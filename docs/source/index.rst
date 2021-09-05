@@ -15,4 +15,4 @@ AutoControlGUI_JE
    critical_exit/critical_exit.rst
 
 Github :
-https://github.com/JE-Chen/Py_AutoControlGUI
+https://github.com/JE-Chen/Python_JEAutoControl

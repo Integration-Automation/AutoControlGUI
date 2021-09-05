@@ -6,9 +6,9 @@
 
 ### Documentation
 
-[![Documentation Status](https://readthedocs.org/projects/autocontrolgui-je/badge/?version=latest)](https://autocontrolgui-je.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/python-jeautocontrol/badge/?version=latest)](https://python-jeautocontrol.readthedocs.io/en/latest/?badge=latest)
 
-documentation available at [autocontrolgui-je.readthedocs.io](https://autocontrolgui-je.readthedocs.io/en/latest/)
+documentation available at [https://python-jeautocontrol.readthedocs.io/en/latest/](https://python-jeautocontrol.readthedocs.io/en/latest/)
 
 ## install
 
