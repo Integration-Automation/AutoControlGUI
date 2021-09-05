@@ -1,0 +1,63 @@
+version: 2.1
+
+orbs:
+  win: circleci/windows@2.2.0
+
+jobs:
+  build-and-test:
+    executor:
+      name: win/default
+      shell: powershell.exe
+
+    steps:
+      - checkout
+      - run:
+          command: pip install --user -r requirements.txt
+          name: pip requirements.txt
+      - run:
+          command: python ./circle_ci_test/screen_test.py
+          name: screen_test
+      - run:
+          command: python ./circle_ci_test/keyboard_type_test.py
+          name: keyboard_test
+      - run:
+          command: python ./circle_ci_test/mouse_test.py
+          name: mouse_test
+      - run:
+          command: python ./circle_ci_test/mouse_scroll_test.py
+          name: scroll_test
+      - run:
+          command: python ./circle_ci_test/keyboard_write_test.py
+          name: keyboard_write_test
+      - run:
+          command: python ./circle_ci_test/screenshot_test.py
+          name: screenshot_test
+      - run:
+          command: python ./circle_ci_test/test_auto_control_exception.py
+          name: test_auto_control_exception
+      - run:
+          command: python ./circle_ci_test/keyboard_is_press_test.py
+          name: keyboard_is_press_test
+      - run:
+          command: python ./circle_ci_test/hotkey_test.py
+          name: hotkey_test
+      - run:
+          command: python ./circle_ci_test/locate_all_image_test.py
+          name: locate_all_image_test
+      - run:
+          command: python ./circle_ci_test/locate_and_click_test.py
+          name: locate_and_click_test
+      - run:
+          command: python ./circle_ci_test/locate_image_center_test.py
+          name: locate_image_center_test
+      - run:
+          command: python ./circle_ci_test/critical_exit_test.py
+          name: critical_exit_test
+      - run:
+          command: python ./circle_ci_test/real_critical_test.py
+          name: real_critical_test
+
+workflows:
+  main:
+    jobs:
+      - build-and-test
