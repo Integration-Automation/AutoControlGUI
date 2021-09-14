@@ -10,12 +10,18 @@ from Xlib.protocol import rq
 
 from threading import Thread
 
+# get current display
 current_display = Display()
 
 
 class KeypressHandler(Thread):
 
     def __init__(self, default_daemon=True):
+        """
+        setDaemon : default damon is true
+        still listener : continue listener keycode ?
+        event_key_code : now current key code default is 0
+        """
         super().__init__()
         self.setDaemon(default_daemon)
         self.still_listener = True
@@ -23,6 +29,9 @@ class KeypressHandler(Thread):
 
     # two times because press and release
     def check_is_press(self, key_code):
+        """
+        :param
+        """
         if key_code == self.event_key_code:
             self.event_key_code = 0
             return True

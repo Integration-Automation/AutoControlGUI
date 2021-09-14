@@ -9,10 +9,16 @@ from Xlib import X
 
 
 def press_key(keycode):
+    """
+    :param keycode the keycode we want to press
+    """
     fake_input(display, X.KeyPress, keycode)
     display.sync()
 
 
 def release_key(keycode):
+    """
+    :param keycode the keycode we want to release
+    """
     fake_input(display, X.KeyRelease, keycode)
     display.sync()
