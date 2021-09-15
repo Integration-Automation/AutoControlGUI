@@ -3,6 +3,9 @@ import sys
 if sys.platform not in ["darwin"]:
     raise Exception("should be only loaded on MacOS")
 
+"""
+osx keyboard virtual keycode
+"""
 osx_key_a = osx_key_A = 0x00
 osx_key_s = osx_key_S = 0x01
 osx_key_d = osx_key_D = 0x02
@@ -100,7 +103,9 @@ osx_key_up = 0x7e
 osx_key_yen = 0x5d
 osx_key_eisu = 0x66
 osx_key_kana = 0x68
-
+"""
+osx mouse virtual keycode
+"""
 osx_mouse_left = "Left"
 osx_mouse_middle = "Middle"
 osx_mouse_right = "Right"

@@ -25,26 +25,33 @@ class KeypressHandler(Thread):
         super().__init__()
         self.setDaemon(default_daemon)
         self.still_listener = True
-        self.event_key_code = 0
+        self.event_keycode = 0
 
     # two times because press and release
-    def check_is_press(self, key_code):
+    def check_is_press(self, keycode):
         """
-        :param
+        :param keycode we want to check
         """
-        if key_code == self.event_key_code:
-            self.event_key_code = 0
+        if keycode == self.event_keycode:
+            self.event_keycode = 0
             return True
         else:
             return False
 
     def run(self, reply):
+        """
+        :param reply listener return data
+        get data
+        while data not null and still listener
+            get event
+
+        """
         try:
             data = reply.data
             while len(data) and self.still_listener:
                 event, data = rq.EventField(None).parse_binary_value(data, current_display.display, None, None)
                 # run two times because press and release event
-                self.event_key_code = event.detail
+                self.event_keycode = event.detail
         except Exception:
             raise Exception
 
@@ -52,6 +59,11 @@ class KeypressHandler(Thread):
 class XWindowsKeypressListener(Thread):
 
     def __init__(self, default_daemon=True):
+        """
+        :param default_daemon default kill when program down
+        create handler
+        set root
+        """
         super().__init__()
         self.setDaemon(default_daemon)
         self.still_listener = True
@@ -60,9 +72,19 @@ class XWindowsKeypressListener(Thread):
         self.context = None
 
     def check_is_press(self, key_code):
+        """
+        :param key_code check this keycode is press?
+        """
         return self.handler.check_is_press(key_code)
 
     def run(self):
+        """
+        while still listener
+            get context
+            set handler
+            set record
+            get event
+        """
         if self.still_listener:
             try:
                 # Monitor keypress and button press
@@ -96,6 +118,9 @@ xwindows_listener = XWindowsKeypressListener()
 xwindows_listener.start()
 
 
-def check_key_is_press(key_code):
-    return xwindows_listener.check_is_press(key_code)
+def check_key_is_press(keycode):
+    """
+    :param keycode check this keycode is press?
+    """
+    return xwindows_listener.check_is_press(keycode)
 

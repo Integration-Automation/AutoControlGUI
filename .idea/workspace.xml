@@ -176,12 +176,12 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.test_auto_control_exception" />
-      <item itemvalue="Python.locate_and_click_test" />
+      <item itemvalue="Python.auto_gui_with_je_editor" />
       <item itemvalue="Python.critcal_exit" />
       <item itemvalue="Python.critical_exit_test" />
+      <item itemvalue="Python.locate_and_click_test" />
       <item itemvalue="Python.real_critical_test" />
-      <item itemvalue="Python.auto_gui_with_je_editor" />
+      <item itemvalue="Python.test_auto_control_exception" />
     </list>
     <recent_temporary>
       <list>

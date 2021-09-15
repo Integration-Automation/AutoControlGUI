@@ -38,7 +38,14 @@ special_key_table = {
 }
 
 
-def normal_key(key, is_shift, is_down):
+def normal_key(keycode, is_shift, is_down):
+    """
+    :param keycode what keycode we want to press or release
+    :param is_shift use shift key ?
+    :param is_down is_down true = press; false = release
+    create event
+    post event
+    """
     if is_shift:
         event = Quartz.CGEventCreateKeyboardEvent(
             None,
@@ -46,18 +53,22 @@ def normal_key(key, is_shift, is_down):
             is_down
         )
         Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
-        time.sleep(.001)
     event = Quartz.CGEventCreateKeyboardEvent(
         None,
-        key,
+        keycode,
         is_down
     )
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
-    time.sleep(.001)
 
 
-def special_key(key, is_shift, event_value):
-    key = special_key_table[key]
+def special_key(keycode, is_shift):
+    """
+    :param keycode what keycode we want to press or release
+    :param is_shift use shift key ?
+    create event
+    post event
+    """
+    keycode = special_key_table[keycode]
     event = AppKit.NSEvent.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2(
         Quartz.NSSystemDefined,
         (0, 0),
@@ -66,21 +77,21 @@ def special_key(key, is_shift, event_value):
         0,
         0,
         8,
-        (key << 16) | ((0xa if is_shift else 0xb) << 8),
+        (keycode << 16) | ((0xa if is_shift else 0xb) << 8),
         -1
     )
     Quartz.CGEventPost(0, event)
 
 
-def press_key(key, is_shift):
-    if key in special_key_table:
-        special_key(key, is_shift, True)
+def press_key(keycode, is_shift):
+    if keycode in special_key_table:
+        special_key(keycode, is_shift)
     else:
-        normal_key(key, is_shift, True)
+        normal_key(keycode, is_shift, True)
 
 
-def release_key(key, is_shift):
-    if key in special_key_table:
-        special_key(key, is_shift, False)
+def release_key(keycode, is_shift):
+    if keycode in special_key_table:
+        special_key(keycode, is_shift)
     else:
-        normal_key(key, is_shift, False)
+        normal_key(keycode, is_shift, False)

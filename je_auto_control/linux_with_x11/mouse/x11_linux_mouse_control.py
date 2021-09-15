@@ -18,32 +18,50 @@ x11_linux_scroll_direction_right = 7
 
 
 def position():
+    """
+    get mouse position
+    """
     coord = display.screen().root.query_pointer()._data
     return coord["root_x"], coord["root_y"]
 
 
 def set_position(x, y):
+    """
+    :param x we want to set mouse x position
+    :param y we want to set mouse y position
+    """
     fake_input(display, X.MotionNotify, x=x, y=y)
     display.sync()
 
 
 def press_mouse(mouse_keycode):
+    """
+    :param mouse_keycode mouse keycode we want to press
+    """
     fake_input(display, X.ButtonPress, mouse_keycode)
     display.sync()
 
 
 def release_mouse(mouse_keycode):
+    """
+    :param mouse_keycode mouse keycode we want to release
+    """
     fake_input(display, X.ButtonRelease, mouse_keycode)
     display.sync()
 
 
 def click_mouse(mouse_keycode):
+    """
+    :param mouse_keycode mouse keycode we want to click
+    """
     press_mouse(mouse_keycode)
     release_mouse(mouse_keycode)
 
 
 def scroll(scroll_value, scroll_direction):
     """"
+    :param scroll_value scroll unit
+    :param scroll_direction what direction you want to scroll
     scroll_direction = 4 : direction up
     scroll_direction = 5 : direction down
     scroll_direction = 6 : direction left

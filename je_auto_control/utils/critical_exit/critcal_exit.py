@@ -15,13 +15,19 @@ class CriticalExit(Thread):
         self.setDaemon(default_daemon)
         self._exit_check_key = keys_table.get("f7")
 
-    def set_critical_key(self, key):
-        if type(key) is int:
-            self._exit_check_key = key
+    def set_critical_key(self, keycode):
+        """
+        :param keycode the keycode we want to check is press ?
+        """
+        if type(keycode) is int:
+            self._exit_check_key = keycode
         else:
-            self._exit_check_key = keys_table.get(key)
+            self._exit_check_key = keys_table.get(keycode)
 
     def run(self):
+        """
+        listener keycode _exit_check_key
+        """
         try:
             while True:
                 if keyboard_listener.check_key_is_press(self._exit_check_key):
@@ -30,5 +36,9 @@ class CriticalExit(Thread):
             raise AutoControlException(je_auto_control_critical_exit_error)
 
     def init_critical_exit(self):
+        """
+        should only use this to start critical exit
+        may this function will add more
+        """
         critical_thread = self
         critical_thread.start()

@@ -49,7 +49,7 @@ def check_key_is_press(key_code):
         get_key_code = key_code
     else :
         get_key_code = keys_table.get(key_code)
-    return keyboard_listener.check_key_is_press(key_code=get_key_code)
+    return keyboard_listener.check_key_is_press(keycode=get_key_code)
 
 
 def write(write_string, is_shift=False):
