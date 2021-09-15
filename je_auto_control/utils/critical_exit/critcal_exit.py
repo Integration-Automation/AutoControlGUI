@@ -17,7 +17,7 @@ class CriticalExit(Thread):
 
     def set_critical_key(self, keycode):
         """
-        :param keycode the keycode we want to check is press ?
+        :param keycode which keycode we want to check is press ?
         """
         if type(keycode) is int:
             self._exit_check_key = keycode

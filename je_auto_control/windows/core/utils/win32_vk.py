@@ -3,7 +3,9 @@ import sys
 if sys.platform not in ["win32", "cygwin", "msys"]:
     raise Exception("should be only loaded on windows")
 
-# mouse
+"""
+windows mouse virtual keycode
+"""
 
 win32_MOVE = 0x0001
 win32_LEFTDOWN = 0x0002
@@ -26,7 +28,9 @@ win32_VK_MBUTTON = 0x04
 win32_VK_XBUTTON1 = 0x05
 win32_VK_XBUTTON2 = 0x06
 
-# keyboard
+"""
+windows keyboard virtual keycode
+"""
 
 win32_EventF_EXTENDEDKEY = 0x0001
 win32_EventF_KEYUP = 0x0002

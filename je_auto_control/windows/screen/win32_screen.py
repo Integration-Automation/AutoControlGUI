@@ -10,4 +10,7 @@ user32.SetProcessDPIAware()
 
 
 def size():
+    """
+    get screen size
+    """
     return [user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)]

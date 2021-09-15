@@ -10,6 +10,9 @@ from je_auto_control.wrapper.platform_wrapper import special_table
 
 
 def position():
+    """
+    get mouse current position
+    """
     try:
         return mouse.position()
     except Exception:
@@ -17,6 +20,10 @@ def position():
 
 
 def set_position(x, y):
+    """
+    :param x set position x
+    :param y set position y
+    """
     try:
         mouse.set_position(x=x, y=y)
     except Exception:
@@ -24,6 +31,11 @@ def set_position(x, y):
 
 
 def press_mouse(mouse_keycode, x=None, y=None):
+    """
+    :param mouse_keycode which mouse keycode we want to press
+    :param x event x
+    :param y event y
+    """
     try:
         mouse_keycode = mouse_table.get(mouse_keycode)
     except Exception:
@@ -43,6 +55,11 @@ def press_mouse(mouse_keycode, x=None, y=None):
 
 
 def release_mouse(mouse_keycode, x=None, y=None):
+    """
+    :param mouse_keycode which mouse keycode we want to release
+    :param x event x
+    :param y event y
+    """
     try:
         mouse_keycode = mouse_table.get(mouse_keycode)
     except Exception:
@@ -65,6 +82,11 @@ def release_mouse(mouse_keycode, x=None, y=None):
 
 
 def click_mouse(mouse_keycode, x=None, y=None):
+    """
+    :param mouse_keycode which mouse keycode we want to click
+    :param x event x
+    :param y event y
+    """
     try:
         mouse_keycode = mouse_table.get(mouse_keycode)
     except Exception:
@@ -88,6 +110,10 @@ def click_mouse(mouse_keycode, x=None, y=None):
 
 def scroll(scroll_value, x=None, y=None, scroll_direction="scroll_down"):
     """"
+    :param scroll_value scroll count
+    :param x event x
+    :param y event y
+    :param scroll_direction which direction we want
     scroll_direction = 4 : direction up
     scroll_direction = 5 : direction down
     scroll_direction = 6 : direction left

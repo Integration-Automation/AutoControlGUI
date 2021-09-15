@@ -29,11 +29,17 @@ win32_mouse_right = (win32_RIGHTUP, win32_RIGHTDOWN, 0)
 win32_mouse_x1 = (win32_XUP, win32_DOWN, win32_XBUTTON1)
 win32_mouse_x2 = (win32_XUP, win32_DOWN, win32_XBUTTON2)
 
-get_cursor_pos = windll.user32.GetCursorPos
-set_cursor_pos = windll.user32.SetCursorPos
+_get_cursor_pos = windll.user32.GetCursorPos
+_set_cursor_pos = windll.user32.SetCursorPos
 
 
 def mouse_event(event, x, y, dwData=0):
+    """
+    :param event which event we use
+    :param x event x
+    :param y event y
+    :param dwData still 0
+    """
     width, height = size()
     convertedX = 65536 * x // width + 1
     convertedY = 65536 * y // height + 1
@@ -41,19 +47,29 @@ def mouse_event(event, x, y, dwData=0):
 
 
 def position():
+    """
+    get mouse position
+    """
     point = wintypes.POINT()
-    if get_cursor_pos(ctypes.byref(point)):
+    if _get_cursor_pos(ctypes.byref(point)):
         return point.x, point.y
     else:
         return None
 
 
 def set_position(x, y):
+    """
+    :param x set mouse position x
+    :param y set mouse position y
+    """
     pos = x, y
-    set_cursor_pos(*pos)
+    _set_cursor_pos(*pos)
 
 
 def press_mouse(press_button):
+    """
+    :param press_button which button we want to press
+    """
     SendInput(1, ctypes.byref(
         Input(type=Mouse, _input=Input.INPUT_Union(
             mi=MouseInput(dwFlags=press_button[1], mouseData=press_button[2])))),
@@ -61,6 +77,9 @@ def press_mouse(press_button):
 
 
 def release_mouse(release_button):
+    """
+    :param release_button which button we want to release
+    """
     SendInput(1, ctypes.byref(
         Input(type=Mouse, _input=Input.INPUT_Union(
             mi=MouseInput(dwFlags=release_button[0], mouseData=release_button[2])))),
@@ -68,11 +87,19 @@ def release_mouse(release_button):
 
 
 def click_mouse(mouse_keycode):
+    """
+    :param mouse_keycode which mouse keycode we want to click
+    """
     press_mouse(mouse_keycode)
     release_mouse(mouse_keycode)
 
 
 def scroll(scroll_value, x=None, y=None):
+    """
+    :param scroll_value scroll count
+    :param x scroll x
+    :param y scroll y
+    """
     now_cursor_x, now_cursor_y = position()
     width, height = size()
     if x is None:

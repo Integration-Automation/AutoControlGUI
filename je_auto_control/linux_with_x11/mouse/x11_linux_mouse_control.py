@@ -19,7 +19,7 @@ x11_linux_scroll_direction_right = 7
 
 def position():
     """
-    get mouse position
+    get mouse current position
     """
     coord = display.screen().root.query_pointer()._data
     return coord["root_x"], coord["root_y"]
@@ -44,7 +44,7 @@ def press_mouse(mouse_keycode):
 
 def release_mouse(mouse_keycode):
     """
-    :param mouse_keycode mouse keycode we want to release
+    :param mouse_keycode which mouse keycode we want to release
     """
     fake_input(display, X.ButtonRelease, mouse_keycode)
     display.sync()
@@ -52,7 +52,7 @@ def release_mouse(mouse_keycode):
 
 def click_mouse(mouse_keycode):
     """
-    :param mouse_keycode mouse keycode we want to click
+    :param mouse_keycode which mouse keycode we want to click
     """
     press_mouse(mouse_keycode)
     release_mouse(mouse_keycode)

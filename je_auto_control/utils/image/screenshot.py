@@ -5,6 +5,10 @@ from je_auto_control.utils.je_auto_control_exception.exceptions import AutoContr
 
 
 def pil_screenshot(file_path=None, region=None):
+    """
+    :param file_path save screenshot path
+    :param region screenshot region
+    """
     if region is not None:
         image = ImageGrab.grab(bbox=region)
     else:

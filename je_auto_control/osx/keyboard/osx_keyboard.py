@@ -40,7 +40,7 @@ special_key_table = {
 
 def normal_key(keycode, is_shift, is_down):
     """
-    :param keycode what keycode we want to press or release
+    :param keycode which keycode we want to press or release
     :param is_shift use shift key ?
     :param is_down is_down true = press; false = release
     create event
@@ -63,7 +63,7 @@ def normal_key(keycode, is_shift, is_down):
 
 def special_key(keycode, is_shift):
     """
-    :param keycode what keycode we want to press or release
+    :param keycode which keycode we want to press or release
     :param is_shift use shift key ?
     create event
     post event
@@ -84,6 +84,10 @@ def special_key(keycode, is_shift):
 
 
 def press_key(keycode, is_shift):
+    """
+    :param keycode which keycode we want to press
+    :param is_shift is shift press?
+    """
     if keycode in special_key_table:
         special_key(keycode, is_shift)
     else:
@@ -91,6 +95,10 @@ def press_key(keycode, is_shift):
 
 
 def release_key(keycode, is_shift):
+    """
+    :param keycode which keycode we want to release
+    :param is_shift is shift press?
+    """
     if keycode in special_key_table:
         special_key(keycode, is_shift)
     else:

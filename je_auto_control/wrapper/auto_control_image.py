@@ -6,6 +6,11 @@ from je_auto_control.wrapper.auto_control_mouse import set_position
 
 
 def locate_all_image(image, detect_threshold=1, draw_image=False):
+    """
+    :param image which image we want to find on screen
+    :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal
+    :param draw_image draw detect tag on return image
+    """
     try:
         image_data_array = template_detection.find_image_multi(image, detect_threshold, draw_image)
     except Exception:
@@ -17,6 +22,11 @@ def locate_all_image(image, detect_threshold=1, draw_image=False):
 
 
 def locate_image_center(image, detect_threshold=1, draw_image=False):
+    """
+    :param image which image we want to find on screen
+    :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal
+    :param draw_image draw detect tag on return image
+    """
     try:
         image_data_array = template_detection.find_image(image, detect_threshold, draw_image)
     except Exception:
@@ -31,6 +41,12 @@ def locate_image_center(image, detect_threshold=1, draw_image=False):
 
 
 def locate_and_click(image, mouse_keycode, detect_threshold=1, draw_image=False):
+    """
+    :param image which image we want to find on screen
+    :param mouse_keycode which mouse keycode we want to click
+    :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal
+    :param draw_image draw detect tag on return image
+    """
     try:
         image_data_array = template_detection.find_image(image, detect_threshold, draw_image)
     except Exception:

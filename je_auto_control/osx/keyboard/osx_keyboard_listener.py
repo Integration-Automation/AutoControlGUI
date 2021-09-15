@@ -7,5 +7,8 @@ import Quartz
 
 
 def check_key_is_press(keycode):
+    """
+    :param keycode which keycode we want to check
+    """
     return Quartz.CGEventSourceKeyState(0, keycode)
 
