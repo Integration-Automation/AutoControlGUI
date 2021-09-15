@@ -44,11 +44,11 @@ def type_key(keycode, is_shift=False):
         raise AutoControlKeyboardException(exception_tag.keyboard_type_key)
 
 
-def check_key_is_press(key_code):
-    if type(key_code) is int:
-        get_key_code = key_code
-    else :
-        get_key_code = keys_table.get(key_code)
+def check_key_is_press(keycode):
+    if type(keycode) is int:
+        get_key_code = keycode
+    else:
+        get_key_code = keys_table.get(keycode)
     return keyboard_listener.check_key_is_press(keycode=get_key_code)
 
 

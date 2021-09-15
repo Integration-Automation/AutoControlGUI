@@ -6,6 +6,6 @@ if sys.platform not in ["darwin"]:
 import Quartz
 
 
-def check_key_is_press(key_code):
-    return Quartz.CGEventSourceKeyState(0, key_code)
+def check_key_is_press(keycode):
+    return Quartz.CGEventSourceKeyState(0, keycode)
 
