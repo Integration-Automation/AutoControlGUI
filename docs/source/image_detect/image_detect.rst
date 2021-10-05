@@ -48,3 +48,19 @@ AutoControlGUI ImageDetect
     image_data = locate_and_click("../../../test_template.png", mouse_keycode="mouse_left", detect_threshold=0.9,
                                   draw_image=False)
     print(image_data)
+
+| screenshot and locate
+
+.. code-block:: python
+
+    import time
+    from je_auto_control import screenshot
+    from je_auto_control import locate_all_image
+
+    time.sleep(2)
+    """
+    detect_threshold 0~1 , 1 is absolute equal
+    draw_image, mark the find target
+    """
+    image_data = locate_all_image(screenshot(), detect_threshold=0.9, draw_image=False)
+    print(image_data)

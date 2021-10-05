@@ -6,13 +6,14 @@ AutoControlGUI_JE
    :maxdepth: 4
 
    installation/installation.rst
-   keyboard/keyboard.rst
+   critical_exit/critical_exit.rst
    mouse/mouse.rst
+   keyboard/keyboard.rst
    screen/screen.rst
    image_detect/image_detect.rst
-   todo/todo.rst
    test/test.rst
-   critical_exit/critical_exit.rst
+   todo/todo.rst
+
 
 Github :
 https://github.com/JE-Chen/Python_JEAutoControl
