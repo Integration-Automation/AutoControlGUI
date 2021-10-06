@@ -51,7 +51,9 @@ class KeypressHandler(Thread):
             while len(data) and self.still_listener:
                 event, data = rq.EventField(None).parse_binary_value(data, current_display.display, None, None)
                 # run two times because press and release event
-                self.event_keycode = event.detail
+                if event.detail != 0:
+                    self.event_keycode = event.detail
+                    print(self.event_keycode)
         except Exception:
             raise Exception
 

@@ -474,7 +474,7 @@ elif sys.platform in ["linux", "linux2"]:
     from je_auto_control.linux_with_x11.mouse.x11_linux_mouse_control import x11_linux_scroll_direction_left
     from je_auto_control.linux_with_x11.mouse.x11_linux_mouse_control import x11_linux_scroll_direction_right
     from je_auto_control.linux_with_x11.keyboard import x11_linux_keyboard_control
-    from je_auto_control.linux_with_x11.keyboard import x11_linux_keyboard_listener
+    from je_auto_control.linux_with_x11.listener import x11_linux_keyboard_listener
     from je_auto_control.linux_with_x11.mouse import x11_linux_mouse_control
     from je_auto_control.linux_with_x11.screen import x11_linux_screen
 
