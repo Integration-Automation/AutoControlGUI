@@ -170,7 +170,7 @@ if sys.platform in ["win32", "cygwin", "msys"]:
     from je_auto_control.windows.core.utils.win32_vk import win32_keyY
     from je_auto_control.windows.core.utils.win32_vk import win32_keyZ
     from je_auto_control.windows.keyboard import win32_ctype_keyboard_control
-    from je_auto_control.windows.keyboard import win32_keyboard_listener
+    from je_auto_control.windows.keyboard import win32_keyboard_check
     from je_auto_control.windows.mouse import win32_ctype_mouse_control
     from je_auto_control.windows.mouse.win32_ctype_mouse_control import win32_mouse_left
     from je_auto_control.windows.mouse.win32_ctype_mouse_control import win32_mouse_middle
@@ -474,7 +474,7 @@ elif sys.platform in ["linux", "linux2"]:
     from je_auto_control.linux_with_x11.mouse.x11_linux_mouse_control import x11_linux_scroll_direction_left
     from je_auto_control.linux_with_x11.mouse.x11_linux_mouse_control import x11_linux_scroll_direction_right
     from je_auto_control.linux_with_x11.keyboard import x11_linux_keyboard_control
-    from je_auto_control.linux_with_x11.keyboard import x11_linux_keyboard_listener
+    from je_auto_control.linux_with_x11.listener import x11_linux_listener
     from je_auto_control.linux_with_x11.mouse import x11_linux_mouse_control
     from je_auto_control.linux_with_x11.screen import x11_linux_screen
 
@@ -693,7 +693,7 @@ if sys.platform in ["win32", "cygwin", "msys"]:
      "mouse_x2": win32_mouse_x2
     }
     keyboard = win32_ctype_keyboard_control
-    keyboard_listener = win32_keyboard_listener
+    keyboard_listener = win32_keyboard_check
     mouse = win32_ctype_mouse_control
     screen = win32_screen
 
@@ -1054,7 +1054,7 @@ elif sys.platform in ["linux", "linux2"]:
         "scroll_right": x11_linux_scroll_direction_right
     }
     keyboard = x11_linux_keyboard_control
-    keyboard_listener = x11_linux_keyboard_listener
+    keyboard_listener = x11_linux_listener
     mouse = x11_linux_mouse_control
     screen = x11_linux_screen
     if None in [keys_table, mouse_table, special_table, keyboard, mouse, screen]:

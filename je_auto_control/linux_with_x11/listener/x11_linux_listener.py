@@ -3,10 +3,14 @@ import sys
 if sys.platform not in ["linux", "linux2"]:
     raise Exception("should be only loaded on linux")
 
+import Xlib.threaded
+
 from Xlib.display import Display
 from Xlib import X
 from Xlib.ext import record
 from Xlib.protocol import rq
+
+from je_auto_control.linux_with_x11.mouse.x11_linux_mouse_control import position
 
 from threading import Thread
 
@@ -26,6 +30,7 @@ class KeypressHandler(Thread):
         self.setDaemon(default_daemon)
         self.still_listener = True
         self.event_keycode = 0
+        self.event_position = 0, 0
 
     # two times because press and release
     def check_is_press(self, keycode):
@@ -51,7 +56,10 @@ class KeypressHandler(Thread):
             while len(data) and self.still_listener:
                 event, data = rq.EventField(None).parse_binary_value(data, current_display.display, None, None)
                 # run two times because press and release event
-                self.event_keycode = event.detail
+                if event.detail != 0:
+                    self.event_keycode = event.detail
+                    self.event_position = event.root_x, event.root_y
+
         except Exception:
             raise Exception
 
@@ -124,3 +132,7 @@ def check_key_is_press(keycode):
     """
     return xwindows_listener.check_is_press(keycode)
 
+
+if __name__ == "__main__":
+    while True:
+        pass
