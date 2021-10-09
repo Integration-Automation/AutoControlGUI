@@ -74,9 +74,9 @@ class Win32MouseListener(Thread):
         message = MSG()
         user32.GetMessageA(byref(message), 0, 0, 0)
 
-    def record(self):
+    def record(self, want_to_record_queue):
         self.record_flag = True
-        self.record_queue = Queue()
+        self.record_queue = want_to_record_queue
         self.start()
 
     def stop_record(self):
@@ -89,7 +89,8 @@ class Win32MouseListener(Thread):
 
 if __name__ == "__main__":
     win32_mouse_listener = Win32MouseListener()
-    win32_mouse_listener.record()
+    record_queue = Queue()
+    win32_mouse_listener.record(record_queue)
     from time import sleep
     sleep(3)
     temp = win32_mouse_listener.stop_record()

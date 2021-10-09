@@ -66,9 +66,9 @@ class Win32KeyboardListener(Thread):
         message = MSG()
         user32.GetMessageA(byref(message), 0, 0, 0)
 
-    def record(self):
+    def record(self, want_to_record_queue):
         self.record_flag = True
-        self.record_queue = Queue()
+        self.record_queue = want_to_record_queue
         self.start()
 
     def stop_record(self):
@@ -81,7 +81,8 @@ class Win32KeyboardListener(Thread):
 
 if __name__ == "__main__":
     win32_keyboard_listener = Win32KeyboardListener()
-    win32_keyboard_listener.record()
+    record_queue = Queue()
+    win32_keyboard_listener.record(record_queue)
     from time import sleep
     sleep(3)
     temp = win32_keyboard_listener.stop_record()
