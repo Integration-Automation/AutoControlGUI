@@ -178,6 +178,7 @@ if sys.platform in ["win32", "cygwin", "msys"]:
     from je_auto_control.windows.mouse.win32_ctype_mouse_control import win32_mouse_x1
     from je_auto_control.windows.mouse.win32_ctype_mouse_control import win32_mouse_x2
     from je_auto_control.windows.screen import win32_screen
+    from je_auto_control.windows.record.win32_record import win32_record
 
 elif sys.platform in ["darwin"]:
     from je_auto_control.osx.core.utils.osx_vk import osx_key_a, osx_key_A
@@ -282,7 +283,7 @@ elif sys.platform in ["darwin"]:
     from je_auto_control.osx.mouse import osx_mouse
     from je_auto_control.osx.screen import osx_screen
     from je_auto_control.osx.keyboard import osx_keyboard
-    from je_auto_control.osx.keyboard import osx_keyboard_listener
+    from je_auto_control.osx.keyboard import osx_keyboard_check
 
 elif sys.platform in ["linux", "linux2"]:
     from je_auto_control.linux_with_x11.core.utils.x11_linux_vk import x11_linux_key_backspace
@@ -485,9 +486,10 @@ keys_table = None
 mouse_table = None
 special_table = None
 keyboard = None
-keyboard_listener = None
+keyboard_check = None
 mouse = None
 screen = None
+recorder = None
 
 if sys.platform in ["win32", "cygwin", "msys"]:
 
@@ -693,9 +695,13 @@ if sys.platform in ["win32", "cygwin", "msys"]:
      "mouse_x2": win32_mouse_x2
     }
     keyboard = win32_ctype_keyboard_control
-    keyboard_listener = win32_keyboard_check
+    keyboard_check = win32_keyboard_check
     mouse = win32_ctype_mouse_control
     screen = win32_screen
+    recorder = win32_record
+
+    if None in [keys_table, mouse_table, keyboard_check, keyboard, mouse, screen, recorder]:
+        raise AutoControlException("Can't init auto control")
 
 elif sys.platform in ["darwin"]:
 
@@ -853,9 +859,11 @@ elif sys.platform in ["darwin"]:
         "mouse_right": osx_mouse_right,
     }
     keyboard = osx_keyboard
-    keyboard_listener = osx_keyboard_listener
+    keyboard_check = osx_keyboard_check
     mouse = osx_mouse
     screen = osx_screen
+    if None in [keys_table, mouse_table, keyboard_check, keyboard, mouse, screen]:
+        raise AutoControlException("Can't init auto control")
 
 elif sys.platform in ["linux", "linux2"]:
 
@@ -1054,7 +1062,7 @@ elif sys.platform in ["linux", "linux2"]:
         "scroll_right": x11_linux_scroll_direction_right
     }
     keyboard = x11_linux_keyboard_control
-    keyboard_listener = x11_linux_listener
+    keyboard_check = x11_linux_listener
     mouse = x11_linux_mouse_control
     screen = x11_linux_screen
     if None in [keys_table, mouse_table, special_table, keyboard, mouse, screen]:

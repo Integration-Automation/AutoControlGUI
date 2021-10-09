@@ -101,7 +101,7 @@ def click_mouse(mouse_keycode, x=None, y=None):
         raise AutoControlMouseException(exception_tag.mouse_get_position)
     try:
         if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
-            mouse.click_mouse(mouse_keycode)
+            mouse.click_mouse(mouse_keycode, x, y)
         elif sys.platform in ["darwin"]:
             mouse.click_mouse(x, y, mouse_keycode)
     except Exception:

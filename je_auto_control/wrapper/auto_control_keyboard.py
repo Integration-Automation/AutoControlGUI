@@ -4,7 +4,7 @@ from je_auto_control.utils.je_auto_control_exception import exception_tag
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlCantFindKeyException
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlKeyboardException
 from je_auto_control.wrapper.platform_wrapper import keyboard
-from je_auto_control.wrapper.platform_wrapper import keyboard_listener
+from je_auto_control.wrapper.platform_wrapper import keyboard_check
 from je_auto_control.wrapper.platform_wrapper import keys_table
 
 
@@ -13,10 +13,11 @@ def press_key(keycode, is_shift=False):
     :param keycode which keycode we want to press
     :param is_shift shift is press?
     """
-    try:
-        keycode = keys_table.get(keycode)
-    except Exception:
-        raise AutoControlCantFindKeyException(exception_tag.table_cant_find_key)
+    if type(keycode) is not int:
+        try:
+            keycode = keys_table.get(keycode)
+        except Exception:
+            raise AutoControlCantFindKeyException(exception_tag.table_cant_find_key)
     try:
         if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
             keyboard.press_key(keycode)
@@ -31,10 +32,11 @@ def release_key(keycode, is_shift=False):
     :param keycode which keycode we want to release
     :param is_shift shift is press?
     """
-    try:
-        keycode = keys_table.get(keycode)
-    except Exception:
-        raise AutoControlCantFindKeyException(exception_tag.table_cant_find_key)
+    if type(keycode) is not int:
+        try:
+            keycode = keys_table.get(keycode)
+        except Exception:
+            raise AutoControlCantFindKeyException(exception_tag.table_cant_find_key)
     try:
         if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
             keyboard.release_key(keycode)
@@ -64,7 +66,7 @@ def check_key_is_press(keycode):
         get_key_code = keycode
     else:
         get_key_code = keys_table.get(keycode)
-    return keyboard_listener.check_key_is_press(keycode=get_key_code)
+    return keyboard_check.check_key_is_press(keycode=get_key_code)
 
 
 def write(write_string, is_shift=False):

@@ -3,11 +3,62 @@ import sys
 if sys.platform not in ["win32", "cygwin", "msys"]:
     raise Exception("should be only loaded on windows")
 
-from je_auto_control.windows.listener import win32_keyboard_listener
-from je_auto_control.windows.listener import win32_mouse_listener
+from je_auto_control.windows.listener.win32_keyboard_listener import Win32KeyboardListener
+from je_auto_control.windows.listener.win32_mouse_listener import Win32MouseListener
 
-from je_auto_control.windows.mouse.win32_ctype_mouse_control import click_mouse
+from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlRecordQueueException
 
-from je_auto_control.windows.keyboard.win32_ctype_keyboard_control import press_key
-from je_auto_control.windows.keyboard.win32_ctype_keyboard_control import release_key
+from queue import Queue
 
+
+class Win32Record(object):
+
+    def __init__(self):
+        self.mouse_record_listener = None
+        self.keyboard_record_listener = None
+        self.record_queue = None
+        self.result_queue = None
+
+    def record(self):
+        self.mouse_record_listener = Win32MouseListener()
+        self.keyboard_record_listener = Win32KeyboardListener()
+        self.record_queue = Queue()
+        self.mouse_record_listener.record(self.record_queue)
+        self.keyboard_record_listener.record(self.record_queue)
+
+    def stop_record(self):
+        self.result_queue =self.mouse_record_listener.stop_record()
+        self.result_queue = self.keyboard_record_listener.stop_record()
+        self.record_queue = None
+        return self.result_queue
+
+    def record_mouse(self):
+        self.mouse_record_listener = Win32MouseListener()
+        self.record_queue = Queue()
+        self.mouse_record_listener.record(self.record_queue)
+
+    def stop_record_mouse(self):
+        self.result_queue = self.mouse_record_listener.stop_record()
+        self.record_queue = None
+        return self.result_queue
+
+    def record_keyboard(self):
+        self.keyboard_record_listener = Win32KeyboardListener()
+        self.record_queue = Queue()
+        self.keyboard_record_listener.record(record_queue)
+
+    def stop_record_keyboard(self):
+        self.result_queue = self.keyboard_record_listener.stop_record()
+        self.record_queue = None
+        return self.result_queue
+
+
+win32_record = Win32Record()
+
+if __name__ == "__main__":
+    win32_record = Win32Record()
+    win32_record.record()
+    from time import sleep
+    sleep(10)
+    for i in win32_record.stop_record().queue:
+        print(i)
