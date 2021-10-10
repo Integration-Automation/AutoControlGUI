@@ -50,10 +50,14 @@ def release_mouse(mouse_keycode):
     display.sync()
 
 
-def click_mouse(mouse_keycode):
+def click_mouse(mouse_keycode, x=None, y=None):
     """
     :param mouse_keycode which mouse keycode we want to click
+    :param x set mouse x position
+    :param y set mouse y position
     """
+    if x and y is not None:
+        set_position(x, y)
     press_mouse(mouse_keycode)
     release_mouse(mouse_keycode)
 

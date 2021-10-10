@@ -38,3 +38,8 @@ image tags
 """
 cant_find_image = "can't find image"
 find_image_error_variable = "variable error"
+"""
+record tags
+"""
+record_queue_error = "can't get record queue it's none are you using stop record before record"
+record_not_found_action_error = "record action not found"

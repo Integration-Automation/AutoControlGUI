@@ -5,7 +5,7 @@ from threading import Thread
 from je_auto_control.utils.je_auto_control_exception.exception_tag import je_auto_control_critical_exit_error
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlException
 from je_auto_control.wrapper.auto_control_keyboard import keys_table
-from je_auto_control.wrapper.platform_wrapper import keyboard_listener
+from je_auto_control.wrapper.platform_wrapper import keyboard_check
 
 
 class CriticalExit(Thread):
@@ -30,7 +30,7 @@ class CriticalExit(Thread):
         """
         try:
             while True:
-                if keyboard_listener.check_key_is_press(self._exit_check_key):
+                if keyboard_check.check_key_is_press(self._exit_check_key):
                     _thread.interrupt_main()
         except AutoControlException:
             raise AutoControlException(je_auto_control_critical_exit_error)

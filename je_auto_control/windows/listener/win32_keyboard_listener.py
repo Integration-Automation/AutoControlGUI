@@ -50,7 +50,7 @@ class Win32KeyboardListener(Thread):
         if self.record_flag is True:
             # int to hex
             temp = hex(l_param[0] & 0xFFFFFFFF)
-            self.record_queue.put(("test_keyboard", temp))
+            self.record_queue.put(("keyboard", int(temp, 16)))
         return user32.CallNextHookEx(self.hooked, code, w_param, l_param)
 
     def _get_function_pointer(self, function):
@@ -59,10 +59,7 @@ class Win32KeyboardListener(Thread):
 
     def _start_listener(self):
         pointer = self._get_function_pointer(self._win32_hook_proc)
-        if self._set_win32_hook(pointer):
-            print("start listener")
-        else:
-            print("failed to start")
+        self._set_win32_hook(pointer)
         message = MSG()
         user32.GetMessageA(byref(message), 0, 0, 0)
 

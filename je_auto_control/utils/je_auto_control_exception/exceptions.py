@@ -4,6 +4,7 @@ from je_auto_control.utils.je_auto_control_exception.exception_tag import je_aut
 from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_error
 from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_error
 from je_auto_control.utils.je_auto_control_exception.exception_tag import screen_error
+from je_auto_control.utils.je_auto_control_exception.exception_tag import record_queue_error
 
 
 class AutoControlException(Exception):
@@ -45,3 +46,10 @@ class ImageNotFoundException(AutoControlException):
 
     def __str__(self):
         return "{%s} cause by: {%s}" % (self.message, self.image)
+
+
+class AutoControlRecordException(AutoControlException):
+    def __init__(self, message=record_queue_error):
+        super().__init__(message)
+
+
