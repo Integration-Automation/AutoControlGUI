@@ -70,10 +70,7 @@ class Win32MouseListener(Thread):
 
     def _start_listener(self):
         pointer = self._get_function_pointer(self._win32_hook_proc)
-        if self._set_win32_hook(pointer):
-            print("start mouse listener")
-        else:
-            print("failed to start mouse listener")
+        self._set_win32_hook(pointer)
         message = MSG()
         user32.GetMessageA(byref(message), 0, 0, 0)
 

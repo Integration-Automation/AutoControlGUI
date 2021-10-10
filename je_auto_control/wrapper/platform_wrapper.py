@@ -178,7 +178,7 @@ if sys.platform in ["win32", "cygwin", "msys"]:
     from je_auto_control.windows.mouse.win32_ctype_mouse_control import win32_mouse_x1
     from je_auto_control.windows.mouse.win32_ctype_mouse_control import win32_mouse_x2
     from je_auto_control.windows.screen import win32_screen
-    from je_auto_control.windows.record.win32_record import win32_record
+    from je_auto_control.windows.record.win32_record import win32_recorder
 
 elif sys.platform in ["darwin"]:
     from je_auto_control.osx.core.utils.osx_vk import osx_key_a, osx_key_A
@@ -478,6 +478,7 @@ elif sys.platform in ["linux", "linux2"]:
     from je_auto_control.linux_with_x11.listener import x11_linux_listener
     from je_auto_control.linux_with_x11.mouse import x11_linux_mouse_control
     from je_auto_control.linux_with_x11.screen import x11_linux_screen
+    from je_auto_control.linux_with_x11.record.x11_linux_record import x11_linux_recoder
 
 else:
     raise AutoControlException("unknown operating system")
@@ -698,7 +699,7 @@ if sys.platform in ["win32", "cygwin", "msys"]:
     keyboard_check = win32_keyboard_check
     mouse = win32_ctype_mouse_control
     screen = win32_screen
-    recorder = win32_record
+    recorder = win32_recorder
 
     if None in [keys_table, mouse_table, keyboard_check, keyboard, mouse, screen, recorder]:
         raise AutoControlException("Can't init auto control")
@@ -1065,7 +1066,8 @@ elif sys.platform in ["linux", "linux2"]:
     keyboard_check = x11_linux_listener
     mouse = x11_linux_mouse_control
     screen = x11_linux_screen
-    if None in [keys_table, mouse_table, special_table, keyboard, mouse, screen]:
+    recorder = x11_linux_recoder
+    if None in [keys_table, mouse_table, special_table, keyboard, mouse, screen, recorder]:
         raise AutoControlException("Can't init auto control")
 
 if None in [keys_table, mouse_table, keyboard, mouse, screen]:

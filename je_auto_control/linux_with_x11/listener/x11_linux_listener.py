@@ -10,8 +10,6 @@ from Xlib import X
 from Xlib.ext import record
 from Xlib.protocol import rq
 
-from je_auto_control.linux_with_x11.mouse.x11_linux_mouse_control import position
-
 from threading import Thread
 
 # get current display
@@ -29,6 +27,8 @@ class KeypressHandler(Thread):
         super().__init__()
         self.setDaemon(default_daemon)
         self.still_listener = True
+        self.record_flag = False
+        self.record_queue = None
         self.event_keycode = 0
         self.event_position = 0, 0
 
@@ -55,13 +55,23 @@ class KeypressHandler(Thread):
             data = reply.data
             while len(data) and self.still_listener:
                 event, data = rq.EventField(None).parse_binary_value(data, current_display.display, None, None)
-                # run two times because press and release event
                 if event.detail != 0:
-                    self.event_keycode = event.detail
-                    self.event_position = event.root_x, event.root_y
-
+                    if event.type is X.ButtonRelease or event.type is X.KeyRelease:
+                        self.event_keycode = event.detail
+                        self.event_position = event.root_x, event.root_y
+                        if self.record_flag is True:
+                            temp = (event.type, event.detail, event.root_x, event.root_y)
+                            self.record_queue.put(temp)
         except Exception:
             raise Exception
+
+    def record(self, record_queue):
+        self.record_flag = True
+        self.record_queue = record_queue
+
+    def stop_record(self):
+        self.record_flag = False
+        return self.record_queue
 
 
 class XWindowsKeypressListener(Thread):
@@ -121,6 +131,12 @@ class XWindowsKeypressListener(Thread):
                 self.handler.still_listener = False
                 self.still_listener = False
 
+    def record(self, record_queue):
+        self.handler.record(record_queue)
+
+    def stop_record(self):
+        return self.handler.stop_record()
+
 
 xwindows_listener = XWindowsKeypressListener()
 xwindows_listener.start()
@@ -133,6 +149,17 @@ def check_key_is_press(keycode):
     return xwindows_listener.check_is_press(keycode)
 
 
+def x11_linux_record(record_queue):
+    xwindows_listener.record(record_queue)
+
+
+def x11_linux_stop_record():
+    return xwindows_listener.stop_record()
+
+
 if __name__ == "__main__":
+    from queue import Queue
+    test_queue = Queue()
+    xwindows_listener.record(test_queue)
     while True:
         pass

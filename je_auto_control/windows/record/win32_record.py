@@ -6,12 +6,12 @@ if sys.platform not in ["win32", "cygwin", "msys"]:
 from je_auto_control.windows.listener.win32_keyboard_listener import Win32KeyboardListener
 from je_auto_control.windows.listener.win32_mouse_listener import Win32MouseListener
 
-from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlRecordQueueException
+from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlRecordException
 
 from queue import Queue
 
 
-class Win32Record(object):
+class Win32Recorder(object):
 
     def __init__(self):
         self.mouse_record_listener = None
@@ -53,12 +53,12 @@ class Win32Record(object):
         return self.result_queue
 
 
-win32_record = Win32Record()
+win32_recorder = Win32Recorder()
 
 if __name__ == "__main__":
-    win32_record = Win32Record()
-    win32_record.record()
+    win32_recorder = Win32Recorder()
+    win32_recorder.record()
     from time import sleep
     sleep(10)
-    for i in win32_record.stop_record().queue:
+    for i in win32_recorder.stop_record().queue:
         print(i)

@@ -48,6 +48,8 @@ class ImageNotFoundException(AutoControlException):
         return "{%s} cause by: {%s}" % (self.message, self.image)
 
 
-class AutoControlRecordQueueException(AutoControlException):
+class AutoControlRecordException(AutoControlException):
     def __init__(self, message=record_queue_error):
         super().__init__(message)
+
+

@@ -38,7 +38,7 @@ def set_position(x, y):
     mouse_event(Quartz.kCGEventMouseMoved, x, y, 0)
 
 
-def press_mouse(x, y, mouse_button):
+def press_mouse(mouse_button, x, y):
     """
     :param x event x
     :param y event y
