@@ -284,6 +284,7 @@ elif sys.platform in ["darwin"]:
     from je_auto_control.osx.screen import osx_screen
     from je_auto_control.osx.keyboard import osx_keyboard
     from je_auto_control.osx.keyboard import osx_keyboard_check
+    from je_auto_control.osx.record.osx_record import osx_recorder
 
 elif sys.platform in ["linux", "linux2"]:
     from je_auto_control.linux_with_x11.core.utils.x11_linux_vk import x11_linux_key_backspace
@@ -863,7 +864,8 @@ elif sys.platform in ["darwin"]:
     keyboard_check = osx_keyboard_check
     mouse = osx_mouse
     screen = osx_screen
-    if None in [keys_table, mouse_table, keyboard_check, keyboard, mouse, screen]:
+    recorder = osx_recorder
+    if None in [keys_table, mouse_table, keyboard_check, keyboard, mouse, screen, recorder]:
         raise AutoControlException("Can't init auto control")
 
 elif sys.platform in ["linux", "linux2"]:

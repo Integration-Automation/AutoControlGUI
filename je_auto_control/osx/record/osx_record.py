@@ -1,0 +1,26 @@
+import sys
+
+if sys.platform not in ["darwin"]:
+    raise Exception("should be only loaded on MacOS")
+
+
+from je_auto_control.osx.listener.osx_listener import osx_record
+from je_auto_control.osx.listener.osx_listener import osx_stop_record
+
+from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlRecordException
+
+
+class OSXRecorder(object):
+
+
+    def record(self):
+        osx_record()
+
+
+    def stop_record(self):
+        record_queue = osx_stop_record()
+        if record_queue is None:
+            raise AutoControlRecordException
+        return osx_stop_record()
+
+osx_recorder = OSXRecorder()
