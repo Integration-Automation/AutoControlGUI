@@ -50,10 +50,15 @@ def stop_record():
             raise AutoControlRecordException(record_not_found_action_error)
 
 
-
 if __name__ == "__main__":
     record()
     from time import sleep
     sleep(10)
     stop_record()
     sleep(3)
+    import sys
+    if sys.platform in ["darwin"]:
+        record()
+        stop_record()
+
+
