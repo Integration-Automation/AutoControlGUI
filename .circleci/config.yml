@@ -56,6 +56,9 @@ jobs:
       - run:
           command: python ./circle_ci_test/real_critical_test.py
           name: real_critical_test
+      - run:
+          command: python ./circle_ci_test/record_test.py
+          name: record_test
 
 workflows:
   main:
