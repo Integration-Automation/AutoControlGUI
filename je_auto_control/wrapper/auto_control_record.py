@@ -1,6 +1,7 @@
 import sys
 
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlRecordException
+from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlException
 from je_auto_control.utils.je_auto_control_exception.exception_tag import record_not_found_action_error
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.auto_control_keyboard import type_key
@@ -18,7 +19,6 @@ def stop_record_mouse():
     if action_queue is None:
         raise AutoControlRecordException
     for mouse_action in action_queue.queue:
-        print(mouse_action)
         click_mouse(mouse_action[0], mouse_action[1], mouse_action[2])
 
 
@@ -31,19 +31,18 @@ def stop_record_keyboard():
     if action_queue is None:
         raise AutoControlRecordException
     for keyboard_action in action_queue.queue:
-        print(keyboard_action)
         type_key(keyboard_action[1])
 
 
 def record():
     if sys.platform == "darwin":
-        raise Exception("macos can't use recorder")
+        raise AutoControlException("macos can't use recorder")
     recorder.record()
 
 
 def stop_record():
     if sys.platform == "darwin":
-        raise Exception("macos can't use recorder")
+        raise AutoControlException("macos can't use recorder")
     action_queue = recorder.stop_record()
     if action_queue is None:
         raise AutoControlRecordException
@@ -54,6 +53,10 @@ def stop_record():
             type_key(action[1])
         else:
             raise AutoControlRecordException(record_not_found_action_error)
+
+
+def close_record():
+    recorder.close_record()
 
 
 if __name__ == "__main__":

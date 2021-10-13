@@ -52,6 +52,10 @@ class Win32Recorder(object):
         self.record_queue = None
         return self.result_queue
 
+    def close_record(self):
+        self.mouse_record_listener.close_record()
+        self.keyboard_record_listener.close_record()
+
 
 win32_recorder = Win32Recorder()
 

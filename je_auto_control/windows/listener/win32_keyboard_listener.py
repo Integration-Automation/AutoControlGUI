@@ -20,6 +20,7 @@ class Win32KeyboardListener(Thread):
 
     def __init__(self):
         super().__init__()
+        self.setDaemon(True)
         self.hooked = None
         self.record_queue = None
         self.record_flag = False
@@ -41,8 +42,6 @@ class Win32KeyboardListener(Thread):
             return
         user32.UnhookWindowsHookEx(self.hooked)
         self.hooked = None
-        self.record_queue = None
-        sys.exit(0)
 
     def _win32_hook_proc(self, code, w_param, l_param):
         if w_param is not wm_keydown:
@@ -70,6 +69,7 @@ class Win32KeyboardListener(Thread):
 
     def stop_record(self):
         self.record_flag = False
+        self._remove_win32_hook_proc()
         return self.record_queue
 
     def run(self):
