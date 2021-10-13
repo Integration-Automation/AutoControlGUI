@@ -24,3 +24,15 @@ class OSXRecorder(object):
         return osx_stop_record()
 
 osx_recorder = OSXRecorder()
+
+
+if __name__ == "__main__":
+    test_osx_recorder = OSXRecorder()
+    test_osx_recorder.record()
+    temp = test_osx_recorder.stop_record()
+    print(temp)
+    for action in temp.queue:
+        print(action)
+    while True:
+        pass
+

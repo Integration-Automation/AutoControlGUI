@@ -12,16 +12,10 @@ from PyObjCTools import AppHelper
 from queue import Queue
 
 
-class RecordQueue(object):
+record_queue = Queue()
 
-    def __init__(self):
-        self.record_queue = None
+app = NSApplication.sharedApplication()
 
-    def reset_queue(self):
-        self.record_queue = Queue()
-
-
-record_queue_manager = RecordQueue()
 
 class AppDelegate(NSObject):
     def applicationDidFinishLaunching_(self, aNotification):
@@ -32,30 +26,31 @@ class AppDelegate(NSObject):
 
 def mouse_left_handler(event):
     loc = NSEvent.mouseLocation()
-    record_queue_manager.record_queue.put(("mouse_left", loc.x, loc.y))
+    record_queue.put(("mouse_left", loc.x, loc.y))
 
 
 def mouse_right_handler(event):
     loc = NSEvent.mouseLocation()
-    record_queue_manager.record_queue.put(("mouse_right", loc.x, loc.y))
+    record_queue.put(("mouse_right", loc.x, loc.y))
 
 
 def keyboard_handler(event):
-    record_queue_manager.record_queue.put(("keyboard", int(hex(event.keyCode()), 16)))
     if int(event.keyCode()) == 98:
-        AppHelper.stopEventLoop()
+        pass
+    else:
+        record_queue.put(("keyboard", int(hex(event.keyCode()), 16)))
+        print(event)
 
 
 def osx_record():
-    record_queue_manager.reset_queue()
-    app = NSApplication.sharedApplication()
+    record_queue = Queue()
     delegate = AppDelegate.alloc().init()
-    NSApp().setDelegate_(delegate)
+    app.setDelegate_(delegate)
     AppHelper.runEventLoop()
 
 
 def osx_stop_record():
-    return record_queue_manager.record_queue
+    return record_queue
 
 
 if __name__ == "__main__":

@@ -864,8 +864,7 @@ elif sys.platform in ["darwin"]:
     keyboard_check = osx_keyboard_check
     mouse = osx_mouse
     screen = osx_screen
-    recorder = osx_recorder
-    if None in [keys_table, mouse_table, keyboard_check, keyboard, mouse, screen, recorder]:
+    if None in [keys_table, mouse_table, keyboard_check, keyboard, mouse, screen]:
         raise AutoControlException("Can't init auto control")
 
 elif sys.platform in ["linux", "linux2"]:
