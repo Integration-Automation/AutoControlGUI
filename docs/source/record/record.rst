@@ -2,6 +2,7 @@
 AutoControlGUI Record
 ========================
 
+| macos can't use record (maybe sometime)
 | record keyboard and mouse event
 
 .. code-block:: python
