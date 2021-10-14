@@ -55,10 +55,6 @@ def stop_record():
             raise AutoControlRecordException(record_not_found_action_error)
 
 
-def close_record():
-    recorder.close_record()
-
-
 if __name__ == "__main__":
     record()
     from time import sleep

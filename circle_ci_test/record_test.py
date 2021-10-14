@@ -4,6 +4,9 @@ from je_auto_control import record
 from je_auto_control import stop_record
 from je_auto_control import type_key
 
+"""
+this program will type test two time
+"""
 record()
 type_key("t")
 type_key("e")

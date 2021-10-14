@@ -11,6 +11,7 @@ AutoControlGUI_JE
    keyboard/keyboard.rst
    screen/screen.rst
    image_detect/image_detect.rst
+   record/record.rst
    test/test.rst
    todo/todo.rst
 
