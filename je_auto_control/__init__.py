@@ -45,4 +45,3 @@ from je_auto_control.utils.je_auto_control_exception.exceptions import AutoContr
 # record
 from je_auto_control.wrapper.auto_control_record import record
 from je_auto_control.wrapper.auto_control_record import stop_record
-from je_auto_control.wrapper.auto_control_record import close_record
