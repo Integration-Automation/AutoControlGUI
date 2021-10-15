@@ -43,3 +43,9 @@ record tags
 """
 record_queue_error = "can't get record queue it's none are you using stop record before record"
 record_not_found_action_error = "record action not found"
+"""
+json action file tag 
+"""
+cant_find_json_error = "can't find json file"
+cant_save_json_error = "can't save json file"
+action_is_null_error = "json action is null"

@@ -5,6 +5,8 @@ from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboa
 from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_error
 from je_auto_control.utils.je_auto_control_exception.exception_tag import screen_error
 from je_auto_control.utils.je_auto_control_exception.exception_tag import record_queue_error
+from je_auto_control.utils.je_auto_control_exception.exception_tag import cant_find_json_error
+from je_auto_control.utils.je_auto_control_exception.exception_tag import action_is_null_error
 
 
 class AutoControlException(Exception):
@@ -51,5 +53,16 @@ class ImageNotFoundException(AutoControlException):
 class AutoControlRecordException(AutoControlException):
     def __init__(self, message=record_queue_error):
         super().__init__(message)
+
+
+class AutoControlJsonActionException(AutoControlException):
+    def __init__(self, message=cant_find_json_error):
+        super().__init__(message)
+
+
+class AutoControlActionNullException(AutoControlException):
+    def __init__(self, message=action_is_null_error):
+        super().__init__(message)
+
 
 

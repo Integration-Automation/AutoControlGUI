@@ -17,6 +17,7 @@ AutoControlGUI Installation
 | if you want to use this on raspberry pi
 .. code-block:: markdown
 
+    sudo apt-get install python3
     pip3 install je_auto_control
     sudo apt-get install libcblas-dev
     sudo apt-get install libhdf5-dev
