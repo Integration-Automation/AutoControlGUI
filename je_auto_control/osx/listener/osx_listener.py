@@ -38,7 +38,7 @@ def keyboard_handler(event):
     if int(event.keyCode()) == 98:
         pass
     else:
-        record_queue.put(("keyboard", int(hex(event.keyCode()), 16)))
+        record_queue.put(("type_key", int(hex(event.keyCode()), 16)))
         print(event)
 
 

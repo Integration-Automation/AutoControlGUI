@@ -5,7 +5,7 @@ with open("README.md", "r") as README:
 
 setuptools.setup(
     name="je_auto_control",
-    version="0.0.46",
+    version="0.0.49",
     author="JE-Chen",
     author_email="zenmailman@gmail.com",
     description="auto control gui",
@@ -17,7 +17,6 @@ setuptools.setup(
         "je_open_cv",
         "pillow",
         "numpy",
-        "je_editor",
         "pyobjc-core;platform_system=='Darwin'",
         "pyobjc;platform_system=='Darwin'",
         "python3-Xlib;platform_system=='Linux'"

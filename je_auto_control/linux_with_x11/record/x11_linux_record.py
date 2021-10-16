@@ -10,7 +10,7 @@ from je_auto_control.linux_with_x11.listener.x11_linux_listener import x11_linux
 
 from queue import Queue
 
-type_dict = {5: "mouse", 3: "keyboard"}
+type_dict = {5: "mouse", 3: "type_key"}
 detail_dict = {1: "mouse_left", 2: "mouse_middle", 3: "mouse_right"}
 
 

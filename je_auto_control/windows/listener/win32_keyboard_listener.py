@@ -49,7 +49,7 @@ class Win32KeyboardListener(Thread):
         if self.record_flag is True:
             # int to hex
             temp = hex(l_param[0] & 0xFFFFFFFF)
-            self.record_queue.put(("keyboard", int(temp, 16)))
+            self.record_queue.put(("type_key", int(temp, 16)))
         return user32.CallNextHookEx(self.hooked, code, w_param, l_param)
 
     def _get_function_pointer(self, function):

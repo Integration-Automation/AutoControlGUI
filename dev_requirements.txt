@@ -1,6 +1,4 @@
 je_auto_control
-je_open_cv
-je_editor
 pillow
 wheel
 twine
