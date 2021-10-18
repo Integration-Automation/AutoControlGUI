@@ -2,7 +2,7 @@
 
 ---
 
-[![CircleCI]([![CircleCI](https://circleci.com/gh/JE-Chen/AutoControl/tree/main.svg?style=svg)](https://circleci.com/gh/JE-Chen/AutoControl/tree/main))
+[![CircleCI](https://circleci.com/gh/JE-Chen/AutoControl/tree/main.svg?style=svg)](https://circleci.com/gh/JE-Chen/AutoControl/tree/main)
 
 ### Documentation
 
