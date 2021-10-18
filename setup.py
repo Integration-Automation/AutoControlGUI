@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.0.49",
     author="JE-Chen",
     author_email="zenmailman@gmail.com",
-    description="auto control gui",
+    description="auto testing",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/JE-Chen/Py_AutoControlGUI",
