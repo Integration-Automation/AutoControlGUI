@@ -2,7 +2,7 @@
 
 ---
 
-[![CircleCI](https://circleci.com/gh/JE-Chen/Python_JEAutoControl/tree/main.svg?style=svg)](https://circleci.com/gh/JE-Chen/Python_JEAutoControl/tree/main)
+[![CircleCI]([![CircleCI](https://circleci.com/gh/JE-Chen/AutoControl/tree/main.svg?style=svg)](https://circleci.com/gh/JE-Chen/AutoControl/tree/main))
 
 ### Documentation
 
