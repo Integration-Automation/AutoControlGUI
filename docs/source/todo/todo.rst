@@ -1,6 +1,6 @@
 ========================
-AutoControlGUI TODO
+AutoControlGUI TODO LIST
 ========================
 * TODO
-    * More feature
-    * Project refactor
+    * more screen function like record screen
+    * Project keep refactor

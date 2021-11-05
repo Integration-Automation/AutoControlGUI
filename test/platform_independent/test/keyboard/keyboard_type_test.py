@@ -7,7 +7,6 @@ from je_auto_control import keys_table
 check keys
 """
 print(keys_table.keys())
-
 """
 Linux in every type and press then release need stop 0.01 time in my computer,i'm not sure it's right?
 

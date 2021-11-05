@@ -2,18 +2,47 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/docs/source/editor/editor.rst" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test/exception/test_image_not_found_exception.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/platform_independent/test/record/test_record.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/execute_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/execute_action_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev_requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/dev_requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/index.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/record/x11_linux_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/record/x11_linux_record.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/listener/osx_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/listener/osx_listener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/action_executer/action_execute.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/action_executer/action_execute.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_keyboard_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_keyboard_listener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/execute_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/execute_action_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/critical_exit_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/critical_exit/critical_exit_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/execute_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/execute_action/execute_action_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/hotkey_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/keyboard/hotkey_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/json_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/execute_action/json_action_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/keyboard_is_press_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/keyboard/keyboard_is_press_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/keyboard_type_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/keyboard/keyboard_type_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/keyboard_write_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/keyboard/keyboard_write_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/locate_all_image_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/image/locate_all_image.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/locate_and_click_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/image/locate_and_click.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/locate_image_center_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/image/locate_image_center.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/mouse_scroll_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/mouse/mouse_scroll_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/mouse_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/mouse/mouse_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/real_critical_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/critical_exit/real_critical_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/record_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/record/record_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/screen_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/screen/screen_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/screenshot_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/screen/screenshot_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_auto_control_exception.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/exception/test_auto_control_exception.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/record/record.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/record/record.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/test/test.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/test/test.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/todo/todo.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/todo/todo.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/critical_exit_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/critical_exit/critical_exit_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/execute_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/execute_action/execute_action_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/hotkey_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/keyboard/hotkey_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/json_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/execute_action/json_action_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/keyboard_is_press_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/keyboard/keyboard_is_press_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/keyboard_type_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/keyboard/keyboard_type_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/keyboard_write_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/keyboard/keyboard_write_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/locate_all_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/image/locate_all_image.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/locate_and_click.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/image/locate_and_click.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/locate_image_center.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/image/locate_image_center.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/mouse_scroll_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/mouse/mouse_scroll_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/mouse_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/mouse/mouse_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/real_critical_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/critical_exit/real_critical_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/record_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/record/record_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/screen_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/screen/screen_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/screenshot_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/screen/screenshot_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/test_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/record/test_record.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,12 +61,11 @@
   </component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/je_auto_control/osx/mouse/osx_mouse.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/test/platform_independent/test/critical_exit_test.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/test/platform_independent/test/critical_exit/critical_exit_test.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/test/platform_independent/with_editor/auto_gui_with_je_editor.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/test/platform_independent/test/mouse_test.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/circle_ci_test/locate_all_image_test.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/test/platform_independent/test/mouse/mouse_test.py" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="ProjectId" id="1wn0qq5AyiVDEsyu3DrNoMAnZ8K" />
   <component name="ProjectLevelVcsManager">
@@ -52,18 +80,21 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/source/editor" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/circle_ci_test" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\docs\source\editor" />
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\circle_ci_test" />
+      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\docs\source\editor" />
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\circle_ci_test\circle_ci_test_source" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\je_auto_control\utils\action_executer" />
-      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\je_auto_control\linux_with_x11\listener" />
+      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\record" />
+      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\critical_exit" />
+      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\screen" />
+      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\mouse" />
+      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\image" />
     </key>
   </component>
   <component name="RunManager" selected="Python.execute_action_test">
@@ -111,7 +142,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="execute_action_test (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="execute_action_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -119,12 +150,12 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/platform_independent/test" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/circle_ci_test" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/platform_independent/test/execute_action_test.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/circle_ci_test/execute_action_test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -141,12 +172,12 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/circle_ci_test" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/platform_independent/test" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/circle_ci_test/execute_action_test.py" />
+      <option name="SCRIPT_NAME" value="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\execute_action\execute_action_test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -201,11 +232,11 @@
     </configuration>
     <list>
       <item itemvalue="Python.test_auto_control_exception" />
-      <item itemvalue="Python.auto_control_record" />
-      <item itemvalue="Python.real_critical_test" />
-      <item itemvalue="Python.execute_action_test" />
-      <item itemvalue="Python.execute_action_test (1)" />
       <item itemvalue="Python.action_execute" />
+      <item itemvalue="Python.auto_control_record" />
+      <item itemvalue="Python.execute_action_test (1)" />
+      <item itemvalue="Python.execute_action_test" />
+      <item itemvalue="Python.real_critical_test" />
     </list>
     <recent_temporary>
       <list>
@@ -240,6 +271,17 @@
       <workItem from="1633315881493" duration="1793000" />
       <workItem from="1633410506839" duration="7459000" />
       <workItem from="1633686699089" duration="1555000" />
+      <workItem from="1635032553047" duration="1851000" />
+      <workItem from="1635127863911" duration="737000" />
+      <workItem from="1635584812046" duration="3000000" />
+      <workItem from="1635694651626" duration="81000" />
+      <workItem from="1635694767559" duration="476000" />
+      <workItem from="1635735390624" duration="722000" />
+      <workItem from="1635817091709" duration="1188000" />
+      <workItem from="1635943869643" duration="1352000" />
+      <workItem from="1635953922859" duration="349000" />
+      <workItem from="1636034334006" duration="588000" />
+      <workItem from="1636090882090" duration="967000" />
     </task>
     <servers />
   </component>
