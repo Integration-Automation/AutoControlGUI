@@ -8,7 +8,7 @@ from Xlib.ext.xtest import fake_input
 from Xlib import X
 
 
-def press_key(keycode):
+def press_key(keycode: int):
     """
     :param keycode which keycode we want to press
     """
@@ -16,7 +16,7 @@ def press_key(keycode):
     display.sync()
 
 
-def release_key(keycode):
+def release_key(keycode: int):
     """
     :param keycode which keycode we want to release
     """

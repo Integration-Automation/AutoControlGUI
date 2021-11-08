@@ -15,7 +15,7 @@ class CriticalExit(Thread):
         self.setDaemon(default_daemon)
         self._exit_check_key = keys_table.get("f7")
 
-    def set_critical_key(self, keycode):
+    def set_critical_key(self, keycode: [int, str] = None):
         """
         :param keycode which keycode we want to check is press ?
         """

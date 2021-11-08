@@ -49,3 +49,7 @@ json action file tag
 cant_find_json_error = "can't find json file"
 cant_save_json_error = "can't save json file"
 action_is_null_error = "json action is null"
+"""
+macos error tag
+"""
+macos_record_error = "macos can't use recorder"

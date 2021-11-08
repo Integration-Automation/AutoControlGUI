@@ -33,7 +33,7 @@ _get_cursor_pos = windll.user32.GetCursorPos
 _set_cursor_pos = windll.user32.SetCursorPos
 
 
-def mouse_event(event, x, y, dwData=0):
+def mouse_event(event, x: int, y: int, dwData: int = 0):
     """
     :param event which event we use
     :param x event x
@@ -57,7 +57,7 @@ def position():
         return None
 
 
-def set_position(x, y):
+def set_position(x: int, y: int):
     """
     :param x set mouse position x
     :param y set mouse position y
@@ -66,7 +66,7 @@ def set_position(x, y):
     _set_cursor_pos(*pos)
 
 
-def press_mouse(press_button):
+def press_mouse(press_button: int):
     """
     :param press_button which button we want to press
     """
@@ -76,7 +76,7 @@ def press_mouse(press_button):
               ctypes.sizeof(Input))
 
 
-def release_mouse(release_button):
+def release_mouse(release_button: int):
     """
     :param release_button which button we want to release
     """
@@ -86,7 +86,7 @@ def release_mouse(release_button):
               ctypes.sizeof(Input))
 
 
-def click_mouse(mouse_keycode, x=None, y=None):
+def click_mouse(mouse_keycode: int, x: int = None, y: int = None):
     """
     :param mouse_keycode which mouse keycode we want to click
     :param x mouse x position
@@ -98,7 +98,7 @@ def click_mouse(mouse_keycode, x=None, y=None):
     release_mouse(mouse_keycode)
 
 
-def scroll(scroll_value, x=None, y=None):
+def scroll(scroll_value: int, x: int = None, y: int = None):
     """
     :param scroll_value scroll count
     :param x scroll x

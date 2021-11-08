@@ -15,16 +15,25 @@ detail_dict = {1: "mouse_left", 2: "mouse_middle", 3: "mouse_right"}
 
 
 class X11LinuxRecorder(object):
-
+    """
+    record controller
+    """
     def __init__(self):
         self.record_queue = None
         self.result_queue = None
 
     def record(self):
+        """
+        create a new queue and start record
+        """
         self.record_queue = Queue()
         x11_linux_record(self.record_queue)
 
     def stop_record(self):
+        """
+        stop record
+        make a format action queue
+        """
         self.result_queue = x11_linux_stop_record()
         action_queue = Queue()
         for details in self.result_queue.queue:

@@ -8,7 +8,7 @@ from je_auto_control.wrapper.platform_wrapper import keyboard_check
 from je_auto_control.wrapper.platform_wrapper import keys_table
 
 
-def press_key(keycode, is_shift=False):
+def press_key(keycode: int, is_shift: bool = False):
     """
     :param keycode which keycode we want to press
     :param is_shift shift is press?
@@ -27,7 +27,7 @@ def press_key(keycode, is_shift=False):
         raise AutoControlKeyboardException(exception_tag.keyboard_press_key)
 
 
-def release_key(keycode, is_shift=False):
+def release_key(keycode: int, is_shift: bool = False):
     """
     :param keycode which keycode we want to release
     :param is_shift shift is press?
@@ -46,7 +46,7 @@ def release_key(keycode, is_shift=False):
         raise AutoControlKeyboardException(exception_tag.keyboard_release_key)
 
 
-def type_key(keycode, is_shift=False):
+def type_key(keycode: int, is_shift: bool = False):
     """
     :param keycode which keycode we want to type
     :param is_shift shift is press?
@@ -58,7 +58,7 @@ def type_key(keycode, is_shift=False):
         raise AutoControlKeyboardException(exception_tag.keyboard_type_key)
 
 
-def check_key_is_press(keycode):
+def check_key_is_press(keycode: int):
     """
     :param keycode check key press?
     """
@@ -69,7 +69,7 @@ def check_key_is_press(keycode):
     return keyboard_check.check_key_is_press(keycode=get_key_code)
 
 
-def write(write_string, is_shift=False):
+def write(write_string: str, is_shift: bool = False):
     """
     :param write_string while string not on write_string+1 type_key(string)
     :param is_shift shift is press?
@@ -87,7 +87,7 @@ def write(write_string, is_shift=False):
         raise AutoControlKeyboardException(exception_tag.keyboard_write)
 
 
-def hotkey(key_code_list, is_shift=False):
+def hotkey(key_code_list: list, is_shift: bool = False):
     """
     :param key_code_list press and release all key on list and reverse
     :param is_shift shift is press?

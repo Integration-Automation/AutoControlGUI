@@ -18,7 +18,7 @@ def size():
         raise AutoControlScreenException(exception_tag.screen_get_size)
 
 
-def screenshot(file_path=None, region=None):
+def screenshot(file_path: str = None, region:list = None):
     """
     :param file_path screenshot file save path
     :param region screenshot region

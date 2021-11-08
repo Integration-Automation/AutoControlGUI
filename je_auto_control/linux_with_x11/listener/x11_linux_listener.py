@@ -33,7 +33,7 @@ class KeypressHandler(Thread):
         self.event_position = 0, 0
 
     # two times because press and release
-    def check_is_press(self, keycode):
+    def check_is_press(self, keycode: int):
         """
         :param keycode we want to check
         """
@@ -66,6 +66,9 @@ class KeypressHandler(Thread):
             raise Exception
 
     def record(self, record_queue):
+        """
+        :param record_queue the queue record action
+        """
         self.record_flag = True
         self.record_queue = record_queue
 
@@ -89,7 +92,7 @@ class XWindowsKeypressListener(Thread):
         self.root = current_display.screen().root
         self.context = None
 
-    def check_is_press(self, keycode):
+    def check_is_press(self, keycode: int):
         """
         :param keycode check this keycode is press?
         """
@@ -142,7 +145,7 @@ xwindows_listener = XWindowsKeypressListener()
 xwindows_listener.start()
 
 
-def check_key_is_press(keycode):
+def check_key_is_press(keycode: int):
     """
     :param keycode check this keycode is press?
     """
@@ -150,10 +153,16 @@ def check_key_is_press(keycode):
 
 
 def x11_linux_record(record_queue):
+    """
+    :param record_queue the queue record action
+    """
     xwindows_listener.record(record_queue)
 
 
 def x11_linux_stop_record():
+    """
+    stop record action
+    """
     return xwindows_listener.stop_record()
 
 

@@ -53,7 +53,11 @@ event_dict = {
 }
 
 
-def execute_action(action_list):
+def execute_action(action_list: list):
+    """
+    :param action_list the list include action
+    for loop the list and execute action
+    """
     if action_list is None:
         raise AutoControlActionNullException
     for action in action_list:

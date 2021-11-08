@@ -19,7 +19,7 @@ def position():
         raise AutoControlMouseException(exception_tag.mouse_get_position)
 
 
-def set_position(x, y):
+def set_position(x: int, y: int):
     """
     :param x set position x
     :param y set position y
@@ -30,7 +30,7 @@ def set_position(x, y):
         raise AutoControlMouseException(exception_tag.mouse_set_position)
 
 
-def press_mouse(mouse_keycode, x=None, y=None):
+def press_mouse(mouse_keycode: int, x: int = None, y: int = None):
     """
     :param mouse_keycode which mouse keycode we want to press
     :param x event x
@@ -54,7 +54,7 @@ def press_mouse(mouse_keycode, x=None, y=None):
         raise AutoControlMouseException(exception_tag.mouse_press_mouse)
 
 
-def release_mouse(mouse_keycode, x=None, y=None):
+def release_mouse(mouse_keycode: int, x: int = None, y: int = None):
     """
     :param mouse_keycode which mouse keycode we want to release
     :param x event x
@@ -81,7 +81,7 @@ def release_mouse(mouse_keycode, x=None, y=None):
         raise AutoControlMouseException(exception_tag.mouse_release_mouse)
 
 
-def click_mouse(mouse_keycode, x=None, y=None):
+def click_mouse(mouse_keycode: int, x: int = None, y: int = None):
     """
     :param mouse_keycode which mouse keycode we want to click
     :param x event x
@@ -105,16 +105,16 @@ def click_mouse(mouse_keycode, x=None, y=None):
         raise AutoControlMouseException(exception_tag.mouse_click_mouse)
 
 
-def scroll(scroll_value, x=None, y=None, scroll_direction="scroll_down"):
+def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down"):
     """"
     :param scroll_value scroll count
     :param x event x
     :param y event y
     :param scroll_direction which direction we want
-    scroll_direction = 4 : direction up
-    scroll_direction = 5 : direction down
-    scroll_direction = 6 : direction left
-    scroll_direction = 7 : direction right
+    scroll_direction = scroll_up : direction up
+    scroll_direction = scroll_down : direction down
+    scroll_direction = scroll_left : direction left
+    scroll_direction = scroll_right : direction right
     """
     try:
         now_cursor_x, now_cursor_y = position()

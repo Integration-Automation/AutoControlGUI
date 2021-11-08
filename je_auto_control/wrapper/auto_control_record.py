@@ -7,6 +7,9 @@ from je_auto_control.wrapper.auto_control_keyboard import type_key
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.platform_wrapper import recorder
 
+from je_auto_control.utils.je_auto_control_exception.exception_tag import macos_record_error
+
+
 event_dict = {"mouse_left": "click_mouse", "mouse_right": "click_mouse", "mouse_middle": "click_mouse",
               "keyboard": "type_key"}
 
@@ -37,13 +40,13 @@ def stop_record_keyboard():
 
 def record():
     if sys.platform == "darwin":
-        raise AutoControlException("macos can't use recorder")
+        raise AutoControlException(macos_record_error)
     recorder.record()
 
 
 def stop_record():
     if sys.platform == "darwin":
-        raise AutoControlException("macos can't use recorder")
+        raise AutoControlException(macos_record_error)
     action_queue = recorder.stop_record()
     if action_queue is None:
         raise AutoControlJsonActionException

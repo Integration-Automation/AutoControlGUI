@@ -4,7 +4,7 @@ from je_auto_control.utils.je_auto_control_exception import exception_tag
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlScreenException
 
 
-def pil_screenshot(file_path=None, region=None):
+def pil_screenshot(file_path: str = None, region: list = None):
     """
     :param file_path save screenshot path
     :param region screenshot region
@@ -16,4 +16,3 @@ def pil_screenshot(file_path=None, region=None):
     if file_path is not None:
         image.save(file_path)
     return image
-

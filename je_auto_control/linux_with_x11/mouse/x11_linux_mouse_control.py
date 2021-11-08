@@ -25,7 +25,7 @@ def position():
     return coord["root_x"], coord["root_y"]
 
 
-def set_position(x, y):
+def set_position(x: int, y: int):
     """
     :param x we want to set mouse x position
     :param y we want to set mouse y position
@@ -34,7 +34,7 @@ def set_position(x, y):
     display.sync()
 
 
-def press_mouse(mouse_keycode):
+def press_mouse(mouse_keycode: int):
     """
     :param mouse_keycode mouse keycode we want to press
     """
@@ -42,7 +42,7 @@ def press_mouse(mouse_keycode):
     display.sync()
 
 
-def release_mouse(mouse_keycode):
+def release_mouse(mouse_keycode: int):
     """
     :param mouse_keycode which mouse keycode we want to release
     """
@@ -50,7 +50,7 @@ def release_mouse(mouse_keycode):
     display.sync()
 
 
-def click_mouse(mouse_keycode, x=None, y=None):
+def click_mouse(mouse_keycode: int, x=None, y=None):
     """
     :param mouse_keycode which mouse keycode we want to click
     :param x set mouse x position
@@ -62,7 +62,7 @@ def click_mouse(mouse_keycode, x=None, y=None):
     release_mouse(mouse_keycode)
 
 
-def scroll(scroll_value, scroll_direction):
+def scroll(scroll_value: int, scroll_direction: int):
     """"
     :param scroll_value scroll unit
     :param scroll_direction what direction you want to scroll

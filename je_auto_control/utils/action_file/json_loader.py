@@ -8,7 +8,10 @@ from je_auto_control.utils.je_auto_control_exception.exception_tag import cant_s
 lock = Lock()
 
 
-def read_action_json(json_file_path):
+def read_action_json(json_file_path: str):
+    """
+    :param json_file_path json file's path to read
+    """
     try:
         lock.acquire()
         file_path = Path(json_file_path)
@@ -21,7 +24,11 @@ def read_action_json(json_file_path):
         lock.release()
 
 
-def write_action_json(json_save_path, action_json):
+def write_action_json(json_save_path: str, action_json: str):
+    """
+    :param json_save_path  json save path
+    :param action_json the json str include action to write
+    """
     try:
         lock.acquire()
         with open(json_save_path, "w+") as file_to_write:

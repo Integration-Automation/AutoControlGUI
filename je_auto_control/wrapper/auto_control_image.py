@@ -5,7 +5,7 @@ from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.auto_control_mouse import set_position
 
 
-def locate_all_image(image, detect_threshold=1, draw_image=False):
+def locate_all_image(image, detect_threshold: float = 1, draw_image: bool = False):
     """
     :param image which image we want to find on screen
     :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal
@@ -21,7 +21,7 @@ def locate_all_image(image, detect_threshold=1, draw_image=False):
         raise ImageNotFoundException(exception_tag.cant_find_image)
 
 
-def locate_image_center(image, detect_threshold=1, draw_image=False):
+def locate_image_center(image, detect_threshold: float = 1, draw_image: bool = False):
     """
     :param image which image we want to find on screen
     :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal
@@ -40,7 +40,7 @@ def locate_image_center(image, detect_threshold=1, draw_image=False):
         raise ImageNotFoundException(exception_tag.cant_find_image)
 
 
-def locate_and_click(image, mouse_keycode, detect_threshold=1, draw_image=False):
+def locate_and_click(image, mouse_keycode: int, detect_threshold: float = 1, draw_image: bool = False):
     """
     :param image which image we want to find on screen
     :param mouse_keycode which mouse keycode we want to click

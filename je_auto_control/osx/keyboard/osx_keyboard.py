@@ -38,7 +38,7 @@ special_key_table = {
 }
 
 
-def normal_key(keycode, is_shift, is_down):
+def normal_key(keycode: int, is_shift: bool, is_down: bool):
     """
     :param keycode which keycode we want to press or release
     :param is_shift use shift key ?
@@ -61,7 +61,7 @@ def normal_key(keycode, is_shift, is_down):
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
 
 
-def special_key(keycode, is_shift):
+def special_key(keycode: int, is_shift: bool):
     """
     :param keycode which keycode we want to press or release
     :param is_shift use shift key ?
@@ -83,7 +83,7 @@ def special_key(keycode, is_shift):
     Quartz.CGEventPost(0, event)
 
 
-def press_key(keycode, is_shift):
+def press_key(keycode: int, is_shift: bool):
     """
     :param keycode which keycode we want to press
     :param is_shift is shift press?
@@ -94,7 +94,7 @@ def press_key(keycode, is_shift):
         normal_key(keycode, is_shift, True)
 
 
-def release_key(keycode, is_shift):
+def release_key(keycode: int, is_shift: bool):
     """
     :param keycode which keycode we want to release
     :param is_shift is shift press?

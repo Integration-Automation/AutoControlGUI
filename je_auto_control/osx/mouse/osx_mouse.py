@@ -19,7 +19,7 @@ def position():
     return (Quartz.NSEvent.mouseLocation().x, Quartz.NSEvent.mouseLocation().y)
 
 
-def mouse_event(event, x, y, mouse_button):
+def mouse_event(event, x: int, y: int, mouse_button: int):
     """
     :param event which event we want to use
     :param x event x
@@ -30,7 +30,7 @@ def mouse_event(event, x, y, mouse_button):
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, curr_event)
 
 
-def set_position(x, y):
+def set_position(x: int, y: int):
     """
     :param x we want to set mouse x position
     :param y we want to set mouse y position
@@ -38,7 +38,7 @@ def set_position(x, y):
     mouse_event(Quartz.kCGEventMouseMoved, x, y, 0)
 
 
-def press_mouse(mouse_button, x, y):
+def press_mouse(x: int, y: int, mouse_button: int):
     """
     :param x event x
     :param y event y
@@ -52,7 +52,7 @@ def press_mouse(mouse_button, x, y):
         mouse_event(Quartz.kCGEventRightMouseDown, x, y, Quartz.kCGMouseButtonRight)
 
 
-def release_mouse(x, y, mouse_button):
+def release_mouse(x: int, y: int, mouse_button: int):
     """
     :param x event x
     :param y event y
@@ -66,7 +66,7 @@ def release_mouse(x, y, mouse_button):
         mouse_event(Quartz.kCGEventRightMouseUp, x, y, Quartz.kCGMouseButtonRight)
 
 
-def click_mouse(x, y, mouse_button):
+def click_mouse(x: int, y: int, mouse_button: int):
     """
     :param x event x
     :param y event y
@@ -86,7 +86,7 @@ def click_mouse(x, y, mouse_button):
         release_mouse(x, y, mouse_button)
 
 
-def scroll(scroll_value):
+def scroll(scroll_value: int):
     """
     :param scroll_value scroll count
     """
