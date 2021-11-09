@@ -1,7 +1,11 @@
 import sys
 
+
+from je_auto_control.utils.je_auto_control_exception.exception_tag import osx_import_error
+from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlException
+
 if sys.platform not in ["darwin"]:
-    raise Exception("should be only loaded on MacOS")
+    raise AutoControlException(osx_import_error)
 
 from je_auto_control.osx.listener.osx_listener import osx_record
 from je_auto_control.osx.listener.osx_listener import osx_stop_record

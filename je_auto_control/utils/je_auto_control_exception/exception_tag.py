@@ -4,6 +4,12 @@ error tags
 je_auto_control_error = "Auto control error"
 je_auto_control_critical_exit_error = "Auto control critical exit error"
 """
+os tags
+"""
+linux_import_error = "should be only loaded on linux"
+osx_import_error = "should be only loaded on MacOS"
+windows_import_error = "should be only loaded on windows"
+"""
 keyboard tags
 """
 keyboard_error = "Auto control keyboard error"
