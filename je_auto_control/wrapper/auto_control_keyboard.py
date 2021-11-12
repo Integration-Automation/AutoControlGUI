@@ -1,6 +1,12 @@
 import sys
 
-from je_auto_control.utils.je_auto_control_exception import exception_tag
+from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_hotkey
+from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_press_key
+from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_release_key
+from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_type_key
+from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_write
+from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_write_cant_find
+from je_auto_control.utils.je_auto_control_exception.exception_tag import table_cant_find_key
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlCantFindKeyException
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlKeyboardException
 from je_auto_control.wrapper.platform_wrapper import keyboard
@@ -17,14 +23,14 @@ def press_key(keycode: int, is_shift: bool = False):
         try:
             keycode = keys_table.get(keycode)
         except Exception:
-            raise AutoControlCantFindKeyException(exception_tag.table_cant_find_key)
+            raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
         if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
             keyboard.press_key(keycode)
         elif sys.platform in ["darwin"]:
             keyboard.press_key(keycode, is_shift=is_shift)
     except Exception:
-        raise AutoControlKeyboardException(exception_tag.keyboard_press_key)
+        raise AutoControlKeyboardException(keyboard_press_key)
 
 
 def release_key(keycode: int, is_shift: bool = False):
@@ -36,14 +42,14 @@ def release_key(keycode: int, is_shift: bool = False):
         try:
             keycode = keys_table.get(keycode)
         except Exception:
-            raise AutoControlCantFindKeyException(exception_tag.table_cant_find_key)
+            raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
         if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
             keyboard.release_key(keycode)
         elif sys.platform in ["darwin"]:
             keyboard.release_key(keycode, is_shift=is_shift)
     except Exception:
-        raise AutoControlKeyboardException(exception_tag.keyboard_release_key)
+        raise AutoControlKeyboardException(keyboard_release_key)
 
 
 def type_key(keycode: int, is_shift: bool = False):
@@ -55,7 +61,7 @@ def type_key(keycode: int, is_shift: bool = False):
         press_key(keycode, is_shift)
         release_key(keycode, is_shift)
     except AutoControlKeyboardException:
-        raise AutoControlKeyboardException(exception_tag.keyboard_type_key)
+        raise AutoControlKeyboardException(keyboard_type_key)
 
 
 def check_key_is_press(keycode: int):
@@ -81,10 +87,10 @@ def write(write_string: str, is_shift: bool = False):
                     type_key(single_string, is_shift)
                 else:
                     raise AutoControlKeyboardException
-            except AutoControlKeyboardException:
-                print(exception_tag.keyboard_write_cant_find + " : " + single_string, file=sys.stderr)
+            except AutoControlKeyboardException(keyboard_write_cant_find):
+                print(keyboard_write_cant_find + " : " + single_string, file=sys.stderr)
     except AutoControlKeyboardException:
-        raise AutoControlKeyboardException(exception_tag.keyboard_write)
+        raise AutoControlKeyboardException(keyboard_write)
 
 
 def hotkey(key_code_list: list, is_shift: bool = False):
@@ -99,4 +105,4 @@ def hotkey(key_code_list: list, is_shift: bool = False):
         for key in key_code_list:
             release_key(key, is_shift)
     except AutoControlKeyboardException:
-        raise AutoControlKeyboardException(exception_tag.keyboard_hotkey)
+        raise AutoControlKeyboardException(keyboard_hotkey)

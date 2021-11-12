@@ -1,14 +1,12 @@
 import sys
 
 from je_auto_control.utils.action_executer.action_execute import execute_action
+from je_auto_control.utils.je_auto_control_exception.exception_tag import macos_record_error
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlException
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlJsonActionException
 from je_auto_control.wrapper.auto_control_keyboard import type_key
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.platform_wrapper import recorder
-
-from je_auto_control.utils.je_auto_control_exception.exception_tag import macos_record_error
-
 
 event_dict = {"mouse_left": "click_mouse", "mouse_right": "click_mouse", "mouse_middle": "click_mouse",
               "keyboard": "type_key"}
@@ -57,6 +55,7 @@ def stop_record():
 if __name__ == "__main__":
     record()
     from time import sleep
+
     sleep(5)
     stop_record()
     sleep(2)
