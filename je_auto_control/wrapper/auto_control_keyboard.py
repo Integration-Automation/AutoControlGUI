@@ -87,8 +87,8 @@ def write(write_string: str, is_shift: bool = False):
                     type_key(single_string, is_shift)
                 else:
                     raise AutoControlKeyboardException
-            except AutoControlKeyboardException(keyboard_write_cant_find):
-                print(keyboard_write_cant_find + " : " + single_string, file=sys.stderr)
+            except AutoControlKeyboardException:
+                raise AutoControlKeyboardException(keyboard_write_cant_find)
     except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_write)
 
