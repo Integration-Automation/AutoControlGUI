@@ -3,6 +3,7 @@ import sys
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlException
 from je_auto_control.utils.je_auto_control_exception.exception_tag import linux_import_error
 
+
 if sys.platform not in ["linux", "linux2"]:
     raise AutoControlException(linux_import_error)
 
@@ -65,8 +66,8 @@ class KeypressHandler(Thread):
                         if self.record_flag is True:
                             temp = (event.type, event.detail, event.root_x, event.root_y)
                             self.record_queue.put(temp)
-        except Exception:
-            raise Exception
+        except AutoControlException:
+            raise AutoControlException
 
     def record(self, record_queue):
         """
@@ -131,8 +132,8 @@ class XWindowsKeypressListener(Thread):
                     current_display.record_free_context(self.context)
                 # keep running this to get event
                 next_event = self.root.display.next_event()
-            except Exception:
-                raise Exception
+            except AutoControlException:
+                raise AutoControlException
             finally:
                 self.handler.still_listener = False
                 self.still_listener = False
