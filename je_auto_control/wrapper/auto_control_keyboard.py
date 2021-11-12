@@ -86,7 +86,7 @@ def write(write_string: str, is_shift: bool = False):
                 if keys_table.get(single_string) is not None:
                     type_key(single_string, is_shift)
                 else:
-                    raise AutoControlKeyboardException
+                    raise AutoControlKeyboardException(keyboard_write_cant_find)
             except AutoControlKeyboardException:
                 raise AutoControlKeyboardException(keyboard_write_cant_find)
     except AutoControlKeyboardException:
