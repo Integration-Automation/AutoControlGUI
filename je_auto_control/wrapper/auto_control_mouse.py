@@ -1,6 +1,9 @@
 import sys
 
-from je_auto_control.utils.je_auto_control_exception import exception_tag
+from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_click_mouse
+from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_press_mouse
+from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_release_mouse
+from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_set_position
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlCantFindKeyException
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlMouseException
 from je_auto_control.wrapper.auto_control_screen import size
@@ -16,7 +19,7 @@ def position():
     try:
         return mouse.position()
     except Exception:
-        raise AutoControlMouseException(exception_tag.mouse_get_position)
+        raise AutoControlMouseException(mouse_get_position)
 
 
 def set_position(x: int, y: int):
@@ -27,7 +30,7 @@ def set_position(x: int, y: int):
     try:
         mouse.set_position(x=x, y=y)
     except Exception:
-        raise AutoControlMouseException(exception_tag.mouse_set_position)
+        raise AutoControlMouseException(mouse_set_position)
 
 
 def press_mouse(mouse_keycode: int, x: int = None, y: int = None):
@@ -39,7 +42,7 @@ def press_mouse(mouse_keycode: int, x: int = None, y: int = None):
     try:
         mouse_keycode = mouse_table.get(mouse_keycode)
     except Exception:
-        raise AutoControlCantFindKeyException(exception_tag.table_cant_find_key)
+        raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
         now_x, now_y = position()
         if x is None:
@@ -51,7 +54,7 @@ def press_mouse(mouse_keycode: int, x: int = None, y: int = None):
         elif sys.platform in ["darwin"]:
             mouse.press_mouse(x, y, mouse_keycode)
     except Exception:
-        raise AutoControlMouseException(exception_tag.mouse_press_mouse)
+        raise AutoControlMouseException(mouse_press_mouse)
 
 
 def release_mouse(mouse_keycode: int, x: int = None, y: int = None):
@@ -63,7 +66,7 @@ def release_mouse(mouse_keycode: int, x: int = None, y: int = None):
     try:
         mouse_keycode = mouse_table.get(mouse_keycode)
     except Exception:
-        raise AutoControlCantFindKeyException(exception_tag.table_cant_find_key)
+        raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
         now_x, now_y = position()
         if x is None:
@@ -71,14 +74,14 @@ def release_mouse(mouse_keycode: int, x: int = None, y: int = None):
         if y is None:
             y = now_y
     except Exception:
-        raise AutoControlMouseException(exception_tag.mouse_get_position)
+        raise AutoControlMouseException(mouse_get_position)
     try:
         if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
             mouse.release_mouse(mouse_keycode)
         elif sys.platform in ["darwin"]:
             mouse.release_mouse(x, y, mouse_keycode)
     except Exception:
-        raise AutoControlMouseException(exception_tag.mouse_release_mouse)
+        raise AutoControlMouseException(mouse_release_mouse)
 
 
 def click_mouse(mouse_keycode: int, x: int = None, y: int = None):
@@ -90,7 +93,7 @@ def click_mouse(mouse_keycode: int, x: int = None, y: int = None):
     try:
         mouse_keycode = mouse_table.get(mouse_keycode)
     except Exception:
-        raise AutoControlCantFindKeyException(exception_tag.table_cant_find_key)
+        raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
         now_x, now_y = position()
         if x is None:
@@ -98,11 +101,11 @@ def click_mouse(mouse_keycode: int, x: int = None, y: int = None):
         if y is None:
             y = now_y
     except Exception:
-        raise AutoControlMouseException(exception_tag.mouse_get_position)
+        raise AutoControlMouseException(mouse_get_position)
     try:
         mouse.click_mouse(mouse_keycode, x, y)
     except Exception:
-        raise AutoControlMouseException(exception_tag.mouse_click_mouse)
+        raise AutoControlMouseException(mouse_click_mouse)
 
 
 def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down"):
@@ -119,7 +122,7 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
     try:
         now_cursor_x, now_cursor_y = position()
     except Exception:
-        raise AutoControlMouseException(exception_tag.mouse_get_position)
+        raise AutoControlMouseException(mouse_get_position)
     width, height = size()
     if x is None:
         x = now_cursor_x
@@ -144,4 +147,4 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
             scroll_direction = special_table.get(scroll_direction)
             mouse.scroll(scroll_value, scroll_direction)
     except Exception:
-        raise AutoControlMouseException(exception_tag.mouse_click_mouse)
+        raise AutoControlMouseException(mouse_click_mouse)

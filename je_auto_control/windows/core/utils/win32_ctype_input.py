@@ -1,7 +1,10 @@
 import sys
 
+from je_auto_control.utils.je_auto_control_exception.exception_tag import windows_import_error
+from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlException
+
 if sys.platform not in ["win32", "cygwin", "msys"]:
-    raise Exception("should be only loaded on windows")
+    raise AutoControlException(windows_import_error)
 
 import ctypes
 from ctypes import wintypes
