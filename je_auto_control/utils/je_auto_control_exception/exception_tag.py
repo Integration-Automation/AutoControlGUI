@@ -56,6 +56,7 @@ record_not_found_action_error = "record action not found"
 """
 json action file tag 
 """
+cant_execute_action_error = "can't execute action"
 cant_find_json_error = "can't find json file"
 cant_save_json_error = "can't save json file"
 action_is_null_error = "json action is null"

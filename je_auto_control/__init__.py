@@ -43,6 +43,7 @@ from je_auto_control.utils.je_auto_control_exception.exceptions import ImageNotF
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlJsonActionException
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlRecordException
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlActionNullException
+from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlActionException
 
 # record
 from je_auto_control.wrapper.auto_control_record import record
