@@ -63,8 +63,8 @@ jobs:
           command: python ./circle_ci_test/execute_action/execute_action_test.py
           name: execute_action_test
       - run:
-          command: python ./circle_ci_test/execute_action/json_action_test.py
-          name: json_action_test
+          command: python ./circle_ci_test/json/json_test.py
+          name: json_test
 
 workflows:
   main:

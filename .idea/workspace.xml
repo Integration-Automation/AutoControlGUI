@@ -2,11 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/action_executer/action_execute.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/action_executer/action_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/action_file/json_loader.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/action_file/json_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_record.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/execute_action/json_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/json/json_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/execute_action/json_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/json/json_test.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -47,7 +46,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/circle_ci_test" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
@@ -273,7 +272,7 @@
       <workItem from="1636090882090" duration="967000" />
       <workItem from="1636891087149" duration="1412000" />
       <workItem from="1636941910253" duration="1113000" />
-      <workItem from="1637030570122" duration="18150000" />
+      <workItem from="1637030570122" duration="18912000" />
     </task>
     <servers />
   </component>
