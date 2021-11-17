@@ -49,10 +49,7 @@ event_dict = {
     "locate_and_click": ("locate_and_click", locate_and_click),
     # screen
     "size": ("size", size),
-    "screenshot": ("screenshot", screenshot),
-    # python's basic function
-    "print": ("print", print)
-
+    "screenshot": ("screenshot", screenshot)
 }
 
 
@@ -60,7 +57,7 @@ def execute_event(action):
     event = event_dict.get(action[0])
     if event[0] in ["click_mouse"]:
         event[1](action[0], action[1], action[2])
-    elif event[0] in ["type_key", "press_key", "release_key", "check_key_is_press", "write", "print"]:
+    elif event[0] in ["type_key", "press_key", "release_key", "check_key_is_press", "write"]:
         event[1](action[1])
     elif event[0] in ["position", "record", "stop_record", "size"]:
         event[1]()
@@ -85,9 +82,9 @@ def execute_action(action_list: list):
             execute_event(action)
         except AutoControlActionException:
             raise AutoControlActionException(cant_execute_action_error)
-        temp_string = "execute: " + str(action) + "\n"
+        temp_string = "execute: " + str(action)
         print(temp_string)
-        execute_record_string = "".join([execute_record_string, temp_string])
+        execute_record_string = "".join([execute_record_string, temp_string + "\n"])
     return execute_record_string
 
 
