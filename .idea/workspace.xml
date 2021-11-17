@@ -4,8 +4,6 @@
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/execute_action/json_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test/json/json_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/platform_independent/test/execute_action/json_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/platform_independent/test/json/json_test.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -56,11 +54,11 @@
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\circle_ci_test\circle_ci_test_source" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\json" />
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\record" />
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\critical_exit" />
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\screen" />
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\mouse" />
-      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\image" />
     </key>
   </component>
   <component name="RunManager" selected="Python.action_executor">
@@ -272,7 +270,7 @@
       <workItem from="1636090882090" duration="967000" />
       <workItem from="1636891087149" duration="1412000" />
       <workItem from="1636941910253" duration="1113000" />
-      <workItem from="1637030570122" duration="18912000" />
+      <workItem from="1637030570122" duration="24251000" />
     </task>
     <servers />
   </component>
