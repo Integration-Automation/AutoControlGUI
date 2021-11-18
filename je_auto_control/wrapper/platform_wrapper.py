@@ -178,6 +178,7 @@ if sys.platform in ["win32", "cygwin", "msys"]:
     from je_auto_control.windows.mouse.win32_ctype_mouse_control import win32_mouse_x2
     from je_auto_control.windows.screen import win32_screen
     from je_auto_control.windows.record.win32_record import win32_recorder
+    from je_auto_control.windows.core.utils import win32_keypress_check
 
 elif sys.platform in ["darwin"]:
     from je_auto_control.osx.core.utils.osx_vk import osx_key_a, osx_key_A
