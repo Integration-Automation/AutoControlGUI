@@ -41,7 +41,7 @@ def locate_image_center(image, detect_threshold: float = 1, draw_image: bool = F
         raise ImageNotFoundException(cant_find_image)
 
 
-def locate_and_click(image, mouse_keycode: int, detect_threshold: float = 1, draw_image: bool = False):
+def locate_and_click(image, mouse_keycode: [int, str], detect_threshold: float = 1, draw_image: bool = False):
     """
     :param image which image we want to find on screen
     :param mouse_keycode which mouse keycode we want to click
