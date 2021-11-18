@@ -170,7 +170,6 @@ if sys.platform in ["win32", "cygwin", "msys"]:
     from je_auto_control.windows.core.utils.win32_vk import win32_keyY
     from je_auto_control.windows.core.utils.win32_vk import win32_keyZ
     from je_auto_control.windows.keyboard import win32_ctype_keyboard_control
-    from je_auto_control.windows.keyboard import win32_keyboard_check
     from je_auto_control.windows.mouse import win32_ctype_mouse_control
     from je_auto_control.windows.mouse.win32_ctype_mouse_control import win32_mouse_left
     from je_auto_control.windows.mouse.win32_ctype_mouse_control import win32_mouse_middle
@@ -284,7 +283,6 @@ elif sys.platform in ["darwin"]:
     from je_auto_control.osx.screen import osx_screen
     from je_auto_control.osx.keyboard import osx_keyboard
     from je_auto_control.osx.keyboard import osx_keyboard_check
-    from je_auto_control.osx.record.osx_record import osx_recorder
 
 elif sys.platform in ["linux", "linux2"]:
     from je_auto_control.linux_with_x11.core.utils.x11_linux_vk import x11_linux_key_backspace
