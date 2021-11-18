@@ -696,7 +696,7 @@ if sys.platform in ["win32", "cygwin", "msys"]:
      "mouse_x2": win32_mouse_x2
     }
     keyboard = win32_ctype_keyboard_control
-    keyboard_check = win32_keyboard_check
+    keyboard_check = win32_keypress_check
     mouse = win32_ctype_mouse_control
     screen = win32_screen
     recorder = win32_recorder
