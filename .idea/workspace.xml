@@ -2,13 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/Python_JEAutoControl.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Python_JEAutoControl.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_mouse.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_mouse.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_screen.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/action_executer/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/action_executer/action_executor.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -74,8 +69,8 @@
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\screen" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.hotkey_test">
-    <configuration name="action_executor" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python.action_executor (1)">
+    <configuration name="action_executor (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -88,7 +83,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\je_auto_control\utils\action_executer\action_executor.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/je_auto_control/utils/action_executer/action_executor.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -209,19 +204,19 @@
     </configuration>
     <list>
       <item itemvalue="Python.test_auto_control_exception" />
-      <item itemvalue="Python.action_executor" />
       <item itemvalue="Python.test" />
       <item itemvalue="Python.win32_keypress_check" />
       <item itemvalue="Python.screenshot_test" />
       <item itemvalue="Python.hotkey_test" />
+      <item itemvalue="Python.action_executor (1)" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.action_executor (1)" />
         <item itemvalue="Python.hotkey_test" />
         <item itemvalue="Python.screenshot_test" />
         <item itemvalue="Python.win32_keypress_check" />
         <item itemvalue="Python.test" />
-        <item itemvalue="Python.action_executor" />
       </list>
     </recent_temporary>
   </component>
@@ -264,7 +259,7 @@
       <workItem from="1636090882090" duration="967000" />
       <workItem from="1636891087149" duration="1412000" />
       <workItem from="1636941910253" duration="1113000" />
-      <workItem from="1637030570122" duration="28481000" />
+      <workItem from="1637030570122" duration="30037000" />
     </task>
     <servers />
   </component>
@@ -302,6 +297,7 @@
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$locate_and_click.coverage" NAME="locate_and_click Coverage Results" MODIFIED="1629094142647" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$keyboard_is_press_test.coverage" NAME="keyboard_is_press_test Coverage Results" MODIFIED="1629290140164" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$x11_linux_listener.coverage" NAME="x11_linux_listener Coverage Results" MODIFIED="1633678306221" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/linux_with_x11/listener" />
+    <SUITE FILE_PATH="coverage/Python_JEAutoControl$action_executor__1_.coverage" NAME="action_executor (1) Coverage Results" MODIFIED="1637302010513" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/action_executer" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$locate_all_image.coverage" NAME="locate_all_image Coverage Results" MODIFIED="1629265031765" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$win32_keyboard_listener__1_.coverage" NAME="win32_keyboard_listener (1) Coverage Results" MODIFIED="1633763750797" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/listener" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$hotkey_test.coverage" NAME="hotkey_test Coverage Results" MODIFIED="1637300409697" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/keyboard" />
