@@ -24,7 +24,7 @@ def position():
         raise AutoControlMouseException(mouse_get_position)
 
 
-def set_position(x: int, y: int):
+def set_position(x: int, y: int, **kwargs):
     """
     :param x set position x
     :param y set position y
@@ -35,7 +35,7 @@ def set_position(x: int, y: int):
         raise AutoControlMouseException(mouse_set_position)
 
 
-def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
+def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
     """
     :param mouse_keycode which mouse keycode we want to press
     :param x event x
@@ -62,7 +62,7 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
         raise AutoControlMouseException(mouse_press_mouse)
 
 
-def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
+def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
     """
     :param mouse_keycode which mouse keycode we want to release
     :param x event x
@@ -92,7 +92,7 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
         raise AutoControlMouseException(mouse_release_mouse)
 
 
-def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
+def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
     """
     :param mouse_keycode which mouse keycode we want to click
     :param x event x
@@ -119,7 +119,7 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
         raise AutoControlMouseException(mouse_click_mouse)
 
 
-def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down"):
+def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down", **kwargs):
     """"
     :param scroll_value scroll count
     :param x event x
