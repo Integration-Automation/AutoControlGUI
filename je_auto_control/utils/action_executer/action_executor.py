@@ -25,48 +25,40 @@ from je_auto_control.utils.je_auto_control_exception.exception_tag import cant_e
 
 event_dict = {
     # mouse
-    "mouse_left": ("click_mouse", click_mouse),
-    "mouse_right": ("click_mouse", click_mouse),
-    "mouse_middle": ("click_mouse", click_mouse),
-    "mouse_table": ("mouse_table", mouse_table),
-    "position": ("position", position),
-    "press_mouse": ("press_mouse", press_mouse),
-    "release_mouse": ("release_mouse", release_mouse),
-    "scroll": ("scroll", scroll),
-    "set_position": ("set_position", set_position),
-    "special_table": ("special_table", special_table),
+    "mouse_left": click_mouse,
+    "mouse_right": click_mouse,
+    "mouse_middle": click_mouse,
+    "mouse_table": mouse_table,
+    "position": position,
+    "press_mouse": press_mouse,
+    "release_mouse": release_mouse,
+    "scroll": scroll,
+    "set_position": set_position,
+    "special_table": special_table,
     # keyboard
-    "keys_table": ("keys_table", keys_table),
-    "type_key": ("type_key", type_key),
-    "press_key": ("press_key", press_key),
-    "release_key": ("release_key", release_key),
-    "check_key_is_press": ("check_key_is_press", check_key_is_press),
-    "write": ("write", write),
-    "hotkey": ("hotkey", hotkey),
+    "keys_table": keys_table,
+    "type_key": type_key,
+    "press_key": press_key,
+    "release_key": release_key,
+    "check_key_is_press": check_key_is_press,
+    "write": write,
+    "hotkey": hotkey,
     # image
-    "locate_all_image": ("locate_all_image", locate_all_image),
-    "locate_image_center": ("locate_image_center", locate_image_center),
-    "locate_and_click": ("locate_and_click", locate_and_click),
+    "locate_all_image": locate_all_image,
+    "locate_image_center": locate_image_center,
+    "locate_and_click": locate_and_click,
     # screen
-    "size": ("size", size),
-    "screenshot": ("screenshot", screenshot)
+    "size": size,
+    "screenshot": screenshot
 }
 
 
 def execute_event(action):
     event = event_dict.get(action[0])
-    if event[0] in ["click_mouse"]:
-        event[1](action[0], action[1], action[2])
-    elif event[0] in ["type_key", "press_key", "release_key", "check_key_is_press", "write"]:
-        event[1](action[1])
-    elif event[0] in ["position", "record", "stop_record", "size"]:
-        event[1]()
-    elif event[0] in ["set_position", "screenshot"]:
-        event[1](action[1], action[2])
-    elif event[0] in ["locate_all_image", "locate_image_center", "press_mouse", "release_mouse"]:
-        event[1](action[1], action[2], action[3])
-    elif event[0] in ["scroll", "locate_and_click"]:
-        event[1](action[1], action[2], action[3], action[4])
+    if len(action) == 2:
+        event(**action[1])
+    else:
+        event()
 
 
 def execute_action(action_list: list):
@@ -94,27 +86,27 @@ if __name__ == "__main__":
     test_list = None
     if sys.platform in ["win32", "cygwin", "msys"]:
         test_list = [
-            ("type_key", 65),
-            ("mouse_left", 500, 500),
-            ("position", "position"),
-            ("press_mouse", "mouse_left", 500, 500),
-            ("release_mouse", "mouse_left", 500, 500),
+            ["type_key", {"keycode": 65}],
+            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
+            ["position"],
+            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
+            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ]
     elif sys.platform in ["linux", "linux2"]:
         test_list = [
-            ("type_key", 38),
-            ("mouse_left", 500, 500),
-            ("position", "position"),
-            ("press_mouse", "mouse_left", 500, 500),
-            ("release_mouse", "mouse_left", 500, 500)
+            ["type_key", {"keycode": 38}],
+            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
+            ["position"],
+            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
+            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ]
     elif sys.platform in ["darwin"]:
         test_list = [
-            ("type_key", 0x00),
-            ("mouse_left", 500, 500),
-            ("position", "position"),
-            ("press_mouse", "mouse_left", 500, 500),
-            ("release_mouse", "mouse_left", 500, 500)
+            ["type_key", {"keycode": 0x00}],
+            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
+            ["position"],
+            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
+            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ]
     print("\n\n")
     print(execute_action(test_list))

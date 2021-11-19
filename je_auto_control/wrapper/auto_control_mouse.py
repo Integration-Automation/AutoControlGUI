@@ -1,6 +1,8 @@
 import sys
 
 from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_click_mouse
+from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_get_position
+from je_auto_control.utils.je_auto_control_exception.exception_tag import table_cant_find_key
 from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_press_mouse
 from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_release_mouse
 from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_set_position
@@ -22,7 +24,7 @@ def position():
         raise AutoControlMouseException(mouse_get_position)
 
 
-def set_position(x: int, y: int):
+def set_position(x: int, y: int, **kwargs):
     """
     :param x set position x
     :param y set position y
@@ -33,14 +35,17 @@ def set_position(x: int, y: int):
         raise AutoControlMouseException(mouse_set_position)
 
 
-def press_mouse(mouse_keycode: int, x: int = None, y: int = None):
+def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
     """
     :param mouse_keycode which mouse keycode we want to press
     :param x event x
     :param y event y
     """
     try:
-        mouse_keycode = mouse_table.get(mouse_keycode)
+        if type(mouse_keycode) is str:
+            mouse_keycode = mouse_table.get(mouse_keycode)
+        else:
+            pass
     except Exception:
         raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
@@ -57,14 +62,17 @@ def press_mouse(mouse_keycode: int, x: int = None, y: int = None):
         raise AutoControlMouseException(mouse_press_mouse)
 
 
-def release_mouse(mouse_keycode: int, x: int = None, y: int = None):
+def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
     """
     :param mouse_keycode which mouse keycode we want to release
     :param x event x
     :param y event y
     """
     try:
-        mouse_keycode = mouse_table.get(mouse_keycode)
+        if type(mouse_keycode) is str:
+            mouse_keycode = mouse_table.get(mouse_keycode)
+        else:
+            pass
     except Exception:
         raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
@@ -84,14 +92,17 @@ def release_mouse(mouse_keycode: int, x: int = None, y: int = None):
         raise AutoControlMouseException(mouse_release_mouse)
 
 
-def click_mouse(mouse_keycode: int, x: int = None, y: int = None):
+def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
     """
     :param mouse_keycode which mouse keycode we want to click
     :param x event x
     :param y event y
     """
     try:
-        mouse_keycode = mouse_table.get(mouse_keycode)
+        if type(mouse_keycode) is str:
+            mouse_keycode = mouse_table.get(mouse_keycode)
+        else:
+            pass
     except Exception:
         raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
@@ -108,7 +119,7 @@ def click_mouse(mouse_keycode: int, x: int = None, y: int = None):
         raise AutoControlMouseException(mouse_click_mouse)
 
 
-def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down"):
+def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down", **kwargs):
     """"
     :param scroll_value scroll count
     :param x event x
