@@ -55,6 +55,7 @@ event_dict = {
 
 def execute_event(action):
     event = event_dict.get(action[0])
+    print(action)
     if len(action) == 2:
         event(**action[1])
     else:
