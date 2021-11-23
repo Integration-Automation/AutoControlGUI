@@ -2,12 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/je_auto_control/utils/timeout/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/je_auto_control/utils/timeout/multiprocess_timeout.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/platform_independent/test/timeout/timeout_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test/timeout/timeout_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/Python_JEAutoControl.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Python_JEAutoControl.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/todo.je" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -34,16 +34,16 @@
   </component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/je_auto_control/utils/je_auto_control_exception/exceptions.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/je_auto_control/osx/mouse/osx_mouse.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/je_auto_control/utils/je_auto_control_exception/exception_tag.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/test/platform_independent/test/critical_exit/critical_exit_test.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/circle_ci_test/keyboard/keyboard_write_test.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/test/platform_independent/with_editor/auto_gui_with_je_editor.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/setup.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/test/platform_independent/test/mouse/mouse_test.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/je_auto_control/osx/mouse/osx_mouse.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/utils/action_executer/action_executor.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/test/platform_independent/with_editor/auto_gui_with_je_editor.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/je_auto_control/utils/je_auto_control_exception/exception_tag.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/test/platform_independent/test/mouse/mouse_test.py" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="ProjectId" id="1wn0qq5AyiVDEsyu3DrNoMAnZ8K" />
   <component name="ProjectLevelVcsManager">
@@ -58,7 +58,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/circle_ci_test" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
@@ -269,6 +269,7 @@
       <workItem from="1637432596794" duration="9656000" />
       <workItem from="1637596026203" duration="148000" />
       <workItem from="1637596220956" duration="77000" />
+      <workItem from="1637598222577" duration="1040000" />
     </task>
     <servers />
   </component>
