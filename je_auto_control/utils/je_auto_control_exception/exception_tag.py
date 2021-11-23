@@ -5,6 +5,7 @@ je_auto_control_critical_exit_error = "Auto control critical exit error"
 linux_import_error = "should be only loaded on linux"
 osx_import_error = "should be only loaded on MacOS"
 windows_import_error = "should be only loaded on windows"
+macos_record_error = "macos can't use recorder"
 # keyboard tags
 keyboard_error = "Auto control keyboard error"
 keyboard_press_key = "keyboard press key error"
@@ -40,5 +41,5 @@ cant_execute_action_error = "can't execute action"
 cant_find_json_error = "can't find json file"
 cant_save_json_error = "can't save json file"
 action_is_null_error = "json action is null"
-# macos error tag
-macos_record_error = "macos can't use recorder"
+# timeout tag
+timeout_need_on_main_error = "should put timeout function on main"

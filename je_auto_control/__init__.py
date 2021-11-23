@@ -55,4 +55,4 @@ from je_auto_control.utils.action_file.json_file import read_action_json
 from je_auto_control.utils.action_file.json_file import write_action_json
 
 # timeout
-from je_auto_control.utils.timeout.multiprocess_timeout import timeout
+from je_auto_control.utils.timeout.multiprocess_timeout import multiprocess_timeout

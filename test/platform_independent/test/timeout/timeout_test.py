@@ -1,9 +1,13 @@
 from itertools import count
-
-from je_auto_control import timeout
 from time import sleep
 
+from je_auto_control import multiprocess_timeout
+
 counter = count(1)
+
+
+def time_not_out_function():
+    print("Hello")
 
 
 def time_out_test_function():
@@ -13,4 +17,5 @@ def time_out_test_function():
 
 
 if __name__ == "__main__":
-    print(timeout(time_out_test_function, 5))
+    print(multiprocess_timeout(time_not_out_function, 5))
+    print(multiprocess_timeout(time_out_test_function, 5))

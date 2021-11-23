@@ -55,3 +55,8 @@ class AutoControlActionNullException(AutoControlException):
 
 class AutoControlActionException(AutoControlException):
     pass
+
+
+# timeout
+class AutoControlTimeoutException(AutoControlException):
+    pass
