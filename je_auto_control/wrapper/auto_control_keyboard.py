@@ -29,6 +29,7 @@ def press_key(keycode: [int, str], is_shift: bool = False, **kwargs):
             keyboard.press_key(keycode)
         elif sys.platform in ["darwin"]:
             keyboard.press_key(keycode, is_shift=is_shift)
+        return str(keycode)
     except Exception:
         raise AutoControlKeyboardException(keyboard_press_key)
 
@@ -48,6 +49,7 @@ def release_key(keycode: [int, str], is_shift: bool = False, **kwargs):
             keyboard.release_key(keycode)
         elif sys.platform in ["darwin"]:
             keyboard.release_key(keycode, is_shift=is_shift)
+        return str(keycode)
     except Exception:
         raise AutoControlKeyboardException(keyboard_release_key)
 
@@ -60,6 +62,7 @@ def type_key(keycode: [int, str], is_shift: bool = False, **kwargs):
     try:
         press_key(keycode, is_shift)
         release_key(keycode, is_shift)
+        return str(keycode)
     except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_type_key)
 
@@ -81,14 +84,16 @@ def write(write_string: str, is_shift: bool = False, **kwargs):
     :param is_shift shift is press?
     """
     try:
+        record_write_string = ""
         for single_string in write_string:
             try:
                 if keys_table.get(single_string) is not None:
-                    type_key(single_string, is_shift)
+                    record_write_string = "".join([record_write_string, type_key(single_string, is_shift)])
                 else:
                     raise AutoControlKeyboardException(keyboard_write_cant_find)
             except AutoControlKeyboardException:
                 print(keyboard_write_cant_find, single_string, sep="\t", file=sys.stderr)
+        return record_write_string
     except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_write)
 
@@ -99,10 +104,13 @@ def hotkey(key_code_list: list, is_shift: bool = False, **kwargs):
     :param is_shift shift is press?
     """
     try:
+        record_hotkey_press_string = ""
+        record_hotkey_release_string = ""
         for key in key_code_list:
-            press_key(key, is_shift)
+            record_hotkey_press_string = ",".join([record_hotkey_press_string, press_key(key, is_shift)])
         key_code_list.reverse()
         for key in key_code_list:
-            release_key(key, is_shift)
+            record_hotkey_release_string = ",".join([record_hotkey_release_string, release_key(key, is_shift)])
+        return record_hotkey_press_string, record_hotkey_release_string
     except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_hotkey)

@@ -31,6 +31,7 @@ def set_position(x: int, y: int, **kwargs):
     """
     try:
         mouse.set_position(x=x, y=y)
+        return x, y
     except Exception:
         raise AutoControlMouseException(mouse_set_position)
 
@@ -58,6 +59,7 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
             mouse.press_mouse(mouse_keycode)
         elif sys.platform in ["darwin"]:
             mouse.press_mouse(x, y, mouse_keycode)
+        return mouse_keycode, x, y
     except Exception:
         raise AutoControlMouseException(mouse_press_mouse)
 
@@ -88,6 +90,7 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwa
             mouse.release_mouse(mouse_keycode)
         elif sys.platform in ["darwin"]:
             mouse.release_mouse(x, y, mouse_keycode)
+        return mouse_keycode, x, y
     except Exception:
         raise AutoControlMouseException(mouse_release_mouse)
 
@@ -115,6 +118,7 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
         raise AutoControlMouseException(mouse_get_position)
     try:
         mouse.click_mouse(mouse_keycode, x, y)
+        return mouse_keycode, x, y
     except Exception:
         raise AutoControlMouseException(mouse_click_mouse)
 
@@ -157,5 +161,6 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
         elif sys.platform in ["linux", "linux2"]:
             scroll_direction = special_table.get(scroll_direction)
             mouse.scroll(scroll_value, scroll_direction)
+        return scroll_value, scroll_direction
     except Exception:
         raise AutoControlMouseException(mouse_click_mouse)

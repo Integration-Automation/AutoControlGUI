@@ -11,14 +11,14 @@ press_key("shift")
 write("123456789")
 press_key("return")
 release_key("return")
-write("abcdefghijklmnopqrstuvwxyz")
+assert (write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz")
 release_key("shift")
 press_key("return")
 release_key("return")
-write("abcdefghijklmnopqrstuvwxyz")
+assert (write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz")
 press_key("return")
 release_key("return")
 """
 this write will print one error -> keyboard write error can't find key : Ѓ and write remain string
 """
-write("Ѓ123456789")
+assert (write("Ѓ123456789") == "123456789")
