@@ -1,15 +1,9 @@
-"""
-general
-"""
-
-
+# general
 class AutoControlException(Exception):
     pass
 
 
-"""
-Keyboard
-"""
+# Keyboard
 
 
 class AutoControlKeyboardException(AutoControlException):
@@ -20,45 +14,35 @@ class AutoControlCantFindKeyException(AutoControlException):
     pass
 
 
-"""
-Mouse
-"""
+# Mouse
 
 
 class AutoControlMouseException(AutoControlException):
     pass
 
 
-"""
-Screen
-"""
+# Screen
 
 
 class AutoControlScreenException(AutoControlException):
     pass
 
 
-"""
-Image detect
-"""
+# Image detect
 
 
 class ImageNotFoundException(AutoControlException):
     pass
 
 
-"""
-Record
-"""
+# Record
 
 
 class AutoControlRecordException(AutoControlException):
     pass
 
 
-"""
-Execute action 
-"""
+# Execute action
 
 
 class AutoControlJsonActionException(AutoControlException):
@@ -70,4 +54,9 @@ class AutoControlActionNullException(AutoControlException):
 
 
 class AutoControlActionException(AutoControlException):
+    pass
+
+
+# timeout
+class AutoControlTimeoutException(AutoControlException):
     pass

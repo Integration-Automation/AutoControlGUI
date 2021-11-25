@@ -25,7 +25,7 @@ jobs:
       # keyboard test
       - run:
           command: python ./circle_ci_test/keyboard/keyboard_type_test.py
-          name: keyboard_test
+          name: keyboard_type_test
       - run:
           command: python ./circle_ci_test/keyboard/keyboard_write_test.py
           name: keyboard_write_test
@@ -75,6 +75,10 @@ jobs:
       - run:
           command: python ./circle_ci_test/json/json_test.py
           name: json_test
+      # timeout
+      - run:
+          command: python ./circle_ci_test/timeout/timeout_test.py
+          name: timeout_test
 
 workflows:
   main:

@@ -39,7 +39,7 @@ def stop_record_keyboard():
 def record():
     if sys.platform == "darwin":
         raise AutoControlException(macos_record_error)
-    recorder.record()
+    return recorder.record()
 
 
 def stop_record():
@@ -49,7 +49,7 @@ def stop_record():
     if action_queue is None:
         raise AutoControlJsonActionException
     action_list = list(action_queue.queue)
-    execute_action(action_list)
+    return execute_action(action_list)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ import sys
 from je_auto_control import hotkey
 
 if sys.platform in ["win32", "cygwin", "msys"]:
-    hotkey(["lcontrol", "a"])
+    hotkey_event = hotkey(["lcontrol", "a"])
     hotkey(["lcontrol", "c"])
     hotkey(["lcontrol", "v"])
     hotkey(["lcontrol", "v"])

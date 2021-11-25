@@ -3,6 +3,7 @@ import sys
 from je_auto_control import check_key_is_press
 from je_auto_control import press_key
 from je_auto_control import release_key
+from je_auto_control import AutoControlException
 
 try:
     """
@@ -30,8 +31,8 @@ try:
             """
             if check_key_is_press(22):
                 sys.exit(0)
-except Exception:
-    raise Exception
+except AutoControlException:
+    raise AutoControlException
 finally:
     if sys.platform in ["win32", "cygwin", "msys"]:
         release_key("A")
