@@ -33,6 +33,7 @@ class CriticalExit(Thread):
                 if keyboard_check.check_key_is_press(self._exit_check_key):
                     _thread.interrupt_main()
         except AutoControlException:
+            _thread.interrupt_main()
             raise AutoControlException(je_auto_control_critical_exit_error)
 
     def init_critical_exit(self):

@@ -11,9 +11,10 @@ if sys.platform in ["win32", "cygwin", "msys"]:
         ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
     ]
+
 elif sys.platform in ["linux", "linux2"]:
     test_list = [
-        ["type_key", {"keycode": 38}],
+        ["type_key", {"keycode": 38}], a
         ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ["position"],
         ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],

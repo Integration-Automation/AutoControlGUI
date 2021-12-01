@@ -20,7 +20,7 @@ def position():
     """
     try:
         return mouse.position()
-    except Exception:
+    except AutoControlMouseException:
         raise AutoControlMouseException(mouse_get_position)
 
 
@@ -32,7 +32,7 @@ def set_position(x: int, y: int, **kwargs):
     try:
         mouse.set_position(x=x, y=y)
         return x, y
-    except Exception:
+    except AutoControlMouseException:
         raise AutoControlMouseException(mouse_set_position)
 
 
@@ -47,7 +47,7 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
             mouse_keycode = mouse_table.get(mouse_keycode)
         else:
             pass
-    except Exception:
+    except AutoControlCantFindKeyException:
         raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
         now_x, now_y = position()
@@ -60,7 +60,7 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
         elif sys.platform in ["darwin"]:
             mouse.press_mouse(x, y, mouse_keycode)
         return mouse_keycode, x, y
-    except Exception:
+    except AutoControlMouseException:
         raise AutoControlMouseException(mouse_press_mouse)
 
 
@@ -75,7 +75,7 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwa
             mouse_keycode = mouse_table.get(mouse_keycode)
         else:
             pass
-    except Exception:
+    except AutoControlCantFindKeyException:
         raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
         now_x, now_y = position()
@@ -83,7 +83,7 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwa
             x = now_x
         if y is None:
             y = now_y
-    except Exception:
+    except AutoControlMouseException:
         raise AutoControlMouseException(mouse_get_position)
     try:
         if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
@@ -91,7 +91,7 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwa
         elif sys.platform in ["darwin"]:
             mouse.release_mouse(x, y, mouse_keycode)
         return mouse_keycode, x, y
-    except Exception:
+    except AutoControlMouseException:
         raise AutoControlMouseException(mouse_release_mouse)
 
 
@@ -106,7 +106,7 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
             mouse_keycode = mouse_table.get(mouse_keycode)
         else:
             pass
-    except Exception:
+    except AutoControlCantFindKeyException:
         raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
         now_x, now_y = position()
@@ -114,12 +114,12 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
             x = now_x
         if y is None:
             y = now_y
-    except Exception:
+    except AutoControlMouseException:
         raise AutoControlMouseException(mouse_get_position)
     try:
         mouse.click_mouse(mouse_keycode, x, y)
         return mouse_keycode, x, y
-    except Exception:
+    except AutoControlMouseException:
         raise AutoControlMouseException(mouse_click_mouse)
 
 
@@ -136,7 +136,7 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
     """
     try:
         now_cursor_x, now_cursor_y = position()
-    except Exception:
+    except AutoControlMouseException:
         raise AutoControlMouseException(mouse_get_position)
     width, height = size()
     if x is None:
@@ -162,5 +162,5 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
             scroll_direction = special_table.get(scroll_direction)
             mouse.scroll(scroll_value, scroll_direction)
         return scroll_value, scroll_direction
-    except Exception:
+    except AutoControlMouseException:
         raise AutoControlMouseException(mouse_click_mouse)

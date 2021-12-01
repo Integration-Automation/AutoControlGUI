@@ -44,7 +44,7 @@ jobs:
           name: scroll_test
       # exception test
       - run:
-          command: python ./circle_ci_test/unit_test/exception/test_auto_control_exception.py
+          command: python ./circle_ci_test/unit_test/exception/auto_control_exception_test.py
           name: test_auto_control_exception
       # image detect
       - run:
