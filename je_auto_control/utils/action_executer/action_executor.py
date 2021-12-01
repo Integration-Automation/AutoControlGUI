@@ -57,8 +57,10 @@ def execute_event(action):
     event = event_dict.get(action[0])
     if len(action) == 2:
         event(**action[1])
-    else:
+    elif len(action) == 1:
         event()
+    else:
+        pass
 
 
 def execute_action(action_list: list):
