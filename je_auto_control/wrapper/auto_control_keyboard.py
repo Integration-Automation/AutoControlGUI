@@ -22,7 +22,7 @@ def press_key(keycode: [int, str], is_shift: bool = False, **kwargs):
     if type(keycode) is not int:
         try:
             keycode = keys_table.get(keycode)
-        except Exception:
+        except AutoControlCantFindKeyException:
             raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
         if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
@@ -30,7 +30,7 @@ def press_key(keycode: [int, str], is_shift: bool = False, **kwargs):
         elif sys.platform in ["darwin"]:
             keyboard.press_key(keycode, is_shift=is_shift)
         return str(keycode)
-    except Exception:
+    except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_press_key)
 
 
@@ -42,7 +42,7 @@ def release_key(keycode: [int, str], is_shift: bool = False, **kwargs):
     if type(keycode) is not int:
         try:
             keycode = keys_table.get(keycode)
-        except Exception:
+        except AutoControlCantFindKeyException:
             raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
         if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
@@ -50,7 +50,7 @@ def release_key(keycode: [int, str], is_shift: bool = False, **kwargs):
         elif sys.platform in ["darwin"]:
             keyboard.release_key(keycode, is_shift=is_shift)
         return str(keycode)
-    except Exception:
+    except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_release_key)
 
 
