@@ -1,14 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/platform_independent/test/image/locate_all_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/platform_independent/test/image/locate_all_image.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/platform_independent/test/image/locate_and_click.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/platform_independent/test/image/locate_and_click.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/platform_independent/test/image/locate_image_center.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/platform_independent/test/image/locate_image_center.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/platform_independent/test/keyboard/keyboard_write_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/platform_independent/test/keyboard/keyboard_write_test.py" afterDir="false" />
-    </list>
+    <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -77,7 +70,7 @@
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\record" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.keyboard_write_test">
+  <component name="RunManager" selected="Python.critical_exit_test">
     <configuration name="critical_exit_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -243,10 +236,10 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.critical_exit_test" />
         <item itemvalue="Python.keyboard_write_test" />
         <item itemvalue="Python.locate_all_image" />
         <item itemvalue="Python.locate_image_center" />
-        <item itemvalue="Python.critical_exit_test" />
         <item itemvalue="Python.execute_action_test" />
       </list>
     </recent_temporary>
@@ -309,7 +302,7 @@
       <workItem from="1638327363748" duration="1554000" />
       <workItem from="1638331973979" duration="11179000" />
       <workItem from="1638408738433" duration="3009000" />
-      <workItem from="1638526002894" duration="2618000" />
+      <workItem from="1638526002894" duration="2994000" />
     </task>
     <servers />
   </component>
@@ -351,7 +344,7 @@
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$keyboard_type_test.coverage" NAME="keyboard_type_test Coverage Results" MODIFIED="1629265020077" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$locate_all_image_test.coverage" NAME="locate_all_image_test Coverage Results" MODIFIED="1629389018535" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$execute_action_test.coverage" NAME="execute_action_test Coverage Results" MODIFIED="1634416736563" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test" />
-    <SUITE FILE_PATH="coverage/AutoControl$critical_exit_test.coverage" NAME="critical_exit_test Coverage Results" MODIFIED="1638527594680" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/critical_exit" />
+    <SUITE FILE_PATH="coverage/AutoControl$critical_exit_test.coverage" NAME="critical_exit_test Coverage Results" MODIFIED="1638531300898" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/critical_exit" />
     <SUITE FILE_PATH="coverage/AutoControl$hotkey_test.coverage" NAME="hotkey_test Coverage Results" MODIFIED="1637744624754" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/keyboard" />
     <SUITE FILE_PATH="coverage/AutoControl$execute_action_test.coverage" NAME="execute_action_test Coverage Results" MODIFIED="1638527551695" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/execute_action" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$real_critical_test.coverage" NAME="real_critical_test Coverage Results" MODIFIED="1634136655791" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test" />
