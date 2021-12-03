@@ -93,6 +93,7 @@ def write(write_string: str, is_shift: bool = False, **kwargs):
                     raise AutoControlKeyboardException(keyboard_write_cant_find)
             except AutoControlKeyboardException:
                 print(keyboard_write_cant_find, single_string, sep="\t", file=sys.stderr)
+                raise AutoControlKeyboardException(keyboard_write_cant_find)
         return record_write_string
     except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_write)
