@@ -2,13 +2,89 @@ version: 2.1
 
 orbs:
   windows: circleci/windows@2.4.1
+  python: circleci/python@1.5.0
 
 jobs:
-  build-and-test:
+  build-and-test-windows:
     executor:
-      name: win/default
+      name: windows/default
       size: medium
       shell: powershell.exe
+
+    steps:
+      - checkout
+      # pip require package
+      - run:
+          command: pip install --user -r requirements.txt
+          name: pip requirements.txt
+      # screen test
+      - run:
+          command: python ./circle_ci_test/unit_test/screen/screen_test.py
+          name: screen_test
+      - run:
+          command: python ./circle_ci_test/unit_test/screen/screenshot_test.py
+          name: screenshot_test
+      # keyboard test
+      - run:
+          command: python ./circle_ci_test/unit_test/keyboard/keyboard_type_test.py
+          name: keyboard_type_test
+      - run:
+          command: python ./circle_ci_test/unit_test/keyboard/keyboard_write_test.py
+          name: keyboard_write_test
+      - run:
+          command: python ./circle_ci_test/unit_test/keyboard/keyboard_is_press_test.py
+          name: keyboard_is_press_test
+      - run:
+          command: python ./circle_ci_test/unit_test/keyboard/hotkey_test.py
+          name: hotkey_test
+      # mouse test
+      - run:
+          command: python ./circle_ci_test/unit_test/mouse/mouse_test.py
+          name: mouse_test
+      - run:
+          command: python ./circle_ci_test/unit_test/mouse/mouse_scroll_test.py
+          name: scroll_test
+      # exception test
+      - run:
+          command: python ./circle_ci_test/unit_test/exception/test_auto_control_exception.py
+          name: test_auto_control_exception
+      # image detect
+      - run:
+          command: python ./circle_ci_test/unit_test/image/locate_all_image_test.py
+          name: locate_all_image_test
+      - run:
+          command: python ./circle_ci_test/unit_test/image/locate_and_click_test.py
+          name: locate_and_click_test
+      - run:
+          command: python ./circle_ci_test/unit_test/image/locate_image_center_test.py
+          name: locate_image_center_test
+      # critical exit
+      - run:
+          command: python ./circle_ci_test/unit_test/critical_exit/critical_exit_test.py
+          name: critical_exit_test
+      - run:
+          command: python ./circle_ci_test/unit_test/critical_exit/real_critical_test.py
+          name: real_critical_test
+      # record
+      - run:
+          command: python ./circle_ci_test/unit_test/record/record_test.py
+          name: record_test
+      # execute
+      - run:
+          command: python ./circle_ci_test/unit_test/execute_action/execute_action_test.py
+          name: execute_action_test
+      # json
+      - run:
+          command: python ./circle_ci_test/unit_test/json/json_test.py
+          name: json_test
+      # timeout
+      - run:
+          command: python ./circle_ci_test/unit_test/timeout/timeout_test.py
+          name: timeout_test
+
+  build-and-test-linux:
+    executor:
+      name: python/default
 
     steps:
       - checkout
@@ -84,4 +160,5 @@ jobs:
 workflows:
   main:
     jobs:
-      - build-and-test
+      - build-and-test-windows
+      - build-and-test-linux
