@@ -3,6 +3,7 @@ version: 2.1
 orbs:
   windows: circleci/windows@2.4.1
   python: circleci/python@1.5.0
+  codecov: codecov/codecov@3.1.1
 
 jobs:
   build-and-test-windows:
@@ -85,13 +86,21 @@ jobs:
   build-and-test-linux:
     executor:
       name: python/default
-
+      machine:
+        image: ubuntu-2004:202010-01
     steps:
       - checkout
       # pip require package
       - run:
           command: pip install --user -r requirements.txt
           name: pip requirements.txt
+      # screen test
+      - run:
+          command: python ./circle_ci_test/unit_test/screen/screen_test.py
+          name: screen_test
+      - run:
+          command: python ./circle_ci_test/unit_test/screen/screenshot_test.py
+          name: screenshot_test
       # keyboard test
       - run:
           command: python ./circle_ci_test/unit_test/keyboard/keyboard_type_test.py
@@ -155,3 +164,7 @@ workflows:
     jobs:
       - build-and-test-windows
       - build-and-test-linux
+  upload-to-codecov:
+    jobs:
+      - checkout
+      - codecov/upload
