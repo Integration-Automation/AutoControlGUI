@@ -2,7 +2,6 @@ version: 2.1
 
 orbs:
   windows: circleci/windows@2.4.1
-  codecov: codecov/codecov@3.1.1
 
 jobs:
   build-and-test-windows:
@@ -82,14 +81,8 @@ jobs:
           command: python ./circle_ci_test/unit_test/timeout/timeout_test.py
           name: timeout_test
 
-  upload-to-codecov:
-    jobs:
-      - checkout
-      - codecov/upload
-
 workflows:
   main:
     jobs:
       - build-and-test-windows
-      - upload-to-codecov
 
