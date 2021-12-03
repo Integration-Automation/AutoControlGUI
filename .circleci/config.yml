@@ -83,6 +83,7 @@ jobs:
           command: python ./circle_ci_test/unit_test/timeout/timeout_test.py
           name: timeout_test
 
+  # Linux
   build-and-test-linux:
     executor:
       name: python/default
