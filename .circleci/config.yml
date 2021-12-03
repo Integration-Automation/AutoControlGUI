@@ -83,11 +83,14 @@ jobs:
           command: python ./circle_ci_test/unit_test/timeout/timeout_test.py
           name: timeout_test
 
-workflows:
-  main:
-    jobs:
-      - build-and-test-windows
   upload-to-codecov:
     jobs:
       - checkout
       - codecov/upload
+      -
+workflows:
+  main:
+    jobs:
+      - build-and-test-windows
+      - upload-to-codecov
+
