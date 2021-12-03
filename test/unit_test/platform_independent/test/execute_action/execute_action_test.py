@@ -29,4 +29,4 @@ elif sys.platform in ["darwin"]:
         ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
     ]
 print("\n\n")
-print(execute_action(test_list))
+execute_action(test_list)

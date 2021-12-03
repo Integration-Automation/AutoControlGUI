@@ -1,4 +1,5 @@
 import sys
+import time
 
 from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlException
 from je_auto_control.utils.je_auto_control_exception.exception_tag import linux_import_error
@@ -33,6 +34,7 @@ def set_position(x: int, y: int):
     :param x we want to set mouse x position
     :param y we want to set mouse y position
     """
+    time.sleep(0.01)
     fake_input(display, X.MotionNotify, x=x, y=y)
     display.sync()
 
@@ -41,6 +43,7 @@ def press_mouse(mouse_keycode: int):
     """
     :param mouse_keycode mouse keycode we want to press
     """
+    time.sleep(0.01)
     fake_input(display, X.ButtonPress, mouse_keycode)
     display.sync()
 
@@ -49,6 +52,7 @@ def release_mouse(mouse_keycode: int):
     """
     :param mouse_keycode which mouse keycode we want to release
     """
+    time.sleep(0.01)
     fake_input(display, X.ButtonRelease, mouse_keycode)
     display.sync()
 

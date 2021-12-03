@@ -25,11 +25,11 @@ try:
             if check_key_is_press(0x60):
                 sys.exit(0)
         elif sys.platform in ["linux", "linux2"]:
-            press_key("backspace")
+            press_key("a")
             """  
-            linux key backspace
+            linux key a
             """
-            if check_key_is_press(22):
+            if check_key_is_press(0):
                 sys.exit(0)
 except AutoControlException:
     raise AutoControlException
@@ -39,4 +39,4 @@ finally:
     elif sys.platform in ["darwin"]:
         release_key("f5")
     elif sys.platform in ["linux", "linux2"]:
-        release_key("backspace")
+        release_key("a")

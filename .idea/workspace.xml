@@ -3,9 +3,11 @@
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/action_executer/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/action_executer/action_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_record.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/keyboard/x11_linux_keyboard_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/keyboard/x11_linux_keyboard_control.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/mouse/x11_linux_mouse_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/mouse/x11_linux_mouse_control.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/unit_test/platform_independent/test/critical_exit/critical_exit_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/platform_independent/test/critical_exit/critical_exit_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/unit_test/platform_independent/test/execute_action/execute_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/platform_independent/test/execute_action/execute_action_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/unit_test/platform_independent/test/keyboard/keyboard_is_press_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/platform_independent/test/keyboard/keyboard_is_press_test.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -56,7 +58,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../Python_JE_API_Test" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../je_editor" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
@@ -74,7 +76,7 @@
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\Python_JEAutoControl\test\platform_independent\test\record" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.record_test (1)">
+  <component name="RunManager" selected="Python.critical_exit_test">
     <configuration name="auto_control_record" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -89,6 +91,28 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_record.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="critical_exit_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Python_JEAutoControl" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/platform_independent/test/critical_exit" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/platform_independent/test/critical_exit/critical_exit_test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -133,28 +157,6 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/je_auto_control/utils/timeout/multiprocess_timeout.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="real_critical_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Python_JEAutoControl" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/platform_independent/test/critical_exit" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/platform_independent/test/critical_exit/real_critical_test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -232,19 +234,19 @@
     <list>
       <item itemvalue="Python.multiprocess_timeout" />
       <item itemvalue="Python.test_auto_control_exception" />
-      <item itemvalue="Python.real_critical_test" />
       <item itemvalue="Python.execute_action_test" />
       <item itemvalue="Python.record_test" />
       <item itemvalue="Python.auto_control_record" />
       <item itemvalue="Python.record_test (1)" />
+      <item itemvalue="Python.critical_exit_test" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.critical_exit_test" />
+        <item itemvalue="Python.execute_action_test" />
         <item itemvalue="Python.record_test (1)" />
         <item itemvalue="Python.auto_control_record" />
-        <item itemvalue="Python.execute_action_test" />
         <item itemvalue="Python.record_test" />
-        <item itemvalue="Python.real_critical_test" />
       </list>
     </recent_temporary>
   </component>
@@ -304,7 +306,9 @@
       <workItem from="1638275363791" duration="3475000" />
       <workItem from="1638285394804" duration="1487000" />
       <workItem from="1638327363748" duration="1554000" />
-      <workItem from="1638331973979" duration="10572000" />
+      <workItem from="1638331973979" duration="11179000" />
+      <workItem from="1638408738433" duration="3009000" />
+      <workItem from="1638526002894" duration="1014000" />
     </task>
     <servers />
   </component>
@@ -346,8 +350,9 @@
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$keyboard_type_test.coverage" NAME="keyboard_type_test Coverage Results" MODIFIED="1629265020077" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$locate_all_image_test.coverage" NAME="locate_all_image_test Coverage Results" MODIFIED="1629389018535" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$execute_action_test.coverage" NAME="execute_action_test Coverage Results" MODIFIED="1634416736563" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test" />
+    <SUITE FILE_PATH="coverage/AutoControl$critical_exit_test.coverage" NAME="critical_exit_test Coverage Results" MODIFIED="1638527594680" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/critical_exit" />
     <SUITE FILE_PATH="coverage/AutoControl$hotkey_test.coverage" NAME="hotkey_test Coverage Results" MODIFIED="1637744624754" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/keyboard" />
-    <SUITE FILE_PATH="coverage/AutoControl$execute_action_test.coverage" NAME="execute_action_test Coverage Results" MODIFIED="1638351207071" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/execute_action" />
+    <SUITE FILE_PATH="coverage/AutoControl$execute_action_test.coverage" NAME="execute_action_test Coverage Results" MODIFIED="1638527551695" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/execute_action" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$real_critical_test.coverage" NAME="real_critical_test Coverage Results" MODIFIED="1634136655791" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$import_test.coverage" NAME="import_test Coverage Results" MODIFIED="1629286120014" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/AutoControl$multiprocess_timeout.coverage" NAME="multiprocess_timeout Coverage Results" MODIFIED="1637593410735" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/timeout" />
