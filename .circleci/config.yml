@@ -87,7 +87,7 @@ jobs:
     jobs:
       - checkout
       - codecov/upload
-      -
+
 workflows:
   main:
     jobs:
