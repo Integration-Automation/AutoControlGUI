@@ -1,7 +1,8 @@
 version: 2.1
 
 orbs:
-  win: circleci/windows@2.2.0
+  windows: circleci/windows@2.4.1
+  python: circleci/python@1.5.0
 
 jobs:
   build-and-test:
