@@ -47,16 +47,6 @@ jobs:
       - run:
           command: python ./circle_ci_test/unit_test/exception/test_auto_control_exception.py
           name: test_auto_control_exception
-      # image detect
-      - run:
-          command: python ./circle_ci_test/unit_test/image/locate_all_image_test.py
-          name: locate_all_image_test
-      - run:
-          command: python ./circle_ci_test/unit_test/image/locate_and_click_test.py
-          name: locate_and_click_test
-      - run:
-          command: python ./circle_ci_test/unit_test/image/locate_image_center_test.py
-          name: locate_image_center_test
       # critical exit
       - run:
           command: python ./circle_ci_test/unit_test/critical_exit/critical_exit_test.py
@@ -80,6 +70,21 @@ jobs:
       - run:
           command: python ./circle_ci_test/unit_test/timeout/timeout_test.py
           name: timeout_test
+# GUI Test
+      # image detect
+      - run:
+          command: python ./circle_ci_test/gui_test/image/locate_all_image_test.py
+          name: locate_all_image_test
+      - run:
+          command: python ./circle_ci_test/gui_test/image/locate_and_click_test.py
+          name: locate_and_click_test
+      - run:
+          command: python ./circle_ci_test/gui_test/image/locate_image_center_test.py
+          name: locate_image_center_test
+      # calculator
+      - run:
+          command: python ./circle_ci_test/gui_test/calculator/calculator.py
+          name: calculator
 
 workflows:
   main:

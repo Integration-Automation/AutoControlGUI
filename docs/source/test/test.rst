@@ -6,6 +6,7 @@ AutoControlGUI Test env
     * windows 10 ~ 11
     * osx 10.5 ~ 11 big sur
     * ubuntu 20.0.4
+    * raspberry pi 4B
 
 | All test in test dir
 
