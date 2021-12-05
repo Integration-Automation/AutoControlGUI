@@ -1,9 +1,9 @@
 import sys
 
 from je_auto_control.utils.action_executer.action_executor import execute_action
-from je_auto_control.utils.je_auto_control_exception.exception_tag import macos_record_error
-from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlException
-from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlJsonActionException
+from je_auto_control.utils.exception.exception_tag import macos_record_error
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
 from je_auto_control.wrapper.platform_wrapper import recorder
 
 

@@ -3,6 +3,7 @@ import sys
 from je_auto_control import check_key_is_press
 from je_auto_control import press_key
 from je_auto_control import release_key
+from je_auto_control import AutoControlException
 
 try:
     """
@@ -24,18 +25,18 @@ try:
             if check_key_is_press(0x60):
                 sys.exit(0)
         elif sys.platform in ["linux", "linux2"]:
-            press_key("backspace")
+            press_key("a")
             """  
-            linux key backspace
+            linux key a
             """
-            if check_key_is_press(22):
+            if check_key_is_press(0):
                 sys.exit(0)
-except Exception:
-    raise Exception
+except AutoControlException:
+    raise AutoControlException
 finally:
     if sys.platform in ["win32", "cygwin", "msys"]:
         release_key("A")
     elif sys.platform in ["darwin"]:
         release_key("f5")
     elif sys.platform in ["linux", "linux2"]:
-        release_key("backspace")
+        release_key("a")

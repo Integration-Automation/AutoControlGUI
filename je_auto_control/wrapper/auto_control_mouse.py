@@ -1,13 +1,16 @@
+import ctypes
 import sys
 
-from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_click_mouse
-from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_get_position
-from je_auto_control.utils.je_auto_control_exception.exception_tag import table_cant_find_key
-from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_press_mouse
-from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_release_mouse
-from je_auto_control.utils.je_auto_control_exception.exception_tag import mouse_set_position
-from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlCantFindKeyException
-from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlMouseException
+from je_auto_control.utils.exception.exception_tag import mouse_click_mouse
+from je_auto_control.utils.exception.exception_tag import mouse_get_position
+from je_auto_control.utils.exception.exception_tag import table_cant_find_key
+from je_auto_control.utils.exception.exception_tag import mouse_press_mouse
+from je_auto_control.utils.exception.exception_tag import mouse_release_mouse
+from je_auto_control.utils.exception.exception_tag import mouse_set_position
+from je_auto_control.utils.exception.exception_tag import mouse_scroll
+from je_auto_control.utils.exception.exception_tag import mouse_wrong_value
+from je_auto_control.utils.exception.exceptions import AutoControlCantFindKeyException
+from je_auto_control.utils.exception.exceptions import AutoControlMouseException
 from je_auto_control.wrapper.auto_control_screen import size
 from je_auto_control.wrapper.platform_wrapper import mouse
 from je_auto_control.wrapper.platform_wrapper import mouse_table
@@ -34,6 +37,8 @@ def set_position(x: int, y: int, **kwargs):
         return x, y
     except AutoControlMouseException:
         raise AutoControlMouseException(mouse_set_position)
+    except ctypes.ArgumentError:
+        raise AutoControlMouseException(mouse_wrong_value)
 
 
 def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
@@ -62,6 +67,8 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
         return mouse_keycode, x, y
     except AutoControlMouseException:
         raise AutoControlMouseException(mouse_press_mouse)
+    except TypeError:
+        raise AutoControlMouseException(mouse_release_mouse)
 
 
 def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
@@ -93,6 +100,8 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwa
         return mouse_keycode, x, y
     except AutoControlMouseException:
         raise AutoControlMouseException(mouse_release_mouse)
+    except TypeError:
+        raise AutoControlMouseException(mouse_release_mouse)
 
 
 def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
@@ -120,6 +129,8 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
         mouse.click_mouse(mouse_keycode, x, y)
         return mouse_keycode, x, y
     except AutoControlMouseException:
+        raise AutoControlMouseException(mouse_click_mouse)
+    except TypeError:
         raise AutoControlMouseException(mouse_click_mouse)
 
 
@@ -163,4 +174,6 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
             mouse.scroll(scroll_value, scroll_direction)
         return scroll_value, scroll_direction
     except AutoControlMouseException:
-        raise AutoControlMouseException(mouse_click_mouse)
+        raise AutoControlMouseException(mouse_scroll)
+    except TypeError:
+        raise AutoControlMouseException(mouse_scroll)

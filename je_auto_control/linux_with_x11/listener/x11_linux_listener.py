@@ -1,8 +1,8 @@
 import sys
 
-from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlException
-from je_auto_control.utils.je_auto_control_exception.exception_tag import linux_import_error
-from je_auto_control.utils.je_auto_control_exception.exception_tag import listener_error
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.exception_tag import linux_import_error
+from je_auto_control.utils.exception.exception_tag import listener_error
 
 
 if sys.platform not in ["linux", "linux2"]:

@@ -14,8 +14,8 @@ jobs:
       - checkout
       # pip require package
       - run:
-          command: pip install --user -r requirements.txt
-          name: pip requirements.txt
+          command: pip install --user -r dev_requirements.txt
+          name: pip dev_requirements.txt
       # screen test
       - run:
           command: python ./circle_ci_test/unit_test/screen/screen_test.py

@@ -20,8 +20,8 @@ from je_auto_control import size
 from je_auto_control import special_table
 from je_auto_control import type_key
 from je_auto_control import write
-from je_auto_control.utils.je_auto_control_exception.exception_tag import action_is_null_error
-from je_auto_control.utils.je_auto_control_exception.exception_tag import cant_execute_action_error
+from je_auto_control.utils.exception.exception_tag import action_is_null_error
+from je_auto_control.utils.exception.exception_tag import cant_execute_action_error
 
 event_dict = {
     # mouse

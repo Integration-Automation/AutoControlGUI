@@ -22,6 +22,7 @@ mouse_press_mouse = "mouse press mouse error"
 mouse_release_mouse = "mouse release key error"
 mouse_click_mouse = "mouse click mouse error"
 mouse_scroll = "mouse scroll error"
+mouse_wrong_value = "mouse value error"
 # screen tags
 screen_error = "Auto control screen error"
 screen_get_size = "screen get size error"
