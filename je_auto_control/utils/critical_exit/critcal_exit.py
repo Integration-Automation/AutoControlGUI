@@ -2,8 +2,8 @@ import _thread
 import sys
 from threading import Thread
 
-from je_auto_control.utils.je_auto_control_exception.exception_tag import je_auto_control_critical_exit_error
-from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.exception_tag import je_auto_control_critical_exit_error
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.auto_control_keyboard import keys_table
 from je_auto_control.wrapper.platform_wrapper import keyboard_check
 

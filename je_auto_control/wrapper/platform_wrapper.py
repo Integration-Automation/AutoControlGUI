@@ -1,6 +1,6 @@
 import sys
 
-from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlException
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 if sys.platform in ["win32", "cygwin", "msys"]:
     from je_auto_control.windows.core.utils.win32_vk import win32_ABSOLUTE

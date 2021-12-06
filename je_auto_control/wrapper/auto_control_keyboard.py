@@ -1,14 +1,14 @@
 import sys
 
-from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_hotkey
-from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_press_key
-from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_release_key
-from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_type_key
-from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_write
-from je_auto_control.utils.je_auto_control_exception.exception_tag import keyboard_write_cant_find
-from je_auto_control.utils.je_auto_control_exception.exception_tag import table_cant_find_key
-from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlCantFindKeyException
-from je_auto_control.utils.je_auto_control_exception.exceptions import AutoControlKeyboardException
+from je_auto_control.utils.exception.exception_tag import keyboard_hotkey
+from je_auto_control.utils.exception.exception_tag import keyboard_press_key
+from je_auto_control.utils.exception.exception_tag import keyboard_release_key
+from je_auto_control.utils.exception.exception_tag import keyboard_type_key
+from je_auto_control.utils.exception.exception_tag import keyboard_write
+from je_auto_control.utils.exception.exception_tag import keyboard_write_cant_find
+from je_auto_control.utils.exception.exception_tag import table_cant_find_key
+from je_auto_control.utils.exception.exceptions import AutoControlCantFindKeyException
+from je_auto_control.utils.exception.exceptions import AutoControlKeyboardException
 from je_auto_control.wrapper.platform_wrapper import keyboard
 from je_auto_control.wrapper.platform_wrapper import keyboard_check
 from je_auto_control.wrapper.platform_wrapper import keys_table
@@ -32,6 +32,8 @@ def press_key(keycode: [int, str], is_shift: bool = False, **kwargs):
         return str(keycode)
     except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_press_key)
+    except TypeError:
+        raise AutoControlKeyboardException(keyboard_type_key)
 
 
 def release_key(keycode: [int, str], is_shift: bool = False, **kwargs):
@@ -52,6 +54,8 @@ def release_key(keycode: [int, str], is_shift: bool = False, **kwargs):
         return str(keycode)
     except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_release_key)
+    except TypeError:
+        raise AutoControlKeyboardException(keyboard_type_key)
 
 
 def type_key(keycode: [int, str], is_shift: bool = False, **kwargs):
@@ -64,6 +68,8 @@ def type_key(keycode: [int, str], is_shift: bool = False, **kwargs):
         release_key(keycode, is_shift)
         return str(keycode)
     except AutoControlKeyboardException:
+        raise AutoControlKeyboardException(keyboard_type_key)
+    except TypeError:
         raise AutoControlKeyboardException(keyboard_type_key)
 
 
