@@ -227,13 +227,13 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.multiprocess_timeout" />
-      <item itemvalue="Python.test_auto_control_exception" />
+      <item itemvalue="Python.auto_control_record" />
+      <item itemvalue="Python.keyboard_write_test (1)" />
       <item itemvalue="Python.keyboard_write_test" />
       <item itemvalue="Python.mouse_test (1)" />
-      <item itemvalue="Python.keyboard_write_test (1)" />
+      <item itemvalue="Python.multiprocess_timeout" />
       <item itemvalue="Python.record_test" />
-      <item itemvalue="Python.auto_control_record" />
+      <item itemvalue="Python.test_auto_control_exception" />
     </list>
     <recent_temporary>
       <list>

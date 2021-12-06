@@ -10,11 +10,12 @@ this program will type test two time
 one time is type key one time is record
 """
 record()
+sleep(1)
 print(type_key("t"))
 print(type_key("e"))
 print(type_key("s"))
 print(type_key("t"))
-sleep(1)
+sleep(2)
 record_result = stop_record()
 print(record_result)
 execute_action(record_result)
