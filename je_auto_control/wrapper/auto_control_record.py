@@ -33,5 +33,7 @@ if __name__ == "__main__":
     record()
     from time import sleep
     sleep(5)
-    print(stop_record())
+    record_result = stop_record()
+    print(record_result)
+    execute_action(record_result)
     sleep(2)

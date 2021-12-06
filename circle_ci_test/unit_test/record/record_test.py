@@ -10,10 +10,10 @@ this program will type test two time
 one time is type key one time is record
 """
 record()
-type_key("t")
-type_key("e")
-type_key("s")
-type_key("t")
+print(type_key("t"))
+print(type_key("e"))
+print(type_key("s"))
+print(type_key("t"))
 sleep(1)
 record_result = stop_record()
 print(record_result)
