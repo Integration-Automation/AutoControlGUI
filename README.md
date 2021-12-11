@@ -19,8 +19,8 @@ pip install je_auto_control
 ## Info
 
 * requirement
-    * Python 3.5 & up
-    * pip 19.3 & up
+    * Python 3.5 & later
+    * pip 19.3 & later
 
 
 * Dev env

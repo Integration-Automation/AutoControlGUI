@@ -52,7 +52,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/circle_ci_test/unit_test/record" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
@@ -227,13 +227,13 @@
       <method v="2" />
     </configuration>
     <list>
+      <item itemvalue="Python.multiprocess_timeout" />
+      <item itemvalue="Python.test_auto_control_exception" />
       <item itemvalue="Python.auto_control_record" />
       <item itemvalue="Python.keyboard_write_test (1)" />
       <item itemvalue="Python.keyboard_write_test" />
       <item itemvalue="Python.mouse_test (1)" />
-      <item itemvalue="Python.multiprocess_timeout" />
       <item itemvalue="Python.record_test" />
-      <item itemvalue="Python.test_auto_control_exception" />
     </list>
     <recent_temporary>
       <list>
@@ -306,6 +306,9 @@
       <workItem from="1638526002894" duration="3350000" />
       <workItem from="1638610540464" duration="8617000" />
       <workItem from="1638754182136" duration="883000" />
+      <workItem from="1638964759181" duration="111000" />
+      <workItem from="1638966060460" duration="1103000" />
+      <workItem from="1639044486297" duration="589000" />
     </task>
     <servers />
   </component>
