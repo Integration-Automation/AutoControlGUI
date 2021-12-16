@@ -90,11 +90,8 @@ jobs:
     steps:
       - checkout
       - run:
-          command: echo "DISPLAY=:0" >> ~/.bashrc
-          name: echo "DISPLAY=:0" >> ~/.bashrc
-      - run:
-          command: source ~/.bashrc
-          name: source ~/.bashrc
+          command: DISPLAY=:0 python
+          name: DISPLAY=:0 python
       # pip require package
       - run:
           command: pip install --user -r requirements.txt
