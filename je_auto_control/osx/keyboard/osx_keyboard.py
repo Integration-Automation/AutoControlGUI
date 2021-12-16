@@ -49,19 +49,22 @@ def normal_key(keycode: int, is_shift: bool, is_down: bool):
     create event
     post event
     """
-    if is_shift:
+    try:
+        if is_shift:
+            event = Quartz.CGEventCreateKeyboardEvent(
+                None,
+                osx_key_shift,
+                is_down
+            )
+            Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
         event = Quartz.CGEventCreateKeyboardEvent(
             None,
-            osx_key_shift,
+            keycode,
             is_down
         )
         Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
-    event = Quartz.CGEventCreateKeyboardEvent(
-        None,
-        keycode,
-        is_down
-    )
-    Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
+    except ValueError as error:
+        print(repr(error), file=sys.stderr)
 
 
 def special_key(keycode: int, is_shift: bool):

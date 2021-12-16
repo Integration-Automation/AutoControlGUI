@@ -21,8 +21,8 @@ except AutoControlKeyboardException as error:
     print(repr(error), file=sys.stderr)
 # no error system will catch it but may make some system error
 # you can try to reconnect usb
+
 type_key(-1)
 type_key(18919819819165161616161651651651651231231)
 press_key(1616516516516516516515)
 release_key(15616516516511)
-

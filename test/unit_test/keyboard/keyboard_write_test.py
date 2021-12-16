@@ -31,5 +31,3 @@ try:
     write("!#@L@#{@#PL#{!@#L{!#{|##PO}!@#O@!O#P!)KI#O_!K")
 except AutoControlKeyboardException as error:
     print(repr(error), file=sys.stderr)
-
-
