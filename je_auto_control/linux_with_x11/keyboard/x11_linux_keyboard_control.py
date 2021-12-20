@@ -16,15 +16,21 @@ def press_key(keycode: int):
     """
     :param keycode which keycode we want to press
     """
-    time.sleep(0.01)
-    fake_input(display, X.KeyPress, keycode)
-    display.sync()
+    try:
+        time.sleep(0.01)
+        fake_input(display, X.KeyPress, keycode)
+        display.sync()
+    except struct.error as error:
+        print(repr(error), file=sys.stderr)
 
 
 def release_key(keycode: int):
     """
     :param keycode which keycode we want to release
     """
-    time.sleep(0.01)
-    fake_input(display, X.KeyRelease, keycode)
-    display.sync()
+    try:
+        time.sleep(0.01)
+        fake_input(display, X.KeyRelease, keycode)
+        display.sync()
+    except struct.error as error:
+        print(repr(error), file=sys.stderr)
