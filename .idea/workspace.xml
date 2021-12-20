@@ -2,7 +2,82 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/gui_test/calculator/calculator.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/gui_test/image/locate_all_image_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/gui_test/image/locate_and_click_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/gui_test/image/locate_image_center_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/1.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/2.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/3.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/4.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/5.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/6.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/7.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/8.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/9.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/equal.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/minus.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/multiply.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/plus.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/test.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/test1.PNG" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/test_template.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/critical_exit/critical_exit_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/critical_exit/real_critical_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/exception/test_auto_control_exception.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/exception/test_image_not_found_exception.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/execute_action/execute_action_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/json/json_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/keyboard/hotkey_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/keyboard/keyboard_is_press_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/keyboard/keyboard_type_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/keyboard/keyboard_write_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/mouse/mouse_scroll_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/mouse/mouse_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/record/record_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/screen/screen_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/screen/screenshot_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/timeout/timeout_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/gui_test/calculator/calculator.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/gui_test/calculator/calculator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/gui_test/image/locate_all_image_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/gui_test/image/locate_all_image_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/gui_test/image/locate_and_click_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/gui_test/image/locate_and_click_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/gui_test/image/locate_image_center_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/gui_test/image/locate_image_center_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/1.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/1.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/2.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/2.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/3.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/3.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/4.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/4.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/5.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/5.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/6.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/6.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/7.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/7.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/8.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/8.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/9.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/9.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/equal.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/equal.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/minus.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/minus.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/multiply.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/multiply.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/plus.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/plus.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/test.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/test.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/test1.PNG" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/test1.PNG" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/test_template.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/test_template.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/critical_exit/critical_exit_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/critical_exit/critical_exit_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/critical_exit/real_critical_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/critical_exit/real_critical_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/exception/test_auto_control_exception.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/exception/test_auto_control_exception.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/exception/test_image_not_found_exception.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/exception/test_image_not_found_exception.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/execute_action/execute_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/execute_action/execute_action_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/json/json_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/json/json_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/keyboard/hotkey_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/keyboard/hotkey_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/keyboard/keyboard_is_press_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/keyboard/keyboard_is_press_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/keyboard/keyboard_type_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/keyboard/keyboard_type_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/keyboard/keyboard_write_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/keyboard/keyboard_write_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/mouse/mouse_scroll_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/mouse/mouse_scroll_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/mouse/mouse_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/mouse/mouse_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/record/record_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/record/record_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/screen/screen_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/screen/screen_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/screen/screenshot_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/screen/screenshot_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/timeout/timeout_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/timeout/timeout_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/keyboard/x11_linux_keyboard_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/keyboard/x11_linux_keyboard_control.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,14 +104,14 @@
   </component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/je_auto_control/utils/exception/exceptions.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/je_auto_control/utils/exception/exception_tag.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/test/unit_test/critical_exit/critical_exit_test.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/test/unit_test/with_editor/auto_gui_with_je_editor.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/setup.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/je_auto_control/utils/exception/exception_tag.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/test/unit_test/with_editor/auto_gui_with_je_editor.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/test/unit_test/critical_exit/critical_exit_test.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/test/unit_test/mouse/mouse_test.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/osx/mouse/osx_mouse.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/utils/action_executor/action_executor.py" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="ProjectId" id="1wn0qq5AyiVDEsyu3DrNoMAnZ8K" />
@@ -52,7 +127,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/circle_ci_test/unit_test/record" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
@@ -227,13 +302,13 @@
       <method v="2" />
     </configuration>
     <list>
+      <item itemvalue="Python.multiprocess_timeout" />
+      <item itemvalue="Python.test_auto_control_exception" />
       <item itemvalue="Python.auto_control_record" />
       <item itemvalue="Python.keyboard_write_test (1)" />
       <item itemvalue="Python.keyboard_write_test" />
       <item itemvalue="Python.mouse_test (1)" />
-      <item itemvalue="Python.multiprocess_timeout" />
       <item itemvalue="Python.record_test" />
-      <item itemvalue="Python.test_auto_control_exception" />
     </list>
     <recent_temporary>
       <list>
@@ -306,6 +381,12 @@
       <workItem from="1638526002894" duration="3350000" />
       <workItem from="1638610540464" duration="8617000" />
       <workItem from="1638754182136" duration="883000" />
+      <workItem from="1638964759181" duration="111000" />
+      <workItem from="1638966060460" duration="1103000" />
+      <workItem from="1639044486297" duration="589000" />
+      <workItem from="1639728249682" duration="695000" />
+      <workItem from="1639733628260" duration="967000" />
+      <workItem from="1639969558505" duration="304000" />
     </task>
     <servers />
   </component>
@@ -347,10 +428,11 @@
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$keyboard_type_test.coverage" NAME="keyboard_type_test Coverage Results" MODIFIED="1629265020077" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$locate_all_image_test.coverage" NAME="locate_all_image_test Coverage Results" MODIFIED="1629389018535" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$execute_action_test.coverage" NAME="execute_action_test Coverage Results" MODIFIED="1634416736563" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test" />
+    <SUITE FILE_PATH="coverage/AutoControl$screenshot_test.coverage" NAME="screenshot_test Coverage Results" MODIFIED="1639515068660" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/screen" />
     <SUITE FILE_PATH="coverage/AutoControl$critical_exit_test.coverage" NAME="critical_exit_test Coverage Results" MODIFIED="1638531300898" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/critical_exit" />
     <SUITE FILE_PATH="coverage/AutoControl$hotkey_test.coverage" NAME="hotkey_test Coverage Results" MODIFIED="1637744624754" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/keyboard" />
-    <SUITE FILE_PATH="coverage/AutoControl$execute_action_test.coverage" NAME="execute_action_test Coverage Results" MODIFIED="1638527551695" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/execute_action" />
     <SUITE FILE_PATH="coverage/AutoControl$calculator__3_.coverage" NAME="calculator (3) Coverage Results" MODIFIED="1638627286676" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
+    <SUITE FILE_PATH="coverage/AutoControl$execute_action_test.coverage" NAME="execute_action_test Coverage Results" MODIFIED="1639517209211" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/execute_action" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$real_critical_test.coverage" NAME="real_critical_test Coverage Results" MODIFIED="1634136655791" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$import_test.coverage" NAME="import_test Coverage Results" MODIFIED="1629286120014" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/AutoControl$multiprocess_timeout.coverage" NAME="multiprocess_timeout Coverage Results" MODIFIED="1637593410735" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/timeout" />
@@ -359,7 +441,7 @@
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$auto_gui_with_je_editor.coverage" NAME="auto_gui_with_je_editor Coverage Results" MODIFIED="1633530497756" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/with_editor" />
     <SUITE FILE_PATH="coverage/AutoControl$keyboard_write_test.coverage" NAME="keyboard_write_test Coverage Results" MODIFIED="1638718035281" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/keyboard" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$keyboard_listener.coverage" NAME="keyboardlistener Coverage Results" MODIFIED="1633627280725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/listener" />
-    <SUITE FILE_PATH="coverage/AutoControl$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1638619218888" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/calculator" />
+    <SUITE FILE_PATH="coverage/AutoControl$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1639515043312" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$x11_linux_keyboard_listener.coverage" NAME="x11_linux_keyboard_listener Coverage Results" MODIFIED="1633499563779" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/linux_with_x11/keyboard" />
     <SUITE FILE_PATH="coverage/AutoControl$record_test__1_.coverage" NAME="record_test (1) Coverage Results" MODIFIED="1638755703893" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test/unit_test/record" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$record_test.coverage" NAME="record_test Coverage Results" MODIFIED="1634135481625" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
@@ -372,7 +454,7 @@
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$critcal_exit.coverage" NAME="critcal_exit Coverage Results" MODIFIED="1629791186697" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/critical_exit" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$locate_and_click.coverage" NAME="locate_and_click Coverage Results" MODIFIED="1629094142647" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$keyboard_is_press_test.coverage" NAME="keyboard_is_press_test Coverage Results" MODIFIED="1629290140164" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
-    <SUITE FILE_PATH="coverage/AutoControl$keyboard_write_test__1_.coverage" NAME="keyboard_write_test (1) Coverage Results" MODIFIED="1638723832873" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/keyboard" />
+    <SUITE FILE_PATH="coverage/AutoControl$keyboard_write_test__1_.coverage" NAME="keyboard_write_test (1) Coverage Results" MODIFIED="1639514967915" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/keyboard" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$x11_linux_listener.coverage" NAME="x11_linux_listener Coverage Results" MODIFIED="1633678306221" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/linux_with_x11/listener" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$action_executor__1_.coverage" NAME="action_executor (1) Coverage Results" MODIFIED="1637302010513" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/action_executer" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$win32_keyboard_listener__1_.coverage" NAME="win32_keyboard_listener (1) Coverage Results" MODIFIED="1633763750797" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/listener" />
@@ -398,6 +480,7 @@
     <SUITE FILE_PATH="coverage/AutoControl$action_executor.coverage" NAME="action_executor Coverage Results" MODIFIED="1637913491910" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/action_executer" />
     <SUITE FILE_PATH="coverage/AutoControl$screen_test.coverage" NAME="screen_test Coverage Results" MODIFIED="1637737335291" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/screen" />
     <SUITE FILE_PATH="coverage/AutoControl$pytest_in_test_image_not_found_exception_py.coverage" NAME="pytest in test_image_not_found_exception.py Coverage Results" MODIFIED="1638156084484" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/exception" />
+    <SUITE FILE_PATH="coverage/AutoControl$auto_gui_with_je_editor.coverage" NAME="auto_gui_with_je_editor Coverage Results" MODIFIED="1639517182376" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/with_editor" />
     <SUITE FILE_PATH="coverage/AutoControl$mouse_test__1_.coverage" NAME="mouse_test (1) Coverage Results" MODIFIED="1638718315654" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/mouse" />
     <SUITE FILE_PATH="coverage/AutoControl$pytest_in_test_auto_control_exception_py.coverage" NAME="pytest in test_auto_control_exception.py Coverage Results" MODIFIED="1638157045378" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/exception" />
     <SUITE FILE_PATH="coverage/AutoControl$locate_all_image_test.coverage" NAME="locate_all_image_test Coverage Results" MODIFIED="1638535161059" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test/unit_test/image" />

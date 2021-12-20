@@ -1,0 +1,47 @@
+import sys
+import time
+
+from je_auto_control import position
+from je_auto_control import set_position
+from je_auto_control import press_mouse
+from je_auto_control import release_mouse
+from je_auto_control import click_mouse
+from je_auto_control import mouse_table
+from je_auto_control import AutoControlMouseException
+
+time.sleep(1)
+
+print(position())
+set_position(809, 388)
+
+print(mouse_table.keys())
+
+press_mouse("mouse_right")
+release_mouse("mouse_right")
+press_mouse("mouse_left")
+release_mouse("mouse_left")
+click_mouse("mouse_left")
+try:
+    set_position(6468684648, 4686468648864684684)
+except AutoControlMouseException as error:
+    print(repr(error), file=sys.stderr)
+try:
+    click_mouse("dawdawddadaawd")
+except AutoControlMouseException as error:
+    print(repr(error), file=sys.stderr)
+try:
+    press_mouse("dawdawdawdawd")
+except AutoControlMouseException as error:
+    print(repr(error), file=sys.stderr)
+try:
+    release_mouse("dwadawdadwdada")
+except AutoControlMouseException as error:
+    print(repr(error), file=sys.stderr)
+try:
+    press_mouse(16515588646)
+except AutoControlMouseException as error:
+    print(repr(error), file=sys.stderr)
+try:
+    release_mouse(1651651915)
+except AutoControlMouseException as error:
+    print(repr(error), file=sys.stderr)

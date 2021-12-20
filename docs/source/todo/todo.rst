@@ -2,5 +2,6 @@
 AutoControlGUI TODO LIST
 ========================
 * TODO
-    * more screen function like record screen
+    * more example
+    * more test
     * Project keep refactor
