@@ -33,7 +33,7 @@ def press_key(keycode: [int, str], is_shift: bool = False, **kwargs):
     except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_press_key)
     except TypeError:
-        raise AutoControlKeyboardException(keyboard_type_key)
+        raise AutoControlKeyboardException(repr(TypeError))
 
 
 def release_key(keycode: [int, str], is_shift: bool = False, **kwargs):

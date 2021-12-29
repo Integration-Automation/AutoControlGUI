@@ -2,82 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/gui_test/calculator/calculator.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/gui_test/image/locate_all_image_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/gui_test/image/locate_and_click_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/gui_test/image/locate_image_center_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/1.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/2.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/3.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/4.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/5.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/6.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/7.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/8.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/9.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/equal.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/minus.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/multiply.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/plus.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/test.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/test1.PNG" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/test_source/test_template.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/critical_exit/critical_exit_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/critical_exit/real_critical_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/exception/test_auto_control_exception.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/exception/test_image_not_found_exception.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/execute_action/execute_action_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/json/json_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/keyboard/hotkey_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/keyboard/keyboard_is_press_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/keyboard/keyboard_type_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/keyboard/keyboard_write_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/mouse/mouse_scroll_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/mouse/mouse_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/record/record_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/screen/screen_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/screen/screenshot_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/circle_ci_test_stable/unit_test/timeout/timeout_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/gui_test/calculator/calculator.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/gui_test/calculator/calculator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/gui_test/image/locate_all_image_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/gui_test/image/locate_all_image_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/gui_test/image/locate_and_click_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/gui_test/image/locate_and_click_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/gui_test/image/locate_image_center_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/gui_test/image/locate_image_center_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/1.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/1.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/2.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/2.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/3.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/3.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/4.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/4.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/5.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/5.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/6.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/6.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/7.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/7.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/8.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/8.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/9.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/9.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/equal.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/equal.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/minus.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/minus.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/multiply.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/multiply.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/plus.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/plus.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/test.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/test.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/test1.PNG" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/test1.PNG" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/test_source/test_template.png" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/test_source/test_template.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/critical_exit/critical_exit_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/critical_exit/critical_exit_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/critical_exit/real_critical_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/critical_exit/real_critical_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/exception/test_auto_control_exception.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/exception/test_auto_control_exception.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/exception/test_image_not_found_exception.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/exception/test_image_not_found_exception.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/execute_action/execute_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/execute_action/execute_action_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/json/json_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/json/json_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/keyboard/hotkey_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/keyboard/hotkey_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/keyboard/keyboard_is_press_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/keyboard/keyboard_is_press_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/keyboard/keyboard_type_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/keyboard/keyboard_type_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/keyboard/keyboard_write_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/keyboard/keyboard_write_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/mouse/mouse_scroll_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/mouse/mouse_scroll_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/mouse/mouse_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/mouse/mouse_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/record/record_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/record/record_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/screen/screen_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/screen/screen_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/screen/screenshot_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/screen/screenshot_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/circle_ci_test/unit_test/timeout/timeout_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/circle_ci_test_dev/unit_test/timeout/timeout_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/keyboard/x11_linux_keyboard_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/keyboard/x11_linux_keyboard_control.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -104,15 +31,15 @@
   </component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/je_auto_control/utils/exception/exceptions.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/setup.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/utils/exception/exception_tag.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/test/unit_test/with_editor/auto_gui_with_je_editor.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/test/unit_test/critical_exit/critical_exit_test.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/test/unit_test/mouse/mouse_test.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/test/unit_test/critical_exit/critical_exit_test.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/osx/mouse/osx_mouse.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/test/unit_test/with_editor/auto_gui_with_je_editor.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/setup.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/utils/action_executor/action_executor.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="ProjectId" id="1wn0qq5AyiVDEsyu3DrNoMAnZ8K" />
   <component name="ProjectLevelVcsManager">
@@ -127,7 +54,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../APITestka" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
@@ -387,6 +314,9 @@
       <workItem from="1639728249682" duration="695000" />
       <workItem from="1639733628260" duration="967000" />
       <workItem from="1639969558505" duration="304000" />
+      <workItem from="1640656816328" duration="272000" />
+      <workItem from="1640692494530" duration="7361000" />
+      <workItem from="1640769391438" duration="3294000" />
     </task>
     <servers />
   </component>
