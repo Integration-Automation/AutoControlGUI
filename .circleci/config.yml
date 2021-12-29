@@ -13,6 +13,10 @@ jobs:
 
     steps:
       - checkout
+      # upgrade
+      - run:
+          command: pip install --upgrade pip setuptools wheel
+          name: pip install --upgrade pip setuptools wheel
       # pip require package
       - run:
           command: pip install --user -r dev_requirements.txt
@@ -89,6 +93,10 @@ jobs:
 
     steps:
       - checkout
+      # upgrade
+      - run:
+          command: pip install --upgrade pip setuptools wheel
+          name: pip install --upgrade pip setuptools wheel
       # pip require package
       - run:
           command: pip install --user -r requirements.txt
