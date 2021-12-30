@@ -32,8 +32,8 @@ def press_key(keycode: [int, str], is_shift: bool = False, **kwargs):
         return str(keycode)
     except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_press_key)
-    except TypeError:
-        raise AutoControlKeyboardException(repr(TypeError))
+    except TypeError as error:
+        raise AutoControlKeyboardException(repr(error))
 
 
 def release_key(keycode: [int, str], is_shift: bool = False, **kwargs):
@@ -54,8 +54,8 @@ def release_key(keycode: [int, str], is_shift: bool = False, **kwargs):
         return str(keycode)
     except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_release_key)
-    except TypeError:
-        raise AutoControlKeyboardException(keyboard_type_key)
+    except TypeError as error:
+        raise AutoControlKeyboardException(repr(error))
 
 
 def type_key(keycode: [int, str], is_shift: bool = False, **kwargs):
@@ -69,8 +69,8 @@ def type_key(keycode: [int, str], is_shift: bool = False, **kwargs):
         return str(keycode)
     except AutoControlKeyboardException:
         raise AutoControlKeyboardException(keyboard_type_key)
-    except TypeError:
-        raise AutoControlKeyboardException(keyboard_type_key)
+    except TypeError as error:
+        raise AutoControlKeyboardException(repr(error))
 
 
 def check_key_is_press(keycode: [int, str], **kwargs):

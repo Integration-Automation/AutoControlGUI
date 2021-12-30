@@ -67,8 +67,8 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
         return mouse_keycode, x, y
     except AutoControlMouseException:
         raise AutoControlMouseException(mouse_press_mouse)
-    except TypeError:
-        raise AutoControlMouseException(mouse_release_mouse)
+    except TypeError as error:
+        raise AutoControlMouseException(repr(error))
 
 
 def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
@@ -100,8 +100,8 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwa
         return mouse_keycode, x, y
     except AutoControlMouseException:
         raise AutoControlMouseException(mouse_release_mouse)
-    except TypeError:
-        raise AutoControlMouseException(mouse_release_mouse)
+    except TypeError as error:
+        raise AutoControlMouseException(repr(error))
 
 
 def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
@@ -130,8 +130,8 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
         return mouse_keycode, x, y
     except AutoControlMouseException:
         raise AutoControlMouseException(mouse_click_mouse)
-    except TypeError:
-        raise AutoControlMouseException(mouse_click_mouse)
+    except TypeError as error:
+        raise AutoControlMouseException(repr(error))
 
 
 def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down", **kwargs):
@@ -175,5 +175,5 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
         return scroll_value, scroll_direction
     except AutoControlMouseException:
         raise AutoControlMouseException(mouse_scroll)
-    except TypeError:
-        raise AutoControlMouseException(mouse_scroll)
+    except TypeError as error:
+        raise AutoControlMouseException(repr(error))
