@@ -107,20 +107,4 @@ def scroll(scroll_value: int, x: int = None, y: int = None):
     :param x scroll x
     :param y scroll y
     """
-    now_cursor_x, now_cursor_y = position()
-    width, height = size()
-    if x is None:
-        x = now_cursor_x
-    else:
-        if x < 0:
-            x = 0
-        elif x >= width:
-            x = width - 1
-    if y is None:
-        y = now_cursor_y
-    else:
-        if y < 0:
-            y = 0
-        elif y >= height:
-            y = height - 1
     mouse_event(win32_WHEEL, x, y, dwData=scroll_value)

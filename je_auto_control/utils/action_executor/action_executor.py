@@ -22,6 +22,7 @@ from je_auto_control import type_key
 from je_auto_control import write
 from je_auto_control.utils.exception.exception_tag import action_is_null_error
 from je_auto_control.utils.exception.exception_tag import cant_execute_action_error
+from je_auto_control.utils.exception.exceptions import AutoControlActionException
 
 event_dict = {
     # mouse
@@ -53,14 +54,14 @@ event_dict = {
 }
 
 
-def execute_event(action):
+def execute_event(action: list):
     event = event_dict.get(action[0])
     if len(action) == 2:
         event(**action[1])
     elif len(action) == 1:
         event()
     else:
-        pass
+        raise AutoControlActionException(cant_execute_action_error)
 
 
 def execute_action(action_list: list):
