@@ -2,14 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/Python_JEAutoControl.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Python_JEAutoControl.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/action_executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/action_executor/action_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/critical_exit/critcal_exit.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/critical_exit/critcal_exit.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/mouse/win32_ctype_mouse_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/mouse/win32_ctype_mouse_control.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_mouse.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_mouse.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/unit_test/with_editor/auto_gui_with_je_editor.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,7 +31,6 @@
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/utils/action_executor/action_executor.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/test/unit_test/with_editor/auto_gui_with_je_editor.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/test/unit_test/critical_exit/critical_exit_test.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/test/unit_test/mouse/mouse_test.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" root0="FORCE_HIGHLIGHTING" />
@@ -62,7 +55,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../APITestka" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
@@ -434,7 +427,7 @@
     <SUITE FILE_PATH="coverage/AutoControl$hotkey_test.coverage" NAME="hotkey_test Coverage Results" MODIFIED="1637744624754" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/keyboard" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$win32_listener.coverage" NAME="win32_listener Coverage Results" MODIFIED="1633687248883" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/listener" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$keyboard_is_press_test.coverage" NAME="keyboard_is_press_test Coverage Results" MODIFIED="1629290140164" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
-    <SUITE FILE_PATH="coverage/AutoControl$mouse_test__1_.coverage" NAME="mouse_test (1) Coverage Results" MODIFIED="1638718315654" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/mouse" />
+    <SUITE FILE_PATH="coverage/AutoControl$mouse_test__1_.coverage" NAME="mouse_test (1) Coverage Results" MODIFIED="1646124117681" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/mouse" />
     <SUITE FILE_PATH="coverage/AutoControl$mouse_test.coverage" NAME="mouse_test Coverage Results" MODIFIED="1638717075083" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/mouse" />
   </component>
 </project>
