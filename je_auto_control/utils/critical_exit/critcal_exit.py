@@ -10,7 +10,7 @@ from je_auto_control.wrapper.platform_wrapper import keyboard_check
 
 class CriticalExit(Thread):
 
-    def __init__(self, default_daemon=True):
+    def __init__(self, default_daemon: bool = True):
         super().__init__()
         self.setDaemon(default_daemon)
         self._exit_check_key = keys_table.get("f7")

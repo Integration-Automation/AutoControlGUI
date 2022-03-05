@@ -17,6 +17,25 @@ from je_auto_control.wrapper.platform_wrapper import mouse_table
 from je_auto_control.wrapper.platform_wrapper import special_table
 
 
+def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int):
+    try:
+        if type(mouse_keycode) is str:
+            mouse_keycode = mouse_table.get(mouse_keycode)
+        else:
+            pass
+    except AutoControlCantFindKeyException:
+        raise AutoControlCantFindKeyException(table_cant_find_key)
+    try:
+        now_x, now_y = position()
+        if x is None:
+            x = now_x
+        if y is None:
+            y = now_y
+    except AutoControlMouseException:
+        raise AutoControlMouseException(mouse_get_position)
+    return mouse_keycode, x, y
+
+
 def position():
     """
     get mouse current position
@@ -47,19 +66,8 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
     :param x event x
     :param y event y
     """
+    mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
     try:
-        if type(mouse_keycode) is str:
-            mouse_keycode = mouse_table.get(mouse_keycode)
-        else:
-            pass
-    except AutoControlCantFindKeyException:
-        raise AutoControlCantFindKeyException(table_cant_find_key)
-    try:
-        now_x, now_y = position()
-        if x is None:
-            x = now_x
-        if y is None:
-            y = now_y
         if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
             mouse.press_mouse(mouse_keycode)
         elif sys.platform in ["darwin"]:
@@ -67,8 +75,8 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
         return mouse_keycode, x, y
     except AutoControlMouseException:
         raise AutoControlMouseException(mouse_press_mouse)
-    except TypeError:
-        raise AutoControlMouseException(mouse_release_mouse)
+    except TypeError as error:
+        raise AutoControlMouseException(repr(error))
 
 
 def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
@@ -77,21 +85,7 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwa
     :param x event x
     :param y event y
     """
-    try:
-        if type(mouse_keycode) is str:
-            mouse_keycode = mouse_table.get(mouse_keycode)
-        else:
-            pass
-    except AutoControlCantFindKeyException:
-        raise AutoControlCantFindKeyException(table_cant_find_key)
-    try:
-        now_x, now_y = position()
-        if x is None:
-            x = now_x
-        if y is None:
-            y = now_y
-    except AutoControlMouseException:
-        raise AutoControlMouseException(mouse_get_position)
+    mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
     try:
         if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
             mouse.release_mouse(mouse_keycode)
@@ -100,8 +94,8 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwa
         return mouse_keycode, x, y
     except AutoControlMouseException:
         raise AutoControlMouseException(mouse_release_mouse)
-    except TypeError:
-        raise AutoControlMouseException(mouse_release_mouse)
+    except TypeError as error:
+        raise AutoControlMouseException(repr(error))
 
 
 def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
@@ -110,28 +104,14 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
     :param x event x
     :param y event y
     """
-    try:
-        if type(mouse_keycode) is str:
-            mouse_keycode = mouse_table.get(mouse_keycode)
-        else:
-            pass
-    except AutoControlCantFindKeyException:
-        raise AutoControlCantFindKeyException(table_cant_find_key)
-    try:
-        now_x, now_y = position()
-        if x is None:
-            x = now_x
-        if y is None:
-            y = now_y
-    except AutoControlMouseException:
-        raise AutoControlMouseException(mouse_get_position)
+    mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
     try:
         mouse.click_mouse(mouse_keycode, x, y)
         return mouse_keycode, x, y
     except AutoControlMouseException:
         raise AutoControlMouseException(mouse_click_mouse)
-    except TypeError:
-        raise AutoControlMouseException(mouse_click_mouse)
+    except TypeError as error:
+        raise AutoControlMouseException(repr(error))
 
 
 def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down", **kwargs):
@@ -175,5 +155,5 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
         return scroll_value, scroll_direction
     except AutoControlMouseException:
         raise AutoControlMouseException(mouse_scroll)
-    except TypeError:
-        raise AutoControlMouseException(mouse_scroll)
+    except TypeError as error:
+        raise AutoControlMouseException(repr(error))

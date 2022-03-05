@@ -23,7 +23,7 @@ current_display = Display()
 
 class KeypressHandler(Thread):
 
-    def __init__(self, default_daemon=True):
+    def __init__(self, default_daemon: bool = True):
         """
         setDaemon : default damon is true
         still listener : continue listener keycode ?

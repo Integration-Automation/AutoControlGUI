@@ -45,3 +45,11 @@ try:
     release_mouse(1651651915)
 except AutoControlMouseException as error:
     print(repr(error), file=sys.stderr)
+try:
+    press_mouse("mouse_left")
+except AutoControlMouseException as error:
+    print(repr(error), file=sys.stderr)
+try:
+    release_mouse("mouse_left")
+except AutoControlMouseException as error:
+    print(repr(error), file=sys.stderr)
