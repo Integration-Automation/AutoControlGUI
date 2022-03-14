@@ -78,13 +78,13 @@ jobs:
       # GUI Test
       # image detect
       - run:
-          command: python ./test/gui_test/image/locate_all_image_test.py
+          command: python ./test/gui_test/image/locate_all_image.py
           name: locate_all_image_test
       - run:
-          command: python ./test/gui_test/image/locate_and_click_test.py
+          command: python ./test/gui_test/image/locate_and_click.py
           name: locate_and_click_test
       - run:
-          command: python ./test/gui_test/image/locate_image_center_test.py
+          command: python ./test/gui_test/image/locate_image_center.py
           name: locate_image_center_test
   build-and-test-windows-stable:
     executor:
