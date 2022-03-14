@@ -86,6 +86,11 @@ jobs:
       - run:
           command: python ./test/gui_test/image/locate_image_center.py
           name: locate_image_center_test
+      # argparse
+      - run:
+          command: python ./test/unit_test/argparse/argparse_test.py
+          name: argparse_test
+
   build-and-test-windows-stable:
     executor:
       name: windows/default
