@@ -50,8 +50,8 @@ jobs:
           name: scroll_test
       # exception test
       - run:
-          command: python ./test/unit_test/exception/test_auto_control_exception.py
-          name: test_auto_control_exception
+          command: python ./test/unit_test/exception/auto_control_exception_test.py
+          name: auto_control_exception_test
       # critical exit
       - run:
           command: python ./test/unit_test/critical_exit/critical_exit_test.py
