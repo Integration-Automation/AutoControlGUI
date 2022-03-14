@@ -34,9 +34,9 @@ cant_find_image = "can't find image"
 find_image_error_variable = "variable error"
 # listener tags
 listener_error = "Auto control listener error"
-# record tags
-record_queue_error = "can't get record queue it's none are you using stop record before record"
-record_not_found_action_error = "record action not found"
+# test_record tags
+record_queue_error = "can't get test_record queue it's none are you using stop test_record before test_record"
+record_not_found_action_error = "test_record action not found"
 # json action file tag
 cant_execute_action_error = "can't execute action"
 cant_find_json_error = "can't find json file"

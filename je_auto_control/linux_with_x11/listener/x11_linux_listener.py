@@ -72,7 +72,7 @@ class KeypressHandler(Thread):
 
     def record(self, record_queue):
         """
-        :param record_queue the queue record action
+        :param record_queue the queue test_record action
         """
         self.record_flag = True
         self.record_queue = record_queue
@@ -108,7 +108,7 @@ class XWindowsKeypressListener(Thread):
         while still listener
             get context
             set handler
-            set record
+            set test_record
             get event
         """
         if self.still_listener:
@@ -159,14 +159,14 @@ def check_key_is_press(keycode: int):
 
 def x11_linux_record(record_queue):
     """
-    :param record_queue the queue record action
+    :param record_queue the queue test_record action
     """
     xwindows_listener.record(record_queue)
 
 
 def x11_linux_stop_record():
     """
-    stop record action
+    stop test_record action
     """
     return xwindows_listener.stop_record()
 

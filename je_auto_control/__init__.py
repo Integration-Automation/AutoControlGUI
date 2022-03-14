@@ -45,14 +45,14 @@ from je_auto_control.utils.exception.exceptions import AutoControlRecordExceptio
 from je_auto_control.utils.exception.exceptions import AutoControlActionNullException
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 
-# record
+# test_record
 from je_auto_control.wrapper.auto_control_record import record
 from je_auto_control.wrapper.auto_control_record import stop_record
 
 # json
-from je_auto_control.utils.action_executor.action_executor import execute_action
-from je_auto_control.utils.action_file.json_file import read_action_json
-from je_auto_control.utils.action_file.json_file import write_action_json
+from je_auto_control.utils.executor.action_executor import execute_action
+from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import write_action_json
 
 # timeout
 from je_auto_control.utils.timeout.multiprocess_timeout import multiprocess_timeout
