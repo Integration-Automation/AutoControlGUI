@@ -61,7 +61,7 @@ jobs:
           name: real_critical_test
       # test_record
       - run:
-          command: python ./test/unit_test/test_record/record_test.py
+          command: python ./test/unit_test/record/record_test.py
           name: record_test
       # execute
       - run:
