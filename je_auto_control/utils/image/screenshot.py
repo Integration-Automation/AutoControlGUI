@@ -1,8 +1,5 @@
 from PIL import ImageGrab
 
-from je_auto_control.utils.exception import exception_tag
-from je_auto_control.utils.exception.exceptions import AutoControlScreenException
-
 
 def pil_screenshot(file_path: str = None, region: list = None):
     """

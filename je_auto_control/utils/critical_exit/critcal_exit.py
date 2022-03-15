@@ -1,5 +1,4 @@
 import _thread
-import sys
 from threading import Thread
 
 from je_auto_control.utils.exception.exception_tag import je_auto_control_critical_exit_error
