@@ -104,7 +104,7 @@ jobs:
           name: pip install --upgrade --user pip setuptools wheel
       # pip require package
       - run:
-          command: pip install --user -r requirements.txt
+          command: pip install --user -r dev_requirements.txt
           name: pip dev_requirements.txt
       # screen test
       - run:
@@ -135,8 +135,8 @@ jobs:
           name: scroll_test
       # exception test
       - run:
-          command: python ./test/unit_test/exception/test_auto_control_exception.py
-          name: test_auto_control_exception
+          command: python ./test/unit_test/exception/auto_control_exception_test.py
+          name: auto_control_exception_test
       # critical exit
       - run:
           command: python ./test/unit_test/critical_exit/critical_exit_test.py
@@ -146,7 +146,7 @@ jobs:
           name: real_critical_test
       # test_record
       - run:
-          command: python ./test/unit_test/test_record/record_test.py
+          command: python ./test/unit_test/record/record_test.py
           name: record_test
       # execute
       - run:
@@ -163,18 +163,19 @@ jobs:
       # GUI Test
       # image detect
       - run:
-          command: python ./test/gui_test/image/locate_all_image_test.py
+          command: python ./test/gui_test/image/locate_all_image.py
           name: locate_all_image_test
       - run:
-          command: python ./test/gui_test/image/locate_and_click_test.py
+          command: python ./test/gui_test/image/locate_and_click.py
           name: locate_and_click_test
       - run:
-          command: python ./test/gui_test/image/locate_image_center_test.py
+          command: python ./test/gui_test/image/locate_image_center.py
           name: locate_image_center_test
       # argparse
       - run:
           command: python ./test/unit_test/argparse/argparse_test.py
           name: argparse_test
+          
 workflows:
   main:
     jobs:
