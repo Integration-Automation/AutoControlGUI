@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="" />
+    <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/unit_test/execute_action/execute_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/execute_action/execute_action_test.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -71,7 +77,7 @@
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\AutoControl\test\gui_test" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.json_test">
+  <component name="RunManager" selected="Python.execute_action_test">
     <configuration name="calculator" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -237,8 +243,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.json_test" />
         <item itemvalue="Python.execute_action_test" />
+        <item itemvalue="Python.json_test" />
         <item itemvalue="Python.real_critical_test" />
         <item itemvalue="Python.calculator" />
         <item itemvalue="Python.keyboard_write_test (1)" />
@@ -325,6 +331,9 @@
       <workItem from="1646732024855" duration="612000" />
       <workItem from="1646800534696" duration="712000" />
       <workItem from="1647228059064" duration="10380000" />
+      <workItem from="1647334280162" duration="615000" />
+      <workItem from="1647341261059" duration="595000" />
+      <workItem from="1647393530663" duration="598000" />
     </task>
     <servers />
   </component>
@@ -380,7 +389,7 @@
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$auto_gui_with_je_editor.coverage" NAME="auto_gui_with_je_editor Coverage Results" MODIFIED="1633530497756" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/with_editor" />
     <SUITE FILE_PATH="coverage/AutoControl$auto_control_record.coverage" NAME="auto_control_record Coverage Results" MODIFIED="1638351916701" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/wrapper" />
     <SUITE FILE_PATH="coverage/AutoControl$record_test.coverage" NAME="record_test Coverage Results" MODIFIED="1638755685149" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/record" />
-    <SUITE FILE_PATH="coverage/AutoControl$execute_action_test.coverage" NAME="execute_action_test Coverage Results" MODIFIED="1647230027791" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/execute_action" />
+    <SUITE FILE_PATH="coverage/AutoControl$execute_action_test.coverage" NAME="execute_action_test Coverage Results" MODIFIED="1647311183633" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/execute_action" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$locate_all_image.coverage" NAME="locate_all_image Coverage Results" MODIFIED="1629265031765" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/AutoControl$locate_image_center_test.coverage" NAME="locate_image_center_test Coverage Results" MODIFIED="1638535169931" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test/unit_test/image" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$import_test.coverage" NAME="import_test Coverage Results" MODIFIED="1629286120014" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
