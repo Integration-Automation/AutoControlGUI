@@ -3,8 +3,8 @@
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/critical_exit/critcal_exit.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/critical_exit/critcal_exit.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/critical_exit/real_critical_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/critical_exit/real_critical_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/example/example_index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/example_index.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/index.rst" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -335,7 +335,7 @@
       <workItem from="1647435056716" duration="1408000" />
       <workItem from="1647523669648" duration="131000" />
       <workItem from="1647524193231" duration="2744000" />
-      <workItem from="1647576517533" duration="7377000" />
+      <workItem from="1647576517533" duration="7978000" />
     </task>
     <servers />
   </component>

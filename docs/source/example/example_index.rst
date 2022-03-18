@@ -3,7 +3,7 @@ AutoControlGUI_JE Example
 ==================
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
 
    installation/installation.rst
    critical_exit/critical_exit.rst
