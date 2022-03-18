@@ -2,8 +2,24 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/docs/source/example/critical_exit/critical_exit.rst" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/source/example/example_index.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev_requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/dev_requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/critical_exit/critical_exit.rst" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/editor/editor.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/editor/editor.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/execute_action/execute_action.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/execute_action/execute_action.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/image_detect/image_detect.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/image_detect/image_detect.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/index.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/installation/installation.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/installation/installation.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/keyboard/keyboard.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/keyboard/keyboard.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/mouse/mouse.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/mouse/mouse.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/record/record.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/record/record.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/screen/screen.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/screen/screen.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/test/test.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/test/test.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/todo/todo.rst" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/unit_test/critical_exit/critical_exit_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/critical_exit/critical_exit_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/unit_test/critical_exit/real_critical_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/critical_exit/real_critical_test.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -55,16 +71,16 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/source" />
     <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source" />
+      <recent name="C:\program_workspace\python\GitHub\AutoControl\docs" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\test\unit_test" />
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\AutoControl\circle_ci_test\unit_test\record" />
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\AutoControl\circle_ci_test\unit_test" />
-      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\AutoControl" />
-      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\AutoControl\circle_ci_test\gui_test\test_source" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\program_workspace\python\GitHub\AutoControl\test\unit_test\execute_action" />
@@ -74,7 +90,7 @@
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\AutoControl\test\gui_test" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.execute_action_test">
+  <component name="RunManager" selected="Python.real_critical_test">
     <configuration name="calculator" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -240,9 +256,9 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.real_critical_test" />
         <item itemvalue="Python.execute_action_test" />
         <item itemvalue="Python.json_test" />
-        <item itemvalue="Python.real_critical_test" />
         <item itemvalue="Python.calculator" />
         <item itemvalue="Python.keyboard_write_test (1)" />
       </list>
@@ -331,7 +347,10 @@
       <workItem from="1647334280162" duration="615000" />
       <workItem from="1647341261059" duration="595000" />
       <workItem from="1647393530663" duration="598000" />
-      <workItem from="1647435056716" duration="866000" />
+      <workItem from="1647435056716" duration="1408000" />
+      <workItem from="1647523669648" duration="131000" />
+      <workItem from="1647524193231" duration="2744000" />
+      <workItem from="1647576517533" duration="4842000" />
     </task>
     <servers />
   </component>
@@ -375,7 +394,7 @@
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$locate_all_image_test.coverage" NAME="locate_all_image_test Coverage Results" MODIFIED="1629389018535" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test" />
     <SUITE FILE_PATH="coverage/AutoControl$critical_exit_test.coverage" NAME="critical_exit_test Coverage Results" MODIFIED="1638531300898" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/critical_exit" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$mouse_test.coverage" NAME="mouse_test Coverage Results" MODIFIED="1636335919333" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/mouse" />
-    <SUITE FILE_PATH="coverage/AutoControl$real_critical_test.coverage" NAME="real_critical_test Coverage Results" MODIFIED="1647229878717" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/critical_exit" />
+    <SUITE FILE_PATH="coverage/AutoControl$real_critical_test.coverage" NAME="real_critical_test Coverage Results" MODIFIED="1647584441193" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/critical_exit" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$keyboard_write_test.coverage" NAME="keyboard_write_test Coverage Results" MODIFIED="1636891949186" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/keyboard" />
     <SUITE FILE_PATH="coverage/AutoControl$locate_all_image_test.coverage" NAME="locate_all_image_test Coverage Results" MODIFIED="1638535161059" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test/unit_test/image" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$action_executor__1_.coverage" NAME="action_executor (1) Coverage Results" MODIFIED="1637302010513" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/action_executer" />

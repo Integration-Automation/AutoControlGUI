@@ -14,12 +14,12 @@ print(size())
 """
 simulate you can't use your mouse because you use while true to set mouse position
 """
+CriticalExit().init_critical_exit()
 try:
     while True:
         set_position(200, 400)
         set_position(400, 600)
-        raise AutoControlMouseException
+        press_key("f7")
 except AutoControlMouseException:
-    CriticalExit().init_critical_exit()
-    press_key("f7")
+    pass
 
