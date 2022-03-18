@@ -1,3 +1,4 @@
+import sys
 from time import sleep
 
 from je_auto_control import set_position
@@ -20,6 +21,5 @@ try:
         set_position(200, 400)
         set_position(400, 600)
         press_key("f7")
-except AutoControlMouseException:
-    pass
-
+except Exception as error:
+    print(repr(error), file=sys.stderr)
