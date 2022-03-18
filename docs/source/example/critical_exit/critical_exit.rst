@@ -4,6 +4,7 @@ AutoControlGUI Critical Exit
 | critical exit
 | if you want to click keyboard key to exit program you can use this module
 | when you click what you set on set_critical_key will make program exit
+| this example is how to auto use CriticalExit
 .. code-block:: python
 
     from je_auto_control import CriticalExit

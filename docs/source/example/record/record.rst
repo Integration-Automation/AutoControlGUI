@@ -4,7 +4,7 @@ AutoControlGUI Record
 
 | macos can't use record but can use execute action
 | record keyboard and mouse event
-
+| this example will auto type test and record will execute and type test
 .. code-block:: python
 
     from time import sleep

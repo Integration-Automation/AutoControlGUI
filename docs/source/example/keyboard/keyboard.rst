@@ -3,6 +3,7 @@ AutoControlGUI Keyboard
 ========================
 
 | Keyboard type
+| type_key will click and release key like this example will auto type TEST
 
 .. code-block:: python
 
@@ -20,8 +21,8 @@ AutoControlGUI Keyboard
     type_key("S")
     type_key("T")
 
-| Keyboard key is press
-
+| Keyboard check key is press
+| check_key_is_press function will check key is pressed or not
 .. code-block:: python
 
     import sys
@@ -69,6 +70,7 @@ AutoControlGUI Keyboard
 
 
 | Keyboard write
+| write function will auto type all you send str if it exists on keys_table
 
 .. code-block:: python
 

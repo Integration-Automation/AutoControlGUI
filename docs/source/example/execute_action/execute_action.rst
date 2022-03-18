@@ -4,6 +4,7 @@ AutoControlGUI Execute action
 
 | you can use write_action_json to save action file
 | and then use read_action_json to read action file to execute
+| this example is how to use read_action_json and write_action_json
 .. code-block:: python
 
     import os
@@ -31,7 +32,7 @@ AutoControlGUI Execute action
 
 
 | you can execute action use list or use read_action_json to read action json
-
+| this example is how to use execute_action and check test_record
 .. code-block:: python
 
     import sys

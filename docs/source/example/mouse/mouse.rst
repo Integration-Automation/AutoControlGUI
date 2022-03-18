@@ -8,6 +8,9 @@ AutoControlGUI Mouse
 | Click mouse
 | Check mouse keys
 
+| in this example first we check now mouse position
+| and then we set mouse position
+| then we press and release mouse right and left
 .. code-block:: python
 
     import time
@@ -33,7 +36,7 @@ AutoControlGUI Mouse
     click_mouse("mouse_left")
 
 | Scroll mouse
-
+| this example is scroll down mouse 100 unit
 .. code-block:: python
 
     from je_auto_control import scroll

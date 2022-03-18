@@ -1,5 +1,5 @@
 ==================
-AutoControlGUI_JE Example
+Example
 ==================
 
 .. toctree::
