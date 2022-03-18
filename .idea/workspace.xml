@@ -2,24 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/docs/source/example/critical_exit/critical_exit.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/example/example_index.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dev_requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/dev_requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/critical_exit/critical_exit.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/editor/editor.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/editor/editor.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/execute_action/execute_action.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/execute_action/execute_action.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/image_detect/image_detect.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/image_detect/image_detect.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/index.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/installation/installation.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/installation/installation.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/keyboard/keyboard.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/keyboard/keyboard.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/mouse/mouse.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/mouse/mouse.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/record/record.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/record/record.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/screen/screen.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/screen/screen.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/test/test.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/test/test.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/todo/todo.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/critical_exit/critical_exit_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/critical_exit/critical_exit_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/critical_exit/real_critical_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/critical_exit/real_critical_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -83,11 +68,11 @@
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\AutoControl\circle_ci_test\unit_test" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\example" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\test\unit_test\execute_action" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\je_auto_control" />
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\AutoControl\test\unit_test" />
       <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\AutoControl\circle_ci_test\gui_test" />
-      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\AutoControl\test\gui_test" />
     </key>
   </component>
   <component name="RunManager" selected="Python.real_critical_test">
@@ -350,7 +335,7 @@
       <workItem from="1647435056716" duration="1408000" />
       <workItem from="1647523669648" duration="131000" />
       <workItem from="1647524193231" duration="2744000" />
-      <workItem from="1647576517533" duration="4842000" />
+      <workItem from="1647576517533" duration="5195000" />
     </task>
     <servers />
   </component>
