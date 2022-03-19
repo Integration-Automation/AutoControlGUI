@@ -2,17 +2,16 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/docs/source/doc/doc_index.rst" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_image/auto_control_image.rst" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_keyboard/auto_control_keyboard.rst" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_mouse/auto_control_mouse.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/critical_exit/critical_exit.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/critical_exit/critical_exit.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/example_index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/example_index.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/execute_action/execute_action.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/execute_action/execute_action.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/image_detect/image_detect.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/image_detect/image_detect.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/installation/installation.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/installation/installation.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/keyboard/keyboard.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/keyboard/keyboard.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/mouse/mouse.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/mouse/mouse.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/record/record.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/record/record.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/index.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/image/screenshot.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/image/screenshot.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_mouse.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_mouse.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -64,16 +63,16 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/source" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/source/doc/auto_control_mouse" />
     <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\doc\auto_control_mouse" />
+      <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\doc\auto_control_keyboard" />
+      <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\doc\auto_control_image" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs" />
-      <recent name="C:\program_workspace\python\GitHub\AutoControl\test\unit_test" />
-      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\AutoControl\circle_ci_test\unit_test\record" />
-      <recent name="D:\WorkSpaces\Program WorkSpace\Python\Project\AutoControl\circle_ci_test\unit_test" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source" />
@@ -344,6 +343,7 @@
       <workItem from="1647523669648" duration="131000" />
       <workItem from="1647524193231" duration="2744000" />
       <workItem from="1647576517533" duration="18161000" />
+      <workItem from="1647670845248" duration="19763000" />
     </task>
     <servers />
   </component>

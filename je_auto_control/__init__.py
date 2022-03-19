@@ -58,3 +58,7 @@ from je_auto_control.utils.json.json_file import write_action_json
 from je_auto_control.utils.timeout.multiprocess_timeout import multiprocess_timeout
 # test record
 from je_auto_control.utils.test_record.record_test_result_class import test_record
+
+# utils image
+from je_auto_control.wrapper.auto_control_image import screenshot
+

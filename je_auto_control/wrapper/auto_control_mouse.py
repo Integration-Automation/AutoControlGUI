@@ -18,6 +18,14 @@ from je_auto_control.wrapper.platform_wrapper import special_table
 
 
 def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int):
+    """
+    check mouse keycode is verified or not
+    and then check current mouse position
+    if x or y is None set x, y is current position
+    :param mouse_keycode which mouse keycode we want to click
+    :param x mouse click x position
+    :param y mouse click y position
+    """
     try:
         if type(mouse_keycode) is str:
             mouse_keycode = mouse_table.get(mouse_keycode)
@@ -39,6 +47,7 @@ def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int):
 def position():
     """
     get mouse current position
+    return mouse_x, mouse_y
     """
     try:
         return mouse.position()
@@ -46,10 +55,11 @@ def position():
         raise AutoControlMouseException(mouse_get_position)
 
 
-def set_position(x: int, y: int, **kwargs):
+def set_position(x: int, y: int):
     """
-    :param x set position x
-    :param y set position y
+    :param x set mouse position x
+    :param y set mouse position y
+    return x, y
     """
     try:
         mouse.set_position(x=x, y=y)
@@ -60,11 +70,13 @@ def set_position(x: int, y: int, **kwargs):
         raise AutoControlMouseException(mouse_wrong_value)
 
 
-def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
+def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
     """
+    press mouse keycode on x, y
+    return keycode, x, y
     :param mouse_keycode which mouse keycode we want to press
-    :param x event x
-    :param y event y
+    :param x mouse click x position
+    :param y mouse click y position
     """
     mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
     try:
@@ -79,11 +91,13 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
         raise AutoControlMouseException(repr(error))
 
 
-def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
+def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
     """
+    release mouse keycode on x, y
+    return keycode, x, y
     :param mouse_keycode which mouse keycode we want to release
-    :param x event x
-    :param y event y
+    :param x mouse click x position
+    :param y mouse click y position
     """
     mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
     try:
@@ -98,11 +112,13 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwa
         raise AutoControlMouseException(repr(error))
 
 
-def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwargs):
+def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
     """
+    press and release mouse keycode on x, y
+    return keycode, x, y
     :param mouse_keycode which mouse keycode we want to click
-    :param x event x
-    :param y event y
+    :param x mouse click x position
+    :param y mouse click y position
     """
     mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
     try:
@@ -114,11 +130,11 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None, **kwarg
         raise AutoControlMouseException(repr(error))
 
 
-def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down", **kwargs):
+def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down"):
     """"
     :param scroll_value scroll count
-    :param x event x
-    :param y event y
+    :param x mouse click x position
+    :param y mouse click y position
     :param scroll_direction which direction we want
     scroll_direction = scroll_up : direction up
     scroll_direction = scroll_down : direction down
