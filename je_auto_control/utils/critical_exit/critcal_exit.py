@@ -1,4 +1,5 @@
 import _thread
+import sys
 from threading import Thread
 
 from je_auto_control.utils.exception.exception_tag import je_auto_control_critical_exit_error
@@ -31,9 +32,8 @@ class CriticalExit(Thread):
             while True:
                 if keyboard_check.check_key_is_press(self._exit_check_key):
                     _thread.interrupt_main()
-        except AutoControlException:
-            _thread.interrupt_main()
-            raise AutoControlException(je_auto_control_critical_exit_error)
+        except Exception as error:
+            print(repr(error), file=sys.stderr)
 
     def init_critical_exit(self):
         """

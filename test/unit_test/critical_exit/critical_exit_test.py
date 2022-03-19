@@ -1,7 +1,6 @@
 from je_auto_control import CriticalExit
 from je_auto_control import keys_table
 from je_auto_control import press_key
-from je_auto_control import release_key
 try:
     """
     Create critical exit listener default exit key is keyboard f7

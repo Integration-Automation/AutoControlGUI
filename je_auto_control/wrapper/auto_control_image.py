@@ -4,13 +4,15 @@ from je_auto_control.utils.exception.exception_tag import find_image_error_varia
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.auto_control_mouse import set_position
+from je_auto_control.utils.image.screenshot import pil_screenshot
 
 
-def locate_all_image(image, detect_threshold: float = 1, draw_image: bool = False, **kwargs):
+def locate_all_image(image, detect_threshold: [float, int] = 1, draw_image: bool = False):
     """
-    :param image which image we want to find on screen
-    :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal
-    :param draw_image draw detect tag on return image
+     use to locate all image that detected and then return detected images list
+    :param image which image we want to find on screen (png or PIL ImageGrab.grab())
+    :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal (float or int)
+    :param draw_image draw detect tag on return image (bool)
     """
     try:
         image_data_array = template_detection.find_image_multi(image, detect_threshold, draw_image)
@@ -22,11 +24,12 @@ def locate_all_image(image, detect_threshold: float = 1, draw_image: bool = Fals
         raise ImageNotFoundException(cant_find_image)
 
 
-def locate_image_center(image, detect_threshold: float = 1, draw_image: bool = False, **kwargs):
+def locate_image_center(image, detect_threshold: [float, int] = 1, draw_image: bool = False):
     """
-    :param image which image we want to find on screen
-    :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal
-    :param draw_image draw detect tag on return image
+    use to locate image and return image center position
+    :param image which image we want to find on screen (png or PIL ImageGrab.grab())
+    :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal (float or int)
+    :param draw_image draw detect tag on return image (bool)
     """
     try:
         image_data_array = template_detection.find_image(image, detect_threshold, draw_image)
@@ -41,12 +44,13 @@ def locate_image_center(image, detect_threshold: float = 1, draw_image: bool = F
         raise ImageNotFoundException(cant_find_image)
 
 
-def locate_and_click(image, mouse_keycode: [int, str], detect_threshold: float = 1, draw_image: bool = False, **kwargs):
+def locate_and_click(image, mouse_keycode: [int, str], detect_threshold: [float, int] = 1, draw_image: bool = False):
     """
-    :param image which image we want to find on screen
+    use to locate image and click image center position and the return image center position
+    :param image which image we want to find on screen (png or PIL ImageGrab.grab())
     :param mouse_keycode which mouse keycode we want to click
-    :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal
-    :param draw_image draw detect tag on return image
+    :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal (float or int)
+    :param draw_image draw detect tag on return image (bool)
     """
     try:
         image_data_array = template_detection.find_image(image, detect_threshold, draw_image)
@@ -63,3 +67,12 @@ def locate_and_click(image, mouse_keycode: [int, str], detect_threshold: float =
         return [image_center_x, image_center_y]
     else:
         raise ImageNotFoundException(cant_find_image)
+
+
+def screenshot(file_path: str = None, region: list = None):
+    """
+    use to get now screen image return image
+    :param file_path save screenshot path (None is no save)
+    :param region screenshot region (screenshot region on screen)
+    """
+    return pil_screenshot(file_path, region)

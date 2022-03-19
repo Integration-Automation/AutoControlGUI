@@ -1,3 +1,4 @@
+import sys
 from je_auto_control import AutoControlActionException
 from je_auto_control import AutoControlActionNullException
 from je_auto_control import check_key_is_press
@@ -23,6 +24,8 @@ from je_auto_control import write
 from je_auto_control.utils.exception.exception_tag import action_is_null_error
 from je_auto_control.utils.exception.exception_tag import cant_execute_action_error
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
+
+from je_auto_control.utils.test_record.record_test_result_class import test_record
 
 event_dict = {
     # mouse
@@ -75,9 +78,11 @@ def execute_action(action_list: list):
     for action in action_list:
         try:
             execute_event(action)
-        except AutoControlActionException:
-            raise AutoControlActionException(cant_execute_action_error)
-        temp_string = "execute: " + str(action)
-        print(temp_string)
-        execute_record_string = "".join([execute_record_string, temp_string + "\n"])
+            temp_string = "execute: " + str(action)
+            print(temp_string)
+            test_record.record_list.append(temp_string)
+            execute_record_string = "".join([execute_record_string, temp_string + "\n"])
+        except Exception as error:
+            print(repr(error), file=sys.stderr)
+            test_record.error_record_list.append([action, repr(error)])
     return execute_record_string

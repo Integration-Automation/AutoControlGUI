@@ -7,6 +7,11 @@ Editor
 
 .. code-block:: python
 
+    pip install je_editor
+
+
+.. code-block:: python
+
     from je_editor import start_editor
 
     start_editor()

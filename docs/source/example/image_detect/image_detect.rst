@@ -2,7 +2,7 @@
 AutoControlGUI ImageDetect
 ========================
 
-| locate image in center
+| this example is screenshot and then check screenshot image is exist?
 
 .. code-block:: python
 
@@ -19,7 +19,7 @@ AutoControlGUI ImageDetect
     print(image_data)
 
 
-| locate all image
+| this example is screenshot and then check all screenshot image is exist?
 
 .. code-block:: python
 
@@ -35,7 +35,7 @@ AutoControlGUI ImageDetect
     image_data = locate_all_image(screenshot(), detect_threshold=0.9, draw_image=False)
     print(image_data)
 
-| locate and click image in center
+| this example is screenshot and then check screenshot image is exist? if exist then click
 
 .. code-block:: python
 

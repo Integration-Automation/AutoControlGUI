@@ -1,5 +1,3 @@
-from time import sleep
-
 from je_auto_control import set_position
 from je_auto_control import size
 from je_auto_control import CriticalExit
@@ -22,4 +20,3 @@ try:
 except AutoControlMouseException:
     CriticalExit().init_critical_exit()
     press_key("f7")
-

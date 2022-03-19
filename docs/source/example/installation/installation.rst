@@ -14,7 +14,7 @@ AutoControlGUI Installation
     * osx 11 big sur
     * ubuntu 20.0.4
 
-| if you want to use this on raspberry pi
+| if you want to use AutoControlGUI on raspberry pi
 .. code-block:: markdown
 
     sudo apt-get install python3
