@@ -3,7 +3,7 @@ Doc
 ==================
 
 .. toctree::
-   :maxdepth: 4
+    :maxdepth: 4
 
     auto_control_image/auto_control_image.rst
     auto_control_keyboard/auto_control_keyboard.rst
