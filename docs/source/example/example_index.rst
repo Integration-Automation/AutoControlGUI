@@ -3,7 +3,7 @@ Example
 ==================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    installation/installation.rst
    critical_exit/critical_exit.rst

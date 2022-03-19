@@ -1,5 +1,5 @@
 ==================
-AutoControlGUI_JE
+AutoControlGUI_JE Test
 ==================
 
 .. toctree::
