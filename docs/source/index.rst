@@ -3,7 +3,7 @@ AutoControlGUI_JE
 ==================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    example/example_index.rst
    doc/doc_index.rst
