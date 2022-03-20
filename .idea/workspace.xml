@@ -2,46 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_critical_exit_doc/auto_control_critical_exit_doc.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_executor_doc/auto_control_executor_doc.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_image_doc/auto_control_image_doc.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_keyboard_doc/auto_control_keyboard_doc.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_mouse_doc/auto_control_mouse_doc.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_record_doc/auto_control_record_doc.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_screen_doc/auto_control_screen_doc.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_test_record_doc/auto_control_test_record_doc.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/example/critical_exit_example/critical_exit.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/example/editor_example/editor.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/example/executor_example/execute_action.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/example/image_detect_example/image_detect.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/example/installation_example/installation.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/example/keyboard_example/keyboard.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/example/mouse_example/mouse.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/example/record_example/record.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/example/screen_example/screen.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/doc/auto_control_image/auto_control_image.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/doc/auto_control_keyboard/auto_control_keyboard.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/doc/auto_control_mouse/auto_control_mouse.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/doc/doc_index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/doc/doc_index.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/critical_exit/critical_exit.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/editor/editor.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/example_index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/example_index.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/execute_action/execute_action.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/image_detect/image_detect.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/installation/installation.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/keyboard/keyboard.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/mouse/mouse.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/record/record.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/screen/screen.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/example/test/test.rst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/index.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/critical_exit/critcal_exit.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/critical_exit/critcal_exit.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/json/json_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/json/json_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_record.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_screen.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/json/json_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/json/json_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -93,7 +57,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/source/doc/auto_control_test_record_doc" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
   </component>
   <component name="RecentsManager">
@@ -375,7 +339,8 @@
       <workItem from="1647576517533" duration="18161000" />
       <workItem from="1647670845248" duration="19763000" />
       <workItem from="1647707438733" duration="5527000" />
-      <workItem from="1647767383333" duration="11971000" />
+      <workItem from="1647767383333" duration="13158000" />
+      <workItem from="1647791877750" duration="1806000" />
     </task>
     <servers />
   </component>
