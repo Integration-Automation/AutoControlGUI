@@ -8,6 +8,18 @@ AutoControlGUI_JE
    example/example_index.rst
    doc/doc_index.rst
 
+| JE Auto Control as a tool for GUI Testing
+
+* Features
+    * Image Detect
+    * Keyboard Event
+    * Mouse Event
+    * Screen
+    * Action file and executor
+    * Record Event
+    * CLI with action file
+    * timeout
+
 * Test on
     * windows 10 ~ 11
     * osx 10.5 ~ 11 big sur

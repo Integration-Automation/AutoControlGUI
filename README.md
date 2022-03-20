@@ -8,7 +8,7 @@
 * Keyboard Event
 * Mouse Event
 * Screen 
-* Action File
+* Action file and executor
 * Record Event
 * CLI with action file
 * timeout
