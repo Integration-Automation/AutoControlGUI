@@ -69,6 +69,7 @@ def execute_event(action: list):
 
 def execute_action(action_list: list):
     """
+    use to execute all action on action list(action file or program list)
     :param action_list the list include action
     for loop the list and execute action
     """
