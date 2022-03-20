@@ -11,6 +11,7 @@ lock = Lock()
 
 def read_action_json(json_file_path: str):
     """
+    use to read action file
     :param json_file_path json file's path to read
     """
     try:
@@ -25,15 +26,16 @@ def read_action_json(json_file_path: str):
         lock.release()
 
 
-def write_action_json(json_save_path: str, action_json: str):
+def write_action_json(json_save_path: str, action_json: list):
     """
+    use to save action file
     :param json_save_path  json save path
     :param action_json the json str include action to write
     """
     try:
         lock.acquire()
         with open(json_save_path, "w+") as file_to_write:
-            file_to_write.write(action_json)
+            file_to_write.write(json.dumps(action_json))
     except AutoControlJsonActionException:
         raise AutoControlJsonActionException(cant_save_json_error)
     finally:

@@ -1,5 +1,4 @@
 import os
-import json
 
 
 from je_auto_control import read_action_json
@@ -11,12 +10,7 @@ test_list = [
     ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
     ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
 ]
-test_dumps_json = json.dumps(test_list)
-print(test_dumps_json)
-test_loads_json = json.loads(test_dumps_json)
-print(test_loads_json)
-list(test_loads_json)
 
-write_action_json(os.getcwd() + "/test.json", test_dumps_json)
+write_action_json(os.getcwd() + "/test.json", test_list)
 read_json = read_action_json(os.getcwd() + "/test.json")
 print(read_json)

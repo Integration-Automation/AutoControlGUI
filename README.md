@@ -2,6 +2,19 @@
 
 ---
 
+### JE Auto Control as a tool for GUI Testing 
+#### Features
+* Image Detect
+* Keyboard Event
+* Mouse Event
+* Screen 
+* Action File
+* Record Event
+* CLI with action file
+* timeout
+
+---
+
 [![CircleCI](https://circleci.com/gh/JE-Chen/AutoControl/tree/main.svg?style=svg)](https://circleci.com/gh/JE-Chen/AutoControl/tree/main)
 
 ### Documentation

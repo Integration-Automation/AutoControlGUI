@@ -2,22 +2,28 @@ import _thread
 import sys
 from threading import Thread
 
-from je_auto_control.utils.exception.exception_tag import je_auto_control_critical_exit_error
-from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.auto_control_keyboard import keys_table
 from je_auto_control.wrapper.platform_wrapper import keyboard_check
 
 
 class CriticalExit(Thread):
+    """
+    use to make program interrupt
+    """
 
     def __init__(self, default_daemon: bool = True):
+        """
+        default interrupt is keyboard F7 key
+        :param default_daemon bool thread setDaemon
+        """
         super().__init__()
         self.setDaemon(default_daemon)
         self._exit_check_key = keys_table.get("f7")
 
     def set_critical_key(self, keycode: [int, str] = None):
         """
-        :param keycode which keycode we want to check is press ?
+        set interrupt key
+        :param keycode interrupt key
         """
         if type(keycode) is int:
             self._exit_check_key = keycode
@@ -26,7 +32,7 @@ class CriticalExit(Thread):
 
     def run(self):
         """
-        listener keycode _exit_check_key
+        listener keycode _exit_check_key to interrupt
         """
         try:
             while True:
