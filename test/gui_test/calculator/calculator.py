@@ -1,3 +1,4 @@
+import os
 import subprocess
 from time import sleep
 
@@ -10,6 +11,7 @@ and calculate 1 + 2 .... + 9
 """
 subprocess.Popen("calc", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
 sleep(3)
+
 locate_and_click(
     "../../test_source/1.png",
     mouse_keycode="mouse_left",
