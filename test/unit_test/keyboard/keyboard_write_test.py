@@ -25,10 +25,9 @@ this write will print one error -> keyboard write error can't find key : Ѓ and 
 """
 try:
     assert (write("Ѓ123456789") == "123456789")
-except AutoControlKeyboardException as error:
+except Exception as error:
     print(repr(error), file=sys.stderr)
 try:
     write("!#@L@#{@#PL#{!@#L{!#{|##PO}!@#O@!O#P!)KI#O_!K")
-except AutoControlKeyboardException as error:
+except Exception as error:
     print(repr(error), file=sys.stderr)
-
