@@ -15,6 +15,7 @@ from je_auto_control.wrapper.auto_control_screen import size
 from je_auto_control.wrapper.platform_wrapper import mouse
 from je_auto_control.wrapper.platform_wrapper import mouse_table
 from je_auto_control.wrapper.platform_wrapper import special_table
+from je_auto_control.utils.test_record.record_test_class import record_total
 
 
 def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int):
@@ -50,9 +51,14 @@ def position():
     return mouse_x, mouse_y
     """
     try:
-        return mouse.position()
-    except AutoControlMouseException:
-        raise AutoControlMouseException(mouse_get_position)
+        try:
+            record_total("position", None)
+            return mouse.position()
+        except AutoControlMouseException:
+            raise AutoControlMouseException(mouse_get_position)
+    except Exception as error:
+        record_total("position", None, repr(error))
+        print(repr(error), file=sys.stderr)
 
 
 def set_position(x: int, y: int):
@@ -61,13 +67,19 @@ def set_position(x: int, y: int):
     :param y set mouse position y
     return x, y
     """
+    param = locals()
     try:
-        mouse.set_position(x=x, y=y)
-        return x, y
-    except AutoControlMouseException:
-        raise AutoControlMouseException(mouse_set_position)
-    except ctypes.ArgumentError:
-        raise AutoControlMouseException(mouse_wrong_value)
+        try:
+            mouse.set_position(x=x, y=y)
+            record_total("position", param)
+            return x, y
+        except AutoControlMouseException:
+            raise AutoControlMouseException(mouse_set_position)
+        except ctypes.ArgumentError:
+            raise AutoControlMouseException(mouse_wrong_value)
+    except Exception as error:
+        record_total("set_position", param, repr(error))
+        print(repr(error), file=sys.stderr)
 
 
 def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
@@ -78,17 +90,23 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
     :param x mouse click x position
     :param y mouse click y position
     """
-    mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
+    param = locals()
     try:
-        if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
-            mouse.press_mouse(mouse_keycode)
-        elif sys.platform in ["darwin"]:
-            mouse.press_mouse(x, y, mouse_keycode)
-        return mouse_keycode, x, y
-    except AutoControlMouseException:
-        raise AutoControlMouseException(mouse_press_mouse)
-    except TypeError as error:
-        raise AutoControlMouseException(repr(error))
+        mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
+        try:
+            if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
+                mouse.press_mouse(mouse_keycode)
+            elif sys.platform in ["darwin"]:
+                mouse.press_mouse(x, y, mouse_keycode)
+            record_total("press_mouse", param)
+            return mouse_keycode, x, y
+        except AutoControlMouseException:
+            raise AutoControlMouseException(mouse_press_mouse)
+        except TypeError as error:
+            raise AutoControlMouseException(repr(error))
+    except Exception as error:
+        record_total("press_mouse", param, repr(error))
+        print(repr(error), file=sys.stderr)
 
 
 def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
@@ -99,17 +117,23 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
     :param x mouse click x position
     :param y mouse click y position
     """
-    mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
+    param = locals()
     try:
-        if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
-            mouse.release_mouse(mouse_keycode)
-        elif sys.platform in ["darwin"]:
-            mouse.release_mouse(x, y, mouse_keycode)
-        return mouse_keycode, x, y
-    except AutoControlMouseException:
-        raise AutoControlMouseException(mouse_release_mouse)
-    except TypeError as error:
-        raise AutoControlMouseException(repr(error))
+        mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
+        try:
+            if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
+                mouse.release_mouse(mouse_keycode)
+            elif sys.platform in ["darwin"]:
+                mouse.release_mouse(x, y, mouse_keycode)
+            record_total("press_mouse", param)
+            return mouse_keycode, x, y
+        except AutoControlMouseException:
+            raise AutoControlMouseException(mouse_release_mouse)
+        except TypeError as error:
+            raise AutoControlMouseException(repr(error))
+    except Exception as error:
+        record_total("release_mouse", param, repr(error))
+        print(repr(error), file=sys.stderr)
 
 
 def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
@@ -120,14 +144,20 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
     :param x mouse click x position
     :param y mouse click y position
     """
-    mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
+    param = locals()
     try:
-        mouse.click_mouse(mouse_keycode, x, y)
-        return mouse_keycode, x, y
-    except AutoControlMouseException:
-        raise AutoControlMouseException(mouse_click_mouse)
-    except TypeError as error:
-        raise AutoControlMouseException(repr(error))
+        mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
+        try:
+            mouse.click_mouse(mouse_keycode, x, y)
+            record_total("click_mouse", param)
+            return mouse_keycode, x, y
+        except AutoControlMouseException:
+            raise AutoControlMouseException(mouse_click_mouse)
+        except TypeError as error:
+            raise AutoControlMouseException(repr(error))
+    except Exception as error:
+        record_total("click_mouse", param, repr(error))
+        print(repr(error), file=sys.stderr)
 
 
 def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down"):
@@ -141,35 +171,41 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
     scroll_direction = scroll_left : direction left
     scroll_direction = scroll_right : direction right
     """
+    param = locals()
     try:
-        now_cursor_x, now_cursor_y = position()
-    except AutoControlMouseException:
-        raise AutoControlMouseException(mouse_get_position)
-    width, height = size()
-    if x is None:
-        x = now_cursor_x
-    else:
-        if x < 0:
-            x = 0
-        elif x >= width:
-            x = width - 1
-    if y is None:
-        y = now_cursor_y
-    else:
-        if y < 0:
-            y = 0
-        elif y >= height:
-            y = height - 1
-    try:
-        if sys.platform in ["win32", "cygwin", "msys"]:
-            mouse.scroll(scroll_value, x, y)
-        elif sys.platform in ["darwin"]:
-            mouse.scroll(scroll_value)
-        elif sys.platform in ["linux", "linux2"]:
-            scroll_direction = special_table.get(scroll_direction)
-            mouse.scroll(scroll_value, scroll_direction)
-        return scroll_value, scroll_direction
-    except AutoControlMouseException:
-        raise AutoControlMouseException(mouse_scroll)
-    except TypeError as error:
-        raise AutoControlMouseException(repr(error))
+        try:
+            now_cursor_x, now_cursor_y = position()
+        except AutoControlMouseException:
+            raise AutoControlMouseException(mouse_get_position)
+        width, height = size()
+        if x is None:
+            x = now_cursor_x
+        else:
+            if x < 0:
+                x = 0
+            elif x >= width:
+                x = width - 1
+        if y is None:
+            y = now_cursor_y
+        else:
+            if y < 0:
+                y = 0
+            elif y >= height:
+                y = height - 1
+        try:
+            if sys.platform in ["win32", "cygwin", "msys"]:
+                mouse.scroll(scroll_value, x, y)
+            elif sys.platform in ["darwin"]:
+                mouse.scroll(scroll_value)
+            elif sys.platform in ["linux", "linux2"]:
+                scroll_direction = special_table.get(scroll_direction)
+                mouse.scroll(scroll_value, scroll_direction)
+            record_total("scroll", param)
+            return scroll_value, scroll_direction
+        except AutoControlMouseException:
+            raise AutoControlMouseException(mouse_scroll)
+        except TypeError as error:
+            raise AutoControlMouseException(repr(error))
+    except Exception as error:
+        record_total("scroll", param, repr(error))
+        print(repr(error), file=sys.stderr)

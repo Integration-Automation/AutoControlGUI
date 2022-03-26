@@ -25,7 +25,7 @@ from je_auto_control.utils.exception.exception_tag import action_is_null_error
 from je_auto_control.utils.exception.exception_tag import cant_execute_action_error
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 
-from je_auto_control.utils.test_record.record_test_result_class import test_record
+from je_auto_control.utils.test_record.record_test_class import test_record
 
 event_dict = {
     # mouse
@@ -60,9 +60,9 @@ event_dict = {
 def execute_event(action: list):
     event = event_dict.get(action[0])
     if len(action) == 2:
-        event(**action[1])
+        return event(**action[1])
     elif len(action) == 1:
-        event()
+        return event()
     else:
         raise AutoControlActionException(cant_execute_action_error)
 
@@ -73,6 +73,13 @@ def execute_action(action_list: list):
     :param action_list the list include action
     for loop the list and execute action
     """
+    flag = test_record.init_total_record
+    """
+    if init_total_record original is True
+    make it False and then make it return
+    """
+    if flag:
+        test_record.init_total_record = False
     execute_record_string = ""
     if action_list is None:
         raise AutoControlActionNullException(action_is_null_error)
@@ -86,4 +93,6 @@ def execute_action(action_list: list):
         except Exception as error:
             print(repr(error), file=sys.stderr)
             test_record.error_record_list.append([action, repr(error)])
+    if flag:
+        test_record.init_total_record = True
     return execute_record_string
