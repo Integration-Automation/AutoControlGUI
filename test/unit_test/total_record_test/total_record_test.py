@@ -1,9 +1,12 @@
 import sys
 
-from je_auto_control import keys_table
+from je_auto_control import test_record
 from je_auto_control import press_key
 from je_auto_control import release_key
 from je_auto_control import write
+from je_auto_control import keys_table
+
+test_record.init_total_record = True
 
 print(keys_table.keys())
 
@@ -30,3 +33,4 @@ try:
 except Exception as error:
     print(repr(error), file=sys.stderr)
 
+print(test_record.total_record_list)

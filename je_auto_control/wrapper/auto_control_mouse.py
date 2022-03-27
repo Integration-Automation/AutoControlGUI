@@ -40,8 +40,8 @@ def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int):
             x = now_x
         if y is None:
             y = now_y
-    except AutoControlMouseException:
-        raise AutoControlMouseException(mouse_get_position)
+    except AutoControlMouseException as error:
+        raise AutoControlMouseException(mouse_get_position + repr(error))
     return mouse_keycode, x, y
 
 
@@ -54,8 +54,8 @@ def position():
         try:
             record_total("position", None)
             return mouse.position()
-        except AutoControlMouseException:
-            raise AutoControlMouseException(mouse_get_position)
+        except AutoControlMouseException as error:
+            raise AutoControlMouseException(mouse_get_position + repr(error))
     except Exception as error:
         record_total("position", None, repr(error))
         print(repr(error), file=sys.stderr)
@@ -73,10 +73,10 @@ def set_position(x: int, y: int):
             mouse.set_position(x=x, y=y)
             record_total("position", param)
             return x, y
-        except AutoControlMouseException:
-            raise AutoControlMouseException(mouse_set_position)
-        except ctypes.ArgumentError:
-            raise AutoControlMouseException(mouse_wrong_value)
+        except AutoControlMouseException as error:
+            raise AutoControlMouseException(mouse_set_position + repr(error))
+        except ctypes.ArgumentError as error:
+            raise AutoControlMouseException(mouse_wrong_value + repr(error))
     except Exception as error:
         record_total("set_position", param, repr(error))
         print(repr(error), file=sys.stderr)
@@ -100,8 +100,8 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
                 mouse.press_mouse(x, y, mouse_keycode)
             record_total("press_mouse", param)
             return mouse_keycode, x, y
-        except AutoControlMouseException:
-            raise AutoControlMouseException(mouse_press_mouse)
+        except AutoControlMouseException as error:
+            raise AutoControlMouseException(mouse_press_mouse + repr(error))
         except TypeError as error:
             raise AutoControlMouseException(repr(error))
     except Exception as error:
@@ -127,8 +127,8 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
                 mouse.release_mouse(x, y, mouse_keycode)
             record_total("press_mouse", param)
             return mouse_keycode, x, y
-        except AutoControlMouseException:
-            raise AutoControlMouseException(mouse_release_mouse)
+        except AutoControlMouseException as error:
+            raise AutoControlMouseException(mouse_release_mouse + repr(error))
         except TypeError as error:
             raise AutoControlMouseException(repr(error))
     except Exception as error:
@@ -151,8 +151,8 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
             mouse.click_mouse(mouse_keycode, x, y)
             record_total("click_mouse", param)
             return mouse_keycode, x, y
-        except AutoControlMouseException:
-            raise AutoControlMouseException(mouse_click_mouse)
+        except AutoControlMouseException as error:
+            raise AutoControlMouseException(mouse_click_mouse + repr(error))
         except TypeError as error:
             raise AutoControlMouseException(repr(error))
     except Exception as error:
@@ -202,8 +202,8 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
                 mouse.scroll(scroll_value, scroll_direction)
             record_total("scroll", param)
             return scroll_value, scroll_direction
-        except AutoControlMouseException:
-            raise AutoControlMouseException(mouse_scroll)
+        except AutoControlMouseException as error:
+            raise AutoControlMouseException(mouse_scroll + repr(error))
         except TypeError as error:
             raise AutoControlMouseException(repr(error))
     except Exception as error:

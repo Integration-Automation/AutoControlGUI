@@ -37,8 +37,8 @@ def press_key(keycode: [int, str], is_shift: bool = False):
                 keyboard.press_key(keycode, is_shift=is_shift)
             record_total("press_key", param)
             return str(keycode)
-        except AutoControlKeyboardException:
-            raise AutoControlKeyboardException(keyboard_press_key)
+        except AutoControlKeyboardException as error:
+            raise AutoControlKeyboardException(keyboard_press_key + repr(error))
         except TypeError as error:
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
@@ -66,8 +66,8 @@ def release_key(keycode: [int, str], is_shift: bool = False):
                 keyboard.release_key(keycode, is_shift=is_shift)
             record_total("release_key", param)
             return str(keycode)
-        except AutoControlKeyboardException:
-            raise AutoControlKeyboardException(keyboard_release_key)
+        except AutoControlKeyboardException as error:
+            raise AutoControlKeyboardException(keyboard_release_key + repr(error))
         except TypeError as error:
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
@@ -88,8 +88,8 @@ def type_key(keycode: [int, str], is_shift: bool = False):
             release_key(keycode, is_shift)
             record_total("type_key", param)
             return str(keycode)
-        except AutoControlKeyboardException:
-            raise AutoControlKeyboardException(keyboard_type_key)
+        except AutoControlKeyboardException as error:
+            raise AutoControlKeyboardException(keyboard_type_key + repr(error))
         except TypeError as error:
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
@@ -137,8 +137,8 @@ def write(write_string: str, is_shift: bool = False):
                     raise AutoControlKeyboardException(keyboard_write_cant_find)
             record_total("write", param)
             return record_write_string
-        except AutoControlKeyboardException:
-            raise AutoControlKeyboardException(keyboard_write)
+        except AutoControlKeyboardException as error:
+            raise AutoControlKeyboardException(keyboard_write + repr(error))
     except Exception as error:
         record_total("write", param, repr(error))
         print(repr(error), file=sys.stderr)
@@ -164,8 +164,8 @@ def hotkey(key_code_list: list, is_shift: bool = False):
                 record_hotkey_release_string = ",".join([record_hotkey_release_string, release_key(key, is_shift)])
             record_total("hotkey", param)
             return record_hotkey_press_string, record_hotkey_release_string
-        except AutoControlKeyboardException:
-            raise AutoControlKeyboardException(keyboard_hotkey)
+        except AutoControlKeyboardException as error:
+            raise AutoControlKeyboardException(keyboard_hotkey + repr(error))
     except Exception as error:
         record_total("hotkey", param, repr(error))
         print(repr(error), file=sys.stderr)

@@ -19,4 +19,4 @@ def record_total(function_name: str, local_param, program_exception: str = None)
     if not test_record.init_total_record:
         pass
     else:
-        test_record.record_list.append([function_name, local_param, program_exception])
+        test_record.total_record_list.append([function_name, local_param, program_exception])
