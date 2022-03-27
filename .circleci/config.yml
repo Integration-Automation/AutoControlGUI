@@ -63,6 +63,9 @@ jobs:
       - run:
           command: python ./test/unit_test/record/record_test.py
           name: record_test
+      - run:
+          command: python ./test/unit_test/total_record_test/total_record_and_html_report_test.py
+          name: total_record_test
       # execute
       - run:
           command: python ./test/unit_test/execute_action/execute_action_test.py
@@ -90,6 +93,11 @@ jobs:
       - run:
           command: python ./test/unit_test/argparse/argparse_test.py
           name: argparse_test
+
+      # integrated_test
+      - run:
+          command: python ./test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py
+          name: total_record_and_html_report_test
 
   build-and-test-windows-stable:
     executor:
@@ -148,6 +156,9 @@ jobs:
       - run:
           command: python ./test/unit_test/record/record_test.py
           name: record_test
+      - run:
+          command: python ./test/unit_test/total_record_test/total_record_and_html_report_test.py
+          name: total_record_test
       # execute
       - run:
           command: python ./test/unit_test/execute_action/execute_action_test.py
@@ -175,6 +186,11 @@ jobs:
       - run:
           command: python ./test/unit_test/argparse/argparse_test.py
           name: argparse_test
+
+      # integrated_test
+      - run:
+          command: python ./test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py
+          name: total_record_and_html_report_test
 
 workflows:
   main:

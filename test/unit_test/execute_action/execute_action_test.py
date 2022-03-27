@@ -4,6 +4,7 @@ from je_auto_control import execute_action
 from je_auto_control import test_record
 
 test_list = None
+test_record.init_total_record = True
 if sys.platform in ["win32", "cygwin", "msys"]:
     test_list = [
         ["type_key", {"keycode": 65}],
@@ -34,5 +35,4 @@ elif sys.platform in ["darwin"]:
     ]
 print("\n\n")
 execute_action(test_list)
-print(test_record.record_list)
-print(test_record.error_record_list)
+print(test_record.total_record_list)

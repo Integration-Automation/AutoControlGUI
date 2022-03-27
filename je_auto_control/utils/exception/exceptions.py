@@ -60,3 +60,11 @@ class AutoControlActionException(AutoControlException):
 # timeout
 class AutoControlTimeoutException(AutoControlException):
     pass
+
+
+# html exception
+
+class HTMLException(AutoControlException):
+    pass
+
+

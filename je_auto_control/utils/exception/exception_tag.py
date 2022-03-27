@@ -44,3 +44,5 @@ cant_save_json_error = "can't save json file"
 action_is_null_error = "json action is null"
 # timeout tag
 timeout_need_on_main_error = "should put timeout function on main"
+# HTML
+html_generate_no_data_tag = "record is None"

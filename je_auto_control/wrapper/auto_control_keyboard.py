@@ -15,13 +15,14 @@ from je_auto_control.wrapper.platform_wrapper import keys_table
 from je_auto_control.utils.test_record.record_test_class import record_total
 
 
-def press_key(keycode: [int, str], is_shift: bool = False):
+def press_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = False):
     """
     use to press a key still press to use release key
     or use critical exit
     return keycode
     :param keycode which keycode we want to press
     :param is_shift press shift True or False
+    :param skip_record skip record on record total list True or False
     """
     param = locals()
     try:
@@ -35,22 +36,25 @@ def press_key(keycode: [int, str], is_shift: bool = False):
                 keyboard.press_key(keycode)
             elif sys.platform in ["darwin"]:
                 keyboard.press_key(keycode, is_shift=is_shift)
-            record_total("press_key", param)
+            if not skip_record:
+                record_total("press_key", param)
             return str(keycode)
         except AutoControlKeyboardException as error:
             raise AutoControlKeyboardException(keyboard_press_key + repr(error))
         except TypeError as error:
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
-        record_total("press_key", param, repr(error))
+        if not skip_record:
+            record_total("press_key", param, repr(error))
         print(repr(error), file=sys.stderr)
 
 
-def release_key(keycode: [int, str], is_shift: bool = False):
+def release_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = False):
     """
     use to release pressed key return keycode
     :param keycode which keycode we want to release
     :param is_shift press shift True or False
+    :param skip_record skip record on record total list True or False
     """
     param = locals()
     try:
@@ -64,36 +68,41 @@ def release_key(keycode: [int, str], is_shift: bool = False):
                 keyboard.release_key(keycode)
             elif sys.platform in ["darwin"]:
                 keyboard.release_key(keycode, is_shift=is_shift)
-            record_total("release_key", param)
+            if not skip_record:
+                record_total("release_key", param)
             return str(keycode)
         except AutoControlKeyboardException as error:
             raise AutoControlKeyboardException(keyboard_release_key + repr(error))
         except TypeError as error:
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
-        record_total("release_key", param, repr(error))
+        if not skip_record:
+            record_total("release_key", param, repr(error))
         print(repr(error), file=sys.stderr)
 
 
-def type_key(keycode: [int, str], is_shift: bool = False):
+def type_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = False):
     """
     press and release key return keycode
     :param keycode which keycode we want to type
     :param is_shift press shift True or False
+    :param skip_record skip record on record total list True or False
     """
     param = locals()
     try:
         try:
-            press_key(keycode, is_shift)
-            release_key(keycode, is_shift)
-            record_total("type_key", param)
+            press_key(keycode, is_shift, skip_record=True)
+            release_key(keycode, is_shift, skip_record=True)
+            if not skip_record:
+                record_total("type_key", param)
             return str(keycode)
         except AutoControlKeyboardException as error:
             raise AutoControlKeyboardException(keyboard_type_key + repr(error))
         except TypeError as error:
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
-        record_total("type_key", param, repr(error))
+        if not skip_record:
+            record_total("type_key", param, repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -129,7 +138,12 @@ def write(write_string: str, is_shift: bool = False):
             for single_string in write_string:
                 try:
                     if keys_table.get(single_string) is not None:
-                        record_write_string = "".join([record_write_string, type_key(single_string, is_shift)])
+                        record_write_string = "".join(
+                            [
+                                record_write_string,
+                                type_key(single_string, is_shift, skip_record=True)
+                            ]
+                        )
                     else:
                         raise AutoControlKeyboardException(keyboard_write_cant_find)
                 except AutoControlKeyboardException:
@@ -158,10 +172,20 @@ def hotkey(key_code_list: list, is_shift: bool = False):
             record_hotkey_press_string = ""
             record_hotkey_release_string = ""
             for key in key_code_list:
-                record_hotkey_press_string = ",".join([record_hotkey_press_string, press_key(key, is_shift)])
+                record_hotkey_press_string = ",".join(
+                    [
+                        record_hotkey_press_string,
+                        press_key(key, is_shift, skip_record=True)
+                    ]
+                )
             key_code_list.reverse()
             for key in key_code_list:
-                record_hotkey_release_string = ",".join([record_hotkey_release_string, release_key(key, is_shift)])
+                record_hotkey_release_string = ",".join(
+                    [
+                        record_hotkey_release_string,
+                        release_key(key, is_shift, skip_record=True)
+                    ]
+                )
             record_total("hotkey", param)
             return record_hotkey_press_string, record_hotkey_release_string
         except AutoControlKeyboardException as error:

@@ -1,5 +1,4 @@
 import sys
-from je_auto_control import AutoControlActionException
 from je_auto_control import AutoControlActionNullException
 from je_auto_control import check_key_is_press
 from je_auto_control import click_mouse
@@ -25,7 +24,7 @@ from je_auto_control.utils.exception.exception_tag import action_is_null_error
 from je_auto_control.utils.exception.exception_tag import cant_execute_action_error
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 
-from je_auto_control.utils.test_record.record_test_class import test_record
+from je_auto_control.utils.test_record.record_test_class import record_total
 
 event_dict = {
     # mouse
@@ -57,42 +56,33 @@ event_dict = {
 }
 
 
-def execute_event(action: list):
-    event = event_dict.get(action[0])
-    if len(action) == 2:
-        return event(**action[1])
-    elif len(action) == 1:
-        return event()
-    else:
-        raise AutoControlActionException(cant_execute_action_error)
-
-
 def execute_action(action_list: list):
     """
     use to execute all action on action list(action file or program list)
     :param action_list the list include action
     for loop the list and execute action
     """
-    flag = test_record.init_total_record
-    """
-    if init_total_record original is True
-    make it False and then make it return
-    """
-    if flag:
-        test_record.init_total_record = False
     execute_record_string = ""
-    if action_list is None:
-        raise AutoControlActionNullException(action_is_null_error)
-    for action in action_list:
-        try:
-            execute_event(action)
-            temp_string = "execute: " + str(action)
-            print(temp_string)
-            test_record.record_list.append(temp_string)
-            execute_record_string = "".join([execute_record_string, temp_string + "\n"])
-        except Exception as error:
-            print(repr(error), file=sys.stderr)
-            test_record.error_record_list.append([action, repr(error)])
-    if flag:
-        test_record.init_total_record = True
+    try:
+        if action_list is None:
+            raise AutoControlActionNullException(action_is_null_error)
+        for action in action_list:
+            event = event_dict.get(action[0])
+            if len(action) == 2:
+                param = action[1]
+                event(**action[1])
+            elif len(action) == 1:
+                param = None
+                event()
+            else:
+                raise AutoControlActionException(cant_execute_action_error)
+            try:
+                temp_string = "execute: " + str(action)
+                print(temp_string)
+                record_total(action[0], param)
+                execute_record_string = "".join([execute_record_string, temp_string + "\n"])
+            except AutoControlActionException as error:
+                record_total(action[0], param, repr(error))
+    except Exception as error:
+        print(repr(error), file=sys.stderr)
     return execute_record_string
