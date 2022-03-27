@@ -26,7 +26,7 @@ release_key("return")
 this write will print one error -> keyboard write error can't find key : Ѓ and write remain string
 """
 try:
-    assert (write("Ѓ123456789") == "123456789")
+    assert (write("?123456789") == "123456789")
 except Exception as error:
     print(repr(error), file=sys.stderr)
 try:
