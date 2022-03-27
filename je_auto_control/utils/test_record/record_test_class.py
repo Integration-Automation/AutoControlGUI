@@ -23,6 +23,6 @@ def record_total(function_name: str, local_param, program_exception: str = None)
                 "function_name": function_name,
                 "local_param": local_param,
                 "time": str(datetime.datetime.now()),
-                "program_exception": program_exception
+                "program_exception": repr(program_exception)
             }
         )
