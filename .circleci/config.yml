@@ -64,7 +64,7 @@ jobs:
           command: python ./test/unit_test/record/record_test.py
           name: record_test
       - run:
-          command: python ./test/unit_test/total_record_test/total_record_and_html_report_test.py
+          command: python ./test/unit_test/total_record_test/total_record_test.py
           name: total_record_test
       # execute
       - run:
