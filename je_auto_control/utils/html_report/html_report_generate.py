@@ -38,6 +38,13 @@ html_string = \
             font-family: "Times New Roman", sans-serif;
             text-align: center;
         }}
+        
+        .failure_table_head {{
+            border: 3px solid #262626;
+            background-color: #f84c5f;
+            font-family: "Times New Roman", sans-serif;
+            text-align: center;
+        }}
 
         .table_data_field_title {{
             border: 3px solid #262626;
@@ -79,7 +86,7 @@ event_table = \
     <table class="main_table">
         <thead>
         <tr>
-            <th colspan="2" class="event_table_head">Test Report</th>
+            <th colspan="2" class="{table_head_class}">Test Report</th>
         </tr>
         </thead>
         <tbody>
@@ -105,6 +112,22 @@ event_table = \
     """.strip()
 
 
+def make_html_table(event_str: str, record_data: dict, table_head: str):
+    event_str = "".join(
+        [
+            event_str,
+            event_table.format(
+                table_head_class=table_head,
+                function_name=record_data.get("function_name"),
+                param=record_data.get("local_param"),
+                time=record_data.get("time"),
+                exception=record_data.get("program_exception"),
+            )
+        ]
+    )
+    return event_str
+
+
 def generate_html(html_name: str = "default_name"):
     """
     :param html_name: save html file name
@@ -115,17 +138,11 @@ def generate_html(html_name: str = "default_name"):
     else:
         event_str = ""
         for record_data in test_record.total_record_list:
-            event_str = "".join(
-                [
-                    event_str,
-                    event_table.format(
-                        function_name=record_data.get("function_name"),
-                        param=record_data.get("local_param"),
-                        time=record_data.get("time"),
-                        exception=record_data.get("program_exception"),
-                    )
-                ]
-            )
+            # because data on record_data all is str
+            if record_data.get("program_exception") == "None":
+                event_str = make_html_table(event_str, record_data, "event_table_head")
+            else:
+                event_str = make_html_table(event_str, record_data, "failure_table_head")
         new_html_string = html_string.format(event_table=event_str)
         try:
             lock.acquire()
