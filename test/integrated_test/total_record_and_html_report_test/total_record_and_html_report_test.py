@@ -38,3 +38,4 @@ print(test_record.total_record_list)
 
 generate_html("test")
 
+
