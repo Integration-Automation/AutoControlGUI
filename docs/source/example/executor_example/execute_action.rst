@@ -71,8 +71,7 @@ AutoControlGUI Execute action
         ]
     print("\n\n")
     execute_action(test_list)
-    print(test_record.record_list)
-    print(test_record.error_record_list)
+
 
 
 

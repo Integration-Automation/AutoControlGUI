@@ -112,7 +112,7 @@ jobs:
           name: pip install --upgrade --user pip setuptools wheel
       # pip require package
       - run:
-          command: pip install --user -r dev_requirements.txt
+          command: pip install --user -r requirements.txt
           name: pip dev_requirements.txt
       # screen test
       - run:
