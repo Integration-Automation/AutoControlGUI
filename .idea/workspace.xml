@@ -2,10 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/test.html" beforeDir="false" afterPath="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/test.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -350,7 +347,7 @@
       <workItem from="1648343746557" duration="6485000" />
       <workItem from="1648378064329" duration="10605000" />
       <workItem from="1648395443010" duration="4127000" />
-      <workItem from="1648430813033" duration="3088000" />
+      <workItem from="1648430813033" duration="3498000" />
     </task>
     <servers />
   </component>
