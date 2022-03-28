@@ -22,7 +22,7 @@ def locate_all_image(image, detect_threshold: [float, int] = 1, draw_image: bool
         try:
             image_data_array = template_detection.find_image_multi(image, detect_threshold, draw_image)
         except ImageNotFoundException as error:
-            raise ImageNotFoundException(find_image_error_variable + repr(error))
+            raise ImageNotFoundException(find_image_error_variable + " " + repr(error))
         if image_data_array[0] is True:
             record_total("locate_all_image", param)
             return image_data_array[1]
@@ -45,7 +45,7 @@ def locate_image_center(image, detect_threshold: [float, int] = 1, draw_image: b
         try:
             image_data_array = template_detection.find_image(image, detect_threshold, draw_image)
         except ImageNotFoundException as error:
-            raise ImageNotFoundException(find_image_error_variable + repr(error))
+            raise ImageNotFoundException(find_image_error_variable + " " + repr(error))
         if image_data_array[0] is True:
             height = image_data_array[1][2] - image_data_array[1][0]
             width = image_data_array[1][3] - image_data_array[1][1]
