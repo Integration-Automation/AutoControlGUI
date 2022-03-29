@@ -14,3 +14,4 @@ Example
     record_example/record.rst
     executor_example/execute_action.rst
     editor_example/editor.rst
+    generate_html_example/generate_html_example.rst

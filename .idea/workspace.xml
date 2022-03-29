@@ -2,8 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/docs/source/doc/generate_html_doc/generate_html_doc.rst" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/source/example/generate_html_example/generate_html_example.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/doc/doc_index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/doc/doc_index.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/example/example_index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/example/example_index.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_screen.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -56,16 +62,16 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../APITestka" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/source/doc/generate_html_doc" />
     <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\doc\generate_html_doc" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\test\integrated_test" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\je_auto_control\utils" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\test\test_source" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\doc\auto_control_test_record_doc" />
-      <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\doc\auto_control_record_doc" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\program_workspace\python\GitHub\AutoControl" />
@@ -350,7 +356,8 @@
       <workItem from="1648378064329" duration="10605000" />
       <workItem from="1648395443010" duration="4127000" />
       <workItem from="1648430813033" duration="3814000" />
-      <workItem from="1648467381283" duration="630000" />
+      <workItem from="1648467381283" duration="2567000" />
+      <workItem from="1648543849549" duration="7352000" />
     </task>
     <servers />
   </component>
@@ -445,7 +452,7 @@
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$win32_keyboard_listener__1_.coverage" NAME="win32_keyboard_listener (1) Coverage Results" MODIFIED="1633763750797" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/listener" />
     <SUITE FILE_PATH="coverage/AutoControl$pytest_in_timeout_test_py.coverage" NAME="pytest in timeout_test.py Coverage Results" MODIFIED="1637595746804" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/timeout" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$record_test__1_.coverage" NAME="record_test (1) Coverage Results" MODIFIED="1634135762635" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test" />
-    <SUITE FILE_PATH="coverage/AutoControl$total_record_and_html_report_test.coverage" NAME="total_record_and_html_report_test Coverage Results" MODIFIED="1648436034125" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test" />
+    <SUITE FILE_PATH="coverage/AutoControl$total_record_and_html_report_test.coverage" NAME="total_record_and_html_report_test Coverage Results" MODIFIED="1648480631073" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$critcal_exit.coverage" NAME="critcal_exit Coverage Results" MODIFIED="1629791186697" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/critical_exit" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$win32_record.coverage" NAME="win32_record Coverage Results" MODIFIED="1633892287671" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/record" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$screen_test.coverage" NAME="screen_test Coverage Results" MODIFIED="1629286145219" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />

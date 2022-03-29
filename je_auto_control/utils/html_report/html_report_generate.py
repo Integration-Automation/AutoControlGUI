@@ -130,6 +130,7 @@ def make_html_table(event_str: str, record_data: dict, table_head: str):
 
 def generate_html(html_name: str = "default_name"):
     """
+    this function will create and save html report on current folder
     :param html_name: save html file name
     :return: html_string
     """
