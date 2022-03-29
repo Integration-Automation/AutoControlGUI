@@ -38,7 +38,7 @@ def screenshot(file_path: str = None, region: list = None):
             record_total("screenshot", param)
             return cv2.cvtColor(np.array(pil_screenshot(file_path=file_path, region=region)), cv2.COLOR_RGB2BGR)
         except AutoControlScreenException as error:
-            raise AutoControlScreenException(screen_screenshot + repr(error))
+            raise AutoControlScreenException(screen_screenshot + " " + repr(error))
     except Exception as error:
         record_total("screenshot", None, repr(error))
         print(repr(error), file=sys.stderr)
