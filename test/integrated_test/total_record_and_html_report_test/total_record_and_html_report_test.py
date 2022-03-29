@@ -35,6 +35,7 @@ except Exception as error:
     print(repr(error), file=sys.stderr)
 
 print(test_record.total_record_list)
-
+# html name is test.html and this html will recode all test detail
+# if test_record.init_total_record = True
 generate_html("test")
 

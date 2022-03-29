@@ -5,7 +5,7 @@ with open("README.md", "r") as README:
 
 setuptools.setup(
     name="je_auto_control",
-    version="0.0.83",
+    version="0.0.84",
     author="JE-Chen",
     author_email="zenmailman@gmail.com",
     description="auto testing",
@@ -33,3 +33,4 @@ setuptools.setup(
 )
 
 # python setup.py sdist bdist_wheel
+# python -m twine upload dist/*
