@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/__main__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__main__.py" afterDir="false" />
-    </list>
+    <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -354,7 +351,7 @@
       <workItem from="1648562322875" duration="2908000" />
       <workItem from="1648643160308" duration="594000" />
       <workItem from="1648688781132" duration="588000" />
-      <workItem from="1649210256462" duration="458000" />
+      <workItem from="1649210256462" duration="868000" />
     </task>
     <servers />
   </component>
