@@ -2,17 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/je_auto_control/utils/file_process/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/je_auto_control/utils/file_process/get_dir_file_list.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/get_dir_file_and_execute.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/test1.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/test2.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/test3.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -366,7 +357,7 @@
       <workItem from="1649210256462" duration="868000" />
       <workItem from="1649233848162" duration="2378000" />
       <workItem from="1649295427021" duration="1190000" />
-      <workItem from="1649323720494" duration="2871000" />
+      <workItem from="1649323720494" duration="4889000" />
     </task>
     <servers />
   </component>
