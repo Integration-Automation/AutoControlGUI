@@ -97,6 +97,9 @@ jobs:
       - run:
           command: python ./test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py
           name: total_record_and_html_report_test
+      - run:
+          command: python ./test/integrated_test/get_dir_file_and_execute/get_dir_file_and_execute.py
+          name: get_dir_file_and_execute
 
   build-and-test-windows-stable:
     executor:
@@ -190,6 +193,9 @@ jobs:
       - run:
           command: python ./test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py
           name: total_record_and_html_report_test
+      - run:
+          command: python ./test/integrated_test/get_dir_file_and_execute/get_dir_file_and_execute.py
+          name: get_dir_file_and_execute
 
 workflows:
   main:
