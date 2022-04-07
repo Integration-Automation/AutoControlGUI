@@ -23,6 +23,7 @@ from je_auto_control import write
 from je_auto_control.utils.exception.exception_tag import action_is_null_error
 from je_auto_control.utils.exception.exception_tag import cant_execute_action_error
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.json.json_file import read_action_json
 
 from je_auto_control.utils.test_record.record_test_class import record_total
 
@@ -86,3 +87,12 @@ def execute_action(action_list: list):
     except Exception as error:
         print(repr(error), file=sys.stderr)
     return execute_record_string
+
+
+def execute_files(execute_files_list: list):
+    """
+    :param execute_files_list:
+    :return:
+    """
+    for file in execute_files_list:
+        execute_action(read_action_json(file))
