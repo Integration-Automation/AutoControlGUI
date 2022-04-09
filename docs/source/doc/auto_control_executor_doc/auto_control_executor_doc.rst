@@ -40,3 +40,11 @@ AutoControlGUI Executor Doc
     :param json_save_path  json save path
     :param action_json the json str include action to write
     """
+
+.. code-block:: python
+
+    def execute_files(execute_files_list: list):
+    """
+    :param execute_files_list: list include execute files path
+    :return: every execute detail as list
+    """

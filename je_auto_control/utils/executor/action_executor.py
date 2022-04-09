@@ -91,8 +91,10 @@ def execute_action(action_list: list):
 
 def execute_files(execute_files_list: list):
     """
-    :param execute_files_list:
-    :return:
+    :param execute_files_list: list include execute files path
+    :return: every execute detail as list
     """
+    execute_detail_list = list()
     for file in execute_files_list:
-        execute_action(read_action_json(file))
+        execute_detail_list.append(execute_action(read_action_json(file)))
+    return execute_detail_list

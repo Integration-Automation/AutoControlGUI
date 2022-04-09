@@ -73,5 +73,17 @@ AutoControlGUI Execute action
     execute_action(test_list)
 
 
+.. code-block:: python
 
+    """
+    get current dir all execute file(json file) list and execute list of file
+    """
+    import os
+
+    from je_auto_control import get_dir_files_as_list
+    from je_auto_control import execute_files
+    files_list = get_dir_files_as_list(os.getcwd())
+    print(files_list)
+    if files_list is not None:
+        execute_files(files_list)
 
