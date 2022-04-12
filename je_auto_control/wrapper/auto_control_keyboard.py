@@ -36,16 +36,22 @@ def press_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = F
                 keyboard.press_key(keycode)
             elif sys.platform in ["darwin"]:
                 keyboard.press_key(keycode, is_shift=is_shift)
-            if not skip_record:
+            if skip_record is False:
                 record_total("press_key", param)
             return str(keycode)
         except AutoControlKeyboardException as error:
+            if skip_record is False:
+                record_total("press_key", param, repr(error))
             raise AutoControlKeyboardException(keyboard_press_key + " " + repr(error))
         except TypeError as error:
+            if skip_record is False:
+                record_total("press_key", param, repr(error))
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
-        if not skip_record:
+        if skip_record is False:
             record_total("press_key", param, repr(error))
+        else:
+            raise AutoControlKeyboardException(repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -68,16 +74,22 @@ def release_key(keycode: [int, str], is_shift: bool = False, skip_record: bool =
                 keyboard.release_key(keycode)
             elif sys.platform in ["darwin"]:
                 keyboard.release_key(keycode, is_shift=is_shift)
-            if not skip_record:
+            if skip_record is False:
                 record_total("release_key", param)
             return str(keycode)
         except AutoControlKeyboardException as error:
+            if skip_record is False:
+                record_total("release_key", param, repr(error))
             raise AutoControlKeyboardException(keyboard_release_key + " " + repr(error))
         except TypeError as error:
+            if skip_record is False:
+                record_total("release_key", param, repr(error))
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
-        if not skip_record:
+        if skip_record is False:
             record_total("release_key", param, repr(error))
+        else:
+            raise AutoControlKeyboardException(repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -93,15 +105,19 @@ def type_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = Fa
         try:
             press_key(keycode, is_shift, skip_record=True)
             release_key(keycode, is_shift, skip_record=True)
-            if not skip_record:
+            if skip_record is False:
                 record_total("type_key", param)
             return str(keycode)
         except AutoControlKeyboardException as error:
+            if skip_record is False:
+                record_total("type_key", param, repr(error))
             raise AutoControlKeyboardException(keyboard_type_key + " " + repr(error))
         except TypeError as error:
+            if skip_record is False:
+                record_total("type_key", param, repr(error))
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
-        if not skip_record:
+        if skip_record is False:
             record_total("type_key", param, repr(error))
         print(repr(error), file=sys.stderr)
 
@@ -146,7 +162,7 @@ def write(write_string: str, is_shift: bool = False):
                         )
                     else:
                         raise AutoControlKeyboardException(keyboard_write_cant_find)
-                except AutoControlKeyboardException:
+                except AutoControlKeyboardException as error:
                     print(keyboard_write_cant_find, single_string, sep="\t", file=sys.stderr)
                     raise AutoControlKeyboardException(keyboard_write_cant_find)
             record_total("write", param)
