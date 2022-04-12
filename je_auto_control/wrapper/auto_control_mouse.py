@@ -152,8 +152,10 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
             record_total("click_mouse", param)
             return mouse_keycode, x, y
         except AutoControlMouseException as error:
+            record_total("click_mouse", param, mouse_click_mouse + " " + repr(error))
             raise AutoControlMouseException(mouse_click_mouse + " " + repr(error))
         except TypeError as error:
+            record_total("click_mouse", param, repr(error))
             raise AutoControlMouseException(repr(error))
     except Exception as error:
         record_total("click_mouse", param, repr(error))
@@ -175,7 +177,8 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
     try:
         try:
             now_cursor_x, now_cursor_y = position()
-        except AutoControlMouseException:
+        except AutoControlMouseException as error:
+            record_total("scroll", param, repr(error))
             raise AutoControlMouseException(mouse_get_position)
         width, height = size()
         if x is None:
@@ -200,7 +203,6 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
             elif sys.platform in ["linux", "linux2"]:
                 scroll_direction = special_table.get(scroll_direction)
                 mouse.scroll(scroll_value, scroll_direction)
-            record_total("scroll", param)
             return scroll_value, scroll_direction
         except AutoControlMouseException as error:
             raise AutoControlMouseException(mouse_scroll + " " + repr(error))

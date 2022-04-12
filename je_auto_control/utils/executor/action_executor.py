@@ -32,6 +32,7 @@ event_dict = {
     "mouse_left": click_mouse,
     "mouse_right": click_mouse,
     "mouse_middle": click_mouse,
+    "click_mouse": click_mouse,
     "mouse_table": mouse_table,
     "position": position,
     "press_mouse": press_mouse,
@@ -70,21 +71,16 @@ def execute_action(action_list: list):
         for action in action_list:
             event = event_dict.get(action[0])
             if len(action) == 2:
-                param = action[1]
                 event(**action[1])
             elif len(action) == 1:
-                param = None
                 event()
             else:
                 raise AutoControlActionException(cant_execute_action_error)
-            try:
-                temp_string = "execute: " + str(action)
-                print(temp_string)
-                record_total(action[0], param)
-                execute_record_string = "".join([execute_record_string, temp_string + "\n"])
-            except AutoControlActionException as error:
-                record_total(action[0], param, repr(error))
+            temp_string = "execute: " + str(action)
+            print(temp_string)
+            execute_record_string = "".join([execute_record_string, temp_string + "\n"])
     except Exception as error:
+        record_total("execute_action", action_list, repr(error))
         print(repr(error), file=sys.stderr)
     return execute_record_string
 
