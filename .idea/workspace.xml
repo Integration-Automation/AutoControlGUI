@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="" />
+    <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -52,16 +54,16 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/je_auto_control/utils/file_process" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/test/unit_test/argparse" />
     <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\program_workspace\python\GitHub\AutoControl\test\unit_test\argparse" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\je_auto_control\utils\file_process" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\test\integrated_test\get_dir_file_and_execute" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\test\integrated_test" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\doc\generate_html_doc" />
-      <recent name="C:\program_workspace\python\GitHub\AutoControl\je_auto_control\utils" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\program_workspace\python\GitHub\AutoControl" />
@@ -357,7 +359,13 @@
       <workItem from="1649323720494" duration="5272000" />
       <workItem from="1649435203954" duration="5888000" />
       <workItem from="1649641563043" duration="1679000" />
-      <workItem from="1649753690708" duration="7948000" />
+      <workItem from="1649753690708" duration="8646000" />
+      <workItem from="1649814099417" duration="218000" />
+      <workItem from="1649826515646" duration="594000" />
+      <workItem from="1650331270173" duration="606000" />
+      <workItem from="1650335489941" duration="1353000" />
+      <workItem from="1650435372412" duration="1071000" />
+      <workItem from="1650478669658" duration="1315000" />
     </task>
     <servers />
   </component>
