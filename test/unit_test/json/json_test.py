@@ -11,6 +11,6 @@ test_list = [
     ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
 ]
 
-write_action_json(os.getcwd() + "/test.json", test_list)
-read_json = read_action_json(os.getcwd() + "/test.json")
+write_action_json(os.getcwd() + "/test1.json", test_list)
+read_json = read_action_json(os.getcwd() + "/test1.json")
 print(read_json)
