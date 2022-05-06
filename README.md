@@ -26,7 +26,12 @@ documentation available at [https://python-jeautocontrol.readthedocs.io/en/lates
 ## install
 
 ```
+# make sure you have install cmake libssl-dev
 pip install je_auto_control
+```
+
+```
+
 ```
 
 ## Info
