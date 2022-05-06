@@ -26,7 +26,6 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--execute_dir", type=str, help="choose dir include action file to execute")
     args = parser.parse_args()
     args = vars(args)
-    print(args)
     for key, value in args.items():
         if value is not None:
             argparse_event_dict.get(key)(value)
