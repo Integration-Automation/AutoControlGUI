@@ -2,42 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/Python_JEAutoControl.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Python_JEAutoControl.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/keyboard/x11_linux_keyboard_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/keyboard/x11_linux_keyboard_control.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/mouse/x11_linux_mouse_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/mouse/x11_linux_mouse_control.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/record/x11_linux_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/record/x11_linux_record.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/screen/x11_linux_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/screen/x11_linux_screen.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/keyboard/osx_keyboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/keyboard/osx_keyboard.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/keyboard/osx_keyboard_check.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/keyboard/osx_keyboard_check.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/listener/osx_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/listener/osx_listener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/mouse/osx_mouse.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/mouse/osx_mouse.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/record/osx_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/record/osx_record.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/screen/osx_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/screen/osx_screen.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/critical_exit/critcal_exit.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/critical_exit/critcal_exit.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/file_process/create_project_structure.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/file_process/create_project_structure.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/file_process/get_dir_file_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/file_process/get_dir_file_list.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/image/screenshot.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/image/screenshot.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/image/template_detection.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/image/template_detection.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/json/json_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/json/json_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/test_record/record_test_class.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/test_record/record_test_class.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_ctype_input.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_ctype_input.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_keypress_check.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_keypress_check.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/keyboard/win32_ctype_keyboard_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/keyboard/win32_ctype_keyboard_control.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_keyboard_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_keyboard_listener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_mouse_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_mouse_listener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/mouse/win32_ctype_mouse_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/mouse/win32_ctype_mouse_control.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/record/win32_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/record/win32_record.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/je_auto_control/windows/screen/win32_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/screen/win32_screen.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_mouse.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_mouse.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_record.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_screen.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -106,29 +73,7 @@
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\example" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.get_dir_file_and_execute">
-    <configuration name="execute_action_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Python_JEAutoControl" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/execute_action" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/execute_action/execute_action_test.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
+  <component name="RunManager" selected="Python.keyboard_write_test">
     <configuration name="get_dir_file_and_execute" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -143,6 +88,28 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/get_dir_file_and_execute.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="keyboard_write_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Python_JEAutoControl" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/keyboard" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/keyboard/keyboard_write_test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -264,7 +231,7 @@
     <list>
       <item itemvalue="Python.multiprocess_timeout" />
       <item itemvalue="Python.test_auto_control_exception" />
-      <item itemvalue="Python.execute_action_test" />
+      <item itemvalue="Python.keyboard_write_test" />
       <item itemvalue="Python.total_record_and_html_report_test" />
       <item itemvalue="Python.total_record_test" />
       <item itemvalue="Python.get_dir_file_and_execute" />
@@ -272,11 +239,11 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.keyboard_write_test" />
         <item itemvalue="Python.get_dir_file_and_execute" />
         <item itemvalue="Python.tt" />
         <item itemvalue="Python.total_record_and_html_report_test" />
         <item itemvalue="Python.total_record_test" />
-        <item itemvalue="Python.execute_action_test" />
       </list>
     </recent_temporary>
   </component>
@@ -411,7 +378,7 @@
       <workItem from="1652188132770" duration="648000" />
       <workItem from="1653167957726" duration="12902000" />
       <workItem from="1653196015386" duration="1535000" />
-      <workItem from="1653263679783" duration="22737000" />
+      <workItem from="1653263679783" duration="23685000" />
     </task>
     <servers />
   </component>
@@ -484,7 +451,7 @@
     <SUITE FILE_PATH="coverage/AutoControl$pytest_in_multiprocess_timeout_py.coverage" NAME="pytest in multiprocess_timeout.py Coverage Results" MODIFIED="1637593405582" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/timeout" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$keyboard_listener.coverage" NAME="keyboardlistener Coverage Results" MODIFIED="1633627280725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/listener" />
     <SUITE FILE_PATH="coverage/AutoControl$mouse_test.coverage" NAME="mouse_test Coverage Results" MODIFIED="1638717075083" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/mouse" />
-    <SUITE FILE_PATH="coverage/AutoControl$keyboard_write_test.coverage" NAME="keyboard_write_test Coverage Results" MODIFIED="1648315048810" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/keyboard" />
+    <SUITE FILE_PATH="coverage/AutoControl$keyboard_write_test.coverage" NAME="keyboard_write_test Coverage Results" MODIFIED="1653320139030" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/keyboard" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$hotkey_test.coverage" NAME="hotkey_test Coverage Results" MODIFIED="1637300409697" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/keyboard" />
     <SUITE FILE_PATH="coverage/AutoControl$image_not_found_exception_test.coverage" NAME="image_not_found_exception_test Coverage Results" MODIFIED="1638157029852" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/exception" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$critcal_exit.coverage" NAME="critcal_exit Coverage Results" MODIFIED="1629791186697" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/critical_exit" />

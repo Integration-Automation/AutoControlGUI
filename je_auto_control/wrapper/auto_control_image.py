@@ -1,5 +1,5 @@
 import sys
-from typing import List
+from typing import List, Union
 
 from je_auto_control.utils.image import template_detection
 from je_auto_control.utils.exception.exception_tag import cant_find_image
@@ -11,7 +11,8 @@ from je_auto_control.utils.image.screenshot import pil_screenshot
 from je_auto_control.utils.test_record.record_test_class import record_total
 
 
-def locate_all_image(image, detect_threshold: [float, int] = 1, draw_image: bool = False) -> List[List[int, int]]:
+def locate_all_image(image, detect_threshold: [float, int] = 1,
+                     draw_image: bool = False) -> List[int]:
     """
      use to locate all image that detected and then return detected images list
     :param image which image we want to find on screen (png or PIL ImageGrab.grab())
@@ -34,7 +35,7 @@ def locate_all_image(image, detect_threshold: [float, int] = 1, draw_image: bool
         print(repr(error), file=sys.stderr)
 
 
-def locate_image_center(image, detect_threshold: [float, int] = 1, draw_image: bool = False) -> List[int, int]:
+def locate_image_center(image, detect_threshold: [float, int] = 1, draw_image: bool = False) -> List[Union[int, int]]:
     """
     use to locate image and return image center position
     :param image which image we want to find on screen (png or PIL ImageGrab.grab())
@@ -63,7 +64,7 @@ def locate_image_center(image, detect_threshold: [float, int] = 1, draw_image: b
 def locate_and_click(
         image, mouse_keycode: [int, str],
         detect_threshold: [float, int] = 1,
-        draw_image: bool = False) -> List[int, int]:
+        draw_image: bool = False) -> List[Union[int, int]]:
     """
     use to locate image and click image center position and the return image center position
     :param image which image we want to find on screen (png or PIL ImageGrab.grab())
@@ -94,7 +95,7 @@ def locate_and_click(
         print(repr(error), file=sys.stderr)
 
 
-def screenshot(file_path: str = None, region: list = None) -> List[int, int]:
+def screenshot(file_path: str = None, region: list = None) -> List[Union[int, int]]:
     """
     use to get now screen image return image
     :param file_path save screenshot path (None is no save)

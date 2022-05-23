@@ -1,5 +1,5 @@
 import sys
-from typing import List
+from typing import List, Union
 
 from je_auto_control.utils.exception.exception_tag import windows_import_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -13,7 +13,7 @@ _user32 = ctypes.windll.user32
 _user32.SetProcessDPIAware()
 
 
-def size() -> List[int, int]:
+def size() -> List[Union[int, int]]:
     """
     get screen size
     """
