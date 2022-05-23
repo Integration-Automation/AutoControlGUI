@@ -8,7 +8,6 @@ if sys.platform not in ["darwin"]:
 
 
 from Cocoa import *
-import time
 from Foundation import *
 from PyObjCTools import AppHelper
 
@@ -27,17 +26,17 @@ class AppDelegate(NSObject):
         NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(NSEventMaskRightMouseDown, mouse_right_handler)
 
 
-def mouse_left_handler(event):
+def mouse_left_handler(event) -> None:
     loc = NSEvent.mouseLocation()
     record_queue.put(("mouse_left", loc.x, loc.y))
 
 
-def mouse_right_handler(event):
+def mouse_right_handler(event) -> None:
     loc = NSEvent.mouseLocation()
     record_queue.put(("mouse_right", loc.x, loc.y))
 
 
-def keyboard_handler(event):
+def keyboard_handler(event) -> None:
     if int(event.keyCode()) == 98:
         pass
     else:
@@ -45,17 +44,14 @@ def keyboard_handler(event):
         print(event)
 
 
-def osx_record():
+def osx_record() -> None:
     record_queue = Queue()
     delegate = AppDelegate.alloc().init()
     app.setDelegate_(delegate)
     AppHelper.runEventLoop()
 
 
-def osx_stop_record():
+def osx_stop_record() -> Queue:
     return record_queue
 
-
-if __name__ == "__main__":
-    osx_record()
 

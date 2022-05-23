@@ -9,7 +9,7 @@ if sys.platform not in ["win32", "cygwin", "msys"]:
 import ctypes
 
 
-def check_key_is_press(keycode: [int, str]):
+def check_key_is_press(keycode: [int, str]) -> bool:
     if type(keycode) is int:
         temp = ctypes.windll.user32.GetKeyState(keycode)
     else:

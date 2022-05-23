@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-def create_dir(dir_name: str):
+def create_dir(dir_name: str) -> None:
     """
     :param dir_name: create dir use dir name
     :return: None
@@ -12,5 +12,5 @@ def create_dir(dir_name: str):
     )
 
 
-def create_template_dir():
+def create_template_dir() -> None:
     create_dir("auto_control/template")

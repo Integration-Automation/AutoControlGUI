@@ -1,4 +1,5 @@
 import sys
+from typing import Tuple
 
 from je_auto_control.utils.exception.exception_tag import osx_import_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -9,7 +10,7 @@ if sys.platform not in ["darwin"]:
 import Quartz
 
 
-def size():
+def size() -> Tuple[int, int]:
     """
     get screen size
     """

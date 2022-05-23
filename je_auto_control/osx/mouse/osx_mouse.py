@@ -1,5 +1,5 @@
 import sys
-
+from typing import Tuple
 
 from je_auto_control.utils.exception.exception_tag import osx_import_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -16,14 +16,14 @@ from je_auto_control.osx.core.utils.osx_vk import osx_mouse_middle
 from je_auto_control.osx.core.utils.osx_vk import osx_mouse_right
 
 
-def position():
+def position() -> Tuple[int, int]:
     """
     get mouse current position
     """
     return (Quartz.NSEvent.mouseLocation().x, Quartz.NSEvent.mouseLocation().y)
 
 
-def mouse_event(event, x: int, y: int, mouse_button: int):
+def mouse_event(event, x: int, y: int, mouse_button: int) -> None:
     """
     :param event which event we want to use
     :param x event x
@@ -34,7 +34,7 @@ def mouse_event(event, x: int, y: int, mouse_button: int):
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, curr_event)
 
 
-def set_position(x: int, y: int):
+def set_position(x: int, y: int) -> None:
     """
     :param x we want to set mouse x position
     :param y we want to set mouse y position
@@ -42,7 +42,7 @@ def set_position(x: int, y: int):
     mouse_event(Quartz.kCGEventMouseMoved, x, y, 0)
 
 
-def press_mouse(x: int, y: int, mouse_button: int):
+def press_mouse(x: int, y: int, mouse_button: int) -> None:
     """
     :param x event x
     :param y event y
@@ -56,7 +56,7 @@ def press_mouse(x: int, y: int, mouse_button: int):
         mouse_event(Quartz.kCGEventRightMouseDown, x, y, Quartz.kCGMouseButtonRight)
 
 
-def release_mouse(x: int, y: int, mouse_button: int):
+def release_mouse(x: int, y: int, mouse_button: int) -> None:
     """
     :param x event x
     :param y event y
@@ -70,7 +70,7 @@ def release_mouse(x: int, y: int, mouse_button: int):
         mouse_event(Quartz.kCGEventRightMouseUp, x, y, Quartz.kCGMouseButtonRight)
 
 
-def click_mouse(x: int, y: int, mouse_button: int):
+def click_mouse(x: int, y: int, mouse_button: int) -> None:
     """
     :param x event x
     :param y event y
@@ -90,7 +90,7 @@ def click_mouse(x: int, y: int, mouse_button: int):
         release_mouse(x, y, mouse_button)
 
 
-def scroll(scroll_value: int):
+def scroll(scroll_value: int) -> None:
     """
     :param scroll_value scroll count
     """

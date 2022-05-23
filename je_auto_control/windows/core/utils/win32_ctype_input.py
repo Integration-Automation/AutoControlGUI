@@ -59,14 +59,13 @@ class Input(ctypes.Structure):
                 ("_input", INPUT_Union))
 
 
-LPINPUT = ctypes.POINTER(Input)
-
-
-def _check_count(result, func, args):
+def _check_count(result, func, args) -> list:
     if result == 0:
         raise ctypes.WinError(ctypes.get_last_error())
     return args
 
+
+LPINPUT = ctypes.POINTER(Input)
 
 SendInput = user32.SendInput
 

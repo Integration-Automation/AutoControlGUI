@@ -6,7 +6,6 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 if sys.platform not in ["darwin"]:
     raise AutoControlException(osx_import_error)
 
-import time
 
 import AppKit
 import Quartz
@@ -41,7 +40,7 @@ special_key_table = {
 }
 
 
-def normal_key(keycode: int, is_shift: bool, is_down: bool):
+def normal_key(keycode: int, is_shift: bool, is_down: bool) -> None:
     """
     :param keycode which keycode we want to press or release
     :param is_shift use shift key ?
@@ -67,7 +66,7 @@ def normal_key(keycode: int, is_shift: bool, is_down: bool):
         print(repr(error), file=sys.stderr)
 
 
-def special_key(keycode: int, is_shift: bool):
+def special_key(keycode: int, is_shift: bool) -> None:
     """
     :param keycode which keycode we want to press or release
     :param is_shift use shift key ?
@@ -89,7 +88,7 @@ def special_key(keycode: int, is_shift: bool):
     Quartz.CGEventPost(0, event)
 
 
-def press_key(keycode: int, is_shift: bool):
+def press_key(keycode: int, is_shift: bool) -> None:
     """
     :param keycode which keycode we want to press
     :param is_shift is shift press?
@@ -100,7 +99,7 @@ def press_key(keycode: int, is_shift: bool):
         normal_key(keycode, is_shift, True)
 
 
-def release_key(keycode: int, is_shift: bool):
+def release_key(keycode: int, is_shift: bool) -> None:
     """
     :param keycode which keycode we want to release
     :param is_shift is shift press?

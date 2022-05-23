@@ -7,14 +7,14 @@ class TestRecord(object):
         self.init_total_record = init_total_record
         self.total_record_list = list()
 
-    def clean_record(self):
+    def clean_record(self) -> None:
         self.total_record_list = list()
 
 
 test_record = TestRecord()
 
 
-def record_total(function_name: str, local_param, program_exception: str = None):
+def record_total(function_name: str, local_param, program_exception: str = None) -> None:
     if not test_record.init_total_record:
         pass
     else:

@@ -1,4 +1,5 @@
 import sys
+from queue import Queue
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exception_tag import linux_import_error
@@ -38,7 +39,7 @@ class KeypressHandler(Thread):
         self.event_position = 0, 0
 
     # two times because press and release
-    def check_is_press(self, keycode: int):
+    def check_is_press(self, keycode: int) -> bool:
         """
         :param keycode we want to check
         """
@@ -48,7 +49,7 @@ class KeypressHandler(Thread):
         else:
             return False
 
-    def run(self, reply):
+    def run(self, reply) -> None:
         """
         :param reply listener return data
         get data
@@ -70,14 +71,14 @@ class KeypressHandler(Thread):
         except AutoControlException:
             raise AutoControlException(listener_error)
 
-    def record(self, record_queue):
+    def record(self, record_queue)-> None:
         """
         :param record_queue the queue test_record action
         """
         self.record_flag = True
         self.record_queue = record_queue
 
-    def stop_record(self):
+    def stop_record(self) -> Queue:
         self.record_flag = False
         return self.record_queue
 
@@ -103,7 +104,7 @@ class XWindowsKeypressListener(Thread):
         """
         return self.handler.check_is_press(keycode)
 
-    def run(self):
+    def run(self) -> None:
         """
         while still listener
             get context
@@ -139,10 +140,10 @@ class XWindowsKeypressListener(Thread):
                 self.handler.still_listener = False
                 self.still_listener = False
 
-    def record(self, record_queue):
+    def record(self, record_queue) -> None:
         self.handler.record(record_queue)
 
-    def stop_record(self):
+    def stop_record(self) -> Queue:
         return self.handler.stop_record()
 
 
@@ -150,30 +151,23 @@ xwindows_listener = XWindowsKeypressListener()
 xwindows_listener.start()
 
 
-def check_key_is_press(keycode: int):
+def check_key_is_press(keycode: int) -> int:
     """
     :param keycode check this keycode is press?
     """
     return xwindows_listener.check_is_press(keycode)
 
 
-def x11_linux_record(record_queue):
+def x11_linux_record(record_queue) -> None:
     """
     :param record_queue the queue test_record action
     """
     xwindows_listener.record(record_queue)
 
 
-def x11_linux_stop_record():
+def x11_linux_stop_record() -> None:
     """
     stop test_record action
     """
     return xwindows_listener.stop_record()
 
-
-if __name__ == "__main__":
-    from queue import Queue
-    test_queue = Queue()
-    xwindows_listener.record(test_queue)
-    while True:
-        pass

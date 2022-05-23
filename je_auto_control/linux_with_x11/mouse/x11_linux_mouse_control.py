@@ -1,5 +1,6 @@
 import sys
 import time
+from typing import Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exception_tag import linux_import_error
@@ -21,7 +22,7 @@ x11_linux_scroll_direction_left = 6
 x11_linux_scroll_direction_right = 7
 
 
-def position():
+def position() -> Tuple[int, int]:
     """
     get mouse current position
     """
@@ -29,7 +30,7 @@ def position():
     return coord["root_x"], coord["root_y"]
 
 
-def set_position(x: int, y: int):
+def set_position(x: int, y: int) -> None:
     """
     :param x we want to set mouse x position
     :param y we want to set mouse y position
@@ -39,7 +40,7 @@ def set_position(x: int, y: int):
     display.sync()
 
 
-def press_mouse(mouse_keycode: int):
+def press_mouse(mouse_keycode: int) -> None:
     """
     :param mouse_keycode mouse keycode we want to press
     """
@@ -48,7 +49,7 @@ def press_mouse(mouse_keycode: int):
     display.sync()
 
 
-def release_mouse(mouse_keycode: int):
+def release_mouse(mouse_keycode: int) -> None:
     """
     :param mouse_keycode which mouse keycode we want to release
     """
@@ -57,7 +58,7 @@ def release_mouse(mouse_keycode: int):
     display.sync()
 
 
-def click_mouse(mouse_keycode: int, x=None, y=None):
+def click_mouse(mouse_keycode: int, x=None, y=None) -> None:
     """
     :param mouse_keycode which mouse keycode we want to click
     :param x set mouse x position
@@ -69,7 +70,7 @@ def click_mouse(mouse_keycode: int, x=None, y=None):
     release_mouse(mouse_keycode)
 
 
-def scroll(scroll_value: int, scroll_direction: int):
+def scroll(scroll_value: int, scroll_direction: int) -> None:
     """"
     :param scroll_value scroll unit
     :param scroll_direction what direction you want to scroll

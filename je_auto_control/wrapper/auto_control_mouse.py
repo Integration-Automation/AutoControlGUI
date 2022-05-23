@@ -1,5 +1,6 @@
 import ctypes
 import sys
+from typing import Tuple, Union
 
 from je_auto_control.utils.exception.exception_tag import mouse_click_mouse
 from je_auto_control.utils.exception.exception_tag import mouse_get_position
@@ -18,7 +19,7 @@ from je_auto_control.wrapper.platform_wrapper import special_table
 from je_auto_control.utils.test_record.record_test_class import record_total
 
 
-def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int):
+def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int) -> Tuple[Union[int, str], int, int]:
     """
     check mouse keycode is verified or not
     and then check current mouse position
@@ -45,7 +46,7 @@ def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int):
     return mouse_keycode, x, y
 
 
-def position():
+def position() -> Tuple[int, int]:
     """
     get mouse current position
     return mouse_x, mouse_y
@@ -61,7 +62,7 @@ def position():
         print(repr(error), file=sys.stderr)
 
 
-def set_position(x: int, y: int):
+def set_position(x: int, y: int) -> Tuple[int, int]:
     """
     :param x set mouse position x
     :param y set mouse position y
@@ -82,7 +83,7 @@ def set_position(x: int, y: int):
         print(repr(error), file=sys.stderr)
 
 
-def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
+def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tuple[Union[int, str], int, int]:
     """
     press mouse keycode on x, y
     return keycode, x, y
@@ -109,7 +110,7 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
         print(repr(error), file=sys.stderr)
 
 
-def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
+def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tuple[Union[int, str], int, int]:
     """
     release mouse keycode on x, y
     return keycode, x, y
@@ -136,7 +137,7 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
         print(repr(error), file=sys.stderr)
 
 
-def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
+def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tuple[Union[int, str], int, int]:
     """
     press and release mouse keycode on x, y
     return keycode, x, y
@@ -162,7 +163,7 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
         print(repr(error), file=sys.stderr)
 
 
-def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down"):
+def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down") -> Tuple[int, str]:
     """"
     :param scroll_value scroll count
     :param x mouse click x position

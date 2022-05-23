@@ -1,4 +1,5 @@
 import sys
+from typing import List
 
 from je_auto_control.utils.exception.exception_tag import windows_import_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -8,12 +9,12 @@ if sys.platform not in ["win32", "cygwin", "msys"]:
 
 import ctypes
 
-user32 = ctypes.windll.user32
-user32.SetProcessDPIAware()
+_user32 = ctypes.windll.user32
+_user32.SetProcessDPIAware()
 
 
-def size():
+def size() -> List[int, int]:
     """
     get screen size
     """
-    return [user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)]
+    return [_user32.GetSystemMetrics(0), _user32.GetSystemMetrics(1)]

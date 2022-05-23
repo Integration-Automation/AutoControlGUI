@@ -1,5 +1,5 @@
 import sys
-
+from queue import Queue
 
 from je_auto_control.utils.exception.exception_tag import osx_import_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -15,10 +15,10 @@ from je_auto_control.utils.exception.exceptions import AutoControlJsonActionExce
 
 class OSXRecorder(object):
 
-    def record(self):
+    def record(self) -> None:
         osx_record()
 
-    def stop_record(self):
+    def stop_record(self) -> Queue:
         record_queue = osx_stop_record()
         if record_queue is None:
             raise AutoControlJsonActionException
@@ -26,13 +26,3 @@ class OSXRecorder(object):
 
 
 osx_recorder = OSXRecorder()
-
-if __name__ == "__main__":
-    test_osx_recorder = OSXRecorder()
-    test_osx_recorder.record()
-    temp = test_osx_recorder.stop_record()
-    print(temp)
-    for action in temp.queue:
-        print(action)
-    while True:
-        pass

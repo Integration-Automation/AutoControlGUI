@@ -25,14 +25,14 @@ class X11LinuxRecorder(object):
         self.record_queue = None
         self.result_queue = None
 
-    def record(self):
+    def record(self) -> None:
         """
         create a new queue and start test_record
         """
         self.record_queue = Queue()
         x11_linux_record(self.record_queue)
 
-    def stop_record(self):
+    def stop_record(self) -> None:
         """
         stop test_record
         make a format action queue
@@ -49,13 +49,4 @@ class X11LinuxRecorder(object):
 
 x11_linux_recoder = X11LinuxRecorder()
 
-
-if __name__ == "__main__":
-    x11_record = X11LinuxRecorder()
-    x11_record.record()
-    from time import sleep
-    sleep(10)
-    temp = x11_record.stop_record()
-    for action in temp.queue:
-        print(action)
 

@@ -5,9 +5,9 @@ from je_auto_control.utils.exception.exceptions import HTMLException
 from je_auto_control.utils.exception.exception_tag import html_generate_no_data_tag
 from threading import Lock
 
-lock = Lock()
+_lock = Lock()
 
-html_string = \
+_html_string = \
     r"""
 <!DOCTYPE html>
 <html lang="en">
@@ -81,7 +81,7 @@ html_string = \
 </html>
 """.strip()
 
-event_table = \
+_event_table = \
     r"""
     <table class="main_table">
         <thead>
@@ -112,11 +112,11 @@ event_table = \
     """.strip()
 
 
-def make_html_table(event_str: str, record_data: dict, table_head: str):
+def make_html_table(event_str: str, record_data: dict, table_head: str) -> str:
     event_str = "".join(
         [
             event_str,
-            event_table.format(
+            _event_table.format(
                 table_head_class=table_head,
                 function_name=record_data.get("function_name"),
                 param=record_data.get("local_param"),
@@ -128,7 +128,7 @@ def make_html_table(event_str: str, record_data: dict, table_head: str):
     return event_str
 
 
-def generate_html(html_name: str = "default_name"):
+def generate_html(html_name: str = "default_name") -> str:
     """
     this function will create and save html report on current folder
     :param html_name: save html file name
@@ -144,9 +144,9 @@ def generate_html(html_name: str = "default_name"):
                 event_str = make_html_table(event_str, record_data, "event_table_head")
             else:
                 event_str = make_html_table(event_str, record_data, "failure_table_head")
-        new_html_string = html_string.format(event_table=event_str)
+        new_html_string = _html_string.format(event_table=event_str)
         try:
-            lock.acquire()
+            _lock.acquire()
             with open(html_name + ".html", "w+") as file_to_write:
                 file_to_write.write(
                     new_html_string
@@ -154,5 +154,5 @@ def generate_html(html_name: str = "default_name"):
         except Exception as error:
             print(repr(error), file=sys.stderr)
         finally:
-            lock.release()
+            _lock.release()
     return new_html_string

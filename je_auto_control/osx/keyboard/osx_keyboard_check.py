@@ -9,7 +9,7 @@ if sys.platform not in ["darwin"]:
 import Quartz
 
 
-def check_key_is_press(keycode: int):
+def check_key_is_press(keycode: int) -> bool:
     """
     :param keycode which keycode we want to check
     """

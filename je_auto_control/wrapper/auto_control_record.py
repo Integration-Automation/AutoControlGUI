@@ -1,6 +1,5 @@
 import sys
 
-from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.exception.exception_tag import macos_record_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
@@ -8,7 +7,7 @@ from je_auto_control.wrapper.platform_wrapper import recorder
 from je_auto_control.utils.test_record.record_test_class import record_total
 
 
-def record():
+def record() -> None:
     """
     start record keyboard and mouse event until stop_record
     """
@@ -22,7 +21,7 @@ def record():
         print(repr(error), file=sys.stderr)
 
 
-def stop_record():
+def stop_record() -> list:
     """
     stop current record
     """
