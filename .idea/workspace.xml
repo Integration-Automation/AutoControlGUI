@@ -3,8 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/screen/win32_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/screen/win32_screen.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -53,7 +52,10 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
     "WebServerToolWindowFactoryState": "false",
+    "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
 }]]></component>
@@ -378,7 +380,8 @@
       <workItem from="1652188132770" duration="648000" />
       <workItem from="1653167957726" duration="12902000" />
       <workItem from="1653196015386" duration="1535000" />
-      <workItem from="1653263679783" duration="23685000" />
+      <workItem from="1653263679783" duration="24570000" />
+      <workItem from="1653359902516" duration="781000" />
     </task>
     <servers />
   </component>
@@ -451,7 +454,7 @@
     <SUITE FILE_PATH="coverage/AutoControl$pytest_in_multiprocess_timeout_py.coverage" NAME="pytest in multiprocess_timeout.py Coverage Results" MODIFIED="1637593405582" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/timeout" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$keyboard_listener.coverage" NAME="keyboardlistener Coverage Results" MODIFIED="1633627280725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/listener" />
     <SUITE FILE_PATH="coverage/AutoControl$mouse_test.coverage" NAME="mouse_test Coverage Results" MODIFIED="1638717075083" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/mouse" />
-    <SUITE FILE_PATH="coverage/AutoControl$keyboard_write_test.coverage" NAME="keyboard_write_test Coverage Results" MODIFIED="1653320139030" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/keyboard" />
+    <SUITE FILE_PATH="coverage/AutoControl$keyboard_write_test.coverage" NAME="keyboard_write_test Coverage Results" MODIFIED="1653320202866" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/keyboard" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$hotkey_test.coverage" NAME="hotkey_test Coverage Results" MODIFIED="1637300409697" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/keyboard" />
     <SUITE FILE_PATH="coverage/AutoControl$image_not_found_exception_test.coverage" NAME="image_not_found_exception_test Coverage Results" MODIFIED="1638157029852" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/exception" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$critcal_exit.coverage" NAME="critcal_exit Coverage Results" MODIFIED="1629791186697" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/critical_exit" />
