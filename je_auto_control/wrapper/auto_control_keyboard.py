@@ -1,4 +1,5 @@
 import sys
+from typing import Tuple
 
 from je_auto_control.utils.exception.exception_tag import keyboard_hotkey
 from je_auto_control.utils.exception.exception_tag import keyboard_press_key
@@ -15,7 +16,7 @@ from je_auto_control.wrapper.platform_wrapper import keys_table
 from je_auto_control.utils.test_record.record_test_class import record_total
 
 
-def press_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = False):
+def press_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = False) -> str:
     """
     use to press a key still press to use release key
     or use critical exit
@@ -55,7 +56,7 @@ def press_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = F
         print(repr(error), file=sys.stderr)
 
 
-def release_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = False):
+def release_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = False) -> str:
     """
     use to release pressed key return keycode
     :param keycode which keycode we want to release
@@ -93,7 +94,7 @@ def release_key(keycode: [int, str], is_shift: bool = False, skip_record: bool =
         print(repr(error), file=sys.stderr)
 
 
-def type_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = False):
+def type_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = False) -> str:
     """
     press and release key return keycode
     :param keycode which keycode we want to type
@@ -122,7 +123,7 @@ def type_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = Fa
         print(repr(error), file=sys.stderr)
 
 
-def check_key_is_press(keycode: [int, str]):
+def check_key_is_press(keycode: [int, str]) -> bool:
     """
     use to check key is press return True or False
     :param keycode check key is press or not
@@ -140,7 +141,7 @@ def check_key_is_press(keycode: [int, str]):
         print(repr(error), file=sys.stderr)
 
 
-def write(write_string: str, is_shift: bool = False):
+def write(write_string: str, is_shift: bool = False) -> str:
     """
     use to press and release whole we get this function str
     return all press and release str
@@ -174,7 +175,7 @@ def write(write_string: str, is_shift: bool = False):
         print(repr(error), file=sys.stderr)
 
 
-def hotkey(key_code_list: list, is_shift: bool = False):
+def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
     """
     use to press and release all key on key_code_list
     then reverse list press and release again

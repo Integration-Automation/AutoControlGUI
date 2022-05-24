@@ -58,7 +58,7 @@ event_dict = {
 }
 
 
-def execute_action(action_list: list):
+def execute_action(action_list: list) -> str:
     """
     use to execute all action on action list(action file or program list)
     :param action_list the list include action
@@ -85,7 +85,7 @@ def execute_action(action_list: list):
     return execute_record_string
 
 
-def execute_files(execute_files_list: list):
+def execute_files(execute_files_list: list) -> list:
     """
     :param execute_files_list: list include execute files path
     :return: every execute detail as list

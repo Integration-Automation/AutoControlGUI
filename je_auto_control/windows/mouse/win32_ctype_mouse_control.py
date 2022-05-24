@@ -1,4 +1,5 @@
 import sys
+from typing import Tuple
 
 from je_auto_control.utils.exception.exception_tag import windows_import_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -36,7 +37,7 @@ _get_cursor_pos = windll.user32.GetCursorPos
 _set_cursor_pos = windll.user32.SetCursorPos
 
 
-def mouse_event(event, x: int, y: int, dwData: int = 0):
+def mouse_event(event, x: int, y: int, dwData: int = 0) -> None:
     """
     :param event which event we use
     :param x event x
@@ -49,7 +50,7 @@ def mouse_event(event, x: int, y: int, dwData: int = 0):
     ctypes.windll.user32.mouse_event(event, ctypes.c_long(convertedX), ctypes.c_long(convertedY), dwData, 0)
 
 
-def position():
+def position() -> [Tuple[int, int], None]:
     """
     get mouse position
     """
@@ -60,7 +61,7 @@ def position():
         return None
 
 
-def set_position(x: int, y: int):
+def set_position(x: int, y: int) -> None:
     """
     :param x set mouse position x
     :param y set mouse position y
@@ -69,7 +70,7 @@ def set_position(x: int, y: int):
     _set_cursor_pos(*pos)
 
 
-def press_mouse(press_button: int):
+def press_mouse(press_button: int) -> None:
     """
     :param press_button which button we want to press
     """
@@ -79,7 +80,7 @@ def press_mouse(press_button: int):
               ctypes.sizeof(Input))
 
 
-def release_mouse(release_button: int):
+def release_mouse(release_button: int) -> None:
     """
     :param release_button which button we want to release
     """
@@ -89,7 +90,7 @@ def release_mouse(release_button: int):
               ctypes.sizeof(Input))
 
 
-def click_mouse(mouse_keycode: int, x: int = None, y: int = None):
+def click_mouse(mouse_keycode: int, x: int = None, y: int = None) -> None:
     """
     :param mouse_keycode which mouse keycode we want to click
     :param x mouse x position
@@ -101,7 +102,7 @@ def click_mouse(mouse_keycode: int, x: int = None, y: int = None):
     release_mouse(mouse_keycode)
 
 
-def scroll(scroll_value: int, x: int = None, y: int = None):
+def scroll(scroll_value: int, x: int = None, y: int = None) -> None:
     """
     :param scroll_value scroll count
     :param x scroll x

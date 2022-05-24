@@ -14,7 +14,7 @@ from je_auto_control.windows.core.utils.win32_ctype_input import ctypes
 from je_auto_control.windows.core.utils.win32_ctype_input import win32_EventF_KEYUP
 
 
-def press_key(keycode: int):
+def press_key(keycode: int) -> None:
     """
     :param keycode which keycode we want to press
     """
@@ -22,7 +22,7 @@ def press_key(keycode: int):
     SendInput(1, ctypes.byref(x), ctypes.sizeof(x))
 
 
-def release_key(keycode: int):
+def release_key(keycode: int) -> None:
     """
     :param keycode which keycode we want to release
     """

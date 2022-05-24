@@ -1,4 +1,5 @@
 import sys
+from typing import Tuple, List
 
 import cv2
 import numpy as np
@@ -11,7 +12,7 @@ from je_auto_control.wrapper.platform_wrapper import screen
 from je_auto_control.utils.test_record.record_test_class import record_total
 
 
-def size():
+def size() -> Tuple[int, int]:
     """
     get screen size
     """
@@ -26,7 +27,7 @@ def size():
         print(repr(error), file=sys.stderr)
 
 
-def screenshot(file_path: str = None, region: list = None):
+def screenshot(file_path: str = None, region: list = None) -> List[int]:
     """
     use to capture current screen image
     :param file_path screenshot file save path

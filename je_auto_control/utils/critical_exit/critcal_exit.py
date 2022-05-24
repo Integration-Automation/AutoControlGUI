@@ -20,7 +20,7 @@ class CriticalExit(Thread):
         self.setDaemon(default_daemon)
         self._exit_check_key = keys_table.get("f7")
 
-    def set_critical_key(self, keycode: [int, str] = None):
+    def set_critical_key(self, keycode: [int, str] = None) -> None:
         """
         set interrupt key
         :param keycode interrupt key
@@ -30,7 +30,7 @@ class CriticalExit(Thread):
         else:
             self._exit_check_key = keys_table.get(keycode)
 
-    def run(self):
+    def run(self) -> None:
         """
         listener keycode _exit_check_key to interrupt
         """
@@ -41,7 +41,7 @@ class CriticalExit(Thread):
         except Exception as error:
             print(repr(error), file=sys.stderr)
 
-    def init_critical_exit(self):
+    def init_critical_exit(self) -> None:
         """
         should only use this to start critical exit
         may this function will add more

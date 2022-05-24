@@ -12,7 +12,7 @@ from Xlib.ext.xtest import fake_input
 from Xlib import X
 
 
-def press_key(keycode: int):
+def press_key(keycode: int) -> None:
     """
     :param keycode which keycode we want to press
     """
@@ -24,7 +24,7 @@ def press_key(keycode: int):
         print(repr(error), file=sys.stderr)
 
 
-def release_key(keycode: int):
+def release_key(keycode: int) -> None:
     """
     :param keycode which keycode we want to release
     """

@@ -1,7 +1,7 @@
-from PIL import ImageGrab
+from PIL import ImageGrab, Image
 
 
-def pil_screenshot(file_path: str = None, region: list = None):
+def pil_screenshot(file_path: str = None, region: list = None) -> Image:
     """
     :param file_path save screenshot path (None is no save)
     :param region screenshot region (screenshot region on screen)
