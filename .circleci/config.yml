@@ -77,6 +77,15 @@ jobs:
       - run:
           command: python ./test/unit_test/timeout/timeout_test.py
           name: timeout_test
+      # argparse
+      - run:
+          command: python ./test/unit_test/argparse/argparse_test.py
+          name: argparse_test
+      # html report test
+      - run:
+          command: python ./test/unit_test/html_report/html_report_test.py
+          name: html_report_test
+
       # GUI Test
       # image detect
       - run:
@@ -88,14 +97,6 @@ jobs:
       - run:
           command: python ./test/gui_test/image/locate_image_center.py
           name: locate_image_center_test
-      # argparse
-      - run:
-          command: python ./test/unit_test/argparse/argparse_test.py
-          name: argparse_test
-      # html report test
-      - run:
-          command: python ./test/unit_test/html_report/html_report_test.py
-          name: html_report_test
 
       # integrated_test
       - run:
@@ -167,7 +168,7 @@ jobs:
           name: total_record_test
       # execute
       - run:
-          command: python ./test/unit_test/execute_action/html_report_test.py
+          command: python ./test/unit_test/execute_action/execute_action_test.py
           name: execute_action_test
       # json
       - run:
@@ -177,6 +178,11 @@ jobs:
       - run:
           command: python ./test/unit_test/timeout/timeout_test.py
           name: timeout_test
+      # html report test
+      - run:
+          command: python ./test/unit_test/html_report/html_report_test.py
+          name: html_report_test
+
       # GUI Test
       # image detect
       - run:
