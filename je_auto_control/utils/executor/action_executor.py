@@ -25,7 +25,10 @@ from je_auto_control.utils.exception.exception_tag import cant_execute_action_er
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.json.json_file import read_action_json
 
-from je_auto_control.utils.test_record.record_test_class import record_total
+from je_auto_control.utils.test_record.record_test_class import record_action_to_list
+from je_auto_control.utils.test_record.record_test_class import test_record_instance
+
+from je_auto_control.utils.html_report.html_report_generate import generate_html
 
 event_dict = {
     # mouse
@@ -54,7 +57,11 @@ event_dict = {
     "locate_and_click": locate_and_click,
     # screen
     "size": size,
-    "screenshot": screenshot
+    "screenshot": screenshot,
+    # test record
+    "set_record_enable": test_record_instance.set_record_enable,
+    # generate html
+    "generate_html": generate_html,
 }
 
 
@@ -69,18 +76,22 @@ def execute_action(action_list: list) -> str:
         if action_list is None:
             raise AutoControlActionNullException(action_is_null_error)
         for action in action_list:
-            event = event_dict.get(action[0])
-            if len(action) == 2:
-                event(**action[1])
-            elif len(action) == 1:
-                event()
-            else:
-                raise AutoControlActionException(cant_execute_action_error)
+            try:
+                event = event_dict.get(action[0])
+                if len(action) == 2:
+                    event(**action[1])
+                elif len(action) == 1:
+                    event()
+                else:
+                    raise AutoControlActionException(cant_execute_action_error)
+            except Exception as error:
+                print(repr(error), file=sys.stderr)
+                record_action_to_list("execute_action", None, repr(error))
             temp_string = "execute: " + str(action)
             print(temp_string)
             execute_record_string = "".join([execute_record_string, temp_string + "\n"])
     except Exception as error:
-        record_total("execute_action", action_list, repr(error))
+        record_action_to_list("execute_action", action_list, repr(error))
         print(repr(error), file=sys.stderr)
     return execute_record_string
 

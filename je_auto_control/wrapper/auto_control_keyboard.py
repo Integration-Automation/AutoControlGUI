@@ -13,7 +13,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlKeyboardExcept
 from je_auto_control.wrapper.platform_wrapper import keyboard
 from je_auto_control.wrapper.platform_wrapper import keyboard_check
 from je_auto_control.wrapper.platform_wrapper import keys_table
-from je_auto_control.utils.test_record.record_test_class import record_total
+from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 
 
 def press_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = False) -> str:
@@ -38,19 +38,19 @@ def press_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = F
             elif sys.platform in ["darwin"]:
                 keyboard.press_key(keycode, is_shift=is_shift)
             if skip_record is False:
-                record_total("press_key", param)
+                record_action_to_list("press_key", param)
             return str(keycode)
         except AutoControlKeyboardException as error:
             if skip_record is False:
-                record_total("press_key", param, repr(error))
+                record_action_to_list("press_key", param, repr(error))
             raise AutoControlKeyboardException(keyboard_press_key + " " + repr(error))
         except TypeError as error:
             if skip_record is False:
-                record_total("press_key", param, repr(error))
+                record_action_to_list("press_key", param, repr(error))
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
         if skip_record is False:
-            record_total("press_key", param, repr(error))
+            record_action_to_list("press_key", param, repr(error))
         else:
             raise AutoControlKeyboardException(repr(error))
         print(repr(error), file=sys.stderr)
@@ -76,19 +76,19 @@ def release_key(keycode: [int, str], is_shift: bool = False, skip_record: bool =
             elif sys.platform in ["darwin"]:
                 keyboard.release_key(keycode, is_shift=is_shift)
             if skip_record is False:
-                record_total("release_key", param)
+                record_action_to_list("release_key", param)
             return str(keycode)
         except AutoControlKeyboardException as error:
             if skip_record is False:
-                record_total("release_key", param, repr(error))
+                record_action_to_list("release_key", param, repr(error))
             raise AutoControlKeyboardException(keyboard_release_key + " " + repr(error))
         except TypeError as error:
             if skip_record is False:
-                record_total("release_key", param, repr(error))
+                record_action_to_list("release_key", param, repr(error))
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
         if skip_record is False:
-            record_total("release_key", param, repr(error))
+            record_action_to_list("release_key", param, repr(error))
         else:
             raise AutoControlKeyboardException(repr(error))
         print(repr(error), file=sys.stderr)
@@ -107,19 +107,19 @@ def type_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = Fa
             press_key(keycode, is_shift, skip_record=True)
             release_key(keycode, is_shift, skip_record=True)
             if skip_record is False:
-                record_total("type_key", param)
+                record_action_to_list("type_key", param)
             return str(keycode)
         except AutoControlKeyboardException as error:
             if skip_record is False:
-                record_total("type_key", param, repr(error))
+                record_action_to_list("type_key", param, repr(error))
             raise AutoControlKeyboardException(keyboard_type_key + " " + repr(error))
         except TypeError as error:
             if skip_record is False:
-                record_total("type_key", param, repr(error))
+                record_action_to_list("type_key", param, repr(error))
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
         if skip_record is False:
-            record_total("type_key", param, repr(error))
+            record_action_to_list("type_key", param, repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -134,10 +134,10 @@ def check_key_is_press(keycode: [int, str]) -> bool:
             get_key_code = keycode
         else:
             get_key_code = keys_table.get(keycode)
-        record_total("check_key_is_press", param)
+        record_action_to_list("check_key_is_press", param)
         return keyboard_check.check_key_is_press(keycode=get_key_code)
     except Exception as error:
-        record_total("check_key_is_press", param, repr(error))
+        record_action_to_list("check_key_is_press", param, repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -166,12 +166,12 @@ def write(write_string: str, is_shift: bool = False) -> str:
                 except AutoControlKeyboardException as error:
                     print(keyboard_write_cant_find, single_string, sep="\t", file=sys.stderr)
                     raise AutoControlKeyboardException(keyboard_write_cant_find)
-            record_total("write", param)
+            record_action_to_list("write", param)
             return record_write_string
         except AutoControlKeyboardException as error:
             raise AutoControlKeyboardException(keyboard_write + " " + repr(error))
     except Exception as error:
-        record_total("write", param, repr(error))
+        record_action_to_list("write", param, repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -203,10 +203,10 @@ def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
                         release_key(key, is_shift, skip_record=True)
                     ]
                 )
-            record_total("hotkey", param)
+            record_action_to_list("hotkey", param)
             return record_hotkey_press_string, record_hotkey_release_string
         except AutoControlKeyboardException as error:
             raise AutoControlKeyboardException(keyboard_hotkey + " " + repr(error))
     except Exception as error:
-        record_total("hotkey", param, repr(error))
+        record_action_to_list("hotkey", param, repr(error))
         print(repr(error), file=sys.stderr)

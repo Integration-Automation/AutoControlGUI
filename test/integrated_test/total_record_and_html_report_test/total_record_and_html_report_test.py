@@ -1,13 +1,13 @@
 import sys
 
-from je_auto_control import test_record
+from je_auto_control import test_record_instance
 from je_auto_control import press_key
 from je_auto_control import release_key
 from je_auto_control import write
 from je_auto_control import keys_table
 from je_auto_control import generate_html
 
-test_record.init_total_record = True
+test_record_instance.init_record = True
 
 print(keys_table.keys())
 
@@ -34,7 +34,7 @@ try:
 except Exception as error:
     print(repr(error), file=sys.stderr)
 
-print(test_record.total_record_list)
+print(test_record_instance.test_record_list)
 # html name is test.html and this html will recode all test detail
 # if test_record.init_total_record = True
 generate_html("test")
