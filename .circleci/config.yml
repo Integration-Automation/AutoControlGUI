@@ -94,7 +94,7 @@ jobs:
           name: argparse_test
       # html report test
       - run:
-          command: python ./test/unit_test/execute_action/html_report_test.py
+          command: python ./test/unit_test/html_report/html_report_test.py
           name: html_report_test
 
       # integrated_test
@@ -192,7 +192,7 @@ jobs:
       - run:
           command: python ./test/unit_test/argparse/argparse_test.py
           name: argparse_test
-      
+
 
       # integrated_test
       - run:
