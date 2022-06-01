@@ -16,7 +16,7 @@ from je_auto_control.wrapper.auto_control_screen import size
 from je_auto_control.wrapper.platform_wrapper import mouse
 from je_auto_control.wrapper.platform_wrapper import mouse_table
 from je_auto_control.wrapper.platform_wrapper import special_table
-from je_auto_control.utils.test_record.record_test_class import record_total
+from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 
 
 def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int) -> Tuple[Union[int, str], int, int]:
@@ -53,12 +53,12 @@ def position() -> Tuple[int, int]:
     """
     try:
         try:
-            record_total("position", None)
+            record_action_to_list("position", None)
             return mouse.position()
         except AutoControlMouseException as error:
             raise AutoControlMouseException(mouse_get_position + " " + repr(error))
     except Exception as error:
-        record_total("position", None, repr(error))
+        record_action_to_list("position", None, repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -72,14 +72,14 @@ def set_position(x: int, y: int) -> Tuple[int, int]:
     try:
         try:
             mouse.set_position(x=x, y=y)
-            record_total("position", param)
+            record_action_to_list("position", param)
             return x, y
         except AutoControlMouseException as error:
             raise AutoControlMouseException(mouse_set_position + " " + repr(error))
         except ctypes.ArgumentError as error:
             raise AutoControlMouseException(mouse_wrong_value + " " + repr(error))
     except Exception as error:
-        record_total("set_position", param, repr(error))
+        record_action_to_list("set_position", param, repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -99,14 +99,14 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tupl
                 mouse.press_mouse(mouse_keycode)
             elif sys.platform in ["darwin"]:
                 mouse.press_mouse(x, y, mouse_keycode)
-            record_total("press_mouse", param)
+            record_action_to_list("press_mouse", param)
             return mouse_keycode, x, y
         except AutoControlMouseException as error:
             raise AutoControlMouseException(mouse_press_mouse + " " + repr(error))
         except TypeError as error:
             raise AutoControlMouseException(repr(error))
     except Exception as error:
-        record_total("press_mouse", param, repr(error))
+        record_action_to_list("press_mouse", param, repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -126,14 +126,14 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tu
                 mouse.release_mouse(mouse_keycode)
             elif sys.platform in ["darwin"]:
                 mouse.release_mouse(x, y, mouse_keycode)
-            record_total("press_mouse", param)
+            record_action_to_list("press_mouse", param)
             return mouse_keycode, x, y
         except AutoControlMouseException as error:
             raise AutoControlMouseException(mouse_release_mouse + " " + repr(error))
         except TypeError as error:
             raise AutoControlMouseException(repr(error))
     except Exception as error:
-        record_total("release_mouse", param, repr(error))
+        record_action_to_list("release_mouse", param, repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -150,16 +150,16 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tupl
         mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
         try:
             mouse.click_mouse(mouse_keycode, x, y)
-            record_total("click_mouse", param)
+            record_action_to_list("click_mouse", param)
             return mouse_keycode, x, y
         except AutoControlMouseException as error:
-            record_total("click_mouse", param, mouse_click_mouse + " " + repr(error))
+            record_action_to_list("click_mouse", param, mouse_click_mouse + " " + repr(error))
             raise AutoControlMouseException(mouse_click_mouse + " " + repr(error))
         except TypeError as error:
-            record_total("click_mouse", param, repr(error))
+            record_action_to_list("click_mouse", param, repr(error))
             raise AutoControlMouseException(repr(error))
     except Exception as error:
-        record_total("click_mouse", param, repr(error))
+        record_action_to_list("click_mouse", param, repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -179,7 +179,7 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
         try:
             now_cursor_x, now_cursor_y = position()
         except AutoControlMouseException as error:
-            record_total("scroll", param, repr(error))
+            record_action_to_list("scroll", param, repr(error))
             raise AutoControlMouseException(mouse_get_position)
         width, height = size()
         if x is None:
@@ -210,5 +210,5 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
         except TypeError as error:
             raise AutoControlMouseException(repr(error))
     except Exception as error:
-        record_total("scroll", param, repr(error))
+        record_action_to_list("scroll", param, repr(error))
         print(repr(error), file=sys.stderr)

@@ -3,22 +3,25 @@ import datetime
 
 class TestRecord(object):
 
-    def __init__(self, init_total_record: bool = False):
-        self.init_total_record = init_total_record
-        self.total_record_list = list()
+    def __init__(self, init_record: bool = False):
+        self.init_record = init_record
+        self.test_record_list = list()
 
     def clean_record(self) -> None:
-        self.total_record_list = list()
+        self.test_record_list = list()
+
+    def set_record_enable(self, set_enable: bool = True):
+        self.init_record = set_enable
 
 
-test_record = TestRecord()
+test_record_instance = TestRecord()
 
 
-def record_total(function_name: str, local_param, program_exception: str = None) -> None:
-    if not test_record.init_total_record:
+def record_action_to_list(function_name: str, local_param, program_exception: str = None) -> None:
+    if not test_record_instance.init_record:
         pass
     else:
-        test_record.total_record_list.append(
+        test_record_instance.test_record_list.append(
             {
                 "function_name": function_name,
                 "local_param": local_param,

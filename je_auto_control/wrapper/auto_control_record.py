@@ -4,7 +4,7 @@ from je_auto_control.utils.exception.exception_tag import macos_record_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
 from je_auto_control.wrapper.platform_wrapper import recorder
-from je_auto_control.utils.test_record.record_test_class import record_total
+from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 
 
 def record() -> None:
@@ -14,10 +14,10 @@ def record() -> None:
     try:
         if sys.platform == "darwin":
             raise AutoControlException(macos_record_error)
-        record_total("record", None)
+        record_action_to_list("record", None)
         return recorder.record()
     except Exception as error:
-        record_total("record", None, repr(error))
+        record_action_to_list("record", None, repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -38,9 +38,9 @@ def stop_record() -> list:
                 new_list.append([action[0], dict([["keycode", action[1]]])])
             else:
                 new_list.append([action[0], dict(zip(["mouse_keycode", "x", "y"], [action[0], action[1], action[2]]))])
-        record_total("stop_record", None)
+        record_action_to_list("stop_record", None)
         return new_list
     except Exception as error:
-        record_total("stop_record", None, repr(error))
+        record_action_to_list("stop_record", None, repr(error))
         print(repr(error), file=sys.stderr)
 

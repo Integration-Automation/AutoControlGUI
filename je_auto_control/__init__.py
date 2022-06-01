@@ -60,7 +60,7 @@ from je_auto_control.utils.executor.action_executor import execute_files
 # timeout
 from je_auto_control.utils.timeout.multiprocess_timeout import multiprocess_timeout
 # test record
-from je_auto_control.utils.test_record.record_test_class import test_record
+from je_auto_control.utils.test_record.record_test_class import test_record_instance
 
 # utils image
 from je_auto_control.wrapper.auto_control_image import screenshot

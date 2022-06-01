@@ -30,10 +30,6 @@ documentation available at [https://python-jeautocontrol.readthedocs.io/en/lates
 pip install je_auto_control
 ```
 
-```
-
-```
-
 ## Info
 
 * requirement
