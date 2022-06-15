@@ -1,12 +1,12 @@
 import sys
 
-from je_auto_control import test_record_instance
+from je_auto_control import keys_table
 from je_auto_control import press_key
 from je_auto_control import release_key
+from je_auto_control import test_record_instance
 from je_auto_control import write
-from je_auto_control import keys_table
 
-test_record_instance.init_record = True
+test_record_instance.set_record_enable(True)
 
 print(keys_table.keys())
 
@@ -34,5 +34,3 @@ except Exception as error:
     print(repr(error), file=sys.stderr)
 
 print(test_record_instance.test_record_list)
-
-
