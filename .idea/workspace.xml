@@ -2,7 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/unit_test/total_record/total_record_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/total_record/total_record_test.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -401,7 +402,7 @@
       <workItem from="1655263716712" duration="2813000" />
       <workItem from="1655472609560" duration="1509000" />
       <workItem from="1655474227152" duration="9793000" />
-      <workItem from="1655492624531" duration="1955000" />
+      <workItem from="1655492624531" duration="2348000" />
     </task>
     <servers />
   </component>
