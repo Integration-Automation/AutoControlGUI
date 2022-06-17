@@ -37,7 +37,6 @@ except Exception as error:
 
 print(test_record_instance.test_record_list)
 
-pass
 
 # html name is test.html and this html will recode all test detail
 # if test_record.init_total_record = True

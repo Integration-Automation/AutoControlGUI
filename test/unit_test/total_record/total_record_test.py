@@ -36,4 +36,3 @@ except Exception as error:
 
 print(test_record_instance.test_record_list)
 
-pass
