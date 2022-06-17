@@ -17,18 +17,17 @@ press_key("shift")
 write("123456789")
 press_key("return")
 release_key("return")
-assert (write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz")
 release_key("shift")
 press_key("return")
 release_key("return")
-assert (write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz")
+print(write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz")
 press_key("return")
 release_key("return")
 """
 this write will print one error -> keyboard write error can't find key : Ѓ and write remain string
 """
 try:
-    assert (write("?123456789") == "123456789")
+    print (write("?123456789") == "123456789")
 except Exception as error:
     print(repr(error), file=sys.stderr)
 try:
@@ -37,6 +36,9 @@ except Exception as error:
     print(repr(error), file=sys.stderr)
 
 print(test_record_instance.test_record_list)
+
+pass
+
 # html name is test.html and this html will recode all test detail
 # if test_record.init_total_record = True
 generate_html("test")
