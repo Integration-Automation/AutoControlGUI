@@ -8,8 +8,6 @@ from je_auto_control import write
 from je_auto_control import keys_table
 from je_auto_control import generate_html
 
-sleep(2)
-test_record_instance.set_record_enable(True)
 
 print(keys_table.keys())
 
