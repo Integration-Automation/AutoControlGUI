@@ -8,7 +8,7 @@ jobs:
   build-and-test-windows-dev:
     executor:
       name: windows/default
-      shell: powershell.exe
+      shell: cmd.exe
 
     steps:
       - checkout
@@ -109,7 +109,7 @@ jobs:
   build-and-test-windows-stable:
     executor:
       name: windows/default
-      shell: powershell.exe
+      shell: cmd.exe
 
     steps:
       - checkout
