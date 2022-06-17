@@ -8,10 +8,10 @@ from je_auto_control import test_record_instance
 from je_auto_control import write
 
 try:
-    sys.exit(0)
+    print("flag")
     test_record_instance.set_record_enable(True)
     print(keys_table.keys())
-
+    print("flag")
     press_key("shift")
     write("123456789")
     press_key("return")

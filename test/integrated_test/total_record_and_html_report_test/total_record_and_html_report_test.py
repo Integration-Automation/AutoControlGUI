@@ -9,11 +9,11 @@ from je_auto_control import keys_table
 from je_auto_control import generate_html
 
 try:
-    sys.exit(0)
+    print("flag")
     test_record_instance.set_record_enable(True)
 
     print(keys_table.keys())
-
+    print("flag")
     press_key("shift")
     write("123456789")
     press_key("return")
