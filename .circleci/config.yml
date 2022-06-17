@@ -1,14 +1,14 @@
 version: 2.1
 
 orbs:
-  windows: circleci/windows@2.4.1
-  python: circleci/python@1.5.0
+  windows: circleci/windows@4.1.1
+  python: circleci/python@2.0.3
 
 jobs:
   build-and-test-windows-dev:
     executor:
       name: windows/default
-      shell: cmd.exe
+      shell: powershell.exe
 
     steps:
       - checkout
@@ -109,7 +109,7 @@ jobs:
   build-and-test-windows-stable:
     executor:
       name: windows/default
-      shell: cmd.exe
+      shell: powershell.exe
 
     steps:
       - checkout
