@@ -8,7 +8,6 @@ jobs:
   build-and-test-windows-dev:
     executor:
       name: windows/default
-      shell: powershell.exe
 
     steps:
       - checkout
@@ -82,7 +81,10 @@ jobs:
       - run:
           command: python ./test/unit_test/html_report/html_report_test.py
           name: html_report_test
-      - run: python ./test/unit_test/total_record/total_record_test.py || true
+      - run:
+          shell: powershell.exe
+          command: python ./test/unit_test/total_record/total_record_test.py
+          name: total_record_test
 
       # GUI Test
       # image detect
@@ -177,7 +179,10 @@ jobs:
       - run:
           command: python ./test/unit_test/html_report/html_report_test.py
           name: html_report_test
-      - run: python ./test/unit_test/total_record/total_record_test.py || true
+      - run:
+          shell: powershell.exe
+          command: python ./test/unit_test/total_record/total_record_test.py
+          name: total_record_test
 
       # GUI Test
       # image detect
