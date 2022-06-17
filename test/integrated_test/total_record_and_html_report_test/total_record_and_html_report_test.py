@@ -9,6 +9,7 @@ from je_auto_control import keys_table
 from je_auto_control import generate_html
 
 try:
+
     test_record_instance.set_record_enable(True)
 
     print(keys_table.keys())
@@ -40,5 +41,6 @@ try:
     # html name is test.html and this html will recode all test detail
     # if test_record.init_total_record = True
     generate_html("test")
+    sys.exit(0)
 except Exception as error:
     print(repr(error), file=sys.stderr)
