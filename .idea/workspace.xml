@@ -400,7 +400,7 @@
       <workItem from="1655263688897" duration="24000" />
       <workItem from="1655263716712" duration="2813000" />
       <workItem from="1655472609560" duration="1509000" />
-      <workItem from="1655474227152" duration="720000" />
+      <workItem from="1655474227152" duration="1019000" />
     </task>
     <servers />
   </component>
@@ -495,7 +495,7 @@
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$locate_and_click.coverage" NAME="locate_and_click Coverage Results" MODIFIED="1629094142647" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/AutoControl$action_executor.coverage" NAME="action_executor Coverage Results" MODIFIED="1637913491910" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/action_executer" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$test_auto_control_exception.coverage" NAME="test_auto_control_exception Coverage Results" MODIFIED="1629286589536" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/exception" />
-    <SUITE FILE_PATH="coverage/AutoControl$total_record_test.coverage" NAME="total_record_test Coverage Results" MODIFIED="1655472854540" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/total_record_test" />
+    <SUITE FILE_PATH="coverage/AutoControl$total_record_test.coverage" NAME="total_record_test Coverage Results" MODIFIED="1655475297863" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/total_record_test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$test.coverage" NAME="test Coverage Results" MODIFIED="1637211045052" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$mouse_test.coverage" NAME="mouse_test Coverage Results" MODIFIED="1636335919333" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/mouse" />
     <SUITE FILE_PATH="coverage/AutoControl$total_record_and_html_report_test.coverage" NAME="total_record_and_html_report_test Coverage Results" MODIFIED="1648480631073" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test" />

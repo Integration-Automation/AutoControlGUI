@@ -83,7 +83,7 @@ jobs:
           command: python ./test/unit_test/html_report/html_report_test.py
           name: html_report_test
       - run:
-          command: python ./test/unit_test/total_record_test/total_record_test.py
+          command: python ./test/unit_test/total_record/total_record_test.py
           name: total_record_test
 
       # GUI Test
@@ -180,7 +180,7 @@ jobs:
           command: python ./test/unit_test/html_report/html_report_test.py
           name: html_report_test
       - run:
-          command: python ./test/unit_test/total_record_test/total_record_test.py
+          command: python ./test/unit_test/total_record/total_record_test.py
           name: total_record_test
 
       # GUI Test
