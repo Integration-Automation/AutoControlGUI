@@ -8,6 +8,7 @@ from je_auto_control import test_record_instance
 from je_auto_control import write
 
 try:
+    sys.exit(0)
     test_record_instance.set_record_enable(True)
     print(keys_table.keys())
 
@@ -34,7 +35,6 @@ try:
         print(repr(error), file=sys.stderr)
 
     print(test_record_instance.test_record_list)
-    sys.exit(0)
+
 except Exception as error:
     print(repr(error), file=sys.stderr)
-    
