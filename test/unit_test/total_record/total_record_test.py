@@ -1,17 +1,20 @@
 import sys
-from time import sleep
 
+print("t1")
 from je_auto_control import keys_table
+print("t1")
 from je_auto_control import press_key
+print("t1")
 from je_auto_control import release_key
+print("t1")
 from je_auto_control import test_record_instance
+print("t1")
 from je_auto_control import write
+print("t1")
 
 try:
-    print("flag")
     test_record_instance.set_record_enable(True)
     print(keys_table.keys())
-    print("flag")
     press_key("shift")
     write("123456789")
     press_key("return")

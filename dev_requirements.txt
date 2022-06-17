@@ -1,5 +1,4 @@
 je_auto_control_dev
-pillow
 wheel
 twine
 sphinx
