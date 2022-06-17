@@ -9,7 +9,6 @@ from je_auto_control import write
 
 try:
     test_record_instance.set_record_enable(True)
-
     print(keys_table.keys())
 
     press_key("shift")

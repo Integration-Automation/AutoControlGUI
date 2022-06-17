@@ -3,6 +3,9 @@
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/unit_test/total_record/total_record_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/total_record/total_record_test.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -75,29 +78,7 @@
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\example" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.real_critical_test">
-    <configuration name="execute_action_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Python_JEAutoControl" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/execute_action" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/execute_action/execute_action_test.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
+  <component name="RunManager" selected="Python.total_record_test (1)">
     <configuration name="html_report_test (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -186,6 +167,28 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="total_record_and_html_report_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Python_JEAutoControl" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="total_record_test (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -234,18 +237,18 @@
       <item itemvalue="Python.multiprocess_timeout" />
       <item itemvalue="Python.test_auto_control_exception" />
       <item itemvalue="Python.real_critical_test" />
+      <item itemvalue="Python.total_record_and_html_report_test" />
       <item itemvalue="Python.total_record_test (1)" />
       <item itemvalue="Python.total_record_test" />
-      <item itemvalue="Python.execute_action_test" />
       <item itemvalue="Python.html_report_test (1)" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.real_critical_test" />
         <item itemvalue="Python.total_record_test (1)" />
+        <item itemvalue="Python.total_record_and_html_report_test" />
+        <item itemvalue="Python.real_critical_test" />
         <item itemvalue="Python.total_record_test" />
         <item itemvalue="Python.html_report_test (1)" />
-        <item itemvalue="Python.execute_action_test" />
       </list>
     </recent_temporary>
   </component>
@@ -401,7 +404,7 @@
       <workItem from="1655263716712" duration="2813000" />
       <workItem from="1655472609560" duration="1509000" />
       <workItem from="1655474227152" duration="9793000" />
-      <workItem from="1655492624531" duration="6314000" />
+      <workItem from="1655492624531" duration="7353000" />
     </task>
     <servers />
   </component>
@@ -499,7 +502,7 @@
     <SUITE FILE_PATH="coverage/AutoControl$total_record_test.coverage" NAME="total_record_test Coverage Results" MODIFIED="1655475297863" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/total_record_test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$test.coverage" NAME="test Coverage Results" MODIFIED="1637211045052" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$mouse_test.coverage" NAME="mouse_test Coverage Results" MODIFIED="1636335919333" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/mouse" />
-    <SUITE FILE_PATH="coverage/AutoControl$total_record_and_html_report_test.coverage" NAME="total_record_and_html_report_test Coverage Results" MODIFIED="1648480631073" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test" />
+    <SUITE FILE_PATH="coverage/AutoControl$total_record_and_html_report_test.coverage" NAME="total_record_and_html_report_test Coverage Results" MODIFIED="1655506945841" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test" />
     <SUITE FILE_PATH="coverage/AutoControl$calculator__3_.coverage" NAME="calculator (3) Coverage Results" MODIFIED="1638627286676" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
     <SUITE FILE_PATH="coverage/AutoControl$tt.coverage" NAME="tt Coverage Results" MODIFIED="1649760251044" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/AutoControl$record_test_class.coverage" NAME="record_test_class Coverage Results" MODIFIED="1648385907955" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/test_record" />
@@ -514,7 +517,7 @@
     <SUITE FILE_PATH="coverage/AutoControl$get_dir_file_and_execute.coverage" NAME="get_dir_file_and_execute Coverage Results" MODIFIED="1650964495864" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$json_loader.coverage" NAME="json_loader Coverage Results" MODIFIED="1634288723749" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/action_file" />
     <SUITE FILE_PATH="coverage/AutoControl$locate_all_image_test.coverage" NAME="locate_all_image_test Coverage Results" MODIFIED="1638535161059" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test/unit_test/image" />
-    <SUITE FILE_PATH="coverage/AutoControl$total_record_test__1_.coverage" NAME="total_record_test (1) Coverage Results" MODIFIED="1655490379050" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/total_record" />
+    <SUITE FILE_PATH="coverage/AutoControl$total_record_test__1_.coverage" NAME="total_record_test (1) Coverage Results" MODIFIED="1655506965070" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/total_record" />
     <SUITE FILE_PATH="coverage/AutoControl$locate_and_click_test.coverage" NAME="locate_and_click_test Coverage Results" MODIFIED="1638535177002" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/circle_ci_test/unit_test/image" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$x11_linux_listener.coverage" NAME="x11_linux_listener Coverage Results" MODIFIED="1633678306221" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/linux_with_x11/listener" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$record_test.coverage" NAME="record_test Coverage Results" MODIFIED="1634135481625" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
