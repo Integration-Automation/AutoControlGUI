@@ -14,7 +14,7 @@ jobs:
       - checkout
       # upgrade
       - run:
-          command: iex & "{ $(irm https://aka.ms/install-powershell.ps1) } -UseMSI"
+          command: iex "& { $(irm https://aka.ms/install-powershell.ps1) } -UseMSI"
           name: update powershell
       - run:
           command: pip install --upgrade --user pip setuptools wheel
@@ -118,7 +118,7 @@ jobs:
       - checkout
       # upgrade
       - run:
-          command: iex & "{ $(irm https://aka.ms/install-powershell.ps1) } -UseMSI"
+          command: iex "& { $(irm https://aka.ms/install-powershell.ps1) } -UseMSI"
           name: update powershell
       - run:
           command: pip install --upgrade --user pip setuptools wheel
