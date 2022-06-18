@@ -61,6 +61,10 @@ jobs:
       - run:
           command: python ./test/unit_test/record/record_test.py
           name: record_test
+      - run: clear
+      - run:
+          command: python ./test/unit_test/total_record/total_record_test.py
+          name: total_record_test
       # execute
       - run:
           command: python ./test/unit_test/execute_action/execute_action_test.py
@@ -81,9 +85,6 @@ jobs:
       - run:
           command: python ./test/unit_test/html_report/html_report_test.py
           name: html_report_test
-      - run:
-          command: python ./test/unit_test/total_record/total_record_test.py
-          name: total_record_test
 
       # GUI Test
       # image detect
@@ -162,6 +163,10 @@ jobs:
       - run:
           command: python ./test/unit_test/record/record_test.py
           name: record_test
+      - run: clear
+      - run:
+          command: python ./test/unit_test/total_record/total_record_test.py
+          name: total_record_test
       # execute
       - run:
           command: python ./test/unit_test/execute_action/execute_action_test.py
@@ -178,9 +183,6 @@ jobs:
       - run:
           command: python ./test/unit_test/html_report/html_report_test.py
           name: html_report_test
-      - run:
-          command: python ./test/unit_test/total_record/total_record_test.py
-          name: total_record_test
 
       # GUI Test
       # image detect
