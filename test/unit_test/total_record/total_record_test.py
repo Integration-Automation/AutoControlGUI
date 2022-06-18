@@ -32,6 +32,6 @@ try:
         print(repr(error), file=sys.stderr)
 
     print(test_record_instance.test_record_list)
-
+    sys.exit(0)
 except Exception as error:
     print(repr(error), file=sys.stderr)
