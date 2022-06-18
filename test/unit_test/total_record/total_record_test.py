@@ -9,11 +9,9 @@ from je_auto_control import write
 try:
     test_record_instance.set_record_enable(True)
     print(keys_table.keys())
-    press_key("shift")
     write("123456789")
     press_key("return")
     release_key("return")
-    release_key("shift")
     press_key("return")
     release_key("return")
     assert (write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz")
