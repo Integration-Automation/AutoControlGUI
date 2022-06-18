@@ -7,8 +7,6 @@ from je_auto_control import test_record_instance
 from je_auto_control import write
 
 try:
-    from time import sleep
-    sleep(20)
     test_record_instance.set_record_enable(True)
     print(keys_table.keys())
     press_key("shift")
