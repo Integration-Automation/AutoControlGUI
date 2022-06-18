@@ -9,7 +9,7 @@ from je_auto_control import generate_html
 
 try:
     from time import sleep
-    sleep(5)
+    sleep(20)
     test_record_instance.set_record_enable(True)
 
     print(keys_table.keys())
