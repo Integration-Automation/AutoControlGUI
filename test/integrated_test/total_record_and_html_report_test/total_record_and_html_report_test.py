@@ -1,11 +1,18 @@
 import sys
 
-from je_auto_control import test_record_instance
+from je_auto_control import generate_html
+from je_auto_control import keys_table
 from je_auto_control import press_key
 from je_auto_control import release_key
+from je_auto_control import test_record_instance
 from je_auto_control import write
-from je_auto_control import keys_table
-from je_auto_control import generate_html
+
+
+def test():
+    return True
+
+
+test()
 
 try:
     test_record_instance.set_record_enable(True)
