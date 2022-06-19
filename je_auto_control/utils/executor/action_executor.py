@@ -73,26 +73,28 @@ def execute_action(action_list: list) -> str:
     """
     execute_record_string = ""
     try:
-        if action_list is None:
+        if len(action_list) > 0 or type(action_list) is list:
+            pass
+        else:
             raise AutoControlActionNullException(action_is_null_error)
-        for action in action_list:
-            try:
-                event = event_dict.get(action[0])
-                if len(action) == 2:
-                    event(**action[1])
-                elif len(action) == 1:
-                    event()
-                else:
-                    raise AutoControlActionException(cant_execute_action_error)
-            except Exception as error:
-                print(repr(error), file=sys.stderr)
-                record_action_to_list("execute_action", None, repr(error))
-            temp_string = "execute: " + str(action)
-            print(temp_string)
-            execute_record_string = "".join([execute_record_string, temp_string + "\n"])
     except Exception as error:
         record_action_to_list("execute_action", action_list, repr(error))
         print(repr(error), file=sys.stderr)
+    for action in action_list:
+        try:
+            event = event_dict.get(action[0])
+            if len(action) == 2:
+                event(**action[1])
+            elif len(action) == 1:
+                event()
+            else:
+                raise AutoControlActionException(cant_execute_action_error)
+        except Exception as error:
+            print(repr(error), file=sys.stderr)
+            record_action_to_list("execute_action", None, repr(error))
+        temp_string = "execute: " + str(action)
+        print(temp_string)
+        execute_record_string = "".join([execute_record_string, temp_string + "\n"])
     return execute_record_string
 
 
