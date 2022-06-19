@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -402,7 +402,7 @@
       <workItem from="1655472609560" duration="1509000" />
       <workItem from="1655474227152" duration="9793000" />
       <workItem from="1655492624531" duration="9241000" />
-      <workItem from="1655509699832" duration="8982000" />
+      <workItem from="1655509699832" duration="9687000" />
     </task>
     <servers />
   </component>
@@ -500,7 +500,7 @@
     <SUITE FILE_PATH="coverage/AutoControl$total_record_test.coverage" NAME="total_record_test Coverage Results" MODIFIED="1655475297863" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/total_record_test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$test.coverage" NAME="test Coverage Results" MODIFIED="1637211045052" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$mouse_test.coverage" NAME="mouse_test Coverage Results" MODIFIED="1636335919333" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/mouse" />
-    <SUITE FILE_PATH="coverage/AutoControl$total_record_and_html_report_test.coverage" NAME="total_record_and_html_report_test Coverage Results" MODIFIED="1655551275336" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test" />
+    <SUITE FILE_PATH="coverage/AutoControl$total_record_and_html_report_test.coverage" NAME="total_record_and_html_report_test Coverage Results" MODIFIED="1655617189845" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test" />
     <SUITE FILE_PATH="coverage/AutoControl$calculator__3_.coverage" NAME="calculator (3) Coverage Results" MODIFIED="1638627286676" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
     <SUITE FILE_PATH="coverage/AutoControl$tt.coverage" NAME="tt Coverage Results" MODIFIED="1649760251044" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/AutoControl$record_test_class.coverage" NAME="record_test_class Coverage Results" MODIFIED="1648385907955" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/test_record" />
