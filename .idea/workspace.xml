@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="" />
+    <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -73,7 +75,7 @@
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\example" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.total_record_test (1)">
+  <component name="RunManager" selected="Python.total_record_and_html_report_test">
     <configuration name="html_report_test (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -239,8 +241,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.total_record_test (1)" />
         <item itemvalue="Python.total_record_and_html_report_test" />
+        <item itemvalue="Python.total_record_test (1)" />
         <item itemvalue="Python.real_critical_test" />
         <item itemvalue="Python.total_record_test" />
         <item itemvalue="Python.html_report_test (1)" />
@@ -400,7 +402,7 @@
       <workItem from="1655472609560" duration="1509000" />
       <workItem from="1655474227152" duration="9793000" />
       <workItem from="1655492624531" duration="9241000" />
-      <workItem from="1655509699832" duration="8189000" />
+      <workItem from="1655509699832" duration="8982000" />
     </task>
     <servers />
   </component>

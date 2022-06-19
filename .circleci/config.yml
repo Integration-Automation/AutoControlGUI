@@ -61,9 +61,7 @@ jobs:
       - run:
           command: python ./test/unit_test/record/record_test.py
           name: record_test
-      - run: clear
       - run:
-          shell: cmd.exe
           command: python ./test/unit_test/total_record/total_record_test.py
           name: total_record_test
       # execute
@@ -164,9 +162,7 @@ jobs:
       - run:
           command: python ./test/unit_test/record/record_test.py
           name: record_test
-      - run: clear
       - run:
-          shell: cmd.exe
           command: python ./test/unit_test/total_record/total_record_test.py
           name: total_record_test
       # execute
