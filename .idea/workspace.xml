@@ -77,7 +77,7 @@
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\example" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.total_record_and_html_report_test">
+  <component name="RunManager" selected="Python.total_record_test (1)">
     <configuration name="html_report_test (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -243,8 +243,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.total_record_and_html_report_test" />
         <item itemvalue="Python.total_record_test (1)" />
+        <item itemvalue="Python.total_record_and_html_report_test" />
         <item itemvalue="Python.real_critical_test" />
         <item itemvalue="Python.total_record_test" />
         <item itemvalue="Python.html_report_test (1)" />
@@ -404,7 +404,7 @@
       <workItem from="1655472609560" duration="1509000" />
       <workItem from="1655474227152" duration="9793000" />
       <workItem from="1655492624531" duration="9241000" />
-      <workItem from="1655509699832" duration="5587000" />
+      <workItem from="1655509699832" duration="7758000" />
     </task>
     <servers />
   </component>

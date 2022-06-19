@@ -8,25 +8,14 @@ from je_auto_control import test_record_instance
 from je_auto_control import write
 
 
-def test():
-    return True
-
-
-test()
-
 try:
     test_record_instance.set_record_enable(True)
 
     print(keys_table.keys())
+    press_key("shift")
     write("123456789")
-    press_key("return")
-    release_key("return")
     assert (write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz")
-    press_key("return")
-    release_key("return")
-    assert (write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz")
-    press_key("return")
-    release_key("return")
+    release_key("shift")
     """
     this write will print one error -> keyboard write error can't find key : Ѓ and write remain string
     """
