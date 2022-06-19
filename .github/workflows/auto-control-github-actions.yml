@@ -22,7 +22,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip wheel
-        if [ -f dev_requirements.txt ]; then pip install -r dev_requirements.txt; fi
+        pip install -r dev_requirements.txt
     # screen test
     - name: screen_test
       run: python ./test/unit_test/screen/screen_test.py
