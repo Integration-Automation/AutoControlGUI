@@ -20,3 +20,4 @@ try:
     print(write("Ѓ123456789"))
 except Exception as error:
     print(repr(error), file=sys.stderr)
+sys.exit(0)

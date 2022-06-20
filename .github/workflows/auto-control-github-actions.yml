@@ -34,7 +34,6 @@ jobs:
     - name: keyboard_write_test
       run: |
         python ./test/unit_test/keyboard/keyboard_write_test.py
-        exit 0
     - name: keyboard_is_press_test
       run: python ./test/unit_test/keyboard/keyboard_is_press_test.py
     - name: hotkey_test

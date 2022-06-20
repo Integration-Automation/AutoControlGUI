@@ -29,3 +29,4 @@ try:
     print(test_record_instance.test_record_list)
 except Exception as error:
     print(repr(error), file=sys.stderr)
+sys.exit(0)
