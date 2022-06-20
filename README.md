@@ -17,6 +17,10 @@
 
 [![CircleCI](https://circleci.com/gh/JE-Chen/AutoControl/tree/main.svg?style=svg)](https://circleci.com/gh/JE-Chen/AutoControl/tree/main)
 
+[![AutoControl GitHub Actions Dev](https://github.com/JE-Chen/AutoControl/actions/workflows/auto-control-github-actions_dev.yml/badge.svg)](https://github.com/JE-Chen/AutoControl/actions/workflows/auto-control-github-actions_dev.yml)
+
+[![AutoControl GitHub Actions Stable](https://github.com/JE-Chen/AutoControl/actions/workflows/auto-control-github-actions_stable.yml/badge.svg)](https://github.com/JE-Chen/AutoControl/actions/workflows/auto-control-github-actions_stable.yml)
+
 ### Documentation
 
 [![Documentation Status](https://readthedocs.org/projects/python-jeautocontrol/badge/?version=latest)](https://python-jeautocontrol.readthedocs.io/en/latest/?badge=latest)
