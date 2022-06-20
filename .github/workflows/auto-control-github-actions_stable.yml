@@ -1,4 +1,4 @@
-name: Python application
+name: AutoControl GitHub Actions Stable
 
 on:
   push:
