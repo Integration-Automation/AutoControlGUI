@@ -31,3 +31,4 @@ if sys.platform in ["win32", "cygwin"]:
 else:
     for i in range(61):
         type_key("backspace")
+type_key("return")
