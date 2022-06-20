@@ -13,6 +13,8 @@ print(size())
 simulate you can't use your mouse because you use while true to set mouse position
 """
 try:
+    from time import sleep
+    sleep(3)
     while True:
         set_position(200, 400)
         set_position(400, 600)
