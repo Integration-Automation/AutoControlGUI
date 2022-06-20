@@ -20,7 +20,3 @@ try:
     write("Ѓ123456789")
 except Exception as error:
     print(repr(error), file=sys.stderr)
-try:
-    write("!#@L@#{@#PL#{!@#L{!#{|##PO}!@#O@!O#P!)KI#O_!K")
-except Exception as error:
-    print(repr(error), file=sys.stderr)
