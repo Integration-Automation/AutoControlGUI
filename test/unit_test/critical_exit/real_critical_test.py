@@ -1,3 +1,5 @@
+import sys
+
 from je_auto_control import set_position
 from je_auto_control import size
 from je_auto_control import CriticalExit
@@ -19,6 +21,7 @@ try:
         set_position(200, 400)
         set_position(400, 600)
         raise AutoControlMouseException
-except AutoControlMouseException:
+except Exception as error:
+    print(repr(error), file=sys.stderr)
     CriticalExit().init_critical_exit()
     press_key("f7")
