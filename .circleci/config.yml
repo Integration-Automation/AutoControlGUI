@@ -52,7 +52,9 @@ jobs:
           name: auto_control_exception_test
       # critical exit
       - run:
-          command: python ./test/unit_test/critical_exit/critical_exit_test.py
+          command: |
+            python ./test/unit_test/critical_exit/critical_exit_test.py
+            exit 0
           name: critical_exit_test
       - run:
           command: python ./test/unit_test/critical_exit/real_critical_test.py
