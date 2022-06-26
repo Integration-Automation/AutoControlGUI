@@ -56,6 +56,7 @@ from je_auto_control.utils.json.json_file import write_action_json
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.executor.action_executor import execute_files
+from je_auto_control.utils.executor.action_executor import executor
 
 # timeout
 from je_auto_control.utils.timeout.multiprocess_timeout import multiprocess_timeout
