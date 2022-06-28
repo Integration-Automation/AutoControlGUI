@@ -64,7 +64,11 @@ class AutoControlTimeoutException(AutoControlException):
 
 # html exception
 
-class HTMLException(AutoControlException):
+class AutoControlHTMLException(AutoControlException):
+    pass
+
+
+class AutoControlAddCommandException(AutoControlException):
     pass
 
 

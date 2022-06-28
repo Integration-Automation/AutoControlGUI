@@ -46,3 +46,5 @@ action_is_null_error = "json action is null"
 timeout_need_on_main_error = "should put timeout function on main"
 # HTML
 html_generate_no_data_tag = "record is None"
+# add command
+add_command_exception_tag = "command value type should be as method or function"
