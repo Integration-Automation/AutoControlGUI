@@ -1,33 +1,18 @@
 import sys
+import types
 
-from je_auto_control import AutoControlActionNullException
-from je_auto_control import check_key_is_press
-from je_auto_control import click_mouse
-from je_auto_control import hotkey
-from je_auto_control import keys_table
-from je_auto_control import locate_all_image
-from je_auto_control import locate_and_click
-from je_auto_control import locate_image_center
-from je_auto_control import mouse_table
-from je_auto_control import position
-from je_auto_control import press_key
-from je_auto_control import press_mouse
-from je_auto_control import release_key
-from je_auto_control import release_mouse
-from je_auto_control import screenshot
-from je_auto_control import scroll
+from je_auto_control import keys_table, press_key, release_key, hotkey, type_key, write
+from je_auto_control import locate_all_image, locate_and_click, locate_image_center
+from je_auto_control import mouse_table, check_key_is_press, position, press_mouse, release_mouse, click_mouse, scroll
 from je_auto_control import set_position
-from je_auto_control import size
-from je_auto_control import special_table
-from je_auto_control import type_key
-from je_auto_control import write
-from je_auto_control.utils.exception.exception_tag import action_is_null_error
+from je_auto_control import screenshot, size, special_table
+from je_auto_control.utils.exception.exception_tag import action_is_null_error, add_command_exception_tag
 from je_auto_control.utils.exception.exception_tag import cant_execute_action_error
-from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.exception.exceptions import AutoControlActionException, AutoControlAddCommandException
+from je_auto_control.utils.exception.exceptions import AutoControlActionNullException
 from je_auto_control.utils.html_report.html_report_generate import generate_html
 from je_auto_control.utils.json.json_file import read_action_json
-from je_auto_control.utils.test_record.record_test_class import record_action_to_list
-from je_auto_control.utils.test_record.record_test_class import test_record_instance
+from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
 
 
 class Executor(object):
@@ -111,6 +96,14 @@ class Executor(object):
 
 
 executor = Executor()
+
+
+def add_command_to_executor(command_dict: dict):
+    for command_name, command in command_dict.items():
+        if isinstance(command, (types.MethodType, types.FunctionType)):
+            executor.event_dict.update({command_name: command})
+        else:
+            raise AutoControlAddCommandException(add_command_exception_tag)
 
 
 def execute_action(action_list: list) -> str:

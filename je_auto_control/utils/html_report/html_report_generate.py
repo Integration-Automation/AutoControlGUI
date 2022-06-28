@@ -1,7 +1,7 @@
 import sys
 
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
-from je_auto_control.utils.exception.exceptions import HTMLException
+from je_auto_control.utils.exception.exceptions import AutoControlHTMLException
 from je_auto_control.utils.exception.exception_tag import html_generate_no_data_tag
 from threading import Lock
 
@@ -135,7 +135,7 @@ def generate_html(html_name: str = "default_name") -> str:
     :return: html_string
     """
     if len(test_record_instance.test_record_list) == 0:
-        raise HTMLException(html_generate_no_data_tag)
+        raise AutoControlHTMLException(html_generate_no_data_tag)
     else:
         event_str = ""
         for record_data in test_record_instance.test_record_list:
