@@ -2,7 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/__main__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__main__.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,16 +50,16 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "last_opened_file_path": "C:/program_workspace/python/LoadDensity",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/program_workspace/python/AutoControl&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\program_workspace\python\AutoControl\test\unit_test" />
@@ -406,7 +407,13 @@
       <workItem from="1655631602691" duration="157000" />
       <workItem from="1655660912272" duration="493000" />
       <workItem from="1656256391423" duration="651000" />
-      <workItem from="1656424775774" duration="4275000" />
+      <workItem from="1656424775774" duration="6800000" />
+      <workItem from="1656681361542" duration="6000" />
+      <workItem from="1656681401593" duration="11000" />
+      <workItem from="1656815983278" duration="9000" />
+      <workItem from="1656816012636" duration="598000" />
+      <workItem from="1657000530838" duration="559000" />
+      <workItem from="1657090757929" duration="627000" />
     </task>
     <servers />
   </component>
