@@ -52,13 +52,23 @@ class Executor(object):
             "generate_html": generate_html,
         }
 
-    def execute_action(self, action_list: list) -> str:
+    def _execute_event(self, action: list):
+        event = self.event_dict.get(action[0])
+        if len(action) == 2:
+            event(**action[1])
+        elif len(action) == 1:
+            event()
+        else:
+            raise AutoControlActionException(cant_execute_action_error)
+
+    def execute_action(self, action_list: list) -> dict:
         """
         use to execute all action on action list(action file or program list)
         :param action_list the list include action
         for loop the list and execute action
         """
-        execute_record_string = ""
+
+        execute_record_dict = dict()
         try:
             if len(action_list) > 0 or type(action_list) is list:
                 pass
@@ -69,20 +79,13 @@ class Executor(object):
             print(repr(error), file=sys.stderr)
         for action in action_list:
             try:
-                event = self.event_dict.get(action[0])
-                if len(action) == 2:
-                    event(**action[1])
-                elif len(action) == 1:
-                    event()
-                else:
-                    raise AutoControlActionException(cant_execute_action_error)
+                event_response = self._execute_event(action)
+                execute_record = "execute: " + str(action)
+                execute_record_dict.update({execute_record: event_response})
             except Exception as error:
                 print(repr(error), file=sys.stderr)
                 record_action_to_list("execute_action", None, repr(error))
-            temp_string = "execute: " + str(action)
-            print(temp_string)
-            execute_record_string = "".join([execute_record_string, temp_string + "\n"])
-        return execute_record_string
+        return execute_record_dict
 
     def execute_files(self, execute_files_list: list) -> list:
         """
@@ -106,7 +109,7 @@ def add_command_to_executor(command_dict: dict):
             raise AutoControlAddCommandException(add_command_exception_tag)
 
 
-def execute_action(action_list: list) -> str:
+def execute_action(action_list: list) -> dict:
     return executor.execute_action(action_list)
 
 

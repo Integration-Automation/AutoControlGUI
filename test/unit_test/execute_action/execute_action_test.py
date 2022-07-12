@@ -34,5 +34,5 @@ elif sys.platform in ["darwin"]:
         ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
     ]
 print("\n\n")
-execute_action(test_list)
+print(execute_action(test_list))
 print(test_record_instance.test_record_list)
