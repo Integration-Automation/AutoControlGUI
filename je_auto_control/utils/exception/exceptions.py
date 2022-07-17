@@ -72,3 +72,7 @@ class AutoControlAddCommandException(AutoControlException):
     pass
 
 
+class AutoControlArgparseException(AutoControlException):
+    pass
+
+

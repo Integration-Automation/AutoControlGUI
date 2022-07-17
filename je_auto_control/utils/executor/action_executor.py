@@ -6,7 +6,8 @@ from je_auto_control import locate_all_image, locate_and_click, locate_image_cen
 from je_auto_control import mouse_table, check_key_is_press, position, press_mouse, release_mouse, click_mouse, scroll
 from je_auto_control import set_position
 from je_auto_control import screenshot, size, special_table
-from je_auto_control.utils.exception.exception_tag import action_is_null_error, add_command_exception_tag
+from je_auto_control.utils.exception.exception_tag import action_is_null_error, add_command_exception_tag, \
+    executor_list_error
 from je_auto_control.utils.exception.exception_tag import cant_execute_action_error
 from je_auto_control.utils.exception.exceptions import AutoControlActionException, AutoControlAddCommandException
 from je_auto_control.utils.exception.exceptions import AutoControlActionNullException
@@ -59,15 +60,18 @@ class Executor(object):
         elif len(action) == 1:
             event()
         else:
-            raise AutoControlActionException(cant_execute_action_error)
+            raise AutoControlActionException(cant_execute_action_error + " " + str(action))
 
-    def execute_action(self, action_list: list) -> dict:
+    def execute_action(self, action_list: [list, dict]) -> dict:
         """
         use to execute all action on action list(action file or program list)
         :param action_list the list include action
         for loop the list and execute action
         """
-
+        if type(action_list) is dict:
+            action_list = action_list.get("web_runner", None)
+            if action_list is None:
+                raise AutoControlActionNullException(executor_list_error)
         execute_record_dict = dict()
         try:
             if len(action_list) > 0 or type(action_list) is list:
@@ -84,6 +88,7 @@ class Executor(object):
                 execute_record_dict.update({execute_record: event_response})
             except Exception as error:
                 print(repr(error), file=sys.stderr)
+                print(action, file=sys.stderr)
                 record_action_to_list("execute_action", None, repr(error))
         return execute_record_dict
 
