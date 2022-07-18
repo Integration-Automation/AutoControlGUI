@@ -69,7 +69,7 @@ class Executor(object):
         for loop the list and execute action
         """
         if type(action_list) is dict:
-            action_list = action_list.get("web_runner", None)
+            action_list = action_list.get("auto_control", None)
             if action_list is None:
                 raise AutoControlActionNullException(executor_list_error)
         execute_record_dict = dict()
@@ -90,6 +90,9 @@ class Executor(object):
                 print(repr(error), file=sys.stderr)
                 print(action, file=sys.stderr)
                 record_action_to_list("execute_action", None, repr(error))
+        for key, value in execute_record_dict.items():
+            print(key)
+            print(value)
         return execute_record_dict
 
     def execute_files(self, execute_files_list: list) -> list:
