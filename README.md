@@ -11,7 +11,8 @@
 * Action file and executor
 * Record Event
 * CLI with action file
-* timeout
+* Generate HTML Report
+* Timeout
 
 ---
 
