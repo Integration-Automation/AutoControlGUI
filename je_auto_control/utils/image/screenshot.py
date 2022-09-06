@@ -3,6 +3,7 @@ from PIL import ImageGrab, Image
 
 def pil_screenshot(file_path: str = None, region: list = None) -> Image:
     """
+    use pil to make a screenshot
     :param file_path save screenshot path (None is no save)
     :param region screenshot region (screenshot region on screen)
     """

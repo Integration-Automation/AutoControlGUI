@@ -2,6 +2,7 @@
 import all wrapper function
 """
 
+
 # import mouse
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.auto_control_mouse import mouse_table
