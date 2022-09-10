@@ -12,7 +12,7 @@ if sys.platform in ["win32", "cygwin", "msys"]:
         ["position"],
         ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-        ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
+        ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}]
     ]
 
 elif sys.platform in ["linux", "linux2"]:
@@ -22,7 +22,7 @@ elif sys.platform in ["linux", "linux2"]:
         ["position"],
         ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-        ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
+        ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}]
     ]
 elif sys.platform in ["darwin"]:
     test_list = [
@@ -31,7 +31,7 @@ elif sys.platform in ["darwin"]:
         ["position"],
         ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-        ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
+        ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}]
     ]
 print("\n\n")
 print(execute_action(test_list))
