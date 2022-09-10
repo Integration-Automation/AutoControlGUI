@@ -24,7 +24,7 @@ AutoControlGUI Executor Doc
         ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ["position"],
         ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-        ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
+        ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}]
     ]
     execute_action(example_list)
 
