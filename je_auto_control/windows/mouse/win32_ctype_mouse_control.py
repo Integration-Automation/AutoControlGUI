@@ -27,14 +27,14 @@ from je_auto_control.windows.core.utils.win32_vk import win32_WHEEL
 from je_auto_control.windows.core.utils.win32_ctype_input import ctypes
 from je_auto_control.windows.screen import size
 
-win32_mouse_left = (win32_LEFTUP, win32_LEFTDOWN, 0)
-win32_mouse_middle = (win32_MIDDLEUP, win32_MIDDLEDOWN, 0)
-win32_mouse_right = (win32_RIGHTUP, win32_RIGHTDOWN, 0)
-win32_mouse_x1 = (win32_XUP, win32_DOWN, win32_XBUTTON1)
-win32_mouse_x2 = (win32_XUP, win32_DOWN, win32_XBUTTON2)
+win32_mouse_left: Tuple = (win32_LEFTUP, win32_LEFTDOWN, 0)
+win32_mouse_middle: Tuple = (win32_MIDDLEUP, win32_MIDDLEDOWN, 0)
+win32_mouse_right: Tuple = (win32_RIGHTUP, win32_RIGHTDOWN, 0)
+win32_mouse_x1: Tuple = (win32_XUP, win32_DOWN, win32_XBUTTON1)
+win32_mouse_x2: Tuple = (win32_XUP, win32_DOWN, win32_XBUTTON2)
 
-_get_cursor_pos = windll.user32.GetCursorPos
-_set_cursor_pos = windll.user32.SetCursorPos
+_get_cursor_pos: windll.user32.GetCursorPos = windll.user32.GetCursorPos
+_set_cursor_pos: windll.user32.SetCursorPos = windll.user32.SetCursorPos
 
 
 def mouse_event(event, x: int, y: int, dwData: int = 0) -> None:

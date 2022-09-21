@@ -15,10 +15,10 @@ from queue import Queue
 class Win32Recorder(object):
 
     def __init__(self):
-        self.mouse_record_listener = None
-        self.keyboard_record_listener = None
-        self.record_queue = None
-        self.result_queue = None
+        self.mouse_record_listener: [None, Win32MouseListener] = None
+        self.keyboard_record_listener: [None, Win32KeyboardListener] = None
+        self.record_queue: [None, Queue] = None
+        self.result_queue: [None, Queue] = None
 
     def record(self) -> None:
         self.mouse_record_listener = Win32MouseListener()

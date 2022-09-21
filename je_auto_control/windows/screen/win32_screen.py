@@ -9,7 +9,7 @@ if sys.platform not in ["win32", "cygwin", "msys"]:
 
 import ctypes
 
-_user32 = ctypes.windll.user32
+_user32: ctypes.windll.user32 = ctypes.windll.user32
 _user32.SetProcessDPIAware()
 
 

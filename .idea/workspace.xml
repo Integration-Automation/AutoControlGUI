@@ -2,11 +2,25 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/Python_JEAutoControl.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Python_JEAutoControl.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/source/doc/auto_control_executor_doc/auto_control_executor_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_executor_doc/auto_control_executor_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/execute_action/execute_action_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/execute_action/execute_action_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/critical_exit/critcal_exit.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/critical_exit/critcal_exit.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/exception/exception_tag.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/exception/exception_tag.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/test_record/record_test_class.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/test_record/record_test_class.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/timeout/multiprocess_timeout.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/timeout/multiprocess_timeout.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_ctype_input.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_ctype_input.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_keypress_check.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_keypress_check.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_vk.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_vk.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/keyboard/win32_ctype_keyboard_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/keyboard/win32_ctype_keyboard_control.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_keyboard_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_keyboard_listener.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_mouse_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_mouse_listener.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/mouse/win32_ctype_mouse_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/mouse/win32_ctype_mouse_control.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/record/win32_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/record/win32_record.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/screen/win32_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/screen/win32_screen.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -53,16 +67,16 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/program_workspace/python/WebRunner&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "last_opened_file_path": "C:/program_workspace/python/Integration-testing-environment",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\program_workspace\python\AutoControl\test\unit_test" />
@@ -441,7 +455,10 @@
       <workItem from="1662304025414" duration="2572000" />
       <workItem from="1662430241656" duration="591000" />
       <workItem from="1662540964914" duration="589000" />
-      <workItem from="1662556811227" duration="3394000" />
+      <workItem from="1662556811227" duration="4874000" />
+      <workItem from="1663134903340" duration="384000" />
+      <workItem from="1663135382226" duration="72000" />
+      <workItem from="1663640582119" duration="10766000" />
     </task>
     <servers />
   </component>

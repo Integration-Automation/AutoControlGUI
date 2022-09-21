@@ -18,13 +18,13 @@ def press_key(keycode: int) -> None:
     """
     :param keycode which keycode we want to press
     """
-    x = Input(type=Keyboard, ki=KeyboardInput(wVk=keycode))
-    SendInput(1, ctypes.byref(x), ctypes.sizeof(x))
+    keyboard = Input(type=Keyboard, ki=KeyboardInput(wVk=keycode))
+    SendInput(1, ctypes.byref(keyboard), ctypes.sizeof(keyboard))
 
 
 def release_key(keycode: int) -> None:
     """
     :param keycode which keycode we want to release
     """
-    x = Input(type=Keyboard, ki=KeyboardInput(wVk=keycode, dwFlags=win32_EventF_KEYUP))
-    SendInput(1, ctypes.byref(x), ctypes.sizeof(x))
+    keyboard = Input(type=Keyboard, ki=KeyboardInput(wVk=keycode, dwFlags=win32_EventF_KEYUP))
+    SendInput(1, ctypes.byref(keyboard), ctypes.sizeof(keyboard))

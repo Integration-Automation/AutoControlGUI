@@ -13,9 +13,9 @@ from threading import Thread
 
 from queue import Queue
 
-_user32 = windll.user32
-_kernel32 = windll.kernel32
-_wm_keydown = 0x100
+_user32: windll.user32 = windll.user32
+_kernel32: windll.kernel32 = windll.kernel32
+_wm_keydown: int = 0x100
 
 
 class Win32KeyboardListener(Thread):
@@ -23,10 +23,10 @@ class Win32KeyboardListener(Thread):
     def __init__(self):
         super().__init__()
         self.setDaemon(True)
-        self.hooked = None
-        self.record_queue = None
-        self.record_flag = False
-        self.hook_event_code_int = 13
+        self.hooked: [None, int] = None
+        self.record_queue: [None, Queue] = None
+        self.record_flag: bool = False
+        self.hook_event_code_int: int = 13
 
     def _set_win32_hook(self, point) -> bool:
         self.hooked = _user32.SetWindowsHookExA(
