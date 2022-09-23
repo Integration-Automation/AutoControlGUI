@@ -2,25 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/Python_JEAutoControl.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Python_JEAutoControl.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/je_auto_control/utils/socket_server/AutoControlSocketServer.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/je_auto_control/utils/socket_server/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/unit_test/socket_server_test/socket_client_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/unit_test/socket_server_test/socket_server_test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/doc/auto_control_executor_doc/auto_control_executor_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/doc/auto_control_executor_doc/auto_control_executor_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/critical_exit/critcal_exit.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/critical_exit/critcal_exit.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/exception/exception_tag.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/exception/exception_tag.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/test_record/record_test_class.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/test_record/record_test_class.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/timeout/multiprocess_timeout.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/timeout/multiprocess_timeout.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_ctype_input.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_ctype_input.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_keypress_check.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_keypress_check.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_vk.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_vk.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/keyboard/win32_ctype_keyboard_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/keyboard/win32_ctype_keyboard_control.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_keyboard_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_keyboard_listener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_mouse_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_mouse_listener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/mouse/win32_ctype_mouse_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/mouse/win32_ctype_mouse_control.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/record/win32_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/record/win32_record.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/screen/win32_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/screen/win32_screen.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -67,16 +54,16 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "last_opened_file_path": "C:/program_workspace/python/Integration-testing-environment",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/program_workspace/python/Integration-testing-environment&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\program_workspace\python\AutoControl\test\unit_test" />
@@ -93,7 +80,29 @@
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\example" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.calculator">
+  <component name="RunManager" selected="Python.AutoControlSocketServer">
+    <configuration name="AutoControlSocketServer" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Python_JEAutoControl" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/je_auto_control/utils/socket_server" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/je_auto_control/utils/socket_server/AutoControlSocketServer.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="calculator" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -116,28 +125,6 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="execute_action_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Python_JEAutoControl" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/execute_action" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/execute_action/execute_action_test.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="multiprocess_timeout" type="PythonConfigurationType" factoryName="Python">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -152,6 +139,50 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/je_auto_control/utils/timeout/multiprocess_timeout.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="socket_client_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Python_JEAutoControl" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/socket_server_test" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/socket_server_test/socket_client_test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="socket_server_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Python_JEAutoControl" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/socket_server_test" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/socket_server_test/socket_server_test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -204,66 +235,22 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="total_record_and_html_report_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Python_JEAutoControl" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="total_record_test (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Python_JEAutoControl" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/total_record" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/total_record/total_record_test.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <list>
       <item itemvalue="Python.multiprocess_timeout" />
       <item itemvalue="Python.test_auto_control_exception" />
+      <item itemvalue="Python.AutoControlSocketServer" />
+      <item itemvalue="Python.socket_client_test" />
+      <item itemvalue="Python.socket_server_test" />
       <item itemvalue="Python.calculator" />
       <item itemvalue="Python.temp" />
-      <item itemvalue="Python.execute_action_test" />
-      <item itemvalue="Python.total_record_and_html_report_test" />
-      <item itemvalue="Python.total_record_test (1)" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.AutoControlSocketServer" />
+        <item itemvalue="Python.socket_client_test" />
+        <item itemvalue="Python.socket_server_test" />
         <item itemvalue="Python.calculator" />
         <item itemvalue="Python.temp" />
-        <item itemvalue="Python.execute_action_test" />
-        <item itemvalue="Python.total_record_and_html_report_test" />
-        <item itemvalue="Python.total_record_test (1)" />
       </list>
     </recent_temporary>
   </component>
@@ -458,7 +445,9 @@
       <workItem from="1662556811227" duration="4874000" />
       <workItem from="1663134903340" duration="384000" />
       <workItem from="1663135382226" duration="72000" />
-      <workItem from="1663640582119" duration="10766000" />
+      <workItem from="1663640582119" duration="11345000" />
+      <workItem from="1663772706275" duration="591000" />
+      <workItem from="1663823140071" duration="24145000" />
     </task>
     <servers />
   </component>
@@ -531,6 +520,7 @@
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$mouse_test.coverage" NAME="mouse_test Coverage Results" MODIFIED="1636335919333" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/mouse" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$record_test.coverage" NAME="record_test Coverage Results" MODIFIED="1634135481625" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/AutoControl$mouse_test.coverage" NAME="mouse_test Coverage Results" MODIFIED="1638717075083" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/mouse" />
+    <SUITE FILE_PATH="coverage/AutoControl$socket_client_test.coverage" NAME="socket_client_test Coverage Results" MODIFIED="1663872816744" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/socket_server_test" />
     <SUITE FILE_PATH="coverage/AutoControl$tt.coverage" NAME="tt Coverage Results" MODIFIED="1649760251044" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$json_action_execute.coverage" NAME="json_action_execute Coverage Results" MODIFIED="1634290239217" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/action_file" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$keyboard_listener.coverage" NAME="keyboardlistener Coverage Results" MODIFIED="1633627280725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/listener" />
@@ -558,7 +548,9 @@
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$locate_and_click.coverage" NAME="locate_and_click Coverage Results" MODIFIED="1629094142647" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$test_auto_control_exception.coverage" NAME="test_auto_control_exception Coverage Results" MODIFIED="1629286589536" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/exception" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$screenshot_test.coverage" NAME="screenshot_test Coverage Results" MODIFIED="1629286130047" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test" />
+    <SUITE FILE_PATH="coverage/AutoControl$AutoControlSocketServer.coverage" NAME="AutoControlSocketServer Coverage Results" MODIFIED="1663926659998" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/socket_server" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$x11_linux_keyboard_listener.coverage" NAME="x11_linux_keyboard_listener Coverage Results" MODIFIED="1633499563779" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/linux_with_x11/keyboard" />
+    <SUITE FILE_PATH="coverage/AutoControl$socket_server_test.coverage" NAME="socket_server_test Coverage Results" MODIFIED="1663866191091" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/socket_server_test" />
     <SUITE FILE_PATH="coverage/AutoControl$test.coverage" NAME="test Coverage Results" MODIFIED="1648207015066" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
     <SUITE FILE_PATH="coverage/AutoControl$multiprocess_timeout.coverage" NAME="multiprocess_timeout Coverage Results" MODIFIED="1637593410735" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/timeout" />
     <SUITE FILE_PATH="coverage/AutoControl$keyboard_type_test.coverage" NAME="keyboard_type_test Coverage Results" MODIFIED="1638716547025" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/test/keyboard" />
