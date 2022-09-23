@@ -9,9 +9,11 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         command_string = str(self.request.recv(8192).strip(), encoding="utf-8")
-        print(command_string)
+        print("command is: " + command_string)
         if command_string == "quit_server":
             self.server.shutdown()
+            self.server.close_flag = True
+            print("Now quit server")
         else:
             try:
                 execute_str = json.loads(command_string)
@@ -21,7 +23,10 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
 
 
 class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-    pass
+
+    def __init__(self, server_address, RequestHandlerClass):
+        super().__init__(server_address, RequestHandlerClass)
+        self.close_flag: bool = False
 
 
 def start_autocontrol_socket_server(host: str = "localhost", port: int = 9938):
@@ -31,8 +36,3 @@ def start_autocontrol_socket_server(host: str = "localhost", port: int = 9938):
     server_thread.start()
     return server
 
-
-if "__main__" == __name__:
-    start_autocontrol_socket_server()
-    while True:
-        pass
