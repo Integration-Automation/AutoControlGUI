@@ -15,14 +15,14 @@ from queue import Queue
 
 from je_auto_control.windows.mouse.win32_ctype_mouse_control import position
 
-_user32 = windll.user32
-_kernel32 = windll.kernel32
+_user32: windll.user32 = windll.user32
+_kernel32: windll.kernel32 = windll.kernel32
 """
 Left mouse button down 0x0201
 Right mouse button down 0x0204
 Middle mouse button down 0x0207
 """
-_wm_mouse_key_code = [0x0201, 0x0204, 0x0207]
+_wm_mouse_key_code: list = [0x0201, 0x0204, 0x0207]
 
 
 class Win32MouseListener(Thread):
@@ -30,10 +30,10 @@ class Win32MouseListener(Thread):
     def __init__(self):
         super().__init__()
         self.setDaemon(True)
-        self.hooked = None
-        self.record_queue = None
-        self.record_flag = False
-        self.hook_event_code_int = 14
+        self.hooked: [None, int] = None
+        self.record_queue: [None, Queue] = None
+        self.record_flag: bool = False
+        self.hook_event_code_int: int = 14
 
     def _set_win32_hook(self, point) -> bool:
         self.hooked = _user32.SetWindowsHookExA(

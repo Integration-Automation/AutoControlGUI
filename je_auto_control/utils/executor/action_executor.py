@@ -19,7 +19,7 @@ from je_auto_control.utils.test_record.record_test_class import record_action_to
 class Executor(object):
 
     def __init__(self):
-        self.event_dict = {
+        self.event_dict: dict = {
             # mouse
             "mouse_left": click_mouse,
             "mouse_right": click_mouse,
@@ -69,7 +69,7 @@ class Executor(object):
         for loop the list and execute action
         """
         if type(action_list) is dict:
-            action_list = action_list.get("auto_control", None)
+            action_list: list = action_list.get("auto_control", None)
             if action_list is None:
                 raise AutoControlActionNullException(executor_list_error)
         execute_record_dict = dict()
@@ -100,7 +100,7 @@ class Executor(object):
         :param execute_files_list: list include execute files path
         :return: every execute detail as list
         """
-        execute_detail_list = list()
+        execute_detail_list: list = list()
         for file in execute_files_list:
             execute_detail_list.append(self.execute_action(read_action_json(file)))
         return execute_detail_list

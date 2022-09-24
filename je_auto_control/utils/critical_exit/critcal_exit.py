@@ -18,7 +18,7 @@ class CriticalExit(Thread):
         """
         super().__init__()
         self.setDaemon(default_daemon)
-        self._exit_check_key = keys_table.get("f7")
+        self._exit_check_key: int = keys_table.get("f7")
 
     def set_critical_key(self, keycode: [int, str] = None) -> None:
         """

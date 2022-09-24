@@ -137,7 +137,7 @@ def generate_html(html_name: str = "default_name") -> str:
     if len(test_record_instance.test_record_list) == 0:
         raise AutoControlHTMLException(html_generate_no_data_tag)
     else:
-        event_str = ""
+        event_str: str = ""
         for record_data in test_record_instance.test_record_list:
             # because data on record_data all is str
             if record_data.get("program_exception") == "None":

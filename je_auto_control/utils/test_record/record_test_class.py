@@ -4,8 +4,8 @@ import datetime
 class TestRecord(object):
 
     def __init__(self, init_record: bool = False):
-        self.init_record = init_record
-        self.test_record_list = list()
+        self.init_record: bool = init_record
+        self.test_record_list: list = list()
 
     def clean_record(self) -> None:
         self.test_record_list = list()
