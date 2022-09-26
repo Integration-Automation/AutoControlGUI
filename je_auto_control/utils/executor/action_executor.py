@@ -56,9 +56,9 @@ class Executor(object):
     def _execute_event(self, action: list):
         event = self.event_dict.get(action[0])
         if len(action) == 2:
-            event(**action[1])
+            return event(**action[1])
         elif len(action) == 1:
-            event()
+            return event()
         else:
             raise AutoControlActionException(cant_execute_action_error + " " + str(action))
 
