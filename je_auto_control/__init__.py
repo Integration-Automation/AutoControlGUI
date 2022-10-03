@@ -75,4 +75,4 @@ from je_auto_control.utils.html_report.html_report_generate import generate_html
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
 from je_auto_control.utils.file_process.create_project_structure import create_template_dir
 # socket server
-from je_auto_control.utils.socket_server.AutoControlSocketServer import start_autocontrol_socket_server
+from je_auto_control.utils.socket_server.auto_control_socket_server import start_autocontrol_socket_server
