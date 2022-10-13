@@ -9,11 +9,11 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         command_string = str(self.request.recv(8192).strip(), encoding="utf-8")
-        print("command is: " + command_string)
+        print("command is: " + command_string, flush=True)
         if command_string == "quit_server":
             self.server.shutdown()
             self.server.close_flag = True
-            print("Now quit server")
+            print("Now quit server", flush=True)
         else:
             try:
                 execute_str = json.loads(command_string)

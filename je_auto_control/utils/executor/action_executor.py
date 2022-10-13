@@ -56,9 +56,9 @@ class Executor(object):
     def _execute_event(self, action: list):
         event = self.event_dict.get(action[0])
         if len(action) == 2:
-            event(**action[1])
+            return event(**action[1])
         elif len(action) == 1:
-            event()
+            return event()
         else:
             raise AutoControlActionException(cant_execute_action_error + " " + str(action))
 
@@ -80,19 +80,19 @@ class Executor(object):
                 raise AutoControlActionNullException(action_is_null_error)
         except Exception as error:
             record_action_to_list("execute_action", action_list, repr(error))
-            print(repr(error), file=sys.stderr)
+            print(repr(error), file=sys.stderr, flush=True)
         for action in action_list:
             try:
                 event_response = self._execute_event(action)
                 execute_record = "execute: " + str(action)
                 execute_record_dict.update({execute_record: event_response})
             except Exception as error:
-                print(repr(error), file=sys.stderr)
-                print(action, file=sys.stderr)
+                print(repr(error), file=sys.stderr, flush=True)
+                print(action, file=sys.stderr, flush=True)
                 record_action_to_list("execute_action", None, repr(error))
         for key, value in execute_record_dict.items():
-            print(key)
-            print(value)
+            print(key, flush=True)
+            print(value, flush=True)
         return execute_record_dict
 
     def execute_files(self, execute_files_list: list) -> list:
