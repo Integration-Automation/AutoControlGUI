@@ -3,11 +3,9 @@
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/autocontrol_driver/generate_autocontrol_driver.py" beforeDir="false" afterPath="$PROJECT_DIR$/autocontrol_driver/generate_autocontrol_driver.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/socket_server/AutoControlSocketServer.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/socket_server/auto_control_socket_server.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/socket_server_test/socket_server_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/socket_server_test/socket_server_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/socket_server/auto_control_socket_server.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/socket_server/auto_control_socket_server.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,7 +57,7 @@
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "WebServerToolWindowFactoryState": "false",
-    "last_opened_file_path": "C:/program_workspace/python/APITestka",
+    "last_opened_file_path": "C:/program_workspace/python/WebRunner",
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
@@ -80,7 +78,29 @@
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\doc" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.socket_client_test">
+  <component name="RunManager" selected="Python.generate_autocontrol_driver">
+    <configuration name="auto_control_socket_server (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Python_JEAutoControl" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/je_auto_control/utils/socket_server" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/je_auto_control/utils/socket_server/auto_control_socket_server.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="auto_control_socket_server" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -95,28 +115,6 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="C:\program_workspace\python\AutoControl\je_auto_control\utils\socket_server\auto_control_socket_server.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="calculator" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Python_JEAutoControl" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/gui_test/calculator" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/gui_test/calculator/calculator.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -238,19 +236,19 @@
     <list>
       <item itemvalue="Python.multiprocess_timeout" />
       <item itemvalue="Python.test_auto_control_exception" />
+      <item itemvalue="Python.auto_control_socket_server (1)" />
       <item itemvalue="Python.generate_autocontrol_driver" />
       <item itemvalue="Python.socket_client_test" />
       <item itemvalue="Python.socket_server_test" />
-      <item itemvalue="Python.calculator" />
       <item itemvalue="Python.auto_control_socket_server" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.socket_client_test" />
         <item itemvalue="Python.generate_autocontrol_driver" />
+        <item itemvalue="Python.auto_control_socket_server (1)" />
+        <item itemvalue="Python.socket_client_test" />
         <item itemvalue="Python.auto_control_socket_server" />
         <item itemvalue="Python.socket_server_test" />
-        <item itemvalue="Python.calculator" />
       </list>
     </recent_temporary>
   </component>
@@ -454,6 +452,9 @@
       <workItem from="1664271753914" duration="1442000" />
       <workItem from="1664351420697" duration="15593000" />
       <workItem from="1664715917369" duration="2505000" />
+      <workItem from="1665645371423" duration="5216000" />
+      <workItem from="1665714392956" duration="15937000" />
+      <workItem from="1665812159484" duration="7165000" />
     </task>
     <servers />
   </component>
@@ -499,7 +500,7 @@
     <SUITE FILE_PATH="coverage/AutoControl$total_record_test__1_.coverage" NAME="total_record_test (1) Coverage Results" MODIFIED="1655615007221" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/total_record" />
     <SUITE FILE_PATH="coverage/AutoControl$real_critical_test.coverage" NAME="real_critical_test Coverage Results" MODIFIED="1655493556980" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/critical_exit" />
     <SUITE FILE_PATH="coverage/Python_JEAutoControl$x11_linux_listener.coverage" NAME="x11_linux_listener Coverage Results" MODIFIED="1633678306221" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/linux_with_x11/listener" />
-    <SUITE FILE_PATH="coverage/AutoControl$generate_autocontrol_driver.coverage" NAME="generate_autocontrol_driver Coverage Results" MODIFIED="1664178813024" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/autocontrol_driver" />
+    <SUITE FILE_PATH="coverage/AutoControl$generate_autocontrol_driver.coverage" NAME="generate_autocontrol_driver Coverage Results" MODIFIED="1665987633809" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/autocontrol_driver" />
     <SUITE FILE_PATH="coverage/AutoControl$screen_test.coverage" NAME="screen_test Coverage Results" MODIFIED="1637737335291" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/screen" />
     <SUITE FILE_PATH="coverage/AutoControl$pytest_in_test_auto_control_exception_py.coverage" NAME="pytest in test_auto_control_exception.py Coverage Results" MODIFIED="1638157045378" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/platform_independent/exception" />
     <SUITE FILE_PATH="coverage/AutoControl$record_test.coverage" NAME="record_test Coverage Results" MODIFIED="1648356568531" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/record" />
@@ -511,6 +512,7 @@
     <SUITE FILE_PATH="coverage/AutoControl$action_executor.coverage" NAME="action_executor Coverage Results" MODIFIED="1637913491910" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/action_executer" />
     <SUITE FILE_PATH="coverage/AutoControl$hotkey_test.coverage" NAME="hotkey_test Coverage Results" MODIFIED="1637744624754" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/platform_independent/test/keyboard" />
     <SUITE FILE_PATH="coverage/AutoControl$auto_control_record.coverage" NAME="auto_control_record Coverage Results" MODIFIED="1638351916701" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/wrapper" />
+    <SUITE FILE_PATH="coverage/AutoControl$auto_control_socket_server__1_.coverage" NAME="auto_control_socket_server (1) Coverage Results" MODIFIED="1665987367167" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/socket_server" />
     <SUITE FILE_PATH="coverage/AutoControl$locate_image_center.coverage" NAME="locate_image_center Coverage Results" MODIFIED="1638621747994" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/image" />
     <SUITE FILE_PATH="coverage/AutoControl$html_report_test__1_.coverage" NAME="html_report_test (1) Coverage Results" MODIFIED="1654084030451" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/html_report" />
     <SUITE FILE_PATH="coverage/AutoControl$get_dir_file_and_execute.coverage" NAME="get_dir_file_and_execute Coverage Results" MODIFIED="1650964495864" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute" />
