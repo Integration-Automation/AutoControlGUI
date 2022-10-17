@@ -1,14 +1,17 @@
+import argparse
 import json
 import socketserver
+import sys
 import threading
 
-from je_auto_control import execute_action
+from je_auto_control.utils.executor.action_executor import execute_action
 
 
 class TCPServerHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         command_string = str(self.request.recv(8192).strip(), encoding="utf-8")
+        socket = self.request
         print("command is: " + command_string, flush=True)
         if command_string == "quit_server":
             self.server.shutdown()
@@ -17,7 +20,11 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
         else:
             try:
                 execute_str = json.loads(command_string)
-                execute_action(execute_str)
+                for execute_function, execute_return in execute_action(execute_str).items():
+                    socket.sendto(str(execute_return).encode("utf-8"), self.client_address)
+                    socket.sendto("\n".encode("utf-8"), self.client_address)
+                socket.sendto("Return_Data_Over_JE".encode("utf-8"), self.client_address)
+                socket.sendto("\n".encode("utf-8"), self.client_address)
             except Exception as error:
                 print(repr(error))
 
@@ -35,4 +42,5 @@ def start_autocontrol_socket_server(host: str = "localhost", port: int = 9938):
     server_thread.daemon = True
     server_thread.start()
     return server
+
 
