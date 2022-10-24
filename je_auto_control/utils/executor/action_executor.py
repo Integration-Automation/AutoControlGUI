@@ -90,6 +90,8 @@ class Executor(object):
                 print(repr(error), file=sys.stderr, flush=True)
                 print(action, file=sys.stderr, flush=True)
                 record_action_to_list("execute_action", None, repr(error))
+                execute_record = "execute: " + str(action)
+                execute_record_dict.update({execute_record: repr(error)})
         for key, value in execute_record_dict.items():
             print(key, flush=True)
             print(value, flush=True)
