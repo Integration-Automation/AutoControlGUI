@@ -1,7 +1,6 @@
-import argparse
+import sys
 import json
 import socketserver
-import sys
 import threading
 
 from je_auto_control.utils.executor.action_executor import execute_action
@@ -26,7 +25,13 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
                 socket.sendto("Return_Data_Over_JE".encode("utf-8"), self.client_address)
                 socket.sendto("\n".encode("utf-8"), self.client_address)
             except Exception as error:
-                print(repr(error))
+                try:
+                    socket.sendto(str(error).encode("utf-8"), self.client_address)
+                    socket.sendto("\n".encode("utf-8"), self.client_address)
+                    socket.sendto("Return_Data_Over_JE".encode("utf-8"), self.client_address)
+                    socket.sendto("\n".encode("utf-8"), self.client_address)
+                except Exception as error:
+                    print(repr(error))
 
 
 class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
@@ -37,10 +42,14 @@ class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 
 def start_autocontrol_socket_server(host: str = "localhost", port: int = 9938):
+    if len(sys.argv) == 2:
+        host = sys.argv[1]
+    elif len(sys.argv) == 3:
+        host = sys.argv[1]
+        port = int(sys.argv[2])
     server = TCPServer((host, port), TCPServerHandler)
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
     return server
-
 
