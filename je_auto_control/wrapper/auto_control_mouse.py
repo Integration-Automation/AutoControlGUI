@@ -19,6 +19,10 @@ from je_auto_control.wrapper.platform_wrapper import special_table
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 
 
+def get_mouse_table():
+    return mouse_table
+
+
 def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int) -> Tuple[Union[int, str], int, int]:
     """
     check mouse keycode is verified or not

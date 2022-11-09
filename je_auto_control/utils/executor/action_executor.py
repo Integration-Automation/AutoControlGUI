@@ -1,11 +1,11 @@
 import sys
 import types
 
-from je_auto_control import keys_table, press_key, release_key, hotkey, type_key, write
+from je_auto_control import press_key, release_key, hotkey, type_key, write, record, stop_record
 from je_auto_control import locate_all_image, locate_and_click, locate_image_center
-from je_auto_control import mouse_table, check_key_is_press, position, press_mouse, release_mouse, click_mouse, scroll
+from je_auto_control import check_key_is_press, position, press_mouse, release_mouse, click_mouse, scroll
 from je_auto_control import set_position
-from je_auto_control import screenshot, size, special_table
+from je_auto_control import screenshot, size
 from je_auto_control.utils.exception.exception_tag import action_is_null_error, add_command_exception_tag, \
     executor_list_error
 from je_auto_control.utils.exception.exception_tag import cant_execute_action_error
@@ -14,6 +14,8 @@ from je_auto_control.utils.exception.exceptions import AutoControlActionNullExce
 from je_auto_control.utils.html_report.html_report_generate import generate_html
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
+from je_auto_control.wrapper.auto_control_keyboard import get_special_table, get_keys_table
+from je_auto_control.wrapper.auto_control_mouse import get_mouse_table
 
 
 class Executor(object):
@@ -25,15 +27,15 @@ class Executor(object):
             "mouse_right": click_mouse,
             "mouse_middle": click_mouse,
             "click_mouse": click_mouse,
-            "mouse_table": mouse_table,
+            "mouse_table": get_mouse_table,
             "position": position,
             "press_mouse": press_mouse,
             "release_mouse": release_mouse,
             "scroll": scroll,
             "set_position": set_position,
-            "special_table": special_table,
+            "special_table": get_special_table,
             # keyboard
-            "keys_table": keys_table,
+            "keys_table": get_keys_table,
             "type_key": type_key,
             "press_key": press_key,
             "release_key": release_key,
@@ -51,6 +53,9 @@ class Executor(object):
             "set_record_enable": test_record_instance.set_record_enable,
             # generate html
             "generate_html": generate_html,
+            # record
+            "record": record,
+            "stop_record": stop_record,
         }
 
     def _execute_event(self, action: list):
