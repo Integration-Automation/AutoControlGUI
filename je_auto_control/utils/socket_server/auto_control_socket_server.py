@@ -1,6 +1,6 @@
-import sys
 import json
 import socketserver
+import sys
 import threading
 
 from je_auto_control.utils.executor.action_executor import execute_action
