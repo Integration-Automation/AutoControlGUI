@@ -1,6 +1,6 @@
-import sys
 import json
 import socketserver
+import sys
 import threading
 
 from je_auto_control.utils.executor.action_executor import execute_action
@@ -19,13 +19,9 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
         else:
             try:
                 execute_str = json.loads(command_string)
-                if execute_str is not None:
-                    for execute_function, execute_return in execute_action(execute_str).items():
-                        socket.sendto(str(execute_return).encode("utf-8"), self.client_address)
-                        socket.sendto("\n".encode("utf-8"), self.client_address)
-                    else:
-                        socket.sendto("No_Return_Data".encode("utf-8"), self.client_address)
-                        socket.sendto("\n".encode("utf-8"), self.client_address)
+                for execute_function, execute_return in execute_action(execute_str).items():
+                    socket.sendto(str(execute_return).encode("utf-8"), self.client_address)
+                    socket.sendto("\n".encode("utf-8"), self.client_address)
                 socket.sendto("Return_Data_Over_JE".encode("utf-8"), self.client_address)
                 socket.sendto("\n".encode("utf-8"), self.client_address)
             except Exception as error:
