@@ -13,9 +13,8 @@ print(write("abcdefghijklmnopqrstuvwxyz"))
 release_key("shift")
 print(write("abcdefghijklmnopqrstuvwxyz"))
 
-"""
-this write will print one error -> keyboard write error can't find key : Ѓ and write remain string
-"""
+# this writes will print one error -> keyboard write error can't find key : Ѓ and write remain string
+
 try:
     print(write("Ѓ123456789"))
 except Exception as error:

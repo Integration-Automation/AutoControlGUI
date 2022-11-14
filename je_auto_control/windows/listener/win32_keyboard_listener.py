@@ -6,7 +6,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 if sys.platform not in ["win32", "cygwin", "msys"]:
     raise AutoControlException(windows_import_error)
 
-from ctypes import *
+from ctypes import windll, WINFUNCTYPE, c_int, POINTER, c_void_p, byref
 from ctypes.wintypes import MSG
 
 from threading import Thread
@@ -16,6 +16,11 @@ from queue import Queue
 _user32: windll.user32 = windll.user32
 _kernel32: windll.kernel32 = windll.kernel32
 _wm_keydown: int = 0x100
+
+
+def _get_function_pointer(function) -> WINFUNCTYPE:
+    win_function = WINFUNCTYPE(c_int, c_int, c_int, POINTER(c_void_p))
+    return win_function(function)
 
 
 class Win32KeyboardListener(Thread):
@@ -54,12 +59,8 @@ class Win32KeyboardListener(Thread):
             self.record_queue.put(("type_key", int(temp, 16)))
         return _user32.CallNextHookEx(self.hooked, code, w_param, l_param)
 
-    def _get_function_pointer(self, function) -> WINFUNCTYPE:
-        win_function = WINFUNCTYPE(c_int, c_int, c_int, POINTER(c_void_p))
-        return win_function(function)
-
     def _start_listener(self) -> None:
-        pointer = self._get_function_pointer(self._win32_hook_proc)
+        pointer = _get_function_pointer(self._win32_hook_proc)
         self._set_win32_hook(pointer)
         message = MSG()
         _user32.GetMessageA(byref(message), 0, 0, 0)
@@ -76,4 +77,3 @@ class Win32KeyboardListener(Thread):
 
     def run(self) -> None:
         self._start_listener()
-

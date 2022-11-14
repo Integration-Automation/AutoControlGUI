@@ -20,7 +20,7 @@ def press_key(keycode: int) -> None:
         time.sleep(0.01)
         fake_input(display, X.KeyPress, keycode)
         display.sync()
-    except struct.error as error:
+    except Exception as error:
         print(repr(error), file=sys.stderr)
 
 
@@ -32,5 +32,5 @@ def release_key(keycode: int) -> None:
         time.sleep(0.01)
         fake_input(display, X.KeyRelease, keycode)
         display.sync()
-    except struct.error as error:
+    except Exception as error:
         print(repr(error), file=sys.stderr)

@@ -25,6 +25,7 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
                 socket.sendto("Return_Data_Over_JE".encode("utf-8"), self.client_address)
                 socket.sendto("\n".encode("utf-8"), self.client_address)
             except Exception as error:
+                print(repr(error), file=sys.stderr)
                 try:
                     socket.sendto(str(error).encode("utf-8"), self.client_address)
                     socket.sendto("\n".encode("utf-8"), self.client_address)

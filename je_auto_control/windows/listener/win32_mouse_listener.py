@@ -6,7 +6,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 if sys.platform not in ["win32", "cygwin", "msys"]:
     raise AutoControlException(windows_import_error)
 
-from ctypes import *
+from ctypes import windll, WINFUNCTYPE, c_int, POINTER, c_void_p, byref
 from ctypes.wintypes import MSG
 
 from threading import Thread
@@ -17,12 +17,15 @@ from je_auto_control.windows.mouse.win32_ctype_mouse_control import position
 
 _user32: windll.user32 = windll.user32
 _kernel32: windll.kernel32 = windll.kernel32
-"""
-Left mouse button down 0x0201
-Right mouse button down 0x0204
-Middle mouse button down 0x0207
-"""
+# Left mouse button down 0x0201
+# Right mouse button down 0x0204
+# Middle mouse button down 0x0207
 _wm_mouse_key_code: list = [0x0201, 0x0204, 0x0207]
+
+
+def _get_function_pointer(function) -> WINFUNCTYPE:
+    win_function = WINFUNCTYPE(c_int, c_int, c_int, POINTER(c_void_p))
+    return win_function(function)
 
 
 class Win32MouseListener(Thread):
@@ -66,12 +69,8 @@ class Win32MouseListener(Thread):
             self.record_queue.put(("mouse_middle", x, y))
         return _user32.CallNextHookEx(self.hooked, code, w_param, l_param)
 
-    def _get_function_pointer(self, function) -> WINFUNCTYPE:
-        win_function = WINFUNCTYPE(c_int, c_int, c_int, POINTER(c_void_p))
-        return win_function(function)
-
     def _start_listener(self) -> None:
-        pointer = self._get_function_pointer(self._win32_hook_proc)
+        pointer = _get_function_pointer(self._win32_hook_proc)
         self._set_win32_hook(pointer)
         message = MSG()
         _user32.GetMessageA(byref(message), 0, 0, 0)

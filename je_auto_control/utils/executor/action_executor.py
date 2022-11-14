@@ -73,13 +73,13 @@ class Executor(object):
         :param action_list the list include action
         for loop the list and execute action
         """
-        if type(action_list) is dict:
+        if isinstance(action_list, dict):
             action_list: list = action_list.get("auto_control", None)
             if action_list is None:
                 raise AutoControlActionNullException(executor_list_error)
         execute_record_dict = dict()
         try:
-            if len(action_list) > 0 or type(action_list) is list:
+            if len(action_list) > 0 or isinstance(action_list, list):
                 pass
             else:
                 raise AutoControlActionNullException(action_is_null_error)

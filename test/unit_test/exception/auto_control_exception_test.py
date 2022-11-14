@@ -14,15 +14,15 @@ exception_list = [
     ImageNotFoundException
 ]
 try:
-    for i in range(len(exception_list)):
+    for index, value in enumerate(exception_list):
         try:
-            "Branch Prediction"
-            if exception_list[i] != ImageNotFoundException:
-                raise exception_list[i]()
+            # Branch Prediction
+            print(value)
+            if exception_list[index] != ImageNotFoundException:
+                raise exception_list[index]()
             else:
-                raise exception_list[i]("test.png")
+                raise exception_list[index]("test.png")
         except Exception as error:
             print(error)
-    i
 except AutoControlException:
     raise AutoControlException

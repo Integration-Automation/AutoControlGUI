@@ -95,6 +95,7 @@ def scroll(scroll_value: int) -> None:
     :param scroll_value scroll count
     """
     scroll_value = int(scroll_value)
+    total = 0
     for do_scroll in range(abs(scroll_value)):
         scroll_event = Quartz.CGEventCreateScrollWheelEvent(
             None,
@@ -103,3 +104,5 @@ def scroll(scroll_value: int) -> None:
             1 if scroll_value >= 0 else -1
         )
         Quartz.CGEventPost(Quartz.kCGHIDEventTap, scroll_event)
+        total = total + 1
+    print("Scroll Value:" + total)

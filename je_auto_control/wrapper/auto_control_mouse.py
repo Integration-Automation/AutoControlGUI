@@ -33,7 +33,7 @@ def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int) -> Tuple[Union[i
     :param y mouse click y position
     """
     try:
-        if type(mouse_keycode) is str:
+        if isinstance(mouse_keycode, str):
             mouse_keycode = mouse_table.get(mouse_keycode)
         else:
             pass

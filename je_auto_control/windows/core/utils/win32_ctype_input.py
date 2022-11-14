@@ -9,7 +9,7 @@ if sys.platform not in ["win32", "cygwin", "msys"]:
 import ctypes
 from ctypes import wintypes
 from ctypes import windll
-from je_auto_control.windows.core.utils.win32_vk import *
+from je_auto_control.windows.core.utils.win32_vk import win32_EventF_UNICODE, win32_VkToVSC
 
 user32 = ctypes.WinDLL('user32', use_last_error=True)
 
@@ -49,14 +49,14 @@ class HardwareInput(ctypes.Structure):
 
 
 class Input(ctypes.Structure):
-    class INPUT_Union(ctypes.Union):
+    class INPUTUnion(ctypes.Union):
         _fields_: tuple = (("ki", KeyboardInput),
                            ("mi", MouseInput),
                            ("hi", HardwareInput))
 
     _anonymous_: tuple = ("_input",)
     _fields_: tuple = (("type", wintypes.DWORD),
-                       ("_input", INPUT_Union))
+                       ("_input", INPUTUnion))
 
 
 def _check_count(result, func, args) -> list:

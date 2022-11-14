@@ -8,7 +8,6 @@ if sys.platform not in ["linux", "linux2"]:
 
 import os
 from Xlib.display import Display
-"""
-get x system display
-"""
+
+# get x system display
 display = Display(os.environ['DISPLAY'])
