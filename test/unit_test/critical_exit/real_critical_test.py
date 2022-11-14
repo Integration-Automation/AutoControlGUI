@@ -6,14 +6,14 @@ from je_auto_control import CriticalExit
 from je_auto_control import press_key
 from je_auto_control import AutoControlMouseException
 
-"""
-print your screen width and height
-"""
+
+# print your screen width and height
+
 print(size())
 
-"""
-simulate you can't use your mouse because you use while true to set mouse position
-"""
+
+# simulate you can't use your mouse because you use while true to set mouse position
+
 try:
     from time import sleep
     sleep(3)

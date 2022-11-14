@@ -1,6 +1,6 @@
 import sys
 
-from je_auto_control import execute_action, generate_html
+from je_auto_control import execute_action
 from je_auto_control import test_record_instance
 
 test_list = None

@@ -15,11 +15,16 @@ from je_auto_control.utils.exception.exceptions import AutoControlJsonActionExce
 
 class OSXRecorder(object):
 
+    def __init__(self):
+        self.record_flag = False
+
     def record(self) -> None:
+        self.record_flag = True
         osx_record()
 
     def stop_record(self) -> Queue:
         record_queue = osx_stop_record()
+        self.record_flag = False
         if record_queue is None:
             raise AutoControlJsonActionException
         return osx_stop_record()

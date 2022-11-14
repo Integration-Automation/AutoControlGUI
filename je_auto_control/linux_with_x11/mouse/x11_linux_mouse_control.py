@@ -79,6 +79,8 @@ def scroll(scroll_value: int, scroll_direction: int) -> None:
     scroll_direction = 6 : direction left
     scroll_direction = 7 : direction right
     """
+    total = 0
     for i in range(scroll_value):
         click_mouse(scroll_direction)
-
+        total = total + i
+    print("Scroll Value:" + total)

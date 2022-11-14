@@ -1,4 +1,5 @@
 import sys
+from typing import Any
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exception_tag import linux_import_error
@@ -32,7 +33,7 @@ class X11LinuxRecorder(object):
         self.record_queue = Queue()
         x11_linux_record(self.record_queue)
 
-    def stop_record(self) -> None:
+    def stop_record(self) -> Queue[Any]:
         """
         stop test_record
         make a format action queue

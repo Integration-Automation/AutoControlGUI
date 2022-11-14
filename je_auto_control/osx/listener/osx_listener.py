@@ -45,7 +45,6 @@ def keyboard_handler(event) -> None:
 
 
 def osx_record() -> None:
-    record_queue = Queue()
     delegate = AppDelegate.alloc().init()
     app.setDelegate_(delegate)
     AppHelper.runEventLoop()

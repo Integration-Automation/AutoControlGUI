@@ -87,7 +87,7 @@ from je_auto_control.utils.timeout.multiprocess_timeout import multiprocess_time
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
 
 # utils image
-from je_auto_control.wrapper.auto_control_image import screenshot
+from je_auto_control.utils.image.screenshot import pil_screenshot
 
 # html report
 from je_auto_control.utils.html_report.html_report_generate import generate_html

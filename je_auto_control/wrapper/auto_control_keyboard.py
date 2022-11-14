@@ -35,7 +35,7 @@ def press_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = F
     """
     param = locals()
     try:
-        if type(keycode) is not int:
+        if isinstance(keycode, int):
             try:
                 keycode = keys_table.get(keycode)
             except AutoControlCantFindKeyException:
@@ -73,7 +73,7 @@ def release_key(keycode: [int, str], is_shift: bool = False, skip_record: bool =
     """
     param = locals()
     try:
-        if type(keycode) is not int:
+        if isinstance(keycode, int):
             try:
                 keycode = keys_table.get(keycode)
             except AutoControlCantFindKeyException:
@@ -138,7 +138,7 @@ def check_key_is_press(keycode: [int, str]) -> bool:
     """
     param = locals()
     try:
-        if type(keycode) is int:
+        if isinstance(keycode, int):
             get_key_code = keycode
         else:
             get_key_code = keys_table.get(keycode)
@@ -172,7 +172,7 @@ def write(write_string: str, is_shift: bool = False) -> str:
                     else:
                         raise AutoControlKeyboardException(keyboard_write_cant_find)
                 except AutoControlKeyboardException as error:
-                    print(keyboard_write_cant_find, single_string, sep="\t", file=sys.stderr)
+                    print(repr(error), keyboard_write_cant_find, single_string, sep="\t", file=sys.stderr)
                     raise AutoControlKeyboardException(keyboard_write_cant_find)
             record_action_to_list("write", param)
             return record_write_string

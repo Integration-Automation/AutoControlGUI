@@ -6,9 +6,9 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 if sys.platform not in ["darwin"]:
     raise AutoControlException(osx_import_error)
 
-"""
-osx keyboard virtual keycode
-"""
+
+# osx keyboard virtual keycode
+
 osx_key_a = osx_key_A = 0x00
 osx_key_s = osx_key_S = 0x01
 osx_key_d = osx_key_D = 0x02

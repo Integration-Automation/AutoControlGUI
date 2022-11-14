@@ -25,7 +25,7 @@ class CriticalExit(Thread):
         set interrupt key
         :param keycode interrupt key
         """
-        if type(keycode) is int:
+        if isinstance(keycode, int):
             self._exit_check_key = keycode
         else:
             self._exit_check_key = keys_table.get(keycode)

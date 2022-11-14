@@ -3,12 +3,12 @@ import subprocess
 from time import sleep
 
 from je_auto_control import locate_and_click
-"""
-開啟windows 計算機
-並累加1至9
-open windows calc.exe
-and calculate 1 + 2 .... + 9 
-"""
+
+# 開啟windows 計算機
+# 並累加1至9
+# open windows calc.exe
+# and calculate 1 + 2 .... + 9
+
 subprocess.Popen("calc", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 sleep(3)
 

@@ -11,7 +11,7 @@ from je_auto_control.windows.core.utils.win32_ctype_input import Keyboard
 from je_auto_control.windows.core.utils.win32_ctype_input import KeyboardInput
 from je_auto_control.windows.core.utils.win32_ctype_input import SendInput
 from je_auto_control.windows.core.utils.win32_ctype_input import ctypes
-from je_auto_control.windows.core.utils.win32_ctype_input import win32_EventF_KEYUP
+from je_auto_control.windows.core.utils.win32_vk import win32_EventF_KEYUP
 
 
 def press_key(keycode: int) -> None:

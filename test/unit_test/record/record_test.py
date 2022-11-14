@@ -5,10 +5,9 @@ from je_auto_control import stop_record
 from je_auto_control import type_key
 from je_auto_control import execute_action
 
-"""
-this program will type test two time
-one time is type key one time is test_record
-"""
+# this program will type test two time
+# one time is type key one time is test_record
+
 record()
 sleep(1)
 print(type_key("t"))
