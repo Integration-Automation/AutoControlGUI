@@ -2,69 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/.readthedocs.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/docs/.readthedocs.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/conf.py" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/conf.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/__main__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__main__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/core/utils/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/core/utils/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/core/utils/x11_linux_display.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/core/utils/x11_linux_display.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/core/utils/x11_linux_vk.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/core/utils/x11_linux_vk.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/keyboard/x11_linux_keyboard_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/keyboard/x11_linux_keyboard_control.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/mouse/x11_linux_mouse_control.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/mouse/x11_linux_mouse_control.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/record/x11_linux_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/record/x11_linux_record.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/linux_with_x11/screen/x11_linux_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/linux_with_x11/screen/x11_linux_screen.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/core/utils/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/core/utils/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/core/utils/osx_vk.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/core/utils/osx_vk.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/keyboard/osx_keyboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/keyboard/osx_keyboard.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/keyboard/osx_keyboard_check.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/keyboard/osx_keyboard_check.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/listener/osx_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/listener/osx_listener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/exception/exceptions.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/exception/exceptions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/file_process/get_dir_file_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/file_process/get_dir_file_list.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/json/json_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/json/json_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/socket_server/auto_control_socket_server.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/socket_server/auto_control_socket_server.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/timeout/multiprocess_timeout.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/timeout/multiprocess_timeout.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_ctype_input.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_ctype_input.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_vk.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/core/utils/win32_vk.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_mouse_listener.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/listener/win32_mouse_listener.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/record/win32_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/record/win32_record.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_mouse.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_mouse.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_record.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_record.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_screen.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/platform_wrapper.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/platform_wrapper.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/gui_test/calculator/calculator.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/gui_test/calculator/calculator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/gui_test/image/locate_all_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/gui_test/image/locate_all_image.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/gui_test/image/locate_and_click.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/gui_test/image/locate_and_click.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/gui_test/image/locate_image_center.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/gui_test/image/locate_image_center.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/get_dir_file_and_execute.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/get_dir_file_and_execute.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/test1.json" beforeDir="false" afterPath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/test1.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/test2.json" beforeDir="false" afterPath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/test2.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/test3.json" beforeDir="false" afterPath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/test3.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/test.html" beforeDir="false" afterPath="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/test.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/integrated_test/total_record_and_html_report_test/total_record_and_html_report_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/argparse/test1.json" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/argparse/test1.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/argparse/test2.json" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/argparse/test2.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/critical_exit/critical_exit_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/critical_exit/critical_exit_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/critical_exit/real_critical_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/critical_exit/real_critical_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/execute_action/test.json" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/execute_action/test.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/html_report/test.json" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/html_report/test.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/json/json_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/json/json_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/keyboard/keyboard_is_press_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/keyboard/keyboard_is_press_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/keyboard/keyboard_type_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/keyboard/keyboard_type_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/mouse/mouse_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/mouse/mouse_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/record/record_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/record/record_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/screen/screen_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/screen/screen_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/socket_server_test/socket_client_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/socket_server_test/socket_client_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/total_record/total_record_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/total_record/total_record_test.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
