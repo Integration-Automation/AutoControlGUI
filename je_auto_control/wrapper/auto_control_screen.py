@@ -4,12 +4,12 @@ from typing import Tuple, List
 import cv2
 import numpy as np
 
-from je_auto_control.utils.image.screenshot import pil_screenshot
 from je_auto_control.utils.exception.exception_tag import screen_get_size
 from je_auto_control.utils.exception.exception_tag import screen_screenshot
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException
-from je_auto_control.wrapper.platform_wrapper import screen
+from je_auto_control.utils.image.screenshot import pil_screenshot
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
+from je_auto_control.wrapper.platform_wrapper import screen
 
 
 def size() -> Tuple[int, int]:

@@ -87,7 +87,3 @@ class Win32MouseListener(Thread):
 
     def run(self) -> None:
         self._start_listener()
-
-
-
-

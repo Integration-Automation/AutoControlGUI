@@ -10,10 +10,10 @@ from je_auto_control.utils.exception.exception_tag import keyboard_write_cant_fi
 from je_auto_control.utils.exception.exception_tag import table_cant_find_key
 from je_auto_control.utils.exception.exceptions import AutoControlCantFindKeyException
 from je_auto_control.utils.exception.exceptions import AutoControlKeyboardException
+from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.platform_wrapper import keyboard, special_table
 from je_auto_control.wrapper.platform_wrapper import keyboard_check
 from je_auto_control.wrapper.platform_wrapper import keys_table
-from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 
 
 def get_special_table():

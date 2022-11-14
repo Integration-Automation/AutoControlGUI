@@ -1,13 +1,11 @@
 import sys
 from typing import Any
 
-from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exception_tag import linux_import_error
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 if sys.platform not in ["linux", "linux2"]:
     raise AutoControlException(linux_import_error)
-
-from Xlib import X
 
 from je_auto_control.linux_with_x11.listener.x11_linux_listener import x11_linux_record
 from je_auto_control.linux_with_x11.listener.x11_linux_listener import x11_linux_stop_record
@@ -22,6 +20,7 @@ class X11LinuxRecorder(object):
     """
     test_record controller
     """
+
     def __init__(self):
         self.record_queue = None
         self.result_queue = None
@@ -49,5 +48,3 @@ class X11LinuxRecorder(object):
 
 
 x11_linux_recoder = X11LinuxRecorder()
-
-

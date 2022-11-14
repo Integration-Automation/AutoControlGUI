@@ -1,6 +1,7 @@
 import time
-from je_auto_control import screenshot
+
 from je_auto_control import locate_image_center
+from je_auto_control import screenshot
 
 time.sleep(2)
 

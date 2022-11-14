@@ -3,8 +3,8 @@ import sys
 from je_auto_control.utils.exception.exception_tag import macos_record_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
-from je_auto_control.wrapper.platform_wrapper import recorder
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
+from je_auto_control.wrapper.platform_wrapper import recorder
 
 
 def record() -> None:
@@ -43,4 +43,3 @@ def stop_record() -> list:
     except Exception as error:
         record_action_to_list("stop_record", None, repr(error))
         print(repr(error), file=sys.stderr)
-

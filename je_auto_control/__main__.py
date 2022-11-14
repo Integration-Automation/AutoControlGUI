@@ -5,10 +5,10 @@ import sys
 
 from je_auto_control.utils.exception.exception_tag import argparse_get_wrong_data
 from je_auto_control.utils.exception.exceptions import AutoControlArgparseException
-from je_auto_control.utils.json.json_file import read_action_json
-from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
 from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.executor.action_executor import execute_files
+from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
+from je_auto_control.utils.json.json_file import read_action_json
 
 if __name__ == "__main__":
     try:
@@ -19,9 +19,11 @@ if __name__ == "__main__":
         def preprocess_execute_files(file_path: str):
             execute_files(get_dir_files_as_list(file_path))
 
+
         def preprocess_read_str_execute_action(execute_str: str):
             execute_str = json.loads(execute_str)
             execute_action(execute_str)
+
 
         argparse_event_dict = {
             "execute_file": preprocess_execute_action,
@@ -42,4 +44,3 @@ if __name__ == "__main__":
     except Exception as error:
         print(repr(error), file=sys.stderr)
         sys.exit(1)
-

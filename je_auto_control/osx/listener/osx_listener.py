@@ -6,13 +6,11 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 if sys.platform not in ["darwin"]:
     raise AutoControlException(osx_import_error)
 
-
 from Cocoa import *
 from Foundation import *
 from PyObjCTools import AppHelper
 
 from queue import Queue
-
 
 record_queue = Queue()
 
@@ -52,5 +50,3 @@ def osx_record() -> None:
 
 def osx_stop_record() -> Queue:
     return record_queue
-
-

@@ -1,7 +1,7 @@
 import sys
 
-from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exception_tag import linux_import_error
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 if sys.platform not in ["linux", "linux2"]:
     raise AutoControlException(linux_import_error)

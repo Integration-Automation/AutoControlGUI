@@ -14,9 +14,7 @@ try:
     write("123456789")
     assert (write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz")
     release_key("shift")
-    """
-    this write will print one error -> keyboard write error can't find key : Ѓ and write remain string
-    """
+    # this write will print one error -> keyboard write error can't find key : Ѓ and write remain string
     try:
         assert (write("?123456789") == "123456789")
     except Exception as error:

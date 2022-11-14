@@ -6,7 +6,6 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 if sys.platform not in ["darwin"]:
     raise AutoControlException(osx_import_error)
 
-
 import AppKit
 import Quartz
 

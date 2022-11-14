@@ -1,9 +1,9 @@
 import sys
 
+from je_auto_control import AutoControlException
 from je_auto_control import check_key_is_press
 from je_auto_control import press_key
 from je_auto_control import release_key
-from je_auto_control import AutoControlException
 
 try:
     # because os key_code not equal

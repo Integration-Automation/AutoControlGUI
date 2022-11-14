@@ -8,7 +8,6 @@ if sys.platform not in ["win32", "cygwin", "msys"]:
 
 import ctypes
 from ctypes import wintypes
-from ctypes import windll
 from je_auto_control.windows.core.utils.win32_vk import win32_EventF_UNICODE, win32_VkToVSC
 
 user32 = ctypes.WinDLL('user32', use_last_error=True)

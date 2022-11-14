@@ -1,4 +1,3 @@
-import os
 import subprocess
 from time import sleep
 
@@ -9,7 +8,7 @@ from je_auto_control import locate_and_click
 # open windows calc.exe
 # and calculate 1 + 2 .... + 9
 
-subprocess.Popen("calc", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+subprocess.Popen("calc", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
 sleep(3)
 
 locate_and_click(

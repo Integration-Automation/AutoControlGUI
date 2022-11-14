@@ -1,5 +1,5 @@
-from os import walk
 from os import getcwd
+from os import walk
 from os.path import abspath
 from os.path import join
 from typing import List

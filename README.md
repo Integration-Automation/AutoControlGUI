@@ -2,12 +2,14 @@
 
 ---
 
-## AutoControl as a tool for GUI Testing 
+## AutoControl as a tool for GUI Testing
+
 ### Features
+
 *  Image Detect
 *  Keyboard Event
 *  Mouse Event
-*  Screen 
+*  Screen
 *  Action file and executor
 *  Record Event
 *  CLI with action file
@@ -21,11 +23,13 @@
 [![AutoControl GitHub Actions Dev](https://github.com/JE-Chen/AutoControl/actions/workflows/auto-control-github-actions_dev.yml/badge.svg)](https://github.com/JE-Chen/AutoControl/actions/workflows/auto-control-github-actions_dev.yml)
 
 [![AutoControl GitHub Actions Stable](https://github.com/JE-Chen/AutoControl/actions/workflows/auto-control-github-actions_stable.yml/badge.svg)](https://github.com/JE-Chen/AutoControl/actions/workflows/auto-control-github-actions_stable.yml)
+
 ### Documentation
 
 [![Documentation Status](https://readthedocs.org/projects/autocontrol/badge/?version=latest)](https://autocontrol.readthedocs.io/en/latest/?badge=latest)
 
-documentation available at [https://python-jeautocontrol.readthedocs.io/en/latest/](https://autocontrol.readthedocs.io/en/latest/)
+documentation available
+at [https://python-jeautocontrol.readthedocs.io/en/latest/](https://autocontrol.readthedocs.io/en/latest/)
 
 ## install
 

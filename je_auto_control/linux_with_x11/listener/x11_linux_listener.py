@@ -1,14 +1,12 @@
 import sys
 from queue import Queue
 
-from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exception_tag import linux_import_error
 from je_auto_control.utils.exception.exception_tag import listener_error
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 if sys.platform not in ["linux", "linux2"]:
     raise AutoControlException(linux_import_error)
-
-import Xlib.threaded
 
 from Xlib.display import Display
 from Xlib import X

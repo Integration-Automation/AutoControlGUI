@@ -14,62 +14,62 @@ jobs:
     runs-on: windows-2019
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.7
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.7"
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip wheel
-        pip install -r dev_requirements.txt
-    # screen test
-    - name: screen_test
-      run: python ./test/unit_test/screen/screen_test.py
-    - name: screenshot_test
-      run: python ./test/unit_test/screen/screenshot_test.py
-    # keyboard test
-    - name: keyboard_type_test
-      run: python ./test/unit_test/keyboard/keyboard_type_test.py
-    - name: keyboard_write_test
-      run: |
-        python ./test/unit_test/keyboard/keyboard_write_test.py
-    - name: keyboard_is_press_test
-      run: python ./test/unit_test/keyboard/keyboard_is_press_test.py
-    - name: hotkey_test
-      run: python ./test/unit_test/keyboard/hotkey_test.py
-      # mouse test
-    - name: mouse_test
-      run: python ./test/unit_test/mouse/mouse_test.py
-    - name: scroll_test
-      run: python ./test/unit_test/exception/auto_control_exception_test.py
-      # exception test
-    - name: auto_control_exception_test
-      run: python ./test/unit_test/exception/auto_control_exception_test.py
-      # critical exit
-    - name: critical_exit_test
-      run: python ./test/unit_test/critical_exit/critical_exit_test.py
-    - name: real_critical_test
-      run: |
-        python ./test/unit_test/critical_exit/real_critical_test.py
-        exit 0
-      # test_record
-    - name: record_test
-      run: python ./test/unit_test/record/record_test.py
-    - name: total record
-      run: python ./test/unit_test/total_record/total_record_test.py
-      # execute
-    - name: execute_action_test
-      run: python ./test/unit_test/execute_action/execute_action_test.py
-      # json
-    - name: json_test
-      run: python ./test/unit_test/json/json_test.py
-      # timeout
-    - name: timeout_test
-      run: python ./test/unit_test/timeout/timeout_test.py
-      # argparse
-    - name: argparse_test
-      run: python ./test/unit_test/argparse/argparse_test.py
-      # html report test
-    - name: html_report_test
-      run: python ./test/unit_test/html_report/html_report_test.py
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.7"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -r dev_requirements.txt
+      # screen test
+      - name: screen_test
+        run: python ./test/unit_test/screen/screen_test.py
+      - name: screenshot_test
+        run: python ./test/unit_test/screen/screenshot_test.py
+      # keyboard test
+      - name: keyboard_type_test
+        run: python ./test/unit_test/keyboard/keyboard_type_test.py
+      - name: keyboard_write_test
+        run: |
+          python ./test/unit_test/keyboard/keyboard_write_test.py
+      - name: keyboard_is_press_test
+        run: python ./test/unit_test/keyboard/keyboard_is_press_test.py
+      - name: hotkey_test
+        run: python ./test/unit_test/keyboard/hotkey_test.py
+        # mouse test
+      - name: mouse_test
+        run: python ./test/unit_test/mouse/mouse_test.py
+      - name: scroll_test
+        run: python ./test/unit_test/exception/auto_control_exception_test.py
+        # exception test
+      - name: auto_control_exception_test
+        run: python ./test/unit_test/exception/auto_control_exception_test.py
+        # critical exit
+      - name: critical_exit_test
+        run: python ./test/unit_test/critical_exit/critical_exit_test.py
+      - name: real_critical_test
+        run: |
+          python ./test/unit_test/critical_exit/real_critical_test.py
+          exit 0
+        # test_record
+      - name: record_test
+        run: python ./test/unit_test/record/record_test.py
+      - name: total record
+        run: python ./test/unit_test/total_record/total_record_test.py
+        # execute
+      - name: execute_action_test
+        run: python ./test/unit_test/execute_action/execute_action_test.py
+        # json
+      - name: json_test
+        run: python ./test/unit_test/json/json_test.py
+        # timeout
+      - name: timeout_test
+        run: python ./test/unit_test/timeout/timeout_test.py
+        # argparse
+      - name: argparse_test
+        run: python ./test/unit_test/argparse/argparse_test.py
+        # html report test
+      - name: html_report_test
+        run: python ./test/unit_test/html_report/html_report_test.py
