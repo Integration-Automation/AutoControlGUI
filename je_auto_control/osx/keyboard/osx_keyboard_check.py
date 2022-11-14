@@ -14,4 +14,3 @@ def check_key_is_press(keycode: int) -> bool:
     :param keycode which keycode we want to check
     """
     return Quartz.CGEventSourceKeyState(0, keycode)
-

@@ -104,5 +104,5 @@ def scroll(scroll_value: int) -> None:
             1 if scroll_value >= 0 else -1
         )
         Quartz.CGEventPost(Quartz.kCGHIDEventTap, scroll_event)
-        total = total + 1
+        total = total + do_scroll
     print("Scroll Value:" + total)

@@ -4,19 +4,19 @@ from typing import Tuple, Union
 
 from je_auto_control.utils.exception.exception_tag import mouse_click_mouse
 from je_auto_control.utils.exception.exception_tag import mouse_get_position
-from je_auto_control.utils.exception.exception_tag import table_cant_find_key
 from je_auto_control.utils.exception.exception_tag import mouse_press_mouse
 from je_auto_control.utils.exception.exception_tag import mouse_release_mouse
-from je_auto_control.utils.exception.exception_tag import mouse_set_position
 from je_auto_control.utils.exception.exception_tag import mouse_scroll
+from je_auto_control.utils.exception.exception_tag import mouse_set_position
 from je_auto_control.utils.exception.exception_tag import mouse_wrong_value
+from je_auto_control.utils.exception.exception_tag import table_cant_find_key
 from je_auto_control.utils.exception.exceptions import AutoControlCantFindKeyException
 from je_auto_control.utils.exception.exceptions import AutoControlMouseException
+from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.auto_control_screen import size
 from je_auto_control.wrapper.platform_wrapper import mouse
 from je_auto_control.wrapper.platform_wrapper import mouse_table
 from je_auto_control.wrapper.platform_wrapper import special_table
-from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 
 
 def get_mouse_table():

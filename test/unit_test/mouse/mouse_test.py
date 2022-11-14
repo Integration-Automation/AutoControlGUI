@@ -1,13 +1,13 @@
 import sys
 import time
 
-from je_auto_control import position
-from je_auto_control import set_position
-from je_auto_control import press_mouse
-from je_auto_control import release_mouse
+from je_auto_control import AutoControlMouseException
 from je_auto_control import click_mouse
 from je_auto_control import mouse_table
-from je_auto_control import AutoControlMouseException
+from je_auto_control import position
+from je_auto_control import press_mouse
+from je_auto_control import release_mouse
+from je_auto_control import set_position
 
 time.sleep(1)
 

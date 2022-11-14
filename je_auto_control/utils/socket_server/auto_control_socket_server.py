@@ -53,4 +53,3 @@ def start_autocontrol_socket_server(host: str = "localhost", port: int = 9938):
     server_thread.daemon = True
     server_thread.start()
     return server
-

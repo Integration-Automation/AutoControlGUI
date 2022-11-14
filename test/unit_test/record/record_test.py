@@ -1,9 +1,9 @@
 from time import sleep
 
+from je_auto_control import execute_action
 from je_auto_control import record
 from je_auto_control import stop_record
 from je_auto_control import type_key
-from je_auto_control import execute_action
 
 # this program will type test two time
 # one time is type key one time is test_record

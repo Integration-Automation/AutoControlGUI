@@ -689,11 +689,11 @@ if sys.platform in ["win32", "cygwin", "msys"]:
         "z": win32_keyZ,
     }
     mouse_table = {
-     "mouse_left": win32_mouse_left,
-     "mouse_middle": win32_mouse_middle,
-     "mouse_right": win32_mouse_right,
-     "mouse_x1": win32_mouse_x1,
-     "mouse_x2": win32_mouse_x2
+        "mouse_left": win32_mouse_left,
+        "mouse_middle": win32_mouse_middle,
+        "mouse_right": win32_mouse_right,
+        "mouse_x1": win32_mouse_x1,
+        "mouse_x2": win32_mouse_x2
     }
     keyboard = win32_ctype_keyboard_control
     keyboard_check = win32_keypress_check

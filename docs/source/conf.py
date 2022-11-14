@@ -12,15 +12,14 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('.'))
 
+sys.path.insert(0, os.path.abspath('.'))
 
 # -- Project information -----------------------------------------------------
 
 project = 'AutoControlGUI_JE'
 copyright = '2020 ~ 2021, JE-Chen'
 author = 'JE-Chen'
-
 
 # -- General configuration ---------------------------------------------------
 
@@ -37,7 +36,6 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
-
 
 # -- Options for HTML output -------------------------------------------------
 

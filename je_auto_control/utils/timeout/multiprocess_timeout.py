@@ -1,6 +1,7 @@
 from multiprocessing import Process
-from je_auto_control.utils.exception.exceptions import AutoControlTimeoutException
+
 from je_auto_control.utils.exception.exception_tag import timeout_need_on_main_error
+from je_auto_control.utils.exception.exceptions import AutoControlTimeoutException
 
 
 def multiprocess_timeout(check_function, time: int):
