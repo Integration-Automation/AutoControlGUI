@@ -5,7 +5,7 @@ with open("README.md", "r") as README:
 
 setuptools.setup(
     name="je_auto_control_dev",
-    version="0.0.47",
+    version="0.0.48",
     author="JE-Chen",
     author_email="zenmailman@gmail.com",
     description="auto testing",

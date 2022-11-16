@@ -35,7 +35,7 @@ def press_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = F
     """
     param = locals()
     try:
-        if isinstance(keycode, int):
+        if isinstance(keycode, str):
             try:
                 keycode = keys_table.get(keycode)
             except AutoControlCantFindKeyException:
@@ -73,7 +73,7 @@ def release_key(keycode: [int, str], is_shift: bool = False, skip_record: bool =
     """
     param = locals()
     try:
-        if isinstance(keycode, int):
+        if isinstance(keycode, str):
             try:
                 keycode = keys_table.get(keycode)
             except AutoControlCantFindKeyException:
