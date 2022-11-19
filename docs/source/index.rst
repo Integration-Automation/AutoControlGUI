@@ -5,8 +5,8 @@ AutoControlGUI_JE
 .. toctree::
    :maxdepth: 4
 
-   Eng/example/example_index.rst
-   Eng/doc/doc_index.rst
+   Eng/eng_index.rst
+   Zh/zh_index.rst
 
 | JE Auto Control as a tool for GUI Testing
 
