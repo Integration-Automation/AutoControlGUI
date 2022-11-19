@@ -1,6 +1,6 @@
-==========================
-AutoControlGUI Generate Html Report Doc
-==========================
+======================================
+AutoControl Generate Html Report Doc
+======================================
 
 
 .. code-block:: python

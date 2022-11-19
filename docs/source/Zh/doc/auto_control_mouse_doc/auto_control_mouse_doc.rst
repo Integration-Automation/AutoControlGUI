@@ -1,4 +1,4 @@
-AutoControlGUI Mouse Doc
+AutoControl 滑鼠控制 文件
 ==========================
 
 
@@ -6,6 +6,7 @@ AutoControlGUI Mouse Doc
 
     def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int):
         """
+        滑鼠的前處理函數 使用者通常不會用到
         check mouse keycode is verified or not
         and then check current mouse position
         if x or y is None set x, y is current position
@@ -16,12 +17,14 @@ AutoControlGUI Mouse Doc
 
     def position():
     """
+    取毒滑鼠目前 x y
     get mouse current position
     return mouse_x, mouse_y
     """
 
     def set_position(x: int, y: int):
     """
+    設置滑鼠 x y
     :param x set mouse position x
     :param y set mouse position y
     return x, y
@@ -29,6 +32,7 @@ AutoControlGUI Mouse Doc
 
     def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
     """
+    按下滑鼠按鍵 可選擇座標
     press mouse keycode on x, y
     return keycode, x, y
     :param mouse_keycode which mouse keycode we want to press
@@ -38,6 +42,7 @@ AutoControlGUI Mouse Doc
 
     def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
     """
+    放開滑鼠按鍵 可選擇座標
     release mouse keycode on x, y
     return keycode, x, y
     :param mouse_keycode which mouse keycode we want to release
@@ -47,6 +52,7 @@ AutoControlGUI Mouse Doc
 
     def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
     """
+    點擊與放開滑鼠按鍵 可選擇座標
     press and release mouse keycode on x, y
     return keycode, x, y
     :param mouse_keycode which mouse keycode we want to click
@@ -56,6 +62,7 @@ AutoControlGUI Mouse Doc
 
     def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down"):
     """"
+    滾動滑鼠滾輪
     :param scroll_value scroll count
     :param x mouse click x position
     :param y mouse click y position

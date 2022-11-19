@@ -1,4 +1,4 @@
-AutoControlGUI Test Record Doc
+AutoControl Test Record Doc
 ==========================
 
 

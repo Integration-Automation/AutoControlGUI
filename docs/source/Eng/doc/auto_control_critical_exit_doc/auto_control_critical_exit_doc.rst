@@ -1,4 +1,4 @@
-AutoControlGUI Critical Exit Doc
+AutoControl Critical Exit Doc
 ==========================
 
 .. code-block:: python

@@ -1,4 +1,4 @@
-AutoControlGUI Executor Doc
+AutoControl Executor Doc
 ==========================
 
 .. code-block:: python

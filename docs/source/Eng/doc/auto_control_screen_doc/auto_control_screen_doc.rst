@@ -1,4 +1,4 @@
-AutoControlGUI Screen Doc
+AutoControl Screen Doc
 ==========================
 
 

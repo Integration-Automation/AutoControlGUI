@@ -1,10 +1,11 @@
-AutoControlGUI Test Record Doc
+AutoControlGUI 測試紀錄 文件
 ==========================
 
 
 .. code-block:: python
 
     """
+    只是一個紀錄成功與失敗的列別 使用者可能不會用到
     just a data class use to record success and failure
     """
     class TestRecord(object):

@@ -1,4 +1,4 @@
-AutoControlGUI Image Doc
+AutoControl Image Doc
 ==========================
 
 .. code-block:: python

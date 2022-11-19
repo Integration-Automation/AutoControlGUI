@@ -1,4 +1,4 @@
-AutoControlGUI File Process Doc
+AutoControl 檔案處理 文件
 ==========================
 
 
@@ -6,6 +6,8 @@ AutoControlGUI File Process Doc
 
     def get_dir_files_as_list(dir_path: str = getcwd(), default_search_file_extension: str = ".json"):
     """
+    取得指定資料夾路徑下的 所有 default_search_file_extension 附檔名的檔案的 list
+    可以跟 執行器 模塊的 execute_files 一起使用
     get dir file when end with default_search_file_extension
     :param dir_path: which dir we want to walk and get file list
     :param default_search_file_extension: which extension we want to search

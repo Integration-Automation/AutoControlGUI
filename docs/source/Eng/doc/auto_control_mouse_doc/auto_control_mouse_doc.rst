@@ -1,4 +1,4 @@
-AutoControlGUI Mouse Doc
+AutoControl Mouse Doc
 ==========================
 
 

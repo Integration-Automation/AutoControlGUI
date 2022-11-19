@@ -1,4 +1,4 @@
-AutoControlGUI File Process Doc
+AutoControl File Process Doc
 ==========================
 
 

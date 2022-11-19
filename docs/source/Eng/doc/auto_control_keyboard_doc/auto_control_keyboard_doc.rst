@@ -1,4 +1,4 @@
-AutoControlGUI Keyboard Doc
+AutoControl Keyboard Doc
 ==========================
 
 

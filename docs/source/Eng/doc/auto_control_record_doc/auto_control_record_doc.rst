@@ -1,4 +1,4 @@
-AutoControlGUI Record Doc
+AutoControl Record Doc
 ==========================
 
 
