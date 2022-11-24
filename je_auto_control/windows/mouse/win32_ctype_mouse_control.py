@@ -21,7 +21,7 @@ from je_auto_control.windows.core.utils.win32_vk import win32_XBUTTON1
 from je_auto_control.windows.core.utils.win32_vk import win32_XBUTTON2
 from je_auto_control.windows.core.utils.win32_vk import win32_DOWN
 from je_auto_control.windows.core.utils.win32_vk import win32_XUP
-from je_auto_control.windows.core.utils.win32_ctype_input import windll
+from ctypes import windll
 from je_auto_control.windows.core.utils.win32_ctype_input import wintypes
 from je_auto_control.windows.core.utils.win32_vk import win32_WHEEL
 from je_auto_control.windows.core.utils.win32_ctype_input import ctypes
