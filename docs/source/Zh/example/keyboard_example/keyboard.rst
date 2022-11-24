@@ -1,9 +1,9 @@
 ========================
-AutoControlGUI Keyboard
+AutoControl 鍵盤使用
 ========================
 
-| Keyboard type
-| type_key will click and release key like this example will auto type TEST
+| 鍵盤按下按鍵
+| type_key 將會按下跟放開按鍵 此範例會自動打出 TEST
 
 .. code-block:: python
 
@@ -21,8 +21,8 @@ AutoControlGUI Keyboard
     type_key("S")
     type_key("T")
 
-| Keyboard check key is press
-| check_key_is_press function will check key is pressed or not
+| 檢查按鍵是否按下
+| check_key_is_press 函數將會檢查按鍵是否按下 並返回布林值
 .. code-block:: python
 
     import sys
@@ -69,8 +69,8 @@ AutoControlGUI Keyboard
             release_key("a")
 
 
-| Keyboard write
-| write function will auto type all you send str if it exists on keys_table
+| 鍵盤 write 函數
+| write 函數將會自動按下與釋放所有傳入的字串
 
 .. code-block:: python
 

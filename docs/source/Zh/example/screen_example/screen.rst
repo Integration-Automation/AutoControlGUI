@@ -1,5 +1,5 @@
 ========================
-AutoControlGUI Screen
+AutoControl Screen
 ========================
 
 | Check screen width and height

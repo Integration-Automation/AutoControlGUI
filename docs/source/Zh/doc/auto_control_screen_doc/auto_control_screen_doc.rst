@@ -1,5 +1,6 @@
+====================================================
 AutoControl 螢幕操作 文件
-==========================
+====================================================
 
 
 .. code-block:: python
@@ -14,6 +15,8 @@ AutoControl 螢幕操作 文件
         """
         截圖 可選擇截圖區域
         use to capture current screen image
+        存檔路徑
         :param file_path screenshot file save path
+        截圖區域
         :param region screenshot region
         """

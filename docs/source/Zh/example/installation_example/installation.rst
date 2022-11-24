@@ -1,5 +1,5 @@
 ==============================
-AutoControlGUI Installation
+AutoControl 安裝指南
 ==============================
 .. code-block:: python
 
@@ -14,7 +14,7 @@ AutoControlGUI Installation
     * osx 11 big sur
     * ubuntu 20.0.4
 
-| if you want to use AutoControlGUI on raspberry pi
+| 如果想要在樹梅派使用
 .. code-block:: markdown
 
     sudo apt-get install python3

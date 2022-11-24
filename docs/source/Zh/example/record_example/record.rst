@@ -1,5 +1,5 @@
 ========================
-AutoControlGUI Record
+AutoControl Record
 ========================
 
 | macos can't use record but can use execute action

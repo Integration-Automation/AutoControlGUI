@@ -1,5 +1,5 @@
 ========================
-AutoControlGUI Generate Html Example
+AutoControl 產生 HTML 報告
 ========================
 
 .. code-block:: python

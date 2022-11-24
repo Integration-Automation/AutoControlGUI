@@ -30,7 +30,7 @@ AutoControl Mouse Doc
     def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
     """
     press mouse keycode on x, y
-    return keycode, x, y
+    return mouse_keycode, x, y
     :param mouse_keycode which mouse keycode we want to press
     :param x mouse click x position
     :param y mouse click y position
@@ -39,7 +39,7 @@ AutoControl Mouse Doc
     def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
     """
     release mouse keycode on x, y
-    return keycode, x, y
+    return mouse_keycode, x, y
     :param mouse_keycode which mouse keycode we want to release
     :param x mouse click x position
     :param y mouse click y position
@@ -48,7 +48,7 @@ AutoControl Mouse Doc
     def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None):
     """
     press and release mouse keycode on x, y
-    return keycode, x, y
+    return mouse_keycode, x, y
     :param mouse_keycode which mouse keycode we want to click
     :param x mouse click x position
     :param y mouse click y position

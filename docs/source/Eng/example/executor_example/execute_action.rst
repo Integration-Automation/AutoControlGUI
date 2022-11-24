@@ -1,5 +1,5 @@
 ========================
-AutoControlGUI Execute action
+AutoControl Execute action
 ========================
 
 | you can use write_action_json to save action file

@@ -1,5 +1,5 @@
 ========================
-AutoControlGUI Mouse
+AutoControl Mouse
 ========================
 
 | Get location

@@ -1,10 +1,10 @@
-========================
-AutoControlGUI Execute action
-========================
+================================================
+AutoControl 執行器範例
+================================================
 
-| you can use write_action_json to save action file
-| and then use read_action_json to read action file to execute
-| this example is how to use read_action_json and write_action_json
+| 可以使用 write_action_json 來儲存指令檔
+| 然後可以使用 read_action_json 來讀取指令檔
+| 這個範例是 讀取 及 儲存 指令檔
 .. code-block:: python
 
     import os
@@ -31,8 +31,8 @@ AutoControlGUI Execute action
     print(read_json)
 
 
-| you can execute action use list or use read_action_json to read action json
-| this example is how to use execute_action and check test_record
+| 可以直接使用 execute_action 加 list 含指令檔的方式
+| 這個範例使用 execute_action + test_record
 .. code-block:: python
 
     import sys
@@ -76,6 +76,7 @@ AutoControlGUI Execute action
 .. code-block:: python
 
     """
+    取得 當前資料夾所有指令檔並執行的範例
     get current dir all execute file(json file) list and execute list of file
     """
     import os

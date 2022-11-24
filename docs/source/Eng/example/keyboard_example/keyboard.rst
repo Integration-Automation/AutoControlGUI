@@ -1,5 +1,5 @@
 ========================
-AutoControlGUI Keyboard
+AutoControl Keyboard
 ========================
 
 | Keyboard type

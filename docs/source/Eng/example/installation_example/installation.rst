@@ -1,5 +1,5 @@
 ==============================
-AutoControlGUI Installation
+AutoControl Installation
 ==============================
 .. code-block:: python
 

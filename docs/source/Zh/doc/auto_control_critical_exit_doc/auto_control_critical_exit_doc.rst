@@ -1,5 +1,6 @@
+====================================================
 AutoControl 緊急退出 文件
-==========================
+====================================================
 
 .. code-block:: python
 
@@ -16,6 +17,7 @@ AutoControl 緊急退出 文件
         def set_critical_key(self, keycode: [int, str] = None):
             """
             設置中斷按鈕用
+            keycode 為中斷的偵測按鈕
             :param keycode interrupt key
             """
 

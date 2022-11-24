@@ -1,5 +1,6 @@
+====================================================
 AutoControl 執行器 文件
-==========================
+====================================================
 
 .. code-block:: python
 
@@ -71,6 +72,7 @@ AutoControl 執行器 文件
     def execute_files(execute_files_list: list):
     """
     執行所有在list裡的指令檔 循序讀取然後執行
+    execute_files_list 含所有要執行指令檔路徑的 list
     :param execute_files_list: list include execute files path
     :return: every execute detail as list
     """

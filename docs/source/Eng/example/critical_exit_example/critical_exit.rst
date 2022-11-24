@@ -1,4 +1,4 @@
-AutoControlGUI Critical Exit
+AutoControl Critical Exit
 ==========================
 
 | critical exit

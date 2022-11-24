@@ -1,5 +1,5 @@
 ========================
-AutoControlGUI ImageDetect
+AutoControl ImageDetect
 ========================
 
 | this example is screenshot and then check screenshot image is exist?

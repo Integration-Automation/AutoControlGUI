@@ -3,16 +3,16 @@
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_critical_exit_doc/auto_control_critical_exit_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_critical_exit_doc/auto_control_critical_exit_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_executor_doc/auto_control_executor_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_executor_doc/auto_control_executor_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_file_process_doc/auto_control_file_process_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_file_process_doc/auto_control_file_process_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_image_doc/auto_control_image_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_image_doc/auto_control_image_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_keyboard_doc/auto_control_keyboard_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_keyboard_doc/auto_control_keyboard_doc.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_mouse_doc/auto_control_mouse_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_mouse_doc/auto_control_mouse_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_record_doc/auto_control_record_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_record_doc/auto_control_record_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_screen_doc/auto_control_screen_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_screen_doc/auto_control_screen_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_test_record_doc/auto_control_test_record_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_test_record_doc/auto_control_test_record_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/doc/generate_html_doc/generate_html_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/doc/generate_html_doc/generate_html_doc.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/critical_exit_example/critical_exit.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/critical_exit_example/critical_exit.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/executor_example/execute_action.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/executor_example/execute_action.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/generate_html_example/generate_html_example.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/generate_html_example/generate_html_example.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/image_detect_example/image_detect.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/image_detect_example/image_detect.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/installation_example/installation.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/installation_example/installation.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/keyboard_example/keyboard.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/keyboard_example/keyboard.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/mouse_example/mouse.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/mouse_example/mouse.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/record_example/record.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/record_example/record.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/screen_example/screen.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/screen_example/screen.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_critical_exit_doc/auto_control_critical_exit_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_critical_exit_doc/auto_control_critical_exit_doc.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_executor_doc/auto_control_executor_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_executor_doc/auto_control_executor_doc.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_file_process_doc/auto_control_file_process_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_file_process_doc/auto_control_file_process_doc.rst" afterDir="false" />
@@ -23,6 +23,16 @@
       <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_screen_doc/auto_control_screen_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_screen_doc/auto_control_screen_doc.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_test_record_doc/auto_control_test_record_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_test_record_doc/auto_control_test_record_doc.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/generate_html_doc/generate_html_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/generate_html_doc/generate_html_doc.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/critical_exit_example/critical_exit.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/critical_exit_example/critical_exit.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/editor_example/editor.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/editor_example/editor.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/executor_example/execute_action.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/executor_example/execute_action.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/generate_html_example/generate_html_example.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/generate_html_example/generate_html_example.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/image_detect_example/image_detect.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/image_detect_example/image_detect.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/installation_example/installation.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/installation_example/installation.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/keyboard_example/keyboard.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/keyboard_example/keyboard.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/mouse_example/mouse.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/mouse_example/mouse.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/record_example/record.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/record_example/record.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/screen_example/screen.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/screen_example/screen.rst" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -70,18 +80,18 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "last_opened_file_path": "C:/program_workspace/python/AutoControl/docs/source/Zh_Hant_TW",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/program_workspace/python/AutoControl/docs/source/Zh_Hant_TW&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\program_workspace\python\AutoControl\docs\source\Zh_Hant_TW" />
@@ -478,7 +488,10 @@
       <workItem from="1668344549244" duration="12336000" />
       <workItem from="1668560954361" duration="3405000" />
       <workItem from="1668798130882" duration="809000" />
-      <workItem from="1668870281059" duration="14741000" />
+      <workItem from="1668870281059" duration="19971000" />
+      <workItem from="1668995566006" duration="2036000" />
+      <workItem from="1669182924155" duration="4874000" />
+      <workItem from="1669192626820" duration="3607000" />
     </task>
     <servers />
   </component>

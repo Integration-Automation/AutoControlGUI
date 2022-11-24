@@ -1,8 +1,8 @@
 ========================
-AutoControlGUI ImageDetect
+AutoControl ImageDetect
 ========================
 
-| this example is screenshot and then check screenshot image is exist?
+| 這個範例會截圖並判斷截圖是否存在
 
 .. code-block:: python
 
@@ -19,7 +19,7 @@ AutoControlGUI ImageDetect
     print(image_data)
 
 
-| this example is screenshot and then check all screenshot image is exist?
+| 這個範例會截圖並判斷所有截圖是否存在
 
 .. code-block:: python
 
@@ -35,7 +35,7 @@ AutoControlGUI ImageDetect
     image_data = locate_all_image(screenshot(), detect_threshold=0.9, draw_image=False)
     print(image_data)
 
-| this example is screenshot and then check screenshot image is exist? if exist then click
+| 這個範例會截圖並判斷截圖是否存在並點擊
 
 .. code-block:: python
 

@@ -1,8 +1,8 @@
+==========================
 Editor
 ==========================
 
-| if you want to edit auto control script
-| you can use editor, a simple python editor
+| 需要編輯器的話 有提供
 | Github : https://github.com/JE-Chen/je_editor
 
 .. code-block:: python
