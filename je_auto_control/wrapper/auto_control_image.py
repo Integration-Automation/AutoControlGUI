@@ -1,6 +1,7 @@
 import sys
 from typing import List, Union
 
+
 from je_auto_control.utils.exception.exception_tag import cant_find_image
 from je_auto_control.utils.exception.exception_tag import find_image_error_variable
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
@@ -24,7 +25,7 @@ def locate_all_image(image, detect_threshold: [float, int] = 1,
         try:
             image_data_array = template_detection.find_image_multi(image, detect_threshold, draw_image)
         except ImageNotFoundException as error:
-            raise ImageNotFoundException(find_image_error_variable + " " + repr(error))
+            raise ImageNotFoundException(find_image_error_variable + " " + repr(error) + " " + str(image))
         if image_data_array[0] is True:
             record_action_to_list("locate_all_image", param)
             return image_data_array[1]
@@ -47,13 +48,13 @@ def locate_image_center(image, detect_threshold: [float, int] = 1, draw_image: b
         try:
             image_data_array = template_detection.find_image(image, detect_threshold, draw_image)
         except ImageNotFoundException as error:
-            raise ImageNotFoundException(find_image_error_variable + " " + repr(error))
+            raise ImageNotFoundException(find_image_error_variable + " " + repr(error) + " " + str(image))
         if image_data_array[0] is True:
             height = image_data_array[1][2] - image_data_array[1][0]
             width = image_data_array[1][3] - image_data_array[1][1]
             center = [int(height / 2), int(width / 2)]
             record_action_to_list("locate_image_center", param)
-            return [image_data_array[1][0] + center[0], image_data_array[1][1] + center[1]]
+            return [int(image_data_array[1][0] + center[0]), int(image_data_array[1][1] + center[1])]
         else:
             raise ImageNotFoundException(cant_find_image)
     except Exception as error:
