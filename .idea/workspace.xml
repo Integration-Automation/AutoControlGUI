@@ -3,10 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/test_source/1.png" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_source/1.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/execute_action/test.json" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/execute_action/test.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -486,7 +483,7 @@
       <workItem from="1671364420691" duration="837000" />
       <workItem from="1671375182262" duration="598000" />
       <workItem from="1671385909252" duration="2914000" />
-      <workItem from="1671516147884" duration="3137000" />
+      <workItem from="1671516147884" duration="4358000" />
     </task>
     <servers />
   </component>
