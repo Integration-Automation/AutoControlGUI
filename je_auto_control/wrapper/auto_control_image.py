@@ -88,7 +88,7 @@ def locate_and_click(
             set_position(int(image_center_x), int(image_center_y))
             click_mouse(mouse_keycode)
             record_action_to_list("locate_and_click", param)
-            return [image_center_x, image_center_y]
+            return [int(image_center_x), int(image_center_y)]
         else:
             raise ImageNotFoundException(cant_find_image + " / " + repr(image))
     except Exception as error:
