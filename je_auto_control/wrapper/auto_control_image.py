@@ -30,7 +30,7 @@ def locate_all_image(image, detect_threshold: [float, int] = 1,
             record_action_to_list("locate_all_image", param)
             return image_data_array[1]
         else:
-            raise ImageNotFoundException(cant_find_image)
+            raise ImageNotFoundException(cant_find_image + " / " + repr(image))
     except Exception as error:
         record_action_to_list("locate_all_image", param, repr(error))
         print(repr(error), file=sys.stderr)
@@ -56,7 +56,7 @@ def locate_image_center(image, detect_threshold: [float, int] = 1, draw_image: b
             record_action_to_list("locate_image_center", param)
             return [int(image_data_array[1][0] + center[0]), int(image_data_array[1][1] + center[1])]
         else:
-            raise ImageNotFoundException(cant_find_image)
+            raise ImageNotFoundException(cant_find_image + " / " + repr(image))
     except Exception as error:
         record_action_to_list("locate_image_center", param, repr(error))
         print(repr(error), file=sys.stderr)
@@ -90,7 +90,7 @@ def locate_and_click(
             record_action_to_list("locate_and_click", param)
             return [image_center_x, image_center_y]
         else:
-            raise ImageNotFoundException(cant_find_image)
+            raise ImageNotFoundException(cant_find_image + " / " + repr(image))
     except Exception as error:
         record_action_to_list("locate_and_click", param, repr(error))
         print(repr(error), file=sys.stderr)
