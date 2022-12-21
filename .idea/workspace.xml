@@ -3,36 +3,9 @@
   <component name="ChangeListManager">
     <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_mouse_doc/auto_control_mouse_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/doc/auto_control_mouse_doc/auto_control_mouse_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/critical_exit_example/critical_exit.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/critical_exit_example/critical_exit.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/executor_example/execute_action.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/executor_example/execute_action.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/generate_html_example/generate_html_example.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/generate_html_example/generate_html_example.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/image_detect_example/image_detect.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/image_detect_example/image_detect.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/installation_example/installation.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/installation_example/installation.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/keyboard_example/keyboard.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/keyboard_example/keyboard.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/mouse_example/mouse.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/mouse_example/mouse.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/record_example/record.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/record_example/record.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/example/screen_example/screen.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/example/screen_example/screen.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_critical_exit_doc/auto_control_critical_exit_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_critical_exit_doc/auto_control_critical_exit_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_executor_doc/auto_control_executor_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_executor_doc/auto_control_executor_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_file_process_doc/auto_control_file_process_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_file_process_doc/auto_control_file_process_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_image_doc/auto_control_image_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_image_doc/auto_control_image_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_keyboard_doc/auto_control_keyboard_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_keyboard_doc/auto_control_keyboard_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_mouse_doc/auto_control_mouse_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_mouse_doc/auto_control_mouse_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_record_doc/auto_control_record_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_record_doc/auto_control_record_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_screen_doc/auto_control_screen_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_screen_doc/auto_control_screen_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_test_record_doc/auto_control_test_record_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/auto_control_test_record_doc/auto_control_test_record_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/generate_html_doc/generate_html_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/generate_html_doc/generate_html_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/critical_exit_example/critical_exit.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/critical_exit_example/critical_exit.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/editor_example/editor.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/editor_example/editor.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/executor_example/execute_action.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/executor_example/execute_action.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/generate_html_example/generate_html_example.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/generate_html_example/generate_html_example.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/image_detect_example/image_detect.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/image_detect_example/image_detect.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/installation_example/installation.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/installation_example/installation.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/keyboard_example/keyboard.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/keyboard_example/keyboard.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/mouse_example/mouse.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/mouse_example/mouse.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/record_example/record.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/record_example/record.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/example/screen_example/screen.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/example/screen_example/screen.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,8 +15,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Python Script" />
         <option value="HTML File" />
+        <option value="Python Script" />
       </list>
     </option>
   </component>
@@ -86,19 +59,19 @@
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/program_workspace/python/AutoControl/docs/source/Zh_Hant_TW&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/program_workspace/python/AutoControl&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.fonts.default&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\program_workspace\python\AutoControl\test\test_source" />
       <recent name="C:\program_workspace\python\AutoControl\docs\source\Zh_Hant_TW" />
       <recent name="C:\program_workspace\python\AutoControl\autocontrol_driver" />
       <recent name="C:\program_workspace\python\AutoControl\test\unit_test" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\test\unit_test\argparse" />
-      <recent name="C:\program_workspace\python\GitHub\AutoControl\je_auto_control\utils\file_process" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\program_workspace\python\AutoControl\docs\source\Eng" />
@@ -108,7 +81,7 @@
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\doc\auto_control_screen_doc" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.multiprocess_timeout">
+  <component name="RunManager" selected="Python.calculator">
     <configuration name="calculator" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -123,28 +96,6 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/gui_test/calculator/calculator.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="generate_autocontrol_driver" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Python_JEAutoControl" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/autocontrol_driver" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/autocontrol_driver/generate_autocontrol_driver.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -219,6 +170,28 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="pancake_game" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Python_JEAutoControl" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/gui_test/pancake_game" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/gui_test/pancake_game/pancake_game.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="screen_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -263,6 +236,13 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.calculator" />
+        <item itemvalue="Python.pancake_game" />
+        <item itemvalue="Python.html_report_test" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="SvnConfiguration">
@@ -492,6 +472,24 @@
       <workItem from="1668995566006" duration="2036000" />
       <workItem from="1669182924155" duration="4874000" />
       <workItem from="1669192626820" duration="3607000" />
+      <workItem from="1669698992812" duration="3924000" />
+      <workItem from="1670405944402" duration="1260000" />
+      <workItem from="1670482625982" duration="649000" />
+      <workItem from="1670483294270" duration="968000" />
+      <workItem from="1670552552424" duration="1950000" />
+      <workItem from="1670671975115" duration="638000" />
+      <workItem from="1671005493589" duration="1343000" />
+      <workItem from="1671204831229" duration="15359000" />
+      <workItem from="1671224039072" duration="4114000" />
+      <workItem from="1671309048763" duration="1524000" />
+      <workItem from="1671364420691" duration="837000" />
+      <workItem from="1671375182262" duration="598000" />
+      <workItem from="1671385909252" duration="2914000" />
+      <workItem from="1671516147884" duration="6571000" />
+      <workItem from="1671600129578" duration="708000" />
+      <workItem from="1671610248823" duration="278000" />
+      <workItem from="1671619932634" duration="1677000" />
+      <workItem from="1671624991388" duration="105000" />
     </task>
     <servers />
   </component>
@@ -511,5 +509,10 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/AutoControl$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1671364540771" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
+    <SUITE FILE_PATH="coverage/AutoControl$pancake_game.coverage" NAME="pancake_game Coverage Results" MODIFIED="1671229511160" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/pancake_game" />
+    <SUITE FILE_PATH="coverage/AutoControl$html_report_test.coverage" NAME="html_report_test Coverage Results" MODIFIED="1669703355906" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/html_report" />
   </component>
 </project>
