@@ -15,3 +15,4 @@ Doc
     auto_control_test_record_doc/auto_control_test_record_doc.rst
     generate_html_doc/generate_html_doc.rst
     auto_control_file_process_doc/auto_control_file_process_doc.rst
+    auto_control_keyword_doc/auto_control_keyword_doc.rst
