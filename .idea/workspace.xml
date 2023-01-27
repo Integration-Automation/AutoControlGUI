@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="99292fb8-fc1c-4a2d-a504-0b1ea6c77fb2" name="Changes" comment="">
+    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/autocontrol_driver/generate_autocontrol_driver_linux" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -53,35 +54,39 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/program_workspace/python/AutoControl&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.fonts.default&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "DefaultHtmlFileTemplate": "HTML File",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "last_opened_file_path": "C:/program_workspace/python/AutoControl/autocontrol_driver",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\program_workspace\python\AutoControl\autocontrol_driver" />
+      <recent name="C:\program_workspace\python\AutoControl\docs\source\Zh\doc" />
+      <recent name="C:\program_workspace\python\AutoControl\docs\source\Eng\doc\auto_control_keyword_doc" />
       <recent name="C:\program_workspace\python\AutoControl\test\test_source" />
       <recent name="C:\program_workspace\python\AutoControl\docs\source\Zh_Hant_TW" />
-      <recent name="C:\program_workspace\python\AutoControl\autocontrol_driver" />
-      <recent name="C:\program_workspace\python\AutoControl\test\unit_test" />
-      <recent name="C:\program_workspace\python\GitHub\AutoControl\test\unit_test\argparse" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\program_workspace\python\AutoControl\docs\source\Eng" />
       <recent name="C:\program_workspace\python\AutoControl\autocontrol_driver" />
+      <recent name="C:\program_workspace\python\AutoControl\docs\source\Eng" />
       <recent name="C:\program_workspace\python\AutoControl\autocontrol_driver\dist" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl" />
       <recent name="C:\program_workspace\python\GitHub\AutoControl\docs\source\doc\auto_control_screen_doc" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.calculator">
+  <component name="RunManager" selected="Python tests.Python tests in test">
     <configuration name="calculator" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -118,28 +123,6 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/html_report/html_report_test.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="keyboard_type_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="Python_JEAutoControl" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/keyboard" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/keyboard/keyboard_type_test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -236,8 +219,24 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="Python tests in test" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="Python_JEAutoControl" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/test&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python tests.Python tests in test" />
         <item itemvalue="Python.calculator" />
         <item itemvalue="Python.pancake_game" />
         <item itemvalue="Python.html_report_test" />
@@ -490,6 +489,15 @@
       <workItem from="1671610248823" duration="278000" />
       <workItem from="1671619932634" duration="1677000" />
       <workItem from="1671624991388" duration="105000" />
+      <workItem from="1671779278937" duration="655000" />
+      <workItem from="1671863526514" duration="1221000" />
+      <workItem from="1671881584669" duration="629000" />
+      <workItem from="1671897457069" duration="524000" />
+      <workItem from="1672054104709" duration="3282000" />
+      <workItem from="1672323522991" duration="1199000" />
+      <workItem from="1673067669994" duration="3340000" />
+      <workItem from="1673592586688" duration="4497000" />
+      <workItem from="1673706502956" duration="529000" />
     </task>
     <servers />
   </component>
@@ -511,8 +519,9 @@
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/AutoControl$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1671364540771" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
-    <SUITE FILE_PATH="coverage/AutoControl$pancake_game.coverage" NAME="pancake_game Coverage Results" MODIFIED="1671229511160" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/pancake_game" />
     <SUITE FILE_PATH="coverage/AutoControl$html_report_test.coverage" NAME="html_report_test Coverage Results" MODIFIED="1669703355906" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/html_report" />
+    <SUITE FILE_PATH="coverage/AutoControl$.coverage" NAME=" Coverage Results" MODIFIED="1672339932881" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test" />
+    <SUITE FILE_PATH="coverage/AutoControl$pancake_game.coverage" NAME="pancake_game Coverage Results" MODIFIED="1671229511160" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/pancake_game" />
+    <SUITE FILE_PATH="coverage/AutoControl$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1671364540771" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
   </component>
 </project>
