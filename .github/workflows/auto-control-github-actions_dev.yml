@@ -74,4 +74,4 @@ jobs:
         run: python ./test/unit_test/argparse/argparse_test.py
         # html report test
       - name: html_report_test
-        run: python ./test/unit_test/generate_report/html_report_test.py
+        run: python ./test/unit_test/html_report/html_report_test.py
