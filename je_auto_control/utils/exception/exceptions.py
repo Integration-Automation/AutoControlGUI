@@ -68,6 +68,12 @@ class AutoControlHTMLException(AutoControlException):
     pass
 
 
+# Json Exception
+
+class AutoControlGenerateJsonReportException(AutoControlException):
+    pass
+
+
 class AutoControlAddCommandException(AutoControlException):
     pass
 

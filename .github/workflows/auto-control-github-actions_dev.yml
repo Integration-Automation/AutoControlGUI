@@ -64,6 +64,8 @@ jobs:
         # json
       - name: json_test
         run: python ./test/unit_test/json/json_test.py
+      - name: json_report
+        run: python ./test/unit_test/json_report/json_report.py
         # timeout
       - name: timeout_test
         run: python ./test/unit_test/timeout/timeout_test.py

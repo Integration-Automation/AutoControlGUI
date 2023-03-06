@@ -24,12 +24,13 @@ from je_auto_control.utils.file_process.create_project_structure import create_t
 # file process
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
 # html report
-from je_auto_control.utils.html_report.html_report_generate import generate_html
+from je_auto_control.utils.generate_report.generate_html_report import generate_html
 # utils image
 from je_auto_control.utils.image.screenshot import pil_screenshot
 # json
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.json.json_file import write_action_json
+from je_auto_control.utils.generate_report.generate_json_report import generate_json_report
 # socket server
 from je_auto_control.utils.socket_server.auto_control_socket_server import start_autocontrol_socket_server
 # test record
@@ -83,6 +84,6 @@ __all__ = [
     "multiprocess_timeout", "test_record_instance",
     "screenshot",
     "pil_screenshot",
-    "generate_html",
+    "generate_html", "generate_json_report",
     "get_dir_files_as_list", "create_template_dir", "start_autocontrol_socket_server"
 ]

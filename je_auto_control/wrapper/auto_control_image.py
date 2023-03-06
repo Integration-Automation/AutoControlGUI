@@ -100,7 +100,7 @@ def screenshot(file_path: str = None, region: list = None) -> List[Union[int, in
     """
     use to get now screen image return image
     :param file_path save screenshot path (None is no save)
-    :param region screenshot region (screenshot region on screen)
+    :param region screenshot screen_region (screenshot screen_region on screen)
     """
     param = locals()
     try:
