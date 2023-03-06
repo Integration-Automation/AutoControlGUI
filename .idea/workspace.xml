@@ -5,9 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -504,7 +502,7 @@
       <workItem from="1676958631486" duration="1804000" />
       <workItem from="1677432277840" duration="653000" />
       <workItem from="1677451654799" duration="269000" />
-      <workItem from="1677967713819" duration="11270000" />
+      <workItem from="1677967713819" duration="11648000" />
     </task>
     <servers />
   </component>
