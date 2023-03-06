@@ -1,6 +1,7 @@
 import sys
 import types
 
+from je_auto_control.utils.generate_report.generate_json_report import generate_json_report
 from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
 from je_auto_control.wrapper.auto_control_mouse import position, press_mouse, release_mouse, click_mouse, scroll
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_and_click, locate_image_center
@@ -13,7 +14,7 @@ from je_auto_control.utils.exception.exception_tag import action_is_null_error, 
 from je_auto_control.utils.exception.exception_tag import cant_execute_action_error
 from je_auto_control.utils.exception.exceptions import AutoControlActionException, AutoControlAddCommandException
 from je_auto_control.utils.exception.exceptions import AutoControlActionNullException
-from je_auto_control.utils.html_report.html_report_generate import generate_html
+from je_auto_control.utils.generate_report.generate_html_report import generate_html
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
 from je_auto_control.wrapper.auto_control_keyboard import get_special_table, get_keys_table
@@ -53,8 +54,9 @@ class Executor(object):
             "screenshot": screenshot,
             # test record
             "set_record_enable": test_record_instance.set_record_enable,
-            # generate html
+            # generate report
             "generate_html": generate_html,
+            "generate_json_report": generate_json_report,
             # record
             "record": record,
             "stop_record": stop_record,

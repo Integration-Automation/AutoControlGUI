@@ -37,8 +37,9 @@ listener_error: str = "Auto control listener error"
 # test_record tags
 record_queue_error: str = "cant get test_record queue its none are you using stop test_record before test_record"
 record_not_found_action_error: str = "test_record action not found"
-# json action file tag
+# json tag
 cant_execute_action_error: str = "cant execute action"
+cant_generate_json_report: str = "can't generate json report"
 cant_find_json_error: str = "cant find json file"
 cant_save_json_error: str = "cant save json file"
 action_is_null_error: str = "json action is null"
