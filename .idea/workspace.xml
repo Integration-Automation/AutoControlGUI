@@ -5,24 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/je_auto_control/utils/generate_report/generate_json_report.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/unit_test/json_report/json_report.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev_setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/dev_setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/exception/exception_tag.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/exception/exception_tag.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/exception/exceptions.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/exception/exceptions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/html_report/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/generate_report/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/html_report/html_report_generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/generate_report/generate_html_report.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/image/screenshot.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/image/screenshot.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_screen.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/get_dir_file_and_execute.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/integrated_test/get_dir_file_and_execute/get_dir_file_and_execute.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/screen/screenshot_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/screen/screenshot_test.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -519,7 +504,7 @@
       <workItem from="1676958631486" duration="1804000" />
       <workItem from="1677432277840" duration="653000" />
       <workItem from="1677451654799" duration="269000" />
-      <workItem from="1677967713819" duration="10873000" />
+      <workItem from="1677967713819" duration="11270000" />
     </task>
     <servers />
   </component>
