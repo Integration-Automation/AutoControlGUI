@@ -10,7 +10,7 @@ class AutoControlKeyboardException(AutoControlException):
     pass
 
 
-class AutoControlCantFindKeyException(AutoControlException):
+class AutoControlCantFindKeyException(AutoControlKeyboardException):
     pass
 
 
@@ -44,16 +44,27 @@ class AutoControlRecordException(AutoControlException):
 
 # Execute action
 
-
-class AutoControlJsonActionException(AutoControlException):
+class AutoControlExecuteActionException(AutoControlException):
     pass
 
 
-class AutoControlActionNullException(AutoControlException):
+class AutoControlJsonActionException(AutoControlExecuteActionException):
     pass
 
 
-class AutoControlActionException(AutoControlException):
+class AutoControlActionNullException(AutoControlExecuteActionException):
+    pass
+
+
+class AutoControlActionException(AutoControlExecuteActionException):
+    pass
+
+
+class AutoControlAddCommandException(AutoControlExecuteActionException):
+    pass
+
+
+class AutoControlArgparseException(AutoControlExecuteActionException):
     pass
 
 
@@ -70,13 +81,19 @@ class AutoControlHTMLException(AutoControlException):
 
 # Json Exception
 
-class AutoControlGenerateJsonReportException(AutoControlException):
+class AutoControlJsonException(AutoControlException):
     pass
 
 
-class AutoControlAddCommandException(AutoControlException):
+class AutoControlGenerateJsonReportException(AutoControlJsonException):
     pass
 
 
-class AutoControlArgparseException(AutoControlException):
+# XML
+
+class XMLException(AutoControlException):
+    pass
+
+
+class XMLTypeException(XMLException):
     pass

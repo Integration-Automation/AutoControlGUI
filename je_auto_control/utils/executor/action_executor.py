@@ -9,9 +9,9 @@ from je_auto_control.wrapper.auto_control_keyboard import press_key, release_key
 from je_auto_control.wrapper.auto_control_record import record, stop_record
 from je_auto_control.wrapper.auto_control_screen import screenshot, size
 from je_auto_control.wrapper.auto_control_mouse import set_position
-from je_auto_control.utils.exception.exception_tag import action_is_null_error, add_command_exception_tag, \
+from je_auto_control.utils.exception.exception_tags import action_is_null_error, add_command_exception_tag, \
     executor_list_error
-from je_auto_control.utils.exception.exception_tag import cant_execute_action_error
+from je_auto_control.utils.exception.exception_tags import cant_execute_action_error
 from je_auto_control.utils.exception.exceptions import AutoControlActionException, AutoControlAddCommandException
 from je_auto_control.utils.exception.exceptions import AutoControlActionNullException
 from je_auto_control.utils.generate_report.generate_html_report import generate_html

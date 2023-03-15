@@ -1,7 +1,7 @@
 import sys
 from queue import Queue
 
-from je_auto_control.utils.exception.exception_tag import osx_import_error
+from je_auto_control.utils.exception.exception_tags import osx_import_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 if sys.platform not in ["darwin"]:

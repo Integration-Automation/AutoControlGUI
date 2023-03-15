@@ -2,7 +2,7 @@ import json
 import sys
 from threading import Lock
 
-from je_auto_control.utils.exception.exception_tag import cant_generate_json_report
+from je_auto_control.utils.exception.exception_tags import cant_generate_json_report
 from je_auto_control.utils.exception.exceptions import AutoControlGenerateJsonReportException
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
 

@@ -2,8 +2,8 @@ import sys
 from typing import List, Union
 
 
-from je_auto_control.utils.exception.exception_tag import cant_find_image
-from je_auto_control.utils.exception.exception_tag import find_image_error_variable
+from je_auto_control.utils.exception.exception_tags import cant_find_image
+from je_auto_control.utils.exception.exception_tags import find_image_error_variable
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.utils.image import template_detection
 from je_auto_control.utils.image.screenshot import pil_screenshot

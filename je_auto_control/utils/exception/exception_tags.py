@@ -53,3 +53,6 @@ add_command_exception_tag: str = "command value type should be as method or func
 executor_list_error: str = "executor receive wrong data list is none or wrong type"
 # argparse
 argparse_get_wrong_data: str = "argparse receive wrong data"
+# XML
+cant_read_xml_error: str = "can't read xml"
+xml_type_error: str = "xml type error"

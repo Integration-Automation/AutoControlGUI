@@ -1,6 +1,6 @@
 import sys
 
-from je_auto_control.utils.exception.exception_tag import macos_record_error
+from je_auto_control.utils.exception.exception_tags import macos_record_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
