@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 from threading import Lock
 
-from je_auto_control.utils.exception.exception_tag import cant_find_json_error
-from je_auto_control.utils.exception.exception_tag import cant_save_json_error
+from je_auto_control.utils.exception.exception_tags import cant_find_json_error
+from je_auto_control.utils.exception.exception_tags import cant_save_json_error
 from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
 
 _lock = Lock()

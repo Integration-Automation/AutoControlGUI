@@ -3,7 +3,7 @@ import argparse
 import json
 import sys
 
-from je_auto_control.utils.exception.exception_tag import argparse_get_wrong_data
+from je_auto_control.utils.exception.exception_tags import argparse_get_wrong_data
 from je_auto_control.utils.exception.exceptions import AutoControlArgparseException
 from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.executor.action_executor import execute_files

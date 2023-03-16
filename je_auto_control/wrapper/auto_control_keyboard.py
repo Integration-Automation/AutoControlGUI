@@ -1,13 +1,13 @@
 import sys
 from typing import Tuple
 
-from je_auto_control.utils.exception.exception_tag import keyboard_hotkey
-from je_auto_control.utils.exception.exception_tag import keyboard_press_key
-from je_auto_control.utils.exception.exception_tag import keyboard_release_key
-from je_auto_control.utils.exception.exception_tag import keyboard_type_key
-from je_auto_control.utils.exception.exception_tag import keyboard_write
-from je_auto_control.utils.exception.exception_tag import keyboard_write_cant_find
-from je_auto_control.utils.exception.exception_tag import table_cant_find_key
+from je_auto_control.utils.exception.exception_tags import keyboard_hotkey
+from je_auto_control.utils.exception.exception_tags import keyboard_press_key
+from je_auto_control.utils.exception.exception_tags import keyboard_release_key
+from je_auto_control.utils.exception.exception_tags import keyboard_type_key
+from je_auto_control.utils.exception.exception_tags import keyboard_write
+from je_auto_control.utils.exception.exception_tags import keyboard_write_cant_find
+from je_auto_control.utils.exception.exception_tags import table_cant_find_key
 from je_auto_control.utils.exception.exceptions import AutoControlCantFindKeyException
 from je_auto_control.utils.exception.exceptions import AutoControlKeyboardException
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list

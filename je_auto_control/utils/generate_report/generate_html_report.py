@@ -1,7 +1,7 @@
 import sys
 from threading import Lock
 
-from je_auto_control.utils.exception.exception_tag import html_generate_no_data_tag
+from je_auto_control.utils.exception.exception_tags import html_generate_no_data_tag
 from je_auto_control.utils.exception.exceptions import AutoControlHTMLException
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
 

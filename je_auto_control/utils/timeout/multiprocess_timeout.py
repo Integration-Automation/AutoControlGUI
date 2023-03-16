@@ -1,6 +1,6 @@
 from multiprocessing import Process
 
-from je_auto_control.utils.exception.exception_tag import timeout_need_on_main_error
+from je_auto_control.utils.exception.exception_tags import timeout_need_on_main_error
 from je_auto_control.utils.exception.exceptions import AutoControlTimeoutException
 
 
