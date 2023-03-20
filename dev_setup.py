@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.0.54",
     author="JE-Chen",
     author_email="zenmailman@gmail.com",
-    description="auto testing",
+    description="GUI Testing Automation Framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/JE-Chen/AutoControl",
