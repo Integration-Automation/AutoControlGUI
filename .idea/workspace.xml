@@ -5,19 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/je_auto_control/utils/generate_report/generate_xml_report.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/unit_test/generate_report/xml_report_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.circleci/config.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/generate_report/generate_html_report.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/generate_report/generate_html_report.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/generate_report/generate_json_report.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/generate_report/generate_json_report.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/html_report/html_report_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/generate_report/html_report_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/html_report/test.json" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/generate_report/test.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/json_report/json_report.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/generate_report/json_report.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev.toml" beforeDir="false" afterPath="$PROJECT_DIR$/stable.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -65,22 +55,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "last_opened_file_path": "C:/Users/JeffreyChen/Desktop/Code_Space/Python/ITE/AutoControl/test/unit_test/generate_report",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/JeffreyChen/Desktop/Code_Space/Python/ITE/AutoControl/test/unit_test/generate_report&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\Python\ITE\AutoControl\test\unit_test\generate_report" />
@@ -220,6 +210,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/generate_report/xml_report_test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
@@ -533,5 +524,12 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/AutoControl$json_report.coverage" NAME="json_report Coverage Results" MODIFIED="1678007286029" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/json_report" />
+    <SUITE FILE_PATH="coverage/AutoControl$html_report_test.coverage" NAME="html_report_test Coverage Results" MODIFIED="1669703355906" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/html_report" />
+    <SUITE FILE_PATH="coverage/AutoControl$.coverage" NAME=" Coverage Results" MODIFIED="1672339932881" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test" />
+    <SUITE FILE_PATH="coverage/AutoControl$pancake_game.coverage" NAME="pancake_game Coverage Results" MODIFIED="1671229511160" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/pancake_game" />
+    <SUITE FILE_PATH="coverage/AutoControl$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1671364540771" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
   </component>
 </project>
