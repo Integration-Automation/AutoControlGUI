@@ -5,10 +5,10 @@ with open("README.md", "r") as README:
 
 setuptools.setup(
     name="je_auto_control_dev",
-    version="0.0.53",
+    version="0.0.54",
     author="JE-Chen",
     author_email="zenmailman@gmail.com",
-    description="auto testing",
+    description="GUI Testing Automation Framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/JE-Chen/AutoControl",

@@ -13,6 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/JE-Chen/AutoControl",
     packages=setuptools.find_packages(),
+    python_requires='>=3.7',
     install_requires=[
         "je_open_cv",
         "pillow",
