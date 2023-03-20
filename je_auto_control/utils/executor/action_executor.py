@@ -1,6 +1,7 @@
 import sys
 import types
 
+from je_auto_control.utils.generate_report.generate_json_report import generate_json
 from je_auto_control.utils.generate_report.generate_json_report import generate_json_report
 from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
 from je_auto_control.wrapper.auto_control_mouse import position, press_mouse, release_mouse, click_mouse, scroll
@@ -15,11 +16,14 @@ from je_auto_control.utils.exception.exception_tags import cant_execute_action_e
 from je_auto_control.utils.exception.exceptions import AutoControlActionException, AutoControlAddCommandException
 from je_auto_control.utils.exception.exceptions import AutoControlActionNullException
 from je_auto_control.utils.generate_report.generate_html_report import generate_html
+from je_auto_control.utils.generate_report.generate_html_report import generate_html_report
+
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
 from je_auto_control.wrapper.auto_control_keyboard import get_special_table, get_keys_table
 from je_auto_control.wrapper.auto_control_mouse import get_mouse_table
-
+from je_auto_control.utils.generate_report.generate_xml_report import generate_xml
+from je_auto_control.utils.generate_report.generate_xml_report import generate_xml_report
 
 class Executor(object):
 
@@ -54,9 +58,14 @@ class Executor(object):
             "screenshot": screenshot,
             # test record
             "set_record_enable": test_record_instance.set_record_enable,
-            # generate report
+            # only generate
             "generate_html": generate_html,
+            "generate_json": generate_json,
+            "generate_xml": generate_xml,
+            # generate report
+            "generate_html_report": generate_html_report,
             "generate_json_report": generate_json_report,
+            "generate_xml_report": generate_xml_report,
             # record
             "record": record,
             "stop_record": stop_record,

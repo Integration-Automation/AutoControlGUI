@@ -2,6 +2,7 @@ import sys
 
 from je_auto_control import execute_action
 from je_auto_control import test_record_instance
+from je_auto_control import generate_xml_report
 
 test_list = None
 test_record_instance.init_record = True
@@ -14,7 +15,6 @@ if sys.platform in ["win32", "cygwin", "msys"]:
         ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-        ["generate_html"],
     ]
 
 elif sys.platform in ["linux", "linux2"]:
@@ -26,7 +26,6 @@ elif sys.platform in ["linux", "linux2"]:
         ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-        ["generate_html"],
     ]
 elif sys.platform in ["darwin"]:
     test_list = [
@@ -37,7 +36,8 @@ elif sys.platform in ["darwin"]:
         ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
         ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-        ["generate_html"],
     ]
 print("\n\n")
 execute_action(test_list)
+generate_xml_report()
+a
