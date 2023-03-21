@@ -40,4 +40,3 @@ elif sys.platform in ["darwin"]:
 print("\n\n")
 execute_action(test_list)
 generate_xml_report()
-a

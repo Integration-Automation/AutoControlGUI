@@ -1,18 +1,19 @@
 import setuptools
 
-with open("README.md", "r") as README:
+with open("../README.md", "r") as README:
     long_description = README.read()
 
 setuptools.setup(
-    name="je_auto_control_dev",
-    version="0.0.54",
+    name="je_auto_control",
+    version="0.0.119",
     author="JE-Chen",
     author_email="zenmailman@gmail.com",
-    description="GUI Testing Automation Framework",
+    description="auto testing",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/JE-Chen/AutoControl",
     packages=setuptools.find_packages(),
+    python_requires='>=3.7',
     install_requires=[
         "je_open_cv",
         "pillow",
@@ -32,5 +33,5 @@ setuptools.setup(
     ]
 )
 
-# python dev_setup.py sdist bdist_wheel
+# python deprecation_setup.py sdist bdist_wheel
 # python -m twine upload dist/*
