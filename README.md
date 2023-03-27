@@ -1,4 +1,6 @@
 ### AutoControl
+> Project Kanban \
+> https://github.com/users/JE-Chen/projects/35 \
 > Image & Coordinate based GUI Testing \
 > GUI automated testing based on image comparison and coordinates. \
 > Cross-platform and cross-programming language.\
