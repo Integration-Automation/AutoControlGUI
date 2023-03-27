@@ -77,7 +77,7 @@ jobs:
           command: python ./test/unit_test/json/json_test.py
           name: json_test
       - run:
-          command: python ./test/unit_test/json_report/json_report.py
+          command: python ./test/unit_test/generate_report/json_report.py
           name: json_report
       # timeout
       - run:
@@ -89,7 +89,7 @@ jobs:
           name: argparse_test
       # html report test
       - run:
-          command: python ./test/unit_test/html_report/html_report_test.py
+          command: python ./test/unit_test/generate_report/html_report_test.py
           name: html_report_test
 
       # GUI Test
@@ -184,7 +184,7 @@ jobs:
           command: python ./test/unit_test/json/json_test.py
           name: json_test
       - run:
-          command: python ./test/unit_test/json_report/json_report.py
+          command: python ./test/unit_test/generate_report/json_report.py
           name: json_report
       # timeout
       - run:
@@ -192,7 +192,7 @@ jobs:
           name: timeout_test
       # html report test
       - run:
-          command: python ./test/unit_test/html_report/html_report_test.py
+          command: python ./test/unit_test/generate_report/html_report_test.py
           name: html_report_test
 
       # GUI Test

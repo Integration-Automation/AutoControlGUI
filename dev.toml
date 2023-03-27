@@ -6,12 +6,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "je_auto_control_dev"
-version = "0.0.54"
+version = "0.0.55"
 authors = [
     { name = "JE-Chen", email = "zenmailman@gmail.com" },
 ]
 description = "GUI Testing Automation Framework"
-readme = { file = "README.md", content-type = "text/plain" }
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.7"
 license = { text = "MIT" }
 dependencies = [

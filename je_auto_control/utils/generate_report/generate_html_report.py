@@ -1,4 +1,5 @@
 import sys
+import typing
 from threading import Lock
 
 from je_auto_control.utils.exception.exception_tags import html_generate_no_data_tag
@@ -128,10 +129,9 @@ def make_html_table(event_str: str, record_data: dict, table_head: str) -> str:
     return event_str
 
 
-def generate_html(html_name: str = "default_name") -> str:
+def generate_html() -> str:
     """
-    this function will create and save html report on current folder
-    :param html_name: save html file name
+    this function will create html string
     :return: html_string
     """
     if len(test_record_instance.test_record_list) == 0:
@@ -145,14 +145,22 @@ def generate_html(html_name: str = "default_name") -> str:
             else:
                 event_str = make_html_table(event_str, record_data, "failure_table_head")
         new_html_string = _html_string.format(event_table=event_str)
-        try:
-            _lock.acquire()
-            with open(html_name + ".html", "w+") as file_to_write:
-                file_to_write.write(
-                    new_html_string
-                )
-        except Exception as error:
-            print(repr(error), file=sys.stderr)
-        finally:
-            _lock.release()
     return new_html_string
+
+
+def generate_html_report(html_name: str = "default_name"):
+    """
+    :param html_name: save html file name
+    :return:
+    """
+    new_html_string = generate_html()
+    try:
+        _lock.acquire()
+        with open(html_name + ".html", "w+") as file_to_write:
+            file_to_write.write(
+                new_html_string
+            )
+    except Exception as error:
+        print(repr(error), file=sys.stderr)
+    finally:
+        _lock.release()
