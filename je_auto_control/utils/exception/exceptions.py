@@ -97,3 +97,8 @@ class XMLException(AutoControlException):
 
 class XMLTypeException(XMLException):
     pass
+
+
+# Execute callback
+class CallbackExecutorException(AutoControlException):
+    pass
