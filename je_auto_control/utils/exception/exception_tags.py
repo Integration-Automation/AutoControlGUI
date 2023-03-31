@@ -56,3 +56,6 @@ argparse_get_wrong_data: str = "argparse receive wrong data"
 # XML
 cant_read_xml_error: str = "can't read xml"
 xml_type_error: str = "xml type error"
+# Callback executor
+get_bad_trigger_method: str = "get bad trigger method, only accept kwargs and args"
+get_bad_trigger_function: str = "get bad trigger function only accept function in event_dict"

@@ -25,6 +25,7 @@ from je_auto_control.wrapper.auto_control_mouse import get_mouse_table
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml_report
 
+
 class Executor(object):
 
     def __init__(self):

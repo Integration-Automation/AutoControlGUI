@@ -69,6 +69,8 @@ from je_auto_control.wrapper.auto_control_screen import size
 # xml
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml_report
+# callback
+from je_auto_control.utils.callback.callback_function_executor import callback_executor
 
 __all__ = [
     "click_mouse", "mouse_table", "position", "press_mouse", "release_mouse",
@@ -92,5 +94,6 @@ __all__ = [
     "generate_html", "generate_html_report",
     "generate_json", "generate_json_report",
     "generate_xml", "generate_xml_report",
-    "get_dir_files_as_list", "create_template_dir", "start_autocontrol_socket_server"
+    "get_dir_files_as_list", "create_template_dir", "start_autocontrol_socket_server",
+    "callback_executor"
 ]

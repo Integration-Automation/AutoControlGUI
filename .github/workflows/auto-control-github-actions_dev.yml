@@ -75,3 +75,6 @@ jobs:
         # html report test
       - name: html_report_test
         run: python ./test/unit_test/generate_report/html_report_test.py
+        # call back test
+      - name: call back test
+        run: python ./test/unit_test/callback/callback_test.py
