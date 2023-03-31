@@ -29,7 +29,7 @@
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/db0f6e626a614f67bf2b6b1f54325a24)](https://www.codacy.com/gh/JE-Chen/AutoControl/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=JE-Chen/AutoControl&amp;utm_campaign=Badge_Grade)
 
-[![CircleCI](https://circleci.com/gh/JE-Chen/AutoControl/tree/main.svg?style=svg)](https://circleci.com/gh/JE-Chen/AutoControl/tree/main)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/Integrated-Testing-Environment/AutoControl/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/Integrated-Testing-Environment/AutoControl/tree/main)
 
 [![AutoControl GitHub Actions Dev](https://github.com/JE-Chen/AutoControl/actions/workflows/auto-control-github-actions_dev.yml/badge.svg)](https://github.com/JE-Chen/AutoControl/actions/workflows/auto-control-github-actions_dev.yml)
 
