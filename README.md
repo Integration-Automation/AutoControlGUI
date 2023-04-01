@@ -13,6 +13,11 @@
 >> * Provide hooks for keyboard and mouse events and state checks (including using code to simulate key presses).
 >> * Can use keywords for development to improve readability.
 ---
+
+### NOTICE
+> We don't support Unix/Linux Wayland GUI Now \
+> May be future feature
+---
 ### Features
 
 >* Image Detect
