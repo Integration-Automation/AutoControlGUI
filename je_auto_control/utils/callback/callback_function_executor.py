@@ -114,7 +114,7 @@ class CallbackFunctionExecutor(object):
             self,
             trigger_function_name: str,
             callback_function: typing.Callable,
-            callback_function_param: dict,
+            callback_function_param: [dict, None] = None,
             callback_param_method: str = "kwargs",
             **kwargs
     ):
@@ -130,12 +130,15 @@ class CallbackFunctionExecutor(object):
             if trigger_function_name not in self.event_dict.keys():
                 raise CallbackExecutorException(get_bad_trigger_function)
             execute_return_value = self.event_dict.get(trigger_function_name)(**kwargs)
-            if callback_param_method not in ["kwargs", "args"]:
-                raise CallbackExecutorException(get_bad_trigger_method)
-            if callback_param_method == "kwargs":
-                callback_function(**callback_function_param)
+            if callback_function_param is not None:
+                if callback_param_method not in ["kwargs", "args"]:
+                    raise CallbackExecutorException(get_bad_trigger_method)
+                if callback_param_method == "kwargs":
+                    callback_function(**callback_function_param)
+                else:
+                    callback_function(*callback_function_param.values())
             else:
-                callback_function(*callback_function_param.values())
+                callback_function()
             return execute_return_value
         except Exception as error:
             print(repr(error), file=stderr)
