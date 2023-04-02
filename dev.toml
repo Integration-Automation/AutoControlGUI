@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "je_auto_control_dev"
-version = "0.0.57"
+version = "0.0.58"
 authors = [
     { name = "JE-Chen", email = "zenmailman@gmail.com" },
 ]
@@ -20,7 +20,7 @@ dependencies = [
     "numpy",
     "pyobjc-core;platform_system=='Darwin'",
     "pyobjc;platform_system=='Darwin'",
-    "python3-Xlib;platform_system=='Linux'"
+    "python-Xlib;platform_system=='Linux'"
 ]
 classifiers = [
     "Programming Language :: Python :: 3.7",
