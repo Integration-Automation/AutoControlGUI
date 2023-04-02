@@ -20,7 +20,7 @@ dependencies = [
     "numpy",
     "pyobjc-core;platform_system=='Darwin'",
     "pyobjc;platform_system=='Darwin'",
-    "python3-Xlib;platform_system=='Linux'"
+    "python-Xlib;platform_system=='Linux'"
 ]
 classifiers = [
     "Programming Language :: Python :: 3.7",
