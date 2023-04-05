@@ -1,15 +1,8 @@
 import sys
+import time
 import types
+from inspect import getmembers, isbuiltin
 
-from je_auto_control.utils.generate_report.generate_json_report import generate_json
-from je_auto_control.utils.generate_report.generate_json_report import generate_json_report
-from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
-from je_auto_control.wrapper.auto_control_mouse import position, press_mouse, release_mouse, click_mouse, scroll
-from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_and_click, locate_image_center
-from je_auto_control.wrapper.auto_control_keyboard import press_key, release_key, hotkey, type_key, write
-from je_auto_control.wrapper.auto_control_record import record, stop_record
-from je_auto_control.wrapper.auto_control_screen import screenshot, size
-from je_auto_control.wrapper.auto_control_mouse import set_position
 from je_auto_control.utils.exception.exception_tags import action_is_null_error, add_command_exception_tag, \
     executor_list_error
 from je_auto_control.utils.exception.exception_tags import cant_execute_action_error
@@ -17,13 +10,21 @@ from je_auto_control.utils.exception.exceptions import AutoControlActionExceptio
 from je_auto_control.utils.exception.exceptions import AutoControlActionNullException
 from je_auto_control.utils.generate_report.generate_html_report import generate_html
 from je_auto_control.utils.generate_report.generate_html_report import generate_html_report
-
-from je_auto_control.utils.json.json_file import read_action_json
-from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
-from je_auto_control.wrapper.auto_control_keyboard import get_special_table, get_keys_table
-from je_auto_control.wrapper.auto_control_mouse import get_mouse_table
+from je_auto_control.utils.generate_report.generate_json_report import generate_json
+from je_auto_control.utils.generate_report.generate_json_report import generate_json_report
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml_report
+from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
+from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_and_click, locate_image_center
+from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
+from je_auto_control.wrapper.auto_control_keyboard import get_special_table, get_keys_table
+from je_auto_control.wrapper.auto_control_keyboard import press_key, release_key, hotkey, type_key, write
+from je_auto_control.wrapper.auto_control_mouse import get_mouse_table
+from je_auto_control.wrapper.auto_control_mouse import position, press_mouse, release_mouse, click_mouse, scroll
+from je_auto_control.wrapper.auto_control_mouse import set_position
+from je_auto_control.wrapper.auto_control_record import record, stop_record
+from je_auto_control.wrapper.auto_control_screen import screenshot, size
 
 
 class Executor(object):
@@ -70,7 +71,13 @@ class Executor(object):
             # record
             "record": record,
             "stop_record": stop_record,
+            # execute
+            "execute_action": self.execute_action,
+            "execute_files": self.execute_files,
         }
+        # get all time module builtin function and add to event dict
+        for function in getmembers(time, isbuiltin):
+            self.event_dict.update({str(function): function})
 
     def _execute_event(self, action: list):
         event = self.event_dict.get(action[0])
