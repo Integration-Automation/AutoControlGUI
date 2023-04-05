@@ -3,7 +3,6 @@ import time
 import types
 from inspect import getmembers, isbuiltin
 
-from je_auto_control.utils.package_manager.package_manager_class import package_manager
 from je_auto_control.utils.exception.exception_tags import action_is_null_error, add_command_exception_tag, \
     executor_list_error
 from je_auto_control.utils.exception.exception_tags import cant_execute_action_error
@@ -16,6 +15,7 @@ from je_auto_control.utils.generate_report.generate_json_report import generate_
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml_report
 from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.package_manager.package_manager_class import package_manager
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_and_click, locate_image_center
 from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
@@ -137,6 +137,7 @@ class Executor(object):
 
 
 executor = Executor()
+package_manager.executor = executor
 
 
 def add_command_to_executor(command_dict: dict):
