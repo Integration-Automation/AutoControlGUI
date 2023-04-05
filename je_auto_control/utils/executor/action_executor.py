@@ -3,6 +3,7 @@ import time
 import types
 from inspect import getmembers, isbuiltin
 
+from je_auto_control.utils.package_manager.package_manager_class import package_manager
 from je_auto_control.utils.exception.exception_tags import action_is_null_error, add_command_exception_tag, \
     executor_list_error
 from je_auto_control.utils.exception.exception_tags import cant_execute_action_error
@@ -74,6 +75,7 @@ class Executor(object):
             # execute
             "execute_action": self.execute_action,
             "execute_files": self.execute_files,
+            "add_package_to_executor": package_manager.add_package_to_executor,
         }
         # get all time module builtin function and add to event dict
         for function in getmembers(time, isbuiltin):

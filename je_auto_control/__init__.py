@@ -71,6 +71,8 @@ from je_auto_control.utils.generate_report.generate_xml_report import generate_x
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml_report
 # callback
 from je_auto_control.utils.callback.callback_function_executor import callback_executor
+# package manager
+from je_auto_control.utils.package_manager.package_manager_class import package_manager
 
 __all__ = [
     "click_mouse", "mouse_table", "position", "press_mouse", "release_mouse",
@@ -95,5 +97,5 @@ __all__ = [
     "generate_json", "generate_json_report",
     "generate_xml", "generate_xml_report",
     "get_dir_files_as_list", "create_template_dir", "start_autocontrol_socket_server",
-    "callback_executor"
+    "callback_executor", "package_manager"
 ]
