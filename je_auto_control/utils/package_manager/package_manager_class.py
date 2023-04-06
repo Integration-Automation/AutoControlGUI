@@ -3,6 +3,7 @@ from importlib.util import find_spec
 from inspect import getmembers, isfunction
 from sys import stderr
 
+
 class PackageManager(object):
 
     def __init__(self):
