@@ -1,9 +1,6 @@
 ====================================
-AutoControl ENG DOC
+AutoControl English Documentation
 ====================================
 
 .. toctree::
    :maxdepth: 4
-
-   example/example_index.rst
-   doc/doc_index.rst

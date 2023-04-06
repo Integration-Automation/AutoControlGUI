@@ -1,4 +1,4 @@
-# Why we need follow this rule
+# Why should we follow this guidelines
 > * Following these guidelines helps to communicate that you respect the time of the developers managing and developing this open source project. 
 > * In return, they should reciprocate that respect in addressing your issue, assessing changes, and helping you finalize your pull requests.
 
@@ -7,7 +7,7 @@
 > * Keep feature versions as small as possible, preferably one new feature per version.
 > * Make sure all tests pass and CI/CD pipelines pass.
 
-## What we can do in this repo
+## What you can do in this repo
 > * Doc translate, renew, improving,etc.
 > * Feature requests or writing new feature etc.
 > * Submitting the bug reports, bug fix etc.
@@ -37,10 +37,10 @@
 >> * What did you do?
 >> * What did you expect to see?
 >> * What did you see instead?
->> * General questions should go to mail instead.
+>> * General questions should go to discord instead.
 
 ## How to suggest a feature 
-> * pen an issue on our issues list on GitHub which describes the feature you would like to see, why you need it, and how it should work.
+> * Pen an issue on our issues list on GitHub which describes the feature you would like to see, why you need it, and how it should work.
 
 ## Code review process
 > * If all tests pass we will check code on every week Sa and Su day

@@ -1,9 +1,6 @@
 ====================================
-AutoControl 繁體中文文件
+AutoControl Traditional Chinese Documentation
 ====================================
 
 .. toctree::
    :maxdepth: 4
-
-   example/example_index.rst
-   doc/doc_index.rst
