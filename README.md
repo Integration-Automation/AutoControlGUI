@@ -56,19 +56,25 @@ pip install je_auto_control
 
 ## Info
 
->* requirement
->>    * Python 3.7 & later
->>    * pip 19.3 & later
+> * requirement
+>> * Python 3.7 & later
+>> * pip 19.3 & later
+
+> * Dev env
+>> * windows 11
+>> * osx 11 big sur
+>> * ubuntu 20.0.4
 
 
->* Dev env
->>    * windows 11
- >>   * osx 11 big sur
- >>   * ubuntu 20.0.4
+> * Test on
+>> * Windows 10 ~ 11
+>> * osx 10.5 ~ 11 big sur
+>> * ubuntu 20.0.4
+>> * raspberry pi 3B and 4B
 
+## How to set dev environment
 
->* Test on
->>    * Windows 10 ~ 11
->>    * osx 10.5 ~ 11 big sur
->>    * ubuntu 20.0.4
->>    * raspberry pi 3B and 4B
+> * Clone repo on GitHub or download source code
+> * Prepare a python venv
+> * Run command "pip install --upgrade pip"
+> * Run command "pip install -r dev_requirements.txt"
