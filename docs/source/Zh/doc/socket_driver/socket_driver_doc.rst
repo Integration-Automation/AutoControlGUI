@@ -1,14 +1,15 @@
 Socket Driver
 ----
 
-* This is an experimental feature.
-* The Socket Server is mainly used to allow other programming languages to use AutoControl.
-* It processes received strings and performs actions through the underlying executor.
-* Tests can be performed remotely through this feature.
-* Currently, Java and C# support are experimental.
-* Return_Data_Over_JE should be transmitted at the end of each paragraph.
-* UTF-8 encoding is used.
-* Sending quit_server will shut down the server.
+* 實驗性的功能。
+* Socket Server 主要用來讓其他程式語言也可以使用 AutoControl。
+* 透過底層的 executor 處理接收到字串並進行執行動作。
+* 可以透過遠端來執行測試的動作。
+
+* 目前有實驗性的 Java 與 C# 支援。
+* 每個段落結束都應該傳輸 Return_Data_Over_JE。
+* 使用 UTF-8 encoding。
+* 傳送 quit_server 將會關閉伺服器。
 
 .. code-block:: python
 

@@ -1,9 +1,9 @@
-Screen
+螢幕
 ----
 
-* Screen is used to get the screen size and take screenshots.
+* Screen 用來取得螢幕尺寸與截圖。
 
-The following example shows how to take a screenshot.
+以下範例是截圖
 
 .. code-block:: python
 
@@ -11,7 +11,7 @@ The following example shows how to take a screenshot.
 
     screenshot()
 
-The following example shows how to get a screen size.
+以下範例是取得螢幕尺寸
 
 .. code-block:: python
 
