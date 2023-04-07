@@ -1,5 +1,5 @@
-from je_auto_control import size
+from je_auto_control import screen_size
 
-screen_size = size()
-assert (size() is not None)
+screen_size = screen_size()
+assert (screen_size() is not None)
 print(screen_size)

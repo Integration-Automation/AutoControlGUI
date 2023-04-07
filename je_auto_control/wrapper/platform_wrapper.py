@@ -483,9 +483,9 @@ elif sys.platform in ["linux", "linux2"]:
 else:
     raise AutoControlException("unknown operating system")
 
-keys_table = None
-mouse_table = None
-special_table = None
+keyboard_keys_table = None
+mouse_keys_table = None
+special_mouse_keys_table = None
 keyboard = None
 keyboard_check = None
 mouse = None
@@ -494,7 +494,7 @@ recorder = None
 
 if sys.platform in ["win32", "cygwin", "msys"]:
 
-    keys_table = {
+    keyboard_keys_table = {
         "absolute": win32_ABSOLUTE,
         "eventf_extendedkey": win32_EventF_EXTENDEDKEY,
         "eventf_keyup": win32_EventF_KEYUP,
@@ -688,7 +688,7 @@ if sys.platform in ["win32", "cygwin", "msys"]:
         "Z": win32_keyZ,
         "z": win32_keyZ,
     }
-    mouse_table = {
+    mouse_keys_table = {
         "mouse_left": win32_mouse_left,
         "mouse_middle": win32_mouse_middle,
         "mouse_right": win32_mouse_right,
@@ -701,12 +701,12 @@ if sys.platform in ["win32", "cygwin", "msys"]:
     screen = win32_screen
     recorder = win32_recorder
 
-    if None in [keys_table, mouse_table, keyboard_check, keyboard, mouse, screen, recorder]:
+    if None in [keyboard_keys_table, mouse_keys_table, keyboard_check, keyboard, mouse, screen, recorder]:
         raise AutoControlException("Can't init auto control")
 
 elif sys.platform in ["darwin"]:
 
-    keys_table = {
+    keyboard_keys_table = {
         "a": osx_key_a,
         "A": osx_key_A,
         "b": osx_key_b,
@@ -854,7 +854,7 @@ elif sys.platform in ["darwin"]:
         "eisu": osx_key_eisu,
         "kana": osx_key_kana,
     }
-    mouse_table = {
+    mouse_keys_table = {
         "mouse_left": osx_mouse_left,
         "mouse_middle": osx_mouse_middle,
         "mouse_right": osx_mouse_right,
@@ -863,12 +863,12 @@ elif sys.platform in ["darwin"]:
     keyboard_check = osx_keyboard_check
     mouse = osx_mouse
     screen = osx_screen
-    if None in [keys_table, mouse_table, keyboard_check, keyboard, mouse, screen]:
+    if None in [keyboard_keys_table, mouse_keys_table, keyboard_check, keyboard, mouse, screen]:
         raise AutoControlException("Can't init auto control")
 
 elif sys.platform in ["linux", "linux2"]:
 
-    keys_table = {
+    keyboard_keys_table = {
         "backspace": x11_linux_key_backspace,
         "\b": x11_linux_key_slash_b,
         "tab": x11_linux_key_tab,
@@ -1051,12 +1051,12 @@ elif sys.platform in ["linux", "linux2"]:
         "9": x11_linux_key_9,
         "0": x11_linux_key_0,
     }
-    mouse_table = {
+    mouse_keys_table = {
         "mouse_left": x11_linux_mouse_left,
         "mouse_middle": x11_linux_mouse_middle,
         "mouse_right": x11_linux_mouse_right
     }
-    special_table = {
+    special_mouse_keys_table = {
         "scroll_up": x11_linux_scroll_direction_up,
         "scroll_down": x11_linux_scroll_direction_down,
         "scroll_left": x11_linux_scroll_direction_left,
@@ -1067,8 +1067,8 @@ elif sys.platform in ["linux", "linux2"]:
     mouse = x11_linux_mouse_control
     screen = x11_linux_screen
     recorder = x11_linux_recoder
-    if None in [keys_table, mouse_table, special_table, keyboard, mouse, screen, recorder]:
+    if None in [keyboard_keys_table, mouse_keys_table, special_mouse_keys_table, keyboard, mouse, screen, recorder]:
         raise AutoControlException("Can't init auto control")
 
-if None in [keys_table, mouse_table, keyboard, mouse, screen]:
+if None in [keyboard_keys_table, mouse_keys_table, keyboard, mouse, screen]:
     raise AutoControlException("Can't init auto control")

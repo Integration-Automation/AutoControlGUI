@@ -9,7 +9,7 @@ from je_auto_control.utils.image import template_detection
 from je_auto_control.utils.image.screenshot import pil_screenshot
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
-from je_auto_control.wrapper.auto_control_mouse import set_position
+from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
 
 
 def locate_all_image(image, detect_threshold: [float, int] = 1,
@@ -85,7 +85,7 @@ def locate_and_click(
             center = [int(height / 2), int(width / 2)]
             image_center_x = image_data_array[1][0] + center[0]
             image_center_y = image_data_array[1][1] + center[1]
-            set_position(int(image_center_x), int(image_center_y))
+            set_mouse_position(int(image_center_x), int(image_center_y))
             click_mouse(mouse_keycode)
             record_action_to_list("locate_and_click", param)
             return [int(image_center_x), int(image_center_y)]

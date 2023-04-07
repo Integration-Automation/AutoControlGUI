@@ -31,9 +31,9 @@
 
 .. code-block:: python
 
-    from je_auto_control import type_key
+    from je_auto_control import type_keyboard
 
-    type_key("a")
+    type_keyboard("a")
 
 以下範例是檢查鍵盤 a 鍵是否按著
 

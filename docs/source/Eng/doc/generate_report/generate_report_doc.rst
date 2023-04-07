@@ -22,35 +22,35 @@ Generate Report 可以生成以下格式的報告
     if sys.platform in ["win32", "cygwin", "msys"]:
         test_list = [
             ["set_record_enable", {"set_enable": True}],
-            ["type_key", {"keycode": 65}],
+            ["type_keyboard", {"keycode": 65}],
             ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["position"],
+            ["get_mouse_position"],
             ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
             ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
+            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
             ["generate_html_report"],
         ]
 
     elif sys.platform in ["linux", "linux2"]:
         test_list = [
             ["set_record_enable", {"set_enable": True}],
-            ["type_key", {"keycode": 38}],
+            ["type_keyboard", {"keycode": 38}],
             ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["position"],
+            ["get_mouse_position"],
             ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
             ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
+            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
             ["generate_html_report"],
         ]
     elif sys.platform in ["darwin"]:
         test_list = [
             ["set_record_enable", {"set_enable": True}],
-            ["type_key", {"keycode": 0x00}],
+            ["type_keyboard", {"keycode": 0x00}],
             ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["position"],
+            ["get_mouse_position"],
             ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
             ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
+            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
             ["generate_html_report"],
         ]
     print("\n\n")
@@ -71,35 +71,35 @@ Generate Report 可以生成以下格式的報告
     if sys.platform in ["win32", "cygwin", "msys"]:
         test_list = [
             ["set_record_enable", {"set_enable": True}],
-            ["type_key", {"keycode": 65}],
+            ["type_keyboard", {"keycode": 65}],
             ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["position"],
+            ["get_mouse_position"],
             ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
             ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
+            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
             ["generate_json_report"],
         ]
 
     elif sys.platform in ["linux", "linux2"]:
         test_list = [
             ["set_record_enable", {"set_enable": True}],
-            ["type_key", {"keycode": 38}],
+            ["type_keyboard", {"keycode": 38}],
             ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["position"],
+            ["get_mouse_position"],
             ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
             ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
+            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
             ["generate_json_report"],
         ]
     elif sys.platform in ["darwin"]:
         test_list = [
             ["set_record_enable", {"set_enable": True}],
-            ["type_key", {"keycode": 0x00}],
+            ["type_keyboard", {"keycode": 0x00}],
             ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["position"],
+            ["get_mouse_position"],
             ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
             ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
+            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
             ["generate_json_report"],
         ]
     print("\n\n")
@@ -119,35 +119,35 @@ Generate Report 可以生成以下格式的報告
     if sys.platform in ["win32", "cygwin", "msys"]:
         test_list = [
             ["set_record_enable", {"set_enable": True}],
-            ["type_key", {"keycode": 65}],
+            ["type_keyboard", {"keycode": 65}],
             ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["position"],
+            ["get_mouse_position"],
             ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
             ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
+            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
             ["generate_xml_report"]
         ]
 
     elif sys.platform in ["linux", "linux2"]:
         test_list = [
             ["set_record_enable", {"set_enable": True}],
-            ["type_key", {"keycode": 38}],
+            ["type_keyboard", {"keycode": 38}],
             ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["position"],
+            ["get_mouse_position"],
             ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
             ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
+            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
             ["generate_xml_report"]
         ]
     elif sys.platform in ["darwin"]:
         test_list = [
             ["set_record_enable", {"set_enable": True}],
-            ["type_key", {"keycode": 0x00}],
+            ["type_keyboard", {"keycode": 0x00}],
             ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["position"],
+            ["get_mouse_position"],
             ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
             ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_key", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
+            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
             ["generate_xml_report"]
         ]
     print("\n\n")

@@ -1,7 +1,7 @@
-鍵盤 文件
+鍵盤
 ----
 
-* 主要用來模擬鍵盤的控制。
+* 用來模擬鍵盤的控制。
 * 提供熱鍵、檢盤鍵盤按鍵狀態(是否按下)、模擬鍵盤控制等功能。
 
 以下範例是取得鍵盤的資訊，
@@ -31,9 +31,9 @@
 
 .. code-block:: python
 
-    from je_auto_control import type_key
+    from je_auto_control import type_keyboard
 
-    type_key("a")
+    type_keyboard("a")
 
 以下範例是檢查鍵盤 a 鍵是否按著
 
@@ -51,7 +51,7 @@
 
     write("abcdefg")
 
-以下範例是按下按鍵並相反的釋放
+以下範例是按下按鍵並相反的釋放按鍵
 
 .. code-block:: python
 

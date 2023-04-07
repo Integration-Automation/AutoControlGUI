@@ -68,42 +68,41 @@ from je_auto_control.utils.test_record.record_test_class import \
 # timeout
 from je_auto_control.utils.timeout.multiprocess_timeout import \
     multiprocess_timeout
-# import image
 from je_auto_control.wrapper.auto_control_image import locate_all_image
 from je_auto_control.wrapper.auto_control_image import locate_and_click
 from je_auto_control.wrapper.auto_control_image import locate_image_center
-from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
-from je_auto_control.wrapper.auto_control_keyboard import hotkey
 # import keyboard
-from je_auto_control.wrapper.auto_control_keyboard import keys_table
-from je_auto_control.wrapper.auto_control_keyboard import press_key
-from je_auto_control.wrapper.auto_control_keyboard import release_key
-from je_auto_control.wrapper.auto_control_keyboard import type_key
-from je_auto_control.wrapper.auto_control_keyboard import write
-from je_auto_control.wrapper.auto_control_keyboard import get_keys_table
+from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
+from je_auto_control.wrapper.auto_control_keyboard import get_keyboard_keys_table
 from je_auto_control.wrapper.auto_control_keyboard import get_special_table
+from je_auto_control.wrapper.auto_control_keyboard import hotkey
+from je_auto_control.wrapper.auto_control_keyboard import keyboard_keys_table
+from je_auto_control.wrapper.auto_control_keyboard import press_keyboard_key
+from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
+from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
+from je_auto_control.wrapper.auto_control_keyboard import write
 # import mouse
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
-from je_auto_control.wrapper.auto_control_mouse import mouse_table
-from je_auto_control.wrapper.auto_control_mouse import position
+from je_auto_control.wrapper.auto_control_mouse import mouse_keys_table
+from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
 from je_auto_control.wrapper.auto_control_mouse import press_mouse
 from je_auto_control.wrapper.auto_control_mouse import release_mouse
-from je_auto_control.wrapper.auto_control_mouse import scroll
-from je_auto_control.wrapper.auto_control_mouse import set_position
-from je_auto_control.wrapper.auto_control_mouse import special_table
+from je_auto_control.wrapper.auto_control_mouse import mouse_scroll
+from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
+from je_auto_control.wrapper.auto_control_mouse import special_mouse_keys_table
 # test_record
 from je_auto_control.wrapper.auto_control_record import record
 from je_auto_control.wrapper.auto_control_record import stop_record
 from je_auto_control.wrapper.auto_control_screen import screenshot
 # import screen
-from je_auto_control.wrapper.auto_control_screen import size
+from je_auto_control.wrapper.auto_control_screen import screen_size
 
 __all__ = [
-    "click_mouse", "mouse_table", "position", "press_mouse", "release_mouse",
-    "scroll", "set_position", "special_table",
-    "keys_table", "press_key", "release_key", "type_key", "check_key_is_press",
+    "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
+    "mouse_scroll", "set_mouse_position", "special_mouse_keys_table",
+    "keyboard_keys_table", "press_keyboard_key", "release_keyboard_key", "type_keyboard", "check_key_is_press",
     "write", "hotkey",
-    "size", "screenshot",
+    "screen_size", "screenshot",
     "locate_all_image", "locate_image_center", "locate_and_click",
     "CriticalExit",
     "AutoControlException", "AutoControlKeyboardException",

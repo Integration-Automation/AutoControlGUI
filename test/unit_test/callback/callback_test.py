@@ -4,9 +4,9 @@ from je_auto_control import callback_executor
 # so this test will first print("test") then print(size_function_return_value)
 print(
     callback_executor.callback_function(
-        trigger_function_name="size",
+        trigger_function_name="screen_size",
         callback_function=print,
         callback_param_method="args",
-        callback_function_param={"": "test"}
+        callback_function_param={"test"}
     )
 )

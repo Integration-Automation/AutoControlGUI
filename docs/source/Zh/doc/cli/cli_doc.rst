@@ -1,4 +1,4 @@
-命令列介面 文件
+命令列介面
 ----
 
 我們可以使用 CLI 模式去執行 keyword.json 檔案或執行包含 Keyword.json files 的資料夾，

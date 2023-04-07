@@ -13,14 +13,14 @@ from je_auto_control.utils.exception.exception_tags import table_cant_find_key
 from je_auto_control.utils.exception.exceptions import AutoControlCantFindKeyException
 from je_auto_control.utils.exception.exceptions import AutoControlMouseException
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
-from je_auto_control.wrapper.auto_control_screen import size
+from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.platform_wrapper import mouse
-from je_auto_control.wrapper.platform_wrapper import mouse_table
-from je_auto_control.wrapper.platform_wrapper import special_table
+from je_auto_control.wrapper.platform_wrapper import mouse_keys_table
+from je_auto_control.wrapper.platform_wrapper import special_mouse_keys_table
 
 
 def get_mouse_table():
-    return mouse_table
+    return mouse_keys_table
 
 
 def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int) -> Tuple[Union[int, str], int, int]:
@@ -34,13 +34,13 @@ def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int) -> Tuple[Union[i
     """
     try:
         if isinstance(mouse_keycode, str):
-            mouse_keycode = mouse_table.get(mouse_keycode)
+            mouse_keycode = mouse_keys_table.get(mouse_keycode)
         else:
             pass
     except AutoControlCantFindKeyException:
         raise AutoControlCantFindKeyException(table_cant_find_key)
     try:
-        now_x, now_y = position()
+        now_x, now_y = get_mouse_position()
         if x is None:
             x = now_x
         if y is None:
@@ -50,14 +50,14 @@ def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int) -> Tuple[Union[i
     return mouse_keycode, x, y
 
 
-def position() -> Tuple[int, int]:
+def get_mouse_position() -> Tuple[int, int]:
     """
     get mouse current position
     return mouse_x, mouse_y
     """
     try:
         try:
-            record_action_to_list("position", None)
+            record_action_to_list("get_mouse_position", None)
             return mouse.position()
         except AutoControlMouseException as error:
             raise AutoControlMouseException(mouse_get_position + " " + repr(error))
@@ -66,7 +66,7 @@ def position() -> Tuple[int, int]:
         print(repr(error), file=sys.stderr)
 
 
-def set_position(x: int, y: int) -> Tuple[int, int]:
+def set_mouse_position(x: int, y: int) -> Tuple[int, int]:
     """
     :param x set mouse position x
     :param y set mouse position y
@@ -83,7 +83,7 @@ def set_position(x: int, y: int) -> Tuple[int, int]:
         except ctypes.ArgumentError as error:
             raise AutoControlMouseException(mouse_wrong_value + " " + repr(error))
     except Exception as error:
-        record_action_to_list("set_position", param, repr(error))
+        record_action_to_list("set_mouse_position", param, repr(error))
         print(repr(error), file=sys.stderr)
 
 
@@ -167,7 +167,7 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tupl
         print(repr(error), file=sys.stderr)
 
 
-def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down") -> Tuple[int, str]:
+def mouse_scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down") -> Tuple[int, str]:
     """"
     :param scroll_value scroll count
     :param x mouse click x position
@@ -181,11 +181,11 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
     param = locals()
     try:
         try:
-            now_cursor_x, now_cursor_y = position()
+            now_cursor_x, now_cursor_y = get_mouse_position()
         except AutoControlMouseException as error:
             record_action_to_list("scroll", param, repr(error))
             raise AutoControlMouseException(mouse_get_position)
-        width, height = size()
+        width, height = screen_size()
         if x is None:
             x = now_cursor_x
         else:
@@ -206,7 +206,7 @@ def scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: st
             elif sys.platform in ["darwin"]:
                 mouse.scroll(scroll_value)
             elif sys.platform in ["linux", "linux2"]:
-                scroll_direction = special_table.get(scroll_direction)
+                scroll_direction = special_mouse_keys_table.get(scroll_direction)
                 mouse.scroll(scroll_value, scroll_direction)
             return scroll_value, scroll_direction
         except AutoControlMouseException as error:

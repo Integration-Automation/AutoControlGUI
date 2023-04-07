@@ -12,7 +12,7 @@ from je_auto_control.utils.test_record.record_test_class import record_action_to
 from je_auto_control.wrapper.platform_wrapper import screen
 
 
-def size() -> Tuple[int, int]:
+def screen_size() -> Tuple[int, int]:
     """
     get screen size
     """

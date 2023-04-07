@@ -1,8 +1,8 @@
-回調函數 文件
+Callback Function
 ----
 
-在 AutoControl 裡，Callback function 是由 Callback Executor 提供支援，
-以下是簡易的使用 Callback Executor 的範例，
+In AutoControl, callback functions are supported by the Callback Executor.
+Below is a simple example of using the Callback Executor:
 
 .. code-block:: python
 
@@ -18,29 +18,35 @@
         )
     )
 
-* ( 注意!，如果 callback_executor event_dict 裡面包含的 name: function 需與 executor 一樣，不一樣則是 Bug)
-* (當然跟 executor 一樣可以藉由添加外部 function 來擴充，請看下面例子)
+* Note that if the "name: function" pair in the callback_executor event_dict is different from the executor, it is a bug.
+* Of course, like the executor, it can be expanded by adding external functions. Please see the example below.
 
-在這個範例裡，我們使用 callback_executor 執行定義在 AutoControl 的 size function，
-然後執行完 size function 後，會去執行傳遞給 callback_function 的 function，
-可以由 callback_param_method 參數來決定要使用的傳遞方法，
-如果是 "args" 請傳入 {"any_name_but_not_duplicate": value, ...} 這裡 ... 代表可以複數傳入，
-如果是 "kwargs" 請傳入 {"actually_param_name": value, ...} 這裡 ... 代表可以複數傳入，
-然後如果要使用回傳值的話，由於回傳值會在所有 function 執行完後才回傳，
-實際上 size -> print 順序沒錯，但此例會先看到 print 之後才是 print(size_function_return_value)，
-因為 size function 只有回傳值本身沒有 print 的動作。
+In this example, we use callback_executor to execute the "size" function defined in AutoControl.
+After executing the "size" function, the function passed to callback_function will be executed.
+The delivery method can be determined by the callback_param_method parameter.
+If it is "args", please pass in {"value1", "value2", ...}.
+Here, the ellipsis (...) represents multiple inputs.
+ If it is "kwargs", please pass in {"actually_param_name": value, ...}.
+Here, the ellipsis (...) again represents multiple inputs.
+ If you want to use the return value,
+since the return value will only be returned after all functions are executed,
+you will actually see the "print" statement
+before the "print(size_function_return_value)" statement in this example,
+even though the order of size -> print is correct.
+This is because the "size" function only returns the value itself without printing it.
 
-如果我們想要在 callback_executor 裡面添加 function，可以使用如下:
-這段程式碼會把所有 time module 的 builtin, function, method, class
-載入到 callback executor，然後要使用被載入的 function 需要使用 package_function 名稱，
-例如 time.sleep 會變成 time_sleep
+This code will load all built-in functions, methods, and classes of the time module into the callback executor.
+To use the loaded functions, we need to use the package_function name,
+for example, time.sleep will become time_sleep.
+
+If we want to add functions in the callback_executor, we can use the following code:
 
 .. code-block:: python
 
     from je_auto_control import package_manager
     package_manager.add_package_to_callback_executor("time")
 
-如果你需要查看被更新的 event_dict 可以使用
+If you need to check the updated event_dict, you can use:
 
 .. code-block:: python
 

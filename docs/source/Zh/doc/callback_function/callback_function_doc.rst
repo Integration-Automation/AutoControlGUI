@@ -1,4 +1,4 @@
-回調函數 文件
+回調函數
 ----
 
 在 AutoControl 裡，Callback function 是由 Callback Executor 提供支援，
@@ -24,7 +24,7 @@
 在這個範例裡，我們使用 callback_executor 執行定義在 AutoControl 的 size function，
 然後執行完 size function 後，會去執行傳遞給 callback_function 的 function，
 可以由 callback_param_method 參數來決定要使用的傳遞方法，
-如果是 "args" 請傳入 {"any_name_but_not_duplicate": value, ...} 這裡 ... 代表可以複數傳入，
+如果是 "args" 請傳入 {"value1", "value2", ...} 這裡 ... 代表可以複數傳入，
 如果是 "kwargs" 請傳入 {"actually_param_name": value, ...} 這裡 ... 代表可以複數傳入，
 然後如果要使用回傳值的話，由於回傳值會在所有 function 執行完後才回傳，
 實際上 size -> print 順序沒錯，但此例會先看到 print 之後才是 print(size_function_return_value)，
@@ -34,6 +34,8 @@
 這段程式碼會把所有 time module 的 builtin, function, method, class
 載入到 callback executor，然後要使用被載入的 function 需要使用 package_function 名稱，
 例如 time.sleep 會變成 time_sleep
+
+這段程式碼會把 time 所有的 function 加入 executor(直譯器裡)。
 
 .. code-block:: python
 

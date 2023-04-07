@@ -1,4 +1,4 @@
-鍵盤與執行者 文件
+關鍵字與執行者
 ----
 
 * Keyword 是一個 JSON 檔案裏面包含許多自定義的關鍵字與參數。
@@ -15,6 +15,10 @@
         # If you are using position param
         ["function_name_in_event_dict": {param_value1, param_value2....}]
     ]
+
+executor 是一個會解析 JSON 檔案的直譯器，
+可以簡單地透過網路傳輸到遠端伺服器或電腦，
+再藉由遠端伺服器或電腦的 executor 執行自動化。
 
 如果我們想要在 executor 裡面添加 function，可以使用如下:
 這段程式碼會把所有 time module 的 builtin, function, method, class

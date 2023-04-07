@@ -36,10 +36,10 @@
 
 .. code-block:: python
 
-    from je_auto_control import position, set_position
+    from je_auto_control import get_mouse_position, set_mouse_position
 
-    print(position)
-    set_position(100, 100)
+    print(get_mouse_position())
+    set_mouse_position(100, 100)
 
 以下範例是3秒後滑鼠會往上 scroll
 
