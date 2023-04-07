@@ -23,12 +23,12 @@ class KeypressHandler(Thread):
 
     def __init__(self, default_daemon: bool = True):
         """
-        setDaemon : default damon is true
+        default damon is true
         still listener : continue listener keycode ?
         event_key_code : now current key code default is 0
         """
         super().__init__()
-        self.setDaemon(default_daemon)
+        self.daemon = default_daemon
         self.still_listener = True
         self.record_flag = False
         self.record_queue = None
@@ -89,7 +89,7 @@ class XWindowsKeypressListener(Thread):
         set root
         """
         super().__init__()
-        self.setDaemon(default_daemon)
+        self.daemon = default_daemon
         self.still_listener = True
         self.handler = KeypressHandler()
         self.root = current_display.screen().root

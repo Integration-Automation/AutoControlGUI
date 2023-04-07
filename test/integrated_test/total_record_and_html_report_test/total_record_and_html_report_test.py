@@ -1,19 +1,19 @@
 import sys
 
 from je_auto_control import generate_html
-from je_auto_control import keys_table
-from je_auto_control import press_key
-from je_auto_control import release_key
+from je_auto_control import keyboard_keys_table
+from je_auto_control import press_keyboard_key
+from je_auto_control import release_keyboard_key
 from je_auto_control import test_record_instance
 from je_auto_control import write
 
 try:
     test_record_instance.set_record_enable(True)
-    print(keys_table.keys())
-    press_key("shift")
+    print(keyboard_keys_table.keys())
+    press_keyboard_key("shift")
     write("123456789")
     assert (write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz")
-    release_key("shift")
+    release_keyboard_key("shift")
     # this write will print one error -> keyboard write error can't find key : Ѓ and write remain string
     try:
         assert (write("?123456789") == "123456789")

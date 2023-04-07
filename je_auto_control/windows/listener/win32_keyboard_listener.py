@@ -27,7 +27,7 @@ class Win32KeyboardListener(Thread):
 
     def __init__(self):
         super().__init__()
-        self.setDaemon(True)
+        self.daemon = True
         self.hooked: [None, int] = None
         self.record_queue: [None, Queue] = None
         self.record_flag: bool = False
@@ -56,7 +56,7 @@ class Win32KeyboardListener(Thread):
         if self.record_flag is True:
             # int to hex
             temp = hex(l_param[0] & 0xFFFFFFFF)
-            self.record_queue.put(("type_key", int(temp, 16)))
+            self.record_queue.put(("type_keyboard", int(temp, 16)))
         return _user32.CallNextHookEx(self.hooked, code, w_param, l_param)
 
     def _start_listener(self) -> None:

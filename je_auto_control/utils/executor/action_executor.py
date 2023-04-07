@@ -19,13 +19,15 @@ from je_auto_control.utils.package_manager.package_manager_class import package_
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_and_click, locate_image_center
 from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
-from je_auto_control.wrapper.auto_control_keyboard import get_special_table, get_keys_table
-from je_auto_control.wrapper.auto_control_keyboard import press_key, release_key, hotkey, type_key, write
+from je_auto_control.wrapper.auto_control_keyboard import get_special_table, get_keyboard_keys_table
+from je_auto_control.wrapper.auto_control_keyboard import press_keyboard_key, release_keyboard_key, hotkey, \
+    type_keyboard, write
+from je_auto_control.wrapper.auto_control_mouse import get_mouse_position, press_mouse, release_mouse, click_mouse, \
+    mouse_scroll
 from je_auto_control.wrapper.auto_control_mouse import get_mouse_table
-from je_auto_control.wrapper.auto_control_mouse import position, press_mouse, release_mouse, click_mouse, scroll
-from je_auto_control.wrapper.auto_control_mouse import set_position
+from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
 from je_auto_control.wrapper.auto_control_record import record, stop_record
-from je_auto_control.wrapper.auto_control_screen import screenshot, size
+from je_auto_control.wrapper.auto_control_screen import screenshot, screen_size
 
 
 class Executor(object):
@@ -37,18 +39,18 @@ class Executor(object):
             "mouse_right": click_mouse,
             "mouse_middle": click_mouse,
             "click_mouse": click_mouse,
-            "mouse_table": get_mouse_table,
-            "position": position,
+            "get_mouse_table": get_mouse_table,
+            "get_mouse_position": get_mouse_position,
             "press_mouse": press_mouse,
             "release_mouse": release_mouse,
-            "scroll": scroll,
-            "set_position": set_position,
-            "special_table": get_special_table,
+            "mouse_scroll": mouse_scroll,
+            "set_mouse_position": set_mouse_position,
+            "get_special_table": get_special_table,
             # keyboard
-            "keys_table": get_keys_table,
-            "type_key": type_key,
-            "press_key": press_key,
-            "release_key": release_key,
+            "get_keyboard_keys_table": get_keyboard_keys_table,
+            "type_keyboard": type_keyboard,
+            "press_keyboard_key": press_keyboard_key,
+            "release_keyboard_key": release_keyboard_key,
             "check_key_is_press": check_key_is_press,
             "write": write,
             "hotkey": hotkey,
@@ -57,7 +59,7 @@ class Executor(object):
             "locate_image_center": locate_image_center,
             "locate_and_click": locate_and_click,
             # screen
-            "size": size,
+            "screen_size": screen_size,
             "screenshot": screenshot,
             # test record
             "set_record_enable": test_record_instance.set_record_enable,
@@ -76,6 +78,7 @@ class Executor(object):
             "execute_action": self.execute_action,
             "execute_files": self.execute_files,
             "add_package_to_executor": package_manager.add_package_to_executor,
+            "add_package_to_callback_executor": package_manager.add_package_to_callback_executor
         }
         # get all time module builtin function and add to event dict
         for function in getmembers(time, isbuiltin):
@@ -84,7 +87,10 @@ class Executor(object):
     def _execute_event(self, action: list):
         event = self.event_dict.get(action[0])
         if len(action) == 2:
-            return event(**action[1])
+            if isinstance(action[1], dict):
+                return event(**action[1])
+            else:
+                return event(*action[1])
         elif len(action) == 1:
             return event()
         else:

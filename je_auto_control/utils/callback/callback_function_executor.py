@@ -22,6 +22,8 @@ from je_auto_control.utils.image.screenshot import pil_screenshot
 # json
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.json.json_file import write_action_json
+from je_auto_control.utils.package_manager.package_manager_class import \
+    package_manager
 # socket server
 from je_auto_control.utils.socket_server.auto_control_socket_server import start_autocontrol_socket_server
 # test record
@@ -30,29 +32,26 @@ from je_auto_control.utils.test_record.record_test_class import test_record_inst
 from je_auto_control.wrapper.auto_control_image import locate_all_image
 from je_auto_control.wrapper.auto_control_image import locate_and_click
 from je_auto_control.wrapper.auto_control_image import locate_image_center
-from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
+from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press, get_special_table, get_keyboard_keys_table
 from je_auto_control.wrapper.auto_control_keyboard import hotkey
 # import keyboard
-from je_auto_control.wrapper.auto_control_keyboard import keys_table
-from je_auto_control.wrapper.auto_control_keyboard import press_key
-from je_auto_control.wrapper.auto_control_keyboard import release_key
-from je_auto_control.wrapper.auto_control_keyboard import type_key
+from je_auto_control.wrapper.auto_control_keyboard import press_keyboard_key
+from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
+from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
 from je_auto_control.wrapper.auto_control_keyboard import write
 # import mouse
-from je_auto_control.wrapper.auto_control_mouse import click_mouse
-from je_auto_control.wrapper.auto_control_mouse import mouse_table
-from je_auto_control.wrapper.auto_control_mouse import position
+from je_auto_control.wrapper.auto_control_mouse import click_mouse, get_mouse_table
+from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
+from je_auto_control.wrapper.auto_control_mouse import mouse_scroll
 from je_auto_control.wrapper.auto_control_mouse import press_mouse
 from je_auto_control.wrapper.auto_control_mouse import release_mouse
-from je_auto_control.wrapper.auto_control_mouse import scroll
-from je_auto_control.wrapper.auto_control_mouse import set_position
-from je_auto_control.wrapper.auto_control_mouse import special_table
+from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
 # test_record
 from je_auto_control.wrapper.auto_control_record import record
 from je_auto_control.wrapper.auto_control_record import stop_record
-from je_auto_control.wrapper.auto_control_screen import screenshot
 # import screen
-from je_auto_control.wrapper.auto_control_screen import size
+from je_auto_control.wrapper.auto_control_screen import screen_size
+from je_auto_control.wrapper.auto_control_screen import screenshot
 
 
 class CallbackFunctionExecutor(object):
@@ -64,18 +63,18 @@ class CallbackFunctionExecutor(object):
             "mouse_right": click_mouse,
             "mouse_middle": click_mouse,
             "click_mouse": click_mouse,
-            "mouse_table": mouse_table,
-            "position": position,
+            "get_mouse_table": get_mouse_table,
+            "get_mouse_position": get_mouse_position,
             "press_mouse": press_mouse,
             "release_mouse": release_mouse,
-            "scroll": scroll,
-            "set_position": set_position,
-            "special_table": special_table,
+            "mouse_scroll": mouse_scroll,
+            "set_mouse_position": set_mouse_position,
+            "get_special_table": get_special_table,
             # keyboard
-            "keys_table": keys_table,
-            "type_key": type_key,
-            "press_key": press_key,
-            "release_key": release_key,
+            "get_keyboard_keys_table": get_keyboard_keys_table,
+            "type_keyboard": type_keyboard,
+            "press_keyboard_key": press_keyboard_key,
+            "release_keyboard_key": release_keyboard_key,
             "check_key_is_press": check_key_is_press,
             "write": write,
             "hotkey": hotkey,
@@ -84,7 +83,7 @@ class CallbackFunctionExecutor(object):
             "locate_image_center": locate_image_center,
             "locate_and_click": locate_and_click,
             # screen
-            "size": size,
+            "screen_size": screen_size,
             "screenshot": screenshot,
             # test record
             "set_record_enable": test_record_instance.set_record_enable,
@@ -99,6 +98,7 @@ class CallbackFunctionExecutor(object):
             # record
             "record": record,
             "stop_record": stop_record,
+            # execute
             "execute_action": execute_action,
             "execute_files": execute_files,
             "create_template_dir": create_template_dir,
@@ -107,7 +107,8 @@ class CallbackFunctionExecutor(object):
             "read_action_json": read_action_json,
             "write_action_json": write_action_json,
             "start_autocontrol_socket_server": start_autocontrol_socket_server,
-
+            "add_package_to_executor": package_manager.add_package_to_executor,
+            "add_package_to_callback_executor": package_manager.add_package_to_callback_executor
         }
 
     def callback_function(
@@ -136,7 +137,7 @@ class CallbackFunctionExecutor(object):
                 if callback_param_method == "kwargs":
                     callback_function(**callback_function_param)
                 else:
-                    callback_function(*callback_function_param.values())
+                    callback_function(*callback_function_param)
             else:
                 callback_function()
             return execute_return_value
@@ -145,5 +146,5 @@ class CallbackFunctionExecutor(object):
 
 
 callback_executor = CallbackFunctionExecutor()
-
+package_manager.callback_executor = callback_executor
 

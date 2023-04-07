@@ -1,6 +1,6 @@
 [
   [
-    "type_key",
+    "type_keyboard",
     {
       "keycode": 0
     }
@@ -14,7 +14,7 @@
     }
   ],
   [
-    "position"
+    "get_mouse_position"
   ],
   [
     "press_mouse",

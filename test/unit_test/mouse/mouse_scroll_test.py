@@ -1,3 +1,6 @@
-from je_auto_control import scroll
+from time import sleep
+from je_auto_control import mouse_scroll
 
-scroll(100)
+sleep(3)
+
+mouse_scroll(100)

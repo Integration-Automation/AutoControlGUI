@@ -34,7 +34,7 @@ def stop_record() -> list:
         action_list = list(action_queue.queue)
         new_list = list()
         for action in action_list:
-            if action[0] == "type_key":
+            if action[0] == "type_keyboard":
                 new_list.append([action[0], dict([["keycode", action[1]]])])
             else:
                 new_list.append([action[0], dict(zip(["mouse_keycode", "x", "y"], [action[0], action[1], action[2]]))])

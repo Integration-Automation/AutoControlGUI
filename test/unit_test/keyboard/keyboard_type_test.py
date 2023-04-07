@@ -1,9 +1,9 @@
-from je_auto_control import keys_table
-from je_auto_control import type_key
+from je_auto_control import keyboard_keys_table
+from je_auto_control import type_keyboard
 
 # check keys
-print(keys_table.keys())
-assert (type_key("T") == "T")
-assert (type_key("E") == "E")
-assert (type_key("S") == "S")
-assert (type_key("T") == "T")
+print(keyboard_keys_table.keys())
+assert (type_keyboard("T") == "T")
+assert (type_keyboard("E") == "E")
+assert (type_keyboard("S") == "S")
+assert (type_keyboard("T") == "T")

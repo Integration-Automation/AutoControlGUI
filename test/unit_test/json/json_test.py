@@ -4,9 +4,9 @@ from je_auto_control import read_action_json
 from je_auto_control import write_action_json
 
 test_list = [
-    ["type_key", {"keycode": 0x00}],
+    ["type_keyboard", {"keycode": 0x00}],
     ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-    ["position"],
+    ["get_mouse_position"],
     ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
     ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
 ]

@@ -2,7 +2,7 @@ import _thread
 import sys
 from threading import Thread
 
-from je_auto_control.wrapper.auto_control_keyboard import keys_table
+from je_auto_control.wrapper.auto_control_keyboard import keyboard_keys_table
 from je_auto_control.wrapper.platform_wrapper import keyboard_check
 
 
@@ -17,8 +17,8 @@ class CriticalExit(Thread):
         :param default_daemon bool thread setDaemon
         """
         super().__init__()
-        self.setDaemon(default_daemon)
-        self._exit_check_key: int = keys_table.get("f7")
+        self.daemon = default_daemon
+        self._exit_check_key: int = keyboard_keys_table.get("f7")
 
     def set_critical_key(self, keycode: [int, str] = None) -> None:
         """
@@ -28,7 +28,7 @@ class CriticalExit(Thread):
         if isinstance(keycode, int):
             self._exit_check_key = keycode
         else:
-            self._exit_check_key = keys_table.get(keycode)
+            self._exit_check_key = keyboard_keys_table.get(keycode)
 
     def run(self) -> None:
         """
