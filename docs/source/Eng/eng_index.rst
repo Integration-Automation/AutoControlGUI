@@ -3,8 +3,7 @@ AutoControl English Documentation
 ====================================
 
 .. toctree::
-   :maxdepth: 4
-
+    :maxdepth: 4
     doc/installation/installation_doc.rst
     doc/keyboard/keyboard_doc.rst
     doc/mouse/mouse_doc.rst
