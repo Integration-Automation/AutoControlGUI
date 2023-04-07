@@ -8,6 +8,7 @@
 以下這個範例是讓滑鼠不受控制的移動並拋出例外，
 當接收到例外，初始化 Critical Exit 並自動按下 F7，
 ( 注意! 如果修改這個範例必須極度小心。 )
+
 .. code-block:: python
     import sys
 

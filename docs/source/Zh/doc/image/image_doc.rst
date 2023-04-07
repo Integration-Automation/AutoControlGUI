@@ -7,6 +7,7 @@
 * 定位圖片在螢幕中的位置並點擊。
 
 以下範例是定位所有圖片
+
 .. code-block:: python
     import time
 
@@ -21,7 +22,8 @@
     image_data = locate_all_image(screenshot(), detect_threshold=0.9, draw_image=False)
     print(image_data)
 
-以下範例是定位並點擊'圖片
+以下範例是定位並點擊圖片
+
 .. code-block:: python
     import time
 
@@ -36,6 +38,7 @@
     print(image_data)
 
 以下範例是定位圖片
+
 .. code-block:: python
     import time
 

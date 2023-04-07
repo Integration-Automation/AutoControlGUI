@@ -32,11 +32,13 @@
 這段程式碼會把所有 time module 的 builtin, function, method, class
 載入到 callback executor，然後要使用被載入的 function 需要使用 package_function 名稱，
 例如 time.sleep 會變成 time_sleep
+
 .. code-block:: python
     from je_auto_control import package_manager
     package_manager.add_package_to_callback_executor("time")
 
 如果你需要查看被更新的 event_dict 可以使用
+
 .. code-block:: python
     from je_auto_control import callback_executor
     print(callback_executor.event_dict)
