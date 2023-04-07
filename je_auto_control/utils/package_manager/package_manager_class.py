@@ -41,7 +41,7 @@ class PackageManager(object):
         if installed_package is not None and target is not None:
             for member in getmembers(installed_package, predicate):
                 target.event_dict.update(
-                    {str(package) + "_" + str(member): member})
+                    {str(package) + "_" + str(member[0]): member[1]})
         elif installed_package is None:
             print(repr(ModuleNotFoundError(f"Can't find package {package}")),
                   file=stderr)
