@@ -10,6 +10,7 @@
 ( 注意! 如果修改這個範例必須極度小心。 )
 
 .. code-block:: python
+
     import sys
 
     from je_auto_control import AutoControlMouseException

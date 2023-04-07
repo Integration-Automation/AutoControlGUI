@@ -7,6 +7,7 @@
 以下是範例如何使用
 
 .. code-block:: python
+
     from time import sleep
 
     from je_auto_control import execute_action

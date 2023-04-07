@@ -3,7 +3,9 @@
 
 在 AutoControl 裡，Callback function 是由 Callback Executor 提供支援，
 以下是簡易的使用 Callback Executor 的範例，
+
 .. code-block:: python
+
     from je_auto_control import callback_executor
     # trigger_function will first to execute, but return value need to wait everything done
     # so this test will first print("test") then print(size_function_return_value)
@@ -34,11 +36,13 @@
 例如 time.sleep 會變成 time_sleep
 
 .. code-block:: python
+
     from je_auto_control import package_manager
     package_manager.add_package_to_callback_executor("time")
 
 如果你需要查看被更新的 event_dict 可以使用
 
 .. code-block:: python
+
     from je_auto_control import callback_executor
     print(callback_executor.event_dict)

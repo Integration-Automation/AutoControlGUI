@@ -6,6 +6,7 @@
 * Keyword 的格式是以下範例，且在 JSON 檔案裡面使用一樣格式。
 
 .. code-block:: python
+
     [
         ["function_name_in_event_dict": {"param_name": param_value}],
         ["function_name_in_event_dict": {"param_name": param_value}],
@@ -21,6 +22,7 @@
 例如 time.sleep 會變成 time_sleep
 
 .. code-block:: python
+
     from je_auto_control import package_manager
     package_manager.add_package_to_executor("time")
 
@@ -29,17 +31,20 @@
 如果你需要查看被更新的 event_dict 可以使用
 
 .. code-block:: python
+
     from je_auto_control import executor
     print(executor.event_dict)
 
 如果我們想要執行 JSON 檔案
 
 .. code-block:: python
+
     from je_auto_control import execute_action, read_action_json
     execute_action(read_action_json(file_path))
 
 如果我們想要執行資料夾裡所有 JSON 檔案
 
 .. code-block:: python
+
     from je_auto_control import execute_files, get_dir_files_as_list
     execute_files(get_dir_files_as_list(dir_path))

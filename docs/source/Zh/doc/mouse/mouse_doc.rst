@@ -8,6 +8,7 @@
 * mouse_table 是所有可以使用的按鍵
 
 .. code-block:: python
+
     from je_auto_control import mouse_table
 
     print(mouse_table)
@@ -15,6 +16,7 @@
 以下範例是按著滑鼠，一秒後釋放滑鼠
 
 .. code-block:: python
+
     from time import sleep
 
     from je_auto_control import press_mouse, release_mouse
@@ -25,6 +27,7 @@
 以下範例是點擊並放開滑鼠
 
 .. code-block:: python
+
     from je_auto_control import click_mouse
 
     click_mouse("mouse_right")
@@ -32,6 +35,7 @@
 以下範例是檢查滑鼠位置並改變滑鼠位置
 
 .. code-block:: python
+
     from je_auto_control import position, set_position
 
     print(position)
@@ -40,6 +44,7 @@
 以下範例是3秒後滑鼠會往上 scroll
 
 .. code-block:: python
+
     from time import sleep
     from je_auto_control import scroll
 

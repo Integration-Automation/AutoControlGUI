@@ -9,6 +9,7 @@
 以下範例是定位所有圖片
 
 .. code-block:: python
+
     import time
 
     from je_auto_control import locate_all_image
@@ -25,6 +26,7 @@
 以下範例是定位並點擊圖片
 
 .. code-block:: python
+
     import time
 
     from je_auto_control import locate_and_click
@@ -40,6 +42,7 @@
 以下範例是定位圖片
 
 .. code-block:: python
+
     import time
 
     from je_auto_control import locate_image_center
