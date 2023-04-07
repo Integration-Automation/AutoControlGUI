@@ -1,6 +1,9 @@
 import typing
 from sys import stderr
 
+from je_auto_control.utils.package_manager.package_manager_class import \
+    package_manager
+
 from je_auto_control.utils.exception.exception_tags import get_bad_trigger_method, get_bad_trigger_function
 from je_auto_control.utils.exception.exceptions import CallbackExecutorException
 # executor
@@ -145,5 +148,5 @@ class CallbackFunctionExecutor(object):
 
 
 callback_executor = CallbackFunctionExecutor()
-
+package_manager.callback_executor = callback_executor
 

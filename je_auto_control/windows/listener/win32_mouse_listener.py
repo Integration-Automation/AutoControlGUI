@@ -32,7 +32,7 @@ class Win32MouseListener(Thread):
 
     def __init__(self):
         super().__init__()
-        self.setDaemon(True)
+        self.daemon = True
         self.hooked: [None, int] = None
         self.record_queue: [None, Queue] = None
         self.record_flag: bool = False

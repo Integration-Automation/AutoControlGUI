@@ -2,7 +2,6 @@ import sys
 
 from je_auto_control import execute_action
 from je_auto_control import test_record_instance
-from je_auto_control import generate_json
 
 test_list = None
 test_record_instance.init_record = True
