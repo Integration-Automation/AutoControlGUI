@@ -11,6 +11,7 @@ Generate Report 可以生成以下格式的報告
 以下是產生 HTML 的範例。
 
 .. code-block:: python
+
     import sys
 
     from je_auto_control import execute_action
@@ -59,6 +60,7 @@ Generate Report 可以生成以下格式的報告
 以下是產生 JSON 的範例。
 
 .. code-block:: python
+
     import sys
 
     from je_auto_control import execute_action
@@ -106,6 +108,7 @@ Generate Report 可以生成以下格式的報告
 以下是產生 XML 的範例。
 
 .. code-block:: python
+
     import sys
 
     from je_auto_control import execute_action

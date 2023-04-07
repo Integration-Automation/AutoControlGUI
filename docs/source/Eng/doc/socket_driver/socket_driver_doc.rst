@@ -1,4 +1,4 @@
-Socket Driver documentation
+Socket Driver 文件
 ----
 
 * 實驗性的功能。
@@ -12,6 +12,7 @@ Socket Driver documentation
 * 傳送 quit_server 將會關閉伺服器。
 
 .. code-block:: python
+
     import sys
 
     from je_auto_control import start_autocontrol_socket_server

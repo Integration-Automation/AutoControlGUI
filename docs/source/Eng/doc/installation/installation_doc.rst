@@ -1,4 +1,4 @@
-Installation documentation
+安裝 文件
 ----
 
 .. code-block:: python
@@ -15,6 +15,7 @@ Installation documentation
     * ubuntu 20.0.4
 
 | 如果想要在樹梅派使用
+
 .. code-block:: python
 
     sudo apt-get install python3

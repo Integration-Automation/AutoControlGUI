@@ -1,4 +1,4 @@
-Record documentation
+記錄 文件
 ----
 
 * Record 主要用來錄製鍵盤跟滑鼠的動作。
@@ -7,6 +7,7 @@ Record documentation
 以下是範例如何使用
 
 .. code-block:: python
+
     from time import sleep
 
     from je_auto_control import execute_action
