@@ -10,7 +10,6 @@ Socket Driver 文件
 * 每個段落結束都應該傳輸 Return_Data_Over_JE。
 * 使用 UTF-8 encoding。
 * 傳送 quit_server 將會關閉伺服器。
-
 .. code-block:: python
     import sys
 
