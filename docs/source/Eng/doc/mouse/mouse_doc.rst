@@ -1,11 +1,11 @@
-滑鼠 文件
+Mouse
 ----
 
-* 主要用來模擬滑鼠的控制。
-* 提供模擬點擊、設定位置等功能。
+* This module is used for simulating mouse control.
+* It provides functions for simulating clicks, setting positions, etc.
 
-以下範例是取得鍵盤的資訊，
-* mouse_table 是所有可以使用的按鍵
+The following example is to obtain information about mouse clicks:
+mouse_table contains all the available mouse buttons.
 
 .. code-block:: python
 
@@ -13,7 +13,7 @@
 
     print(mouse_table)
 
-以下範例是按著滑鼠，一秒後釋放滑鼠
+The following example is holding down the mouse button and releasing it after one second.
 
 .. code-block:: python
 
@@ -22,9 +22,10 @@
     from je_auto_control import press_mouse, release_mouse
 
     press_mouse("mouse_right")
+    sleep(1)
     release_mouse("mouse_right")
 
-以下範例是點擊並放開滑鼠
+The following example is clicking and releasing the mouse.
 
 .. code-block:: python
 
@@ -32,7 +33,7 @@
 
     click_mouse("mouse_right")
 
-以下範例是檢查滑鼠位置並改變滑鼠位置
+The following example is to check the mouse position and change the mouse position.
 
 .. code-block:: python
 
@@ -41,7 +42,7 @@
     print(get_mouse_position())
     set_mouse_position(100, 100)
 
-以下範例是3秒後滑鼠會往上 scroll
+Here's an example where the mouse will scroll up after 3 seconds:
 
 .. code-block:: python
 

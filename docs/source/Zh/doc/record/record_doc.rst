@@ -1,10 +1,9 @@
-記錄
+Record
 ----
 
-* Record 主要用來錄製鍵盤跟滑鼠的動作。
-* 可以搭配 executor 使用來重播鍵盤跟滑鼠動作。
-
-以下是範例如何使用
+* Record is mainly used to record keyboard and mouse actions.
+* It can be used with an executor to replay keyboard and mouse actions.
+* The following example shows how to use it.
 
 .. code-block:: python
 

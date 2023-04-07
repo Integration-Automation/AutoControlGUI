@@ -1,12 +1,14 @@
-圖片偵測 文件
+Image detect
 ----
 
-* Image 提供了關於圖像辨識的功能。
-* 定位一張圖片在螢幕中的位置。
-* 定位多張圖片在螢幕中的位置。
-* 定位圖片在螢幕中的位置並點擊。
+* Image detect provides functionalities related to image recognition.
+* Locating the position of a single image on the screen.
+* Locating the position of multiple images on the screen.
+* Locating the position of an image on the screen and clicking on it.
 
-以下範例是定位所有圖片
+This is mainly used to recognize images on the screen and perform clicks or determine if the image exists on the screen.
+
+The following example is to locate all images.
 
 .. code-block:: python
 
@@ -23,7 +25,7 @@
     image_data = locate_all_image(screenshot(), detect_threshold=0.9, draw_image=False)
     print(image_data)
 
-以下範例是定位並點擊圖片
+The following example is used to locate and click on an image.
 
 .. code-block:: python
 
@@ -39,7 +41,7 @@
     image_data = locate_and_click(screenshot(), "mouse_left", detect_threshold=0.9, draw_image=False)
     print(image_data)
 
-以下範例是定位圖片
+The following example locates an image.
 
 .. code-block:: python
 

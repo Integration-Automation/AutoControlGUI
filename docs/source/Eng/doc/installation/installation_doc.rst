@@ -1,4 +1,4 @@
-安裝 文件
+Installation
 ----
 
 .. code-block:: python
@@ -14,7 +14,7 @@
     * osx 11 big sur
     * ubuntu 20.0.4
 
-| 如果想要在樹梅派使用
+| If you want install on raspberry pi
 
 .. code-block:: python
 

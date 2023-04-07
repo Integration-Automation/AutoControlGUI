@@ -1,9 +1,9 @@
-鍵盤與執行者 文件
+Keyword & Executor
 ----
 
-* Keyword 是一個 JSON 檔案裏面包含許多自定義的關鍵字與參數。
-* Keyword 會與 Executor 搭配使用。
-* Keyword 的格式是以下範例，且在 JSON 檔案裡面使用一樣格式。
+Keyword is a JSON file that contains many custom keywords and parameters.
+Keywords are used in conjunction with the Executor.
+The format of a keyword is as shown in the following example, and the same format is used in the JSON file.
 
 .. code-block:: python
 
@@ -16,10 +16,13 @@
         ["function_name_in_event_dict": {param_value1, param_value2....}]
     ]
 
-如果我們想要在 executor 裡面添加 function，可以使用如下:
-這段程式碼會把所有 time module 的 builtin, function, method, class
-載入到 executor，然後要使用被載入的 function 需要使用 package_function 名稱，
-例如 time.sleep 會變成 time_sleep
+The executor is an interpreter that can parse JSON files and execute automation scripts.
+It can be easily transferred over the network to a remote server or computer,
+which can then execute the automation scripts using the executor.
+
+If we want to add a function to the executor, we can use the following code snippet.
+This code will load all the built-in functions, methods, and classes of the time module into the executor.
+To use the loaded functions, we need to use the package_function name, for example, time.sleep will become time_sleep.
 
 .. code-block:: python
 
@@ -28,21 +31,21 @@
 
 
 
-如果你需要查看被更新的 event_dict 可以使用
+If you need to check the updated event_dict, you can use:
 
 .. code-block:: python
 
     from je_auto_control import executor
     print(executor.event_dict)
 
-如果我們想要執行 JSON 檔案
+If we want to execute a JSON file
 
 .. code-block:: python
 
     from je_auto_control import execute_action, read_action_json
     execute_action(read_action_json(file_path))
 
-如果我們想要執行資料夾裡所有 JSON 檔案
+If we want to execute all JSON files in a folder, we can use the following code snippet:
 
 .. code-block:: python
 

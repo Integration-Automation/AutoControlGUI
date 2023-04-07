@@ -1,12 +1,12 @@
-鍵盤 文件
+Keyboard
 ----
 
-* 主要用來模擬鍵盤的控制。
-* 提供熱鍵、檢盤鍵盤狀態、模擬鍵盤控制等功能。
+* Used to simulate keyboard control.
+* Provides functions such as hotkeys, checking keyboard key status (whether pressed), and simulating keyboard control.
+* The following example is to obtain information about the keyboard.
 
-以下範例是取得鍵盤的資訊，
-* special_table 是特定的鍵盤按鍵 ( 注意! 不是每個平台都有 )
-* keys_table 是所有可以使用的按鍵
+* special_table is a table of special keyboard keys (Note! Not every platform has them).
+* keys_table is a table of all available keys.
 
 .. code-block:: python
 
@@ -16,7 +16,7 @@
     print(get_special_table())
 
 
-以下範例是按著鍵盤的某個按鍵，並在一秒後釋放
+The following example presses a certain key on the keyboard and releases it after one second.
 
 .. code-block:: python
 
@@ -27,7 +27,7 @@
     sleep(1)
     release_key("a")
 
-以下範例是按下與釋放按鍵
+The following example presses and releases a key.
 
 .. code-block:: python
 
@@ -51,7 +51,7 @@
 
     write("abcdefg")
 
-以下範例是按下按鍵並相反的釋放
+以下範例是按下按鍵並相反的釋放按鍵
 
 .. code-block:: python
 

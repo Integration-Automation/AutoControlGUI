@@ -1,8 +1,10 @@
-命令列介面 文件
+CLI
 ----
 
-我們可以使用 CLI 模式去執行 keyword.json 檔案或執行包含 Keyword.json files 的資料夾，
-以下這個範例是去執行指定路徑的關鍵字 json 檔
+We can use the CLI mode to execute the keyword.
+json file or execute the folder containing the Keyword.json files.
+
+The following example is to execute the specified path of the keyword JSON file.
 
 .. code-block::
 
@@ -10,7 +12,7 @@
 
 
 
-以下這個範例是去執行指定路徑資料夾下所有的 keyword json 檔
+The following example is to run all keyword JSON files in a specified folder:
 
 .. code-block::
 

@@ -1,14 +1,16 @@
-報告產生 文件
+Generate Report
 ----
 
-Generate Report 可以生成以下格式的報告
-* HTML
-* JSON
-* XML
-* Generate Report 主要用來記錄與確認有哪些步驟執行，執行是否成功，
-* 如果要使用 Generate Report 需要先設定紀錄為 True，使用 test_record_instance.init_record = True
-* 下面的範例有搭配 keyword and executor 如果看不懂可以先去看看 executor
-以下是產生 HTML 的範例。
+* Generate Report can generate reports in the following formats:
+ * HTML
+ * JSON
+ * XML
+
+* Generate Report is mainly used to record and confirm which steps were executed and whether they were successful or not.
+* If you want to use Generate Report, you need to set the recording to True by using test_record_instance.init_record = True.
+* The following example is used with keywords and an executor. If you don't understand, please first take a look at the executor.
+
+Here's an example of generating an HTML report.
 
 .. code-block:: python
 
@@ -57,7 +59,7 @@ Generate Report 可以生成以下格式的報告
     execute_action(test_list)
 
 
-以下是產生 JSON 的範例。
+Here's an example of generating an JSON report.
 
 .. code-block:: python
 
@@ -105,7 +107,7 @@ Generate Report 可以生成以下格式的報告
     print("\n\n")
     execute_action(test_list)
 
-以下是產生 XML 的範例。
+Here's an example of generating an XML report.
 
 .. code-block:: python
 

@@ -22,6 +22,7 @@
     from je_auto_control import press_mouse, release_mouse
 
     press_mouse("mouse_right")
+    sleep(1)
     release_mouse("mouse_right")
 
 以下範例是點擊並放開滑鼠

@@ -41,6 +41,8 @@ for example, time.sleep will become time_sleep.
 
 If we want to add functions in the callback_executor, we can use the following code:
 
+This code will add all the functions of the time module to the executor (interpreter).
+
 .. code-block:: python
 
     from je_auto_control import package_manager

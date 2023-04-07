@@ -1,13 +1,16 @@
-緊急退出 文件
+緊急退出
 ----
-* Critical Exit 是提供故障保護的機制。
-* Critical Exit 預設是關閉的。
-* 如果開啟，預設按鍵是 F7。
-* 開啟的方法是 CriticalExit().init_critical_exit()
 
-以下這個範例是讓滑鼠不受控制的移動並拋出例外，
-當接收到例外，初始化 Critical Exit 並自動按下 F7，
-( 注意! 如果修改這個範例必須極度小心。 )
+* Critical Exit is a mechanism that provides fault protection.
+* Critical Exit is disabled by default.
+* If enabled, the default hotkey is F7.
+* To enable Critical Exit, call CriticalExit().init_critical_exit()
+* (enabling it will consume additional system resources).
+
+The following example is to make the mouse move uncontrollably and throw an exception.
+When the exception is caught, initialize the Critical Exit and automatically press F7.
+(Note! If you modify this example, you must be extremely careful.
+You may lose control of your computer, such as the mouse being out of control.)
 
 .. code-block:: python
 
@@ -16,7 +19,7 @@
     from je_auto_control import AutoControlMouseException
     from je_auto_control import CriticalExit
     from je_auto_control import press_key
-    from je_auto_control import set_mouse_position
+    from je_auto_control import set_position
     from je_auto_control import size
 
     # print your screen width and height
@@ -27,7 +30,7 @@
 
     try:
         from time import sleep
-
+        # Or no sleep
         sleep(3)
         while True:
             set_mouse_position(200, 400)
