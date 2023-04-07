@@ -1,4 +1,4 @@
-Critical Exit documentation
+緊急退出 文件
 ----
 
 ----

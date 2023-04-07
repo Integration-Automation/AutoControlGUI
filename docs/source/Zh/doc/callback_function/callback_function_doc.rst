@@ -1,4 +1,4 @@
-Callback function documentation
+回調函數 文件
 ----
 
 在 AutoControl 裡，Callback function 是由 Callback Executor 提供支援，

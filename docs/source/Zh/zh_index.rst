@@ -1,5 +1,5 @@
 ====================================
-AutoControl Traditional Chinese Documentation
+AutoControl 繁體中文 文件
 ====================================
 
 .. toctree::

@@ -1,4 +1,4 @@
-Generate Report documentation
+報告產生 文件
 ----
 
 Generate Report 可以生成以下格式的報告

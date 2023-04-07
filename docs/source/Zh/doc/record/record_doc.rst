@@ -1,4 +1,4 @@
-Record documentation
+記錄 文件
 ----
 
 * Record 主要用來錄製鍵盤跟滑鼠的動作。

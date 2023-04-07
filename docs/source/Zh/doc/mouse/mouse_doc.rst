@@ -1,4 +1,4 @@
-Mouse documentation
+滑鼠 文件
 ----
 
 * 主要用來模擬滑鼠的控制。

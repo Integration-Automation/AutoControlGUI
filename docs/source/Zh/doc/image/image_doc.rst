@@ -1,4 +1,4 @@
-Image documentation
+圖片偵測 文件
 ----
 
 * Image 提供了關於圖像辨識的功能。

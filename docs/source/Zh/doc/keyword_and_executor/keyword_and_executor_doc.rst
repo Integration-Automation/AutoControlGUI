@@ -1,4 +1,4 @@
-Keyword and Executor documentation
+鍵盤與執行者 文件
 ----
 
 * Keyword 是一個 JSON 檔案裏面包含許多自定義的關鍵字與參數。

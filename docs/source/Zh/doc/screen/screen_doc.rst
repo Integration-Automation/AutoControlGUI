@@ -1,4 +1,4 @@
-Screen documentation
+螢幕 文件
 ----
 
 * Screen 主要用來取得螢幕尺寸與截圖。

@@ -1,4 +1,4 @@
-Installation documentation
+安裝 文件
 ----
 
 .. code-block:: python

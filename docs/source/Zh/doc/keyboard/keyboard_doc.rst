@@ -1,4 +1,4 @@
-Keyboard documentation
+鍵盤 文件
 ----
 
 * 主要用來模擬鍵盤的控制。
