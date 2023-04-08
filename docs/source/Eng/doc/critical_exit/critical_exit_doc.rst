@@ -1,4 +1,4 @@
-緊急退出
+Critical Exit
 ----
 
 * Critical Exit is a mechanism that provides fault protection.
