@@ -147,6 +147,9 @@ package_manager.executor = executor
 
 
 def add_command_to_executor(command_dict: dict):
+    """
+    :param command_dict: dict include command we want to add to event_dict
+    """
     for command_name, command in command_dict.items():
         if isinstance(command, (types.MethodType, types.FunctionType)):
             executor.event_dict.update({command_name: command})

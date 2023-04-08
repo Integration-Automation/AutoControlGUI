@@ -17,8 +17,8 @@ sys.path.insert(0, os.path.abspath('.'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'AutoControlGUI_JE'
-copyright = '2020 ~ 2021, JE-Chen'
+project = 'AutoControl'
+copyright = '2020 ~ 2023, JE-Chen'
 author = 'JE-Chen'
 
 # -- General configuration ---------------------------------------------------
@@ -27,6 +27,7 @@ author = 'JE-Chen'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "sphinx.ext.autosectionlabel"
 ]
 
 # Add any paths that contain templates here, relative to this directory.

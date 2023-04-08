@@ -7,6 +7,7 @@ AutoControl
 
    Eng/eng_index.rst
    Zh/zh_index.rst
+   API/api_index.rst
 
 ----
 

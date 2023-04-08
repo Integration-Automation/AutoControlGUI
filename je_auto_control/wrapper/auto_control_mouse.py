@@ -172,7 +172,7 @@ def mouse_scroll(scroll_value: int, x: int = None, y: int = None, scroll_directi
     :param scroll_value scroll count
     :param x mouse click x position
     :param y mouse click y position
-    :param scroll_direction which direction we want
+    :param scroll_direction which direction we want to scroll (only linux)
     scroll_direction = scroll_up : direction up
     scroll_direction = scroll_down : direction down
     scroll_direction = scroll_left : direction left

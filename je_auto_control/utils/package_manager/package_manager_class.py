@@ -13,6 +13,10 @@ class PackageManager(object):
         self.callback_executor = None
 
     def check_package(self, package: str):
+        """
+        :param package: package to check exists or not
+        :return: package if find else None
+        """
         if self.installed_package_dict.get(package, None) is None:
             found_spec = find_spec(package)
             if found_spec is not None:
@@ -25,18 +29,29 @@ class PackageManager(object):
         return self.installed_package_dict.get(package, None)
 
     def add_package_to_executor(self, package):
+        """
+        :param package: package's function will add to executor
+        """
         self.add_package_to_target(
             package=package,
             target=self.executor
         )
 
     def add_package_to_callback_executor(self, package):
+        """
+        :param package: package's function will add to callback_executor
+        """
         self.add_package_to_target(
             package=package,
             target=self.callback_executor
         )
 
     def get_member(self, package, predicate, target):
+        """
+        :param package: package we want to get member
+        :param predicate: predicate
+        :param target: which event_dict will be added
+        """
         installed_package = self.check_package(package)
         if installed_package is not None and target is not None:
             for member in getmembers(installed_package, predicate):
@@ -49,6 +64,10 @@ class PackageManager(object):
             print(f"Executor error {self.executor}", file=stderr)
 
     def add_package_to_target(self, package, target):
+        """
+        :param package: package we want to get member
+        :param target: which event_dict will be added
+        """
         try:
             self.get_member(
                 package=package,
