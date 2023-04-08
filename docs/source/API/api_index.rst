@@ -17,3 +17,5 @@ AutoControl API Documentation
    utils/generate_report.rst
    utils/package_manager.rst
    utils/socket_server.rst
+   special/keyboard_keys.rst
+   special/mouse_keys.rst
