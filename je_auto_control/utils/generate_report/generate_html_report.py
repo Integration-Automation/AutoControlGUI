@@ -150,8 +150,8 @@ def generate_html() -> str:
 
 def generate_html_report(html_name: str = "default_name"):
     """
+    Output html report file
     :param html_name: save html file name
-    :return:
     """
     new_html_string = generate_html()
     try:

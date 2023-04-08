@@ -125,7 +125,7 @@ class CallbackFunctionExecutor(object):
         :param callback_function_param: callback function's param only accept dict 
         :param callback_param_method: what type param will use on callback function only accept kwargs and args
         :param kwargs: trigger_function's param
-        :return: 
+        :return: trigger_function_name return value
         """
         try:
             if trigger_function_name not in self.event_dict.keys():

@@ -8,6 +8,9 @@ from je_auto_control.utils.test_record.record_test_class import test_record_inst
 
 
 def generate_json():
+    """
+    :return: two dict {success_dict}, {failure_dict}
+    """
     if len(test_record_instance.test_record_list) == 0:
         raise AutoControlGenerateJsonReportException(cant_generate_json_report)
     else:
@@ -47,8 +50,8 @@ def generate_json():
 
 def generate_json_report(json_file_name: str = "default_name"):
     """
+    Output json report file
     :param json_file_name: save json file's name
-    :return:
     """
     lock = Lock()
     success_dict, failure_dict = generate_json()
