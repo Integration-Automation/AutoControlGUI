@@ -21,7 +21,7 @@
 .. code-block:: python
 
     from time import sleep
-    from je_auto_control import press_key, release_key
+    from je_auto_control import press_keyboard_key, release_keyboard_key
 
     press_key("a")
     sleep(1)
