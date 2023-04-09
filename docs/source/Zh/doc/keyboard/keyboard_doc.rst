@@ -16,7 +16,7 @@
     print(get_special_table())
 
 
-以下範例是按著鍵盤的某個按鍵，並在一秒後釋放
+以下範例是按著鍵盤的傳入的按鍵，並在一秒後釋放
 
 .. code-block:: python
 
@@ -27,7 +27,7 @@
     sleep(1)
     release_key("a")
 
-以下範例是按下與釋放按鍵
+以下範例會幫你完成按下與釋放傳入的按鍵
 
 .. code-block:: python
 
@@ -51,7 +51,7 @@
 
     write("abcdefg")
 
-以下範例是按下按鍵並相反的釋放按鍵
+以下範例使用熱鍵，會按下傳入的按鍵並相反的放開
 
 .. code-block:: python
 

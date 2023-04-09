@@ -35,7 +35,7 @@ The following example presses and releases a key.
 
     type_keyboard("a")
 
-以下範例是檢查鍵盤 a 鍵是否按著
+The following example checks whether the 'a' key on the keyboard is being pressed.
 
 .. code-block:: python
 
@@ -43,7 +43,7 @@ The following example presses and releases a key.
 
     check_key_is_press("a")
 
-以下範例是按下與放開一串按鍵
+The following example presses and releases a series of keys.
 
 .. code-block:: python
 
@@ -51,7 +51,7 @@ The following example presses and releases a key.
 
     write("abcdefg")
 
-以下範例是按下按鍵並相反的釋放按鍵
+The following example uses a hotkey to press and then release the passed-in key in reverse.
 
 .. code-block:: python
 
