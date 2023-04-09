@@ -5,12 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev.toml" beforeDir="false" afterPath="$PROJECT_DIR$/stable.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/keyword_and_executor/keyword_and_executor_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/keyword_and_executor/keyword_and_executor_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/package_manager/package_manager_class.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/package_manager/package_manager_class.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Eng/doc/keyboard/keyboard_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/doc/keyboard/keyboard_doc.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/source/Zh/doc/keyboard/keyboard_doc.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/doc/keyboard/keyboard_doc.rst" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -64,7 +62,7 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
     &quot;git-widget-placeholder&quot;: &quot;dev&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/JeffreyChen/Desktop/Code_Space/TestPlatform&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/JeffreyChen/Desktop/Code_Space/AutoControl/docs/source/API&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -76,21 +74,21 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\Python\ITE\AutoControl\test\unit_test\generate_report" />
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\Python\ITE\AutoControl\je_auto_control\utils\generate_report" />
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\Python\ITE\AutoControl" />
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\Python\ITE\AutoControl\je_auto_control\utils" />
-      <recent name="C:\program_workspace\python\AutoControl\autocontrol_driver" />
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\API" />
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs" />
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Eng\doc" />
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Eng" />
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Zh\doc" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\Python\ITE\AutoControl\test\unit_test\generate_report" />
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\Python\ITE\AutoControl\test\gui_test" />
-      <recent name="C:\program_workspace\python\AutoControl\autocontrol_driver" />
-      <recent name="C:\program_workspace\python\AutoControl\docs\source\Eng" />
-      <recent name="C:\program_workspace\python\AutoControl\autocontrol_driver\dist" />
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\autocontrol_driver" />
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Zh\doc" />
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Zh" />
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Eng\doc" />
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.action_executor">
+  <component name="RunManager" selected="Python.html_report_test">
     <configuration name="action_executor" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -133,7 +131,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="mouse_info" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="callback_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -141,12 +139,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/mouse" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/callback" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/mouse/mouse_info.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/callback/callback_test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -155,7 +152,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="mouse_scroll_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="html_report_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -163,12 +160,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/mouse" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/generate_report" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/mouse/mouse_scroll_test.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/generate_report/html_report_test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -199,7 +195,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="record_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="screen_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Python_JEAutoControl" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -207,12 +203,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/record" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/screen" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/record/record_test.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/screen/screen_test.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -245,11 +240,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.html_report_test" />
+        <item itemvalue="Python.screen_test" />
+        <item itemvalue="Python.callback_test" />
         <item itemvalue="Python.action_executor" />
         <item itemvalue="Python.argparse_test" />
-        <item itemvalue="Python.record_test" />
-        <item itemvalue="Python.mouse_scroll_test" />
-        <item itemvalue="Python.mouse_info" />
       </list>
     </recent_temporary>
   </component>
