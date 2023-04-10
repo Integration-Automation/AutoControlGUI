@@ -55,16 +55,16 @@ def generate_json_report(json_file_name: str = "default_name"):
     """
     lock = Lock()
     success_dict, failure_dict = generate_json()
+    lock.acquire()
     try:
-        lock.acquire()
         with open(json_file_name + "_success.json", "w+") as file_to_write:
             json.dump(dict(success_dict), file_to_write, indent=4)
     except Exception as error:
         print(repr(error), file=sys.stderr)
     finally:
         lock.release()
+    lock.acquire()
     try:
-        lock.acquire()
         with open(json_file_name + "_failure.json", "w+") as file_to_write:
             json.dump(dict(failure_dict), file_to_write, indent=4)
     except Exception as error:

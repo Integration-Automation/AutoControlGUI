@@ -1,6 +1,7 @@
 import sys
 import time
 import types
+import builtins
 from inspect import getmembers, isbuiltin
 
 from je_auto_control.utils.exception.exception_tags import action_is_null_error, add_command_exception_tag, \
@@ -80,9 +81,9 @@ class Executor(object):
             "add_package_to_executor": package_manager.add_package_to_executor,
             "add_package_to_callback_executor": package_manager.add_package_to_callback_executor
         }
-        # get all time module builtin function and add to event dict
-        for function in getmembers(time, isbuiltin):
-            self.event_dict.update({str(function): function})
+        # get all builtin function and add to event dict
+        for function in getmembers(builtins, isbuiltin):
+            self.event_dict.update({str(function[0]): function[1]})
 
     def _execute_event(self, action: list):
         event = self.event_dict.get(action[0])

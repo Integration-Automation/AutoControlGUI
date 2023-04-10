@@ -32,8 +32,8 @@ from je_auto_control.utils.executor.action_executor import \
 from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.executor.action_executor import execute_files
 from je_auto_control.utils.executor.action_executor import executor
-from je_auto_control.utils.file_process.create_project_structure import \
-    create_template_dir
+from je_auto_control.utils.project.create_project_structure import \
+    create_project_dir
 # file process
 from je_auto_control.utils.file_process.get_dir_file_list import \
     get_dir_files_as_list
@@ -119,7 +119,7 @@ __all__ = [
     "generate_html", "generate_html_report",
     "generate_json", "generate_json_report",
     "generate_xml", "generate_xml_report",
-    "get_dir_files_as_list", "create_template_dir",
+    "get_dir_files_as_list", "create_project_dir",
     "start_autocontrol_socket_server",
     "callback_executor", "package_manager",
     "get_special_table"

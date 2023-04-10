@@ -27,16 +27,16 @@ def generate_xml_report(xml_file_name: str = "default_name"):
     success_xml = success_xml.toprettyxml()
     failure_xml = failure_xml.toprettyxml()
     lock = Lock()
+    lock.acquire()
     try:
-        lock.acquire()
         with open(xml_file_name + "_failure.xml", "w+") as file_to_write:
             file_to_write.write(failure_xml)
     except Exception as error:
         print(repr(error), file=sys.stderr)
     finally:
         lock.release()
+    lock.acquire()
     try:
-        lock.acquire()
         with open(xml_file_name + "_success.xml", "w+") as file_to_write:
             file_to_write.write(success_xml)
             pass
