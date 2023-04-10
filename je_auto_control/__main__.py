@@ -11,6 +11,7 @@ from je_auto_control.utils.executor.action_executor import execute_files
 from je_auto_control.utils.file_process.get_dir_file_list import \
     get_dir_files_as_list
 from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.project.create_project_structure import create_project_dir
 
 if __name__ == "__main__":
     try:
@@ -25,6 +26,7 @@ if __name__ == "__main__":
         argparse_event_dict = {
             "execute_file": preprocess_execute_action,
             "execute_dir": preprocess_execute_files,
+            "create_project": create_project_dir
         }
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -34,6 +36,10 @@ if __name__ == "__main__":
         parser.add_argument(
             "-d", "--execute_dir",
             type=str, help="choose dir include action file to execute"
+        )
+        parser.add_argument(
+            "-c", "--create_project",
+            type=str, help="create project with template"
         )
         args = parser.parse_args()
         args = vars(args)

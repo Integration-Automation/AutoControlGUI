@@ -1,5 +1,5 @@
-from pathlib import Path
 from os import getcwd
+from pathlib import Path
 from threading import Lock
 
 from je_auto_control.utils.json.json_file import write_action_json
@@ -20,43 +20,47 @@ def create_dir(dir_name: str) -> None:
     )
 
 
-def create_template(parent_name: str) -> None:
-    keyword_dir_path = Path(getcwd() + "/" + parent_name + "/keyword")
-    executor_dir_path = Path(getcwd() + "/" + parent_name + "/executor")
+def create_template(parent_name: str, project_path: str = None) -> None:
+    if project_path is None:
+        project_path = getcwd()
+    keyword_dir_path = Path(project_path + "/" + parent_name + "/keyword")
+    executor_dir_path = Path(project_path + "/" + parent_name + "/executor")
     lock = Lock()
     if keyword_dir_path.exists() and keyword_dir_path.is_dir():
-        write_action_json(getcwd() + "/" + parent_name + "/keyword/keyword1.json", template_keyword_1)
-        write_action_json(getcwd() + "/" + parent_name + "/keyword/keyword2.json", template_keyword_2)
-        write_action_json(getcwd() + "/" + parent_name + "/keyword/bad_keyword_1.json", bad_template_1)
+        write_action_json(project_path + "/" + parent_name + "/keyword/keyword1.json", template_keyword_1)
+        write_action_json(project_path + "/" + parent_name + "/keyword/keyword2.json", template_keyword_2)
+        write_action_json(project_path + "/" + parent_name + "/keyword/bad_keyword_1.json", bad_template_1)
     if executor_dir_path.exists() and keyword_dir_path.is_dir():
         lock.acquire()
         try:
-            with open(getcwd() + "/" + parent_name + "/executor/executor_one_file.py", "w+") as file:
+            with open(project_path + "/" + parent_name + "/executor/executor_one_file.py", "w+") as file:
                 file.write(
                     executor_template_1.replace(
                         "{temp}",
-                        getcwd() + "/" + parent_name + "/keyword/keyword1.json"
+                        project_path + "/" + parent_name + "/keyword/keyword1.json"
                     )
                 )
-            with open(getcwd() + "/" + parent_name + "/executor/executor_bad_file.py", "w+") as file:
+            with open(project_path + "/" + parent_name + "/executor/executor_bad_file.py", "w+") as file:
                 file.write(
                     bad_executor_template_1.replace(
                         "{temp}",
-                        getcwd() + "/" + parent_name + "/keyword/bad_keyword_1.json"
+                        project_path + "/" + parent_name + "/keyword/bad_keyword_1.json"
                     )
                 )
-            with open(getcwd() + "/" + parent_name + "/executor/executor_folder.py", "w+") as file:
+            with open(project_path + "/" + parent_name + "/executor/executor_folder.py", "w+") as file:
                 file.write(
                     executor_template_2.replace(
                         "{temp}",
-                        getcwd() + "/" + parent_name + "/keyword"
+                        project_path + "/" + parent_name + "/keyword"
                     )
                 )
         finally:
             lock.release()
 
 
-def create_project_dir(parent_name: str) -> None:
-    create_dir(getcwd() + "/" + parent_name + "/keyword")
-    create_dir(getcwd() + "/" + parent_name + "/executor")
+def create_project_dir(parent_name: str, project_path: str = None) -> None:
+    if project_path is None:
+        project_path = getcwd()
+    create_dir(project_path + "/" + parent_name + "/keyword")
+    create_dir(project_path + "/" + parent_name + "/executor")
     create_template(parent_name)
