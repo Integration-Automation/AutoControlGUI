@@ -6,7 +6,7 @@ from je_auto_control.utils.exception.exceptions import CallbackExecutorException
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.executor.action_executor import execute_files
-from je_auto_control.utils.file_process.create_project_structure import create_template_dir
+from je_auto_control.utils.project.create_project_structure import create_project_dir
 # file process
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
 # html report
@@ -101,7 +101,7 @@ class CallbackFunctionExecutor(object):
             # execute
             "execute_action": execute_action,
             "execute_files": execute_files,
-            "create_template_dir": create_template_dir,
+            "create_template_dir": create_project_dir,
             "get_dir_files_as_list": get_dir_files_as_list,
             "pil_screenshot": pil_screenshot,
             "read_action_json": read_action_json,

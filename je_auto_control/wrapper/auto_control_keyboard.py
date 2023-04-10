@@ -162,11 +162,19 @@ def write(write_string: str, is_shift: bool = False) -> str:
             record_write_string = ""
             for single_string in write_string:
                 try:
-                    if keyboard_keys_table.get(single_string) is not None:
+                    key = keyboard_keys_table.get(single_string, None)
+                    if key is not None:
                         record_write_string = "".join(
                             [
                                 record_write_string,
-                                type_keyboard(single_string, is_shift, skip_record=True)
+                                type_keyboard(key, is_shift, skip_record=True)
+                            ]
+                        )
+                    elif single_string.isspace():
+                        record_write_string = "".join(
+                            [
+                                record_write_string,
+                                type_keyboard("space", is_shift, skip_record=True)
                             ]
                         )
                     else:

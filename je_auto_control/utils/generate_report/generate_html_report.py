@@ -154,8 +154,8 @@ def generate_html_report(html_name: str = "default_name"):
     :param html_name: save html file name
     """
     new_html_string = generate_html()
+    _lock.acquire()
     try:
-        _lock.acquire()
         with open(html_name + ".html", "w+") as file_to_write:
             file_to_write.write(
                 new_html_string
