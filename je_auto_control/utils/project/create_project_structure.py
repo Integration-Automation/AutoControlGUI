@@ -58,7 +58,7 @@ def create_template(parent_name: str, project_path: str = None) -> None:
             lock.release()
 
 
-def create_project_dir(parent_name: str, project_path: str = None) -> None:
+def create_project_dir(project_path: str = None, parent_name: str = "AutoControl") -> None:
     if project_path is None:
         project_path = getcwd()
     create_dir(project_path + "/" + parent_name + "/keyword")
