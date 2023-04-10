@@ -1,0 +1,26 @@
+[
+    [
+        "set_record_enable",
+        [
+            true
+        ]
+    ],
+    [
+        "add_package_to_executor",
+        [
+            "os"
+        ]
+    ],
+    [
+        "os_system",
+        [
+            "python --version"
+        ]
+    ],
+    [
+        "os_system",
+        [
+            "python -m pip --version"
+        ]
+    ]
+]

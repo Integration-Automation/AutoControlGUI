@@ -1,0 +1,143 @@
+[
+    [
+        "set_record_enable",
+        [
+            true
+        ]
+    ],
+    [
+        "write",
+        {
+            "write_string": "Hello World"
+        }
+    ],
+    [
+        "type_keyboard",
+        {
+            "keycode": "return"
+        }
+    ],
+    [
+        "write",
+        {
+            "write_string": "If you want Windows write upcase string"
+        }
+    ],
+    [
+        "type_keyboard",
+        {
+            "keycode": "return"
+        }
+    ],
+    [
+        "write",
+        {
+            "write_string": "you need to press shift first"
+        }
+    ],
+    [
+        "type_keyboard",
+        {
+            "keycode": "return"
+        }
+    ],
+    [
+        "press_keyboard_key",
+        {
+            "keycode": "shift"
+        }
+    ],
+    [
+        "write",
+        {
+            "write_string": "UPCASEE"
+        }
+    ],
+    [
+        "release_keyboard_key",
+        {
+            "keycode": "shift"
+        }
+    ],
+    [
+        "type_keyboard",
+        {
+            "keycode": "return"
+        }
+    ],
+    [
+        "write",
+        {
+            "write_string": "this is example how to use keyword"
+        }
+    ],
+    [
+        "write",
+        {
+            "write_string": " and add module to executor"
+        }
+    ],
+    [
+        "type_keyboard",
+        {
+            "keycode": "return"
+        }
+    ],
+    [
+        "write",
+        {
+            "write_string": "now i will add time module and sleep 3 sec"
+        }
+    ],
+    [
+        "add_package_to_executor",
+        [
+            "time"
+        ]
+    ],
+    [
+        "time_sleep",
+        [
+            3
+        ]
+    ],
+    [
+        "type_keyboard",
+        {
+            "keycode": "return"
+        }
+    ],
+    [
+        "write",
+        {
+            "write_string": "also you can use builtin function on executor like print"
+        }
+    ],
+    [
+        "print",
+        [
+            "Google Bye World"
+        ]
+    ],
+    [
+        "type_keyboard",
+        {
+            "keycode": "return"
+        }
+    ],
+    [
+        "write",
+        {
+            "write_string": "and i will create an html report for you"
+        }
+    ],
+    [
+        "generate_html_report"
+    ],
+    [
+        "type_keyboard",
+        {
+            "keycode": "return"
+        }
+    ]
+]

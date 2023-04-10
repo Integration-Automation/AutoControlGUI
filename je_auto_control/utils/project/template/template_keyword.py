@@ -48,3 +48,9 @@ template_keyword_2: list = [
     ["generate_json_report"]
 ]
 
+bad_template_1 = [
+    ["set_record_enable", [True]],
+    ["add_package_to_executor", ["os"]],
+    ["os_system", ["python --version"]],
+    ["os_system", ["python -m pip --version"]],
+]

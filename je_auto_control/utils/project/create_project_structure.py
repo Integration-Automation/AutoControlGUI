@@ -4,9 +4,9 @@ from threading import Lock
 
 from je_auto_control.utils.json.json_file import write_action_json
 from je_auto_control.utils.project.template.template_executor import executor_template_1, \
-    executor_template_2
+    executor_template_2, bad_executor_template_1
 from je_auto_control.utils.project.template.template_keyword import template_keyword_1, \
-    template_keyword_2
+    template_keyword_2, bad_template_1
 
 
 def create_dir(dir_name: str) -> None:
@@ -27,6 +27,7 @@ def create_template(parent_name: str) -> None:
     if keyword_dir_path.exists() and keyword_dir_path.is_dir():
         write_action_json(getcwd() + "/" + parent_name + "/keyword/keyword1.json", template_keyword_1)
         write_action_json(getcwd() + "/" + parent_name + "/keyword/keyword2.json", template_keyword_2)
+        write_action_json(getcwd() + "/" + parent_name + "/keyword/bad_keyword_1.json", bad_template_1)
     if executor_dir_path.exists() and keyword_dir_path.is_dir():
         lock.acquire()
         try:
@@ -35,6 +36,13 @@ def create_template(parent_name: str) -> None:
                     executor_template_1.replace(
                         "{temp}",
                         getcwd() + "/" + parent_name + "/keyword/keyword1.json"
+                    )
+                )
+            with open(getcwd() + "/" + parent_name + "/executor/executor_bad_file.py", "w+") as file:
+                file.write(
+                    bad_executor_template_1.replace(
+                        "{temp}",
+                        getcwd() + "/" + parent_name + "/keyword/bad_keyword_1.json"
                     )
                 )
             with open(getcwd() + "/" + parent_name + "/executor/executor_folder.py", "w+") as file:
