@@ -107,7 +107,10 @@ jobs:
       - run:
           command: python ./test/unit_test/callback/callback_test.py
           name: callback_test
-
+      # create project
+      - run:
+          command: python ./test/unit_test/create_project_file/create_project_test.py
+          name: create project
       # integrated_test
       # can't run this because circle ci bug
       #- run:
@@ -218,6 +221,10 @@ jobs:
       - run:
           command: python ./test/unit_test/callback/callback_test.py
           name: callback_test
+      # create project
+      - run:
+          command: python ./test/unit_test/create_project_file/create_project_test.py
+          name: create project
 
       # integrated_test
       # can't run this because circle ci bug
