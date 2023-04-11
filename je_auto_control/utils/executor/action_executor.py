@@ -4,6 +4,7 @@ import types
 import builtins
 from inspect import getmembers, isbuiltin
 
+from je_auto_control.utils.project.create_project_structure import create_project_dir
 from je_auto_control.utils.exception.exception_tags import action_is_null_error, add_command_exception_tag, \
     executor_list_error
 from je_auto_control.utils.exception.exception_tags import cant_execute_action_error
@@ -79,7 +80,9 @@ class Executor(object):
             "execute_action": self.execute_action,
             "execute_files": self.execute_files,
             "add_package_to_executor": package_manager.add_package_to_executor,
-            "add_package_to_callback_executor": package_manager.add_package_to_callback_executor
+            "add_package_to_callback_executor": package_manager.add_package_to_callback_executor,
+            # project
+            "create_project": create_project_dir
         }
         # get all builtin function and add to event dict
         for function in getmembers(builtins, isbuiltin):
