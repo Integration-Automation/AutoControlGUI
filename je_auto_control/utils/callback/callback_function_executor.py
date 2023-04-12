@@ -1,6 +1,7 @@
 import typing
 from sys import stderr
 
+from je_auto_control.utils.project.create_project_structure import create_project_dir
 from je_auto_control.utils.exception.exception_tags import get_bad_trigger_method, get_bad_trigger_function
 from je_auto_control.utils.exception.exceptions import CallbackExecutorException
 # executor
@@ -108,7 +109,9 @@ class CallbackFunctionExecutor(object):
             "write_action_json": write_action_json,
             "start_autocontrol_socket_server": start_autocontrol_socket_server,
             "add_package_to_executor": package_manager.add_package_to_executor,
-            "add_package_to_callback_executor": package_manager.add_package_to_callback_executor
+            "add_package_to_callback_executor": package_manager.add_package_to_callback_executor,
+            # project
+            "create_project": create_project_dir
         }
 
     def callback_function(
