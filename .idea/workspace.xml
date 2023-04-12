@@ -5,12 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/docs/source/Eng/doc/create_project/create_project_doc.rst" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/source/Zh/doc/create_project/create_project_doc.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Eng/eng_index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Eng/eng_index.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/Zh/zh_index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/Zh/zh_index.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
