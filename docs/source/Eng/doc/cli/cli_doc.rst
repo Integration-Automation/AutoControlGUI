@@ -8,7 +8,7 @@ The following example is to execute the specified path of the keyword JSON file.
 
 .. code-block::
 
-    python je_auto_control --execute_file "C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\test\unit_test\argparse\test1.json"
+    python je_auto_control --execute_file "your_file_path"
 
 
 
@@ -16,4 +16,4 @@ The following example is to run all keyword JSON files in a specified folder:
 
 .. code-block::
 
-    python je_auto_control --execute_dir "C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\test\unit_test\argparse"
+    python je_auto_control --execute_dir "your_dir_path"

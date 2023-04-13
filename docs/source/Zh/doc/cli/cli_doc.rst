@@ -6,7 +6,7 @@
 
 .. code-block::
 
-    python je_auto_control --execute_file "C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\test\unit_test\argparse\test1.json"
+    python je_auto_control --execute_file "your_file_path"
 
 
 
@@ -14,4 +14,4 @@
 
 .. code-block::
 
-    python je_auto_control --execute_dir "C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\test\unit_test\argparse"
+    python je_auto_control --execute_dir "your_dir_path"
