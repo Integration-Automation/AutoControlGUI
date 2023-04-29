@@ -78,3 +78,6 @@ pip install je_auto_control
 > * Prepare a python venv
 > * Run command "pip install --upgrade pip"
 > * Run command "pip install -r dev_requirements.txt"
+
+### Architecture Diagram
+![architecture_diagram](architecture_diagram/AutoControl_Architecture.drawio.png)
