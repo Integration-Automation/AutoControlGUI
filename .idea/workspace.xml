@@ -5,8 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev.toml" beforeDir="false" afterPath="$PROJECT_DIR$/stable.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,7 +61,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "WebServerToolWindowFactoryState": "false",
     "git-widget-placeholder": "dev",
-    "last_opened_file_path": "C:/Users/JeffreyChen/Desktop/Code_Space/Integration-testing-environment",
+    "last_opened_file_path": "C:/Users/JeffreyChen/Desktop/Code_Space/AutoControl",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -72,18 +73,18 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Zh\doc\create_project" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Eng\doc\create_project" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Zh\doc" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\API" />
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\architecture_diagram" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\autocontrol_driver" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Zh\doc" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Zh" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Eng\doc" />
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source" />
     </key>
   </component>
   <component name="RunManager" selected="Python.create_project_test">

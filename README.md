@@ -1,8 +1,8 @@
 ### AutoControl
 > Project Kanban \
-> https://github.com/orgs/Integrated-Testing-Environment/projects/4/views/1 \
-> Image & Coordinate based GUI Testing \
-> GUI automated testing based on image comparison and coordinates. \
+> https://github.com/orgs/Intergration-Automation-Testing/projects/2 \
+> Image & Coordinate based GUI Automation \
+> GUI automated based on image comparison and coordinates. \
 > Cross-platform and cross-programming language.\
 > Solve problems:
 >> * Provide automation execution for repetitive tasks.
@@ -57,7 +57,7 @@ pip install je_auto_control
 ## Info
 
 > * requirement
->> * Python 3.7 & later
+>> * Python 3.8 & later
 >> * pip 19.3 & later
 
 > * Dev env

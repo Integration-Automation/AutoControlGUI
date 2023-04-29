@@ -1,18 +1,18 @@
-# Rename to build stable version
-# This is stable version
+# Rename to build dev version
+# This is dev version
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "je_auto_control"
-version = "0.0.135"
+name = "je_auto_control_dev"
+version = "0.0.72"
 authors = [
     { name = "JE-Chen", email = "zenmailman@gmail.com" },
 ]
 description = "GUI Testing Automation Framework"
 readme = { file = "README.md", content-type = "text/markdown" }
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = { text = "MIT" }
 dependencies = [
     "je_open_cv",
