@@ -1,0 +1,47 @@
+# Rename to build dev version
+# This is dev version
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "je_auto_control_dev"
+version = "0.0.74"
+authors = [
+    { name = "JE-Chen", email = "jechenmailman@gmail.com" },
+]
+description = "GUI Automation Framework"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+dependencies = [
+    "je_open_cv",
+    "pillow",
+    "numpy",
+    "pyobjc-core;platform_system=='Darwin'",
+    "pyobjc;platform_system=='Darwin'",
+    "python-Xlib;platform_system=='Linux'"
+]
+classifiers = [
+    "Programming Language :: Python :: 3.8",
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: MacOS X",
+    "Environment :: X11 Applications",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+
+[project.urls]
+Homepage = "https://github.com/Intergration-Automation-Testing/AutoControl"
+Documentation = "https://autocontrol.readthedocs.io/en/latest/"
+Code = "https://github.com/Intergration-Automation-Testing/AutoControl"
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[tool.setuptools]
+license-files = ["LICENSE"]
+
+[tool.setuptools.packages]
+find = { namespaces = false }
