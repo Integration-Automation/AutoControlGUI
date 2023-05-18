@@ -5,9 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/autocontrol_driver/auto_py_to_exe.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/autocontrol_driver/generate_autocontrol_driver_win.exe" beforeDir="false" afterPath="$PROJECT_DIR$/autocontrol_driver/AutoControlDriverWindows.exe" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/stable.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dev.toml" afterDir="false" />
     </list>
@@ -63,7 +63,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "WebServerToolWindowFactoryState": "false",
     "git-widget-placeholder": "dev",
-    "last_opened_file_path": "C:/Users/JeffreyChen/Desktop/Code_Space/LoadDensity",
+    "last_opened_file_path": "C:/Users/JeffreyChen/Desktop/Code_Space/AutoControl/autocontrol_driver",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -75,11 +75,11 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\autocontrol_driver" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Zh\doc\create_project" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Eng\doc\create_project" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Zh\doc" />
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\API" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\architecture_diagram" />

@@ -37,8 +37,8 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
 
 class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
-    def __init__(self, server_address, RequestHandlerClass):
-        super().__init__(server_address, RequestHandlerClass)
+    def __init__(self, server_address, request_handler_class):
+        super().__init__(server_address, request_handler_class)
         self.close_flag: bool = False
 
 
