@@ -16,11 +16,11 @@ from je_auto_control.wrapper.platform_wrapper import keyboard_check
 from je_auto_control.wrapper.platform_wrapper import keyboard_keys_table
 
 
-def get_special_table():
+def get_special_table() -> dict:
     return special_mouse_keys_table
 
 
-def get_keyboard_keys_table():
+def get_keyboard_keys_table() -> dict:
     return keyboard_keys_table
 
 

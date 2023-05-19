@@ -20,7 +20,7 @@ def position() -> Tuple[int, int]:
     """
     get mouse current position
     """
-    return (Quartz.NSEvent.mouseLocation().x, Quartz.NSEvent.mouseLocation().y)
+    return Quartz.NSEvent.mouseLocation().x, Quartz.NSEvent.mouseLocation().y
 
 
 def mouse_event(event, x: int, y: int, mouse_button: int) -> None:
@@ -105,4 +105,3 @@ def scroll(scroll_value: int) -> None:
         )
         Quartz.CGEventPost(Quartz.kCGHIDEventTap, scroll_event)
         total = total + do_scroll
-    print("Scroll Value:" + total)
