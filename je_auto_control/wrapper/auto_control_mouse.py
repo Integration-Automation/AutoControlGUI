@@ -19,7 +19,7 @@ from je_auto_control.wrapper.platform_wrapper import mouse_keys_table
 from je_auto_control.wrapper.platform_wrapper import special_mouse_keys_table
 
 
-def get_mouse_table():
+def get_mouse_table() -> dict:
     return mouse_keys_table
 
 
@@ -167,7 +167,8 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tupl
         print(repr(error), file=sys.stderr)
 
 
-def mouse_scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down") -> Tuple[int, str]:
+def mouse_scroll(
+        scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down") -> Tuple[int, str]:
     """"
     :param scroll_value scroll count
     :param x mouse click x position

@@ -95,7 +95,7 @@ class XWindowsKeypressListener(Thread):
         self.root = current_display.screen().root
         self.context = None
 
-    def check_is_press(self, keycode: int):
+    def check_is_press(self, keycode: int) -> bool:
         """
         :param keycode check this keycode is press?
         """
@@ -148,7 +148,7 @@ xwindows_listener = XWindowsKeypressListener()
 xwindows_listener.start()
 
 
-def check_key_is_press(keycode: int) -> int:
+def check_key_is_press(keycode: int) -> bool:
     """
     :param keycode check this keycode is press?
     """

@@ -121,7 +121,7 @@ class CallbackFunctionExecutor(object):
             callback_function_param: [dict, None] = None,
             callback_param_method: str = "kwargs",
             **kwargs
-    ):
+    ) -> typing.Any:
         """
         :param trigger_function_name: what function we want to trigger only accept function in event_dict
         :param callback_function: what function we want to callback
