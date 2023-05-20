@@ -1,6 +1,4 @@
-auto-control-github-actions_stable_python3_8:
-  yml:
-name: AutoControl GitHub Actions Stable
+name: AutoControl GitHub Actions Stable Python3.9
 
 on:
   push:

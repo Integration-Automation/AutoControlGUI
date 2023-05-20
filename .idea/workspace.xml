@@ -4,17 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev_python3_11.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev_python3_8.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev_python3_9.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable_python3_11.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable_python3_8.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable_python3_9.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_dev_python3_10.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/auto-control-github-actions_stable_python3_10.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -79,11 +69,11 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\.github\workflows" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\autocontrol_driver" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Zh\doc\create_project" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Eng\doc\create_project" />
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Zh\doc" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\architecture_diagram" />
