@@ -6,8 +6,11 @@
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Intergration-Automation-Testing/AutoControl/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/Intergration-Automation-Testing/AutoControl/tree/main)
 
 [![AutoControl GitHub Actions Stable Python3.8](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_8.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_8.yml)
+
 [![AutoControl GitHub Actions Stable Python3.9](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_9.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_9.yml)
+
 [![AutoControl GitHub Actions Stable Python3.10](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_10.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_10.yml)
+
 [![AutoControl GitHub Actions Stable Python3.11](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_11.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_11.yml)
 
 ### Documentation
