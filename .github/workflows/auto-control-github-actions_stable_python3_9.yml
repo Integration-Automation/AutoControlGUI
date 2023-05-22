@@ -1,4 +1,4 @@
-name: AutoControl GitHub Actions Stable Python3.9
+name: AutoControl Stable Python3.9
 
 on:
   push:
