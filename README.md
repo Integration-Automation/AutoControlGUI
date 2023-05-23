@@ -4,13 +4,13 @@
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/db0f6e626a614f67bf2b6b1f54325a24)](https://www.codacy.com/gh/JE-Chen/AutoControl/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=JE-Chen/AutoControl&amp;utm_campaign=Badge_Grade)
 
-[![AutoControl GitHub Actions Stable Python3.8](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_8.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_8.yml)
+[![AutoControl Stable Python3.8](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/stable_python3_8.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/stable_python3_8.yml)
 
-[![AutoControl GitHub Actions Stable Python3.9](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_9.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_9.yml)
+[![AutoControl Stable Python3.9](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/stable_python3_9.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/stable_python3_9.yml)
 
-[![AutoControl GitHub Actions Stable Python3.10](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_10.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_10.yml)
+[![AutoControl Stable Python3.10](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/stable_python3_10.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/stable_python3_10.yml)
 
-[![AutoControl GitHub Actions Stable Python3.11](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_11.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_11.yml)
+[![AutoControl Stable Python3.11](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/stable_python3_11.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/stable_python3_11.yml)
 
 ### Documentation
 [![Documentation Status](https://readthedocs.org/projects/autocontrol/badge/?version=latest)](https://autocontrol.readthedocs.io/en/latest/?badge=latest)
@@ -20,6 +20,7 @@
 > Project Kanban \
 > https://github.com/orgs/Intergration-Automation-Testing/projects/2 \
 > Image & Coordinate based GUI Automation \
+
 > GUI automated based on image comparison and coordinates. \
 > Cross-platform and cross-programming language.\
 > Solve problems:
