@@ -1,4 +1,4 @@
-name: AutoControl GitHub Actions Dev Python3.11
+name: AutoControl Dev Python3.11
 
 on:
   push:
