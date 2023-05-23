@@ -3,7 +3,6 @@
 [![Downloads](https://static.pepy.tech/badge/je-auto-control)](https://pepy.tech/project/je-auto-control)
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/db0f6e626a614f67bf2b6b1f54325a24)](https://www.codacy.com/gh/JE-Chen/AutoControl/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=JE-Chen/AutoControl&amp;utm_campaign=Badge_Grade)
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/Intergration-Automation-Testing/AutoControl/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/Intergration-Automation-Testing/AutoControl/tree/main)
 
 [![AutoControl GitHub Actions Stable Python3.8](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_8.yml/badge.svg)](https://github.com/Intergration-Automation-Testing/AutoControl/actions/workflows/auto-control-github-actions_stable_python3_8.yml)
 
