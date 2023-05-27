@@ -96,31 +96,25 @@ from je_auto_control.wrapper.auto_control_record import stop_record
 from je_auto_control.wrapper.auto_control_screen import screenshot
 # import screen
 from je_auto_control.wrapper.auto_control_screen import screen_size
+# Shell command
+from je_auto_control.utils.shell_process.shell_exec import ShellManager
+from je_auto_control.utils.shell_process.shell_exec import default_shell_manager
+# Start exe
+from je_auto_control.utils.start_exe.start_another_process import start_exe
 
 __all__ = [
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
     "mouse_scroll", "set_mouse_position", "special_mouse_keys_table",
     "keyboard_keys_table", "press_keyboard_key", "release_keyboard_key", "type_keyboard", "check_key_is_press",
-    "write", "hotkey",
-    "screen_size", "screenshot",
-    "locate_all_image", "locate_image_center", "locate_and_click",
-    "CriticalExit",
-    "AutoControlException", "AutoControlKeyboardException",
+    "write", "hotkey", "start_exe",
+    "screen_size", "screenshot", "locate_all_image", "locate_image_center", "locate_and_click",
+    "CriticalExit", "AutoControlException", "AutoControlKeyboardException",
     "AutoControlMouseException", "AutoControlCantFindKeyException",
-    "AutoControlScreenException", "ImageNotFoundException",
-    "AutoControlJsonActionException", "AutoControlRecordException",
-    "AutoControlActionNullException", "AutoControlActionException",
-    "record", "stop_record",
-    "read_action_json", "write_action_json",
-    "execute_action", "execute_files", "executor", "add_command_to_executor",
-    "multiprocess_timeout", "test_record_instance",
-    "screenshot",
-    "pil_screenshot",
-    "generate_html", "generate_html_report",
-    "generate_json", "generate_json_report",
-    "generate_xml", "generate_xml_report",
-    "get_dir_files_as_list", "create_project_dir",
-    "start_autocontrol_socket_server",
-    "callback_executor", "package_manager",
-    "get_special_table"
+    "AutoControlScreenException", "ImageNotFoundException", "AutoControlJsonActionException",
+    "AutoControlRecordException", "AutoControlActionNullException", "AutoControlActionException", "record",
+    "stop_record", "read_action_json", "write_action_json", "execute_action", "execute_files", "executor",
+    "add_command_to_executor", "multiprocess_timeout", "test_record_instance", "screenshot", "pil_screenshot",
+    "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
+    "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
+    "callback_executor", "package_manager", "get_special_table", "ShellManager", "default_shell_manager",
 ]

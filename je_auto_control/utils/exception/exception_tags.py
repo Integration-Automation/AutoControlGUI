@@ -59,3 +59,5 @@ xml_type_error: str = "xml type error"
 # Callback executor
 get_bad_trigger_method: str = "get bad trigger method, only accept kwargs and args"
 get_bad_trigger_function: str = "get bad trigger function only accept function in event_dict"
+# Can't find file
+can_not_find_file: str = "Can not find file"

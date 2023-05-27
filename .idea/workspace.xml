@@ -4,13 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/licenses/AutoControl/LICENSE" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE/AutoControl/LICENSE" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/licenses/Numpy/LICENSE" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE/Numpy/LICENSE" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/licenses/OpenCV/LICENSE" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE/OpenCV/LICENSE" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/licenses/Pillow/LICENSE" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE/Pillow/LICENSE" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/licenses/python_xlib/LICENSE" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE/python_xlib/LICENSE" afterDir="false" />
-    </list>
+    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

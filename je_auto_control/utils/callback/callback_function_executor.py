@@ -1,13 +1,13 @@
 import typing
 from sys import stderr
 
-from je_auto_control.utils.project.create_project_structure import create_project_dir
+from je_auto_control.utils.shell_process.shell_exec import ShellManager
+from je_auto_control.utils.start_exe.start_another_process import start_exe
 from je_auto_control.utils.exception.exception_tags import get_bad_trigger_method, get_bad_trigger_function
 from je_auto_control.utils.exception.exceptions import CallbackExecutorException
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.executor.action_executor import execute_files
-from je_auto_control.utils.project.create_project_structure import create_project_dir
 # file process
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
 # html report
@@ -25,6 +25,7 @@ from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.json.json_file import write_action_json
 from je_auto_control.utils.package_manager.package_manager_class import \
     package_manager
+from je_auto_control.utils.project.create_project_structure import create_project_dir
 # socket server
 from je_auto_control.utils.socket_server.auto_control_socket_server import start_autocontrol_socket_server
 # test record
@@ -111,7 +112,11 @@ class CallbackFunctionExecutor(object):
             "add_package_to_executor": package_manager.add_package_to_executor,
             "add_package_to_callback_executor": package_manager.add_package_to_callback_executor,
             # project
-            "create_project": create_project_dir
+            "create_project": create_project_dir,
+            # Shell
+            "shell_command": ShellManager().exec_shell,
+            # Another process
+            "execute_process": start_exe,
         }
 
     def callback_function(
