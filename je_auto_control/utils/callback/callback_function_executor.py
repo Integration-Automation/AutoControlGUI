@@ -1,8 +1,6 @@
 import typing
 from sys import stderr
 
-from je_auto_control.utils.shell_process.shell_exec import ShellManager
-from je_auto_control.utils.start_exe.start_another_process import start_exe
 from je_auto_control.utils.exception.exception_tags import get_bad_trigger_method, get_bad_trigger_function
 from je_auto_control.utils.exception.exceptions import CallbackExecutorException
 # executor
@@ -26,8 +24,10 @@ from je_auto_control.utils.json.json_file import write_action_json
 from je_auto_control.utils.package_manager.package_manager_class import \
     package_manager
 from je_auto_control.utils.project.create_project_structure import create_project_dir
+from je_auto_control.utils.shell_process.shell_exec import ShellManager
 # socket server
 from je_auto_control.utils.socket_server.auto_control_socket_server import start_autocontrol_socket_server
+from je_auto_control.utils.start_exe.start_another_process import start_exe
 # test record
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
 # import image

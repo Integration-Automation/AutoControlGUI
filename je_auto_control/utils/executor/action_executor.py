@@ -3,8 +3,6 @@ import sys
 import types
 from inspect import getmembers, isbuiltin
 
-from je_auto_control.utils.start_exe.start_another_process import start_exe
-from je_auto_control.utils.shell_process.shell_exec import ShellManager
 from je_auto_control.utils.exception.exception_tags import action_is_null_error, add_command_exception_tag, \
     executor_list_error
 from je_auto_control.utils.exception.exception_tags import cant_execute_action_error
@@ -19,6 +17,8 @@ from je_auto_control.utils.generate_report.generate_xml_report import generate_x
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.package_manager.package_manager_class import package_manager
 from je_auto_control.utils.project.create_project_structure import create_project_dir
+from je_auto_control.utils.shell_process.shell_exec import ShellManager
+from je_auto_control.utils.start_exe.start_another_process import start_exe
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_and_click, locate_image_center
 from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press

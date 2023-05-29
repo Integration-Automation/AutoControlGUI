@@ -118,4 +118,6 @@ dmypy.json
 # Pycharm
 .idea
 .idea/*
+.idea/AutoControl.iml
+.idea/misc.xml
 .idea/workspace.xml
