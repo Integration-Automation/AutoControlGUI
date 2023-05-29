@@ -18,7 +18,7 @@
 ---
 
 > Project Kanban \
-> https://github.com/orgs/Intergration-Automation-Testing/projects/2 \
+> https://github.com/orgs/Integration-Automation/projects/2/views/1 \
 > Image & Coordinate based GUI Automation \
 
 > GUI automated based on image comparison and coordinates. \
