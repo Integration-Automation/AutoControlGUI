@@ -19,6 +19,11 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitSEFilterConfiguration">
@@ -50,23 +55,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;dev&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/JeffreyChen/Desktop/Code_Space/AutoControl&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "DefaultHtmlFileTemplate": "HTML File",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "git-widget-placeholder": "dev",
+    "last_opened_file_path": "C:/Users/JeffreyChen/Desktop/Code_Space/AutomationEditor",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\.github\workflows" />
@@ -76,11 +81,11 @@
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\docs\source\Eng\doc\create_project" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\.github" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\licenses\python_xlib" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\licenses\Pillow" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\licenses\OpenCV" />
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\licenses\Numpy" />
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\licenses\AutoControl" />
     </key>
   </component>
   <component name="RunManager" selected="Python.create_project_test">
@@ -235,10 +240,10 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.create_project_test" />
-        <item itemvalue="Python.executor_bad_file" />
-        <item itemvalue="Python.html_report_test" />
         <item itemvalue="Python.screen_test" />
+        <item itemvalue="Python.html_report_test" />
+        <item itemvalue="Python.executor_bad_file" />
+        <item itemvalue="Python.create_project_test" />
         <item itemvalue="Python.callback_test" />
       </list>
     </recent_temporary>
