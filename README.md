@@ -19,36 +19,28 @@
 
 > Project Kanban \
 > https://github.com/orgs/Integration-Automation/projects/2/views/1 \
-> Image & Coordinate based GUI Automation \
+> * Powerful and useful GUI Automation.
+> * Image recognition.
+> * Coordinate-based.
+> * Mouse automation.
+> * Keyboard automation.
+> * Locate image less than 0.5 sec.
+> * AutoControl script.
+> * Generate JSON/HTML/XML report.
+> * Remote Automation support.
+> * 1 sec / thousands keyboard event.
+> * 1 sec / thousands mouse event.
+> * Open another process support.
+> * Shell command support.
+> * Screenshot support.
+> * OS Independent.
+> * Project & Template support.
 
-> GUI automated based on image comparison and coordinates. \
-> Cross-platform and cross-programming language.\
-> Solve problems:
->> * Provide automation execution for repetitive tasks.
->> * Multiple methods are available, including recording, image recognition, and coordinate-based testing.
->> * Tests can be executed remotely through TCP/IP.
->> * Test reports can be generated with records for each action.
->> * The same code can be used for three platforms, reducing the possibility of platform-dependent programs.
->> * Provide hooks for keyboard and mouse events and state checks (including using code to simulate key presses).
->> * Can use keywords for development to improve readability.
 ---
 
 ### NOTICE
 > We don't support Unix/Linux Wayland GUI Now \
 > May be future feature
----
-### Features
-
->* Image Detect
->* Keyboard Event
->* Mouse Event
->* Screen
->* Action file and executor
->* Record Event
->* CLI with action file
->* Generate HTML Report
->* Timeout
-
 ---
 
 ## install
