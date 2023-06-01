@@ -17,6 +17,7 @@ dependencies = [
     "je_open_cv",
     "pillow",
     "numpy",
+    "APScheduler",
     "pyobjc-core;platform_system=='Darwin'",
     "pyobjc;platform_system=='Darwin'",
     "python-Xlib;platform_system=='Linux'"

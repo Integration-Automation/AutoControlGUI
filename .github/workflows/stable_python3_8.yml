@@ -69,3 +69,7 @@ jobs:
         run: python ./test/unit_test/callback/callback_test.py
       - name: Test Create Project Function
         run: python ./test/unit_test/create_project_file/create_project_test.py
+      - name: Test Interval Scheduler
+        run: python ./test/unit_test/scheduler_test/sec_interval_test.py
+      - name: Test Cron Scheduler
+        run: python ./test/unit_test/scheduler_test/sec_cron_test.py
