@@ -3,7 +3,7 @@ import sys
 import types
 from inspect import getmembers, isbuiltin
 
-from je_auto_control.utils.exception.exception_tags import action_is_null_error, add_command_exception_tag, \
+from je_auto_control.utils.exception.exception_tags import action_is_null_error, add_command_exception, \
     executor_list_error
 from je_auto_control.utils.exception.exception_tags import cant_execute_action_error
 from je_auto_control.utils.exception.exceptions import AutoControlActionException, AutoControlAddCommandException
@@ -163,7 +163,7 @@ def add_command_to_executor(command_dict: dict):
         if isinstance(command, (types.MethodType, types.FunctionType)):
             executor.event_dict.update({command_name: command})
         else:
-            raise AutoControlAddCommandException(add_command_exception_tag)
+            raise AutoControlAddCommandException(add_command_exception)
 
 
 def execute_action(action_list: list) -> dict:

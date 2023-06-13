@@ -1,12 +1,11 @@
-import sys
 from typing import List, Union
-
 
 from je_auto_control.utils.exception.exception_tags import cant_find_image
 from je_auto_control.utils.exception.exception_tags import find_image_error_variable
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.utils.image import template_detection
 from je_auto_control.utils.image.screenshot import pil_screenshot
+from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
@@ -20,20 +19,31 @@ def locate_all_image(image, detect_threshold: [float, int] = 1,
     :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal (float or int)
     :param draw_image draw detect tag on return image (bool)
     """
+    auto_control_logger.info(
+        f"Find multi image {image}, with threshold {detect_threshold}"
+    )
     param = locals()
     try:
         try:
             image_data_array = template_detection.find_image_multi(image, detect_threshold, draw_image)
         except ImageNotFoundException as error:
+            auto_control_logger.error(
+                f"Find multi image {image}, with threshold {detect_threshold} failed. "
+                f"failed: {repr(find_image_error_variable + ' ' + repr(error) + ' ' + str(image))}")
             raise ImageNotFoundException(find_image_error_variable + " " + repr(error) + " " + str(image))
         if image_data_array[0] is True:
             record_action_to_list("locate_all_image", param)
             return image_data_array[1]
         else:
+            auto_control_logger.error(
+                f"Find multi image {image}, with threshold {detect_threshold} failed. "
+                f"failed: {repr(ImageNotFoundException(cant_find_image + ' / ' + repr(image)))}")
             raise ImageNotFoundException(cant_find_image + " / " + repr(image))
     except Exception as error:
         record_action_to_list("locate_all_image", param, repr(error))
-        print(repr(error), file=sys.stderr)
+        auto_control_logger.error(
+            f"Find multi image {image}, with threshold {detect_threshold} failed. "
+            f"failed: {repr(error)}")
 
 
 def locate_image_center(image, detect_threshold: [float, int] = 1, draw_image: bool = False) -> List[Union[int, int]]:
@@ -43,11 +53,17 @@ def locate_image_center(image, detect_threshold: [float, int] = 1, draw_image: b
     :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal (float or int)
     :param draw_image draw detect tag on return image (bool)
     """
+    auto_control_logger.info(
+        f"Try to locate image center {image} with threshold {detect_threshold}")
     param = locals()
     try:
         try:
             image_data_array = template_detection.find_image(image, detect_threshold, draw_image)
         except ImageNotFoundException as error:
+            auto_control_logger.error(
+                f"Locate image center failed. image: {image}, with threshold {detect_threshold}, "
+                f"{repr(ImageNotFoundException(find_image_error_variable + ' ' + repr(error) + ' ' + str(image)))}"
+            )
             raise ImageNotFoundException(find_image_error_variable + " " + repr(error) + " " + str(image))
         if image_data_array[0] is True:
             height = image_data_array[1][2] - image_data_array[1][0]
@@ -56,10 +72,16 @@ def locate_image_center(image, detect_threshold: [float, int] = 1, draw_image: b
             record_action_to_list("locate_image_center", param)
             return [int(image_data_array[1][0] + center[0]), int(image_data_array[1][1] + center[1])]
         else:
+            auto_control_logger.error(
+                f"Locate image center failed. image: {image}, with threshold {detect_threshold}, "
+                f"failed: {repr(ImageNotFoundException(cant_find_image + ' / ' + repr(image)))}"
+            )
             raise ImageNotFoundException(cant_find_image + " / " + repr(image))
     except Exception as error:
         record_action_to_list("locate_image_center", param, repr(error))
-        print(repr(error), file=sys.stderr)
+        auto_control_logger.error(
+            f"Locate image center failed. image: {image}, with threshold {detect_threshold}, "
+            f"failed: {repr(error)}")
 
 
 def locate_and_click(
@@ -73,11 +95,20 @@ def locate_and_click(
     :param detect_threshold detect precision 0.0 ~ 1.0; 1 is absolute equal (float or int)
     :param draw_image draw detect tag on return image (bool)
     """
+    auto_control_logger.info(
+        f"locate_and_click, image: {image}, keycode: {mouse_keycode}, detect threshold: {detect_threshold}, "
+        f"draw image: {draw_image}"
+    )
     param = locals()
     try:
         try:
             image_data_array = template_detection.find_image(image, detect_threshold, draw_image)
         except ImageNotFoundException:
+            auto_control_logger.error(
+                f"Locate and click failed, image: {image}, keycode: {mouse_keycode}, "
+                f"detect_threshold: {detect_threshold}, "
+                f"failed: {repr(ImageNotFoundException(find_image_error_variable))}"
+            )
             raise ImageNotFoundException(find_image_error_variable)
         if image_data_array[0] is True:
             height = image_data_array[1][2] - image_data_array[1][0]
@@ -90,10 +121,19 @@ def locate_and_click(
             record_action_to_list("locate_and_click", param)
             return [int(image_center_x), int(image_center_y)]
         else:
+            auto_control_logger.error(
+                f"Locate and click failed, image: {image}, keycode: {mouse_keycode}, "
+                f"detect_threshold: {detect_threshold}, "
+                f"failed: {repr(ImageNotFoundException(cant_find_image + ' / ' + repr(image)))}"
+            )
             raise ImageNotFoundException(cant_find_image + " / " + repr(image))
     except Exception as error:
         record_action_to_list("locate_and_click", param, repr(error))
-        print(repr(error), file=sys.stderr)
+        auto_control_logger.error(
+            f"Locate and click failed, image: {image}, keycode: {mouse_keycode}, "
+            f"detect_threshold: {detect_threshold}, "
+            f"failed: {repr(error)}"
+        )
 
 
 def screenshot(file_path: str = None, region: list = None) -> List[Union[int, int]]:
@@ -102,10 +142,16 @@ def screenshot(file_path: str = None, region: list = None) -> List[Union[int, in
     :param file_path save screenshot path (None is no save)
     :param region screenshot screen_region (screenshot screen_region on screen)
     """
+    auto_control_logger.info(
+        f"screenshot, file path: {file_path}, region: {region}"
+    )
     param = locals()
     try:
         record_action_to_list("screenshot", param)
         return pil_screenshot(file_path, region)
     except Exception as error:
-        print(repr(error), file=sys.stderr)
+        auto_control_logger.error(
+            f"Screenshot failed, file path: {file_path}, region: {region}, "
+            f"failed: {repr(error)}"
+        )
         record_action_to_list("screenshot", param, repr(error))

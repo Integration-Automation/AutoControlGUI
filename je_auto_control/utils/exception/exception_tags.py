@@ -48,7 +48,7 @@ timeout_need_on_main_error: str = "should put timeout function on main"
 # HTML
 html_generate_no_data_tag: str = "record is None"
 # add command
-add_command_exception_tag: str = "command value type should be as method or function"
+add_command_exception: str = "command value type should be as method or function"
 # executor
 executor_list_error: str = "executor receive wrong data list is none or wrong type"
 # argparse
