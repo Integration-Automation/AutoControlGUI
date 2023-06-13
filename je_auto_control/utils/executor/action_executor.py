@@ -15,6 +15,7 @@ from je_auto_control.utils.generate_report.generate_json_report import generate_
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml_report
 from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 from je_auto_control.utils.package_manager.package_manager_class import package_manager
 from je_auto_control.utils.project.create_project_structure import create_project_dir
 from je_auto_control.utils.shell_process.shell_exec import ShellManager
@@ -111,6 +112,7 @@ class Executor(object):
         :param action_list the list include action
         for loop the list and execute action
         """
+        auto_control_logger.info(f"execute_action, action_list: {action_list}")
         if isinstance(action_list, dict):
             action_list: list = action_list.get("auto_control", None)
             if action_list is None:
@@ -123,15 +125,18 @@ class Executor(object):
                 raise AutoControlActionNullException(action_is_null_error)
         except Exception as error:
             record_action_to_list("execute_action", action_list, repr(error))
-            print(repr(error), file=sys.stderr, flush=True)
+            auto_control_logger.info(
+                f"execute_action, action_list: {action_list}, "
+                f"failed: {repr(error)}")
         for action in action_list:
             try:
                 event_response = self._execute_event(action)
                 execute_record = "execute: " + str(action)
                 execute_record_dict.update({execute_record: event_response})
             except Exception as error:
-                print(repr(error), file=sys.stderr, flush=True)
-                print(action, file=sys.stderr, flush=True)
+                auto_control_logger.info(
+                    f"execute_action, action_list: {action_list}, "
+                    f"action: {action}, failed: {repr(error)}")
                 record_action_to_list("execute_action", None, repr(error))
                 execute_record = "execute: " + str(action)
                 execute_record_dict.update({execute_record: repr(error)})
@@ -145,6 +150,7 @@ class Executor(object):
         :param execute_files_list: list include execute files path
         :return: every execute detail as list
         """
+        auto_control_logger.info(f"execute_files, execute_files_list: {execute_files_list}")
         execute_detail_list: list = list()
         for file in execute_files_list:
             execute_detail_list.append(self.execute_action(read_action_json(file)))
