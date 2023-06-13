@@ -1,6 +1,7 @@
 import sys
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 
 if sys.platform in ["win32", "cygwin", "msys"]:
     from je_auto_control.windows.core.utils.win32_vk import win32_ABSOLUTE
@@ -493,7 +494,7 @@ screen = None
 recorder = None
 
 if sys.platform in ["win32", "cygwin", "msys"]:
-
+    auto_control_logger.info("Load Windows Setting")
     keyboard_keys_table = {
         "absolute": win32_ABSOLUTE,
         "eventf_extendedkey": win32_EventF_EXTENDEDKEY,
@@ -705,7 +706,7 @@ if sys.platform in ["win32", "cygwin", "msys"]:
         raise AutoControlException("Can't init auto control")
 
 elif sys.platform in ["darwin"]:
-
+    auto_control_logger.info("Load MacOS Setting")
     keyboard_keys_table = {
         "a": osx_key_a,
         "A": osx_key_A,
@@ -867,7 +868,7 @@ elif sys.platform in ["darwin"]:
         raise AutoControlException("Can't init auto control")
 
 elif sys.platform in ["linux", "linux2"]:
-
+    auto_control_logger.info("Load Linux x11 Setting")
     keyboard_keys_table = {
         "backspace": x11_linux_key_backspace,
         "\b": x11_linux_key_slash_b,

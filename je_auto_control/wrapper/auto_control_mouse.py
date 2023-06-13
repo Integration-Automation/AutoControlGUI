@@ -12,6 +12,7 @@ from je_auto_control.utils.exception.exception_tags import mouse_wrong_value
 from je_auto_control.utils.exception.exception_tags import table_cant_find_key
 from je_auto_control.utils.exception.exceptions import AutoControlCantFindKeyException
 from je_auto_control.utils.exception.exceptions import AutoControlMouseException
+from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.platform_wrapper import mouse
@@ -55,6 +56,7 @@ def get_mouse_position() -> Tuple[int, int]:
     get mouse current position
     return mouse_x, mouse_y
     """
+    auto_control_logger.info("get_mouse_position")
     try:
         try:
             record_action_to_list("get_mouse_position", None)
@@ -72,6 +74,7 @@ def set_mouse_position(x: int, y: int) -> Tuple[int, int]:
     :param y set mouse position y
     return x, y
     """
+    auto_control_logger.info(f"set_mouse_position, x: {x}, y: {y}")
     param = locals()
     try:
         try:
@@ -79,12 +82,20 @@ def set_mouse_position(x: int, y: int) -> Tuple[int, int]:
             record_action_to_list("position", param)
             return x, y
         except AutoControlMouseException as error:
+            auto_control_logger.error(
+                f"set_mouse_position, x: {x}, y: {y}, "
+                f"failed: {AutoControlMouseException(mouse_set_position + ' ' + repr(error))}")
             raise AutoControlMouseException(mouse_set_position + " " + repr(error))
         except ctypes.ArgumentError as error:
+            auto_control_logger.error(
+                f"set_mouse_position, x: {x}, y: {y}, "
+                f"failed: {AutoControlMouseException(mouse_wrong_value + ' ' + repr(error))}")
             raise AutoControlMouseException(mouse_wrong_value + " " + repr(error))
     except Exception as error:
         record_action_to_list("set_mouse_position", param, repr(error))
-        print(repr(error), file=sys.stderr)
+        auto_control_logger.error(
+            f"set_mouse_position, x: {x}, y: {y}, "
+            f"failed: {repr(error)}")
 
 
 def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tuple[Union[int, str], int, int]:
@@ -95,6 +106,9 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tupl
     :param x mouse click x position
     :param y mouse click y position
     """
+    auto_control_logger.info(
+        f"press_mouse, mouse_keycode: {mouse_keycode}, x: {x}, y: {y}"
+    )
     param = locals()
     try:
         mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
@@ -106,12 +120,17 @@ def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tupl
             record_action_to_list("press_mouse", param)
             return mouse_keycode, x, y
         except AutoControlMouseException as error:
+            auto_control_logger.error(
+                f"press_mouse, mouse_keycode: {mouse_keycode}, x: {x}, y: {y}, "
+                f"failed: {AutoControlMouseException(mouse_press_mouse + ' ' + repr(error))}"
+            )
             raise AutoControlMouseException(mouse_press_mouse + " " + repr(error))
-        except TypeError as error:
-            raise AutoControlMouseException(repr(error))
     except Exception as error:
         record_action_to_list("press_mouse", param, repr(error))
-        print(repr(error), file=sys.stderr)
+        auto_control_logger.error(
+            f"press_mouse, mouse_keycode: {mouse_keycode}, x: {x}, y: {y}, "
+            f"failed: {repr(error)}"
+        )
 
 
 def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tuple[Union[int, str], int, int]:
@@ -122,6 +141,9 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tu
     :param x mouse click x position
     :param y mouse click y position
     """
+    auto_control_logger.info(
+        f"press_mouse, mouse_keycode: {mouse_keycode}, x: {x}, y: {y}"
+    )
     param = locals()
     try:
         mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
@@ -133,12 +155,17 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tu
             record_action_to_list("press_mouse", param)
             return mouse_keycode, x, y
         except AutoControlMouseException as error:
+            auto_control_logger.error(
+                f"press_mouse, mouse_keycode: {mouse_keycode}, x: {x}, y: {y}, "
+                f"failed: {AutoControlMouseException(mouse_release_mouse + ' ' + repr(error))}"
+            )
             raise AutoControlMouseException(mouse_release_mouse + " " + repr(error))
-        except TypeError as error:
-            raise AutoControlMouseException(repr(error))
     except Exception as error:
         record_action_to_list("release_mouse", param, repr(error))
-        print(repr(error), file=sys.stderr)
+        auto_control_logger.error(
+            f"press_mouse, mouse_keycode: {mouse_keycode}, x: {x}, y: {y}, "
+            f"failed: {repr(error)}"
+        )
 
 
 def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tuple[Union[int, str], int, int]:
@@ -149,6 +176,9 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tupl
     :param x mouse click x position
     :param y mouse click y position
     """
+    auto_control_logger.info(
+        f"click_mouse, mouse_keycode: {mouse_keycode}, x: {x}, y: {y}"
+    )
     param = locals()
     try:
         mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
@@ -158,13 +188,17 @@ def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tupl
             return mouse_keycode, x, y
         except AutoControlMouseException as error:
             record_action_to_list("click_mouse", param, mouse_click_mouse + " " + repr(error))
+            auto_control_logger.error(
+                f"click_mouse, mouse_keycode: {mouse_keycode}, x: {x}, y: {y}, "
+                f"failed: {AutoControlMouseException(mouse_click_mouse + ' ' + repr(error))}"
+            )
             raise AutoControlMouseException(mouse_click_mouse + " " + repr(error))
-        except TypeError as error:
-            record_action_to_list("click_mouse", param, repr(error))
-            raise AutoControlMouseException(repr(error))
     except Exception as error:
         record_action_to_list("click_mouse", param, repr(error))
-        print(repr(error), file=sys.stderr)
+        auto_control_logger.error(
+            f"click_mouse, mouse_keycode: {mouse_keycode}, x: {x}, y: {y}, "
+            f"failed: {repr(error)}"
+        )
 
 
 def mouse_scroll(
@@ -179,12 +213,19 @@ def mouse_scroll(
     scroll_direction = scroll_left : direction left
     scroll_direction = scroll_right : direction right
     """
+    auto_control_logger.info(
+        f"mouse_scroll, scroll_value: {scroll_value}, x: {x}, y: {y}, scroll_direction: {scroll_direction}"
+    )
     param = locals()
     try:
         try:
             now_cursor_x, now_cursor_y = get_mouse_position()
         except AutoControlMouseException as error:
             record_action_to_list("scroll", param, repr(error))
+            auto_control_logger.error(
+                f"mouse_scroll, scroll_value: {scroll_value}, x: {x}, y: {y}, scroll_direction: {scroll_direction}, "
+                f"failed: {AutoControlMouseException(mouse_get_position)}"
+            )
             raise AutoControlMouseException(mouse_get_position)
         width, height = screen_size()
         if x is None:
@@ -211,9 +252,14 @@ def mouse_scroll(
                 mouse.scroll(scroll_value, scroll_direction)
             return scroll_value, scroll_direction
         except AutoControlMouseException as error:
+            auto_control_logger.error(
+                f"mouse_scroll, scroll_value: {scroll_value}, x: {x}, y: {y}, scroll_direction: {scroll_direction}, "
+                f"failed: {AutoControlMouseException(mouse_scroll + ' ' + repr(error))}"
+            )
             raise AutoControlMouseException(mouse_scroll + " " + repr(error))
-        except TypeError as error:
-            raise AutoControlMouseException(repr(error))
     except Exception as error:
         record_action_to_list("scroll", param, repr(error))
-        print(repr(error), file=sys.stderr)
+        auto_control_logger.error(
+            f"mouse_scroll, scroll_value: {scroll_value}, x: {x}, y: {y}, scroll_direction: {scroll_direction}, "
+            f"failed: {repr(error)}"
+        )
