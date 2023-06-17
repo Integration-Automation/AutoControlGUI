@@ -3,7 +3,6 @@ import time
 
 from je_auto_control.utils.exception.exception_tags import linux_import_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 
 if sys.platform not in ["linux", "linux2"]:
     raise AutoControlException(linux_import_error)
@@ -29,4 +28,3 @@ def release_key(keycode: int) -> None:
     time.sleep(0.01)
     fake_input(display, X.KeyRelease, keycode)
     display.sync()
-

@@ -2,7 +2,6 @@ import sys
 
 from je_auto_control.utils.exception.exception_tags import linux_import_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 
 if sys.platform not in ["linux", "linux2"]:
     raise AutoControlException(linux_import_error)
@@ -195,4 +194,3 @@ x11_linux_key_7 = display.keysym_to_keycode(XK.string_to_keysym("7"))
 x11_linux_key_8 = display.keysym_to_keycode(XK.string_to_keysym("8"))
 x11_linux_key_9 = display.keysym_to_keycode(XK.string_to_keysym("9"))
 x11_linux_key_0 = display.keysym_to_keycode(XK.string_to_keysym("0"))
-
