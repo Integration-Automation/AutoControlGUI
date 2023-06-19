@@ -7,7 +7,7 @@ from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 from je_auto_control.utils.shell_process.shell_exec import ShellManager
 
 
-def start_exe(exe_path: str):
+def start_exe(exe_path: str) -> None:
     auto_control_logger.info(f"start_exe, exe_path: {exe_path}")
     exe_path = Path(exe_path)
     if exe_path.exists() and exe_path.is_file():

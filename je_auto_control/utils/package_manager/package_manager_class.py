@@ -2,6 +2,7 @@ from importlib import import_module
 from importlib.util import find_spec
 from inspect import getmembers, isfunction, isbuiltin, isclass
 from sys import stderr
+from typing import Union, Callable
 
 from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 
@@ -14,7 +15,7 @@ class PackageManager(object):
         self.executor = None
         self.callback_executor = None
 
-    def check_package(self, package: str):
+    def check_package(self, package: str) -> Union[None, dict[str, Callable]]:
         """
         :param package: package to check exists or not
         :return: package if find else None
@@ -30,7 +31,7 @@ class PackageManager(object):
                     print(repr(error), file=stderr)
         return self.installed_package_dict.get(package, None)
 
-    def add_package_to_executor(self, package):
+    def add_package_to_executor(self, package) -> None:
         auto_control_logger.info(f"add_package_to_executor, package: {package}")
         """
         :param package: package's function will add to executor
@@ -40,7 +41,7 @@ class PackageManager(object):
             target=self.executor
         )
 
-    def add_package_to_callback_executor(self, package):
+    def add_package_to_callback_executor(self, package) -> None:
         auto_control_logger.info(f"add_package_to_callback_executor, package: {package}")
         """
         :param package: package's function will add to callback_executor
@@ -50,7 +51,7 @@ class PackageManager(object):
             target=self.callback_executor
         )
 
-    def get_member(self, package, predicate, target):
+    def get_member(self, package, predicate, target) -> None:
         """
         :param package: package we want to get member
         :param predicate: predicate
@@ -67,7 +68,7 @@ class PackageManager(object):
         else:
             print(f"Executor error {self.executor}", file=stderr)
 
-    def add_package_to_target(self, package, target):
+    def add_package_to_target(self, package, target) -> None:
         """
         :param package: package we want to get member
         :param target: which event_dict will be added

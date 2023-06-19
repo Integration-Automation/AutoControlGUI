@@ -8,7 +8,7 @@ from je_auto_control.utils.executor.action_executor import execute_action
 
 class TCPServerHandler(socketserver.BaseRequestHandler):
 
-    def handle(self):
+    def handle(self) -> None:
         command_string = str(self.request.recv(8192).strip(), encoding="utf-8")
         socket = self.request
         print("command is: " + command_string, flush=True)
@@ -42,7 +42,7 @@ class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         self.close_flag: bool = False
 
 
-def start_autocontrol_socket_server(host: str = "localhost", port: int = 9938):
+def start_autocontrol_socket_server(host: str = "localhost", port: int = 9938) -> TCPServer:
     if len(sys.argv) == 2:
         host = sys.argv[1]
     elif len(sys.argv) == 3:

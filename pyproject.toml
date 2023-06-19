@@ -1,12 +1,12 @@
-# Rename to build stable version
-# This is stable version
+# Rename to build dev version
+# This is dev version
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "je_auto_control"
-version = "0.0.144"
+name = "je_auto_control_dev"
+version = "0.0.83"
 authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]

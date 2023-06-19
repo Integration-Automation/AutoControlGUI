@@ -150,7 +150,7 @@ def generate_html() -> str:
     return new_html_string
 
 
-def generate_html_report(html_name: str = "default_name"):
+def generate_html_report(html_name: str = "default_name") -> None:
     auto_control_logger.info(f"generate_html_report, html_name: {html_name}")
     """
     Output html report file

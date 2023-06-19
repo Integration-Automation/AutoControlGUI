@@ -1,13 +1,13 @@
-import sys
 from threading import Lock
 from xml.dom.minidom import parseString
+from typing import Tuple, Dict, Union
 
 from je_auto_control.utils.generate_report.generate_json_report import generate_json
 from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 from je_auto_control.utils.xml.change_xml_structure.change_xml_structure import dict_to_elements_tree
 
 
-def generate_xml():
+def generate_xml() -> Tuple[Union[str, bytes], Union[str, bytes]]:
     auto_control_logger.info("generate_xml")
     """
     :return: two dict {success_dict}, {failure_dict}
@@ -52,4 +52,3 @@ def generate_xml_report(xml_file_name: str = "default_name"):
             f"failed: {repr(error)}")
     finally:
         lock.release()
-
