@@ -8,7 +8,7 @@ from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
 
 
-def generate_json() -> tuple[Dict[str, Dict[str, str]], Dict[str, dict[str, str]]]:
+def generate_json() -> tuple[Dict[str, Dict[str, str]], Dict[str, Dict[str, str]]]:
     auto_control_logger.info("generate_json")
     """
     :return: two dict {success_dict}, {failure_dict}
