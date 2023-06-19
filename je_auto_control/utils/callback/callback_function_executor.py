@@ -1,4 +1,4 @@
-import typing
+from typing import Callable, Any
 from sys import stderr
 
 from je_auto_control.utils.exception.exception_tags import get_bad_trigger_method, get_bad_trigger_function
@@ -122,11 +122,11 @@ class CallbackFunctionExecutor(object):
     def callback_function(
             self,
             trigger_function_name: str,
-            callback_function: typing.Callable,
+            callback_function: Callable,
             callback_function_param: [dict, None] = None,
             callback_param_method: str = "kwargs",
             **kwargs
-    ) -> typing.Any:
+    ) -> Any:
         """
         :param trigger_function_name: what function we want to trigger only accept function in event_dict
         :param callback_function: what function we want to callback
@@ -155,4 +155,3 @@ class CallbackFunctionExecutor(object):
 
 callback_executor = CallbackFunctionExecutor()
 package_manager.callback_executor = callback_executor
-

@@ -1,7 +1,7 @@
 import builtins
-import sys
 import types
 from inspect import getmembers, isbuiltin
+from typing import Any, Dict, List
 
 from je_auto_control.utils.exception.exception_tags import action_is_null_error, add_command_exception, \
     executor_list_error
@@ -94,7 +94,7 @@ class Executor(object):
         for function in getmembers(builtins, isbuiltin):
             self.event_dict.update({str(function[0]): function[1]})
 
-    def _execute_event(self, action: list):
+    def _execute_event(self, action: list) -> Any:
         event = self.event_dict.get(action[0])
         if len(action) == 2:
             if isinstance(action[1], dict):
@@ -106,7 +106,7 @@ class Executor(object):
         else:
             raise AutoControlActionException(cant_execute_action_error + " " + str(action))
 
-    def execute_action(self, action_list: [list, dict]) -> dict:
+    def execute_action(self, action_list: [list, dict]) -> Dict[str, str]:
         """
         use to execute all action on action list(action file or program list)
         :param action_list the list include action
@@ -145,7 +145,7 @@ class Executor(object):
             print(value, flush=True)
         return execute_record_dict
 
-    def execute_files(self, execute_files_list: list) -> list:
+    def execute_files(self, execute_files_list: list) -> List[Dict[str, str]]:
         """
         :param execute_files_list: list include execute files path
         :return: every execute detail as list
@@ -161,7 +161,7 @@ executor = Executor()
 package_manager.executor = executor
 
 
-def add_command_to_executor(command_dict: dict):
+def add_command_to_executor(command_dict: dict) -> None:
     """
     :param command_dict: dict include command we want to add to event_dict
     """
@@ -172,9 +172,9 @@ def add_command_to_executor(command_dict: dict):
             raise AutoControlAddCommandException(add_command_exception)
 
 
-def execute_action(action_list: list) -> dict:
+def execute_action(action_list: list) -> Dict[str, str]:
     return executor.execute_action(action_list)
 
 
-def execute_files(execute_files_list: list) -> list:
+def execute_files(execute_files_list: list) -> List[Dict[str, str]]:
     return executor.execute_files(execute_files_list)

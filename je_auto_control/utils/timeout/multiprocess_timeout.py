@@ -4,7 +4,7 @@ from je_auto_control.utils.exception.exception_tags import timeout_need_on_main_
 from je_auto_control.utils.exception.exceptions import AutoControlTimeoutException
 
 
-def multiprocess_timeout(check_function, time: int):
+def multiprocess_timeout(check_function, time: int) -> str:
     try:
         new_process: Process = Process(target=check_function)
         new_process.start()

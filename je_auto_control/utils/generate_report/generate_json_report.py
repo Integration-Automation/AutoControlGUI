@@ -1,6 +1,6 @@
 import json
-import sys
 from threading import Lock
+from typing import Dict, Tuple
 
 from je_auto_control.utils.exception.exception_tags import cant_generate_json_report
 from je_auto_control.utils.exception.exceptions import AutoControlGenerateJsonReportException
@@ -8,7 +8,7 @@ from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
 
 
-def generate_json():
+def generate_json() -> Tuple[Dict[str, Dict[str, str]], Dict[str, Dict[str, str]]]:
     auto_control_logger.info("generate_json")
     """
     :return: two dict {success_dict}, {failure_dict}

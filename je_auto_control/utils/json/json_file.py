@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from threading import Lock
+from typing import List, Dict
 
 from je_auto_control.utils.exception.exception_tags import cant_find_json_error
 from je_auto_control.utils.exception.exception_tags import cant_save_json_error
@@ -9,7 +10,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlJsonActionExce
 _lock = Lock()
 
 
-def read_action_json(json_file_path: str) -> list:
+def read_action_json(json_file_path: str) -> List[List[Dict[str, Dict[str, str]]]]:
     """
     use to read action file
     :param json_file_path json file's path to read
