@@ -2,7 +2,7 @@ from importlib import import_module
 from importlib.util import find_spec
 from inspect import getmembers, isfunction, isbuiltin, isclass
 from sys import stderr
-from typing import Union, Callable
+from typing import Union, Callable, Dict
 
 from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 
@@ -15,7 +15,7 @@ class PackageManager(object):
         self.executor = None
         self.callback_executor = None
 
-    def check_package(self, package: str) -> Union[None, dict[str, Callable]]:
+    def check_package(self, package: str) -> Union[None, Dict[str, Callable]]:
         """
         :param package: package to check exists or not
         :return: package if find else None
