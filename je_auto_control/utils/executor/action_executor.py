@@ -90,6 +90,13 @@ class Executor(object):
             "shell_command": ShellManager().exec_shell,
             # Another process
             "execute_process": start_exe,
+            # Scheduler
+            "scheduler_event_trigger": self.scheduler_event_trigger,
+            "remove_blocking_scheduler_job": scheduler_manager.remove_blocking_job,
+            "remove_nonblocking_scheduler_job": scheduler_manager.remove_nonblocking_job,
+            "start_blocking_scheduler": scheduler_manager.start_block_scheduler,
+            "start_nonblocking_scheduler": scheduler_manager.start_nonblocking_scheduler,
+            "start_all_scheduler": scheduler_manager.start_all_scheduler,
         }
         # get all builtin function and add to event dict
         for function in getmembers(builtins, isbuiltin):
