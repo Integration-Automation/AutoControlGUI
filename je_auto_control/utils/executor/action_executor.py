@@ -97,6 +97,8 @@ class Executor(object):
             "start_blocking_scheduler": scheduler_manager.start_block_scheduler,
             "start_nonblocking_scheduler": scheduler_manager.start_nonblocking_scheduler,
             "start_all_scheduler": scheduler_manager.start_all_scheduler,
+            "shutdown_blocking_scheduler": scheduler_manager.shutdown_blocking_scheduler,
+            "shutdown_nonblocking_scheduler": scheduler_manager.shutdown_nonblocking_scheduler,
         }
         # get all builtin function and add to event dict
         for function in getmembers(builtins, isbuiltin):
