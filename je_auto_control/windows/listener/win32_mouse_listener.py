@@ -60,13 +60,13 @@ class Win32MouseListener(Thread):
             return _user32.CallNextHookEx(self.hooked, code, w_param, l_param)
         if w_param == _wm_mouse_key_code[0] and self.record_flag is True:
             x, y = position()
-            self.record_queue.put(("mouse_left", x, y))
+            self.record_queue.put(("AC_mouse_left", x, y))
         elif w_param == _wm_mouse_key_code[1] and self.record_flag is True:
             x, y = position()
-            self.record_queue.put(("mouse_right", x, y))
+            self.record_queue.put(("AC_mouse_right", x, y))
         elif w_param == _wm_mouse_key_code[2] and self.record_flag is True:
             x, y = position()
-            self.record_queue.put(("mouse_middle", x, y))
+            self.record_queue.put(("AC_mouse_middle", x, y))
         return _user32.CallNextHookEx(self.hooked, code, w_param, l_param)
 
     def _start_listener(self) -> None:

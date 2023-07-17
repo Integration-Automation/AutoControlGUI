@@ -16,11 +16,11 @@ set_mouse_position(809, 388)
 
 print(mouse_keys_table.keys())
 
-press_mouse("mouse_right")
-release_mouse("mouse_right")
-press_mouse("mouse_left")
-release_mouse("mouse_left")
-click_mouse("mouse_left")
+press_mouse("AC_mouse_right")
+release_mouse("AC_mouse_right")
+press_mouse("AC_mouse_left")
+release_mouse("AC_mouse_left")
+click_mouse("AC_mouse_left")
 try:
     set_mouse_position(6468684648, 4686468648864684684)
 except AutoControlMouseException as error:
@@ -46,10 +46,10 @@ try:
 except AutoControlMouseException as error:
     print(repr(error), file=sys.stderr)
 try:
-    press_mouse("mouse_left")
+    press_mouse("AC_mouse_left")
 except AutoControlMouseException as error:
     print(repr(error), file=sys.stderr)
 try:
-    release_mouse("mouse_left")
+    release_mouse("AC_mouse_left")
 except AutoControlMouseException as error:
     print(repr(error), file=sys.stderr)

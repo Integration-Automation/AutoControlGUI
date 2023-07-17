@@ -16,7 +16,7 @@ def screen_size() -> Tuple[int, int]:
     """
     get screen size
     """
-    auto_control_logger.info("screen_size")
+    auto_control_logger.info("AC_screen_size")
     try:
         try:
             record_action_to_list("size", None)
@@ -39,7 +39,7 @@ def screenshot(file_path: str = None, screen_region: list = None) -> List[int]:
     param = locals()
     try:
         try:
-            record_action_to_list("screenshot", param)
+            record_action_to_list("AC_screenshot", param)
             return cv2.cvtColor(
                 np.array(pil_screenshot(file_path=file_path, screen_region=screen_region)), cv2.COLOR_RGB2BGR)
         except AutoControlScreenException as error:
@@ -48,7 +48,7 @@ def screenshot(file_path: str = None, screen_region: list = None) -> List[int]:
                 f"failed: {AutoControlScreenException(screen_screenshot + ' ' + repr(error))}")
             raise AutoControlScreenException(screen_screenshot + " " + repr(error))
     except Exception as error:
-        record_action_to_list("screenshot", None, repr(error))
+        record_action_to_list("AC_screenshot", None, repr(error))
         auto_control_logger.info(
             f"screen_size, file_path: {file_path}, screen_region: {screen_region}, "
             f"failed: {repr(error)}")
