@@ -6,9 +6,8 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 if sys.platform not in ["win32", "cygwin", "msys"]:
     raise AutoControlException(windows_import_error)
 
-"""
-windows mouse virtual keycode
-"""
+# windows mouse virtual keycode
+
 
 win32_MOVE: int = 0x0001
 win32_LEFTDOWN: int = 0x0002

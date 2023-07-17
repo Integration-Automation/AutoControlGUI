@@ -1,5 +1,3 @@
-import sys
-import typing
 from threading import Lock
 
 from je_auto_control.utils.exception.exception_tags import html_generate_no_data_tag
@@ -132,10 +130,8 @@ def make_html_table(event_str: str, record_data: dict, table_head: str) -> str:
 
 def generate_html() -> str:
     auto_control_logger.info("generate_html")
-    """
-    this function will create html string
-    :return: html_string
-    """
+    """ this function will create html string
+    :return: html_string """
     if len(test_record_instance.test_record_list) == 0:
         raise AutoControlHTMLException(html_generate_no_data_tag)
     else:
