@@ -12,6 +12,20 @@ class SchedulerManager(object):
     def __init__(self):
         self._blocking_schedulers: BlockingScheduler = BlockingScheduler()
         self._background_schedulers: BackgroundScheduler = BackgroundScheduler()
+        self.blocking_scheduler_event_dict = {
+            "secondly": self.add_interval_blocking_secondly,
+            "minutely": self.add_interval_blocking_minutely,
+            "hourly": self.add_interval_blocking_hourly,
+            "daily": self.add_interval_blocking_daily,
+            "weekly": self.add_interval_blocking_weekly,
+        }
+        self.nonblocking_scheduler_event_dict = {
+            "secondly": self.add_interval_nonblocking_secondly,
+            "minutely": self.add_interval_nonblocking_minutely,
+            "hourly": self.add_interval_nonblocking_hourly,
+            "daily": self.add_interval_nonblocking_daily,
+            "weekly": self.add_interval_nonblocking_weekly,
+        }
 
     def add_blocking_job(
             self, func: Callable, trigger: str = None, args: Union[list, tuple] = None,
@@ -196,3 +210,6 @@ class SchedulerManager(object):
 
     def shutdown_nonblocking_scheduler(self, wait: bool = False) -> None:
         self._background_schedulers.shutdown(wait=wait)
+
+
+scheduler_manager = SchedulerManager()
