@@ -26,19 +26,19 @@ class AppDelegate(NSObject):
 
 def mouse_left_handler(event) -> None:
     loc = NSEvent.mouseLocation()
-    record_queue.put(("mouse_left", loc.x, loc.y))
+    record_queue.put(("AC_mouse_left", loc.x, loc.y))
 
 
 def mouse_right_handler(event) -> None:
     loc = NSEvent.mouseLocation()
-    record_queue.put(("mouse_right", loc.x, loc.y))
+    record_queue.put(("AC_mouse_right", loc.x, loc.y))
 
 
 def keyboard_handler(event) -> None:
     if int(event.keyCode()) == 98:
         pass
     else:
-        record_queue.put(("type_keyboard", int(hex(event.keyCode()), 16)))
+        record_queue.put(("AC_type_keyboard", int(hex(event.keyCode()), 16)))
         print(event)
 
 

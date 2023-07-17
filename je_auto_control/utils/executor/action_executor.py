@@ -40,65 +40,65 @@ class Executor(object):
     def __init__(self):
         self.event_dict: dict = {
             # mouse
-            "mouse_left": click_mouse,
-            "mouse_right": click_mouse,
-            "mouse_middle": click_mouse,
-            "click_mouse": click_mouse,
-            "get_mouse_table": get_mouse_table,
-            "get_mouse_position": get_mouse_position,
-            "press_mouse": press_mouse,
-            "release_mouse": release_mouse,
-            "mouse_scroll": mouse_scroll,
-            "set_mouse_position": set_mouse_position,
-            "get_special_table": get_special_table,
+            "AC_mouse_left": click_mouse,
+            "AC_mouse_right": click_mouse,
+            "AC_mouse_middle": click_mouse,
+            "AC_click_mouse": click_mouse,
+            "AC_get_mouse_table": get_mouse_table,
+            "AC_get_mouse_position": get_mouse_position,
+            "AC_press_mouse": press_mouse,
+            "AC_release_mouse": release_mouse,
+            "AC_mouse_scroll": mouse_scroll,
+            "AC_set_mouse_position": set_mouse_position,
+            "AC_get_special_table": get_special_table,
             # keyboard
-            "get_keyboard_keys_table": get_keyboard_keys_table,
-            "type_keyboard": type_keyboard,
-            "press_keyboard_key": press_keyboard_key,
-            "release_keyboard_key": release_keyboard_key,
-            "check_key_is_press": check_key_is_press,
-            "write": write,
-            "hotkey": hotkey,
+            "AC_get_keyboard_keys_table": get_keyboard_keys_table,
+            "AC_type_keyboard": type_keyboard,
+            "AC_press_keyboard_key": press_keyboard_key,
+            "AC_release_keyboard_key": release_keyboard_key,
+            "AC_check_key_is_press": check_key_is_press,
+            "AC_write": write,
+            "AC_hotkey": hotkey,
             # image
-            "locate_all_image": locate_all_image,
-            "locate_image_center": locate_image_center,
-            "locate_and_click": locate_and_click,
+            "AC_locate_all_image": locate_all_image,
+            "AC_locate_image_center": locate_image_center,
+            "AC_locate_and_click": locate_and_click,
             # screen
-            "screen_size": screen_size,
-            "screenshot": screenshot,
+            "AC_screen_size": screen_size,
+            "AC_screenshot": screenshot,
             # test record
-            "set_record_enable": test_record_instance.set_record_enable,
+            "AC_set_record_enable": test_record_instance.set_record_enable,
             # only generate
-            "generate_html": generate_html,
-            "generate_json": generate_json,
-            "generate_xml": generate_xml,
+            "AC_generate_html": generate_html,
+            "AC_generate_json": generate_json,
+            "AC_generate_xml": generate_xml,
             # generate report
-            "generate_html_report": generate_html_report,
-            "generate_json_report": generate_json_report,
-            "generate_xml_report": generate_xml_report,
+            "AC_generate_html_report": generate_html_report,
+            "AC_generate_json_report": generate_json_report,
+            "AC_generate_xml_report": generate_xml_report,
             # record
-            "record": record,
-            "stop_record": stop_record,
+            "AC_record": record,
+            "AC_stop_record": stop_record,
             # execute
-            "execute_action": self.execute_action,
-            "execute_files": self.execute_files,
-            "add_package_to_executor": package_manager.add_package_to_executor,
-            "add_package_to_callback_executor": package_manager.add_package_to_callback_executor,
+            "AC_execute_action": self.execute_action,
+            "AC_execute_files": self.execute_files,
+            "AC_add_package_to_executor": package_manager.add_package_to_executor,
+            "AC_add_package_to_callback_executor": package_manager.add_package_to_callback_executor,
             # project
-            "create_project": create_project_dir,
+            "AC_create_project": create_project_dir,
             # Shell
-            "shell_command": ShellManager().exec_shell,
+            "AC_shell_command": ShellManager().exec_shell,
             # Another process
-            "execute_process": start_exe,
+            "AC_execute_process": start_exe,
             # Scheduler
-            "scheduler_event_trigger": self.scheduler_event_trigger,
-            "remove_blocking_scheduler_job": scheduler_manager.remove_blocking_job,
-            "remove_nonblocking_scheduler_job": scheduler_manager.remove_nonblocking_job,
-            "start_blocking_scheduler": scheduler_manager.start_block_scheduler,
-            "start_nonblocking_scheduler": scheduler_manager.start_nonblocking_scheduler,
-            "start_all_scheduler": scheduler_manager.start_all_scheduler,
-            "shutdown_blocking_scheduler": scheduler_manager.shutdown_blocking_scheduler,
-            "shutdown_nonblocking_scheduler": scheduler_manager.shutdown_nonblocking_scheduler,
+            "AC_scheduler_event_trigger": self.scheduler_event_trigger,
+            "AC_remove_blocking_scheduler_job": scheduler_manager.remove_blocking_job,
+            "AC_remove_nonblocking_scheduler_job": scheduler_manager.remove_nonblocking_job,
+            "AC_start_blocking_scheduler": scheduler_manager.start_block_scheduler,
+            "AC_start_nonblocking_scheduler": scheduler_manager.start_nonblocking_scheduler,
+            "AC_start_all_scheduler": scheduler_manager.start_all_scheduler,
+            "AC_shutdown_blocking_scheduler": scheduler_manager.shutdown_blocking_scheduler,
+            "AC_shutdown_nonblocking_scheduler": scheduler_manager.shutdown_nonblocking_scheduler,
         }
         # get all builtin function and add to event dict
         for function in getmembers(builtins, isbuiltin):
@@ -134,7 +134,7 @@ class Executor(object):
             else:
                 raise AutoControlActionNullException(action_is_null_error)
         except Exception as error:
-            record_action_to_list("execute_action", action_list, repr(error))
+            record_action_to_list("AC_execute_action", action_list, repr(error))
             auto_control_logger.info(
                 f"execute_action, action_list: {action_list}, "
                 f"failed: {repr(error)}")
@@ -147,7 +147,7 @@ class Executor(object):
                 auto_control_logger.info(
                     f"execute_action, action_list: {action_list}, "
                     f"action: {action}, failed: {repr(error)}")
-                record_action_to_list("execute_action", None, repr(error))
+                record_action_to_list("AC_execute_action", None, repr(error))
                 execute_record = "execute: " + str(action)
                 execute_record_dict.update({execute_record: repr(error)})
         for key, value in execute_record_dict.items():
