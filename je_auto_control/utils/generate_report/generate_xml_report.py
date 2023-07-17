@@ -1,6 +1,6 @@
 from threading import Lock
+from typing import Tuple, Union
 from xml.dom.minidom import parseString
-from typing import Tuple, Dict, Union
 
 from je_auto_control.utils.generate_report.generate_json_report import generate_json
 from je_auto_control.utils.logging.loggin_instance import auto_control_logger
@@ -45,7 +45,6 @@ def generate_xml_report(xml_file_name: str = "default_name"):
     try:
         with open(xml_file_name + "_success.xml", "w+") as file_to_write:
             file_to_write.write(success_xml)
-            pass
     except Exception as error:
         auto_control_logger.error(
             f"generate_xml_report, xml_file_name: {xml_file_name}, "

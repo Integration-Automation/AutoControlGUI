@@ -17,7 +17,7 @@ def record() -> None:
         if sys.platform == "darwin":
             raise AutoControlException(macos_record_error)
         record_action_to_list("record", None)
-        return recorder.record()
+        recorder.record()
     except Exception as error:
         record_action_to_list("record", None, repr(error))
         auto_control_logger.error(f"record, failed: {repr(error)}")
