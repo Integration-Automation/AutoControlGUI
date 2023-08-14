@@ -1,28 +1,29 @@
-# Rename to build dev version
-# This is dev version
+# Rename to build stable version
+# This is stable version
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "je_auto_control_dev"
-version = "0.0.94"
+name = "je_auto_control"
+version = "0.0.154"
 authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]
 description = "GUI Automation Framework"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = { text = "MIT" }
 dependencies = [
     "je_open_cv",
     "pillow",
-    "APScheduler",
+    "numpy",
+    "APScheduler==3.10.1",
     "pyobjc-core;platform_system=='Darwin'",
     "pyobjc;platform_system=='Darwin'",
     "python-Xlib;platform_system=='Linux'"
 ]
 classifiers = [
-    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
     "Development Status :: 2 - Pre-Alpha",
     "Environment :: Win32 (MS Windows)",
     "Environment :: MacOS X",
