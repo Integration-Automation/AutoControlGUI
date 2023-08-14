@@ -15,6 +15,8 @@
 ### Documentation
 [![Documentation Status](https://readthedocs.org/projects/autocontrol/badge/?version=latest)](https://autocontrol.readthedocs.io/en/latest/?badge=latest)
 
+[AutoControl Doc Click Here!](https://autocontrol.readthedocs.io/en/latest/)
+
 ---
 
 > Project Kanban \
