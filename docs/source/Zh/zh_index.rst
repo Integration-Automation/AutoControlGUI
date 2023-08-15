@@ -2,7 +2,7 @@ AutoControl 繁體中文 文件
 ----
 
 .. toctree::
-   :maxdepth: 4
+    :maxdepth: 4
 
     doc/installation/installation_doc.rst
     doc/create_project/create_project_doc.rst
