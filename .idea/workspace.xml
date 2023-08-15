@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/stable.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dev.toml" afterDir="false" />
-    </list>
+    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -70,7 +66,7 @@
     "WebServerToolWindowFactoryState": "false",
     "git-widget-placeholder": "dev",
     "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/CodeWorkspace/FileAutomation",
+    "last_opened_file_path": "C:/CodeWorkspace/APITestka",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -82,11 +78,11 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\CodeWorkspace\AutoControl\docs\source\Zh\doc" />
+      <recent name="C:\CodeWorkspace\AutoControl\docs\source\Eng\doc" />
+      <recent name="C:\CodeWorkspace\AutoControl\docs\source\API\utils" />
       <recent name="C:\CodeWorkspace\AutoControl\docs" />
       <recent name="C:\CodeWorkspace\AutoControl\test\gui_test\calculator" />
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\je_auto_control\utils" />
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\test\unit_test" />
-      <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\.github\workflows" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\.github" />
