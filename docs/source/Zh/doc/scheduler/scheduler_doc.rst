@@ -5,7 +5,7 @@ Scheduler
 
 .. code-block:: python
 
-    from je_web_runner import SchedulerManager
+    from je_auto_control import SchedulerManager
 
 
     def test_scheduler():
