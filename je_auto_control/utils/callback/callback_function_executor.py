@@ -1,6 +1,8 @@
-from typing import Callable, Any
 from sys import stderr
+from typing import Callable, Any
 
+# utils cv2_utils
+from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
 from je_auto_control.utils.exception.exception_tags import get_bad_trigger_method, get_bad_trigger_function
 from je_auto_control.utils.exception.exceptions import CallbackExecutorException
 # executor
@@ -16,8 +18,6 @@ from je_auto_control.utils.generate_report.generate_json_report import generate_
 # xml
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml_report
-# utils image
-from je_auto_control.utils.image.screenshot import pil_screenshot
 # json
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.json.json_file import write_action_json
@@ -30,7 +30,7 @@ from je_auto_control.utils.socket_server.auto_control_socket_server import start
 from je_auto_control.utils.start_exe.start_another_process import start_exe
 # test record
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
-# import image
+# import cv2_utils
 from je_auto_control.wrapper.auto_control_image import locate_all_image
 from je_auto_control.wrapper.auto_control_image import locate_and_click
 from je_auto_control.wrapper.auto_control_image import locate_image_center
@@ -80,7 +80,7 @@ class CallbackFunctionExecutor(object):
             "AC_check_key_is_press": check_key_is_press,
             "AC_write": write,
             "AC_hotkey": hotkey,
-            # image
+            # cv2_utils
             "AC_locate_all_image": locate_all_image,
             "AC_locate_image_center": locate_image_center,
             "AC_locate_and_click": locate_and_click,
