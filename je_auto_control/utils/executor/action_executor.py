@@ -59,7 +59,7 @@ class Executor(object):
             "AC_check_key_is_press": check_key_is_press,
             "AC_write": write,
             "AC_hotkey": hotkey,
-            # image
+            # cv2_utils
             "AC_locate_all_image": locate_all_image,
             "AC_locate_image_center": locate_image_center,
             "AC_locate_and_click": locate_and_click,

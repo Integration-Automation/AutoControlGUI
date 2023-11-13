@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('.'))
 # -- Project information -----------------------------------------------------
 
 project = 'AutoControl'
-copyright = '2020 ~ 2023, JE-Chen'
+copyright = '2020 ~ Now, JE-Chen'
 author = 'JE-Chen'
 
 # -- General configuration ---------------------------------------------------

@@ -3,10 +3,10 @@ from typing import Tuple, List
 import cv2
 import numpy as np
 
+from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
 from je_auto_control.utils.exception.exception_tags import screen_get_size
 from je_auto_control.utils.exception.exception_tags import screen_screenshot
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException
-from je_auto_control.utils.image.screenshot import pil_screenshot
 from je_auto_control.utils.logging.loggin_instance import auto_control_logger
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.platform_wrapper import screen
@@ -31,7 +31,7 @@ def screen_size() -> Tuple[int, int]:
 
 def screenshot(file_path: str = None, screen_region: list = None) -> List[int]:
     """
-    use to capture current screen image
+    use to capture current screen cv2_utils
     :param file_path screenshot file save path
     :param screen_region screenshot screen_region
     """

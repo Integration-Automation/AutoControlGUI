@@ -29,8 +29,8 @@ screen_get_size: str = "screen get size error"
 screen_screenshot: str = "screen screenshot error"
 # table tags
 table_cant_find_key: str = "cant find key error"
-# image tags
-cant_find_image: str = "cant find image"
+# cv2_utils tags
+cant_find_image: str = "cant find cv2_utils"
 find_image_error_variable: str = "variable error"
 # listener tags
 listener_error: str = "Auto control listener error"
