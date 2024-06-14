@@ -45,3 +45,6 @@ license-files = ["LICENSE"]
 
 [tool.setuptools.packages]
 find = { namespaces = false }
+
+[project.optional-dependencies]
+gui = ["Pyside6", "qt-material"]

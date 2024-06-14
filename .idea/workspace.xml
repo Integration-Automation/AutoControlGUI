@@ -5,10 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/je_auto_control/windows/message/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/je_auto_control/windows/message/window_message.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/window/window_hwnd.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/window/window_hwnd.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/manual_test/windows_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/manual_test/windows_window.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/je_auto_control/gui/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/je_auto_control/gui/main_widget.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/je_auto_control/gui/main_window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dev.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -63,24 +66,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "git-widget-placeholder": "dev",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/Users/JeffreyChen/Desktop/Code_Space/AutoControlGUI",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;dev&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/JeffreyChen/Desktop/Code_Space/AutoControlGUI&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\CodeWorkspace\AutoControl\docs\source\Zh\doc" />
@@ -100,6 +103,7 @@
   <component name="RunManager" selected="Python.windows_window">
     <configuration name="calculator" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="AutoControl" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -122,6 +126,7 @@
     </configuration>
     <configuration name="calculator_executor" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="AutoControl" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -144,6 +149,7 @@
     </configuration>
     <configuration name="screen_record" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="AutoControl" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -166,6 +172,7 @@
     </configuration>
     <configuration name="window_hwnd" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="AutoControl" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -188,6 +195,7 @@
     </configuration>
     <configuration name="windows_window" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="AutoControl" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -213,10 +221,18 @@
         <item itemvalue="Python.windows_window" />
         <item itemvalue="Python.window_hwnd" />
         <item itemvalue="Python.screen_record" />
-        <item itemvalue="Python.calculator" />
         <item itemvalue="Python.calculator_executor" />
+        <item itemvalue="Python.calculator" />
       </list>
     </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-1d06a55b98c1-74d2a5396914-JavaScript-PY-241.14494.241" />
+        <option value="bundled-python-sdk-0509580d9d50-28c9f5db9ffe-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-241.14494.241" />
+      </set>
+    </attachedChunks>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="SvnConfiguration">
@@ -500,6 +516,8 @@
       <workItem from="1701673984887" duration="10000" />
       <workItem from="1701756312149" duration="349000" />
       <workItem from="1708417712216" duration="9867000" />
+      <workItem from="1718330921906" duration="2466000" />
+      <workItem from="1718333557389" duration="2223000" />
     </task>
     <servers />
   </component>
