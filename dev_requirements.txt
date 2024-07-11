@@ -3,3 +3,5 @@ wheel
 twine
 sphinx
 sphinx-rtd-theme
+Pyside6
+qt-material

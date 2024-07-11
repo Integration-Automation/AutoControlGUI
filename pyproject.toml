@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "je_auto_control"
-version = "0.0.156"
+version = "0.0.157"
 authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]
@@ -46,3 +46,6 @@ license-files = ["LICENSE"]
 
 [tool.setuptools.packages]
 find = { namespaces = false }
+
+[project.optional-dependencies]
+gui = ["Pyside6", "qt-material"]
