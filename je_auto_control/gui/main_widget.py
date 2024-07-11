@@ -12,6 +12,9 @@ class AutoControlWidget(QWidget):
 
     def __init__(self, main_ui: AutoControlGUI):
         super().__init__()
+        # Variable
         self.main_ui = main_ui
+        # UI component
+        # Grid layout
         self.grid_layout = QGridLayout()
         self.setLayout(self.grid_layout)
