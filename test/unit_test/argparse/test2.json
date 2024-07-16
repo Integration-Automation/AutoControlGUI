@@ -1,12 +1,12 @@
 [
   [
-    "type_keyboard",
+    "AC_type_keyboard",
     {
       "keycode": 0
     }
   ],
   [
-    "mouse_left",
+    "AC_mouse_left",
     {
       "mouse_keycode": "mouse_left",
       "x": 500,
@@ -14,10 +14,10 @@
     }
   ],
   [
-    "get_mouse_position"
+    "AC_get_mouse_position"
   ],
   [
-    "press_mouse",
+    "AC_press_mouse",
     {
       "mouse_keycode": "mouse_left",
       "x": 500,
@@ -25,7 +25,7 @@
     }
   ],
   [
-    "release_mouse",
+    "AC_release_mouse",
     {
       "mouse_keycode": "mouse_left",
       "x": 500,

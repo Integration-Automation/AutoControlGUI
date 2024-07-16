@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/gui/main_widget.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/gui/main_widget.py" afterDir="false" />
-    </list>
+    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -70,7 +67,7 @@
     "WebServerToolWindowFactoryState": "false",
     "git-widget-placeholder": "dev",
     "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/Users/JeffreyChen/Desktop/Code_Space/AutoControlGUI",
+    "last_opened_file_path": "C:/Users/JeffreyChen/Desktop/Code_Space/APITestka",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -518,6 +515,7 @@
       <workItem from="1718767797416" duration="467000" />
       <workItem from="1718768302088" duration="2189000" />
       <workItem from="1720600524227" duration="858000" />
+      <workItem from="1720684582352" duration="2627000" />
     </task>
     <servers />
   </component>
