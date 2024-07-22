@@ -58,7 +58,7 @@ class SchedulerManager(object):
         """
         params = locals()
         params.pop("self")
-        trigger_args = params.pop("trigger_args")
+        params.pop("trigger_args")
         return self._blocking_schedulers.add_job(**params, **trigger_args)
 
     def add_nonblocking_job(
@@ -92,7 +92,7 @@ class SchedulerManager(object):
         """
         params = locals()
         params.pop("self")
-        trigger_args = params.pop("trigger_args")
+        params.pop("trigger_args")
         return self._background_schedulers.add_job(**params, **trigger_args)
 
     def get_blocking_scheduler(self) -> BlockingScheduler:

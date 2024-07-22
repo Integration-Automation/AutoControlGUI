@@ -104,8 +104,6 @@ from je_auto_control.wrapper.auto_control_record import stop_record
 # import screen
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.auto_control_screen import screenshot
-# GUI
-from je_auto_control.gui.main_window import start_autocontrol_gui
 __all__ = [
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
     "mouse_scroll", "set_mouse_position", "special_mouse_keys_table",
@@ -121,5 +119,4 @@ __all__ = [
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "get_special_table", "ShellManager", "default_shell_manager",
-    "start_autocontrol_gui"
 ]

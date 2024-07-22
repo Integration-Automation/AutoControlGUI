@@ -4,101 +4,97 @@ class AutoControlException(Exception):
 
 
 # Keyboard
-
-
-class AutoControlKeyboardException(AutoControlException):
+class AutoControlKeyboardException(Exception):
     pass
 
 
-class AutoControlCantFindKeyException(AutoControlKeyboardException):
+class AutoControlCantFindKeyException(Exception):
     pass
 
 
 # Mouse
-
-
-class AutoControlMouseException(AutoControlException):
+class AutoControlMouseException(Exception):
     pass
 
 
 # Screen
 
 
-class AutoControlScreenException(AutoControlException):
+class AutoControlScreenException(Exception):
     pass
 
 
 # Image detect
 
 
-class ImageNotFoundException(AutoControlException):
+class ImageNotFoundException(Exception):
     pass
 
 
 # Record
 
 
-class AutoControlRecordException(AutoControlException):
+class AutoControlRecordException(Exception):
     pass
 
 
 # Execute action
 
-class AutoControlExecuteActionException(AutoControlException):
+class AutoControlExecuteActionException(Exception):
     pass
 
 
-class AutoControlJsonActionException(AutoControlExecuteActionException):
+class AutoControlJsonActionException(Exception):
     pass
 
 
-class AutoControlActionNullException(AutoControlExecuteActionException):
+class AutoControlActionNullException(Exception):
     pass
 
 
-class AutoControlActionException(AutoControlExecuteActionException):
+class AutoControlActionException(Exception):
     pass
 
 
-class AutoControlAddCommandException(AutoControlExecuteActionException):
+class AutoControlAddCommandException(Exception):
     pass
 
 
-class AutoControlArgparseException(AutoControlExecuteActionException):
+class AutoControlArgparseException(Exception):
     pass
 
 
 # timeout
-class AutoControlTimeoutException(AutoControlException):
+class AutoControlTimeoutException(Exception):
     pass
 
 
 # html exception
 
-class AutoControlHTMLException(AutoControlException):
+class AutoControlHTMLException(Exception):
     pass
 
 
 # Json Exception
 
-class AutoControlJsonException(AutoControlException):
+class AutoControlJsonException(Exception):
     pass
 
 
-class AutoControlGenerateJsonReportException(AutoControlJsonException):
+class AutoControlGenerateJsonReportException(Exception):
     pass
 
 
 # XML
 
-class XMLException(AutoControlException):
+class XMLException(Exception):
     pass
 
 
-class XMLTypeException(XMLException):
+class XMLTypeException(Exception):
     pass
 
 
 # Execute callback
-class CallbackExecutorException(AutoControlException):
+class CallbackExecutorException(Exception):
     pass

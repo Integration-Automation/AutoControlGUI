@@ -35,9 +35,7 @@ def dict_to_elements_tree(json_dict: dict):
     """
 
     def _to_elements_tree(json_dict: dict, root):
-        if not json_dict:
-            pass
-        elif isinstance(json_dict, str):
+        if isinstance(json_dict, str):
             root.text = json_dict
         elif isinstance(json_dict, dict):
             for key, value in json_dict.items():

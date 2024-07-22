@@ -124,14 +124,12 @@ class Executor(object):
         """
         auto_control_logger.info(f"execute_action, action_list: {action_list}")
         if isinstance(action_list, dict):
-            action_list: list = action_list.get("auto_control", None)
+            action_list: list = action_list.get("auto_control")
             if action_list is None:
                 raise AutoControlActionNullException(executor_list_error)
         execute_record_dict = dict()
         try:
-            if len(action_list) > 0 or isinstance(action_list, list):
-                pass
-            else:
+            if len(action_list) < 0 or isinstance(action_list, list) is False:
                 raise AutoControlActionNullException(action_is_null_error)
         except Exception as error:
             record_action_to_list("AC_execute_action", action_list, repr(error))
@@ -167,14 +165,14 @@ class Executor(object):
         return execute_detail_list
 
     def scheduler_event_trigger(
-            self, function: str, id: str = None, args: Union[list, tuple] = None,
+            self, function: str, scheduler_id: str = None, args: Union[list, tuple] = None,
             kwargs: dict = None, scheduler_type: str = "nonblocking", wait_type: str = "secondly",
             wait_value: int = 1, **trigger_args: Any) -> None:
         if scheduler_type == "nonblocking":
             scheduler_event = scheduler_manager.nonblocking_scheduler_event_dict.get(wait_type)
         else:
             scheduler_event = scheduler_manager.blocking_scheduler_event_dict.get(wait_type)
-        scheduler_event(self.event_dict.get(function), id, args, kwargs, wait_value, **trigger_args)
+        scheduler_event(self.event_dict.get(function), scheduler_id, args, kwargs, wait_value, **trigger_args)
 
 
 executor = Executor()
