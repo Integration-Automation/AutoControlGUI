@@ -3,7 +3,7 @@ from pathlib import Path
 from threading import Lock
 
 from je_auto_control.utils.json.json_file import write_action_json
-from je_auto_control.utils.logging.loggin_instance import auto_control_logger
+from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 from je_auto_control.utils.project.template.template_executor import executor_template_1, \
     executor_template_2, bad_executor_template_1
 from je_auto_control.utils.project.template.template_keyword import template_keyword_1, \
@@ -60,7 +60,7 @@ def create_template(parent_name: str, project_path: str = None) -> None:
 
 
 def create_project_dir(project_path: str = None, parent_name: str = "AutoControl") -> None:
-    auto_control_logger.info(f"create_project_dir, project_path: {project_path}, parent_name: {parent_name}")
+    autocontrol_logger.info(f"create_project_dir, project_path: {project_path}, parent_name: {parent_name}")
     if project_path is None:
         project_path = getcwd()
     create_dir(project_path + "/" + parent_name + "/keyword")

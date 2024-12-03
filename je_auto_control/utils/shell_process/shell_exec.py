@@ -4,7 +4,7 @@ import subprocess
 import sys
 from threading import Thread
 
-from je_auto_control.utils.logging.loggin_instance import auto_control_logger
+from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 
 
 class ShellManager(object):
@@ -32,7 +32,7 @@ class ShellManager(object):
         :param shell_command: shell command will run
         :return: if error return result and True else return result and False
         """
-        auto_control_logger.info(f"exec_shell, shell_command: {shell_command}")
+        autocontrol_logger.info(f"exec_shell, shell_command: {shell_command}")
         try:
             self.exit_program()
             if sys.platform in ["win32", "cygwin", "msys"]:
@@ -59,7 +59,7 @@ class ShellManager(object):
             )
             self.read_program_error_output_from_thread.start()
         except Exception as error:
-            auto_control_logger.error(
+            autocontrol_logger.error(
                 f"exec_shell, shell_command: {shell_command}, failed: {repr(error)}")
 
     # tkinter_ui update method

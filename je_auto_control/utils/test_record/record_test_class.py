@@ -1,6 +1,6 @@
 import datetime
 
-from je_auto_control.utils.logging.loggin_instance import auto_control_logger
+from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 
 
 class TestRecord(object):
@@ -13,7 +13,7 @@ class TestRecord(object):
         self.test_record_list = list()
 
     def set_record_enable(self, set_enable: bool = True):
-        auto_control_logger.info(f"set_record_enable, set_enable: {set_enable}")
+        autocontrol_logger.info(f"set_record_enable, set_enable: {set_enable}")
         self.init_record = set_enable
 
 

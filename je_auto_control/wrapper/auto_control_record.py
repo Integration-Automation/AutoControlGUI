@@ -3,7 +3,7 @@ import sys
 from je_auto_control.utils.exception.exception_tags import macos_record_error
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
-from je_auto_control.utils.logging.loggin_instance import auto_control_logger
+from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.platform_wrapper import recorder
 
@@ -12,7 +12,7 @@ def record() -> None:
     """
     start record keyboard and mouse event until stop_record
     """
-    auto_control_logger.info("record")
+    autocontrol_logger.info("record")
     try:
         if sys.platform == "darwin":
             raise AutoControlException(macos_record_error)
@@ -20,14 +20,14 @@ def record() -> None:
         recorder.record()
     except Exception as error:
         record_action_to_list("record", None, repr(error))
-        auto_control_logger.error(f"record, failed: {repr(error)}")
+        autocontrol_logger.error(f"record, failed: {repr(error)}")
 
 
 def stop_record() -> list:
     """
     stop current record
     """
-    auto_control_logger.info("stop_record")
+    autocontrol_logger.info("stop_record")
     try:
         if sys.platform == "darwin":
             raise AutoControlException(macos_record_error)
@@ -45,4 +45,4 @@ def stop_record() -> list:
         return new_list
     except Exception as error:
         record_action_to_list("stop_record", None, repr(error))
-        auto_control_logger.error(f"stop_record, failed: {repr(error)}")
+        autocontrol_logger.error(f"stop_record, failed: {repr(error)}")

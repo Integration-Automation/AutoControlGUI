@@ -3,12 +3,12 @@ from typing import Tuple, Union
 from xml.dom.minidom import parseString
 
 from je_auto_control.utils.generate_report.generate_json_report import generate_json
-from je_auto_control.utils.logging.loggin_instance import auto_control_logger
+from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 from je_auto_control.utils.xml.change_xml_structure.change_xml_structure import dict_to_elements_tree
 
 
 def generate_xml() -> Tuple[Union[str, bytes], Union[str, bytes]]:
-    auto_control_logger.info("generate_xml")
+    autocontrol_logger.info("generate_xml")
     """
     :return: two dict {success_dict}, {failure_dict}
     """
@@ -21,7 +21,7 @@ def generate_xml() -> Tuple[Union[str, bytes], Union[str, bytes]]:
 
 
 def generate_xml_report(xml_file_name: str = "default_name"):
-    auto_control_logger.info(f"generate_xml_report, xml_file_name: {xml_file_name}")
+    autocontrol_logger.info(f"generate_xml_report, xml_file_name: {xml_file_name}")
     """
     :param xml_file_name: save xml file name
     """
@@ -36,7 +36,7 @@ def generate_xml_report(xml_file_name: str = "default_name"):
         with open(xml_file_name + "_failure.xml", "w+") as file_to_write:
             file_to_write.write(failure_xml)
     except Exception as error:
-        auto_control_logger.error(
+        autocontrol_logger.error(
             f"generate_xml_report, xml_file_name: {xml_file_name}, "
             f"failed: {repr(error)}")
     finally:
@@ -46,7 +46,7 @@ def generate_xml_report(xml_file_name: str = "default_name"):
         with open(xml_file_name + "_success.xml", "w+") as file_to_write:
             file_to_write.write(success_xml)
     except Exception as error:
-        auto_control_logger.error(
+        autocontrol_logger.error(
             f"generate_xml_report, xml_file_name: {xml_file_name}, "
             f"failed: {repr(error)}")
     finally:

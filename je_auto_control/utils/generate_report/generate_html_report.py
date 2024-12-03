@@ -2,7 +2,7 @@ from threading import Lock
 
 from je_auto_control.utils.exception.exception_tags import html_generate_no_data_tag
 from je_auto_control.utils.exception.exceptions import AutoControlHTMLException
-from je_auto_control.utils.logging.loggin_instance import auto_control_logger
+from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
 
 _lock = Lock()
@@ -129,7 +129,7 @@ def make_html_table(event_str: str, record_data: dict, table_head: str) -> str:
 
 
 def generate_html() -> str:
-    auto_control_logger.info("generate_html")
+    autocontrol_logger.info("generate_html")
     """ this function will create html string
     :return: html_string """
     if len(test_record_instance.test_record_list) == 0:
@@ -147,7 +147,7 @@ def generate_html() -> str:
 
 
 def generate_html_report(html_name: str = "default_name") -> None:
-    auto_control_logger.info(f"generate_html_report, html_name: {html_name}")
+    autocontrol_logger.info(f"generate_html_report, html_name: {html_name}")
     """
     Output html report file
     :param html_name: save html file name
@@ -160,7 +160,7 @@ def generate_html_report(html_name: str = "default_name") -> None:
                 new_html_string
             )
     except Exception as error:
-        auto_control_logger.error(
+        autocontrol_logger.error(
             f"generate_html_report, html_name: {html_name}, failed: {repr(error)}")
     finally:
         _lock.release()

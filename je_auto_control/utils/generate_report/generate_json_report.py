@@ -4,12 +4,12 @@ from typing import Dict, Tuple
 
 from je_auto_control.utils.exception.exception_tags import cant_generate_json_report
 from je_auto_control.utils.exception.exceptions import AutoControlGenerateJsonReportException
-from je_auto_control.utils.logging.loggin_instance import auto_control_logger
+from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
 
 
 def generate_json() -> Tuple[Dict[str, Dict[str, str]], Dict[str, Dict[str, str]]]:
-    auto_control_logger.info("generate_json")
+    autocontrol_logger.info("generate_json")
     """
     :return: two dict {success_dict}, {failure_dict}
     """
@@ -51,7 +51,7 @@ def generate_json() -> Tuple[Dict[str, Dict[str, str]], Dict[str, Dict[str, str]
 
 
 def generate_json_report(json_file_name: str = "default_name"):
-    auto_control_logger.info(f"generate_json_report, json_file_name: {json_file_name}")
+    autocontrol_logger.info(f"generate_json_report, json_file_name: {json_file_name}")
     """
     Output json report file
     :param json_file_name: save json file's name
@@ -63,7 +63,7 @@ def generate_json_report(json_file_name: str = "default_name"):
         with open(json_file_name + "_success.json", "w+") as file_to_write:
             json.dump(dict(success_dict), file_to_write, indent=4)
     except Exception as error:
-        auto_control_logger.error(
+        autocontrol_logger.error(
             f"generate_json_report, json_file_name: {json_file_name}, "
             f"failed: {repr(error)}")
     finally:
@@ -73,7 +73,7 @@ def generate_json_report(json_file_name: str = "default_name"):
         with open(json_file_name + "_failure.json", "w+") as file_to_write:
             json.dump(dict(failure_dict), file_to_write, indent=4)
     except Exception as error:
-        auto_control_logger.error(
+        autocontrol_logger.error(
             f"generate_json_report, json_file_name: {json_file_name}, "
             f"failed: {repr(error)}")
     finally:
