@@ -8,7 +8,7 @@ file_handler = logging.FileHandler(filename="AutoControlGUI.log", mode="w")
 file_handler.setFormatter(formatter)
 autocontrol_logger.addHandler(file_handler)
 
-class APITestkaLoggingHandler(logging.Handler):
+class AutoControlLoggingHandler(logging.Handler):
 
     # redirect logging stderr output to queue
 
@@ -22,4 +22,4 @@ class APITestkaLoggingHandler(logging.Handler):
 
 
 # Stream handler
-autocontrol_logger.addHandler(APITestkaLoggingHandler())
+autocontrol_logger.addHandler(AutoControlLoggingHandler())
