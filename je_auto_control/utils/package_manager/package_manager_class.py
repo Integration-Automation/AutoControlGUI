@@ -4,7 +4,7 @@ from inspect import getmembers, isfunction, isbuiltin, isclass
 from sys import stderr
 from typing import Union, Callable, Dict
 
-from je_auto_control.utils.logging.loggin_instance import auto_control_logger
+from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 
 
 class PackageManager(object):
@@ -32,7 +32,7 @@ class PackageManager(object):
         return self.installed_package_dict.get(package, None)
 
     def add_package_to_executor(self, package) -> None:
-        auto_control_logger.info(f"add_package_to_executor, package: {package}")
+        autocontrol_logger.info(f"add_package_to_executor, package: {package}")
         """
         :param package: package's function will add to executor
         """
@@ -42,7 +42,7 @@ class PackageManager(object):
         )
 
     def add_package_to_callback_executor(self, package) -> None:
-        auto_control_logger.info(f"add_package_to_callback_executor, package: {package}")
+        autocontrol_logger.info(f"add_package_to_callback_executor, package: {package}")
         """
         :param package: package's function will add to callback_executor
         """

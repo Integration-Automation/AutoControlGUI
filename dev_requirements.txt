@@ -1,5 +1,6 @@
 je_auto_control_dev
 wheel
+build
 twine
 sphinx
 sphinx-rtd-theme

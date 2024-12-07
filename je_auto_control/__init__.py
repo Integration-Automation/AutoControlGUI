@@ -60,8 +60,6 @@ from je_auto_control.utils.package_manager.package_manager_class import \
     package_manager
 from je_auto_control.utils.project.create_project_structure import \
     create_project_dir
-# Scheduler
-from je_auto_control.utils.scheduler.extend_apscheduler import SchedulerManager
 # Shell command
 from je_auto_control.utils.shell_process.shell_exec import ShellManager
 from je_auto_control.utils.shell_process.shell_exec import default_shell_manager
@@ -104,13 +102,13 @@ from je_auto_control.wrapper.auto_control_record import stop_record
 # import screen
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.auto_control_screen import screenshot
-# GUI
-from je_auto_control.gui.main_window import start_autocontrol_gui
+# Scheduler
+from je_auto_control.utils.scheduler.extend_apscheduler import SchedulerManager
 __all__ = [
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
     "mouse_scroll", "set_mouse_position", "special_mouse_keys_table",
     "keyboard_keys_table", "press_keyboard_key", "release_keyboard_key", "type_keyboard", "check_key_is_press",
-    "write", "hotkey", "start_exe", "SchedulerManager", "get_keyboard_keys_table",
+    "write", "hotkey", "start_exe", "get_keyboard_keys_table",
     "screen_size", "screenshot", "locate_all_image", "locate_image_center", "locate_and_click",
     "CriticalExit", "AutoControlException", "AutoControlKeyboardException",
     "AutoControlMouseException", "AutoControlCantFindKeyException",
@@ -121,5 +119,5 @@ __all__ = [
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "get_special_table", "ShellManager", "default_shell_manager",
-    "start_autocontrol_gui"
+    "SchedulerManager"
 ]
