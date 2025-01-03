@@ -30,6 +30,11 @@ jobs:
         run: python ./test/unit_test/screen/screen_test.py
       - name: Test Screenshot
         run: python ./test/unit_test/screen/screenshot_test.py
+      - name: Save Screenshot Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot_png
+          path: test.png
 
       - name: Test Keyboard type Function
         run: python ./test/unit_test/keyboard/keyboard_type_test.py
