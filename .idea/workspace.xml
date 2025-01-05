@@ -4,20 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/dev_python3_10.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/dev_python3_10.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/dev_python3_11.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/dev_python3_11.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/dev_python3_8.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/dev_python3_9.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/dev_python3_9.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/stable_python3_10.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/stable_python3_10.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/stable_python3_11.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/stable_python3_11.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/stable_python3_8.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/stable_python3_9.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/stable_python3_9.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev_requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/dev_requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/logging/loggin_instance.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/logging/loggin_instance.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-    </list>
+    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -555,7 +542,7 @@
       <workItem from="1734285494069" duration="1854000" />
       <workItem from="1734652219673" duration="95000" />
       <workItem from="1734652331974" duration="1308000" />
-      <workItem from="1735938375804" duration="345000" />
+      <workItem from="1735938375804" duration="1110000" />
     </task>
     <servers />
   </component>

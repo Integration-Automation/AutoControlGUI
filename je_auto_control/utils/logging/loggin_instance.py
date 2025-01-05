@@ -11,7 +11,7 @@ class AutoControlGUILoggingHandler(RotatingFileHandler):
     # redirect logging stderr output to queue
 
     def __init__(self, filename: str = "AutoControlGUI.log", mode="w",
-                 maxBytes:int=1073741824, backupCount:int=0):
+                 maxBytes: int = 1073741824, backupCount: int = 0):
         super().__init__(filename=filename, mode=mode, maxBytes=maxBytes, backupCount=backupCount)
         self.formatter = formatter
         self.setLevel(logging.DEBUG)
