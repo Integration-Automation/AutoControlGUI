@@ -1,25 +1,25 @@
 import logging
+from logging.handlers import RotatingFileHandler
 
 logging.root.setLevel(logging.DEBUG)
 autocontrol_logger = logging.getLogger("AutoControlGUI")
 formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s')
-# File handler
-file_handler = logging.FileHandler(filename="AutoControlGUI.log", mode="w")
-file_handler.setFormatter(formatter)
-autocontrol_logger.addHandler(file_handler)
 
-class AutoControlLoggingHandler(logging.Handler):
+
+class AutoControlGUILoggingHandler(RotatingFileHandler):
 
     # redirect logging stderr output to queue
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, filename: str = "AutoControlGUI.log", mode="w",
+                 maxBytes: int = 1073741824, backupCount: int = 0):
+        super().__init__(filename=filename, mode=mode, maxBytes=maxBytes, backupCount=backupCount)
         self.formatter = formatter
         self.setLevel(logging.DEBUG)
 
     def emit(self, record: logging.LogRecord) -> None:
-        print(self.format(record))
+        super().emit(record)
 
 
-# Stream handler
-autocontrol_logger.addHandler(AutoControlLoggingHandler())
+# File handler
+file_handler = AutoControlGUILoggingHandler()
+autocontrol_logger.addHandler(file_handler)
