@@ -7,7 +7,7 @@ image = screenshot(screen_region=[300, 400, 500, 600])
 assert (image is not None)
 print(image)
 
-subprocess.Popen("calc", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
+subprocess.call("notepad.exe")
 
 # screenshot and save
 image = screenshot("test.png")
