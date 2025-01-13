@@ -8,7 +8,6 @@ assert (image is not None)
 print(image)
 
 subprocess.Popen("calc", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
-subprocess.Popen("edge", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
 
 # screenshot and save
 image = screenshot("test.png")
