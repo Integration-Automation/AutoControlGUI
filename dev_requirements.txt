@@ -4,6 +4,6 @@ build
 twine
 sphinx
 sphinx-rtd-theme
-Pyside6==6.8.1.1
+Pyside6==6.8.2.1
 qt-material
 mss
