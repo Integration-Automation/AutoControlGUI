@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="" />
+    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/test/unit_test/use_this_as_rpa_test/rpa_open_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/unit_test/screen/screenshot_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/screen/screenshot_test.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -68,13 +71,14 @@
     "Python.executor_one_file.executor": "Run",
     "Python.screen_test.executor": "Run",
     "Python.screenshot_test.executor": "Run",
+    "Python.video_recording.executor": "Run",
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "WebServerToolWindowFactoryState": "false",
     "git-widget-placeholder": "dev",
     "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/CodeWorkspace/Python/AutoControlGUI",
+    "last_opened_file_path": "C:/CodeWorkspace/Python/NovelAI_RPA",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -101,29 +105,6 @@
     </key>
   </component>
   <component name="RunManager" selected="Python.screenshot_test">
-    <configuration name="create_project_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="AutoControl" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/create_project_file" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/create_project_file/create_project_test.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="critical_exit_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="AutoControl" />
       <option name="ENV_FILES" value="" />
@@ -193,6 +174,29 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="video_recording" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="AutoControl" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/je_auto_control/utils/cv2_utils" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/je_auto_control/utils/cv2_utils/video_recording.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="windows_window" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="AutoControl" />
       <option name="ENV_FILES" value="" />
@@ -219,10 +223,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.screenshot_test" />
+        <item itemvalue="Python.video_recording" />
         <item itemvalue="Python.windows_window" />
         <item itemvalue="Python.critical_exit_test" />
         <item itemvalue="Python.executor_one_file" />
-        <item itemvalue="Python.create_project_test" />
       </list>
     </recent_temporary>
   </component>
@@ -543,6 +547,11 @@
       <workItem from="1734652219673" duration="95000" />
       <workItem from="1734652331974" duration="1308000" />
       <workItem from="1735938375804" duration="1110000" />
+      <workItem from="1735977380695" duration="17220000" />
+      <workItem from="1736321537483" duration="103000" />
+      <workItem from="1736322758805" duration="2070000" />
+      <workItem from="1736660004635" duration="5000" />
+      <workItem from="1736743330772" duration="9005000" />
     </task>
     <servers />
   </component>
@@ -566,10 +575,11 @@
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/AutoControlGUI$critical_exit_test.coverage" NAME="critical_exit_test Coverage Results" MODIFIED="1725849386001" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/critical_exit" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$windows_window.coverage" NAME="windows_window Coverage Results" MODIFIED="1708423317362" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/manual_test" />
+    <SUITE FILE_PATH="coverage/AutoControlGUI$video_recording.coverage" NAME="video_recording Coverage Results" MODIFIED="1735979525244" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/cv2_utils" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$screen_test.coverage" NAME="screen_test Coverage Results" MODIFIED="1718679894929" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/screen" />
-    <SUITE FILE_PATH="coverage/AutoControlGUI$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1725846692260" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
     <SUITE FILE_PATH="coverage/AutoControl$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1699847389383" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
-    <SUITE FILE_PATH="coverage/AutoControlGUI$screenshot_test.coverage" NAME="screenshot_test Coverage Results" MODIFIED="1735938489858" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/screen" />
+    <SUITE FILE_PATH="coverage/AutoControlGUI$screenshot_test.coverage" NAME="screenshot_test Coverage Results" MODIFIED="1736745791504" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/screen" />
+    <SUITE FILE_PATH="coverage/AutoControlGUI$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1725846692260" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$callback_test.coverage" NAME="callback_test Coverage Results" MODIFIED="1725848440583" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/callback" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$executor_one_file.coverage" NAME="executor_one_file Coverage Results" MODIFIED="1725848623775" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/create_project_file/AutoControl/executor" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$window_hwnd.coverage" NAME="window_hwnd Coverage Results" MODIFIED="1708421995069" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/window" />
