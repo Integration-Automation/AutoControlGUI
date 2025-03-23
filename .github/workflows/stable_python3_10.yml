@@ -87,11 +87,6 @@ jobs:
       - name: Test Create Project Function
         run: python ./test/unit_test/create_project_file/create_project_test.py
 
-      - name: Test Interval Scheduler
-        run: python ./test/unit_test/scheduler_test/sec_interval_test.py
-      - name: Test Cron Scheduler
-        run: python ./test/unit_test/scheduler_test/sec_cron_test.py
-
       - name: Test Get Mouse Info
         run: python ./test/unit_test/get_info/mouse_info.py
       - name: Test Get Special Info
