@@ -1,23 +1,22 @@
-# Rename to build dev version
-# This is dev version
+# Rename to build stable version
+# This is stable version
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "je_auto_control_dev"
-version = "0.0.106"
+name = "je_auto_control"
+version = "0.0.163"
 authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]
 description = "GUI Automation Framework"
 requires-python = ">=3.9"
-license = { text = "MIT" }
+license-files = ["LICENSE"]
 dependencies = [
     "je_open_cv",
     "pillow",
-    "APScheduler",
-    "Pyside6",
+    "Pyside6==6.8.2.1",
     "pyobjc-core;platform_system=='Darwin'",
     "pyobjc;platform_system=='Darwin'",
     "python-Xlib;platform_system=='Linux'",
@@ -29,7 +28,6 @@ classifiers = [
     "Environment :: Win32 (MS Windows)",
     "Environment :: MacOS X",
     "Environment :: X11 Applications",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent"
 ]
 
@@ -41,9 +39,6 @@ Code = "https://github.com/Intergration-Automation-Testing/AutoControl"
 [project.readme]
 file = "README.md"
 content-type = "text/markdown"
-
-[tool.setuptools]
-license-files = ["LICENSE"]
 
 [tool.setuptools.packages]
 find = { namespaces = false }

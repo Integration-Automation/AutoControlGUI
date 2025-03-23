@@ -5,8 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/test/unit_test/use_this_as_rpa_test/rpa_open_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/screen/screenshot_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/screen/screenshot_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dev.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev_requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/dev_requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/scheduler/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/scheduler/extend_apscheduler.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,6 +34,12 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;JE-Chen&quot;
+  }
+}</component>
   <component name="GitSEFilterConfiguration">
     <file-type-list>
       <filtered-out-file-type name="LOCAL_BRANCH" />
@@ -37,6 +48,12 @@
       <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
     </file-type-list>
   </component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/Integration-Automation/AutoControlGUI.git&quot;,
+    &quot;accountId&quot;: &quot;a99e3205-1b0b-4362-b014-5d2163fb0c3a&quot;
+  }
+}</component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/je_auto_control/linux_with_x11/listener/x11_linux_listener.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/je_auto_control/osx/mouse/osx_mouse.py" root0="FORCE_HIGHLIGHTING" />
@@ -61,33 +78,33 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "Python.calculator.executor": "Run",
-    "Python.callback_test.executor": "Run",
-    "Python.create_project_test.executor": "Run",
-    "Python.critical_exit_test.executor": "Run",
-    "Python.executor_one_file.executor": "Run",
-    "Python.screen_test.executor": "Run",
-    "Python.screenshot_test.executor": "Run",
-    "Python.video_recording.executor": "Run",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "git-widget-placeholder": "dev",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/CodeWorkspace/Python/NovelAI_RPA",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "discord-application",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;Python.calculator.executor&quot;: &quot;Run&quot;,
+    &quot;Python.callback_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.create_project_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.critical_exit_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.executor_one_file.executor&quot;: &quot;Run&quot;,
+    &quot;Python.screen_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.screenshot_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.video_recording.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;dev&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/CodeWorkspace/Python/AutoControlGUI&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;discord-application&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\CodeWorkspace\AutoControl\docs\source\Zh\doc" />
@@ -233,8 +250,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-deb605915726-JavaScript-PY-243.22562.220" />
-        <option value="bundled-python-sdk-0fc6c617c4bd-9a18a617cbe4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-243.22562.220" />
+        <option value="bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-PY-243.25659.43" />
+        <option value="bundled-python-sdk-181015f7ab06-4df51de95216-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-243.25659.43" />
       </set>
     </attachedChunks>
   </component>
@@ -552,6 +569,13 @@
       <workItem from="1736322758805" duration="2070000" />
       <workItem from="1736660004635" duration="5000" />
       <workItem from="1736743330772" duration="9005000" />
+      <workItem from="1740464859986" duration="2093000" />
+      <workItem from="1740573510129" duration="1798000" />
+      <workItem from="1741266960149" duration="123000" />
+      <workItem from="1741655370132" duration="3456000" />
+      <workItem from="1741675538682" duration="1877000" />
+      <workItem from="1741678734747" duration="807000" />
+      <workItem from="1742708134992" duration="1393000" />
     </task>
     <servers />
   </component>

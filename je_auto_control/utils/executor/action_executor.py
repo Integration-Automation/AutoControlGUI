@@ -18,7 +18,6 @@ from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 from je_auto_control.utils.package_manager.package_manager_class import package_manager
 from je_auto_control.utils.project.create_project_structure import create_project_dir
-from je_auto_control.utils.scheduler.extend_apscheduler import scheduler_manager
 from je_auto_control.utils.shell_process.shell_exec import ShellManager
 from je_auto_control.utils.start_exe.start_another_process import start_exe
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
@@ -90,15 +89,6 @@ class Executor(object):
             "AC_shell_command": ShellManager().exec_shell,
             # Another process
             "AC_execute_process": start_exe,
-            # Scheduler
-            "AC_scheduler_event_trigger": self.scheduler_event_trigger,
-            "AC_remove_blocking_scheduler_job": scheduler_manager.remove_blocking_job,
-            "AC_remove_nonblocking_scheduler_job": scheduler_manager.remove_nonblocking_job,
-            "AC_start_blocking_scheduler": scheduler_manager.start_block_scheduler,
-            "AC_start_nonblocking_scheduler": scheduler_manager.start_nonblocking_scheduler,
-            "AC_start_all_scheduler": scheduler_manager.start_all_scheduler,
-            "AC_shutdown_blocking_scheduler": scheduler_manager.shutdown_blocking_scheduler,
-            "AC_shutdown_nonblocking_scheduler": scheduler_manager.shutdown_nonblocking_scheduler,
         }
         # get all builtin function and add to event dict
         for function in getmembers(builtins, isbuiltin):
@@ -164,15 +154,6 @@ class Executor(object):
             execute_detail_list.append(self.execute_action(read_action_json(file)))
         return execute_detail_list
 
-    def scheduler_event_trigger(
-            self, function: str, scheduler_id: str = None, args: Union[list, tuple] = None,
-            kwargs: dict = None, scheduler_type: str = "nonblocking", wait_type: str = "secondly",
-            wait_value: int = 1, **trigger_args: Any) -> None:
-        if scheduler_type == "nonblocking":
-            scheduler_event = scheduler_manager.nonblocking_scheduler_event_dict.get(wait_type)
-        else:
-            scheduler_event = scheduler_manager.blocking_scheduler_event_dict.get(wait_type)
-        scheduler_event(self.event_dict.get(function), scheduler_id, args, kwargs, wait_value, **trigger_args)
 
 
 executor = Executor()
