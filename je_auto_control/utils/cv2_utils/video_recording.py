@@ -14,6 +14,8 @@ class RecordingThread(threading.Thread):
         super().__init__()
         self.recoding_flag = True
         self.video_name = video_name
+        self.daemon = True
+        self.fps = 20
 
     def set_recoding_flag(self, recoding_flag: bool):
         autocontrol_logger.info(f"RecordingThread set_recoding_flag recoding_flag: {recoding_flag}")
@@ -24,8 +26,7 @@ class RecordingThread(threading.Thread):
             resolution = sct.monitors[0]
             self.video_name = self.video_name + '.mp4'
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            desired_fps = 20
-            video_writer = cv2.VideoWriter(self.video_name, fourcc, desired_fps,
+            video_writer = cv2.VideoWriter(self.video_name, fourcc, self.fps,
                                            (resolution['width'], resolution['height']))
             while self.recoding_flag:
                 screen_image = sct.grab(resolution)
