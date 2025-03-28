@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "je_auto_control_dev"
-version = "0.0.107"
+version = "0.0.110"
 authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]
@@ -16,7 +16,7 @@ license-files = ["LICENSE"]
 dependencies = [
     "je_open_cv",
     "pillow",
-    "Pyside6==6.8.2.1",
+    "Pyside6==6.8.3",
     "pyobjc-core;platform_system=='Darwin'",
     "pyobjc;platform_system=='Darwin'",
     "python-Xlib;platform_system=='Linux'",
