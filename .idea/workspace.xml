@@ -6,9 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev.toml" beforeDir="false" afterPath="$PROJECT_DIR$/stable.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/cv2_utils/video_recording.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/cv2_utils/video_recording.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dev.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev_requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/dev_requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/stable.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -92,23 +93,23 @@
     "WebServerToolWindowFactoryState": "false",
     "git-widget-placeholder": "dev",
     "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/CodeWorkspace/Python/WebRunner",
+    "last_opened_file_path": "C:/CodeWorkspace/Python/AutoControlGUI",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "discord-application",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\CodeWorkspace\Python\AutoControlGUI" />
       <recent name="C:\CodeWorkspace\AutoControl\docs\source\Zh\doc" />
       <recent name="C:\CodeWorkspace\AutoControl\docs\source\Eng\doc" />
       <recent name="C:\CodeWorkspace\AutoControl\docs\source\API\utils" />
       <recent name="C:\CodeWorkspace\AutoControl\docs" />
-      <recent name="C:\CodeWorkspace\AutoControl\test\gui_test\calculator" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\.github" />
@@ -578,6 +579,8 @@
       <workItem from="1742813373801" duration="10000" />
       <workItem from="1742819242249" duration="1232000" />
       <workItem from="1742867862556" duration="5524000" />
+      <workItem from="1743188981565" duration="926000" />
+      <workItem from="1743702736955" duration="1848000" />
     </task>
     <servers />
   </component>
