@@ -16,7 +16,7 @@ license-files = ["LICENSE"]
 dependencies = [
     "je_open_cv",
     "pillow",
-    "Pyside6==6.8.3",
+    "Pyside6==6.9.0",
     "pyobjc-core;platform_system=='Darwin'",
     "pyobjc;platform_system=='Darwin'",
     "python-Xlib;platform_system=='Linux'",
