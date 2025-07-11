@@ -11,7 +11,7 @@ authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]
 description = "GUI Automation Framework"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license-files = ["LICENSE"]
 dependencies = [
     "je_open_cv",
@@ -22,7 +22,7 @@ dependencies = [
     "mss"
 ]
 classifiers = [
-    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Development Status :: 2 - Pre-Alpha",
     "Environment :: Win32 (MS Windows)",
     "Environment :: MacOS X",
