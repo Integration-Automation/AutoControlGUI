@@ -6,24 +6,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "je_auto_control_dev"
-version = "0.0.111"
+version = "0.0.116"
 authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]
 description = "GUI Automation Framework"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license-files = ["LICENSE"]
 dependencies = [
     "je_open_cv",
     "pillow",
-    "Pyside6==6.9.0",
     "pyobjc-core;platform_system=='Darwin'",
     "pyobjc;platform_system=='Darwin'",
     "python-Xlib;platform_system=='Linux'",
     "mss"
 ]
 classifiers = [
-    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Development Status :: 2 - Pre-Alpha",
     "Environment :: Win32 (MS Windows)",
     "Environment :: MacOS X",
@@ -44,4 +43,4 @@ content-type = "text/markdown"
 find = { namespaces = false }
 
 [project.optional-dependencies]
-gui = ["Pyside6", "qt-material"]
+gui = ["PySide6==6.9.1", "qt-material"]

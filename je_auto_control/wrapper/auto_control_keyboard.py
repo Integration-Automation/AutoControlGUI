@@ -1,5 +1,5 @@
 import sys
-from typing import Tuple
+from typing import Union
 
 from je_auto_control.utils.exception.exception_tags import keyboard_hotkey
 from je_auto_control.utils.exception.exception_tags import keyboard_press_key
@@ -25,7 +25,7 @@ def get_keyboard_keys_table() -> dict:
     return keyboard_keys_table
 
 
-def press_keyboard_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = False) -> str:
+def press_keyboard_key(keycode: Union[int, str], is_shift: bool = False, skip_record: bool = False) -> str | None:
     """
     use to press a key still press to use release key
     or use critical exit
@@ -81,7 +81,7 @@ def press_keyboard_key(keycode: [int, str], is_shift: bool = False, skip_record:
         )
 
 
-def release_keyboard_key(keycode: [int, str], is_shift: bool = False, skip_record: bool = False) -> str:
+def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False, skip_record: bool = False) -> str | None:
     """
     use to release pressed key return keycode
     :param keycode which keycode we want to release
@@ -103,11 +103,11 @@ def release_keyboard_key(keycode: [int, str], is_shift: bool = False, skip_recor
                 keyboard.release_key(keycode)
             elif sys.platform in ["darwin"]:
                 keyboard.release_key(keycode, is_shift=is_shift)
-            if skip_record is False:
+            if not skip_record:
                 record_action_to_list("release_key", param)
             return str(keycode)
         except AutoControlKeyboardException as error:
-            if skip_record is False:
+            if not skip_record:
                 record_action_to_list("release_key", param, repr(error))
             autocontrol_logger.error(
                 f"release_keyboard_key, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}, "
@@ -131,7 +131,7 @@ def release_keyboard_key(keycode: [int, str], is_shift: bool = False, skip_recor
         )
 
 
-def type_keyboard(keycode: [int, str], is_shift: bool = False, skip_record: bool = False) -> str:
+def type_keyboard(keycode: Union[int, str], is_shift: bool = False, skip_record: bool = False) -> str | None:
     """
     press and release key return keycode
     :param keycode which keycode we want to type
@@ -146,11 +146,11 @@ def type_keyboard(keycode: [int, str], is_shift: bool = False, skip_record: bool
         try:
             press_keyboard_key(keycode, is_shift, skip_record=True)
             release_keyboard_key(keycode, is_shift, skip_record=True)
-            if skip_record is False:
+            if not skip_record:
                 record_action_to_list("type_keyboard", param)
             return str(keycode)
         except AutoControlKeyboardException as error:
-            if skip_record is False:
+            if not skip_record:
                 record_action_to_list("type_keyboard", param, repr(error))
             autocontrol_logger.error(
                 f"type_keyboard, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}, "
@@ -158,7 +158,7 @@ def type_keyboard(keycode: [int, str], is_shift: bool = False, skip_record: bool
             )
             raise AutoControlKeyboardException(keyboard_type_key + " " + repr(error))
         except TypeError as error:
-            if skip_record is False:
+            if not skip_record:
                 record_action_to_list("type_keyboard", param, repr(error))
             autocontrol_logger.error(
                 f"type_keyboard, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}, "
@@ -166,7 +166,7 @@ def type_keyboard(keycode: [int, str], is_shift: bool = False, skip_record: bool
             )
             raise AutoControlKeyboardException(repr(error))
     except Exception as error:
-        if skip_record is False:
+        if not skip_record:
             record_action_to_list("type_keyboard", param, repr(error))
         autocontrol_logger.error(
             f"type_keyboard, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}, "
@@ -174,7 +174,7 @@ def type_keyboard(keycode: [int, str], is_shift: bool = False, skip_record: bool
         )
 
 
-def check_key_is_press(keycode: [int, str]) -> bool:
+def check_key_is_press(keycode: [int, str]) -> bool | None:
     """
     use to check key is press return True or False
     :param keycode check key is press or not
@@ -198,7 +198,7 @@ def check_key_is_press(keycode: [int, str]) -> bool:
         )
 
 
-def write(write_string: str, is_shift: bool = False) -> str:
+def write(write_string: str, is_shift: bool = False) -> None | str:
     """
     use to press and release whole we get this function str
     return all press and release str
@@ -257,7 +257,7 @@ def write(write_string: str, is_shift: bool = False) -> str:
         )
 
 
-def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
+def hotkey(key_code_list: list, is_shift: bool = False) -> tuple[str, str] | None:
     """
     use to press and release all key on key_code_list
     then reverse list press and release again
