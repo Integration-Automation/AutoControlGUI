@@ -1,5 +1,5 @@
 import sys
-from typing import Tuple, Union, LiteralString, Any
+from typing import Union
 
 from je_auto_control.utils.exception.exception_tags import keyboard_hotkey
 from je_auto_control.utils.exception.exception_tags import keyboard_press_key
@@ -198,7 +198,7 @@ def check_key_is_press(keycode: [int, str]) -> bool | None:
         )
 
 
-def write(write_string: str, is_shift: bool = False) -> None | LiteralString | str:
+def write(write_string: str, is_shift: bool = False) -> None | str:
     """
     use to press and release whole we get this function str
     return all press and release str
