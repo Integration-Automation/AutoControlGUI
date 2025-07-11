@@ -24,7 +24,7 @@ def get_mouse_table() -> dict:
     return mouse_keys_table
 
 
-def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int) -> Tuple[Union[int, str], int, int]:
+def mouse_preprocess(mouse_keycode: Union[int, str], x: int, y: int) -> Tuple[Union[int, str], int, int]:
     """
     check mouse keycode is verified or not
     and then check current mouse position
@@ -168,7 +168,7 @@ def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tu
         )
 
 
-def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tuple[Union[int, str], int, int]:
+def click_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) -> Tuple[Union[int, str], int, int]:
     """
     press and release mouse keycode on x, y
     return keycode, x, y
