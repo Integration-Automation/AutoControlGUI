@@ -5,19 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/je_auto_control/gui/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/je_auto_control/gui/language_wrapper/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/je_auto_control/gui/language_wrapper/english.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/je_auto_control/gui/language_wrapper/multi_language_wrapper.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/je_auto_control/gui/language_wrapper/traditional_chinese.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/je_auto_control/gui/main_widget.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/je_auto_control/gui/main_window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/dev_python3_12.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/dev_python3_12.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/stable_python3_12.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/stable_python3_12.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_keyboard.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_mouse.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_mouse.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/stable.toml" beforeDir="false" afterPath="$PROJECT_DIR$/stable.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/unit_test/record/record_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/unit_test/record/record_test.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -596,7 +586,8 @@
       <workItem from="1745371097893" duration="881000" />
       <workItem from="1752161037166" duration="5609000" />
       <workItem from="1752172644364" duration="361000" />
-      <workItem from="1752213771333" duration="553000" />
+      <workItem from="1752213771333" duration="9334000" />
+      <workItem from="1752395504749" duration="612000" />
     </task>
     <servers />
   </component>
@@ -619,8 +610,8 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/AutoControlGUI$critical_exit_test.coverage" NAME="critical_exit_test Coverage Results" MODIFIED="1725849386001" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/critical_exit" />
-    <SUITE FILE_PATH="coverage/AutoControlGUI$executor_one_file.coverage" NAME="executor_one_file Coverage Results" MODIFIED="1725848623775" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/create_project_file/AutoControl/executor" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$screenshot_test.coverage" NAME="screenshot_test Coverage Results" MODIFIED="1752162500179" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/screen" />
+    <SUITE FILE_PATH="coverage/AutoControlGUI$executor_one_file.coverage" NAME="executor_one_file Coverage Results" MODIFIED="1725848623775" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/create_project_file/AutoControl/executor" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$video_recording.coverage" NAME="video_recording Coverage Results" MODIFIED="1735979525244" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/cv2_utils" />
     <SUITE FILE_PATH="coverage/AutoControl$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1699847389383" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$callback_test.coverage" NAME="callback_test Coverage Results" MODIFIED="1725848440583" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/callback" />
@@ -630,7 +621,7 @@
     <SUITE FILE_PATH="coverage/AutoControlGUI$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1725846692260" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$window_hwnd.coverage" NAME="window_hwnd Coverage Results" MODIFIED="1708421995069" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/window" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$record_test.coverage" NAME="record_test Coverage Results" MODIFIED="1752165107988" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/record" />
-    <SUITE FILE_PATH="coverage/AutoControlGUI$main_window.coverage" NAME="main_window Coverage Results" MODIFIED="1752165200551" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/gui" />
+    <SUITE FILE_PATH="coverage/AutoControlGUI$main_window.coverage" NAME="main_window Coverage Results" MODIFIED="1752215709523" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/gui" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$create_project_test.coverage" NAME="create_project_test Coverage Results" MODIFIED="1725848609210" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/create_project_file" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$screen_test.coverage" NAME="screen_test Coverage Results" MODIFIED="1718679894929" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/screen" />
   </component>
