@@ -43,4 +43,4 @@ content-type = "text/markdown"
 find = { namespaces = false }
 
 [project.optional-dependencies]
-gui = ["PySide6==6.9.1", "qt-material"]
+gui = ["PySide6==6.9.2", "qt-material"]

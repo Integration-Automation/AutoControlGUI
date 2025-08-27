@@ -1,4 +1,4 @@
 je_auto_control
 qt-material
 mss
-Pyside6==6.9.0
+Pyside6==6.9.2
