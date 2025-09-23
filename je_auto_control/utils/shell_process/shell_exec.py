@@ -3,6 +3,7 @@ import shlex
 import subprocess
 import sys
 from threading import Thread
+from typing import Union
 
 from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 
@@ -21,7 +22,7 @@ class ShellManager(object):
         self.read_program_error_output_from_thread = None
         self.read_program_output_from_thread = None
         self.still_run_shell: bool = True
-        self.process = None
+        self.process: Union[subprocess.Popen, None] = None
         self.run_output_queue: queue = queue.Queue()
         self.run_error_queue: queue = queue.Queue()
         self.program_encoding: str = shell_encoding
@@ -115,16 +116,16 @@ class ShellManager(object):
 
     def read_program_output_from_process(self) -> None:
         while self.still_run_shell:
-            program_output_data = self.process.stdout.raw.read(
+            program_output_data = self.process.stdout.readline(
                 self.program_buffer) \
-                .decode(self.program_encoding)
+                .decode(self.program_encoding, "replace")
             self.run_output_queue.put_nowait(program_output_data)
 
     def read_program_error_output_from_process(self) -> None:
         while self.still_run_shell:
-            program_error_output_data = self.process.stderr.raw.read(
+            program_error_output_data = self.process.stderr.readline(
                 self.program_buffer) \
-                .decode(self.program_encoding)
+                .decode(self.program_encoding, "replace")
             self.run_error_queue.put_nowait(program_error_output_data)
 
 
