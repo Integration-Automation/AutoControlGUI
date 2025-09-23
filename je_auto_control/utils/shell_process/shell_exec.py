@@ -23,12 +23,12 @@ class ShellManager(object):
         self.read_program_output_from_thread = None
         self.still_run_shell: bool = True
         self.process: Union[subprocess.Popen, None] = None
-        self.run_output_queue: queue = queue.Queue()
-        self.run_error_queue: queue = queue.Queue()
+        self.run_output_queue: queue.Queue = queue.Queue()
+        self.run_error_queue: queue.Queue = queue.Queue()
         self.program_encoding: str = shell_encoding
         self.program_buffer: int = program_buffer
 
-    def exec_shell(self, shell_command: [str, list]) -> None:
+    def exec_shell(self, shell_command: Union[str, list]) -> None:
         """
         :param shell_command: shell command will run
         :return: if error return result and True else return result and False
