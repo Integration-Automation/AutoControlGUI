@@ -87,6 +87,7 @@ from je_auto_control.wrapper.auto_control_keyboard import press_keyboard_key
 from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
 from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
 from je_auto_control.wrapper.auto_control_keyboard import write
+from je_auto_control.wrapper.auto_control_keyboard import send_key_event_to_window
 # import mouse
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
@@ -96,6 +97,7 @@ from je_auto_control.wrapper.auto_control_mouse import press_mouse
 from je_auto_control.wrapper.auto_control_mouse import release_mouse
 from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
 from je_auto_control.wrapper.auto_control_mouse import special_mouse_keys_table
+from je_auto_control.wrapper.auto_control_mouse import send_mouse_event_to_window
 # test_record
 from je_auto_control.wrapper.auto_control_record import record
 from je_auto_control.wrapper.auto_control_record import stop_record
@@ -104,6 +106,8 @@ from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.auto_control_screen import screenshot
 # Recording
 from je_auto_control.utils.cv2_utils.video_recording import RecordingThread
+# Windows
+from je_auto_control.windows.window import windows_window_manage
 
 __all__ = [
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
@@ -120,5 +124,5 @@ __all__ = [
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "get_special_table", "ShellManager", "default_shell_manager",
-    "RecordingThread"
+    "RecordingThread", "send_key_event_to_window", "send_mouse_event_to_window", "windows_window_manage"
 ]

@@ -7,7 +7,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 if sys.platform not in ["win32", "cygwin", "msys"]:
     raise AutoControlException(windows_import_error)
 
-from je_auto_control.windows.core.utils.win32_ctype_input import Input
+from je_auto_control.windows.core.utils.win32_ctype_input import Input, user32
 from je_auto_control.windows.core.utils.win32_vk import win32_LEFTDOWN
 from je_auto_control.windows.core.utils.win32_vk import win32_LEFTUP
 from je_auto_control.windows.core.utils.win32_vk import win32_MIDDLEDOWN
@@ -50,7 +50,7 @@ def mouse_event(event, x: int, y: int, dwData: int = 0) -> None:
     ctypes.windll.user32.mouse_event(event, ctypes.c_long(converted_x), ctypes.c_long(converted_y), dwData, 0)
 
 
-def position() -> [Tuple[int, int], None]:
+def position() -> tuple[int, int] | None:
     """
     get mouse position
     """
@@ -102,10 +102,16 @@ def click_mouse(mouse_keycode: int, x: int = None, y: int = None) -> None:
     release_mouse(mouse_keycode)
 
 
-def scroll(scroll_value: int, x: int = None, y: int = None) -> None:
+def scroll(scroll_value: int, x: int = None, y: int = None) -> None:    
     """
     :param scroll_value scroll count
     :param x scroll x
     :param y scroll y
     """
     mouse_event(win32_WHEEL, x, y, dwData=scroll_value)
+
+
+def send_mouse_event_to_window(window, mouse_keycode: int, x: int = None, y: int = None):
+    lparam = (y << 16) | x
+    user32.PostMessageW(window, mouse_keycode, 1, lparam)
+    user32.PostMessageW(window, mouse_keycode, 0, lparam)

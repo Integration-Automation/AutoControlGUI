@@ -1,5 +1,5 @@
 from je_auto_control.windows.core.utils.win32_ctype_input import user32
-from je_auto_control.windows.window.window_hwnd import FindWindowW
+from je_auto_control.windows.window.windows_window_manage import FindWindowW
 
 PostMessageW = user32.PostMessageW
 SendMessageW = user32.SendMessageW

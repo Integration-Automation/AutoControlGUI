@@ -38,3 +38,12 @@ def close_window(hwnd) -> bool:
 
 def destroy_window(hwnd) -> bool:
     return DestroyWindow(hwnd)
+
+
+def set_foreground_window(hwnd) -> None:
+    user32.SetForegroundWindow(hwnd)
+
+def set_window_positon(hwnd, position: int) -> None:
+    swp_no_size = 0x0001
+    swp_no_move = 0x0002
+    user32.SetWindowPos(hwnd, position, 0, 0, 0, 0, swp_no_move | swp_no_size)
