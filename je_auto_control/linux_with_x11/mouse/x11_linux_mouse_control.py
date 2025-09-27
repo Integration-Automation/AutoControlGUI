@@ -8,7 +8,7 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 if sys.platform not in ["linux", "linux2"]:
     raise AutoControlException(linux_import_error)
 
-from Xlib import X
+from Xlib import X, protocol
 from Xlib.ext.xtest import fake_input
 
 from je_auto_control.linux_with_x11.core.utils.x11_linux_display import display
@@ -83,3 +83,23 @@ def scroll(scroll_value: int, scroll_direction: int) -> None:
     for i in range(scroll_value):
         click_mouse(scroll_direction)
         total = total + i
+
+def send_mouse_event_to_window(window_id, mouse_keycode: int, x: int = None, y: int = None):
+    window = display.create_resource_object('window', window_id)
+    for ev_type in (X.ButtonPress, X.ButtonRelease):
+        ev = protocol.event.ButtonPress(
+            time=X.CurrentTime,
+            root=display.screen().root,
+            window=window,
+            same_screen=1,
+            child=X.NONE,
+            root_x=x, root_y=y, event_x=x, event_y=y,
+            state=0,
+            detail=mouse_keycode
+        )
+        ev.type = ev_type
+        window.send_event(ev, propagate=True)
+    display.flush()
+
+
+

@@ -174,7 +174,7 @@ def type_keyboard(keycode: Union[int, str], is_shift: bool = False, skip_record:
         )
 
 
-def check_key_is_press(keycode: [int, str]) -> bool | None:
+def check_key_is_press(keycode: Union[int, str]) -> bool | None:
     """
     use to check key is press return True or False
     :param keycode check key is press or not
@@ -300,5 +300,28 @@ def hotkey(key_code_list: list, is_shift: bool = False) -> tuple[str, str] | Non
         record_action_to_list("hotkey", param, repr(error))
         autocontrol_logger.error(
             f"hotkey, key_code_list: {key_code_list}, is_shift: {is_shift}, "
+            f"failed: {repr(error)}"
+        )
+
+def send_key_event_to_window(window_title, keycode: int):
+    autocontrol_logger.info(
+        f"send_key_event_to_window window:{window_title}, keycode:{keycode}"
+    )
+    param = locals()
+    try:
+        if sys.platform in ["darwin"]:
+            return
+        if isinstance(keycode, int):
+            get_key_code = keycode
+        else:
+            get_key_code = keyboard_keys_table.get(keycode)
+        keyboard.send_key_event_to_window(
+            window_title,
+            keycode=keycode
+        )
+    except Exception as error:
+        record_action_to_list("send_key_event_to_window", param, repr(error))
+        autocontrol_logger.error(
+            f"send_key_event_to_window window:{window_title}, keycode:{keycode}"
             f"failed: {repr(error)}"
         )

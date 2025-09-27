@@ -263,3 +263,25 @@ def mouse_scroll(
             f"mouse_scroll, scroll_value: {scroll_value}, x: {x}, y: {y}, scroll_direction: {scroll_direction}, "
             f"failed: {repr(error)}"
         )
+
+def send_mouse_event_to_window(window, mouse_keycode: Union[int, str], x: int = None, y: int = None):
+    autocontrol_logger.info(
+        f"send_mouse_event_to_window window:{window} mouse_keycode:{mouse_keycode}, x: {x}, y: {y}"
+    )
+    param = locals()
+    try:
+        if sys.platform in ["darwin"]:
+            return
+        mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
+        mouse.send_mouse_event_to_window(
+            window,
+            mouse_keycode=mouse_keycode,
+            x=x,
+            y=y,
+        )
+    except Exception as error:
+        record_action_to_list("send_mouse_event_to_window", param, repr(error))
+        autocontrol_logger.error(
+            f"send_mouse_event_to_window window:{window} mouse_keycode:{mouse_keycode}, x: {x}, y: {y}"
+            f"failed: {repr(error)}"
+        )
