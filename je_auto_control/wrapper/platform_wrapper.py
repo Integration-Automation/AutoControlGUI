@@ -14,7 +14,7 @@ if sys.platform in ["win32", "cygwin", "msys"]:
     from je_auto_control.windows.core.utils.win32_vk import win32_LEFTUP
     from je_auto_control.windows.core.utils.win32_vk import win32_MIDDLEDOWN
     from je_auto_control.windows.core.utils.win32_vk import win32_MIDDLEUP
-    from je_auto_control.windows.core.utils.win32_vk import win32_MOVE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_MOVE
     from je_auto_control.windows.core.utils.win32_vk import win32_RIGHTDOWN
     from je_auto_control.windows.core.utils.win32_vk import win32_RIGHTUP
     from je_auto_control.windows.core.utils.win32_vk import win32_VK_ACCEPT
@@ -506,7 +506,7 @@ if sys.platform in ["win32", "cygwin", "msys"]:
         "leftup": win32_LEFTUP,
         "middledown": win32_MIDDLEDOWN,
         "middleup": win32_MIDDLEUP,
-        "move": win32_MOVE,
+        "move": WIN32_MOVE,
         "rightdown": win32_RIGHTDOWN,
         "rightup": win32_RIGHTUP,
         "accept": win32_VK_ACCEPT,
