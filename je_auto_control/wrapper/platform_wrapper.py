@@ -4,172 +4,172 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 
 if sys.platform in ["win32", "cygwin", "msys"]:
-    from je_auto_control.windows.core.utils.win32_vk import win32_ABSOLUTE
-    from je_auto_control.windows.core.utils.win32_vk import win32_EventF_EXTENDEDKEY
-    from je_auto_control.windows.core.utils.win32_vk import win32_EventF_KEYUP
-    from je_auto_control.windows.core.utils.win32_vk import win32_EventF_SCANCODE
-    from je_auto_control.windows.core.utils.win32_vk import win32_EventF_UNICODE
-    from je_auto_control.windows.core.utils.win32_vk import win32_HWHEEL
-    from je_auto_control.windows.core.utils.win32_vk import win32_LEFTDOWN
-    from je_auto_control.windows.core.utils.win32_vk import win32_LEFTUP
-    from je_auto_control.windows.core.utils.win32_vk import win32_MIDDLEDOWN
-    from je_auto_control.windows.core.utils.win32_vk import win32_MIDDLEUP
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_ABSOLUTE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_EventF_EXTENDEDKEY
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_EventF_KEYUP
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_EventF_SCANCODE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_EventF_UNICODE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_HWHEEL
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_LEFTDOWN
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_LEFTUP
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_MIDDLEDOWN
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_MIDDLEUP
     from je_auto_control.windows.core.utils.win32_vk import WIN32_MOVE
-    from je_auto_control.windows.core.utils.win32_vk import win32_RIGHTDOWN
-    from je_auto_control.windows.core.utils.win32_vk import win32_RIGHTUP
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_ACCEPT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_ADD
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_APPS
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_BACK
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_BROWSER_BACK
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_BROWSER_FAVORITES
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_BROWSER_FORWARD
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_BROWSER_REFRESH
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_BROWSER_SEARCH
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_BROWSER_STOP
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_CANCEL
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_CAPITAL
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_CLEAR
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_CONTROL
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_CONVERT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_DECIMAL
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_DELETE
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_DIVIDE
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_DOWN
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_END
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_ESCAPE
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_EXECUTE
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F1
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F10
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F11
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F12
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F13
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F14
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F15
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F16
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F17
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F18
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F19
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F2
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F20
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F21
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F22
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F23
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F24
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F3
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F4
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F5
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F6
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F7
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F8
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_F9
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_FINAL
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_HANJA
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_HELP
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_HOME
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_IME_OFF
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_IME_ON
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_INSERT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_JUNJA
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_KANA
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_LAUNCH_APP1
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_LAUNCH_APP2
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_LAUNCH_MAIL
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_LAUNCH_MEDIA_SELECT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_LBUTTON
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_LCONTROL
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_LEFT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_LMENU
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_LSHIFT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_LWIN
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_MBUTTON
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_MEDIA_NEXT_TRACK
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_MEDIA_PLAY_PAUSE
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_MEDIA_PREV_TRACK
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_MEDIA_STOP
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_MODECHANGE
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_MULTIPLY
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_Menu
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NEXT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NONCONVERT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NUMLOCK
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NUMPAD0
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NUMPAD1
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NUMPAD2
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NUMPAD3
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NUMPAD4
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NUMPAD5
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NUMPAD6
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NUMPAD7
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NUMPAD8
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_NUMPAD9
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_PAUSE
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_PRINT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_PRIOR
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_RBUTTON
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_RCONTROL
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_RETURN
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_RIGHT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_RMENU
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_RSHIFT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_RWIN
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_SCROLL
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_SELECT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_SEPARATOR
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_SHIFT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_SLEEP
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_SNAPSHOT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_SPACE
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_SUBTRACT
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_TAB
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_UP
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_VOLUME_DOWN
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_VOLUME_MUTE
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_VOLUME_UP
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_XBUTTON1
-    from je_auto_control.windows.core.utils.win32_vk import win32_VK_XBUTTON2
-    from je_auto_control.windows.core.utils.win32_vk import win32_VkToVSC
-    from je_auto_control.windows.core.utils.win32_vk import win32_WHEEL
-    from je_auto_control.windows.core.utils.win32_vk import win32_XBUTTON1
-    from je_auto_control.windows.core.utils.win32_vk import win32_XBUTTON2
-    from je_auto_control.windows.core.utils.win32_vk import win32_DOWN
-    from je_auto_control.windows.core.utils.win32_vk import win32_XUP
-    from je_auto_control.windows.core.utils.win32_vk import win32_key0
-    from je_auto_control.windows.core.utils.win32_vk import win32_key1
-    from je_auto_control.windows.core.utils.win32_vk import win32_key2
-    from je_auto_control.windows.core.utils.win32_vk import win32_key3
-    from je_auto_control.windows.core.utils.win32_vk import win32_key4
-    from je_auto_control.windows.core.utils.win32_vk import win32_key5
-    from je_auto_control.windows.core.utils.win32_vk import win32_key6
-    from je_auto_control.windows.core.utils.win32_vk import win32_key7
-    from je_auto_control.windows.core.utils.win32_vk import win32_key8
-    from je_auto_control.windows.core.utils.win32_vk import win32_key9
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyA
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyB
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyC
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyD
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyE
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyF
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyG
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyH
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyI
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyJ
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyK
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyL
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyM
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyN
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyO
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyP
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyQ
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyR
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyS
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyT
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyU
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyV
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyW
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyX
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyY
-    from je_auto_control.windows.core.utils.win32_vk import win32_keyZ
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_RIGHTDOWN
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_RIGHTUP
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_ACCEPT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_ADD
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_APPS
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_BACK
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_BROWSER_BACK
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_BROWSER_FAVORITES
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_BROWSER_FORWARD
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_BROWSER_REFRESH
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_BROWSER_SEARCH
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_BROWSER_STOP
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_CANCEL
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_CAPITAL
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_CLEAR
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_CONTROL
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_CONVERT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_DECIMAL
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_DELETE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_DIVIDE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_DOWN
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_END
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_ESCAPE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_EXECUTE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F1
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F10
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F11
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F12
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F13
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F14
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F15
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F16
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F17
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F18
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F19
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F2
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F20
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F21
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F22
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F23
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F24
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F3
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F4
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F5
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F6
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F7
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F8
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_F9
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_FINAL
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_HANJA
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_HELP
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_HOME
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_IME_OFF
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_IME_ON
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_INSERT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_JUNJA
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_KANA
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_LAUNCH_APP1
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_LAUNCH_APP2
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_LAUNCH_MAIL
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_LAUNCH_MEDIA_SELECT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_LBUTTON
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_LCONTROL
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_LEFT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_LMENU
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_LSHIFT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_LWIN
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_MBUTTON
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_MEDIA_NEXT_TRACK
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_MEDIA_PLAY_PAUSE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_MEDIA_PREV_TRACK
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_MEDIA_STOP
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_MODECHANGE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_MULTIPLY
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_Menu
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NEXT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NONCONVERT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NUMLOCK
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NUMPAD0
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NUMPAD1
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NUMPAD2
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NUMPAD3
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NUMPAD4
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NUMPAD5
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NUMPAD6
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NUMPAD7
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NUMPAD8
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_NUMPAD9
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_PAUSE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_PRINT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_PRIOR
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_RBUTTON
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_RCONTROL
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_RETURN
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_RIGHT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_RMENU
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_RSHIFT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_RWIN
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_SCROLL
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_SELECT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_SEPARATOR
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_SHIFT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_SLEEP
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_SNAPSHOT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_SPACE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_SUBTRACT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_TAB
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_UP
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_VOLUME_DOWN
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_VOLUME_MUTE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_VOLUME_UP
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_XBUTTON1
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VK_XBUTTON2
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_VkToVSC
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_WHEEL
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_XBUTTON1
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_XBUTTON2
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_DOWN
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_XUP
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_key0
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_key1
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_key2
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_key3
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_key4
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_key5
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_key6
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_key7
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_key8
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_key9
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyA
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyB
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyC
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyD
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyE
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyF
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyG
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyH
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyI
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyJ
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyK
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyL
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyM
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyN
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyO
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyP
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyQ
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyR
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyS
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyT
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyU
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyV
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyW
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyX
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyY
+    from je_auto_control.windows.core.utils.win32_vk import WIN32_keyZ
     from je_auto_control.windows.keyboard import win32_ctype_keyboard_control
     from je_auto_control.windows.mouse import win32_ctype_mouse_control
     from je_auto_control.windows.mouse.win32_ctype_mouse_control import win32_mouse_left
@@ -496,198 +496,198 @@ recorder = None
 if sys.platform in ["win32", "cygwin", "msys"]:
     autocontrol_logger.info("Load Windows Setting")
     keyboard_keys_table = {
-        "absolute": win32_ABSOLUTE,
-        "eventf_extendedkey": win32_EventF_EXTENDEDKEY,
-        "eventf_keyup": win32_EventF_KEYUP,
-        "eventf_scancode": win32_EventF_SCANCODE,
-        "eventf_unicode": win32_EventF_UNICODE,
-        "hwheel": win32_HWHEEL,
-        "leftdown": win32_LEFTDOWN,
-        "leftup": win32_LEFTUP,
-        "middledown": win32_MIDDLEDOWN,
-        "middleup": win32_MIDDLEUP,
+        "absolute": WIN32_ABSOLUTE,
+        "eventf_extendedkey": WIN32_EventF_EXTENDEDKEY,
+        "eventf_keyup": WIN32_EventF_KEYUP,
+        "eventf_scancode": WIN32_EventF_SCANCODE,
+        "eventf_unicode": WIN32_EventF_UNICODE,
+        "hwheel": WIN32_HWHEEL,
+        "leftdown": WIN32_LEFTDOWN,
+        "leftup": WIN32_LEFTUP,
+        "middledown": WIN32_MIDDLEDOWN,
+        "middleup": WIN32_MIDDLEUP,
         "move": WIN32_MOVE,
-        "rightdown": win32_RIGHTDOWN,
-        "rightup": win32_RIGHTUP,
-        "accept": win32_VK_ACCEPT,
-        "add": win32_VK_ADD,
-        "apps": win32_VK_APPS,
-        "back": win32_VK_BACK,
-        "browser_back": win32_VK_BROWSER_BACK,
-        "browser_favorites": win32_VK_BROWSER_FAVORITES,
-        "browser_forward": win32_VK_BROWSER_FORWARD,
-        "browser_refresh": win32_VK_BROWSER_REFRESH,
-        "browser_search": win32_VK_BROWSER_SEARCH,
-        "browser_stop": win32_VK_BROWSER_STOP,
-        "cancel": win32_VK_CANCEL,
-        "capital": win32_VK_CAPITAL,
-        "clear": win32_VK_CLEAR,
-        "control": win32_VK_CONTROL,
-        "convert": win32_VK_CONVERT,
-        "decimal": win32_VK_DECIMAL,
-        "delete": win32_VK_DELETE,
-        "divide": win32_VK_DIVIDE,
-        "vk_down": win32_VK_DOWN,
-        "end": win32_VK_END,
-        "escape": win32_VK_ESCAPE,
-        "execute": win32_VK_EXECUTE,
-        "f1": win32_VK_F1,
-        "f2": win32_VK_F2,
-        "f3": win32_VK_F3,
-        "f4": win32_VK_F4,
-        "f5": win32_VK_F5,
-        "f6": win32_VK_F6,
-        "f7": win32_VK_F7,
-        "f8": win32_VK_F8,
-        "f9": win32_VK_F9,
-        "f10": win32_VK_F10,
-        "f11": win32_VK_F11,
-        "f12": win32_VK_F12,
-        "f13": win32_VK_F13,
-        "f14": win32_VK_F14,
-        "f15": win32_VK_F15,
-        "f16": win32_VK_F16,
-        "f17": win32_VK_F17,
-        "f18": win32_VK_F18,
-        "f19": win32_VK_F19,
-        "f20": win32_VK_F20,
-        "f21": win32_VK_F21,
-        "f22": win32_VK_F22,
-        "f23": win32_VK_F23,
-        "f24": win32_VK_F24,
-        "final": win32_VK_FINAL,
-        "hanja": win32_VK_HANJA,
-        "help": win32_VK_HELP,
-        "home": win32_VK_HOME,
-        "ime_off": win32_VK_IME_OFF,
-        "ime_on": win32_VK_IME_ON,
-        "insert": win32_VK_INSERT,
-        "junja": win32_VK_JUNJA,
-        "kana": win32_VK_KANA,
-        "launch_app1": win32_VK_LAUNCH_APP1,
-        "LAUNCH_APP2": win32_VK_LAUNCH_APP2,
-        "launch_mail": win32_VK_LAUNCH_MAIL,
-        "launch_media_select": win32_VK_LAUNCH_MEDIA_SELECT,
-        "lbutton": win32_VK_LBUTTON,
-        "lcontrol": win32_VK_LCONTROL,
-        "left": win32_VK_LEFT,
-        "lmenu": win32_VK_LMENU,
-        "lshift": win32_VK_LSHIFT,
-        "lwin": win32_VK_LWIN,
-        "mbutton": win32_VK_MBUTTON,
-        "media_next_track": win32_VK_MEDIA_NEXT_TRACK,
-        "media_play_pause": win32_VK_MEDIA_PLAY_PAUSE,
-        "media_prev_track": win32_VK_MEDIA_PREV_TRACK,
-        "media_stop": win32_VK_MEDIA_STOP,
-        "modechange": win32_VK_MODECHANGE,
-        "multiply": win32_VK_MULTIPLY,
-        "menu": win32_VK_Menu,
-        "next": win32_VK_NEXT,
-        "nonconvert": win32_VK_NONCONVERT,
-        "numlock": win32_VK_NUMLOCK,
-        "num0": win32_VK_NUMPAD0,
-        "num1": win32_VK_NUMPAD1,
-        "num2": win32_VK_NUMPAD2,
-        "num3": win32_VK_NUMPAD3,
-        "num4": win32_VK_NUMPAD4,
-        "num5": win32_VK_NUMPAD5,
-        "num6": win32_VK_NUMPAD6,
-        "num7": win32_VK_NUMPAD7,
-        "num8": win32_VK_NUMPAD8,
-        "num9": win32_VK_NUMPAD9,
-        "pause": win32_VK_PAUSE,
-        "print": win32_VK_PRINT,
-        "prior": win32_VK_PRIOR,
-        "rbutton": win32_VK_RBUTTON,
-        "rcontrol": win32_VK_RCONTROL,
-        "return": win32_VK_RETURN,
-        "right": win32_VK_RIGHT,
-        "rmenu": win32_VK_RMENU,
-        "rshift": win32_VK_RSHIFT,
-        "rwin": win32_VK_RWIN,
-        "scroll": win32_VK_SCROLL,
-        "select": win32_VK_SELECT,
-        "separator": win32_VK_SEPARATOR,
-        "shift": win32_VK_SHIFT,
-        "sleep": win32_VK_SLEEP,
-        "snapshot": win32_VK_SNAPSHOT,
-        "space": win32_VK_SPACE,
-        "subtract": win32_VK_SUBTRACT,
-        "tab": win32_VK_TAB,
-        "up": win32_VK_UP,
-        "volume_down": win32_VK_VOLUME_DOWN,
-        "volume_mute": win32_VK_VOLUME_MUTE,
-        "volume_up": win32_VK_VOLUME_UP,
-        "vk_xbutton1": win32_VK_XBUTTON1,
-        "vk_xbutton2": win32_VK_XBUTTON2,
-        "xbutton1": win32_XBUTTON1,
-        "xbutton2": win32_XBUTTON2,
-        "vktovsc": win32_VkToVSC,
-        "wheel": win32_WHEEL,
-        "down": win32_DOWN,
-        "xup": win32_XUP,
-        "0": win32_key0,
-        "1": win32_key1,
-        "2": win32_key2,
-        "3": win32_key3,
-        "4": win32_key4,
-        "5": win32_key5,
-        "6": win32_key6,
-        "7": win32_key7,
-        "8": win32_key8,
-        "9": win32_key9,
-        "A": win32_keyA,
-        "a": win32_keyA,
-        "B": win32_keyB,
-        "b": win32_keyB,
-        "C": win32_keyC,
-        "c": win32_keyC,
-        "D": win32_keyD,
-        "d": win32_keyD,
-        "E": win32_keyE,
-        "e": win32_keyE,
-        "F": win32_keyF,
-        "f": win32_keyF,
-        "G": win32_keyG,
-        "g": win32_keyG,
-        "H": win32_keyH,
-        "h": win32_keyH,
-        "I": win32_keyI,
-        "i": win32_keyI,
-        "J": win32_keyJ,
-        "j": win32_keyJ,
-        "K": win32_keyK,
-        "k": win32_keyK,
-        "L": win32_keyL,
-        "l": win32_keyL,
-        "M": win32_keyM,
-        "m": win32_keyM,
-        "N": win32_keyN,
-        "n": win32_keyN,
-        "O": win32_keyO,
-        "o": win32_keyO,
-        "P": win32_keyP,
-        "p": win32_keyP,
-        "Q": win32_keyQ,
-        "q": win32_keyQ,
-        "R": win32_keyR,
-        "r": win32_keyR,
-        "S": win32_keyS,
-        "s": win32_keyS,
-        "T": win32_keyT,
-        "t": win32_keyT,
-        "U": win32_keyU,
-        "u": win32_keyU,
-        "V": win32_keyV,
-        "v": win32_keyV,
-        "W": win32_keyW,
-        "w": win32_keyW,
-        "X": win32_keyX,
-        "x": win32_keyX,
-        "Y": win32_keyY,
-        "y": win32_keyY,
-        "Z": win32_keyZ,
-        "z": win32_keyZ,
+        "rightdown": WIN32_RIGHTDOWN,
+        "rightup": WIN32_RIGHTUP,
+        "accept": WIN32_VK_ACCEPT,
+        "add": WIN32_VK_ADD,
+        "apps": WIN32_VK_APPS,
+        "back": WIN32_VK_BACK,
+        "browser_back": WIN32_VK_BROWSER_BACK,
+        "browser_favorites": WIN32_VK_BROWSER_FAVORITES,
+        "browser_forward": WIN32_VK_BROWSER_FORWARD,
+        "browser_refresh": WIN32_VK_BROWSER_REFRESH,
+        "browser_search": WIN32_VK_BROWSER_SEARCH,
+        "browser_stop": WIN32_VK_BROWSER_STOP,
+        "cancel": WIN32_VK_CANCEL,
+        "capital": WIN32_VK_CAPITAL,
+        "clear": WIN32_VK_CLEAR,
+        "control": WIN32_VK_CONTROL,
+        "convert": WIN32_VK_CONVERT,
+        "decimal": WIN32_VK_DECIMAL,
+        "delete": WIN32_VK_DELETE,
+        "divide": WIN32_VK_DIVIDE,
+        "vk_down": WIN32_VK_DOWN,
+        "end": WIN32_VK_END,
+        "escape": WIN32_VK_ESCAPE,
+        "execute": WIN32_VK_EXECUTE,
+        "f1": WIN32_VK_F1,
+        "f2": WIN32_VK_F2,
+        "f3": WIN32_VK_F3,
+        "f4": WIN32_VK_F4,
+        "f5": WIN32_VK_F5,
+        "f6": WIN32_VK_F6,
+        "f7": WIN32_VK_F7,
+        "f8": WIN32_VK_F8,
+        "f9": WIN32_VK_F9,
+        "f10": WIN32_VK_F10,
+        "f11": WIN32_VK_F11,
+        "f12": WIN32_VK_F12,
+        "f13": WIN32_VK_F13,
+        "f14": WIN32_VK_F14,
+        "f15": WIN32_VK_F15,
+        "f16": WIN32_VK_F16,
+        "f17": WIN32_VK_F17,
+        "f18": WIN32_VK_F18,
+        "f19": WIN32_VK_F19,
+        "f20": WIN32_VK_F20,
+        "f21": WIN32_VK_F21,
+        "f22": WIN32_VK_F22,
+        "f23": WIN32_VK_F23,
+        "f24": WIN32_VK_F24,
+        "final": WIN32_VK_FINAL,
+        "hanja": WIN32_VK_HANJA,
+        "help": WIN32_VK_HELP,
+        "home": WIN32_VK_HOME,
+        "ime_off": WIN32_VK_IME_OFF,
+        "ime_on": WIN32_VK_IME_ON,
+        "insert": WIN32_VK_INSERT,
+        "junja": WIN32_VK_JUNJA,
+        "kana": WIN32_VK_KANA,
+        "launch_app1": WIN32_VK_LAUNCH_APP1,
+        "LAUNCH_APP2": WIN32_VK_LAUNCH_APP2,
+        "launch_mail": WIN32_VK_LAUNCH_MAIL,
+        "launch_media_select": WIN32_VK_LAUNCH_MEDIA_SELECT,
+        "lbutton": WIN32_VK_LBUTTON,
+        "lcontrol": WIN32_VK_LCONTROL,
+        "left": WIN32_VK_LEFT,
+        "lmenu": WIN32_VK_LMENU,
+        "lshift": WIN32_VK_LSHIFT,
+        "lwin": WIN32_VK_LWIN,
+        "mbutton": WIN32_VK_MBUTTON,
+        "media_next_track": WIN32_VK_MEDIA_NEXT_TRACK,
+        "media_play_pause": WIN32_VK_MEDIA_PLAY_PAUSE,
+        "media_prev_track": WIN32_VK_MEDIA_PREV_TRACK,
+        "media_stop": WIN32_VK_MEDIA_STOP,
+        "modechange": WIN32_VK_MODECHANGE,
+        "multiply": WIN32_VK_MULTIPLY,
+        "menu": WIN32_VK_Menu,
+        "next": WIN32_VK_NEXT,
+        "nonconvert": WIN32_VK_NONCONVERT,
+        "numlock": WIN32_VK_NUMLOCK,
+        "num0": WIN32_VK_NUMPAD0,
+        "num1": WIN32_VK_NUMPAD1,
+        "num2": WIN32_VK_NUMPAD2,
+        "num3": WIN32_VK_NUMPAD3,
+        "num4": WIN32_VK_NUMPAD4,
+        "num5": WIN32_VK_NUMPAD5,
+        "num6": WIN32_VK_NUMPAD6,
+        "num7": WIN32_VK_NUMPAD7,
+        "num8": WIN32_VK_NUMPAD8,
+        "num9": WIN32_VK_NUMPAD9,
+        "pause": WIN32_VK_PAUSE,
+        "print": WIN32_VK_PRINT,
+        "prior": WIN32_VK_PRIOR,
+        "rbutton": WIN32_VK_RBUTTON,
+        "rcontrol": WIN32_VK_RCONTROL,
+        "return": WIN32_VK_RETURN,
+        "right": WIN32_VK_RIGHT,
+        "rmenu": WIN32_VK_RMENU,
+        "rshift": WIN32_VK_RSHIFT,
+        "rwin": WIN32_VK_RWIN,
+        "scroll": WIN32_VK_SCROLL,
+        "select": WIN32_VK_SELECT,
+        "separator": WIN32_VK_SEPARATOR,
+        "shift": WIN32_VK_SHIFT,
+        "sleep": WIN32_VK_SLEEP,
+        "snapshot": WIN32_VK_SNAPSHOT,
+        "space": WIN32_VK_SPACE,
+        "subtract": WIN32_VK_SUBTRACT,
+        "tab": WIN32_VK_TAB,
+        "up": WIN32_VK_UP,
+        "volume_down": WIN32_VK_VOLUME_DOWN,
+        "volume_mute": WIN32_VK_VOLUME_MUTE,
+        "volume_up": WIN32_VK_VOLUME_UP,
+        "vk_xbutton1": WIN32_VK_XBUTTON1,
+        "vk_xbutton2": WIN32_VK_XBUTTON2,
+        "xbutton1": WIN32_XBUTTON1,
+        "xbutton2": WIN32_XBUTTON2,
+        "vktovsc": WIN32_VkToVSC,
+        "wheel": WIN32_WHEEL,
+        "down": WIN32_DOWN,
+        "xup": WIN32_XUP,
+        "0": WIN32_key0,
+        "1": WIN32_key1,
+        "2": WIN32_key2,
+        "3": WIN32_key3,
+        "4": WIN32_key4,
+        "5": WIN32_key5,
+        "6": WIN32_key6,
+        "7": WIN32_key7,
+        "8": WIN32_key8,
+        "9": WIN32_key9,
+        "A": WIN32_keyA,
+        "a": WIN32_keyA,
+        "B": WIN32_keyB,
+        "b": WIN32_keyB,
+        "C": WIN32_keyC,
+        "c": WIN32_keyC,
+        "D": WIN32_keyD,
+        "d": WIN32_keyD,
+        "E": WIN32_keyE,
+        "e": WIN32_keyE,
+        "F": WIN32_keyF,
+        "f": WIN32_keyF,
+        "G": WIN32_keyG,
+        "g": WIN32_keyG,
+        "H": WIN32_keyH,
+        "h": WIN32_keyH,
+        "I": WIN32_keyI,
+        "i": WIN32_keyI,
+        "J": WIN32_keyJ,
+        "j": WIN32_keyJ,
+        "K": WIN32_keyK,
+        "k": WIN32_keyK,
+        "L": WIN32_keyL,
+        "l": WIN32_keyL,
+        "M": WIN32_keyM,
+        "m": WIN32_keyM,
+        "N": WIN32_keyN,
+        "n": WIN32_keyN,
+        "O": WIN32_keyO,
+        "o": WIN32_keyO,
+        "P": WIN32_keyP,
+        "p": WIN32_keyP,
+        "Q": WIN32_keyQ,
+        "q": WIN32_keyQ,
+        "R": WIN32_keyR,
+        "r": WIN32_keyR,
+        "S": WIN32_keyS,
+        "s": WIN32_keyS,
+        "T": WIN32_keyT,
+        "t": WIN32_keyT,
+        "U": WIN32_keyU,
+        "u": WIN32_keyU,
+        "V": WIN32_keyV,
+        "v": WIN32_keyV,
+        "W": WIN32_keyW,
+        "w": WIN32_keyW,
+        "X": WIN32_keyX,
+        "x": WIN32_keyX,
+        "Y": WIN32_keyY,
+        "y": WIN32_keyY,
+        "Z": WIN32_keyZ,
+        "z": WIN32_keyZ,
     }
     mouse_keys_table = {
         "mouse_left": win32_mouse_left,

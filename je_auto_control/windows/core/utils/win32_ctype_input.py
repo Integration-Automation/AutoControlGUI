@@ -8,7 +8,7 @@ if sys.platform not in ["win32", "cygwin", "msys"]:
 
 import ctypes
 from ctypes import wintypes
-from je_auto_control.windows.core.utils.win32_vk import win32_EventF_UNICODE, win32_VkToVSC
+from je_auto_control.windows.core.utils.win32_vk import WIN32_EventF_UNICODE, WIN32_VkToVSC
 
 user32 = ctypes.WinDLL('user32', use_last_error=True)
 
@@ -37,8 +37,8 @@ class KeyboardInput(ctypes.Structure):
 
     def __init__(self, *args, **kwds):
         super(KeyboardInput, self).__init__(*args, **kwds)
-        if not self.dwFlags & win32_EventF_UNICODE:
-            self.wScan = user32.MapVirtualKeyExW(self.wVk, win32_VkToVSC, 0)
+        if not self.dwFlags & WIN32_EventF_UNICODE:
+            self.wScan = user32.MapVirtualKeyExW(self.wVk, WIN32_VkToVSC, 0)
 
 
 class HardwareInput(ctypes.Structure):
