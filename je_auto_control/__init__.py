@@ -108,6 +108,7 @@ from je_auto_control.wrapper.auto_control_record import stop_record
 # import screen
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.auto_control_screen import screenshot
+from je_auto_control.wrapper.auto_control_screen import get_pixel
 
 __all__ = [
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
@@ -125,5 +126,5 @@ __all__ = [
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "get_special_table", "ShellManager", "default_shell_manager",
     "RecordingThread", "send_key_event_to_window", "send_mouse_event_to_window", "windows_window_manage",
-    "ScreenRecorder"
+    "ScreenRecorder", "get_pixel"
 ]
