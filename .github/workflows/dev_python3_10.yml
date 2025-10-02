@@ -31,7 +31,7 @@ jobs:
       - name: Test Screenshot
         run: python ./test/unit_test/screen/screenshot_test.py
       - name: Test Screen Get Pixel
-        run: python ./test/unit_test/screen/screen_test.py
+        run: python ./test/unit_test/screen/get_pixel_test.py
       - name: Save Screenshot Image
         uses: actions/upload-artifact@v4
         with:
