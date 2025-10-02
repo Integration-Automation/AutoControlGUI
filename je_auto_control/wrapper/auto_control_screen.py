@@ -52,3 +52,18 @@ def screenshot(file_path: str = None, screen_region: list = None) -> List[int]:
         autocontrol_logger.info(
             f"screen_size, file_path: {file_path}, screen_region: {screen_region}, "
             f"failed: {repr(error)}")
+
+
+def get_pixel(x: int, y: int, hwnd=None):
+    autocontrol_logger.info(f"get_pixel, x: {x}, y: {y}, hwnd: {hwnd}")
+    param = locals()
+    try:
+        if hwnd is None:
+            return screen.get_pixel(x, y)
+        else:
+            return screen.get_pixel(x, y, hwnd)
+    except Exception as error:
+        record_action_to_list("AC_get_pixel", None, repr(error))
+        autocontrol_logger.info(
+            f"get_pixel, x: {x}, y: {y}, hwnd: {hwnd}"
+            f"failed: {repr(error)}")

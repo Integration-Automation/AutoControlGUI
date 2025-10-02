@@ -47,3 +47,10 @@ def set_window_positon(hwnd, position: int) -> None:
     swp_no_size = 0x0001
     swp_no_move = 0x0002
     user32.SetWindowPos(hwnd, position, 0, 0, 0, 0, swp_no_move | swp_no_size)
+
+def show_window(hwnd, size: int) -> None:
+    if size < 0 or size > 3:
+        size = 3
+    user32.ShowWindow(hwnd, size)
+    user32.SetForegroundWindow(hwnd)
+

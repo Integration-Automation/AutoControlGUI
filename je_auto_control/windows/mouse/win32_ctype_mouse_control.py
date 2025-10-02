@@ -8,30 +8,30 @@ if sys.platform not in ["win32", "cygwin", "msys"]:
     raise AutoControlException(windows_import_error)
 
 from je_auto_control.windows.core.utils.win32_ctype_input import Input, user32
-from je_auto_control.windows.core.utils.win32_vk import win32_LEFTDOWN
-from je_auto_control.windows.core.utils.win32_vk import win32_LEFTUP
-from je_auto_control.windows.core.utils.win32_vk import win32_MIDDLEDOWN
-from je_auto_control.windows.core.utils.win32_vk import win32_MIDDLEUP
+from je_auto_control.windows.core.utils.win32_vk import WIN32_LEFTDOWN
+from je_auto_control.windows.core.utils.win32_vk import WIN32_LEFTUP
+from je_auto_control.windows.core.utils.win32_vk import WIN32_MIDDLEDOWN
+from je_auto_control.windows.core.utils.win32_vk import WIN32_MIDDLEUP
 from je_auto_control.windows.core.utils.win32_ctype_input import Mouse
 from je_auto_control.windows.core.utils.win32_ctype_input import MouseInput
-from je_auto_control.windows.core.utils.win32_vk import win32_RIGHTDOWN
-from je_auto_control.windows.core.utils.win32_vk import win32_RIGHTUP
+from je_auto_control.windows.core.utils.win32_vk import WIN32_RIGHTDOWN
+from je_auto_control.windows.core.utils.win32_vk import WIN32_RIGHTUP
 from je_auto_control.windows.core.utils.win32_ctype_input import SendInput
-from je_auto_control.windows.core.utils.win32_vk import win32_XBUTTON1
-from je_auto_control.windows.core.utils.win32_vk import win32_XBUTTON2
-from je_auto_control.windows.core.utils.win32_vk import win32_DOWN
-from je_auto_control.windows.core.utils.win32_vk import win32_XUP
+from je_auto_control.windows.core.utils.win32_vk import WIN32_XBUTTON1
+from je_auto_control.windows.core.utils.win32_vk import WIN32_XBUTTON2
+from je_auto_control.windows.core.utils.win32_vk import WIN32_DOWN
+from je_auto_control.windows.core.utils.win32_vk import WIN32_XUP
 from ctypes import windll
 from je_auto_control.windows.core.utils.win32_ctype_input import wintypes
-from je_auto_control.windows.core.utils.win32_vk import win32_WHEEL
+from je_auto_control.windows.core.utils.win32_vk import WIN32_WHEEL
 from je_auto_control.windows.core.utils.win32_ctype_input import ctypes
 from je_auto_control.windows.screen.win32_screen import size
 
-win32_mouse_left: Tuple = (win32_LEFTUP, win32_LEFTDOWN, 0)
-win32_mouse_middle: Tuple = (win32_MIDDLEUP, win32_MIDDLEDOWN, 0)
-win32_mouse_right: Tuple = (win32_RIGHTUP, win32_RIGHTDOWN, 0)
-win32_mouse_x1: Tuple = (win32_XUP, win32_DOWN, win32_XBUTTON1)
-win32_mouse_x2: Tuple = (win32_XUP, win32_DOWN, win32_XBUTTON2)
+win32_mouse_left: Tuple = (WIN32_LEFTUP, WIN32_LEFTDOWN, 0)
+win32_mouse_middle: Tuple = (WIN32_MIDDLEUP, WIN32_MIDDLEDOWN, 0)
+win32_mouse_right: Tuple = (WIN32_RIGHTUP, WIN32_RIGHTDOWN, 0)
+win32_mouse_x1: Tuple = (WIN32_XUP, WIN32_DOWN, WIN32_XBUTTON1)
+win32_mouse_x2: Tuple = (WIN32_XUP, WIN32_DOWN, WIN32_XBUTTON2)
 
 _get_cursor_pos: windll.user32.GetCursorPos = windll.user32.GetCursorPos
 _set_cursor_pos: windll.user32.SetCursorPos = windll.user32.SetCursorPos
@@ -108,7 +108,7 @@ def scroll(scroll_value: int, x: int = None, y: int = None) -> None:
     :param x scroll x
     :param y scroll y
     """
-    mouse_event(win32_WHEEL, x, y, dwData=scroll_value)
+    mouse_event(WIN32_WHEEL, x, y, dwData=scroll_value)
 
 
 def send_mouse_event_to_window(window, mouse_keycode: int, x: int = None, y: int = None):
