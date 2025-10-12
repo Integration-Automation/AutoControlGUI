@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="" />
+    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dev.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -80,6 +84,7 @@
     &quot;Python.create_project_test.executor&quot;: &quot;Run&quot;,
     &quot;Python.critical_exit_test.executor&quot;: &quot;Run&quot;,
     &quot;Python.executor_one_file.executor&quot;: &quot;Run&quot;,
+    &quot;Python.get_pixel_test.executor&quot;: &quot;Run&quot;,
     &quot;Python.keyboard_is_press_test.executor&quot;: &quot;Run&quot;,
     &quot;Python.main_widget.executor&quot;: &quot;Run&quot;,
     &quot;Python.main_window.executor&quot;: &quot;Run&quot;,
@@ -88,6 +93,7 @@
     &quot;Python.screenshot_test.executor&quot;: &quot;Run&quot;,
     &quot;Python.test.executor&quot;: &quot;Run&quot;,
     &quot;Python.video_recording.executor&quot;: &quot;Run&quot;,
+    &quot;Python.win32_screen.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
@@ -123,7 +129,7 @@
       <recent name="C:\Users\JeffreyChen\Desktop\Code_Space\AutoControl\licenses\Numpy" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.keyboard_is_press_test">
+  <component name="RunManager" selected="Python.get_pixel_test">
     <configuration name="auto_control_keyboard" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="AutoControl" />
       <option name="ENV_FILES" value="" />
@@ -170,6 +176,29 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="get_pixel_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="AutoControl" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test/unit_test/screen" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/screen/get_pixel_test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="keyboard_is_press_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="AutoControl" />
       <option name="ENV_FILES" value="" />
@@ -193,7 +222,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="main_window" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="win32_screen" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="AutoControl" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -202,35 +231,12 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/je_auto_control/gui" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/je_auto_control/windows/screen" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/je_auto_control/gui/main_window.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="AutoControl" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/je_auto_control/windows/screen/win32_screen.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -241,11 +247,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.get_pixel_test" />
+        <item itemvalue="Python.win32_screen" />
         <item itemvalue="Python.keyboard_is_press_test" />
         <item itemvalue="Python.auto_control_keyboard" />
         <item itemvalue="Python.auto_control_mouse" />
-        <item itemvalue="Python.test" />
-        <item itemvalue="Python.main_window" />
       </list>
     </recent_temporary>
   </component>
@@ -599,6 +605,8 @@
       <workItem from="1758797534838" duration="11743000" />
       <workItem from="1758974329009" duration="8855000" />
       <workItem from="1759070541660" duration="1407000" />
+      <workItem from="1759075113999" duration="45485000" />
+      <workItem from="1759499857536" duration="3445000" />
     </task>
     <servers />
   </component>
@@ -630,11 +638,13 @@
     <SUITE FILE_PATH="coverage/AutoControlGUI$main_widget.coverage" NAME="main_widget Coverage Results" MODIFIED="1752162504803" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/gui" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$window_hwnd.coverage" NAME="window_hwnd Coverage Results" MODIFIED="1708421995069" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/window" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$auto_control_keyboard.coverage" NAME="auto_control_keyboard Coverage Results" MODIFIED="1758586347726" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/wrapper" />
+    <SUITE FILE_PATH="coverage/AutoControlGUI$win32_screen.coverage" NAME="win32_screen Coverage Results" MODIFIED="1759215219372" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/windows/screen" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$screen_test.coverage" NAME="screen_test Coverage Results" MODIFIED="1718679894929" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/screen" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1725846692260" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$video_recording.coverage" NAME="video_recording Coverage Results" MODIFIED="1735979525244" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/utils/cv2_utils" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$main_window.coverage" NAME="main_window Coverage Results" MODIFIED="1752215709523" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/je_auto_control/gui" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$screenshot_test.coverage" NAME="screenshot_test Coverage Results" MODIFIED="1752162500179" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/screen" />
+    <SUITE FILE_PATH="coverage/AutoControlGUI$get_pixel_test.coverage" NAME="get_pixel_test Coverage Results" MODIFIED="1759378709382" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/screen" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$critical_exit_test.coverage" NAME="critical_exit_test Coverage Results" MODIFIED="1725849386001" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/critical_exit" />
     <SUITE FILE_PATH="coverage/AutoControlGUI$record_test.coverage" NAME="record_test Coverage Results" MODIFIED="1752165107988" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/unit_test/record" />
     <SUITE FILE_PATH="coverage/AutoControl$calculator.coverage" NAME="calculator Coverage Results" MODIFIED="1699847389383" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test/gui_test/calculator" />
