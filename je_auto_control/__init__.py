@@ -73,9 +73,6 @@ from je_auto_control.utils.start_exe.start_another_process import start_exe
 # test record
 from je_auto_control.utils.test_record.record_test_class import \
     test_record_instance
-# timeout
-from je_auto_control.utils.timeout.multiprocess_timeout import \
-    multiprocess_timeout
 # Windows
 from je_auto_control.windows.window import windows_window_manage
 from je_auto_control.wrapper.auto_control_image import locate_all_image
@@ -84,7 +81,6 @@ from je_auto_control.wrapper.auto_control_image import locate_image_center
 # import keyboard
 from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
 from je_auto_control.wrapper.auto_control_keyboard import get_keyboard_keys_table
-from je_auto_control.wrapper.auto_control_keyboard import get_special_table
 from je_auto_control.wrapper.auto_control_keyboard import hotkey
 from je_auto_control.wrapper.auto_control_keyboard import keyboard_keys_table
 from je_auto_control.wrapper.auto_control_keyboard import press_keyboard_key
@@ -96,7 +92,7 @@ from je_auto_control.wrapper.auto_control_keyboard import write
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
 from je_auto_control.wrapper.auto_control_mouse import mouse_keys_table
-from je_auto_control.wrapper.auto_control_mouse import mouse_scroll
+from je_auto_control.wrapper.auto_control_mouse import mouse_scroll_error_message
 from je_auto_control.wrapper.auto_control_mouse import press_mouse
 from je_auto_control.wrapper.auto_control_mouse import release_mouse
 from je_auto_control.wrapper.auto_control_mouse import send_mouse_event_to_window
@@ -112,7 +108,7 @@ from je_auto_control.wrapper.auto_control_screen import get_pixel
 
 __all__ = [
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
-    "mouse_scroll", "set_mouse_position", "special_mouse_keys_table",
+    "mouse_scroll_error_message", "set_mouse_position", "special_mouse_keys_table",
     "keyboard_keys_table", "press_keyboard_key", "release_keyboard_key", "type_keyboard", "check_key_is_press",
     "write", "hotkey", "start_exe", "get_keyboard_keys_table",
     "screen_size", "screenshot", "locate_all_image", "locate_image_center", "locate_and_click",
@@ -121,10 +117,10 @@ __all__ = [
     "AutoControlScreenException", "ImageNotFoundException", "AutoControlJsonActionException",
     "AutoControlRecordException", "AutoControlActionNullException", "AutoControlActionException", "record",
     "stop_record", "read_action_json", "write_action_json", "execute_action", "execute_files", "executor",
-    "add_command_to_executor", "multiprocess_timeout", "test_record_instance", "screenshot", "pil_screenshot",
+    "add_command_to_executor", "test_record_instance", "screenshot", "pil_screenshot",
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
-    "callback_executor", "package_manager", "get_special_table", "ShellManager", "default_shell_manager",
+    "callback_executor", "package_manager", "ShellManager", "default_shell_manager",
     "RecordingThread", "send_key_event_to_window", "send_mouse_event_to_window", "windows_window_manage",
     "ScreenRecorder", "get_pixel"
 ]

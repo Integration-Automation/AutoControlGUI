@@ -64,11 +64,6 @@ class AutoControlArgparseException(Exception):
     pass
 
 
-# timeout
-class AutoControlTimeoutException(Exception):
-    pass
-
-
 # html exception
 
 class AutoControlHTMLException(Exception):

@@ -4,8 +4,8 @@ import cv2
 import numpy as np
 
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-from je_auto_control.utils.exception.exception_tags import screen_get_size
-from je_auto_control.utils.exception.exception_tags import screen_screenshot
+from je_auto_control.utils.exception.exception_tags import screen_get_size_error_message
+from je_auto_control.utils.exception.exception_tags import screen_screenshot_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException
 from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
@@ -22,8 +22,8 @@ def screen_size() -> Tuple[int, int]:
             record_action_to_list("size", None)
             return screen.size()
         except AutoControlScreenException:
-            autocontrol_logger.error(f"screen_size, failed: {repr(AutoControlScreenException(screen_get_size))}")
-            raise AutoControlScreenException(screen_get_size)
+            autocontrol_logger.error(f"screen_size, failed: {repr(AutoControlScreenException(screen_get_size_error_message))}")
+            raise AutoControlScreenException(screen_get_size_error_message)
     except Exception as error:
         record_action_to_list("size", None, repr(error))
         autocontrol_logger.error(f"screen_size, failed: {repr(error)}")
@@ -45,8 +45,8 @@ def screenshot(file_path: str = None, screen_region: list = None) -> List[int]:
         except AutoControlScreenException as error:
             autocontrol_logger.info(
                 f"screen_size, file_path: {file_path}, screen_region: {screen_region}, "
-                f"failed: {AutoControlScreenException(screen_screenshot + ' ' + repr(error))}")
-            raise AutoControlScreenException(screen_screenshot + " " + repr(error))
+                f"failed: {AutoControlScreenException(screen_screenshot_error_message + ' ' + repr(error))}")
+            raise AutoControlScreenException(screen_screenshot_error_message + " " + repr(error))
     except Exception as error:
         record_action_to_list("AC_screenshot", None, repr(error))
         autocontrol_logger.info(

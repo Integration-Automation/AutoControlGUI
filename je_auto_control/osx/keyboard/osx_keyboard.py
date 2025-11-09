@@ -1,16 +1,19 @@
 import sys
 
-from je_auto_control.utils.exception.exception_tags import osx_import_error
+from je_auto_control.utils.exception.exception_tags import osx_import_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
+# === 平台檢查 Platform Check ===
+# 僅允許在 macOS (Darwin) 環境執行，否則拋出例外
 if sys.platform not in ["darwin"]:
-    raise AutoControlException(osx_import_error)
+    raise AutoControlException(osx_import_error_message)
 
 import AppKit
 import Quartz
 
 from je_auto_control.osx.core.utils.osx_vk import osx_key_shift
 
+# === 特殊鍵對照表 Special key mapping ===
 special_key_table = {
     "key_sound_up": 0,
     "key_sound_down": 1,
@@ -41,13 +44,15 @@ special_key_table = {
 
 def normal_key(keycode: int, is_shift: bool, is_down: bool) -> None:
     """
-    :param keycode which keycode we want to press or release
-    :param is_shift use shift key ?
-    :param is_down is_down true = press; false = release
-    create event
-    post event
+    Simulate normal key press/release
+    模擬普通鍵盤按下/釋放
+
+    :param keycode: 要模擬的鍵盤代碼
+    :param is_shift: 是否同時按下 Shift
+    :param is_down: True = 按下, False = 釋放
     """
     try:
+        # 如果需要 Shift，先送出 Shift 事件
         if is_shift:
             event = Quartz.CGEventCreateKeyboardEvent(
                 None,
@@ -55,24 +60,32 @@ def normal_key(keycode: int, is_shift: bool, is_down: bool) -> None:
                 is_down
             )
             Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
+
+        # 送出目標鍵盤事件
         event = Quartz.CGEventCreateKeyboardEvent(
             None,
             keycode,
             is_down
         )
         Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
+
     except ValueError as error:
         print(repr(error), file=sys.stderr)
 
 
-def special_key(keycode: int, is_shift: bool) -> None:
+def special_key(keycode: str, is_shift: bool) -> None:
     """
-    :param keycode which keycode we want to press or release
-    :param is_shift use shift key ?
-    create event
-    post event
+    Simulate special key press/release
+    模擬特殊鍵盤按下/釋放 (例如音量、亮度、播放鍵)
+
+    :param keycode: 特殊鍵名稱 (必須存在於 special_key_table)
+    :param is_shift: 是否同時按下 Shift
     """
-    keycode = special_key_table[keycode]
+    if keycode not in special_key_table:
+        raise ValueError(f"Unknown special key: {keycode}")
+
+    mapped_code = special_key_table[keycode]
+
     event = AppKit.NSEvent.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2(
         Quartz.NSSystemDefined,
         (0, 0),
@@ -81,16 +94,19 @@ def special_key(keycode: int, is_shift: bool) -> None:
         0,
         0,
         8,
-        (keycode << 16) | ((0xa if is_shift else 0xb) << 8),
+        (mapped_code << 16) | ((0xa if is_shift else 0xb) << 8),
         -1
     )
     Quartz.CGEventPost(0, event)
 
 
-def press_key(keycode: int, is_shift: bool) -> None:
+def press_key(keycode: int | str, is_shift: bool) -> None:
     """
-    :param keycode which keycode we want to press
-    :param is_shift is shift press?
+    Press a key (normal or special)
+    模擬按下鍵盤按鍵 (普通或特殊)
+
+    :param keycode: 鍵盤代碼或特殊鍵名稱
+    :param is_shift: 是否同時按下 Shift
     """
     if keycode in special_key_table:
         special_key(keycode, is_shift)
@@ -98,10 +114,13 @@ def press_key(keycode: int, is_shift: bool) -> None:
         normal_key(keycode, is_shift, True)
 
 
-def release_key(keycode: int, is_shift: bool) -> None:
+def release_key(keycode: int | str, is_shift: bool) -> None:
     """
-    :param keycode which keycode we want to release
-    :param is_shift is shift press?
+    Release a key (normal or special)
+    模擬釋放鍵盤按鍵 (普通或特殊)
+
+    :param keycode: 鍵盤代碼或特殊鍵名稱
+    :param is_shift: 是否同時按下 Shift
     """
     if keycode in special_key_table:
         special_key(keycode, is_shift)

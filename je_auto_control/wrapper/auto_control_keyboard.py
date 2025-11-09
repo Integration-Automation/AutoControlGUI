@@ -1,327 +1,226 @@
 import sys
-from typing import Union
+from typing import Optional, Union, Tuple
 
-from je_auto_control.utils.exception.exception_tags import keyboard_hotkey
-from je_auto_control.utils.exception.exception_tags import keyboard_press_key
-from je_auto_control.utils.exception.exception_tags import keyboard_release_key
-from je_auto_control.utils.exception.exception_tags import keyboard_type_key
-from je_auto_control.utils.exception.exception_tags import keyboard_write
-from je_auto_control.utils.exception.exception_tags import keyboard_write_cant_find
-from je_auto_control.utils.exception.exception_tags import table_cant_find_key
-from je_auto_control.utils.exception.exceptions import AutoControlCantFindKeyException
-from je_auto_control.utils.exception.exceptions import AutoControlKeyboardException
+from je_auto_control.utils.exception.exception_tags import (
+    keyboard_press_key_error_message, keyboard_release_key_error_message, keyboard_type_key_error_message,
+    table_cant_find_key_error_message, keyboard_write_cant_find_error_message, keyboard_write_error_message, keyboard_hotkey_error_message
+)
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlCantFindKeyException, AutoControlKeyboardException
+)
 from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
-from je_auto_control.wrapper.platform_wrapper import keyboard, special_mouse_keys_table
-from je_auto_control.wrapper.platform_wrapper import keyboard_check
-from je_auto_control.wrapper.platform_wrapper import keyboard_keys_table
-
-
-def get_special_table() -> dict:
-    return special_mouse_keys_table
-
+from je_auto_control.wrapper.platform_wrapper import keyboard, keyboard_keys_table, keyboard_check
 
 def get_keyboard_keys_table() -> dict:
+    """
+    取得鍵盤對應表
+    Get keyboard keys table
+    """
     return keyboard_keys_table
 
 
-def press_keyboard_key(keycode: Union[int, str], is_shift: bool = False, skip_record: bool = False) -> str | None:
+def _resolve_keycode(keycode: Union[int, str]) -> int:
     """
-    use to press a key still press to use release key
-    or use critical exit
+    將字串鍵名轉換成對應的 keycode
+    Resolve string key name to keycode
+    """
+    if isinstance(keycode, str):
+        resolved = keyboard_keys_table.get(keycode)
+        if resolved is None:
+            raise AutoControlCantFindKeyException(table_cant_find_key_error_message)
+        return resolved
     return keycode
-    :param keycode which keycode we want to press
-    :param is_shift press shift True or False
-    :param skip_record skip record on record total list True or False
+
+
+def press_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
+                       skip_record: bool = False) -> Optional[str]:
     """
-    autocontrol_logger.info(
-        f"press_keyboard_key, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}"
-    )
-    param = locals()
+    按下指定鍵
+    Press a keyboard key
+
+    :param keycode: 鍵盤代碼或字串 Keycode or string
+    :param is_shift: 是否同時按下 Shift
+    :param skip_record: 是否跳過紀錄
+    :return: keycode 字串
+    """
+    autocontrol_logger.info(f"press_keyboard_key, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
     try:
-        if isinstance(keycode, str):
-            try:
-                keycode = keyboard_keys_table.get(keycode)
-            except AutoControlCantFindKeyException:
-                autocontrol_logger.error(
-                    f"press_keyboard_key failed, keycode: {keycode}, is_shift: {is_shift}, "
-                    f"failed: {repr(AutoControlCantFindKeyException(table_cant_find_key))}"
-                )
-                raise AutoControlCantFindKeyException(table_cant_find_key)
-        try:
-            if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
-                keyboard.press_key(keycode)
-            elif sys.platform in ["darwin"]:
-                keyboard.press_key(keycode, is_shift=is_shift)
-            if skip_record is False:
-                record_action_to_list("press_key", param)
-            return str(keycode)
-        except AutoControlKeyboardException as error:
-            if skip_record is False:
-                record_action_to_list("press_key", param, repr(error))
-            autocontrol_logger.error(
-                f"press_keyboard_key failed, keycode: {keycode}, is_shift: {is_shift}, "
-                f"{repr(AutoControlKeyboardException(keyboard_press_key + ' ' + repr(error)))}"
-            )
-            raise AutoControlKeyboardException(keyboard_press_key + " " + repr(error))
-        except TypeError as error:
-            if skip_record is False:
-                record_action_to_list("press_key", param, repr(error))
-            autocontrol_logger.error(
-                f"press_keyboard_key failed, keycode: {keycode}, is_shift: {is_shift}, "
-                f"failed: {repr(AutoControlKeyboardException)}"
-            )
-            raise AutoControlKeyboardException(repr(error))
-    except Exception as error:
-        if skip_record is False:
-            record_action_to_list("press_key", param, repr(error))
-        autocontrol_logger.error(
-            f"press_keyboard_key failed, keycode: {keycode}, is_shift: {is_shift}, "
-            f"failed: {repr(error)}"
-        )
+        keycode = _resolve_keycode(keycode)
+        if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
+            keyboard.press_key(keycode)
+        elif sys.platform == "darwin":
+            keyboard.press_key(keycode, is_shift=is_shift)
 
+        if not skip_record:
+            record_action_to_list("press_key", {"keycode": keycode, "is_shift": is_shift})
+        return str(keycode)
 
-def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False, skip_record: bool = False) -> str | None:
-    """
-    use to release pressed key return keycode
-    :param keycode which keycode we want to release
-    :param is_shift press shift True or False
-    :param skip_record skip record on record total list True or False
-    """
-    autocontrol_logger.info(
-        f"release_keyboard_key, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}"
-    )
-    param = locals()
-    try:
-        if isinstance(keycode, str):
-            try:
-                keycode = keyboard_keys_table.get(keycode)
-            except AutoControlCantFindKeyException:
-                raise AutoControlCantFindKeyException(table_cant_find_key)
-        try:
-            if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
-                keyboard.release_key(keycode)
-            elif sys.platform in ["darwin"]:
-                keyboard.release_key(keycode, is_shift=is_shift)
-            if not skip_record:
-                record_action_to_list("release_key", param)
-            return str(keycode)
-        except AutoControlKeyboardException as error:
-            if not skip_record:
-                record_action_to_list("release_key", param, repr(error))
-            autocontrol_logger.error(
-                f"release_keyboard_key, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}, "
-                f"failed: {AutoControlKeyboardException(keyboard_release_key + ' ' + repr(error))}"
-            )
-            raise AutoControlKeyboardException(keyboard_release_key + " " + repr(error))
-        except TypeError as error:
-            if skip_record is False:
-                record_action_to_list("release_key", param, repr(error))
-            autocontrol_logger.error(
-                f"release_keyboard_key, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}, "
-                f"failed: {AutoControlKeyboardException(error)}"
-            )
-            raise AutoControlKeyboardException(error)
-    except Exception as error:
-        if skip_record is False:
-            record_action_to_list("release_key", param, repr(error))
-        autocontrol_logger.error(
-            f"release_keyboard_key, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}, "
-            f"failed: {repr(error)}"
-        )
-
-
-def type_keyboard(keycode: Union[int, str], is_shift: bool = False, skip_record: bool = False) -> str | None:
-    """
-    press and release key return keycode
-    :param keycode which keycode we want to type
-    :param is_shift press shift True or False
-    :param skip_record skip record on record total list True or False
-    """
-    autocontrol_logger.info(
-        f"type_keyboard, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}"
-    )
-    param = locals()
-    try:
-        try:
-            press_keyboard_key(keycode, is_shift, skip_record=True)
-            release_keyboard_key(keycode, is_shift, skip_record=True)
-            if not skip_record:
-                record_action_to_list("type_keyboard", param)
-            return str(keycode)
-        except AutoControlKeyboardException as error:
-            if not skip_record:
-                record_action_to_list("type_keyboard", param, repr(error))
-            autocontrol_logger.error(
-                f"type_keyboard, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}, "
-                f"failed: {repr(AutoControlKeyboardException(keyboard_type_key + ' ' + repr(error)))}"
-            )
-            raise AutoControlKeyboardException(keyboard_type_key + " " + repr(error))
-        except TypeError as error:
-            if not skip_record:
-                record_action_to_list("type_keyboard", param, repr(error))
-            autocontrol_logger.error(
-                f"type_keyboard, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}, "
-                f"failed: {repr(AutoControlKeyboardException(repr(error)))}"
-            )
-            raise AutoControlKeyboardException(repr(error))
     except Exception as error:
         if not skip_record:
-            record_action_to_list("type_keyboard", param, repr(error))
-        autocontrol_logger.error(
-            f"type_keyboard, keycode: {keycode}, is_shift: {is_shift}, skip_record: {skip_record}, "
-            f"failed: {repr(error)}"
-        )
+            record_action_to_list("press_key", {"keycode": keycode}, repr(error))
+        autocontrol_logger.error(f"press_keyboard_key failed: {repr(error)}")
+        raise AutoControlKeyboardException(f"{keyboard_press_key_error_message} {repr(error)}")
 
 
-def check_key_is_press(keycode: Union[int, str]) -> bool | None:
+def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
+                         skip_record: bool = False) -> Optional[str]:
     """
-    use to check key is press return True or False
-    :param keycode check key is press or not
+    放開指定鍵
+    Release a keyboard key
     """
-    autocontrol_logger.info(
-        f"check_key_is_press, keycode: {keycode}"
-    )
-    param = locals()
+    autocontrol_logger.info(f"release_keyboard_key, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
     try:
-        if isinstance(keycode, int):
-            get_key_code = keycode
-        else:
-            get_key_code = keyboard_keys_table.get(keycode)
-        record_action_to_list("check_key_is_press", param)
+        keycode = _resolve_keycode(keycode)
+        if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
+            keyboard.release_key(keycode)
+        elif sys.platform == "darwin":
+            keyboard.release_key(keycode, is_shift=is_shift)
+
+        if not skip_record:
+            record_action_to_list("release_key", {"keycode": keycode, "is_shift": is_shift})
+        return str(keycode)
+
+    except Exception as error:
+        if not skip_record:
+            record_action_to_list("release_key", {"keycode": keycode}, repr(error))
+        autocontrol_logger.error(f"release_keyboard_key failed: {repr(error)}")
+        raise AutoControlKeyboardException(f"{keyboard_release_key_error_message} {repr(error)}")
+
+
+def type_keyboard(keycode: Union[int, str], is_shift: bool = False,
+                  skip_record: bool = False) -> Optional[str]:
+    """
+    模擬輸入 (按下再放開)
+    Type a keyboard key (press and release)
+    """
+    autocontrol_logger.info(f"type_keyboard, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
+    try:
+        press_keyboard_key(keycode, is_shift, skip_record=True)
+        release_keyboard_key(keycode, is_shift, skip_record=True)
+
+        if not skip_record:
+            record_action_to_list("type_keyboard", {"keycode": keycode, "is_shift": is_shift})
+        return str(keycode)
+
+    except Exception as error:
+        if not skip_record:
+            record_action_to_list("type_keyboard", {"keycode": keycode}, repr(error))
+        autocontrol_logger.error(f"type_keyboard failed: {repr(error)}")
+        raise AutoControlKeyboardException(f"{keyboard_type_key_error_message} {repr(error)}")
+
+def check_key_is_press(keycode: Union[int, str]) -> Optional[bool]:
+    """
+    檢查某個鍵是否正在被按下
+    Check if a key is currently pressed
+
+    :param keycode: 鍵盤代碼或字串 Keycode or string
+    :return: True / False / None
+    """
+    autocontrol_logger.info(f"check_key_is_press, keycode={keycode}")
+    try:
+        get_key_code = keycode if isinstance(keycode, int) else keyboard_keys_table.get(keycode)
+        record_action_to_list("check_key_is_press", {"keycode": keycode})
         return keyboard_check.check_key_is_press(keycode=get_key_code)
     except Exception as error:
-        record_action_to_list("check_key_is_press", param, repr(error))
-        autocontrol_logger.error(
-            f"check_key_is_press, keycode: {keycode}, "
-            f"failed: {repr(error)}"
-        )
+        record_action_to_list("check_key_is_press", {"keycode": keycode}, repr(error))
+        autocontrol_logger.error(f"check_key_is_press failed: {repr(error)}")
+        return None
 
 
-def write(write_string: str, is_shift: bool = False) -> None | str:
+def write(write_string: str, is_shift: bool = False) -> Optional[str]:
     """
-    use to press and release whole we get this function str
-    return all press and release str
-    :param write_string while string not on write_string+1 type_keyboard(string)
-    :param is_shift press shift True or False
+    模擬輸入整個字串
+    Type a whole string
+
+    :param write_string: 要輸入的字串 String to type
+    :param is_shift: 是否同時按下 Shift
+    :return: 輸入的字串
     """
-    autocontrol_logger.info(
-        f"write, write_string: {write_string}, is_shift: {is_shift}"
-    )
-    param = locals()
+    autocontrol_logger.info(f"write, write_string={write_string}, is_shift={is_shift}")
     try:
-        try:
-            record_write_string = ""
-            for single_string in write_string:
-                try:
-                    key = keyboard_keys_table.get(single_string, None)
-                    if key is not None:
-                        record_write_string = "".join(
-                            [
-                                record_write_string,
-                                type_keyboard(key, is_shift, skip_record=True)
-                            ]
-                        )
-                    elif single_string.isspace():
-                        record_write_string = "".join(
-                            [
-                                record_write_string,
-                                type_keyboard("space", is_shift, skip_record=True)
-                            ]
-                        )
-                    else:
-                        autocontrol_logger.error(
-                            f"write, write_string: {write_string}, is_shift: {is_shift}, "
-                            f"failed: {AutoControlKeyboardException(keyboard_write_cant_find)}"
-                        )
-                        raise AutoControlKeyboardException(keyboard_write_cant_find)
-                except AutoControlKeyboardException as error:
-                    autocontrol_logger.error(
-                        f"write, write_string: {write_string}, is_shift: {is_shift}, "
-                        f"failed: {repr(error)}, keyboard_write_cant_find, {single_string}"
-                    )
-                    raise AutoControlKeyboardException(keyboard_write_cant_find)
-            record_action_to_list("write", param)
-            return record_write_string
-        except AutoControlKeyboardException as error:
-            autocontrol_logger.error(
-                f"write, write_string: {write_string}, is_shift: {is_shift}, "
-                f"failed: {AutoControlKeyboardException(keyboard_write + ' ' + repr(error))}"
-            )
-            raise AutoControlKeyboardException(keyboard_write + " " + repr(error))
+        record_write_chars = []
+        for single_char in write_string:
+            key = keyboard_keys_table.get(single_char)
+            if key is not None:
+                record_write_chars.append(type_keyboard(key, is_shift, skip_record=True))
+            elif single_char.isspace():
+                record_write_chars.append(type_keyboard("space", is_shift, skip_record=True))
+            else:
+                autocontrol_logger.error(f"write failed: {keyboard_write_cant_find_error_message}, char={single_char}")
+                raise AutoControlKeyboardException(keyboard_write_cant_find_error_message)
+
+        result = "".join(record_write_chars)
+        record_action_to_list("write", {"write_string": write_string, "is_shift": is_shift})
+        return result
+
     except Exception as error:
-        record_action_to_list("write", param, repr(error))
-        autocontrol_logger.error(
-            f"write, write_string: {write_string}, is_shift: {is_shift}, "
-            f"failed: {repr(error)}"
-        )
+        record_action_to_list("write", {"write_string": write_string}, repr(error))
+        autocontrol_logger.error(f"write failed: {repr(error)}")
+        raise AutoControlKeyboardException(f"{keyboard_write_error_message} {repr(error)}")
 
 
-def hotkey(key_code_list: list, is_shift: bool = False) -> tuple[str, str] | None:
+def hotkey(key_code_list: list, is_shift: bool = False) -> Optional[Tuple[str, str]]:
     """
-    use to press and release all key on key_code_list
-    then reverse list press and release again
-    return [press_str_list, release_str_list]
-    :param key_code_list press and release all key on list and reverse
-    :param is_shift press shift True or False
+    模擬組合鍵 (依序按下，再反向放開)
+    Simulate hotkey (press all keys, then release in reverse order)
+
+    :param key_code_list: 鍵盤代碼清單 List of keycodes
+    :param is_shift: 是否同時按下 Shift
+    :return: (press_str, release_str)
     """
-    autocontrol_logger.info(
-        f"hotkey, key_code_list: {key_code_list}, is_shift: {is_shift}"
-    )
-    param = locals()
+    autocontrol_logger.info(f"hotkey, key_code_list={key_code_list}, is_shift={is_shift}")
     try:
-        try:
-            record_hotkey_press_string = ""
-            record_hotkey_release_string = ""
-            for key in key_code_list:
-                record_hotkey_press_string = ",".join(
-                    [
-                        record_hotkey_press_string,
-                        press_keyboard_key(key, is_shift, skip_record=True)
-                    ]
-                )
-            key_code_list.reverse()
-            for key in key_code_list:
-                record_hotkey_release_string = ",".join(
-                    [
-                        record_hotkey_release_string,
-                        release_keyboard_key(key, is_shift, skip_record=True)
-                    ]
-                )
-            record_action_to_list("hotkey", param)
-            return record_hotkey_press_string, record_hotkey_release_string
-        except AutoControlKeyboardException as error:
-            autocontrol_logger.error(
-                f"hotkey, key_code_list: {key_code_list}, is_shift: {is_shift}, "
-                f"failed: {AutoControlKeyboardException(keyboard_hotkey + ' ' + repr(error))}"
-            )
-            raise AutoControlKeyboardException(keyboard_hotkey + " " + repr(error))
+        press_list = []
+        release_list = []
+
+        for key in key_code_list:
+            press_list.append(press_keyboard_key(key, is_shift, skip_record=True))
+
+        for key in reversed(key_code_list):
+            release_list.append(release_keyboard_key(key, is_shift, skip_record=True))
+
+        press_str = ",".join(filter(None, press_list))
+        release_str = ",".join(filter(None, release_list))
+
+        record_action_to_list("hotkey", {"keys": key_code_list, "is_shift": is_shift})
+        return press_str, release_str
+
     except Exception as error:
-        record_action_to_list("hotkey", param, repr(error))
-        autocontrol_logger.error(
-            f"hotkey, key_code_list: {key_code_list}, is_shift: {is_shift}, "
-            f"failed: {repr(error)}"
-        )
+        record_action_to_list("hotkey", {"keys": key_code_list}, repr(error))
+        autocontrol_logger.error(f"hotkey failed: {repr(error)}")
+        raise AutoControlKeyboardException(f"{keyboard_hotkey_error_message} {repr(error)}")
 
-def send_key_event_to_window(window_title, keycode: int):
-    autocontrol_logger.info(
-        f"send_key_event_to_window window:{window_title}, keycode:{keycode}"
-    )
-    param = locals()
+def send_key_event_to_window(window_title: str, keycode: Union[int, str]) -> None:
+    """
+    將鍵盤事件送到指定視窗
+    Send a key event to a specific window
+
+    :param window_title: 視窗標題 Window title
+    :param keycode: 鍵盤代碼或字串 Keycode or string
+    """
+    autocontrol_logger.info(f"send_key_event_to_window, window={window_title}, keycode={keycode}")
     try:
-        if sys.platform in ["darwin"]:
+        # macOS 不支援直接送鍵盤事件
+        if sys.platform == "darwin":
             return
+
+        # 解析 keycode Resolve keycode
         if isinstance(keycode, int):
             get_key_code = keycode
         else:
             get_key_code = keyboard_keys_table.get(keycode)
-        keyboard.send_key_event_to_window(
-            window_title,
-            keycode=keycode
-        )
+            if get_key_code is None:
+                raise AutoControlKeyboardException(f"Key not found: {keycode}")
+
+        # 呼叫底層 API Send event
+        keyboard.send_key_event_to_window(window_title, keycode=get_key_code)
+
+        # 紀錄動作 Record action
+        record_action_to_list("send_key_event_to_window", {"window_title": window_title, "keycode": get_key_code})
+
     except Exception as error:
-        record_action_to_list("send_key_event_to_window", param, repr(error))
+        record_action_to_list("send_key_event_to_window", {"window_title": window_title, "keycode": keycode}, repr(error))
         autocontrol_logger.error(
-            f"send_key_event_to_window window:{window_title}, keycode:{keycode}"
-            f"failed: {repr(error)}"
+            f"send_key_event_to_window failed, window={window_title}, keycode={keycode}, error={repr(error)}"
         )

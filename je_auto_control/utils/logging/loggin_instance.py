@@ -1,25 +1,50 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
+# 設定 root logger 等級 Set root logger level
 logging.root.setLevel(logging.DEBUG)
+
+# 建立 AutoControlGUI 專用 logger Create dedicated logger
 autocontrol_logger = logging.getLogger("AutoControlGUI")
-formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s')
+
+# 日誌格式 Formatter
+formatter = logging.Formatter(
+    "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+)
 
 
 class AutoControlGUILoggingHandler(RotatingFileHandler):
+    """
+    AutoControlGUILoggingHandler
+    自訂日誌處理器，繼承 RotatingFileHandler
+    - 支援檔案大小輪替
+    - 預設輸出到 AutoControlGUI.log
+    """
 
-    # redirect logging stderr output to queue
-
-    def __init__(self, filename: str = "AutoControlGUI.log", mode="w",
-                 maxBytes: int = 1073741824, backupCount: int = 0):
-        super().__init__(filename=filename, mode=mode, maxBytes=maxBytes, backupCount=backupCount)
-        self.formatter = formatter
-        self.setLevel(logging.DEBUG)
+    def __init__(
+        self,
+        filename: str = "AutoControlGUI.log",
+        mode: str = "w",
+        max_bytes: int = 1073741824,  # 1GB
+        backup_count: int = 0,
+    ):
+        super().__init__(
+            filename=filename,
+            mode=mode,
+            maxBytes=max_bytes,
+            backupCount=backup_count,
+        )
+        self.setFormatter(formatter)  # 設定格式器
+        self.setLevel(logging.DEBUG)  # 設定等級
 
     def emit(self, record: logging.LogRecord) -> None:
+        """
+        Emit log record.
+        輸出日誌紀錄
+        """
         super().emit(record)
 
 
-# File handler
+# 建立並加入檔案處理器 Add file handler to logger
 file_handler = AutoControlGUILoggingHandler()
 autocontrol_logger.addHandler(file_handler)

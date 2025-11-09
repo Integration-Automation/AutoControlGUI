@@ -1,6 +1,6 @@
 import sys
 
-from je_auto_control.utils.exception.exception_tags import macos_record_error
+from je_auto_control.utils.exception.exception_tags import macos_record_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
 from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
@@ -15,7 +15,7 @@ def record() -> None:
     autocontrol_logger.info("record")
     try:
         if sys.platform == "darwin":
-            raise AutoControlException(macos_record_error)
+            raise AutoControlException(macos_record_error_message)
         record_action_to_list("record", None)
         recorder.record()
     except Exception as error:
@@ -30,7 +30,7 @@ def stop_record() -> list:
     autocontrol_logger.info("stop_record")
     try:
         if sys.platform == "darwin":
-            raise AutoControlException(macos_record_error)
+            raise AutoControlException(macos_record_error_message)
         action_queue = recorder.stop_record()
         if action_queue is None:
             raise AutoControlJsonActionException

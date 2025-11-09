@@ -1,9 +1,13 @@
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 from je_auto_control.windows.core.utils.win32_ctype_input import user32
 from je_auto_control.windows.window.windows_window_manage import FindWindowW
 
+# Win32 API 函式指標 Win32 API function pointers
 PostMessageW = user32.PostMessageW
 SendMessageW = user32.SendMessageW
 
+# 常見的 Windows 訊息對照表 Common Windows messages
 messages = {
     "WM_ACTIVATEAPP": 0x001C,
     "WM_CANCELMODE": 0x001F,
@@ -37,31 +41,57 @@ messages = {
     "WM_THEMECHANGED": 0x031A,
     "WM_USERCHANGED": 0x0054,
     "WM_WINDOWPOSCHANGED": 0x0047,
-    "WM_WINDOWPOSCHANGING": 0x0046
+    "WM_WINDOWPOSCHANGING": 0x0046,
 }
 
 
 def send_message_to_window(window_name: str, action_message: int,
                            key_code_1: int, key_code_2: int):
-    _hwnd = FindWindowW(window_name)
-    post_status = SendMessageW(_hwnd, action_message, key_code_1, key_code_2)
-    return _hwnd, post_status
+    """
+    使用 SendMessageW 對指定視窗名稱傳送訊息
+    Send message to a window by name using SendMessageW
+
+    :param window_name: 視窗標題 Window title
+    :param action_message: Windows 訊息代碼 Windows message code
+    :param key_code_1: wParam
+    :param key_code_2: lParam
+    :return: (HWND, 傳送狀態)
+    """
+    hwnd = FindWindowW(window_name)
+    if not hwnd:
+        raise AutoControlException(f"Window '{window_name}' not found")
+    post_status = SendMessageW(hwnd, action_message, key_code_1, key_code_2)
+    return hwnd, post_status
 
 
-def send_message_to_window_hwnd(_hwnd, action_message: int,
+def send_message_to_window_hwnd(hwnd, action_message: int,
                                 key_code_1: int, key_code_2: int):
-    post_status = SendMessageW(_hwnd, action_message, key_code_1, key_code_2)
-    return _hwnd, post_status
+    """
+    使用 SendMessageW 對指定 HWND 傳送訊息
+    Send message to a window by HWND using SendMessageW
+    """
+    post_status = SendMessageW(hwnd, action_message, key_code_1, key_code_2)
+    return hwnd, post_status
 
 
 def post_message_to_window(window_name: str, action_message: int,
                            key_code_1: int, key_code_2: int):
-    _hwnd = FindWindowW(window_name)
-    post_status = PostMessageW(_hwnd, action_message, key_code_1, key_code_2)
-    return _hwnd, post_status
+    """
+    使用 PostMessageW 對指定視窗名稱投遞訊息
+    Post message to a window by name using PostMessageW
+    """
+    hwnd = FindWindowW(window_name)
+    if not hwnd:
+        raise AutoControlException(f"Window '{window_name}' not found")
+    post_status = PostMessageW(hwnd, action_message, key_code_1, key_code_2)
+    return hwnd, post_status
 
 
-def post_message_to_window_hwnd(_hwnd, action_message: int,
+def post_message_to_window_hwnd(hwnd, action_message: int,
                                 key_code_1: int, key_code_2: int):
-    post_status = PostMessageW(_hwnd, action_message, key_code_1, key_code_2)
-    return _hwnd, post_status
+    """
+    使用 PostMessageW 對指定 HWND 投遞訊息
+    Post message to a window by HWND using PostMessageW
+    """
+    post_status = PostMessageW(hwnd, action_message, key_code_1, key_code_2)
+    return hwnd, post_status
