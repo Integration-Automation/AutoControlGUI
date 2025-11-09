@@ -4,7 +4,7 @@ import json
 import sys
 
 from je_auto_control.utils.exception.exception_tags import \
-    argparse_get_wrong_data
+    argparse_get_wrong_data_error_message
 from je_auto_control.utils.exception.exceptions import \
     AutoControlArgparseException
 from je_auto_control.utils.executor.action_executor import execute_action
@@ -62,7 +62,7 @@ if __name__ == "__main__":
             if value is not None:
                 argparse_event_dict.get(key)(value)
         if all(value is None for value in args.values()):
-            raise AutoControlArgparseException(argparse_get_wrong_data)
+            raise AutoControlArgparseException(argparse_get_wrong_data_error_message)
     except Exception as error:
         print(repr(error), file=sys.stderr)
         sys.exit(1)

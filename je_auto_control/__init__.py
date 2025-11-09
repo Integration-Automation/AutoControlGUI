@@ -96,7 +96,7 @@ from je_auto_control.wrapper.auto_control_keyboard import write
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
 from je_auto_control.wrapper.auto_control_mouse import mouse_keys_table
-from je_auto_control.wrapper.auto_control_mouse import mouse_scroll
+from je_auto_control.wrapper.auto_control_mouse import mouse_scroll_error_message
 from je_auto_control.wrapper.auto_control_mouse import press_mouse
 from je_auto_control.wrapper.auto_control_mouse import release_mouse
 from je_auto_control.wrapper.auto_control_mouse import send_mouse_event_to_window
@@ -112,7 +112,7 @@ from je_auto_control.wrapper.auto_control_screen import get_pixel
 
 __all__ = [
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
-    "mouse_scroll", "set_mouse_position", "special_mouse_keys_table",
+    "mouse_scroll_error_message", "set_mouse_position", "special_mouse_keys_table",
     "keyboard_keys_table", "press_keyboard_key", "release_keyboard_key", "type_keyboard", "check_key_is_press",
     "write", "hotkey", "start_exe", "get_keyboard_keys_table",
     "screen_size", "screenshot", "locate_all_image", "locate_image_center", "locate_and_click",
