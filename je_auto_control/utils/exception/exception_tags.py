@@ -53,9 +53,6 @@ cant_find_json_error_message: str = "Cannot find JSON file"
 cant_save_json_error_message: str = "Cannot save JSON file"
 action_is_null_error_message: str = "JSON action is null"
 
-# timeout tag
-timeout_need_on_main_error_message: str = "Timeout function must be in main"
-
 # HTML
 html_generate_no_data_tag_error_message: str = "Record is None"
 

@@ -75,8 +75,6 @@ jobs:
         run: python ./test/unit_test/json/json_test.py
       - name: Test Generate Json Report
         run: python ./test/unit_test/generate_report/json_report.py
-      - name: Test Timeout Module
-        run: python ./test/unit_test/timeout/timeout_test.py
       - name: Test Generate HTML Report
         run: python ./test/unit_test/generate_report/html_report_test.py
 

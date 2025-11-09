@@ -73,9 +73,6 @@ from je_auto_control.utils.start_exe.start_another_process import start_exe
 # test record
 from je_auto_control.utils.test_record.record_test_class import \
     test_record_instance
-# timeout
-from je_auto_control.utils.timeout.multiprocess_timeout import \
-    multiprocess_timeout
 # Windows
 from je_auto_control.windows.window import windows_window_manage
 from je_auto_control.wrapper.auto_control_image import locate_all_image
@@ -120,7 +117,7 @@ __all__ = [
     "AutoControlScreenException", "ImageNotFoundException", "AutoControlJsonActionException",
     "AutoControlRecordException", "AutoControlActionNullException", "AutoControlActionException", "record",
     "stop_record", "read_action_json", "write_action_json", "execute_action", "execute_files", "executor",
-    "add_command_to_executor", "multiprocess_timeout", "test_record_instance", "screenshot", "pil_screenshot",
+    "add_command_to_executor", "test_record_instance", "screenshot", "pil_screenshot",
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",
