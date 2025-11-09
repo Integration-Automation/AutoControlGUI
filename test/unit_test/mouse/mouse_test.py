@@ -27,29 +27,29 @@ except AutoControlMouseException as error:
     print(repr(error), file=sys.stderr)
 try:
     click_mouse("dawdawddadaawd")
-except AutoControlMouseException as error:
+except Exception as error:
     print(repr(error), file=sys.stderr)
 try:
     press_mouse("dawdawdawdawd")
-except AutoControlMouseException as error:
+except Exception as error:
     print(repr(error), file=sys.stderr)
 try:
     release_mouse("dwadawdadwdada")
-except AutoControlMouseException as error:
+except Exception as error:
     print(repr(error), file=sys.stderr)
 try:
     press_mouse(16515588646)
-except AutoControlMouseException as error:
+except Exception as error:
     print(repr(error), file=sys.stderr)
 try:
     release_mouse(1651651915)
-except AutoControlMouseException as error:
+except Exception as error:
     print(repr(error), file=sys.stderr)
 try:
     press_mouse("AC_mouse_left")
-except AutoControlMouseException as error:
+except Exception as error:
     print(repr(error), file=sys.stderr)
 try:
     release_mouse("AC_mouse_left")
-except AutoControlMouseException as error:
+except Exception as error:
     print(repr(error), file=sys.stderr)
