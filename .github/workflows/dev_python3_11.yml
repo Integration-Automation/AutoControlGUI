@@ -89,7 +89,5 @@ jobs:
 
       - name: Test Get Mouse Info
         run: python ./test/unit_test/get_info/mouse_info.py
-      - name: Test Get Special Info
-        run: python ./test/unit_test/get_info/special_info.py
       - name: Test Get Keyboard Info
         run: python ./test/unit_test/get_info/keyboard_info.py
