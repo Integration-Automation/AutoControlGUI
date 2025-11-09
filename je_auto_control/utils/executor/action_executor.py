@@ -1,7 +1,7 @@
 import builtins
 import types
 from inspect import getmembers, isbuiltin
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from je_auto_control.utils.exception.exception_tags import (
     action_is_null_error_message, add_command_exception_error_message,
@@ -23,7 +23,7 @@ from je_auto_control.utils.start_exe.start_another_process import start_exe
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_and_click, locate_image_center
 from je_auto_control.wrapper.auto_control_keyboard import (
-    check_key_is_press, get_special_table, get_keyboard_keys_table,
+    check_key_is_press, get_keyboard_keys_table,
     press_keyboard_key, release_keyboard_key, hotkey, type_keyboard, write
 )
 from je_auto_control.wrapper.auto_control_mouse import (
@@ -57,7 +57,6 @@ class Executor:
             "AC_release_mouse": release_mouse,
             "AC_mouse_scroll": mouse_scroll_error_message,
             "AC_set_mouse_position": set_mouse_position,
-            "AC_get_special_table": get_special_table,
 
             # Keyboard 鍵盤相關
             "AC_get_keyboard_keys_table": get_keyboard_keys_table,

@@ -84,7 +84,6 @@ from je_auto_control.wrapper.auto_control_image import locate_image_center
 # import keyboard
 from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
 from je_auto_control.wrapper.auto_control_keyboard import get_keyboard_keys_table
-from je_auto_control.wrapper.auto_control_keyboard import get_special_table
 from je_auto_control.wrapper.auto_control_keyboard import hotkey
 from je_auto_control.wrapper.auto_control_keyboard import keyboard_keys_table
 from je_auto_control.wrapper.auto_control_keyboard import press_keyboard_key
@@ -124,7 +123,7 @@ __all__ = [
     "add_command_to_executor", "multiprocess_timeout", "test_record_instance", "screenshot", "pil_screenshot",
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
-    "callback_executor", "package_manager", "get_special_table", "ShellManager", "default_shell_manager",
+    "callback_executor", "package_manager", "ShellManager", "default_shell_manager",
     "RecordingThread", "send_key_event_to_window", "send_mouse_event_to_window", "windows_window_manage",
     "ScreenRecorder", "get_pixel"
 ]

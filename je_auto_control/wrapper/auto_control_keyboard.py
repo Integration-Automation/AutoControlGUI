@@ -12,7 +12,6 @@ from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.platform_wrapper import keyboard, keyboard_keys_table, keyboard_check
 
-
 def get_keyboard_keys_table() -> dict:
     """
     取得鍵盤對應表
