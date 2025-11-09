@@ -33,7 +33,7 @@ from je_auto_control.utils.test_record.record_test_class import test_record_inst
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_and_click, locate_image_center
 # keyboard wrapper
 from je_auto_control.wrapper.auto_control_keyboard import (
-    check_key_is_press, get_special_table, get_keyboard_keys_table,
+    check_key_is_press, get_keyboard_keys_table,
     hotkey, press_keyboard_key, release_keyboard_key,
     type_keyboard, write
 )
@@ -71,7 +71,6 @@ class CallbackFunctionExecutor:
             "AC_release_mouse": release_mouse,
             "AC_mouse_scroll": mouse_scroll_error_message,
             "AC_set_mouse_position": set_mouse_position,
-            "AC_get_special_table": get_special_table,
 
             # keyboard 鍵盤相關
             "AC_get_keyboard_keys_table": get_keyboard_keys_table,
