@@ -7,7 +7,7 @@ from je_auto_control import press_mouse
 from je_auto_control import release_mouse
 from je_auto_control import set_mouse_position
 
-time.sleep(1)
+time.sleep(10)
 
 print(get_mouse_position())
 set_mouse_position(809, 388)
