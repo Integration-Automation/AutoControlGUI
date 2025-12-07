@@ -48,8 +48,8 @@ jobs:
       - name: Test Keyboard hotkey Function
         run: python ./test/unit_test/keyboard/hotkey_test.py
 
-#      - name: Test Mouse Module
-#        run: python ./test/unit_test/mouse/mouse_test.py
+      - name: Test Mouse Module
+        run: python ./test/unit_test/mouse/mouse_test.py
       - name: Test Scroll Module
         run: python ./test/unit_test/exception/auto_control_exception_test.py
 

@@ -27,5 +27,4 @@ try:
         except Exception as error:
             print(error)
 except AutoControlException:
-    raise AutoControlException
-sys.exit(0)
+    sys.exit(0)
