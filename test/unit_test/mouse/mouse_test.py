@@ -1,7 +1,7 @@
 try:
     import sys
     import time
-    
+
     from je_auto_control import click_mouse
     from je_auto_control import get_mouse_position
     from je_auto_control import mouse_keys_table
