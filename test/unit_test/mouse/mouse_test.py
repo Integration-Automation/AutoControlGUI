@@ -14,6 +14,8 @@ set_mouse_position(809, 388)
 
 print(mouse_keys_table.keys())
 
+time.sleep(10)
+
 press_mouse("mouse_right")
 release_mouse("mouse_right")
 press_mouse("mouse_left")
