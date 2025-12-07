@@ -24,3 +24,4 @@ except Exception as error:
     print(repr(error), file=sys.stderr)
     CriticalExit().init_critical_exit()
     press_keyboard_key("f7")
+    sys.exit(0)
