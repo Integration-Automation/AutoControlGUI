@@ -1,3 +1,5 @@
+import sys
+
 from je_auto_control import CriticalExit
 from je_auto_control import keyboard_keys_table
 from je_auto_control import press_keyboard_key
@@ -14,4 +16,4 @@ try:
     while True:
         press_keyboard_key("f2")
 except KeyboardInterrupt:
-    pass
+    sys.exit(0)
