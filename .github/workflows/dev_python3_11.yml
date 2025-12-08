@@ -1,6 +1,10 @@
 name: AutoControl Dev Python3.11
 
 on:
+  workflow_run:
+    workflows: [ "AutoControl Dev Python3.10" ]
+    types:
+      - completed
   push:
     branches: [ "dev" ]
   pull_request:

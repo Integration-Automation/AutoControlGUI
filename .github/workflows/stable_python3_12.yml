@@ -1,6 +1,10 @@
 name: AutoControl Stable Python3.12
 
 on:
+  workflow_run:
+    workflows: [ "AutoControl Stable Python3.11" ]
+    types:
+      - completed
   push:
     branches: [ "main" ]
   pull_request:
