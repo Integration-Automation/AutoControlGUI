@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build_dev_version:
-    runs-on: windows-2025
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v3
@@ -53,8 +53,8 @@ jobs:
       - name: Test Scroll Module
         run: python ./test/unit_test/exception/auto_control_exception_test.py
 
-      - name: Test Exceptions
-        run: python ./test/unit_test/exception/auto_control_exception_test.py
+      #      - name: Test Exceptions
+      #        run: python ./test/unit_test/exception/auto_control_exception_test.py
 
 #      - name: Test Critical Exit
 #        run: |
