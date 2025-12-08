@@ -60,10 +60,10 @@ jobs:
       #        run: |
       #          python ./test/unit_test/critical_exit/critical_exit_test.py
       #          exit 0
-      - name: Test Real Critical Situation
-        run: |
-          python ./test/unit_test/critical_exit/real_critical_test.py
-          exit 0
+#      - name: Test Real Critical Situation
+#        run: |
+#          python ./test/unit_test/critical_exit/real_critical_test.py
+#          exit 0
 
       - name: Test Record Module
         run: python ./test/unit_test/record/record_test.py

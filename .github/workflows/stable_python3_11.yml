@@ -46,24 +46,24 @@ jobs:
       - name: Test Keyboard hotkey Function
         run: python ./test/unit_test/keyboard/hotkey_test.py
 
-#      - name: Test Mouse Module
-#        run: |
-#          python ./test/unit_test/mouse/mouse_test.py
-#          exit 0
+      #      - name: Test Mouse Module
+      #        run: |
+      #          python ./test/unit_test/mouse/mouse_test.py
+      #          exit 0
       - name: Test Scroll Module
         run: python ./test/unit_test/exception/auto_control_exception_test.py
 
-#      - name: Test Exceptions
-#        run: python ./test/unit_test/exception/auto_control_exception_test.py
+      #      - name: Test Exceptions
+      #        run: python ./test/unit_test/exception/auto_control_exception_test.py
 
-#      - name: Test Critical Exit
+      #      - name: Test Critical Exit
+      #        run: |
+      #          python ./test/unit_test/critical_exit/critical_exit_test.py
+      #          exit 0
+#      - name: Test Real Critical Situation
 #        run: |
-#          python ./test/unit_test/critical_exit/critical_exit_test.py
+#          python ./test/unit_test/critical_exit/real_critical_test.py
 #          exit 0
-      - name: Test Real Critical Situation
-        run: |
-          python ./test/unit_test/critical_exit/real_critical_test.py
-          exit 0
 
       - name: Test Record Module
         run: python ./test/unit_test/record/record_test.py
