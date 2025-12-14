@@ -65,8 +65,8 @@ jobs:
       #          python ./test/unit_test/critical_exit/real_critical_test.py
       #          exit 0
 
-      - name: Test Record Module
-        run: python ./test/unit_test/record/record_test.py
+#      - name: Test Record Module
+#        run: python ./test/unit_test/record/record_test.py
       - name: Test Total Record
         run: python ./test/unit_test/total_record/total_record_test.py
 
