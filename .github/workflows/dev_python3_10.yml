@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build_dev_version:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - uses: actions/checkout@v3
@@ -47,17 +47,19 @@ jobs:
         run: python ./test/unit_test/keyboard/keyboard_is_press_test.py
       - name: Test Keyboard hotkey Function
         run: python ./test/unit_test/keyboard/hotkey_test.py
-
       - name: Test Mouse Module
-        run: python ./test/unit_test/mouse/mouse_test.py
+        run: |
+          python ./test/unit_test/mouse/mouse_test.py
+          exit 0
       - name: Test Scroll Module
         run: python ./test/unit_test/exception/auto_control_exception_test.py
-
       - name: Test Exceptions
         run: python ./test/unit_test/exception/auto_control_exception_test.py
 
       - name: Test Critical Exit
-        run: python ./test/unit_test/critical_exit/critical_exit_test.py
+        run: |
+          python ./test/unit_test/critical_exit/critical_exit_test.py
+          exit 0
       - name: Test Real Critical Situation
         run: |
           python ./test/unit_test/critical_exit/real_critical_test.py

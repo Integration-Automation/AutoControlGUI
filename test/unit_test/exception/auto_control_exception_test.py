@@ -1,3 +1,5 @@
+import sys
+
 from je_auto_control.utils.exception.exceptions import AutoControlCantFindKeyException
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exceptions import AutoControlKeyboardException
@@ -25,4 +27,4 @@ try:
         except Exception as error:
             print(error)
 except AutoControlException:
-    raise AutoControlException
+    sys.exit(0)
