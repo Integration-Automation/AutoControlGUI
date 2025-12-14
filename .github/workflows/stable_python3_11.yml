@@ -1,8 +1,8 @@
-name: AutoControl Stable Python3.11
+name: AutoControl_Stable_Python3.11
 
 on:
   workflow_run:
-    workflows: [ "AutoControl Stable Python3.10" ]
+    workflows: [ "AutoControl_Stable_Python3.10" ]
     types:
       - completed
 

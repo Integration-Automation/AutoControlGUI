@@ -1,8 +1,8 @@
-name: AutoControl Dev Python3.12
+name: AutoControl_Dev_Python3.12
 
 on:
   workflow_run:
-    workflows: [ "AutoControl Dev Python3.11" ]
+    workflows: [ "AutoControl_Dev_Python3.11" ]
     types:
       - completed
 
