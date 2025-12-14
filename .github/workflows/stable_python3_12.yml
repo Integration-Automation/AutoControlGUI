@@ -1,10 +1,12 @@
 name: AutoControl_Stable_Python3.12
 
 on:
-  workflow_run:
-    workflows: [ "AutoControl_Stable_Python3.11" ]
-    types:
-      - completed
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: "0 1 * * *"
 
 permissions:
   contents: read

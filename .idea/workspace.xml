@@ -5,6 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.github/workflows/dev_python3_11.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/dev_python3_11.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/dev_python3_12.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/dev_python3_12.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/stable_python3_11.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/stable_python3_11.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/stable_python3_12.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/stable_python3_12.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -629,7 +633,7 @@
       <workItem from="1765461260820" duration="2652000" />
       <workItem from="1765617817947" duration="8357000" />
       <workItem from="1765715382309" duration="3900000" />
-      <workItem from="1765723750090" duration="925000" />
+      <workItem from="1765723750090" duration="2183000" />
     </task>
     <servers />
   </component>

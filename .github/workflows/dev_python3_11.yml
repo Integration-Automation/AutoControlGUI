@@ -1,10 +1,12 @@
 name: AutoControl_Dev_Python3.11
 
 on:
-  workflow_run:
-    workflows: [ "AutoControl_Dev_Python3.10" ]
-    types:
-      - completed
+  push:
+    branches: [ "dev" ]
+  pull_request:
+    branches: [ "dev" ]
+  schedule:
+    - cron: "0 1 * * *"
 
 permissions:
   contents: read
