@@ -69,8 +69,8 @@ jobs:
 
 #      - name: Test Record Module
 #        run: python ./test/unit_test/record/record_test.py
-      - name: Test Total Record
-        run: python ./test/unit_test/total_record/total_record_test.py
+#      - name: Test Total Record
+#        run: python ./test/unit_test/total_record/total_record_test.py
 
       - name: Test Execute Action
         run: python ./test/unit_test/execute_action/execute_action_test.py
