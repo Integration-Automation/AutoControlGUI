@@ -5,6 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.github/workflows/dev_python3_11.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/dev_python3_11.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/dev_python3_12.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/dev_python3_12.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/stable_python3_11.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/stable_python3_11.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.github/workflows/stable_python3_12.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/stable_python3_12.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
@@ -104,7 +107,7 @@
     "WebServerToolWindowFactoryState": "false",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "#164 on dev",
+    "git-widget-placeholder": "#165 on dev",
     "ignore.virus.scanning.warn.message": "true",
     "junie.onboarding.icon.badge.shown": "true",
     "last_opened_file_path": "C:/CodeWorkspace/Python/AutoControlGUI/.github/workflows",
@@ -268,8 +271,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-c7e53b3be11b-JavaScript-PY-253.28294.336" />
-        <option value="bundled-python-sdk-0978a7220b69-9867c7d4c0a4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.28294.336" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.29346.46" />
+        <option value="bundled-python-sdk-dd10acb83ddd-d0d357532b9e-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.29346.46" />
       </set>
     </attachedChunks>
   </component>
@@ -628,6 +631,9 @@
       <workItem from="1765080056010" duration="1690000" />
       <workItem from="1765167444770" duration="14642000" />
       <workItem from="1765461260820" duration="2652000" />
+      <workItem from="1765617817947" duration="8357000" />
+      <workItem from="1765715382309" duration="3900000" />
+      <workItem from="1765723750090" duration="2183000" />
     </task>
     <servers />
   </component>
