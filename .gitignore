@@ -121,3 +121,5 @@ dmypy.json
 .idea/AutoControl.iml
 .idea/misc.xml
 .idea/workspace.xml
+.claude/settings.local.json
+/.claude/

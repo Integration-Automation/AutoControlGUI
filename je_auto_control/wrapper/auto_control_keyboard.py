@@ -143,9 +143,11 @@ def write(write_string: str, is_shift: bool = False) -> Optional[str]:
         for single_char in write_string:
             key = keyboard_keys_table.get(single_char)
             if key is not None:
-                record_write_chars.append(type_keyboard(key, is_shift, skip_record=True))
+                type_keyboard(key, is_shift, skip_record=True)
+                record_write_chars.append(single_char)
             elif single_char.isspace():
-                record_write_chars.append(type_keyboard("space", is_shift, skip_record=True))
+                type_keyboard("space", is_shift, skip_record=True)
+                record_write_chars.append(single_char)
             else:
                 autocontrol_logger.error(f"write failed: {keyboard_write_cant_find_error_message}, char={single_char}")
                 raise AutoControlKeyboardException(keyboard_write_cant_find_error_message)
