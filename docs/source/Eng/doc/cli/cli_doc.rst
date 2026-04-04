@@ -1,19 +1,54 @@
-CLI
-----
+=======================
+Command-Line Interface
+=======================
 
-We can use the CLI mode to execute the keyword.
-json file or execute the folder containing the Keyword.json files.
+AutoControl can be used directly from the command line to execute automation scripts.
 
-The following example is to execute the specified path of the keyword JSON file.
+Execute a Single Action File
+=============================
 
-.. code-block::
+.. code-block:: bash
 
-    python je_auto_control --execute_file "your_file_path"
+   python -m je_auto_control --execute_file "path/to/actions.json"
 
+   # Short form
+   python -m je_auto_control -e "path/to/actions.json"
 
+Execute All Files in a Directory
+================================
 
-The following example is to run all keyword JSON files in a specified folder:
+.. code-block:: bash
 
-.. code-block::
+   python -m je_auto_control --execute_dir "path/to/action_files/"
 
-    python je_auto_control --execute_dir "your_dir_path"
+   # Short form
+   python -m je_auto_control -d "path/to/action_files/"
+
+Execute a JSON String Directly
+==============================
+
+.. code-block:: bash
+
+   python -m je_auto_control --execute_str '[["AC_screenshot", {"file_path": "test.png"}]]'
+
+Create a Project Template
+=========================
+
+.. code-block:: bash
+
+   python -m je_auto_control --create_project "path/to/my_project"
+
+   # Short form
+   python -m je_auto_control -c "path/to/my_project"
+
+Launch the GUI
+==============
+
+.. code-block:: bash
+
+   python -m je_auto_control
+
+.. note::
+
+   Launching the GUI requires the ``[gui]`` extra to be installed:
+   ``pip install je_auto_control[gui]``

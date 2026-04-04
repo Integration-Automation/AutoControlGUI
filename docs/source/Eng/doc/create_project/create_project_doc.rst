@@ -1,23 +1,48 @@
-Create Project
-----
+==================
+Project Management
+==================
 
-In AutoControl, you can create a project which will automatically generate sample files once the project is created.
-These sample files include a Python executor file and a keyword.json file.
+AutoControl can scaffold a project directory with template files to help you get started quickly.
 
-To create a project, you can use the following method:
+Creating a Project
+==================
+
+Using Python:
 
 .. code-block:: python
 
-    from je_auto_control import create_project_dir
-    # create on current workdir
-    create_project_dir()
-    # create project on project_path
-    create_project_dir("project_path")
-    # create project on project_path and dir name is My First Project
-    create_project_dir("project_path", "My First Project")
+   from je_auto_control import create_project_dir
 
-Or using CLI, this will generate a project at the project_path location.
+   # Create in current working directory
+   create_project_dir()
 
-.. code-block:: console
+   # Create at a specific path
+   create_project_dir("path/to/project")
 
-    python -m je_auto_control --create_project project_path
+   # Create with a custom directory name
+   create_project_dir("path/to/project", "My First Project")
+
+Using the CLI:
+
+.. code-block:: bash
+
+   python -m je_auto_control --create_project "path/to/project"
+
+Generated Structure
+===================
+
+.. code-block:: text
+
+   my_project/
+   └── AutoControl/
+       ├── keyword/
+       │   ├── keyword1.json          # Template action file
+       │   ├── keyword2.json          # Template action file
+       │   └── bad_keyword_1.json     # Error handling template
+       └── executor/
+           ├── executor_one_file.py   # Execute single file example
+           ├── executor_folder.py     # Execute folder example
+           └── executor_bad_file.py   # Error handling example
+
+The ``keyword/`` directory contains JSON action files, and the ``executor/`` directory
+contains Python scripts that demonstrate how to run them.

@@ -1,60 +1,51 @@
+=================
 Socket Server API
+=================
+
+TCP server for receiving and executing JSON automation commands remotely.
+
 ----
 
-.. code-block:: python
+start_autocontrol_socket_server
+===============================
 
-    import json
-    import socketserver
-    import sys
-    import threading
+.. function:: start_autocontrol_socket_server(host="localhost", port=9938)
 
-    from je_auto_control.utils.executor.action_executor import execute_action
+   Starts a threaded TCP server that accepts JSON automation commands.
 
+   :param str host: Server hostname. Defaults to ``"localhost"``.
+   :param int port: Server port. Defaults to ``9938``.
+   :returns: The server instance. Check ``server.close_flag`` to detect shutdown.
+   :rtype: TCPServer
 
-    class TCPServerHandler(socketserver.BaseRequestHandler):
+   The server can also read ``host`` and ``port`` from command-line arguments
+   (``sys.argv[1]`` and ``sys.argv[2]``).
 
-        def handle(self):
-            command_string = str(self.request.recv(8192).strip(), encoding="utf-8")
-            socket = self.request
-            print("command is: " + command_string, flush=True)
-            if command_string == "quit_server":
-                self.server.shutdown()
-                self.server.close_flag = True
-                print("Now quit server", flush=True)
-            else:
-                try:
-                    execute_str = json.loads(command_string)
-                    for execute_function, execute_return in execute_action(execute_str).items():
-                        socket.sendto(str(execute_return).encode("utf-8"), self.client_address)
-                        socket.sendto("\n".encode("utf-8"), self.client_address)
-                    socket.sendto("Return_Data_Over_JE".encode("utf-8"), self.client_address)
-                    socket.sendto("\n".encode("utf-8"), self.client_address)
-                except Exception as error:
-                    print(repr(error), file=sys.stderr)
-                    try:
-                        socket.sendto(str(error).encode("utf-8"), self.client_address)
-                        socket.sendto("\n".encode("utf-8"), self.client_address)
-                        socket.sendto("Return_Data_Over_JE".encode("utf-8"), self.client_address)
-                        socket.sendto("\n".encode("utf-8"), self.client_address)
-                    except Exception as error:
-                        print(repr(error))
+----
 
+TCPServer
+=========
 
-    class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+.. class:: TCPServer(server_address, RequestHandlerClass)
 
-        def __init__(self, server_address, RequestHandlerClass):
-            super().__init__(server_address, RequestHandlerClass)
-            self.close_flag: bool = False
+   Threaded TCP server (extends ``socketserver.ThreadingMixIn`` and ``socketserver.TCPServer``).
 
+   .. attribute:: close_flag
+      :type: bool
 
-    def start_autocontrol_socket_server(host: str = "localhost", port: int = 9938):
-        if len(sys.argv) == 2:
-            host = sys.argv[1]
-        elif len(sys.argv) == 3:
-            host = sys.argv[1]
-            port = int(sys.argv[2])
-        server = TCPServer((host, port), TCPServerHandler)
-        server_thread = threading.Thread(target=server.serve_forever)
-        server_thread.daemon = True
-        server_thread.start()
-        return server
+      Set to ``True`` when the server receives a ``"quit_server"`` command.
+
+----
+
+TCPServerHandler
+================
+
+.. class:: TCPServerHandler
+
+   Request handler for the TCP server.
+
+   Receives up to 8192 bytes per request, decodes as UTF-8, and processes:
+
+   - ``"quit_server"`` -- shuts down the server.
+   - Any other string -- parsed as JSON and passed to ``execute_action()``.
+     Results are sent back to the client, terminated by ``"Return_Data_Over_JE"``.

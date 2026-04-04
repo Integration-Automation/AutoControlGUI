@@ -5,10 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/dev_python3_11.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/dev_python3_11.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/dev_python3_12.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/dev_python3_12.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/stable_python3_11.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/stable_python3_11.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/stable_python3_12.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/stable_python3_12.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/AutoControl.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/AutoControl.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -105,9 +102,10 @@
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "WebServerToolWindowFactoryState": "false",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "#165 on dev",
+    "git-widget-placeholder": "dev",
     "ignore.virus.scanning.warn.message": "true",
     "junie.onboarding.icon.badge.shown": "true",
     "last_opened_file_path": "C:/CodeWorkspace/Python/AutoControlGUI/.github/workflows",
@@ -151,6 +149,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="RUN_TOOL" value="" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/screen/get_pixel_test.py" />
@@ -175,6 +174,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="RUN_TOOL" value="" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/keyboard/keyboard_type_test.py" />
@@ -199,6 +199,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="RUN_TOOL" value="" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/mouse/mouse_test.py" />
@@ -223,6 +224,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="RUN_TOOL" value="" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/unit_test/screen/screen_test.py" />
@@ -247,6 +249,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="RUN_TOOL" value="" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/je_auto_control/windows/screen/win32_screen.py" />
@@ -271,8 +274,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-PY-253.29346.46" />
-        <option value="bundled-python-sdk-dd10acb83ddd-d0d357532b9e-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.29346.46" />
+        <option value="bundled-js-predefined-d6986cc7102b-3bd3a6803838-JavaScript-PY-261.22158.340" />
+        <option value="bundled-python-sdk-b63d5a1f7c97-b61e75351b1f-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.22158.340" />
       </set>
     </attachedChunks>
   </component>
@@ -634,6 +637,7 @@
       <workItem from="1765617817947" duration="8357000" />
       <workItem from="1765715382309" duration="3900000" />
       <workItem from="1765723750090" duration="2183000" />
+      <workItem from="1775297582464" duration="9000" />
     </task>
     <servers />
   </component>

@@ -1,56 +1,73 @@
-Callback Function
-----
+=================
+Callback Executor
+=================
 
-In AutoControl, callback functions are supported by the Callback Executor.
-Below is a simple example of using the Callback Executor:
+The Callback Executor allows you to execute an automation function and trigger a callback
+function upon completion.
 
-.. code-block:: python
-
-    from je_auto_control import callback_executor
-    # trigger_function will first to execute, but return value need to wait everything done
-    # so this test will first print("test") then print(size_function_return_value)
-    print(
-        callback_executor.callback_function(
-            trigger_function_name="size",
-            callback_function=print,
-            callback_param_method="args",
-            callback_function_param={"": "test"}
-        )
-    )
-
-* Note that if the "name: function" pair in the callback_executor event_dict is different from the executor, it is a bug.
-* Of course, like the executor, it can be expanded by adding external functions. Please see the example below.
-
-In this example, we use callback_executor to execute the "size" function defined in AutoControl.
-After executing the "size" function, the function passed to callback_function will be executed.
-The delivery method can be determined by the callback_param_method parameter.
-If it is "args", please pass in {"value1", "value2", ...}.
-Here, the ellipsis (...) represents multiple inputs.
- If it is "kwargs", please pass in {"actually_param_name": value, ...}.
-Here, the ellipsis (...) again represents multiple inputs.
- If you want to use the return value,
-since the return value will only be returned after all functions are executed,
-you will actually see the "print" statement
-before the "print(size_function_return_value)" statement in this example,
-even though the order of size -> print is correct.
-This is because the "size" function only returns the value itself without printing it.
-
-This code will load all built-in functions, methods, and classes of the time module into the callback executor.
-To use the loaded functions, we need to use the package_function name,
-for example, time.sleep will become time_sleep.
-
-If we want to add functions in the callback_executor, we can use the following code:
-
-This code will add all the functions of the time module to the executor (interpreter).
+Basic Usage
+===========
 
 .. code-block:: python
 
-    from je_auto_control import package_manager
-    package_manager.add_package_to_callback_executor("time")
+   from je_auto_control import callback_executor
 
-If you need to check the updated event_dict, you can use:
+   result = callback_executor.callback_function(
+       trigger_function_name="screen_size",
+       callback_function=print,
+       callback_param_method="args",
+       callback_function_param={"": "Callback triggered!"}
+   )
+   print(f"Return value: {result}")
+
+How It Works
+============
+
+1. The ``trigger_function_name`` function executes first.
+2. After it completes, the ``callback_function`` is called.
+3. The return value of the trigger function is returned after all callbacks finish.
+
+Parameters
+==========
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Description
+   * - ``trigger_function_name``
+     - Name of the function to execute (must exist in ``event_dict``)
+   * - ``callback_function``
+     - The function to call after the trigger function completes
+   * - ``callback_function_param``
+     - Parameters to pass to the callback function (dict)
+   * - ``callback_param_method``
+     - ``"args"`` for positional or ``"kwargs"`` for keyword arguments
+   * - ``**kwargs``
+     - Additional keyword arguments passed to the trigger function
+
+Extending the Callback Executor
+================================
+
+Load external package functions into the callback executor:
 
 .. code-block:: python
 
-    from je_auto_control import callback_executor
-    print(callback_executor.event_dict)
+   from je_auto_control import package_manager
+
+   # Add all functions from the 'time' module
+   package_manager.add_package_to_callback_executor("time")
+
+To inspect the current event dictionary:
+
+.. code-block:: python
+
+   from je_auto_control import callback_executor
+
+   print(callback_executor.event_dict)
+
+.. note::
+
+   The callback executor's ``event_dict`` should contain the same function mappings as the
+   main executor. If they differ, it is a bug.

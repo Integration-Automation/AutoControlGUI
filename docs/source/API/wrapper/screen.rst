@@ -1,18 +1,32 @@
+==========
 Screen API
+==========
+
+Functions for screen information and capture.
+
 ----
 
-.. code-block:: python
+screen_size
+===========
 
-    def screen_size() -> Tuple[int, int]:
-        """
-        get screen size
-        """
+.. function:: screen_size()
 
-.. code-block:: python
+   Returns the current screen resolution.
 
-    def screenshot(file_path: str = None, screen_region: list = None) -> List[int]:
-        """
-        use to capture current screen image
-        :param file_path screenshot file save path
-        :param screen_region screenshot screen_region
-        """
+   :returns: Screen dimensions as ``(width, height)``.
+   :rtype: tuple[int, int]
+
+----
+
+screenshot
+==========
+
+.. function:: screenshot(file_path=None, screen_region=None)
+
+   Captures the current screen image.
+
+   :param str file_path: File path to save the screenshot. If ``None``, the image is not saved.
+   :param list screen_region: Region to capture as ``[x1, y1, x2, y2]``.
+      If ``None``, captures the full screen.
+   :returns: The captured screen image.
+   :rtype: list[int]

@@ -1,54 +1,82 @@
-滑鼠
-----
+========
+滑鼠控制
+========
 
-* 主要用來模擬滑鼠的控制。
-* 提供模擬點擊、設定位置等功能。
+AutoControl 提供模擬滑鼠操作的功能，包括點擊、定位、捲動及拖曳操作。
 
-以下範例是取得鍵盤的資訊，
-* mouse_table 是所有可以使用的按鍵
+取得滑鼠按鍵表
+==============
 
-.. code-block:: python
-
-    from je_auto_control import mouse_table
-
-    print(mouse_table)
-
-以下範例是按著滑鼠，一秒後釋放滑鼠
+取得所有可用的滑鼠按鍵名稱：
 
 .. code-block:: python
 
-    from time import sleep
+   from je_auto_control import mouse_table
 
-    from je_auto_control import press_mouse, release_mouse
+   print(mouse_table)
 
-    press_mouse("mouse_right")
-    sleep(1)
-    release_mouse("mouse_right")
+.. tip::
 
-以下範例是點擊並放開滑鼠
+   完整的滑鼠按鍵列表請參考 :doc:`/API/special/mouse_keys`。
 
-.. code-block:: python
+按下與釋放
+==========
 
-    from je_auto_control import click_mouse
-
-    click_mouse("mouse_right")
-
-以下範例是檢查滑鼠位置並改變滑鼠位置
+按住滑鼠按鍵，延遲後釋放：
 
 .. code-block:: python
 
-    from je_auto_control import get_mouse_position, set_mouse_position
+   from time import sleep
+   from je_auto_control import press_mouse, release_mouse
 
-    print(get_mouse_position())
-    set_mouse_position(100, 100)
+   press_mouse("mouse_right")
+   sleep(1)
+   release_mouse("mouse_right")
 
-以下範例是3秒後滑鼠會往上 scroll
+點擊
+====
+
+按下並立即釋放滑鼠按鍵：
 
 .. code-block:: python
 
-    from time import sleep
-    from je_auto_control import scroll
+   from je_auto_control import click_mouse
 
-    sleep(3)
+   # 在目前位置右鍵點擊
+   click_mouse("mouse_right")
 
-    scroll(100)
+   # 在指定座標左鍵點擊
+   click_mouse("mouse_left", x=500, y=300)
+
+游標位置
+========
+
+取得及設定滑鼠游標位置：
+
+.. code-block:: python
+
+   from je_auto_control import get_mouse_position, set_mouse_position
+
+   # 取得目前位置
+   x, y = get_mouse_position()
+   print(f"滑鼠位置: ({x}, {y})")
+
+   # 移動滑鼠到 (100, 100)
+   set_mouse_position(100, 100)
+
+捲動
+====
+
+捲動滑鼠滾輪：
+
+.. code-block:: python
+
+   from je_auto_control import mouse_scroll
+
+   # 向下捲動 5 個單位
+   mouse_scroll(scroll_value=5)
+
+.. note::
+
+   在 Linux 上，可以使用 ``scroll_direction`` 參數指定捲動方向：
+   ``"scroll_up"``、``"scroll_down"``、``"scroll_left"``、``"scroll_right"``。

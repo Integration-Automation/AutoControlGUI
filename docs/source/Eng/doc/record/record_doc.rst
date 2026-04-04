@@ -1,30 +1,38 @@
-Record
-----
+=====================
+Recording & Playback
+=====================
 
-* Record is mainly used to record keyboard and mouse actions.
-* It can be used with an executor to replay keyboard and mouse actions.
-* The following example shows how to use it.
+AutoControl can record mouse and keyboard events and replay them using the executor.
+
+Record and Replay
+=================
 
 .. code-block:: python
 
-    from time import sleep
+   from time import sleep
+   from je_auto_control import record, stop_record, execute_action
 
-    from je_auto_control import execute_action
-    from je_auto_control import record
-    from je_auto_control import stop_record
-    from je_auto_control import type_keyboard
+   # Start recording all mouse and keyboard events
+   record()
 
-    # this program will type test two time
-    # one time is type key one time is test_record
+   sleep(5)  # Record for 5 seconds
 
-    record()
-    sleep(1)
-    print(type_keyboard("t"))
-    print(type_keyboard("e"))
-    print(type_keyboard("s"))
-    print(type_keyboard("t"))
-    sleep(2)
-    record_result = stop_record()
-    print(record_result)
-    execute_action(record_result)
-    sleep(5)
+   # Stop and get the recorded action list
+   actions = stop_record()
+   print(actions)
+
+   # Replay the recorded actions
+   execute_action(actions)
+
+.. note::
+
+   Action recording is **not available on macOS**. See :doc:`/getting_started/installation` for platform support details.
+
+How It Works
+============
+
+1. ``record()`` starts a background listener that captures all mouse and keyboard events.
+2. ``stop_record()`` stops the listener and returns a list of actions in the executor-compatible format.
+3. ``execute_action(actions)`` replays the captured actions through the built-in executor.
+
+The recorded actions are in the same JSON format used by the :doc:`/Eng/doc/keyword_and_executor/keyword_and_executor_doc`, so you can save them to a file and replay later.

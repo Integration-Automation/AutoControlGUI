@@ -1,31 +1,60 @@
+======
 安裝
-----
+======
 
-.. code-block:: python
+從 PyPI 安裝
+============
 
-    pip install je_auto_control
+.. code-block:: bash
 
-* Python & pip require version
-    * Python 3.7 & up
-    * pip 19.3 & up
+   pip install je_auto_control
 
-* Dev env
-    * windows 11
-    * osx 11 big sur
-    * ubuntu 20.0.4
+系統需求
+========
 
-| 如果想要在樹莓派使用
+* Python 3.10 以上
+* pip 19.3 以上
 
-.. code-block:: python
+安裝 GUI 支援
+=============
 
-    sudo apt-get install python3
-    pip3 install je_auto_control
-    sudo apt-get install libcblas-dev
-    sudo apt-get install libhdf5-dev
-    sudo apt-get install libhdf5-serial-dev
-    sudo apt-get install libatlas-base-dev
-    sudo apt-get install libjasper-dev
-    sudo apt-get install libqtgui4
-    sudo apt-get install libqt4-test
-    pip3 install -U pillow
-    pip3 install -U numpy
+.. code-block:: bash
+
+   pip install je_auto_control[gui]
+
+Linux 前置套件
+==============
+
+.. code-block:: bash
+
+   sudo apt-get install cmake libssl-dev
+
+樹莓派
+======
+
+.. code-block:: bash
+
+   sudo apt-get install python3
+   pip3 install je_auto_control
+   sudo apt-get install libcblas-dev libhdf5-dev libhdf5-serial-dev
+   sudo apt-get install libatlas-base-dev libjasper-dev
+   sudo apt-get install libqtgui4 libqt4-test
+   pip3 install -U pillow numpy
+
+開發環境
+========
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 平台
+     - 測試版本
+   * - Windows
+     - Windows 11
+   * - macOS
+     - macOS Big Sur (11)
+   * - Linux
+     - Ubuntu 20.04
+   * - Raspberry Pi
+     - 3B / 4B

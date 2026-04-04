@@ -1,16 +1,32 @@
+==========
 Record API
+==========
+
+Functions for recording and replaying mouse/keyboard events.
+
 ----
 
-.. code-block:: python
+record
+======
 
-    def record() -> None:
-        """
-        start record keyboard and mouse event until stop_record
-        """
+.. function:: record()
 
-.. code-block:: python
+   Starts recording all keyboard and mouse events in the background.
+   Recording continues until :func:`stop_record` is called.
 
-    def stop_record() -> list:
-        """
-        stop current record
-        """
+   :returns: None
+
+----
+
+stop_record
+===========
+
+.. function:: stop_record()
+
+   Stops the current recording session and returns the captured events.
+
+   :returns: List of recorded actions in executor-compatible format.
+   :rtype: list
+
+   The returned list can be passed directly to ``execute_action()`` for playback,
+   or saved to a JSON file for later use.
