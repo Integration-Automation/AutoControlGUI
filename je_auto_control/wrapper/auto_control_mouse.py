@@ -10,7 +10,7 @@ from je_auto_control.utils.exception.exception_tags import (
 from je_auto_control.utils.exception.exceptions import (
     AutoControlCantFindKeyException, AutoControlMouseException
 )
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.platform_wrapper import mouse, mouse_keys_table, special_mouse_keys_table
@@ -69,7 +69,8 @@ def get_mouse_position() -> tuple[int, int] | None:
         raise AutoControlMouseException(mouse_get_position_error_message + " " + repr(error))
     except Exception as error:
         record_action_to_list("get_mouse_position", None, repr(error))
-        print(repr(error), file=sys.stderr)
+        autocontrol_logger.error(f"get_mouse_position failed: {repr(error)}")
+        raise
 
 
 def set_mouse_position(x: int, y: int) -> tuple[int, int] | None:
@@ -96,6 +97,7 @@ def set_mouse_position(x: int, y: int) -> tuple[int, int] | None:
     except Exception as error:
         record_action_to_list("set_mouse_position", param, repr(error))
         autocontrol_logger.error(f"set_mouse_position failed: {repr(error)}")
+        raise
 
 
 def press_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) -> tuple[int, int, int] | None:
@@ -121,6 +123,7 @@ def press_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) ->
     except Exception as error:
         record_action_to_list("press_mouse", param, repr(error))
         autocontrol_logger.error(f"press_mouse failed: {repr(error)}")
+        raise
 
 
 def release_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) -> tuple[int, int, int] | None:
@@ -146,6 +149,7 @@ def release_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) 
     except Exception as error:
         record_action_to_list("release_mouse", param, repr(error))
         autocontrol_logger.error(f"release_mouse failed: {repr(error)}")
+        raise
 
 
 def click_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) -> Tuple[int, int, int]:

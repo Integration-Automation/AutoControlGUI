@@ -13,10 +13,8 @@ print(write("abcdefghijklmnopqrstuvwxyz"))
 release_keyboard_key("shift")
 print(write("abcdefghijklmnopqrstuvwxyz"))
 
-# this writes will print one error -> keyboard write error can't find key : Ѓ and write remain string
-
+# this write will raise an error for unsupported character
 try:
     print(write("Ѓ123456789"))
 except Exception as error:
-    print(repr(error), file=sys.stderr)
-sys.exit(0)
+    print(f"Expected error for unsupported character: {repr(error)}", file=sys.stderr)

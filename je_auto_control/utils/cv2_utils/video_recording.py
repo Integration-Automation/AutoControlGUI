@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from mss import mss
 
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 class RecordingThread(threading.Thread):

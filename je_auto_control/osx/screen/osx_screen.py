@@ -82,29 +82,31 @@ def get_pixel(x: int, y: int) -> Tuple[int, int, int, int]:
             "Unable to capture screen image. 請確認已授予螢幕錄製權限"
         )
 
-    # 取得影像資料供應器 Get data provider
-    provider = cg.CGImageGetDataProvider(img)
+    provider = None
+    cfdata = None
+    try:
+        # 取得影像資料供應器 Get data provider
+        provider = cg.CGImageGetDataProvider(img)
 
-    # 複製影像資料 Copy image data
-    cfdata = cg.CGDataProviderCopyData(provider)
+        # 複製影像資料 Copy image data
+        cfdata = cg.CGDataProviderCopyData(provider)
 
-    # 取得資料長度 Get data length
-    length = cf.CFDataGetLength(cfdata)
-    if length < 4:
-        cf.CFRelease(cfdata)
-        cf.CFRelease(provider)
+        # 取得資料長度 Get data length
+        length = cf.CFDataGetLength(cfdata)
+        if length < 4:
+            raise RuntimeError("Invalid pixel data. 資料不足")
+
+        # 取得 byte pointer Get byte pointer
+        buf = cf.CFDataGetBytePtr(cfdata)
+
+        # 預設像素格式為 BGRA Default pixel format is BGRA
+        b, g, r, a = buf[0], buf[1], buf[2], buf[3]
+
+        return r, g, b, a
+    finally:
+        # 釋放 CoreFoundation 物件 Release CF objects
+        if cfdata:
+            cf.CFRelease(cfdata)
+        if provider:
+            cf.CFRelease(provider)
         cf.CFRelease(img)
-        raise RuntimeError("Invalid pixel data. 資料不足")
-
-    # 取得 byte pointer Get byte pointer
-    buf = cf.CFDataGetBytePtr(cfdata)
-
-    # 預設像素格式為 BGRA Default pixel format is BGRA
-    b, g, r, a = buf[0], buf[1], buf[2], buf[3]
-
-    # 釋放 CoreFoundation 物件 Release CF objects
-    cf.CFRelease(cfdata)
-    cf.CFRelease(provider)
-    cf.CFRelease(img)
-
-    return r, g, b, a

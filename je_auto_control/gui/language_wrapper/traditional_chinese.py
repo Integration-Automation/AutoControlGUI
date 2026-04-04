@@ -1,13 +1,26 @@
 traditional_chinese_word_dict = {
     # Main
     "application_name": "AutoControlGUI",
-    # Widget
-    "interval_time": "間隔時間（秒）：",
-    "cursor_x": "滑鼠游標 X 軸位置：",
-    "cursor_y": "滑鼠游標 Y 軸位置：",
+
+    # Tabs
+    "tab_auto_click": "自動點擊",
+    "tab_screenshot": "螢幕截圖",
+    "tab_image_detect": "影像偵測",
+    "tab_record": "錄製 / 回放",
+    "tab_script": "腳本執行",
+    "tab_screen_record": "螢幕錄影",
+    "tab_shell": "Shell 命令",
+    "tab_report": "報告產生",
+
+    # Auto Click Tab
+    "interval_time": "間隔時間 (ms)：",
+    "cursor_x": "游標 X：",
+    "cursor_y": "游標 Y：",
     "mouse_button": "滑鼠按鍵：",
     "keyboard_button": "鍵盤按鍵：",
     "click_type": "點擊類型：",
+    "single_click": "單擊",
+    "double_click": "雙擊",
     "input_method": "輸入方式：",
     "mouse_radio": "滑鼠",
     "keyboard_radio": "鍵盤",
@@ -16,4 +29,84 @@ traditional_chinese_word_dict = {
     "times": "次數",
     "start": "開始",
     "stop": "停止",
+    "hotkey_label": "組合鍵（逗號分隔）：",
+    "hotkey_send": "送出組合鍵",
+    "write_label": "輸入文字：",
+    "write_send": "輸入",
+    "mouse_scroll_label": "滾動值：",
+    "scroll_direction_label": "滾動方向：",
+    "scroll_send": "滾動",
+    "get_position": "取得滑鼠位置",
+    "current_position": "目前位置：",
+
+    # Screenshot Tab
+    "take_screenshot": "截取螢���",
+    "save_screenshot": "儲存截圖",
+    "file_path_label": "檔案路徑：",
+    "browse": "瀏覽",
+    "region_label": "區域 (x1, y1, x2, y2)：",
+    "get_pixel_label": "取得像素顏色",
+    "pixel_x": "X：",
+    "pixel_y": "Y：",
+    "pixel_result": "像素顏色：",
+    "screen_size_label": "螢幕大小：",
+    "get_screen_size": "取得螢幕大小",
+
+    # Image Detection Tab
+    "template_image": "模板影像：",
+    "threshold_label": "精確度 (0.0~1.0)：",
+    "locate_image": "尋找影像",
+    "locate_all": "尋找全部",
+    "locate_click": "尋找並點擊",
+    "detection_result": "偵測結果：",
+    "draw_image_check": "標記偵測結果",
+
+    # Record / Playback Tab
+    "start_record": "開始錄製",
+    "stop_record": "停止錄製",
+    "playback": "回放",
+    "save_record": "儲存為 JSON",
+    "load_record": "載入 JSON",
+    "record_status": "狀態：",
+    "record_idle": "閒置",
+    "record_recording": "錄製中...",
+    "record_list_label": "已錄製動作：",
+
+    # Script Executor Tab
+    "load_script": "載入腳本 (JSON)",
+    "execute_script": "執行",
+    "execute_dir_label": "執行目錄：",
+    "execute_dir": "執行全部",
+    "script_content": "腳本內容：",
+    "execution_result": "執行結果：",
+
+    # Screen Recording Tab
+    "recorder_name": "錄影器名稱：",
+    "output_file": "輸出檔案：",
+    "codec_label": "編碼器：",
+    "fps_label": "FPS：",
+    "resolution_label": "解析度 (寬x高)：",
+    "start_screen_record": "開始錄影",
+    "stop_screen_record": "停止錄影",
+    "screen_record_status": "狀態：",
+
+    # Shell Tab
+    "shell_command_label": "Shell 命令：",
+    "execute_shell": "執行",
+    "shell_output": "輸出：",
+    "start_exe_label": "可執行檔路徑：",
+    "start_exe": "啟動可執行檔",
+
+    # Report Tab
+    "report_name": "報告名稱：",
+    "generate_html_report": "產生 HTML 報告",
+    "generate_json_report": "產生 JSON 報告",
+    "generate_xml_report": "產生 XML 報告",
+    "enable_test_record": "啟用測試紀錄",
+    "disable_test_record": "停用測試紀錄",
+    "test_record_status": "測試紀錄：",
+    "report_result": "結果：",
+
+    # Language
+    "language_label": "語言：",
 }

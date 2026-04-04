@@ -481,7 +481,7 @@ Keyboard keys API
         "|": osx_key_bar,
         ",": osx_key_comma,
         "<": osx_key_less,
-        "/": osx_key_salsh,
+        "/": osx_key_slash,
         "?": osx_key_question,
         ".": osx_key_period,
         ">": osx_key_greater,

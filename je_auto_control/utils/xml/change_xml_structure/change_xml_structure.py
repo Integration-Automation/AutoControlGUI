@@ -59,14 +59,17 @@ def dict_to_elements_tree(json_dict: Dict[str, Any]) -> str:
             root.text = json_dict
         elif isinstance(json_dict, dict):
             for key, value in json_dict.items():
-                assert isinstance(key, str)
+                if not isinstance(key, str):
+                    raise TypeError(f"Expected str key, got {type(key)}")
                 if key.startswith('#'):
                     # 處理文字節點 Handle text node
-                    assert key == '#text' and isinstance(value, str)
+                    if key != '#text' or not isinstance(value, str):
+                        raise ValueError(f"Invalid text node: key={key}, value type={type(value)}")
                     root.text = value
                 elif key.startswith('@'):
                     # 處理屬性 Handle attributes
-                    assert isinstance(value, str)
+                    if not isinstance(value, str):
+                        raise TypeError(f"Expected str attribute value, got {type(value)}")
                     root.set(key[1:], value)
                 elif isinstance(value, list):
                     # 處理多個子節點 Handle multiple children
@@ -78,7 +81,8 @@ def dict_to_elements_tree(json_dict: Dict[str, Any]) -> str:
         else:
             raise TypeError(f"Invalid type: {type(json_dict)}")
 
-    assert isinstance(json_dict, dict) and len(json_dict) == 1
+    if not isinstance(json_dict, dict) or len(json_dict) != 1:
+        raise TypeError(f"Expected dict with exactly 1 key, got {type(json_dict)} with {len(json_dict) if isinstance(json_dict, dict) else 'N/A'} keys")
     tag, body = next(iter(json_dict.items()))
     node = ElementTree.Element(tag)
     _to_elements_tree(body, node)

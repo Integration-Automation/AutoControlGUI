@@ -50,7 +50,7 @@ osx_key_k = osx_key_K = 0x28
 osx_key_semicolon = osx_key_colon = 0x29
 osx_key_backslash = osx_key_bar = 0x2a
 osx_key_comma = osx_key_less = 0x2b
-osx_key_salsh = osx_key_question = 0x2c
+osx_key_slash = osx_key_question = 0x2c
 osx_key_n = osx_key_N = 0x2d
 osx_key_m = osx_key_M = 0x2e
 osx_key_period = osx_key_greater = 0x2f

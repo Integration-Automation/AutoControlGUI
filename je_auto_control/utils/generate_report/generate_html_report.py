@@ -2,7 +2,7 @@ from threading import Lock
 
 from je_auto_control.utils.exception.exception_tags import html_generate_no_data_tag_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlHTMLException
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
 
 _lock = Lock()

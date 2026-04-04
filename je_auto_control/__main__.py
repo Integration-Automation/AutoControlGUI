@@ -25,12 +25,10 @@ if __name__ == "__main__":
 
 
         def preprocess_read_str_execute_action(execute_str: str):
-            if sys.platform in ["win32", "cygwin", "msys"]:
-                json_data = json.loads(execute_str)
-                execute_str = json.loads(json_data)
-            else:
-                execute_str = json.loads(execute_str)
-            execute_action(execute_str)
+            json_data = json.loads(execute_str)
+            if isinstance(json_data, str):
+                json_data = json.loads(json_data)
+            execute_action(json_data)
 
 
         argparse_event_dict = {

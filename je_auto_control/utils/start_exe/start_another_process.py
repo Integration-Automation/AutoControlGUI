@@ -2,7 +2,7 @@ from pathlib import Path
 
 from je_auto_control.utils.exception.exception_tags import can_not_find_file_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.shell_process.shell_exec import ShellManager
 
 
@@ -30,6 +30,6 @@ def start_exe(exe_path: str) -> None:
             raise AutoControlException(f"Failed to execute {exe_path_obj}: {repr(error)}")
     else:
         autocontrol_logger.error(
-            f"start_exe, exe_path: {exe_path_obj}, failed: {AutoControlException(can_not_find_file_error_message)}"
+            f"start_exe, exe_path: {exe_path_obj}, failed: {can_not_find_file_error_message}"
         )
         raise AutoControlException(can_not_find_file_error_message)

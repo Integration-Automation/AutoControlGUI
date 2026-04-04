@@ -1,6 +1,6 @@
 from je_auto_control.gui.language_wrapper.english import english_word_dict
 from je_auto_control.gui.language_wrapper.traditional_chinese import traditional_chinese_word_dict
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 

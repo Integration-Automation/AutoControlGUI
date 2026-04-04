@@ -5,7 +5,7 @@ from types import ModuleType
 from sys import stderr
 from typing import Optional
 
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 class PackageManager:

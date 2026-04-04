@@ -38,9 +38,11 @@ def get_pid_by_window_title(title: str) -> int | None:
     :param title: Window title 視窗標題
     :return: PID (int) or None 若找到則回傳 PID，否則回傳 None
     """
+    # 轉義 AppleScript 字串中的特殊字元 Escape special characters for AppleScript
+    escaped_title = title.replace("\\", "\\\\").replace('"', '\\"')
     # AppleScript 腳本，用來搜尋視窗標題
     script = f'''
-    set targetWindowName to "{title}"
+    set targetWindowName to "{escaped_title}"
     tell application "System Events"
         repeat with proc in processes
             repeat with win in windows of proc
@@ -57,5 +59,5 @@ def get_pid_by_window_title(title: str) -> int | None:
             stderr=subprocess.DEVNULL
         ).decode().strip()
         return int(pid_str) if pid_str else None
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, ValueError):
         return None

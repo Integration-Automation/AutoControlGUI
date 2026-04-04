@@ -10,4 +10,4 @@ import os
 from Xlib.display import Display
 
 # get x system display
-display = Display(os.environ['DISPLAY'])
+display = Display(os.environ.get('DISPLAY', ':0'))

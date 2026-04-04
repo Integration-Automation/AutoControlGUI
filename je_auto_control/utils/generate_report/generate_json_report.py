@@ -4,7 +4,7 @@ from typing import Dict, Tuple
 
 from je_auto_control.utils.exception.exception_tags import cant_generate_json_report_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlGenerateJsonReportException
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
 
 

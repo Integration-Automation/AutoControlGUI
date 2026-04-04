@@ -70,7 +70,6 @@ def keyboard_handler(event) -> None:
     if keycode == 98:  # 特殊情況：忽略 keycode 98
         return
     record_queue.put(("AC_type_keyboard", keycode))
-    print(event)
 
 
 def osx_record() -> None:

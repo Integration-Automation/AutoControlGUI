@@ -19,18 +19,18 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
         else:
             try:
                 execute_str = json.loads(command_string)
-                for execute_function, execute_return in execute_action(execute_str).items():
-                    socket.sendto(str(execute_return).encode("utf-8"), self.client_address)
-                    socket.sendto("\n".encode("utf-8"), self.client_address)
-                socket.sendto("Return_Data_Over_JE".encode("utf-8"), self.client_address)
-                socket.sendto("\n".encode("utf-8"), self.client_address)
+                for _, execute_return in execute_action(execute_str).items():
+                    socket.sendall(str(execute_return).encode("utf-8"))
+                    socket.sendall("\n".encode("utf-8"))
+                socket.sendall("Return_Data_Over_JE".encode("utf-8"))
+                socket.sendall("\n".encode("utf-8"))
             except Exception as error:
                 print(repr(error), file=sys.stderr)
                 try:
-                    socket.sendto(str(error).encode("utf-8"), self.client_address)
-                    socket.sendto("\n".encode("utf-8"), self.client_address)
-                    socket.sendto("Return_Data_Over_JE".encode("utf-8"), self.client_address)
-                    socket.sendto("\n".encode("utf-8"), self.client_address)
+                    socket.sendall(str(error).encode("utf-8"))
+                    socket.sendall("\n".encode("utf-8"))
+                    socket.sendall("Return_Data_Over_JE".encode("utf-8"))
+                    socket.sendall("\n".encode("utf-8"))
                 except Exception as error:
                     print(repr(error))
 
