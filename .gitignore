@@ -123,3 +123,4 @@ dmypy.json
 .idea/workspace.xml
 .claude/settings.local.json
 /.claude/
+/.claude
