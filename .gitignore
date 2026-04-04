@@ -124,3 +124,4 @@ dmypy.json
 .claude/settings.local.json
 /.claude/
 /.claude
+/.idea
