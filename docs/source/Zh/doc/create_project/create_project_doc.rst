@@ -1,23 +1,47 @@
-創建專案
-----
+========
+專案管理
+========
 
-在 AutoControl 裡可以創建專案，創建專案後將會自動生成範例文件，
-範例文件包含 python executor 檔案以及 keyword.json 檔案。
+AutoControl 可以建立專案目錄架構與範本檔案，幫助你快速開始。
 
-要創建專案可以用以下方式:
+建立專案
+========
+
+使用 Python：
 
 .. code-block:: python
 
-    from je_auto_control import create_project_dir
-    # create on current workdir
-    create_project_dir()
-    # create project on project_path
-    create_project_dir("project_path")
-    # create project on project_path and dir name is My First Project
-    create_project_dir("project_path", "My First Project")
+   from je_auto_control import create_project_dir
 
-或是這個方式將會在 project_path 路徑產生專案
+   # 在目前工作目錄建立
+   create_project_dir()
 
-.. code-block:: console
+   # 在指定路徑建立
+   create_project_dir("path/to/project")
 
-    python -m je_auto_control --create_project project_path
+   # 在指定路徑建立，並自訂目錄名稱
+   create_project_dir("path/to/project", "My First Project")
+
+使用 CLI：
+
+.. code-block:: bash
+
+   python -m je_auto_control --create_project "path/to/project"
+
+產生的目錄結構
+==============
+
+.. code-block:: text
+
+   my_project/
+   └── AutoControl/
+       ├── keyword/
+       │   ├── keyword1.json          # 動作範本檔案
+       │   ├── keyword2.json          # 動作範本檔案
+       │   └── bad_keyword_1.json     # 錯誤處理範本
+       └── executor/
+           ├── executor_one_file.py   # 執行單一檔案範例
+           ├── executor_folder.py     # 執行資料夾範例
+           └── executor_bad_file.py   # 錯誤處理範例
+
+``keyword/`` 目錄包含 JSON 動作檔案，``executor/`` 目錄包含示範如何執行的 Python 腳本。

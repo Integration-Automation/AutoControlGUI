@@ -1,84 +1,127 @@
+=========
 Mouse API
+=========
+
+Functions for controlling the mouse cursor.
+
 ----
 
-.. code-block:: python
+get_mouse_table
+===============
 
-    def get_mouse_table():
-        return mouse_keys_table
+.. function:: get_mouse_table()
 
-.. code-block:: python
+   Returns the mouse key table for the current platform.
 
-    def mouse_preprocess(mouse_keycode: [int, str], x: int, y: int) -> Tuple[Union[int, str], int, int]:
-        """
-        check mouse keycode is verified or not
-        and then check current mouse position
-        if x or y is None set x, y is current position
-        :param mouse_keycode which mouse keycode we want to click
-        :param x mouse click x position
-        :param y mouse click y position
-        """
+   :returns: Dictionary mapping mouse button names to platform-specific key codes.
+   :rtype: dict
 
-.. code-block:: python
+----
 
-    def get_mouse_position() -> Tuple[int, int]:
-        """
-        get mouse current position
-        return mouse_x, mouse_y
-        """
+mouse_preprocess
+================
 
-.. code-block:: python
+.. function:: mouse_preprocess(mouse_keycode, x, y)
 
-    def set_mouse_position(x: int, y: int) -> Tuple[int, int]:
-        """
-        :param x set mouse position x
-        :param y set mouse position y
-        return x, y
-        """
+   Validates the mouse key code and resolves the cursor position.
+   If ``x`` or ``y`` is ``None``, the current mouse position is used.
 
-.. code-block:: python
+   :param mouse_keycode: Mouse button name or key code.
+   :type mouse_keycode: int or str
+   :param x: X coordinate. If ``None``, uses current position.
+   :type x: int
+   :param y: Y coordinate. If ``None``, uses current position.
+   :type y: int
+   :returns: Tuple of ``(keycode, x, y)``.
+   :rtype: tuple
 
-    def press_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tuple[Union[int, str], int, int]:
-        """
-        press mouse keycode on x, y
-        return keycode, x, y
-        :param mouse_keycode which mouse keycode we want to press
-        :param x mouse click x position
-        :param y mouse click y position
-        """
+----
 
-.. code-block:: python
+get_mouse_position
+==================
 
-    def release_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tuple[Union[int, str], int, int]:
-        """
-        release mouse keycode on x, y
-        return keycode, x, y
-        :param mouse_keycode which mouse keycode we want to release
-        :param x mouse click x position
-        :param y mouse click y position
-        """
+.. function:: get_mouse_position()
 
-.. code-block:: python
+   Returns the current mouse cursor position.
 
-    def click_mouse(mouse_keycode: [int, str], x: int = None, y: int = None) -> Tuple[Union[int, str], int, int]:
-        """
-        press and release mouse keycode on x, y
-        return keycode, x, y
-        :param mouse_keycode which mouse keycode we want to click
-        :param x mouse click x position
-        :param y mouse click y position
-        """
+   :returns: Tuple of ``(x, y)``.
+   :rtype: tuple[int, int]
 
-.. code-block:: python
+----
 
-    def mouse_scroll(scroll_value: int, x: int = None, y: int = None, scroll_direction: str = "scroll_down") -> Tuple[int, str]:
-        """"
-        :param scroll_value scroll count
-        :param x mouse click x position
-        :param y mouse click y position
-        :param scroll_direction which direction we want to scroll (only linux)
-        scroll_direction = scroll_up : direction up
-        scroll_direction = scroll_down : direction down
-        scroll_direction = scroll_left : direction left
-        scroll_direction = scroll_right : direction right
-        """
+set_mouse_position
+==================
 
+.. function:: set_mouse_position(x, y)
+
+   Moves the mouse cursor to the specified coordinates.
+
+   :param int x: Target X position.
+   :param int y: Target Y position.
+   :returns: Tuple of ``(x, y)``.
+   :rtype: tuple[int, int]
+
+----
+
+press_mouse
+===========
+
+.. function:: press_mouse(mouse_keycode, x=None, y=None)
+
+   Presses and holds a mouse button at the specified position.
+
+   :param mouse_keycode: Mouse button name (e.g., ``"mouse_left"``).
+   :type mouse_keycode: int or str
+   :param int x: X position (default: current position).
+   :param int y: Y position (default: current position).
+   :returns: Tuple of ``(keycode, x, y)``.
+   :rtype: tuple
+
+----
+
+release_mouse
+=============
+
+.. function:: release_mouse(mouse_keycode, x=None, y=None)
+
+   Releases a previously pressed mouse button.
+
+   :param mouse_keycode: Mouse button name (e.g., ``"mouse_left"``).
+   :type mouse_keycode: int or str
+   :param int x: X position (default: current position).
+   :param int y: Y position (default: current position).
+   :returns: Tuple of ``(keycode, x, y)``.
+   :rtype: tuple
+
+----
+
+click_mouse
+===========
+
+.. function:: click_mouse(mouse_keycode, x=None, y=None)
+
+   Presses and releases a mouse button at the specified position.
+
+   :param mouse_keycode: Mouse button name (e.g., ``"mouse_left"``).
+   :type mouse_keycode: int or str
+   :param int x: X position (default: current position).
+   :param int y: Y position (default: current position).
+   :returns: Tuple of ``(keycode, x, y)``.
+   :rtype: tuple
+
+----
+
+mouse_scroll
+============
+
+.. function:: mouse_scroll(scroll_value, x=None, y=None, scroll_direction="scroll_down")
+
+   Scrolls the mouse wheel.
+
+   :param int scroll_value: Number of scroll units.
+   :param int x: X position (default: current position).
+   :param int y: Y position (default: current position).
+   :param str scroll_direction: Scroll direction (Linux only). One of:
+      ``"scroll_up"``, ``"scroll_down"``, ``"scroll_left"``, ``"scroll_right"``.
+   :returns: Tuple of ``(scroll_value, direction)``.
+   :rtype: tuple

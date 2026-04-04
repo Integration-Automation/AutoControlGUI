@@ -1,17 +1,54 @@
+============
 命令列介面
-----
+============
 
-我們可以使用 CLI 模式去執行 keyword.json 檔案或執行包含 Keyword.json files 的資料夾，
-以下這個範例是去執行指定路徑的關鍵字 json 檔
+AutoControl 可以直接從命令列執行自動化腳本。
 
-.. code-block::
+執行單一動作檔案
+================
 
-    python je_auto_control --execute_file "your_file_path"
+.. code-block:: bash
 
+   python -m je_auto_control --execute_file "path/to/actions.json"
 
+   # 簡寫
+   python -m je_auto_control -e "path/to/actions.json"
 
-以下這個範例是去執行指定路徑資料夾下所有的 keyword json 檔
+執行資料夾內所有檔案
+====================
 
-.. code-block::
+.. code-block:: bash
 
-    python je_auto_control --execute_dir "your_dir_path"
+   python -m je_auto_control --execute_dir "path/to/action_files/"
+
+   # 簡寫
+   python -m je_auto_control -d "path/to/action_files/"
+
+直接執行 JSON 字串
+==================
+
+.. code-block:: bash
+
+   python -m je_auto_control --execute_str '[["AC_screenshot", {"file_path": "test.png"}]]'
+
+建立專案範本
+============
+
+.. code-block:: bash
+
+   python -m je_auto_control --create_project "path/to/my_project"
+
+   # 簡寫
+   python -m je_auto_control -c "path/to/my_project"
+
+啟動 GUI
+========
+
+.. code-block:: bash
+
+   python -m je_auto_control
+
+.. note::
+
+   啟動 GUI 需要安裝 ``[gui]`` 額外套件：
+   ``pip install je_auto_control[gui]``

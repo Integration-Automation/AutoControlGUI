@@ -1,156 +1,84 @@
-Generate Report
-----
+=================
+Report Generation
+=================
 
-* Generate Report can generate reports in the following formats:
- * HTML
- * JSON
- * XML
+AutoControl can generate test reports in HTML, JSON, and XML formats. Reports record
+which automation steps were executed and whether they succeeded or failed.
 
-* Generate Report is mainly used to record and confirm which steps were executed and whether they were successful or not.
-* If you want to use Generate Report, you need to set the recording to True by using test_record_instance.init_record = True.
-* The following example is used with keywords and an executor. If you don't understand, please first take a look at the executor.
+Setup
+=====
 
-Here's an example of generating an HTML report.
+Before generating reports, enable test recording:
 
 .. code-block:: python
 
-    import sys
+   from je_auto_control import test_record_instance
 
-    from je_auto_control import execute_action
-    from je_auto_control import test_record_instance
+   test_record_instance.init_record = True
 
-    test_list = None
-    test_record_instance.init_record = True
-    if sys.platform in ["win32", "cygwin", "msys"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 65}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_html_report"],
-        ]
+.. important::
 
-    elif sys.platform in ["linux", "linux2"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 38}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_html_report"],
-        ]
-    elif sys.platform in ["darwin"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 0x00}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_html_report"],
-        ]
-    print("\n\n")
-    execute_action(test_list)
+   Recording must be enabled **before** executing actions, otherwise no data will be captured.
 
+Generating Reports
+==================
 
-Here's an example of generating an JSON report.
+HTML Report
+-----------
 
 .. code-block:: python
 
-    import sys
+   from je_auto_control import execute_action, generate_html_report, test_record_instance
 
-    from je_auto_control import execute_action
-    from je_auto_control import test_record_instance
+   test_record_instance.init_record = True
 
-    test_list = None
-    test_record_instance.init_record = True
-    if sys.platform in ["win32", "cygwin", "msys"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 65}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_json_report"],
-        ]
+   actions = [
+       ["set_record_enable", {"set_enable": True}],
+       ["AC_set_mouse_position", {"x": 500, "y": 500}],
+       ["AC_click_mouse", {"mouse_keycode": "mouse_left"}],
+       ["generate_html_report"],
+   ]
+   execute_action(actions)
 
-    elif sys.platform in ["linux", "linux2"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 38}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_json_report"],
-        ]
-    elif sys.platform in ["darwin"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 0x00}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_json_report"],
-        ]
-    print("\n\n")
-    execute_action(test_list)
+This produces an HTML file where successful actions appear in **cyan** and failed actions in **red**.
 
-Here's an example of generating an XML report.
+JSON Report
+-----------
 
 .. code-block:: python
 
-    import sys
+   from je_auto_control import generate_json_report
 
-    from je_auto_control import execute_action
-    from je_auto_control import test_record_instance
+   generate_json_report("test_report")  # -> test_report.json
 
-    test_list = None
-    test_record_instance.init_record = True
-    if sys.platform in ["win32", "cygwin", "msys"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 65}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_xml_report"]
-        ]
+XML Report
+----------
 
-    elif sys.platform in ["linux", "linux2"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 38}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_xml_report"]
-        ]
-    elif sys.platform in ["darwin"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 0x00}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_xml_report"]
-        ]
-    print("\n\n")
-    execute_action(test_list)
+.. code-block:: python
+
+   from je_auto_control import generate_xml_report
+
+   generate_xml_report("test_report")  # -> test_report.xml
+
+Getting Report Content as String
+================================
+
+If you need the report content without saving to a file:
+
+.. code-block:: python
+
+   from je_auto_control import generate_html, generate_json, generate_xml
+
+   html_string = generate_html()
+   json_data = generate_json()
+   xml_data = generate_xml()
+
+Report Contents
+===============
+
+Each report entry includes:
+
+* **Function name** -- the automation function that was called
+* **Parameters** -- the arguments passed to the function
+* **Timestamp** -- when the action was executed
+* **Exception info** -- error details if the action failed

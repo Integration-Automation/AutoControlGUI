@@ -1,31 +1,60 @@
+============
 Installation
-----
+============
 
-.. code-block:: python
+Install from PyPI
+=================
 
-    pip install je_auto_control
+.. code-block:: bash
 
-* Python & pip require version
-    * Python 3.7 & up
-    * pip 19.3 & up
+   pip install je_auto_control
 
-* Dev env
-    * windows 11
-    * osx 11 big sur
-    * ubuntu 20.0.4
+Requirements
+============
 
-| If you want install on raspberry pi
+* Python 3.10 or higher
+* pip 19.3 or higher
 
-.. code-block:: python
+With GUI Support
+================
 
-    sudo apt-get install python3
-    pip3 install je_auto_control
-    sudo apt-get install libcblas-dev
-    sudo apt-get install libhdf5-dev
-    sudo apt-get install libhdf5-serial-dev
-    sudo apt-get install libatlas-base-dev
-    sudo apt-get install libjasper-dev
-    sudo apt-get install libqtgui4
-    sudo apt-get install libqt4-test
-    pip3 install -U pillow
-    pip3 install -U numpy
+.. code-block:: bash
+
+   pip install je_auto_control[gui]
+
+Linux Prerequisites
+===================
+
+.. code-block:: bash
+
+   sudo apt-get install cmake libssl-dev
+
+Raspberry Pi
+============
+
+.. code-block:: bash
+
+   sudo apt-get install python3
+   pip3 install je_auto_control
+   sudo apt-get install libcblas-dev libhdf5-dev libhdf5-serial-dev
+   sudo apt-get install libatlas-base-dev libjasper-dev
+   sudo apt-get install libqtgui4 libqt4-test
+   pip3 install -U pillow numpy
+
+Development Environment
+=======================
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Platform
+     - Tested Version
+   * - Windows
+     - Windows 11
+   * - macOS
+     - macOS Big Sur (11)
+   * - Linux
+     - Ubuntu 20.04
+   * - Raspberry Pi
+     - 3B / 4B

@@ -1,40 +1,76 @@
-Mouse keys API
-----
+==========
+Mouse Keys
+==========
 
-* Windows
+Mouse button key names available per platform.
 
-.. code-block:: python
+Windows
+=======
 
-        mouse_keys_table = {
-        "mouse_left": win32_mouse_left,
-        "mouse_middle": win32_mouse_middle,
-        "mouse_right": win32_mouse_right,
-        "mouse_x1": win32_mouse_x1,
-        "mouse_x2": win32_mouse_x2
-    }
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
 
-* Linux
+   * - Key Name
+     - Description
+   * - ``mouse_left``
+     - Left mouse button
+   * - ``mouse_middle``
+     - Middle mouse button (scroll wheel click)
+   * - ``mouse_right``
+     - Right mouse button
+   * - ``mouse_x1``
+     - Extra button 1 (back)
+   * - ``mouse_x2``
+     - Extra button 2 (forward)
 
-.. code-block:: python
+Linux (X11)
+===========
 
-    mouse_keys_table = {
-        "mouse_left": x11_linux_mouse_left,
-        "mouse_middle": x11_linux_mouse_middle,
-        "mouse_right": x11_linux_mouse_right
-    }
-    special_mouse_keys_table = {
-        "scroll_up": x11_linux_scroll_direction_up,
-        "scroll_down": x11_linux_scroll_direction_down,
-        "scroll_left": x11_linux_scroll_direction_left,
-        "scroll_right": x11_linux_scroll_direction_right
-    }
+**Standard buttons:**
 
-* MacOS
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
 
-.. code-block:: python
+   * - Key Name
+     - Description
+   * - ``mouse_left``
+     - Left mouse button
+   * - ``mouse_middle``
+     - Middle mouse button
+   * - ``mouse_right``
+     - Right mouse button
 
-     mouse_keys_table = {
-        "mouse_left": osx_mouse_left,
-        "mouse_middle": osx_mouse_middle,
-        "mouse_right": osx_mouse_right,
-    }
+**Scroll directions (special keys):**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Key Name
+     - Description
+   * - ``scroll_up``
+     - Scroll up
+   * - ``scroll_down``
+     - Scroll down
+   * - ``scroll_left``
+     - Scroll left
+   * - ``scroll_right``
+     - Scroll right
+
+macOS
+=====
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Key Name
+     - Description
+   * - ``mouse_left``
+     - Left mouse button
+   * - ``mouse_middle``
+     - Middle mouse button
+   * - ``mouse_right``
+     - Right mouse button

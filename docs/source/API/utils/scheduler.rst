@@ -1,192 +1,117 @@
+=============
 Scheduler API
+=============
+
+The ``SchedulerManager`` class wraps APScheduler for scheduling automation tasks.
+
 ----
 
-.. code-block:: python
+SchedulerManager
+================
 
-    def add_blocking_job(
-        self, func: Callable, trigger: str = None, args: Union[list, tuple] = None,
-        kwargs: dict = None, id: str = None, name: str = None,
-        misfire_grace_time: int = undefined, coalesce: bool = undefined, max_instances: int = undefined,
-        next_run_time: datetime = undefined, jobstore: str = 'default', executor: str = 'default',
-        replace_existing: bool = False, **trigger_args: Any) -> Job:
-            """
-            Just an apscheduler add job wrapper.
-            :param func: callable (or a textual reference to one) to run at the given time
-            :param str|apscheduler.triggers.base.BaseTrigger trigger: trigger that determines when
-                ``func`` is called
-            :param list|tuple args: list of positional arguments to call func with
-            :param dict kwargs: dict of keyword arguments to call func with
-            :param str|unicode id: explicit identifier for the job (for modifying it later)
-            :param str|unicode name: textual description of the job
-            :param int misfire_grace_time: seconds after the designated runtime that the job is still
-                allowed to be run (or ``None`` to allow the job to run no matter how late it is)
-            :param bool coalesce: run once instead of many times if the scheduler determines that the
-                job should be run more than once in succession
-            :param int max_instances: maximum number of concurrently running instances allowed for this
-                job
-            :param datetime next_run_time: when to first run the job, regardless of the trigger (pass
-                ``None`` to add the job as paused)
-            :param str|unicode jobstore: alias of the job store to store the job in
-            :param str|unicode executor: alias of the executor to run the job with
-            :param bool replace_existing: ``True`` to replace an existing job with the same ``id``
-                (but retain the number of runs from the existing one)
-            :return: Job
-            """
+.. class:: SchedulerManager
 
-.. code-block:: python
+   Manages blocking and non-blocking schedulers.
 
-    def add_nonblocking_job(
-        self, func: Callable, trigger: str = None, args: Union[list, tuple] = None,
-        kwargs: dict = None, id: str = None, name: str = None,
-        misfire_grace_time: int = undefined, coalesce: bool = undefined, max_instances: int = undefined,
-        next_run_time: datetime = undefined, jobstore: str = 'default', executor: str = 'default',
-        replace_existing: bool = False, **trigger_args: Any) -> Job:
-            """
-            Just an apscheduler add job wrapper.
-            :param func: callable (or a textual reference to one) to run at the given time
-            :param str|apscheduler.triggers.base.BaseTrigger trigger: trigger that determines when
-                ``func`` is called
-            :param list|tuple args: list of positional arguments to call func with
-            :param dict kwargs: dict of keyword arguments to call func with
-            :param str|unicode id: explicit identifier for the job (for modifying it later)
-            :param str|unicode name: textual description of the job
-            :param int misfire_grace_time: seconds after the designated runtime that the job is still
-                allowed to be run (or ``None`` to allow the job to run no matter how late it is)
-            :param bool coalesce: run once instead of many times if the scheduler determines that the
-                job should be run more than once in succession
-            :param int max_instances: maximum number of concurrently running instances allowed for this
-                job
-            :param datetime next_run_time: when to first run the job, regardless of the trigger (pass
-                ``None`` to add the job as paused)
-            :param str|unicode jobstore: alias of the job store to store the job in
-            :param str|unicode executor: alias of the executor to run the job with
-            :param bool replace_existing: ``True`` to replace an existing job with the same ``id``
-                (but retain the number of runs from the existing one)
-            :return: Job
-            """
+   Adding Jobs
+   -----------
 
-.. code-block:: python
+   .. method:: add_blocking_job(func, trigger=None, args=None, kwargs=None, id=None, name=None, misfire_grace_time=undefined, coalesce=undefined, max_instances=undefined, next_run_time=undefined, jobstore='default', executor='default', replace_existing=False, **trigger_args)
 
-     def get_blocking_scheduler(self) -> BlockingScheduler:
-        """
-        Return self blocking scheduler
-        :return: BlockingScheduler
-        """
+      Adds a job to the blocking scheduler. Wraps APScheduler's ``add_job()``.
 
-.. code-block:: python
+      :param callable func: Function to run.
+      :param str trigger: Trigger type (e.g., ``"interval"``, ``"cron"``).
+      :param str id: Unique job identifier.
+      :param str name: Human-readable job name.
+      :param bool replace_existing: If ``True``, replaces a job with the same ``id``.
+      :returns: The created Job instance.
+      :rtype: Job
 
-        def get_nonblocking_scheduler(self) -> BackgroundScheduler:
-            """
-            Return self background scheduler
-            :return: BackgroundScheduler
-            """
+   .. method:: add_nonblocking_job(func, trigger=None, args=None, kwargs=None, id=None, name=None, **trigger_args)
 
-.. code-block:: python
+      Adds a job to the non-blocking (background) scheduler. Same parameters as ``add_blocking_job()``.
 
-    def start_block_scheduler(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Start blocking scheduler
-        :return: None
-        """
+   Interval Scheduling
+   -------------------
 
-.. code-block:: python
+   Convenience methods for interval-based scheduling. All accept ``function``, ``id``, ``args``, ``kwargs``, and the interval parameter.
 
-    def start_nonblocking_scheduler(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Start background scheduler
-        :return: None
-        """
+   **Blocking:**
 
-.. code-block:: python
+   .. method:: add_interval_blocking_secondly(function, id=None, seconds=1, **trigger_args)
+   .. method:: add_interval_blocking_minutely(function, id=None, minutes=1, **trigger_args)
+   .. method:: add_interval_blocking_hourly(function, id=None, hours=1, **trigger_args)
+   .. method:: add_interval_blocking_daily(function, id=None, days=1, **trigger_args)
+   .. method:: add_interval_blocking_weekly(function, id=None, weeks=1, **trigger_args)
 
-    def start_all_scheduler(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Start background and blocking scheduler
-        :return: None
-        """
+   **Non-blocking:**
 
-.. code-block:: python
+   .. method:: add_interval_nonblocking_secondly(function, id=None, seconds=1, **trigger_args)
+   .. method:: add_interval_nonblocking_minutely(function, id=None, minutes=1, **trigger_args)
+   .. method:: add_interval_nonblocking_hourly(function, id=None, hours=1, **trigger_args)
+   .. method:: add_interval_nonblocking_daily(function, id=None, days=1, **trigger_args)
+   .. method:: add_interval_nonblocking_weekly(function, id=None, weeks=1, **trigger_args)
 
-    def add_interval_blocking_secondly(
-            self, function: Callable, id: str = None, args: Union[list, tuple] = None,
-            kwargs: dict = None, seconds: int = 1, **trigger_args: Any) -> Job:
+   Cron Scheduling
+   ---------------
 
-.. code-block:: python
+   .. method:: add_cron_blocking(function, id=None, **trigger_args)
 
-        def add_interval_blocking_minutely(
-            self, function: Callable, id: str = None, args: Union[list, tuple] = None,
-            kwargs: dict = None, minutes: int = 1, **trigger_args: Any) -> Job:
+      Adds a cron-triggered job to the blocking scheduler.
 
-.. code-block:: python
+   .. method:: add_cron_nonblocking(function, id=None, **trigger_args)
 
-    def add_interval_blocking_hourly(
-            self, function: Callable, id: str = None, args: Union[list, tuple] = None,
-            kwargs: dict = None, hours: int = 1, **trigger_args: Any) -> Job:
+      Adds a cron-triggered job to the non-blocking scheduler.
 
-.. code-block:: python
+   Scheduler Control
+   -----------------
 
-    def add_interval_blocking_daily(
-            self, function: Callable, id: str = None, args: Union[list, tuple] = None,
-            kwargs: dict = None, days: int = 1, **trigger_args: Any) -> Job:
+   .. method:: get_blocking_scheduler()
 
-.. code-block:: python
+      :returns: The blocking scheduler instance.
+      :rtype: BlockingScheduler
 
-    def add_interval_blocking_weekly(
-            self, function: Callable, id: str = None, args: Union[list, tuple] = None,
-            kwargs: dict = None, weeks: int = 1, **trigger_args: Any) -> Job:
+   .. method:: get_nonblocking_scheduler()
 
-.. code-block:: python
+      :returns: The background scheduler instance.
+      :rtype: BackgroundScheduler
 
-    def add_interval_nonblocking_secondly(
-            self, function: Callable, id: str = None, args: list = None,
-            kwargs: dict = None, seconds: int = 1, **trigger_args: Any) -> Job:
+   .. method:: start_block_scheduler(*args, **kwargs)
 
-.. code-block:: python
+      Starts the blocking scheduler (blocks the current thread).
 
-    def add_interval_nonblocking_minutely(
-            self, function: Callable, id: str = None, args: list = None,
-            kwargs: dict = None, minutes: int = 1, **trigger_args: Any) -> Job:
+   .. method:: start_nonblocking_scheduler(*args, **kwargs)
 
-.. code-block:: python
+      Starts the non-blocking scheduler in a background thread.
 
-    def add_interval_nonblocking_hourly(
-            self, function: Callable, id: str = None, args: Union[list, tuple] = None,
-            kwargs: dict = None, hours: int = 1, **trigger_args: Any) -> Job:
+   .. method:: start_all_scheduler(*args, **kwargs)
 
-.. code-block:: python
+      Starts both blocking and non-blocking schedulers.
 
-    def add_interval_nonblocking_daily(
-            self, function: Callable, id: str = None, args: Union[list, tuple] = None,
-            kwargs: dict = None, days: int = 1, **trigger_args: Any) -> Job:
+   Job Management
+   --------------
 
-.. code-block:: python
+   .. method:: remove_blocking_job(id, jobstore='default')
 
-    def add_interval_nonblocking_weekly(
-            self, function: Callable, id: str = None, args: Union[list, tuple] = None,
-            kwargs: dict = None, weeks: int = 1, **trigger_args: Any) -> Job:
+      Removes a job from the blocking scheduler.
 
-.. code-block:: python
+      :param str id: Job identifier.
 
-    def add_cron_blocking(
-        self, function: Callable, id: str = None, **trigger_args: Any) -> Job:
+   .. method:: remove_nonblocking_job(id, jobstore='default')
 
-.. code-block:: python
+      Removes a job from the non-blocking scheduler.
 
-    def add_cron_nonblocking(
-            self, function: Callable, id: str = None, **trigger_args: Any) -> Job:
+      :param str id: Job identifier.
 
-.. code-block:: python
+   .. method:: shutdown_blocking_scheduler(wait=False)
 
-    def remove_blocking_job(self, id: str, jobstore: str = 'default') -> Any:
+      Shuts down the blocking scheduler.
 
-.. code-block:: python
+      :param bool wait: If ``True``, waits for running jobs to finish.
 
-    def remove_nonblocking_job(self, id: str, jobstore: str = 'default') -> Any:
+   .. method:: shutdown_nonblocking_scheduler(wait=False)
 
-.. code-block:: python
+      Shuts down the non-blocking scheduler.
 
-    def shutdown_blocking_scheduler(self, wait: bool = False) -> None:
-
-.. code-block:: python
-
-        def shutdown_nonblocking_scheduler(self, wait: bool = False) -> None:
+      :param bool wait: If ``True``, waits for running jobs to finish.

@@ -1,42 +1,62 @@
+=============
 Critical Exit
-----
+=============
 
-* Critical Exit is a mechanism that provides fault protection.
-* Critical Exit is disabled by default.
-* If enabled, the default hotkey is F7.
-* To enable Critical Exit, call CriticalExit().init_critical_exit()
-* (enabling it will consume additional system resources).
+Critical Exit is a safety mechanism that allows you to forcibly stop an automation script
+by pressing a hotkey (default: **F7**).
 
-The following example is to make the mouse move uncontrollably and throw an exception.
-When the exception is caught, initialize the Critical Exit and automatically press F7.
-(Note! If you modify this example, you must be extremely careful.
-You may lose control of your computer, such as the mouse being out of control.)
+.. warning::
+
+   Critical Exit is **disabled by default**. Enabling it consumes additional system resources
+   as it runs a background thread that continuously monitors the keyboard.
+
+Enabling Critical Exit
+======================
 
 .. code-block:: python
 
-    import sys
+   from je_auto_control import CriticalExit
 
-    from je_auto_control import AutoControlMouseException
-    from je_auto_control import CriticalExit
-    from je_auto_control import press_key
-    from je_auto_control import set_position
-    from je_auto_control import size
+   CriticalExit().init_critical_exit()
 
-    # print your screen width and height
+After calling ``init_critical_exit()``, pressing **F7** will interrupt the main thread
+and terminate the program.
 
-    print(size())
+Changing the Hotkey
+===================
 
-    # simulate you can't use your mouse because you use while true to set mouse position
+.. code-block:: python
 
-    try:
-        from time import sleep
-        # Or no sleep
-        sleep(3)
-        while True:
-            set_mouse_position(200, 400)
-            set_mouse_position(400, 600)
-            raise AutoControlMouseException
-    except Exception as error:
-        print(repr(error), file=sys.stderr)
-        CriticalExit().init_critical_exit()
-        press_key("f7")
+   from je_auto_control import CriticalExit
+
+   critical = CriticalExit()
+   critical.set_critical_key("escape")  # Use Escape instead of F7
+   critical.init_critical_exit()
+
+Example: Recovering from Runaway Mouse
+=======================================
+
+.. code-block:: python
+
+   import sys
+   from je_auto_control import (
+       CriticalExit, AutoControlMouseException,
+       set_mouse_position, screen_size, press_keyboard_key
+   )
+
+   print(screen_size())
+
+   try:
+       while True:
+           set_mouse_position(200, 400)
+           set_mouse_position(400, 600)
+           raise AutoControlMouseException
+   except Exception as error:
+       print(repr(error), file=sys.stderr)
+       CriticalExit().init_critical_exit()
+       press_keyboard_key("f7")
+
+.. danger::
+
+   Be extremely careful when testing automation loops that move the mouse continuously.
+   Always have Critical Exit enabled or another way to regain control.

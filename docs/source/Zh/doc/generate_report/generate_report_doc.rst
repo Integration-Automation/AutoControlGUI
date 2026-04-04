@@ -1,156 +1,84 @@
+========
 報告產生
-----
+========
 
-Generate Report 可以生成以下格式的報告
+AutoControl 可以產生 HTML、JSON 和 XML 格式的測試報告。報告會記錄哪些自動化步驟被執行，
+以及是否成功。
 
-* HTML
-* JSON
-* XML
-* Generate Report 主要用來記錄與確認有哪些步驟執行，執行是否成功，
-* 如果要使用 Generate Report 需要先設定紀錄為 True，使用 test_record_instance.init_record = True
-* 下面的範例有搭配 keyword and executor 如果看不懂可以先去看看 executor
+設定
+====
 
-以下是產生 HTML 的範例。
+在產生報告之前，需先啟用測試記錄：
 
 .. code-block:: python
 
-    import sys
+   from je_auto_control import test_record_instance
 
-    from je_auto_control import execute_action
-    from je_auto_control import test_record_instance
+   test_record_instance.init_record = True
 
-    test_list = None
-    test_record_instance.init_record = True
-    if sys.platform in ["win32", "cygwin", "msys"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 65}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_html_report"],
-        ]
+.. important::
 
-    elif sys.platform in ["linux", "linux2"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 38}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_html_report"],
-        ]
-    elif sys.platform in ["darwin"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 0x00}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_html_report"],
-        ]
-    print("\n\n")
-    execute_action(test_list)
+   記錄必須在執行動作 **之前** 啟用，否則不會擷取到任何資料。
 
+產生報告
+========
 
-以下是產生 JSON 的範例。
+HTML 報告
+---------
 
 .. code-block:: python
 
-    import sys
+   from je_auto_control import execute_action, generate_html_report, test_record_instance
 
-    from je_auto_control import execute_action
-    from je_auto_control import test_record_instance
+   test_record_instance.init_record = True
 
-    test_list = None
-    test_record_instance.init_record = True
-    if sys.platform in ["win32", "cygwin", "msys"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 65}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_json_report"],
-        ]
+   actions = [
+       ["set_record_enable", {"set_enable": True}],
+       ["AC_set_mouse_position", {"x": 500, "y": 500}],
+       ["AC_click_mouse", {"mouse_keycode": "mouse_left"}],
+       ["generate_html_report"],
+   ]
+   execute_action(actions)
 
-    elif sys.platform in ["linux", "linux2"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 38}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_json_report"],
-        ]
-    elif sys.platform in ["darwin"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 0x00}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_json_report"],
-        ]
-    print("\n\n")
-    execute_action(test_list)
+產生的 HTML 報告中，成功的動作以 **青色** 顯示，失敗的動作以 **紅色** 顯示。
 
-以下是產生 XML 的範例。
+JSON 報告
+---------
 
 .. code-block:: python
 
-    import sys
+   from je_auto_control import generate_json_report
 
-    from je_auto_control import execute_action
-    from je_auto_control import test_record_instance
+   generate_json_report("test_report")  # -> test_report.json
 
-    test_list = None
-    test_record_instance.init_record = True
-    if sys.platform in ["win32", "cygwin", "msys"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 65}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_xml_report"]
-        ]
+XML 報告
+--------
 
-    elif sys.platform in ["linux", "linux2"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 38}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_xml_report"]
-        ]
-    elif sys.platform in ["darwin"]:
-        test_list = [
-            ["set_record_enable", {"set_enable": True}],
-            ["type_keyboard", {"keycode": 0x00}],
-            ["mouse_left", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["get_mouse_position"],
-            ["press_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["release_mouse", {"mouse_keycode": "mouse_left", "x": 500, "y": 500}],
-            ["type_keyboard", {"mouse_keycode": "dwadwawda", "dwadwad": 500, "wdawddwawad": 500}],
-            ["generate_xml_report"]
-        ]
-    print("\n\n")
-    execute_action(test_list)
+.. code-block:: python
+
+   from je_auto_control import generate_xml_report
+
+   generate_xml_report("test_report")  # -> test_report.xml
+
+取得報告內容為字串
+==================
+
+如果需要報告內容而不儲存為檔案：
+
+.. code-block:: python
+
+   from je_auto_control import generate_html, generate_json, generate_xml
+
+   html_string = generate_html()
+   json_data = generate_json()
+   xml_data = generate_xml()
+
+報告內容
+========
+
+每筆報告記錄包含：
+
+* **函式名稱** -- 被呼叫的自動化函式
+* **參數** -- 傳遞給函式的引數
+* **時間戳記** -- 動作執行的時間
+* **例外資訊** -- 動作失敗時的錯誤詳情
