@@ -38,12 +38,12 @@ def get_pixel(x: int, y: int, hwnd: int = 0) -> Tuple[int, int, int]:
     """
     dc = _user32.GetDC(hwnd)
     if not dc:
-        raise RuntimeError("GetDC failed")
+        raise AutoControlException("GetDC failed")
 
     try:
         pixel = _gdi32.GetPixel(dc, x, y)
         if pixel == 0xFFFFFFFF:  # GetPixel 失敗時回傳 -1 (0xFFFFFFFF)
-            raise RuntimeError("GetPixel failed")
+            raise AutoControlException("GetPixel failed")
 
         r = pixel & 0xFF
         g = (pixel >> 8) & 0xFF

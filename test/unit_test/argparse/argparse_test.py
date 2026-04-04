@@ -1,8 +1,9 @@
 import os
+import subprocess
 
 print(os.getcwd())
 
-os.system("cd " + os.getcwd())
-os.system("python je_auto_control --execute_file " + os.getcwd() + r"/test/unit_test/argparse/test1.json")
-os.system("python je_auto_control --execute_dir " + os.getcwd() + r"/test/unit_test/argparse")
-os.system("python je_auto_control --create_project " + os.getcwd())
+cwd = os.getcwd()
+subprocess.run(["python", "je_auto_control", "--execute_file", os.path.join(cwd, "test/unit_test/argparse/test1.json")])
+subprocess.run(["python", "je_auto_control", "--execute_dir", os.path.join(cwd, "test/unit_test/argparse")])
+subprocess.run(["python", "je_auto_control", "--create_project", cwd])

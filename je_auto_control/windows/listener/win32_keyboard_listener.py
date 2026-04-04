@@ -84,8 +84,8 @@ class Win32KeyboardListener(Thread):
         啟動鍵盤監聽
         Start keyboard listener
         """
-        pointer = _get_function_pointer(self._win32_hook_proc)
-        if not self._set_win32_hook(pointer):
+        self._pointer = _get_function_pointer(self._win32_hook_proc)
+        if not self._set_win32_hook(self._pointer):
             raise AutoControlException("Failed to set keyboard hook")
 
         message = MSG()

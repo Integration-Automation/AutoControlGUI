@@ -1,5 +1,3 @@
-import sys
-
 from je_auto_control.utils.exception.exceptions import AutoControlCantFindKeyException
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exceptions import AutoControlKeyboardException
@@ -15,16 +13,13 @@ exception_list = [
     AutoControlCantFindKeyException,
     ImageNotFoundException
 ]
-try:
-    for index, value in enumerate(exception_list):
-        try:
-            # Branch Prediction
-            print(value)
-            if exception_list[index] != ImageNotFoundException:
-                raise exception_list[index]()
-            else:
-                raise exception_list[index]("test.png")
-        except Exception as error:
-            print(error)
-except AutoControlException:
-    sys.exit(0)
+
+for index, value in enumerate(exception_list):
+    try:
+        print(value)
+        if exception_list[index] != ImageNotFoundException:
+            raise exception_list[index]()
+        else:
+            raise exception_list[index]("test.png")
+    except Exception as error:
+        print(repr(error))

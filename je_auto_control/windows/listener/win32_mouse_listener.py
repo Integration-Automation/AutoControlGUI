@@ -94,8 +94,8 @@ class Win32MouseListener(Thread):
         啟動滑鼠監聽
         Start mouse listener
         """
-        pointer = _get_function_pointer(self._win32_hook_proc)
-        if not self._set_win32_hook(pointer):
+        self._pointer = _get_function_pointer(self._win32_hook_proc)
+        if not self._set_win32_hook(self._pointer):
             raise AutoControlException("Failed to set mouse hook")
 
         message = MSG()

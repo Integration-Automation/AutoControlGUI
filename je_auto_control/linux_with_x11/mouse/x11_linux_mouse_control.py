@@ -1,6 +1,6 @@
 import sys
 import time
-from typing import Tuple
+from typing import Optional, Tuple
 
 from je_auto_control.utils.exception.exception_tags import linux_import_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -70,7 +70,7 @@ def release_mouse(mouse_keycode: int) -> None:
     display.sync()
 
 
-def click_mouse(mouse_keycode: int, x: int = None, y: int = None) -> None:
+def click_mouse(mouse_keycode: int, x: Optional[int] = None, y: Optional[int] = None) -> None:
     """
     Perform mouse click (press + release)
     模擬滑鼠點擊（按下 + 釋放）
@@ -102,7 +102,7 @@ def scroll(scroll_value: int, scroll_direction: int) -> None:
 
 
 def send_mouse_event_to_window(window_id: int, mouse_keycode: int,
-                               x: int = None, y: int = None) -> None:
+                               x: Optional[int] = None, y: Optional[int] = None) -> None:
     """
     Send mouse event directly to a specific window
     將滑鼠事件直接送到指定視窗

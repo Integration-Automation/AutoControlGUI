@@ -1,7 +1,7 @@
 import sys
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 if sys.platform in ["win32", "cygwin", "msys"]:
     from je_auto_control.windows.core.utils.win32_vk import WIN32_ABSOLUTE
@@ -226,7 +226,7 @@ elif sys.platform in ["darwin"]:
     from je_auto_control.osx.core.utils.osx_vk import osx_key_semicolon, osx_key_colon
     from je_auto_control.osx.core.utils.osx_vk import osx_key_backslash, osx_key_bar
     from je_auto_control.osx.core.utils.osx_vk import osx_key_comma, osx_key_less
-    from je_auto_control.osx.core.utils.osx_vk import osx_key_salsh, osx_key_question
+    from je_auto_control.osx.core.utils.osx_vk import osx_key_slash, osx_key_question
     from je_auto_control.osx.core.utils.osx_vk import osx_key_period, osx_key_greater
     from je_auto_control.osx.core.utils.osx_vk import osx_key_grave, osx_key_asciitilde
     from je_auto_control.osx.core.utils.osx_vk import osx_key_space
@@ -796,7 +796,7 @@ elif sys.platform in ["darwin"]:
         "|": osx_key_bar,
         ",": osx_key_comma,
         "<": osx_key_less,
-        "/": osx_key_salsh,
+        "/": osx_key_slash,
         "?": osx_key_question,
         ".": osx_key_period,
         ">": osx_key_greater,

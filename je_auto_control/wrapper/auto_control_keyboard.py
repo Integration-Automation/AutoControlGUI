@@ -8,7 +8,7 @@ from je_auto_control.utils.exception.exception_tags import (
 from je_auto_control.utils.exception.exceptions import (
     AutoControlCantFindKeyException, AutoControlKeyboardException
 )
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.platform_wrapper import keyboard, keyboard_keys_table, keyboard_check
 

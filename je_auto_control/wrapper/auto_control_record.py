@@ -3,7 +3,7 @@ import sys
 from je_auto_control.utils.exception.exception_tags import macos_record_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.platform_wrapper import recorder
 
@@ -40,7 +40,7 @@ def stop_record() -> list:
             if action[0] == "AC_type_keyboard":
                 new_list.append([action[0], dict([["keycode", action[1]]])])
             else:
-                new_list.append([action[0], dict(zip(["mouse_keycode", "x", "y"], [action[0], action[1], action[2]]))])
+                new_list.append([action[0], {"mouse_keycode": action[0], "x": action[1], "y": action[2]}])
         record_action_to_list("stop_record", None)
         return new_list
     except Exception as error:

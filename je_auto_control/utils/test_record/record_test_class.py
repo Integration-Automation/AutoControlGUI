@@ -1,5 +1,5 @@
 import datetime
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 class TestRecord:

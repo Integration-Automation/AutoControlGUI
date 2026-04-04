@@ -70,18 +70,19 @@ class ScreenRecordThread(threading.Thread):
 
     def run(self) -> None:
         self.record_flag = True
-        while self.record_flag:
-            # 擷取螢幕畫面 Capture screen frame
-            image = screenshot()
+        try:
+            while self.record_flag:
+                # 擷取螢幕畫面 Capture screen frame
+                image = screenshot()
 
-            # 確保影像大小符合設定解析度 Ensure frame size matches resolution
-            if image.shape[1] != self.resolution[0] or image.shape[0] != self.resolution[1]:
-                image = cv2.resize(image, self.resolution)
+                # 確保影像大小符合設定解析度 Ensure frame size matches resolution
+                if image.shape[1] != self.resolution[0] or image.shape[0] != self.resolution[1]:
+                    image = cv2.resize(image, self.resolution)
 
-            self.video_writer.write(image)
-
-        # 錄影結束後釋放資源 Release resources after recording
-        self.video_writer.release()
+                self.video_writer.write(image)
+        finally:
+            # 錄影結束後釋放資源 Release resources after recording
+            self.video_writer.release()
 
     def stop(self) -> None:
         """

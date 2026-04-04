@@ -3,7 +3,7 @@ from pathlib import Path
 from threading import Lock
 
 from je_auto_control.utils.json.json_file import write_action_json
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.project.template.template_executor import (
     executor_template_1, executor_template_2, bad_executor_template_1
 )
@@ -51,9 +51,9 @@ def create_template(parent_name: str, project_path: str = None) -> None:
 
     # 建立 keyword JSON 檔案 Create keyword JSON files
     if keyword_dir_path.exists() and keyword_dir_path.is_dir():
-        write_action_json(str(keyword_dir_path) + "keyword1.json", template_keyword_1)
-        write_action_json(str(keyword_dir_path) + "keyword2.json", template_keyword_2)
-        write_action_json(str(keyword_dir_path) + "bad_keyword_1.json", bad_template_1)
+        write_action_json(str(keyword_dir_path / "keyword1.json"), template_keyword_1)
+        write_action_json(str(keyword_dir_path / "keyword2.json"), template_keyword_2)
+        write_action_json(str(keyword_dir_path / "bad_keyword_1.json"), bad_template_1)
 
     # 建立 executor Python 檔案 Create executor Python files
     if executor_dir_path.exists() and executor_dir_path.is_dir():
@@ -86,8 +86,8 @@ def create_project_dir(project_path: str = None, parent_name: str = "AutoControl
         project_path = getcwd()
 
     # 建立 keyword 與 executor 子目錄 Create keyword and executor subdirectories
-    create_dir(str(Path(project_path)) + parent_name + "keyword")
-    create_dir(str(Path(project_path)) + parent_name + "executor")
+    create_dir(str(Path(project_path) / parent_name / "keyword"))
+    create_dir(str(Path(project_path) / parent_name / "executor"))
 
     # 建立範例模板檔案 Create template files
     create_template(parent_name, project_path)

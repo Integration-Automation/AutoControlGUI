@@ -15,7 +15,7 @@ from je_auto_control.utils.generate_report.generate_html_report import generate_
 from je_auto_control.utils.generate_report.generate_json_report import generate_json, generate_json_report
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml, generate_xml_report
 from je_auto_control.utils.json.json_file import read_action_json
-from je_auto_control.utils.logging.loggin_instance import autocontrol_logger
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.package_manager.package_manager_class import package_manager
 from je_auto_control.utils.project.create_project_structure import create_project_dir
 from je_auto_control.utils.shell_process.shell_exec import ShellManager
@@ -28,7 +28,7 @@ from je_auto_control.wrapper.auto_control_keyboard import (
 )
 from je_auto_control.wrapper.auto_control_mouse import (
     get_mouse_position, press_mouse, release_mouse, click_mouse,
-    mouse_scroll_error_message, get_mouse_table, set_mouse_position
+    mouse_scroll, get_mouse_table, set_mouse_position
 )
 from je_auto_control.wrapper.auto_control_record import record, stop_record
 from je_auto_control.wrapper.auto_control_screen import screenshot, screen_size
@@ -55,7 +55,7 @@ class Executor:
             "AC_get_mouse_position": get_mouse_position,
             "AC_press_mouse": press_mouse,
             "AC_release_mouse": release_mouse,
-            "AC_mouse_scroll": mouse_scroll_error_message,
+            "AC_mouse_scroll": mouse_scroll,
             "AC_set_mouse_position": set_mouse_position,
 
             # Keyboard 鍵盤相關

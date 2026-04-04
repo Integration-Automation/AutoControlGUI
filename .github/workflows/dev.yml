@@ -1,10 +1,10 @@
-name: AutoControl_Stable_Python3.10
+name: AutoControl Dev CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "dev" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "dev" ]
   schedule:
     - cron: "0 1 * * *"
 
@@ -12,83 +12,100 @@ permissions:
   contents: read
 
 jobs:
-  build_dev_version:
+  test:
     runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12" ]
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v3
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: ${{ matrix.python-version }}
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip wheel
           pip install -r dev_requirements.txt
 
-      - name: Test Screen Module
+      # Screen tests
+      - name: Test Screen Size
         run: python ./test/unit_test/screen/screen_test.py
       - name: Test Screenshot
         run: python ./test/unit_test/screen/screenshot_test.py
       - name: Test Screen Get Pixel
         run: python ./test/unit_test/screen/get_pixel_test.py
-      - name: Save Screenshot Image
+      - name: Upload Screenshot Artifact
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: screenshot_png
+          name: screenshot_png_${{ matrix.python-version }}
           path: test.png
+          if-no-files-found: ignore
 
-      - name: Test Keyboard type Function
+      # Keyboard tests
+      - name: Test Keyboard Type
         run: python ./test/unit_test/keyboard/keyboard_type_test.py
-      - name: Test Keyboard write Function
-        run: |
-          python ./test/unit_test/keyboard/keyboard_write_test.py
-      - name: Test Keyboard is_press Function
+      - name: Test Keyboard Write
+        run: python ./test/unit_test/keyboard/keyboard_write_test.py
+      - name: Test Keyboard Is Press
         run: python ./test/unit_test/keyboard/keyboard_is_press_test.py
-      - name: Test Keyboard hotkey Function
+      - name: Test Keyboard Hotkey
         run: python ./test/unit_test/keyboard/hotkey_test.py
+
+      # Mouse tests
       - name: Test Mouse Module
-        run: |
-          python ./test/unit_test/mouse/mouse_test.py
-          exit 0
-      - name: Test Scroll Module
-        run: python ./test/unit_test/exception/auto_control_exception_test.py
+        run: python ./test/unit_test/mouse/mouse_test.py
+        continue-on-error: true
+
+      # Exception tests
       - name: Test Exceptions
         run: python ./test/unit_test/exception/auto_control_exception_test.py
 
+      # Critical exit tests
       - name: Test Critical Exit
-        run: |
-          python ./test/unit_test/critical_exit/critical_exit_test.py
-          exit 0
+        run: python ./test/unit_test/critical_exit/critical_exit_test.py
+        continue-on-error: true
       - name: Test Real Critical Situation
-        run: |
-          python ./test/unit_test/critical_exit/real_critical_test.py
-          exit 0
+        run: python ./test/unit_test/critical_exit/real_critical_test.py
+        continue-on-error: true
 
+      # Record tests
       - name: Test Record Module
         run: python ./test/unit_test/record/record_test.py
       - name: Test Total Record
         run: python ./test/unit_test/total_record/total_record_test.py
 
+      # Executor tests
       - name: Test Execute Action
         run: python ./test/unit_test/execute_action/execute_action_test.py
 
-      - name: Test Json Module
+      # JSON tests
+      - name: Test JSON Module
         run: python ./test/unit_test/json/json_test.py
-      - name: Test Generate Json Report
+
+      # Report generation tests
+      - name: Test Generate JSON Report
         run: python ./test/unit_test/generate_report/json_report.py
       - name: Test Generate HTML Report
         run: python ./test/unit_test/generate_report/html_report_test.py
 
+      # Argparse test
       - name: Test Argparse
         run: python ./test/unit_test/argparse/argparse_test.py
 
+      # Callback test
       - name: Test Callback Module
         run: python ./test/unit_test/callback/callback_test.py
 
-      - name: Test Create Project Function
+      # Project creation test
+      - name: Test Create Project
         run: python ./test/unit_test/create_project_file/create_project_test.py
 
+      # Info tests
       - name: Test Get Mouse Info
         run: python ./test/unit_test/get_info/mouse_info.py
       - name: Test Get Keyboard Info

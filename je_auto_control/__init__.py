@@ -6,7 +6,7 @@ import all wrapper function
 from je_auto_control.utils.callback.callback_function_executor import \
     callback_executor
 # Critical
-from je_auto_control.utils.critical_exit.critcal_exit import CriticalExit
+from je_auto_control.utils.critical_exit.critical_exit import CriticalExit
 from je_auto_control.utils.cv2_utils.screen_record import ScreenRecorder
 # utils cv2_utils
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
@@ -92,6 +92,7 @@ from je_auto_control.wrapper.auto_control_keyboard import write
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
 from je_auto_control.wrapper.auto_control_mouse import mouse_keys_table
+from je_auto_control.wrapper.auto_control_mouse import mouse_scroll
 from je_auto_control.wrapper.auto_control_mouse import mouse_scroll_error_message
 from je_auto_control.wrapper.auto_control_mouse import press_mouse
 from je_auto_control.wrapper.auto_control_mouse import release_mouse
@@ -105,10 +106,12 @@ from je_auto_control.wrapper.auto_control_record import stop_record
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.auto_control_screen import screenshot
 from je_auto_control.wrapper.auto_control_screen import get_pixel
+# GUI
+from je_auto_control.gui import start_autocontrol_gui
 
 __all__ = [
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
-    "mouse_scroll_error_message", "set_mouse_position", "special_mouse_keys_table",
+    "mouse_scroll", "mouse_scroll_error_message", "set_mouse_position", "special_mouse_keys_table",
     "keyboard_keys_table", "press_keyboard_key", "release_keyboard_key", "type_keyboard", "check_key_is_press",
     "write", "hotkey", "start_exe", "get_keyboard_keys_table",
     "screen_size", "screenshot", "locate_all_image", "locate_image_center", "locate_and_click",
@@ -122,5 +125,6 @@ __all__ = [
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",
     "RecordingThread", "send_key_event_to_window", "send_mouse_event_to_window", "windows_window_manage",
-    "ScreenRecorder", "get_pixel"
+    "ScreenRecorder", "get_pixel",
+    "start_autocontrol_gui"
 ]
