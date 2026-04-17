@@ -1,7 +1,6 @@
 import sys
 
 from PySide6.QtWidgets import QMainWindow, QApplication, QComboBox, QLabel, QHBoxLayout, QWidget
-from PySide6.QtGui import QAction
 from qt_material import QtStyleTools
 
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper

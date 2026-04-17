@@ -1,6 +1,4 @@
-import builtins
 import types
-from inspect import getmembers, isbuiltin
 from typing import Any, Dict, List, Union
 
 from je_auto_control.utils.exception.exception_tags import (
@@ -106,10 +104,6 @@ class Executor:
             # Process
             "AC_execute_process": start_exe,
         }
-
-        # 加入所有 Python 內建函式 Add all Python builtins
-        for function in getmembers(builtins, isbuiltin):
-            self.event_dict[str(function[0])] = function[1]
 
     def _execute_event(self, action: list) -> Any:
         """

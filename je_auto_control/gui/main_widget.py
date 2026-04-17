@@ -1,22 +1,19 @@
 import json
-import sys
-from threading import Thread
 
 from PySide6.QtCore import QTimer, Signal, QObject
 from PySide6.QtGui import QIntValidator, QDoubleValidator, QKeyEvent, Qt
 from PySide6.QtWidgets import (
     QWidget, QLineEdit, QComboBox, QPushButton, QVBoxLayout, QLabel,
     QGridLayout, QHBoxLayout, QRadioButton, QButtonGroup, QMessageBox,
-    QTabWidget, QTextEdit, QFileDialog, QCheckBox, QGroupBox, QSplitter,
-    QListWidget
+    QTabWidget, QTextEdit, QFileDialog, QCheckBox, QGroupBox
 )
 
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.wrapper.auto_control_keyboard import (
-    type_keyboard, press_keyboard_key, release_keyboard_key, hotkey, write, check_key_is_press
+    type_keyboard, hotkey, write
 )
 from je_auto_control.wrapper.auto_control_mouse import (
-    click_mouse, get_mouse_position, set_mouse_position, press_mouse, release_mouse, mouse_scroll
+    click_mouse, get_mouse_position, mouse_scroll
 )
 from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot, get_pixel
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_image_center, locate_and_click

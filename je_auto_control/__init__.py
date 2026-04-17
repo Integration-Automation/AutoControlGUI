@@ -99,7 +99,7 @@ from je_auto_control.wrapper.auto_control_mouse import release_mouse
 from je_auto_control.wrapper.auto_control_mouse import send_mouse_event_to_window
 from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
 from je_auto_control.wrapper.auto_control_mouse import special_mouse_keys_table
-# test_record
+# record
 from je_auto_control.wrapper.auto_control_record import record
 from je_auto_control.wrapper.auto_control_record import stop_record
 # import screen
@@ -120,7 +120,7 @@ __all__ = [
     "AutoControlScreenException", "ImageNotFoundException", "AutoControlJsonActionException",
     "AutoControlRecordException", "AutoControlActionNullException", "AutoControlActionException", "record",
     "stop_record", "read_action_json", "write_action_json", "execute_action", "execute_files", "executor",
-    "add_command_to_executor", "test_record_instance", "screenshot", "pil_screenshot",
+    "add_command_to_executor", "test_record_instance", "pil_screenshot",
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",

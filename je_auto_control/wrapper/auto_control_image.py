@@ -2,7 +2,7 @@ from typing import List, Tuple, Optional, Union
 
 from je_auto_control.utils.cv2_utils import template_detection
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-from je_auto_control.utils.exception.exception_tags import cant_find_image_error_message, find_image_error_variable_error_message
+from je_auto_control.utils.exception.exception_tags import cant_find_image_error_message
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
