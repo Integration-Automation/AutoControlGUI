@@ -49,7 +49,7 @@ traditional_chinese_word_dict = {
     "current_position": "目前位置：",
 
     # Screenshot Tab
-    "take_screenshot": "截取螢���",
+    "take_screenshot": "截取螢幕",
     "save_screenshot": "儲存截圖",
     "file_path_label": "檔案路徑：",
     "browse": "瀏覽",
