@@ -8,6 +8,15 @@ traditional_chinese_word_dict = {
     "tab_image_detect": "影像偵測",
     "tab_record": "錄製 / 回放",
     "tab_script": "腳本執行",
+    "tab_script_builder": "腳本編輯器",
+    "tab_recording_editor": "錄製後製",
+    "tab_window_manager": "視窗管理",
+    "tab_scheduler": "排程器",
+    "tab_socket_server": "Socket 伺服器",
+    "tab_live_hud": "即時監看",
+    "tab_hotkeys": "全域熱鍵",
+    "tab_triggers": "事件觸發器",
+    "tab_plugins": "外掛",
     "tab_screen_record": "螢幕錄影",
     "tab_shell": "Shell 命令",
     "tab_report": "報告產生",
@@ -45,6 +54,8 @@ traditional_chinese_word_dict = {
     "file_path_label": "檔案路徑：",
     "browse": "瀏覽",
     "region_label": "區域 (x1, y1, x2, y2)：",
+    "pick_region": "框選區域",
+    "crop_template": "框選模板",
     "get_pixel_label": "取得像素顏色",
     "pixel_x": "X：",
     "pixel_y": "Y：",
@@ -109,4 +120,18 @@ traditional_chinese_word_dict = {
 
     # Language
     "language_label": "語言：",
+
+    # Menu bar
+    "menu_file": "檔案",
+    "menu_file_open_script": "開啟腳本...",
+    "menu_file_exit": "結束",
+    "menu_view": "檢視",
+    "menu_view_tabs": "分頁",
+    "menu_tools": "工具",
+    "menu_tools_start_hotkeys": "啟動熱鍵服務",
+    "menu_tools_start_scheduler": "啟動排程器",
+    "menu_tools_start_triggers": "啟動觸發引擎",
+    "menu_language": "語言",
+    "menu_help": "說明",
+    "menu_help_about": "關於 AutoControlGUI",
 }

@@ -22,3 +22,4 @@ Comprehensive guides for all AutoControl features.
    doc/critical_exit/critical_exit_doc
    doc/cli/cli_doc
    doc/create_project/create_project_doc
+   doc/new_features/new_features_doc

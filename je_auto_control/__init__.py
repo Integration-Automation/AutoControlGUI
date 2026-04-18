@@ -35,8 +35,54 @@ from je_auto_control.utils.executor.action_executor import \
     add_command_to_executor
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action
+from je_auto_control.utils.executor.action_executor import \
+    execute_action_with_vars
 from je_auto_control.utils.executor.action_executor import execute_files
 from je_auto_control.utils.executor.action_executor import executor
+# Clipboard (headless)
+from je_auto_control.utils.clipboard.clipboard import (
+    get_clipboard, set_clipboard,
+)
+# Hotkey daemon (headless)
+from je_auto_control.utils.hotkey.hotkey_daemon import (
+    HotkeyBinding, HotkeyDaemon, default_hotkey_daemon,
+)
+# OCR (headless)
+from je_auto_control.utils.ocr.ocr_engine import (
+    TextMatch, click_text, find_text_matches, locate_text_center,
+    set_tesseract_cmd, wait_for_text,
+)
+# Plugin loader (headless)
+from je_auto_control.utils.plugin_loader.plugin_loader import (
+    discover_plugin_commands, load_plugin_directory, load_plugin_file,
+    register_plugin_commands,
+)
+# REST API (headless)
+from je_auto_control.utils.rest_api.rest_server import (
+    RestApiServer, start_rest_api_server,
+)
+# Triggers (headless)
+from je_auto_control.utils.triggers.trigger_engine import (
+    FilePathTrigger, ImageAppearsTrigger, PixelColorTrigger, TriggerEngine,
+    WindowAppearsTrigger, default_trigger_engine,
+)
+# Recording editor (headless helpers)
+from je_auto_control.utils.recording_edit.editor import (
+    adjust_delays, filter_actions, insert_action, remove_action,
+    scale_coordinates, trim_actions,
+)
+# Scheduler (headless)
+from je_auto_control.utils.scheduler.scheduler import (
+    ScheduledJob, Scheduler, default_scheduler,
+)
+# Script variables (headless)
+from je_auto_control.utils.script_vars.interpolate import (
+    interpolate_actions, interpolate_value, load_vars_from_json,
+)
+# Watchers (headless)
+from je_auto_control.utils.watcher.watcher import (
+    LogTail, MouseWatcher, PixelWatcher,
+)
 # file process
 from je_auto_control.utils.file_process.get_dir_file_list import \
     get_dir_files_as_list
@@ -106,8 +152,17 @@ from je_auto_control.wrapper.auto_control_record import stop_record
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.auto_control_screen import screenshot
 from je_auto_control.wrapper.auto_control_screen import get_pixel
-# GUI
-from je_auto_control.gui import start_autocontrol_gui
+# Cross-platform window manager (headless)
+from je_auto_control.wrapper.auto_control_window import (
+    close_window_by_title, find_window, focus_window, list_windows,
+    show_window_by_title, wait_for_window,
+)
+
+
+def start_autocontrol_gui(*args, **kwargs):
+    """Launch the GUI (imports PySide6 lazily so headless usage stays Qt-free)."""
+    from je_auto_control.gui import start_autocontrol_gui as _impl
+    return _impl(*args, **kwargs)
 
 __all__ = [
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
@@ -120,7 +175,36 @@ __all__ = [
     "AutoControlScreenException", "ImageNotFoundException", "AutoControlJsonActionException",
     "AutoControlRecordException", "AutoControlActionNullException", "AutoControlActionException", "record",
     "stop_record", "read_action_json", "write_action_json", "execute_action", "execute_files", "executor",
+    "execute_action_with_vars",
     "add_command_to_executor", "test_record_instance", "pil_screenshot",
+    # OCR
+    "TextMatch", "find_text_matches", "locate_text_center", "wait_for_text",
+    "click_text", "set_tesseract_cmd",
+    # Recording editor
+    "trim_actions", "insert_action", "remove_action", "filter_actions",
+    "adjust_delays", "scale_coordinates",
+    # Scheduler
+    "Scheduler", "ScheduledJob", "default_scheduler",
+    # Script variables
+    "interpolate_actions", "interpolate_value", "load_vars_from_json",
+    # Watchers
+    "MouseWatcher", "PixelWatcher", "LogTail",
+    # Window manager
+    "list_windows", "find_window", "focus_window", "wait_for_window",
+    "close_window_by_title", "show_window_by_title",
+    # Clipboard
+    "get_clipboard", "set_clipboard",
+    # Hotkey daemon
+    "HotkeyDaemon", "HotkeyBinding", "default_hotkey_daemon",
+    # Plugin loader
+    "load_plugin_file", "load_plugin_directory", "discover_plugin_commands",
+    "register_plugin_commands",
+    # REST API
+    "RestApiServer", "start_rest_api_server",
+    # Triggers
+    "TriggerEngine", "default_trigger_engine",
+    "ImageAppearsTrigger", "WindowAppearsTrigger",
+    "PixelColorTrigger", "FilePathTrigger",
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",

@@ -74,6 +74,27 @@ python -m pytest test/integrated_test/
 python -m build
 ```
 
+## Feature Delivery Rules
+
+### Every feature must ship both a headless API and a GUI surface
+
+No feature is complete unless it can be driven entirely without the GUI **and** has a corresponding GUI affordance. Concretely:
+
+- **Headless core in `utils/` or `wrapper/`**: all business logic lives in a module with zero `PySide6` imports. Users must be able to `import je_auto_control` and call the feature without ever instantiating a Qt class.
+- **Re-export from the package facade**: add the public functions / classes to `je_auto_control/__init__.py` and its `__all__` so `import je_auto_control as ac; ac.<feature>(...)` works out of the box.
+- **Executor command coverage**: wire an `AC_*` command into `utils/executor/action_executor.py` so the feature is usable from JSON action files, the socket server, the scheduler, and the visual script builder — all without Python glue.
+- **GUI tab or control is a thin wrapper**: the Qt widget must only translate user input into calls on the headless core. It must not contain business logic that would be unreachable headlessly.
+- **The top-level package stays Qt-free**: `import je_auto_control` MUST NOT import `PySide6`. The GUI entry point is loaded lazily inside `start_autocontrol_gui()`. Verify with:
+
+  ```python
+  import sys, je_auto_control  # noqa
+  assert not any("PySide6" in m for m in sys.modules)
+  ```
+
+- **Tests cover the headless path**: at least one unit test in `test/unit_test/` must exercise the feature through its non-GUI API with no Qt imports.
+
+Features that are inherently interactive (e.g. region picking with the mouse, template cropping) still count as GUI-only — but they must accept programmatic equivalents (e.g. `screenshot(screen_region=[...])` with explicit coordinates) so scripts can replay the same effect headlessly.
+
 ## Coding Standards
 
 ### Security First
