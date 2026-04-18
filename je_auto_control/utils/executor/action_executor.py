@@ -12,6 +12,9 @@ from je_auto_control.utils.exception.exceptions import (
 from je_auto_control.utils.accessibility.accessibility_api import (
     click_accessibility_element, find_accessibility_element,
 )
+from je_auto_control.utils.vision.vlm_api import (
+    click_by_description, locate_by_description,
+)
 from je_auto_control.utils.clipboard.clipboard import (
     get_clipboard, set_clipboard,
 )
@@ -74,6 +77,16 @@ def _a11y_find_as_dict(name: Optional[str] = None,
         name=name, role=role, app_name=app_name,
     )
     return None if element is None else element.to_dict()
+
+
+def _vlm_locate_as_list(description: str,
+                        screen_region: Optional[List[int]] = None,
+                        model: Optional[str] = None) -> Optional[List[int]]:
+    """Executor adapter: return VLM-located coords as a JSON-safe list."""
+    coords = locate_by_description(
+        description, screen_region=screen_region, model=model,
+    )
+    return None if coords is None else [coords[0], coords[1]]
 
 
 def _history_list_as_dicts(limit: int = 100,
@@ -191,6 +204,10 @@ class Executor:
             "AC_a11y_list": _a11y_list_as_dicts,
             "AC_a11y_find": _a11y_find_as_dict,
             "AC_a11y_click": click_accessibility_element,
+
+            # VLM-based element locator
+            "AC_vlm_locate": _vlm_locate_as_list,
+            "AC_vlm_click": click_by_description,
         }
 
     def known_commands(self) -> set:

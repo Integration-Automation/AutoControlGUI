@@ -23,6 +23,7 @@ from je_auto_control.gui.scheduler_tab import SchedulerTab
 from je_auto_control.gui.script_builder import ScriptBuilderTab
 from je_auto_control.gui.selector import crop_template_to_file, open_region_selector
 from je_auto_control.gui.triggers_tab import TriggersTab
+from je_auto_control.gui.vlm_tab import VLMTab
 from je_auto_control.gui.window_tab import WindowManagerTab
 from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot, get_pixel
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_image_center, locate_and_click
@@ -85,6 +86,7 @@ class AutoControlGUIWidget(
         self._add_tab("triggers", "tab_triggers", TriggersTab())
         self._add_tab("run_history", "tab_run_history", RunHistoryTab())
         self._add_tab("accessibility", "tab_accessibility", AccessibilityTab())
+        self._add_tab("vlm", "tab_vlm", VLMTab())
         self._add_tab("plugins", "tab_plugins", PluginsTab())
         layout.addWidget(self.tabs)
 

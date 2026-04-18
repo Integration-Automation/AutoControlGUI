@@ -22,6 +22,7 @@ english_word_dict = {
     "tab_report": "Report",
     "tab_run_history": "Run History",
     "tab_accessibility": "Accessibility",
+    "tab_vlm": "AI Locator",
 
     # Auto Click Tab
     "interval_time": "Interval (ms):",
@@ -298,6 +299,19 @@ english_word_dict = {
     "a11y_count_label": "{n} elements",
     "a11y_no_selection": "Select a row first",
     "a11y_click_not_found": "No matching element to click",
+
+    # VLM (AI Locator) Tab
+    "vlm_desc_label": "Describe:",
+    "vlm_desc_placeholder": "e.g. the green Submit button",
+    "vlm_model_label": "Model:",
+    "vlm_model_placeholder": "optional override (e.g. claude-opus-4-7)",
+    "vlm_locate": "Locate",
+    "vlm_click": "Locate & click",
+    "vlm_result": "Match at ({x}, {y})",
+    "vlm_ok": "OK",
+    "vlm_not_found": "No match found",
+    "vlm_error": "Error",
+    "vlm_desc_required": "Describe the target first",
 
     # Menu bar
     "menu_file": "File",

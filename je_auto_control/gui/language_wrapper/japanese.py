@@ -21,6 +21,7 @@ japanese_word_dict = {
     "tab_report": "レポート",
     "tab_run_history": "実行履歴",
     "tab_accessibility": "アクセシビリティ",
+    "tab_vlm": "AI ロケーター",
 
     # Auto Click Tab
     "interval_time": "間隔 (ms):",
@@ -297,6 +298,19 @@ japanese_word_dict = {
     "a11y_count_label": "{n} 個の要素",
     "a11y_no_selection": "行を選択してください",
     "a11y_click_not_found": "クリック可能な要素が見つかりません",
+
+    # VLM (AI Locator) Tab
+    "vlm_desc_label": "説明:",
+    "vlm_desc_placeholder": "例: 緑色の送信ボタン",
+    "vlm_model_label": "モデル:",
+    "vlm_model_placeholder": "任意 (例: claude-opus-4-7)",
+    "vlm_locate": "検索",
+    "vlm_click": "検索してクリック",
+    "vlm_result": "位置: ({x}, {y})",
+    "vlm_ok": "完了",
+    "vlm_not_found": "一致する要素が見つかりません",
+    "vlm_error": "エラー",
+    "vlm_desc_required": "まず対象の説明を入力してください",
 
     # Menu bar
     "menu_file": "ファイル",

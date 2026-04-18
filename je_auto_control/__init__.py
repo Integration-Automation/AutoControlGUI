@@ -45,6 +45,10 @@ from je_auto_control.utils.accessibility import (
     click_accessibility_element, find_accessibility_element,
     list_accessibility_elements,
 )
+# VLM element locator (headless)
+from je_auto_control.utils.vision import (
+    VLMNotAvailableError, click_by_description, locate_by_description,
+)
 # Clipboard (headless)
 from je_auto_control.utils.clipboard.clipboard import (
     get_clipboard, set_clipboard,
@@ -221,6 +225,8 @@ __all__ = [
     "AccessibilityElement", "AccessibilityNotAvailableError",
     "list_accessibility_elements", "find_accessibility_element",
     "click_accessibility_element",
+    # VLM locator
+    "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",

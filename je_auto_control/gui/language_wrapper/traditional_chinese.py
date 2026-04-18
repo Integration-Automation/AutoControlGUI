@@ -22,6 +22,7 @@ traditional_chinese_word_dict = {
     "tab_report": "報告產生",
     "tab_run_history": "執行紀錄",
     "tab_accessibility": "無障礙樹",
+    "tab_vlm": "AI 定位",
 
     # Auto Click Tab
     "interval_time": "間隔時間 (ms)：",
@@ -298,6 +299,19 @@ traditional_chinese_word_dict = {
     "a11y_count_label": "{n} 個元素",
     "a11y_no_selection": "請先選擇一列",
     "a11y_click_not_found": "找不到可點擊的元素",
+
+    # VLM (AI Locator) Tab
+    "vlm_desc_label": "描述：",
+    "vlm_desc_placeholder": "例如：綠色的送出按鈕",
+    "vlm_model_label": "模型：",
+    "vlm_model_placeholder": "選填（例如 claude-opus-4-7）",
+    "vlm_locate": "定位",
+    "vlm_click": "定位並點擊",
+    "vlm_result": "位置：({x}, {y})",
+    "vlm_ok": "完成",
+    "vlm_not_found": "找不到符合的元素",
+    "vlm_error": "錯誤",
+    "vlm_desc_required": "請先輸入目標描述",
 
     # Menu bar
     "menu_file": "檔案",
