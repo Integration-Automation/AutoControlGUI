@@ -23,10 +23,9 @@ def read_action_json(json_file_path: str) -> List[List[Dict[str, Dict[str, str]]
             if file_path.exists() and file_path.is_file():
                 with open(json_file_path, encoding="utf-8") as read_file:
                     return json.load(read_file)
-            else:
-                raise AutoControlJsonActionException(cant_find_json_error_message)
-        except Exception as error:
-            raise AutoControlJsonActionException(f"{cant_find_json_error_message}: {repr(error)}")
+            raise AutoControlJsonActionException(cant_find_json_error_message)
+        except (OSError, json.JSONDecodeError) as error:
+            raise AutoControlJsonActionException(f"{cant_find_json_error_message}: {repr(error)}") from error
 
 
 def write_action_json(json_save_path: str, action_json: list) -> None:
@@ -41,5 +40,5 @@ def write_action_json(json_save_path: str, action_json: list) -> None:
         try:
             with open(json_save_path, "w+", encoding="utf-8") as file_to_write:
                 json.dump(action_json, file_to_write, indent=4, ensure_ascii=False)
-        except Exception as error:
-            raise AutoControlJsonActionException(f"{cant_save_json_error_message}: {repr(error)}")
+        except (OSError, TypeError, ValueError) as error:
+            raise AutoControlJsonActionException(f"{cant_save_json_error_message}: {repr(error)}") from error

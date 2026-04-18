@@ -66,8 +66,8 @@ class RecordingThread(threading.Thread):
                     screen_image = sct.grab(resolution)
                     image_rgb = cv2.cvtColor(np.array(screen_image), cv2.COLOR_BGRA2BGR)
                     video_writer.write(image_rgb)
-            except Exception as e:
-                autocontrol_logger.error(f"RecordingThread error: {e}")
+            except (cv2.error, ValueError, RuntimeError) as error:
+                autocontrol_logger.error("RecordingThread error: %r", error)
             finally:
                 video_writer.release()
                 autocontrol_logger.info("RecordingThread stopped and video released")

@@ -56,11 +56,11 @@ def press_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
             record_action_to_list("press_key", {"keycode": keycode, "is_shift": is_shift})
         return str(keycode)
 
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         if not skip_record:
             record_action_to_list("press_key", {"keycode": keycode}, repr(error))
         autocontrol_logger.error(f"press_keyboard_key failed: {repr(error)}")
-        raise AutoControlKeyboardException(f"{keyboard_press_key_error_message} {repr(error)}")
+        raise AutoControlKeyboardException(f"{keyboard_press_key_error_message} {repr(error)}") from error
 
 
 def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
@@ -81,11 +81,11 @@ def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
             record_action_to_list("release_key", {"keycode": keycode, "is_shift": is_shift})
         return str(keycode)
 
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         if not skip_record:
             record_action_to_list("release_key", {"keycode": keycode}, repr(error))
         autocontrol_logger.error(f"release_keyboard_key failed: {repr(error)}")
-        raise AutoControlKeyboardException(f"{keyboard_release_key_error_message} {repr(error)}")
+        raise AutoControlKeyboardException(f"{keyboard_release_key_error_message} {repr(error)}") from error
 
 
 def type_keyboard(keycode: Union[int, str], is_shift: bool = False,
@@ -103,11 +103,11 @@ def type_keyboard(keycode: Union[int, str], is_shift: bool = False,
             record_action_to_list("type_keyboard", {"keycode": keycode, "is_shift": is_shift})
         return str(keycode)
 
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         if not skip_record:
             record_action_to_list("type_keyboard", {"keycode": keycode}, repr(error))
         autocontrol_logger.error(f"type_keyboard failed: {repr(error)}")
-        raise AutoControlKeyboardException(f"{keyboard_type_key_error_message} {repr(error)}")
+        raise AutoControlKeyboardException(f"{keyboard_type_key_error_message} {repr(error)}") from error
 
 def check_key_is_press(keycode: Union[int, str]) -> Optional[bool]:
     """
@@ -122,7 +122,7 @@ def check_key_is_press(keycode: Union[int, str]) -> Optional[bool]:
         get_key_code = keycode if isinstance(keycode, int) else keyboard_keys_table.get(keycode)
         record_action_to_list("check_key_is_press", {"keycode": keycode})
         return keyboard_check.check_key_is_press(keycode=get_key_code)
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         record_action_to_list("check_key_is_press", {"keycode": keycode}, repr(error))
         autocontrol_logger.error(f"check_key_is_press failed: {repr(error)}")
         return None
@@ -156,10 +156,10 @@ def write(write_string: str, is_shift: bool = False) -> Optional[str]:
         record_action_to_list("write", {"write_string": write_string, "is_shift": is_shift})
         return result
 
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         record_action_to_list("write", {"write_string": write_string}, repr(error))
         autocontrol_logger.error(f"write failed: {repr(error)}")
-        raise AutoControlKeyboardException(f"{keyboard_write_error_message} {repr(error)}")
+        raise AutoControlKeyboardException(f"{keyboard_write_error_message} {repr(error)}") from error
 
 
 def hotkey(key_code_list: list, is_shift: bool = False) -> Optional[Tuple[str, str]]:
@@ -188,10 +188,10 @@ def hotkey(key_code_list: list, is_shift: bool = False) -> Optional[Tuple[str, s
         record_action_to_list("hotkey", {"keys": key_code_list, "is_shift": is_shift})
         return press_str, release_str
 
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         record_action_to_list("hotkey", {"keys": key_code_list}, repr(error))
         autocontrol_logger.error(f"hotkey failed: {repr(error)}")
-        raise AutoControlKeyboardException(f"{keyboard_hotkey_error_message} {repr(error)}")
+        raise AutoControlKeyboardException(f"{keyboard_hotkey_error_message} {repr(error)}") from error
 
 def send_key_event_to_window(window_title: str, keycode: Union[int, str]) -> None:
     """
@@ -221,7 +221,7 @@ def send_key_event_to_window(window_title: str, keycode: Union[int, str]) -> Non
         # 紀錄動作 Record action
         record_action_to_list("send_key_event_to_window", {"window_title": window_title, "keycode": get_key_code})
 
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         record_action_to_list("send_key_event_to_window", {"window_title": window_title, "keycode": keycode}, repr(error))
         autocontrol_logger.error(
             f"send_key_event_to_window failed, window={window_title}, keycode={keycode}, error={repr(error)}"

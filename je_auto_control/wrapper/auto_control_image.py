@@ -27,7 +27,7 @@ def locate_all_image(image, detect_threshold: float = 1.0,
             record_action_to_list("locate_all_image", {"image": image, "threshold": detect_threshold})
             return image_data_array[1]
         raise ImageNotFoundException(f"{cant_find_image_error_message} / {image}")
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError, ImageNotFoundException) as error:
         record_action_to_list("locate_all_image", {"image": image}, repr(error))
         autocontrol_logger.error(f"locate_all_image failed: {repr(error)}")
         raise
@@ -51,7 +51,7 @@ def locate_image_center(image, detect_threshold: float = 1.0,
             record_action_to_list("locate_image_center", {"image": image, "threshold": detect_threshold})
             return center_x, center_y
         raise ImageNotFoundException(f"{cant_find_image_error_message} / {image}")
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError, ImageNotFoundException) as error:
         record_action_to_list("locate_image_center", {"image": image}, repr(error))
         autocontrol_logger.error(f"locate_image_center failed: {repr(error)}")
         raise
@@ -78,7 +78,7 @@ def locate_and_click(image, mouse_keycode: Union[int, str],
             record_action_to_list("locate_and_click", {"image": image, "threshold": detect_threshold})
             return center_x, center_y
         raise ImageNotFoundException(f"{cant_find_image_error_message} / {image}")
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError, ImageNotFoundException) as error:
         record_action_to_list("locate_and_click", {"image": image}, repr(error))
         autocontrol_logger.error(f"locate_and_click failed: {repr(error)}")
         raise
@@ -97,7 +97,7 @@ def screenshot(file_path: Optional[str] = None, region: Optional[List[int]] = No
     try:
         record_action_to_list("screenshot", {"file_path": file_path, "region": region})
         return pil_screenshot(file_path, region)
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError, ImageNotFoundException) as error:
         record_action_to_list("screenshot", {"file_path": file_path, "region": region}, repr(error))
         autocontrol_logger.error(f"screenshot failed: {repr(error)}")
         raise

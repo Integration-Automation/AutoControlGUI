@@ -9,8 +9,14 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 if sys.platform not in ["darwin"]:
     raise AutoControlException(osx_import_error_message)
 
-from Cocoa import *
-from Foundation import *
+from Cocoa import (
+    NSApplication,
+    NSEvent,
+    NSEventMaskKeyDown,
+    NSEventMaskLeftMouseDown,
+    NSEventMaskRightMouseDown,
+    NSObject,
+)
 from PyObjCTools import AppHelper
 
 # === 全域事件記錄 Queue Global event record queue ===

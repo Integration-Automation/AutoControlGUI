@@ -149,7 +149,7 @@ class Executor:
                 event_response = self._execute_event(action)
                 execute_record = "execute: " + str(action)
                 execute_record_dict[execute_record] = event_response
-            except Exception as error:
+            except (AutoControlActionException, OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
                 autocontrol_logger.info(
                     f"execute_action failed, action: {action}, error: {repr(error)}"
                 )
@@ -157,10 +157,9 @@ class Executor:
                 execute_record = "execute: " + str(action)
                 execute_record_dict[execute_record] = repr(error)
 
-        # 輸出執行結果 Print results
+        # 輸出執行結果 Log results
         for key, value in execute_record_dict.items():
-            print(key, flush=True)
-            print(value, flush=True)
+            autocontrol_logger.info("%s -> %s", key, value)
 
         return execute_record_dict
 

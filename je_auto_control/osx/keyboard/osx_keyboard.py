@@ -2,6 +2,7 @@ import sys
 
 from je_auto_control.utils.exception.exception_tags import osx_import_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 # === 平台檢查 Platform Check ===
 # 僅允許在 macOS (Darwin) 環境執行，否則拋出例外
@@ -70,7 +71,7 @@ def normal_key(keycode: int, is_shift: bool, is_down: bool) -> None:
         Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
 
     except ValueError as error:
-        print(repr(error), file=sys.stderr)
+        autocontrol_logger.error("normal_key failed: %r", error)
 
 
 def special_key(keycode: str, is_shift: bool) -> None:

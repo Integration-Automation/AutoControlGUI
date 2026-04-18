@@ -21,10 +21,10 @@ def screen_size() -> Tuple[int, int]:
     try:
         record_action_to_list("size", None)
         return screen.size()
-    except AutoControlScreenException:
+    except AutoControlScreenException as error:
         autocontrol_logger.error(f"screen_size failed: {screen_get_size_error_message}")
-        raise AutoControlScreenException(screen_get_size_error_message)
-    except Exception as error:
+        raise AutoControlScreenException(screen_get_size_error_message) from error
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         record_action_to_list("size", None, repr(error))
         autocontrol_logger.error(f"screen_size failed: {repr(error)}")
         raise
@@ -48,8 +48,8 @@ def screenshot(file_path: str = None, screen_region: list = None) -> List[int]:
         autocontrol_logger.error(
             f"screenshot failed, file_path: {file_path}, screen_region: {screen_region}, "
             f"error: {repr(error)}")
-        raise AutoControlScreenException(screen_screenshot_error_message + " " + repr(error))
-    except Exception as error:
+        raise AutoControlScreenException(screen_screenshot_error_message + " " + repr(error)) from error
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         record_action_to_list("AC_screenshot", None, repr(error))
         autocontrol_logger.error(
             f"screenshot failed, file_path: {file_path}, screen_region: {screen_region}, "
@@ -68,7 +68,7 @@ def get_pixel(x: int, y: int, hwnd=None):
             return screen.get_pixel(x, y)
         else:
             return screen.get_pixel(x, y, hwnd)
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         record_action_to_list("AC_get_pixel", None, repr(error))
         autocontrol_logger.error(
             f"get_pixel failed, x: {x}, y: {y}, hwnd: {hwnd}, "

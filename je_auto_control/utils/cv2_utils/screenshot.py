@@ -1,6 +1,8 @@
 from PIL import ImageGrab, Image
 from typing import List, Optional
 
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+
 
 def pil_screenshot(file_path: Optional[str] = None, screen_region: Optional[List[int]] = None) -> Image.Image:
     """
@@ -23,7 +25,7 @@ def pil_screenshot(file_path: Optional[str] = None, screen_region: Optional[List
     if file_path:
         try:
             image.save(file_path)
-        except Exception as e:
-            print(f"Failed to save screenshot: {e}")
+        except (OSError, ValueError) as error:
+            autocontrol_logger.error("Failed to save screenshot: %r", error)
 
     return image

@@ -2,7 +2,6 @@ import importlib
 from importlib.util import find_spec
 from inspect import getmembers, isfunction, isbuiltin, isclass
 from types import ModuleType
-from sys import stderr
 from typing import Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -36,7 +35,7 @@ class PackageManager:
                     installed_package = importlib.import_module(found_spec.name)
                     self.installed_package_dict[found_spec.name] = installed_package
                 except ModuleNotFoundError as error:
-                    print(repr(error), file=stderr)
+                    autocontrol_logger.error("import %s failed: %r", package, error)
         return self.installed_package_dict.get(package)
 
     def add_package_to_executor(self, package: str) -> None:
@@ -69,9 +68,9 @@ class PackageManager:
             for member in getmembers(installed_package, predicate):
                 target.event_dict[f"{package}_{member[0]}"] = member[1]
         elif installed_package is None:
-            print(repr(ModuleNotFoundError(f"Can't find package {package}")), file=stderr)
+            autocontrol_logger.error("can't find package %s", package)
         else:
-            print(f"Executor error {self.executor}", file=stderr)
+            autocontrol_logger.error("Executor error %r", self.executor)
 
     def add_package_to_target(self, package: str, target) -> None:
         """
@@ -84,8 +83,8 @@ class PackageManager:
         try:
             for predicate in (isfunction, isbuiltin, isclass):
                 self.get_member(package, predicate, target)
-        except Exception as error:
-            print(repr(error), file=stderr)
+        except (ImportError, AttributeError, TypeError) as error:
+            autocontrol_logger.error("add_package_to_target failed: %r", error)
 
 
 # 全域 PackageManager 實例 Global instance

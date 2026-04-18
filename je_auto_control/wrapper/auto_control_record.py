@@ -18,7 +18,7 @@ def record() -> None:
             raise AutoControlException(macos_record_error_message)
         record_action_to_list("record", None)
         recorder.record()
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError, AutoControlException, AutoControlJsonActionException) as error:
         record_action_to_list("record", None, repr(error))
         autocontrol_logger.error(f"record, failed: {repr(error)}")
 
@@ -43,6 +43,6 @@ def stop_record() -> list:
                 new_list.append([action[0], {"mouse_keycode": action[0], "x": action[1], "y": action[2]}])
         record_action_to_list("stop_record", None)
         return new_list
-    except Exception as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError, AutoControlException, AutoControlJsonActionException) as error:
         record_action_to_list("stop_record", None, repr(error))
         autocontrol_logger.error(f"stop_record, failed: {repr(error)}")

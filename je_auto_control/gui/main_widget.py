@@ -8,18 +8,11 @@ from PySide6.QtWidgets import (
     QTabWidget, QTextEdit, QFileDialog, QCheckBox, QGroupBox
 )
 
+from je_auto_control.gui._auto_click_tab import AutoClickTabMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
-from je_auto_control.wrapper.auto_control_keyboard import (
-    type_keyboard, hotkey, write
-)
-from je_auto_control.wrapper.auto_control_mouse import (
-    click_mouse, get_mouse_position, mouse_scroll
-)
 from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot, get_pixel
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_image_center, locate_and_click
 from je_auto_control.wrapper.auto_control_record import record, stop_record
-from je_auto_control.wrapper.auto_control_keyboard import get_keyboard_keys_table
-from je_auto_control.wrapper.auto_control_mouse import mouse_keys_table, special_mouse_keys_table
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
@@ -45,7 +38,7 @@ class _WorkerSignals(QObject):
 # =============================================================================
 # Main Widget
 # =============================================================================
-class AutoControlGUIWidget(QWidget):
+class AutoControlGUIWidget(AutoClickTabMixin, QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -277,9 +270,9 @@ class AutoControlGUIWidget(QWidget):
                 type_keyboard(key)
                 if is_double:
                     type_keyboard(key)
-        except Exception as e:
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
             self.timer.stop()
-            QMessageBox.warning(self, "Error", str(e))
+            QMessageBox.warning(self, "Error", str(error))
 
     def _get_mouse_pos(self):
         try:
@@ -287,32 +280,32 @@ class AutoControlGUIWidget(QWidget):
             self.pos_label.setText(_t("current_position") + f" ({x}, {y})")
             self.cursor_x_input.setText(str(x))
             self.cursor_y_input.setText(str(y))
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _send_hotkey(self):
         try:
             keys = [k.strip() for k in self.hotkey_input.text().split(",") if k.strip()]
             if keys:
                 hotkey(keys)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _send_write(self):
         try:
             text = self.write_input.text()
             if text:
                 write(text)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _send_scroll(self):
         try:
             val = int(self.scroll_value_input.text() or "3")
             direction = self.scroll_dir_combo.currentText() if self.scroll_dir_combo else "scroll_down"
             mouse_scroll(val, scroll_direction=direction)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     # =========================================================================
     # Tab 2: Screenshot
@@ -386,8 +379,8 @@ class AutoControlGUIWidget(QWidget):
         try:
             w, h = screen_size()
             self.screen_size_label.setText(f"{w} x {h}")
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _browse_ss_path(self):
         path, _ = QFileDialog.getSaveFileName(self, _t("save_screenshot"), "", "PNG (*.png);;All (*)")
@@ -403,8 +396,8 @@ class AutoControlGUIWidget(QWidget):
                 region = [int(x.strip()) for x in region_text.split(",")]
             screenshot(file_path=path, screen_region=region)
             self.ss_result_text.setText(f"Screenshot saved: {path or '(not saved)'}")
-        except Exception as e:
-            self.ss_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.ss_result_text.setText(f"Error: {error}")
 
     def _get_pixel_color(self):
         try:
@@ -412,8 +405,8 @@ class AutoControlGUIWidget(QWidget):
             y = int(self.pixel_y_input.text())
             color = get_pixel(x, y)
             self.pixel_result_label.setText(_t("pixel_result") + f" {color}")
-        except Exception as e:
-            self.pixel_result_label.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.pixel_result_label.setText(f"Error: {error}")
 
     # =========================================================================
     # Tab 3: Image Detection
@@ -476,16 +469,16 @@ class AutoControlGUIWidget(QWidget):
             path, th, draw = self._get_detect_params()
             result = locate_image_center(path, th, draw)
             self.detect_result_text.setText(f"Center: {result}")
-        except Exception as e:
-            self.detect_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.detect_result_text.setText(f"Error: {error}")
 
     def _locate_all(self):
         try:
             path, th, draw = self._get_detect_params()
             result = locate_all_image(path, th, draw)
             self.detect_result_text.setText(f"Found {len(result)} matches:\n{result}")
-        except Exception as e:
-            self.detect_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.detect_result_text.setText(f"Error: {error}")
 
     def _locate_click(self):
         try:
@@ -493,8 +486,8 @@ class AutoControlGUIWidget(QWidget):
             btn = self.mouse_button_combo.currentText() if hasattr(self, "mouse_button_combo") else "mouse_left"
             result = locate_and_click(path, btn, th, draw)
             self.detect_result_text.setText(f"Clicked at: {result}")
-        except Exception as e:
-            self.detect_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.detect_result_text.setText(f"Error: {error}")
 
     # =========================================================================
     # Tab 4: Record / Playback
@@ -538,16 +531,16 @@ class AutoControlGUIWidget(QWidget):
         try:
             record()
             self.record_status_label.setText(_t("record_status") + " " + _t("record_recording"))
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _stop_record(self):
         try:
             self._record_data = stop_record() or []
             self.record_status_label.setText(_t("record_status") + " " + _t("record_idle"))
             self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _playback_record(self):
         try:
@@ -555,8 +548,8 @@ class AutoControlGUIWidget(QWidget):
                 QMessageBox.warning(self, "Warning", "No recorded data")
                 return
             execute_action(self._record_data)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _save_record(self):
         try:
@@ -566,8 +559,8 @@ class AutoControlGUIWidget(QWidget):
             path, _ = QFileDialog.getSaveFileName(self, _t("save_record"), "", "JSON (*.json)")
             if path:
                 write_action_json(path, self._record_data)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _load_record(self):
         try:
@@ -575,8 +568,8 @@ class AutoControlGUIWidget(QWidget):
             if path:
                 self._record_data = read_action_json(path)
                 self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     # =========================================================================
     # Tab 5: Script Executor
@@ -633,8 +626,8 @@ class AutoControlGUIWidget(QWidget):
             try:
                 data = read_action_json(path)
                 self.script_editor.setText(json.dumps(data, indent=2, ensure_ascii=False))
-            except Exception as e:
-                self.script_result_text.setText(f"Error loading: {e}")
+            except (OSError, ValueError, TypeError, RuntimeError) as error:
+                self.script_result_text.setText(f"Error loading: {error}")
 
     def _execute_script(self):
         try:
@@ -644,8 +637,8 @@ class AutoControlGUIWidget(QWidget):
             data = read_action_json(path)
             result = execute_action(data)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except Exception as e:
-            self.script_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.script_result_text.setText(f"Error: {error}")
 
     def _browse_script_dir(self):
         path = QFileDialog.getExistingDirectory(self, _t("execute_dir_label"))
@@ -660,8 +653,8 @@ class AutoControlGUIWidget(QWidget):
             files = get_dir_files_as_list(path)
             result = execute_files(files)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except Exception as e:
-            self.script_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.script_result_text.setText(f"Error: {error}")
 
     def _execute_manual_script(self):
         try:
@@ -671,8 +664,8 @@ class AutoControlGUIWidget(QWidget):
             data = json.loads(text)
             result = execute_action(data)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except Exception as e:
-            self.script_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.script_result_text.setText(f"Error: {error}")
 
     # =========================================================================
     # Tab 6: Screen Recording
@@ -746,16 +739,16 @@ class AutoControlGUIWidget(QWidget):
             resolution = (int(w), int(h))
             self.screen_recorder.start_new_record(name, output, codec, fps, resolution)
             self.sr_status_label.setText(_t("screen_record_status") + " " + _t("record_recording"))
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _stop_screen_record(self):
         try:
             name = self.sr_name_input.text() or "default"
             self.screen_recorder.stop_record(name)
             self.sr_status_label.setText(_t("screen_record_status") + " " + _t("record_idle"))
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     # =========================================================================
     # Tab 7: Shell Command
@@ -807,8 +800,8 @@ class AutoControlGUIWidget(QWidget):
             mgr = ShellManager()
             mgr.exec_shell(cmd)
             self.shell_output_text.setText(f"Executed: {cmd}\n(Check console for output)")
-        except Exception as e:
-            self.shell_output_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.shell_output_text.setText(f"Error: {error}")
 
     def _browse_exe(self):
         path, _ = QFileDialog.getOpenFileName(self, _t("start_exe_label"), "", "Executable (*.exe);;All (*)")
@@ -822,8 +815,8 @@ class AutoControlGUIWidget(QWidget):
                 return
             start_exe(path)
             self.shell_output_text.setText(f"Started: {path}")
-        except Exception as e:
-            self.shell_output_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.shell_output_text.setText(f"Error: {error}")
 
     # =========================================================================
     # Tab 8: Report
@@ -883,24 +876,24 @@ class AutoControlGUIWidget(QWidget):
             name = self.report_name_input.text() or "autocontrol_report"
             generate_html_report(name)
             self.report_result_text.setText(f"HTML report generated: {name}")
-        except Exception as e:
-            self.report_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.report_result_text.setText(f"Error: {error}")
 
     def _gen_json(self):
         try:
             name = self.report_name_input.text() or "autocontrol_report"
             generate_json_report(name)
             self.report_result_text.setText(f"JSON report generated: {name}")
-        except Exception as e:
-            self.report_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.report_result_text.setText(f"Error: {error}")
 
     def _gen_xml(self):
         try:
             name = self.report_name_input.text() or "autocontrol_report"
             generate_xml_report(name)
             self.report_result_text.setText(f"XML report generated: {name}")
-        except Exception as e:
-            self.report_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.report_result_text.setText(f"Error: {error}")
 
     # =========================================================================
     # Global keyboard shortcut: Ctrl+4 to stop
