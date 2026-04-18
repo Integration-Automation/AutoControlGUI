@@ -278,6 +278,10 @@ english_word_dict = {
     "rh_status_ok": "OK",
     "rh_status_error": "Error",
     "rh_status_running": "Running",
+    "rh_col_artifact": "Artifact",
+    "rh_open_artifact": "Open artifact",
+    "rh_no_artifact": "Selected run has no artifact.",
+    "rh_artifact_missing": "Artifact file no longer exists.",
 
     # Accessibility Tab
     "a11y_app_label": "App:",

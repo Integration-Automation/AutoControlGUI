@@ -18,6 +18,9 @@ from typing import Callable, Dict, FrozenSet, List, Optional, Tuple
 
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.artifact_manager import (
+    capture_error_snapshot,
+)
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_HOTKEY, STATUS_ERROR, STATUS_OK, default_history_store,
 )
@@ -191,7 +194,11 @@ class HotkeyDaemon:
             autocontrol_logger.error("hotkey %s failed: %r",
                                      match.combo, error)
         finally:
-            default_history_store.finish_run(run_id, status, error_text)
+            artifact = (capture_error_snapshot(run_id)
+                        if status == STATUS_ERROR else None)
+            default_history_store.finish_run(
+                run_id, status, error_text, artifact_path=artifact,
+            )
         match.fired += 1
 
 

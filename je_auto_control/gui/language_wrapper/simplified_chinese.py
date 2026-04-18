@@ -277,6 +277,10 @@ simplified_chinese_word_dict = {
     "rh_status_ok": "成功",
     "rh_status_error": "错误",
     "rh_status_running": "执行中",
+    "rh_col_artifact": "截图",
+    "rh_open_artifact": "打开截图",
+    "rh_no_artifact": "所选记录没有截图。",
+    "rh_artifact_missing": "截图文件已不存在。",
 
     # Accessibility Tab
     "a11y_app_label": "应用:",

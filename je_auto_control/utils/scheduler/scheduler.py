@@ -12,6 +12,9 @@ from typing import Callable, Dict, List, Optional
 
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.artifact_manager import (
+    capture_error_snapshot,
+)
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_SCHEDULER, STATUS_ERROR, STATUS_OK, default_history_store,
 )
@@ -168,7 +171,11 @@ class Scheduler:
             autocontrol_logger.error("scheduler job %s failed: %r",
                                      job.job_id, error)
         finally:
-            default_history_store.finish_run(run_id, status, error_text)
+            artifact = (capture_error_snapshot(run_id)
+                        if status == STATUS_ERROR else None)
+            default_history_store.finish_run(
+                run_id, status, error_text, artifact_path=artifact,
+            )
         with self._lock:
             live = self._jobs.get(job.job_id)
             if live is None:

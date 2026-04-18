@@ -1,12 +1,13 @@
 """Tests for the run history store and its scheduler/trigger/hotkey hooks."""
 import time
+from pathlib import Path
 
 import pytest
 
 from je_auto_control.utils.run_history import history_store as history_mod
 from je_auto_control.utils.run_history.history_store import (
-    SOURCE_HOTKEY, SOURCE_SCHEDULER, SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK,
-    STATUS_RUNNING, HistoryStore, RunRecord,
+    SOURCE_HOTKEY, SOURCE_MANUAL, SOURCE_SCHEDULER, SOURCE_TRIGGER,
+    STATUS_ERROR, STATUS_OK, STATUS_RUNNING, HistoryStore, RunRecord,
 )
 
 
@@ -137,6 +138,7 @@ def test_scheduler_records_error(monkeypatch, store):
 
     monkeypatch.setattr(sched_mod, "default_history_store", store)
     monkeypatch.setattr(sched_mod, "read_action_json", boom)
+    monkeypatch.setattr(sched_mod, "capture_error_snapshot", lambda _rid: None)
 
     sched = sched_mod.Scheduler(
         executor=lambda actions: None, tick_seconds=0.05,
@@ -165,3 +167,81 @@ def test_executor_history_commands(monkeypatch, store):
     store.start_run(SOURCE_SCHEDULER, "j", "p")
     rows = action_executor._history_list_as_dicts(limit=10)
     assert rows and rows[0]["source_type"] == SOURCE_SCHEDULER
+
+
+def test_finish_run_persists_artifact_path(store):
+    run_id = store.start_run(SOURCE_SCHEDULER, "j", "s.json")
+    store.finish_run(run_id, STATUS_ERROR, error_text="boom",
+                     artifact_path="/tmp/x.png")
+    record = store.get_run(run_id)
+    assert record.artifact_path == "/tmp/x.png"
+
+
+def test_attach_artifact_updates_existing_row(store):
+    run_id = store.start_run(SOURCE_HOTKEY, "h", "s.json")
+    store.finish_run(run_id, STATUS_ERROR, error_text="oops")
+    assert store.attach_artifact(run_id, "/tmp/snap.png") is True
+    assert store.get_run(run_id).artifact_path == "/tmp/snap.png"
+    assert store.attach_artifact(99999, "/tmp/a.png") is False
+
+
+def test_clear_removes_artifact_files(tmp_path, store):
+    artifact = tmp_path / "snap.png"
+    artifact.write_bytes(b"fake")
+    run_id = store.start_run(SOURCE_TRIGGER, "t", "s.json")
+    store.finish_run(run_id, STATUS_ERROR, error_text="fail",
+                     artifact_path=str(artifact))
+    store.clear()
+    assert not artifact.exists()
+
+
+def test_prune_removes_artifact_files_of_dropped_rows(tmp_path, store):
+    keep = tmp_path / "keep.png"
+    drop = tmp_path / "drop.png"
+    keep.write_bytes(b"k")
+    drop.write_bytes(b"d")
+    old = store.start_run(SOURCE_SCHEDULER, "a", "s", started_at=100.0)
+    store.finish_run(old, STATUS_ERROR, artifact_path=str(drop))
+    new = store.start_run(SOURCE_SCHEDULER, "b", "s", started_at=200.0)
+    store.finish_run(new, STATUS_ERROR, artifact_path=str(keep))
+    store.prune(keep_latest=1)
+    assert keep.exists()
+    assert not drop.exists()
+
+
+def test_capture_error_snapshot_uses_injected_store(tmp_path, monkeypatch,
+                                                    store):
+    from je_auto_control.utils.run_history import artifact_manager as am
+
+    def fake_screenshot(path):
+        Path(path).write_bytes(b"png")
+
+    import je_auto_control.wrapper.auto_control_screen as screen_mod
+    monkeypatch.setattr(screen_mod, "screenshot", fake_screenshot)
+
+    run_id = store.start_run(SOURCE_MANUAL, "m", "s.json")
+    store.finish_run(run_id, STATUS_ERROR, error_text="x")
+    path = am.capture_error_snapshot(
+        run_id, artifacts_dir=tmp_path, store=store,
+    )
+    assert path is not None
+    assert Path(path).exists()
+    assert store.get_run(run_id).artifact_path == path
+
+
+def test_capture_error_snapshot_returns_none_on_failure(tmp_path, monkeypatch,
+                                                       store):
+    from je_auto_control.utils.run_history import artifact_manager as am
+
+    def boom(_path):
+        raise OSError("no display")
+
+    import je_auto_control.wrapper.auto_control_screen as screen_mod
+    monkeypatch.setattr(screen_mod, "screenshot", boom)
+
+    run_id = store.start_run(SOURCE_MANUAL, "m", "s.json")
+    store.finish_run(run_id, STATUS_ERROR, error_text="x")
+    assert am.capture_error_snapshot(
+        run_id, artifacts_dir=tmp_path, store=store,
+    ) is None
+    assert store.get_run(run_id).artifact_path is None

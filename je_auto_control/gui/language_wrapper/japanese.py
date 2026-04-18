@@ -277,6 +277,10 @@ japanese_word_dict = {
     "rh_status_ok": "成功",
     "rh_status_error": "エラー",
     "rh_status_running": "実行中",
+    "rh_col_artifact": "スクリーンショット",
+    "rh_open_artifact": "スクリーンショットを開く",
+    "rh_no_artifact": "選択した実行にスクリーンショットはありません。",
+    "rh_artifact_missing": "スクリーンショットファイルが存在しません。",
 
     # Accessibility Tab
     "a11y_app_label": "アプリ:",

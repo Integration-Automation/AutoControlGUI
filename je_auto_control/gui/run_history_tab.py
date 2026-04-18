@@ -1,8 +1,10 @@
 """Run History tab: browse past scheduler / trigger / hotkey fires."""
 import datetime as _dt
+from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QTimer, Qt, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QAbstractItemView, QComboBox, QHBoxLayout, QHeaderView, QLabel,
     QMessageBox, QPushButton, QTableWidget, QTableWidgetItem,
@@ -19,7 +21,7 @@ from je_auto_control.utils.run_history.history_store import (
     default_history_store,
 )
 
-_COLUMN_COUNT = 7
+_COLUMN_COUNT = 8
 _REFRESH_INTERVAL_MS = 2000
 _SOURCES = (
     ("rh_source_all", None),
@@ -106,6 +108,7 @@ class RunHistoryTab(TranslatableMixin, QWidget):
             _t("rh_col_id"), _t("rh_col_source"), _t("rh_col_target"),
             _t("rh_col_script"), _t("rh_col_started"),
             _t("rh_col_duration"), _t("rh_col_status"),
+            _t("rh_col_artifact"),
         ])
 
     def _build_layout(self) -> None:
@@ -122,6 +125,13 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         top.addWidget(clear_btn)
         root.addLayout(top)
         root.addWidget(self._table, stretch=1)
+        self._table.cellDoubleClicked.connect(self._on_cell_double_clicked)
+        open_row = QHBoxLayout()
+        self._open_artifact_btn = self._tr(QPushButton(), "rh_open_artifact")
+        self._open_artifact_btn.clicked.connect(self._open_selected_artifact)
+        open_row.addWidget(self._open_artifact_btn)
+        open_row.addStretch()
+        root.addLayout(open_row)
         root.addWidget(self._count_label)
 
     def _on_clear(self) -> None:
@@ -150,6 +160,7 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         status_key = _STATUS_LABEL_KEYS.get(record.status, record.status)
         status_text = _t(status_key) if record.error_text is None \
             else f"{_t(status_key)}: {record.error_text}"
+        artifact_text = record.artifact_path or "-"
         values = (
             str(record.id),
             record.source_type,
@@ -158,8 +169,49 @@ class RunHistoryTab(TranslatableMixin, QWidget):
             _format_time(record.started_at),
             _format_duration(record.duration_seconds),
             status_text,
+            artifact_text,
         )
         for col, text in enumerate(values):
             item = QTableWidgetItem(text)
             item.setFlags(item.flags() & ~Qt.ItemIsEditable)
             self._table.setItem(row, col, item)
+
+    def _selected_artifact_path(self) -> Optional[str]:
+        row = self._table.currentRow()
+        if row < 0:
+            return None
+        item = self._table.item(row, _COLUMN_COUNT - 1)
+        if item is None:
+            return None
+        text = item.text()
+        if not text or text == "-":
+            return None
+        return text
+
+    def _open_selected_artifact(self) -> None:
+        path = self._selected_artifact_path()
+        if path is None:
+            QMessageBox.information(
+                self, _t("rh_open_artifact"), _t("rh_no_artifact"),
+            )
+            return
+        self._open_path(path)
+
+    def _on_cell_double_clicked(self, row: int, column: int) -> None:
+        if column != _COLUMN_COUNT - 1:
+            return
+        item = self._table.item(row, column)
+        if item is None:
+            return
+        text = item.text()
+        if text and text != "-":
+            self._open_path(text)
+
+    def _open_path(self, path: str) -> None:
+        resolved = Path(path)
+        if not resolved.exists():
+            QMessageBox.warning(
+                self, _t("rh_open_artifact"), _t("rh_artifact_missing"),
+            )
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(resolved)))

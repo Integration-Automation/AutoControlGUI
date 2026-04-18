@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS runs (
     started_at REAL NOT NULL,
     finished_at REAL,
     status TEXT NOT NULL,
-    error_text TEXT
+    error_text TEXT,
+    artifact_path TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_runs_started_at ON runs(started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_runs_source ON runs(source_type, source_id);
@@ -58,6 +59,7 @@ class RunRecord:
     finished_at: Optional[float]
     status: str
     error_text: Optional[str]
+    artifact_path: Optional[str] = None
 
     @property
     def duration_seconds(self) -> Optional[float]:
@@ -100,6 +102,17 @@ class HistoryStore:
         )
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
+        self._migrate_schema()
+
+    def _migrate_schema(self) -> None:
+        """Add columns that older store files are missing."""
+        cols = {row["name"] for row in self._conn.execute(
+            "PRAGMA table_info(runs)",
+        ).fetchall()}
+        if "artifact_path" not in cols:
+            self._conn.execute(
+                "ALTER TABLE runs ADD COLUMN artifact_path TEXT",
+            )
 
     @property
     def path(self) -> str:
@@ -121,7 +134,8 @@ class HistoryStore:
 
     def finish_run(self, run_id: int, status: str,
                    error_text: Optional[str] = None,
-                   finished_at: Optional[float] = None) -> bool:
+                   finished_at: Optional[float] = None,
+                   artifact_path: Optional[str] = None) -> bool:
         """Update a pending run with its final status; return False if unknown."""
         _validate_status(status)
         if status == STATUS_RUNNING:
@@ -129,9 +143,18 @@ class HistoryStore:
         ts = float(finished_at) if finished_at is not None else time.time()
         with self._lock:
             cursor = self._conn.execute(
-                "UPDATE runs SET finished_at = ?, status = ?, error_text = ?"
-                " WHERE id = ?",
-                (ts, status, error_text, int(run_id)),
+                "UPDATE runs SET finished_at = ?, status = ?, error_text = ?,"
+                " artifact_path = ? WHERE id = ?",
+                (ts, status, error_text, artifact_path, int(run_id)),
+            )
+            return cursor.rowcount > 0
+
+    def attach_artifact(self, run_id: int, artifact_path: str) -> bool:
+        """Attach or replace the artifact path on a finished run."""
+        with self._lock:
+            cursor = self._conn.execute(
+                "UPDATE runs SET artifact_path = ? WHERE id = ?",
+                (artifact_path, int(run_id)),
             )
             return cursor.rowcount > 0
 
@@ -177,23 +200,36 @@ class HistoryStore:
         return int(row[0])
 
     def clear(self) -> int:
-        """Delete every row; return the number removed."""
+        """Delete every row (and its artifact file); return rows removed."""
         with self._lock:
+            paths = [r[0] for r in self._conn.execute(
+                "SELECT artifact_path FROM runs WHERE artifact_path IS NOT NULL",
+            ).fetchall()]
             cursor = self._conn.execute("DELETE FROM runs")
-            return int(cursor.rowcount)
+            removed = int(cursor.rowcount)
+        _remove_artifact_files(paths)
+        return removed
 
     def prune(self, keep_latest: int) -> int:
-        """Keep only the newest ``keep_latest`` rows; return rows removed."""
+        """Keep only the newest ``keep_latest`` rows; delete the rest."""
         if keep_latest < 0:
             raise ValueError("keep_latest must be >= 0")
         with self._lock:
+            paths = [r[0] for r in self._conn.execute(
+                "SELECT artifact_path FROM runs WHERE artifact_path IS NOT NULL"
+                " AND id NOT IN ("
+                "SELECT id FROM runs ORDER BY started_at DESC LIMIT ?)",
+                (int(keep_latest),),
+            ).fetchall()]
             cursor = self._conn.execute(
                 "DELETE FROM runs WHERE id NOT IN ("
                 "SELECT id FROM runs ORDER BY started_at DESC LIMIT ?"
                 ")",
                 (int(keep_latest),),
             )
-            return int(cursor.rowcount)
+            removed = int(cursor.rowcount)
+        _remove_artifact_files(paths)
+        return removed
 
     def close(self) -> None:
         with self._lock:
@@ -204,6 +240,7 @@ class HistoryStore:
 
 
 def _row_to_record(row: sqlite3.Row) -> RunRecord:
+    artifact = row["artifact_path"] if "artifact_path" in row.keys() else None
     return RunRecord(
         id=int(row["id"]),
         source_type=str(row["source_type"]),
@@ -215,7 +252,23 @@ def _row_to_record(row: sqlite3.Row) -> RunRecord:
         status=str(row["status"]),
         error_text=(str(row["error_text"])
                     if row["error_text"] is not None else None),
+        artifact_path=str(artifact) if artifact is not None else None,
     )
+
+
+def _remove_artifact_files(paths) -> None:
+    """Best-effort delete of artifact files; ignore missing entries."""
+    for raw in paths:
+        if not raw:
+            continue
+        try:
+            Path(raw).unlink()
+        except FileNotFoundError:
+            continue
+        except OSError as error:
+            autocontrol_logger.warning(
+                "failed to remove artifact %r: %r", raw, error,
+            )
 
 
 default_history_store = HistoryStore(path=_default_history_path())

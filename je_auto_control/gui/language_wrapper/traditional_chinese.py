@@ -278,6 +278,10 @@ traditional_chinese_word_dict = {
     "rh_status_ok": "成功",
     "rh_status_error": "錯誤",
     "rh_status_running": "執行中",
+    "rh_col_artifact": "截圖",
+    "rh_open_artifact": "開啟截圖",
+    "rh_no_artifact": "所選紀錄沒有截圖。",
+    "rh_artifact_missing": "截圖檔案已不存在。",
 
     # Accessibility Tab
     "a11y_app_label": "應用程式：",
