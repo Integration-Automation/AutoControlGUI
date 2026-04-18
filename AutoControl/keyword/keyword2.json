@@ -1,0 +1,133 @@
+[
+    [
+        "AC_set_record_enable",
+        [
+            true
+        ]
+    ],
+    [
+        "AC_write",
+        {
+            "write_string": "in this keyword file we will change the mouse position"
+        }
+    ],
+    [
+        "AC_type_keyboard",
+        {
+            "keycode": "return"
+        }
+    ],
+    [
+        "AC_set_mouse_position",
+        [
+            500,
+            500
+        ]
+    ],
+    [
+        "AC_set_mouse_position",
+        {
+            "x": 100,
+            "y": 100
+        }
+    ],
+    [
+        "AC_set_mouse_position",
+        [
+            600,
+            600
+        ]
+    ],
+    [
+        "AC_set_mouse_position",
+        {
+            "x": 100,
+            "y": 100
+        }
+    ],
+    [
+        "AC_set_mouse_position",
+        [
+            400,
+            400
+        ]
+    ],
+    [
+        "AC_set_mouse_position",
+        {
+            "x": 100,
+            "y": 100
+        }
+    ],
+    [
+        "AC_set_mouse_position",
+        [
+            300,
+            300
+        ]
+    ],
+    [
+        "AC_set_mouse_position",
+        {
+            "x": 100,
+            "y": 100
+        }
+    ],
+    [
+        "AC_set_mouse_position",
+        [
+            200,
+            200
+        ]
+    ],
+    [
+        "AC_set_mouse_position",
+        {
+            "x": 100,
+            "y": 100
+        }
+    ],
+    [
+        "AC_set_mouse_position",
+        [
+            700,
+            700
+        ]
+    ],
+    [
+        "AC_set_mouse_position",
+        {
+            "x": 100,
+            "y": 100
+        }
+    ],
+    [
+        "AC_set_mouse_position",
+        [
+            800,
+            800
+        ]
+    ],
+    [
+        "AC_set_mouse_position",
+        {
+            "x": 100,
+            "y": 100
+        }
+    ],
+    [
+        "AC_write",
+        {
+            "write_string": "now i will create an json report for you"
+        }
+    ],
+    [
+        "AC_type_keyboard",
+        {
+            "keycode": "return"
+        }
+    ],
+    [
+        "AC_generate_json_report"
+    ]
+]

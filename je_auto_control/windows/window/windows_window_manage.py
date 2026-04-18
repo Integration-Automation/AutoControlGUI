@@ -1,5 +1,5 @@
 from ctypes import WINFUNCTYPE, c_bool, c_int, POINTER, create_unicode_buffer
-from typing import Union, List, Tuple, Optional
+from typing import List, Tuple, Optional
 
 from je_auto_control.windows.core.utils.win32_ctype_input import user32
 

@@ -1,6 +1,6 @@
 from collections import defaultdict
 from xml.etree import ElementTree
-from typing import Union, Dict, Any
+from typing import Dict, Any
 
 
 def elements_tree_to_dict(elements_tree: ElementTree.Element) -> Dict[str, Any]:

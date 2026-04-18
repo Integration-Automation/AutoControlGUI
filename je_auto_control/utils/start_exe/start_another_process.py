@@ -23,11 +23,11 @@ def start_exe(exe_path: str) -> None:
             process_manager = ShellManager()
             process_manager.exec_shell(str(exe_path_obj))
             autocontrol_logger.info(f"Successfully started executable: {exe_path_obj}")
-        except Exception as error:
+        except (OSError, ValueError, RuntimeError) as error:
             autocontrol_logger.error(
                 f"start_exe, exe_path: {exe_path_obj}, exec_shell failed: {repr(error)}"
             )
-            raise AutoControlException(f"Failed to execute {exe_path_obj}: {repr(error)}")
+            raise AutoControlException(f"Failed to execute {exe_path_obj}: {repr(error)}") from error
     else:
         autocontrol_logger.error(
             f"start_exe, exe_path: {exe_path_obj}, failed: {can_not_find_file_error_message}"

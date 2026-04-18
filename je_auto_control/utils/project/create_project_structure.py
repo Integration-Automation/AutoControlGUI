@@ -11,6 +11,8 @@ from je_auto_control.utils.project.template.template_keyword import (
     template_keyword_1, template_keyword_2, bad_template_1
 )
 
+_project_lock = Lock()
+
 
 def create_dir(dir_name: str) -> None:
     """
@@ -47,17 +49,16 @@ def create_template(parent_name: str, project_path: str = None) -> None:
 
     keyword_dir_path = Path(project_path) / parent_name / "keyword"
     executor_dir_path = Path(project_path) / parent_name / "executor"
-    lock = Lock()
 
-    # 建立 keyword JSON 檔案 Create keyword JSON files
-    if keyword_dir_path.exists() and keyword_dir_path.is_dir():
-        write_action_json(str(keyword_dir_path / "keyword1.json"), template_keyword_1)
-        write_action_json(str(keyword_dir_path / "keyword2.json"), template_keyword_2)
-        write_action_json(str(keyword_dir_path / "bad_keyword_1.json"), bad_template_1)
+    with _project_lock:
+        # 建立 keyword JSON 檔案 Create keyword JSON files
+        if keyword_dir_path.exists() and keyword_dir_path.is_dir():
+            write_action_json(str(keyword_dir_path / "keyword1.json"), template_keyword_1)
+            write_action_json(str(keyword_dir_path / "keyword2.json"), template_keyword_2)
+            write_action_json(str(keyword_dir_path / "bad_keyword_1.json"), bad_template_1)
 
-    # 建立 executor Python 檔案 Create executor Python files
-    if executor_dir_path.exists() and executor_dir_path.is_dir():
-        with lock:
+        # 建立 executor Python 檔案 Create executor Python files
+        if executor_dir_path.exists() and executor_dir_path.is_dir():
             _write_file(
                 executor_dir_path / "executor_one_file.py",
                 executor_template_1.replace("{temp}", str(keyword_dir_path / "keyword1.json"))

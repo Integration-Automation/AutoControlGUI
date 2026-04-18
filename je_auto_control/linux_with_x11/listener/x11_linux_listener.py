@@ -69,7 +69,7 @@ class KeypressHandler(Thread):
                         if self.record_flag and self.record_queue is not None:
                             temp = (event.type, event.detail, event.root_x, event.root_y)
                             self.record_queue.put(temp)
-        except Exception as error:
+        except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
             raise AutoControlException(f"{listener_error_message}: {error}") from error
 
     def record(self, record_queue: Queue) -> None:
@@ -142,7 +142,7 @@ class XWindowsKeypressListener(Thread):
 
                 # 持續等待事件
                 self.root.display.next_event()
-            except Exception as error:
+            except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
                 raise AutoControlException(f"{listener_error_message}: {error}") from error
             finally:
                 self.handler.still_listener = False

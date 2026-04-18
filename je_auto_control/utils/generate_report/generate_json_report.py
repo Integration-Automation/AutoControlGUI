@@ -54,7 +54,7 @@ def _write_json_file(file_name: str, data: Dict[str, Dict[str, str]], lock: Lock
         try:
             with open(file_name, "w+", encoding="utf-8") as file_to_write:
                 json.dump(data, file_to_write, indent=4, ensure_ascii=False)
-        except Exception as error:
+        except (OSError, TypeError, ValueError) as error:
             autocontrol_logger.error(f"Failed to write {file_name}, error: {repr(error)}")
 
 

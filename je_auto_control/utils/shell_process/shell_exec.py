@@ -3,16 +3,27 @@ import shlex
 import subprocess
 import sys
 from threading import Thread
-from typing import Union
+from typing import List, Union
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+
+
+def _normalize_command(shell_command: Union[str, List[str]]) -> List[str]:
+    """
+    Normalize shell command to an argv list with no shell interpretation.
+    將 shell 指令正規化為 argv list，不經 shell 解譯，避免指令注入。
+    """
+    if isinstance(shell_command, list):
+        return [str(part) for part in shell_command]
+    posix_mode = sys.platform not in ("win32", "cygwin", "msys")
+    return shlex.split(shell_command, posix=posix_mode)
 
 
 class ShellManager:
     """
     ShellManager
     Shell 指令管理器
-    - 執行外部 shell 指令
+    - 執行外部 shell 指令 (不使用 shell=True，避免注入)
     - 使用背景執行緒持續讀取 stdout / stderr
     - 將輸出放入 queue，供 pull_text() 取出
     """
@@ -31,68 +42,58 @@ class ShellManager:
         self.program_encoding: str = shell_encoding
         self.program_buffer: int = program_buffer
 
-    def exec_shell(self, shell_command: Union[str, list]) -> None:
+    def exec_shell(self, shell_command: Union[str, List[str]]) -> None:
         """
-        Execute shell command.
-        執行 shell 指令
+        Execute shell command with shell=False.
+        執行 shell 指令 (shell=False，呼叫端需自備 argv 或可被 shlex 切分的字串)
         """
         autocontrol_logger.info(f"exec_shell, shell_command: {shell_command}")
         try:
             self.exit_program()
-
-            if sys.platform in ["win32", "cygwin", "msys"]:
-                args = shell_command if isinstance(shell_command, str) else " ".join(shell_command)
-                self.process = subprocess.Popen(
-                    args,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    shell=True,
-                )
-            else:
-                args = shlex.split(shell_command) if isinstance(shell_command, str) else shell_command
-                self.process = subprocess.Popen(
-                    args,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    shell=False,
-                )
+            args = _normalize_command(shell_command)
+            self.process = subprocess.Popen(  # nosec B603  # reason: shell=False, argv list validated via _normalize_command
+                args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=False,
+            )
 
             self.still_run_shell = True
 
-            # stdout thread
             self.read_program_output_from_thread = Thread(
                 target=self._read_stream,
                 args=(self.process.stdout, self.run_output_queue),
-                daemon=True
+                daemon=True,
             )
             self.read_program_output_from_thread.start()
 
-            # stderr thread
             self.read_program_error_output_from_thread = Thread(
                 target=self._read_stream,
                 args=(self.process.stderr, self.run_error_queue),
-                daemon=True
+                daemon=True,
             )
             self.read_program_error_output_from_thread.start()
 
-        except Exception as error:
-            autocontrol_logger.error(f"exec_shell failed, shell_command: {shell_command}, error: {repr(error)}")
+        except (OSError, ValueError) as error:
+            autocontrol_logger.error(
+                f"exec_shell failed, shell_command: {shell_command}, error: {repr(error)}"
+            )
 
     def pull_text(self) -> None:
         """
-        Pull text from queues and print.
-        從 queue 取出訊息並輸出
+        Pull text from queues and log.
+        從 queue 取出訊息並透過 logger 輸出
         """
         try:
             while not self.run_error_queue.empty():
                 error_message = self.run_error_queue.get_nowait().strip()
                 if error_message:
-                    print(error_message, file=sys.stderr)
+                    autocontrol_logger.error(error_message)
 
             while not self.run_output_queue.empty():
                 output_message = self.run_output_queue.get_nowait().strip()
                 if output_message:
-                    print(output_message)
+                    autocontrol_logger.info(output_message)
 
         except queue.Empty:
             pass
@@ -109,21 +110,23 @@ class ShellManager:
 
         if self.process is not None:
             self.process.terminate()
-            print(f"Shell command exit with code {self.process.returncode}")
+            autocontrol_logger.info(
+                f"Shell command exit with code {self.process.returncode}"
+            )
             self.process = None
 
-        self.print_and_clear_queue()
+        self.log_and_clear_queue()
 
-    def print_and_clear_queue(self) -> None:
+    def log_and_clear_queue(self) -> None:
         """
-        Print and clear queues.
-        輸出並清空 queue
+        Log and clear queues.
+        透過 logger 輸出並清空 queue
         """
         while not self.run_output_queue.empty():
-            print(self.run_output_queue.get_nowait().strip())
+            autocontrol_logger.info(self.run_output_queue.get_nowait().strip())
 
         while not self.run_error_queue.empty():
-            print(self.run_error_queue.get_nowait().strip(), file=sys.stderr)
+            autocontrol_logger.error(self.run_error_queue.get_nowait().strip())
 
         self.run_output_queue = queue.Queue()
         self.run_error_queue = queue.Queue()
@@ -140,5 +143,4 @@ class ShellManager:
             target_queue.put_nowait(line.decode(self.program_encoding, "replace"))
 
 
-# 預設 ShellManager 實例 Default instance
 default_shell_manager = ShellManager()

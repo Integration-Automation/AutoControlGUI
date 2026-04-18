@@ -57,8 +57,8 @@ class XMLParser:
         """
         try:
             self.xml_root = ElementTree.fromstring(self.xml_string, **kwargs)
-        except ParseError as e:
-            raise XMLException(f"{cant_read_xml_error_message}: {repr(e)}")
+        except ParseError as error:
+            raise XMLException(f"{cant_read_xml_error_message}: {repr(error)}") from error
         return self.xml_root
 
     def xml_parser_from_file(self, **kwargs) -> ElementTree.Element:
@@ -70,8 +70,8 @@ class XMLParser:
         """
         try:
             self.tree = ElementTree.parse(self.xml_string, **kwargs)
-        except (OSError, ParseError) as e:
-            raise XMLException(f"{cant_read_xml_error_message}: {repr(e)}")
+        except (OSError, ParseError) as error:
+            raise XMLException(f"{cant_read_xml_error_message}: {repr(error)}") from error
         self.xml_root = self.tree.getroot()
         self.xml_from_type = "file"
         return self.xml_root
@@ -88,5 +88,5 @@ class XMLParser:
             content = ElementTree.fromstring(write_content.strip())
             tree = ElementTree.ElementTree(content)
             tree.write(write_xml_filename, encoding="utf-8", xml_declaration=True)
-        except ParseError as e:
-            raise XMLException(f"{cant_read_xml_error_message}: {repr(e)}")
+        except ParseError as error:
+            raise XMLException(f"{cant_read_xml_error_message}: {repr(error)}") from error

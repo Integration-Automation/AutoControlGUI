@@ -1,9 +1,9 @@
 import json
 import socketserver
-import sys
 import threading
 
 from je_auto_control.utils.executor.action_executor import execute_action
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
 class TCPServerHandler(socketserver.BaseRequestHandler):
@@ -11,11 +11,11 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
     def handle(self) -> None:
         command_string = str(self.request.recv(8192).strip(), encoding="utf-8")
         socket = self.request
-        print("command is: " + command_string, flush=True)
+        autocontrol_logger.info("command is: %s", command_string)
         if command_string == "quit_server":
             self.server.shutdown()
             self.server.close_flag = True
-            print("Now quit server", flush=True)
+            autocontrol_logger.info("Now quit server")
         else:
             try:
                 execute_str = json.loads(command_string)
@@ -24,15 +24,15 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
                     socket.sendall("\n".encode("utf-8"))
                 socket.sendall("Return_Data_Over_JE".encode("utf-8"))
                 socket.sendall("\n".encode("utf-8"))
-            except Exception as error:
-                print(repr(error), file=sys.stderr)
+            except (json.JSONDecodeError, ValueError, RuntimeError) as error:
+                autocontrol_logger.error("socket command failed: %r", error)
                 try:
                     socket.sendall(str(error).encode("utf-8"))
                     socket.sendall("\n".encode("utf-8"))
                     socket.sendall("Return_Data_Over_JE".encode("utf-8"))
                     socket.sendall("\n".encode("utf-8"))
-                except Exception as error:
-                    print(repr(error))
+                except OSError as send_error:
+                    autocontrol_logger.error("send error reply failed: %r", send_error)
 
 
 class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
@@ -42,12 +42,14 @@ class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         self.close_flag: bool = False
 
 
-def start_autocontrol_socket_server(host: str = "localhost", port: int = 9938) -> TCPServer:
-    if len(sys.argv) == 2:
-        host = sys.argv[1]
-    elif len(sys.argv) == 3:
-        host = sys.argv[1]
-        port = int(sys.argv[2])
+def start_autocontrol_socket_server(host: str = "127.0.0.1", port: int = 9938) -> TCPServer:
+    """
+    Start the AutoControl TCP command server.
+    啟動 AutoControl TCP 指令伺服器。
+
+    :param host: bind address; defaults to localhost for least privilege.
+    :param port: TCP port to listen on.
+    """
     server = TCPServer((host, port), TCPServerHandler)
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True

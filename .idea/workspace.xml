@@ -5,8 +5,27 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/AutoControl.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/AutoControl.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/AutoControl/executor/executor_bad_file.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/AutoControl/executor/executor_folder.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/AutoControl/executor/executor_one_file.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/AutoControl/keyword/bad_keyword_1.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/AutoControl/keyword/keyword1.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/AutoControl/keyword/keyword2.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/CLAUDE.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev_requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/dev_requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/gui/main_widget.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/gui/main_widget.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/gui/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/gui/main_window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/screen/osx_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/screen/osx_screen.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/file_process/get_dir_file_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/file_process/get_dir_file_list.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/project/create_project_structure.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/project/create_project_structure.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/xml/change_xml_structure/change_xml_structure.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/xml/change_xml_structure/change_xml_structure.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/window/windows_window_manage.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/window/windows_window_manage.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -74,51 +93,51 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "Python.auto_control_keyboard.executor": "Run",
-    "Python.auto_control_mouse.executor": "Run",
-    "Python.calculator.executor": "Run",
-    "Python.callback_test.executor": "Run",
-    "Python.create_project_test.executor": "Run",
-    "Python.critical_exit_test.executor": "Run",
-    "Python.executor_one_file.executor": "Run",
-    "Python.get_pixel_test.executor": "Run",
-    "Python.keyboard_is_press_test.executor": "Run",
-    "Python.keyboard_type_test.executor": "Run",
-    "Python.main_widget.executor": "Run",
-    "Python.main_window.executor": "Run",
-    "Python.mouse_test.executor": "Run",
-    "Python.record_test.executor": "Run",
-    "Python.screen_test.executor": "Run",
-    "Python.screenshot_test.executor": "Run",
-    "Python.test.executor": "Run",
-    "Python.video_recording.executor": "Run",
-    "Python.win32_screen.executor": "Run",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1": "true",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "dev",
-    "ignore.virus.scanning.warn.message": "true",
-    "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "C:/CodeWorkspace/Python/AutoControlGUI/.github/workflows",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "discord-application",
-    "to.speed.mode.migration.done": "true",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;Python.auto_control_keyboard.executor&quot;: &quot;Run&quot;,
+    &quot;Python.auto_control_mouse.executor&quot;: &quot;Run&quot;,
+    &quot;Python.calculator.executor&quot;: &quot;Run&quot;,
+    &quot;Python.callback_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.create_project_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.critical_exit_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.executor_one_file.executor&quot;: &quot;Run&quot;,
+    &quot;Python.get_pixel_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.keyboard_is_press_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.keyboard_type_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main_widget.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main_window.executor&quot;: &quot;Run&quot;,
+    &quot;Python.mouse_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.record_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.screen_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.screenshot_test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.video_recording.executor&quot;: &quot;Run&quot;,
+    &quot;Python.win32_screen.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;dev&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/Codes/AutoControlGUI&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;discord-application&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\CodeWorkspace\Python\AutoControlGUI\.github\workflows" />
@@ -638,6 +657,8 @@
       <workItem from="1765715382309" duration="3900000" />
       <workItem from="1765723750090" duration="2183000" />
       <workItem from="1775297582464" duration="9000" />
+      <workItem from="1776314601652" duration="128000" />
+      <workItem from="1776436369542" duration="1046000" />
     </task>
     <servers />
   </component>

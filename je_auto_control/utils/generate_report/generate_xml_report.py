@@ -39,7 +39,7 @@ def _write_xml_file(file_name: str, xml_content: str, lock: Lock) -> None:
         try:
             with open(file_name, "w+", encoding="utf-8") as file_to_write:
                 file_to_write.write(xml_content)
-        except Exception as error:
+        except OSError as error:
             autocontrol_logger.error(f"Failed to write {file_name}, error: {repr(error)}")
 
 

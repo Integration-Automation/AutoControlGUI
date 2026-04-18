@@ -1,6 +1,6 @@
 import sys
 import ctypes
-from ctypes import c_void_p, c_double, c_uint32
+from ctypes import c_void_p, c_uint32
 from typing import Tuple
 
 from je_auto_control.utils.exception.exception_tags import osx_import_error_message

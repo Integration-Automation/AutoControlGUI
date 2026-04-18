@@ -1,10 +1,10 @@
-from sys import stderr
 from typing import Callable, Any
 
 # utils cv2_utils
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
 from je_auto_control.utils.exception.exception_tags import get_bad_trigger_method_error_message, get_bad_trigger_function_error_message
 from je_auto_control.utils.exception.exceptions import CallbackExecutorException
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
 # file process
@@ -174,8 +174,12 @@ class CallbackFunctionExecutor:
 
             return execute_return_value
 
-        except Exception as error:
-            print(repr(error), file=stderr)
+        except CallbackExecutorException as error:
+            autocontrol_logger.error("callback_function config error: %r", error)
+            return None
+        except (TypeError, ValueError, RuntimeError) as error:
+            autocontrol_logger.error("callback_function execution failed: %r", error)
+            return None
 
 
 # === 全域 Callback Executor 實例 Global Instance ===

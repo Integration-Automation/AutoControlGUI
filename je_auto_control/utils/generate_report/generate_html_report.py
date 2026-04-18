@@ -157,7 +157,7 @@ def generate_html_report(html_name: str = "default_name") -> None:
         try:
             with open(html_name + ".html", "w+", encoding="utf-8") as file_to_write:
                 file_to_write.write(new_html_string)
-        except Exception as error:
+        except OSError as error:
             autocontrol_logger.error(
                 f"generate_html_report failed, html_name: {html_name}, error: {repr(error)}"
             )

@@ -1,7 +1,7 @@
 import _thread
-import sys
 from threading import Thread
 
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.wrapper.auto_control_keyboard import keyboard_keys_table
 from je_auto_control.wrapper.platform_wrapper import keyboard_check
 
@@ -49,8 +49,8 @@ class CriticalExit(Thread):
             while True:
                 if keyboard_check.check_key_is_press(self._exit_check_key):
                     _thread.interrupt_main()  # 中斷主程式 Interrupt main thread
-        except Exception as error:
-            print(repr(error), file=sys.stderr)
+        except (OSError, RuntimeError) as error:
+            autocontrol_logger.error("critical exit listener failed: %r", error)
 
     def init_critical_exit(self) -> None:
         """

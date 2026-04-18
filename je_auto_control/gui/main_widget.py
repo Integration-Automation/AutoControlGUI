@@ -1,28 +1,18 @@
 import json
-import sys
-from threading import Thread
 
 from PySide6.QtCore import QTimer, Signal, QObject
 from PySide6.QtGui import QIntValidator, QDoubleValidator, QKeyEvent, Qt
 from PySide6.QtWidgets import (
     QWidget, QLineEdit, QComboBox, QPushButton, QVBoxLayout, QLabel,
-    QGridLayout, QHBoxLayout, QRadioButton, QButtonGroup, QMessageBox,
-    QTabWidget, QTextEdit, QFileDialog, QCheckBox, QGroupBox, QSplitter,
-    QListWidget
+    QGridLayout, QHBoxLayout, QMessageBox,
+    QTabWidget, QTextEdit, QFileDialog, QCheckBox, QGroupBox
 )
 
+from je_auto_control.gui._auto_click_tab import AutoClickTabMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
-from je_auto_control.wrapper.auto_control_keyboard import (
-    type_keyboard, press_keyboard_key, release_keyboard_key, hotkey, write, check_key_is_press
-)
-from je_auto_control.wrapper.auto_control_mouse import (
-    click_mouse, get_mouse_position, set_mouse_position, press_mouse, release_mouse, mouse_scroll
-)
 from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot, get_pixel
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_image_center, locate_and_click
 from je_auto_control.wrapper.auto_control_record import record, stop_record
-from je_auto_control.wrapper.auto_control_keyboard import get_keyboard_keys_table
-from je_auto_control.wrapper.auto_control_mouse import mouse_keys_table, special_mouse_keys_table
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
@@ -48,7 +38,7 @@ class _WorkerSignals(QObject):
 # =============================================================================
 # Main Widget
 # =============================================================================
-class AutoControlGUIWidget(QWidget):
+class AutoControlGUIWidget(AutoClickTabMixin, QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -73,249 +63,6 @@ class AutoControlGUIWidget(QWidget):
         self.repeat_max = 0
         self.screen_recorder = ScreenRecorder()
         self._record_data = []
-
-    # =========================================================================
-    # Tab 1: Auto Click
-    # =========================================================================
-    def _build_auto_click_tab(self) -> QWidget:
-        tab = QWidget()
-        outer = QVBoxLayout()
-
-        # --- Mouse / Keyboard click group ---
-        click_group = QGroupBox(_t("tab_auto_click"))
-        grid = QGridLayout()
-        row = 0
-
-        grid.addWidget(QLabel(_t("input_method")), row, 0)
-        self.mouse_radio = QRadioButton(_t("mouse_radio"))
-        self.keyboard_radio = QRadioButton(_t("keyboard_radio"))
-        self.mouse_radio.setChecked(True)
-        self._input_group = QButtonGroup()
-        self._input_group.addButton(self.mouse_radio)
-        self._input_group.addButton(self.keyboard_radio)
-        h = QHBoxLayout()
-        h.addWidget(self.mouse_radio)
-        h.addWidget(self.keyboard_radio)
-        grid.addLayout(h, row, 1)
-
-        row += 1
-        grid.addWidget(QLabel(_t("interval_time")), row, 0)
-        self.interval_input = QLineEdit("1000")
-        self.interval_input.setValidator(QIntValidator(1, 999999999))
-        grid.addWidget(self.interval_input, row, 1)
-
-        row += 1
-        grid.addWidget(QLabel(_t("cursor_x")), row, 0)
-        self.cursor_x_input = QLineEdit()
-        self.cursor_x_input.setValidator(QIntValidator())
-        grid.addWidget(self.cursor_x_input, row, 1)
-
-        row += 1
-        grid.addWidget(QLabel(_t("cursor_y")), row, 0)
-        self.cursor_y_input = QLineEdit()
-        self.cursor_y_input.setValidator(QIntValidator())
-        grid.addWidget(self.cursor_y_input, row, 1)
-
-        row += 1
-        grid.addWidget(QLabel(_t("mouse_button")), row, 0)
-        self.mouse_button_combo = QComboBox()
-        self.mouse_button_combo.addItems(list(mouse_keys_table.keys()) if isinstance(mouse_keys_table, dict) else list(mouse_keys_table))
-        grid.addWidget(self.mouse_button_combo, row, 1)
-
-        row += 1
-        grid.addWidget(QLabel(_t("keyboard_button")), row, 0)
-        self.keyboard_button_combo = QComboBox()
-        self.keyboard_button_combo.addItems(list(get_keyboard_keys_table().keys()))
-        grid.addWidget(self.keyboard_button_combo, row, 1)
-
-        row += 1
-        grid.addWidget(QLabel(_t("click_type")), row, 0)
-        self.click_type_combo = QComboBox()
-        self.click_type_combo.addItems([_t("single_click"), _t("double_click")])
-        grid.addWidget(self.click_type_combo, row, 1)
-
-        row += 1
-        self.repeat_until_stopped = QRadioButton(_t("repeat_until_stopped_radio"))
-        self.repeat_count_times = QRadioButton(_t("repeat_radio"))
-        self.repeat_count_input = QLineEdit()
-        self.repeat_count_input.setValidator(QIntValidator(1, 999999999))
-        self.repeat_count_input.setPlaceholderText(_t("times"))
-        rg = QButtonGroup(tab)
-        rg.addButton(self.repeat_until_stopped)
-        rg.addButton(self.repeat_count_times)
-        self.repeat_until_stopped.setChecked(True)
-        rh = QHBoxLayout()
-        rh.addWidget(self.repeat_until_stopped)
-        rh.addWidget(self.repeat_count_times)
-        rh.addWidget(self.repeat_count_input)
-        grid.addLayout(rh, row, 0, 1, 2)
-
-        row += 1
-        btn_h = QHBoxLayout()
-        self.start_button = QPushButton(_t("start"))
-        self.start_button.clicked.connect(self._start_auto_click)
-        self.stop_button = QPushButton(_t("stop"))
-        self.stop_button.clicked.connect(self._stop_auto_click)
-        btn_h.addWidget(self.start_button)
-        btn_h.addWidget(self.stop_button)
-        grid.addLayout(btn_h, row, 0, 1, 2)
-
-        click_group.setLayout(grid)
-        outer.addWidget(click_group)
-
-        # --- Mouse position ---
-        pos_group = QGroupBox(_t("get_position"))
-        pos_layout = QHBoxLayout()
-        self.pos_btn = QPushButton(_t("get_position"))
-        self.pos_btn.clicked.connect(self._get_mouse_pos)
-        self.pos_label = QLabel(_t("current_position") + " --")
-        pos_layout.addWidget(self.pos_btn)
-        pos_layout.addWidget(self.pos_label)
-        pos_group.setLayout(pos_layout)
-        outer.addWidget(pos_group)
-
-        # --- Hotkey ---
-        hotkey_group = QGroupBox(_t("hotkey_label"))
-        hk_layout = QHBoxLayout()
-        self.hotkey_input = QLineEdit()
-        self.hotkey_input.setPlaceholderText("ctrl,a")
-        self.hotkey_btn = QPushButton(_t("hotkey_send"))
-        self.hotkey_btn.clicked.connect(self._send_hotkey)
-        hk_layout.addWidget(self.hotkey_input)
-        hk_layout.addWidget(self.hotkey_btn)
-        hotkey_group.setLayout(hk_layout)
-        outer.addWidget(hotkey_group)
-
-        # --- Write text ---
-        write_group = QGroupBox(_t("write_label"))
-        wr_layout = QHBoxLayout()
-        self.write_input = QLineEdit()
-        self.write_btn = QPushButton(_t("write_send"))
-        self.write_btn.clicked.connect(self._send_write)
-        wr_layout.addWidget(self.write_input)
-        wr_layout.addWidget(self.write_btn)
-        write_group.setLayout(wr_layout)
-        outer.addWidget(write_group)
-
-        # --- Scroll ---
-        scroll_group = QGroupBox(_t("mouse_scroll_label"))
-        sc_layout = QHBoxLayout()
-        self.scroll_value_input = QLineEdit("3")
-        self.scroll_value_input.setValidator(QIntValidator())
-        sc_layout.addWidget(QLabel(_t("mouse_scroll_label")))
-        sc_layout.addWidget(self.scroll_value_input)
-        if special_mouse_keys_table:
-            self.scroll_dir_combo = QComboBox()
-            self.scroll_dir_combo.addItems(list(special_mouse_keys_table.keys()))
-            sc_layout.addWidget(self.scroll_dir_combo)
-        else:
-            self.scroll_dir_combo = None
-        self.scroll_btn = QPushButton(_t("scroll_send"))
-        self.scroll_btn.clicked.connect(self._send_scroll)
-        sc_layout.addWidget(self.scroll_btn)
-        scroll_group.setLayout(sc_layout)
-        outer.addWidget(scroll_group)
-
-        outer.addStretch()
-
-        # toggle handler
-        self.mouse_radio.toggled.connect(self._update_click_mode)
-        self._update_click_mode()
-
-        tab.setLayout(outer)
-        return tab
-
-    def _update_click_mode(self):
-        use_mouse = self.mouse_radio.isChecked()
-        self.cursor_x_input.setEnabled(use_mouse)
-        self.cursor_y_input.setEnabled(use_mouse)
-        self.mouse_button_combo.setEnabled(use_mouse)
-        self.keyboard_button_combo.setEnabled(not use_mouse)
-
-    def _start_auto_click(self):
-        try:
-            interval = int(self.interval_input.text())
-        except ValueError:
-            QMessageBox.warning(self, "Warning", "Interval must be a number")
-            return
-        self.repeat_count = 0
-        try:
-            self.repeat_max = int(self.repeat_count_input.text())
-        except ValueError:
-            self.repeat_max = 0
-        self.timer.setInterval(interval)
-        try:
-            self.timer.timeout.disconnect(self._timer_tick)
-        except RuntimeError:
-            pass
-        self.timer.timeout.connect(self._timer_tick)
-        self.timer.start()
-
-    def _stop_auto_click(self):
-        self.timer.stop()
-
-    def _timer_tick(self):
-        if self.repeat_until_stopped.isChecked():
-            self._do_click()
-        elif self.repeat_count_times.isChecked():
-            self.repeat_count += 1
-            if self.repeat_count <= self.repeat_max:
-                self._do_click()
-            else:
-                self.repeat_count = 0
-                self.timer.stop()
-
-    def _do_click(self):
-        try:
-            is_double = self.click_type_combo.currentIndex() == 1
-            if self.mouse_radio.isChecked():
-                btn = self.mouse_button_combo.currentText()
-                x = int(self.cursor_x_input.text() or "0")
-                y = int(self.cursor_y_input.text() or "0")
-                click_mouse(btn, x, y)
-                if is_double:
-                    click_mouse(btn, x, y)
-            else:
-                key = self.keyboard_button_combo.currentText()
-                type_keyboard(key)
-                if is_double:
-                    type_keyboard(key)
-        except Exception as e:
-            self.timer.stop()
-            QMessageBox.warning(self, "Error", str(e))
-
-    def _get_mouse_pos(self):
-        try:
-            x, y = get_mouse_position()
-            self.pos_label.setText(_t("current_position") + f" ({x}, {y})")
-            self.cursor_x_input.setText(str(x))
-            self.cursor_y_input.setText(str(y))
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
-
-    def _send_hotkey(self):
-        try:
-            keys = [k.strip() for k in self.hotkey_input.text().split(",") if k.strip()]
-            if keys:
-                hotkey(keys)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
-
-    def _send_write(self):
-        try:
-            text = self.write_input.text()
-            if text:
-                write(text)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
-
-    def _send_scroll(self):
-        try:
-            val = int(self.scroll_value_input.text() or "3")
-            direction = self.scroll_dir_combo.currentText() if self.scroll_dir_combo else "scroll_down"
-            mouse_scroll(val, scroll_direction=direction)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
 
     # =========================================================================
     # Tab 2: Screenshot
@@ -389,8 +136,8 @@ class AutoControlGUIWidget(QWidget):
         try:
             w, h = screen_size()
             self.screen_size_label.setText(f"{w} x {h}")
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _browse_ss_path(self):
         path, _ = QFileDialog.getSaveFileName(self, _t("save_screenshot"), "", "PNG (*.png);;All (*)")
@@ -406,8 +153,8 @@ class AutoControlGUIWidget(QWidget):
                 region = [int(x.strip()) for x in region_text.split(",")]
             screenshot(file_path=path, screen_region=region)
             self.ss_result_text.setText(f"Screenshot saved: {path or '(not saved)'}")
-        except Exception as e:
-            self.ss_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.ss_result_text.setText(f"Error: {error}")
 
     def _get_pixel_color(self):
         try:
@@ -415,8 +162,8 @@ class AutoControlGUIWidget(QWidget):
             y = int(self.pixel_y_input.text())
             color = get_pixel(x, y)
             self.pixel_result_label.setText(_t("pixel_result") + f" {color}")
-        except Exception as e:
-            self.pixel_result_label.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.pixel_result_label.setText(f"Error: {error}")
 
     # =========================================================================
     # Tab 3: Image Detection
@@ -479,16 +226,16 @@ class AutoControlGUIWidget(QWidget):
             path, th, draw = self._get_detect_params()
             result = locate_image_center(path, th, draw)
             self.detect_result_text.setText(f"Center: {result}")
-        except Exception as e:
-            self.detect_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.detect_result_text.setText(f"Error: {error}")
 
     def _locate_all(self):
         try:
             path, th, draw = self._get_detect_params()
             result = locate_all_image(path, th, draw)
             self.detect_result_text.setText(f"Found {len(result)} matches:\n{result}")
-        except Exception as e:
-            self.detect_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.detect_result_text.setText(f"Error: {error}")
 
     def _locate_click(self):
         try:
@@ -496,8 +243,8 @@ class AutoControlGUIWidget(QWidget):
             btn = self.mouse_button_combo.currentText() if hasattr(self, "mouse_button_combo") else "mouse_left"
             result = locate_and_click(path, btn, th, draw)
             self.detect_result_text.setText(f"Clicked at: {result}")
-        except Exception as e:
-            self.detect_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.detect_result_text.setText(f"Error: {error}")
 
     # =========================================================================
     # Tab 4: Record / Playback
@@ -541,16 +288,16 @@ class AutoControlGUIWidget(QWidget):
         try:
             record()
             self.record_status_label.setText(_t("record_status") + " " + _t("record_recording"))
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _stop_record(self):
         try:
             self._record_data = stop_record() or []
             self.record_status_label.setText(_t("record_status") + " " + _t("record_idle"))
             self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _playback_record(self):
         try:
@@ -558,8 +305,8 @@ class AutoControlGUIWidget(QWidget):
                 QMessageBox.warning(self, "Warning", "No recorded data")
                 return
             execute_action(self._record_data)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _save_record(self):
         try:
@@ -569,8 +316,8 @@ class AutoControlGUIWidget(QWidget):
             path, _ = QFileDialog.getSaveFileName(self, _t("save_record"), "", "JSON (*.json)")
             if path:
                 write_action_json(path, self._record_data)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _load_record(self):
         try:
@@ -578,8 +325,8 @@ class AutoControlGUIWidget(QWidget):
             if path:
                 self._record_data = read_action_json(path)
                 self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     # =========================================================================
     # Tab 5: Script Executor
@@ -636,8 +383,8 @@ class AutoControlGUIWidget(QWidget):
             try:
                 data = read_action_json(path)
                 self.script_editor.setText(json.dumps(data, indent=2, ensure_ascii=False))
-            except Exception as e:
-                self.script_result_text.setText(f"Error loading: {e}")
+            except (OSError, ValueError, TypeError, RuntimeError) as error:
+                self.script_result_text.setText(f"Error loading: {error}")
 
     def _execute_script(self):
         try:
@@ -647,8 +394,8 @@ class AutoControlGUIWidget(QWidget):
             data = read_action_json(path)
             result = execute_action(data)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except Exception as e:
-            self.script_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.script_result_text.setText(f"Error: {error}")
 
     def _browse_script_dir(self):
         path = QFileDialog.getExistingDirectory(self, _t("execute_dir_label"))
@@ -663,8 +410,8 @@ class AutoControlGUIWidget(QWidget):
             files = get_dir_files_as_list(path)
             result = execute_files(files)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except Exception as e:
-            self.script_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.script_result_text.setText(f"Error: {error}")
 
     def _execute_manual_script(self):
         try:
@@ -674,8 +421,8 @@ class AutoControlGUIWidget(QWidget):
             data = json.loads(text)
             result = execute_action(data)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except Exception as e:
-            self.script_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.script_result_text.setText(f"Error: {error}")
 
     # =========================================================================
     # Tab 6: Screen Recording
@@ -749,16 +496,16 @@ class AutoControlGUIWidget(QWidget):
             resolution = (int(w), int(h))
             self.screen_recorder.start_new_record(name, output, codec, fps, resolution)
             self.sr_status_label.setText(_t("screen_record_status") + " " + _t("record_recording"))
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     def _stop_screen_record(self):
         try:
             name = self.sr_name_input.text() or "default"
             self.screen_recorder.stop_record(name)
             self.sr_status_label.setText(_t("screen_record_status") + " " + _t("record_idle"))
-        except Exception as e:
-            QMessageBox.warning(self, "Error", str(e))
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            QMessageBox.warning(self, "Error", str(error))
 
     # =========================================================================
     # Tab 7: Shell Command
@@ -810,8 +557,8 @@ class AutoControlGUIWidget(QWidget):
             mgr = ShellManager()
             mgr.exec_shell(cmd)
             self.shell_output_text.setText(f"Executed: {cmd}\n(Check console for output)")
-        except Exception as e:
-            self.shell_output_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.shell_output_text.setText(f"Error: {error}")
 
     def _browse_exe(self):
         path, _ = QFileDialog.getOpenFileName(self, _t("start_exe_label"), "", "Executable (*.exe);;All (*)")
@@ -825,8 +572,8 @@ class AutoControlGUIWidget(QWidget):
                 return
             start_exe(path)
             self.shell_output_text.setText(f"Started: {path}")
-        except Exception as e:
-            self.shell_output_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.shell_output_text.setText(f"Error: {error}")
 
     # =========================================================================
     # Tab 8: Report
@@ -886,24 +633,24 @@ class AutoControlGUIWidget(QWidget):
             name = self.report_name_input.text() or "autocontrol_report"
             generate_html_report(name)
             self.report_result_text.setText(f"HTML report generated: {name}")
-        except Exception as e:
-            self.report_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.report_result_text.setText(f"Error: {error}")
 
     def _gen_json(self):
         try:
             name = self.report_name_input.text() or "autocontrol_report"
             generate_json_report(name)
             self.report_result_text.setText(f"JSON report generated: {name}")
-        except Exception as e:
-            self.report_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.report_result_text.setText(f"Error: {error}")
 
     def _gen_xml(self):
         try:
             name = self.report_name_input.text() or "autocontrol_report"
             generate_xml_report(name)
             self.report_result_text.setText(f"XML report generated: {name}")
-        except Exception as e:
-            self.report_result_text.setText(f"Error: {e}")
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            self.report_result_text.setText(f"Error: {error}")
 
     # =========================================================================
     # Global keyboard shortcut: Ctrl+4 to stop
