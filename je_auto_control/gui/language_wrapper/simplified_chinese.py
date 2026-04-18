@@ -19,6 +19,7 @@ simplified_chinese_word_dict = {
     "tab_screen_record": "屏幕录像",
     "tab_shell": "Shell 命令",
     "tab_report": "报告生成",
+    "tab_run_history": "执行记录",
 
     # Auto Click Tab
     "interval_time": "间隔时间 (ms):",
@@ -252,6 +253,29 @@ simplified_chinese_word_dict = {
 
     # Language
     "language_label": "语言:",
+
+    # Run History Tab
+    "rh_filter_label": "来源:",
+    "rh_source_all": "全部",
+    "rh_source_scheduler": "调度器",
+    "rh_source_trigger": "触发器",
+    "rh_source_hotkey": "热键",
+    "rh_source_manual": "手动",
+    "rh_source_rest": "REST",
+    "rh_refresh": "刷新",
+    "rh_clear": "清除",
+    "rh_confirm_clear": "要删除全部执行记录吗？此操作无法撤销。",
+    "rh_count_label": "{n} 条记录",
+    "rh_col_id": "ID",
+    "rh_col_source": "来源",
+    "rh_col_target": "目标",
+    "rh_col_script": "脚本",
+    "rh_col_started": "开始时间",
+    "rh_col_duration": "耗时",
+    "rh_col_status": "状态",
+    "rh_status_ok": "成功",
+    "rh_status_error": "错误",
+    "rh_status_running": "执行中",
 
     # Menu bar
     "menu_file": "文件",

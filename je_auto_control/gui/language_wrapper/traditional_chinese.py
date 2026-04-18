@@ -20,6 +20,7 @@ traditional_chinese_word_dict = {
     "tab_screen_record": "螢幕錄影",
     "tab_shell": "Shell 命令",
     "tab_report": "報告產生",
+    "tab_run_history": "執行紀錄",
 
     # Auto Click Tab
     "interval_time": "間隔時間 (ms)：",
@@ -253,6 +254,29 @@ traditional_chinese_word_dict = {
     "sb_dialog_save": "儲存腳本",
     "sb_dialog_load": "載入腳本",
     "sb_no_step_selected": "尚未選取步驟",
+
+    # Run History Tab
+    "rh_filter_label": "來源：",
+    "rh_source_all": "全部",
+    "rh_source_scheduler": "排程器",
+    "rh_source_trigger": "觸發器",
+    "rh_source_hotkey": "熱鍵",
+    "rh_source_manual": "手動",
+    "rh_source_rest": "REST",
+    "rh_refresh": "重新整理",
+    "rh_clear": "清除",
+    "rh_confirm_clear": "要刪除全部執行紀錄嗎？此動作無法復原。",
+    "rh_count_label": "{n} 筆紀錄",
+    "rh_col_id": "ID",
+    "rh_col_source": "來源",
+    "rh_col_target": "目標",
+    "rh_col_script": "腳本",
+    "rh_col_started": "開始時間",
+    "rh_col_duration": "耗時",
+    "rh_col_status": "狀態",
+    "rh_status_ok": "成功",
+    "rh_status_error": "錯誤",
+    "rh_status_running": "執行中",
 
     # Menu bar
     "menu_file": "檔案",

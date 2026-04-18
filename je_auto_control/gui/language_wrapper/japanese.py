@@ -19,6 +19,7 @@ japanese_word_dict = {
     "tab_screen_record": "画面録画",
     "tab_shell": "シェル",
     "tab_report": "レポート",
+    "tab_run_history": "実行履歴",
 
     # Auto Click Tab
     "interval_time": "間隔 (ms):",
@@ -252,6 +253,29 @@ japanese_word_dict = {
 
     # Language
     "language_label": "言語:",
+
+    # Run History Tab
+    "rh_filter_label": "ソース:",
+    "rh_source_all": "すべて",
+    "rh_source_scheduler": "スケジューラー",
+    "rh_source_trigger": "トリガー",
+    "rh_source_hotkey": "ホットキー",
+    "rh_source_manual": "手動",
+    "rh_source_rest": "REST",
+    "rh_refresh": "更新",
+    "rh_clear": "クリア",
+    "rh_confirm_clear": "すべての実行履歴を削除しますか？この操作は取り消せません。",
+    "rh_count_label": "{n} 件",
+    "rh_col_id": "ID",
+    "rh_col_source": "ソース",
+    "rh_col_target": "対象",
+    "rh_col_script": "スクリプト",
+    "rh_col_started": "開始時刻",
+    "rh_col_duration": "所要時間",
+    "rh_col_status": "ステータス",
+    "rh_status_ok": "成功",
+    "rh_status_error": "エラー",
+    "rh_status_running": "実行中",
 
     # Menu bar
     "menu_file": "ファイル",

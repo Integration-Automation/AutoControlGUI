@@ -16,6 +16,9 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.history_store import (
+    SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
+)
 
 
 @dataclass
@@ -174,12 +177,21 @@ class TriggerEngine:
             self._fire(trigger, now)
 
     def _fire(self, trigger: _TriggerBase, now: float) -> None:
+        run_id = default_history_store.start_run(
+            SOURCE_TRIGGER, trigger.trigger_id, trigger.script_path,
+        )
+        status = STATUS_OK
+        error_text: Optional[str] = None
         try:
             actions = read_action_json(trigger.script_path)
             self._execute(actions)
         except (OSError, ValueError, RuntimeError) as error:
+            status = STATUS_ERROR
+            error_text = repr(error)
             autocontrol_logger.error("trigger %s failed: %r",
                                      trigger.trigger_id, error)
+        finally:
+            default_history_store.finish_run(run_id, status, error_text)
         with self._lock:
             live = self._triggers.get(trigger.trigger_id)
             if live is None:

@@ -61,6 +61,10 @@ from je_auto_control.utils.plugin_loader.plugin_loader import (
 from je_auto_control.utils.rest_api.rest_server import (
     RestApiServer, start_rest_api_server,
 )
+# Run history (headless)
+from je_auto_control.utils.run_history.history_store import (
+    HistoryStore, RunRecord, default_history_store,
+)
 # Triggers (headless)
 from je_auto_control.utils.triggers.trigger_engine import (
     FilePathTrigger, ImageAppearsTrigger, PixelColorTrigger, TriggerEngine,
@@ -205,6 +209,8 @@ __all__ = [
     "TriggerEngine", "default_trigger_engine",
     "ImageAppearsTrigger", "WindowAppearsTrigger",
     "PixelColorTrigger", "FilePathTrigger",
+    # Run history
+    "HistoryStore", "RunRecord", "default_history_store",
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",

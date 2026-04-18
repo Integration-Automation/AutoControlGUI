@@ -17,6 +17,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import language
 from je_auto_control.gui.live_hud_tab import LiveHUDTab
 from je_auto_control.gui.plugins_tab import PluginsTab
 from je_auto_control.gui.recording_editor_tab import RecordingEditorTab
+from je_auto_control.gui.run_history_tab import RunHistoryTab
 from je_auto_control.gui.scheduler_tab import SchedulerTab
 from je_auto_control.gui.script_builder import ScriptBuilderTab
 from je_auto_control.gui.selector import crop_template_to_file, open_region_selector
@@ -86,6 +87,7 @@ class AutoControlGUIWidget(
         self._add_tab("report", "tab_report", self._build_report_tab())
         self._add_tab("hotkeys", "tab_hotkeys", HotkeysTab())
         self._add_tab("triggers", "tab_triggers", TriggersTab())
+        self._add_tab("run_history", "tab_run_history", RunHistoryTab())
         self._add_tab("plugins", "tab_plugins", PluginsTab())
         layout.addWidget(self.tabs)
 

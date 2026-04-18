@@ -12,6 +12,9 @@ from typing import Callable, Dict, List, Optional
 
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.history_store import (
+    SOURCE_SCHEDULER, STATUS_ERROR, STATUS_OK, default_history_store,
+)
 from je_auto_control.utils.scheduler.cron import (
     CronExpression, next_match, parse_cron,
 )
@@ -151,12 +154,21 @@ class Scheduler:
             self._fire(job, now_mono, now_wall)
 
     def _fire(self, job: ScheduledJob, now_mono: float, now_wall: float) -> None:
+        run_id = default_history_store.start_run(
+            SOURCE_SCHEDULER, job.job_id, job.script_path,
+        )
+        status = STATUS_OK
+        error_text: Optional[str] = None
         try:
             actions = read_action_json(job.script_path)
             self._execute(actions)
         except (OSError, ValueError, RuntimeError) as error:
+            status = STATUS_ERROR
+            error_text = repr(error)
             autocontrol_logger.error("scheduler job %s failed: %r",
                                      job.job_id, error)
+        finally:
+            default_history_store.finish_run(run_id, status, error_text)
         with self._lock:
             live = self._jobs.get(job.job_id)
             if live is None:

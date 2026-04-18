@@ -20,6 +20,7 @@ english_word_dict = {
     "tab_screen_record": "Screen Recording",
     "tab_shell": "Shell Command",
     "tab_report": "Report",
+    "tab_run_history": "Run History",
 
     # Auto Click Tab
     "interval_time": "Interval (ms):",
@@ -253,6 +254,29 @@ english_word_dict = {
     "sb_dialog_save": "Save script",
     "sb_dialog_load": "Load script",
     "sb_no_step_selected": "No step selected",
+
+    # Run History Tab
+    "rh_filter_label": "Source:",
+    "rh_source_all": "All",
+    "rh_source_scheduler": "Scheduler",
+    "rh_source_trigger": "Trigger",
+    "rh_source_hotkey": "Hotkey",
+    "rh_source_manual": "Manual",
+    "rh_source_rest": "REST",
+    "rh_refresh": "Refresh",
+    "rh_clear": "Clear",
+    "rh_confirm_clear": "Delete all run history? This cannot be undone.",
+    "rh_count_label": "{n} runs",
+    "rh_col_id": "ID",
+    "rh_col_source": "Source",
+    "rh_col_target": "Target",
+    "rh_col_script": "Script",
+    "rh_col_started": "Started",
+    "rh_col_duration": "Duration",
+    "rh_col_status": "Status",
+    "rh_status_ok": "OK",
+    "rh_status_error": "Error",
+    "rh_status_running": "Running",
 
     # Menu bar
     "menu_file": "File",

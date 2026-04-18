@@ -12,9 +12,11 @@ to ``0.0.0.0`` — matching the policy in CLAUDE.md.
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import parse_qs, urlparse
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.history_store import default_history_store
 
 
 class _JSONHandler(BaseHTTPRequestHandler):
@@ -28,11 +30,18 @@ class _JSONHandler(BaseHTTPRequestHandler):
                                 self.address_string(), fmt % args)
 
     def do_GET(self) -> None:  # noqa: N802  # reason: stdlib API
-        if self.path == "/health":
+        parsed = urlparse(self.path)
+        if parsed.path == "/health":
             self._send_json({"status": "ok"})
             return
-        if self.path == "/jobs":
+        if parsed.path == "/jobs":
             self._send_json({"jobs": self._serialize_jobs()})
+            return
+        if parsed.path == "/history":
+            self._send_json(
+                {"runs": self._serialize_history(parsed.query)},
+                default=str,
+            )
             return
         self._send_json({"error": f"unknown path: {self.path}"}, status=404)
 
@@ -89,6 +98,31 @@ class _JSONHandler(BaseHTTPRequestHandler):
                 "runs": job.runs, "enabled": job.enabled,
             }
             for job in default_scheduler.list_jobs()
+        ]
+
+    @staticmethod
+    def _serialize_history(query: str) -> List[Dict[str, Any]]:
+        params = parse_qs(query)
+        try:
+            limit = int(params.get("limit", ["100"])[0])
+        except ValueError:
+            limit = 100
+        source_type = params.get("source_type", [None])[0] or None
+        try:
+            rows = default_history_store.list_runs(
+                limit=limit, source_type=source_type,
+            )
+        except ValueError:
+            return []
+        return [
+            {
+                "id": r.id, "source_type": r.source_type,
+                "source_id": r.source_id, "script_path": r.script_path,
+                "started_at": r.started_at, "finished_at": r.finished_at,
+                "status": r.status, "error_text": r.error_text,
+                "duration_seconds": r.duration_seconds,
+            }
+            for r in rows
         ]
 
 

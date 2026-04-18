@@ -18,6 +18,9 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.run_history.history_store import (
+    SOURCE_HOTKEY, STATUS_ERROR, STATUS_OK, default_history_store,
+)
 
 
 MOD_ALT = 0x0001
@@ -199,12 +202,21 @@ class HotkeyDaemon:
                     break
         if match is None or not match.enabled:
             return
+        run_id = default_history_store.start_run(
+            SOURCE_HOTKEY, match.binding_id, match.script_path,
+        )
+        status = STATUS_OK
+        error_text: Optional[str] = None
         try:
             actions = read_action_json(match.script_path)
             self._execute(actions)
         except (OSError, ValueError, RuntimeError) as error:
+            status = STATUS_ERROR
+            error_text = repr(error)
             autocontrol_logger.error("hotkey %s failed: %r",
                                      match.combo, error)
+        finally:
+            default_history_store.finish_run(run_id, status, error_text)
         match.fired += 1
 
 
