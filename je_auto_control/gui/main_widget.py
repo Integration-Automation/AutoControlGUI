@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._auto_click_tab import AutoClickTabMixin
+from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui._shell_report_tabs import ShellReportTabsMixin
 from je_auto_control.gui.hotkeys_tab import HotkeysTab
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
@@ -51,13 +52,16 @@ class _TabEntry:
 # =============================================================================
 # Main Widget
 # =============================================================================
-class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
+class AutoControlGUIWidget(
+    TranslatableMixin, AutoClickTabMixin, ShellReportTabsMixin, QWidget,
+):
     """Owns the QTabWidget and exposes show/hide/list APIs for the menu bar."""
 
     tabs_changed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._tr_init()
         layout = QVBoxLayout()
 
         self._tab_entries: list = []
@@ -147,14 +151,34 @@ class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
                 self.hide_tab(entry.key)
                 return
 
+    def _translate(self, key: str) -> str:
+        return language_wrapper.translate(key, key)
+
     def retranslate(self) -> None:
-        """Relabel visible tabs after a language change."""
+        """Relabel tab titles and propagate into every child tab."""
         for entry in self._tab_entries:
             index = self.tabs.indexOf(entry.widget)
             if index != -1:
                 self.tabs.setTabText(
                     index, language_wrapper.translate(entry.title_key, entry.title_key),
                 )
+        # Widgets registered via TranslatableMixin on this widget (screenshot,
+        # image-detect, record, script, screen-record, shell, report tabs).
+        TranslatableMixin.retranslate(self)
+        if hasattr(self, "_auto_click_retranslate"):
+            self._auto_click_retranslate()
+        if hasattr(self, "_screenshot_retranslate"):
+            self._screenshot_retranslate()
+        if hasattr(self, "_record_retranslate"):
+            self._record_retranslate()
+        # Child class tabs get their own retranslate if they implement one.
+        for entry in self._tab_entries:
+            callback = getattr(entry.widget, "retranslate", None)
+            if callable(callback) and entry.widget is not self:
+                try:
+                    callback()
+                except (RuntimeError, AttributeError):
+                    continue
 
     def open_script_file(self, path: str) -> None:
         """Load a JSON script into the Script Executor tab and focus it."""
@@ -179,10 +203,10 @@ class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
         layout = QVBoxLayout()
 
         # Screen size
-        size_group = QGroupBox(_t("screen_size_label"))
+        size_group = self._tr(QGroupBox(), "screen_size_label")
         sg = QHBoxLayout()
         self.screen_size_label = QLabel("--")
-        self.screen_size_btn = QPushButton(_t("get_screen_size"))
+        self.screen_size_btn = self._tr(QPushButton(), "get_screen_size")
         self.screen_size_btn.clicked.connect(self._get_screen_size)
         sg.addWidget(self.screen_size_label)
         sg.addWidget(self.screen_size_btn)
@@ -190,25 +214,25 @@ class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
         layout.addWidget(size_group)
 
         # Screenshot
-        ss_group = QGroupBox(_t("take_screenshot"))
+        ss_group = self._tr(QGroupBox(), "take_screenshot")
         ss_grid = QGridLayout()
-        ss_grid.addWidget(QLabel(_t("file_path_label")), 0, 0)
+        ss_grid.addWidget(self._tr(QLabel(), "file_path_label"), 0, 0)
         self.ss_path_input = QLineEdit()
         ss_grid.addWidget(self.ss_path_input, 0, 1)
-        self.ss_browse_btn = QPushButton(_t("browse"))
+        self.ss_browse_btn = self._tr(QPushButton(), "browse")
         self.ss_browse_btn.clicked.connect(self._browse_ss_path)
         ss_grid.addWidget(self.ss_browse_btn, 0, 2)
 
-        ss_grid.addWidget(QLabel(_t("region_label")), 1, 0)
+        ss_grid.addWidget(self._tr(QLabel(), "region_label"), 1, 0)
         self.ss_region_input = QLineEdit()
         self.ss_region_input.setPlaceholderText("0, 0, 800, 600")
         ss_grid.addWidget(self.ss_region_input, 1, 1)
-        self.ss_pick_region_btn = QPushButton(_t("pick_region"))
+        self.ss_pick_region_btn = self._tr(QPushButton(), "pick_region")
         self.ss_pick_region_btn.clicked.connect(self._pick_ss_region)
         ss_grid.addWidget(self.ss_pick_region_btn, 1, 2)
 
         btn_h = QHBoxLayout()
-        self.ss_take_btn = QPushButton(_t("take_screenshot"))
+        self.ss_take_btn = self._tr(QPushButton(), "take_screenshot")
         self.ss_take_btn.clicked.connect(self._take_screenshot)
         btn_h.addWidget(self.ss_take_btn)
         ss_grid.addLayout(btn_h, 2, 0, 1, 3)
@@ -216,20 +240,24 @@ class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
         layout.addWidget(ss_group)
 
         # Get pixel
-        px_group = QGroupBox(_t("get_pixel_label"))
+        px_group = self._tr(QGroupBox(), "get_pixel_label")
         px_grid = QGridLayout()
-        px_grid.addWidget(QLabel(_t("pixel_x")), 0, 0)
+        px_grid.addWidget(self._tr(QLabel(), "pixel_x"), 0, 0)
         self.pixel_x_input = QLineEdit("0")
         self.pixel_x_input.setValidator(QIntValidator())
         px_grid.addWidget(self.pixel_x_input, 0, 1)
-        px_grid.addWidget(QLabel(_t("pixel_y")), 0, 2)
+        px_grid.addWidget(self._tr(QLabel(), "pixel_y"), 0, 2)
         self.pixel_y_input = QLineEdit("0")
         self.pixel_y_input.setValidator(QIntValidator())
         px_grid.addWidget(self.pixel_y_input, 0, 3)
-        self.pixel_btn = QPushButton(_t("get_pixel_label"))
+        self.pixel_btn = self._tr(QPushButton(), "get_pixel_label")
         self.pixel_btn.clicked.connect(self._get_pixel_color)
         px_grid.addWidget(self.pixel_btn, 1, 0, 1, 2)
-        self.pixel_result_label = QLabel(_t("pixel_result") + " --")
+        self.pixel_result_label = QLabel()
+        self._pixel_result_suffix = " --"
+        self.pixel_result_label.setText(
+            self._translate("pixel_result") + self._pixel_result_suffix,
+        )
         px_grid.addWidget(self.pixel_result_label, 1, 2, 1, 2)
         px_group.setLayout(px_grid)
         layout.addWidget(px_group)
@@ -278,9 +306,18 @@ class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
             x = int(self.pixel_x_input.text())
             y = int(self.pixel_y_input.text())
             color = get_pixel(x, y)
-            self.pixel_result_label.setText(_t("pixel_result") + f" {color}")
+            self._pixel_result_suffix = f" {color}"
+            self.pixel_result_label.setText(
+                self._translate("pixel_result") + self._pixel_result_suffix,
+            )
         except (OSError, ValueError, TypeError, RuntimeError) as error:
             self.pixel_result_label.setText(f"Error: {error}")
+
+    def _screenshot_retranslate(self) -> None:
+        if hasattr(self, "pixel_result_label"):
+            self.pixel_result_label.setText(
+                self._translate("pixel_result") + self._pixel_result_suffix,
+            )
 
     # =========================================================================
     # Tab 3: Image Detection
@@ -290,38 +327,38 @@ class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
         layout = QVBoxLayout()
 
         grid = QGridLayout()
-        grid.addWidget(QLabel(_t("template_image")), 0, 0)
+        grid.addWidget(self._tr(QLabel(), "template_image"), 0, 0)
         self.img_path_input = QLineEdit()
         grid.addWidget(self.img_path_input, 0, 1)
-        self.img_browse_btn = QPushButton(_t("browse"))
+        self.img_browse_btn = self._tr(QPushButton(), "browse")
         self.img_browse_btn.clicked.connect(self._browse_img)
         grid.addWidget(self.img_browse_btn, 0, 2)
-        self.img_crop_btn = QPushButton(_t("crop_template"))
+        self.img_crop_btn = self._tr(QPushButton(), "crop_template")
         self.img_crop_btn.clicked.connect(self._crop_template)
         grid.addWidget(self.img_crop_btn, 0, 3)
 
-        grid.addWidget(QLabel(_t("threshold_label")), 1, 0)
+        grid.addWidget(self._tr(QLabel(), "threshold_label"), 1, 0)
         self.threshold_input = QLineEdit("0.8")
         self.threshold_input.setValidator(QDoubleValidator(0.0, 1.0, 2))
         grid.addWidget(self.threshold_input, 1, 1)
-        self.draw_check = QCheckBox(_t("draw_image_check"))
+        self.draw_check = self._tr(QCheckBox(), "draw_image_check")
         grid.addWidget(self.draw_check, 1, 2)
 
         layout.addLayout(grid)
 
         btn_h = QHBoxLayout()
-        self.locate_btn = QPushButton(_t("locate_image"))
+        self.locate_btn = self._tr(QPushButton(), "locate_image")
         self.locate_btn.clicked.connect(self._locate_image)
-        self.locate_all_btn = QPushButton(_t("locate_all"))
+        self.locate_all_btn = self._tr(QPushButton(), "locate_all")
         self.locate_all_btn.clicked.connect(self._locate_all)
-        self.locate_click_btn = QPushButton(_t("locate_click"))
+        self.locate_click_btn = self._tr(QPushButton(), "locate_click")
         self.locate_click_btn.clicked.connect(self._locate_click)
         btn_h.addWidget(self.locate_btn)
         btn_h.addWidget(self.locate_all_btn)
         btn_h.addWidget(self.locate_click_btn)
         layout.addLayout(btn_h)
 
-        layout.addWidget(QLabel(_t("detection_result")))
+        layout.addWidget(self._tr(QLabel(), "detection_result"))
         self.detect_result_text = QTextEdit()
         self.detect_result_text.setReadOnly(True)
         layout.addWidget(self.detect_result_text)
@@ -388,15 +425,17 @@ class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
         tab = QWidget()
         layout = QVBoxLayout()
 
-        self.record_status_label = QLabel(_t("record_status") + " " + _t("record_idle"))
+        self._record_status_key = "record_idle"
+        self.record_status_label = QLabel()
+        self._apply_record_status_label()
         layout.addWidget(self.record_status_label)
 
         btn_h = QHBoxLayout()
-        self.rec_start_btn = QPushButton(_t("start_record"))
+        self.rec_start_btn = self._tr(QPushButton(), "start_record")
         self.rec_start_btn.clicked.connect(self._start_record)
-        self.rec_stop_btn = QPushButton(_t("stop_record"))
+        self.rec_stop_btn = self._tr(QPushButton(), "stop_record")
         self.rec_stop_btn.clicked.connect(self._stop_record)
-        self.rec_play_btn = QPushButton(_t("playback"))
+        self.rec_play_btn = self._tr(QPushButton(), "playback")
         self.rec_play_btn.clicked.connect(self._playback_record)
         btn_h.addWidget(self.rec_start_btn)
         btn_h.addWidget(self.rec_stop_btn)
@@ -404,32 +443,52 @@ class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
         layout.addLayout(btn_h)
 
         btn_h2 = QHBoxLayout()
-        self.rec_save_btn = QPushButton(_t("save_record"))
+        self.rec_save_btn = self._tr(QPushButton(), "save_record")
         self.rec_save_btn.clicked.connect(self._save_record)
-        self.rec_load_btn = QPushButton(_t("load_record"))
+        self.rec_load_btn = self._tr(QPushButton(), "load_record")
         self.rec_load_btn.clicked.connect(self._load_record)
         btn_h2.addWidget(self.rec_save_btn)
         btn_h2.addWidget(self.rec_load_btn)
         layout.addLayout(btn_h2)
 
-        layout.addWidget(QLabel(_t("record_list_label")))
+        layout.addWidget(self._tr(QLabel(), "record_list_label"))
         self.record_list_text = QTextEdit()
         self.record_list_text.setReadOnly(True)
         layout.addWidget(self.record_list_text)
         tab.setLayout(layout)
         return tab
 
+    def _apply_record_status_label(self) -> None:
+        if hasattr(self, "record_status_label"):
+            self.record_status_label.setText(
+                self._translate("record_status") + " "
+                + self._translate(self._record_status_key),
+            )
+
+    def _apply_sr_status_label(self) -> None:
+        if hasattr(self, "sr_status_label"):
+            self.sr_status_label.setText(
+                self._translate("screen_record_status") + " "
+                + self._translate(self._sr_status_key),
+            )
+
+    def _record_retranslate(self) -> None:
+        self._apply_record_status_label()
+        self._apply_sr_status_label()
+
     def _start_record(self):
         try:
             record()
-            self.record_status_label.setText(_t("record_status") + " " + _t("record_recording"))
+            self._record_status_key = "record_recording"
+            self._apply_record_status_label()
         except (OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _stop_record(self):
         try:
             self._record_data = stop_record() or []
-            self.record_status_label.setText(_t("record_status") + " " + _t("record_idle"))
+            self._record_status_key = "record_idle"
+            self._apply_record_status_label()
             self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
         except (OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
@@ -470,41 +529,38 @@ class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
         tab = QWidget()
         layout = QVBoxLayout()
 
-        # Load / execute single file
         file_h = QHBoxLayout()
         self.script_path_input = QLineEdit()
-        self.script_browse_btn = QPushButton(_t("load_script"))
+        self.script_browse_btn = self._tr(QPushButton(), "load_script")
         self.script_browse_btn.clicked.connect(self._browse_script)
-        self.script_exec_btn = QPushButton(_t("execute_script"))
+        self.script_exec_btn = self._tr(QPushButton(), "execute_script")
         self.script_exec_btn.clicked.connect(self._execute_script)
         file_h.addWidget(self.script_path_input)
         file_h.addWidget(self.script_browse_btn)
         file_h.addWidget(self.script_exec_btn)
         layout.addLayout(file_h)
 
-        # Execute directory
         dir_h = QHBoxLayout()
         self.script_dir_input = QLineEdit()
-        self.script_dir_browse_btn = QPushButton(_t("execute_dir_label"))
+        self.script_dir_browse_btn = self._tr(QPushButton(), "execute_dir_label")
         self.script_dir_browse_btn.clicked.connect(self._browse_script_dir)
-        self.script_dir_exec_btn = QPushButton(_t("execute_dir"))
+        self.script_dir_exec_btn = self._tr(QPushButton(), "execute_dir")
         self.script_dir_exec_btn.clicked.connect(self._execute_dir)
         dir_h.addWidget(self.script_dir_input)
         dir_h.addWidget(self.script_dir_browse_btn)
         dir_h.addWidget(self.script_dir_exec_btn)
         layout.addLayout(dir_h)
 
-        # Manual JSON input
-        layout.addWidget(QLabel(_t("script_content")))
+        layout.addWidget(self._tr(QLabel(), "script_content"))
         self.script_editor = QTextEdit()
         self.script_editor.setPlaceholderText('[["AC_type_keyboard", {"keycode": "a"}]]')
         layout.addWidget(self.script_editor)
 
-        exec_btn = QPushButton(_t("execute_script"))
+        exec_btn = self._tr(QPushButton(), "execute_script")
         exec_btn.clicked.connect(self._execute_manual_script)
         layout.addWidget(exec_btn)
 
-        layout.addWidget(QLabel(_t("execution_result")))
+        layout.addWidget(self._tr(QLabel(), "execution_result"))
         self.script_result_text = QTextEdit()
         self.script_result_text.setReadOnly(True)
         layout.addWidget(self.script_result_text)
@@ -569,46 +625,48 @@ class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
         grid = QGridLayout()
         row = 0
 
-        grid.addWidget(QLabel(_t("recorder_name")), row, 0)
+        grid.addWidget(self._tr(QLabel(), "recorder_name"), row, 0)
         self.sr_name_input = QLineEdit("default")
         grid.addWidget(self.sr_name_input, row, 1)
 
         row += 1
-        grid.addWidget(QLabel(_t("output_file")), row, 0)
+        grid.addWidget(self._tr(QLabel(), "output_file"), row, 0)
         self.sr_file_input = QLineEdit("output.avi")
         grid.addWidget(self.sr_file_input, row, 1)
-        self.sr_file_browse_btn = QPushButton(_t("browse"))
+        self.sr_file_browse_btn = self._tr(QPushButton(), "browse")
         self.sr_file_browse_btn.clicked.connect(self._browse_sr_file)
         grid.addWidget(self.sr_file_browse_btn, row, 2)
 
         row += 1
-        grid.addWidget(QLabel(_t("codec_label")), row, 0)
+        grid.addWidget(self._tr(QLabel(), "codec_label"), row, 0)
         self.sr_codec_input = QLineEdit("XVID")
         grid.addWidget(self.sr_codec_input, row, 1)
 
         row += 1
-        grid.addWidget(QLabel(_t("fps_label")), row, 0)
+        grid.addWidget(self._tr(QLabel(), "fps_label"), row, 0)
         self.sr_fps_input = QLineEdit("30")
         self.sr_fps_input.setValidator(QIntValidator(1, 120))
         grid.addWidget(self.sr_fps_input, row, 1)
 
         row += 1
-        grid.addWidget(QLabel(_t("resolution_label")), row, 0)
+        grid.addWidget(self._tr(QLabel(), "resolution_label"), row, 0)
         self.sr_res_input = QLineEdit("1920x1080")
         grid.addWidget(self.sr_res_input, row, 1)
 
         layout.addLayout(grid)
 
         btn_h = QHBoxLayout()
-        self.sr_start_btn = QPushButton(_t("start_screen_record"))
+        self.sr_start_btn = self._tr(QPushButton(), "start_screen_record")
         self.sr_start_btn.clicked.connect(self._start_screen_record)
-        self.sr_stop_btn = QPushButton(_t("stop_screen_record"))
+        self.sr_stop_btn = self._tr(QPushButton(), "stop_screen_record")
         self.sr_stop_btn.clicked.connect(self._stop_screen_record)
         btn_h.addWidget(self.sr_start_btn)
         btn_h.addWidget(self.sr_stop_btn)
         layout.addLayout(btn_h)
 
-        self.sr_status_label = QLabel(_t("screen_record_status") + " " + _t("record_idle"))
+        self._sr_status_key = "record_idle"
+        self.sr_status_label = QLabel()
+        self._apply_sr_status_label()
         layout.addWidget(self.sr_status_label)
 
         layout.addStretch()
@@ -630,7 +688,8 @@ class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
             w, h = res_text.lower().split("x")
             resolution = (int(w), int(h))
             self.screen_recorder.start_new_record(name, output, codec, fps, resolution)
-            self.sr_status_label.setText(_t("screen_record_status") + " " + _t("record_recording"))
+            self._sr_status_key = "record_recording"
+            self._apply_sr_status_label()
         except (OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
@@ -638,7 +697,8 @@ class AutoControlGUIWidget(AutoClickTabMixin, ShellReportTabsMixin, QWidget):
         try:
             name = self.sr_name_input.text() or "default"
             self.screen_recorder.stop_record(name)
-            self.sr_status_label.setText(_t("screen_record_status") + " " + _t("record_idle"))
+            self._sr_status_key = "record_idle"
+            self._apply_sr_status_label()
         except (OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 

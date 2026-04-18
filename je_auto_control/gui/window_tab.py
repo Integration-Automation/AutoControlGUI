@@ -7,40 +7,71 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
+    language_wrapper,
+)
 from je_auto_control.wrapper.auto_control_window import (
     close_window_by_title, focus_window, list_windows,
 )
 
 
-class WindowManagerTab(QWidget):
+def _t(key: str) -> str:
+    return language_wrapper.translate(key, key)
+
+
+class WindowManagerTab(TranslatableMixin, QWidget):
     """Browse top-level windows and trigger focus / close actions."""
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
+        self._tr_init()
         self._table = QTableWidget(0, 2)
-        self._table.setHorizontalHeaderLabels(["HWND", "Title"])
+        self._apply_table_headers()
         self._filter = QLineEdit()
-        self._filter.setPlaceholderText("Filter by title substring")
+        self._apply_filter_placeholder()
         self._filter.textChanged.connect(self._apply_filter)
+        self._status_count: Optional[int] = None
+        self._status_error: Optional[str] = None
         self._status = QLabel("")
         self._build_layout()
         self.refresh()
 
+    def _apply_table_headers(self) -> None:
+        self._table.setHorizontalHeaderLabels([_t("win_col_hwnd"), _t("win_col_title")])
+
+    def _apply_filter_placeholder(self) -> None:
+        self._filter.setPlaceholderText(_t("win_filter_placeholder"))
+
+    def _apply_status(self) -> None:
+        if self._status_error is not None:
+            self._status.setText(self._status_error)
+        elif self._status_count is not None:
+            self._status.setText(_t("win_status_count").replace("{n}", str(self._status_count)))
+        else:
+            self._status.setText("")
+
+    def retranslate(self) -> None:
+        TranslatableMixin.retranslate(self)
+        self._apply_table_headers()
+        self._apply_filter_placeholder()
+        self._apply_status()
+
     def _build_layout(self) -> None:
         root = QVBoxLayout(self)
         top = QHBoxLayout()
-        refresh = QPushButton("Refresh")
+        refresh = self._tr(QPushButton(), "win_refresh")
         refresh.clicked.connect(self.refresh)
         top.addWidget(refresh)
         top.addWidget(self._filter, stretch=1)
         root.addLayout(top)
         root.addWidget(self._table, stretch=1)
         actions = QHBoxLayout()
-        for label, handler in (
-            ("Focus selected", self._on_focus),
-            ("Close selected", self._on_close),
+        for key, handler in (
+            ("win_focus_selected", self._on_focus),
+            ("win_close_selected", self._on_close),
         ):
-            btn = QPushButton(label)
+            btn = self._tr(QPushButton(), key)
             btn.clicked.connect(handler)
             actions.addWidget(btn)
         actions.addStretch()
@@ -51,14 +82,18 @@ class WindowManagerTab(QWidget):
         try:
             windows = list_windows()
         except NotImplementedError as error:
-            self._status.setText(str(error))
+            self._status_error = str(error)
+            self._status_count = None
+            self._apply_status()
             self._table.setRowCount(0)
             return
+        self._status_error = None
         self._table.setRowCount(len(windows))
         for row, (hwnd, title) in enumerate(windows):
             self._table.setItem(row, 0, QTableWidgetItem(str(hwnd)))
             self._table.setItem(row, 1, QTableWidgetItem(title))
-        self._status.setText(f"{len(windows)} windows")
+        self._status_count = len(windows)
+        self._apply_status()
         QTimer.singleShot(0, self._apply_filter)
 
     def _apply_filter(self) -> None:

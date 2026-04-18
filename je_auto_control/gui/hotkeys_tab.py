@@ -7,22 +7,31 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
+    language_wrapper,
+)
 from je_auto_control.utils.hotkey.hotkey_daemon import default_hotkey_daemon
 
 
-class HotkeysTab(QWidget):
+def _t(key: str) -> str:
+    return language_wrapper.translate(key, key)
+
+
+class HotkeysTab(TranslatableMixin, QWidget):
     """Add / remove hotkey bindings and toggle the daemon."""
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
+        self._tr_init()
         self._combo_input = QLineEdit()
         self._combo_input.setPlaceholderText("ctrl+alt+1")
         self._script_input = QLineEdit()
-        self._status = QLabel("Daemon stopped")
+        self._daemon_running = False
+        self._status = QLabel()
         self._table = QTableWidget(0, 4)
-        self._table.setHorizontalHeaderLabels(
-            ["ID", "Combo", "Script", "Fired"]
-        )
+        self._apply_status_label()
+        self._apply_table_headers()
         self._timer = QTimer(self)
         self._timer.setInterval(1000)
         self._timer.timeout.connect(self._refresh)
@@ -31,14 +40,14 @@ class HotkeysTab(QWidget):
     def _build_layout(self) -> None:
         root = QVBoxLayout(self)
         form = QHBoxLayout()
-        form.addWidget(QLabel("Combo:"))
+        form.addWidget(self._tr(QLabel(), "hk_combo_label"))
         form.addWidget(self._combo_input)
-        form.addWidget(QLabel("Script:"))
+        form.addWidget(self._tr(QLabel(), "hk_script_label"))
         form.addWidget(self._script_input, stretch=1)
-        browse = QPushButton("Browse")
+        browse = self._tr(QPushButton(), "browse")
         browse.clicked.connect(self._browse)
         form.addWidget(browse)
-        add = QPushButton("Bind")
+        add = self._tr(QPushButton(), "hk_bind")
         add.clicked.connect(self._on_bind)
         form.addWidget(add)
         root.addLayout(form)
@@ -46,20 +55,37 @@ class HotkeysTab(QWidget):
         root.addWidget(self._table, stretch=1)
 
         ctl = QHBoxLayout()
-        for label, handler in (
-            ("Remove selected", self._on_remove),
-            ("Start daemon", self._on_start),
-            ("Stop daemon", self._on_stop),
+        for key, handler in (
+            ("hk_remove_selected", self._on_remove),
+            ("hk_start_daemon", self._on_start),
+            ("hk_stop_daemon", self._on_stop),
         ):
-            btn = QPushButton(label)
+            btn = self._tr(QPushButton(), key)
             btn.clicked.connect(handler)
             ctl.addWidget(btn)
         ctl.addStretch()
         root.addLayout(ctl)
         root.addWidget(self._status)
 
+    def _apply_status_label(self) -> None:
+        key = "hk_daemon_running" if self._daemon_running else "hk_daemon_stopped"
+        self._status.setText(_t(key))
+
+    def _apply_table_headers(self) -> None:
+        self._table.setHorizontalHeaderLabels([
+            _t("hk_col_id"), _t("hk_col_combo"),
+            _t("hk_col_script"), _t("hk_col_fired"),
+        ])
+
+    def retranslate(self) -> None:
+        TranslatableMixin.retranslate(self)
+        self._apply_status_label()
+        self._apply_table_headers()
+
     def _browse(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Select script", "", "JSON (*.json)")
+        path, _ = QFileDialog.getOpenFileName(
+            self, _t("hk_dialog_select_script"), "", "JSON (*.json)",
+        )
         if path:
             self._script_input.setText(path)
 
@@ -91,12 +117,14 @@ class HotkeysTab(QWidget):
             QMessageBox.warning(self, "Error", str(error))
             return
         self._timer.start()
-        self._status.setText("Daemon running")
+        self._daemon_running = True
+        self._apply_status_label()
 
     def _on_stop(self) -> None:
         default_hotkey_daemon.stop()
         self._timer.stop()
-        self._status.setText("Daemon stopped")
+        self._daemon_running = False
+        self._apply_status_label()
 
     def _refresh(self) -> None:
         bindings = default_hotkey_daemon.list_bindings()

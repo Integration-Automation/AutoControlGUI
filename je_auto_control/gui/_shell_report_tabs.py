@@ -18,17 +18,21 @@ def _t(key: str) -> str:
 
 
 class ShellReportTabsMixin:
-    """Provides shell-command and report-generation tab builders/handlers."""
+    """Provides shell-command and report-generation tab builders/handlers.
+
+    Host widget must expose the TranslatableMixin API (``self._tr(...)``)
+    so every label/button registers for live language switching.
+    """
 
     def _build_shell_tab(self) -> QWidget:
         tab = QWidget()
         layout = QVBoxLayout()
 
-        shell_group = QGroupBox(_t("shell_command_label"))
+        shell_group = self._tr(QGroupBox(), "shell_command_label")
         sg = QVBoxLayout()
         self.shell_input = QLineEdit()
         self.shell_input.setPlaceholderText("echo hello")
-        self.shell_exec_btn = QPushButton(_t("execute_shell"))
+        self.shell_exec_btn = self._tr(QPushButton(), "execute_shell")
         self.shell_exec_btn.clicked.connect(self._execute_shell)
         sh = QHBoxLayout()
         sh.addWidget(self.shell_input)
@@ -37,12 +41,12 @@ class ShellReportTabsMixin:
         shell_group.setLayout(sg)
         layout.addWidget(shell_group)
 
-        exe_group = QGroupBox(_t("start_exe_label"))
+        exe_group = self._tr(QGroupBox(), "start_exe_label")
         eg = QHBoxLayout()
         self.exe_path_input = QLineEdit()
-        self.exe_browse_btn = QPushButton(_t("browse"))
+        self.exe_browse_btn = self._tr(QPushButton(), "browse")
         self.exe_browse_btn.clicked.connect(self._browse_exe)
-        self.exe_start_btn = QPushButton(_t("start_exe"))
+        self.exe_start_btn = self._tr(QPushButton(), "start_exe")
         self.exe_start_btn.clicked.connect(self._start_exe)
         eg.addWidget(self.exe_path_input)
         eg.addWidget(self.exe_browse_btn)
@@ -50,7 +54,7 @@ class ShellReportTabsMixin:
         exe_group.setLayout(eg)
         layout.addWidget(exe_group)
 
-        layout.addWidget(QLabel(_t("shell_output")))
+        layout.addWidget(self._tr(QLabel(), "shell_output"))
         self.shell_output_text = QTextEdit()
         self.shell_output_text.setReadOnly(True)
         layout.addWidget(self.shell_output_text)
@@ -91,11 +95,11 @@ class ShellReportTabsMixin:
         tab = QWidget()
         layout = QVBoxLayout()
 
-        tr_group = QGroupBox(_t("test_record_status"))
+        tr_group = self._tr(QGroupBox(), "test_record_status")
         tr_h = QHBoxLayout()
-        self.tr_enable_btn = QPushButton(_t("enable_test_record"))
+        self.tr_enable_btn = self._tr(QPushButton(), "enable_test_record")
         self.tr_enable_btn.clicked.connect(lambda: self._set_test_record(True))
-        self.tr_disable_btn = QPushButton(_t("disable_test_record"))
+        self.tr_disable_btn = self._tr(QPushButton(), "disable_test_record")
         self.tr_disable_btn.clicked.connect(lambda: self._set_test_record(False))
         self.tr_status_label = QLabel("OFF")
         tr_h.addWidget(self.tr_enable_btn)
@@ -105,24 +109,24 @@ class ShellReportTabsMixin:
         layout.addWidget(tr_group)
 
         name_h = QHBoxLayout()
-        name_h.addWidget(QLabel(_t("report_name")))
+        name_h.addWidget(self._tr(QLabel(), "report_name"))
         self.report_name_input = QLineEdit("autocontrol_report")
         name_h.addWidget(self.report_name_input)
         layout.addLayout(name_h)
 
         btn_h = QHBoxLayout()
-        self.html_report_btn = QPushButton(_t("generate_html_report"))
+        self.html_report_btn = self._tr(QPushButton(), "generate_html_report")
         self.html_report_btn.clicked.connect(self._gen_html)
-        self.json_report_btn = QPushButton(_t("generate_json_report"))
+        self.json_report_btn = self._tr(QPushButton(), "generate_json_report")
         self.json_report_btn.clicked.connect(self._gen_json)
-        self.xml_report_btn = QPushButton(_t("generate_xml_report"))
+        self.xml_report_btn = self._tr(QPushButton(), "generate_xml_report")
         self.xml_report_btn.clicked.connect(self._gen_xml)
         btn_h.addWidget(self.html_report_btn)
         btn_h.addWidget(self.json_report_btn)
         btn_h.addWidget(self.xml_report_btn)
         layout.addLayout(btn_h)
 
-        layout.addWidget(QLabel(_t("report_result")))
+        layout.addWidget(self._tr(QLabel(), "report_result"))
         self.report_result_text = QTextEdit()
         self.report_result_text.setReadOnly(True)
         layout.addWidget(self.report_result_text)
