@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 from je_auto_control.gui._auto_click_tab import AutoClickTabMixin
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.accessibility_tab import AccessibilityTab
-from je_auto_control.gui._shell_report_tabs import ShellReportTabsMixin
+from je_auto_control.gui._report_tab import ReportTabMixin
 from je_auto_control.gui.hotkeys_tab import HotkeysTab
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.live_hud_tab import LiveHUDTab
@@ -22,7 +22,6 @@ from je_auto_control.gui.run_history_tab import RunHistoryTab
 from je_auto_control.gui.scheduler_tab import SchedulerTab
 from je_auto_control.gui.script_builder import ScriptBuilderTab
 from je_auto_control.gui.selector import crop_template_to_file, open_region_selector
-from je_auto_control.gui.socket_server_tab import SocketServerTab
 from je_auto_control.gui.triggers_tab import TriggersTab
 from je_auto_control.gui.window_tab import WindowManagerTab
 from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot, get_pixel
@@ -31,7 +30,6 @@ from je_auto_control.wrapper.auto_control_record import record, stop_record
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
-from je_auto_control.utils.cv2_utils.screen_record import ScreenRecorder
 
 
 def _t(key: str) -> str:
@@ -55,7 +53,7 @@ class _TabEntry:
 # Main Widget
 # =============================================================================
 class AutoControlGUIWidget(
-    TranslatableMixin, AutoClickTabMixin, ShellReportTabsMixin, QWidget,
+    TranslatableMixin, AutoClickTabMixin, ReportTabMixin, QWidget,
 ):
     """Owns the QTabWidget and exposes show/hide/list APIs for the menu bar."""
 
@@ -81,10 +79,7 @@ class AutoControlGUIWidget(
         self._add_tab("recording_editor", "tab_recording_editor", RecordingEditorTab())
         self._add_tab("window_manager", "tab_window_manager", WindowManagerTab())
         self._add_tab("scheduler", "tab_scheduler", SchedulerTab())
-        self._add_tab("socket_server", "tab_socket_server", SocketServerTab())
         self._add_tab("live_hud", "tab_live_hud", LiveHUDTab())
-        self._add_tab("screen_record", "tab_screen_record", self._build_screen_record_tab())
-        self._add_tab("shell", "tab_shell", self._build_shell_tab())
         self._add_tab("report", "tab_report", self._build_report_tab())
         self._add_tab("hotkeys", "tab_hotkeys", HotkeysTab())
         self._add_tab("triggers", "tab_triggers", TriggersTab())
@@ -98,7 +93,6 @@ class AutoControlGUIWidget(
         self.timer = QTimer()
         self.repeat_count = 0
         self.repeat_max = 0
-        self.screen_recorder = ScreenRecorder()
         self._record_data = []
 
     # --- tab registry API ----------------------------------------------------
@@ -469,16 +463,8 @@ class AutoControlGUIWidget(
                 + self._translate(self._record_status_key),
             )
 
-    def _apply_sr_status_label(self) -> None:
-        if hasattr(self, "sr_status_label"):
-            self.sr_status_label.setText(
-                self._translate("screen_record_status") + " "
-                + self._translate(self._sr_status_key),
-            )
-
     def _record_retranslate(self) -> None:
         self._apply_record_status_label()
-        self._apply_sr_status_label()
 
     def _start_record(self):
         try:
@@ -618,93 +604,6 @@ class AutoControlGUIWidget(
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
         except (OSError, ValueError, TypeError, RuntimeError) as error:
             self.script_result_text.setText(f"Error: {error}")
-
-    # =========================================================================
-    # Tab 6: Screen Recording
-    # =========================================================================
-    def _build_screen_record_tab(self) -> QWidget:
-        tab = QWidget()
-        layout = QVBoxLayout()
-
-        grid = QGridLayout()
-        row = 0
-
-        grid.addWidget(self._tr(QLabel(), "recorder_name"), row, 0)
-        self.sr_name_input = QLineEdit("default")
-        grid.addWidget(self.sr_name_input, row, 1)
-
-        row += 1
-        grid.addWidget(self._tr(QLabel(), "output_file"), row, 0)
-        self.sr_file_input = QLineEdit("output.avi")
-        grid.addWidget(self.sr_file_input, row, 1)
-        self.sr_file_browse_btn = self._tr(QPushButton(), "browse")
-        self.sr_file_browse_btn.clicked.connect(self._browse_sr_file)
-        grid.addWidget(self.sr_file_browse_btn, row, 2)
-
-        row += 1
-        grid.addWidget(self._tr(QLabel(), "codec_label"), row, 0)
-        self.sr_codec_input = QLineEdit("XVID")
-        grid.addWidget(self.sr_codec_input, row, 1)
-
-        row += 1
-        grid.addWidget(self._tr(QLabel(), "fps_label"), row, 0)
-        self.sr_fps_input = QLineEdit("30")
-        self.sr_fps_input.setValidator(QIntValidator(1, 120))
-        grid.addWidget(self.sr_fps_input, row, 1)
-
-        row += 1
-        grid.addWidget(self._tr(QLabel(), "resolution_label"), row, 0)
-        self.sr_res_input = QLineEdit("1920x1080")
-        grid.addWidget(self.sr_res_input, row, 1)
-
-        layout.addLayout(grid)
-
-        btn_h = QHBoxLayout()
-        self.sr_start_btn = self._tr(QPushButton(), "start_screen_record")
-        self.sr_start_btn.clicked.connect(self._start_screen_record)
-        self.sr_stop_btn = self._tr(QPushButton(), "stop_screen_record")
-        self.sr_stop_btn.clicked.connect(self._stop_screen_record)
-        btn_h.addWidget(self.sr_start_btn)
-        btn_h.addWidget(self.sr_stop_btn)
-        layout.addLayout(btn_h)
-
-        self._sr_status_key = "record_idle"
-        self.sr_status_label = QLabel()
-        self._apply_sr_status_label()
-        layout.addWidget(self.sr_status_label)
-
-        layout.addStretch()
-        tab.setLayout(layout)
-        return tab
-
-    def _browse_sr_file(self):
-        path, _ = QFileDialog.getSaveFileName(self, _t("output_file"), "", "AVI (*.avi);;MP4 (*.mp4);;All (*)")
-        if path:
-            self.sr_file_input.setText(path)
-
-    def _start_screen_record(self):
-        try:
-            name = self.sr_name_input.text() or "default"
-            output = self.sr_file_input.text() or "output.avi"
-            codec = self.sr_codec_input.text() or "XVID"
-            fps = int(self.sr_fps_input.text() or "30")
-            res_text = self.sr_res_input.text() or "1920x1080"
-            w, h = res_text.lower().split("x")
-            resolution = (int(w), int(h))
-            self.screen_recorder.start_new_record(name, output, codec, fps, resolution)
-            self._sr_status_key = "record_recording"
-            self._apply_sr_status_label()
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
-
-    def _stop_screen_record(self):
-        try:
-            name = self.sr_name_input.text() or "default"
-            self.screen_recorder.stop_record(name)
-            self._sr_status_key = "record_idle"
-            self._apply_sr_status_label()
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
 
     # =========================================================================
     # Global keyboard shortcut: Ctrl+4 to stop
