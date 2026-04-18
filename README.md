@@ -22,11 +22,20 @@
   - [Mouse Control](#mouse-control)
   - [Keyboard Control](#keyboard-control)
   - [Image Recognition](#image-recognition)
+  - [Accessibility Element Finder](#accessibility-element-finder)
+  - [AI Element Locator (VLM)](#ai-element-locator-vlm)
+  - [OCR (Text on Screen)](#ocr-text-on-screen)
+  - [Clipboard](#clipboard)
   - [Screen Operations](#screen-operations)
   - [Action Recording & Playback](#action-recording--playback)
   - [Action Scripting (JSON Executor)](#action-scripting-json-executor)
+  - [Scheduler (Interval & Cron)](#scheduler-interval--cron)
+  - [Global Hotkey Daemon](#global-hotkey-daemon)
+  - [Event Triggers](#event-triggers)
+  - [Run History](#run-history)
   - [Report Generation](#report-generation)
-  - [Remote Automation (Socket Server)](#remote-automation-socket-server)
+  - [Remote Automation (Socket / REST)](#remote-automation-socket--rest)
+  - [Plugin Loader](#plugin-loader)
   - [Shell Command Execution](#shell-command-execution)
   - [Screen Recording](#screen-recording)
   - [Callback Executor](#callback-executor)
@@ -46,17 +55,27 @@
 - **Mouse Automation** — move, click, press, release, drag, and scroll with precise coordinate control
 - **Keyboard Automation** — press/release individual keys, type strings, hotkey combinations, key state detection
 - **Image Recognition** — locate UI elements on screen using OpenCV template matching with configurable threshold
+- **Accessibility Element Finder** — query the OS accessibility tree (Windows UIA / macOS AX) to locate buttons, menus, and controls by name/role
+- **AI Element Locator (VLM)** — describe a UI element in plain language and let a vision-language model (Anthropic / OpenAI) find its screen coordinates
+- **OCR** — extract text from screen regions using Tesseract; wait for, click, or locate rendered text
+- **Clipboard** — read/write system clipboard text on Windows, macOS, and Linux
 - **Screenshot & Screen Recording** — capture full screen or regions as images, record screen to video (AVI/MP4)
 - **Action Recording & Playback** — record mouse/keyboard events and replay them
-- **JSON-Based Action Scripting** — define and execute automation flows using JSON action files
+- **JSON-Based Action Scripting** — define and execute automation flows using JSON action files (dry-run + step debug)
+- **Scheduler** — run scripts on an interval or cron expression; jobs persist across restarts
+- **Global Hotkey Daemon** — bind OS-level hotkeys to action scripts (Windows today; macOS/Linux stubs in place)
+- **Event Triggers** — fire scripts when an image appears, a window opens, a pixel changes, or a file is modified
+- **Run History** — SQLite-backed run log across scheduler / triggers / hotkeys / REST with auto error-screenshot artifacts
 - **Report Generation** — export test records as HTML, JSON, or XML reports with success/failure status
-- **Remote Automation** — start a TCP socket server to receive and execute automation commands from remote clients
+- **Remote Automation** — TCP socket server **and** REST API server to receive automation commands
+- **Plugin Loader** — drop `.py` files exposing `AC_*` callables into a directory and register them as executor commands at runtime
 - **Shell Integration** — execute shell commands within automation workflows with async output capture
 - **Callback Executor** — trigger automation functions with callback hooks for chaining operations
 - **Dynamic Package Loading** — extend the executor at runtime by importing external Python packages
 - **Project & Template Management** — scaffold automation projects with keyword/executor directory structure
 - **Window Management** — send keyboard/mouse events directly to specific windows (Windows/Linux)
-- **GUI Application** — built-in PySide6 graphical interface for interactive automation
+- **GUI Application** — built-in PySide6 graphical interface with live language switching (English / 繁體中文 / 简体中文 / 日本語)
+- **CLI Runner** — `python -m je_auto_control.cli run|list-jobs|start-server|start-rest`
 - **Cross-Platform** — unified API across Windows, macOS, and Linux (X11)
 
 ---
@@ -80,10 +99,23 @@ je_auto_control/
     ├── executor/               # JSON action executor engine
     ├── callback/               # Callback function executor
     ├── cv2_utils/              # OpenCV screenshot, template matching, video recording
+    ├── accessibility/          # UIA (Windows) / AX (macOS) element finder
+    ├── vision/                 # VLM-based locator (Anthropic / OpenAI backends)
+    ├── ocr/                    # Tesseract-backed text locator
+    ├── clipboard/              # Cross-platform clipboard
+    ├── scheduler/              # Interval + cron scheduler
+    ├── hotkey/                 # Global hotkey daemon
+    ├── triggers/               # Image/window/pixel/file triggers
+    ├── run_history/            # SQLite run log + error-screenshot artifacts
+    ├── rest_api/               # Stdlib HTTP/REST server
+    ├── plugin_loader/          # Dynamic AC_* plugin discovery
     ├── socket_server/          # TCP socket server for remote automation
     ├── shell_process/          # Shell command manager
     ├── generate_report/        # HTML / JSON / XML report generators
     ├── test_record/            # Test action recording
+    ├── script_vars/            # Script variable interpolation
+    ├── watcher/                # Mouse / pixel / log watchers (Live HUD)
+    ├── recording_edit/         # Trim, filter, re-scale recorded actions
     ├── json/                   # JSON action file read/write
     ├── project/                # Project scaffolding & templates
     ├── package_manager/        # Dynamic package loading
@@ -135,6 +167,13 @@ sudo apt-get install cmake libssl-dev
 | `python-Xlib` | Linux X11 backend (auto-installed on Linux) |
 | `PySide6` | GUI application (optional, install with `[gui]`) |
 | `qt-material` | GUI theme (optional, install with `[gui]`) |
+| `uiautomation` | Windows accessibility backend (optional, loaded on demand) |
+| `pytesseract` + Tesseract | OCR engine (optional, loaded on demand) |
+| `anthropic` | VLM locator — Anthropic backend (optional, loaded on demand) |
+| `openai` | VLM locator — OpenAI backend (optional, loaded on demand) |
+
+See [Third_Party_License.md](Third_Party_License.md) for a full list of
+third-party components and their licenses.
 
 ---
 
@@ -196,6 +235,95 @@ print(f"Found at: ({cx}, {cy})")
 # Find an image and automatically click it
 je_auto_control.locate_and_click("submit_button.png", mouse_keycode="mouse_left")
 ```
+
+### Accessibility Element Finder
+
+Query the OS accessibility tree to locate controls by name, role, or app.
+Works on Windows (UIA, via `uiautomation`) and macOS (AX).
+
+```python
+import je_auto_control
+
+# List all visible buttons in the Calculator app
+elements = je_auto_control.list_accessibility_elements(app_name="Calculator")
+
+# Find a specific element
+ok = je_auto_control.find_accessibility_element(name="OK", role="Button")
+if ok is not None:
+    print(ok.bounds, ok.center)
+
+# Click it directly
+je_auto_control.click_accessibility_element(name="OK", app_name="Calculator")
+```
+
+Raises `AccessibilityNotAvailableError` if no accessibility backend is
+installed for the current platform.
+
+### AI Element Locator (VLM)
+
+When template matching and accessibility both fail, describe the element
+in plain language and let a vision-language model find its coordinates.
+
+```python
+import je_auto_control
+
+# Uses Anthropic by default if ANTHROPIC_API_KEY is set, else OpenAI.
+x, y = je_auto_control.locate_by_description("the green Submit button")
+
+# Or click it in one shot
+je_auto_control.click_by_description(
+    "the cookie-banner 'Accept all' button",
+    screen_region=[0, 800, 1920, 1080],   # optional crop
+)
+```
+
+Configuration (environment variables only — keys are never persisted or
+logged):
+
+| Variable | Effect |
+|---|---|
+| `ANTHROPIC_API_KEY` | Enables the Anthropic backend |
+| `OPENAI_API_KEY` | Enables the OpenAI backend |
+| `AUTOCONTROL_VLM_BACKEND` | `anthropic` or `openai` to force a backend |
+| `AUTOCONTROL_VLM_MODEL` | Override the default model (e.g. `claude-opus-4-7`, `gpt-4o-mini`) |
+
+Raises `VLMNotAvailableError` if neither SDK is installed or no API key
+is set.
+
+### OCR (Text on Screen)
+
+```python
+import je_auto_control as ac
+
+# Locate all matches of a piece of text
+matches = ac.find_text_matches("Submit")
+
+# Center of the first match, or None
+cx, cy = ac.locate_text_center("Submit")
+
+# Click text in one call
+ac.click_text("Submit")
+
+# Block until text appears (or timeout)
+ac.wait_for_text("Loading complete", timeout=15.0)
+```
+
+If Tesseract is not on `PATH`, point at it explicitly:
+
+```python
+ac.set_tesseract_cmd(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+```
+
+### Clipboard
+
+```python
+import je_auto_control as ac
+ac.set_clipboard("hello")
+text = ac.get_clipboard()
+```
+
+Backends: Windows (Win32 via `ctypes`), macOS (`pbcopy`/`pbpaste`),
+Linux (`xclip` or `xsel`).
 
 ### Screenshot
 
@@ -270,12 +398,83 @@ je_auto_control.execute_action([
 | Keyboard | `AC_type_keyboard`, `AC_press_keyboard_key`, `AC_release_keyboard_key`, `AC_write`, `AC_hotkey`, `AC_check_key_is_press` |
 | Image | `AC_locate_all_image`, `AC_locate_image_center`, `AC_locate_and_click` |
 | Screen | `AC_screen_size`, `AC_screenshot` |
+| Accessibility | `AC_a11y_list`, `AC_a11y_find`, `AC_a11y_click` |
+| VLM (AI Locator) | `AC_vlm_locate`, `AC_vlm_click` |
+| OCR | `AC_locate_text`, `AC_click_text`, `AC_wait_text` |
+| Clipboard | `AC_clipboard_get`, `AC_clipboard_set` |
 | Record | `AC_record`, `AC_stop_record` |
 | Report | `AC_generate_html`, `AC_generate_json`, `AC_generate_xml`, `AC_generate_html_report`, `AC_generate_json_report`, `AC_generate_xml_report` |
 | Project | `AC_create_project` |
 | Shell | `AC_shell_command` |
 | Process | `AC_execute_process` |
 | Executor | `AC_execute_action`, `AC_execute_files` |
+
+### Scheduler (Interval & Cron)
+
+```python
+import je_auto_control as ac
+
+# Interval job — run every 30 seconds
+job = ac.default_scheduler.add_job(
+    script_path="scripts/poll.json", interval_seconds=30, repeat=True,
+)
+
+# Cron job — 09:00 on weekdays (minute hour dom month dow)
+cron_job = ac.default_scheduler.add_cron_job(
+    script_path="scripts/daily.json", cron_expression="0 9 * * 1-5",
+)
+
+ac.default_scheduler.start()
+```
+
+Both flavours coexist; `job.is_cron` tells them apart.
+
+### Global Hotkey Daemon
+
+Bind OS-level hotkeys to action JSON scripts (Windows backend today;
+macOS / Linux raise `NotImplementedError` on `start()` with Strategy-
+pattern seams in place).
+
+```python
+from je_auto_control import default_hotkey_daemon
+
+default_hotkey_daemon.bind("ctrl+alt+1", "scripts/greet.json")
+default_hotkey_daemon.start()
+```
+
+### Event Triggers
+
+Poll-based triggers that fire a script when a condition becomes true:
+
+```python
+from je_auto_control import (
+    default_trigger_engine, ImageAppearsTrigger,
+    WindowAppearsTrigger, PixelColorTrigger, FilePathTrigger,
+)
+
+default_trigger_engine.add(ImageAppearsTrigger(
+    trigger_id="", script_path="scripts/click_ok.json",
+    image_path="templates/ok_button.png", threshold=0.85, repeat=True,
+))
+default_trigger_engine.start()
+```
+
+### Run History
+
+Every run from the scheduler, trigger engine, hotkey daemon, REST API,
+and manual GUI replay is recorded to `~/.je_auto_control/history.db`.
+Errors automatically attach a screenshot under
+`~/.je_auto_control/artifacts/run_{id}_{ms}.png` for post-mortem.
+
+```python
+from je_auto_control import default_history_store
+
+for run in default_history_store.list_runs(limit=20):
+    print(run.id, run.source, run.status, run.artifact_path)
+```
+
+The GUI **Run History** tab exposes filter/refresh/clear and
+double-click-to-open on the artifact column.
 
 ### Report Generation
 
@@ -302,19 +501,24 @@ xml_string = je_auto_control.generate_xml()
 
 Reports include: function name, parameters, timestamp, and exception info (if any) for each recorded action. HTML reports display successful actions in cyan and failed actions in red.
 
-### Remote Automation (Socket Server)
+### Remote Automation (Socket / REST)
 
-Start a TCP server to receive JSON automation commands from remote clients:
+Two servers are available — a raw TCP socket and a stdlib HTTP/REST
+server. Both default to `127.0.0.1`; binding to `0.0.0.0` is an explicit,
+documented opt-in.
 
 ```python
-import je_auto_control
+import je_auto_control as ac
 
-# Start the server (default: localhost:9938)
-server = je_auto_control.start_autocontrol_socket_server(host="localhost", port=9938)
+# TCP socket server (default: 127.0.0.1:9938)
+ac.start_autocontrol_socket_server(host="127.0.0.1", port=9938)
 
-# The server runs in a background thread
-# Send JSON action commands via TCP to execute remotely
-# Send "quit_server" to shut down
+# REST API server (default: 127.0.0.1:9939)
+ac.start_rest_api_server(host="127.0.0.1", port=9939)
+# Endpoints:
+#   GET  /health           liveness probe
+#   GET  /jobs             scheduler job list
+#   POST /execute          body: {"actions": [...]}
 ```
 
 Client example:
@@ -338,6 +542,26 @@ response = sock.recv(8192).decode("utf-8")
 print(response)
 sock.close()
 ```
+
+### Plugin Loader
+
+Drop `.py` files defining top-level `AC_*` callables into a directory,
+then register them as executor commands at runtime:
+
+```python
+from je_auto_control import (
+    load_plugin_directory, register_plugin_commands,
+)
+
+commands = load_plugin_directory("./my_plugins")
+register_plugin_commands(commands)
+
+# Now usable from any JSON action script:
+# [["AC_greet", {"name": "world"}]]
+```
+
+> **Warning:** Plugin files execute arbitrary Python on load. Only load
+> from directories you control.
 
 ### Shell Command Execution
 
@@ -497,6 +721,24 @@ python -m je_auto_control --execute_str '[["AC_screenshot", {"file_path": "test.
 python -m je_auto_control -c ./my_project
 ```
 
+A richer subcommand CLI built on the headless APIs:
+
+```bash
+# Run a script, optionally with variables, and/or a dry-run
+python -m je_auto_control.cli run script.json
+python -m je_auto_control.cli run script.json --var name=alice --dry-run
+
+# List scheduler jobs
+python -m je_auto_control.cli list-jobs
+
+# Start the socket or REST server
+python -m je_auto_control.cli start-server --port 9938
+python -m je_auto_control.cli start-rest   --port 9939
+```
+
+`--var name=value` is parsed as JSON when possible (so `count=10` becomes
+an int), otherwise treated as a string.
+
 ---
 
 ## Platform Support
@@ -541,4 +783,6 @@ python -m pytest test/integrated_test/
 
 ## License
 
-[MIT License](LICENSE) © JE-Chen
+[MIT License](LICENSE) © JE-Chen.
+See [Third_Party_License.md](Third_Party_License.md) for the licenses of
+bundled and optional third-party dependencies.

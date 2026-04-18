@@ -209,3 +209,90 @@ The main window is now a ``QMainWindow`` with:
 - **Help** → About
 
 Close any tab with its ✕ button; re-open it via *View → Tabs*.
+
+
+OCR (text on screen)
+====================
+
+Tesseract-backed text locator. Useful when a button or label has no
+stable accessibility name and no template image::
+
+   import je_auto_control as ac
+
+   matches = ac.find_text_matches("Submit")
+   cx, cy = ac.locate_text_center("Submit")
+   ac.click_text("Submit")
+   ac.wait_for_text("Loading complete", timeout=15.0)
+
+If Tesseract isn't on ``PATH``::
+
+   ac.set_tesseract_cmd(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+
+Action-JSON commands: ``AC_locate_text``, ``AC_click_text``,
+``AC_wait_text``.
+
+
+Accessibility element finder
+============================
+
+Query the OS accessibility tree (Windows UIA via ``uiautomation``,
+macOS AX) by name / role / app name::
+
+   import je_auto_control as ac
+
+   elements = ac.list_accessibility_elements(app_name="Calculator")
+   ok = ac.find_accessibility_element(name="OK", role="Button")
+   ac.click_accessibility_element(name="OK", app_name="Calculator")
+
+Raises ``AccessibilityNotAvailableError`` on platforms where no backend
+is installed. Action-JSON commands: ``AC_a11y_list``, ``AC_a11y_find``,
+``AC_a11y_click``. GUI: **Accessibility** tab.
+
+
+VLM (AI) element locator
+========================
+
+When neither template matching nor accessibility can find the element,
+describe it in plain language and let a vision-language model return
+pixel coordinates::
+
+   import je_auto_control as ac
+
+   x, y = ac.locate_by_description("the green Submit button")
+   ac.click_by_description(
+       "the cookie-banner 'Accept all' button",
+       screen_region=[0, 800, 1920, 1080],  # optional crop
+   )
+
+Backends (loaded lazily, zero imports at package import time):
+
+- Anthropic (``anthropic`` SDK, ``ANTHROPIC_API_KEY``)
+- OpenAI (``openai`` SDK, ``OPENAI_API_KEY``)
+
+Environment variables (keys are never logged or persisted):
+
+- ``ANTHROPIC_API_KEY`` / ``OPENAI_API_KEY``
+- ``AUTOCONTROL_VLM_BACKEND=anthropic|openai``
+- ``AUTOCONTROL_VLM_MODEL=<model-id>``
+
+Action-JSON commands: ``AC_vlm_locate``, ``AC_vlm_click``. GUI:
+**AI Locator** tab.
+
+
+Run history + error-snapshot artifacts
+======================================
+
+Every run from the scheduler, trigger engine, hotkey daemon, REST API,
+and manual GUI replay is recorded to ``~/.je_auto_control/history.db``
+(SQLite). When a run finishes with an error, a screenshot is captured
+automatically and attached to the row::
+
+   from je_auto_control import default_history_store
+
+   for run in default_history_store.list_runs(limit=20):
+       print(run.id, run.source, run.status, run.artifact_path)
+
+Artifacts are stored under ``~/.je_auto_control/artifacts/`` and are
+removed when the matching run is pruned or the history is cleared. GUI:
+**Run History** tab — double-click the artifact column to open the
+screenshot in the OS image viewer.
