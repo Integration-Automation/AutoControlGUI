@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 
 from je_auto_control.gui._auto_click_tab import AutoClickTabMixin
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.accessibility_tab import AccessibilityTab
 from je_auto_control.gui._shell_report_tabs import ShellReportTabsMixin
 from je_auto_control.gui.hotkeys_tab import HotkeysTab
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
@@ -88,6 +89,7 @@ class AutoControlGUIWidget(
         self._add_tab("hotkeys", "tab_hotkeys", HotkeysTab())
         self._add_tab("triggers", "tab_triggers", TriggersTab())
         self._add_tab("run_history", "tab_run_history", RunHistoryTab())
+        self._add_tab("accessibility", "tab_accessibility", AccessibilityTab())
         self._add_tab("plugins", "tab_plugins", PluginsTab())
         layout.addWidget(self.tabs)
 

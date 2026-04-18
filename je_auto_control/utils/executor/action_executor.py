@@ -9,6 +9,9 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlActionException, AutoControlAddCommandException,
     AutoControlActionNullException
 )
+from je_auto_control.utils.accessibility.accessibility_api import (
+    click_accessibility_element, find_accessibility_element,
+)
 from je_auto_control.utils.clipboard.clipboard import (
     get_clipboard, set_clipboard,
 )
@@ -47,6 +50,30 @@ from je_auto_control.wrapper.auto_control_screen import screenshot, screen_size
 from je_auto_control.wrapper.auto_control_window import (
     close_window_by_title, focus_window, list_windows, wait_for_window,
 )
+
+
+def _a11y_list_as_dicts(app_name: Optional[str] = None,
+                        max_results: int = 200) -> List[dict]:
+    """Executor adapter: list accessibility elements as plain dicts."""
+    from je_auto_control.utils.accessibility.accessibility_api import (
+        list_accessibility_elements,
+    )
+    return [
+        element.to_dict()
+        for element in list_accessibility_elements(
+            app_name=app_name, max_results=int(max_results),
+        )
+    ]
+
+
+def _a11y_find_as_dict(name: Optional[str] = None,
+                       role: Optional[str] = None,
+                       app_name: Optional[str] = None) -> Optional[dict]:
+    """Executor adapter: find an accessibility element, return its dict."""
+    element = find_accessibility_element(
+        name=name, role=role, app_name=app_name,
+    )
+    return None if element is None else element.to_dict()
 
 
 def _history_list_as_dicts(limit: int = 100,
@@ -159,6 +186,11 @@ class Executor:
             # Run history
             "AC_history_list": _history_list_as_dicts,
             "AC_history_clear": default_history_store.clear,
+
+            # Accessibility-tree widget location
+            "AC_a11y_list": _a11y_list_as_dicts,
+            "AC_a11y_find": _a11y_find_as_dict,
+            "AC_a11y_click": click_accessibility_element,
         }
 
     def known_commands(self) -> set:

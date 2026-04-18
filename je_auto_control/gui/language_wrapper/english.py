@@ -21,6 +21,7 @@ english_word_dict = {
     "tab_shell": "Shell Command",
     "tab_report": "Report",
     "tab_run_history": "Run History",
+    "tab_accessibility": "Accessibility",
 
     # Auto Click Tab
     "interval_time": "Interval (ms):",
@@ -277,6 +278,22 @@ english_word_dict = {
     "rh_status_ok": "OK",
     "rh_status_error": "Error",
     "rh_status_running": "Running",
+
+    # Accessibility Tab
+    "a11y_app_label": "App:",
+    "a11y_app_placeholder": "e.g. Calculator",
+    "a11y_name_label": "Name contains:",
+    "a11y_name_placeholder": "partial match",
+    "a11y_refresh": "Refresh",
+    "a11y_click_selected": "Click selected",
+    "a11y_col_app": "App",
+    "a11y_col_role": "Role",
+    "a11y_col_name": "Name",
+    "a11y_col_bounds": "Bounds",
+    "a11y_col_center": "Center",
+    "a11y_count_label": "{n} elements",
+    "a11y_no_selection": "Select a row first",
+    "a11y_click_not_found": "No matching element to click",
 
     # Menu bar
     "menu_file": "File",

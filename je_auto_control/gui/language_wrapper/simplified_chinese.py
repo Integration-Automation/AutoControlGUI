@@ -20,6 +20,7 @@ simplified_chinese_word_dict = {
     "tab_shell": "Shell 命令",
     "tab_report": "报告生成",
     "tab_run_history": "执行记录",
+    "tab_accessibility": "无障碍树",
 
     # Auto Click Tab
     "interval_time": "间隔时间 (ms):",
@@ -276,6 +277,22 @@ simplified_chinese_word_dict = {
     "rh_status_ok": "成功",
     "rh_status_error": "错误",
     "rh_status_running": "执行中",
+
+    # Accessibility Tab
+    "a11y_app_label": "应用:",
+    "a11y_app_placeholder": "例如：计算器",
+    "a11y_name_label": "名称包含:",
+    "a11y_name_placeholder": "部分匹配",
+    "a11y_refresh": "刷新",
+    "a11y_click_selected": "点击所选",
+    "a11y_col_app": "应用",
+    "a11y_col_role": "角色",
+    "a11y_col_name": "名称",
+    "a11y_col_bounds": "边界",
+    "a11y_col_center": "中心",
+    "a11y_count_label": "{n} 个元素",
+    "a11y_no_selection": "请先选择一行",
+    "a11y_click_not_found": "找不到可点击的元素",
 
     # Menu bar
     "menu_file": "文件",

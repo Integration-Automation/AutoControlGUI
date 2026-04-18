@@ -39,6 +39,12 @@ from je_auto_control.utils.executor.action_executor import \
     execute_action_with_vars
 from je_auto_control.utils.executor.action_executor import execute_files
 from je_auto_control.utils.executor.action_executor import executor
+# Accessibility (headless)
+from je_auto_control.utils.accessibility import (
+    AccessibilityElement, AccessibilityNotAvailableError,
+    click_accessibility_element, find_accessibility_element,
+    list_accessibility_elements,
+)
 # Clipboard (headless)
 from je_auto_control.utils.clipboard.clipboard import (
     get_clipboard, set_clipboard,
@@ -211,6 +217,10 @@ __all__ = [
     "PixelColorTrigger", "FilePathTrigger",
     # Run history
     "HistoryStore", "RunRecord", "default_history_store",
+    # Accessibility
+    "AccessibilityElement", "AccessibilityNotAvailableError",
+    "list_accessibility_elements", "find_accessibility_element",
+    "click_accessibility_element",
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",

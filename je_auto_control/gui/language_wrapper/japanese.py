@@ -20,6 +20,7 @@ japanese_word_dict = {
     "tab_shell": "シェル",
     "tab_report": "レポート",
     "tab_run_history": "実行履歴",
+    "tab_accessibility": "アクセシビリティ",
 
     # Auto Click Tab
     "interval_time": "間隔 (ms):",
@@ -276,6 +277,22 @@ japanese_word_dict = {
     "rh_status_ok": "成功",
     "rh_status_error": "エラー",
     "rh_status_running": "実行中",
+
+    # Accessibility Tab
+    "a11y_app_label": "アプリ:",
+    "a11y_app_placeholder": "例: 電卓",
+    "a11y_name_label": "名前に含む:",
+    "a11y_name_placeholder": "部分一致",
+    "a11y_refresh": "更新",
+    "a11y_click_selected": "選択項目をクリック",
+    "a11y_col_app": "アプリ",
+    "a11y_col_role": "ロール",
+    "a11y_col_name": "名前",
+    "a11y_col_bounds": "境界",
+    "a11y_col_center": "中心",
+    "a11y_count_label": "{n} 個の要素",
+    "a11y_no_selection": "行を選択してください",
+    "a11y_click_not_found": "クリック可能な要素が見つかりません",
 
     # Menu bar
     "menu_file": "ファイル",
