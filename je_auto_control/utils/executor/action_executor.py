@@ -1,5 +1,5 @@
 import types
-from typing import Any, Dict, List, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from je_auto_control.utils.exception.exception_tags import (
     action_is_null_error_message, add_command_exception_error_message,
@@ -9,6 +9,19 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlActionException, AutoControlAddCommandException,
     AutoControlActionNullException
 )
+from je_auto_control.utils.clipboard.clipboard import (
+    get_clipboard, set_clipboard,
+)
+from je_auto_control.utils.executor.action_schema import validate_actions
+from je_auto_control.utils.executor.flow_control import (
+    BLOCK_COMMANDS, LoopBreak, LoopContinue,
+)
+from je_auto_control.utils.ocr.ocr_engine import (
+    click_text as ocr_click_text,
+    locate_text_center as ocr_locate_text_center,
+    wait_for_text as ocr_wait_for_text,
+)
+from je_auto_control.utils.script_vars.interpolate import interpolate_actions
 from je_auto_control.utils.generate_report.generate_html_report import generate_html, generate_html_report
 from je_auto_control.utils.generate_report.generate_json_report import generate_json, generate_json_report
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml, generate_xml_report
@@ -30,6 +43,9 @@ from je_auto_control.wrapper.auto_control_mouse import (
 )
 from je_auto_control.wrapper.auto_control_record import record, stop_record
 from je_auto_control.wrapper.auto_control_screen import screenshot, screen_size
+from je_auto_control.wrapper.auto_control_window import (
+    close_window_by_title, focus_window, list_windows, wait_for_window,
+)
 
 
 class Executor:
@@ -39,9 +55,11 @@ class Executor:
     - 提供 event_dict 對應字串名稱到函式
     - 支援滑鼠、鍵盤、螢幕、影像辨識、報告生成等功能
     - 可執行 action list 或 action file
+    - 支援流程控制指令 (AC_loop, AC_if_image_found 等)
     """
 
     def __init__(self):
+        self._block_commands = BLOCK_COMMANDS
         # 事件字典，對應字串名稱到函式
         self.event_dict: dict = {
             # Mouse 滑鼠相關
@@ -103,65 +121,117 @@ class Executor:
 
             # Process
             "AC_execute_process": start_exe,
+
+            # OCR
+            "AC_locate_text": ocr_locate_text_center,
+            "AC_wait_text": ocr_wait_for_text,
+            "AC_click_text": ocr_click_text,
+
+            # Window management
+            "AC_list_windows": list_windows,
+            "AC_focus_window": focus_window,
+            "AC_wait_window": wait_for_window,
+            "AC_close_window": close_window_by_title,
+
+            # Clipboard
+            "AC_clipboard_get": get_clipboard,
+            "AC_clipboard_set": set_clipboard,
         }
+
+    def known_commands(self) -> set:
+        """Return the set of all command names the executor recognises."""
+        return set(self.event_dict.keys()) | set(self._block_commands.keys())
 
     def _execute_event(self, action: list) -> Any:
         """
         執行單一事件
         Execute a single event
         """
-        event = self.event_dict.get(action[0])
+        name = action[0]
+        block_handler = self._block_commands.get(name)
+        if block_handler is not None:
+            args = action[1] if len(action) == 2 else {}
+            if not isinstance(args, dict):
+                raise AutoControlActionException(
+                    f"{name} requires a dict of arguments"
+                )
+            return block_handler(self, args)
+
+        event = self.event_dict.get(name)
         if event is None:
-            raise AutoControlActionException(f"Unknown action: {action[0]}")
+            raise AutoControlActionException(f"Unknown action: {name}")
 
         if len(action) == 2:
             if isinstance(action[1], dict):
                 return event(**action[1])
-            else:
-                return event(*action[1])
-        elif len(action) == 1:
+            return event(*action[1])
+        if len(action) == 1:
             return event()
-        else:
-            raise AutoControlActionException(cant_execute_action_error_message + " " + str(action))
+        raise AutoControlActionException(cant_execute_action_error_message + " " + str(action))
 
-    def execute_action(self, action_list: Union[list, dict]) -> Dict[str, str]:
+    def execute_action(self, action_list: Union[list, dict],
+                       raise_on_error: bool = False,
+                       _validated: bool = False,
+                       dry_run: bool = False,
+                       step_callback: Optional[Callable[[list], None]] = None,
+                       ) -> Dict[str, str]:
         """
         執行 action list
         Execute all actions in action list
 
         :param action_list: list 或 dict (包含 auto_control key)
+        :param raise_on_error: 若為 True，遇到錯誤立即拋出 (流程控制用)
+        :param _validated: 內部用；子呼叫已驗證過時避免重複驗證
+        :param dry_run: 若為 True，只記錄將執行的動作，不實際呼叫。
+        :param step_callback: 每個 action 開始前呼叫此 hook（偵錯用）。
         :return: 執行紀錄字典
         """
         autocontrol_logger.info(f"execute_action, action_list: {action_list}")
+        action_list = self._unwrap_action_list(action_list)
+        if not _validated:
+            validate_actions(action_list, self.known_commands())
 
+        execute_record_dict: Dict[str, Any] = {}
+        for action in action_list:
+            if step_callback is not None:
+                step_callback(action)
+            if dry_run:
+                execute_record_dict["dry-run: " + str(action)] = "(not executed)"
+                continue
+            self._run_one_action(action, execute_record_dict, raise_on_error)
+
+        for key, value in execute_record_dict.items():
+            autocontrol_logger.info("%s -> %s", key, value)
+        return execute_record_dict
+
+    @staticmethod
+    def _unwrap_action_list(action_list: Union[list, dict]) -> list:
+        """Normalise the ``action_list`` argument or raise on invalid input."""
         if isinstance(action_list, dict):
             action_list = action_list.get("auto_control")
             if action_list is None:
                 raise AutoControlActionNullException(executor_list_error_message)
-
         if not isinstance(action_list, list) or len(action_list) == 0:
             raise AutoControlActionNullException(action_is_null_error_message)
+        return action_list
 
-        execute_record_dict = {}
-
-        for action in action_list:
-            try:
-                event_response = self._execute_event(action)
-                execute_record = "execute: " + str(action)
-                execute_record_dict[execute_record] = event_response
-            except (AutoControlActionException, OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
-                autocontrol_logger.info(
-                    f"execute_action failed, action: {action}, error: {repr(error)}"
-                )
-                record_action_to_list("AC_execute_action", None, repr(error))
-                execute_record = "execute: " + str(action)
-                execute_record_dict[execute_record] = repr(error)
-
-        # 輸出執行結果 Log results
-        for key, value in execute_record_dict.items():
-            autocontrol_logger.info("%s -> %s", key, value)
-
-        return execute_record_dict
+    def _run_one_action(self, action: list, record: Dict[str, Any],
+                        raise_on_error: bool) -> None:
+        """Execute a single action, recording the result or raising."""
+        key = "execute: " + str(action)
+        try:
+            record[key] = self._execute_event(action)
+        except (LoopBreak, LoopContinue):
+            raise
+        except (AutoControlActionException, OSError, RuntimeError,
+                AttributeError, TypeError, ValueError) as error:
+            if raise_on_error:
+                raise
+            autocontrol_logger.info(
+                f"execute_action failed, action: {action}, error: {repr(error)}"
+            )
+            record_action_to_list("AC_execute_action", None, repr(error))
+            record[key] = repr(error)
 
     def execute_files(self, execute_files_list: list) -> List[Dict[str, str]]:
         """
@@ -203,3 +273,10 @@ def execute_action(action_list: list) -> Dict[str, str]:
 
 def execute_files(execute_files_list: list) -> List[Dict[str, str]]:
     return executor.execute_files(execute_files_list)
+
+
+def execute_action_with_vars(action_list: list, variables: dict
+                             ) -> Dict[str, str]:
+    """Interpolate ``${name}`` placeholders with ``variables`` and execute."""
+    resolved = interpolate_actions(action_list, variables)
+    return executor.execute_action(resolved)

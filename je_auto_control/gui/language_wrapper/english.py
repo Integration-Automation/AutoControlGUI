@@ -8,6 +8,15 @@ english_word_dict = {
     "tab_image_detect": "Image Detection",
     "tab_record": "Record / Playback",
     "tab_script": "Script Executor",
+    "tab_script_builder": "Script Builder",
+    "tab_recording_editor": "Recording Editor",
+    "tab_window_manager": "Windows",
+    "tab_scheduler": "Scheduler",
+    "tab_socket_server": "Socket Server",
+    "tab_live_hud": "Live HUD",
+    "tab_hotkeys": "Hotkeys",
+    "tab_triggers": "Triggers",
+    "tab_plugins": "Plugins",
     "tab_screen_record": "Screen Recording",
     "tab_shell": "Shell Command",
     "tab_report": "Report",
@@ -45,6 +54,8 @@ english_word_dict = {
     "file_path_label": "File Path:",
     "browse": "Browse",
     "region_label": "Region (x1, y1, x2, y2):",
+    "pick_region": "Pick Region",
+    "crop_template": "Crop Template",
     "get_pixel_label": "Get Pixel Color",
     "pixel_x": "X:",
     "pixel_y": "Y:",
@@ -109,4 +120,18 @@ english_word_dict = {
 
     # Language
     "language_label": "Language:",
+
+    # Menu bar
+    "menu_file": "File",
+    "menu_file_open_script": "Open Script...",
+    "menu_file_exit": "Exit",
+    "menu_view": "View",
+    "menu_view_tabs": "Tabs",
+    "menu_tools": "Tools",
+    "menu_tools_start_hotkeys": "Start hotkey daemon",
+    "menu_tools_start_scheduler": "Start scheduler",
+    "menu_tools_start_triggers": "Start trigger engine",
+    "menu_language": "Language",
+    "menu_help": "Help",
+    "menu_help_about": "About AutoControlGUI",
 }
