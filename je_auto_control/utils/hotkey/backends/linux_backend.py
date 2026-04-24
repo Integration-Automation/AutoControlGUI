@@ -89,47 +89,61 @@ class LinuxHotkeyBackend(HotkeyBackend):
             disp.close()
 
     def _sync(self, disp, root, bindings: List[HotkeyBinding]) -> None:
+        current_ids = {b.binding_id for b in bindings}
+        self._ungrab_stale(root, current_ids)
+        for binding in bindings:
+            self._sync_one(root, binding)
+        disp.sync()
+
+    def _ungrab_stale(self, root, current_ids: set) -> None:
+        stale_ids = [bid for bid in self._registered if bid not in current_ids]
+        for stale in stale_ids:
+            _combo, mask, keycode = self._registered.pop(stale)
+            self._ungrab_masked(root, keycode, mask)
+
+    def _sync_one(self, root, binding: HotkeyBinding) -> None:
+        prior = self._registered.get(binding.binding_id)
+        if prior is not None and prior[0] == binding.combo:
+            return
+        if prior is not None:
+            self._registered.pop(binding.binding_id, None)
+        try:
+            mask, keycode = _combo_to_x11(binding.combo)
+        except ValueError as error:
+            autocontrol_logger.error(
+                "hotkey parse failed for %s: %r", binding.combo, error,
+            )
+            return
+        if self._grab_masked(root, binding, mask, keycode):
+            self._registered[binding.binding_id] = (
+                binding.combo, mask, keycode,
+            )
+
+    @staticmethod
+    def _ungrab_masked(root, keycode: int, mask: int) -> None:
+        for extra_mask in _lock_mask_variants():
+            try:
+                root.ungrab_key(keycode, mask | extra_mask)
+            except Exception:  # nosec B110  # noqa: BLE001  # reason: X11 ungrab races are non-fatal
+                pass
+
+    @staticmethod
+    def _grab_masked(root, binding: HotkeyBinding,
+                     mask: int, keycode: int) -> bool:
         from Xlib import X
 
-        current_ids = {b.binding_id for b in bindings}
-        for stale in [bid for bid in self._registered if bid not in current_ids]:
-            _combo, mask, keycode = self._registered.pop(stale)
-            for extra_mask in _lock_mask_variants():
-                try:
-                    root.ungrab_key(keycode, mask | extra_mask)
-                except Exception:  # nosec B110  # noqa: BLE001  # reason: X11 ungrab races are non-fatal
-                    pass
-        for binding in bindings:
-            prior = self._registered.get(binding.binding_id)
-            if prior is not None and prior[0] == binding.combo:
-                continue
-            if prior is not None:
-                self._registered.pop(binding.binding_id, None)
+        for extra_mask in _lock_mask_variants():
             try:
-                mask, keycode = _combo_to_x11(binding.combo)
-            except ValueError as error:
+                root.grab_key(
+                    keycode, mask | extra_mask, True,
+                    X.GrabModeAsync, X.GrabModeAsync,
+                )
+            except Exception as error:  # noqa: BLE001  # reason: X errors
                 autocontrol_logger.error(
-                    "hotkey parse failed for %s: %r", binding.combo, error,
+                    "XGrabKey failed for %s: %r", binding.combo, error,
                 )
-                continue
-            ok = True
-            for extra_mask in _lock_mask_variants():
-                try:
-                    root.grab_key(
-                        keycode, mask | extra_mask, True,
-                        X.GrabModeAsync, X.GrabModeAsync,
-                    )
-                except Exception as error:  # noqa: BLE001  # reason: X errors
-                    autocontrol_logger.error(
-                        "XGrabKey failed for %s: %r", binding.combo, error,
-                    )
-                    ok = False
-                    break
-            if ok:
-                self._registered[binding.binding_id] = (
-                    binding.combo, mask, keycode,
-                )
-        disp.sync()
+                return False
+        return True
 
     def _drain(self, disp, fire: "callable") -> None:
         from Xlib import X

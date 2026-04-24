@@ -4,10 +4,10 @@ Direct ``xml.etree`` / ``xml.dom.minidom`` parsing is vulnerable to XXE and
 billion-laughs attacks. We parse via ``defusedxml`` and only build trees with
 the stdlib ``ElementTree`` (which is safe for construction).
 """
-from defusedxml import ElementTree as DefusedET  # nosec B405  # reason: defusedxml is the safe replacement
-from defusedxml.minidom import parseString as defused_parse_string
-from xml.etree import ElementTree  # nosec B405  # reason: only used to construct trees, not parse untrusted data
-from xml.etree.ElementTree import ParseError  # nosec B405  # reason: type used for catching, not for parsing
+from defusedxml import ElementTree as DefusedET  # nosec B405  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: defusedxml is the safe replacement
+from defusedxml.minidom import parseString as defused_parse_string  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: defusedxml parser
+from xml.etree import ElementTree  # nosec B405  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: only used to construct trees, not to parse untrusted data
+from xml.etree.ElementTree import ParseError  # nosec B405  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: exception type used for catching only
 
 from je_auto_control.utils.exception.exception_tags import (
     cant_read_xml_error_message, xml_type_error_message,

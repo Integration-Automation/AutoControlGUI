@@ -1,12 +1,13 @@
 """VLM backend factory."""
 import os
+from typing import Optional
 
 from je_auto_control.utils.vision.backends.base import (
     VLMBackend, VLMNotAvailableError,
 )
 from je_auto_control.utils.vision.backends.null_backend import NullVLMBackend
 
-_cached_backend: VLMBackend = None  # type: ignore[assignment]
+_cached_backend: Optional[VLMBackend] = None
 
 
 def get_backend() -> VLMBackend:
@@ -21,7 +22,7 @@ def get_backend() -> VLMBackend:
 def reset_backend_cache() -> None:
     """Force ``get_backend()`` to re-detect on its next call."""
     global _cached_backend
-    _cached_backend = None  # type: ignore[assignment]
+    _cached_backend = None
 
 
 def _build_backend() -> VLMBackend:

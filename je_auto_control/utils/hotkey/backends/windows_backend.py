@@ -47,7 +47,7 @@ class WindowsHotkeyBackend(HotkeyBackend):
                         self._dispatch(msg.wParam, context.fire)
                 context.stop_event.wait(0.05)
         finally:
-            for reg_id, _ in list(self._registered.values()):
+            for reg_id, _ in self._registered.values():
                 user32.UnregisterHotKey(None, reg_id)
             self._registered.clear()
 

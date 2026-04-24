@@ -40,7 +40,7 @@ class MacOSAccessibilityBackend(AccessibilityBackend):
                 "pyobjc (ApplicationServices, AppKit) is required for "
                 "macOS accessibility",
             )
-        import ApplicationServices as AS
+        import ApplicationServices as ax_module
         import AppKit
 
         workspace = AppKit.NSWorkspace.sharedWorkspace()
@@ -54,8 +54,8 @@ class MacOSAccessibilityBackend(AccessibilityBackend):
                 continue
             pid = int(app.processIdentifier())
             try:
-                root = AS.AXUIElementCreateApplication(pid)
-                self._walk(AS, root, name, pid, results, max_results)
+                root = ax_module.AXUIElementCreateApplication(pid)
+                self._walk(ax_module, root, name, pid, results, max_results)
             except Exception as error:  # noqa: BLE001  # reason: AX errors vary
                 autocontrol_logger.warning(
                     "AX walk failed for %s (%d): %r", name, pid, error,
@@ -64,14 +64,14 @@ class MacOSAccessibilityBackend(AccessibilityBackend):
                 break
         return results[:max_results]
 
-    def _walk(self, AS, element, app_name: str, pid: int,
+    def _walk(self, ax_module, element, app_name: str, pid: int,
               results: List[AccessibilityElement], max_results: int) -> None:
         if len(results) >= max_results:
             return
-        converted = _convert_ax(AS, element, app_name, pid)
+        converted = _convert_ax(ax_module, element, app_name, pid)
         if converted is not None:
             results.append(converted)
-        err, children = AS.AXUIElementCopyAttributeValue(
+        err, children = ax_module.AXUIElementCopyAttributeValue(
             element, "AXChildren", None,
         )
         if err or children is None:
@@ -79,22 +79,22 @@ class MacOSAccessibilityBackend(AccessibilityBackend):
         for child in children:
             if len(results) >= max_results:
                 return
-            self._walk(AS, child, app_name, pid, results, max_results)
+            self._walk(ax_module, child, app_name, pid, results, max_results)
 
 
-def _convert_ax(AS, element, app_name: str, pid: int,
+def _convert_ax(ax_module, element, app_name: str, pid: int,
                 ) -> Optional[AccessibilityElement]:
     try:
-        _err, role = AS.AXUIElementCopyAttributeValue(
+        _err, role = ax_module.AXUIElementCopyAttributeValue(
             element, "AXRole", None,
         )
-        _err, title = AS.AXUIElementCopyAttributeValue(
+        _err, title = ax_module.AXUIElementCopyAttributeValue(
             element, "AXTitle", None,
         )
-        _err, position = AS.AXUIElementCopyAttributeValue(
+        _err, position = ax_module.AXUIElementCopyAttributeValue(
             element, "AXPosition", None,
         )
-        _err, size = AS.AXUIElementCopyAttributeValue(
+        _err, size = ax_module.AXUIElementCopyAttributeValue(
             element, "AXSize", None,
         )
     except Exception:  # noqa: BLE001  # reason: AX errors vary

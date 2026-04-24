@@ -1,3 +1,8 @@
+_SCRIPT = "スクリプト"
+_SCRIPT_LABEL = "スクリプト:"
+_REMOVE_SELECTED = "選択項目を削除"
+_SELECT_SCRIPT = "スクリプトを選択"
+
 japanese_word_dict = {
     "application_name": "AutoControlGUI",
 
@@ -122,25 +127,25 @@ japanese_word_dict = {
 
     # Hotkeys Tab
     "hk_combo_label": "組合せ:",
-    "hk_script_label": "スクリプト:",
+    "hk_script_label": _SCRIPT_LABEL,
     "hk_bind": "バインド",
-    "hk_remove_selected": "選択項目を削除",
+    "hk_remove_selected": _REMOVE_SELECTED,
     "hk_start_daemon": "デーモン開始",
     "hk_stop_daemon": "デーモン停止",
     "hk_daemon_stopped": "デーモン停止中",
     "hk_daemon_running": "デーモン実行中",
     "hk_col_id": "ID",
     "hk_col_combo": "組合せ",
-    "hk_col_script": "スクリプト",
+    "hk_col_script": _SCRIPT,
     "hk_col_fired": "発火",
-    "hk_dialog_select_script": "スクリプトを選択",
+    "hk_dialog_select_script": _SELECT_SCRIPT,
 
     # Triggers Tab
-    "tr_script_label": "スクリプト:",
+    "tr_script_label": _SCRIPT_LABEL,
     "tr_type_label": "タイプ:",
     "tr_repeat": "繰り返し",
     "tr_add": "トリガー追加",
-    "tr_remove_selected": "選択項目を削除",
+    "tr_remove_selected": _REMOVE_SELECTED,
     "tr_start_engine": "エンジン開始",
     "tr_stop_engine": "エンジン停止",
     "tr_engine_stopped": "エンジン停止中",
@@ -160,7 +165,7 @@ japanese_word_dict = {
     "tr_col_enabled": "有効",
     "tr_yes": "はい",
     "tr_no": "いいえ",
-    "tr_dialog_select_script": "スクリプトを選択",
+    "tr_dialog_select_script": _SELECT_SCRIPT,
     "tr_dialog_select_image": "画像を選択",
     "tr_dialog_select_file": "監視するファイルを選択",
 
@@ -172,21 +177,21 @@ japanese_word_dict = {
     "pl_dialog_plugin_dir": "プラグインディレクトリ",
 
     # Scheduler Tab
-    "sch_script_label": "スクリプト:",
+    "sch_script_label": _SCRIPT_LABEL,
     "sch_interval_label": "毎 (秒):",
     "sch_repeat": "繰り返し",
     "sch_add": "追加",
-    "sch_remove_selected": "選択項目を削除",
+    "sch_remove_selected": _REMOVE_SELECTED,
     "sch_start": "スケジューラー開始",
     "sch_stop": "スケジューラー停止",
     "sch_status_running": "スケジューラー実行中",
     "sch_status_stopped": "スケジューラー停止中",
     "sch_col_job_id": "ジョブ ID",
-    "sch_col_script": "スクリプト",
+    "sch_col_script": _SCRIPT,
     "sch_col_interval": "間隔 (秒)",
     "sch_col_runs": "実行回数",
     "sch_col_enabled": "有効",
-    "sch_dialog_select_script": "スクリプトを選択",
+    "sch_dialog_select_script": _SELECT_SCRIPT,
 
     # Socket / REST Tab
     "ss_tcp_group": "TCP ソケットサーバー",
@@ -228,7 +233,7 @@ japanese_word_dict = {
     "re_trim_start": "トリム開始:",
     "re_trim_end": "終了:",
     "re_apply_trim": "トリム適用",
-    "re_remove_selected": "選択項目を削除",
+    "re_remove_selected": _REMOVE_SELECTED,
     "re_delay_x": "ディレイ倍率",
     "re_floor_ms": "下限 ms:",
     "re_apply_delays": "ディレイ適用",
@@ -271,7 +276,7 @@ japanese_word_dict = {
     "rh_col_id": "ID",
     "rh_col_source": "ソース",
     "rh_col_target": "対象",
-    "rh_col_script": "スクリプト",
+    "rh_col_script": _SCRIPT,
     "rh_col_started": "開始時刻",
     "rh_col_duration": "所要時間",
     "rh_col_status": "ステータス",

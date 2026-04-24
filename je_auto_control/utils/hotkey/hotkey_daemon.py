@@ -148,9 +148,7 @@ class HotkeyDaemon:
         with self._lock:
             return list(self._bindings.values())
 
-    def _snapshot(self) -> List[HotkeyBinding]:
-        with self._lock:
-            return list(self._bindings.values())
+    _snapshot = list_bindings
 
     def start(self) -> None:
         if self._thread is not None and self._thread.is_alive():

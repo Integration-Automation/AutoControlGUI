@@ -25,6 +25,8 @@ STATUS_RUNNING = "running"
 STATUS_OK = "ok"
 STATUS_ERROR = "error"
 
+_IN_MEMORY_DB = ":memory:"
+
 _VALID_SOURCES = frozenset({
     SOURCE_SCHEDULER, SOURCE_TRIGGER, SOURCE_HOTKEY,
     SOURCE_MANUAL, SOURCE_REST,
@@ -92,9 +94,9 @@ def _validate_status(status: str) -> None:
 class HistoryStore:
     """SQLite-backed run log. Safe to share across threads."""
 
-    def __init__(self, path: Union[str, Path] = ":memory:") -> None:
-        self._path = str(path) if path == ":memory:" else str(Path(path))
-        if self._path != ":memory:":
+    def __init__(self, path: Union[str, Path] = _IN_MEMORY_DB) -> None:
+        self._path = str(path) if path == _IN_MEMORY_DB else str(Path(path))
+        if self._path != _IN_MEMORY_DB:
             os.makedirs(os.path.dirname(self._path) or ".", exist_ok=True)
         self._lock = threading.Lock()
         self._conn = sqlite3.connect(
@@ -174,6 +176,8 @@ class HistoryStore:
         sql += " ORDER BY started_at DESC LIMIT ?"
         params.append(int(limit))
         with self._lock:
+            # nosemgrep: python_sql_rule-hardcoded-sql-expression
+            # reason: `sql` is composed only from in-module string literals; `source_type` is validated via `_validate_source`, and `limit` is coerced to int before binding as a parameter.
             rows = self._conn.execute(sql, params).fetchall()
         return [_row_to_record(row) for row in rows]
 

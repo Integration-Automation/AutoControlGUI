@@ -1,3 +1,7 @@
+_SCRIPT_LABEL = "Script:"
+_REMOVE_SELECTED = "Remove selected"
+_SELECT_SCRIPT = "Select script"
+
 english_word_dict = {
     # Main
     "application_name": "AutoControlGUI",
@@ -126,9 +130,9 @@ english_word_dict = {
 
     # Hotkeys Tab
     "hk_combo_label": "Combo:",
-    "hk_script_label": "Script:",
+    "hk_script_label": _SCRIPT_LABEL,
     "hk_bind": "Bind",
-    "hk_remove_selected": "Remove selected",
+    "hk_remove_selected": _REMOVE_SELECTED,
     "hk_start_daemon": "Start daemon",
     "hk_stop_daemon": "Stop daemon",
     "hk_daemon_stopped": "Daemon stopped",
@@ -137,14 +141,14 @@ english_word_dict = {
     "hk_col_combo": "Combo",
     "hk_col_script": "Script",
     "hk_col_fired": "Fired",
-    "hk_dialog_select_script": "Select script",
+    "hk_dialog_select_script": _SELECT_SCRIPT,
 
     # Triggers Tab
-    "tr_script_label": "Script:",
+    "tr_script_label": _SCRIPT_LABEL,
     "tr_type_label": "Type:",
     "tr_repeat": "Repeat",
     "tr_add": "Add trigger",
-    "tr_remove_selected": "Remove selected",
+    "tr_remove_selected": _REMOVE_SELECTED,
     "tr_start_engine": "Start engine",
     "tr_stop_engine": "Stop engine",
     "tr_engine_stopped": "Engine stopped",
@@ -164,7 +168,7 @@ english_word_dict = {
     "tr_col_enabled": "Enabled",
     "tr_yes": "Yes",
     "tr_no": "No",
-    "tr_dialog_select_script": "Select script",
+    "tr_dialog_select_script": _SELECT_SCRIPT,
     "tr_dialog_select_image": "Select image",
     "tr_dialog_select_file": "Select file to watch",
 
@@ -176,11 +180,11 @@ english_word_dict = {
     "pl_dialog_plugin_dir": "Plugin directory",
 
     # Scheduler Tab
-    "sch_script_label": "Script:",
+    "sch_script_label": _SCRIPT_LABEL,
     "sch_interval_label": "Every (s):",
     "sch_repeat": "Repeat",
     "sch_add": "Add",
-    "sch_remove_selected": "Remove selected",
+    "sch_remove_selected": _REMOVE_SELECTED,
     "sch_start": "Start scheduler",
     "sch_stop": "Stop scheduler",
     "sch_status_running": "Scheduler running",
@@ -190,7 +194,7 @@ english_word_dict = {
     "sch_col_interval": "Interval (s)",
     "sch_col_runs": "Runs",
     "sch_col_enabled": "Enabled",
-    "sch_dialog_select_script": "Select script",
+    "sch_dialog_select_script": _SELECT_SCRIPT,
 
     # Socket / REST Tab
     "ss_tcp_group": "TCP socket server",
@@ -232,7 +236,7 @@ english_word_dict = {
     "re_trim_start": "Trim start:",
     "re_trim_end": "end:",
     "re_apply_trim": "Apply trim",
-    "re_remove_selected": "Remove selected",
+    "re_remove_selected": _REMOVE_SELECTED,
     "re_delay_x": "Delay x",
     "re_floor_ms": "floor ms:",
     "re_apply_delays": "Apply delays",

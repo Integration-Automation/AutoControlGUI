@@ -7,7 +7,7 @@ from typing import Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
-_PACKAGE_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")
+_PACKAGE_NAME_RE = re.compile(r"^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$")
 
 
 class PackageManager:

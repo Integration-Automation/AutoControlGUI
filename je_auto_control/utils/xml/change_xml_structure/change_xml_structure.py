@@ -1,7 +1,16 @@
 from collections import defaultdict
-from defusedxml import ElementTree as DefusedET  # nosec B405  # reason: defusedxml is the safe replacement
-from xml.etree import ElementTree  # nosec B405  # reason: only used to construct trees, not parse untrusted data
+from defusedxml import ElementTree as DefusedET  # nosec B405  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: defusedxml is the safe replacement
+from xml.etree import ElementTree  # nosec B405  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: only used to construct trees, not to parse untrusted data
 from typing import Any, Dict
+
+
+def _initial_body(children: list, element: ElementTree.Element) -> Any:
+    """Pick the starting body form: dict from children, empty dict, or None."""
+    if children:
+        return _children_to_dict(children)
+    if element.attrib:
+        return {}
+    return None
 
 
 def _children_to_dict(children: list) -> Dict[str, Any]:
@@ -45,9 +54,7 @@ def elements_tree_to_dict(elements_tree: ElementTree.Element) -> Dict[str, Any]:
     :return: dict representation of XML
     """
     children = list(elements_tree)
-    body: Any = _children_to_dict(children) if children else (
-        {} if elements_tree.attrib else None
-    )
+    body: Any = _initial_body(children, elements_tree)
     elements_dict: Dict[str, Any] = {elements_tree.tag: body}
 
     if isinstance(body, dict):

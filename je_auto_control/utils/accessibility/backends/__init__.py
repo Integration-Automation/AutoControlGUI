@@ -1,5 +1,6 @@
 """Platform backends for the accessibility API."""
 import sys
+from typing import Optional
 
 from je_auto_control.utils.accessibility.backends.base import (
     AccessibilityBackend,
@@ -8,7 +9,7 @@ from je_auto_control.utils.accessibility.backends.null_backend import (
     NullAccessibilityBackend,
 )
 
-_cached_backend: AccessibilityBackend = None  # type: ignore[assignment]
+_cached_backend: Optional[AccessibilityBackend] = None
 
 
 def get_backend() -> AccessibilityBackend:
@@ -23,7 +24,7 @@ def get_backend() -> AccessibilityBackend:
 def reset_backend_cache() -> None:
     """Force the next ``get_backend()`` call to re-detect."""
     global _cached_backend
-    _cached_backend = None  # type: ignore[assignment]
+    _cached_backend = None
 
 
 def _build_backend() -> AccessibilityBackend:
