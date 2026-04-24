@@ -19,12 +19,12 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
         else:
             try:
                 execute_str = json.loads(command_string)
-                for _, execute_return in execute_action(execute_str).items():
+                for execute_return in execute_action(execute_str).values():
                     socket.sendall(str(execute_return).encode("utf-8"))
                     socket.sendall("\n".encode("utf-8"))
                 socket.sendall("Return_Data_Over_JE".encode("utf-8"))
                 socket.sendall("\n".encode("utf-8"))
-            except (json.JSONDecodeError, ValueError, RuntimeError) as error:
+            except (ValueError, RuntimeError) as error:
                 autocontrol_logger.error("socket command failed: %r", error)
                 try:
                     socket.sendall(str(error).encode("utf-8"))

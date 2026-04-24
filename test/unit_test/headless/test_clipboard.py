@@ -29,4 +29,4 @@ def test_set_and_get_roundtrip():
 
 def test_set_clipboard_rejects_non_string():
     with pytest.raises(TypeError):
-        set_clipboard(123)
+        set_clipboard(123)  # type: ignore[arg-type]  # NOSONAR

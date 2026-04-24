@@ -1,6 +1,6 @@
 import sys
 
-from je_auto_control import generate_html
+from je_auto_control import generate_html_report
 from je_auto_control import keyboard_keys_table
 from je_auto_control import press_keyboard_key
 from je_auto_control import release_keyboard_key
@@ -12,11 +12,11 @@ try:
     print(keyboard_keys_table.keys())
     press_keyboard_key("shift")
     write("123456789")
-    assert (write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz")
+    assert write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz"  # noqa: S101  # reason: integration test
     release_keyboard_key("shift")
     # this write will print one error -> keyboard write error can't find key : Ѓ and write remain string
     try:
-        assert (write("?123456789") == "123456789")
+        assert write("?123456789") == "123456789"  # noqa: S101  # reason: integration test
     except Exception as error:
         print(repr(error), file=sys.stderr)
     try:
@@ -27,7 +27,7 @@ try:
     print(test_record_instance.test_record_list)
     # html name is test.html and this html will recode all test detail
     # if test_record.init_total_record = True
-    generate_html("test")
+    generate_html_report("test")
     sys.exit(0)
 except Exception as error:
     print(repr(error), file=sys.stderr)

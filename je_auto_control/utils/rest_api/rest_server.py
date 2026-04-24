@@ -43,11 +43,13 @@ class _JSONHandler(BaseHTTPRequestHandler):
                 default=str,
             )
             return
-        self._send_json({"error": f"unknown path: {self.path}"}, status=404)
+        autocontrol_logger.info("rest-api unknown GET path: %r", self.path)
+        self._send_json({"error": "unknown path"}, status=404)
 
     def do_POST(self) -> None:  # noqa: N802  # reason: stdlib API
         if self.path != "/execute":
-            self._send_json({"error": f"unknown path: {self.path}"}, status=404)
+            autocontrol_logger.info("rest-api unknown POST path: %r", self.path)
+            self._send_json({"error": "unknown path"}, status=404)
             return
         payload = self._read_json_body()
         if payload is None:
@@ -60,7 +62,8 @@ class _JSONHandler(BaseHTTPRequestHandler):
             from je_auto_control.utils.executor.action_executor import execute_action
             result = execute_action(actions)
         except (OSError, RuntimeError, ValueError, TypeError) as error:
-            self._send_json({"error": repr(error)}, status=500)
+            autocontrol_logger.error("rest-api execute_action failed: %r", error)
+            self._send_json({"error": "execute_action failed"}, status=500)
             return
         self._send_json({"result": result}, default=str)
 
@@ -74,8 +77,9 @@ class _JSONHandler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length)
         try:
             return json.loads(raw.decode("utf-8"))
-        except (ValueError, UnicodeDecodeError) as error:
-            self._send_json({"error": f"invalid JSON: {error}"}, status=400)
+        except ValueError as error:
+            autocontrol_logger.info("rest-api invalid JSON body: %r", error)
+            self._send_json({"error": "invalid JSON"}, status=400)
             return None
 
     def _send_json(self, payload: Dict[str, Any], status: int = 200,

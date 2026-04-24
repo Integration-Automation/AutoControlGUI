@@ -33,6 +33,9 @@ from je_auto_control.utils.json.json_file import read_action_json, write_action_
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
 
 
+_JSON_FILE_FILTER = "JSON (*.json)"
+
+
 def _t(key: str) -> str:
     """language_wrapper shorthand"""
     return language_wrapper.translate(key, key)
@@ -499,7 +502,7 @@ class AutoControlGUIWidget(
             if not self._record_data:
                 QMessageBox.warning(self, "Warning", "No recorded data")
                 return
-            path, _ = QFileDialog.getSaveFileName(self, _t("save_record"), "", "JSON (*.json)")
+            path, _ = QFileDialog.getSaveFileName(self, _t("save_record"), "", _JSON_FILE_FILTER)
             if path:
                 write_action_json(path, self._record_data)
         except (OSError, ValueError, TypeError, RuntimeError) as error:
@@ -507,7 +510,7 @@ class AutoControlGUIWidget(
 
     def _load_record(self):
         try:
-            path, _ = QFileDialog.getOpenFileName(self, _t("load_record"), "", "JSON (*.json)")
+            path, _ = QFileDialog.getOpenFileName(self, _t("load_record"), "", _JSON_FILE_FILTER)
             if path:
                 self._record_data = read_action_json(path)
                 self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
@@ -560,7 +563,7 @@ class AutoControlGUIWidget(
         return tab
 
     def _browse_script(self):
-        path, _ = QFileDialog.getOpenFileName(self, _t("load_script"), "", "JSON (*.json)")
+        path, _ = QFileDialog.getOpenFileName(self, _t("load_script"), "", _JSON_FILE_FILTER)
         if path:
             self.script_path_input.setText(path)
             try:

@@ -1,9 +1,20 @@
-import xml.dom.minidom
-from xml.etree import ElementTree
-from xml.etree.ElementTree import ParseError
+"""Safe XML helpers backed by ``defusedxml``.
 
-from je_auto_control.utils.exception.exception_tags import cant_read_xml_error_message, xml_type_error_message
-from je_auto_control.utils.exception.exceptions import XMLException, XMLTypeException
+Direct ``xml.etree`` / ``xml.dom.minidom`` parsing is vulnerable to XXE and
+billion-laughs attacks. We parse via ``defusedxml`` and only build trees with
+the stdlib ``ElementTree`` (which is safe for construction).
+"""
+from defusedxml import ElementTree as DefusedET  # nosec B405  # reason: defusedxml is the safe replacement
+from defusedxml.minidom import parseString as defused_parse_string
+from xml.etree import ElementTree  # nosec B405  # reason: only used to construct trees, not parse untrusted data
+from xml.etree.ElementTree import ParseError  # nosec B405  # reason: type used for catching, not for parsing
+
+from je_auto_control.utils.exception.exception_tags import (
+    cant_read_xml_error_message, xml_type_error_message,
+)
+from je_auto_control.utils.exception.exceptions import (
+    XMLException, XMLTypeException,
+)
 
 
 def reformat_xml_file(xml_string: str) -> str:
@@ -14,7 +25,7 @@ def reformat_xml_file(xml_string: str) -> str:
     :param xml_string: 原始 XML 字串 Raw XML string
     :return: 美化後的 XML 字串 Pretty XML string
     """
-    dom = xml.dom.minidom.parseString(xml_string)
+    dom = defused_parse_string(xml_string)
     return dom.toprettyxml(indent="  ", encoding="utf-8").decode("utf-8")
 
 
@@ -56,7 +67,7 @@ class XMLParser:
         :return: XML root element
         """
         try:
-            self.xml_root = ElementTree.fromstring(self.xml_string, **kwargs)
+            self.xml_root = DefusedET.fromstring(self.xml_string, **kwargs)
         except ParseError as error:
             raise XMLException(f"{cant_read_xml_error_message}: {repr(error)}") from error
         return self.xml_root
@@ -69,7 +80,7 @@ class XMLParser:
         :return: XML root element
         """
         try:
-            self.tree = ElementTree.parse(self.xml_string, **kwargs)
+            self.tree = DefusedET.parse(self.xml_string, **kwargs)
         except (OSError, ParseError) as error:
             raise XMLException(f"{cant_read_xml_error_message}: {repr(error)}") from error
         self.xml_root = self.tree.getroot()
@@ -85,7 +96,7 @@ class XMLParser:
         :param write_content: XML 字串 XML string
         """
         try:
-            content = ElementTree.fromstring(write_content.strip())
+            content = DefusedET.fromstring(write_content.strip())
             tree = ElementTree.ElementTree(content)
             tree.write(write_xml_filename, encoding="utf-8", xml_declaration=True)
         except ParseError as error:

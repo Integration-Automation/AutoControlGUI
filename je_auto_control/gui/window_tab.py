@@ -116,7 +116,7 @@ class WindowManagerTab(TranslatableMixin, QWidget):
             return
         try:
             focus_window(title, case_sensitive=True)
-        except (NotImplementedError, RuntimeError, OSError) as error:
+        except (RuntimeError, OSError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _on_close(self) -> None:
@@ -126,5 +126,5 @@ class WindowManagerTab(TranslatableMixin, QWidget):
         try:
             close_window_by_title(title, case_sensitive=True)
             self.refresh()
-        except (NotImplementedError, RuntimeError, OSError) as error:
+        except (RuntimeError, OSError) as error:
             QMessageBox.warning(self, "Error", str(error))

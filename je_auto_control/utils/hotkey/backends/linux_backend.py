@@ -97,7 +97,7 @@ class LinuxHotkeyBackend(HotkeyBackend):
             for extra_mask in _lock_mask_variants():
                 try:
                     root.ungrab_key(keycode, mask | extra_mask)
-                except Exception:  # noqa: BLE001  # reason: X errors vary
+                except Exception:  # nosec B110  # noqa: BLE001  # reason: X11 ungrab races are non-fatal
                     pass
         for binding in bindings:
             prior = self._registered.get(binding.binding_id)
@@ -155,7 +155,7 @@ class LinuxHotkeyBackend(HotkeyBackend):
             for extra_mask in _lock_mask_variants():
                 try:
                     root.ungrab_key(keycode, mask | extra_mask)
-                except Exception:  # noqa: BLE001  # reason: X errors vary
+                except Exception:  # nosec B110  # noqa: BLE001  # reason: X11 ungrab races are non-fatal
                     pass
         self._registered.clear()
         disp.sync()

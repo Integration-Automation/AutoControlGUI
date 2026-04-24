@@ -7,3 +7,4 @@ sphinx-rtd-theme
 PySide6==6.11.0
 qt-material==2.17
 mss==10.1.0
+defusedxml==0.7.1

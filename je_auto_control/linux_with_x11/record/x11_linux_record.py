@@ -56,7 +56,7 @@ class X11LinuxRecorder:
         action_queue = Queue()
 
         # 將原始事件轉換成可讀格式
-        for details in list(self.result_queue.queue):
+        for details in self.result_queue.queue:
             if details[0] == 5:  # 滑鼠事件
                 action_queue.put(
                     (detail_dict.get(details[1]), details[2], details[3])

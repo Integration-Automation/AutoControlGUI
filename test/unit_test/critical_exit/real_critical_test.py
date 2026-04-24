@@ -16,10 +16,9 @@ try:
     from time import sleep
 
     sleep(3)
-    while True:
-        set_mouse_position(200, 400)
-        set_mouse_position(400, 600)
-        raise AutoControlMouseException
+    set_mouse_position(200, 400)
+    set_mouse_position(400, 600)
+    raise AutoControlMouseException
 except Exception as error:
     print(repr(error), file=sys.stderr)
     CriticalExit().init_critical_exit()

@@ -42,7 +42,7 @@ def _convert_position(x: int, y: int) -> Tuple[int, int]:
     return converted_x, converted_y
 
 
-def mouse_event(event: int, x: int, y: int, dwData: int = 0) -> None:
+def mouse_event(event: int, x: int, y: int, dw_data: int = 0) -> None:
     """
     觸發滑鼠事件
     Trigger mouse event
@@ -50,14 +50,14 @@ def mouse_event(event: int, x: int, y: int, dwData: int = 0) -> None:
     :param event: 滑鼠事件代碼 Mouse event code
     :param x: X 座標 X position
     :param y: Y 座標 Y position
-    :param dwData: 滾輪數值 Wheel data
+    :param dw_data: 滾輪數值 Wheel data
     """
     converted_x, converted_y = _convert_position(x, y)
     ctypes.windll.user32.mouse_event(
         event,
         ctypes.c_long(converted_x),
         ctypes.c_long(converted_y),
-        dwData,
+        dw_data,
         0
     )
 
@@ -133,7 +133,7 @@ def scroll(scroll_value: int, x: int = 0, y: int = 0) -> None:
     :param x: X 座標 X position
     :param y: Y 座標 Y position
     """
-    mouse_event(WIN32_WHEEL, x, y, dwData=scroll_value)
+    mouse_event(WIN32_WHEEL, x, y, dw_data=scroll_value)
 
 
 def send_mouse_event_to_window(window, mouse_keycode: int, x: int = 0, y: int = 0):

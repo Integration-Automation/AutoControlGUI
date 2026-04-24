@@ -138,7 +138,7 @@ from je_auto_control.windows.window import windows_window_manage
 from je_auto_control.wrapper.auto_control_image import locate_all_image
 from je_auto_control.wrapper.auto_control_image import locate_and_click
 from je_auto_control.wrapper.auto_control_image import locate_image_center
-# import keyboard
+# Keyboard wrappers
 from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
 from je_auto_control.wrapper.auto_control_keyboard import get_keyboard_keys_table
 from je_auto_control.wrapper.auto_control_keyboard import hotkey
@@ -148,7 +148,7 @@ from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
 from je_auto_control.wrapper.auto_control_keyboard import send_key_event_to_window
 from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
 from je_auto_control.wrapper.auto_control_keyboard import write
-# import mouse
+# Mouse wrappers
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
 from je_auto_control.wrapper.auto_control_mouse import mouse_keys_table
@@ -162,7 +162,7 @@ from je_auto_control.wrapper.auto_control_mouse import special_mouse_keys_table
 # record
 from je_auto_control.wrapper.auto_control_record import record
 from je_auto_control.wrapper.auto_control_record import stop_record
-# import screen
+# Screen wrappers
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.auto_control_screen import screenshot
 from je_auto_control.wrapper.auto_control_screen import get_pixel

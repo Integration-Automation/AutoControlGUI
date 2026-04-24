@@ -1,6 +1,6 @@
 import queue
 import shlex
-import subprocess
+import subprocess  # nosec B404  # reason: ShellManager intentionally invokes user-supplied subprocesses without shell
 import sys
 from threading import Thread
 from typing import List, Union

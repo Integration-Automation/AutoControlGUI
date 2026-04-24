@@ -1,7 +1,7 @@
 # Rename to build stable version
 # This is stable version
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=82.0.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -19,7 +19,8 @@ dependencies = [
     "pyobjc-core==12.1;platform_system=='Darwin'",
     "pyobjc==12.1;platform_system=='Darwin'",
     "python-Xlib==0.33;platform_system=='Linux'",
-    "mss==10.1.0"
+    "mss==10.1.0",
+    "defusedxml==0.7.1"
 ]
 classifiers = [
     "Programming Language :: Python :: 3.10",
@@ -44,3 +45,9 @@ find = { namespaces = false }
 
 [project.optional-dependencies]
 gui = ["PySide6==6.11.0", "qt-material==2.17"]
+
+[tool.bandit]
+exclude_dirs = ["test", "docs", ".venv", "build", "dist"]
+# B101 (use of assert) — pytest test code intentionally uses assert.
+# Library code is enforced by CLAUDE.md (no assert in non-test code).
+skips = ["B101"]

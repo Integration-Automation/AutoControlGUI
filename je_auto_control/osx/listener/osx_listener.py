@@ -33,7 +33,7 @@ class AppDelegate(NSObject):
     - 負責在應用程式啟動後註冊全域事件監聽器
     """
 
-    def applicationDidFinishLaunching_(self, aNotification):
+    def applicationDidFinishLaunching_(self, notification):  # noqa: N802  # reason: ObjC selector signature
         """
         註冊全域事件監聽器
         Register global event monitors

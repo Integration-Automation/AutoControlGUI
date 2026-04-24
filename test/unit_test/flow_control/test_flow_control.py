@@ -64,7 +64,7 @@ def test_ac_wait_image_times_out(monkeypatch, executor_with_hooks):
 
 
 def test_ac_retry_succeeds_after_failures(executor_with_hooks):
-    ex, state = executor_with_hooks
+    ex, _ = executor_with_hooks
     attempts = {"n": 0}
 
     def flaky():

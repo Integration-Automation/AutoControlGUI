@@ -1,0 +1,18 @@
+---
+# Codacy repository configuration.
+# Docs: https://docs.codacy.com/repositories-configure/codacy-configuration-file/
+
+engines:
+  bandit:
+    enabled: true
+    exclude_paths:
+      # Test code legitimately uses `assert` (B101); pytest depends on it.
+      # Library/non-test code is constrained by CLAUDE.md "no assert outside tests".
+      - "test/**"
+
+# Drop generated docs / build outputs from analysis entirely.
+exclude_paths:
+  - "docs/build/**"
+  - ".venv/**"
+  - "build/**"
+  - "dist/**"

@@ -68,7 +68,7 @@ class WindowAppearsTrigger(_TriggerBase):
         try:
             return find_window(self.title_substring,
                                case_sensitive=self.case_sensitive) is not None
-        except (NotImplementedError, OSError, RuntimeError):
+        except (OSError, RuntimeError):
             return False
 
 

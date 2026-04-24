@@ -19,19 +19,22 @@ from Xlib.protocol import rq
 current_display = Display()
 
 
-class KeypressHandler(Thread):
+class KeypressHandler:
     """
     KeypressHandler
     鍵盤事件處理器
     - 負責解析 X11 事件
     - 可選擇記錄事件到 Queue
+
+    Plain handler (not a Thread): instances are passed as the
+    ``record_enable_context`` callback, never started as their own thread.
     """
 
     def __init__(self, default_daemon: bool = True):
         """
-        :param default_daemon: 是否設為守護執行緒 (程式結束時自動停止)
+        :param default_daemon: kept for backwards compatibility; the handler
+            is no longer a Thread, so this flag is informational only.
         """
-        super().__init__()
         self.daemon = default_daemon
         self.still_listener = True
         self.record_flag = False
@@ -49,7 +52,7 @@ class KeypressHandler(Thread):
             return True
         return False
 
-    def run(self, reply) -> None:
+    def handle_reply(self, reply) -> None:
         """
         處理 X11 回傳的事件資料
         Handle X11 reply data and parse events
@@ -137,7 +140,7 @@ class XWindowsKeypressListener(Thread):
                         }]
                     )
                     # 啟用事件監聽
-                    current_display.record_enable_context(self.context, self.handler.run)
+                    current_display.record_enable_context(self.context, self.handler.handle_reply)
                     current_display.record_free_context(self.context)
 
                 # 持續等待事件

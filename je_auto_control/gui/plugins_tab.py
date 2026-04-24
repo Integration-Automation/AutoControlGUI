@@ -64,7 +64,7 @@ class PluginsTab(TranslatableMixin, QWidget):
             return
         try:
             commands = load_plugin_directory(path)
-        except (OSError, NotADirectoryError) as error:
+        except OSError as error:
             QMessageBox.warning(self, "Error", str(error))
             return
         if not commands:

@@ -2,7 +2,7 @@
 import pytest
 
 from je_auto_control.utils.hotkey.hotkey_daemon import (
-    MOD_ALT, MOD_CONTROL, MOD_NOREPEAT, MOD_SHIFT, MOD_WIN, parse_combo,
+    MOD_ALT, MOD_CONTROL, MOD_NOREPEAT, MOD_SHIFT, parse_combo,
 )
 
 

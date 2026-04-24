@@ -35,10 +35,10 @@ def stop_record() -> list:
         if action_queue is None:
             raise AutoControlJsonActionException
         action_list = list(action_queue.queue)
-        new_list = list()
+        new_list = []
         for action in action_list:
             if action[0] == "AC_type_keyboard":
-                new_list.append([action[0], dict([["keycode", action[1]]])])
+                new_list.append([action[0], {"keycode": action[1]}])
             else:
                 new_list.append([action[0], {"mouse_keycode": action[0], "x": action[1], "y": action[2]}])
         record_action_to_list("stop_record", None)

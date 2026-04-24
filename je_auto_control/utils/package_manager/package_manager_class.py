@@ -1,10 +1,13 @@
 import importlib
+import re
 from importlib.util import find_spec
 from inspect import getmembers, isfunction, isbuiltin, isclass
 from types import ModuleType
 from typing import Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+
+_PACKAGE_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")
 
 
 class PackageManager:
@@ -25,13 +28,17 @@ class PackageManager:
         檢查並載入套件
         Check and import package
 
-        :param package: 套件名稱 Package name
+        :param package: 套件名稱 Package name (must match a Python dotted identifier)
         :return: 套件模組 ModuleType 或 None
         """
+        if not isinstance(package, str) or not _PACKAGE_NAME_RE.match(package):
+            autocontrol_logger.error("rejected invalid package name: %r", package)
+            return None
         if package not in self.installed_package_dict:
             found_spec = find_spec(package)
             if found_spec is not None:
                 try:
+                    # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
                     installed_package = importlib.import_module(found_spec.name)
                     self.installed_package_dict[found_spec.name] = installed_package
                 except ModuleNotFoundError as error:
