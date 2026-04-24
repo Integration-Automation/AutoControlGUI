@@ -19,7 +19,7 @@ dependencies = [
     "pyobjc-core==12.1;platform_system=='Darwin'",
     "pyobjc==12.1;platform_system=='Darwin'",
     "python-Xlib==0.33;platform_system=='Linux'",
-    "mss==10.1.0",
+    "mss==10.2.0",
     "defusedxml==0.7.1"
 ]
 classifiers = [
