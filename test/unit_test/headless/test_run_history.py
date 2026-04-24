@@ -169,20 +169,23 @@ def test_executor_history_commands(monkeypatch, store):
     assert rows and rows[0]["source_type"] == SOURCE_SCHEDULER
 
 
-def test_finish_run_persists_artifact_path(store):
+def test_finish_run_persists_artifact_path(tmp_path, store):
+    artifact = str(tmp_path / "x.png")
     run_id = store.start_run(SOURCE_SCHEDULER, "j", "s.json")
     store.finish_run(run_id, STATUS_ERROR, error_text="boom",
-                     artifact_path="/tmp/x.png")
+                     artifact_path=artifact)
     record = store.get_run(run_id)
-    assert record.artifact_path == "/tmp/x.png"
+    assert record.artifact_path == artifact
 
 
-def test_attach_artifact_updates_existing_row(store):
+def test_attach_artifact_updates_existing_row(tmp_path, store):
+    attached = str(tmp_path / "snap.png")
+    missing = str(tmp_path / "a.png")
     run_id = store.start_run(SOURCE_HOTKEY, "h", "s.json")
     store.finish_run(run_id, STATUS_ERROR, error_text="oops")
-    assert store.attach_artifact(run_id, "/tmp/snap.png") is True
-    assert store.get_run(run_id).artifact_path == "/tmp/snap.png"
-    assert store.attach_artifact(99999, "/tmp/a.png") is False
+    assert store.attach_artifact(run_id, attached) is True
+    assert store.get_run(run_id).artifact_path == attached
+    assert store.attach_artifact(99999, missing) is False
 
 
 def test_clear_removes_artifact_files(tmp_path, store):

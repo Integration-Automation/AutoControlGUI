@@ -2,7 +2,7 @@
 import re
 from typing import Optional, Tuple
 
-_COORDS_RE = re.compile(r"(-?\d{1,5})\s*[,\s]\s*(-?\d{1,5})")
+_COORDS_RE = re.compile(r"(-?\d{1,5})(?:\s*,\s*|\s+)(-?\d{1,5})")
 
 
 def parse_coords(text: str) -> Optional[Tuple[int, int]]:

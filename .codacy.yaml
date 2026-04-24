@@ -9,6 +9,10 @@ engines:
       # Test code legitimately uses `assert` (B101); pytest depends on it.
       # Library/non-test code is constrained by CLAUDE.md "no assert outside tests".
       - "test/**"
+  prospector:
+    enabled: true
+    exclude_paths:
+      - "test/**"
 
 # Drop generated docs / build outputs from analysis entirely.
 exclude_paths:
@@ -16,3 +20,6 @@ exclude_paths:
   - ".venv/**"
   - "build/**"
   - "dist/**"
+  # One-off GUI smoke scripts — not library code, not pytest targets.
+  - "test/gui_test/**"
+  - "test/manual_test/**"

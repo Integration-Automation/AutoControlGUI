@@ -25,3 +25,10 @@ else:
 
 if None in [keyboard_keys_table, mouse_keys_table, keyboard, mouse, screen]:
     raise AutoControlException("Can't init auto control")
+
+
+__all__ = [
+    "keyboard", "keyboard_check", "keyboard_keys_table",
+    "mouse", "mouse_keys_table", "special_mouse_keys_table",
+    "screen", "recorder",
+]
