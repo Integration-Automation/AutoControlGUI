@@ -25,9 +25,9 @@ class _JSONHandler(BaseHTTPRequestHandler):
     server_version = "AutoControlREST/1.0"
 
     # Suppress default stderr access logs — route through the project logger.
-    def log_message(self, fmt: str, *args: Any) -> None:
+    def log_message(self, format, *args) -> None:  # noqa: A002  # pylint: disable=redefined-builtin  # reason: stdlib BaseHTTPRequestHandler override
         autocontrol_logger.info("rest-api %s - %s",
-                                self.address_string(), fmt % args)
+                                self.address_string(), format % args)
 
     def do_GET(self) -> None:  # noqa: N802  # reason: stdlib API
         parsed = urlparse(self.path)

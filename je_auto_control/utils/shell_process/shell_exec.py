@@ -51,6 +51,7 @@ class ShellManager:
         try:
             self.exit_program()
             args = _normalize_command(shell_command)
+            # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
             self.process = subprocess.Popen(  # nosec B603  # reason: shell=False, argv list validated via _normalize_command
                 args,
                 stdout=subprocess.PIPE,
