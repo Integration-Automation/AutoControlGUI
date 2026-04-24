@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'AutoControl'
-copyright = '2020 ~ Now, JE-Chen'  # noqa: A001  # reason: Sphinx-required name
+copyright = '2020 ~ Now, JE-Chen'  # noqa: A001  # pylint: disable=redefined-builtin  # reason: Sphinx-required name
 author = 'JE-Chen'
 release = '0.0.179'
 

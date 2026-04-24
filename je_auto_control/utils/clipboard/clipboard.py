@@ -143,6 +143,7 @@ def _linux_get() -> str:
     if cmd is None:
         raise RuntimeError("Install xclip or xsel for Linux clipboard support")
     read_cmd = cmd + ["-o"] if cmd[0] == "xclip" else cmd + ["--output"]
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
     result = subprocess.run(  # nosec B603  # reason: argv from allowlist (xclip/xsel) discovered via shutil.which
         read_cmd, capture_output=True, check=True, timeout=5,
     )
@@ -154,6 +155,7 @@ def _linux_set(text: str) -> None:
     if cmd is None:
         raise RuntimeError("Install xclip or xsel for Linux clipboard support")
     write_cmd = cmd + ["-i"] if cmd[0] == "xclip" else cmd + ["--input"]
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
     subprocess.run(  # nosec B603  # reason: argv from allowlist (xclip/xsel) discovered via shutil.which
         write_cmd, input=text.encode("utf-8"),
         check=True, timeout=5,
