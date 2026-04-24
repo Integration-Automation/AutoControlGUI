@@ -1,4 +1,4 @@
 je_auto_control
 qt-material==2.17
-mss==10.1.0
+mss==10.2.0
 PySide6==6.11.0
