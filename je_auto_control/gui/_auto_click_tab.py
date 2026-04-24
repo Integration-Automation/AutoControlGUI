@@ -5,7 +5,6 @@ from PySide6.QtWidgets import (
     QGroupBox,
 )
 
-from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.wrapper.auto_control_keyboard import (
     type_keyboard, hotkey, write, get_keyboard_keys_table,
 )
@@ -15,28 +14,25 @@ from je_auto_control.wrapper.auto_control_mouse import (
 )
 
 
-def _t(key: str) -> str:
-    return language_wrapper.language_word_dict.get(key, key)
-
-
 class AutoClickTabMixin:
     """
     Mixin that provides the auto-click tab UI and handlers.
     Requires the host widget to expose `self.timer`, `self.repeat_count`,
-    `self.repeat_max` attributes set in its __init__.
+    `self.repeat_max` attributes, and the ``TranslatableMixin`` helpers
+    (``self._tr(...)``) set up by its __init__.
     """
 
     def _build_auto_click_tab(self) -> QWidget:
         tab = QWidget()
         outer = QVBoxLayout()
 
-        click_group = QGroupBox(_t("tab_auto_click"))
+        click_group = self._tr(QGroupBox(), "tab_auto_click")
         grid = QGridLayout()
         row = 0
 
-        grid.addWidget(QLabel(_t("input_method")), row, 0)
-        self.mouse_radio = QRadioButton(_t("mouse_radio"))
-        self.keyboard_radio = QRadioButton(_t("keyboard_radio"))
+        grid.addWidget(self._tr(QLabel(), "input_method"), row, 0)
+        self.mouse_radio = self._tr(QRadioButton(), "mouse_radio")
+        self.keyboard_radio = self._tr(QRadioButton(), "keyboard_radio")
         self.mouse_radio.setChecked(True)
         self._input_group = QButtonGroup()
         self._input_group.addButton(self.mouse_radio)
@@ -47,25 +43,25 @@ class AutoClickTabMixin:
         grid.addLayout(h, row, 1)
 
         row += 1
-        grid.addWidget(QLabel(_t("interval_time")), row, 0)
+        grid.addWidget(self._tr(QLabel(), "interval_time"), row, 0)
         self.interval_input = QLineEdit("1000")
         self.interval_input.setValidator(QIntValidator(1, 999999999))
         grid.addWidget(self.interval_input, row, 1)
 
         row += 1
-        grid.addWidget(QLabel(_t("cursor_x")), row, 0)
+        grid.addWidget(self._tr(QLabel(), "cursor_x"), row, 0)
         self.cursor_x_input = QLineEdit()
         self.cursor_x_input.setValidator(QIntValidator())
         grid.addWidget(self.cursor_x_input, row, 1)
 
         row += 1
-        grid.addWidget(QLabel(_t("cursor_y")), row, 0)
+        grid.addWidget(self._tr(QLabel(), "cursor_y"), row, 0)
         self.cursor_y_input = QLineEdit()
         self.cursor_y_input.setValidator(QIntValidator())
         grid.addWidget(self.cursor_y_input, row, 1)
 
         row += 1
-        grid.addWidget(QLabel(_t("mouse_button")), row, 0)
+        grid.addWidget(self._tr(QLabel(), "mouse_button"), row, 0)
         self.mouse_button_combo = QComboBox()
         self.mouse_button_combo.addItems(
             list(mouse_keys_table.keys()) if isinstance(mouse_keys_table, dict) else list(mouse_keys_table)
@@ -73,23 +69,27 @@ class AutoClickTabMixin:
         grid.addWidget(self.mouse_button_combo, row, 1)
 
         row += 1
-        grid.addWidget(QLabel(_t("keyboard_button")), row, 0)
+        grid.addWidget(self._tr(QLabel(), "keyboard_button"), row, 0)
         self.keyboard_button_combo = QComboBox()
         self.keyboard_button_combo.addItems(list(get_keyboard_keys_table().keys()))
         grid.addWidget(self.keyboard_button_combo, row, 1)
 
         row += 1
-        grid.addWidget(QLabel(_t("click_type")), row, 0)
+        grid.addWidget(self._tr(QLabel(), "click_type"), row, 0)
         self.click_type_combo = QComboBox()
-        self.click_type_combo.addItems([_t("single_click"), _t("double_click")])
+        self._click_type_keys = ["single_click", "double_click"]
+        self.click_type_combo.addItems(
+            [self._translate(key) for key in self._click_type_keys]
+        )
         grid.addWidget(self.click_type_combo, row, 1)
 
         row += 1
-        self.repeat_until_stopped = QRadioButton(_t("repeat_until_stopped_radio"))
-        self.repeat_count_times = QRadioButton(_t("repeat_radio"))
-        self.repeat_count_input = QLineEdit()
+        self.repeat_until_stopped = self._tr(
+            QRadioButton(), "repeat_until_stopped_radio",
+        )
+        self.repeat_count_times = self._tr(QRadioButton(), "repeat_radio")
+        self.repeat_count_input = self._tr(QLineEdit(), "times")
         self.repeat_count_input.setValidator(QIntValidator(1, 999999999))
-        self.repeat_count_input.setPlaceholderText(_t("times"))
         rg = QButtonGroup(tab)
         rg.addButton(self.repeat_until_stopped)
         rg.addButton(self.repeat_count_times)
@@ -102,9 +102,9 @@ class AutoClickTabMixin:
 
         row += 1
         btn_h = QHBoxLayout()
-        self.start_button = QPushButton(_t("start"))
+        self.start_button = self._tr(QPushButton(), "start")
         self.start_button.clicked.connect(self._start_auto_click)
-        self.stop_button = QPushButton(_t("stop"))
+        self.stop_button = self._tr(QPushButton(), "stop")
         self.stop_button.clicked.connect(self._stop_auto_click)
         btn_h.addWidget(self.start_button)
         btn_h.addWidget(self.stop_button)
@@ -113,42 +113,46 @@ class AutoClickTabMixin:
         click_group.setLayout(grid)
         outer.addWidget(click_group)
 
-        pos_group = QGroupBox(_t("get_position"))
+        pos_group = self._tr(QGroupBox(), "get_position")
         pos_layout = QHBoxLayout()
-        self.pos_btn = QPushButton(_t("get_position"))
+        self.pos_btn = self._tr(QPushButton(), "get_position")
         self.pos_btn.clicked.connect(self._get_mouse_pos)
-        self.pos_label = QLabel(_t("current_position") + " --")
+        self.pos_label = QLabel()
+        self._pos_label_suffix = " --"
+        self.pos_label.setText(
+            self._translate("current_position") + self._pos_label_suffix,
+        )
         pos_layout.addWidget(self.pos_btn)
         pos_layout.addWidget(self.pos_label)
         pos_group.setLayout(pos_layout)
         outer.addWidget(pos_group)
 
-        hotkey_group = QGroupBox(_t("hotkey_label"))
+        hotkey_group = self._tr(QGroupBox(), "hotkey_label")
         hk_layout = QHBoxLayout()
         self.hotkey_input = QLineEdit()
         self.hotkey_input.setPlaceholderText("ctrl,a")
-        self.hotkey_btn = QPushButton(_t("hotkey_send"))
+        self.hotkey_btn = self._tr(QPushButton(), "hotkey_send")
         self.hotkey_btn.clicked.connect(self._send_hotkey)
         hk_layout.addWidget(self.hotkey_input)
         hk_layout.addWidget(self.hotkey_btn)
         hotkey_group.setLayout(hk_layout)
         outer.addWidget(hotkey_group)
 
-        write_group = QGroupBox(_t("write_label"))
+        write_group = self._tr(QGroupBox(), "write_label")
         wr_layout = QHBoxLayout()
         self.write_input = QLineEdit()
-        self.write_btn = QPushButton(_t("write_send"))
+        self.write_btn = self._tr(QPushButton(), "write_send")
         self.write_btn.clicked.connect(self._send_write)
         wr_layout.addWidget(self.write_input)
         wr_layout.addWidget(self.write_btn)
         write_group.setLayout(wr_layout)
         outer.addWidget(write_group)
 
-        scroll_group = QGroupBox(_t("mouse_scroll_label"))
+        scroll_group = self._tr(QGroupBox(), "mouse_scroll_label")
         sc_layout = QHBoxLayout()
         self.scroll_value_input = QLineEdit("3")
         self.scroll_value_input.setValidator(QIntValidator())
-        sc_layout.addWidget(QLabel(_t("mouse_scroll_label")))
+        sc_layout.addWidget(self._tr(QLabel(), "mouse_scroll_label"))
         sc_layout.addWidget(self.scroll_value_input)
         if special_mouse_keys_table:
             self.scroll_dir_combo = QComboBox()
@@ -156,7 +160,7 @@ class AutoClickTabMixin:
             sc_layout.addWidget(self.scroll_dir_combo)
         else:
             self.scroll_dir_combo = None
-        self.scroll_btn = QPushButton(_t("scroll_send"))
+        self.scroll_btn = self._tr(QPushButton(), "scroll_send")
         self.scroll_btn.clicked.connect(self._send_scroll)
         sc_layout.addWidget(self.scroll_btn)
         scroll_group.setLayout(sc_layout)
@@ -169,6 +173,21 @@ class AutoClickTabMixin:
 
         tab.setLayout(outer)
         return tab
+
+    def _auto_click_retranslate(self) -> None:
+        """Re-translate composite labels and combo items that ``_tr`` can't own."""
+        if hasattr(self, "click_type_combo") and hasattr(self, "_click_type_keys"):
+            current_index = self.click_type_combo.currentIndex()
+            self.click_type_combo.clear()
+            self.click_type_combo.addItems(
+                [self._translate(key) for key in self._click_type_keys]
+            )
+            if 0 <= current_index < self.click_type_combo.count():
+                self.click_type_combo.setCurrentIndex(current_index)
+        if hasattr(self, "pos_label"):
+            self.pos_label.setText(
+                self._translate("current_position") + self._pos_label_suffix,
+            )
 
     def _update_click_mode(self):
         use_mouse = self.mouse_radio.isChecked()
@@ -232,7 +251,10 @@ class AutoClickTabMixin:
     def _get_mouse_pos(self):
         try:
             x, y = get_mouse_position()
-            self.pos_label.setText(_t("current_position") + f" ({x}, {y})")
+            self._pos_label_suffix = f" ({x}, {y})"
+            self.pos_label.setText(
+                self._translate("current_position") + self._pos_label_suffix,
+            )
             self.cursor_x_input.setText(str(x))
             self.cursor_y_input.setText(str(y))
         except (OSError, ValueError, TypeError, RuntimeError) as error:

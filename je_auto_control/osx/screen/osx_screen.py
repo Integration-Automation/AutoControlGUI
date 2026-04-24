@@ -41,10 +41,10 @@ def get_pixel(x: int, y: int) -> Tuple[int, int, int, int]:
     cf = ctypes.CDLL("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
 
     # 定義 CGRect 結構 (x, y, width, height)
-    CGRect = ctypes.c_double * 4
+    cg_rect_t = ctypes.c_double * 4
 
     # 設定函式簽名 Function signatures
-    cg.CGWindowListCreateImage.argtypes = [CGRect, c_uint32, c_uint32, c_uint32]
+    cg.CGWindowListCreateImage.argtypes = [cg_rect_t, c_uint32, c_uint32, c_uint32]
     cg.CGWindowListCreateImage.restype = c_void_p
 
     cg.CGImageGetDataProvider.argtypes = [c_void_p]
@@ -62,20 +62,21 @@ def get_pixel(x: int, y: int) -> Tuple[int, int, int, int]:
     cf.CFRelease.argtypes = [c_void_p]
     cf.CFRelease.restype = None
 
-    # 常數 Constants
-    kCGWindowListOptionOnScreenOnly = 1
-    kCGNullWindowID = 0
-    kCGWindowImageDefault = 0
+    # 常數 Constants (Apple names: kCGWindowListOptionOnScreenOnly,
+    # kCGNullWindowID, kCGWindowImageDefault)
+    window_list_option_on_screen_only = 1
+    null_window_id = 0
+    window_image_default = 0
 
     # 建立擷取範圍 Create capture rect
-    rect = CGRect(x, y, 1.0, 1.0)
+    rect = cg_rect_t(x, y, 1.0, 1.0)
 
     # 擷取螢幕影像 Capture screen image
     img = cg.CGWindowListCreateImage(
         rect,
-        kCGWindowListOptionOnScreenOnly,
-        kCGNullWindowID,
-        kCGWindowImageDefault
+        window_list_option_on_screen_only,
+        null_window_id,
+        window_image_default
     )
     if not img:
         raise RuntimeError(

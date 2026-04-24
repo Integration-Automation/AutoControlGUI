@@ -1,5 +1,5 @@
 import objc
-import subprocess
+import subprocess  # nosec B404  # reason: required to invoke osascript with argv list
 from ctypes import cdll, c_void_p
 
 from Quartz import CGEventCreateKeyboardEvent
@@ -54,10 +54,11 @@ def get_pid_by_window_title(title: str) -> int | None:
     end tell
     '''
     try:
-        pid_str = subprocess.check_output(
+        pid_str = subprocess.check_output(  # nosec B603 B607  # reason: argv list, osascript on PATH; title is escaped
             ["osascript", "-e", script],
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
+            timeout=5,
         ).decode().strip()
         return int(pid_str) if pid_str else None
-    except (subprocess.CalledProcessError, ValueError):
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError):
         return None

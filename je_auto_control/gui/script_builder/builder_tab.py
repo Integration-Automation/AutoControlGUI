@@ -9,6 +9,10 @@ from PySide6.QtWidgets import (
     QTextEdit, QToolButton, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
+    language_wrapper,
+)
 from je_auto_control.gui.script_builder.command_schema import (
     CATEGORIES, COMMAND_SPECS, specs_in_category,
 )
@@ -21,18 +25,31 @@ from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 
 
-class ScriptBuilderTab(QWidget):
+def _t(key: str) -> str:
+    return language_wrapper.translate(key, key)
+
+
+class ScriptBuilderTab(TranslatableMixin, QWidget):
     """Visual editor for composing AC_* scripts."""
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
+        self._tr_init()
         self._tree = StepTreeView()
         self._form = StepFormView()
         self._result = QTextEdit()
         self._result.setReadOnly(True)
         self._result.setMaximumHeight(140)
+        self._add_btn: Optional[QToolButton] = None
         self._build_layout()
         self._wire_signals()
+
+    def retranslate(self) -> None:
+        TranslatableMixin.retranslate(self)
+        if self._add_btn is not None:
+            self._add_btn.setText(_t("sb_add_step"))
+        if hasattr(self._form, "retranslate"):
+            self._form.retranslate()
 
     def _build_layout(self) -> None:
         root = QVBoxLayout(self)
@@ -47,28 +64,28 @@ class ScriptBuilderTab(QWidget):
     def _build_toolbar(self) -> QHBoxLayout:
         bar = QHBoxLayout()
         bar.addWidget(self._add_button())
-        for label, handler in (
-            ("Delete", self._on_delete),
-            ("Up", lambda: self._tree.move_selected(-1)),
-            ("Down", lambda: self._tree.move_selected(1)),
+        for key, handler in (
+            ("sb_delete", self._on_delete),
+            ("sb_up", lambda: self._tree.move_selected(-1)),
+            ("sb_down", lambda: self._tree.move_selected(1)),
         ):
-            btn = QPushButton(label)
+            btn = self._tr(QPushButton(), key)
             btn.clicked.connect(handler)
             bar.addWidget(btn)
         bar.addStretch()
-        for label, handler in (
-            ("Load JSON", self._on_load),
-            ("Save JSON", self._on_save),
-            ("Run", self._on_run),
+        for key, handler in (
+            ("sb_load_json", self._on_load),
+            ("sb_save_json", self._on_save),
+            ("sb_run", self._on_run),
         ):
-            btn = QPushButton(label)
+            btn = self._tr(QPushButton(), key)
             btn.clicked.connect(handler)
             bar.addWidget(btn)
         return bar
 
     def _add_button(self) -> QToolButton:
         button = QToolButton()
-        button.setText("Add Step")
+        button.setText(_t("sb_add_step"))
         button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         menu = QMenu(button)
         for category in CATEGORIES:
@@ -80,6 +97,7 @@ class ScriptBuilderTab(QWidget):
                 )
                 submenu.addAction(action)
         button.setMenu(menu)
+        self._add_btn = button
         return button
 
     def _wire_signals(self) -> None:
@@ -102,7 +120,9 @@ class ScriptBuilderTab(QWidget):
         self._form.load_step(None)
 
     def _on_save(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Save script", "", "JSON (*.json)")
+        path, _ = QFileDialog.getSaveFileName(
+            self, _t("sb_dialog_save"), "", "JSON (*.json)",
+        )
         if not path:
             return
         try:
@@ -113,7 +133,9 @@ class ScriptBuilderTab(QWidget):
             QMessageBox.warning(self, "Error", str(error))
 
     def _on_load(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Load script", "", "JSON (*.json)")
+        path, _ = QFileDialog.getOpenFileName(
+            self, _t("sb_dialog_load"), "", "JSON (*.json)",
+        )
         if not path:
             return
         try:

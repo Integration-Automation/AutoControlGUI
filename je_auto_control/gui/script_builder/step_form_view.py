@@ -8,6 +8,9 @@ from PySide6.QtWidgets import (
     QLineEdit, QPushButton, QWidget,
 )
 
+from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
+    language_wrapper,
+)
 from je_auto_control.gui.script_builder.command_schema import (
     COMMAND_SPECS, CommandSpec, FieldSpec, FieldType,
 )
@@ -15,6 +18,10 @@ from je_auto_control.gui.script_builder.step_model import Step
 
 
 _EDITOR_BUILDERS: Dict[FieldType, Callable[["StepFormView", FieldSpec], QWidget]]
+
+
+def _t(key: str) -> str:
+    return language_wrapper.translate(key, key)
 
 
 class StepFormView(QWidget):
@@ -27,15 +34,22 @@ class StepFormView(QWidget):
         self._step: Optional[Step] = None
         self._editors: Dict[str, QWidget] = {}
         self._layout = QFormLayout(self)
-        self._title = QLabel("No step selected")
+        self._title = QLabel(_t("sb_no_step_selected"))
         self._layout.addRow(self._title)
+
+    def retranslate(self) -> None:
+        """Re-apply translated title and reload current step for label refresh."""
+        if self._step is None:
+            self._title.setText(_t("sb_no_step_selected"))
+        else:
+            self.load_step(self._step)
 
     def load_step(self, step: Optional[Step]) -> None:
         """Populate the form with fields for ``step``."""
         self._clear()
         self._step = step
         if step is None:
-            self._title.setText("No step selected")
+            self._title.setText(_t("sb_no_step_selected"))
             return
         spec = COMMAND_SPECS.get(step.command)
         if spec is None:

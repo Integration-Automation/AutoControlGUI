@@ -9,6 +9,12 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlActionException, AutoControlAddCommandException,
     AutoControlActionNullException
 )
+from je_auto_control.utils.accessibility.accessibility_api import (
+    click_accessibility_element, find_accessibility_element,
+)
+from je_auto_control.utils.vision.vlm_api import (
+    click_by_description, locate_by_description,
+)
 from je_auto_control.utils.clipboard.clipboard import (
     get_clipboard, set_clipboard,
 )
@@ -21,6 +27,7 @@ from je_auto_control.utils.ocr.ocr_engine import (
     locate_text_center as ocr_locate_text_center,
     wait_for_text as ocr_wait_for_text,
 )
+from je_auto_control.utils.run_history.history_store import default_history_store
 from je_auto_control.utils.script_vars.interpolate import interpolate_actions
 from je_auto_control.utils.generate_report.generate_html_report import generate_html, generate_html_report
 from je_auto_control.utils.generate_report.generate_json_report import generate_json, generate_json_report
@@ -46,6 +53,58 @@ from je_auto_control.wrapper.auto_control_screen import screenshot, screen_size
 from je_auto_control.wrapper.auto_control_window import (
     close_window_by_title, focus_window, list_windows, wait_for_window,
 )
+
+
+def _a11y_list_as_dicts(app_name: Optional[str] = None,
+                        max_results: int = 200) -> List[dict]:
+    """Executor adapter: list accessibility elements as plain dicts."""
+    from je_auto_control.utils.accessibility.accessibility_api import (
+        list_accessibility_elements,
+    )
+    return [
+        element.to_dict()
+        for element in list_accessibility_elements(
+            app_name=app_name, max_results=int(max_results),
+        )
+    ]
+
+
+def _a11y_find_as_dict(name: Optional[str] = None,
+                       role: Optional[str] = None,
+                       app_name: Optional[str] = None) -> Optional[dict]:
+    """Executor adapter: find an accessibility element, return its dict."""
+    element = find_accessibility_element(
+        name=name, role=role, app_name=app_name,
+    )
+    return None if element is None else element.to_dict()
+
+
+def _vlm_locate_as_list(description: str,
+                        screen_region: Optional[List[int]] = None,
+                        model: Optional[str] = None) -> Optional[List[int]]:
+    """Executor adapter: return VLM-located coords as a JSON-safe list."""
+    coords = locate_by_description(
+        description, screen_region=screen_region, model=model,
+    )
+    return None if coords is None else [coords[0], coords[1]]
+
+
+def _history_list_as_dicts(limit: int = 100,
+                           source_type: Optional[str] = None) -> List[dict]:
+    """Executor adapter: list run history as plain dicts (JSON-friendly)."""
+    rows = default_history_store.list_runs(
+        limit=int(limit), source_type=source_type,
+    )
+    return [
+        {
+            "id": r.id, "source_type": r.source_type,
+            "source_id": r.source_id, "script_path": r.script_path,
+            "started_at": r.started_at, "finished_at": r.finished_at,
+            "status": r.status, "error_text": r.error_text,
+            "duration_seconds": r.duration_seconds,
+        }
+        for r in rows
+    ]
 
 
 class Executor:
@@ -136,6 +195,19 @@ class Executor:
             # Clipboard
             "AC_clipboard_get": get_clipboard,
             "AC_clipboard_set": set_clipboard,
+
+            # Run history
+            "AC_history_list": _history_list_as_dicts,
+            "AC_history_clear": default_history_store.clear,
+
+            # Accessibility-tree widget location
+            "AC_a11y_list": _a11y_list_as_dicts,
+            "AC_a11y_find": _a11y_find_as_dict,
+            "AC_a11y_click": click_accessibility_element,
+
+            # VLM-based element locator
+            "AC_vlm_locate": _vlm_locate_as_list,
+            "AC_vlm_click": click_by_description,
         }
 
     def known_commands(self) -> set:

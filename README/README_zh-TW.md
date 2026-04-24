@@ -17,15 +17,23 @@
 - [安裝](#安裝)
 - [系統需求](#系統需求)
 - [快速開始](#快速開始)
-- [API 參考](#api-參考)
   - [滑鼠控制](#滑鼠控制)
   - [鍵盤控制](#鍵盤控制)
   - [圖像辨識](#圖像辨識)
-  - [螢幕操作](#螢幕操作)
+  - [Accessibility 元件搜尋](#accessibility-元件搜尋)
+  - [AI 元件定位（VLM）](#ai-元件定位vlm)
+  - [OCR 螢幕文字辨識](#ocr-螢幕文字辨識)
+  - [剪貼簿](#剪貼簿)
+  - [截圖](#截圖)
   - [動作錄製與回放](#動作錄製與回放)
   - [JSON 腳本執行器](#json-腳本執行器)
+  - [排程器（Interval & Cron）](#排程器interval--cron)
+  - [全域熱鍵](#全域熱鍵)
+  - [事件觸發器](#事件觸發器)
+  - [執行歷史](#執行歷史)
   - [報告產生](#報告產生)
-  - [遠端自動化（Socket 伺服器）](#遠端自動化socket-伺服器)
+  - [遠端自動化（Socket / REST）](#遠端自動化socket--rest)
+  - [外掛載入器](#外掛載入器)
   - [Shell 命令執行](#shell-命令執行)
   - [螢幕錄製](#螢幕錄製)
   - [回呼執行器](#回呼執行器)
@@ -45,17 +53,27 @@
 - **滑鼠自動化** — 移動、點擊、按下、釋放、拖曳、滾動，支援精確座標控制
 - **鍵盤自動化** — 按下/釋放單一按鍵、輸入字串、組合鍵、按鍵狀態偵測
 - **圖像辨識** — 使用 OpenCV 模板匹配在螢幕上定位 UI 元素，支援可設定的偵測閾值
+- **Accessibility 元件搜尋** — 透過作業系統無障礙樹（Windows UIA / macOS AX）依名稱/角色定位按鈕、選單、控制項
+- **AI 元件定位（VLM）** — 用自然語言描述 UI 元素，交由視覺語言模型（Anthropic / OpenAI）取得螢幕座標
+- **OCR** — 使用 Tesseract 從螢幕擷取文字，可搜尋、點擊或等待文字出現
+- **剪貼簿** — 於 Windows / macOS / Linux 讀寫系統剪貼簿文字
 - **截圖與螢幕錄製** — 擷取全螢幕或指定區域為圖片，錄製螢幕為影片（AVI/MP4）
 - **動作錄製與回放** — 錄製滑鼠/鍵盤事件並重新播放
-- **JSON 腳本執行** — 使用 JSON 動作檔案定義並執行自動化流程
+- **JSON 腳本執行** — 使用 JSON 動作檔案定義並執行自動化流程（支援 dry-run 與逐步除錯）
+- **排程器** — 以 interval 或 cron 表示式執行腳本，interval 與 cron job 可同時存在
+- **全域熱鍵** — 將 OS 熱鍵綁定到 action 腳本（目前為 Windows，macOS/Linux 保留擴充介面）
+- **事件觸發器** — 偵測到影像出現、視窗出現、像素變化或檔案變動時自動執行腳本
+- **執行歷史** — 以 SQLite 紀錄 scheduler / triggers / hotkeys / REST 的執行結果；錯誤時自動附上截圖
 - **報告產生** — 將測試紀錄匯出為 HTML、JSON 或 XML 報告，包含成功/失敗狀態
-- **遠端自動化** — 啟動 TCP Socket 伺服器，接收並執行來自遠端客戶端的自動化命令
+- **遠端自動化** — 同時提供 TCP Socket 伺服器與 REST API 伺服器
+- **外掛載入器** — 將定義 `AC_*` 可呼叫物的 `.py` 檔放入目錄，執行時即可註冊成 executor 指令
 - **Shell 整合** — 在自動化流程中執行 Shell 命令，支援非同步輸出擷取
 - **回呼執行器** — 觸發自動化函式後自動呼叫回呼函式，實現操作串接
 - **動態套件載入** — 在執行時匯入外部 Python 套件，擴充執行器功能
 - **專案與範本管理** — 快速建立包含 keyword/executor 目錄結構的自動化專案
 - **視窗管理** — 直接將鍵盤/滑鼠事件送至指定視窗（Windows/Linux）
-- **GUI 應用程式** — 內建 PySide6 圖形介面，支援互動式自動化操作
+- **GUI 應用程式** — 內建 PySide6 圖形介面，支援即時切換語系（English / 繁體中文 / 简体中文 / 日本語）
+- **CLI 執行介面** — `python -m je_auto_control.cli run|list-jobs|start-server|start-rest`
 - **跨平台** — 統一 API，支援 Windows、macOS、Linux（X11）
 
 ---
@@ -79,10 +97,23 @@ je_auto_control/
     ├── executor/               # JSON 動作執行引擎
     ├── callback/               # 回呼函式執行器
     ├── cv2_utils/              # OpenCV 截圖、模板匹配、影片錄製
+    ├── accessibility/          # UIA (Windows) / AX (macOS) 元件搜尋
+    ├── vision/                 # VLM 元件定位（Anthropic / OpenAI）
+    ├── ocr/                    # Tesseract 文字定位
+    ├── clipboard/              # 跨平台剪貼簿
+    ├── scheduler/              # Interval + cron 排程器
+    ├── hotkey/                 # 全域熱鍵守護程序
+    ├── triggers/               # 影像/視窗/像素/檔案 觸發器
+    ├── run_history/            # SQLite 執行紀錄 + 錯誤截圖
+    ├── rest_api/               # 純 stdlib HTTP/REST 伺服器
+    ├── plugin_loader/          # 動態 AC_* 外掛搜尋與註冊
     ├── socket_server/          # TCP Socket 伺服器（遠端自動化）
     ├── shell_process/          # Shell 命令管理器
     ├── generate_report/        # HTML / JSON / XML 報告產生器
     ├── test_record/            # 測試動作紀錄
+    ├── script_vars/            # 腳本變數插值
+    ├── watcher/                # 滑鼠 / 像素 / log 監看器（Live HUD）
+    ├── recording_edit/         # 錄製內容的修剪、過濾、縮放
     ├── json/                   # JSON 動作檔案讀寫
     ├── project/                # 專案建立與範本
     ├── package_manager/        # 動態套件載入
@@ -134,6 +165,12 @@ sudo apt-get install cmake libssl-dev
 | `python-Xlib` | Linux X11 後端（在 Linux 上自動安裝） |
 | `PySide6` | GUI 應用程式（選用，使用 `[gui]` 安裝） |
 | `qt-material` | GUI 主題（選用，使用 `[gui]` 安裝） |
+| `uiautomation` | Windows Accessibility 後端（選用，首次使用時載入） |
+| `pytesseract` + Tesseract | OCR 文字辨識（選用，首次使用時載入） |
+| `anthropic` | VLM 定位 — Anthropic 後端（選用，首次使用時載入） |
+| `openai` | VLM 定位 — OpenAI 後端（選用，首次使用時載入） |
+
+完整第三方相依套件與授權資訊請見 [Third_Party_License.md](../Third_Party_License.md)。
 
 ---
 
@@ -195,6 +232,92 @@ print(f"找到位置: ({cx}, {cy})")
 # 找出圖像並自動點擊
 je_auto_control.locate_and_click("submit_button.png", mouse_keycode="mouse_left")
 ```
+
+### Accessibility 元件搜尋
+
+透過作業系統無障礙樹依名稱/角色/App 搜尋控制項（Windows UIA，via
+`uiautomation`；macOS AX）。
+
+```python
+import je_auto_control
+
+# 列出 Calculator 中所有可見按鈕
+elements = je_auto_control.list_accessibility_elements(app_name="Calculator")
+
+# 搜尋特定元件
+ok = je_auto_control.find_accessibility_element(name="OK", role="Button")
+if ok is not None:
+    print(ok.bounds, ok.center)
+
+# 一步定位並點擊
+je_auto_control.click_accessibility_element(name="OK", app_name="Calculator")
+```
+
+若當前平台無可用後端，會拋出 `AccessibilityNotAvailableError`。
+
+### AI 元件定位（VLM）
+
+當模板匹配與 Accessibility 都失效時，可用自然語言描述元件，交給視覺
+語言模型取得座標。
+
+```python
+import je_auto_control
+
+# 預設偏好 Anthropic（若有設定 ANTHROPIC_API_KEY），否則用 OpenAI
+x, y = je_auto_control.locate_by_description("綠色的 Submit 按鈕")
+
+# 一次定位並點擊
+je_auto_control.click_by_description(
+    "Cookie 橫幅中的『全部接受』按鈕",
+    screen_region=[0, 800, 1920, 1080],   # 可選：只在此區域找
+)
+```
+
+設定（僅從環境變數讀取 — 金鑰不會被寫入程式碼或日誌）：
+
+| 變數 | 作用 |
+|---|---|
+| `ANTHROPIC_API_KEY` | 啟用 Anthropic 後端 |
+| `OPENAI_API_KEY` | 啟用 OpenAI 後端 |
+| `AUTOCONTROL_VLM_BACKEND` | 強制指定 `anthropic` 或 `openai` |
+| `AUTOCONTROL_VLM_MODEL` | 覆寫預設模型（如 `claude-opus-4-7`、`gpt-4o-mini`） |
+
+若兩個 SDK 皆未安裝或未設定 API key，會拋出 `VLMNotAvailableError`。
+
+### OCR 螢幕文字辨識
+
+```python
+import je_auto_control as ac
+
+# 找出所有吻合的文字位置
+matches = ac.find_text_matches("Submit")
+
+# 取得第一個吻合位置的中心座標（找不到則回傳 None）
+cx, cy = ac.locate_text_center("Submit")
+
+# 一步定位並點擊
+ac.click_text("Submit")
+
+# 等待文字出現（或 timeout）
+ac.wait_for_text("載入完成", timeout=15.0)
+```
+
+若 Tesseract 不在 `PATH` 中，可手動指定路徑：
+
+```python
+ac.set_tesseract_cmd(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+```
+
+### 剪貼簿
+
+```python
+import je_auto_control as ac
+ac.set_clipboard("hello")
+text = ac.get_clipboard()
+```
+
+後端：Windows（Win32 + ctypes）、macOS（`pbcopy`/`pbpaste`）、Linux
+（`xclip` 或 `xsel`）。
 
 ### 截圖
 
@@ -269,12 +392,82 @@ je_auto_control.execute_action([
 | 鍵盤 | `AC_type_keyboard`, `AC_press_keyboard_key`, `AC_release_keyboard_key`, `AC_write`, `AC_hotkey`, `AC_check_key_is_press` |
 | 圖像 | `AC_locate_all_image`, `AC_locate_image_center`, `AC_locate_and_click` |
 | 螢幕 | `AC_screen_size`, `AC_screenshot` |
+| Accessibility | `AC_a11y_list`, `AC_a11y_find`, `AC_a11y_click` |
+| VLM（AI 定位） | `AC_vlm_locate`, `AC_vlm_click` |
+| OCR | `AC_locate_text`, `AC_click_text`, `AC_wait_text` |
+| 剪貼簿 | `AC_clipboard_get`, `AC_clipboard_set` |
 | 錄製 | `AC_record`, `AC_stop_record` |
 | 報告 | `AC_generate_html`, `AC_generate_json`, `AC_generate_xml`, `AC_generate_html_report`, `AC_generate_json_report`, `AC_generate_xml_report` |
 | 專案 | `AC_create_project` |
 | Shell | `AC_shell_command` |
 | 程序 | `AC_execute_process` |
 | 執行器 | `AC_execute_action`, `AC_execute_files` |
+
+### 排程器（Interval & Cron）
+
+```python
+import je_auto_control as ac
+
+# Interval：每 30 秒執行一次
+job = ac.default_scheduler.add_job(
+    script_path="scripts/poll.json", interval_seconds=30, repeat=True,
+)
+
+# Cron：週一到週五 09:00（欄位為 minute hour dom month dow）
+cron_job = ac.default_scheduler.add_cron_job(
+    script_path="scripts/daily.json", cron_expression="0 9 * * 1-5",
+)
+
+ac.default_scheduler.start()
+```
+
+兩種排程可同時存在，可由 `job.is_cron` 判斷類型。
+
+### 全域熱鍵
+
+將 OS 熱鍵綁定到 action JSON 腳本（Windows 後端；macOS / Linux 的
+`start()` 目前會拋出 `NotImplementedError`，介面已依 Strategy pattern
+預留）。
+
+```python
+from je_auto_control import default_hotkey_daemon
+
+default_hotkey_daemon.bind("ctrl+alt+1", "scripts/greet.json")
+default_hotkey_daemon.start()
+```
+
+### 事件觸發器
+
+輪詢式觸發器，偵測到條件成立時自動執行腳本：
+
+```python
+from je_auto_control import (
+    default_trigger_engine, ImageAppearsTrigger,
+    WindowAppearsTrigger, PixelColorTrigger, FilePathTrigger,
+)
+
+default_trigger_engine.add(ImageAppearsTrigger(
+    trigger_id="", script_path="scripts/click_ok.json",
+    image_path="templates/ok_button.png", threshold=0.85, repeat=True,
+))
+default_trigger_engine.start()
+```
+
+### 執行歷史
+
+排程器、觸發器、熱鍵、REST API 與 GUI 手動回放的每一次執行都會被寫入
+`~/.je_auto_control/history.db`。錯誤時會自動在
+`~/.je_auto_control/artifacts/run_{id}_{ms}.png` 附上截圖以便除錯。
+
+```python
+from je_auto_control import default_history_store
+
+for run in default_history_store.list_runs(limit=20):
+    print(run.id, run.source, run.status, run.artifact_path)
+```
+
+GUI **執行歷史** 分頁提供篩選 / 更新 / 清除功能，並可雙擊截圖欄位開啟
+附件。
 
 ### 報告產生
 
@@ -301,42 +494,43 @@ xml_string = je_auto_control.generate_xml()
 
 報告內容包含：每個紀錄動作的函式名稱、參數、時間戳記及例外資訊（如有）。HTML 報告中成功的動作以青色顯示，失敗的動作以紅色顯示。
 
-### 遠端自動化（Socket 伺服器）
+### 遠端自動化（Socket / REST）
 
-啟動 TCP 伺服器，接收來自遠端客戶端的 JSON 自動化命令：
-
-```python
-import je_auto_control
-
-# 啟動伺服器（預設：localhost:9938）
-server = je_auto_control.start_autocontrol_socket_server(host="localhost", port=9938)
-
-# 伺服器在背景執行緒中運行
-# 透過 TCP 發送 JSON 動作命令即可遠端執行
-# 發送 "quit_server" 關閉伺服器
-```
-
-客戶端範例：
+提供兩種伺服器：原始 TCP socket 與純 stdlib HTTP/REST。預設均綁定
+`127.0.0.1`，綁定到 `0.0.0.0` 須明確指定。
 
 ```python
-import socket
-import json
+import je_auto_control as ac
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(("localhost", 9938))
+# TCP Socket 伺服器（預設：127.0.0.1:9938）
+ac.start_autocontrol_socket_server(host="127.0.0.1", port=9938)
 
-# 發送自動化命令
-command = json.dumps([
-    ["AC_set_mouse_position", {"x": 500, "y": 300}],
-    ["AC_click_mouse", {"mouse_keycode": "mouse_left"}]
-])
-sock.sendall(command.encode("utf-8"))
-
-# 接收回應
-response = sock.recv(8192).decode("utf-8")
-print(response)
-sock.close()
+# REST API 伺服器（預設：127.0.0.1:9939）
+ac.start_rest_api_server(host="127.0.0.1", port=9939)
+# 端點：
+#   GET  /health           存活檢查
+#   GET  /jobs             列出排程工作
+#   POST /execute          body: {"actions": [...]}
 ```
+
+### 外掛載入器
+
+將定義頂層 `AC_*` 可呼叫物的 `.py` 檔放進一個目錄，執行時即可註冊成
+executor 指令：
+
+```python
+from je_auto_control import (
+    load_plugin_directory, register_plugin_commands,
+)
+
+commands = load_plugin_directory("./my_plugins")
+register_plugin_commands(commands)
+
+# 之後任何 JSON 腳本都能使用：
+# [["AC_greet", {"name": "world"}]]
+```
+
+> **警告：** 外掛檔案會直接執行任意 Python，請僅載入自己信任的目錄。
 
 ### Shell 命令執行
 
@@ -496,6 +690,24 @@ python -m je_auto_control --execute_str '[["AC_screenshot", {"file_path": "test.
 python -m je_auto_control -c ./my_project
 ```
 
+另外還有以 headless API 為基礎的子命令 CLI：
+
+```bash
+# 執行腳本（可帶變數或 dry-run）
+python -m je_auto_control.cli run script.json
+python -m je_auto_control.cli run script.json --var name=alice --dry-run
+
+# 列出排程工作
+python -m je_auto_control.cli list-jobs
+
+# 啟動 Socket / REST 伺服器
+python -m je_auto_control.cli start-server --port 9938
+python -m je_auto_control.cli start-rest   --port 9939
+```
+
+`--var name=value` 會優先以 JSON 解析（`count=10` 會變成 int），失敗
+則視為字串。
+
 ---
 
 ## 平台支援
@@ -540,4 +752,6 @@ python -m pytest test/integrated_test/
 
 ## 授權條款
 
-[MIT License](../LICENSE) © JE-Chen
+[MIT License](../LICENSE) © JE-Chen。
+第三方相依套件之授權請見
+[Third_Party_License.md](../Third_Party_License.md)。

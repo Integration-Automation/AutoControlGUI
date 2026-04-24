@@ -39,6 +39,16 @@ from je_auto_control.utils.executor.action_executor import \
     execute_action_with_vars
 from je_auto_control.utils.executor.action_executor import execute_files
 from je_auto_control.utils.executor.action_executor import executor
+# Accessibility (headless)
+from je_auto_control.utils.accessibility import (
+    AccessibilityElement, AccessibilityNotAvailableError,
+    click_accessibility_element, find_accessibility_element,
+    list_accessibility_elements,
+)
+# VLM element locator (headless)
+from je_auto_control.utils.vision import (
+    VLMNotAvailableError, click_by_description, locate_by_description,
+)
 # Clipboard (headless)
 from je_auto_control.utils.clipboard.clipboard import (
     get_clipboard, set_clipboard,
@@ -60,6 +70,10 @@ from je_auto_control.utils.plugin_loader.plugin_loader import (
 # REST API (headless)
 from je_auto_control.utils.rest_api.rest_server import (
     RestApiServer, start_rest_api_server,
+)
+# Run history (headless)
+from je_auto_control.utils.run_history.history_store import (
+    HistoryStore, RunRecord, default_history_store,
 )
 # Triggers (headless)
 from je_auto_control.utils.triggers.trigger_engine import (
@@ -124,7 +138,7 @@ from je_auto_control.windows.window import windows_window_manage
 from je_auto_control.wrapper.auto_control_image import locate_all_image
 from je_auto_control.wrapper.auto_control_image import locate_and_click
 from je_auto_control.wrapper.auto_control_image import locate_image_center
-# import keyboard
+# Keyboard wrappers
 from je_auto_control.wrapper.auto_control_keyboard import check_key_is_press
 from je_auto_control.wrapper.auto_control_keyboard import get_keyboard_keys_table
 from je_auto_control.wrapper.auto_control_keyboard import hotkey
@@ -134,7 +148,7 @@ from je_auto_control.wrapper.auto_control_keyboard import release_keyboard_key
 from je_auto_control.wrapper.auto_control_keyboard import send_key_event_to_window
 from je_auto_control.wrapper.auto_control_keyboard import type_keyboard
 from je_auto_control.wrapper.auto_control_keyboard import write
-# import mouse
+# Mouse wrappers
 from je_auto_control.wrapper.auto_control_mouse import click_mouse
 from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
 from je_auto_control.wrapper.auto_control_mouse import mouse_keys_table
@@ -148,7 +162,7 @@ from je_auto_control.wrapper.auto_control_mouse import special_mouse_keys_table
 # record
 from je_auto_control.wrapper.auto_control_record import record
 from je_auto_control.wrapper.auto_control_record import stop_record
-# import screen
+# Screen wrappers
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.auto_control_screen import screenshot
 from je_auto_control.wrapper.auto_control_screen import get_pixel
@@ -205,6 +219,14 @@ __all__ = [
     "TriggerEngine", "default_trigger_engine",
     "ImageAppearsTrigger", "WindowAppearsTrigger",
     "PixelColorTrigger", "FilePathTrigger",
+    # Run history
+    "HistoryStore", "RunRecord", "default_history_store",
+    # Accessibility
+    "AccessibilityElement", "AccessibilityNotAvailableError",
+    "list_accessibility_elements", "find_accessibility_element",
+    "click_accessibility_element",
+    # VLM locator
+    "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",

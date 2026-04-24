@@ -1,4 +1,3 @@
-import sys
 import time
 
 from je_auto_control import click_mouse

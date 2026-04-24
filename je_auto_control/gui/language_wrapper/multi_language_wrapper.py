@@ -49,7 +49,7 @@ class LanguageWrapper:
             return
         self.language = language
         self.language_word_dict = self._merged(language)
-        for listener in list(self._listeners):
+        for listener in self._listeners[:]:
             try:
                 listener(language)
             except (OSError, RuntimeError) as error:

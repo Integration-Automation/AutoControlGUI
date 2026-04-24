@@ -1,4 +1,3 @@
-import subprocess
 from time import sleep
 
 from je_auto_control import locate_and_click
@@ -8,122 +7,27 @@ from je_auto_control import locate_and_click
 # open windows calc.exe
 # and calculate 1 + 2 .... + 9
 
-subprocess.Popen("calc", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
+import subprocess  # noqa: E402  # reason: imported after instructional comments
+subprocess.Popen(["calc.exe"])  # nosec B603 B607  # reason: hard-coded calc launcher used by GUI test
+
 sleep(3)
 
-locate_and_click(
-    "../../test_source/1.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/plus.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
+_PLUS_IMG = "../../test_source/plus.png"
+_EQUAL_IMG = "../../test_source/equal.png"
+_DIGIT_IMG = "../../test_source/{n}.png"
 
-locate_and_click(
-    "../../test_source/2.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
 
-locate_and_click(
-    "../../test_source/equal.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/plus.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/3.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/plus.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/4.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/plus.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/5.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/plus.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/6.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/plus.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/7.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/plus.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/8.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/plus.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/9.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
-locate_and_click(
-    "../../test_source/equal.png",
-    mouse_keycode="mouse_left",
-    detect_threshold=0.9,
-    draw_image=False
-)
+def _click_image(image_path: str) -> None:
+    locate_and_click(
+        image_path,
+        mouse_keycode="mouse_left",
+        detect_threshold=0.9,
+        draw_image=False,
+    )
+
+
+_click_image(_DIGIT_IMG.format(n=1))
+for digit in range(2, 10):
+    _click_image(_PLUS_IMG)
+    _click_image(_DIGIT_IMG.format(n=digit))
+_click_image(_EQUAL_IMG)

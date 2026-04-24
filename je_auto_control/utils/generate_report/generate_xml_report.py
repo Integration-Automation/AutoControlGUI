@@ -1,6 +1,7 @@
 from threading import Lock
 from typing import Tuple, Union
-from xml.dom.minidom import parseString
+
+from defusedxml.minidom import parseString  # nosec B405  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml  # reason: defusedxml is the safe replacement
 
 from je_auto_control.utils.generate_report.generate_json_report import generate_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger

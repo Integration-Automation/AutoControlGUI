@@ -198,3 +198,87 @@ GUI 多語系
 - **Help** → 關於
 
 點擊分頁的 ✕ 即可關閉，之後可從 *View → Tabs* 恢復。
+
+
+OCR 螢幕文字辨識
+================
+
+以 Tesseract 為後端的文字定位。適用於沒有穩定 Accessibility 名稱、也
+不方便擷取模板影像的按鈕或標籤::
+
+   import je_auto_control as ac
+
+   matches = ac.find_text_matches("Submit")
+   cx, cy = ac.locate_text_center("Submit")
+   ac.click_text("Submit")
+   ac.wait_for_text("載入完成", timeout=15.0)
+
+若 Tesseract 不在 ``PATH`` 中::
+
+   ac.set_tesseract_cmd(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+
+Action-JSON 指令：``AC_locate_text``、``AC_click_text``、
+``AC_wait_text``。
+
+
+Accessibility 元件搜尋
+======================
+
+透過作業系統無障礙樹查詢控制項（Windows UIA 透過 ``uiautomation``；
+macOS AX），支援依名稱 / 角色 / 應用程式過濾::
+
+   import je_auto_control as ac
+
+   elements = ac.list_accessibility_elements(app_name="Calculator")
+   ok = ac.find_accessibility_element(name="OK", role="Button")
+   ac.click_accessibility_element(name="OK", app_name="Calculator")
+
+當前平台若沒有可用後端會拋出 ``AccessibilityNotAvailableError``。
+Action-JSON 指令：``AC_a11y_list``、``AC_a11y_find``、
+``AC_a11y_click``。GUI：**Accessibility** 分頁。
+
+
+VLM（AI）元件定位
+=================
+
+當模板匹配與 Accessibility 都無法找到目標時，可用自然語言描述元件，
+交給視覺語言模型回傳像素座標::
+
+   import je_auto_control as ac
+
+   x, y = ac.locate_by_description("綠色的 Submit 按鈕")
+   ac.click_by_description(
+       "Cookie 橫幅中的『全部接受』按鈕",
+       screen_region=[0, 800, 1920, 1080],   # 可選：只在此區域搜尋
+   )
+
+後端（延遲載入，import ``je_auto_control`` 時不會引入）：
+
+- Anthropic (``anthropic`` SDK，``ANTHROPIC_API_KEY``)
+- OpenAI (``openai`` SDK，``OPENAI_API_KEY``)
+
+環境變數（金鑰不會被記錄或寫入磁碟）：
+
+- ``ANTHROPIC_API_KEY`` / ``OPENAI_API_KEY``
+- ``AUTOCONTROL_VLM_BACKEND=anthropic|openai``
+- ``AUTOCONTROL_VLM_MODEL=<model-id>``
+
+Action-JSON 指令：``AC_vlm_locate``、``AC_vlm_click``。GUI：
+**AI Locator** 分頁。
+
+
+執行歷史 + 錯誤截圖附件
+=======================
+
+排程器、觸發器、熱鍵守護程序、REST API 與 GUI 手動回放的每一次執行
+都會被寫入 ``~/.je_auto_control/history.db``（SQLite）。失敗時會自動
+擷取螢幕截圖並附到該筆紀錄上::
+
+   from je_auto_control import default_history_store
+
+   for run in default_history_store.list_runs(limit=20):
+       print(run.id, run.source, run.status, run.artifact_path)
+
+截圖檔存於 ``~/.je_auto_control/artifacts/``，相關紀錄被 prune 或整個
+歷史被清除時會一併刪除。GUI：**Run History** 分頁 — 雙擊截圖欄位可開
+啟 OS 預覽。

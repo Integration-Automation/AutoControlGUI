@@ -51,7 +51,7 @@ def test_engine_runs_trigger_once_when_non_repeat(tmp_path):
         later = watched.stat().st_mtime + 2
         os.utime(str(watched), (later, later))
         deadline = time.monotonic() + 2.0
-        while time.monotonic() < deadline and not engine.list_triggers() == []:
+        while time.monotonic() < deadline and engine.list_triggers() != []:
             time.sleep(0.05)
             if calls:
                 break

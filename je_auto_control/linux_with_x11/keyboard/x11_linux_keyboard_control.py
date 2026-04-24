@@ -13,6 +13,8 @@ from je_auto_control.linux_with_x11.core.utils.x11_linux_display import display
 from Xlib.ext.xtest import fake_input
 from Xlib import X, protocol
 
+_KEYCODE_INT_ERROR = "Keycode must be an integer 鍵盤代碼必須是整數"
+
 
 def press_key(keycode: int) -> None:
     """
@@ -22,7 +24,7 @@ def press_key(keycode: int) -> None:
     :param keycode: (int) The keycode to press 要按下的鍵盤代碼
     """
     if not isinstance(keycode, int):
-        raise ValueError("Keycode must be an integer 鍵盤代碼必須是整數")
+        raise ValueError(_KEYCODE_INT_ERROR)
 
     time.sleep(0.01)  # Small delay to ensure event stability 確保事件穩定的小延遲
     fake_input(display, X.KeyPress, keycode)
@@ -37,7 +39,7 @@ def release_key(keycode: int) -> None:
     :param keycode: (int) The keycode to release 要釋放的鍵盤代碼
     """
     if not isinstance(keycode, int):
-        raise ValueError("Keycode must be an integer 鍵盤代碼必須是整數")
+        raise ValueError(_KEYCODE_INT_ERROR)
 
     time.sleep(0.01)
     fake_input(display, X.KeyRelease, keycode)
@@ -55,7 +57,7 @@ def send_key_event_to_window(window_id: int, keycode: int) -> None:
     if not isinstance(window_id, int):
         raise ValueError("Window ID must be an integer 視窗 ID 必須是整數")
     if not isinstance(keycode, int):
-        raise ValueError("Keycode must be an integer 鍵盤代碼必須是整數")
+        raise ValueError(_KEYCODE_INT_ERROR)
 
     # 建立目標視窗物件 Create target window object
     window = display.create_resource_object("window", window_id)

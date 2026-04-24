@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 from typing import Any, Mapping, MutableMapping
 
-_PLACEHOLDER = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+_PLACEHOLDER = re.compile(r"\$\{([A-Za-z_]\w*)\}")
 
 
 def interpolate_value(value: Any, variables: Mapping[str, Any]) -> Any:

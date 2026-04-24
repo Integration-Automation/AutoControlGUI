@@ -12,6 +12,7 @@ from je_auto_control.utils.project.template.template_keyword import (
 )
 
 _project_lock = Lock()
+_TEMPLATE_PLACEHOLDER = "{temp}"  # noqa: S101  # reason: literal sentinel substituted in templates
 
 
 def create_dir(dir_name: str) -> None:
@@ -61,15 +62,15 @@ def create_template(parent_name: str, project_path: str = None) -> None:
         if executor_dir_path.exists() and executor_dir_path.is_dir():
             _write_file(
                 executor_dir_path / "executor_one_file.py",
-                executor_template_1.replace("{temp}", str(keyword_dir_path / "keyword1.json"))
+                executor_template_1.replace(_TEMPLATE_PLACEHOLDER, str(keyword_dir_path / "keyword1.json"))
             )
             _write_file(
                 executor_dir_path / "executor_bad_file.py",
-                bad_executor_template_1.replace("{temp}", str(keyword_dir_path / "bad_keyword_1.json"))
+                bad_executor_template_1.replace(_TEMPLATE_PLACEHOLDER, str(keyword_dir_path / "bad_keyword_1.json"))
             )
             _write_file(
                 executor_dir_path / "executor_folder.py",
-                executor_template_2.replace("{temp}", str(keyword_dir_path))
+                executor_template_2.replace(_TEMPLATE_PLACEHOLDER, str(keyword_dir_path))
             )
 
 
