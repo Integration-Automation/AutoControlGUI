@@ -93,14 +93,14 @@ def _win_set(text: str) -> None:
     kernel32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
 
     data = ctypes.create_unicode_buffer(text)
-    size = ctypes.sizeof(data)
+    size = ctypes.sizeof(data)  # NOSONAR S5655 false positive — Array is accepted by sizeof
     handle = kernel32.GlobalAlloc(gmem_moveable, size)
     if not handle:
         raise RuntimeError("GlobalAlloc failed")
     pointer = kernel32.GlobalLock(handle)
     if not pointer:
         raise RuntimeError("GlobalLock failed")
-    ctypes.memmove(pointer, ctypes.addressof(data), size)
+    ctypes.memmove(pointer, ctypes.addressof(data), size)  # NOSONAR S5655 false positive — Array is accepted by addressof
     kernel32.GlobalUnlock(handle)
     if not user32.OpenClipboard(None):
         raise RuntimeError("OpenClipboard failed")

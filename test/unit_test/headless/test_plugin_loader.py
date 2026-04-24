@@ -73,10 +73,10 @@ def test_register_plugin_commands_adds_and_removes_cleanly(tmp_path):
 
 def test_discover_ignores_non_callable_ac_attribute():
     class Module:
-        AC_value = 42  # noqa: N815  # reason: AC_* is the plugin contract
+        AC_value = 42  # noqa: N815  # NOSONAR AC_* is the plugin contract
 
         @staticmethod
-        def AC_run():  # noqa: N802  # reason: AC_* is the plugin contract
+        def AC_run():  # noqa: N802  # NOSONAR AC_* is the plugin contract
             return 1
 
     found = discover_plugin_commands(Module)
