@@ -166,19 +166,22 @@ class HistoryStore:
         """Return the most recent runs (newest first)."""
         if limit <= 0:
             return []
-        if source_type is not None:
+        bound_limit = int(limit)
+        if source_type is None:
+            with self._lock:
+                rows = self._conn.execute(
+                    "SELECT * FROM runs "
+                    "ORDER BY started_at DESC LIMIT ?",
+                    (bound_limit,),
+                ).fetchall()
+        else:
             _validate_source(source_type)
-        sql = "SELECT * FROM runs"
-        params: list = []
-        if source_type is not None:
-            sql += " WHERE source_type = ?"
-            params.append(source_type)
-        sql += " ORDER BY started_at DESC LIMIT ?"
-        params.append(int(limit))
-        with self._lock:
-            # nosemgrep: python_sql_rule-hardcoded-sql-expression
-            # reason: `sql` is composed only from in-module string literals; `source_type` is validated via `_validate_source`, and `limit` is coerced to int before binding as a parameter.
-            rows = self._conn.execute(sql, params).fetchall()
+            with self._lock:
+                rows = self._conn.execute(
+                    "SELECT * FROM runs WHERE source_type = ? "
+                    "ORDER BY started_at DESC LIMIT ?",
+                    (source_type, bound_limit),
+                ).fetchall()
         return [_row_to_record(row) for row in rows]
 
     def get_run(self, run_id: int) -> Optional[RunRecord]:
