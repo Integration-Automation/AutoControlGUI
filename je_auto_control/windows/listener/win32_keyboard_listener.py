@@ -90,7 +90,7 @@ class Win32KeyboardListener(Thread):
 
         message = MSG()
         # 進入訊息迴圈 Enter message loop
-        _user32.GetMessageA(byref(message), 0, 0, 0)
+        _user32.GetMessageA(byref(message), 0, 0, 0)  # NOSONAR S5655 false positive — MSG is a ctypes Structure
 
     def record(self, want_to_record_queue: Queue) -> None:
         """

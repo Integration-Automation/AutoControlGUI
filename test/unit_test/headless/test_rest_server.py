@@ -16,7 +16,7 @@ def rest_server():
     server.stop(timeout=1.0)
 
 
-_TEST_SCHEME = "http"  # NOSONAR: S5332  # reason: localhost-only ephemeral test server; TLS is out of scope here
+_TEST_SCHEME = "http"  # NOSONAR localhost-only ephemeral test server; TLS is out of scope here
 
 
 def _request(server, path, method="GET", body=None):

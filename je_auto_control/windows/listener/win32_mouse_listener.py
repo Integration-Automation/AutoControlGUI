@@ -99,7 +99,7 @@ class Win32MouseListener(Thread):
             raise AutoControlException("Failed to set mouse hook")
 
         message = MSG()
-        _user32.GetMessageA(byref(message), 0, 0, 0)
+        _user32.GetMessageA(byref(message), 0, 0, 0)  # NOSONAR S5655 false positive — MSG is a ctypes Structure
 
     def record(self, want_to_record_queue: Queue) -> None:
         """

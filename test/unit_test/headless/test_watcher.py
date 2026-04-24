@@ -46,8 +46,11 @@ def test_mouse_watcher_reports_failure(monkeypatch):
 
 def test_pixel_watcher_returns_none_on_error(monkeypatch):
     import je_auto_control.wrapper.auto_control_screen as screen_mod
-    monkeypatch.setattr(screen_mod, "get_pixel",
-                        lambda x, y: (_ for _ in ()).throw(OSError("nope")))
+
+    def _raise_os_error(_x, _y):
+        raise OSError("nope")
+
+    monkeypatch.setattr(screen_mod, "get_pixel", _raise_os_error)
     assert PixelWatcher().sample(0, 0) is None
 
 
