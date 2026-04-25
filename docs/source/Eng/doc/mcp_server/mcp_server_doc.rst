@@ -114,6 +114,26 @@ Security notes
 - File paths supplied to ``ac_screenshot`` and ``ac_execute_action_file``
   are normalised through ``os.path.realpath`` before any I/O.
 
+HTTP transport
+==============
+
+When stdio is awkward — a long-running GUI host process, a container,
+a remote box — start the same dispatcher behind HTTP instead:
+
+.. code-block:: python
+
+   import je_auto_control as ac
+
+   server = ac.start_mcp_http_server(host="127.0.0.1", port=9940)
+   # ... later
+   server.stop()
+
+The server speaks the JSON-only variant of the MCP Streamable HTTP
+transport: ``POST /mcp`` accepts a JSON-RPC body and returns a JSON
+response (or ``202 Accepted`` for notifications). The default bind
+is ``127.0.0.1`` per the project's least-privilege policy — opt into
+``0.0.0.0`` only with an explicit, documented reason.
+
 Read-only / safe mode
 =====================
 

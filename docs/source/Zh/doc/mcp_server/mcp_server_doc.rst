@@ -108,6 +108,25 @@ tool-use 迴圈等）都能透過 AutoControl 操控本機桌面。傳輸採用 
 - ``ac_screenshot`` 與 ``ac_execute_action_file`` 收到的檔案路徑會
   先經過 ``os.path.realpath`` 正規化才進行 I/O。
 
+HTTP 傳輸
+=========
+
+當 stdio 不方便（長時間執行的 GUI 主機、容器、遠端機器）時，可以
+改用 HTTP 啟動相同的 dispatcher：
+
+.. code-block:: python
+
+   import je_auto_control as ac
+
+   server = ac.start_mcp_http_server(host="127.0.0.1", port=9940)
+   # ... 之後
+   server.stop()
+
+伺服器走 MCP Streamable HTTP 的 JSON-only 變體：``POST /mcp`` 接收
+JSON-RPC 主體，回傳 JSON（通知會回 ``202 Accepted``）。預設綁定
+``127.0.0.1`` 以符合專案最小權限原則；如要對外，必須明確且有理由
+地改為 ``0.0.0.0``。
+
 唯讀 / 安全模式
 ===============
 
