@@ -10,10 +10,10 @@ from je_auto_control.utils.mcp_server.server import (
     MCPServer, start_mcp_stdio_server,
 )
 from je_auto_control.utils.mcp_server.tools import (
-    MCPTool, build_default_tool_registry,
+    MCPTool, MCPToolAnnotations, build_default_tool_registry,
 )
 
 __all__ = [
-    "MCPServer", "MCPTool", "build_default_tool_registry",
-    "start_mcp_stdio_server",
+    "MCPServer", "MCPTool", "MCPToolAnnotations",
+    "build_default_tool_registry", "start_mcp_stdio_server",
 ]

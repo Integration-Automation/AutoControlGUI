@@ -12,7 +12,7 @@ from je_auto_control.utils.mcp_server.server import (
     PROTOCOL_VERSION, MCPServer,
 )
 from je_auto_control.utils.mcp_server.tools import (
-    MCPTool, build_default_tool_registry,
+    MCPTool, MCPToolAnnotations, build_default_tool_registry,
 )
 
 
@@ -149,6 +149,41 @@ def test_serve_stdio_processes_messages_until_eof():
     assert len(out_lines) == 2  # initialize + tools/call (notification has no reply)
     last = _decode(out_lines[-1])
     assert last["result"]["content"][0]["text"] == "pong"
+
+
+def test_tool_descriptor_includes_annotations():
+    annotations = MCPToolAnnotations(title="Echo", read_only=True,
+                                      idempotent=True)
+    tool = MCPTool(
+        name="echo", description="echo",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda: "ok",
+        annotations=annotations,
+    )
+    descriptor = tool.to_descriptor()
+    assert descriptor["annotations"] == {
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+        "title": "Echo",
+    }
+
+
+def test_read_only_annotation_forces_destructive_false():
+    """Per spec, destructiveHint is meaningful only if readOnlyHint is false."""
+    annotations = MCPToolAnnotations(read_only=True, destructive=True)
+    assert annotations.to_dict()["destructiveHint"] is False
+
+
+def test_default_tool_registry_marks_safe_tools_read_only():
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    assert by_name["ac_get_mouse_position"].annotations.read_only is True
+    assert by_name["ac_screen_size"].annotations.read_only is True
+    assert by_name["ac_list_action_commands"].annotations.read_only is True
+    # Side-effecting tools must NOT claim read-only.
+    assert by_name["ac_click_mouse"].annotations.read_only is False
+    assert by_name["ac_type_text"].annotations.read_only is False
 
 
 def test_default_registry_lists_core_automation_tools():

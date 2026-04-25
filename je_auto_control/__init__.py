@@ -64,7 +64,8 @@ from je_auto_control.utils.ocr.ocr_engine import (
 )
 # MCP server (headless stdio bridge for Claude / other MCP clients)
 from je_auto_control.utils.mcp_server import (
-    MCPServer, MCPTool, build_default_tool_registry, start_mcp_stdio_server,
+    MCPServer, MCPTool, MCPToolAnnotations, build_default_tool_registry,
+    start_mcp_stdio_server,
 )
 # Plugin loader (headless)
 from je_auto_control.utils.plugin_loader.plugin_loader import (
@@ -215,8 +216,8 @@ __all__ = [
     # Hotkey daemon
     "HotkeyDaemon", "HotkeyBinding", "default_hotkey_daemon",
     # MCP server
-    "MCPServer", "MCPTool", "build_default_tool_registry",
-    "start_mcp_stdio_server",
+    "MCPServer", "MCPTool", "MCPToolAnnotations",
+    "build_default_tool_registry", "start_mcp_stdio_server",
     # Plugin loader
     "load_plugin_file", "load_plugin_directory", "discover_plugin_commands",
     "register_plugin_commands",

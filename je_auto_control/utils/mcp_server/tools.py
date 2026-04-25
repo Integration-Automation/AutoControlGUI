@@ -16,6 +16,36 @@ from typing import Any, Callable, Dict, List, Optional
 
 
 @dataclass(frozen=True)
+class MCPToolAnnotations:
+    """MCP behaviour hints surfaced to the client per the 2025-03-26 spec.
+
+    Defaults follow the spec: a tool is assumed to mutate state in an
+    open world unless it explicitly opts in to read-only / closed-world.
+    These hints are advisory — clients may use them to require user
+    confirmation before destructive calls but MUST NOT rely on them for
+    security.
+    """
+
+    title: Optional[str] = None
+    read_only: bool = False
+    destructive: bool = True
+    idempotent: bool = False
+    open_world: bool = True
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return the JSON shape MCP clients expect under ``annotations``."""
+        annotations: Dict[str, Any] = {
+            "readOnlyHint": self.read_only,
+            "destructiveHint": False if self.read_only else self.destructive,
+            "idempotentHint": self.idempotent,
+            "openWorldHint": self.open_world,
+        }
+        if self.title is not None:
+            annotations["title"] = self.title
+        return annotations
+
+
+@dataclass(frozen=True)
 class MCPTool:
     """A single MCP tool — public name, schema, and Python callable."""
 
@@ -23,6 +53,7 @@ class MCPTool:
     description: str
     input_schema: Dict[str, Any]
     handler: Callable[..., Any]
+    annotations: MCPToolAnnotations = MCPToolAnnotations()
 
     def to_descriptor(self) -> Dict[str, Any]:
         """Return the dict shape MCP clients expect from ``tools/list``."""
@@ -30,6 +61,7 @@ class MCPTool:
             "name": self.name,
             "description": self.description,
             "inputSchema": self.input_schema,
+            "annotations": self.annotations.to_dict(),
         }
 
     def invoke(self, arguments: Dict[str, Any]) -> Any:
@@ -229,6 +261,11 @@ def _list_action_commands() -> List[str]:
 
 # === Tool builders ==========================================================
 
+_DESTRUCTIVE = MCPToolAnnotations(destructive=True)
+_NON_DESTRUCTIVE = MCPToolAnnotations(destructive=False, idempotent=True)
+_READ_ONLY = MCPToolAnnotations(read_only=True, idempotent=True)
+
+
 def _mouse_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -243,12 +280,14 @@ def _mouse_tools() -> List[MCPTool]:
                 "y": {"type": "integer"},
             }),
             handler=_click_mouse,
+            annotations=_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_get_mouse_position",
             description="Return the current cursor position as [x, y].",
             input_schema=_schema({}),
             handler=_get_mouse_position,
+            annotations=_READ_ONLY,
         ),
         MCPTool(
             name="ac_set_mouse_position",
@@ -258,6 +297,7 @@ def _mouse_tools() -> List[MCPTool]:
                 "y": {"type": "integer"},
             }, required=["x", "y"]),
             handler=_set_mouse_position,
+            annotations=_NON_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_mouse_scroll",
@@ -270,6 +310,7 @@ def _mouse_tools() -> List[MCPTool]:
                 "scroll_direction": {"type": "string"},
             }, required=["scroll_value"]),
             handler=_mouse_scroll,
+            annotations=_DESTRUCTIVE,
         ),
     ]
 
@@ -283,6 +324,7 @@ def _keyboard_tools() -> List[MCPTool]:
             input_schema=_schema({"text": {"type": "string"}},
                                  required=["text"]),
             handler=_type_text,
+            annotations=_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_press_key",
@@ -292,6 +334,7 @@ def _keyboard_tools() -> List[MCPTool]:
             input_schema=_schema({"keycode": {"type": "string"}},
                                  required=["keycode"]),
             handler=_press_key,
+            annotations=_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_hotkey",
@@ -301,6 +344,7 @@ def _keyboard_tools() -> List[MCPTool]:
                 "keys": {"type": "array", "items": {"type": "string"}},
             }, required=["keys"]),
             handler=_hotkey,
+            annotations=_DESTRUCTIVE,
         ),
     ]
 
@@ -312,6 +356,7 @@ def _screen_tools() -> List[MCPTool]:
             description="Return the primary screen size as [width, height].",
             input_schema=_schema({}),
             handler=_screen_size,
+            annotations=_READ_ONLY,
         ),
         MCPTool(
             name="ac_screenshot",
@@ -324,6 +369,7 @@ def _screen_tools() -> List[MCPTool]:
                                    "items": {"type": "integer"}},
             }, required=["file_path"]),
             handler=_screenshot,
+            annotations=MCPToolAnnotations(destructive=False, idempotent=False),
         ),
         MCPTool(
             name="ac_get_pixel",
@@ -333,6 +379,7 @@ def _screen_tools() -> List[MCPTool]:
                 "y": {"type": "integer"},
             }, required=["x", "y"]),
             handler=_get_pixel,
+            annotations=_READ_ONLY,
         ),
     ]
 
@@ -348,6 +395,7 @@ def _image_and_ocr_tools() -> List[MCPTool]:
                 "detect_threshold": {"type": "number"},
             }, required=["image_path"]),
             handler=_locate_image_center,
+            annotations=_READ_ONLY,
         ),
         MCPTool(
             name="ac_locate_and_click",
@@ -358,6 +406,7 @@ def _image_and_ocr_tools() -> List[MCPTool]:
                 "detect_threshold": {"type": "number"},
             }, required=["image_path"]),
             handler=_locate_and_click,
+            annotations=_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_locate_text",
@@ -370,6 +419,7 @@ def _image_and_ocr_tools() -> List[MCPTool]:
                 "min_confidence": {"type": "number"},
             }, required=["text"]),
             handler=_locate_text,
+            annotations=_READ_ONLY,
         ),
         MCPTool(
             name="ac_click_text",
@@ -381,6 +431,7 @@ def _image_and_ocr_tools() -> List[MCPTool]:
                 "min_confidence": {"type": "number"},
             }, required=["text"]),
             handler=_click_text,
+            annotations=_DESTRUCTIVE,
         ),
     ]
 
@@ -393,6 +444,7 @@ def _window_tools() -> List[MCPTool]:
                          "[{hwnd, title}, ...] (Windows only)."),
             input_schema=_schema({}),
             handler=_list_windows,
+            annotations=_READ_ONLY,
         ),
         MCPTool(
             name="ac_focus_window",
@@ -402,6 +454,7 @@ def _window_tools() -> List[MCPTool]:
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
             handler=_focus_window,
+            annotations=_NON_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_wait_for_window",
@@ -412,6 +465,7 @@ def _window_tools() -> List[MCPTool]:
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
             handler=_wait_for_window,
+            annotations=_READ_ONLY,
         ),
         MCPTool(
             name="ac_close_window",
@@ -421,6 +475,7 @@ def _window_tools() -> List[MCPTool]:
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
             handler=_close_window,
+            annotations=_DESTRUCTIVE,
         ),
     ]
 
@@ -432,6 +487,7 @@ def _system_tools() -> List[MCPTool]:
             description="Return the current text clipboard contents.",
             input_schema=_schema({}),
             handler=_get_clipboard,
+            annotations=_READ_ONLY,
         ),
         MCPTool(
             name="ac_set_clipboard",
@@ -439,6 +495,7 @@ def _system_tools() -> List[MCPTool]:
             input_schema=_schema({"text": {"type": "string"}},
                                  required=["text"]),
             handler=_set_clipboard,
+            annotations=_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_execute_actions",
@@ -450,6 +507,7 @@ def _system_tools() -> List[MCPTool]:
                             "items": {"type": "array"}},
             }, required=["actions"]),
             handler=_execute_actions,
+            annotations=_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_execute_action_file",
@@ -457,12 +515,14 @@ def _system_tools() -> List[MCPTool]:
             input_schema=_schema({"file_path": {"type": "string"}},
                                  required=["file_path"]),
             handler=_execute_action_file,
+            annotations=_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_list_action_commands",
             description="Return every action command name the executor recognises.",
             input_schema=_schema({}),
             handler=_list_action_commands,
+            annotations=_READ_ONLY,
         ),
         MCPTool(
             name="ac_list_run_history",
@@ -473,6 +533,7 @@ def _system_tools() -> List[MCPTool]:
                 "source_type": {"type": "string"},
             }),
             handler=_list_run_history,
+            annotations=_READ_ONLY,
         ),
     ]
 
