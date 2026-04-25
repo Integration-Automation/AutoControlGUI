@@ -6,6 +6,7 @@ tools: ``initialize``, ``tools/list``, ``tools/call``, ``ping``, and
 ``notifications/initialized``. Each transport line is one JSON-RPC
 message — no Content-Length framing — matching the MCP stdio spec.
 """
+import itertools
 import json
 import sys
 import threading
@@ -44,7 +45,8 @@ class MCPServer:
 
     def __init__(self, tools: Optional[List[MCPTool]] = None,
                  resource_provider: Optional[ResourceProvider] = None,
-                 prompt_provider: Optional[PromptProvider] = None
+                 prompt_provider: Optional[PromptProvider] = None,
+                 concurrent_tools: bool = False
                  ) -> None:
         registry = tools if tools is not None else build_default_tool_registry()
         self._tools: Dict[str, MCPTool] = {tool.name: tool for tool in registry}
@@ -52,12 +54,17 @@ class MCPServer:
                             else default_resource_provider())
         self._prompts = (prompt_provider if prompt_provider is not None
                           else default_prompt_provider())
+        self._concurrent_tools = bool(concurrent_tools)
         self._stop = threading.Event()
         self._initialized = False
         self._notifier: Optional[Callable[[str, Dict[str, Any]], None]] = None
+        self._writer: Optional[Callable[[str], None]] = None
         self._active_calls: Dict[Any, ToolCallContext] = {}
         self._calls_lock = threading.Lock()
         self._write_lock = threading.Lock()
+        self._sampling_id_counter = itertools.count(1)
+        self._pending_outbound: Dict[Any, Dict[str, Any]] = {}
+        self._outbound_lock = threading.Lock()
 
     def register_tool(self, tool: MCPTool) -> None:
         """Add or replace a tool in the live registry."""
@@ -76,9 +83,15 @@ class MCPServer:
             "MCP server starting (stdio, %d tools)", len(self._tools),
         )
         prior_notifier = self._notifier
-        self._notifier = lambda method, params: self._write_message(
-            out_stream, _notification_message(method, params),
+        prior_writer = self._writer
+        prior_concurrent = self._concurrent_tools
+        self._writer = lambda payload: self._write_message(out_stream, payload)
+        self._notifier = lambda method, params: self._writer(  # type: ignore[misc]
+            _notification_message(method, params),
         )
+        # Stdio always opts into concurrent tool execution so sampling
+        # requests issued by tool handlers don't block the reader.
+        self._concurrent_tools = True
         try:
             while not self._stop.is_set():
                 line = in_stream.readline()
@@ -92,6 +105,8 @@ class MCPServer:
                     self._write_message(out_stream, response)
         finally:
             self._notifier = prior_notifier
+            self._writer = prior_writer
+            self._concurrent_tools = prior_concurrent
             autocontrol_logger.info("MCP server stopped")
 
     def _write_message(self, out_stream: TextIO, payload: str) -> None:
@@ -111,6 +126,16 @@ class MCPServer:
         """
         self._notifier = notifier
 
+    def set_writer(self, writer: Optional[Callable[[str], None]]) -> None:
+        """Install a callback used to write any outbound JSON-RPC line.
+
+        This is the lower-level companion to :meth:`set_notifier` —
+        used to deliver server-initiated requests (e.g. sampling) and
+        to emit asynchronously-produced tools/call responses when the
+        server is running in concurrent mode.
+        """
+        self._writer = writer
+
     def handle_line(self, line: str) -> Optional[str]:
         """Process one JSON-RPC line; return the response line or ``None``."""
         try:
@@ -125,10 +150,50 @@ class MCPServer:
         msg_id = message.get("id")
         params = message.get("params") or {}
 
+        if method is None and msg_id is not None and (
+            "result" in message or "error" in message
+        ):
+            self._dispatch_outbound_response(msg_id, message)
+            return None
         if msg_id is None:
             self._handle_notification(method, params)
             return None
+        if method == "tools/call" and self._concurrent_tools:
+            self._dispatch_tools_call_async(msg_id, params)
+            return None
         return self._build_response(msg_id, method, params)
+
+    def _dispatch_outbound_response(self, msg_id: Any,
+                                    message: Dict[str, Any]) -> None:
+        """Route a JSON-RPC response to the matching pending request."""
+        with self._outbound_lock:
+            slot = self._pending_outbound.get(msg_id)
+        if slot is None:
+            autocontrol_logger.debug(
+                "MCP outbound response for unknown id %r", msg_id,
+            )
+            return
+        if "error" in message:
+            slot["error"] = message["error"]
+        else:
+            slot["result"] = message.get("result")
+        slot["event"].set()
+
+    def _dispatch_tools_call_async(self, msg_id: Any,
+                                   params: Dict[str, Any]) -> None:
+        """Run a tools/call on a worker thread; the worker writes the reply."""
+        def worker() -> None:
+            payload = self._build_response(msg_id, "tools/call", params)
+            writer = self._writer
+            if writer is None:
+                autocontrol_logger.warning(
+                    "MCP async tool reply with no writer; dropping %s", msg_id,
+                )
+                return
+            writer(payload)
+        threading.Thread(
+            target=worker, daemon=True, name=f"MCPCall-{msg_id}",
+        ).start()
 
     def _build_response(self, msg_id: Any, method: Optional[str],
                         params: Dict[str, Any]) -> str:
@@ -202,6 +267,7 @@ class MCPServer:
                 "tools": {"listChanged": False},
                 "resources": {"listChanged": False, "subscribe": False},
                 "prompts": {"listChanged": False},
+                "sampling": {},
             },
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
         }
@@ -264,6 +330,55 @@ class MCPServer:
             "content": _to_content_blocks(result),
             "isError": False,
         }
+
+    def request_sampling(self, messages: List[Dict[str, Any]],
+                         system_prompt: Optional[str] = None,
+                         max_tokens: int = 1024,
+                         model_preferences: Optional[Dict[str, Any]] = None,
+                         timeout: float = 120.0) -> Dict[str, Any]:
+        """Ask the connected client to run an LLM sampling request.
+
+        Tools that need the model's help (e.g. an OCR fallback that
+        wants the model to identify a UI element from a screenshot)
+        can call this and receive the assistant's reply. Requires the
+        server to be running in concurrent mode with an outbound
+        writer set — typically meaning ``serve_stdio`` or the HTTP
+        SSE transport.
+        """
+        writer = self._writer
+        if writer is None:
+            raise RuntimeError(
+                "request_sampling requires an outbound writer; "
+                "start serve_stdio or call set_writer() first",
+            )
+        request_id = f"sampling-{next(self._sampling_id_counter)}"
+        params: Dict[str, Any] = {
+            "messages": list(messages),
+            "maxTokens": int(max_tokens),
+        }
+        if system_prompt is not None:
+            params["systemPrompt"] = str(system_prompt)
+        if model_preferences is not None:
+            params["modelPreferences"] = dict(model_preferences)
+        slot = {"event": threading.Event()}
+        with self._outbound_lock:
+            self._pending_outbound[request_id] = slot
+        envelope = json.dumps({
+            "jsonrpc": "2.0", "id": request_id,
+            "method": "sampling/createMessage", "params": params,
+        }, ensure_ascii=False, default=str)
+        try:
+            writer(envelope)
+            if not slot["event"].wait(timeout=timeout):
+                raise TimeoutError(
+                    f"sampling request {request_id} timed out after {timeout}s"
+                )
+        finally:
+            with self._outbound_lock:
+                self._pending_outbound.pop(request_id, None)
+        if "error" in slot:
+            raise RuntimeError(f"sampling failed: {slot['error']}")
+        return slot.get("result") or {}
 
     def _build_call_context(self, msg_id: Any,
                             params: Dict[str, Any]) -> ToolCallContext:

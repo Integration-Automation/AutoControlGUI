@@ -682,6 +682,80 @@ def test_tool_call_context_check_cancelled_raises():
         raise AssertionError("expected OperationCancelledError")
 
 
+def test_request_sampling_round_trips_via_writer():
+    """Tool calls sampling; we play the client and reply with a result."""
+    captured_lines = []
+
+    def handler(prompt, ctx):
+        del ctx
+        reply = server.request_sampling(
+            messages=[{"role": "user",
+                        "content": {"type": "text", "text": prompt}}],
+            max_tokens=64,
+        )
+        return reply["content"]["text"]
+
+    tool = MCPTool(
+        name="ask_model", description="ask",
+        input_schema={"type": "object", "properties": {
+            "prompt": {"type": "string"}}, "required": ["prompt"]},
+        handler=handler,
+    )
+    server = MCPServer(tools=[tool], concurrent_tools=True)
+    server.set_writer(captured_lines.append)
+
+    server.handle_line(_request("tools/call", msg_id=10, params={
+        "name": "ask_model", "arguments": {"prompt": "ping?"},
+    }))
+
+    # The worker is now blocked on sampling; wait for the outbound request.
+    deadline = threading.Event()
+    for _ in range(200):
+        if any('"sampling/createMessage"' in line for line in captured_lines):
+            break
+        deadline.wait(0.01)
+    sampling_lines = [line for line in captured_lines
+                       if '"sampling/createMessage"' in line]
+    assert sampling_lines, "expected outbound sampling request"
+    sampling_request = json.loads(sampling_lines[-1])
+    assert sampling_request["method"] == "sampling/createMessage"
+    sampling_id = sampling_request["id"]
+
+    server.handle_line(json.dumps({
+        "jsonrpc": "2.0", "id": sampling_id,
+        "result": {"role": "assistant", "model": "test-model",
+                    "content": {"type": "text", "text": "pong"}},
+    }))
+
+    for _ in range(200):
+        if any('"id": 10' in line for line in captured_lines):
+            break
+        deadline.wait(0.01)
+    final_lines = [line for line in captured_lines if '"id": 10' in line]
+    assert final_lines, "expected tools/call reply on writer"
+    final = json.loads(final_lines[-1])
+    assert final["result"]["isError"] is False
+    assert final["result"]["content"][0]["text"] == "pong"
+
+
+def test_request_sampling_without_writer_raises():
+    server = MCPServer(tools=[], concurrent_tools=True)
+    try:
+        server.request_sampling(messages=[
+            {"role": "user", "content": {"type": "text", "text": "hi"}}
+        ])
+    except RuntimeError as error:
+        assert "writer" in str(error)
+    else:
+        raise AssertionError("expected RuntimeError")
+
+
+def test_initialize_advertises_sampling_capability():
+    server = MCPServer(tools=[])
+    response = _decode(server.handle_line(_request("initialize", params={})))
+    assert "sampling" in response["result"]["capabilities"]
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {
