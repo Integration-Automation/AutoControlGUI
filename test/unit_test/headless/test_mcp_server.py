@@ -8,6 +8,10 @@ import io
 import json
 from typing import Any, Dict, List
 
+from je_auto_control.utils.mcp_server.prompts import (
+    MCPPrompt, MCPPromptArgument, StaticPromptProvider,
+    default_prompt_catalogue,
+)
 from je_auto_control.utils.mcp_server.resources import (
     ChainProvider, FileSystemProvider, MCPResource, ResourceProvider,
 )
@@ -498,6 +502,75 @@ def test_filesystem_provider_rejects_path_traversal(tmp_path):
     provider = FileSystemProvider(root=str(tmp_path))
     assert provider.read("autocontrol://files/../etc/passwd") is None
     assert provider.read("autocontrol://files/.hidden") is None
+
+
+def test_initialize_advertises_prompts_capability():
+    server = MCPServer(tools=[],
+                       prompt_provider=StaticPromptProvider([]))
+    response = _decode(server.handle_line(_request("initialize", params={})))
+    assert "prompts" in response["result"]["capabilities"]
+
+
+def test_prompts_list_returns_descriptors():
+    prompt = MCPPrompt(
+        name="hello", description="say hi",
+        arguments=[MCPPromptArgument("name", required=True)],
+        render=lambda args: f"hi {args['name']}",
+    )
+    server = MCPServer(tools=[],
+                       prompt_provider=StaticPromptProvider([prompt]))
+    response = _decode(server.handle_line(_request("prompts/list")))
+    descriptors = response["result"]["prompts"]
+    assert descriptors == [{
+        "name": "hello", "description": "say hi",
+        "arguments": [{"name": "name", "required": True}],
+    }]
+
+
+def test_prompts_get_renders_message_with_arguments():
+    prompt = MCPPrompt(
+        name="hello", description="say hi",
+        arguments=[MCPPromptArgument("name", required=True)],
+        render=lambda args: f"hi {args['name']}",
+    )
+    server = MCPServer(tools=[],
+                       prompt_provider=StaticPromptProvider([prompt]))
+    response = _decode(server.handle_line(_request("prompts/get", params={
+        "name": "hello", "arguments": {"name": "Jeff"},
+    })))
+    payload = response["result"]
+    assert payload["messages"][0]["content"]["text"] == "hi Jeff"
+
+
+def test_prompts_get_unknown_name_returns_error():
+    server = MCPServer(tools=[],
+                       prompt_provider=StaticPromptProvider([]))
+    response = _decode(server.handle_line(_request("prompts/get", params={
+        "name": "missing",
+    })))
+    assert response["error"]["code"] == -32602
+    assert "Unknown prompt" in response["error"]["message"]
+
+
+def test_prompts_get_missing_required_arg_returns_error():
+    prompt = MCPPrompt(
+        name="hello", description="say hi",
+        arguments=[MCPPromptArgument("name", required=True)],
+        render=lambda args: f"hi {args['name']}",
+    )
+    server = MCPServer(tools=[],
+                       prompt_provider=StaticPromptProvider([prompt]))
+    response = _decode(server.handle_line(_request("prompts/get", params={
+        "name": "hello", "arguments": {},
+    })))
+    assert response["error"]["code"] == -32602
+
+
+def test_default_prompt_catalogue_has_core_templates():
+    names = {prompt.name for prompt in default_prompt_catalogue()}
+    assert {"automate_ui_task", "record_and_generalize",
+            "compare_screenshots", "find_widget",
+            "explain_action_file"}.issubset(names)
 
 
 def test_default_registry_lists_core_automation_tools():

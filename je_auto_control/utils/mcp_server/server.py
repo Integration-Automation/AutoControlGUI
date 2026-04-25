@@ -12,6 +12,9 @@ import threading
 from typing import Any, Dict, List, Optional, TextIO
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.mcp_server.prompts import (
+    PromptProvider, default_prompt_provider,
+)
 from je_auto_control.utils.mcp_server.resources import (
     ResourceProvider, default_resource_provider,
 )
@@ -37,12 +40,15 @@ class MCPServer:
     """JSON-RPC 2.0 MCP server with a configurable tool registry."""
 
     def __init__(self, tools: Optional[List[MCPTool]] = None,
-                 resource_provider: Optional[ResourceProvider] = None
+                 resource_provider: Optional[ResourceProvider] = None,
+                 prompt_provider: Optional[PromptProvider] = None
                  ) -> None:
         registry = tools if tools is not None else build_default_tool_registry()
         self._tools: Dict[str, MCPTool] = {tool.name: tool for tool in registry}
         self._resources = (resource_provider if resource_provider is not None
                             else default_resource_provider())
+        self._prompts = (prompt_provider if prompt_provider is not None
+                          else default_prompt_provider())
         self._stop = threading.Event()
         self._initialized = False
 
@@ -132,6 +138,11 @@ class MCPServer:
                                    for resource in self._resources.list()]}
         if method == "resources/read":
             return self._handle_resources_read(params)
+        if method == "prompts/list":
+            return {"prompts": [prompt.to_descriptor()
+                                 for prompt in self._prompts.list()]}
+        if method == "prompts/get":
+            return self._handle_prompts_get(params)
         raise _MCPError(-32601, f"Method not found: {method}")
 
     @staticmethod
@@ -142,6 +153,7 @@ class MCPServer:
             "capabilities": {
                 "tools": {"listChanged": False},
                 "resources": {"listChanged": False, "subscribe": False},
+                "prompts": {"listChanged": False},
             },
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
         }
@@ -155,6 +167,21 @@ class MCPServer:
         if content is None:
             raise _MCPError(-32602, f"Unknown resource: {uri}")
         return {"contents": [content]}
+
+    def _handle_prompts_get(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        name = params.get("name")
+        arguments = params.get("arguments") or {}
+        if not isinstance(name, str) or not name:
+            raise _MCPError(-32602, "prompts/get requires string 'name'")
+        if not isinstance(arguments, dict):
+            raise _MCPError(-32602, "prompts/get 'arguments' must be an object")
+        try:
+            payload = self._prompts.get(name, arguments)
+        except ValueError as error:
+            raise _MCPError(-32602, str(error)) from error
+        if payload is None:
+            raise _MCPError(-32602, f"Unknown prompt: {name}")
+        return payload
 
     def _handle_tools_call(self, params: Dict[str, Any]) -> Dict[str, Any]:
         name = params.get("name")

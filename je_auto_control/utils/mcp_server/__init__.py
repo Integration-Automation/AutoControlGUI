@@ -9,6 +9,9 @@ dependencies are required.
 from je_auto_control.utils.mcp_server.server import (
     MCPServer, start_mcp_stdio_server,
 )
+from je_auto_control.utils.mcp_server.prompts import (
+    MCPPrompt, MCPPromptArgument, PromptProvider, default_prompt_provider,
+)
 from je_auto_control.utils.mcp_server.resources import (
     MCPResource, ResourceProvider, default_resource_provider,
 )
@@ -17,8 +20,10 @@ from je_auto_control.utils.mcp_server.tools import (
 )
 
 __all__ = [
-    "MCPContent", "MCPResource", "MCPServer", "MCPTool",
-    "MCPToolAnnotations", "ResourceProvider",
-    "build_default_tool_registry", "default_resource_provider",
+    "MCPContent", "MCPPrompt", "MCPPromptArgument", "MCPResource",
+    "MCPServer", "MCPTool", "MCPToolAnnotations",
+    "PromptProvider", "ResourceProvider",
+    "build_default_tool_registry",
+    "default_prompt_provider", "default_resource_provider",
     "start_mcp_stdio_server",
 ]
