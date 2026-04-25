@@ -1,4 +1,4 @@
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable
 
 # utils cv2_utils
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
@@ -7,6 +7,9 @@ from je_auto_control.utils.exception.exceptions import CallbackExecutorException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
+from je_auto_control.utils.executor.mouse_aliases import (
+    click_mouse_left, click_mouse_middle, click_mouse_right,
+)
 # file process
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
 # html report
@@ -48,24 +51,6 @@ from je_auto_control.wrapper.auto_control_record import record, stop_record
 from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot
 
 
-def _click_mouse_left(x: Optional[int] = None,
-                      y: Optional[int] = None) -> Tuple[int, int, int]:
-    """Callback adapter: click left mouse button (button is hardcoded)."""
-    return click_mouse("mouse_left", x, y)
-
-
-def _click_mouse_right(x: Optional[int] = None,
-                       y: Optional[int] = None) -> Tuple[int, int, int]:
-    """Callback adapter: click right mouse button (button is hardcoded)."""
-    return click_mouse("mouse_right", x, y)
-
-
-def _click_mouse_middle(x: Optional[int] = None,
-                        y: Optional[int] = None) -> Tuple[int, int, int]:
-    """Callback adapter: click middle mouse button (button is hardcoded)."""
-    return click_mouse("mouse_middle", x, y)
-
-
 class CallbackFunctionExecutor:
     """
     CallbackFunctionExecutor
@@ -79,9 +64,9 @@ class CallbackFunctionExecutor:
         # 事件字典，對應字串名稱到實際函式
         self.event_dict: dict = {
             # mouse 滑鼠相關
-            "AC_mouse_left": _click_mouse_left,
-            "AC_mouse_right": _click_mouse_right,
-            "AC_mouse_middle": _click_mouse_middle,
+            "AC_mouse_left": click_mouse_left,
+            "AC_mouse_right": click_mouse_right,
+            "AC_mouse_middle": click_mouse_middle,
             "AC_click_mouse": click_mouse,
             "AC_get_mouse_table": get_mouse_table,
             "AC_get_mouse_position": get_mouse_position,

@@ -1,5 +1,5 @@
 import types
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from je_auto_control.utils.exception.exception_tags import (
     action_is_null_error_message, add_command_exception_error_message,
@@ -21,6 +21,9 @@ from je_auto_control.utils.clipboard.clipboard import (
 from je_auto_control.utils.executor.action_schema import validate_actions
 from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue,
+)
+from je_auto_control.utils.executor.mouse_aliases import (
+    click_mouse_left, click_mouse_middle, click_mouse_right,
 )
 from je_auto_control.utils.ocr.ocr_engine import (
     click_text as ocr_click_text,
@@ -91,24 +94,6 @@ def _vlm_locate_as_list(description: str,
     return None if coords is None else [coords[0], coords[1]]
 
 
-def _click_mouse_left(x: Optional[int] = None,
-                      y: Optional[int] = None) -> Tuple[int, int, int]:
-    """Executor adapter: click left mouse button (button is hardcoded)."""
-    return click_mouse("mouse_left", x, y)
-
-
-def _click_mouse_right(x: Optional[int] = None,
-                       y: Optional[int] = None) -> Tuple[int, int, int]:
-    """Executor adapter: click right mouse button (button is hardcoded)."""
-    return click_mouse("mouse_right", x, y)
-
-
-def _click_mouse_middle(x: Optional[int] = None,
-                        y: Optional[int] = None) -> Tuple[int, int, int]:
-    """Executor adapter: click middle mouse button (button is hardcoded)."""
-    return click_mouse("mouse_middle", x, y)
-
-
 def _history_list_as_dicts(limit: int = 100,
                            source_type: Optional[str] = None) -> List[dict]:
     """Executor adapter: list run history as plain dicts (JSON-friendly)."""
@@ -142,9 +127,9 @@ class Executor:
         # 事件字典，對應字串名稱到函式
         self.event_dict: dict = {
             # Mouse 滑鼠相關
-            "AC_mouse_left": _click_mouse_left,
-            "AC_mouse_right": _click_mouse_right,
-            "AC_mouse_middle": _click_mouse_middle,
+            "AC_mouse_left": click_mouse_left,
+            "AC_mouse_right": click_mouse_right,
+            "AC_mouse_middle": click_mouse_middle,
             "AC_click_mouse": click_mouse,
             "AC_get_mouse_table": get_mouse_table,
             "AC_get_mouse_position": get_mouse_position,
