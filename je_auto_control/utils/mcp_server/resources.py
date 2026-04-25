@@ -7,10 +7,13 @@ inspecting which executor commands the model can call. The provider
 abstraction lets callers compose custom sources without touching the
 JSON-RPC layer.
 """
+import base64
+import io
 import json
 import os
+import threading
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -44,6 +47,21 @@ class ResourceProvider:
     def set_workspace_root(self, root: str) -> None:
         """Hook for MCP roots. Default: no-op. FS-backed providers override."""
         del root
+
+    def subscribe(self, uri: str,
+                  on_update: Callable[[], None]) -> Optional[Any]:
+        """Optional hook: start emitting ``on_update`` calls until unsubscribed.
+
+        Return a non-``None`` handle when this provider owns ``uri`` and
+        accepted the subscription. The default implementation returns
+        ``None`` (not subscribable).
+        """
+        del uri, on_update
+        return None
+
+    def unsubscribe(self, uri: str, handle: Any) -> None:
+        """Cancel a previous :meth:`subscribe` handle."""
+        del uri, handle
 
 
 class FileSystemProvider(ResourceProvider):
@@ -173,6 +191,94 @@ class ChainProvider(ResourceProvider):
         for provider in self.providers:
             provider.set_workspace_root(root)
 
+    def subscribe(self, uri: str,
+                  on_update: Callable[[], None]) -> Optional[Any]:
+        for provider in self.providers:
+            handle = provider.subscribe(uri, on_update)
+            if handle is not None:
+                return (provider, handle)
+        return None
+
+    def unsubscribe(self, uri: str, handle: Any) -> None:
+        if not isinstance(handle, tuple) or len(handle) != 2:
+            return
+        provider, child_handle = handle
+        provider.unsubscribe(uri, child_handle)
+
+
+class LiveScreenProvider(ResourceProvider):
+    """Live screen feed at ``autocontrol://screen/live``.
+
+    ``read`` always grabs a fresh PNG (base64-encoded). Subscribers
+    receive ``on_update`` calls every ``poll_seconds`` so they can
+    re-fetch the resource and surface live state to the model.
+    """
+
+    URI = "autocontrol://screen/live"
+
+    def __init__(self, poll_seconds: float = 1.0) -> None:
+        self._poll_seconds = max(0.1, float(poll_seconds))
+        self._lock = threading.Lock()
+        self._subscribers: Dict[int, Callable[[], None]] = {}
+        self._next_handle = 1
+        self._thread: Optional[threading.Thread] = None
+        self._stop = threading.Event()
+
+    def list(self) -> List[MCPResource]:
+        return [MCPResource(
+            uri=self.URI, name="screen_live",
+            description=("Current screen as base64 PNG. Subscribe to be "
+                          "notified when it should be re-fetched."),
+            mime_type="image/png",
+        )]
+
+    def read(self, uri: str) -> Optional[Dict[str, Any]]:
+        if uri != self.URI:
+            return None
+        from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
+        image = pil_screenshot()
+        buffer = io.BytesIO()
+        image.save(buffer, format="PNG")
+        encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+        return {"uri": uri, "mimeType": "image/png", "blob": encoded}
+
+    def subscribe(self, uri: str,
+                  on_update: Callable[[], None]) -> Optional[Any]:
+        if uri != self.URI:
+            return None
+        with self._lock:
+            handle = self._next_handle
+            self._next_handle += 1
+            self._subscribers[handle] = on_update
+            if self._thread is None or not self._thread.is_alive():
+                self._stop.clear()
+                self._thread = threading.Thread(
+                    target=self._broadcast_loop, daemon=True,
+                    name="MCPLiveScreen",
+                )
+                self._thread.start()
+        return handle
+
+    def unsubscribe(self, uri: str, handle: Any) -> None:
+        if uri != self.URI:
+            return
+        with self._lock:
+            self._subscribers.pop(int(handle), None)
+            if not self._subscribers:
+                self._stop.set()
+                self._thread = None
+
+    def _broadcast_loop(self) -> None:
+        while not self._stop.is_set():
+            with self._lock:
+                callbacks = list(self._subscribers.values())
+            for callback in callbacks:
+                try:
+                    callback()
+                except (OSError, RuntimeError, ValueError):
+                    pass
+            self._stop.wait(self._poll_seconds)
+
 
 def default_resource_provider(root: str = ".") -> ResourceProvider:
     """Return the resource provider exposed by the default MCP server."""
@@ -180,11 +286,12 @@ def default_resource_provider(root: str = ".") -> ResourceProvider:
         FileSystemProvider(root=root),
         HistoryProvider(),
         CommandsProvider(),
+        LiveScreenProvider(),
     ])
 
 
 __all__ = [
     "ChainProvider", "CommandsProvider", "FileSystemProvider",
-    "HistoryProvider", "MCPResource", "ResourceProvider",
-    "default_resource_provider",
+    "HistoryProvider", "LiveScreenProvider", "MCPResource",
+    "ResourceProvider", "default_resource_provider",
 ]

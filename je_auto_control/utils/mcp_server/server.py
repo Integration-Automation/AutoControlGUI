@@ -86,6 +86,8 @@ class MCPServer:
         self._pending_outbound: Dict[Any, Dict[str, Any]] = {}
         self._outbound_lock = threading.Lock()
         self._client_capabilities: Dict[str, Any] = {}
+        self._resource_subscriptions: Dict[str, Any] = {}
+        self._subscriptions_lock = threading.Lock()
 
     def register_tool(self, tool: MCPTool) -> None:
         """Add or replace a tool in the live registry.
@@ -379,6 +381,10 @@ class MCPServer:
                                    for resource in self._resources.list()]}
         if method == "resources/read":
             return self._handle_resources_read(params)
+        if method == "resources/subscribe":
+            return self._handle_resources_subscribe(params)
+        if method == "resources/unsubscribe":
+            return self._handle_resources_unsubscribe(params)
         if method == "prompts/list":
             return {"prompts": [prompt.to_descriptor()
                                  for prompt in self._prompts.list()]}
@@ -411,7 +417,7 @@ class MCPServer:
             self._client_capabilities = client_caps
         capabilities: Dict[str, Any] = {
             "tools": {"listChanged": True},
-            "resources": {"listChanged": False, "subscribe": False},
+            "resources": {"listChanged": False, "subscribe": True},
             "prompts": {"listChanged": False},
             "sampling": {},
             "logging": {},
@@ -433,6 +439,45 @@ class MCPServer:
         if content is None:
             raise _MCPError(-32602, f"Unknown resource: {uri}")
         return {"contents": [content]}
+
+    def _handle_resources_subscribe(self,
+                                    params: Dict[str, Any]) -> Dict[str, Any]:
+        uri = params.get("uri")
+        if not isinstance(uri, str) or not uri:
+            raise _MCPError(-32602, "resources/subscribe requires 'uri'")
+        with self._subscriptions_lock:
+            if uri in self._resource_subscriptions:
+                return {}
+        handle = self._resources.subscribe(
+            uri, lambda u=uri: self._notify_resource_updated(u),
+        )
+        if handle is None:
+            raise _MCPError(-32602, f"Unsubscribable resource: {uri}")
+        with self._subscriptions_lock:
+            self._resource_subscriptions[uri] = handle
+        return {}
+
+    def _handle_resources_unsubscribe(self,
+                                      params: Dict[str, Any]) -> Dict[str, Any]:
+        uri = params.get("uri")
+        if not isinstance(uri, str) or not uri:
+            raise _MCPError(-32602, "resources/unsubscribe requires 'uri'")
+        with self._subscriptions_lock:
+            handle = self._resource_subscriptions.pop(uri, None)
+        if handle is not None:
+            self._resources.unsubscribe(uri, handle)
+        return {}
+
+    def _notify_resource_updated(self, uri: str) -> None:
+        notifier = self._notifier
+        if notifier is None:
+            return
+        try:
+            notifier("notifications/resources/updated", {"uri": uri})
+        except (OSError, RuntimeError, ValueError):
+            autocontrol_logger.exception(
+                "MCP failed to send resources/updated for %s", uri,
+            )
 
     def _handle_prompts_get(self, params: Dict[str, Any]) -> Dict[str, Any]:
         name = params.get("name")

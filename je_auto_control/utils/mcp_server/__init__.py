@@ -27,7 +27,8 @@ from je_auto_control.utils.mcp_server.prompts import (
     MCPPrompt, MCPPromptArgument, PromptProvider, default_prompt_provider,
 )
 from je_auto_control.utils.mcp_server.resources import (
-    MCPResource, ResourceProvider, default_resource_provider,
+    LiveScreenProvider, MCPResource, ResourceProvider,
+    default_resource_provider,
 )
 from je_auto_control.utils.mcp_server.tools import (
     MCPContent, MCPTool, MCPToolAnnotations, build_default_tool_registry,
@@ -35,9 +36,9 @@ from je_auto_control.utils.mcp_server.tools import (
 )
 
 __all__ = [
-    "AuditLogger", "FakeState", "HttpMCPServer", "MCPContent",
-    "MCPLogBridge", "MCPPrompt", "MCPPromptArgument", "MCPResource",
-    "MCPServer", "MCPTool", "MCPToolAnnotations",
+    "AuditLogger", "FakeState", "HttpMCPServer", "LiveScreenProvider",
+    "MCPContent", "MCPLogBridge", "MCPPrompt", "MCPPromptArgument",
+    "MCPResource", "MCPServer", "MCPTool", "MCPToolAnnotations",
     "OperationCancelledError", "PluginWatcher", "PromptProvider",
     "RateLimiter", "ResourceProvider", "ToolCallContext",
     "build_default_tool_registry",

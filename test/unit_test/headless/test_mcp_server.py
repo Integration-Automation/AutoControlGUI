@@ -1504,6 +1504,77 @@ def test_aliases_excluded_from_read_only_registry():
     assert "mouse_pos" in names
 
 
+def test_initialize_advertises_resources_subscribe_capability():
+    server = MCPServer(tools=[])
+    response = _decode(server.handle_line(_request("initialize", params={})))
+    caps = response["result"]["capabilities"]
+    assert caps["resources"]["subscribe"] is True
+
+
+def test_resources_subscribe_and_notification_round_trip():
+    """Subscribe to a fake resource and verify the server forwards updates."""
+    from je_auto_control.utils.mcp_server.resources import (
+        ChainProvider, MCPResource, ResourceProvider,
+    )
+
+    class _FakeProvider(ResourceProvider):
+        URI = "fake://live"
+
+        def __init__(self):
+            self.callback = None
+
+        def list(self):
+            return [MCPResource(uri=self.URI, name="fake")]
+
+        def read(self, uri):
+            if uri == self.URI:
+                return {"uri": uri, "mimeType": "text/plain", "text": "hi"}
+            return None
+
+        def subscribe(self, uri, on_update):
+            if uri != self.URI:
+                return None
+            self.callback = on_update
+            return "fake-handle"
+
+        def unsubscribe(self, uri, handle):
+            self.callback = None
+
+    fake = _FakeProvider()
+    chain = ChainProvider([fake])
+    captured = []
+    server = MCPServer(tools=[], resource_provider=chain)
+    server.set_notifier(lambda method, params: captured.append((method, params)))
+
+    sub_response = _decode(server.handle_line(_request(
+        "resources/subscribe", params={"uri": "fake://live"},
+    )))
+    assert sub_response["result"] == {}
+    assert fake.callback is not None
+
+    # Simulate the provider noticing fresh content.
+    fake.callback()
+
+    methods = [event[0] for event in captured]
+    assert "notifications/resources/updated" in methods
+    update = next(e for e in captured if e[0] == "notifications/resources/updated")
+    assert update[1] == {"uri": "fake://live"}
+
+    unsub_response = _decode(server.handle_line(_request(
+        "resources/unsubscribe", params={"uri": "fake://live"},
+    )))
+    assert unsub_response["result"] == {}
+    assert fake.callback is None
+
+
+def test_resources_subscribe_rejects_unknown_uri():
+    server = MCPServer(tools=[])
+    response = _decode(server.handle_line(_request(
+        "resources/subscribe", params={"uri": "fake://nowhere"},
+    )))
+    assert response["error"]["code"] == -32602
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {
