@@ -1404,6 +1404,75 @@ def test_launch_process_rejects_empty_argv():
         raise AssertionError("expected ValueError for empty argv")
 
 
+def test_auto_screenshot_on_error_skipped_when_env_unset(monkeypatch, tmp_path):
+    monkeypatch.delenv("JE_AUTOCONTROL_MCP_ERROR_SHOTS", raising=False)
+    from je_auto_control.utils.mcp_server.audit import AuditLogger
+    audit = AuditLogger(path=str(tmp_path / "audit.jsonl"))
+
+    def boom(x):
+        raise RuntimeError("nope")
+
+    tool = MCPTool(
+        name="boom", description="boom",
+        input_schema={"type": "object", "properties": {
+            "x": {"type": "integer"}}, "required": ["x"]},
+        handler=boom,
+    )
+    server = MCPServer(tools=[tool], audit_logger=audit)
+    server.handle_line(_request("tools/call", params={
+        "name": "boom", "arguments": {"x": 1},
+    }))
+    record = json.loads(open(audit.path, encoding="utf-8").readline())
+    assert "artifact_path" not in record
+
+
+def test_auto_screenshot_on_error_writes_file_when_env_set(
+        monkeypatch, tmp_path):
+    """When the env var is set we capture a screenshot via pil_screenshot."""
+    debug_dir = tmp_path / "shots"
+    monkeypatch.setenv("JE_AUTOCONTROL_MCP_ERROR_SHOTS", str(debug_dir))
+
+    saved_paths = []
+
+    def fake_screenshot(file_path=None, screen_region=None):
+        saved_paths.append(file_path)
+        # Touch the file so the audit record's path actually exists.
+        if file_path is not None:
+            open(file_path, "wb").close()
+
+        class _Stub:
+            def save(self, *_args, **_kwargs):
+                return None
+
+            size = (1, 1)
+        return _Stub()
+
+    import je_auto_control.utils.cv2_utils.screenshot as screenshot_module
+    monkeypatch.setattr(screenshot_module, "pil_screenshot", fake_screenshot)
+
+    from je_auto_control.utils.mcp_server.audit import AuditLogger
+    audit = AuditLogger(path=str(tmp_path / "audit.jsonl"))
+
+    def boom(x):
+        raise RuntimeError("nope")
+
+    tool = MCPTool(
+        name="boom2", description="boom2",
+        input_schema={"type": "object", "properties": {
+            "x": {"type": "integer"}}, "required": ["x"]},
+        handler=boom,
+    )
+    server = MCPServer(tools=[tool], audit_logger=audit)
+    response = _decode(server.handle_line(_request("tools/call", params={
+        "name": "boom2", "arguments": {"x": 1},
+    })))
+    assert response["result"]["isError"] is True
+    assert "error screenshot saved to" in response["result"]["content"][0]["text"]
+    record = json.loads(open(audit.path, encoding="utf-8").readline())
+    assert record["artifact_path"]
+    assert saved_paths
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {

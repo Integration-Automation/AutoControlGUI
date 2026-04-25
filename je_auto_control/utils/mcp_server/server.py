@@ -8,6 +8,7 @@ message — no Content-Length framing — matching the MCP stdio spec.
 """
 import itertools
 import json
+import os
 import sys
 import threading
 import time
@@ -479,14 +480,18 @@ class MCPServer:
         except (OSError, RuntimeError, ValueError, TypeError,
                 AttributeError, KeyError, NotImplementedError) as error:
             autocontrol_logger.warning("MCP tool %s failed: %r", name, error)
+            artifact = _capture_error_screenshot(name)
             self._audit.record(
                 tool=name, arguments=arguments, status="error",
                 duration_seconds=time.monotonic() - started_at,
                 error_text=f"{type(error).__name__}: {error}",
+                artifact_path=artifact,
             )
+            error_text = f"{type(error).__name__}: {error}"
+            if artifact is not None:
+                error_text += f"\n(error screenshot saved to {artifact})"
             return {
-                "content": [{"type": "text",
-                             "text": f"{type(error).__name__}: {error}"}],
+                "content": [{"type": "text", "text": error_text}],
                 "isError": True,
             }
         finally:
@@ -579,6 +584,33 @@ def _stringify_result(value: Any) -> str:
         return json.dumps(value, ensure_ascii=False, default=str)
     except (TypeError, ValueError):
         return repr(value)
+
+
+def _capture_error_screenshot(tool_name: str) -> Optional[str]:
+    """Save a debug screenshot when JE_AUTOCONTROL_MCP_ERROR_SHOTS is set."""
+    debug_dir = os.environ.get("JE_AUTOCONTROL_MCP_ERROR_SHOTS")
+    if not debug_dir:
+        return None
+    target_dir = os.path.realpath(os.fspath(debug_dir))
+    try:
+        os.makedirs(target_dir, exist_ok=True)
+    except OSError as error:
+        autocontrol_logger.info(
+            "MCP error-screenshot dir unavailable: %r", error,
+        )
+        return None
+    filename = f"{tool_name}_{int(time.time() * 1000)}.png"
+    path = os.path.join(target_dir, filename)
+    try:
+        from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
+        pil_screenshot(file_path=path)
+    except (OSError, RuntimeError, ValueError, AttributeError,
+            ImportError) as error:
+        autocontrol_logger.info(
+            "MCP failed to capture error screenshot: %r", error,
+        )
+        return None
+    return path
 
 
 def _file_uri_to_path(uri: str) -> Optional[str]:

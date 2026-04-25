@@ -35,7 +35,8 @@ class AuditLogger:
 
     def record(self, *, tool: str, arguments: Dict[str, Any],
                status: str, duration_seconds: float,
-               error_text: Optional[str] = None) -> None:
+               error_text: Optional[str] = None,
+               artifact_path: Optional[str] = None) -> None:
         """Append one audit entry. No-ops when no path is configured."""
         if self._path is None:
             return
@@ -48,6 +49,8 @@ class AuditLogger:
         }
         if error_text is not None:
             entry["error"] = error_text
+        if artifact_path is not None:
+            entry["artifact_path"] = artifact_path
         line = json.dumps(entry, ensure_ascii=False, default=str)
         with self._lock:
             with open(self._path, "a", encoding="utf-8") as handle:
