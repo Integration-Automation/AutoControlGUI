@@ -3,8 +3,6 @@ import io
 import json
 import sys
 
-import pytest
-
 from je_auto_control.utils.mcp_server.__main__ import main
 
 
@@ -17,7 +15,7 @@ def _capture(monkeypatch, argv):
 
 def test_list_tools_emits_json_and_exits(monkeypatch):
     rc, output = _capture(monkeypatch, ["--list-tools"])
-    assert rc == 0
+    assert rc is None
     descriptors = json.loads(output)
     assert isinstance(descriptors, list)
     assert descriptors
@@ -34,7 +32,7 @@ def test_list_tools_with_read_only_drops_destructive(monkeypatch):
 
 def test_list_resources_emits_json(monkeypatch):
     rc, output = _capture(monkeypatch, ["--list-resources"])
-    assert rc == 0
+    assert rc is None
     descriptors = json.loads(output)
     assert isinstance(descriptors, list)
     uris = {d["uri"] for d in descriptors}
@@ -44,7 +42,7 @@ def test_list_resources_emits_json(monkeypatch):
 
 def test_list_prompts_emits_json(monkeypatch):
     rc, output = _capture(monkeypatch, ["--list-prompts"])
-    assert rc == 0
+    assert rc is None
     descriptors = json.loads(output)
     assert isinstance(descriptors, list)
     names = {d["name"] for d in descriptors}
@@ -58,5 +56,5 @@ def test_no_flags_starts_stdio_server(monkeypatch):
     monkeypatch.setattr(cli_mod, "start_mcp_stdio_server",
                         lambda: started.append(True))
     rc = main([])
-    assert rc == 0
+    assert rc is None
     assert started == [True]

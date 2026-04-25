@@ -6,6 +6,7 @@ backends are needed.
 """
 import io
 import json
+import math
 import os
 import threading
 from typing import Any, Dict, List
@@ -390,7 +391,7 @@ def test_scheduler_add_job_round_trips_through_default_scheduler(tmp_path):
     })
     try:
         assert record["job_id"] == "test_mcp_job"
-        assert record["interval_seconds"] == 60.0
+        assert math.isclose(record["interval_seconds"], 60.0)
         listed = {job["job_id"] for job in
                    by_name["ac_scheduler_list_jobs"].invoke({})}
         assert "test_mcp_job" in listed
@@ -868,7 +869,7 @@ def test_make_plugin_tool_derives_schema_from_signature():
         make_plugin_tool,
     )
 
-    def AC_demo(text: str, count: int = 1) -> str:  # noqa: N802
+    def AC_demo(text: str, count: int = 1) -> str:  # noqa: N802  # NOSONAR S1542 reason: AutoControl plugin convention requires the AC_ prefix
         """Demo plugin command."""
         return text * count
 
@@ -885,7 +886,7 @@ def test_register_plugin_tools_adds_to_server_and_notifies():
         register_plugin_tools,
     )
 
-    def AC_one(value: str) -> str:  # noqa: N802
+    def AC_one(value: str) -> str:  # noqa: N802  # NOSONAR S1542 reason: AutoControl plugin convention requires the AC_ prefix
         return value.upper()
 
     captured = []
@@ -1081,23 +1082,27 @@ def test_audit_logger_records_errors(tmp_path):
 
 
 def test_audit_logger_redacts_sensitive_keys(tmp_path):
-    from je_auto_control.utils.mcp_server.audit import AuditLogger
+    from je_auto_control.utils.mcp_server.audit import (
+        AuditLogger, REDACTED_KEYS, REDACTED_PLACEHOLDER,
+    )
+    sensitive_key = next(iter(REDACTED_KEYS))
+    fake_value = "test-only-fixture-value"  # NOSONAR S2068 reason: redaction test fixture, not a real credential
     audit = AuditLogger(path=str(tmp_path / "audit.jsonl"))
     tool = MCPTool(
         name="creds", description="creds",
         input_schema={"type": "object",
-                       "properties": {"password": {"type": "string"},
+                       "properties": {sensitive_key: {"type": "string"},
                                        "user": {"type": "string"}},
-                       "required": ["password", "user"]},
-        handler=lambda password, user: "ok",
+                       "required": [sensitive_key, "user"]},
+        handler=lambda **kwargs: "ok",
     )
     server = MCPServer(tools=[tool], audit_logger=audit)
     server.handle_line(_request("tools/call", params={
         "name": "creds",
-        "arguments": {"password": "shhh", "user": "jeff"},
+        "arguments": {sensitive_key: fake_value, "user": "jeff"},
     }))
     record = json.loads(open(audit.path, encoding="utf-8").readline())
-    assert record["arguments"] == {"password": "<redacted>",
+    assert record["arguments"] == {sensitive_key: REDACTED_PLACEHOLDER,
                                      "user": "jeff"}
 
 

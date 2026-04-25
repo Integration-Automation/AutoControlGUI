@@ -15,6 +15,8 @@ import threading
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
+_MIME_JSON = "application/json"
+
 
 @dataclass(frozen=True)
 class MCPResource:
@@ -90,7 +92,7 @@ class FileSystemProvider(ResourceProvider):
                 uri=f"{self.scheme}://files/{name}",
                 name=name,
                 description=f"action JSON file in {self.root}",
-                mime_type="application/json",
+                mime_type=_MIME_JSON,
             ))
         return out
 
@@ -108,7 +110,7 @@ class FileSystemProvider(ResourceProvider):
             return None
         with open(path, encoding="utf-8") as handle:
             text = handle.read()
-        return {"uri": uri, "mimeType": "application/json", "text": text}
+        return {"uri": uri, "mimeType": _MIME_JSON, "text": text}
 
 
 class HistoryProvider(ResourceProvider):
@@ -120,7 +122,7 @@ class HistoryProvider(ResourceProvider):
         return [MCPResource(
             uri=self.URI, name="run_history",
             description="Recent script-run history records (last 100).",
-            mime_type="application/json",
+            mime_type=_MIME_JSON,
         )]
 
     def read(self, uri: str) -> Optional[Dict[str, Any]]:
@@ -139,7 +141,7 @@ class HistoryProvider(ResourceProvider):
             "duration_seconds": row.duration_seconds,
         } for row in rows]
         return {
-            "uri": uri, "mimeType": "application/json",
+            "uri": uri, "mimeType": _MIME_JSON,
             "text": json.dumps(data, ensure_ascii=False, indent=2),
         }
 
@@ -153,7 +155,7 @@ class CommandsProvider(ResourceProvider):
         return [MCPResource(
             uri=self.URI, name="executor_commands",
             description="Every AC_* command name the executor recognises.",
-            mime_type="application/json",
+            mime_type=_MIME_JSON,
         )]
 
     def read(self, uri: str) -> Optional[Dict[str, Any]]:
@@ -162,7 +164,7 @@ class CommandsProvider(ResourceProvider):
         from je_auto_control.utils.executor.action_executor import executor
         names = sorted(executor.known_commands())
         return {
-            "uri": uri, "mimeType": "application/json",
+            "uri": uri, "mimeType": _MIME_JSON,
             "text": json.dumps(names, ensure_ascii=False, indent=2),
         }
 

@@ -50,8 +50,8 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list = None) -> int:
-    """CLI entry point. Returns the process exit code."""
+def main(argv: list = None) -> None:
+    """CLI entry point. Performs the requested action and returns ``None``."""
     parser = _build_parser()
     args = parser.parse_args(argv)
     if args.fake_backend:
@@ -61,9 +61,8 @@ def main(argv: list = None) -> int:
     listing_modes = (args.list_tools, args.list_resources, args.list_prompts)
     if any(listing_modes):
         _print_listings(args)
-        return 0
+        return
     start_mcp_stdio_server()
-    return 0
 
 
 def _print_listings(args: argparse.Namespace) -> None:
@@ -85,4 +84,4 @@ def _print_listings(args: argparse.Namespace) -> None:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

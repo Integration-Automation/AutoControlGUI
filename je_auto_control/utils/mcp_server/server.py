@@ -15,8 +15,6 @@ import time
 from typing import Any, Callable, Dict, List, Optional, TextIO
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-import logging
-
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
@@ -41,6 +39,7 @@ from je_auto_control.utils.mcp_server.tools._validation import (
 PROTOCOL_VERSION = "2025-06-18"
 SERVER_NAME = "je_auto_control"
 SERVER_VERSION = "0.1.0"
+_TOOLS_CALL_METHOD = "tools/call"
 
 
 class _MCPError(Exception):
@@ -224,7 +223,7 @@ class MCPServer:
         if msg_id is None:
             self._handle_notification(method, params)
             return None
-        if method == "tools/call" and self._concurrent_tools:
+        if method == _TOOLS_CALL_METHOD and self._concurrent_tools:
             self._dispatch_tools_call_async(msg_id, params)
             return None
         return self._build_response(msg_id, method, params)
@@ -249,7 +248,7 @@ class MCPServer:
                                    params: Dict[str, Any]) -> None:
         """Run a tools/call on a worker thread; the worker writes the reply."""
         def worker() -> None:
-            payload = self._build_response(msg_id, "tools/call", params)
+            payload = self._build_response(msg_id, _TOOLS_CALL_METHOD, params)
             writer = self._writer
             if writer is None:
                 autocontrol_logger.warning(
@@ -374,7 +373,7 @@ class MCPServer:
         if method == "tools/list":
             return {"tools": [tool.to_descriptor()
                               for tool in self._tools.values()]}
-        if method == "tools/call":
+        if method == _TOOLS_CALL_METHOD:
             return self._handle_tools_call(msg_id, params)
         if method == "resources/list":
             return {"resources": [resource.to_descriptor()
@@ -524,7 +523,8 @@ class MCPServer:
             )
             raise
         except (OSError, RuntimeError, ValueError, TypeError,
-                AttributeError, KeyError, NotImplementedError) as error:
+                AttributeError, KeyError) as error:
+            # NotImplementedError subclasses RuntimeError so it's already covered.
             autocontrol_logger.warning("MCP tool %s failed: %r", name, error)
             artifact = _capture_error_screenshot(name)
             self._audit.record(

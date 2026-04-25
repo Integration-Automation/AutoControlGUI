@@ -485,6 +485,7 @@ def launch_process(argv: List[str],
         cwd = os.path.realpath(os.fspath(working_directory))
         if not os.path.isdir(cwd):
             raise ValueError(f"working_directory does not exist: {cwd}")
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
     process = subprocess.Popen(  # nosec B603  # reason: argv list, no shell expansion
         cleaned, cwd=cwd, stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
@@ -552,6 +553,7 @@ def shell_command(command: str, timeout: float = 30.0
         raise ValueError("command must be a non-empty string")
     argv = shlex.split(command, posix=False) if os.name == "nt" \
         else shlex.split(command)
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
     proc = subprocess.run(  # nosec B603  # reason: argv from shlex.split, no shell
         argv, capture_output=True, text=True,
         timeout=float(timeout), check=False,

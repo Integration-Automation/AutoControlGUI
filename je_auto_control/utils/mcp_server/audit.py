@@ -57,21 +57,22 @@ class AuditLogger:
                 handle.write(line + "\n")
 
 
-_REDACTED_KEYS = frozenset({"password", "token", "secret", "api_key",
+REDACTED_KEYS = frozenset({"password", "token", "secret", "api_key",
                             "authorization"})
+REDACTED_PLACEHOLDER = "<redacted>"
 
 
 def _sanitise(arguments: Dict[str, Any]) -> Dict[str, Any]:
-    """Replace obvious secret-like values with ``"<redacted>"``."""
+    """Replace obvious secret-like values with ``REDACTED_PLACEHOLDER``."""
     if not isinstance(arguments, dict):
         return arguments
     out: Dict[str, Any] = {}
     for key, value in arguments.items():
-        if key.lower() in _REDACTED_KEYS:
-            out[key] = "<redacted>"
+        if key.lower() in REDACTED_KEYS:
+            out[key] = REDACTED_PLACEHOLDER
         else:
             out[key] = value
     return out
 
 
-__all__ = ["AuditLogger"]
+__all__ = ["AuditLogger", "REDACTED_KEYS", "REDACTED_PLACEHOLDER"]
