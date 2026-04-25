@@ -2,14 +2,18 @@ name: AutoControl Stable CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "stable" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "stable" ]
   schedule:
     - cron: "0 1 * * *"
 
 permissions:
   contents: read
+
+concurrency:
+  group: stable-publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -111,3 +115,82 @@ jobs:
         run: python ./test/unit_test/get_info/mouse_info.py
       - name: Test Get Keyboard Info
         run: python ./test/unit_test/get_info/keyboard_info.py
+
+  publish:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/stable'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Bump patch version in pyproject.toml
+        id: bump
+        run: |
+          python <<'PY'
+          import os
+          import re
+          import pathlib
+
+          path = pathlib.Path("pyproject.toml")
+          text = path.read_text(encoding="utf-8")
+          match = re.search(r'^version\s*=\s*"(\d+)\.(\d+)\.(\d+)"', text, flags=re.M)
+          if not match:
+              raise SystemExit("version line not found in pyproject.toml")
+          major, minor, patch = (int(part) for part in match.groups())
+          new_version = f"{major}.{minor}.{patch + 1}"
+          text = re.sub(
+              r'^version\s*=\s*"\d+\.\d+\.\d+"',
+              f'version = "{new_version}"',
+              text,
+              count=1,
+              flags=re.M,
+          )
+          path.write_text(text, encoding="utf-8")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"new_version={new_version}\n")
+          print(f"Bumped to {new_version}")
+          PY
+
+      - name: Build distribution
+        run: python -m build
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: twine upload --non-interactive dist/*
+
+      - name: Commit and push version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml
+          git commit -m "Bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
+          git tag "v${{ steps.bump.outputs.new_version }}"
+          git pull --rebase origin stable
+          git push origin stable
+          git push origin "v${{ steps.bump.outputs.new_version }}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.bump.outputs.new_version }}" \
+            dist/* \
+            --title "v${{ steps.bump.outputs.new_version }}" \
+            --generate-notes
