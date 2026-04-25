@@ -355,6 +355,68 @@ def test_a11y_find_tool_returns_none_when_backend_has_no_match(monkeypatch):
     assert by_name["ac_a11y_find"].invoke({"name": "ghost"}) is None
 
 
+def test_automation_tools_present_in_default_registry():
+    names = {tool.name for tool in build_default_tool_registry()}
+    assert {
+        "ac_scheduler_add_job", "ac_scheduler_remove_job",
+        "ac_scheduler_list_jobs", "ac_scheduler_start", "ac_scheduler_stop",
+        "ac_trigger_add", "ac_trigger_remove", "ac_trigger_list",
+        "ac_trigger_start", "ac_trigger_stop",
+        "ac_hotkey_bind", "ac_hotkey_unbind", "ac_hotkey_list",
+        "ac_hotkey_daemon_start", "ac_hotkey_daemon_stop",
+    }.issubset(names)
+
+
+def test_scheduler_add_job_round_trips_through_default_scheduler(tmp_path):
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    script = tmp_path / "noop.json"
+    script.write_text("[]", encoding="utf-8")
+    record = by_name["ac_scheduler_add_job"].invoke({
+        "script_path": str(script), "interval_seconds": 60.0,
+        "repeat": False, "job_id": "test_mcp_job",
+    })
+    try:
+        assert record["job_id"] == "test_mcp_job"
+        assert record["interval_seconds"] == 60.0
+        listed = {job["job_id"] for job in
+                   by_name["ac_scheduler_list_jobs"].invoke({})}
+        assert "test_mcp_job" in listed
+    finally:
+        by_name["ac_scheduler_remove_job"].invoke({"job_id": "test_mcp_job"})
+
+
+def test_trigger_add_image_kind_records_trigger(tmp_path):
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    from je_auto_control.utils.triggers.trigger_engine import default_trigger_engine
+    script = tmp_path / "noop.json"
+    script.write_text("[]", encoding="utf-8")
+    image = tmp_path / "hit.png"
+    image.write_bytes(b"\x89PNG\r\n\x1a\n")
+    record = by_name["ac_trigger_add"].invoke({
+        "kind": "image", "script_path": str(script),
+        "image_path": str(image), "threshold": 0.5,
+    })
+    try:
+        assert record["type"] == "ImageAppearsTrigger"
+        assert any(t.trigger_id == record["trigger_id"]
+                   for t in default_trigger_engine.list_triggers())
+    finally:
+        by_name["ac_trigger_remove"].invoke(
+            {"trigger_id": record["trigger_id"]}
+        )
+
+
+def test_trigger_add_rejects_unknown_kind(tmp_path):
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    script = tmp_path / "noop.json"
+    script.write_text("[]", encoding="utf-8")
+    import pytest
+    with pytest.raises(ValueError):
+        by_name["ac_trigger_add"].invoke({
+            "kind": "telepathy", "script_path": str(script),
+        })
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {

@@ -477,8 +477,165 @@ def semantic_locator_tools() -> List[MCPTool]:
     ]
 
 
+def scheduler_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_scheduler_add_job",
+            description=("Schedule an action JSON file. Provide either "
+                         "interval_seconds (run every N seconds) or "
+                         "cron_expression (5-field cron rule)."),
+            input_schema=schema({
+                "script_path": {"type": "string"},
+                "interval_seconds": {"type": "number"},
+                "cron_expression": {"type": "string"},
+                "repeat": {"type": "boolean"},
+                "max_runs": {"type": "integer"},
+                "job_id": {"type": "string"},
+            }, required=["script_path"]),
+            handler=h.scheduler_add_job,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_scheduler_remove_job",
+            description="Remove a scheduled job by id; returns True if it existed.",
+            input_schema=schema({"job_id": {"type": "string"}},
+                                required=["job_id"]),
+            handler=h.scheduler_remove_job,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_scheduler_list_jobs",
+            description="List currently registered scheduler jobs.",
+            input_schema=schema({}),
+            handler=h.scheduler_list_jobs,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_scheduler_start",
+            description="Start the scheduler polling thread (idempotent).",
+            input_schema=schema({}),
+            handler=h.scheduler_start,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_scheduler_stop",
+            description="Stop the scheduler polling thread.",
+            input_schema=schema({}),
+            handler=h.scheduler_stop,
+            annotations=NON_DESTRUCTIVE,
+        ),
+    ]
+
+
+def trigger_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_trigger_add",
+            description=("Add a trigger to the default engine. ``kind`` is "
+                         "image (provide image_path/threshold), window "
+                         "(title_substring/case_sensitive), pixel "
+                         "(x/y/target_rgb/tolerance), or file (watch_path). "
+                         "When fired, ``script_path`` is executed."),
+            input_schema=schema({
+                "kind": {"type": "string",
+                         "enum": ["image", "window", "pixel", "file"]},
+                "script_path": {"type": "string"},
+                "repeat": {"type": "boolean"},
+                "image_path": {"type": "string"},
+                "threshold": {"type": "number"},
+                "title_substring": {"type": "string"},
+                "case_sensitive": {"type": "boolean"},
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "target_rgb": {"type": "array",
+                                "items": {"type": "integer"}},
+                "tolerance": {"type": "integer"},
+                "watch_path": {"type": "string"},
+            }, required=["kind", "script_path"]),
+            handler=h.trigger_add,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_trigger_remove",
+            description="Remove a trigger by id.",
+            input_schema=schema({"trigger_id": {"type": "string"}},
+                                required=["trigger_id"]),
+            handler=h.trigger_remove,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_trigger_list",
+            description="List currently registered triggers.",
+            input_schema=schema({}),
+            handler=h.trigger_list,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_trigger_start",
+            description="Start the trigger engine polling thread (idempotent).",
+            input_schema=schema({}),
+            handler=h.trigger_start,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_trigger_stop",
+            description="Stop the trigger engine polling thread.",
+            input_schema=schema({}),
+            handler=h.trigger_stop,
+            annotations=NON_DESTRUCTIVE,
+        ),
+    ]
+
+
+def hotkey_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_hotkey_bind",
+            description=("Bind a global hotkey combo (e.g. 'ctrl+alt+1') to "
+                         "an action JSON file. Call ac_hotkey_daemon_start "
+                         "to begin listening."),
+            input_schema=schema({
+                "combo": {"type": "string"},
+                "script_path": {"type": "string"},
+                "binding_id": {"type": "string"},
+            }, required=["combo", "script_path"]),
+            handler=h.hotkey_bind,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_hotkey_unbind",
+            description="Remove a hotkey binding by id.",
+            input_schema=schema({"binding_id": {"type": "string"}},
+                                required=["binding_id"]),
+            handler=h.hotkey_unbind,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_hotkey_list",
+            description="List the registered hotkey bindings.",
+            input_schema=schema({}),
+            handler=h.hotkey_list,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_hotkey_daemon_start",
+            description="Start the global hotkey listener thread (idempotent).",
+            input_schema=schema({}),
+            handler=h.hotkey_daemon_start,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_hotkey_daemon_stop",
+            description="Stop the global hotkey listener thread.",
+            input_schema=schema({}),
+            handler=h.hotkey_daemon_stop,
+            annotations=NON_DESTRUCTIVE,
+        ),
+    ]
+
+
 ALL_FACTORIES = (
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
-    semantic_locator_tools,
+    semantic_locator_tools, scheduler_tools, trigger_tools, hotkey_tools,
 )
