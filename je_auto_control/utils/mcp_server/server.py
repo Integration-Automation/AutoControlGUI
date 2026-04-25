@@ -12,6 +12,9 @@ import threading
 from typing import Any, Dict, List, Optional, TextIO
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.mcp_server.resources import (
+    ResourceProvider, default_resource_provider,
+)
 from je_auto_control.utils.mcp_server.tools import (
     MCPContent, MCPTool, build_default_tool_registry,
 )
@@ -33,9 +36,13 @@ class _MCPError(Exception):
 class MCPServer:
     """JSON-RPC 2.0 MCP server with a configurable tool registry."""
 
-    def __init__(self, tools: Optional[List[MCPTool]] = None) -> None:
+    def __init__(self, tools: Optional[List[MCPTool]] = None,
+                 resource_provider: Optional[ResourceProvider] = None
+                 ) -> None:
         registry = tools if tools is not None else build_default_tool_registry()
         self._tools: Dict[str, MCPTool] = {tool.name: tool for tool in registry}
+        self._resources = (resource_provider if resource_provider is not None
+                            else default_resource_provider())
         self._stop = threading.Event()
         self._initialized = False
 
@@ -120,6 +127,11 @@ class MCPServer:
                               for tool in self._tools.values()]}
         if method == "tools/call":
             return self._handle_tools_call(params)
+        if method == "resources/list":
+            return {"resources": [resource.to_descriptor()
+                                   for resource in self._resources.list()]}
+        if method == "resources/read":
+            return self._handle_resources_read(params)
         raise _MCPError(-32601, f"Method not found: {method}")
 
     @staticmethod
@@ -127,9 +139,22 @@ class MCPServer:
         client_version = params.get("protocolVersion", PROTOCOL_VERSION)
         return {
             "protocolVersion": client_version or PROTOCOL_VERSION,
-            "capabilities": {"tools": {"listChanged": False}},
+            "capabilities": {
+                "tools": {"listChanged": False},
+                "resources": {"listChanged": False, "subscribe": False},
+            },
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
         }
+
+    def _handle_resources_read(self,
+                               params: Dict[str, Any]) -> Dict[str, Any]:
+        uri = params.get("uri")
+        if not isinstance(uri, str) or not uri:
+            raise _MCPError(-32602, "resources/read requires string 'uri'")
+        content = self._resources.read(uri)
+        if content is None:
+            raise _MCPError(-32602, f"Unknown resource: {uri}")
+        return {"contents": [content]}
 
     def _handle_tools_call(self, params: Dict[str, Any]) -> Dict[str, Any]:
         name = params.get("name")

@@ -8,6 +8,9 @@ import io
 import json
 from typing import Any, Dict, List
 
+from je_auto_control.utils.mcp_server.resources import (
+    ChainProvider, FileSystemProvider, MCPResource, ResourceProvider,
+)
 from je_auto_control.utils.mcp_server.server import (
     PROTOCOL_VERSION, MCPServer,
 )
@@ -415,6 +418,86 @@ def test_trigger_add_rejects_unknown_kind(tmp_path):
         by_name["ac_trigger_add"].invoke({
             "kind": "telepathy", "script_path": str(script),
         })
+
+
+class _StaticProvider(ResourceProvider):
+    """Test double — exposes one fixed resource."""
+
+    def __init__(self, resource: MCPResource, body: str) -> None:
+        self._resource = resource
+        self._body = body
+
+    def list(self):
+        return [self._resource]
+
+    def read(self, uri):
+        if uri != self._resource.uri:
+            return None
+        return {"uri": uri, "mimeType": self._resource.mime_type or "text/plain",
+                "text": self._body}
+
+
+def test_initialize_advertises_resources_capability():
+    server = MCPServer(tools=[], resource_provider=ChainProvider([]))
+    response = _decode(server.handle_line(_request("initialize", params={})))
+    assert "resources" in response["result"]["capabilities"]
+
+
+def test_resources_list_returns_provider_descriptors():
+    resource = MCPResource(uri="autocontrol://demo",
+                            name="demo",
+                            description="static demo",
+                            mime_type="text/plain")
+    server = MCPServer(tools=[],
+                       resource_provider=_StaticProvider(resource, "hi"))
+    response = _decode(server.handle_line(_request("resources/list")))
+    descriptors = response["result"]["resources"]
+    assert descriptors == [{
+        "uri": "autocontrol://demo", "name": "demo",
+        "description": "static demo", "mimeType": "text/plain",
+    }]
+
+
+def test_resources_read_returns_provider_content():
+    resource = MCPResource(uri="autocontrol://demo", name="demo",
+                            mime_type="text/plain")
+    server = MCPServer(tools=[],
+                       resource_provider=_StaticProvider(resource, "hello"))
+    response = _decode(server.handle_line(_request("resources/read", params={
+        "uri": "autocontrol://demo",
+    })))
+    contents = response["result"]["contents"]
+    assert contents == [{"uri": "autocontrol://demo",
+                          "mimeType": "text/plain", "text": "hello"}]
+
+
+def test_resources_read_unknown_uri_returns_invalid_params():
+    server = MCPServer(tools=[], resource_provider=ChainProvider([]))
+    response = _decode(server.handle_line(_request("resources/read", params={
+        "uri": "autocontrol://missing",
+    })))
+    assert response["error"]["code"] == -32602
+    assert "Unknown resource" in response["error"]["message"]
+
+
+def test_filesystem_provider_lists_action_files(tmp_path):
+    (tmp_path / "alpha.json").write_text("[]", encoding="utf-8")
+    (tmp_path / "ignore.txt").write_text("nope", encoding="utf-8")
+    (tmp_path / "beta.json").write_text("[]", encoding="utf-8")
+    provider = FileSystemProvider(root=str(tmp_path))
+    listed = provider.list()
+    names = sorted(item.name for item in listed)
+    assert names == ["alpha.json", "beta.json"]
+    body = provider.read(listed[0].uri)
+    assert body is not None
+    assert body["mimeType"] == "application/json"
+
+
+def test_filesystem_provider_rejects_path_traversal(tmp_path):
+    (tmp_path / "alpha.json").write_text("[]", encoding="utf-8")
+    provider = FileSystemProvider(root=str(tmp_path))
+    assert provider.read("autocontrol://files/../etc/passwd") is None
+    assert provider.read("autocontrol://files/.hidden") is None
 
 
 def test_default_registry_lists_core_automation_tools():

@@ -9,11 +9,16 @@ dependencies are required.
 from je_auto_control.utils.mcp_server.server import (
     MCPServer, start_mcp_stdio_server,
 )
+from je_auto_control.utils.mcp_server.resources import (
+    MCPResource, ResourceProvider, default_resource_provider,
+)
 from je_auto_control.utils.mcp_server.tools import (
     MCPContent, MCPTool, MCPToolAnnotations, build_default_tool_registry,
 )
 
 __all__ = [
-    "MCPContent", "MCPServer", "MCPTool", "MCPToolAnnotations",
-    "build_default_tool_registry", "start_mcp_stdio_server",
+    "MCPContent", "MCPResource", "MCPServer", "MCPTool",
+    "MCPToolAnnotations", "ResourceProvider",
+    "build_default_tool_registry", "default_resource_provider",
+    "start_mcp_stdio_server",
 ]
