@@ -1,4 +1,4 @@
-from typing import Callable, Any
+from typing import Any, Callable, Optional, Tuple
 
 # utils cv2_utils
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
@@ -22,7 +22,7 @@ from je_auto_control.utils.package_manager.package_manager_class import package_
 # project
 from je_auto_control.utils.project.create_project_structure import create_project_dir
 # shell
-from je_auto_control.utils.shell_process.shell_exec import ShellManager
+from je_auto_control.utils.shell_process.shell_exec import default_shell_manager
 # socket server
 from je_auto_control.utils.socket_server.auto_control_socket_server import start_autocontrol_socket_server
 # process
@@ -48,6 +48,24 @@ from je_auto_control.wrapper.auto_control_record import record, stop_record
 from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot
 
 
+def _click_mouse_left(x: Optional[int] = None,
+                      y: Optional[int] = None) -> Tuple[int, int, int]:
+    """Callback adapter: click left mouse button (button is hardcoded)."""
+    return click_mouse("mouse_left", x, y)
+
+
+def _click_mouse_right(x: Optional[int] = None,
+                       y: Optional[int] = None) -> Tuple[int, int, int]:
+    """Callback adapter: click right mouse button (button is hardcoded)."""
+    return click_mouse("mouse_right", x, y)
+
+
+def _click_mouse_middle(x: Optional[int] = None,
+                        y: Optional[int] = None) -> Tuple[int, int, int]:
+    """Callback adapter: click middle mouse button (button is hardcoded)."""
+    return click_mouse("mouse_middle", x, y)
+
+
 class CallbackFunctionExecutor:
     """
     CallbackFunctionExecutor
@@ -61,9 +79,9 @@ class CallbackFunctionExecutor:
         # 事件字典，對應字串名稱到實際函式
         self.event_dict: dict = {
             # mouse 滑鼠相關
-            "AC_mouse_left": click_mouse,
-            "AC_mouse_right": click_mouse,
-            "AC_mouse_middle": click_mouse,
+            "AC_mouse_left": _click_mouse_left,
+            "AC_mouse_right": _click_mouse_right,
+            "AC_mouse_middle": _click_mouse_middle,
             "AC_click_mouse": click_mouse,
             "AC_get_mouse_table": get_mouse_table,
             "AC_get_mouse_position": get_mouse_position,
@@ -129,7 +147,7 @@ class CallbackFunctionExecutor:
             "AC_add_package_to_callback_executor": package_manager.add_package_to_callback_executor,
 
             # shell command
-            "AC_shell_command": ShellManager().exec_shell,
+            "AC_shell_command": default_shell_manager.exec_shell,
 
             # process
             "AC_execute_process": start_exe,

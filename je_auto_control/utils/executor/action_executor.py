@@ -1,5 +1,5 @@
 import types
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from je_auto_control.utils.exception.exception_tags import (
     action_is_null_error_message, add_command_exception_error_message,
@@ -38,7 +38,7 @@ from je_auto_control.utils.mcp_server.http_transport import start_mcp_http_serve
 from je_auto_control.utils.mcp_server.server import start_mcp_stdio_server
 from je_auto_control.utils.package_manager.package_manager_class import package_manager
 from je_auto_control.utils.project.create_project_structure import create_project_dir
-from je_auto_control.utils.shell_process.shell_exec import ShellManager
+from je_auto_control.utils.shell_process.shell_exec import default_shell_manager
 from je_auto_control.utils.start_exe.start_another_process import start_exe
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_and_click, locate_image_center
@@ -91,6 +91,24 @@ def _vlm_locate_as_list(description: str,
     return None if coords is None else [coords[0], coords[1]]
 
 
+def _click_mouse_left(x: Optional[int] = None,
+                      y: Optional[int] = None) -> Tuple[int, int, int]:
+    """Executor adapter: click left mouse button (button is hardcoded)."""
+    return click_mouse("mouse_left", x, y)
+
+
+def _click_mouse_right(x: Optional[int] = None,
+                       y: Optional[int] = None) -> Tuple[int, int, int]:
+    """Executor adapter: click right mouse button (button is hardcoded)."""
+    return click_mouse("mouse_right", x, y)
+
+
+def _click_mouse_middle(x: Optional[int] = None,
+                        y: Optional[int] = None) -> Tuple[int, int, int]:
+    """Executor adapter: click middle mouse button (button is hardcoded)."""
+    return click_mouse("mouse_middle", x, y)
+
+
 def _history_list_as_dicts(limit: int = 100,
                            source_type: Optional[str] = None) -> List[dict]:
     """Executor adapter: list run history as plain dicts (JSON-friendly)."""
@@ -124,9 +142,9 @@ class Executor:
         # 事件字典，對應字串名稱到函式
         self.event_dict: dict = {
             # Mouse 滑鼠相關
-            "AC_mouse_left": click_mouse,
-            "AC_mouse_right": click_mouse,
-            "AC_mouse_middle": click_mouse,
+            "AC_mouse_left": _click_mouse_left,
+            "AC_mouse_right": _click_mouse_right,
+            "AC_mouse_middle": _click_mouse_middle,
             "AC_click_mouse": click_mouse,
             "AC_get_mouse_table": get_mouse_table,
             "AC_get_mouse_position": get_mouse_position,
@@ -178,7 +196,7 @@ class Executor:
             "AC_create_project": create_project_dir,
 
             # Shell
-            "AC_shell_command": ShellManager().exec_shell,
+            "AC_shell_command": default_shell_manager.exec_shell,
 
             # Process
             "AC_execute_process": start_exe,
