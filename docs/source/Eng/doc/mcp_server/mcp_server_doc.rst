@@ -1,32 +1,117 @@
-==================================
+==========================================
 MCP Server (Use AutoControl from Claude)
-==================================
+==========================================
 
-The MCP Server exposes AutoControl as a Model Context Protocol server
-so any MCP-compatible client (Claude Desktop, Claude Code, custom
-Claude API tool-use loops) can drive the host machine through
-AutoControl. The transport is JSON-RPC 2.0 over stdio and is
-implemented with the Python standard library only — no extra
-dependencies are required.
+The MCP server exposes AutoControl as a Model Context Protocol
+service so any MCP-compatible client (Claude Desktop, Claude Code,
+custom Anthropic / OpenAI tool-use loops) can drive the host machine
+through AutoControl. Implementation is stdlib-only — JSON-RPC 2.0
+over stdio or HTTP+SSE — no extra runtime dependencies.
 
-What Claude can do once connected
-=================================
+Roughly 90 tools are exposed, plus the full set of MCP protocol
+capabilities: tools, resources, prompts, sampling, roots, logging,
+progress, cancellation, list-changed notifications, and elicitation.
 
-After AutoControl is registered as an MCP server, the model gains
-access to ~24 tools covering:
+Tool catalogue
+==============
 
-- Mouse control: ``ac_click_mouse``, ``ac_set_mouse_position``,
-  ``ac_get_mouse_position``, ``ac_mouse_scroll``
-- Keyboard: ``ac_type_text``, ``ac_press_key``, ``ac_hotkey``
-- Screen: ``ac_screen_size``, ``ac_screenshot``, ``ac_get_pixel``
-- Image / OCR: ``ac_locate_image_center``, ``ac_locate_and_click``,
-  ``ac_locate_text``, ``ac_click_text``
-- Windows (Win32 only): ``ac_list_windows``, ``ac_focus_window``,
-  ``ac_wait_for_window``, ``ac_close_window``
-- System: ``ac_get_clipboard``, ``ac_set_clipboard``
-- Action executor: ``ac_execute_actions`` (run a list of ``AC_*``
-  commands), ``ac_execute_action_file``, ``ac_list_action_commands``,
-  ``ac_list_run_history``
+The default registry pairs every canonical ``ac_*`` tool with a
+short alias (``click``, ``type``, ``screenshot``, ...) so prompts
+can stay terse. Use ``--list-tools`` (see *CLI inspection* below) to
+dump the live catalogue as JSON.
+
+Mouse / keyboard
+  ``ac_click_mouse``, ``ac_set_mouse_position``,
+  ``ac_get_mouse_position``, ``ac_mouse_scroll``,
+  ``ac_drag``, ``ac_send_mouse_to_window``,
+  ``ac_type_text``, ``ac_press_key``, ``ac_hotkey``,
+  ``ac_send_key_to_window``.
+
+Screen / image / OCR
+  ``ac_screen_size``, ``ac_screenshot`` (returns base64 PNG image
+  content + optional file save, supports ``monitor_index`` for
+  multi-display setups), ``ac_list_monitors``, ``ac_get_pixel``,
+  ``ac_diff_screenshots``, ``ac_locate_image_center``,
+  ``ac_locate_and_click``, ``ac_locate_text``, ``ac_click_text``,
+  ``ac_wait_for_image``, ``ac_wait_for_pixel``.
+
+Window management (Windows)
+  ``ac_list_windows``, ``ac_focus_window``, ``ac_wait_for_window``,
+  ``ac_close_window``, ``ac_window_move``, ``ac_window_minimize``,
+  ``ac_window_maximize``, ``ac_window_restore``.
+
+Semantic locators
+  ``ac_a11y_list``, ``ac_a11y_find``, ``ac_a11y_click``,
+  ``ac_vlm_locate``, ``ac_vlm_click``.
+
+Clipboard / processes / shell
+  ``ac_get_clipboard``, ``ac_set_clipboard``,
+  ``ac_get_clipboard_image``, ``ac_set_clipboard_image``,
+  ``ac_launch_process``, ``ac_list_processes``,
+  ``ac_kill_process``, ``ac_shell``.
+
+Recording / replay
+  ``ac_record_start``, ``ac_record_stop``,
+  ``ac_read_action_file``, ``ac_write_action_file``,
+  ``ac_trim_actions``, ``ac_adjust_delays``,
+  ``ac_scale_coordinates``,
+  ``ac_screen_record_start``, ``ac_screen_record_stop``,
+  ``ac_screen_record_list``.
+
+Action executor / history
+  ``ac_execute_actions``, ``ac_execute_action_file``,
+  ``ac_list_action_commands``, ``ac_list_run_history``.
+
+Scheduler / triggers / hotkeys
+  ``ac_scheduler_add_job``, ``ac_scheduler_remove_job``,
+  ``ac_scheduler_list_jobs``, ``ac_scheduler_start``,
+  ``ac_scheduler_stop``, ``ac_trigger_add``, ``ac_trigger_remove``,
+  ``ac_trigger_list``, ``ac_trigger_start``, ``ac_trigger_stop``,
+  ``ac_hotkey_bind``, ``ac_hotkey_unbind``, ``ac_hotkey_list``,
+  ``ac_hotkey_daemon_start``, ``ac_hotkey_daemon_stop``.
+
+Every tool carries the MCP 2025-06-18 ``annotations`` block
+(``readOnlyHint``, ``destructiveHint``, ``idempotentHint``,
+``openWorldHint``) so well-behaved clients can auto-approve
+read-only queries and require user confirmation before destructive
+ones.
+
+Resources, prompts, sampling
+============================
+
+Resources
+  - ``autocontrol://files/<name>`` — every JSON action file in the
+    workspace root (re-targets when the client publishes
+    ``roots/list``).
+  - ``autocontrol://history`` — recent run-history snapshot.
+  - ``autocontrol://commands`` — full ``AC_*`` executor catalogue.
+  - ``autocontrol://screen/live`` — base64 PNG screenshots, with
+    ``resources/subscribe`` push notifications when content changes.
+
+Prompts
+  Five built-in templates: ``automate_ui_task``,
+  ``record_and_generalize``, ``compare_screenshots``,
+  ``find_widget``, ``explain_action_file``.
+
+Sampling
+  Tools can call ``server.request_sampling(messages, ...)`` to ask
+  the connected client model a question — useful when an automation
+  step needs an LLM judgment (e.g. "is this dialog showing an
+  error?"). Bridges through the same writer that handles tool
+  responses.
+
+Logging notifications, progress, cancellation
+=============================================
+
+- The project logger is forwarded to the client as
+  ``notifications/message`` while a stdio session is active.
+  Clients can retune the level with ``logging/setLevel``.
+- Long-running tools that accept a ``ctx`` parameter receive a
+  :class:`ToolCallContext` and can call
+  ``ctx.progress(value, total, message)`` to push
+  ``notifications/progress`` (when the client supplied a
+  ``progressToken``) and ``ctx.check_cancelled()`` to abort
+  cooperatively when ``notifications/cancelled`` arrives.
 
 Starting the server (programmatic)
 ==================================
@@ -38,14 +123,17 @@ Starting the server (programmatic)
    # Blocks until stdin closes — typical entry point for an MCP client.
    ac.start_mcp_stdio_server()
 
-You can also build a custom registry:
+You can also build a custom registry, swap in a fake backend, or
+attach plugin hot-reload:
 
 .. code-block:: python
 
    import je_auto_control as ac
 
-   tools = ac.build_default_tool_registry()
+   tools = ac.build_default_tool_registry(read_only=False, aliases=True)
    server = ac.MCPServer(tools=tools)
+   watcher = ac.PluginWatcher(server, "./plugins")
+   watcher.start()
    server.serve_stdio()
 
 Starting the server (command line)
@@ -61,14 +149,29 @@ run it as a module:
    # or
    python -m je_auto_control.utils.mcp_server
 
-Both forms speak MCP over stdin/stdout — they are not meant to be run
-interactively from a terminal.
+Both forms speak MCP over stdin/stdout — they are not meant to be
+run interactively from a terminal.
+
+CLI inspection flags
+====================
+
+Without any flags the entry point starts the stdio dispatcher.
+Supplying one of the following prints the catalogue as JSON and
+exits — useful in CI smoke tests and prompt prep:
+
+.. code-block:: shell
+
+   je_auto_control_mcp --list-tools
+   je_auto_control_mcp --list-tools --read-only
+   je_auto_control_mcp --list-resources
+   je_auto_control_mcp --list-prompts
+   je_auto_control_mcp --fake-backend       # swap in the in-memory backend
 
 Registering with Claude Desktop
 ===============================
 
-Edit Claude Desktop's MCP config (``claude_desktop_config.json``) and
-add an entry under ``mcpServers``:
+Edit ``claude_desktop_config.json`` and add an entry under
+``mcpServers``:
 
 .. code-block:: json
 
@@ -104,44 +207,47 @@ Or add to your project's ``.claude/mcp.json``:
      }
    }
 
-Security notes
-==============
+HTTP transport (with SSE, auth, TLS)
+====================================
 
-- The MCP server can move the mouse, send keystrokes, screenshot the
-  screen, and execute arbitrary ``AC_*`` actions. Only register it
-  with MCP clients you trust.
-- The transport is local stdio — there is no network exposure.
-- File paths supplied to ``ac_screenshot`` and ``ac_execute_action_file``
-  are normalised through ``os.path.realpath`` before any I/O.
-
-HTTP transport
-==============
-
-When stdio is awkward — a long-running GUI host process, a container,
-a remote box — start the same dispatcher behind HTTP instead:
+When stdio is awkward (long-running GUI host, container, remote
+box), start the same dispatcher behind HTTP:
 
 .. code-block:: python
 
    import je_auto_control as ac
+   import ssl
 
-   server = ac.start_mcp_http_server(host="127.0.0.1", port=9940)
-   # ... later
-   server.stop()
+   ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+   ssl_context.load_cert_chain("server.crt", "server.key")
 
-The server speaks the JSON-only variant of the MCP Streamable HTTP
-transport: ``POST /mcp`` accepts a JSON-RPC body and returns a JSON
-response (or ``202 Accepted`` for notifications). The default bind
-is ``127.0.0.1`` per the project's least-privilege policy — opt into
-``0.0.0.0`` only with an explicit, documented reason.
+   server = ac.start_mcp_http_server(
+       host="127.0.0.1", port=9940,
+       auth_token="hunter2",
+       ssl_context=ssl_context,
+   )
+
+- ``POST /mcp`` accepts JSON-RPC bodies. Returns
+  ``application/json`` by default; if ``Accept`` includes
+  ``text/event-stream`` the response streams progress notifications
+  followed by the final result as SSE events.
+- Missing / wrong ``Authorization: Bearer <token>`` returns 401 /
+  403 (constant-time compare via ``hmac.compare_digest``).
+- ``ssl_context`` wraps the listening socket so the same transport
+  can serve HTTPS.
+- The default bind is ``127.0.0.1`` per the project's
+  least-privilege policy — opt into ``0.0.0.0`` only with explicit
+  reason.
+
+Bearer token can also come from ``JE_AUTOCONTROL_MCP_TOKEN``.
 
 Read-only / safe mode
 =====================
 
-To restrict the server to read-only tools (no clicks, no keystrokes,
-no script execution), set the ``JE_AUTOCONTROL_MCP_READONLY``
-environment variable to ``1`` / ``true``. Only tools annotated with
-``readOnlyHint`` (positions, sizes, OCR queries, history, clipboard
-reads, ...) are exposed:
+Set ``JE_AUTOCONTROL_MCP_READONLY=1`` (or pass ``read_only=True`` to
+:func:`build_default_tool_registry`) to drop every tool whose
+``readOnlyHint`` is false. Only observers (positions, OCR queries,
+clipboard reads, history, ...) survive:
 
 .. code-block:: json
 
@@ -155,11 +261,113 @@ reads, ...) are exposed:
      }
    }
 
-Or programmatically:
+Confirmation prompts (elicitation)
+==================================
+
+Set ``JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1`` to gate every
+destructive tool behind an MCP ``elicitation/create`` request. The
+client surfaces a confirmation prompt; declining returns a clean
+error to the model without running the action. Requires the client
+to advertise the ``elicitation`` capability — older clients fall
+through with a logged warning.
+
+Audit log
+=========
+
+Set ``JE_AUTOCONTROL_MCP_AUDIT=/path/to/audit.jsonl`` to append one
+JSONL record per ``tools/call``: timestamp, tool name, sanitised
+arguments (``password`` / ``token`` / ``secret`` / ``api_key`` /
+``authorization`` are redacted), status (``ok`` / ``error`` /
+``cancelled``), duration, optional error text, and optional
+auto-screenshot artifact path (see below).
+
+Auto-screenshot on tool error
+=============================
+
+Set ``JE_AUTOCONTROL_MCP_ERROR_SHOTS=/path/to/dir`` to write a
+``<tool>_<ts>.png`` screenshot every time a tool errors. The path
+is included in both the audit record and the error message
+returned to the model — fast forensic trail for flaky automations.
+
+Rate limiting
+=============
+
+Pass a :class:`RateLimiter` to :class:`MCPServer` to guard against
+runaway loops:
 
 .. code-block:: python
 
    import je_auto_control as ac
 
-   safe_tools = ac.build_default_tool_registry(read_only=True)
-   ac.MCPServer(tools=safe_tools).serve_stdio()
+   server = ac.MCPServer(rate_limiter=ac.RateLimiter(
+       rate_per_sec=20.0, capacity=40,
+   ))
+
+Exceeding the limit returns a ``-32000`` ``Rate limit exceeded``
+JSON-RPC error.
+
+Plugin hot-reload
+=================
+
+Drop ``*.py`` files exposing top-level ``AC_*`` callables into a
+directory and let :class:`PluginWatcher` keep the registry in sync:
+
+.. code-block:: python
+
+   import je_auto_control as ac
+
+   server = ac.MCPServer()
+   watcher = ac.PluginWatcher(server, directory="./plugins",
+                                poll_seconds=2.0)
+   watcher.start()
+   ac.start_mcp_stdio_server()
+
+Each register / unregister fires
+``notifications/tools/list_changed`` so the client refreshes its
+cached catalogue automatically.
+
+CI smoke tests with the fake backend
+====================================
+
+The fake backend swaps the wrapper layer with in-memory recorders
+so headless CI runners can exercise every MCP tool without a
+display server:
+
+.. code-block:: shell
+
+   JE_AUTOCONTROL_FAKE_BACKEND=1 python -m je_auto_control.utils.mcp_server
+
+Programmatically:
+
+.. code-block:: python
+
+   from je_auto_control.utils.mcp_server.fake_backend import (
+       fake_state, install_fake_backend, reset_fake_state,
+       uninstall_fake_backend,
+   )
+
+   install_fake_backend()
+   try:
+       # Run tests / tools — actions accumulate in fake_state().
+       ...
+   finally:
+       uninstall_fake_backend()
+       reset_fake_state()
+
+Security notes
+==============
+
+- The MCP server can move the mouse, send keystrokes, screenshot
+  the screen, and execute arbitrary ``AC_*`` actions. Only register
+  it with MCP clients you trust.
+- Local stdio is the default transport — no network exposure unless
+  you opt into HTTP. HTTP defaults to ``127.0.0.1``; binding to
+  ``0.0.0.0`` requires an explicit, documented reason and **must**
+  be paired with ``auth_token`` and (for non-localhost) ``ssl_context``.
+- File paths supplied to ``ac_screenshot``, ``ac_screen_record_start``,
+  ``ac_execute_action_file``, ``ac_read_action_file``,
+  ``ac_write_action_file``, and the FileSystem resource provider are
+  normalised via ``os.path.realpath``; the resource provider blocks
+  path traversal at the boundary.
+- Subprocess calls (``ac_launch_process`` / ``ac_shell``) accept
+  argv lists or ``shlex.split`` parses — never an OS shell.

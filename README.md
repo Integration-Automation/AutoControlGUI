@@ -28,6 +28,7 @@
   - [Screenshot](#screenshot)
   - [Action Recording & Playback](#action-recording--playback)
   - [JSON Action Scripting](#json-action-scripting)
+  - [MCP Server (Use AutoControl from Claude)](#mcp-server-use-autocontrol-from-claude)
   - [Scheduler (Interval & Cron)](#scheduler-interval--cron)
   - [Global Hotkey Daemon](#global-hotkey-daemon)
   - [Event Triggers](#event-triggers)
@@ -66,6 +67,7 @@
 - **Event Triggers** — fire scripts when an image appears, a window opens, a pixel changes, or a file is modified
 - **Run History** — SQLite-backed run log across scheduler / triggers / hotkeys / REST with auto error-screenshot artifacts
 - **Report Generation** — export test records as HTML, JSON, or XML reports with success/failure status
+- **MCP Server** — JSON-RPC 2.0 Model Context Protocol server (stdio + HTTP/SSE) so Claude Desktop / Claude Code / custom tool-use loops can drive AutoControl. ~90 tools, full protocol coverage (resources, prompts, sampling, roots, logging, progress, cancellation, elicitation), bearer-token auth + TLS, audit log, rate limit, plugin hot-reload, CI fake backend
 - **Remote Automation** — TCP socket server **and** REST API server to receive automation commands
 - **Plugin Loader** — drop `.py` files exposing `AC_*` callables into a directory and register them as executor commands at runtime
 - **Shell Integration** — execute shell commands within automation workflows with async output capture
@@ -81,6 +83,97 @@
 
 ## Architecture
 
+The runtime is layered: **client surfaces** (CLI, GUI, MCP/REST/socket
+servers) sit on top of the **headless API** (`wrapper/` + `utils/`),
+which resolves to a **per-OS backend** chosen at import time by
+`wrapper/platform_wrapper.py`. The package façade
+(`je_auto_control/__init__.py`) re-exports every public name so users
+need only `import je_auto_control` regardless of which surface or
+backend they hit.
+
+```mermaid
+flowchart LR
+    subgraph Clients["Client Surfaces"]
+        direction TB
+        Claude[["Claude Desktop /<br/>Claude Code"]]
+        APIUser[["Custom Anthropic /<br/>OpenAI tool loops"]]
+        HTTPClient[["HTTP / SSE clients"]]
+        TCPClient[["Socket / REST clients"]]
+        GUIUser[["PySide6 GUI"]]
+        CLIUser[["python -m<br/>je_auto_control[.cli]"]]
+        Library[["Library users<br/>(import je_auto_control)"]]
+    end
+
+    subgraph Transports["Transports & Servers"]
+        direction TB
+        Stdio["MCP stdio<br/>JSON-RPC 2.0"]
+        HTTPMCP["MCP HTTP /<br/>SSE + auth + TLS"]
+        REST["REST server<br/>:9939"]
+        Socket["Socket server<br/>:9938"]
+    end
+
+    subgraph MCP["mcp_server/"]
+        direction TB
+        Dispatcher["MCPServer<br/>(JSON-RPC dispatcher)"]
+        Tools["tools/<br/>~90 ac_* + aliases"]
+        Resources["resources/<br/>files · history ·<br/>commands · screen-live"]
+        Prompts["prompts/<br/>built-in templates"]
+        Context["context · audit ·<br/>rate-limit · log-bridge"]
+        FakeBE["fake_backend<br/>(CI smoke)"]
+    end
+
+    subgraph Core["Headless Core (wrapper/ + utils/)"]
+        direction TB
+        Wrapper["wrapper/<br/>mouse · keyboard · screen ·<br/>image · record · window"]
+        Executor["executor/<br/>AC_* JSON action engine"]
+        Vision["vision/ · ocr/ ·<br/>accessibility/"]
+        Recorder["scheduler/ · triggers/ ·<br/>hotkey/ · plugin_loader/<br/>run_history/"]
+        IOUtils["clipboard/ · cv2_utils/ ·<br/>shell_process/ · json/"]
+    end
+
+    subgraph Backends["Per-OS Backends"]
+        direction TB
+        Win["windows/<br/>Win32 ctypes"]
+        Mac["osx/<br/>pyobjc · Quartz"]
+        X11["linux_with_x11/<br/>python-Xlib"]
+    end
+
+    Claude --> Stdio
+    APIUser --> Stdio
+    HTTPClient --> HTTPMCP
+    TCPClient --> Socket
+    TCPClient --> REST
+
+    Stdio --> Dispatcher
+    HTTPMCP --> Dispatcher
+    Dispatcher --> Tools
+    Dispatcher --> Resources
+    Dispatcher --> Prompts
+    Dispatcher -.- Context
+    Tools -.optional.-> FakeBE
+
+    Tools --> Wrapper
+    Tools --> Executor
+    Tools --> Vision
+    Tools --> Recorder
+    Tools --> IOUtils
+    Resources --> Recorder
+    Resources --> Wrapper
+
+    REST --> Executor
+    Socket --> Executor
+
+    GUIUser --> Wrapper
+    GUIUser --> Recorder
+    CLIUser --> Executor
+    Library --> Wrapper
+    Library --> Executor
+
+    Wrapper --> Backends
+    Vision -.- Wrapper
+    Recorder -.- Executor
+```
+
 ```
 je_auto_control/
 ├── wrapper/                    # Platform-agnostic API layer
@@ -89,19 +182,21 @@ je_auto_control/
 │   ├── auto_control_keyboard.py# Keyboard operations
 │   ├── auto_control_image.py   # Image recognition (OpenCV template matching)
 │   ├── auto_control_screen.py  # Screenshot, screen size, pixel color
+│   ├── auto_control_window.py  # Cross-platform window manager facade
 │   └── auto_control_record.py  # Action recording/playback
 ├── windows/                    # Windows-specific backend (Win32 API / ctypes)
 ├── osx/                        # macOS-specific backend (pyobjc / Quartz)
 ├── linux_with_x11/             # Linux-specific backend (python-Xlib)
 ├── gui/                        # PySide6 GUI application
 └── utils/
+    ├── mcp_server/             # MCP server (stdio + HTTP/SSE) — server, tools/, resources, prompts, audit, rate_limit, fake_backend, plugin_watcher
     ├── executor/               # JSON action executor engine
     ├── callback/               # Callback function executor
     ├── cv2_utils/              # OpenCV screenshot, template matching, video recording
     ├── accessibility/          # UIA (Windows) / AX (macOS) element finder
     ├── vision/                 # VLM-based locator (Anthropic / OpenAI backends)
     ├── ocr/                    # Tesseract-backed text locator
-    ├── clipboard/              # Cross-platform clipboard
+    ├── clipboard/              # Cross-platform clipboard (text + image)
     ├── scheduler/              # Interval + cron scheduler
     ├── hotkey/                 # Global hotkey daemon
     ├── triggers/               # Image/window/pixel/file triggers
@@ -407,6 +502,77 @@ je_auto_control.execute_action([
 | Shell | `AC_shell_command` |
 | Process | `AC_execute_process` |
 | Executor | `AC_execute_action`, `AC_execute_files` |
+
+### MCP Server (Use AutoControl from Claude)
+
+Expose AutoControl as a Model Context Protocol server so any
+MCP-compatible client (Claude Desktop, Claude Code, custom Anthropic
+/ OpenAI tool-use loops) can drive the host machine. Stdlib-only —
+JSON-RPC 2.0 over stdio or HTTP+SSE.
+
+**Register with Claude Code:**
+
+```bash
+claude mcp add autocontrol -- python -m je_auto_control.utils.mcp_server
+```
+
+**Register with Claude Desktop** (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "autocontrol": {
+      "command": "python",
+      "args": ["-m", "je_auto_control.utils.mcp_server"]
+    }
+  }
+}
+```
+
+**Start programmatically:**
+
+```python
+import je_auto_control as ac
+
+# Stdio (blocks until stdin closes)
+ac.start_mcp_stdio_server()
+
+# Or HTTP / SSE with bearer-token auth + optional TLS
+ac.start_mcp_http_server(host="127.0.0.1", port=9940,
+                         auth_token="hunter2")
+```
+
+**Inspect the catalogue without starting the server:**
+
+```bash
+je_auto_control_mcp --list-tools
+je_auto_control_mcp --list-tools --read-only
+je_auto_control_mcp --list-resources
+je_auto_control_mcp --list-prompts
+```
+
+**What ships:**
+
+| Surface | Coverage |
+|---|---|
+| Tools (~90) | mouse · keyboard · drag · screen / multi-monitor · screenshot-as-image · diff · OCR · image · windows (move/min/max/restore/...) · clipboard text+image · process / shell · recording · screen recording · scheduler / triggers / hotkeys · accessibility tree · VLM locator · executor · history |
+| Aliases | `click`, `type`, `screenshot`, `find_image`, `drag`, `shell`, `wait_image`, ... — toggle with `JE_AUTOCONTROL_MCP_ALIASES=0` |
+| Resources | `autocontrol://files/<name>`, `autocontrol://history`, `autocontrol://commands`, `autocontrol://screen/live` (with `resources/subscribe`) |
+| Prompts | `automate_ui_task`, `record_and_generalize`, `compare_screenshots`, `find_widget`, `explain_action_file` |
+| Protocol | tools / resources / prompts / sampling / roots / logging / progress / cancellation / list_changed / elicitation |
+| Transports | stdio, HTTP `POST /mcp`, SSE streaming when `Accept: text/event-stream` |
+| Safety | tool annotations · `JE_AUTOCONTROL_MCP_READONLY` · `JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE` · audit log · token-bucket rate limiter · auto-screenshot on error |
+| Ops | bearer-token auth · TLS via `ssl_context` · `PluginWatcher` hot-reload · `JE_AUTOCONTROL_FAKE_BACKEND=1` for CI |
+
+See [docs/source/Eng/doc/mcp_server/mcp_server_doc.rst](docs/source/Eng/doc/mcp_server/mcp_server_doc.rst)
+for the full reference (or the
+[繁體中文](docs/source/Zh/doc/mcp_server/mcp_server_doc.rst) version).
+
+> ⚠️ The MCP server can move the mouse, send keystrokes, capture the
+> screen, and execute arbitrary `AC_*` actions. Only register it with
+> MCP clients you trust. HTTP defaults to `127.0.0.1`; binding to
+> `0.0.0.0` requires explicit reason and **must** be paired with
+> `auth_token` plus `ssl_context`.
 
 ### Scheduler (Interval & Cron)
 
