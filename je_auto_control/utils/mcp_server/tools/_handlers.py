@@ -17,10 +17,13 @@ from je_auto_control.utils.mcp_server.tools._base import MCPContent
 
 def click_mouse(mouse_keycode: str = "mouse_left",
                 x: Optional[int] = None,
-                y: Optional[int] = None) -> List[int]:
+                y: Optional[int] = None) -> List[Any]:
     from je_auto_control.wrapper.auto_control_mouse import click_mouse as _click
     keycode, click_x, click_y = _click(mouse_keycode, x, y)
-    return [int(keycode), int(click_x), int(click_y)]
+    # Real wrapper resolves the string keycode to an int via the keys table;
+    # the fake backend keeps it as a string. Pass through whatever we got.
+    resolved = int(keycode) if isinstance(keycode, int) else keycode
+    return [resolved, int(click_x), int(click_y)]
 
 
 def set_mouse_position(x: int, y: int) -> List[int]:

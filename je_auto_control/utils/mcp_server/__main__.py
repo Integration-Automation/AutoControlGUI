@@ -8,6 +8,9 @@ import argparse
 import json
 import sys
 
+from je_auto_control.utils.mcp_server.fake_backend import (
+    install_fake_backend, maybe_install_from_env,
+)
 from je_auto_control.utils.mcp_server.prompts import default_prompt_provider
 from je_auto_control.utils.mcp_server.resources import (
     default_resource_provider,
@@ -39,6 +42,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--read-only", action="store_true",
         help="Restrict tools to those marked readOnlyHint=true.",
     )
+    parser.add_argument(
+        "--fake-backend", action="store_true",
+        help=("Install the in-memory fake backend so tools record but "
+              "don't drive the real OS. Useful for CI smoke tests."),
+    )
     return parser
 
 
@@ -46,6 +54,10 @@ def main(argv: list = None) -> int:
     """CLI entry point. Returns the process exit code."""
     parser = _build_parser()
     args = parser.parse_args(argv)
+    if args.fake_backend:
+        install_fake_backend()
+    else:
+        maybe_install_from_env()
     listing_modes = (args.list_tools, args.list_resources, args.list_prompts)
     if any(listing_modes):
         _print_listings(args)

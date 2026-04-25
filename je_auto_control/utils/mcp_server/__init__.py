@@ -13,6 +13,10 @@ from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
 )
+from je_auto_control.utils.mcp_server.fake_backend import (
+    FakeState, fake_state, install_fake_backend, reset_fake_state,
+    uninstall_fake_backend,
+)
 from je_auto_control.utils.mcp_server.rate_limit import RateLimiter
 from je_auto_control.utils.mcp_server.http_transport import (
     HttpMCPServer, start_mcp_http_server,
@@ -29,12 +33,14 @@ from je_auto_control.utils.mcp_server.tools import (
 )
 
 __all__ = [
-    "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
+    "AuditLogger", "FakeState", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
     "MCPToolAnnotations", "OperationCancelledError", "PromptProvider",
     "RateLimiter", "ResourceProvider", "ToolCallContext",
     "build_default_tool_registry",
     "default_prompt_provider", "default_resource_provider",
-    "make_plugin_tool", "register_plugin_tools",
+    "fake_state", "install_fake_backend", "make_plugin_tool",
+    "register_plugin_tools", "reset_fake_state",
     "start_mcp_http_server", "start_mcp_stdio_server",
+    "uninstall_fake_backend",
 ]
