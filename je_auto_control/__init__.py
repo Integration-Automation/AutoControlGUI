@@ -62,6 +62,16 @@ from je_auto_control.utils.ocr.ocr_engine import (
     TextMatch, click_text, find_text_matches, locate_text_center,
     set_tesseract_cmd, wait_for_text,
 )
+# MCP server (headless stdio bridge for Claude / other MCP clients)
+from je_auto_control.utils.mcp_server import (
+    AuditLogger, HttpMCPServer, MCPContent, MCPPrompt, MCPPromptArgument,
+    MCPResource, MCPServer, MCPTool, MCPToolAnnotations,
+    OperationCancelledError, PromptProvider, RateLimiter,
+    ResourceProvider, ToolCallContext, build_default_tool_registry,
+    default_prompt_provider, default_resource_provider,
+    make_plugin_tool, register_plugin_tools, start_mcp_http_server,
+    start_mcp_stdio_server,
+)
 # Plugin loader (headless)
 from je_auto_control.utils.plugin_loader.plugin_loader import (
     discover_plugin_commands, load_plugin_directory, load_plugin_file,
@@ -210,6 +220,15 @@ __all__ = [
     "get_clipboard", "set_clipboard",
     # Hotkey daemon
     "HotkeyDaemon", "HotkeyBinding", "default_hotkey_daemon",
+    # MCP server
+    "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
+    "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
+    "MCPToolAnnotations", "OperationCancelledError", "PromptProvider",
+    "RateLimiter", "ResourceProvider", "ToolCallContext",
+    "build_default_tool_registry",
+    "default_prompt_provider", "default_resource_provider",
+    "make_plugin_tool", "register_plugin_tools",
+    "start_mcp_http_server", "start_mcp_stdio_server",
     # Plugin loader
     "load_plugin_file", "load_plugin_directory", "discover_plugin_commands",
     "register_plugin_commands",

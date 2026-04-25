@@ -27,6 +27,7 @@
   - [截图](#截图)
   - [动作录制与回放](#动作录制与回放)
   - [JSON 脚本执行器](#json-脚本执行器)
+  - [MCP 服务器（让 Claude 使用 AutoControl）](#mcp-服务器让-claude-使用-autocontrol)
   - [调度器（Interval & Cron）](#调度器interval--cron)
   - [全局热键](#全局热键)
   - [事件触发器](#事件触发器)
@@ -65,6 +66,7 @@
 - **事件触发器** — 检测到图像出现、窗口出现、像素变化或文件变动时自动执行脚本
 - **执行历史** — 使用 SQLite 记录 scheduler / triggers / hotkeys / REST 的执行结果；错误时自动附带截图
 - **报告生成** — 将测试记录导出为 HTML、JSON 或 XML 报告，包含成功/失败状态
+- **MCP 服务器** — JSON-RPC 2.0 Model Context Protocol 服务（stdio + HTTP/SSE），让 Claude Desktop / Claude Code / 自定义 tool-use 循环直接驱动 AutoControl。约 90 个工具,完整协议支持(resources、prompts、sampling、roots、logging、progress、cancellation、elicitation),Bearer token 验证 + TLS、审计 log、rate limit、plugin 热加载、CI fake backend
 - **远程自动化** — 同时提供 TCP Socket 服务器与 REST API 服务器
 - **插件加载器** — 将定义 `AC_*` 可调用对象的 `.py` 文件放入目录，运行时即可注册为 executor 命令
 - **Shell 集成** — 在自动化流程中执行 Shell 命令，支持异步输出捕获
@@ -80,6 +82,96 @@
 
 ## 架构
 
+运行时是分层的:**客户端接口**(CLI、GUI、MCP/REST/Socket 服务
+器)位于最上层,下面是**无头 API**(`wrapper/` + `utils/`),最后
+解析到 `wrapper/platform_wrapper.py` 在 import 时选定的**操作系统
+后端**。包 façade(`je_auto_control/__init__.py`)会 re-export 所
+有公开名称,使用者只需要 `import je_auto_control`,无论用哪个接口
+或后端都一样。
+
+```mermaid
+flowchart LR
+    subgraph Clients["客户端接口"]
+        direction TB
+        Claude[["Claude Desktop /<br/>Claude Code"]]
+        APIUser[["自定义 Anthropic /<br/>OpenAI tool-use 循环"]]
+        HTTPClient[["HTTP / SSE clients"]]
+        TCPClient[["Socket / REST clients"]]
+        GUIUser[["PySide6 GUI"]]
+        CLIUser[["python -m<br/>je_auto_control[.cli]"]]
+        Library[["Library 使用者<br/>(import je_auto_control)"]]
+    end
+
+    subgraph Transports["传输与服务器"]
+        direction TB
+        Stdio["MCP stdio<br/>JSON-RPC 2.0"]
+        HTTPMCP["MCP HTTP /<br/>SSE + auth + TLS"]
+        REST["REST 服务器<br/>:9939"]
+        Socket["Socket 服务器<br/>:9938"]
+    end
+
+    subgraph MCP["mcp_server/"]
+        direction TB
+        Dispatcher["MCPServer<br/>(JSON-RPC dispatcher)"]
+        Tools["tools/<br/>~90 ac_* + 别名"]
+        Resources["resources/<br/>files · history ·<br/>commands · screen-live"]
+        Prompts["prompts/<br/>内置模板"]
+        Context["context · audit ·<br/>rate-limit · log-bridge"]
+        FakeBE["fake_backend<br/>(CI 烟雾测试)"]
+    end
+
+    subgraph Core["无头核心 (wrapper/ + utils/)"]
+        direction TB
+        Wrapper["wrapper/<br/>鼠标 · 键盘 · 屏幕 ·<br/>图像 · 录制 · 窗口"]
+        Executor["executor/<br/>AC_* JSON 动作引擎"]
+        Vision["vision/ · ocr/ ·<br/>accessibility/"]
+        Recorder["scheduler/ · triggers/ ·<br/>hotkey/ · plugin_loader/<br/>run_history/"]
+        IOUtils["clipboard/ · cv2_utils/ ·<br/>shell_process/ · json/"]
+    end
+
+    subgraph Backends["操作系统后端"]
+        direction TB
+        Win["windows/<br/>Win32 ctypes"]
+        Mac["osx/<br/>pyobjc · Quartz"]
+        X11["linux_with_x11/<br/>python-Xlib"]
+    end
+
+    Claude --> Stdio
+    APIUser --> Stdio
+    HTTPClient --> HTTPMCP
+    TCPClient --> Socket
+    TCPClient --> REST
+
+    Stdio --> Dispatcher
+    HTTPMCP --> Dispatcher
+    Dispatcher --> Tools
+    Dispatcher --> Resources
+    Dispatcher --> Prompts
+    Dispatcher -.- Context
+    Tools -.可选.-> FakeBE
+
+    Tools --> Wrapper
+    Tools --> Executor
+    Tools --> Vision
+    Tools --> Recorder
+    Tools --> IOUtils
+    Resources --> Recorder
+    Resources --> Wrapper
+
+    REST --> Executor
+    Socket --> Executor
+
+    GUIUser --> Wrapper
+    GUIUser --> Recorder
+    CLIUser --> Executor
+    Library --> Wrapper
+    Library --> Executor
+
+    Wrapper --> Backends
+    Vision -.- Wrapper
+    Recorder -.- Executor
+```
+
 ```
 je_auto_control/
 ├── wrapper/                    # 平台无关 API 层
@@ -88,19 +180,21 @@ je_auto_control/
 │   ├── auto_control_keyboard.py# 键盘操作
 │   ├── auto_control_image.py   # 图像识别（OpenCV 模板匹配）
 │   ├── auto_control_screen.py  # 截图、屏幕大小、像素颜色
+│   ├── auto_control_window.py  # 跨平台窗口管理 facade
 │   └── auto_control_record.py  # 动作录制/回放
 ├── windows/                    # Windows 专用后端（Win32 API / ctypes）
 ├── osx/                        # macOS 专用后端（pyobjc / Quartz）
 ├── linux_with_x11/             # Linux 专用后端（python-Xlib）
 ├── gui/                        # PySide6 GUI 应用程序
 └── utils/
+    ├── mcp_server/             # MCP 服务器（stdio + HTTP/SSE）— server / tools / resources / prompts / audit / rate_limit / fake_backend / plugin_watcher
     ├── executor/               # JSON 动作执行引擎
     ├── callback/               # 回调函数执行器
     ├── cv2_utils/              # OpenCV 截图、模板匹配、视频录制
     ├── accessibility/          # UIA (Windows) / AX (macOS) 元件搜索
     ├── vision/                 # VLM 元件定位（Anthropic / OpenAI）
     ├── ocr/                    # Tesseract 文字定位
-    ├── clipboard/              # 跨平台剪贴板
+    ├── clipboard/              # 跨平台剪贴板（文字 + 图像）
     ├── scheduler/              # Interval + cron 调度器
     ├── hotkey/                 # 全局热键守护进程
     ├── triggers/               # 图像/窗口/像素/文件 触发器
@@ -402,6 +496,74 @@ je_auto_control.execute_action([
 | Shell | `AC_shell_command` |
 | 进程 | `AC_execute_process` |
 | 执行器 | `AC_execute_action`, `AC_execute_files` |
+
+### MCP 服务器（让 Claude 使用 AutoControl）
+
+把 AutoControl 包装成 Model Context Protocol 服务,任何支持 MCP 的
+client(Claude Desktop、Claude Code、自定义 Anthropic / OpenAI tool-use
+循环)都能驱动本机桌面。纯 stdlib — JSON-RPC 2.0 走 stdio 或 HTTP+
+SSE。
+
+**注册到 Claude Code:**
+
+```bash
+claude mcp add autocontrol -- python -m je_auto_control.utils.mcp_server
+```
+
+**注册到 Claude Desktop**(`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "autocontrol": {
+      "command": "python",
+      "args": ["-m", "je_auto_control.utils.mcp_server"]
+    }
+  }
+}
+```
+
+**程序启动:**
+
+```python
+import je_auto_control as ac
+
+# Stdio(会阻塞直到 stdin 关闭)
+ac.start_mcp_stdio_server()
+
+# 或 HTTP / SSE,带 Bearer token 验证 + 可选 TLS
+ac.start_mcp_http_server(host="127.0.0.1", port=9940,
+                         auth_token="hunter2")
+```
+
+**不启动服务器、只看目录:**
+
+```bash
+je_auto_control_mcp --list-tools
+je_auto_control_mcp --list-tools --read-only
+je_auto_control_mcp --list-resources
+je_auto_control_mcp --list-prompts
+```
+
+**功能总览:**
+
+| 面向 | 涵盖 |
+|---|---|
+| 工具(约 90 个) | 鼠标 · 键盘 · drag · 屏幕 / 多屏 · 截图回 image · diff · OCR · 图像 · 窗口(move/min/max/restore/...) · 剪贴板文字+图像 · 进程 / shell · 动作录制 · 屏幕录像 · scheduler / triggers / hotkeys · accessibility tree · VLM · executor · history |
+| 别名 | `click`、`type`、`screenshot`、`find_image`、`drag`、`shell`、`wait_image`...,以 `JE_AUTOCONTROL_MCP_ALIASES=0` 关闭 |
+| Resources | `autocontrol://files/<name>`、`autocontrol://history`、`autocontrol://commands`、`autocontrol://screen/live`(支持 `resources/subscribe`)|
+| Prompts | `automate_ui_task`、`record_and_generalize`、`compare_screenshots`、`find_widget`、`explain_action_file` |
+| 协议 | tools / resources / prompts / sampling / roots / logging / progress / cancellation / list_changed / elicitation |
+| 传输 | stdio、HTTP `POST /mcp`、`Accept: text/event-stream` 时走 SSE 流 |
+| 安全 | 工具注解 · `JE_AUTOCONTROL_MCP_READONLY` · `JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE` · 审计 log · token-bucket rate limiter · 工具失败自动截图 |
+| 部署 | Bearer token 验证 · 通过 `ssl_context` 启用 TLS · `PluginWatcher` 热加载 · `JE_AUTOCONTROL_FAKE_BACKEND=1` 给 CI |
+
+完整参考请见 [docs/source/Zh/doc/mcp_server/mcp_server_doc.rst](docs/source/Zh/doc/mcp_server/mcp_server_doc.rst)
+(英文版本在 [docs/source/Eng/doc/mcp_server/mcp_server_doc.rst](docs/source/Eng/doc/mcp_server/mcp_server_doc.rst))。
+
+> ⚠️ MCP 服务器可以移动鼠标、发送键盘事件、截图、执行任意 `AC_*`
+> 动作。请只注册给可信任的 client。HTTP 默认绑 `127.0.0.1`,要对外
+> 必须有明确理由,**并且**搭配 `auth_token` 与 `ssl_context`。
 
 ### 调度器（Interval & Cron）
 
