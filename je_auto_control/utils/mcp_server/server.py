@@ -14,9 +14,14 @@ import time
 from typing import Any, Callable, Dict, List, Optional, TextIO
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+import logging
+
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
+)
+from je_auto_control.utils.mcp_server.log_bridge import (
+    MCPLogBridge, mcp_level_to_logging,
 )
 from je_auto_control.utils.mcp_server.rate_limit import RateLimiter
 from je_auto_control.utils.mcp_server.prompts import (
@@ -55,6 +60,7 @@ class MCPServer:
                  concurrent_tools: bool = False,
                  audit_logger: Optional[AuditLogger] = None,
                  rate_limiter: Optional[RateLimiter] = None,
+                 log_bridge: Optional[MCPLogBridge] = None,
                  ) -> None:
         registry = tools if tools is not None else build_default_tool_registry()
         self._tools: Dict[str, MCPTool] = {tool.name: tool for tool in registry}
@@ -66,6 +72,7 @@ class MCPServer:
         self._audit = (audit_logger if audit_logger is not None
                         else AuditLogger())
         self._rate_limiter = rate_limiter
+        self._log_bridge = log_bridge
         self._stop = threading.Event()
         self._initialized = False
         self._notifier: Optional[Callable[[str, Dict[str, Any]], None]] = None
@@ -129,6 +136,7 @@ class MCPServer:
         # Stdio always opts into concurrent tool execution so sampling
         # requests issued by tool handlers don't block the reader.
         self._concurrent_tools = True
+        self._attach_log_bridge_if_configured()
         try:
             while not self._stop.is_set():
                 line = in_stream.readline()
@@ -141,6 +149,7 @@ class MCPServer:
                 if response is not None:
                     self._write_message(out_stream, response)
         finally:
+            self._detach_log_bridge_if_configured()
             self._notifier = prior_notifier
             self._writer = prior_writer
             self._concurrent_tools = prior_concurrent
@@ -162,6 +171,23 @@ class MCPServer:
         register a list-collecting callback to inspect notifications.
         """
         self._notifier = notifier
+
+    def _attach_log_bridge_if_configured(self) -> None:
+        """Wire the log bridge into the project logger and notifier."""
+        if self._log_bridge is None:
+            self._log_bridge = MCPLogBridge()
+        self._log_bridge.set_notifier(self._notifier)
+        if self._log_bridge not in autocontrol_logger.handlers:
+            autocontrol_logger.addHandler(self._log_bridge)
+
+    def _detach_log_bridge_if_configured(self) -> None:
+        if self._log_bridge is None:
+            return
+        self._log_bridge.set_notifier(None)
+        try:
+            autocontrol_logger.removeHandler(self._log_bridge)
+        except ValueError:
+            pass
 
     def set_writer(self, writer: Optional[Callable[[str], None]]) -> None:
         """Install a callback used to write any outbound JSON-RPC line.
@@ -357,7 +383,25 @@ class MCPServer:
                                  for prompt in self._prompts.list()]}
         if method == "prompts/get":
             return self._handle_prompts_get(params)
+        if method == "logging/setLevel":
+            return self._handle_logging_set_level(params)
         raise _MCPError(-32601, f"Method not found: {method}")
+
+    def _handle_logging_set_level(self,
+                                  params: Dict[str, Any]) -> Dict[str, Any]:
+        name = params.get("level")
+        if not isinstance(name, str):
+            raise _MCPError(-32602, "logging/setLevel requires string 'level'")
+        level = mcp_level_to_logging(name)
+        if level is None:
+            raise _MCPError(-32602, f"unknown log level: {name!r}")
+        if self._log_bridge is None:
+            self._log_bridge = MCPLogBridge()
+        self._log_bridge.setLevel(level)
+        autocontrol_logger.setLevel(min(autocontrol_logger.level or level,
+                                         level) if autocontrol_logger.level
+                                    else level)
+        return {}
 
     def _handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
         client_version = params.get("protocolVersion", PROTOCOL_VERSION)
@@ -369,6 +413,7 @@ class MCPServer:
             "resources": {"listChanged": False, "subscribe": False},
             "prompts": {"listChanged": False},
             "sampling": {},
+            "logging": {},
         }
         if "roots" in self._client_capabilities:
             capabilities["roots"] = {"listChanged": True}

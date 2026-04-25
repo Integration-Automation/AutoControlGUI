@@ -158,9 +158,10 @@ def test_serve_stdio_processes_messages_until_eof():
     stdout = io.StringIO()
     server.serve_stdio(stdin=stdin, stdout=stdout)
     out_lines = [line for line in stdout.getvalue().splitlines() if line]
-    assert len(out_lines) == 2  # initialize + tools/call (notification has no reply)
-    last = _decode(out_lines[-1])
-    assert last["result"]["content"][0]["text"] == "pong"
+    responses = [_decode(line) for line in out_lines
+                  if '"id":' in line and '"method"' not in line]
+    assert len(responses) == 2  # initialize + tools/call
+    assert responses[-1]["result"]["content"][0]["text"] == "pong"
 
 
 def test_tool_descriptor_includes_annotations():
@@ -1191,6 +1192,51 @@ def test_refresh_roots_updates_filesystem_provider(tmp_path):
     t.join(timeout=2.0)
     assert not t.is_alive()
     assert os.path.realpath(fs_provider.root) == os.path.realpath(str(target))
+
+
+def test_initialize_advertises_logging_capability():
+    server = MCPServer(tools=[])
+    response = _decode(server.handle_line(_request("initialize", params={})))
+    assert "logging" in response["result"]["capabilities"]
+
+
+def test_log_bridge_emits_notification_for_log_record():
+    from je_auto_control.utils.mcp_server.log_bridge import MCPLogBridge
+    captured = []
+    bridge = MCPLogBridge(
+        notifier=lambda method, params: captured.append((method, params)),
+    )
+    import logging
+    record = logging.LogRecord(
+        name="je_auto_control.tests", level=logging.WARNING,
+        pathname=__file__, lineno=10, msg="something %s", args=("happened",),
+        exc_info=None,
+    )
+    bridge.emit(record)
+    assert captured
+    method, params = captured[0]
+    assert method == "notifications/message"
+    assert params["level"] == "warning"
+    assert params["data"]["message"] == "something happened"
+
+
+def test_logging_set_level_request_updates_bridge_level():
+    from je_auto_control.utils.mcp_server.log_bridge import MCPLogBridge
+    server = MCPServer(tools=[], log_bridge=MCPLogBridge())
+    response = _decode(server.handle_line(_request("logging/setLevel", params={
+        "level": "error",
+    })))
+    assert response["result"] == {}
+    import logging
+    assert server._log_bridge.level == logging.ERROR
+
+
+def test_logging_set_level_rejects_unknown_name():
+    server = MCPServer(tools=[])
+    response = _decode(server.handle_line(_request("logging/setLevel", params={
+        "level": "telepathy",
+    })))
+    assert response["error"]["code"] == -32602
 
 
 def test_default_registry_lists_core_automation_tools():
