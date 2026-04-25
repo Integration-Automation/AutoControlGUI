@@ -118,7 +118,7 @@ jobs:
 
   publish:
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/stable'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -182,8 +182,8 @@ jobs:
           git add pyproject.toml
           git commit -m "Bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
           git tag "v${{ steps.bump.outputs.new_version }}"
-          git pull --rebase origin stable
-          git push origin stable
+          git pull --rebase origin main
+          git push origin main
           git push origin "v${{ steps.bump.outputs.new_version }}"
 
       - name: Create GitHub Release
