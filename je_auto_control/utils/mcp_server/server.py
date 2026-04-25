@@ -9,9 +9,12 @@ message — no Content-Length framing — matching the MCP stdio spec.
 import json
 import sys
 import threading
-from typing import Any, Dict, List, Optional, TextIO
+from typing import Any, Callable, Dict, List, Optional, TextIO
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.mcp_server.context import (
+    OperationCancelledError, ToolCallContext,
+)
 from je_auto_control.utils.mcp_server.prompts import (
     PromptProvider, default_prompt_provider,
 )
@@ -51,6 +54,10 @@ class MCPServer:
                           else default_prompt_provider())
         self._stop = threading.Event()
         self._initialized = False
+        self._notifier: Optional[Callable[[str, Dict[str, Any]], None]] = None
+        self._active_calls: Dict[Any, ToolCallContext] = {}
+        self._calls_lock = threading.Lock()
+        self._write_lock = threading.Lock()
 
     def register_tool(self, tool: MCPTool) -> None:
         """Add or replace a tool in the live registry."""
@@ -68,18 +75,41 @@ class MCPServer:
         autocontrol_logger.info(
             "MCP server starting (stdio, %d tools)", len(self._tools),
         )
-        while not self._stop.is_set():
-            line = in_stream.readline()
-            if line == "":
-                break
-            line = line.strip()
-            if not line:
-                continue
-            response = self.handle_line(line)
-            if response is not None:
-                out_stream.write(response + "\n")
-                out_stream.flush()
-        autocontrol_logger.info("MCP server stopped")
+        prior_notifier = self._notifier
+        self._notifier = lambda method, params: self._write_message(
+            out_stream, _notification_message(method, params),
+        )
+        try:
+            while not self._stop.is_set():
+                line = in_stream.readline()
+                if line == "":
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                response = self.handle_line(line)
+                if response is not None:
+                    self._write_message(out_stream, response)
+        finally:
+            self._notifier = prior_notifier
+            autocontrol_logger.info("MCP server stopped")
+
+    def _write_message(self, out_stream: TextIO, payload: str) -> None:
+        """Serialize an outbound JSON-RPC line under a writer lock."""
+        with self._write_lock:
+            out_stream.write(payload + "\n")
+            out_stream.flush()
+
+    def set_notifier(self,
+                     notifier: Optional[Callable[[str, Dict[str, Any]], None]]
+                     ) -> None:
+        """Install a callback used to send outbound notifications.
+
+        The HTTP transport sets this to push notifications onto an
+        SSE stream; the stdio loop installs its own writer. Tests may
+        register a list-collecting callback to inspect notifications.
+        """
+        self._notifier = notifier
 
     def handle_line(self, line: str) -> Optional[str]:
         """Process one JSON-RPC line; return the response line or ``None``."""
@@ -104,9 +134,12 @@ class MCPServer:
                         params: Dict[str, Any]) -> str:
         """Dispatch a request and serialise the result or error."""
         try:
-            result = self._dispatch(method, params)
+            result = self._dispatch(msg_id, method, params)
         except _MCPError as error:
             return _error_response(msg_id, error.code, error.message)
+        except OperationCancelledError as error:
+            autocontrol_logger.info("MCP call %s cancelled by client", msg_id)
+            return _error_response(msg_id, -32800, str(error))
         except (OSError, RuntimeError, ValueError, TypeError, KeyError) as error:
             autocontrol_logger.exception("MCP dispatch failed")
             return _error_response(msg_id, -32603, f"Internal error: {error}")
@@ -115,14 +148,29 @@ class MCPServer:
     def _handle_notification(self, method: Optional[str],
                              params: Dict[str, Any]) -> None:
         """Notifications carry no id and never get a response."""
-        del params
         if method == "notifications/initialized":
             self._initialized = True
             autocontrol_logger.info("MCP client initialized")
             return
+        if method == "notifications/cancelled":
+            self._cancel_active_call(params)
+            return
         autocontrol_logger.debug("MCP notification ignored: %s", method)
 
-    def _dispatch(self, method: Optional[str],
+    def _cancel_active_call(self, params: Dict[str, Any]) -> None:
+        """Mark the matching active tool call as cancelled, if any."""
+        request_id = params.get("requestId")
+        if request_id is None:
+            return
+        with self._calls_lock:
+            ctx = self._active_calls.get(request_id)
+        if ctx is not None:
+            ctx.cancelled_event.set()
+            autocontrol_logger.info(
+                "MCP cancel signalled for call %r", request_id,
+            )
+
+    def _dispatch(self, msg_id: Any, method: Optional[str],
                   params: Dict[str, Any]) -> Any:
         if method == "initialize":
             return self._handle_initialize(params)
@@ -132,7 +180,7 @@ class MCPServer:
             return {"tools": [tool.to_descriptor()
                               for tool in self._tools.values()]}
         if method == "tools/call":
-            return self._handle_tools_call(params)
+            return self._handle_tools_call(msg_id, params)
         if method == "resources/list":
             return {"resources": [resource.to_descriptor()
                                    for resource in self._resources.list()]}
@@ -183,7 +231,8 @@ class MCPServer:
             raise _MCPError(-32602, f"Unknown prompt: {name}")
         return payload
 
-    def _handle_tools_call(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _handle_tools_call(self, msg_id: Any,
+                           params: Dict[str, Any]) -> Dict[str, Any]:
         name = params.get("name")
         arguments = params.get("arguments") or {}
         if not isinstance(name, str):
@@ -193,8 +242,13 @@ class MCPServer:
         tool = self._tools.get(name)
         if tool is None:
             raise _MCPError(-32602, f"Unknown tool: {name}")
+        ctx = self._build_call_context(msg_id, params)
+        with self._calls_lock:
+            self._active_calls[msg_id] = ctx
         try:
-            result = tool.invoke(arguments)
+            result = tool.invoke(arguments, ctx=ctx)
+        except OperationCancelledError:
+            raise
         except (OSError, RuntimeError, ValueError, TypeError,
                 AttributeError, KeyError, NotImplementedError) as error:
             autocontrol_logger.warning("MCP tool %s failed: %r", name, error)
@@ -203,10 +257,23 @@ class MCPServer:
                              "text": f"{type(error).__name__}: {error}"}],
                 "isError": True,
             }
+        finally:
+            with self._calls_lock:
+                self._active_calls.pop(msg_id, None)
         return {
             "content": _to_content_blocks(result),
             "isError": False,
         }
+
+    def _build_call_context(self, msg_id: Any,
+                            params: Dict[str, Any]) -> ToolCallContext:
+        meta = params.get("_meta") if isinstance(params.get("_meta"),
+                                                  dict) else {}
+        progress_token = meta.get("progressToken") if isinstance(meta, dict) else None
+        return ToolCallContext(
+            request_id=msg_id, progress_token=progress_token,
+            notifier=self._notifier,
+        )
 
 
 def _to_content_blocks(result: Any) -> List[Dict[str, Any]]:
@@ -227,6 +294,11 @@ def _stringify_result(value: Any) -> str:
         return json.dumps(value, ensure_ascii=False, default=str)
     except (TypeError, ValueError):
         return repr(value)
+
+
+def _notification_message(method: str, params: Dict[str, Any]) -> str:
+    return json.dumps({"jsonrpc": "2.0", "method": method, "params": params},
+                      ensure_ascii=False, default=str)
 
 
 def _result_response(msg_id: Any, result: Any) -> str:

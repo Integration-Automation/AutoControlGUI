@@ -9,6 +9,9 @@ dependencies are required.
 from je_auto_control.utils.mcp_server.server import (
     MCPServer, start_mcp_stdio_server,
 )
+from je_auto_control.utils.mcp_server.context import (
+    OperationCancelledError, ToolCallContext,
+)
 from je_auto_control.utils.mcp_server.http_transport import (
     HttpMCPServer, start_mcp_http_server,
 )
@@ -25,8 +28,8 @@ from je_auto_control.utils.mcp_server.tools import (
 __all__ = [
     "HttpMCPServer", "MCPContent", "MCPPrompt", "MCPPromptArgument",
     "MCPResource", "MCPServer", "MCPTool", "MCPToolAnnotations",
-    "PromptProvider", "ResourceProvider",
-    "build_default_tool_registry",
+    "OperationCancelledError", "PromptProvider", "ResourceProvider",
+    "ToolCallContext", "build_default_tool_registry",
     "default_prompt_provider", "default_resource_provider",
     "start_mcp_http_server", "start_mcp_stdio_server",
 ]

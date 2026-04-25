@@ -4,8 +4,10 @@ Holds the public value types (:class:`MCPContent`,
 :class:`MCPToolAnnotations`, :class:`MCPTool`), the JSON-Schema
 helper, and the annotation constants used by every tool factory.
 """
+import inspect
 import os
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any, Callable, Dict, List, Optional
 
 
@@ -94,9 +96,28 @@ class MCPTool:
             "annotations": self.annotations.to_dict(),
         }
 
-    def invoke(self, arguments: Dict[str, Any]) -> Any:
-        """Call the underlying handler with keyword arguments."""
+    def invoke(self, arguments: Dict[str, Any], ctx: Any = None) -> Any:
+        """Call the underlying handler with keyword arguments.
+
+        Handlers that declare a ``ctx`` parameter receive the
+        :class:`~je_auto_control.utils.mcp_server.context.ToolCallContext`
+        for the active call, which lets them report progress and
+        observe cooperative cancellation. Handlers that do not
+        declare ``ctx`` see the original behaviour unchanged.
+        """
+        if ctx is not None and _handler_accepts_ctx(self.handler):
+            return self.handler(ctx=ctx, **arguments)
         return self.handler(**arguments)
+
+
+@lru_cache(maxsize=512)
+def _handler_accepts_ctx(handler: Callable[..., Any]) -> bool:
+    """Return True when ``handler`` declares a ``ctx`` keyword parameter."""
+    try:
+        signature = inspect.signature(handler)
+    except (TypeError, ValueError):
+        return False
+    return "ctx" in signature.parameters
 
 
 def schema(properties: Dict[str, Any],

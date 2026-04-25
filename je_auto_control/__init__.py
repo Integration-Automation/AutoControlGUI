@@ -65,10 +65,10 @@ from je_auto_control.utils.ocr.ocr_engine import (
 # MCP server (headless stdio bridge for Claude / other MCP clients)
 from je_auto_control.utils.mcp_server import (
     HttpMCPServer, MCPContent, MCPPrompt, MCPPromptArgument, MCPResource,
-    MCPServer, MCPTool, MCPToolAnnotations, PromptProvider,
-    ResourceProvider, build_default_tool_registry,
-    default_prompt_provider, default_resource_provider,
-    start_mcp_http_server, start_mcp_stdio_server,
+    MCPServer, MCPTool, MCPToolAnnotations, OperationCancelledError,
+    PromptProvider, ResourceProvider, ToolCallContext,
+    build_default_tool_registry, default_prompt_provider,
+    default_resource_provider, start_mcp_http_server, start_mcp_stdio_server,
 )
 # Plugin loader (headless)
 from je_auto_control.utils.plugin_loader.plugin_loader import (
@@ -221,8 +221,8 @@ __all__ = [
     # MCP server
     "HttpMCPServer", "MCPContent", "MCPPrompt", "MCPPromptArgument",
     "MCPResource", "MCPServer", "MCPTool", "MCPToolAnnotations",
-    "PromptProvider", "ResourceProvider",
-    "build_default_tool_registry",
+    "OperationCancelledError", "PromptProvider", "ResourceProvider",
+    "ToolCallContext", "build_default_tool_registry",
     "default_prompt_provider", "default_resource_provider",
     "start_mcp_http_server", "start_mcp_stdio_server",
     # Plugin loader

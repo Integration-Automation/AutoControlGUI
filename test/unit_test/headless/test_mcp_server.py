@@ -6,8 +6,12 @@ backends are needed.
 """
 import io
 import json
+import threading
 from typing import Any, Dict, List
 
+from je_auto_control.utils.mcp_server.context import (
+    OperationCancelledError, ToolCallContext,
+)
 from je_auto_control.utils.mcp_server.prompts import (
     MCPPrompt, MCPPromptArgument, StaticPromptProvider,
     default_prompt_catalogue,
@@ -571,6 +575,111 @@ def test_default_prompt_catalogue_has_core_templates():
     assert {"automate_ui_task", "record_and_generalize",
             "compare_screenshots", "find_widget",
             "explain_action_file"}.issubset(names)
+
+
+def test_progress_notifications_are_sent_when_token_provided():
+    captured = []
+
+    def slow_handler(seconds, ctx):
+        del seconds
+        ctx.progress(0.0, total=1.0, message="starting")
+        ctx.progress(1.0, total=1.0, message="done")
+        return "ok"
+
+    tool = MCPTool(
+        name="slow", description="slow",
+        input_schema={"type": "object", "properties": {
+            "seconds": {"type": "number"}}},
+        handler=slow_handler,
+    )
+    server = MCPServer(tools=[tool])
+    server.set_notifier(lambda method, params: captured.append((method, params)))
+    response = _decode(server.handle_line(_request("tools/call", params={
+        "name": "slow", "arguments": {"seconds": 0.0},
+        "_meta": {"progressToken": "tok-1"},
+    })))
+    assert response["result"]["isError"] is False
+    methods = [event[0] for event in captured]
+    assert methods == ["notifications/progress",
+                       "notifications/progress"]
+    assert captured[0][1] == {"progressToken": "tok-1",
+                               "progress": 0.0, "total": 1.0,
+                               "message": "starting"}
+
+
+def test_progress_is_no_op_without_token():
+    captured = []
+
+    def handler(ctx):
+        ctx.progress(0.5, total=1.0)
+        return "ok"
+
+    tool = MCPTool(
+        name="silent", description="silent",
+        input_schema={"type": "object", "properties": {}},
+        handler=handler,
+    )
+    server = MCPServer(tools=[tool])
+    server.set_notifier(lambda method, params: captured.append((method, params)))
+    response = _decode(server.handle_line(_request("tools/call", params={
+        "name": "silent", "arguments": {},
+    })))
+    assert response["result"]["isError"] is False
+    assert captured == []
+
+
+def test_cancellation_notification_sets_context_flag():
+    started = threading.Event()
+    proceed = threading.Event()
+    seen_cancel = []
+
+    def slow_handler(ctx):
+        started.set()
+        proceed.wait(timeout=2.0)
+        seen_cancel.append(ctx.cancelled)
+        ctx.check_cancelled()
+        return "ok"
+
+    tool = MCPTool(
+        name="cancellable", description="cancellable",
+        input_schema={"type": "object", "properties": {}},
+        handler=slow_handler,
+    )
+    server = MCPServer(tools=[tool])
+
+    response_holder = {}
+
+    def run_call():
+        response_holder["raw"] = server.handle_line(_request(
+            "tools/call", msg_id=42,
+            params={"name": "cancellable", "arguments": {}},
+        ))
+
+    thread = threading.Thread(target=run_call)
+    thread.start()
+    assert started.wait(timeout=1.0)
+    server.handle_line(json.dumps({
+        "jsonrpc": "2.0", "method": "notifications/cancelled",
+        "params": {"requestId": 42, "reason": "user clicked stop"},
+    }))
+    proceed.set()
+    thread.join(timeout=2.0)
+    assert not thread.is_alive()
+    assert seen_cancel == [True]
+    decoded = _decode(response_holder["raw"])
+    assert decoded["error"]["code"] == -32800
+
+
+def test_tool_call_context_check_cancelled_raises():
+    ctx = ToolCallContext(request_id=7, progress_token=None)
+    ctx.check_cancelled()  # not cancelled — no raise
+    ctx.cancelled_event.set()
+    try:
+        ctx.check_cancelled()
+    except OperationCancelledError as error:
+        assert error.request_id == 7
+    else:
+        raise AssertionError("expected OperationCancelledError")
 
 
 def test_default_registry_lists_core_automation_tools():
