@@ -510,6 +510,7 @@ class MCPServer:
             raise _MCPError(-32602, f"Invalid arguments for {name}: {violation}")
         if self._rate_limiter is not None and not self._rate_limiter.try_acquire():
             raise _MCPError(-32000, f"Rate limit exceeded for tool {name!r}")
+        self._maybe_confirm_destructive(name, tool, arguments)
         ctx = self._build_call_context(msg_id, params)
         with self._calls_lock:
             self._active_calls[msg_id] = ctx
@@ -550,6 +551,21 @@ class MCPServer:
             "content": _to_content_blocks(result),
             "isError": False,
         }
+
+    def request_elicitation(self, message: str,
+                            requested_schema: Optional[Dict[str, Any]] = None,
+                            timeout: float = 60.0) -> Dict[str, Any]:
+        """Ask the connected client to elicit a response from the user.
+
+        Returns the raw payload (typically ``{"action": "accept" | "decline" | "cancel", ...}``).
+        Requires the client to advertise the ``elicitation`` capability.
+        """
+        params: Dict[str, Any] = {"message": str(message)}
+        if requested_schema is not None:
+            params["requestedSchema"] = requested_schema
+        return self._send_outbound_request(
+            "elicitation/create", params=params, timeout=timeout,
+        )
 
     def request_sampling(self, messages: List[Dict[str, Any]],
                          system_prompt: Optional[str] = None,
@@ -600,6 +616,42 @@ class MCPServer:
             raise RuntimeError(f"sampling failed: {slot['error']}")
         return slot.get("result") or {}
 
+    def _maybe_confirm_destructive(self, name: str, tool: MCPTool,
+                                    arguments: Dict[str, Any]) -> None:
+        """Ask the client to confirm before running a destructive tool."""
+        if not _confirm_destructive_enabled():
+            return
+        annotations = tool.annotations
+        if annotations.read_only or not annotations.destructive:
+            return
+        if "elicitation" not in self._client_capabilities:
+            autocontrol_logger.info(
+                "MCP confirmation requested for %s but client lacks "
+                "elicitation capability — proceeding without prompt", name,
+            )
+            return
+        if self._writer is None:
+            return
+        prompt = (f"AutoControl is about to run a destructive tool "
+                  f"'{name}'. Continue?")
+        try:
+            response = self.request_elicitation(
+                message=prompt, requested_schema={"type": "object",
+                                                    "properties": {}},
+                timeout=60.0,
+            )
+        except (RuntimeError, TimeoutError) as error:
+            autocontrol_logger.info(
+                "MCP elicitation for %s failed (%r) — refusing call",
+                name, error,
+            )
+            raise _MCPError(-32000,
+                             f"User confirmation unavailable for {name}")
+        action = response.get("action") if isinstance(response, dict) else None
+        if action != "accept":
+            raise _MCPError(-32000, f"User declined to run {name}: action={action!r}")
+        del arguments  # available for future per-arg confirmation policies
+
     def _build_call_context(self, msg_id: Any,
                             params: Dict[str, Any]) -> ToolCallContext:
         meta = params.get("_meta") if isinstance(params.get("_meta"),
@@ -629,6 +681,12 @@ def _stringify_result(value: Any) -> str:
         return json.dumps(value, ensure_ascii=False, default=str)
     except (TypeError, ValueError):
         return repr(value)
+
+
+def _confirm_destructive_enabled() -> bool:
+    """Return True when the operator wants destructive tools gated on user OK."""
+    raw = os.environ.get("JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "")
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _capture_error_screenshot(tool_name: str) -> Optional[str]:

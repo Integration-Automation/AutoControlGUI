@@ -1575,6 +1575,116 @@ def test_resources_subscribe_rejects_unknown_uri():
     assert response["error"]["code"] == -32602
 
 
+def test_destructive_confirmation_blocks_when_user_declines(monkeypatch):
+    monkeypatch.setenv("JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "1")
+    captured_lines = []
+    tool = MCPTool(
+        name="zap", description="zap",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda: "should not run",
+    )
+    server = MCPServer(tools=[tool], concurrent_tools=True)
+    server.set_writer(captured_lines.append)
+    server._client_capabilities = {"elicitation": {}}
+
+    def run_call():
+        server.handle_line(_request("tools/call", msg_id=11, params={
+            "name": "zap", "arguments": {},
+        }))
+
+    t = threading.Thread(target=run_call)
+    t.start()
+    deadline = threading.Event()
+    for _ in range(200):
+        if any('"elicitation/create"' in line for line in captured_lines):
+            break
+        deadline.wait(0.01)
+    eli_lines = [line for line in captured_lines
+                  if '"elicitation/create"' in line]
+    assert eli_lines, "expected elicitation/create"
+    eli_id = json.loads(eli_lines[-1])["id"]
+
+    server.handle_line(json.dumps({
+        "jsonrpc": "2.0", "id": eli_id,
+        "result": {"action": "decline"},
+    }))
+    t.join(timeout=2.0)
+    assert not t.is_alive()
+    final_lines = [line for line in captured_lines if '"id": 11' in line]
+    assert final_lines
+    final = json.loads(final_lines[-1])
+    assert final["error"]["code"] == -32000
+    assert "declined" in final["error"]["message"]
+
+
+def test_destructive_confirmation_allows_when_user_accepts(monkeypatch):
+    monkeypatch.setenv("JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "1")
+    captured_lines = []
+    tool = MCPTool(
+        name="zap2", description="zap2",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda: "ran",
+    )
+    server = MCPServer(tools=[tool], concurrent_tools=True)
+    server.set_writer(captured_lines.append)
+    server._client_capabilities = {"elicitation": {}}
+
+    def run_call():
+        server.handle_line(_request("tools/call", msg_id=12, params={
+            "name": "zap2", "arguments": {},
+        }))
+
+    t = threading.Thread(target=run_call)
+    t.start()
+    deadline = threading.Event()
+    for _ in range(200):
+        if any('"elicitation/create"' in line for line in captured_lines):
+            break
+        deadline.wait(0.01)
+    eli_id = json.loads([line for line in captured_lines
+                          if '"elicitation/create"' in line][-1])["id"]
+
+    server.handle_line(json.dumps({
+        "jsonrpc": "2.0", "id": eli_id,
+        "result": {"action": "accept", "content": {}},
+    }))
+    t.join(timeout=2.0)
+    final = json.loads([line for line in captured_lines
+                          if '"id": 12' in line][-1])
+    assert final["result"]["isError"] is False
+    assert final["result"]["content"][0]["text"] == "ran"
+
+
+def test_destructive_confirmation_skipped_when_client_lacks_capability(monkeypatch):
+    monkeypatch.setenv("JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "1")
+    tool = MCPTool(
+        name="zap3", description="zap3",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda: "ok",
+    )
+    server = MCPServer(tools=[tool])
+    # Client did not advertise elicitation — server proceeds without asking.
+    response = _decode(server.handle_line(_request("tools/call", params={
+        "name": "zap3", "arguments": {},
+    })))
+    assert response["result"]["isError"] is False
+
+
+def test_destructive_confirmation_skipped_when_env_unset(monkeypatch):
+    monkeypatch.delenv("JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", raising=False)
+    tool = MCPTool(
+        name="zap4", description="zap4",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda: "ok",
+    )
+    server = MCPServer(tools=[tool])
+    server._client_capabilities = {"elicitation": {}}
+    response = _decode(server.handle_line(_request("tools/call", params={
+        "name": "zap4", "arguments": {},
+    })))
+    assert response["result"]["isError"] is False
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {
