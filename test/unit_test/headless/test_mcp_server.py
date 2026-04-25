@@ -1473,6 +1473,37 @@ def test_auto_screenshot_on_error_writes_file_when_env_set(
     assert saved_paths
 
 
+def test_default_registry_includes_short_aliases():
+    names = {tool.name for tool in build_default_tool_registry(aliases=True)}
+    assert {"click", "type", "screenshot", "find_image",
+            "drag", "shell"}.issubset(names)
+
+
+def test_alias_handler_dispatches_to_canonical_tool():
+    by_name = {tool.name: tool
+                for tool in build_default_tool_registry(aliases=True)}
+    canonical = by_name["ac_get_mouse_position"]
+    alias = by_name["mouse_pos"]
+    assert alias.handler is canonical.handler
+
+
+def test_aliases_env_flag_disables_them(monkeypatch):
+    monkeypatch.setenv("JE_AUTOCONTROL_MCP_ALIASES", "0")
+    names = {tool.name for tool in build_default_tool_registry()}
+    assert "click" not in names
+    assert "ac_click_mouse" in names
+
+
+def test_aliases_excluded_from_read_only_registry():
+    names = {tool.name
+              for tool in build_default_tool_registry(read_only=True,
+                                                       aliases=True)}
+    # Read-only filter runs before alias expansion, so destructive aliases drop.
+    assert "click" not in names
+    # Read-only canonical tools get their aliases.
+    assert "mouse_pos" in names
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {
