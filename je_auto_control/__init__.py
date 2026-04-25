@@ -68,7 +68,8 @@ from je_auto_control.utils.mcp_server import (
     MCPServer, MCPTool, MCPToolAnnotations, OperationCancelledError,
     PromptProvider, ResourceProvider, ToolCallContext,
     build_default_tool_registry, default_prompt_provider,
-    default_resource_provider, start_mcp_http_server, start_mcp_stdio_server,
+    default_resource_provider, make_plugin_tool, register_plugin_tools,
+    start_mcp_http_server, start_mcp_stdio_server,
 )
 # Plugin loader (headless)
 from je_auto_control.utils.plugin_loader.plugin_loader import (
@@ -224,6 +225,7 @@ __all__ = [
     "OperationCancelledError", "PromptProvider", "ResourceProvider",
     "ToolCallContext", "build_default_tool_registry",
     "default_prompt_provider", "default_resource_provider",
+    "make_plugin_tool", "register_plugin_tools",
     "start_mcp_http_server", "start_mcp_stdio_server",
     # Plugin loader
     "load_plugin_file", "load_plugin_directory", "discover_plugin_commands",

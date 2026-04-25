@@ -828,6 +828,77 @@ def test_tools_call_passes_valid_args():
     assert response["result"]["content"][0]["text"] == "3"
 
 
+def test_initialize_advertises_tools_list_changed():
+    server = MCPServer(tools=[])
+    response = _decode(server.handle_line(_request("initialize", params={})))
+    assert response["result"]["capabilities"]["tools"]["listChanged"] is True
+
+
+def test_register_tool_emits_list_changed_notification():
+    captured = []
+    server = MCPServer(tools=[])
+    server.set_notifier(lambda method, params: captured.append((method, params)))
+    new_tool = MCPTool(
+        name="late", description="late",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda: "ok",
+    )
+    server.register_tool(new_tool)
+    assert ("notifications/tools/list_changed", {}) in captured
+
+
+def test_unregister_tool_emits_list_changed_notification():
+    tool = MCPTool(
+        name="vanish", description="vanish",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda: "ok",
+    )
+    captured = []
+    server = MCPServer(tools=[tool])
+    server.set_notifier(lambda method, params: captured.append((method, params)))
+    assert server.unregister_tool("vanish") is True
+    assert ("notifications/tools/list_changed", {}) in captured
+    assert server.unregister_tool("vanish") is False
+
+
+def test_make_plugin_tool_derives_schema_from_signature():
+    from je_auto_control.utils.mcp_server.tools.plugin_tools import (
+        make_plugin_tool,
+    )
+
+    def AC_demo(text: str, count: int = 1) -> str:  # noqa: N802
+        """Demo plugin command."""
+        return text * count
+
+    tool = make_plugin_tool("AC_demo", AC_demo)
+    assert tool.name == "plugin_ac_demo"
+    assert tool.description.startswith("Demo plugin command")
+    assert tool.input_schema["properties"]["text"] == {"type": "string"}
+    assert tool.input_schema["properties"]["count"] == {"type": "integer"}
+    assert tool.input_schema.get("required") == ["text"]
+
+
+def test_register_plugin_tools_adds_to_server_and_notifies():
+    from je_auto_control.utils.mcp_server.tools.plugin_tools import (
+        register_plugin_tools,
+    )
+
+    def AC_one(value: str) -> str:  # noqa: N802
+        return value.upper()
+
+    captured = []
+    server = MCPServer(tools=[])
+    server.set_notifier(lambda method, params: captured.append((method, params)))
+    names = register_plugin_tools(server, {"AC_one": AC_one})
+    assert names == ["plugin_ac_one"]
+    response = _decode(server.handle_line(_request("tools/call", params={
+        "name": "plugin_ac_one", "arguments": {"value": "hi"},
+    })))
+    assert response["result"]["content"][0]["text"] == "HI"
+    assert any(method == "notifications/tools/list_changed"
+               for method, _ in captured)
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {

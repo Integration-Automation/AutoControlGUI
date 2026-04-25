@@ -70,8 +70,32 @@ class MCPServer:
         self._outbound_lock = threading.Lock()
 
     def register_tool(self, tool: MCPTool) -> None:
-        """Add or replace a tool in the live registry."""
+        """Add or replace a tool in the live registry.
+
+        Emits ``notifications/tools/list_changed`` to the connected
+        client so it knows to refresh its cached tool list.
+        """
         self._tools[tool.name] = tool
+        self._notify_tools_list_changed()
+
+    def unregister_tool(self, name: str) -> bool:
+        """Remove a tool by name. Returns True if it existed."""
+        if name not in self._tools:
+            return False
+        del self._tools[name]
+        self._notify_tools_list_changed()
+        return True
+
+    def _notify_tools_list_changed(self) -> None:
+        notifier = self._notifier
+        if notifier is None:
+            return
+        try:
+            notifier("notifications/tools/list_changed", {})
+        except (OSError, RuntimeError, ValueError):
+            autocontrol_logger.exception(
+                "MCP failed to send tools/list_changed",
+            )
 
     def stop(self) -> None:
         """Request the stdio loop to exit at its next iteration."""
@@ -267,7 +291,7 @@ class MCPServer:
         return {
             "protocolVersion": client_version or PROTOCOL_VERSION,
             "capabilities": {
-                "tools": {"listChanged": False},
+                "tools": {"listChanged": True},
                 "resources": {"listChanged": False, "subscribe": False},
                 "prompts": {"listChanged": False},
                 "sampling": {},

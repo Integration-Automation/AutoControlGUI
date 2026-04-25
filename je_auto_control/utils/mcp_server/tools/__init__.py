@@ -11,6 +11,9 @@ from je_auto_control.utils.mcp_server.tools._base import (
     MCPContent, MCPTool, MCPToolAnnotations, read_only_env_flag,
 )
 from je_auto_control.utils.mcp_server.tools._factories import ALL_FACTORIES
+from je_auto_control.utils.mcp_server.tools.plugin_tools import (
+    make_plugin_tool, register_plugin_tools,
+)
 
 
 def build_default_tool_registry(read_only: Optional[bool] = None
@@ -35,5 +38,6 @@ def build_default_tool_registry(read_only: Optional[bool] = None
 
 __all__ = [
     "MCPContent", "MCPTool", "MCPToolAnnotations",
-    "build_default_tool_registry",
+    "build_default_tool_registry", "make_plugin_tool",
+    "register_plugin_tools",
 ]
