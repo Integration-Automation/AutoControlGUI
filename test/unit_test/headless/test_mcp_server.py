@@ -12,7 +12,7 @@ from je_auto_control.utils.mcp_server.server import (
     PROTOCOL_VERSION, MCPServer,
 )
 from je_auto_control.utils.mcp_server.tools import (
-    MCPTool, MCPToolAnnotations, build_default_tool_registry,
+    MCPContent, MCPTool, MCPToolAnnotations, build_default_tool_registry,
 )
 
 
@@ -209,6 +209,53 @@ def test_read_only_env_var_disabled_when_unset(monkeypatch):
     monkeypatch.delenv("JE_AUTOCONTROL_MCP_READONLY", raising=False)
     full = build_default_tool_registry()
     assert any(not tool.annotations.read_only for tool in full)
+
+
+def test_mcp_content_image_block_serialises_to_mcp_shape():
+    content = MCPContent.image_block("AAAA", mime_type="image/jpeg")
+    assert content.to_dict() == {
+        "type": "image", "data": "AAAA", "mimeType": "image/jpeg",
+    }
+
+
+def test_mcp_content_text_block_serialises_to_mcp_shape():
+    assert MCPContent.text_block("hello").to_dict() == {
+        "type": "text", "text": "hello",
+    }
+
+
+def test_tools_call_returns_image_content_when_handler_yields_image():
+    image_payload = MCPContent.image_block("ZmFrZQ==")  # base64 "fake"
+    tool = MCPTool(
+        name="snap", description="snap",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda: image_payload,
+    )
+    server = MCPServer(tools=[tool])
+    response = _decode(server.handle_line(_request("tools/call", params={
+        "name": "snap", "arguments": {},
+    })))
+    blocks = response["result"]["content"]
+    assert blocks == [{"type": "image", "data": "ZmFrZQ==",
+                       "mimeType": "image/png"}]
+
+
+def test_tools_call_passes_through_multi_content_lists():
+    payload = [MCPContent.image_block("Zm9v"),
+               MCPContent.text_block("saved: /tmp/x.png")]
+    tool = MCPTool(
+        name="snap2", description="snap2",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda: payload,
+    )
+    server = MCPServer(tools=[tool])
+    response = _decode(server.handle_line(_request("tools/call", params={
+        "name": "snap2", "arguments": {},
+    })))
+    blocks = response["result"]["content"]
+    assert len(blocks) == 2
+    assert blocks[0]["type"] == "image"
+    assert blocks[1]["type"] == "text"
 
 
 def test_default_registry_lists_core_automation_tools():

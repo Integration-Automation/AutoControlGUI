@@ -10,9 +10,47 @@ All wrapper imports are lazy so importing this module — and therefore
 booting the MCP server — does not pull in heavy backends (cv2, OCR,
 Win32) until a tool is actually called.
 """
+import base64
+import io
 import os
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
+
+
+@dataclass(frozen=True)
+class MCPContent:
+    """One content block returned to an MCP client.
+
+    The ``type`` field follows the MCP content discriminator: ``text``,
+    ``image``, or ``resource``. Tools normally return plain Python
+    objects (auto-wrapped in a single ``text`` block); use this class
+    when a tool needs to return non-text content such as a screenshot.
+    """
+
+    type: str
+    text: Optional[str] = None
+    data: Optional[str] = None
+    mime_type: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return the JSON shape MCP clients expect for one content block."""
+        if self.type == "text":
+            return {"type": "text", "text": self.text or ""}
+        if self.type == "image":
+            return {
+                "type": "image", "data": self.data or "",
+                "mimeType": self.mime_type or "image/png",
+            }
+        return {"type": self.type, "text": self.text or ""}
+
+    @classmethod
+    def text_block(cls, text: str) -> "MCPContent":
+        return cls(type="text", text=text)
+
+    @classmethod
+    def image_block(cls, data: str,
+                    mime_type: str = "image/png") -> "MCPContent":
+        return cls(type="image", data=data, mime_type=mime_type)
 
 
 @dataclass(frozen=True)
@@ -131,16 +169,31 @@ def _screen_size() -> List[int]:
     return [int(width), int(height)]
 
 
-def _screenshot(file_path: str,
-                screen_region: Optional[List[int]] = None) -> str:
-    """Save a screenshot to ``file_path`` (validated) and return that path."""
+def _screenshot(file_path: Optional[str] = None,
+                screen_region: Optional[List[int]] = None
+                ) -> List[MCPContent]:
+    """Take a screenshot, optionally save it, and return image + path.
+
+    The result always includes a base64 PNG content block so MCP
+    clients can show the screen to the model. If ``file_path`` is
+    given, the screenshot is also saved there and a text block with
+    the resolved absolute path is appended.
+    """
     from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-    safe_path = os.path.realpath(os.fspath(file_path))
-    parent = os.path.dirname(safe_path) or "."
-    if not os.path.isdir(parent):
-        raise ValueError(f"screenshot directory does not exist: {parent}")
-    pil_screenshot(file_path=safe_path, screen_region=screen_region)
-    return safe_path
+    saved_path: Optional[str] = None
+    if file_path is not None:
+        saved_path = os.path.realpath(os.fspath(file_path))
+        parent = os.path.dirname(saved_path) or "."
+        if not os.path.isdir(parent):
+            raise ValueError(f"screenshot directory does not exist: {parent}")
+    image = pil_screenshot(file_path=saved_path, screen_region=screen_region)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    contents: List[MCPContent] = [MCPContent.image_block(encoded)]
+    if saved_path is not None:
+        contents.append(MCPContent.text_block(f"saved: {saved_path}"))
+    return contents
 
 
 def _get_pixel(x: int, y: int) -> List[int]:
@@ -360,14 +413,16 @@ def _screen_tools() -> List[MCPTool]:
         ),
         MCPTool(
             name="ac_screenshot",
-            description=("Save a screenshot to file_path and return the "
-                         "absolute path. Optional screen_region is "
+            description=("Take a screenshot and return it as a base64 PNG "
+                         "image content block so the model can see the "
+                         "screen. If file_path is provided, the image is "
+                         "also saved there. screen_region is "
                          "[x, y, width, height]."),
             input_schema=_schema({
                 "file_path": {"type": "string"},
                 "screen_region": {"type": "array",
                                    "items": {"type": "integer"}},
-            }, required=["file_path"]),
+            }),
             handler=_screenshot,
             annotations=MCPToolAnnotations(destructive=False, idempotent=False),
         ),

@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, TextIO
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.tools import (
-    MCPTool, build_default_tool_registry,
+    MCPContent, MCPTool, build_default_tool_registry,
 )
 
 PROTOCOL_VERSION = "2025-06-18"
@@ -152,9 +152,19 @@ class MCPServer:
                 "isError": True,
             }
         return {
-            "content": [{"type": "text", "text": _stringify_result(result)}],
+            "content": _to_content_blocks(result),
             "isError": False,
         }
+
+
+def _to_content_blocks(result: Any) -> List[Dict[str, Any]]:
+    """Normalise a tool's return value into MCP ``content`` blocks."""
+    if isinstance(result, MCPContent):
+        return [result.to_dict()]
+    if isinstance(result, list) and result and \
+            all(isinstance(item, MCPContent) for item in result):
+        return [item.to_dict() for item in result]
+    return [{"type": "text", "text": _stringify_result(result)}]
 
 
 def _stringify_result(value: Any) -> str:
