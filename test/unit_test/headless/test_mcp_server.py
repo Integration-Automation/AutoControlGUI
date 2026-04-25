@@ -756,6 +756,78 @@ def test_initialize_advertises_sampling_capability():
     assert "sampling" in response["result"]["capabilities"]
 
 
+def test_tools_call_rejects_missing_required_field():
+    tool = MCPTool(
+        name="needs_x", description="needs x",
+        input_schema={
+            "type": "object",
+            "properties": {"x": {"type": "integer"}},
+            "required": ["x"],
+        },
+        handler=lambda x: x * 2,
+    )
+    server = MCPServer(tools=[tool])
+    response = _decode(server.handle_line(_request("tools/call", params={
+        "name": "needs_x", "arguments": {},
+    })))
+    assert response["error"]["code"] == -32602
+    assert "missing required property 'x'" in response["error"]["message"]
+
+
+def test_tools_call_rejects_wrong_type():
+    tool = MCPTool(
+        name="needs_int", description="needs int",
+        input_schema={
+            "type": "object",
+            "properties": {"x": {"type": "integer"}},
+            "required": ["x"],
+        },
+        handler=lambda x: x,
+    )
+    server = MCPServer(tools=[tool])
+    response = _decode(server.handle_line(_request("tools/call", params={
+        "name": "needs_int", "arguments": {"x": "not-int"},
+    })))
+    assert response["error"]["code"] == -32602
+    assert "expected integer" in response["error"]["message"]
+
+
+def test_tools_call_rejects_value_outside_enum():
+    tool = MCPTool(
+        name="enum_only", description="enum",
+        input_schema={
+            "type": "object",
+            "properties": {"mode": {"type": "string",
+                                     "enum": ["a", "b"]}},
+            "required": ["mode"],
+        },
+        handler=lambda mode: mode,
+    )
+    server = MCPServer(tools=[tool])
+    response = _decode(server.handle_line(_request("tools/call", params={
+        "name": "enum_only", "arguments": {"mode": "c"},
+    })))
+    assert response["error"]["code"] == -32602
+
+
+def test_tools_call_passes_valid_args():
+    tool = MCPTool(
+        name="adder", description="adder",
+        input_schema={
+            "type": "object",
+            "properties": {"x": {"type": "integer"},
+                            "y": {"type": "integer"}},
+            "required": ["x", "y"],
+        },
+        handler=lambda x, y: x + y,
+    )
+    server = MCPServer(tools=[tool])
+    response = _decode(server.handle_line(_request("tools/call", params={
+        "name": "adder", "arguments": {"x": 1, "y": 2},
+    })))
+    assert response["result"]["content"][0]["text"] == "3"
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {

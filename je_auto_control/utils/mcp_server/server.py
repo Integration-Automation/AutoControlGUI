@@ -25,6 +25,9 @@ from je_auto_control.utils.mcp_server.resources import (
 from je_auto_control.utils.mcp_server.tools import (
     MCPContent, MCPTool, build_default_tool_registry,
 )
+from je_auto_control.utils.mcp_server.tools._validation import (
+    validate_arguments,
+)
 
 PROTOCOL_VERSION = "2025-06-18"
 SERVER_NAME = "je_auto_control"
@@ -308,6 +311,9 @@ class MCPServer:
         tool = self._tools.get(name)
         if tool is None:
             raise _MCPError(-32602, f"Unknown tool: {name}")
+        violation = validate_arguments(tool.input_schema, arguments)
+        if violation is not None:
+            raise _MCPError(-32602, f"Invalid arguments for {name}: {violation}")
         ctx = self._build_call_context(msg_id, params)
         with self._calls_lock:
             self._active_calls[msg_id] = ctx
