@@ -113,3 +113,33 @@ Security notes
 - The transport is local stdio — there is no network exposure.
 - File paths supplied to ``ac_screenshot`` and ``ac_execute_action_file``
   are normalised through ``os.path.realpath`` before any I/O.
+
+Read-only / safe mode
+=====================
+
+To restrict the server to read-only tools (no clicks, no keystrokes,
+no script execution), set the ``JE_AUTOCONTROL_MCP_READONLY``
+environment variable to ``1`` / ``true``. Only tools annotated with
+``readOnlyHint`` (positions, sizes, OCR queries, history, clipboard
+reads, ...) are exposed:
+
+.. code-block:: json
+
+   {
+     "mcpServers": {
+       "autocontrol_safe": {
+         "command": "python",
+         "args": ["-m", "je_auto_control.utils.mcp_server"],
+         "env": {"JE_AUTOCONTROL_MCP_READONLY": "1"}
+       }
+     }
+   }
+
+Or programmatically:
+
+.. code-block:: python
+
+   import je_auto_control as ac
+
+   safe_tools = ac.build_default_tool_registry(read_only=True)
+   ac.MCPServer(tools=safe_tools).serve_stdio()

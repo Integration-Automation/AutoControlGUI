@@ -107,3 +107,32 @@ tool-use 迴圈等）都能透過 AutoControl 操控本機桌面。傳輸採用 
 - 傳輸只走本機 stdio，不對外開放網路。
 - ``ac_screenshot`` 與 ``ac_execute_action_file`` 收到的檔案路徑會
   先經過 ``os.path.realpath`` 正規化才進行 I/O。
+
+唯讀 / 安全模式
+===============
+
+若要限制伺服器只暴露唯讀工具（不准點擊、輸入、執行腳本），可將
+``JE_AUTOCONTROL_MCP_READONLY`` 環境變數設為 ``1`` / ``true``。只
+有帶有 ``readOnlyHint`` 的工具（座標、螢幕尺寸、OCR 查詢、歷史紀
+錄、剪貼簿讀取等）會被暴露：
+
+.. code-block:: json
+
+   {
+     "mcpServers": {
+       "autocontrol_safe": {
+         "command": "python",
+         "args": ["-m", "je_auto_control.utils.mcp_server"],
+         "env": {"JE_AUTOCONTROL_MCP_READONLY": "1"}
+       }
+     }
+   }
+
+或以程式設定：
+
+.. code-block:: python
+
+   import je_auto_control as ac
+
+   safe_tools = ac.build_default_tool_registry(read_only=True)
+   ac.MCPServer(tools=safe_tools).serve_stdio()

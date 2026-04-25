@@ -538,10 +538,28 @@ def _system_tools() -> List[MCPTool]:
     ]
 
 
-def build_default_tool_registry() -> List[MCPTool]:
-    """Return the full set of tools the MCP server exposes by default."""
+def _read_only_env_flag() -> bool:
+    """Return True when JE_AUTOCONTROL_MCP_READONLY is set to a truthy value."""
+    raw = os.environ.get("JE_AUTOCONTROL_MCP_READONLY", "")
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def build_default_tool_registry(read_only: Optional[bool] = None
+                                ) -> List[MCPTool]:
+    """Return the full set of tools the MCP server exposes by default.
+
+    :param read_only: when True, drop every tool whose annotations
+        indicate it can mutate state. When None (default), the value
+        of ``JE_AUTOCONTROL_MCP_READONLY`` is consulted, so deployments
+        can pin the server in safe mode without code changes.
+    """
+    enforce_read_only = (
+        _read_only_env_flag() if read_only is None else bool(read_only)
+    )
     tools: List[MCPTool] = []
     for batch in (_mouse_tools, _keyboard_tools, _screen_tools,
                   _image_and_ocr_tools, _window_tools, _system_tools):
         tools.extend(batch())
+    if enforce_read_only:
+        tools = [tool for tool in tools if tool.annotations.read_only]
     return tools

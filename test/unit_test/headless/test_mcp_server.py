@@ -186,6 +186,31 @@ def test_default_tool_registry_marks_safe_tools_read_only():
     assert by_name["ac_type_text"].annotations.read_only is False
 
 
+def test_read_only_registry_drops_destructive_tools():
+    safe = build_default_tool_registry(read_only=True)
+    assert safe, "expected at least one read-only tool"
+    assert all(tool.annotations.read_only for tool in safe)
+    safe_names = {tool.name for tool in safe}
+    assert "ac_click_mouse" not in safe_names
+    assert "ac_type_text" not in safe_names
+    assert "ac_execute_actions" not in safe_names
+    # Pure observers must survive.
+    assert {"ac_get_mouse_position", "ac_screen_size",
+            "ac_list_action_commands"}.issubset(safe_names)
+
+
+def test_read_only_env_var_is_honored(monkeypatch):
+    monkeypatch.setenv("JE_AUTOCONTROL_MCP_READONLY", "1")
+    safe = build_default_tool_registry()
+    assert all(tool.annotations.read_only for tool in safe)
+
+
+def test_read_only_env_var_disabled_when_unset(monkeypatch):
+    monkeypatch.delenv("JE_AUTOCONTROL_MCP_READONLY", raising=False)
+    full = build_default_tool_registry()
+    assert any(not tool.annotations.read_only for tool in full)
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {
