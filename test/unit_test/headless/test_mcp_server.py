@@ -258,6 +258,47 @@ def test_tools_call_passes_through_multi_content_lists():
     assert blocks[1]["type"] == "text"
 
 
+def test_recording_tools_present_in_default_registry():
+    names = {tool.name for tool in build_default_tool_registry()}
+    assert {
+        "ac_record_start", "ac_record_stop",
+        "ac_read_action_file", "ac_write_action_file",
+        "ac_trim_actions", "ac_adjust_delays", "ac_scale_coordinates",
+    }.issubset(names)
+
+
+def test_trim_actions_tool_returns_subset(tmp_path):
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    actions = [["AC_a", {}], ["AC_b", {}], ["AC_c", {}], ["AC_d", {}]]
+    trimmed = by_name["ac_trim_actions"].invoke(
+        {"actions": actions, "start": 1, "end": 3}
+    )
+    assert trimmed == [["AC_b", {}], ["AC_c", {}]]
+
+
+def test_scale_coordinates_tool_scales_x_y():
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    actions = [["AC_click_mouse", {"x": 100, "y": 200,
+                                     "mouse_keycode": "mouse_left"}]]
+    scaled = by_name["ac_scale_coordinates"].invoke(
+        {"actions": actions, "x_factor": 2.0, "y_factor": 0.5}
+    )
+    assert scaled[0][1]["x"] == 200
+    assert scaled[0][1]["y"] == 100
+
+
+def test_write_and_read_action_file_round_trip(tmp_path):
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    target = tmp_path / "actions.json"
+    actions = [["AC_click_mouse", {"mouse_keycode": "mouse_left"}]]
+    saved_path = by_name["ac_write_action_file"].invoke(
+        {"file_path": str(target), "actions": actions}
+    )
+    assert target.exists()
+    loaded = by_name["ac_read_action_file"].invoke({"file_path": saved_path})
+    assert loaded == actions
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {

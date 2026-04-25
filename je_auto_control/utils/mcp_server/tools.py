@@ -312,6 +312,54 @@ def _list_action_commands() -> List[str]:
     return sorted(executor.known_commands())
 
 
+def _record_start() -> str:
+    from je_auto_control.wrapper.auto_control_record import record
+    record()
+    return "recording started"
+
+
+def _record_stop() -> List[Any]:
+    from je_auto_control.wrapper.auto_control_record import stop_record
+    return stop_record() or []
+
+
+def _read_action_file(file_path: str) -> List[Any]:
+    from je_auto_control.utils.json.json_file import read_action_json
+    safe_path = os.path.realpath(os.fspath(file_path))
+    return read_action_json(safe_path)
+
+
+def _write_action_file(file_path: str, actions: List[Any]) -> str:
+    from je_auto_control.utils.json.json_file import write_action_json
+    safe_path = os.path.realpath(os.fspath(file_path))
+    parent = os.path.dirname(safe_path) or "."
+    if not os.path.isdir(parent):
+        raise ValueError(f"action-file directory does not exist: {parent}")
+    write_action_json(safe_path, actions)
+    return safe_path
+
+
+def _trim_actions(actions: List[Any], start: int = 0,
+                  end: Optional[int] = None) -> List[Any]:
+    from je_auto_control.utils.recording_edit.editor import trim_actions
+    return trim_actions(actions, start=int(start),
+                        end=None if end is None else int(end))
+
+
+def _adjust_delays(actions: List[Any], factor: float = 1.0,
+                   clamp_ms: int = 0) -> List[Any]:
+    from je_auto_control.utils.recording_edit.editor import adjust_delays
+    return adjust_delays(actions, factor=float(factor),
+                         clamp_ms=int(clamp_ms))
+
+
+def _scale_coordinates(actions: List[Any], x_factor: float = 1.0,
+                       y_factor: float = 1.0) -> List[Any]:
+    from je_auto_control.utils.recording_edit.editor import scale_coordinates
+    return scale_coordinates(actions, x_factor=float(x_factor),
+                             y_factor=float(y_factor))
+
+
 # === Tool builders ==========================================================
 
 _DESTRUCTIVE = MCPToolAnnotations(destructive=True)
@@ -599,6 +647,84 @@ def _read_only_env_flag() -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _recording_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_record_start",
+            description=("Start recording mouse and keyboard events in the "
+                         "background. Call ac_record_stop to retrieve the "
+                         "captured action list. Not supported on macOS."),
+            input_schema=_schema({}),
+            handler=_record_start,
+            annotations=MCPToolAnnotations(destructive=False, idempotent=False),
+        ),
+        MCPTool(
+            name="ac_record_stop",
+            description=("Stop the active recorder and return the captured "
+                         "action list ([[command, args], ...]) ready to "
+                         "feed back into ac_execute_actions."),
+            input_schema=_schema({}),
+            handler=_record_stop,
+            annotations=MCPToolAnnotations(destructive=False, idempotent=False),
+        ),
+        MCPTool(
+            name="ac_read_action_file",
+            description="Read a JSON action file from disk and return its parsed contents.",
+            input_schema=_schema({"file_path": {"type": "string"}},
+                                 required=["file_path"]),
+            handler=_read_action_file,
+            annotations=_READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_write_action_file",
+            description="Persist an action list to a JSON file at file_path.",
+            input_schema=_schema({
+                "file_path": {"type": "string"},
+                "actions": {"type": "array"},
+            }, required=["file_path", "actions"]),
+            handler=_write_action_file,
+            annotations=MCPToolAnnotations(destructive=False, idempotent=False),
+        ),
+        MCPTool(
+            name="ac_trim_actions",
+            description=("Return actions[start:end] as a new list — useful "
+                         "for cleaning up the head/tail of a recording."),
+            input_schema=_schema({
+                "actions": {"type": "array"},
+                "start": {"type": "integer"},
+                "end": {"type": "integer"},
+            }, required=["actions"]),
+            handler=_trim_actions,
+            annotations=_READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_adjust_delays",
+            description=("Scale every AC_sleep delay by ``factor`` and "
+                         "optionally clamp to a minimum of clamp_ms."),
+            input_schema=_schema({
+                "actions": {"type": "array"},
+                "factor": {"type": "number"},
+                "clamp_ms": {"type": "integer"},
+            }, required=["actions"]),
+            handler=_adjust_delays,
+            annotations=_READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_scale_coordinates",
+            description=("Scale every x/y coordinate in an action list — "
+                         "useful when replaying a recording on a different "
+                         "resolution."),
+            input_schema=_schema({
+                "actions": {"type": "array"},
+                "x_factor": {"type": "number"},
+                "y_factor": {"type": "number"},
+            }, required=["actions"]),
+            handler=_scale_coordinates,
+            annotations=_READ_ONLY,
+        ),
+    ]
+
+
 def build_default_tool_registry(read_only: Optional[bool] = None
                                 ) -> List[MCPTool]:
     """Return the full set of tools the MCP server exposes by default.
@@ -613,7 +739,8 @@ def build_default_tool_registry(read_only: Optional[bool] = None
     )
     tools: List[MCPTool] = []
     for batch in (_mouse_tools, _keyboard_tools, _screen_tools,
-                  _image_and_ocr_tools, _window_tools, _system_tools):
+                  _image_and_ocr_tools, _window_tools, _system_tools,
+                  _recording_tools):
         tools.extend(batch())
     if enforce_read_only:
         tools = [tool for tool in tools if tool.annotations.read_only]
