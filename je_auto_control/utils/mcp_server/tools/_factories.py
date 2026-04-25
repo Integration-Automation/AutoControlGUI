@@ -277,6 +277,26 @@ def system_tools() -> List[MCPTool]:
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
+            name="ac_get_clipboard_image",
+            description=("Return the current clipboard image as a base64 "
+                         "PNG content block (so the model can see it). "
+                         "Returns a text block 'clipboard does not contain "
+                         "an image' when the clipboard has no image."),
+            input_schema=schema({}),
+            handler=h.get_clipboard_image,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_set_clipboard_image",
+            description=("Place a Pillow-readable image file on the "
+                         "clipboard. Windows-only today; macOS / Linux "
+                         "raise NotImplementedError."),
+            input_schema=schema({"image_path": {"type": "string"}},
+                                required=["image_path"]),
+            handler=h.set_clipboard_image,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
             name="ac_execute_actions",
             description=("Run a list of AutoControl actions through the "
                          "executor. Each action is [name, args] where name "

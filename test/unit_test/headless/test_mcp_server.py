@@ -992,6 +992,44 @@ def test_screenshot_rejects_invalid_monitor_index():
         raise AssertionError("expected ValueError for bad monitor index")
 
 
+def test_clipboard_image_tools_present_in_default_registry():
+    names = {tool.name for tool in build_default_tool_registry()}
+    assert {"ac_get_clipboard_image", "ac_set_clipboard_image"}.issubset(names)
+
+
+def test_get_clipboard_image_returns_text_block_when_empty(monkeypatch):
+    """When the clipboard has no image, return a clear text fallback."""
+    import je_auto_control.utils.mcp_server.tools._handlers as handlers
+    import je_auto_control.utils.clipboard.clipboard_image as image_clip
+    monkeypatch.setattr(image_clip, "get_clipboard_image", lambda: None)
+    result = handlers.get_clipboard_image()
+    assert result[0].type == "text"
+    assert "does not contain an image" in result[0].text
+
+
+def test_get_clipboard_image_returns_image_block_when_set(monkeypatch):
+    import je_auto_control.utils.mcp_server.tools._handlers as handlers
+    import je_auto_control.utils.clipboard.clipboard_image as image_clip
+    monkeypatch.setattr(image_clip, "get_clipboard_image",
+                         lambda: b"\x89PNG\r\n\x1a\n")
+    result = handlers.get_clipboard_image()
+    assert result[0].type == "image"
+    assert result[0].mime_type == "image/png"
+
+
+def test_set_clipboard_image_validates_existence(tmp_path):
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    missing = tmp_path / "nope.png"
+    try:
+        by_name["ac_set_clipboard_image"].invoke({
+            "image_path": str(missing),
+        })
+    except FileNotFoundError as error:
+        assert "image not found" in str(error)
+    else:
+        raise AssertionError("expected FileNotFoundError")
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {

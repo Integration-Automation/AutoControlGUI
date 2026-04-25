@@ -381,6 +381,27 @@ def set_clipboard(text: str) -> str:
     return "ok"
 
 
+def get_clipboard_image() -> List[MCPContent]:
+    """Return the clipboard image as a base64 PNG content block."""
+    from je_auto_control.utils.clipboard.clipboard_image import (
+        get_clipboard_image as _read,
+    )
+    payload = _read()
+    if payload is None:
+        return [MCPContent.text_block("clipboard does not contain an image")]
+    encoded = base64.b64encode(payload).decode("ascii")
+    return [MCPContent.image_block(encoded)]
+
+
+def set_clipboard_image(image_path: str) -> str:
+    from je_auto_control.utils.clipboard.clipboard_image import (
+        set_clipboard_image as _write,
+    )
+    safe_path = os.path.realpath(os.fspath(image_path))
+    _write(safe_path)
+    return "ok"
+
+
 # === Executor / history / recording =========================================
 
 def execute_actions(actions: List[Any]) -> Dict[str, str]:
