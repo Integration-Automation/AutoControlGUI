@@ -31,6 +31,9 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 
+[project.scripts]
+je_auto_control_mcp = "je_auto_control.utils.mcp_server.__main__:main"
+
 [project.urls]
 Homepage = "https://github.com/Intergration-Automation-Testing/AutoControl"
 Documentation = "https://autocontrol.readthedocs.io/en/latest/"

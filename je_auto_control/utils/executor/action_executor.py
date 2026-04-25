@@ -34,6 +34,7 @@ from je_auto_control.utils.generate_report.generate_json_report import generate_
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml, generate_xml_report
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.mcp_server.server import start_mcp_stdio_server
 from je_auto_control.utils.package_manager.package_manager_class import package_manager
 from je_auto_control.utils.project.create_project_structure import create_project_dir
 from je_auto_control.utils.shell_process.shell_exec import ShellManager
@@ -208,6 +209,9 @@ class Executor:
             # VLM-based element locator
             "AC_vlm_locate": _vlm_locate_as_list,
             "AC_vlm_click": click_by_description,
+
+            # MCP server (Model Context Protocol stdio bridge)
+            "AC_start_mcp_server": start_mcp_stdio_server,
         }
 
     def known_commands(self) -> set:
