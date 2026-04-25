@@ -482,20 +482,24 @@ je_auto_control.execute_action([
 
 | 類別 | 命令 |
 |---|---|
-| 滑鼠 | `AC_click_mouse`, `AC_set_mouse_position`, `AC_get_mouse_position`, `AC_press_mouse`, `AC_release_mouse`, `AC_mouse_scroll`, `AC_mouse_left`, `AC_mouse_right`, `AC_mouse_middle` |
-| 鍵盤 | `AC_type_keyboard`, `AC_press_keyboard_key`, `AC_release_keyboard_key`, `AC_write`, `AC_hotkey`, `AC_check_key_is_press` |
+| 滑鼠 | `AC_click_mouse`, `AC_set_mouse_position`, `AC_get_mouse_position`, `AC_get_mouse_table`, `AC_press_mouse`, `AC_release_mouse`, `AC_mouse_scroll`, `AC_mouse_left`, `AC_mouse_right`, `AC_mouse_middle` |
+| 鍵盤 | `AC_type_keyboard`, `AC_press_keyboard_key`, `AC_release_keyboard_key`, `AC_write`, `AC_hotkey`, `AC_check_key_is_press`, `AC_get_keyboard_keys_table` |
 | 圖像 | `AC_locate_all_image`, `AC_locate_image_center`, `AC_locate_and_click` |
 | 螢幕 | `AC_screen_size`, `AC_screenshot` |
 | Accessibility | `AC_a11y_list`, `AC_a11y_find`, `AC_a11y_click` |
 | VLM（AI 定位） | `AC_vlm_locate`, `AC_vlm_click` |
 | OCR | `AC_locate_text`, `AC_click_text`, `AC_wait_text` |
 | 剪貼簿 | `AC_clipboard_get`, `AC_clipboard_set` |
-| 錄製 | `AC_record`, `AC_stop_record` |
+| 視窗 | `AC_list_windows`, `AC_focus_window`, `AC_wait_window`, `AC_close_window` |
+| 流程控制 | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_while_image`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry` |
+| 錄製 | `AC_record`, `AC_stop_record`, `AC_set_record_enable` |
 | 報告 | `AC_generate_html`, `AC_generate_json`, `AC_generate_xml`, `AC_generate_html_report`, `AC_generate_json_report`, `AC_generate_xml_report` |
+| 執行紀錄 | `AC_history_list`, `AC_history_clear` |
 | 專案 | `AC_create_project` |
 | Shell | `AC_shell_command` |
 | 程序 | `AC_execute_process` |
-| 執行器 | `AC_execute_action`, `AC_execute_files` |
+| 執行器 | `AC_execute_action`, `AC_execute_files`, `AC_add_package_to_executor`, `AC_add_package_to_callback_executor` |
+| MCP 伺服器 | `AC_start_mcp_server`, `AC_start_mcp_http_server` |
 
 ### MCP 伺服器（讓 Claude 使用 AutoControl）
 

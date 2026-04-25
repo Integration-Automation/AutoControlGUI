@@ -8,7 +8,6 @@
   [
     "AC_mouse_left",
     {
-      "mouse_keycode": "mouse_left",
       "x": 500,
       "y": 500
     }

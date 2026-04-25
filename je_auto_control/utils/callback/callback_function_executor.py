@@ -1,4 +1,4 @@
-from typing import Callable, Any
+from typing import Any, Callable
 
 # utils cv2_utils
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
@@ -7,6 +7,7 @@ from je_auto_control.utils.exception.exceptions import CallbackExecutorException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
+from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 # file process
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
 # html report
@@ -22,7 +23,7 @@ from je_auto_control.utils.package_manager.package_manager_class import package_
 # project
 from je_auto_control.utils.project.create_project_structure import create_project_dir
 # shell
-from je_auto_control.utils.shell_process.shell_exec import ShellManager
+from je_auto_control.utils.shell_process.shell_exec import default_shell_manager
 # socket server
 from je_auto_control.utils.socket_server.auto_control_socket_server import start_autocontrol_socket_server
 # process
@@ -61,9 +62,7 @@ class CallbackFunctionExecutor:
         # 事件字典，對應字串名稱到實際函式
         self.event_dict: dict = {
             # mouse 滑鼠相關
-            "AC_mouse_left": click_mouse,
-            "AC_mouse_right": click_mouse,
-            "AC_mouse_middle": click_mouse,
+            **MOUSE_BUTTON_COMMANDS,
             "AC_click_mouse": click_mouse,
             "AC_get_mouse_table": get_mouse_table,
             "AC_get_mouse_position": get_mouse_position,
@@ -129,7 +128,7 @@ class CallbackFunctionExecutor:
             "AC_add_package_to_callback_executor": package_manager.add_package_to_callback_executor,
 
             # shell command
-            "AC_shell_command": ShellManager().exec_shell,
+            "AC_shell_command": default_shell_manager.exec_shell,
 
             # process
             "AC_execute_process": start_exe,
