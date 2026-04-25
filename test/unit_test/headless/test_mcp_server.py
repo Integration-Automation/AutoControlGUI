@@ -943,6 +943,33 @@ def test_diff_screenshots_returns_no_boxes_when_identical(tmp_path):
     assert result["boxes"] == []
 
 
+def test_screen_recording_tools_present_in_default_registry():
+    names = {tool.name for tool in build_default_tool_registry()}
+    assert {"ac_screen_record_start", "ac_screen_record_stop",
+            "ac_screen_record_list"}.issubset(names)
+
+
+def test_screen_record_start_validates_directory(tmp_path):
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    missing = tmp_path / "nope" / "out.avi"
+    try:
+        by_name["ac_screen_record_start"].invoke({
+            "recorder_name": "rec1", "file_path": str(missing),
+        })
+    except ValueError as error:
+        assert "directory does not exist" in str(error)
+    else:
+        raise AssertionError("expected ValueError for missing dir")
+
+
+def test_screen_record_list_starts_empty(monkeypatch):
+    """Force a fresh recorder so leftover state from other tests doesn't bleed in."""
+    import je_auto_control.utils.mcp_server.tools._handlers as handlers
+    monkeypatch.setattr(handlers, "_screen_recorder_singleton", None)
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    assert by_name["ac_screen_record_list"].invoke({}) == []
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {

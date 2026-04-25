@@ -192,6 +192,52 @@ def _connected_component_boxes(mask: Any,
     return boxes
 
 
+_screen_recorder_singleton: Any = None
+
+
+def _get_screen_recorder() -> Any:
+    """Lazy-init the process-wide ScreenRecorder."""
+    global _screen_recorder_singleton
+    if _screen_recorder_singleton is None:
+        from je_auto_control.utils.cv2_utils.screen_record import ScreenRecorder
+        _screen_recorder_singleton = ScreenRecorder()
+    return _screen_recorder_singleton
+
+
+def screen_record_start(recorder_name: str,
+                        file_path: str,
+                        codec: str = "XVID",
+                        frame_per_sec: int = 30,
+                        width: int = 1920,
+                        height: int = 1080) -> str:
+    """Start a screen recording under ``recorder_name``; returns the resolved path."""
+    safe_path = os.path.realpath(os.fspath(file_path))
+    parent = os.path.dirname(safe_path) or "."
+    if not os.path.isdir(parent):
+        raise ValueError(f"recording directory does not exist: {parent}")
+    recorder = _get_screen_recorder()
+    recorder.start_new_record(
+        recorder_name=str(recorder_name),
+        path_and_filename=safe_path, codec=str(codec),
+        frame_per_sec=int(frame_per_sec),
+        resolution=(int(width), int(height)),
+    )
+    return safe_path
+
+
+def screen_record_stop(recorder_name: str) -> str:
+    """Stop the named screen recording; no-op if it doesn't exist."""
+    recorder = _get_screen_recorder()
+    recorder.stop_record(str(recorder_name))
+    return "stopped"
+
+
+def screen_record_list() -> List[str]:
+    """Return the names of currently running recorders."""
+    recorder = _get_screen_recorder()
+    return sorted(recorder.running_recorder.keys())
+
+
 def _flood_fill_box(mask: Any, visited: Any,
                     start_x: int, start_y: int) -> List[int]:
     """Iterative 4-connectivity flood fill returning [x, y, w, h]."""

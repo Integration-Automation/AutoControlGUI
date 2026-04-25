@@ -305,6 +305,42 @@ def system_tools() -> List[MCPTool]:
     ]
 
 
+def screen_record_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_screen_record_start",
+            description=("Start recording the screen to a video file. "
+                         "recorder_name is a handle for ac_screen_record_stop. "
+                         "Codec defaults to XVID (.avi); use MP4V for .mp4."),
+            input_schema=schema({
+                "recorder_name": {"type": "string"},
+                "file_path": {"type": "string"},
+                "codec": {"type": "string"},
+                "frame_per_sec": {"type": "integer"},
+                "width": {"type": "integer"},
+                "height": {"type": "integer"},
+            }, required=["recorder_name", "file_path"]),
+            handler=h.screen_record_start,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_screen_record_stop",
+            description="Stop the named screen recorder.",
+            input_schema=schema({"recorder_name": {"type": "string"}},
+                                required=["recorder_name"]),
+            handler=h.screen_record_stop,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_screen_record_list",
+            description="Return the names of currently running screen recorders.",
+            input_schema=schema({}),
+            handler=h.screen_record_list,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def recording_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -655,4 +691,5 @@ ALL_FACTORIES = (
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
     semantic_locator_tools, scheduler_tools, trigger_tools, hotkey_tools,
+    screen_record_tools,
 )
