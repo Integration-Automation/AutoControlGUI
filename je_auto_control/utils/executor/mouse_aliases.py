@@ -27,4 +27,13 @@ click_mouse_left: ClickFn = _make_button_click("mouse_left")
 click_mouse_right: ClickFn = _make_button_click("mouse_right")
 click_mouse_middle: ClickFn = _make_button_click("mouse_middle")
 
-__all__ = ["click_mouse_left", "click_mouse_right", "click_mouse_middle"]
+MOUSE_BUTTON_COMMANDS: dict = {
+    "AC_mouse_left": click_mouse_left,
+    "AC_mouse_right": click_mouse_right,
+    "AC_mouse_middle": click_mouse_middle,
+}
+
+__all__ = [
+    "click_mouse_left", "click_mouse_right", "click_mouse_middle",
+    "MOUSE_BUTTON_COMMANDS",
+]

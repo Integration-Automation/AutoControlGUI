@@ -7,9 +7,7 @@ from je_auto_control.utils.exception.exceptions import CallbackExecutorException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
-from je_auto_control.utils.executor.mouse_aliases import (
-    click_mouse_left, click_mouse_middle, click_mouse_right,
-)
+from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 # file process
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
 # html report
@@ -64,9 +62,7 @@ class CallbackFunctionExecutor:
         # 事件字典，對應字串名稱到實際函式
         self.event_dict: dict = {
             # mouse 滑鼠相關
-            "AC_mouse_left": click_mouse_left,
-            "AC_mouse_right": click_mouse_right,
-            "AC_mouse_middle": click_mouse_middle,
+            **MOUSE_BUTTON_COMMANDS,
             "AC_click_mouse": click_mouse,
             "AC_get_mouse_table": get_mouse_table,
             "AC_get_mouse_position": get_mouse_position,
