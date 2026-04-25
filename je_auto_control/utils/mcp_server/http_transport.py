@@ -16,10 +16,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.utils.mcp_server.server import MCPServer
+from je_auto_control.utils.mcp_server.server import (
+    MCPServer, _notification_message,
+)
 
 DEFAULT_PATH = "/mcp"
 _MAX_BODY = 1_000_000
+_SSE_MEDIA_TYPE = "text/event-stream"
 
 
 class _MCPHttpHandler(BaseHTTPRequestHandler):
@@ -40,12 +43,54 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         if line is None:
             return
         bridge: MCPServer = self.server.mcp  # type: ignore[attr-defined]
+        if self._client_accepts_sse():
+            self._dispatch_sse(bridge, line)
+            return
         response = bridge.handle_line(line)
         if response is None:
             # MCP notification — no body, ack with 202.
             self._send_blank(status=202)
             return
         self._send_raw_json(response)
+
+    def _client_accepts_sse(self) -> bool:
+        accept = self.headers.get("Accept", "")
+        return _SSE_MEDIA_TYPE in accept
+
+    def _dispatch_sse(self, bridge: MCPServer, line: str) -> None:
+        """Stream progress notifications + the final response as SSE events."""
+        # Force connection close so the client gets EOF after the last event.
+        self.close_connection = True
+        self.send_response(200)
+        self.send_header("Content-Type",
+                          f"{_SSE_MEDIA_TYPE}; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "close")
+        self.end_headers()
+        send_lock = threading.Lock()
+
+        def emit(payload: str) -> None:
+            with send_lock:
+                self.wfile.write(b"data: ")
+                self.wfile.write(payload.encode("utf-8"))
+                self.wfile.write(b"\n\n")
+                self.wfile.flush()
+
+        sse_lock = self.server.sse_lock  # type: ignore[attr-defined]
+        with sse_lock:
+            saved = (bridge._notifier, bridge._writer,
+                      bridge._concurrent_tools)
+            bridge._notifier = lambda method, params: emit(
+                _notification_message(method, params),
+            )
+            bridge._writer = emit
+            bridge._concurrent_tools = False
+            try:
+                response = bridge.handle_line(line)
+                if response is not None:
+                    emit(response)
+            finally:
+                bridge._notifier, bridge._writer, bridge._concurrent_tools = saved
 
     def do_GET(self) -> None:  # noqa: N802  # reason: stdlib API
         # MCP optionally allows server→client SSE on GET; not used here.
@@ -98,6 +143,10 @@ class _MCPHttpServer(ThreadingHTTPServer):
                  mcp: MCPServer) -> None:
         super().__init__(server_address, _MCPHttpHandler)
         self.mcp = mcp
+        # Serialise SSE requests — they swap server-wide notifier/writer
+        # state, so concurrent SSE streams would race. POST-without-SSE
+        # requests don't take this lock and remain fully concurrent.
+        self.sse_lock = threading.Lock()
 
 
 class HttpMCPServer:

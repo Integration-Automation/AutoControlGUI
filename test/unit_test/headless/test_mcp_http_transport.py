@@ -127,6 +127,60 @@ def test_invalid_content_length_rejected(http_server):
         pytest.fail("expected 400 response")
 
 
+def test_sse_streams_progress_then_final_response():
+    """When Accept includes text/event-stream, progress + result both stream."""
+    from je_auto_control.utils.mcp_server.tools import MCPTool
+
+    def slow_handler(ctx):
+        ctx.progress(0.0, total=1.0, message="starting")
+        ctx.progress(0.5, total=1.0)
+        ctx.progress(1.0, total=1.0, message="done")
+        return "all done"
+
+    tool = MCPTool(
+        name="streamed", description="streamed",
+        input_schema={"type": "object", "properties": {}},
+        handler=slow_handler,
+    )
+    server = HttpMCPServer(mcp=MCPServer(
+        tools=[tool], resource_provider=ChainProvider([]),
+        prompt_provider=StaticPromptProvider([]),
+    ), host="127.0.0.1", port=0)
+    server.start()
+    try:
+        host, port = server.address
+        url = f"{_TEST_SCHEME}://{host}:{port}{DEFAULT_PATH}"
+        body = json.dumps({
+            "jsonrpc": "2.0", "id": 99, "method": "tools/call",
+            "params": {"name": "streamed", "arguments": {},
+                        "_meta": {"progressToken": "tok"}},
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            url, data=body, method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json, text/event-stream",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:  # nosec B310
+            assert response.status == 200
+            assert "text/event-stream" in response.headers.get("Content-Type", "")
+            stream = response.read().decode("utf-8")
+        events = [chunk[len("data: "):] for chunk in stream.split("\n\n")
+                   if chunk.startswith("data: ")]
+        progress_events = [json.loads(line) for line in events
+                            if '"notifications/progress"' in line]
+        final_events = [json.loads(line) for line in events
+                         if '"id": 99' in line]
+        assert len(progress_events) == 3
+        assert progress_events[0]["params"]["progressToken"] == "tok"
+        assert len(final_events) == 1
+        assert final_events[0]["result"]["isError"] is False
+        assert final_events[0]["result"]["content"][0]["text"] == "all done"
+    finally:
+        server.stop(timeout=1.0)
+
+
 def test_malformed_json_returns_parse_error(http_server):
     host, port = http_server.address
     url = f"{_TEST_SCHEME}://{host}:{port}{DEFAULT_PATH}"
