@@ -340,6 +340,21 @@ def test_drag_tool_calls_press_move_release_in_order(monkeypatch):
     assert calls[2][1:] == (100, 200)
 
 
+def test_semantic_locator_tools_present_in_default_registry():
+    names = {tool.name for tool in build_default_tool_registry()}
+    assert {"ac_a11y_list", "ac_a11y_find", "ac_a11y_click",
+            "ac_vlm_locate", "ac_vlm_click"}.issubset(names)
+
+
+def test_a11y_find_tool_returns_none_when_backend_has_no_match(monkeypatch):
+    """Find delegates to the headless API; null result must round-trip."""
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    import je_auto_control.utils.accessibility.accessibility_api as api
+    monkeypatch.setattr(api, "find_accessibility_element",
+                        lambda **_kwargs: None)
+    assert by_name["ac_a11y_find"].invoke({"name": "ghost"}) is None
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {
