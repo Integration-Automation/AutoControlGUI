@@ -1,7 +1,6 @@
-from typing import List, Tuple, Optional, Union
+from typing import List, Tuple, Union
 
 from je_auto_control.utils.cv2_utils import template_detection
-from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
 from je_auto_control.utils.exception.exception_tags import cant_find_image_error_message
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -81,23 +80,4 @@ def locate_and_click(image, mouse_keycode: Union[int, str],
     except (OSError, RuntimeError, AttributeError, TypeError, ValueError, ImageNotFoundException) as error:
         record_action_to_list("locate_and_click", {"image": image}, repr(error))
         autocontrol_logger.error(f"locate_and_click failed: {repr(error)}")
-        raise
-
-
-def screenshot(file_path: Optional[str] = None, region: Optional[List[int]] = None):
-    """
-    擷取螢幕畫面
-    Take a screenshot
-
-    :param file_path: 儲存路徑 (None = 不儲存)
-    :param region: 擷取區域 [x1, y1, x2, y2]
-    :return: PIL Image
-    """
-    autocontrol_logger.info(f"screenshot, file={file_path}, region={region}")
-    try:
-        record_action_to_list("screenshot", {"file_path": file_path, "region": region})
-        return pil_screenshot(file_path, region)
-    except (OSError, RuntimeError, AttributeError, TypeError, ValueError, ImageNotFoundException) as error:
-        record_action_to_list("screenshot", {"file_path": file_path, "region": region}, repr(error))
-        autocontrol_logger.error(f"screenshot failed: {repr(error)}")
         raise

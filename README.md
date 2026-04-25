@@ -488,20 +488,24 @@ je_auto_control.execute_action([
 
 | Category | Commands |
 |---|---|
-| Mouse | `AC_click_mouse`, `AC_set_mouse_position`, `AC_get_mouse_position`, `AC_press_mouse`, `AC_release_mouse`, `AC_mouse_scroll`, `AC_mouse_left`, `AC_mouse_right`, `AC_mouse_middle` |
-| Keyboard | `AC_type_keyboard`, `AC_press_keyboard_key`, `AC_release_keyboard_key`, `AC_write`, `AC_hotkey`, `AC_check_key_is_press` |
+| Mouse | `AC_click_mouse`, `AC_set_mouse_position`, `AC_get_mouse_position`, `AC_get_mouse_table`, `AC_press_mouse`, `AC_release_mouse`, `AC_mouse_scroll`, `AC_mouse_left`, `AC_mouse_right`, `AC_mouse_middle` |
+| Keyboard | `AC_type_keyboard`, `AC_press_keyboard_key`, `AC_release_keyboard_key`, `AC_write`, `AC_hotkey`, `AC_check_key_is_press`, `AC_get_keyboard_keys_table` |
 | Image | `AC_locate_all_image`, `AC_locate_image_center`, `AC_locate_and_click` |
 | Screen | `AC_screen_size`, `AC_screenshot` |
 | Accessibility | `AC_a11y_list`, `AC_a11y_find`, `AC_a11y_click` |
 | VLM (AI Locator) | `AC_vlm_locate`, `AC_vlm_click` |
 | OCR | `AC_locate_text`, `AC_click_text`, `AC_wait_text` |
 | Clipboard | `AC_clipboard_get`, `AC_clipboard_set` |
-| Record | `AC_record`, `AC_stop_record` |
+| Window | `AC_list_windows`, `AC_focus_window`, `AC_wait_window`, `AC_close_window` |
+| Flow control | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_while_image`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry` |
+| Record | `AC_record`, `AC_stop_record`, `AC_set_record_enable` |
 | Report | `AC_generate_html`, `AC_generate_json`, `AC_generate_xml`, `AC_generate_html_report`, `AC_generate_json_report`, `AC_generate_xml_report` |
+| Run history | `AC_history_list`, `AC_history_clear` |
 | Project | `AC_create_project` |
 | Shell | `AC_shell_command` |
 | Process | `AC_execute_process` |
-| Executor | `AC_execute_action`, `AC_execute_files` |
+| Executor | `AC_execute_action`, `AC_execute_files`, `AC_add_package_to_executor`, `AC_add_package_to_callback_executor` |
+| MCP server | `AC_start_mcp_server`, `AC_start_mcp_http_server` |
 
 ### MCP Server (Use AutoControl from Claude)
 

@@ -22,6 +22,7 @@ from je_auto_control.utils.executor.action_schema import validate_actions
 from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue,
 )
+from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.ocr.ocr_engine import (
     click_text as ocr_click_text,
     locate_text_center as ocr_locate_text_center,
@@ -38,7 +39,7 @@ from je_auto_control.utils.mcp_server.http_transport import start_mcp_http_serve
 from je_auto_control.utils.mcp_server.server import start_mcp_stdio_server
 from je_auto_control.utils.package_manager.package_manager_class import package_manager
 from je_auto_control.utils.project.create_project_structure import create_project_dir
-from je_auto_control.utils.shell_process.shell_exec import ShellManager
+from je_auto_control.utils.shell_process.shell_exec import default_shell_manager
 from je_auto_control.utils.start_exe.start_another_process import start_exe
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list, test_record_instance
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_and_click, locate_image_center
@@ -124,9 +125,7 @@ class Executor:
         # 事件字典，對應字串名稱到函式
         self.event_dict: dict = {
             # Mouse 滑鼠相關
-            "AC_mouse_left": click_mouse,
-            "AC_mouse_right": click_mouse,
-            "AC_mouse_middle": click_mouse,
+            **MOUSE_BUTTON_COMMANDS,
             "AC_click_mouse": click_mouse,
             "AC_get_mouse_table": get_mouse_table,
             "AC_get_mouse_position": get_mouse_position,
@@ -178,7 +177,7 @@ class Executor:
             "AC_create_project": create_project_dir,
 
             # Shell
-            "AC_shell_command": ShellManager().exec_shell,
+            "AC_shell_command": default_shell_manager.exec_shell,
 
             # Process
             "AC_execute_process": start_exe,
