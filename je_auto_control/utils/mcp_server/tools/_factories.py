@@ -131,6 +131,23 @@ def screen_tools() -> List[MCPTool]:
             handler=h.get_pixel,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_diff_screenshots",
+            description=("Compare two screenshots and return the bounding "
+                         "boxes that changed. Result shape: {size: [w, h], "
+                         "boxes: [[x, y, w, h], ...]}. Pixels differing by "
+                         "at most threshold (per channel) are treated as "
+                         "equal; components smaller than min_box_pixels "
+                         "are ignored to filter antialias noise."),
+            input_schema=schema({
+                "image_path_a": {"type": "string"},
+                "image_path_b": {"type": "string"},
+                "threshold": {"type": "integer"},
+                "min_box_pixels": {"type": "integer"},
+            }, required=["image_path_a", "image_path_b"]),
+            handler=h.diff_screenshots,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

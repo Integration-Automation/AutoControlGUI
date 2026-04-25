@@ -134,6 +134,91 @@ def get_pixel(x: int, y: int) -> List[int]:
     return [int(component) for component in pixel]
 
 
+def diff_screenshots(image_path_a: str,
+                     image_path_b: str,
+                     threshold: int = 16,
+                     min_box_pixels: int = 25,
+                     ) -> Dict[str, Any]:
+    """Return the bounding boxes that differ between two screenshots.
+
+    The result is JSON-friendly: ``{"size": [w, h], "boxes": [[x, y, w, h], ...]}``.
+    Boxes are merged via a flood-fill so a single changed widget is one
+    rectangle. Pixels whose absolute per-channel difference is at most
+    ``threshold`` are considered equal; tiny components below
+    ``min_box_pixels`` are dropped to ignore JPEG / antialias noise.
+    """
+    safe_a = os.path.realpath(os.fspath(image_path_a))
+    safe_b = os.path.realpath(os.fspath(image_path_b))
+    return _diff_screenshots(safe_a, safe_b, int(threshold),
+                              int(min_box_pixels))
+
+
+def _diff_screenshots(path_a: str, path_b: str, threshold: int,
+                      min_box_pixels: int) -> Dict[str, Any]:
+    """Implementation split off so the public adapter stays under 75 lines."""
+    import numpy as np
+    from PIL import Image
+
+    img_a = np.asarray(Image.open(path_a).convert("RGB"))
+    img_b = np.asarray(Image.open(path_b).convert("RGB"))
+    if img_a.shape != img_b.shape:
+        height = min(img_a.shape[0], img_b.shape[0])
+        width = min(img_a.shape[1], img_b.shape[1])
+        img_a = img_a[:height, :width]
+        img_b = img_b[:height, :width]
+    diff = np.abs(img_a.astype("int16") - img_b.astype("int16"))
+    mask = (diff.max(axis=-1) > threshold).astype("uint8")
+    boxes = _connected_component_boxes(mask, min_box_pixels)
+    height, width = mask.shape
+    return {"size": [int(width), int(height)], "boxes": boxes}
+
+
+def _connected_component_boxes(mask: Any,
+                               min_pixels: int) -> List[List[int]]:
+    """Return tight bounding boxes for connected non-zero regions in ``mask``."""
+    import numpy as np
+
+    height, width = mask.shape
+    visited = np.zeros_like(mask, dtype=bool)
+    boxes: List[List[int]] = []
+    for start_y in range(height):
+        for start_x in range(width):
+            if mask[start_y, start_x] == 0 or visited[start_y, start_x]:
+                continue
+            box = _flood_fill_box(mask, visited, start_x, start_y)
+            if box[2] * box[3] < min_pixels:
+                continue
+            boxes.append(box)
+    return boxes
+
+
+def _flood_fill_box(mask: Any, visited: Any,
+                    start_x: int, start_y: int) -> List[int]:
+    """Iterative 4-connectivity flood fill returning [x, y, w, h]."""
+    height, width = mask.shape
+    stack = [(start_x, start_y)]
+    min_x = max_x = start_x
+    min_y = max_y = start_y
+    while stack:
+        x, y = stack.pop()
+        if x < 0 or y < 0 or x >= width or y >= height:
+            continue
+        if visited[y, x] or mask[y, x] == 0:
+            continue
+        visited[y, x] = True
+        if x < min_x:
+            min_x = x
+        if x > max_x:
+            max_x = x
+        if y < min_y:
+            min_y = y
+        if y > max_y:
+            max_y = y
+        stack.extend(((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)))
+    return [int(min_x), int(min_y),
+            int(max_x - min_x + 1), int(max_y - min_y + 1)]
+
+
 def locate_image_center(image_path: str,
                         detect_threshold: float = 1.0) -> List[int]:
     from je_auto_control.wrapper.auto_control_image import locate_image_center as _loc

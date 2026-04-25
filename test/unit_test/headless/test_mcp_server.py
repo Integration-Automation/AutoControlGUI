@@ -899,6 +899,50 @@ def test_register_plugin_tools_adds_to_server_and_notifies():
                for method, _ in captured)
 
 
+def test_diff_screenshots_finds_changed_region(tmp_path):
+    pytest = __import__("pytest")
+    np = pytest.importorskip("numpy")
+    pil_image = pytest.importorskip("PIL.Image")
+
+    base = np.zeros((40, 60, 3), dtype="uint8")
+    other = base.copy()
+    other[10:20, 30:50, 0] = 255  # paint a 20x10 red rectangle
+
+    path_a = tmp_path / "a.png"
+    path_b = tmp_path / "b.png"
+    pil_image.fromarray(base).save(path_a)
+    pil_image.fromarray(other).save(path_b)
+
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    result = by_name["ac_diff_screenshots"].invoke({
+        "image_path_a": str(path_a),
+        "image_path_b": str(path_b),
+        "threshold": 10, "min_box_pixels": 4,
+    })
+    assert result["size"] == [60, 40]
+    assert result["boxes"], "expected at least one diff region"
+    # Bounding box should contain the painted rectangle (30..49, 10..19).
+    box = result["boxes"][0]
+    assert box[0] <= 30 and box[1] <= 10
+    assert box[0] + box[2] >= 50
+    assert box[1] + box[3] >= 20
+
+
+def test_diff_screenshots_returns_no_boxes_when_identical(tmp_path):
+    pytest = __import__("pytest")
+    np = pytest.importorskip("numpy")
+    pil_image = pytest.importorskip("PIL.Image")
+    img = np.full((20, 20, 3), 200, dtype="uint8")
+    path = tmp_path / "same.png"
+    pil_image.fromarray(img).save(path)
+
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    result = by_name["ac_diff_screenshots"].invoke({
+        "image_path_a": str(path), "image_path_b": str(path),
+    })
+    assert result["boxes"] == []
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {
