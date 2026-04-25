@@ -41,6 +41,10 @@ class ResourceProvider:
         """Return one content block (``{uri, mimeType, text}``) or ``None``."""
         raise NotImplementedError
 
+    def set_workspace_root(self, root: str) -> None:
+        """Hook for MCP roots. Default: no-op. FS-backed providers override."""
+        del root
+
 
 class FileSystemProvider(ResourceProvider):
     """Expose ``*.json`` action files in ``root`` under ``<scheme>://files/<name>``."""
@@ -49,6 +53,10 @@ class FileSystemProvider(ResourceProvider):
                  scheme: str = "autocontrol") -> None:
         self.root = os.path.realpath(root)
         self.scheme = scheme
+
+    def set_workspace_root(self, root: str) -> None:
+        """Re-target the provider at a new directory (e.g. via MCP roots)."""
+        self.root = os.path.realpath(os.fspath(root))
 
     def list(self) -> List[MCPResource]:
         if not os.path.isdir(self.root):
@@ -159,6 +167,11 @@ class ChainProvider(ResourceProvider):
             if content is not None:
                 return content
         return None
+
+    def set_workspace_root(self, root: str) -> None:
+        """Forward the root to every child provider."""
+        for provider in self.providers:
+            provider.set_workspace_root(root)
 
 
 def default_resource_provider(root: str = ".") -> ResourceProvider:

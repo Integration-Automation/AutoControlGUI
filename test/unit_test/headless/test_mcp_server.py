@@ -6,6 +6,7 @@ backends are needed.
 """
 import io
 import json
+import os
 import threading
 from typing import Any, Dict, List
 
@@ -1133,6 +1134,63 @@ def test_rate_limiter_zero_rate_means_unlimited():
     limiter = RateLimiter(rate_per_sec=0)
     for _ in range(5):
         assert limiter.try_acquire() is True
+
+
+def test_initialize_advertises_roots_when_client_supports_it():
+    server = MCPServer(tools=[])
+    response = _decode(server.handle_line(_request("initialize", params={
+        "capabilities": {"roots": {"listChanged": True}},
+    })))
+    assert "roots" in response["result"]["capabilities"]
+
+
+def test_initialize_omits_roots_when_client_lacks_capability():
+    server = MCPServer(tools=[])
+    response = _decode(server.handle_line(_request("initialize", params={
+        "capabilities": {},
+    })))
+    assert "roots" not in response["result"]["capabilities"]
+
+
+def test_refresh_roots_updates_filesystem_provider(tmp_path):
+    from je_auto_control.utils.mcp_server.resources import (
+        ChainProvider, FileSystemProvider,
+    )
+    fs_provider = FileSystemProvider(root=str(tmp_path / "initial"))
+    chain = ChainProvider([fs_provider])
+    captured_lines = []
+    server = MCPServer(tools=[], resource_provider=chain,
+                       concurrent_tools=True)
+    server.set_writer(captured_lines.append)
+    # Simulate client capability so refresh is allowed.
+    server._client_capabilities = {"roots": {"listChanged": True}}
+
+    target = tmp_path / "ws"
+    target.mkdir()
+
+    def run_refresh():
+        server.refresh_roots(timeout=2.0)
+
+    t = threading.Thread(target=run_refresh)
+    t.start()
+    deadline = threading.Event()
+    for _ in range(200):
+        if any('"roots/list"' in line for line in captured_lines):
+            break
+        deadline.wait(0.01)
+    request_lines = [line for line in captured_lines
+                      if '"roots/list"' in line]
+    assert request_lines, "expected outbound roots/list"
+    request_id = json.loads(request_lines[-1])["id"]
+
+    file_uri = "file:///" + str(target).replace("\\", "/").lstrip("/")
+    server.handle_line(json.dumps({
+        "jsonrpc": "2.0", "id": request_id,
+        "result": {"roots": [{"uri": file_uri, "name": "ws"}]},
+    }))
+    t.join(timeout=2.0)
+    assert not t.is_alive()
+    assert os.path.realpath(fs_provider.root) == os.path.realpath(str(target))
 
 
 def test_default_registry_lists_core_automation_tools():

@@ -74,8 +74,10 @@ class MCPServer:
         self._calls_lock = threading.Lock()
         self._write_lock = threading.Lock()
         self._sampling_id_counter = itertools.count(1)
+        self._outbound_id_counter = itertools.count(1)
         self._pending_outbound: Dict[Any, Dict[str, Any]] = {}
         self._outbound_lock = threading.Lock()
+        self._client_capabilities: Dict[str, Any] = {}
 
     def register_tool(self, tool: MCPTool) -> None:
         """Add or replace a tool in the live registry.
@@ -251,11 +253,75 @@ class MCPServer:
         if method == "notifications/initialized":
             self._initialized = True
             autocontrol_logger.info("MCP client initialized")
+            self._maybe_request_roots_async()
             return
         if method == "notifications/cancelled":
             self._cancel_active_call(params)
             return
+        if method == "notifications/roots/list_changed":
+            self._maybe_request_roots_async()
+            return
         autocontrol_logger.debug("MCP notification ignored: %s", method)
+
+    def _maybe_request_roots_async(self) -> None:
+        """Fire a roots/list request when the client supports it."""
+        if "roots" not in self._client_capabilities:
+            return
+        if self._writer is None:
+            return
+        threading.Thread(
+            target=self._refresh_roots_safely, daemon=True,
+            name="MCPRootsRefresh",
+        ).start()
+
+    def _refresh_roots_safely(self) -> None:
+        try:
+            self.refresh_roots(timeout=5.0)
+        except (RuntimeError, TimeoutError) as error:
+            autocontrol_logger.info("MCP roots refresh skipped: %r", error)
+
+    def refresh_roots(self, timeout: float = 10.0) -> List[Dict[str, Any]]:
+        """Send ``roots/list`` to the client and apply the first root."""
+        result = self._send_outbound_request(
+            "roots/list", params={}, timeout=timeout,
+        )
+        roots_list = (result or {}).get("roots") or []
+        if not isinstance(roots_list, list) or not roots_list:
+            return []
+        first_uri = roots_list[0].get("uri") if isinstance(roots_list[0],
+                                                            dict) else None
+        if isinstance(first_uri, str):
+            local_path = _file_uri_to_path(first_uri)
+            if local_path:
+                self._resources.set_workspace_root(local_path)
+                autocontrol_logger.info("MCP workspace root → %s", local_path)
+        return roots_list
+
+    def _send_outbound_request(self, method: str,
+                               params: Dict[str, Any],
+                               timeout: float = 10.0) -> Dict[str, Any]:
+        """Send a server-initiated request and wait for the response."""
+        writer = self._writer
+        if writer is None:
+            raise RuntimeError(f"{method} requires an outbound writer")
+        request_id = f"srv-{next(self._outbound_id_counter)}"
+        slot = {"event": threading.Event()}
+        with self._outbound_lock:
+            self._pending_outbound[request_id] = slot
+        envelope = json.dumps({
+            "jsonrpc": "2.0", "id": request_id,
+            "method": method, "params": params,
+        }, ensure_ascii=False, default=str)
+        try:
+            writer(envelope)
+            if not slot["event"].wait(timeout=timeout):
+                raise TimeoutError(f"{method} timed out after {timeout}s")
+        finally:
+            with self._outbound_lock:
+                self._pending_outbound.pop(request_id, None)
+        if "error" in slot:
+            raise RuntimeError(f"{method} failed: {slot['error']}")
+        return slot.get("result") or {}
 
     def _cancel_active_call(self, params: Dict[str, Any]) -> None:
         """Mark the matching active tool call as cancelled, if any."""
@@ -293,17 +359,22 @@ class MCPServer:
             return self._handle_prompts_get(params)
         raise _MCPError(-32601, f"Method not found: {method}")
 
-    @staticmethod
-    def _handle_initialize(params: Dict[str, Any]) -> Dict[str, Any]:
+    def _handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
         client_version = params.get("protocolVersion", PROTOCOL_VERSION)
+        client_caps = params.get("capabilities") or {}
+        if isinstance(client_caps, dict):
+            self._client_capabilities = client_caps
+        capabilities: Dict[str, Any] = {
+            "tools": {"listChanged": True},
+            "resources": {"listChanged": False, "subscribe": False},
+            "prompts": {"listChanged": False},
+            "sampling": {},
+        }
+        if "roots" in self._client_capabilities:
+            capabilities["roots"] = {"listChanged": True}
         return {
             "protocolVersion": client_version or PROTOCOL_VERSION,
-            "capabilities": {
-                "tools": {"listChanged": True},
-                "resources": {"listChanged": False, "subscribe": False},
-                "prompts": {"listChanged": False},
-                "sampling": {},
-            },
+            "capabilities": capabilities,
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
         }
 
@@ -463,6 +534,20 @@ def _stringify_result(value: Any) -> str:
         return json.dumps(value, ensure_ascii=False, default=str)
     except (TypeError, ValueError):
         return repr(value)
+
+
+def _file_uri_to_path(uri: str) -> Optional[str]:
+    """Convert a ``file://`` URI to a local filesystem path; ``None`` otherwise."""
+    if not isinstance(uri, str) or not uri.startswith("file://"):
+        return None
+    from urllib.parse import unquote, urlparse
+    parsed = urlparse(uri)
+    raw_path = unquote(parsed.path)
+    # Windows: file:///C:/foo strips the leading slash before the drive letter.
+    if sys.platform.startswith("win") and raw_path.startswith("/") and \
+            len(raw_path) > 2 and raw_path[2] == ":":
+        raw_path = raw_path[1:]
+    return raw_path or None
 
 
 def _notification_message(method: str, params: Dict[str, Any]) -> str:
