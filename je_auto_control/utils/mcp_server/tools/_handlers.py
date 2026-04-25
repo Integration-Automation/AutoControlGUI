@@ -472,6 +472,96 @@ def window_restore(title_substring: str,
     return _show_command(title_substring, bool(case_sensitive), cmd_show=9)
 
 
+def launch_process(argv: List[str],
+                   working_directory: Optional[str] = None,
+                   ) -> Dict[str, Any]:
+    """Spawn a detached subprocess with a sanitised argv list."""
+    import subprocess  # nosec B404  # reason: required to spawn child processes
+    if not isinstance(argv, list) or not argv:
+        raise ValueError("argv must be a non-empty list")
+    cleaned = [str(part) for part in argv]
+    cwd = None
+    if working_directory is not None:
+        cwd = os.path.realpath(os.fspath(working_directory))
+        if not os.path.isdir(cwd):
+            raise ValueError(f"working_directory does not exist: {cwd}")
+    process = subprocess.Popen(  # nosec B603  # reason: argv list, no shell expansion
+        cleaned, cwd=cwd, stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+    )
+    return {"pid": int(process.pid), "argv": cleaned}
+
+
+def list_processes(name_contains: Optional[str] = None,
+                    ) -> List[Dict[str, Any]]:
+    """List running processes via ``psutil`` if installed; raise otherwise."""
+    try:
+        import psutil  # type: ignore[import-untyped]
+    except ImportError as error:
+        raise RuntimeError(
+            "ac_list_processes requires psutil — pip install psutil"
+        ) from error
+    needle = name_contains.lower() if name_contains else None
+    out: List[Dict[str, Any]] = []
+    for proc in psutil.process_iter(["pid", "name", "username"]):
+        info = proc.info or {}
+        name = (info.get("name") or "")
+        if needle and needle not in name.lower():
+            continue
+        out.append({
+            "pid": int(info.get("pid") or 0),
+            "name": name,
+            "username": info.get("username") or "",
+        })
+    return out
+
+
+def kill_process(pid: int, timeout: float = 5.0) -> str:
+    """Terminate a PID gracefully, escalating to SIGKILL after ``timeout``."""
+    try:
+        import psutil  # type: ignore[import-untyped]
+    except ImportError as error:
+        raise RuntimeError(
+            "ac_kill_process requires psutil — pip install psutil"
+        ) from error
+    try:
+        proc = psutil.Process(int(pid))
+    except psutil.NoSuchProcess:
+        return "not-found"
+    proc.terminate()
+    try:
+        proc.wait(timeout=float(timeout))
+        return "terminated"
+    except psutil.TimeoutExpired:
+        proc.kill()
+        return "killed"
+
+
+def shell_command(command: str, timeout: float = 30.0
+                  ) -> Dict[str, Any]:
+    """Run a shell-style command line and return stdout/stderr/exit_code.
+
+    Uses argv-list parsing via ``shlex.split`` so we never enable a
+    shell — protects against the parameterised command injection
+    classes Bandit B602 / B605 cover.
+    """
+    import shlex
+    import subprocess  # nosec B404  # reason: required for child execution
+
+    if not command or not command.strip():
+        raise ValueError("command must be a non-empty string")
+    argv = shlex.split(command, posix=False) if os.name == "nt" \
+        else shlex.split(command)
+    proc = subprocess.run(  # nosec B603  # reason: argv from shlex.split, no shell
+        argv, capture_output=True, text=True,
+        timeout=float(timeout), check=False,
+    )
+    return {
+        "exit_code": int(proc.returncode),
+        "stdout": proc.stdout, "stderr": proc.stderr,
+    }
+
+
 def get_clipboard() -> str:
     from je_auto_control.utils.clipboard.clipboard import get_clipboard as _get
     return _get()

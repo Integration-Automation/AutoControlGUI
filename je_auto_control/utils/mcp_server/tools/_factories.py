@@ -751,6 +751,57 @@ def trigger_tools() -> List[MCPTool]:
     ]
 
 
+def process_and_shell_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_launch_process",
+            description=("Spawn a subprocess with the given argv list "
+                         "(detached, stdio piped to /dev/null). Returns "
+                         "{pid, argv}. Optional working_directory."),
+            input_schema=schema({
+                "argv": {"type": "array", "items": {"type": "string"}},
+                "working_directory": {"type": "string"},
+            }, required=["argv"]),
+            handler=h.launch_process,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_list_processes",
+            description=("List running processes (psutil required). "
+                         "Optionally filter by case-insensitive substring."),
+            input_schema=schema({
+                "name_contains": {"type": "string"},
+            }),
+            handler=h.list_processes,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_kill_process",
+            description=("Terminate a PID gracefully, escalating to "
+                         "SIGKILL after ``timeout``. Returns 'terminated' "
+                         "/ 'killed' / 'not-found'. psutil required."),
+            input_schema=schema({
+                "pid": {"type": "integer"},
+                "timeout": {"type": "number"},
+            }, required=["pid"]),
+            handler=h.kill_process,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_shell",
+            description=("Run a shell-style command line via shlex.split "
+                         "(NO shell expansion). Returns {exit_code, "
+                         "stdout, stderr}."),
+            input_schema=schema({
+                "command": {"type": "string"},
+                "timeout": {"type": "number"},
+            }, required=["command"]),
+            handler=h.shell_command,
+            annotations=DESTRUCTIVE,
+        ),
+    ]
+
+
 def hotkey_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -802,5 +853,5 @@ ALL_FACTORIES = (
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
     semantic_locator_tools, scheduler_tools, trigger_tools, hotkey_tools,
-    screen_record_tools,
+    screen_record_tools, process_and_shell_tools,
 )

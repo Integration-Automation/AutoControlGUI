@@ -1350,6 +1350,60 @@ def test_window_minimize_uses_show_command_six(monkeypatch):
     assert seen["call"] == (456, 6)
 
 
+def test_process_tools_present_in_default_registry():
+    names = {tool.name for tool in build_default_tool_registry()}
+    assert {"ac_launch_process", "ac_list_processes",
+            "ac_kill_process", "ac_shell"}.issubset(names)
+
+
+def test_shell_command_returns_exit_code_and_stdout():
+    """Run a portable command and verify the shape."""
+    import sys as _sys
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    result = by_name["ac_shell"].invoke({
+        "command": f"{_sys.executable} -V",
+        "timeout": 5.0,
+    })
+    assert result["exit_code"] == 0
+    # Python 3.4+ prints the version to stdout.
+    assert "Python" in (result["stdout"] + result["stderr"])
+
+
+def test_shell_command_rejects_empty():
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    try:
+        by_name["ac_shell"].invoke({"command": "   "})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for empty command")
+
+
+def test_launch_process_validates_working_directory(tmp_path):
+    import sys as _sys
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    missing = tmp_path / "ghost"
+    try:
+        by_name["ac_launch_process"].invoke({
+            "argv": [_sys.executable, "-V"],
+            "working_directory": str(missing),
+        })
+    except ValueError as error:
+        assert "does not exist" in str(error)
+    else:
+        raise AssertionError("expected ValueError")
+
+
+def test_launch_process_rejects_empty_argv():
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    try:
+        by_name["ac_launch_process"].invoke({"argv": []})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for empty argv")
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {
