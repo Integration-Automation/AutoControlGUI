@@ -88,3 +88,14 @@ def show_window(hwnd: int, cmd_show: int) -> None:
         cmd_show = 1  # 預設為 Normal
     user32.ShowWindow(hwnd, cmd_show)
     user32.SetForegroundWindow(hwnd)
+
+
+def move_window(hwnd: int, x: int, y: int, width: int, height: int,
+                repaint: bool = True) -> bool:
+    """
+    搬移與調整視窗大小 (一次設定座標與寬高)
+    Move and resize a window in one call.
+    """
+    return bool(user32.MoveWindow(int(hwnd), int(x), int(y),
+                                   int(width), int(height),
+                                   c_bool(bool(repaint))))

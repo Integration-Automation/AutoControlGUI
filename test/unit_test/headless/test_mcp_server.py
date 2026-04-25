@@ -1301,6 +1301,55 @@ def test_wait_for_pixel_times_out_when_color_never_matches(monkeypatch):
         raise AssertionError("expected TimeoutError")
 
 
+def test_window_geometry_tools_present_in_default_registry():
+    names = {tool.name for tool in build_default_tool_registry()}
+    assert {"ac_window_move", "ac_window_minimize",
+            "ac_window_maximize", "ac_window_restore"}.issubset(names)
+
+
+def test_window_move_calls_into_windows_manager(monkeypatch):
+    import je_auto_control.utils.mcp_server.tools._handlers as handlers
+    import je_auto_control.wrapper.auto_control_window as window_module
+    monkeypatch.setattr(window_module, "find_window",
+                        lambda title, case_sensitive=False: (123, title))
+    captured = {}
+
+    def fake_move(hwnd, x, y, width, height, repaint=True):
+        captured["call"] = (int(hwnd), int(x), int(y),
+                             int(width), int(height))
+        return True
+
+    from je_auto_control.windows.window import windows_window_manage
+    monkeypatch.setattr(windows_window_manage, "move_window", fake_move)
+
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    record = by_name["ac_window_move"].invoke({
+        "title_substring": "Notepad",
+        "x": 10, "y": 20, "width": 800, "height": 600,
+    })
+    assert captured["call"] == (123, 10, 20, 800, 600)
+    assert record == {"hwnd": 123, "x": 10, "y": 20,
+                       "width": 800, "height": 600}
+
+
+def test_window_minimize_uses_show_command_six(monkeypatch):
+    """ShowWindow flag 6 is SW_MINIMIZE."""
+    import je_auto_control.wrapper.auto_control_window as window_module
+    monkeypatch.setattr(window_module, "find_window",
+                        lambda title, case_sensitive=False: (456, title))
+    seen = {}
+
+    def fake_show(hwnd, cmd_show):
+        seen["call"] = (int(hwnd), int(cmd_show))
+
+    from je_auto_control.windows.window import windows_window_manage
+    monkeypatch.setattr(windows_window_manage, "show_window", fake_show)
+
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    by_name["ac_window_minimize"].invoke({"title_substring": "Notepad"})
+    assert seen["call"] == (456, 6)
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {

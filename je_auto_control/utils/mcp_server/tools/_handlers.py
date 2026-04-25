@@ -427,6 +427,51 @@ def close_window(title_substring: str,
                                        case_sensitive=case_sensitive))
 
 
+def _resolve_window_hwnd(title_substring: str,
+                         case_sensitive: bool) -> int:
+    from je_auto_control.wrapper.auto_control_window import find_window
+    hit = find_window(title_substring, case_sensitive=case_sensitive)
+    if hit is None:
+        raise ValueError(f"no window matches {title_substring!r}")
+    return int(hit[0])
+
+
+def window_move(title_substring: str, x: int, y: int,
+                width: int, height: int,
+                case_sensitive: bool = False) -> Dict[str, int]:
+    """Move and resize the first window matching ``title_substring`` (Win32 only)."""
+    from je_auto_control.windows.window import windows_window_manage as wm
+    hwnd = _resolve_window_hwnd(title_substring, bool(case_sensitive))
+    if not wm.move_window(hwnd, int(x), int(y), int(width), int(height)):
+        raise RuntimeError("MoveWindow returned 0")
+    return {"hwnd": hwnd, "x": int(x), "y": int(y),
+            "width": int(width), "height": int(height)}
+
+
+def _show_command(title_substring: str, case_sensitive: bool,
+                  cmd_show: int) -> int:
+    """Resolve the window then call ShowWindow with the given cmd."""
+    from je_auto_control.windows.window import windows_window_manage as wm
+    hwnd = _resolve_window_hwnd(title_substring, bool(case_sensitive))
+    wm.show_window(hwnd, int(cmd_show))
+    return hwnd
+
+
+def window_minimize(title_substring: str,
+                    case_sensitive: bool = False) -> int:
+    return _show_command(title_substring, bool(case_sensitive), cmd_show=6)
+
+
+def window_maximize(title_substring: str,
+                    case_sensitive: bool = False) -> int:
+    return _show_command(title_substring, bool(case_sensitive), cmd_show=3)
+
+
+def window_restore(title_substring: str,
+                   case_sensitive: bool = False) -> int:
+    return _show_command(title_substring, bool(case_sensitive), cmd_show=9)
+
+
 def get_clipboard() -> str:
     from je_auto_control.utils.clipboard.clipboard import get_clipboard as _get
     return _get()

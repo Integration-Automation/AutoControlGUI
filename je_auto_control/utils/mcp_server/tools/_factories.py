@@ -288,6 +288,53 @@ def window_tools() -> List[MCPTool]:
             handler=h.close_window,
             annotations=DESTRUCTIVE,
         ),
+        MCPTool(
+            name="ac_window_move",
+            description=("Move and resize the first matching window to "
+                         "(x, y) with dimensions (width, height). "
+                         "Windows-only."),
+            input_schema=schema({
+                "title_substring": {"type": "string"},
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "width": {"type": "integer"},
+                "height": {"type": "integer"},
+                "case_sensitive": {"type": "boolean"},
+            }, required=["title_substring", "x", "y", "width", "height"]),
+            handler=h.window_move,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_window_minimize",
+            description="Minimise the first matching window.",
+            input_schema=schema({
+                "title_substring": {"type": "string"},
+                "case_sensitive": {"type": "boolean"},
+            }, required=["title_substring"]),
+            handler=h.window_minimize,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_window_maximize",
+            description="Maximise the first matching window.",
+            input_schema=schema({
+                "title_substring": {"type": "string"},
+                "case_sensitive": {"type": "boolean"},
+            }, required=["title_substring"]),
+            handler=h.window_maximize,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_window_restore",
+            description=("Restore the first matching window to its previous "
+                         "size and position."),
+            input_schema=schema({
+                "title_substring": {"type": "string"},
+                "case_sensitive": {"type": "boolean"},
+            }, required=["title_substring"]),
+            handler=h.window_restore,
+            annotations=DESTRUCTIVE,
+        ),
     ]
 
 
