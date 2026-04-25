@@ -181,6 +181,90 @@ def test_sse_streams_progress_then_final_response():
         server.stop(timeout=1.0)
 
 
+def test_authentication_rejects_missing_bearer():
+    server = HttpMCPServer(mcp=MCPServer(
+        tools=[], resource_provider=ChainProvider([]),
+        prompt_provider=StaticPromptProvider([]),
+    ), host="127.0.0.1", port=0, auth_token="secret")
+    server.start()
+    try:
+        host, port = server.address
+        url = f"{_TEST_SCHEME}://{host}:{port}{DEFAULT_PATH}"
+        body = json.dumps({"jsonrpc": "2.0", "id": 1,
+                            "method": "ping"}).encode("utf-8")
+        req = urllib.request.Request(
+            url, data=body, method="POST",
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            urllib.request.urlopen(req, timeout=3)  # nosec B310
+        except urllib.error.HTTPError as error:
+            assert error.code == 401
+        else:
+            pytest.fail("expected 401 response")
+    finally:
+        server.stop(timeout=1.0)
+
+
+def test_authentication_rejects_wrong_bearer():
+    server = HttpMCPServer(mcp=MCPServer(
+        tools=[], resource_provider=ChainProvider([]),
+        prompt_provider=StaticPromptProvider([]),
+    ), host="127.0.0.1", port=0, auth_token="secret")
+    server.start()
+    try:
+        host, port = server.address
+        url = f"{_TEST_SCHEME}://{host}:{port}{DEFAULT_PATH}"
+        body = json.dumps({"jsonrpc": "2.0", "id": 1,
+                            "method": "ping"}).encode("utf-8")
+        req = urllib.request.Request(
+            url, data=body, method="POST",
+            headers={"Content-Type": "application/json",
+                      "Authorization": "Bearer wrong"},
+        )
+        try:
+            urllib.request.urlopen(req, timeout=3)  # nosec B310
+        except urllib.error.HTTPError as error:
+            assert error.code == 403
+        else:
+            pytest.fail("expected 403 response")
+    finally:
+        server.stop(timeout=1.0)
+
+
+def test_authentication_accepts_correct_bearer():
+    server = HttpMCPServer(mcp=MCPServer(
+        tools=[], resource_provider=ChainProvider([]),
+        prompt_provider=StaticPromptProvider([]),
+    ), host="127.0.0.1", port=0, auth_token="secret")
+    server.start()
+    try:
+        host, port = server.address
+        url = f"{_TEST_SCHEME}://{host}:{port}{DEFAULT_PATH}"
+        body = json.dumps({"jsonrpc": "2.0", "id": 1,
+                            "method": "ping"}).encode("utf-8")
+        req = urllib.request.Request(
+            url, data=body, method="POST",
+            headers={"Content-Type": "application/json",
+                      "Authorization": "Bearer secret"},
+        )
+        with urllib.request.urlopen(req, timeout=3) as response:  # nosec B310
+            assert response.status == 200
+            payload = json.loads(response.read().decode("utf-8"))
+            assert payload["result"] == {}
+    finally:
+        server.stop(timeout=1.0)
+
+
+def test_auth_token_falls_back_to_env(monkeypatch):
+    monkeypatch.setenv("JE_AUTOCONTROL_MCP_TOKEN", "env-secret")
+    server = HttpMCPServer(mcp=MCPServer(
+        tools=[], resource_provider=ChainProvider([]),
+        prompt_provider=StaticPromptProvider([]),
+    ), host="127.0.0.1", port=0)
+    assert server._auth_token == "env-secret"
+
+
 def test_malformed_json_returns_parse_error(http_server):
     host, port = http_server.address
     url = f"{_TEST_SCHEME}://{host}:{port}{DEFAULT_PATH}"

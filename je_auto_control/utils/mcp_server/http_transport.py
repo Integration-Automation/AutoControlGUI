@@ -10,7 +10,10 @@ ordinary requests return their JSON-RPC response with
 ``Content-Type: application/json``. The default bind is
 ``127.0.0.1`` to honour the project's least-privilege policy.
 """
+import hmac
 import json
+import os
+import ssl
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Optional, Tuple
@@ -36,6 +39,8 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
                                 self.address_string(), format % args)
 
     def do_POST(self) -> None:  # noqa: N802  # reason: stdlib API
+        if not self._authorize():
+            return
         if self.path != DEFAULT_PATH:
             self._send_json({"error": "unknown path"}, status=404)
             return
@@ -52,6 +57,21 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             self._send_blank(status=202)
             return
         self._send_raw_json(response)
+
+    def _authorize(self) -> bool:
+        """Validate Bearer token if the server has one configured."""
+        expected: Optional[str] = self.server.auth_token  # type: ignore[attr-defined]
+        if expected is None:
+            return True
+        header = self.headers.get("Authorization", "")
+        if not header.startswith("Bearer "):
+            self._send_json({"error": "missing bearer token"}, status=401)
+            return False
+        provided = header[len("Bearer "):].strip()
+        if not hmac.compare_digest(provided, expected):
+            self._send_json({"error": "invalid bearer token"}, status=403)
+            return False
+        return True
 
     def _client_accepts_sse(self) -> bool:
         accept = self.headers.get("Accept", "")
@@ -93,10 +113,14 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
                 bridge._notifier, bridge._writer, bridge._concurrent_tools = saved
 
     def do_GET(self) -> None:  # noqa: N802  # reason: stdlib API
+        if not self._authorize():
+            return
         # MCP optionally allows server→client SSE on GET; not used here.
         self._send_json({"error": "GET stream not supported"}, status=405)
 
     def do_DELETE(self) -> None:  # noqa: N802  # reason: stdlib API
+        if not self._authorize():
+            return
         # Sessionless server — accept the terminate so clients can cleanup.
         self._send_json({"status": "session terminated"})
 
@@ -140,9 +164,11 @@ class _MCPHttpServer(ThreadingHTTPServer):
     """ThreadingHTTPServer extension that owns an :class:`MCPServer`."""
 
     def __init__(self, server_address: Tuple[str, int],
-                 mcp: MCPServer) -> None:
+                 mcp: MCPServer,
+                 auth_token: Optional[str] = None) -> None:
         super().__init__(server_address, _MCPHttpHandler)
         self.mcp = mcp
+        self.auth_token = auth_token
         # Serialise SSE requests — they swap server-wide notifier/writer
         # state, so concurrent SSE streams would race. POST-without-SSE
         # requests don't take this lock and remain fully concurrent.
@@ -153,9 +179,16 @@ class HttpMCPServer:
     """Threaded HTTP transport for the MCP dispatcher."""
 
     def __init__(self, mcp: Optional[MCPServer] = None,
-                 host: str = "127.0.0.1", port: int = 9940) -> None:
+                 host: str = "127.0.0.1", port: int = 9940,
+                 auth_token: Optional[str] = None,
+                 ssl_context: Optional[ssl.SSLContext] = None,
+                 ) -> None:
         self._mcp = mcp if mcp is not None else MCPServer()
         self._address: Tuple[str, int] = (host, port)
+        self._auth_token = auth_token if auth_token is not None else (
+            os.environ.get("JE_AUTOCONTROL_MCP_TOKEN") or None
+        )
+        self._ssl_context = ssl_context
         self._server: Optional[_MCPHttpServer] = None
         self._thread: Optional[threading.Thread] = None
 
@@ -172,14 +205,22 @@ class HttpMCPServer:
         """Bind the socket and begin serving on a background thread."""
         if self._server is not None:
             return
-        self._server = _MCPHttpServer(self._address, self._mcp)
+        self._server = _MCPHttpServer(
+            self._address, self._mcp, auth_token=self._auth_token,
+        )
+        if self._ssl_context is not None:
+            self._server.socket = self._ssl_context.wrap_socket(
+                self._server.socket, server_side=True,
+            )
         self._address = self._server.server_address[:2]
         self._thread = threading.Thread(
             target=self._server.serve_forever, daemon=True,
             name="AutoControlMCPHttp",
         )
         self._thread.start()
-        autocontrol_logger.info("MCP HTTP listening on %s:%d", *self._address)
+        scheme = "https" if self._ssl_context is not None else "http"
+        autocontrol_logger.info("MCP %s listening on %s:%d", scheme,
+                                 *self._address)
 
     def stop(self, timeout: float = 2.0) -> None:
         if self._server is None:
@@ -193,9 +234,15 @@ class HttpMCPServer:
 
 
 def start_mcp_http_server(host: str = "127.0.0.1", port: int = 9940,
-                          mcp: Optional[MCPServer] = None) -> HttpMCPServer:
+                          mcp: Optional[MCPServer] = None,
+                          auth_token: Optional[str] = None,
+                          ssl_context: Optional[ssl.SSLContext] = None,
+                          ) -> HttpMCPServer:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
-    server = HttpMCPServer(mcp=mcp, host=host, port=port)
+    server = HttpMCPServer(
+        mcp=mcp, host=host, port=port,
+        auth_token=auth_token, ssl_context=ssl_context,
+    )
     server.start()
     return server
 
