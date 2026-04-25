@@ -13,6 +13,7 @@ from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
 )
+from je_auto_control.utils.mcp_server.rate_limit import RateLimiter
 from je_auto_control.utils.mcp_server.http_transport import (
     HttpMCPServer, start_mcp_http_server,
 )
@@ -31,7 +32,7 @@ __all__ = [
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
     "MCPToolAnnotations", "OperationCancelledError", "PromptProvider",
-    "ResourceProvider", "ToolCallContext",
+    "RateLimiter", "ResourceProvider", "ToolCallContext",
     "build_default_tool_registry",
     "default_prompt_provider", "default_resource_provider",
     "make_plugin_tool", "register_plugin_tools",

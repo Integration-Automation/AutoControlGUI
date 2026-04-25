@@ -18,6 +18,7 @@ from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
 )
+from je_auto_control.utils.mcp_server.rate_limit import RateLimiter
 from je_auto_control.utils.mcp_server.prompts import (
     PromptProvider, default_prompt_provider,
 )
@@ -53,6 +54,7 @@ class MCPServer:
                  prompt_provider: Optional[PromptProvider] = None,
                  concurrent_tools: bool = False,
                  audit_logger: Optional[AuditLogger] = None,
+                 rate_limiter: Optional[RateLimiter] = None,
                  ) -> None:
         registry = tools if tools is not None else build_default_tool_registry()
         self._tools: Dict[str, MCPTool] = {tool.name: tool for tool in registry}
@@ -63,6 +65,7 @@ class MCPServer:
         self._concurrent_tools = bool(concurrent_tools)
         self._audit = (audit_logger if audit_logger is not None
                         else AuditLogger())
+        self._rate_limiter = rate_limiter
         self._stop = threading.Event()
         self._initialized = False
         self._notifier: Optional[Callable[[str, Dict[str, Any]], None]] = None
@@ -343,6 +346,8 @@ class MCPServer:
         violation = validate_arguments(tool.input_schema, arguments)
         if violation is not None:
             raise _MCPError(-32602, f"Invalid arguments for {name}: {violation}")
+        if self._rate_limiter is not None and not self._rate_limiter.try_acquire():
+            raise _MCPError(-32000, f"Rate limit exceeded for tool {name!r}")
         ctx = self._build_call_context(msg_id, params)
         with self._calls_lock:
             self._active_calls[msg_id] = ctx

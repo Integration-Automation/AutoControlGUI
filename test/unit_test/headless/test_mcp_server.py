@@ -1107,6 +1107,34 @@ def test_audit_logger_disabled_when_no_path():
                   duration_seconds=0.0)  # must not raise
 
 
+def test_rate_limiter_blocks_when_capacity_exhausted():
+    from je_auto_control.utils.mcp_server.rate_limit import RateLimiter
+    limiter = RateLimiter(rate_per_sec=0.0001, capacity=2)
+    tool = MCPTool(
+        name="counted", description="counted",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda: "ok",
+    )
+    server = MCPServer(tools=[tool], rate_limiter=limiter)
+    first = _decode(server.handle_line(_request("tools/call", msg_id=1,
+        params={"name": "counted", "arguments": {}})))
+    second = _decode(server.handle_line(_request("tools/call", msg_id=2,
+        params={"name": "counted", "arguments": {}})))
+    third = _decode(server.handle_line(_request("tools/call", msg_id=3,
+        params={"name": "counted", "arguments": {}})))
+    assert first["result"]["isError"] is False
+    assert second["result"]["isError"] is False
+    assert third["error"]["code"] == -32000
+    assert "Rate limit" in third["error"]["message"]
+
+
+def test_rate_limiter_zero_rate_means_unlimited():
+    from je_auto_control.utils.mcp_server.rate_limit import RateLimiter
+    limiter = RateLimiter(rate_per_sec=0)
+    for _ in range(5):
+        assert limiter.try_acquire() is True
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {
