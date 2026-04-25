@@ -7,15 +7,15 @@ from je_auto_control.utils.mcp_server.__main__ import main
 
 
 def _capture(monkeypatch, argv):
+    """Run ``main(argv)`` for its side effect and return captured stdout."""
     buffer = io.StringIO()
     monkeypatch.setattr(sys, "stdout", buffer)
-    rc = main(argv)
-    return rc, buffer.getvalue()
+    main(argv)
+    return buffer.getvalue()
 
 
 def test_list_tools_emits_json_and_exits(monkeypatch):
-    rc, output = _capture(monkeypatch, ["--list-tools"])
-    assert rc is None
+    output = _capture(monkeypatch, ["--list-tools"])
     descriptors = json.loads(output)
     assert isinstance(descriptors, list)
     assert descriptors
@@ -23,7 +23,7 @@ def test_list_tools_emits_json_and_exits(monkeypatch):
 
 
 def test_list_tools_with_read_only_drops_destructive(monkeypatch):
-    _, output = _capture(monkeypatch, ["--list-tools", "--read-only"])
+    output = _capture(monkeypatch, ["--list-tools", "--read-only"])
     descriptors = json.loads(output)
     names = {d["name"] for d in descriptors}
     assert "ac_click_mouse" not in names
@@ -31,8 +31,7 @@ def test_list_tools_with_read_only_drops_destructive(monkeypatch):
 
 
 def test_list_resources_emits_json(monkeypatch):
-    rc, output = _capture(monkeypatch, ["--list-resources"])
-    assert rc is None
+    output = _capture(monkeypatch, ["--list-resources"])
     descriptors = json.loads(output)
     assert isinstance(descriptors, list)
     uris = {d["uri"] for d in descriptors}
@@ -41,8 +40,7 @@ def test_list_resources_emits_json(monkeypatch):
 
 
 def test_list_prompts_emits_json(monkeypatch):
-    rc, output = _capture(monkeypatch, ["--list-prompts"])
-    assert rc is None
+    output = _capture(monkeypatch, ["--list-prompts"])
     descriptors = json.loads(output)
     assert isinstance(descriptors, list)
     names = {d["name"] for d in descriptors}
@@ -55,6 +53,5 @@ def test_no_flags_starts_stdio_server(monkeypatch):
     import je_auto_control.utils.mcp_server.__main__ as cli_mod
     monkeypatch.setattr(cli_mod, "start_mcp_stdio_server",
                         lambda: started.append(True))
-    rc = main([])
-    assert rc is None
+    main([])
     assert started == [True]
