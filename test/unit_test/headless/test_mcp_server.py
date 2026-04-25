@@ -299,6 +299,47 @@ def test_write_and_read_action_file_round_trip(tmp_path):
     assert loaded == actions
 
 
+def test_drag_and_send_tools_present_in_default_registry():
+    names = {tool.name for tool in build_default_tool_registry()}
+    assert {"ac_drag", "ac_send_key_to_window",
+            "ac_send_mouse_to_window"}.issubset(names)
+
+
+def test_drag_tool_calls_press_move_release_in_order(monkeypatch):
+    """ac_drag must press at the start, move, then release at the end."""
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    calls = []
+
+    def fake_set(x, y):
+        calls.append(("set", int(x), int(y)))
+        return (int(x), int(y))
+
+    def fake_press(keycode, x=None, y=None):
+        calls.append(("press", keycode, x, y))
+        return (keycode, x, y)
+
+    def fake_release(keycode, x=None, y=None):
+        calls.append(("release", keycode, x, y))
+        return (keycode, x, y)
+
+    import je_auto_control.wrapper.auto_control_mouse as mouse_module
+    monkeypatch.setattr(mouse_module, "set_mouse_position", fake_set)
+    monkeypatch.setattr(mouse_module, "press_mouse", fake_press)
+    monkeypatch.setattr(mouse_module, "release_mouse", fake_release)
+
+    result = by_name["ac_drag"].invoke({
+        "start_x": 10, "start_y": 20,
+        "end_x": 100, "end_y": 200,
+        "mouse_keycode": "mouse_left",
+    })
+    assert result == [100, 200]
+    sequence = [step[0] for step in calls]
+    # set start → press → set end → release
+    assert sequence == ["set", "press", "set", "release"]
+    assert calls[0][1:] == (10, 20)
+    assert calls[2][1:] == (100, 200)
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {

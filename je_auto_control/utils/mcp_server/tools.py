@@ -360,6 +360,43 @@ def _scale_coordinates(actions: List[Any], x_factor: float = 1.0,
                              y_factor=float(y_factor))
 
 
+def _drag(start_x: int, start_y: int, end_x: int, end_y: int,
+          mouse_keycode: str = "mouse_left") -> List[int]:
+    """Drag the cursor from (start_x, start_y) to (end_x, end_y)."""
+    from je_auto_control.wrapper.auto_control_mouse import (
+        press_mouse, release_mouse, set_mouse_position,
+    )
+    set_mouse_position(int(start_x), int(start_y))
+    press_mouse(mouse_keycode, int(start_x), int(start_y))
+    set_mouse_position(int(end_x), int(end_y))
+    release_mouse(mouse_keycode, int(end_x), int(end_y))
+    return [int(end_x), int(end_y)]
+
+
+def _send_key_to_window(window_title: str, keycode: str) -> str:
+    from je_auto_control.wrapper.auto_control_keyboard import (
+        send_key_event_to_window,
+    )
+    send_key_event_to_window(window_title, keycode)
+    return "ok"
+
+
+def _send_mouse_to_window(window_title: str,
+                          mouse_keycode: str = "mouse_left",
+                          x: Optional[int] = None,
+                          y: Optional[int] = None) -> str:
+    from je_auto_control.windows.window import windows_window_manage as wm
+    from je_auto_control.wrapper.auto_control_mouse import (
+        send_mouse_event_to_window,
+    )
+    hit = next(((hwnd, title) for hwnd, title in wm.get_all_window_hwnd()
+                if window_title.lower() in title.lower()), None)
+    if hit is None:
+        raise ValueError(f"no window matching {window_title!r}")
+    send_mouse_event_to_window(hit[0], mouse_keycode, x=x, y=y)
+    return "ok"
+
+
 # === Tool builders ==========================================================
 
 _DESTRUCTIVE = MCPToolAnnotations(destructive=True)
@@ -647,6 +684,50 @@ def _read_only_env_flag() -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _drag_and_send_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_drag",
+            description=("Drag the mouse from (start_x, start_y) to "
+                         "(end_x, end_y). mouse_keycode defaults to "
+                         "mouse_left."),
+            input_schema=_schema({
+                "start_x": {"type": "integer"},
+                "start_y": {"type": "integer"},
+                "end_x": {"type": "integer"},
+                "end_y": {"type": "integer"},
+                "mouse_keycode": {"type": "string"},
+            }, required=["start_x", "start_y", "end_x", "end_y"]),
+            handler=_drag,
+            annotations=_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_send_key_to_window",
+            description=("Post a key event to a specific window without "
+                         "stealing focus (Windows / Linux only)."),
+            input_schema=_schema({
+                "window_title": {"type": "string"},
+                "keycode": {"type": "string"},
+            }, required=["window_title", "keycode"]),
+            handler=_send_key_to_window,
+            annotations=_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_send_mouse_to_window",
+            description=("Post a mouse event to a specific window without "
+                         "stealing focus (Windows / Linux only)."),
+            input_schema=_schema({
+                "window_title": {"type": "string"},
+                "mouse_keycode": {"type": "string"},
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+            }, required=["window_title"]),
+            handler=_send_mouse_to_window,
+            annotations=_DESTRUCTIVE,
+        ),
+    ]
+
+
 def _recording_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -740,7 +821,7 @@ def build_default_tool_registry(read_only: Optional[bool] = None
     tools: List[MCPTool] = []
     for batch in (_mouse_tools, _keyboard_tools, _screen_tools,
                   _image_and_ocr_tools, _window_tools, _system_tools,
-                  _recording_tools):
+                  _recording_tools, _drag_and_send_tools):
         tools.extend(batch())
     if enforce_read_only:
         tools = [tool for tool in tools if tool.annotations.read_only]
