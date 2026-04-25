@@ -144,6 +144,38 @@ def screen_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_wait_for_image",
+            description=("Poll the screen until ``image_path`` appears, "
+                         "returning its centre [x, y]. Raises after "
+                         "``timeout`` seconds. Cancellable: clients can "
+                         "send notifications/cancelled to abort."),
+            input_schema=schema({
+                "image_path": {"type": "string"},
+                "timeout": {"type": "number"},
+                "poll": {"type": "number"},
+                "detect_threshold": {"type": "number"},
+            }, required=["image_path"]),
+            handler=h.wait_for_image,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_wait_for_pixel",
+            description=("Poll pixel (x, y) until it matches ``target_rgb`` "
+                         "within ``tolerance`` per channel. Returns the "
+                         "actual [r, g, b] reading on match."),
+            input_schema=schema({
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "target_rgb": {"type": "array",
+                                "items": {"type": "integer"}},
+                "tolerance": {"type": "integer"},
+                "timeout": {"type": "number"},
+                "poll": {"type": "number"},
+            }, required=["x", "y", "target_rgb"]),
+            handler=h.wait_for_pixel,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_diff_screenshots",
             description=("Compare two screenshots and return the bounding "
                          "boxes that changed. Result shape: {size: [w, h], "

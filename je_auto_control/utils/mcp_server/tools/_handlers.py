@@ -178,6 +178,60 @@ def get_pixel(x: int, y: int) -> List[int]:
     return [int(component) for component in pixel]
 
 
+def wait_for_image(image_path: str, timeout: float = 10.0,
+                   poll: float = 0.5,
+                   detect_threshold: float = 1.0,
+                   ctx: Any = None) -> List[int]:
+    """Poll for ``image_path`` on screen; return its centre [x, y] or raise."""
+    import time as _time
+    from je_auto_control.utils.exception.exceptions import ImageNotFoundException
+    from je_auto_control.wrapper.auto_control_image import locate_image_center as _loc
+    poll_seconds = max(0.05, float(poll))
+    deadline = _time.monotonic() + float(timeout)
+    while _time.monotonic() < deadline:
+        if ctx is not None:
+            ctx.check_cancelled()
+            ctx.progress(_time.monotonic() - (deadline - float(timeout)),
+                          total=float(timeout),
+                          message=f"waiting for {image_path}")
+        try:
+            cx, cy = _loc(image_path,
+                          detect_threshold=float(detect_threshold))
+            return [int(cx), int(cy)]
+        except ImageNotFoundException:
+            _time.sleep(poll_seconds)
+    raise TimeoutError(
+        f"wait_for_image timed out after {timeout}s: {image_path!r}"
+    )
+
+
+def wait_for_pixel(x: int, y: int, target_rgb: List[int],
+                   tolerance: int = 8, timeout: float = 10.0,
+                   poll: float = 0.25,
+                   ctx: Any = None) -> List[int]:
+    """Poll until pixel ``(x, y)`` matches ``target_rgb`` within ``tolerance``."""
+    import time as _time
+    from je_auto_control.wrapper.auto_control_screen import get_pixel as _pixel
+    if len(target_rgb) < 3:
+        raise ValueError("target_rgb must contain at least 3 channels")
+    target = [int(c) for c in target_rgb[:3]]
+    tol = max(0, int(tolerance))
+    poll_seconds = max(0.05, float(poll))
+    deadline = _time.monotonic() + float(timeout)
+    while _time.monotonic() < deadline:
+        if ctx is not None:
+            ctx.check_cancelled()
+        raw = _pixel(int(x), int(y))
+        if raw is not None and len(raw) >= 3:
+            channels = [int(raw[i]) for i in range(3)]
+            if all(abs(channels[i] - target[i]) <= tol for i in range(3)):
+                return channels
+        _time.sleep(poll_seconds)
+    raise TimeoutError(
+        f"wait_for_pixel timed out after {timeout}s at ({x}, {y})"
+    )
+
+
 def diff_screenshots(image_path_a: str,
                      image_path_b: str,
                      threshold: int = 16,

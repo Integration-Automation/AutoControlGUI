@@ -1239,6 +1239,68 @@ def test_logging_set_level_rejects_unknown_name():
     assert response["error"]["code"] == -32602
 
 
+def test_wait_for_image_returns_center_when_template_found(monkeypatch):
+    import je_auto_control.utils.mcp_server.tools._handlers as handlers
+    import je_auto_control.wrapper.auto_control_image as image_module
+    monkeypatch.setattr(image_module, "locate_image_center",
+                        lambda image_path, detect_threshold=1.0: (42, 84))
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    coords = by_name["ac_wait_for_image"].invoke({
+        "image_path": "needle.png", "timeout": 1.0, "poll": 0.05,
+    })
+    assert coords == [42, 84]
+
+
+def test_wait_for_image_times_out_when_template_missing(monkeypatch):
+    from je_auto_control.utils.exception.exceptions import (
+        ImageNotFoundException,
+    )
+    import je_auto_control.wrapper.auto_control_image as image_module
+
+    def always_miss(image_path, detect_threshold=1.0):
+        raise ImageNotFoundException("nope")
+
+    monkeypatch.setattr(image_module, "locate_image_center", always_miss)
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    try:
+        by_name["ac_wait_for_image"].invoke({
+            "image_path": "missing.png",
+            "timeout": 0.2, "poll": 0.05,
+        })
+    except TimeoutError as error:
+        assert "timed out" in str(error)
+    else:
+        raise AssertionError("expected TimeoutError")
+
+
+def test_wait_for_pixel_returns_when_match(monkeypatch):
+    import je_auto_control.wrapper.auto_control_screen as screen_module
+    monkeypatch.setattr(screen_module, "get_pixel",
+                        lambda x, y, hwnd=None: (255, 0, 0))
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    rgb = by_name["ac_wait_for_pixel"].invoke({
+        "x": 1, "y": 2, "target_rgb": [255, 0, 0],
+        "tolerance": 2, "timeout": 0.5, "poll": 0.05,
+    })
+    assert rgb == [255, 0, 0]
+
+
+def test_wait_for_pixel_times_out_when_color_never_matches(monkeypatch):
+    import je_auto_control.wrapper.auto_control_screen as screen_module
+    monkeypatch.setattr(screen_module, "get_pixel",
+                        lambda x, y, hwnd=None: (0, 0, 0))
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    try:
+        by_name["ac_wait_for_pixel"].invoke({
+            "x": 1, "y": 2, "target_rgb": [255, 0, 0],
+            "tolerance": 2, "timeout": 0.2, "poll": 0.05,
+        })
+    except TimeoutError:
+        pass
+    else:
+        raise AssertionError("expected TimeoutError")
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {
