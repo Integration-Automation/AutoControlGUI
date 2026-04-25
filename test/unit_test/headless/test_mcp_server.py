@@ -1030,6 +1030,83 @@ def test_set_clipboard_image_validates_existence(tmp_path):
         raise AssertionError("expected FileNotFoundError")
 
 
+def test_audit_logger_records_successful_tool_call(tmp_path):
+    from je_auto_control.utils.mcp_server.audit import AuditLogger
+    audit_path = tmp_path / "audit.jsonl"
+    audit = AuditLogger(path=str(audit_path))
+    tool = MCPTool(
+        name="audited", description="audited",
+        input_schema={"type": "object",
+                       "properties": {"x": {"type": "integer"}},
+                       "required": ["x"]},
+        handler=lambda x: x * 2,
+    )
+    server = MCPServer(tools=[tool], audit_logger=audit)
+    server.handle_line(_request("tools/call", params={
+        "name": "audited", "arguments": {"x": 21},
+    }))
+    lines = audit_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["tool"] == "audited"
+    assert record["status"] == "ok"
+    assert record["arguments"] == {"x": 21}
+    assert "duration_seconds" in record
+
+
+def test_audit_logger_records_errors(tmp_path):
+    from je_auto_control.utils.mcp_server.audit import AuditLogger
+
+    def raises(x):  # pragma: no cover - called via tool
+        del x
+        raise ValueError("bad")
+
+    audit = AuditLogger(path=str(tmp_path / "errs.jsonl"))
+    tool = MCPTool(
+        name="boom", description="boom",
+        input_schema={"type": "object",
+                       "properties": {"x": {"type": "integer"}},
+                       "required": ["x"]},
+        handler=raises,
+    )
+    server = MCPServer(tools=[tool], audit_logger=audit)
+    server.handle_line(_request("tools/call", params={
+        "name": "boom", "arguments": {"x": 1},
+    }))
+    record = json.loads(audit.path and open(audit.path, encoding="utf-8").readline())
+    assert record["status"] == "error"
+    assert "ValueError" in record["error"]
+
+
+def test_audit_logger_redacts_sensitive_keys(tmp_path):
+    from je_auto_control.utils.mcp_server.audit import AuditLogger
+    audit = AuditLogger(path=str(tmp_path / "audit.jsonl"))
+    tool = MCPTool(
+        name="creds", description="creds",
+        input_schema={"type": "object",
+                       "properties": {"password": {"type": "string"},
+                                       "user": {"type": "string"}},
+                       "required": ["password", "user"]},
+        handler=lambda password, user: "ok",
+    )
+    server = MCPServer(tools=[tool], audit_logger=audit)
+    server.handle_line(_request("tools/call", params={
+        "name": "creds",
+        "arguments": {"password": "shhh", "user": "jeff"},
+    }))
+    record = json.loads(open(audit.path, encoding="utf-8").readline())
+    assert record["arguments"] == {"password": "<redacted>",
+                                     "user": "jeff"}
+
+
+def test_audit_logger_disabled_when_no_path():
+    from je_auto_control.utils.mcp_server.audit import AuditLogger
+    audit = AuditLogger(path=None)
+    assert audit.enabled is False
+    audit.record(tool="x", arguments={}, status="ok",
+                  duration_seconds=0.0)  # must not raise
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {

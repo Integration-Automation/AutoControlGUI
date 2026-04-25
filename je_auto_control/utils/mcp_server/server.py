@@ -10,9 +10,11 @@ import itertools
 import json
 import sys
 import threading
+import time
 from typing import Any, Callable, Dict, List, Optional, TextIO
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
 )
@@ -49,7 +51,8 @@ class MCPServer:
     def __init__(self, tools: Optional[List[MCPTool]] = None,
                  resource_provider: Optional[ResourceProvider] = None,
                  prompt_provider: Optional[PromptProvider] = None,
-                 concurrent_tools: bool = False
+                 concurrent_tools: bool = False,
+                 audit_logger: Optional[AuditLogger] = None,
                  ) -> None:
         registry = tools if tools is not None else build_default_tool_registry()
         self._tools: Dict[str, MCPTool] = {tool.name: tool for tool in registry}
@@ -58,6 +61,8 @@ class MCPServer:
         self._prompts = (prompt_provider if prompt_provider is not None
                           else default_prompt_provider())
         self._concurrent_tools = bool(concurrent_tools)
+        self._audit = (audit_logger if audit_logger is not None
+                        else AuditLogger())
         self._stop = threading.Event()
         self._initialized = False
         self._notifier: Optional[Callable[[str, Dict[str, Any]], None]] = None
@@ -341,13 +346,23 @@ class MCPServer:
         ctx = self._build_call_context(msg_id, params)
         with self._calls_lock:
             self._active_calls[msg_id] = ctx
+        started_at = time.monotonic()
         try:
             result = tool.invoke(arguments, ctx=ctx)
         except OperationCancelledError:
+            self._audit.record(
+                tool=name, arguments=arguments, status="cancelled",
+                duration_seconds=time.monotonic() - started_at,
+            )
             raise
         except (OSError, RuntimeError, ValueError, TypeError,
                 AttributeError, KeyError, NotImplementedError) as error:
             autocontrol_logger.warning("MCP tool %s failed: %r", name, error)
+            self._audit.record(
+                tool=name, arguments=arguments, status="error",
+                duration_seconds=time.monotonic() - started_at,
+                error_text=f"{type(error).__name__}: {error}",
+            )
             return {
                 "content": [{"type": "text",
                              "text": f"{type(error).__name__}: {error}"}],
@@ -356,6 +371,10 @@ class MCPServer:
         finally:
             with self._calls_lock:
                 self._active_calls.pop(msg_id, None)
+        self._audit.record(
+            tool=name, arguments=arguments, status="ok",
+            duration_seconds=time.monotonic() - started_at,
+        )
         return {
             "content": _to_content_blocks(result),
             "isError": False,

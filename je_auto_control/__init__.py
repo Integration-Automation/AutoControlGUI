@@ -64,10 +64,10 @@ from je_auto_control.utils.ocr.ocr_engine import (
 )
 # MCP server (headless stdio bridge for Claude / other MCP clients)
 from je_auto_control.utils.mcp_server import (
-    HttpMCPServer, MCPContent, MCPPrompt, MCPPromptArgument, MCPResource,
-    MCPServer, MCPTool, MCPToolAnnotations, OperationCancelledError,
-    PromptProvider, ResourceProvider, ToolCallContext,
-    build_default_tool_registry, default_prompt_provider,
+    AuditLogger, HttpMCPServer, MCPContent, MCPPrompt, MCPPromptArgument,
+    MCPResource, MCPServer, MCPTool, MCPToolAnnotations,
+    OperationCancelledError, PromptProvider, ResourceProvider,
+    ToolCallContext, build_default_tool_registry, default_prompt_provider,
     default_resource_provider, make_plugin_tool, register_plugin_tools,
     start_mcp_http_server, start_mcp_stdio_server,
 )
@@ -220,10 +220,11 @@ __all__ = [
     # Hotkey daemon
     "HotkeyDaemon", "HotkeyBinding", "default_hotkey_daemon",
     # MCP server
-    "HttpMCPServer", "MCPContent", "MCPPrompt", "MCPPromptArgument",
-    "MCPResource", "MCPServer", "MCPTool", "MCPToolAnnotations",
-    "OperationCancelledError", "PromptProvider", "ResourceProvider",
-    "ToolCallContext", "build_default_tool_registry",
+    "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
+    "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
+    "MCPToolAnnotations", "OperationCancelledError", "PromptProvider",
+    "ResourceProvider", "ToolCallContext",
+    "build_default_tool_registry",
     "default_prompt_provider", "default_resource_provider",
     "make_plugin_tool", "register_plugin_tools",
     "start_mcp_http_server", "start_mcp_stdio_server",
