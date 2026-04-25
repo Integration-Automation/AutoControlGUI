@@ -106,17 +106,28 @@ def screen_size() -> List[int]:
 
 
 def screenshot(file_path: Optional[str] = None,
-               screen_region: Optional[List[int]] = None
+               screen_region: Optional[List[int]] = None,
+               monitor_index: Optional[int] = None,
                ) -> List[MCPContent]:
-    """Take a screenshot, optionally save it, and return image + path."""
-    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
+    """Take a screenshot, optionally save it, and return image + path.
+
+    When ``monitor_index`` is provided, capture that specific monitor
+    via ``mss`` (works across multi-display setups). Index 0 is the
+    virtual desktop spanning all monitors; 1+ are individual screens.
+    """
     saved_path: Optional[str] = None
     if file_path is not None:
         saved_path = os.path.realpath(os.fspath(file_path))
         parent = os.path.dirname(saved_path) or "."
         if not os.path.isdir(parent):
             raise ValueError(f"screenshot directory does not exist: {parent}")
-    image = pil_screenshot(file_path=saved_path, screen_region=screen_region)
+    if monitor_index is not None:
+        image = _grab_monitor(int(monitor_index))
+        if saved_path is not None:
+            image.save(saved_path)
+    else:
+        from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
+        image = pil_screenshot(file_path=saved_path, screen_region=screen_region)
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
@@ -124,6 +135,36 @@ def screenshot(file_path: Optional[str] = None,
     if saved_path is not None:
         contents.append(MCPContent.text_block(f"saved: {saved_path}"))
     return contents
+
+
+def list_monitors() -> List[Dict[str, Any]]:
+    """Return every monitor's geometry. Index 0 spans all monitors."""
+    import mss
+    with mss.mss() as sct:
+        return [
+            {
+                "index": index, "left": int(monitor["left"]),
+                "top": int(monitor["top"]),
+                "width": int(monitor["width"]),
+                "height": int(monitor["height"]),
+                "is_combined": index == 0,
+            }
+            for index, monitor in enumerate(sct.monitors)
+        ]
+
+
+def _grab_monitor(index: int):
+    """Capture a single monitor via ``mss`` and return a PIL Image."""
+    import mss
+    from PIL import Image
+    with mss.mss() as sct:
+        if index < 0 or index >= len(sct.monitors):
+            raise ValueError(
+                f"monitor index {index} out of range "
+                f"(0..{len(sct.monitors) - 1})"
+            )
+        frame = sct.grab(sct.monitors[index])
+        return Image.frombytes("RGB", frame.size, frame.bgra, "raw", "BGRX")
 
 
 def get_pixel(x: int, y: int) -> List[int]:

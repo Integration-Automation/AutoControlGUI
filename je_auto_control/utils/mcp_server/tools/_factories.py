@@ -110,16 +110,28 @@ def screen_tools() -> List[MCPTool]:
             name="ac_screenshot",
             description=("Take a screenshot and return it as a base64 PNG "
                          "image content block so the model can see the "
-                         "screen. If file_path is provided, the image is "
-                         "also saved there. screen_region is "
-                         "[x, y, width, height]."),
+                         "screen. file_path saves to disk. screen_region "
+                         "is [left, top, right, bottom]. monitor_index "
+                         "captures one monitor across multi-display setups "
+                         "(0 = virtual desktop spanning all, 1+ = single "
+                         "screens — see ac_list_monitors)."),
             input_schema=schema({
                 "file_path": {"type": "string"},
                 "screen_region": {"type": "array",
                                    "items": {"type": "integer"}},
+                "monitor_index": {"type": "integer"},
             }),
             handler=h.screenshot,
             annotations=MCPToolAnnotations(destructive=False, idempotent=False),
+        ),
+        MCPTool(
+            name="ac_list_monitors",
+            description=("List every connected monitor's geometry. Index 0 "
+                         "spans all monitors; 1+ are single displays. Use "
+                         "the index with ac_screenshot's monitor_index."),
+            input_schema=schema({}),
+            handler=h.list_monitors,
+            annotations=READ_ONLY,
         ),
         MCPTool(
             name="ac_get_pixel",

@@ -970,6 +970,28 @@ def test_screen_record_list_starts_empty(monkeypatch):
     assert by_name["ac_screen_record_list"].invoke({}) == []
 
 
+def test_list_monitors_returns_at_least_one_entry():
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    monitors = by_name["ac_list_monitors"].invoke({})
+    assert isinstance(monitors, list)
+    assert monitors  # mss always reports at least the virtual desktop
+    first = monitors[0]
+    assert first["index"] == 0
+    assert first["is_combined"] is True
+    for key in ("left", "top", "width", "height"):
+        assert isinstance(first[key], int)
+
+
+def test_screenshot_rejects_invalid_monitor_index():
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    try:
+        by_name["ac_screenshot"].invoke({"monitor_index": 999})
+    except ValueError as error:
+        assert "out of range" in str(error)
+    else:
+        raise AssertionError("expected ValueError for bad monitor index")
+
+
 def test_default_registry_lists_core_automation_tools():
     names = {tool.name for tool in build_default_tool_registry()}
     expected = {
