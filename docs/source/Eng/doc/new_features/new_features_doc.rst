@@ -296,3 +296,201 @@ Artifacts are stored under ``~/.je_auto_control/artifacts/`` and are
 removed when the matching run is pruned or the history is cleared. GUI:
 **Run History** tab — double-click the artifact column to open the
 screenshot in the OS image viewer.
+
+
+OCR — region dump and regex search
+==================================
+
+The OCR module already exposed substring / exact-match helpers. Two new
+APIs cover scenarios the existing ones could not::
+
+   import je_auto_control as ac
+
+   # Dump every recognised text record in a region (or full screen)
+   for match in ac.read_text_in_region(region=[0, 0, 800, 600]):
+       print(match.text, match.center, match.confidence)
+
+   # Regex search — useful when text varies (order numbers, error codes)
+   for match in ac.find_text_regex(r"Order#\d+"):
+       print(match.text, match.center)
+
+   # Compiled patterns and flags work too
+   import re
+   ac.find_text_regex(re.compile(r"foo", re.IGNORECASE))
+
+Action-JSON commands::
+
+   [["AC_read_text_in_region", {"region": [0, 0, 800, 600]}]]
+   [["AC_find_text_regex", {"pattern": "Order#\\d+"}]]
+
+GUI: **OCR Reader** tab. Pick a region with the existing overlay (or
+leave blank for full screen), set language / minimum confidence, then
+hit *Dump region text* or *Find by regex*. Results are returned as a
+JSON list with text, bounding box, and confidence per hit.
+
+
+Runtime variables and data-driven control flow
+==============================================
+
+Pre-execution interpolation in :mod:`script_vars.interpolate` only
+substituted ``${var}`` placeholders once against a static mapping;
+scripts had no way to mutate state during execution. ``VariableScope``
+is a runtime mapping the executor exposes to flow-control commands so
+they can read and write the same bag the runtime interpolator consults.
+
+The executor now resolves ``${var}`` per command call (not pre-flattened),
+so nested ``body`` / ``then`` / ``else`` lists keep their placeholders
+and re-bind each time they execute — letting ``AC_for_each`` iterate
+over a list while the body sees the current item.
+
+::
+
+   import je_auto_control as ac
+   from je_auto_control.utils.executor.action_executor import executor
+
+   executor.execute_action([
+       ["AC_set_var", {"name": "items", "value": ["alpha", "beta"]}],
+       ["AC_set_var", {"name": "i", "value": 0}],
+       ["AC_for_each", {
+           "items": "${items}", "as": "name",
+           "body": [
+               ["AC_inc_var", {"name": "i"}],
+               ["AC_if_var", {
+                   "name": "i", "op": "ge", "value": 2,
+                   "then": [["AC_break"]], "else": [],
+               }],
+           ],
+       }],
+   ])
+
+Comparison operators for ``AC_if_var``: ``eq``, ``ne``, ``lt``, ``le``,
+``gt``, ``ge``, ``contains``, ``startswith``, ``endswith``.
+
+Action-JSON commands: ``AC_set_var``, ``AC_get_var``, ``AC_inc_var``,
+``AC_if_var``, ``AC_for_each``.
+
+GUI: **Variables** tab — live view of ``executor.variables`` with
+single-set, JSON seed, and clear-all controls; reflects what
+``AC_set_var`` / ``AC_for_each`` mutate at runtime.
+
+
+LLM action planner
+==================
+
+Translate a plain-language description into a validated ``AC_*``
+action list by asking an LLM (Anthropic Claude by default). Output is
+parsed leniently (strips code fences, extracts the first JSON array
+from prose) and then validated by the same schema the executor uses,
+so the result can be piped straight into ``execute_action``::
+
+   import je_auto_control as ac
+   from je_auto_control.utils.executor.action_executor import executor
+
+   actions = ac.plan_actions(
+       "click the Submit button, then type 'done' and save",
+       known_commands=executor.known_commands(),
+   )
+   executor.execute_action(actions)
+
+   # Or in one call:
+   ac.run_from_description("open Notepad and type hello", executor=executor)
+
+Backend selection mirrors :mod:`vision.backends`:
+
+- Anthropic (``anthropic`` SDK, ``ANTHROPIC_API_KEY``) — default
+- ``AUTOCONTROL_LLM_BACKEND`` and ``AUTOCONTROL_LLM_MODEL`` for overrides
+
+Action-JSON commands: ``AC_llm_plan``, ``AC_llm_run``.
+
+GUI: **LLM Planner** tab. Description box, ``QThread``-backed *Plan*
+button, action-list preview, and a *Run plan* button — long calls run
+off the GUI thread so the UI stays responsive.
+
+
+Remote desktop (host + viewer)
+==============================
+
+Stream this machine's screen to another machine, **or** view and
+control a remote machine — both directions ship with a headless API
+and a GUI tab.
+
+The wire format is a length-prefixed framing on raw TCP (no extra
+deps), starting with an HMAC-SHA256 challenge/response handshake;
+viewers that fail auth are dropped before they can see a frame. JPEG
+frames are produced at the configured FPS / quality and broadcast to
+authenticated viewers via a shared latest-frame slot, so a slow viewer
+drops frames instead of blocking the rest. Viewer input messages are
+JSON, validated against an allowlist, and applied through the existing
+mouse / keyboard wrappers.
+
+Headless host (be remoted by someone else)::
+
+   from je_auto_control import RemoteDesktopHost
+
+   host = RemoteDesktopHost(
+       token="hunter2",          # shared secret (HMAC key)
+       bind="127.0.0.1",         # default; expose externally only via
+                                 # SSH tunnel or trusted VPN
+       port=0,                   # 0 = auto-assigned
+       fps=10, quality=70,
+   )
+   host.start()
+   print("listening on", host.port, "viewers:", host.connected_clients)
+   # ...
+   host.stop()
+
+Headless viewer (control someone else)::
+
+   from je_auto_control import RemoteDesktopViewer
+
+   viewer = RemoteDesktopViewer(
+       host="10.0.0.5", port=51234, token="hunter2",
+       on_frame=lambda jpeg_bytes: ...,   # render or save
+   )
+   viewer.connect()
+   viewer.send_input({"action": "mouse_move", "x": 100, "y": 200})
+   viewer.send_input({"action": "type", "text": "hello"})
+   viewer.disconnect()
+
+Input message allowlist (validated on the host before dispatch):
+
+- ``mouse_move`` ``{x, y}``
+- ``mouse_click`` ``{x?, y?, button}``
+- ``mouse_press`` / ``mouse_release`` ``{button}``
+- ``mouse_scroll`` ``{x?, y?, amount}``
+- ``key_press`` / ``key_release`` ``{keycode}``
+- ``type`` ``{text}``
+- ``ping``
+
+Action-JSON commands (use the singleton in
+:mod:`utils.remote_desktop.registry`)::
+
+   AC_start_remote_host       # token, bind, port, fps, quality, region
+   AC_stop_remote_host
+   AC_remote_host_status      # → {running, port, connected_clients}
+
+   AC_remote_connect          # host, port, token, timeout
+   AC_remote_disconnect
+   AC_remote_viewer_status    # → {connected}
+   AC_remote_send_input       # action: {...}
+
+GUI: **Remote Desktop** tab with two sub-tabs.
+
+- **Host** — token field with a *Generate* button that emits 24 random
+  URL-safe bytes, security warning about the bind address, start / stop
+  controls, refreshing port + viewer-count status, and a 4 fps preview
+  pane below the controls so the user being remoted sees what viewers
+  see.
+- **Viewer** — address / port / token form, *Connect* / *Disconnect*,
+  and a custom frame-display widget that paints incoming JPEG frames
+  scaled with ``KeepAspectRatio``. Mouse / wheel / key events on the
+  display are remapped from widget coordinates back to the remote
+  screen's pixel space using the latest frame's dimensions, then
+  forwarded as ``INPUT`` messages.
+
+.. warning::
+   Anyone with the host:port and token gets full mouse / keyboard
+   control of the host machine. Defaults bind to ``127.0.0.1``;
+   exposing this to untrusted networks should be paired with an SSH
+   tunnel or TLS front-end. The token is the *only* line of defence —
+   treat it like a password.

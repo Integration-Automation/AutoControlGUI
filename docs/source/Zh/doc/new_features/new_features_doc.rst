@@ -282,3 +282,187 @@ Action-JSON 指令：``AC_vlm_locate``、``AC_vlm_click``。GUI：
 截圖檔存於 ``~/.je_auto_control/artifacts/``，相關紀錄被 prune 或整個
 歷史被清除時會一併刪除。GUI：**Run History** 分頁 — 雙擊截圖欄位可開
 啟 OS 預覽。
+
+
+OCR — 區域 dump 與 regex 搜尋
+=============================
+
+原本 OCR 模組只支援字串／精確比對，新增兩個 API 補強其他常見場景::
+
+   import je_auto_control as ac
+
+   # 把區域（或整個螢幕）內辨識到的所有文字傾倒出來
+   for match in ac.read_text_in_region(region=[0, 0, 800, 600]):
+       print(match.text, match.center, match.confidence)
+
+   # Regex 搜尋 — 適合內容會變的文字（訂單編號、錯誤代碼）
+   for match in ac.find_text_regex(r"Order#\d+"):
+       print(match.text, match.center)
+
+   # 也接受 compiled pattern 與 flags
+   import re
+   ac.find_text_regex(re.compile(r"foo", re.IGNORECASE))
+
+Action-JSON 指令::
+
+   [["AC_read_text_in_region", {"region": [0, 0, 800, 600]}]]
+   [["AC_find_text_regex", {"pattern": "Order#\\d+"}]]
+
+GUI：**OCR Reader** 分頁。可用既有的選取 overlay 圈出區域（留空則整螢幕），
+設定語言／最低信心度後按 *抓取區域全部文字* 或 *用 regex 搜尋*。結果
+以 JSON 列出，含文字、邊界框、信心度。
+
+
+執行期變數與資料驅動流程控制
+============================
+
+過去 :mod:`script_vars.interpolate` 只能在執行前一次性把 ``${var}``
+取代成靜態 mapping 中的值，腳本沒辦法在執行時修改狀態。``VariableScope``
+是 executor 暴露給流程控制指令的執行期 mapping，讓它們能讀寫與
+runtime interpolator 相同的容器。
+
+executor 現在改成「每次呼叫」才解析 ``${var}`` placeholder（不會
+事先攤平），所以巢狀的 ``body`` / ``then`` / ``else`` 清單會保留
+placeholder，每次重複執行時重新繫結 — 因此 ``AC_for_each`` 走訪
+list 時，body 內看到的就是當前的元素。
+
+::
+
+   import je_auto_control as ac
+   from je_auto_control.utils.executor.action_executor import executor
+
+   executor.execute_action([
+       ["AC_set_var", {"name": "items", "value": ["alpha", "beta"]}],
+       ["AC_set_var", {"name": "i", "value": 0}],
+       ["AC_for_each", {
+           "items": "${items}", "as": "name",
+           "body": [
+               ["AC_inc_var", {"name": "i"}],
+               ["AC_if_var", {
+                   "name": "i", "op": "ge", "value": 2,
+                   "then": [["AC_break"]], "else": [],
+               }],
+           ],
+       }],
+   ])
+
+``AC_if_var`` 的比較運算子：``eq``、``ne``、``lt``、``le``、``gt``、
+``ge``、``contains``、``startswith``、``endswith``。
+
+Action-JSON 指令：``AC_set_var``、``AC_get_var``、``AC_inc_var``、
+``AC_if_var``、``AC_for_each``。
+
+GUI：**Variables** 分頁 — 即時檢視 ``executor.variables``，可單筆設
+定、JSON 整批 seed、清空，反映 ``AC_set_var`` / ``AC_for_each`` 在執
+行期的變動。
+
+
+LLM 動作規劃器
+==============
+
+把一段中／英文描述交給 LLM（預設 Anthropic Claude），生成驗證過的
+``AC_*`` 動作清單。輸出採寬鬆解析（會剝 code fence、從散文中抽出
+第一個 JSON array），再用 executor 同樣的 schema 驗證，所以結果可
+以直接餵給 ``execute_action``::
+
+   import je_auto_control as ac
+   from je_auto_control.utils.executor.action_executor import executor
+
+   actions = ac.plan_actions(
+       "點擊 Submit 按鈕，然後輸入 'done' 並儲存",
+       known_commands=executor.known_commands(),
+   )
+   executor.execute_action(actions)
+
+   # 或者一行做完：
+   ac.run_from_description("開記事本，輸入 hello", executor=executor)
+
+後端選擇對齊 :mod:`vision.backends`：
+
+- Anthropic（``anthropic`` SDK，``ANTHROPIC_API_KEY``）— 預設
+- 用 ``AUTOCONTROL_LLM_BACKEND``、``AUTOCONTROL_LLM_MODEL`` 覆寫
+
+Action-JSON 指令：``AC_llm_plan``、``AC_llm_run``。
+
+GUI：**LLM Planner** 分頁。描述輸入框、``QThread`` 背景執行的 *Plan*
+按鈕、預覽指令清單、以及 *Run plan* 按鈕 — 長時間呼叫不會卡 UI。
+
+
+遠端桌面（Host + Viewer）
+=========================
+
+把本機畫面串流給別人看／控制，**或** 觀看並控制別人的機器 — 雙向都有
+headless API 與 GUI 分頁。
+
+協定是 raw TCP 上的長度前綴框架（沒有額外相依），先做一輪 HMAC-SHA256
+challenge/response 認證；認證失敗的 viewer 在看到任何畫面前就被踢掉。
+JPEG frame 依設定的 FPS／品質產生，透過共享 latest-frame slot 廣播給
+通過認證的 viewers，慢的 viewer 只會掉 frame 而不會卡其他人。Viewer
+輸入訊息是 JSON，host 端用允許清單驗證後才透過既有 mouse／keyboard
+wrapper 派送。
+
+Headless host（被別人遠端）::
+
+   from je_auto_control import RemoteDesktopHost
+
+   host = RemoteDesktopHost(
+       token="hunter2",          # 共用密鑰（HMAC key）
+       bind="127.0.0.1",         # 預設值；要對外請走 SSH tunnel
+                                 # 或可信的 VPN
+       port=0,                   # 0 = 自動指派
+       fps=10, quality=70,
+   )
+   host.start()
+   print("listening on", host.port, "viewers:", host.connected_clients)
+   # ...
+   host.stop()
+
+Headless viewer（控制別人）::
+
+   from je_auto_control import RemoteDesktopViewer
+
+   viewer = RemoteDesktopViewer(
+       host="10.0.0.5", port=51234, token="hunter2",
+       on_frame=lambda jpeg_bytes: ...,   # 顯示或存檔
+   )
+   viewer.connect()
+   viewer.send_input({"action": "mouse_move", "x": 100, "y": 200})
+   viewer.send_input({"action": "type", "text": "hello"})
+   viewer.disconnect()
+
+輸入訊息允許清單（host 派送前驗證）：
+
+- ``mouse_move`` ``{x, y}``
+- ``mouse_click`` ``{x?, y?, button}``
+- ``mouse_press`` / ``mouse_release`` ``{button}``
+- ``mouse_scroll`` ``{x?, y?, amount}``
+- ``key_press`` / ``key_release`` ``{keycode}``
+- ``type`` ``{text}``
+- ``ping``
+
+Action-JSON 指令（使用 :mod:`utils.remote_desktop.registry` 的單例）::
+
+   AC_start_remote_host       # token, bind, port, fps, quality, region
+   AC_stop_remote_host
+   AC_remote_host_status      # → {running, port, connected_clients}
+
+   AC_remote_connect          # host, port, token, timeout
+   AC_remote_disconnect
+   AC_remote_viewer_status    # → {connected}
+   AC_remote_send_input       # action: {...}
+
+GUI：**Remote Desktop** 分頁，內含兩個子分頁。
+
+- **Host**（被遠端的本機）— Token 欄位附 *產生* 按鈕（24 bytes
+  URL-safe 隨機字串）、bind 位址安全提示、啟動／停止控制、即時刷新
+  的 port + viewer 數量狀態列，以及底部 4fps 的預覽面板，讓被遠端
+  的人看到 viewer 看到的畫面。
+- **Viewer**（控制別人）— 位址／port／token 表單、*連線* / *中斷
+  連線*，以及自繪的 frame display widget，會把 JPEG 等比縮放繪入。
+  display 上的滑鼠／滾輪／鍵盤事件，會用最新 frame 的尺寸把 widget
+  座標映射回原始遠端螢幕的像素座標，再用 ``INPUT`` 訊息送回。
+
+.. warning::
+   取得 host:port 與 token 的人，等同擁有本機完整滑鼠／鍵盤控制權。
+   預設只綁 ``127.0.0.1``；要對外暴露請務必搭配 SSH tunnel 或 TLS
+   前端。Token 是唯一防線 — 請當作密碼來保管。
