@@ -395,6 +395,7 @@ traditional_chinese_word_dict = {
     "rd_host_stop": "停止 Host",
     "rd_host_status_running": "運行中 port {port} — {n} 個 viewer",
     "rd_host_status_stopped": "Host 已停止",
+    "rd_host_preview_label": "預覽（viewer 看到的畫面）：",
     "rd_viewer_connect": "連線",
     "rd_viewer_disconnect": "中斷連線",
     "rd_viewer_required_fields": "位址、port、token 都必須填寫。",

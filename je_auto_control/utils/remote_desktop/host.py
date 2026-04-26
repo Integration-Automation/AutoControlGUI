@@ -252,6 +252,15 @@ class RemoteDesktopHost:
                 if client.authenticated and not client._shutdown.is_set()
             )
 
+    def latest_frame(self) -> Optional[bytes]:
+        """Return the most recent encoded frame (JPEG bytes) or ``None``.
+
+        Useful for a local preview pane: the GUI can poll this without
+        opening a TCP connection back to the host.
+        """
+        with self._frame_cond:
+            return self._latest_frame
+
     def start(self) -> None:
         """Bind, then launch accept + capture threads."""
         if self.is_running:

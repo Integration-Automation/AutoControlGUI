@@ -400,6 +400,7 @@ english_word_dict = {
     "rd_host_stop": "Stop host",
     "rd_host_status_running": "Running on port {port} — {n} viewer(s)",
     "rd_host_status_stopped": "Host is stopped",
+    "rd_host_preview_label": "Preview (what viewers see):",
     "rd_viewer_connect": "Connect",
     "rd_viewer_disconnect": "Disconnect",
     "rd_viewer_required_fields": (

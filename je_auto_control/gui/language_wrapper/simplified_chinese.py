@@ -394,6 +394,7 @@ simplified_chinese_word_dict = {
     "rd_host_stop": "停止 Host",
     "rd_host_status_running": "运行中 端口 {port} — {n} 个 viewer",
     "rd_host_status_stopped": "Host 已停止",
+    "rd_host_preview_label": "预览（viewer 看到的画面）：",
     "rd_viewer_connect": "连接",
     "rd_viewer_disconnect": "断开",
     "rd_viewer_required_fields": "地址、端口、token 都必须填写。",

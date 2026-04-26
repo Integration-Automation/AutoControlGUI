@@ -400,6 +400,7 @@ japanese_word_dict = {
     "rd_host_stop": "ホスト停止",
     "rd_host_status_running": "稼働中 ポート {port} — ビューア {n} 名",
     "rd_host_status_stopped": "ホストは停止中",
+    "rd_host_preview_label": "プレビュー（ビューアの表示）:",
     "rd_viewer_connect": "接続",
     "rd_viewer_disconnect": "切断",
     "rd_viewer_required_fields": "アドレス・ポート・トークンはすべて必須です。",

@@ -5,10 +5,13 @@ and at most one active viewer without juggling handles. Holding those
 references here keeps :mod:`action_executor` thin and avoids circular
 imports between the executor and the host/viewer classes.
 """
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Callable, Dict, Optional, Sequence
 
 from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
 from je_auto_control.utils.remote_desktop.viewer import RemoteDesktopViewer
+
+FrameCallback = Callable[[bytes], None]
+ErrorCallback = Callable[[Exception], None]
 
 
 class _RemoteDesktopRegistry:
@@ -62,10 +65,21 @@ class _RemoteDesktopRegistry:
         }
 
     def connect_viewer(self, host: str, port: int, token: str,
-                       timeout: float = 5.0) -> Dict[str, Any]:
-        """Disconnect any existing viewer, then connect a fresh one."""
+                       timeout: float = 5.0,
+                       on_frame: Optional[FrameCallback] = None,
+                       on_error: Optional[ErrorCallback] = None,
+                       ) -> Dict[str, Any]:
+        """Disconnect any existing viewer, then connect a fresh one.
+
+        ``on_frame`` and ``on_error`` are wired before the receiver
+        thread starts, so no frame can arrive while the GUI is still
+        attaching its callbacks.
+        """
         self.disconnect_viewer()
-        viewer = RemoteDesktopViewer(host=host, port=int(port), token=token)
+        viewer = RemoteDesktopViewer(
+            host=host, port=int(port), token=token,
+            on_frame=on_frame, on_error=on_error,
+        )
         viewer.connect(timeout=float(timeout))
         self._viewer = viewer
         return self.viewer_status()

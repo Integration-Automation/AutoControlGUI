@@ -207,7 +207,9 @@ class _FrameDisplay(QWidget):
 
 
 class _HostPanel(TranslatableMixin, QWidget):
-    """Start / stop the singleton host and show its status."""
+    """Start / stop the singleton host and show what is being streamed."""
+
+    _PREVIEW_INTERVAL_MS = 250  # 4 fps preview is enough to confirm liveness
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -224,15 +226,23 @@ class _HostPanel(TranslatableMixin, QWidget):
         self._quality.setRange(1, 95)
         self._quality.setValue(70)
         self._status = QLabel()
+        self._preview = _FrameDisplay()
+        # Preview is read-only — a host watching their own stream shouldn't
+        # trigger fake input on themselves through the local widget.
+        self._preview.setEnabled(False)
         self._start_btn: Optional[QPushButton] = None
         self._stop_btn: Optional[QPushButton] = None
         self._refresh_timer = QTimer(self)
         self._refresh_timer.setInterval(1000)
         self._refresh_timer.timeout.connect(self._refresh_status)
+        self._preview_timer = QTimer(self)
+        self._preview_timer.setInterval(self._PREVIEW_INTERVAL_MS)
+        self._preview_timer.timeout.connect(self._refresh_preview)
         self._build_layout()
         self._apply_placeholders()
         self._refresh_status()
         self._refresh_timer.start()
+        self._preview_timer.start()
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
@@ -289,8 +299,9 @@ class _HostPanel(TranslatableMixin, QWidget):
         btn_row.addStretch()
         root.addLayout(btn_row)
 
+        root.addWidget(self._tr(QLabel(), "rd_host_preview_label"))
+        root.addWidget(self._preview, stretch=1)
         root.addWidget(self._status)
-        root.addStretch()
 
     def _generate_token(self) -> None:
         self._token.setText(secrets.token_urlsafe(24))
@@ -330,6 +341,18 @@ class _HostPanel(TranslatableMixin, QWidget):
         else:
             text = _t("rd_host_status_stopped")
         self._status.setText(text)
+
+    def _refresh_preview(self) -> None:
+        host = registry.host
+        if host is None or not host.is_running:
+            self._preview.clear()
+            return
+        frame = host.latest_frame()
+        if frame is None:
+            return
+        image = QImage.fromData(frame, "JPEG")
+        if not image.isNull():
+            self._preview.set_image(image)
 
 
 class _ViewerPanel(TranslatableMixin, QWidget):
@@ -425,6 +448,8 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         try:
             registry.connect_viewer(
                 host=host, port=port, token=token, timeout=5.0,
+                on_frame=self._frame_signal.emit,
+                on_error=lambda exc: self._error_signal.emit(str(exc)),
             )
         except AuthenticationError as error:
             QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
@@ -432,10 +457,6 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         except (OSError, ConnectionError, RuntimeError) as error:
             QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
             return
-        viewer = registry.viewer
-        if viewer is not None:
-            viewer._on_frame = self._frame_signal.emit  # noqa: SLF001
-            viewer._on_error = lambda exc: self._error_signal.emit(str(exc))  # noqa: SLF001
         self._connected = True
         self._refresh_status()
 
