@@ -494,3 +494,178 @@ GUI: **Remote Desktop** tab with two sub-tabs.
    exposing this to untrusted networks should be paired with an SSH
    tunnel or TLS front-end. The token is the *only* line of defence —
    treat it like a password.
+
+
+Remote desktop — secure transports, audio, clipboard, file transfer
+===================================================================
+
+Host ID handshake
+-----------------
+
+Every host now exposes a stable 9-digit numeric ID, persisted at
+``~/.je_auto_control/remote_host_id`` so it stays the same across
+restarts. The ID is announced inside ``AUTH_OK`` (so only authenticated
+viewers see it), and viewers can verify ``expected_host_id`` to defend
+against a different process listening on the same address::
+
+   from je_auto_control import RemoteDesktopHost, RemoteDesktopViewer
+   host = RemoteDesktopHost(token="tok")
+   print(host.host_id)        # e.g. "123456789"
+
+   viewer = RemoteDesktopViewer(
+       host="10.0.0.5", port=51234, token="tok",
+       expected_host_id="123456789",
+   )
+   viewer.connect()           # raises AuthenticationError on mismatch
+
+Helpers ``format_host_id("123456789") == "123 456 789"`` and
+``parse_host_id("123 456 789") == "123456789"`` are also exported. The
+GUI displays the formatted ID with a *Copy* button, and the viewer
+panel accepts any common spacing / dashing.
+
+TLS
+---
+
+Both ``RemoteDesktopHost`` and ``RemoteDesktopViewer`` accept an
+``ssl.SSLContext``. When provided, the host wraps each accepted
+connection server-side; the viewer wraps the connect socket
+client-side. Failed handshakes are logged and silently dropped before
+they can register as connected clients::
+
+   import ssl
+   ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+   ctx.load_cert_chain("cert.pem", "key.pem")
+   host = RemoteDesktopHost(token="tok", ssl_context=ctx)
+
+   client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+   client_ctx.load_verify_locations("cert.pem")
+   viewer = RemoteDesktopViewer(host=..., ssl_context=client_ctx)
+
+For self-signed loopback testing, set
+``ctx.check_hostname = False`` and ``ctx.verify_mode = ssl.CERT_NONE``
+on the client context. The Remote Desktop GUI host panel has TLS cert
+/ key file pickers; the viewer panel has a *Skip cert verification*
+checkbox.
+
+WebSocket transport
+-------------------
+
+A new ``WebSocketDesktopHost`` / ``WebSocketDesktopViewer`` pair
+speaks the same typed-message protocol over RFC 6455 BINARY frames.
+The implementation is in-tree (no extra deps); each application
+message rides as one full WebSocket frame, so reassembly machinery is
+unnecessary. The same ``ssl_context`` parameter doubles as the
+``wss://`` switch::
+
+   from je_auto_control import (
+       WebSocketDesktopHost, WebSocketDesktopViewer,
+   )
+   host = WebSocketDesktopHost(token="tok", ssl_context=ctx)   # wss://
+   viewer = WebSocketDesktopViewer(
+       host="example.com", port=443, token="tok",
+       ssl_context=client_ctx, path="/rd",
+   )
+
+Why WS: friendly to corporate firewalls and reverse proxies, and
+compatible with browser viewers. The GUI viewer's transport dropdown
+(*TCP* / *WebSocket* / *TLS* / *WSS*) chooses the right class
+automatically.
+
+Audio streaming
+---------------
+
+A new ``AUDIO`` message type carries 16-bit signed PCM blocks (default
+16 kHz mono, 50 ms / 1600 bytes per block). The optional
+``sounddevice`` dependency is loaded lazily — without it, audio is
+reported disabled and the host stays up::
+
+   host = RemoteDesktopHost(
+       token="tok", enable_audio=True, audio_device=None,    # default mic
+       audio_sample_rate=16000, audio_channels=1,
+   )
+
+   from je_auto_control.utils.remote_desktop import AudioPlayer
+   player = AudioPlayer(); player.start()
+   viewer = RemoteDesktopViewer(host=..., on_audio=player.play)
+
+The host fans each captured block out to all authenticated viewers
+through a bounded per-client deque (~2.5 s of buffering), so a slow
+viewer drops old audio chunks instead of stalling capture for
+everyone else. To capture system audio (rather than the mic), pick a
+loopback / monitor device by index — Windows WASAPI loopback on
+Windows, the PulseAudio monitor source on Linux, BlackHole on macOS.
+GUI: *Stream system audio* on the Host panel, *Play received audio*
+on the Viewer panel.
+
+Clipboard sync (text + image)
+-----------------------------
+
+A new ``CLIPBOARD`` message type carries a JSON envelope so kinds can
+grow without a protocol bump:
+
+* ``{"kind": "text", "text": "..."}``
+* ``{"kind": "image", "format": "png", "data_b64": "..."}``
+
+``utils/clipboard/clipboard.py`` is extended with
+``get_clipboard_image`` / ``set_clipboard_image``; Windows uses
+CF_DIB via ctypes (Pillow rasterises PNG → BMP → DIB), Linux shells
+out to ``xclip -t image/png``, macOS get works via Pillow ImageGrab
+and set raises until a PyObjC backend lands. Sync is explicit per
+call — no auto-poll loops to avoid paste storms::
+
+   # Viewer pushes its local clipboard to the host
+   viewer.send_clipboard_text("hello")
+   viewer.send_clipboard_image(open("logo.png", "rb").read())
+
+   # Host pushes to all viewers
+   host.broadcast_clipboard_text("greetings")
+   host.broadcast_clipboard_image(png_bytes)
+
+   # Viewer wires a callback so it can choose when to paste
+   viewer = RemoteDesktopViewer(
+       host=..., on_clipboard=lambda kind, data: ...,
+   )
+
+GUI: *Push clipboard text to host* button on the Viewer panel; the
+host applies inbound clipboards via the helpers above.
+
+File transfer with progress
+---------------------------
+
+Three new message types form one transfer:
+
+* ``FILE_BEGIN`` — JSON ``{transfer_id, dest_path, size}``
+* ``FILE_CHUNK`` — 36-byte ASCII transfer id + raw payload
+* ``FILE_END``   — JSON ``{transfer_id, status, error?}``
+
+Transfers are bidirectional, chunked (256 KiB per chunk), and have
+*no aggregate size limit* and *no path restriction* on the
+destination — token holders are trusted users. Progress is reported
+locally on both sides without an extra wire message::
+
+   from je_auto_control.utils.remote_desktop import (
+       FileReceiver, RemoteDesktopHost, RemoteDesktopViewer, send_file,
+   )
+
+   # Viewer uploads to host
+   viewer.send_file("local.bin", "/tmp/uploaded.bin",
+                    on_progress=lambda tid, done, total: print(done, total))
+
+   # Host pushes to all viewers (each viewer needs a FileReceiver)
+   viewer.set_file_receiver(FileReceiver(
+       on_progress=..., on_complete=...,
+   ))
+   host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
+
+GUI: *Send file...* opens a file picker + destination-path prompt and
+runs the upload on a ``QThread`` with a ``QProgressBar`` bound to the
+sender's progress events. The frame display widget also accepts
+dragEnter / drop of local files; each dropped file kicks off the same
+upload flow.
+
+.. warning::
+   Path is unrestricted and there is no size cap. Anyone with the
+   token can write any file to any location, and can fill the disk.
+   Keep ``trusted token holders == trusted users`` in mind, or wrap
+   the headless API in your own restricted ``FileReceiver`` subclass
+   that vets the destination path.

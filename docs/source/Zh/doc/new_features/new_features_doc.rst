@@ -466,3 +466,166 @@ GUI：**Remote Desktop** 分頁，內含兩個子分頁。
    取得 host:port 與 token 的人，等同擁有本機完整滑鼠／鍵盤控制權。
    預設只綁 ``127.0.0.1``；要對外暴露請務必搭配 SSH tunnel 或 TLS
    前端。Token 是唯一防線 — 請當作密碼來保管。
+
+
+遠端桌面 — 加密傳輸、音訊、剪貼簿、檔案傳輸
+============================================
+
+Host ID 握手
+------------
+
+每台 host 現在都有一個穩定的 9 位數字 ID，存在
+``~/.je_auto_control/remote_host_id``，重啟後仍是同一個。ID 在
+``AUTH_OK`` 訊息內回傳（只有通過認證的 viewer 才看得到），viewer 可
+以指定 ``expected_host_id`` 驗證，避免「同樣位址但是別的程序」的
+冒充攻擊::
+
+   from je_auto_control import RemoteDesktopHost, RemoteDesktopViewer
+   host = RemoteDesktopHost(token="tok")
+   print(host.host_id)        # 例如 "123456789"
+
+   viewer = RemoteDesktopViewer(
+       host="10.0.0.5", port=51234, token="tok",
+       expected_host_id="123456789",
+   )
+   viewer.connect()           # 不一致就拋 AuthenticationError
+
+另外提供 ``format_host_id("123456789") == "123 456 789"`` 與
+``parse_host_id("123 456 789") == "123456789"`` 助手。GUI 會顯示分組
+過的 ID 並有 *複製* 按鈕；viewer 端的輸入欄接受常見的空白／破折號。
+
+TLS
+---
+
+``RemoteDesktopHost`` 與 ``RemoteDesktopViewer`` 都接受
+``ssl.SSLContext`` 參數。設定後，host 會把每條接受的連線在伺服器側
+套上 TLS；viewer 在客戶端側套上。失敗的握手會被記錄並關閉，不會
+進到 connected client 計數::
+
+   import ssl
+   ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+   ctx.load_cert_chain("cert.pem", "key.pem")
+   host = RemoteDesktopHost(token="tok", ssl_context=ctx)
+
+   client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+   client_ctx.load_verify_locations("cert.pem")
+   viewer = RemoteDesktopViewer(host=..., ssl_context=client_ctx)
+
+自簽憑證 loopback 測試時，把 ``ctx.check_hostname = False`` 與
+``ctx.verify_mode = ssl.CERT_NONE`` 設在 client context 上。GUI host
+分頁有 TLS 憑證／私鑰的檔案選擇器；viewer 分頁有 *忽略憑證驗證* 的
+checkbox 配自簽用。
+
+WebSocket 傳輸
+--------------
+
+新增 ``WebSocketDesktopHost`` / ``WebSocketDesktopViewer``，用 RFC
+6455 BINARY frame 傳同樣的 typed message。實作放在 in-tree（沒有
+額外相依）；每個 application message 對應一個完整的 WS frame，所以
+不需要重組機制。同一個 ``ssl_context`` 也是 ``wss://`` 的開關::
+
+   from je_auto_control import (
+       WebSocketDesktopHost, WebSocketDesktopViewer,
+   )
+   host = WebSocketDesktopHost(token="tok", ssl_context=ctx)   # wss://
+   viewer = WebSocketDesktopViewer(
+       host="example.com", port=443, token="tok",
+       ssl_context=client_ctx, path="/rd",
+   )
+
+為什麼用 WS：穿牆友善、容易接反向代理、跟瀏覽器 viewer 相容。GUI
+viewer 的傳輸下拉（*TCP* / *WebSocket* / *TLS* / *WSS*）會自動選對
+應的 class。
+
+音訊串流
+--------
+
+新增 ``AUDIO`` 訊息類型，攜帶 16-bit signed PCM 區塊（預設 16 kHz
+mono，每塊 50 ms / 1600 bytes）。``sounddevice`` 為 optional 相依，
+延遲載入；沒裝就 host 端音訊回報停用且整個 host 仍能運作::
+
+   host = RemoteDesktopHost(
+       token="tok", enable_audio=True, audio_device=None,    # 預設 mic
+       audio_sample_rate=16000, audio_channels=1,
+   )
+
+   from je_auto_control.utils.remote_desktop import AudioPlayer
+   player = AudioPlayer(); player.start()
+   viewer = RemoteDesktopViewer(host=..., on_audio=player.play)
+
+Host 把每塊抓到的音訊透過每個 client 一個有上限的 deque（~2.5 秒緩
+衝）廣播出去；慢的 viewer 只會丟掉舊的音訊塊，不會卡到大家的擷取
+執行緒。如果要抓系統聲音（而非 mic），用 device index 指定 — Win
+是 WASAPI loopback、Linux 是 PulseAudio monitor source、macOS 要
+BlackHole 之類。GUI：Host 分頁的 *串流系統音訊*，Viewer 分頁的 *播
+放接收的音訊*。
+
+剪貼簿同步（文字 + 圖片）
+-------------------------
+
+新增 ``CLIPBOARD`` 訊息類型，payload 是 JSON envelope，方便日後加新
+類別不用動到 framing：
+
+* ``{"kind": "text", "text": "..."}``
+* ``{"kind": "image", "format": "png", "data_b64": "..."}``
+
+``utils/clipboard/clipboard.py`` 補上 ``get_clipboard_image`` /
+``set_clipboard_image``；Windows 用 ctypes 寫 CF_DIB（Pillow 把 PNG
+轉成 BMP 再去掉 14 byte file header 變成 DIB），Linux 走
+``xclip -t image/png``，macOS get 走 Pillow ImageGrab、set 暫時拋
+NotImplemented 等 PyObjC backend。同步是「明確呼叫」的（避免雙向
+auto-poll 造成 paste 迴圈）::
+
+   # Viewer 把本機剪貼簿送到 host
+   viewer.send_clipboard_text("hello")
+   viewer.send_clipboard_image(open("logo.png", "rb").read())
+
+   # Host 把本機剪貼簿送到所有 viewers
+   host.broadcast_clipboard_text("greetings")
+   host.broadcast_clipboard_image(png_bytes)
+
+   # Viewer 接收回 callback，自己決定要不要 paste
+   viewer = RemoteDesktopViewer(
+       host=..., on_clipboard=lambda kind, data: ...,
+   )
+
+GUI：Viewer 分頁有 *把本機剪貼簿文字送到 Host* 按鈕；host 收到後
+透過上述 helpers 套用到本機剪貼簿。
+
+檔案傳輸 + 進度
+---------------
+
+三個新訊息組成一次傳輸：
+
+* ``FILE_BEGIN`` — JSON ``{transfer_id, dest_path, size}``
+* ``FILE_CHUNK`` — 36-byte ASCII transfer id + 原始 payload
+* ``FILE_END``   — JSON ``{transfer_id, status, error?}``
+
+雙向、分塊（256 KiB / chunk）、**沒有總大小上限**、**沒有目的路徑
+限制**（拿到 token 就視為信任使用者）。進度由兩端各自本地計算，不
+需要額外的 wire 訊息::
+
+   from je_auto_control.utils.remote_desktop import (
+       FileReceiver, RemoteDesktopHost, RemoteDesktopViewer, send_file,
+   )
+
+   # Viewer 上傳到 host
+   viewer.send_file("local.bin", "/tmp/uploaded.bin",
+                    on_progress=lambda tid, done, total: print(done, total))
+
+   # Host 下發到所有 viewer（viewer 需要設一個 FileReceiver 來收）
+   viewer.set_file_receiver(FileReceiver(
+       on_progress=..., on_complete=...,
+   ))
+   host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
+
+GUI：*傳送檔案...* 按鈕開啟檔案選擇器 + 目的路徑提示，上傳跑在
+``QThread`` 上，底下 ``QProgressBar`` 綁到 sender 的 progress 事
+件。Frame display widget 也接受 dragEnter／drop 拖放本機檔案，丟進
+去就走同一個流程上傳。
+
+.. warning::
+   路徑無限制、大小無上限。任何拿到 token 的人都能把任意檔案寫到
+   任意位置（覆蓋 ``C:\\Windows\\System32\\*.dll`` 都可能），也能
+   塞滿磁碟。Token 持有者必須等同信任使用者；要更嚴格的話請自行
+   繼承 ``FileReceiver`` 在 ``handle_begin`` 內驗證 dest_path。

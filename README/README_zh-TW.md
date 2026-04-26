@@ -62,7 +62,7 @@
 - **OCR** — 使用 Tesseract 從螢幕擷取文字，可搜尋、點擊或等待文字出現；支援 regex 搜尋與整塊區域 dump
 - **LLM 動作規劃器** — 用 Claude 把自然語言描述翻譯成驗證過的 `AC_*` 動作清單
 - **執行期變數與流程控制** — 執行時 `${var}` 取代，加上 `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` 讓腳本資料驅動
-- **遠端桌面** — 用 token 認證的 TCP 協定串流本機畫面並接收輸入，**或** 連線到他機觀看與控制（host + viewer GUI 皆內建）
+- **遠端桌面** — 用 token 認證的 TCP 協定串流本機畫面並接收輸入，**或** 連線到他機觀看與控制（host + viewer GUI 皆內建）。可選 TLS（HTTPS 級加密）、WebSocket 傳輸（``ws://`` + ``wss://``，穿牆／瀏覽器友善）、持久化 9 位數 Host ID、host→viewer 音訊串流、雙向剪貼簿同步（文字 + 圖片）、分塊檔案傳輸（拖放 + 進度條；任意目的路徑；無大小上限）
 - **剪貼簿** — 於 Windows / macOS / Linux 讀寫系統剪貼簿文字
 - **截圖與螢幕錄製** — 擷取全螢幕或指定區域為圖片，錄製螢幕為影片（AVI/MP4）
 - **動作錄製與回放** — 錄製滑鼠/鍵盤事件並重新播放
@@ -503,6 +503,59 @@ GUI：**Remote Desktop** 分頁，內含兩個子分頁。
 - **Viewer**（控制他機）— 位址 / port / token 表單、*連線* / *中斷連線*，自繪 frame display widget，會把 JPEG 等比縮放繪入。display 上的滑鼠 / 滾輪 / 鍵盤事件會用最新 frame 的尺寸映射回原始遠端螢幕的像素座標，再用 `INPUT` 訊息送回。
 
 > ⚠️ 取得 host:port 與 token 的人，等同擁有本機完整滑鼠 / 鍵盤控制權。預設只綁 `127.0.0.1`；要對外暴露請務必搭配 SSH tunnel 或 TLS 前端。Token 是唯一防線 — 請當作密碼來保管。
+
+**加密傳輸與替代協定**：傳 `ssl_context` 給 `RemoteDesktopHost` 或 `RemoteDesktopViewer` 即套上 TLS。要穿牆／給瀏覽器接，用內建的 WebSocket 版本（無額外相依），加 `ssl_context` 就變 `wss://`：
+
+```python
+from je_auto_control import (
+    WebSocketDesktopHost, WebSocketDesktopViewer,
+)
+host = WebSocketDesktopHost(token="hunter2", ssl_context=server_ctx)
+viewer = WebSocketDesktopViewer(
+    host="example.com", port=443, token="hunter2",
+    ssl_context=client_ctx, expected_host_id="123456789",
+)
+```
+
+**持久化 Host ID**：每台 host 有穩定的 9 位數字 ID（存在 `~/.je_auto_control/remote_host_id`），在 `AUTH_OK` 中宣告，viewer 透過 `expected_host_id` 驗證：
+
+```python
+print(host.host_id)            # 例如 "123456789"
+viewer = RemoteDesktopViewer(
+    host=..., port=..., token=...,
+    expected_host_id="123456789",   # 不一致就拋 AuthenticationError
+)
+```
+
+**音訊串流（host → viewer）**：選用 `sounddevice` 相依；host 端 `enable_audio=True` 開啟，viewer 端接 `AudioPlayer`（或自己的 callback）：
+
+```python
+host = RemoteDesktopHost(token="tok", enable_audio=True)
+
+from je_auto_control.utils.remote_desktop import AudioPlayer
+player = AudioPlayer(); player.start()
+viewer = RemoteDesktopViewer(host=..., on_audio=player.play)
+```
+
+**剪貼簿同步（文字 + 圖片，雙向）**：明確呼叫，沒有自動 polling 迴圈。圖片剪貼簿在 Windows（CF_DIB via ctypes）跟 Linux（`xclip -t image/png`）支援；macOS get 走 Pillow ImageGrab、set 暫時需要 PyObjC。
+
+```python
+viewer.send_clipboard_text("hello")
+viewer.send_clipboard_image(open("logo.png", "rb").read())
+host.broadcast_clipboard_text("greetings")
+```
+
+**檔案傳輸 + 進度**：雙向、分塊、目的路徑任意、無大小上限；GUI viewer 還可以拖放：
+
+```python
+viewer.send_file(
+    "local.bin", "/tmp/uploaded.bin",
+    on_progress=lambda tid, done, total: print(done, total),
+)
+host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
+```
+
+> ⚠️ 路徑無限制、大小無上限。任何拿到 token 的人都能把任意檔案寫到任意位置，也能塞滿磁碟 — 必須等同信任 token 持有者，或自己繼承 `FileReceiver` 在 `handle_begin` 內驗證 dest_path。
 
 ### 剪貼簿
 
