@@ -88,12 +88,12 @@ def _trusting_client_context(ca_path: Path) -> ssl.SSLContext:
     return ctx
 
 
-def _insecure_client_context() -> ssl.SSLContext:
+def _insecure_client_context() -> ssl.SSLContext:  # NOSONAR S4830 S5527
     """Self-signed loopback test context — verification deliberately off."""
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-    ctx.check_hostname = False  # NOSONAR S5527  # loopback self-signed test
-    ctx.verify_mode = ssl.CERT_NONE  # NOSONAR S4830  # loopback self-signed test
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
     return ctx
 
 

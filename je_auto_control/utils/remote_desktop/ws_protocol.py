@@ -134,8 +134,7 @@ def _compute_accept(key: str) -> str:
     # RFC 6455 mandates SHA-1 for the Sec-WebSocket-Accept handshake;
     # ``usedforsecurity=False`` tells linters this is a protocol-required
     # checksum, not a cryptographic primitive.
-    # nosemgrep: python.lang.security.audit.insecure-hash-algorithms.insecure-hash-algorithm-sha1
-    digest = hashlib.sha1(  # nosec B324  # reason: RFC 6455 handshake
+    digest = hashlib.sha1(  # nosec B324  # nosemgrep: python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
         key.encode("ascii") + WS_GUID,
         usedforsecurity=False,
     ).digest()

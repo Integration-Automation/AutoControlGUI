@@ -109,6 +109,30 @@ def _scroll_amount(angle_delta: int) -> int:
     return 0
 
 
+def _build_verifying_client_context() -> ssl.SSLContext:
+    """TLS client context with full hostname + cert verification enabled."""
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    ctx.load_default_certs()
+    ctx.check_hostname = True
+    ctx.verify_mode = ssl.CERT_REQUIRED
+    return ctx
+
+
+def _build_insecure_client_context() -> ssl.SSLContext:  # NOSONAR S4830 S5527
+    """Opt-in self-signed loopback context — verification intentionally off.
+
+    Triggered only when the user ticks 'Skip cert verification' on the
+    Viewer panel; meant for self-signed dev / LAN hosts where the user
+    has already pinned the host out-of-band (token + 9-digit Host ID).
+    """
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return ctx
+
+
 class _FrameDisplay(QWidget):
     """Paints the latest frame and emits remapped input events.
 
@@ -713,17 +737,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
             self, transport: str) -> Optional[ssl.SSLContext]:
         if transport not in ("TLS", "WSS"):
             return None
-        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         if self._tls_insecure.isChecked():
-            # Explicit user opt-in for self-signed loopback / dev hosts.
-            ctx.check_hostname = False  # NOSONAR S5527
-            ctx.verify_mode = ssl.CERT_NONE  # NOSONAR S4830
-        else:
-            ctx.load_default_certs()
-            ctx.check_hostname = True
-            ctx.verify_mode = ssl.CERT_REQUIRED
-        return ctx
+            return _build_insecure_client_context()
+        return _build_verifying_client_context()
 
     def _start_audio_player_if_requested(self) -> None:
         if not (self._enable_audio.isChecked()
