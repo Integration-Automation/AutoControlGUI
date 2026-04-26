@@ -25,7 +25,9 @@ from je_auto_control.utils.executor.flow_control import (
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.ocr.ocr_engine import (
     click_text as ocr_click_text,
+    find_text_regex as ocr_find_text_regex,
     locate_text_center as ocr_locate_text_center,
+    read_text_in_region as ocr_read_text_in_region,
     wait_for_text as ocr_wait_for_text,
 )
 from je_auto_control.utils.run_history.history_store import default_history_store
@@ -90,6 +92,41 @@ def _vlm_locate_as_list(description: str,
         description, screen_region=screen_region, model=model,
     )
     return None if coords is None else [coords[0], coords[1]]
+
+
+def _ocr_read_region_as_dicts(region: Optional[List[int]] = None,
+                              lang: str = "eng",
+                              min_confidence: float = 60.0) -> List[dict]:
+    """Executor adapter: dump OCR hits in a region as JSON-friendly dicts."""
+    return [
+        {
+            "text": match.text, "x": match.x, "y": match.y,
+            "width": match.width, "height": match.height,
+            "confidence": match.confidence,
+        }
+        for match in ocr_read_text_in_region(
+            region=region, lang=lang, min_confidence=float(min_confidence),
+        )
+    ]
+
+
+def _ocr_find_regex_as_dicts(pattern: str,
+                             lang: str = "eng",
+                             region: Optional[List[int]] = None,
+                             min_confidence: float = 60.0,
+                             flags: int = 0) -> List[dict]:
+    """Executor adapter: regex OCR search returning JSON-friendly dicts."""
+    return [
+        {
+            "text": match.text, "x": match.x, "y": match.y,
+            "width": match.width, "height": match.height,
+            "confidence": match.confidence,
+        }
+        for match in ocr_find_text_regex(
+            pattern, lang=lang, region=region,
+            min_confidence=float(min_confidence), flags=int(flags),
+        )
+    ]
 
 
 def _history_list_as_dicts(limit: int = 100,
@@ -186,6 +223,8 @@ class Executor:
             "AC_locate_text": ocr_locate_text_center,
             "AC_wait_text": ocr_wait_for_text,
             "AC_click_text": ocr_click_text,
+            "AC_read_text_in_region": _ocr_read_region_as_dicts,
+            "AC_find_text_regex": _ocr_find_regex_as_dicts,
 
             # Window management
             "AC_list_windows": list_windows,

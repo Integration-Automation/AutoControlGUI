@@ -59,8 +59,9 @@ from je_auto_control.utils.hotkey.hotkey_daemon import (
 )
 # OCR (headless)
 from je_auto_control.utils.ocr.ocr_engine import (
-    TextMatch, click_text, find_text_matches, locate_text_center,
-    set_tesseract_cmd, wait_for_text,
+    TextMatch, click_text, find_text_matches, find_text_regex,
+    locate_text_center, read_text_in_region, set_tesseract_cmd,
+    wait_for_text,
 )
 # MCP server (headless stdio bridge for Claude / other MCP clients)
 from je_auto_control.utils.mcp_server import (
@@ -203,7 +204,8 @@ __all__ = [
     "add_command_to_executor", "test_record_instance", "pil_screenshot",
     # OCR
     "TextMatch", "find_text_matches", "locate_text_center", "wait_for_text",
-    "click_text", "set_tesseract_cmd",
+    "click_text", "set_tesseract_cmd", "read_text_in_region",
+    "find_text_regex",
     # Recording editor
     "trim_actions", "insert_action", "remove_action", "filter_actions",
     "adjust_delays", "scale_coordinates",

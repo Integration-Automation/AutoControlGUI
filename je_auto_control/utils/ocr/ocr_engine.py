@@ -4,9 +4,10 @@ Text search can be restricted to a region to reduce CPU cost. The Tesseract
 binary is loaded lazily; if it is missing, a clear ``RuntimeError`` is raised
 rather than ``ImportError`` so callers can degrade gracefully.
 """
+import re
 import time
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Pattern, Sequence, Tuple, Union
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -110,6 +111,33 @@ def find_text_matches(target: str,
     return [m for m in matches
             if (m.text if case_sensitive else m.text.lower()) == needle
             or needle in (m.text if case_sensitive else m.text.lower())]
+
+
+def read_text_in_region(region: Optional[Sequence[int]] = None,
+                        lang: str = "eng",
+                        min_confidence: float = 60.0) -> List[TextMatch]:
+    """Return every OCR hit in ``region`` (or whole screen) as TextMatch records."""
+    pt, _ = _load_backend()
+    frame, offset_x, offset_y = _grab(region)
+    try:
+        data = pt.image_to_data(frame, lang=lang, output_type=pt.Output.DICT)
+    except (OSError, RuntimeError) as error:
+        raise RuntimeError(
+            "Tesseract binary not found. Install it and/or call set_tesseract_cmd()."
+        ) from error
+    return _parse_matches(data, offset_x, offset_y, min_confidence)
+
+
+def find_text_regex(pattern: Union[str, Pattern[str]],
+                    lang: str = "eng",
+                    region: Optional[Sequence[int]] = None,
+                    min_confidence: float = 60.0,
+                    flags: int = 0) -> List[TextMatch]:
+    """Return every match whose text matches ``pattern`` (regex search)."""
+    compiled = pattern if isinstance(pattern, re.Pattern) else re.compile(pattern, flags)
+    matches = read_text_in_region(region=region, lang=lang,
+                                  min_confidence=min_confidence)
+    return [m for m in matches if compiled.search(m.text) is not None]
 
 
 def locate_text_center(target: str,
