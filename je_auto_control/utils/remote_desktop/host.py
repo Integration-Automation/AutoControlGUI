@@ -19,7 +19,9 @@ from je_auto_control.utils.remote_desktop.input_dispatch import (
 )
 from je_auto_control.utils.remote_desktop.protocol import (
     AuthenticationError, MessageType, ProtocolError,
-    encode_frame, read_message,
+)
+from je_auto_control.utils.remote_desktop.transport import (
+    MessageChannel, TcpMessageChannel,
 )
 
 FrameProvider = Callable[[], bytes]
@@ -51,12 +53,11 @@ def _default_frame_provider(region: Optional[Sequence[int]] = None,
 class _ClientHandler:
     """Per-connection auth + input-receive + frame-send state."""
 
-    def __init__(self, host: "RemoteDesktopHost", sock: socket.socket,
-                 address) -> None:
+    def __init__(self, host: "RemoteDesktopHost",
+                 channel: MessageChannel, address) -> None:
         self._host = host
-        self._sock = sock
+        self._channel = channel
         self._address = address
-        self._send_lock = threading.Lock()
         self._shutdown = threading.Event()
         self._sender_thread: Optional[threading.Thread] = None
         self._receiver_thread: Optional[threading.Thread] = None
@@ -95,27 +96,23 @@ class _ClientHandler:
 
     def _authenticate(self) -> None:
         nonce = make_nonce()
-        self._sock.settimeout(_AUTH_TIMEOUT_S)
-        self._send(MessageType.AUTH_CHALLENGE, nonce)
-        msg_type, payload = read_message(self._sock)
+        self._channel.settimeout(_AUTH_TIMEOUT_S)
+        self._channel.send_typed(MessageType.AUTH_CHALLENGE, nonce)
+        msg_type, payload = self._channel.read_typed()
         if msg_type is not MessageType.AUTH_RESPONSE:
-            self._send(MessageType.AUTH_FAIL, b"expected AUTH_RESPONSE")
+            self._channel.send_typed(MessageType.AUTH_FAIL,
+                                     b"expected AUTH_RESPONSE")
             raise AuthenticationError(
                 f"expected AUTH_RESPONSE, got {msg_type.name}"
             )
         if not verify_response(self._host._token, nonce, payload):
-            self._send(MessageType.AUTH_FAIL, b"bad token")
+            self._channel.send_typed(MessageType.AUTH_FAIL, b"bad token")
             raise AuthenticationError("bad token")
         ok_payload = json.dumps(
             {"host_id": self._host.host_id}, ensure_ascii=False,
         ).encode("utf-8")
-        self._send(MessageType.AUTH_OK, ok_payload)
-        self._sock.settimeout(None)
-
-    def _send(self, message_type: MessageType, payload: bytes) -> None:
-        data = encode_frame(message_type, payload)
-        with self._send_lock:
-            self._sock.sendall(data)
+        self._channel.send_typed(MessageType.AUTH_OK, ok_payload)
+        self._channel.settimeout(None)
 
     def _send_loop(self) -> None:
         last_sent = 0
@@ -131,7 +128,7 @@ class _ClientHandler:
             if frame is None:
                 continue
             try:
-                self._send(MessageType.FRAME, frame)
+                self._channel.send_typed(MessageType.FRAME, frame)
             except (OSError, ConnectionError) as error:
                 autocontrol_logger.info(
                     "remote_desktop send to %s failed: %r",
@@ -144,7 +141,7 @@ class _ClientHandler:
     def _recv_loop(self) -> None:
         while not self._shutdown.is_set():
             try:
-                msg_type, payload = read_message(self._sock)
+                msg_type, payload = self._channel.read_typed()
             except (OSError, ConnectionError, ProtocolError) as error:
                 if not self._shutdown.is_set():
                     autocontrol_logger.info(
@@ -186,14 +183,7 @@ class _ClientHandler:
             )
 
     def _close(self) -> None:
-        try:
-            self._sock.shutdown(socket.SHUT_RDWR)
-        except OSError:
-            pass
-        try:
-            self._sock.close()
-        except OSError:
-            pass
+        self._channel.close()
 
 
 class RemoteDesktopHost:
@@ -338,7 +328,19 @@ class RemoteDesktopHost:
             wrapped = self._maybe_wrap_tls(client_sock, address)
             if wrapped is None:
                 continue
-            handler = _ClientHandler(self, wrapped, address)
+            try:
+                channel = self._build_channel(wrapped, address)
+            except (OSError, RuntimeError) as error:
+                autocontrol_logger.info(
+                    "remote_desktop channel handshake from %s failed: %r",
+                    address, error,
+                )
+                try:
+                    wrapped.close()
+                except OSError:
+                    pass
+                continue
+            handler = _ClientHandler(self, channel, address)
             with self._clients_lock:
                 if len(self._clients) >= self._max_clients:
                     autocontrol_logger.info(
@@ -350,6 +352,12 @@ class RemoteDesktopHost:
                 self._clients.append(handler)
             handler.start()
             self._reap_dead_clients()
+
+    def _build_channel(self, sock: socket.socket,
+                       address) -> MessageChannel:
+        """Hook for transports: TCP wraps directly, WS overrides this."""
+        del address
+        return TcpMessageChannel(sock)
 
     def _maybe_wrap_tls(self, client_sock: socket.socket,
                         address) -> Optional[socket.socket]:

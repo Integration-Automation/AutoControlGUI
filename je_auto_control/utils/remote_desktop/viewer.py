@@ -10,7 +10,9 @@ from je_auto_control.utils.remote_desktop.auth import compute_response
 from je_auto_control.utils.remote_desktop.host_id import validate_host_id
 from je_auto_control.utils.remote_desktop.protocol import (
     AuthenticationError, MessageType, ProtocolError,
-    encode_frame, read_message,
+)
+from je_auto_control.utils.remote_desktop.transport import (
+    MessageChannel, TcpMessageChannel,
 )
 
 FrameCallback = Callable[[bytes], None]
@@ -61,8 +63,8 @@ class RemoteDesktopViewer:
         self._remote_host_id: Optional[str] = None
         self._ssl_context = ssl_context
         self._server_hostname = server_hostname
+        self._channel: Optional[MessageChannel] = None
         self._sock: Optional[socket.socket] = None
-        self._send_lock = threading.Lock()
         self._shutdown = threading.Event()
         self._receiver: Optional[threading.Thread] = None
         self._connected = False
@@ -90,15 +92,17 @@ class RemoteDesktopViewer:
         raw_sock.settimeout(_DEFAULT_AUTH_TIMEOUT_S)
         try:
             sock = self._maybe_wrap_tls(raw_sock)
-            self._handshake(sock)
+            channel = self._build_channel(sock)
+            self._handshake(channel)
         except (AuthenticationError, ProtocolError, OSError, ssl.SSLError):
             try:
                 raw_sock.close()
             except OSError:
                 pass
             raise
-        sock.settimeout(None)
+        channel.settimeout(None)
         self._sock = sock
+        self._channel = channel
         self._shutdown.clear()
         self._connected = True
         self._receiver = threading.Thread(
@@ -119,20 +123,18 @@ class RemoteDesktopViewer:
             raw_sock, server_hostname=hostname,
         )
 
+    def _build_channel(self, sock: socket.socket) -> MessageChannel:
+        """Hook for transports: TCP wraps directly, WS overrides this."""
+        return TcpMessageChannel(sock)
+
     def disconnect(self, timeout: float = 2.0) -> None:
         """Close the connection and join the receiver thread."""
         self._shutdown.set()
-        sock = self._sock
-        if sock is not None:
-            try:
-                sock.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
-            try:
-                sock.close()
-            except OSError:
-                pass
+        channel = self._channel
+        if channel is not None:
+            channel.close()
         self._sock = None
+        self._channel = None
         receiver = self._receiver
         if receiver is not None:
             receiver.join(timeout=timeout)
@@ -141,22 +143,18 @@ class RemoteDesktopViewer:
 
     def send_input(self, action: Mapping[str, Any]) -> None:
         """JSON-encode ``action`` and forward it as an INPUT message."""
-        if not self._connected or self._sock is None:
+        if not self._connected or self._channel is None:
             raise ConnectionError("viewer is not connected")
         if not isinstance(action, Mapping):
             raise TypeError("action must be a mapping")
         payload = json.dumps(dict(action), ensure_ascii=False).encode("utf-8")
-        data = encode_frame(MessageType.INPUT, payload)
-        with self._send_lock:
-            self._sock.sendall(data)
+        self._channel.send_typed(MessageType.INPUT, payload)
 
     def send_ping(self) -> None:
         """Send a no-op PING message; the host treats it as liveness."""
-        if not self._connected or self._sock is None:
+        if not self._connected or self._channel is None:
             raise ConnectionError("viewer is not connected")
-        data = encode_frame(MessageType.PING, b"")
-        with self._send_lock:
-            self._sock.sendall(data)
+        self._channel.send_typed(MessageType.PING, b"")
 
     # context manager ----------------------------------------------------
 
@@ -169,15 +167,15 @@ class RemoteDesktopViewer:
 
     # internals ----------------------------------------------------------
 
-    def _handshake(self, sock: socket.socket) -> None:
-        msg_type, payload = read_message(sock)
+    def _handshake(self, channel: MessageChannel) -> None:
+        msg_type, payload = channel.read_typed()
         if msg_type is not MessageType.AUTH_CHALLENGE:
             raise AuthenticationError(
                 f"expected AUTH_CHALLENGE, got {msg_type.name}"
             )
         response = compute_response(self._token, payload)
-        sock.sendall(encode_frame(MessageType.AUTH_RESPONSE, response))
-        msg_type, payload = read_message(sock)
+        channel.send_typed(MessageType.AUTH_RESPONSE, response)
+        msg_type, payload = channel.read_typed()
         if msg_type is MessageType.AUTH_OK:
             self._remote_host_id = _extract_host_id(payload)
             self._verify_host_id(self._remote_host_id)
@@ -201,13 +199,13 @@ class RemoteDesktopViewer:
             )
 
     def _recv_loop(self) -> None:
-        sock = self._sock
-        if sock is None:
+        channel = self._channel
+        if channel is None:
             return
         try:
             while not self._shutdown.is_set():
                 try:
-                    msg_type, payload = read_message(sock)
+                    msg_type, payload = channel.read_typed()
                 except (OSError, ConnectionError, ProtocolError) as error:
                     if not self._shutdown.is_set() and self._on_error is not None:
                         try:

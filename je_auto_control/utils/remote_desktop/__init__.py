@@ -23,9 +23,14 @@ from je_auto_control.utils.remote_desktop.protocol import (
 )
 from je_auto_control.utils.remote_desktop.registry import registry
 from je_auto_control.utils.remote_desktop.viewer import RemoteDesktopViewer
+from je_auto_control.utils.remote_desktop.ws_host import WebSocketDesktopHost
+from je_auto_control.utils.remote_desktop.ws_viewer import (
+    WebSocketDesktopViewer,
+)
 
 __all__ = [
     "RemoteDesktopHost", "RemoteDesktopViewer",
+    "WebSocketDesktopHost", "WebSocketDesktopViewer",
     "InputDispatchError", "AuthenticationError", "ProtocolError",
     "MessageType", "encode_frame", "decode_frame_header",
     "dispatch_input", "registry",
