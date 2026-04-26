@@ -10,6 +10,9 @@ from je_auto_control.utils.remote_desktop.auth import compute_response
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
     ClipboardSyncError, decode as decode_clipboard, encode_image, encode_text,
 )
+from je_auto_control.utils.remote_desktop.file_transfer import (
+    FileReceiver, FileTransferError, send_file,
+)
 from je_auto_control.utils.remote_desktop.host_id import validate_host_id
 from je_auto_control.utils.remote_desktop.protocol import (
     AuthenticationError, MessageType, ProtocolError,
@@ -67,6 +70,7 @@ class RemoteDesktopViewer:
         self._on_error = on_error
         self._on_audio = on_audio
         self._on_clipboard = on_clipboard
+        self._file_receiver: Optional[FileReceiver] = None
         self._expected_host_id = (validate_host_id(expected_host_id)
                                   if expected_host_id else None)
         self._remote_host_id: Optional[str] = None
@@ -177,6 +181,42 @@ class RemoteDesktopViewer:
             raise ConnectionError("viewer is not connected")
         self._channel.send_typed(MessageType.CLIPBOARD, encode_image(png_bytes))
 
+    def set_file_receiver(self, receiver: FileReceiver) -> None:
+        """Replace the default ``FileReceiver`` used for incoming files."""
+        self._file_receiver = receiver
+
+    def _ensure_file_receiver(self) -> FileReceiver:
+        if self._file_receiver is None:
+            self._file_receiver = FileReceiver()
+        return self._file_receiver
+
+    def send_file(self, source_path: str, dest_path: str,
+                  on_progress=None):
+        """Stream ``source_path`` to ``dest_path`` on the host.
+
+        Returns the :class:`FileSendResult`. Synchronous: callers wanting
+        a non-blocking upload should run this in a worker thread.
+        """
+        if not self._connected or self._channel is None:
+            raise ConnectionError("viewer is not connected")
+        return send_file(self._channel, source_path, dest_path,
+                         on_progress=on_progress)
+
+    def _handle_file_payload(self, msg_type: MessageType,
+                             payload: bytes) -> None:
+        receiver = self._ensure_file_receiver()
+        try:
+            if msg_type is MessageType.FILE_BEGIN:
+                receiver.handle_begin(payload)
+            elif msg_type is MessageType.FILE_CHUNK:
+                receiver.handle_chunk(payload)
+            elif msg_type is MessageType.FILE_END:
+                receiver.handle_end(payload)
+        except FileTransferError as error:
+            autocontrol_logger.info(
+                "remote_desktop viewer bad file message: %r", error,
+            )
+
     def _handle_clipboard_payload(self, payload: bytes) -> None:
         try:
             kind, data = decode_clipboard(payload)
@@ -277,6 +317,11 @@ class RemoteDesktopViewer:
                     continue
                 if msg_type is MessageType.CLIPBOARD:
                     self._handle_clipboard_payload(payload)
+                    continue
+                if msg_type in (MessageType.FILE_BEGIN,
+                                MessageType.FILE_CHUNK,
+                                MessageType.FILE_END):
+                    self._handle_file_payload(msg_type, payload)
                     continue
                 if msg_type is MessageType.PING:
                     continue

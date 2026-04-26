@@ -34,6 +34,9 @@ class MessageType(enum.IntEnum):
     AUDIO = 0x11  # host -> viewer: PCM audio chunk
     INPUT = 0x20  # viewer -> host: JSON input message
     CLIPBOARD = 0x21  # either way: clipboard payload (text or image)
+    FILE_BEGIN = 0x22  # either way: JSON metadata for an incoming transfer
+    FILE_CHUNK = 0x23  # either way: 36-byte transfer id + chunk bytes
+    FILE_END = 0x24  # either way: JSON status for a finished transfer
     PING = 0x30  # either way: liveness
 
 

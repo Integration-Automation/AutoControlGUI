@@ -20,6 +20,9 @@ from je_auto_control.utils.remote_desktop.auth import (
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
     ClipboardSyncError, decode as decode_clipboard, encode_image, encode_text,
 )
+from je_auto_control.utils.remote_desktop.file_transfer import (
+    FileReceiver, FileTransferError, send_file,
+)
 from je_auto_control.utils.remote_desktop.host_id import (
     load_or_create_host_id, validate_host_id,
 )
@@ -210,9 +213,29 @@ class _ClientHandler:
             if msg_type is MessageType.CLIPBOARD:
                 self._handle_clipboard_payload(payload)
                 continue
+            if msg_type in (MessageType.FILE_BEGIN, MessageType.FILE_CHUNK,
+                            MessageType.FILE_END):
+                self._handle_file_payload(msg_type, payload)
+                continue
             autocontrol_logger.info(
                 "remote_desktop unexpected msg %s from %s",
                 msg_type.name, self._address,
+            )
+
+    def _handle_file_payload(self, msg_type: MessageType,
+                             payload: bytes) -> None:
+        receiver = self._host._ensure_file_receiver()
+        try:
+            if msg_type is MessageType.FILE_BEGIN:
+                receiver.handle_begin(payload)
+            elif msg_type is MessageType.FILE_CHUNK:
+                receiver.handle_chunk(payload)
+            elif msg_type is MessageType.FILE_END:
+                receiver.handle_end(payload)
+        except FileTransferError as error:
+            autocontrol_logger.info(
+                "remote_desktop bad file message from %s: %r",
+                self._address, error,
             )
 
     def _handle_clipboard_payload(self, payload: bytes) -> None:
@@ -303,6 +326,7 @@ class RemoteDesktopHost:
             frame_provider or _default_frame_provider(region, int(quality))
         )
         self._dispatch: InputDispatcher = input_dispatcher or dispatch_input
+        self._file_receiver: Optional[FileReceiver] = None
         self._audio_enabled = bool(enable_audio)
         self._audio_device = audio_device
         self._audio_sample_rate = int(audio_sample_rate)
@@ -475,6 +499,37 @@ class RemoteDesktopHost:
                 )
                 client.stop()
         return sent
+
+    def set_file_receiver(self, receiver: FileReceiver) -> None:
+        """Replace the default ``FileReceiver`` (e.g. to wire progress callbacks)."""
+        self._file_receiver = receiver
+
+    def _ensure_file_receiver(self) -> FileReceiver:
+        if self._file_receiver is None:
+            self._file_receiver = FileReceiver()
+        return self._file_receiver
+
+    def send_file_to_viewers(self, source_path: str, dest_path: str,
+                             on_progress=None) -> int:
+        """Stream ``source_path`` to every authenticated viewer.
+
+        Returns the number of viewers the transfer was attempted on.
+        Each viewer gets its own ``transfer_id`` so progress callbacks
+        can be demultiplexed in the GUI.
+        """
+        with self._clients_lock:
+            clients = [c for c in self._clients
+                       if c.authenticated and not c._shutdown.is_set()]
+        for client in clients:
+            try:
+                send_file(client._channel, source_path, dest_path,
+                          on_progress=on_progress)
+            except (OSError, ConnectionError, FileTransferError) as error:
+                autocontrol_logger.info(
+                    "remote_desktop file send to %s failed: %r",
+                    client.address, error,
+                )
+        return len(clients)
 
     def _apply_clipboard(self, kind: str, data: Any) -> None:
         """Set this host's local clipboard from a decoded CLIPBOARD payload.
