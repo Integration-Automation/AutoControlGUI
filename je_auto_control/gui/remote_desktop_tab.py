@@ -3,27 +3,47 @@
 Two sub-tabs share the same window:
 
 * **Host**: starts a :class:`RemoteDesktopHost` and shows the bound port,
-  token, and connected-viewer count. The token field has a generator
-  button so users can hand off a fresh secret per session.
-* **Viewer**: connects a :class:`RemoteDesktopViewer`, decodes incoming
-  JPEG frames into a custom :class:`_FrameDisplay` widget, and forwards
-  mouse / keyboard / wheel events back to the host as JSON ``INPUT``
-  messages. Coordinates are mapped from widget space to the original
-  remote-screen pixel space using the latest received frame's size.
+  token, host ID, and connected-viewer count. Token + host ID together
+  identify the session; users hand both to whoever is connecting.
+* **Viewer**: connects a :class:`RemoteDesktopViewer` (or its WebSocket
+  variant), decodes incoming JPEG frames into a custom
+  :class:`_FrameDisplay` widget that accepts drag-and-drop file uploads,
+  and forwards mouse / keyboard / wheel events back to the host as JSON
+  ``INPUT`` messages. Coordinates are mapped from widget space to the
+  original remote-screen pixel space using the latest received frame's
+  size.
 """
+import os
 import secrets
+import ssl
+from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import QPoint, QRect, Qt, QTimer, Signal
-from PySide6.QtGui import QImage, QKeyEvent, QMouseEvent, QPainter, QWheelEvent
+from PySide6.QtCore import QPoint, QRect, Qt, QThread, QTimer, Signal
+from PySide6.QtGui import (
+    QClipboard, QDragEnterEvent, QDropEvent, QGuiApplication, QImage,
+    QKeyEvent, QMouseEvent, QPainter, QWheelEvent,
+)
 from PySide6.QtWidgets import (
-    QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,
+    QApplication, QCheckBox, QComboBox, QFileDialog, QGroupBox, QHBoxLayout,
+    QInputDialog, QLabel, QLineEdit, QMessageBox, QProgressBar, QPushButton,
     QSizePolicy, QSpinBox, QTabWidget, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
+)
+from je_auto_control.utils.remote_desktop import (
+    FileReceiver, RemoteDesktopHost, RemoteDesktopViewer,
+    WebSocketDesktopHost, WebSocketDesktopViewer,
+)
+from je_auto_control.utils.remote_desktop.audio import (
+    AudioBackendError, AudioPlayer, is_audio_backend_available,
+)
+from je_auto_control.utils.remote_desktop.file_transfer import send_file
+from je_auto_control.utils.remote_desktop.host_id import (
+    HostIdError, format_host_id, parse_host_id,
 )
 from je_auto_control.utils.remote_desktop.protocol import (
     AuthenticationError,
@@ -83,7 +103,12 @@ def _key_event_to_ac(event: QKeyEvent) -> Optional[str]:
 
 
 class _FrameDisplay(QWidget):
-    """Paints the latest frame and emits remapped input events."""
+    """Paints the latest frame and emits remapped input events.
+
+    Also accepts drag-and-drop of local files; each dropped file path is
+    re-emitted via :pyattr:`files_dropped` so the parent panel can choose
+    a destination on the remote host and start a transfer.
+    """
 
     mouse_moved = Signal(int, int)
     mouse_pressed = Signal(int, int, str)
@@ -92,6 +117,7 @@ class _FrameDisplay(QWidget):
     key_pressed = Signal(str)
     key_released = Signal(str)
     type_text = Signal(str)
+    files_dropped = Signal(list)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -103,6 +129,7 @@ class _FrameDisplay(QWidget):
         )
         self.setMinimumSize(320, 200)
         self.setStyleSheet("background-color: #101010;")
+        self.setAcceptDrops(True)
 
     def set_image(self, image: QImage) -> None:
         self._image = image
@@ -205,6 +232,23 @@ class _FrameDisplay(QWidget):
         if keycode is not None:
             self.key_released.emit(keycode)
 
+    # --- drag-and-drop --------------------------------------------------
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:  # noqa: N802
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event: QDropEvent) -> None:  # noqa: N802
+        urls = event.mimeData().urls()
+        local_paths = [
+            url.toLocalFile() for url in urls
+            if url.isLocalFile() and url.toLocalFile()
+        ]
+        files = [p for p in local_paths if Path(p).is_file()]
+        if files:
+            self.files_dropped.emit(files)
+            event.acceptProposedAction()
+
 
 class _HostPanel(TranslatableMixin, QWidget):
     """Start / stop the singleton host and show what is being streamed."""
@@ -214,17 +258,29 @@ class _HostPanel(TranslatableMixin, QWidget):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
+        self._host_id_label = QLabel("---")
+        self._host_id_label.setStyleSheet(
+            "font-size: 18pt; font-weight: bold; color: #2070d0;"
+        )
         self._token = QLineEdit()
         self._bind = QLineEdit("127.0.0.1")
         self._port = QSpinBox()
         self._port.setRange(0, 65535)
         self._port.setValue(0)
+        self._transport = QComboBox()
+        self._transport.addItems(["TCP", "WebSocket"])
         self._fps = QSpinBox()
         self._fps.setRange(1, 60)
         self._fps.setValue(10)
         self._quality = QSpinBox()
         self._quality.setRange(1, 95)
         self._quality.setValue(70)
+        self._tls_cert = QLineEdit()
+        self._tls_key = QLineEdit()
+        self._enable_audio = QCheckBox()
+        self._enable_audio.setChecked(False)
+        if not is_audio_backend_available():
+            self._enable_audio.setEnabled(False)
         self._status = QLabel()
         self._preview = _FrameDisplay()
         # Preview is read-only — a host watching their own stream shouldn't
@@ -232,6 +288,7 @@ class _HostPanel(TranslatableMixin, QWidget):
         self._preview.setEnabled(False)
         self._start_btn: Optional[QPushButton] = None
         self._stop_btn: Optional[QPushButton] = None
+        self._copy_id_btn: Optional[QPushButton] = None
         self._refresh_timer = QTimer(self)
         self._refresh_timer.setInterval(1000)
         self._refresh_timer.timeout.connect(self._refresh_status)
@@ -251,6 +308,8 @@ class _HostPanel(TranslatableMixin, QWidget):
 
     def _apply_placeholders(self) -> None:
         self._token.setPlaceholderText(_t("rd_token_placeholder"))
+        self._tls_cert.setPlaceholderText(_t("rd_tls_cert_placeholder"))
+        self._tls_key.setPlaceholderText(_t("rd_tls_key_placeholder"))
 
     def _build_layout(self) -> None:
         root = QVBoxLayout(self)
@@ -261,6 +320,16 @@ class _HostPanel(TranslatableMixin, QWidget):
         warning.setStyleSheet("color: #cc7000;")
         self._tr(warning, "rd_host_security_warning")
         root.addWidget(warning)
+
+        id_group = self._tr(QGroupBox(), "rd_host_id_group")
+        id_layout = QHBoxLayout()
+        id_layout.addWidget(self._tr(QLabel(), "rd_host_id_label"))
+        id_layout.addWidget(self._host_id_label, stretch=1)
+        self._copy_id_btn = self._tr(QPushButton(), "rd_host_id_copy")
+        self._copy_id_btn.clicked.connect(self._copy_host_id)
+        id_layout.addWidget(self._copy_id_btn)
+        id_group.setLayout(id_layout)
+        root.addWidget(id_group)
 
         config = self._tr(QGroupBox(), "rd_host_config_group")
         grid = QVBoxLayout()
@@ -279,6 +348,28 @@ class _HostPanel(TranslatableMixin, QWidget):
         bind_row.addWidget(self._port)
         grid.addLayout(bind_row)
 
+        transport_row = QHBoxLayout()
+        transport_row.addWidget(self._tr(QLabel(), "rd_transport_label"))
+        transport_row.addWidget(self._transport)
+        transport_row.addStretch()
+        grid.addLayout(transport_row)
+
+        tls_row = QHBoxLayout()
+        tls_row.addWidget(self._tr(QLabel(), "rd_tls_cert_label"))
+        tls_row.addWidget(self._tls_cert, stretch=2)
+        cert_browse = self._tr(QPushButton(), "rd_browse")
+        cert_browse.clicked.connect(self._browse_cert)
+        tls_row.addWidget(cert_browse)
+        grid.addLayout(tls_row)
+
+        key_row = QHBoxLayout()
+        key_row.addWidget(self._tr(QLabel(), "rd_tls_key_label"))
+        key_row.addWidget(self._tls_key, stretch=2)
+        key_browse = self._tr(QPushButton(), "rd_browse")
+        key_browse.clicked.connect(self._browse_key)
+        key_row.addWidget(key_browse)
+        grid.addLayout(key_row)
+
         media_row = QHBoxLayout()
         media_row.addWidget(self._tr(QLabel(), "rd_fps_label"))
         media_row.addWidget(self._fps)
@@ -286,6 +377,12 @@ class _HostPanel(TranslatableMixin, QWidget):
         media_row.addWidget(self._quality)
         media_row.addStretch()
         grid.addLayout(media_row)
+
+        audio_row = QHBoxLayout()
+        audio_row.addWidget(self._tr(self._enable_audio, "rd_enable_audio"))
+        audio_row.addStretch()
+        grid.addLayout(audio_row)
+
         config.setLayout(grid)
         root.addWidget(config)
 
@@ -306,22 +403,70 @@ class _HostPanel(TranslatableMixin, QWidget):
     def _generate_token(self) -> None:
         self._token.setText(secrets.token_urlsafe(24))
 
+    def _copy_host_id(self) -> None:
+        host = registry.host
+        if host is None:
+            return
+        QGuiApplication.clipboard().setText(format_host_id(host.host_id))
+
+    def _browse_cert(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, _t("rd_tls_cert_label"), "",
+            "PEM (*.pem *.crt *.cer);;All (*)",
+        )
+        if path:
+            self._tls_cert.setText(path)
+
+    def _browse_key(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, _t("rd_tls_key_label"), "",
+            "PEM (*.pem *.key);;All (*)",
+        )
+        if path:
+            self._tls_key.setText(path)
+
+    def _build_ssl_context(self) -> Optional[ssl.SSLContext]:
+        cert_path = self._tls_cert.text().strip()
+        key_path = self._tls_key.text().strip()
+        if not cert_path and not key_path:
+            return None
+        if not cert_path or not key_path:
+            raise ValueError(_t("rd_tls_both_required"))
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)
+        return ctx
+
     def _start(self) -> None:
         token = self._token.text().strip()
         if not token:
             self._generate_token()
             token = self._token.text().strip()
         try:
-            registry.start_host(
+            ssl_context = self._build_ssl_context()
+        except (OSError, ssl.SSLError, ValueError) as error:
+            QMessageBox.warning(self, _t("rd_host_start"), str(error))
+            return
+        host_cls = (WebSocketDesktopHost
+                    if self._transport.currentText() == "WebSocket"
+                    else RemoteDesktopHost)
+        registry.disconnect_viewer()
+        registry.stop_host()
+        try:
+            host = host_cls(
                 token=token,
                 bind=self._bind.text().strip() or "127.0.0.1",
                 port=self._port.value(),
                 fps=float(self._fps.value()),
                 quality=self._quality.value(),
+                ssl_context=ssl_context,
+                enable_audio=self._enable_audio.isChecked()
+                and self._enable_audio.isEnabled(),
             )
-        except (OSError, ValueError, RuntimeError) as error:
+            host.start()
+        except (OSError, ValueError, RuntimeError, AudioBackendError) as error:
             QMessageBox.warning(self, _t("rd_host_start"), str(error))
             return
+        registry._host = host  # noqa: SLF001  centralised lifecycle ownership
         self._refresh_status()
 
     def _stop(self) -> None:
@@ -338,8 +483,13 @@ class _HostPanel(TranslatableMixin, QWidget):
             text = (_t("rd_host_status_running")
                     .replace("{port}", str(status["port"]))
                     .replace("{n}", str(status["connected_clients"])))
+            host_id = status.get("host_id") or ""
+            self._host_id_label.setText(
+                format_host_id(host_id) if host_id else "---"
+            )
         else:
             text = _t("rd_host_status_stopped")
+            self._host_id_label.setText("---")
         self._status.setText(text)
 
     def _refresh_preview(self) -> None:
@@ -360,6 +510,10 @@ class _ViewerPanel(TranslatableMixin, QWidget):
 
     _frame_signal = Signal(bytes)
     _error_signal = Signal(str)
+    _audio_signal = Signal(bytes)
+    _clipboard_signal = Signal(str, object)
+    _file_progress_signal = Signal(str, int, int)
+    _file_complete_signal = Signal(str, bool, str, str)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -369,11 +523,25 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._port.setRange(1, 65535)
         self._port.setValue(0)
         self._token = QLineEdit()
+        self._host_id = QLineEdit()
+        self._transport = QComboBox()
+        self._transport.addItems(["TCP", "WebSocket", "TLS", "WSS"])
+        self._tls_insecure = QCheckBox()
+        self._tls_insecure.setChecked(True)
+        self._enable_audio = QCheckBox()
+        self._enable_audio.setChecked(False)
+        if not is_audio_backend_available():
+            self._enable_audio.setEnabled(False)
         self._status = QLabel()
         self._display = _FrameDisplay()
         self._connect_btn: Optional[QPushButton] = None
         self._disconnect_btn: Optional[QPushButton] = None
         self._connected = False
+        self._audio_player: Optional[AudioPlayer] = None
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setVisible(False)
+        self._progress_label = QLabel()
+        self._active_progress_id: Optional[str] = None
         self._build_layout()
         self._apply_placeholders()
         self._wire_signals()
@@ -391,16 +559,38 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         root = QVBoxLayout(self)
         connect_group = self._tr(QGroupBox(), "rd_viewer_config_group")
         grid = QVBoxLayout()
+
+        host_id_row = QHBoxLayout()
+        host_id_row.addWidget(self._tr(QLabel(), "rd_host_id_label"))
+        host_id_row.addWidget(self._host_id, stretch=1)
+        grid.addLayout(host_id_row)
+
         host_row = QHBoxLayout()
         host_row.addWidget(self._tr(QLabel(), "rd_bind_label"))
         host_row.addWidget(self._host_field, stretch=1)
         host_row.addWidget(self._tr(QLabel(), "rd_port_label"))
         host_row.addWidget(self._port)
         grid.addLayout(host_row)
+
         token_row = QHBoxLayout()
         token_row.addWidget(self._tr(QLabel(), "rd_token_label"))
         token_row.addWidget(self._token, stretch=1)
         grid.addLayout(token_row)
+
+        transport_row = QHBoxLayout()
+        transport_row.addWidget(self._tr(QLabel(), "rd_transport_label"))
+        transport_row.addWidget(self._transport)
+        transport_row.addWidget(self._tr(self._tls_insecure,
+                                         "rd_tls_insecure"))
+        transport_row.addStretch()
+        grid.addLayout(transport_row)
+
+        feature_row = QHBoxLayout()
+        feature_row.addWidget(self._tr(self._enable_audio,
+                                       "rd_viewer_audio_play"))
+        feature_row.addStretch()
+        grid.addLayout(feature_row)
+
         connect_group.setLayout(grid)
         root.addWidget(connect_group)
 
@@ -414,12 +604,28 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         btn_row.addStretch()
         root.addLayout(btn_row)
 
+        action_row = QHBoxLayout()
+        push_clip_btn = self._tr(QPushButton(), "rd_viewer_push_clipboard")
+        push_clip_btn.clicked.connect(self._push_clipboard_to_host)
+        send_file_btn = self._tr(QPushButton(), "rd_viewer_send_file")
+        send_file_btn.clicked.connect(self._on_send_file_clicked)
+        action_row.addWidget(push_clip_btn)
+        action_row.addWidget(send_file_btn)
+        action_row.addStretch()
+        root.addLayout(action_row)
+
         root.addWidget(self._display, stretch=1)
+        root.addWidget(self._progress_label)
+        root.addWidget(self._progress_bar)
         root.addWidget(self._status)
 
     def _wire_signals(self) -> None:
         self._frame_signal.connect(self._on_frame_main)
         self._error_signal.connect(self._on_error_main)
+        self._audio_signal.connect(self._on_audio_main)
+        self._clipboard_signal.connect(self._on_clipboard_main)
+        self._file_progress_signal.connect(self._on_file_progress_main)
+        self._file_complete_signal.connect(self._on_file_complete_main)
         self._display.mouse_moved.connect(self._send_mouse_move)
         self._display.mouse_pressed.connect(self._send_mouse_press)
         self._display.mouse_released.connect(self._send_mouse_release)
@@ -433,6 +639,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._display.type_text.connect(
             lambda text: self._send({"action": "type", "text": text})
         )
+        self._display.files_dropped.connect(self._on_files_dropped)
 
     # --- connection lifecycle ------------------------------------------
 
@@ -446,24 +653,96 @@ class _ViewerPanel(TranslatableMixin, QWidget):
             )
             return
         try:
-            registry.connect_viewer(
-                host=host, port=port, token=token, timeout=5.0,
+            expected_id = self._parse_host_id_input()
+        except HostIdError as error:
+            QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
+            return
+        transport = self._transport.currentText()
+        ssl_context = self._build_client_ssl_context(transport)
+        viewer_cls = (WebSocketDesktopViewer
+                      if transport in ("WebSocket", "WSS")
+                      else RemoteDesktopViewer)
+        registry.disconnect_viewer()
+        try:
+            viewer = viewer_cls(
+                host=host, port=port, token=token,
                 on_frame=self._frame_signal.emit,
                 on_error=lambda exc: self._error_signal.emit(str(exc)),
+                on_audio=self._audio_signal.emit,
+                on_clipboard=lambda kind, data:
+                    self._clipboard_signal.emit(kind, data),
+                expected_host_id=expected_id,
+                ssl_context=ssl_context,
             )
+            viewer.set_file_receiver(FileReceiver(
+                on_progress=lambda tid, done, total:
+                    self._file_progress_signal.emit(tid, done, total),
+                on_complete=lambda tid, ok, err, dst:
+                    self._file_complete_signal.emit(
+                        tid, bool(ok), err or "", dst,
+                    ),
+            ))
+            viewer.connect(timeout=5.0)
         except AuthenticationError as error:
             QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
             return
-        except (OSError, ConnectionError, RuntimeError) as error:
+        except (OSError, ConnectionError, RuntimeError, ssl.SSLError) as error:
             QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
             return
+        registry._viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
         self._connected = True
+        self._start_audio_player_if_requested()
         self._refresh_status()
+
+    def _parse_host_id_input(self) -> Optional[str]:
+        text = self._host_id.text().strip()
+        if not text:
+            return None
+        return parse_host_id(text)
+
+    def _build_client_ssl_context(
+            self, transport: str) -> Optional[ssl.SSLContext]:
+        if transport not in ("TLS", "WSS"):
+            return None
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        if self._tls_insecure.isChecked():
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+        else:
+            ctx.load_default_certs()
+            ctx.check_hostname = True
+            ctx.verify_mode = ssl.CERT_REQUIRED
+        return ctx
+
+    def _start_audio_player_if_requested(self) -> None:
+        if not (self._enable_audio.isChecked()
+                and self._enable_audio.isEnabled()):
+            return
+        try:
+            player = AudioPlayer()
+            player.start()
+        except (AudioBackendError, OSError, RuntimeError) as error:
+            self._status.setText(f"{_t('rd_viewer_audio_play')}: {error}")
+            return
+        self._audio_player = player
+
+    def _stop_audio_player(self) -> None:
+        player = self._audio_player
+        self._audio_player = None
+        if player is not None:
+            try:
+                player.stop()
+            except (OSError, RuntimeError):
+                pass
 
     def _disconnect(self) -> None:
         registry.disconnect_viewer()
+        self._stop_audio_player()
         self._connected = False
         self._display.clear()
+        self._progress_bar.setVisible(False)
+        self._progress_label.setText("")
+        self._active_progress_id = None
         self._refresh_status()
 
     def _refresh_status(self) -> None:
@@ -484,6 +763,61 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._connected = False
         self._refresh_status()
         QMessageBox.warning(self, _t("rd_viewer_error"), message)
+
+    def _on_audio_main(self, payload: bytes) -> None:
+        player = self._audio_player
+        if player is None:
+            return
+        try:
+            player.play(payload)
+        except (OSError, RuntimeError):
+            pass
+
+    def _on_clipboard_main(self, kind: str, data) -> None:
+        from je_auto_control.utils.clipboard.clipboard import (
+            set_clipboard, set_clipboard_image,
+        )
+        try:
+            if kind == "text":
+                set_clipboard(data)
+            elif kind == "image":
+                set_clipboard_image(data)
+        except (OSError, RuntimeError) as error:
+            self._status.setText(f"{_t('rd_viewer_error')}: {error}")
+            return
+        self._status.setText(_t("rd_viewer_clipboard_received"))
+
+    def _on_file_progress_main(self, transfer_id: str,
+                               bytes_done: int, total: int) -> None:
+        if (self._active_progress_id is not None
+                and self._active_progress_id != transfer_id):
+            return
+        self._active_progress_id = transfer_id
+        self._progress_bar.setVisible(True)
+        if total > 0:
+            self._progress_bar.setRange(0, total)
+            self._progress_bar.setValue(min(bytes_done, total))
+        else:
+            self._progress_bar.setRange(0, 0)
+        self._progress_label.setText(
+            _t("rd_progress_label")
+            .replace("{done}", str(bytes_done))
+            .replace("{total}", str(total))
+        )
+
+    def _on_file_complete_main(self, transfer_id: str, success: bool,
+                               error: str, dest_path: str) -> None:
+        del transfer_id
+        self._active_progress_id = None
+        self._progress_bar.setVisible(False)
+        if success:
+            self._progress_label.setText(
+                _t("rd_progress_done").replace("{path}", dest_path)
+            )
+        else:
+            self._progress_label.setText(
+                _t("rd_progress_failed").replace("{error}", error)
+            )
 
     # --- input forwarding ---------------------------------------------
 
@@ -510,6 +844,94 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._send({
             "action": "mouse_scroll", "x": x, "y": y, "amount": amount,
         })
+
+    # --- clipboard / file transfer (viewer -> host) -------------------
+
+    def _push_clipboard_to_host(self) -> None:
+        viewer = registry.viewer
+        if viewer is None or not viewer.connected:
+            QMessageBox.warning(self, _t("rd_viewer_push_clipboard"),
+                                _t("rd_viewer_status_idle"))
+            return
+        text = QGuiApplication.clipboard().text()
+        if not text:
+            self._status.setText(_t("rd_clipboard_empty"))
+            return
+        try:
+            viewer.send_clipboard_text(text)
+        except (OSError, ConnectionError) as error:
+            QMessageBox.warning(self, _t("rd_viewer_push_clipboard"),
+                                str(error))
+            return
+        self._status.setText(_t("rd_clipboard_sent"))
+
+    def _on_send_file_clicked(self) -> None:
+        viewer = registry.viewer
+        if viewer is None or not viewer.connected:
+            QMessageBox.warning(self, _t("rd_viewer_send_file"),
+                                _t("rd_viewer_status_idle"))
+            return
+        source, _ = QFileDialog.getOpenFileName(
+            self, _t("rd_viewer_send_file"), "", "All Files (*)",
+        )
+        if not source:
+            return
+        self._upload_file(source)
+
+    def _on_files_dropped(self, paths) -> None:
+        viewer = registry.viewer
+        if viewer is None or not viewer.connected:
+            return
+        for path in paths:
+            self._upload_file(path)
+
+    def _upload_file(self, source_path: str) -> None:
+        default_dest = "~/" + Path(source_path).name
+        dest, ok = QInputDialog.getText(
+            self, _t("rd_viewer_send_file"),
+            _t("rd_dest_path_prompt").replace("{name}",
+                                              Path(source_path).name),
+            text=default_dest,
+        )
+        if not ok or not dest:
+            return
+        viewer = registry.viewer
+        if viewer is None:
+            return
+        thread = _FileSendThread(viewer, source_path, dest, self)
+        thread.progress.connect(self._on_file_progress_main)
+        thread.completed.connect(self._on_file_complete_main)
+        thread.finished.connect(thread.deleteLater)
+        thread.start()
+
+
+class _FileSendThread(QThread):
+    """Run send_file off the GUI thread; bridge progress via signals."""
+
+    progress = Signal(str, int, int)
+    completed = Signal(str, bool, str, str)
+
+    def __init__(self, viewer: RemoteDesktopViewer, source: str, dest: str,
+                 parent=None) -> None:
+        super().__init__(parent)
+        self._viewer = viewer
+        self._source = source
+        self._dest = dest
+
+    def run(self) -> None:
+        def relay(transfer_id, done, total):
+            self.progress.emit(transfer_id, done, total)
+        try:
+            result = self._viewer.send_file(
+                self._source, self._dest, on_progress=relay,
+            )
+        except (OSError, ConnectionError, RuntimeError) as error:
+            self.completed.emit("", False, str(error), self._dest)
+            return
+        self.completed.emit(
+            result.transfer_id, bool(result.success),
+            result.error or "", self._dest,
+        )
 
 
 class RemoteDesktopTab(TranslatableMixin, QWidget):
