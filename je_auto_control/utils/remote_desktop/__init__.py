@@ -17,11 +17,12 @@ from je_auto_control.utils.remote_desktop.protocol import (
     AuthenticationError, MessageType, ProtocolError,
     decode_frame_header, encode_frame,
 )
+from je_auto_control.utils.remote_desktop.registry import registry
 from je_auto_control.utils.remote_desktop.viewer import RemoteDesktopViewer
 
 __all__ = [
     "RemoteDesktopHost", "RemoteDesktopViewer",
     "InputDispatchError", "AuthenticationError", "ProtocolError",
     "MessageType", "encode_frame", "decode_frame_header",
-    "dispatch_input",
+    "dispatch_input", "registry",
 ]

@@ -27,6 +27,9 @@ from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
     run_from_description as llm_run_from_description,
 )
+from je_auto_control.utils.remote_desktop.registry import (
+    registry as remote_desktop_registry,
+)
 from je_auto_control.utils.ocr.ocr_engine import (
     click_text as ocr_click_text,
     find_text_regex as ocr_find_text_regex,
@@ -99,6 +102,49 @@ def _vlm_locate_as_list(description: str,
         description, screen_region=screen_region, model=model,
     )
     return None if coords is None else [coords[0], coords[1]]
+
+
+def _remote_start_host(token: str,
+                       bind: str = "127.0.0.1",
+                       port: int = 0,
+                       fps: float = 10.0,
+                       quality: int = 70,
+                       region: Optional[List[int]] = None,
+                       max_clients: int = 4) -> Dict[str, Any]:
+    """Executor adapter: start the singleton remote-desktop host."""
+    return remote_desktop_registry.start_host(
+        token=token, bind=bind, port=int(port),
+        fps=float(fps), quality=int(quality),
+        region=region, max_clients=int(max_clients),
+    )
+
+
+def _remote_stop_host() -> Dict[str, Any]:
+    return remote_desktop_registry.stop_host()
+
+
+def _remote_host_status() -> Dict[str, Any]:
+    return remote_desktop_registry.host_status()
+
+
+def _remote_connect(host: str, port: int, token: str,
+                    timeout: float = 5.0) -> Dict[str, Any]:
+    """Executor adapter: connect the singleton viewer."""
+    return remote_desktop_registry.connect_viewer(
+        host=host, port=int(port), token=token, timeout=float(timeout),
+    )
+
+
+def _remote_disconnect() -> Dict[str, Any]:
+    return remote_desktop_registry.disconnect_viewer()
+
+
+def _remote_viewer_status() -> Dict[str, Any]:
+    return remote_desktop_registry.viewer_status()
+
+
+def _remote_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
+    return remote_desktop_registry.send_input(action)
 
 
 def _llm_plan_for_executor(description: str,
@@ -296,6 +342,17 @@ class Executor:
             # LLM action planner
             "AC_llm_plan": _llm_plan_for_executor,
             "AC_llm_run": _llm_run_for_executor,
+
+            # Remote desktop host (this machine streams to others)
+            "AC_start_remote_host": _remote_start_host,
+            "AC_stop_remote_host": _remote_stop_host,
+            "AC_remote_host_status": _remote_host_status,
+
+            # Remote desktop viewer (this machine controls others)
+            "AC_remote_connect": _remote_connect,
+            "AC_remote_disconnect": _remote_disconnect,
+            "AC_remote_viewer_status": _remote_viewer_status,
+            "AC_remote_send_input": _remote_send_input,
         }
 
     def known_commands(self) -> set:
