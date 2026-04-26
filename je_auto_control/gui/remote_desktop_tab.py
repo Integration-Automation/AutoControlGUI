@@ -119,17 +119,17 @@ def _build_verifying_client_context() -> ssl.SSLContext:
     return ctx
 
 
-def _build_insecure_client_context() -> ssl.SSLContext:  # NOSONAR S4830 S5527
+def _build_insecure_client_context() -> ssl.SSLContext:
     """Opt-in self-signed loopback context — verification intentionally off.
 
     Triggered only when the user ticks 'Skip cert verification' on the
     Viewer panel; meant for self-signed dev / LAN hosts where the user
     has already pinned the host out-of-band (token + 9-digit Host ID).
     """
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)  # NOSONAR S5527  # opt-in self-signed
     ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    ctx.verify_mode = ssl.CERT_NONE  # NOSONAR S4830  # opt-in self-signed
     return ctx
 
 
