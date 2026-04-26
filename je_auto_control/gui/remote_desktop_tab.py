@@ -38,8 +38,7 @@ from je_auto_control.utils.remote_desktop import (
     WebSocketDesktopHost, WebSocketDesktopViewer,
 )
 from je_auto_control.utils.remote_desktop.audio import (
-    AudioBackendError, AudioCaptureConfig, AudioPlayer,
-    is_audio_backend_available,
+    AudioCaptureConfig, AudioPlayer, is_audio_backend_available,
 )
 from je_auto_control.utils.remote_desktop.host_id import (
     HostIdError, format_host_id, parse_host_id,
@@ -473,7 +472,7 @@ class _HostPanel(TranslatableMixin, QWidget):
                 ),
             )
             host.start()
-        except (OSError, ValueError, RuntimeError, AudioBackendError) as error:
+        except (OSError, ValueError, RuntimeError) as error:
             QMessageBox.warning(self, _t("rd_host_start"), str(error))
             return
         registry._host = host  # noqa: SLF001  centralised lifecycle ownership
@@ -717,9 +716,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         if self._tls_insecure.isChecked():
-            # NOSONAR S5527 S4830  # reason: explicit user opt-in for self-signed
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
+            # Explicit user opt-in for self-signed loopback / dev hosts.
+            ctx.check_hostname = False  # NOSONAR S5527
+            ctx.verify_mode = ssl.CERT_NONE  # NOSONAR S4830
         else:
             ctx.load_default_certs()
             ctx.check_hostname = True
@@ -733,7 +732,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         try:
             player = AudioPlayer()
             player.start()
-        except (AudioBackendError, OSError, RuntimeError) as error:
+        except (OSError, RuntimeError) as error:
             self._status.setText(f"{_t('rd_viewer_audio_play')}: {error}")
             return
         self._audio_player = player

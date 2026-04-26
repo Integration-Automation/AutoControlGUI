@@ -29,10 +29,10 @@ def _wait_until(predicate, timeout: float = 4.0,
 
 def test_begin_round_trip():
     tid = new_transfer_id()
-    payload = encode_begin(tid, "/tmp/a.bin", 4242)
+    payload = encode_begin(tid, "drop/a.bin", 4242)
     out_id, dest, size = decode_begin(payload)
     assert out_id == tid
-    assert dest == "/tmp/a.bin"
+    assert dest == "drop/a.bin"
     assert size == 4242
 
 
@@ -59,7 +59,7 @@ def test_decode_chunk_short_payload_raises():
 
 def test_encode_begin_rejects_invalid_id():
     with pytest.raises(FileTransferError):
-        encode_begin("short", "/tmp/x", 1)
+        encode_begin("short", "drop/x", 1)
 
 
 # --- send_file <-> FileReceiver in-process round-trip --------------------

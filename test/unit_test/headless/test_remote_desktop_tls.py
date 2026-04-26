@@ -89,11 +89,11 @@ def _trusting_client_context(ca_path: Path) -> ssl.SSLContext:
 
 
 def _insecure_client_context() -> ssl.SSLContext:
-    # NOSONAR S5527 S4830 S4423  # reason: self-signed loopback test
+    """Self-signed loopback test context — verification deliberately off."""
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    ctx.check_hostname = False  # NOSONAR S5527  # loopback self-signed test
+    ctx.verify_mode = ssl.CERT_NONE  # NOSONAR S4830  # loopback self-signed test
     return ctx
 
 

@@ -10,10 +10,7 @@ from typing import Any, Callable, Deque, List, Mapping, Optional, Sequence
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.audio import (
-    AudioBackendError, AudioCapture, AudioCaptureConfig,
-    DEFAULT_BLOCK_FRAMES as _AUDIO_BLOCK_FRAMES,
-    DEFAULT_CHANNELS as _AUDIO_CHANNELS,
-    DEFAULT_SAMPLE_RATE as _AUDIO_SAMPLE_RATE,
+    AudioCapture, AudioCaptureConfig,
 )
 from je_auto_control.utils.remote_desktop.auth import (
     make_nonce, verify_response,
@@ -430,7 +427,7 @@ class RemoteDesktopHost:
             self._audio_capture = self._audio_capture_override
             try:
                 self._audio_capture.start()
-            except (AudioBackendError, OSError, RuntimeError) as error:
+            except (OSError, RuntimeError) as error:
                 autocontrol_logger.warning(
                     "remote_desktop audio capture failed to start: %r", error,
                 )
@@ -445,7 +442,7 @@ class RemoteDesktopHost:
                 block_frames=config.block_frames,
             )
             capture.start()
-        except (AudioBackendError, OSError, RuntimeError) as error:
+        except (OSError, RuntimeError) as error:
             autocontrol_logger.warning(
                 "remote_desktop audio capture disabled: %r", error,
             )
