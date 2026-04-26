@@ -16,6 +16,7 @@ from je_auto_control.utils.remote_desktop.transport import (
 )
 
 FrameCallback = Callable[[bytes], None]
+AudioCallback = Callable[[bytes], None]
 ErrorCallback = Callable[[Exception], None]
 
 _DEFAULT_AUTH_TIMEOUT_S = 5.0
@@ -45,6 +46,7 @@ class RemoteDesktopViewer:
     def __init__(self, host: str, port: int, token: str,
                  on_frame: Optional[FrameCallback] = None,
                  on_error: Optional[ErrorCallback] = None,
+                 on_audio: Optional[AudioCallback] = None,
                  expected_host_id: Optional[str] = None,
                  ssl_context: Optional[ssl.SSLContext] = None,
                  server_hostname: Optional[str] = None,
@@ -58,6 +60,7 @@ class RemoteDesktopViewer:
         self._token = token
         self._on_frame = on_frame
         self._on_error = on_error
+        self._on_audio = on_audio
         self._expected_host_id = (validate_host_id(expected_host_id)
                                   if expected_host_id else None)
         self._remote_host_id: Optional[str] = None
@@ -228,6 +231,15 @@ class RemoteDesktopViewer:
                                     self._on_error(error)
                                 except Exception:  # noqa: BLE001
                                     pass
+                    continue
+                if msg_type is MessageType.AUDIO:
+                    if self._on_audio is not None:
+                        try:
+                            self._on_audio(payload)
+                        except Exception:  # noqa: BLE001
+                            autocontrol_logger.exception(
+                                "remote_desktop viewer on_audio callback raised"
+                            )
                     continue
                 if msg_type is MessageType.PING:
                     continue

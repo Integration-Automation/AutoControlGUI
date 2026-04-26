@@ -31,6 +31,7 @@ class MessageType(enum.IntEnum):
     AUTH_OK = 0x03  # host -> viewer: handshake accepted
     AUTH_FAIL = 0x04  # host -> viewer: handshake rejected
     FRAME = 0x10  # host -> viewer: JPEG frame
+    AUDIO = 0x11  # host -> viewer: PCM audio chunk
     INPUT = 0x20  # viewer -> host: JSON input message
     PING = 0x30  # either way: liveness
 

@@ -9,6 +9,10 @@ misuse difficult — this is *not* a hardened RDP replacement, and exposing
 it to untrusted networks should be paired with an SSH tunnel or TLS
 front-end.
 """
+from je_auto_control.utils.remote_desktop.audio import (
+    AudioBackendError, AudioCapture, AudioPlayer,
+    is_audio_backend_available,
+)
 from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
 from je_auto_control.utils.remote_desktop.host_id import (
     HostIdError, format_host_id, generate_host_id, load_or_create_host_id,
@@ -36,4 +40,6 @@ __all__ = [
     "dispatch_input", "registry",
     "HostIdError", "format_host_id", "generate_host_id",
     "load_or_create_host_id", "parse_host_id", "validate_host_id",
+    "AudioBackendError", "AudioCapture", "AudioPlayer",
+    "is_audio_backend_available",
 ]

@@ -1,13 +1,19 @@
 """TCP host that streams JPEG frames and applies viewer input."""
+import collections
 import json
 import socket
 import ssl
 import threading
 import time
 from io import BytesIO
-from typing import Any, Callable, List, Mapping, Optional, Sequence
+from typing import Any, Callable, Deque, List, Mapping, Optional, Sequence
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.remote_desktop.audio import (
+    AudioBackendError, AudioCapture, DEFAULT_BLOCK_FRAMES as _AUDIO_BLOCK_FRAMES,
+    DEFAULT_CHANNELS as _AUDIO_CHANNELS,
+    DEFAULT_SAMPLE_RATE as _AUDIO_SAMPLE_RATE,
+)
 from je_auto_control.utils.remote_desktop.auth import (
     NONCE_BYTES, make_nonce, verify_response,
 )
@@ -53,6 +59,8 @@ def _default_frame_provider(region: Optional[Sequence[int]] = None,
 class _ClientHandler:
     """Per-connection auth + input-receive + frame-send state."""
 
+    _AUDIO_QUEUE_MAXLEN = 50  # ~2.5 s of buffered chunks at 50 ms each
+
     def __init__(self, host: "RemoteDesktopHost",
                  channel: MessageChannel, address) -> None:
         self._host = host
@@ -61,6 +69,12 @@ class _ClientHandler:
         self._shutdown = threading.Event()
         self._sender_thread: Optional[threading.Thread] = None
         self._receiver_thread: Optional[threading.Thread] = None
+        self._audio_queue: Deque[bytes] = collections.deque(
+            maxlen=self._AUDIO_QUEUE_MAXLEN,
+        )
+        self._audio_lock = threading.Lock()
+        self._audio_event = threading.Event()
+        self._audio_sender_thread: Optional[threading.Thread] = None
         self.authenticated = False
 
     @property
@@ -86,12 +100,26 @@ class _ClientHandler:
         )
         self._sender_thread.start()
         self._receiver_thread.start()
+        if self._host._audio_enabled:
+            self._audio_sender_thread = threading.Thread(
+                target=self._audio_send_loop, name="rd-audio", daemon=True,
+            )
+            self._audio_sender_thread.start()
+
+    def push_audio(self, chunk: bytes) -> None:
+        """Enqueue a PCM chunk for delivery; oldest dropped if queue is full."""
+        if self._shutdown.is_set() or not self.authenticated:
+            return
+        with self._audio_lock:
+            self._audio_queue.append(chunk)
+        self._audio_event.set()
 
     def stop(self) -> None:
         """Signal threads and close the socket."""
         self._shutdown.set()
         with self._host._frame_cond:
             self._host._frame_cond.notify_all()
+        self._audio_event.set()
         self._close()
 
     def _authenticate(self) -> None:
@@ -137,6 +165,27 @@ class _ClientHandler:
                 self.stop()
                 return
             last_sent = seq
+
+    def _audio_send_loop(self) -> None:
+        while not self._shutdown.is_set():
+            self._audio_event.wait(timeout=0.5)
+            if self._shutdown.is_set():
+                return
+            while True:
+                with self._audio_lock:
+                    if not self._audio_queue:
+                        self._audio_event.clear()
+                        break
+                    chunk = self._audio_queue.popleft()
+                try:
+                    self._channel.send_typed(MessageType.AUDIO, chunk)
+                except (OSError, ConnectionError) as error:
+                    autocontrol_logger.info(
+                        "remote_desktop audio send to %s failed: %r",
+                        self._address, error,
+                    )
+                    self.stop()
+                    return
 
     def _recv_loop(self) -> None:
         while not self._shutdown.is_set():
@@ -206,6 +255,12 @@ class RemoteDesktopHost:
                  input_dispatcher: Optional[InputDispatcher] = None,
                  host_id: Optional[str] = None,
                  ssl_context: Optional[ssl.SSLContext] = None,
+                 enable_audio: bool = False,
+                 audio_device: Optional[int] = None,
+                 audio_sample_rate: int = _AUDIO_SAMPLE_RATE,
+                 audio_channels: int = _AUDIO_CHANNELS,
+                 audio_block_frames: int = _AUDIO_BLOCK_FRAMES,
+                 audio_capture: Optional[Any] = None,
                  ) -> None:
         if not isinstance(token, str) or not token:
             raise ValueError("token must be a non-empty string")
@@ -225,6 +280,13 @@ class RemoteDesktopHost:
             frame_provider or _default_frame_provider(region, int(quality))
         )
         self._dispatch: InputDispatcher = input_dispatcher or dispatch_input
+        self._audio_enabled = bool(enable_audio)
+        self._audio_device = audio_device
+        self._audio_sample_rate = int(audio_sample_rate)
+        self._audio_channels = int(audio_channels)
+        self._audio_block_frames = int(audio_block_frames)
+        self._audio_capture_override = audio_capture
+        self._audio_capture: Optional[AudioCapture] = None
         self._listen_sock: Optional[socket.socket] = None
         self._accept_thread: Optional[threading.Thread] = None
         self._capture_thread: Optional[threading.Thread] = None
@@ -242,6 +304,10 @@ class RemoteDesktopHost:
     def host_id(self) -> str:
         """The 9-digit numeric ID viewers use to verify this host."""
         return self._host_id
+
+    @property
+    def audio_enabled(self) -> bool:
+        return self._audio_enabled and self._audio_capture is not None
 
     @property
     def port(self) -> int:
@@ -287,12 +353,14 @@ class RemoteDesktopHost:
         )
         self._accept_thread.start()
         self._capture_thread.start()
+        self._start_audio_capture()
 
     def stop(self, timeout: float = 2.0) -> None:
         """Tear down accept loop, capture loop, and every connected client."""
         if self._listen_sock is None:
             return
         self._shutdown.set()
+        self._stop_audio_capture()
         try:
             self._listen_sock.close()
         except OSError:
@@ -310,6 +378,55 @@ class RemoteDesktopHost:
                 thread.join(timeout=timeout)
         self._accept_thread = None
         self._capture_thread = None
+
+    def _start_audio_capture(self) -> None:
+        """Open the audio input stream when ``enable_audio`` is set."""
+        if not self._audio_enabled:
+            return
+        if self._audio_capture_override is not None:
+            self._audio_capture = self._audio_capture_override
+            try:
+                self._audio_capture.start()
+            except (AudioBackendError, OSError, RuntimeError) as error:
+                autocontrol_logger.warning(
+                    "remote_desktop audio capture failed to start: %r", error,
+                )
+                self._audio_capture = None
+            return
+        try:
+            capture = AudioCapture(
+                on_block=self._broadcast_audio,
+                device=self._audio_device,
+                sample_rate=self._audio_sample_rate,
+                channels=self._audio_channels,
+                block_frames=self._audio_block_frames,
+            )
+            capture.start()
+        except (AudioBackendError, OSError, RuntimeError) as error:
+            autocontrol_logger.warning(
+                "remote_desktop audio capture disabled: %r", error,
+            )
+            self._audio_capture = None
+            return
+        self._audio_capture = capture
+
+    def _stop_audio_capture(self) -> None:
+        capture = self._audio_capture
+        if capture is None:
+            return
+        try:
+            capture.stop()
+        except (OSError, RuntimeError):
+            pass
+        self._audio_capture = None
+
+    def _broadcast_audio(self, chunk: bytes) -> None:
+        """Push a captured PCM block to every authenticated client."""
+        with self._clients_lock:
+            clients = [c for c in self._clients
+                       if c.authenticated and not c._shutdown.is_set()]
+        for client in clients:
+            client.push_audio(chunk)
 
     # internals -----------------------------------------------------------
 
