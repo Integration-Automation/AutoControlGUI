@@ -17,6 +17,9 @@ from je_auto_control.utils.remote_desktop.audio import (
 from je_auto_control.utils.remote_desktop.auth import (
     NONCE_BYTES, make_nonce, verify_response,
 )
+from je_auto_control.utils.remote_desktop.clipboard_sync import (
+    ClipboardSyncError, decode as decode_clipboard, encode_image, encode_text,
+)
 from je_auto_control.utils.remote_desktop.host_id import (
     load_or_create_host_id, validate_host_id,
 )
@@ -204,9 +207,29 @@ class _ClientHandler:
             if msg_type is MessageType.INPUT:
                 self._handle_input_payload(payload)
                 continue
+            if msg_type is MessageType.CLIPBOARD:
+                self._handle_clipboard_payload(payload)
+                continue
             autocontrol_logger.info(
                 "remote_desktop unexpected msg %s from %s",
                 msg_type.name, self._address,
+            )
+
+    def _handle_clipboard_payload(self, payload: bytes) -> None:
+        try:
+            kind, data = decode_clipboard(payload)
+        except ClipboardSyncError as error:
+            autocontrol_logger.info(
+                "remote_desktop bad CLIPBOARD from %s: %r",
+                self._address, error,
+            )
+            return
+        try:
+            self._host._apply_clipboard(kind, data)
+        except (OSError, RuntimeError, TypeError, ValueError) as error:
+            autocontrol_logger.warning(
+                "remote_desktop clipboard apply failed for %s: %r",
+                self._address, error,
             )
 
     def _handle_input_payload(self, payload: bytes) -> None:
@@ -427,6 +450,47 @@ class RemoteDesktopHost:
                        if c.authenticated and not c._shutdown.is_set()]
         for client in clients:
             client.push_audio(chunk)
+
+    def broadcast_clipboard_text(self, text: str) -> int:
+        """Send a text-clipboard message to every authenticated viewer."""
+        return self._broadcast_clipboard_payload(encode_text(text))
+
+    def broadcast_clipboard_image(self, png_bytes: bytes) -> int:
+        """Send a PNG image to every authenticated viewer's clipboard."""
+        return self._broadcast_clipboard_payload(encode_image(png_bytes))
+
+    def _broadcast_clipboard_payload(self, payload: bytes) -> int:
+        with self._clients_lock:
+            clients = [c for c in self._clients
+                       if c.authenticated and not c._shutdown.is_set()]
+        sent = 0
+        for client in clients:
+            try:
+                client._channel.send_typed(MessageType.CLIPBOARD, payload)
+                sent += 1
+            except (OSError, ConnectionError) as error:
+                autocontrol_logger.info(
+                    "remote_desktop clipboard send to %s failed: %r",
+                    client.address, error,
+                )
+                client.stop()
+        return sent
+
+    def _apply_clipboard(self, kind: str, data: Any) -> None:
+        """Set this host's local clipboard from a decoded CLIPBOARD payload.
+
+        Subclasses or tests may override; the default routes to the
+        utils.clipboard helpers and accepts ``"text"`` / ``"image"`` kinds.
+        """
+        from je_auto_control.utils.clipboard.clipboard import (
+            set_clipboard, set_clipboard_image,
+        )
+        if kind == "text":
+            set_clipboard(data)
+        elif kind == "image":
+            set_clipboard_image(data)
+        else:
+            raise ValueError(f"unsupported clipboard kind: {kind!r}")
 
     # internals -----------------------------------------------------------
 

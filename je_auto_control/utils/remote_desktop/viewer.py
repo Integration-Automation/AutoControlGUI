@@ -7,6 +7,9 @@ from typing import Any, Callable, Mapping, Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.auth import compute_response
+from je_auto_control.utils.remote_desktop.clipboard_sync import (
+    ClipboardSyncError, decode as decode_clipboard, encode_image, encode_text,
+)
 from je_auto_control.utils.remote_desktop.host_id import validate_host_id
 from je_auto_control.utils.remote_desktop.protocol import (
     AuthenticationError, MessageType, ProtocolError,
@@ -17,6 +20,7 @@ from je_auto_control.utils.remote_desktop.transport import (
 
 FrameCallback = Callable[[bytes], None]
 AudioCallback = Callable[[bytes], None]
+ClipboardCallback = Callable[[str, Any], None]
 ErrorCallback = Callable[[Exception], None]
 
 _DEFAULT_AUTH_TIMEOUT_S = 5.0
@@ -47,6 +51,7 @@ class RemoteDesktopViewer:
                  on_frame: Optional[FrameCallback] = None,
                  on_error: Optional[ErrorCallback] = None,
                  on_audio: Optional[AudioCallback] = None,
+                 on_clipboard: Optional[ClipboardCallback] = None,
                  expected_host_id: Optional[str] = None,
                  ssl_context: Optional[ssl.SSLContext] = None,
                  server_hostname: Optional[str] = None,
@@ -61,6 +66,7 @@ class RemoteDesktopViewer:
         self._on_frame = on_frame
         self._on_error = on_error
         self._on_audio = on_audio
+        self._on_clipboard = on_clipboard
         self._expected_host_id = (validate_host_id(expected_host_id)
                                   if expected_host_id else None)
         self._remote_host_id: Optional[str] = None
@@ -159,6 +165,34 @@ class RemoteDesktopViewer:
             raise ConnectionError("viewer is not connected")
         self._channel.send_typed(MessageType.PING, b"")
 
+    def send_clipboard_text(self, text: str) -> None:
+        """Push ``text`` onto the host's clipboard."""
+        if not self._connected or self._channel is None:
+            raise ConnectionError("viewer is not connected")
+        self._channel.send_typed(MessageType.CLIPBOARD, encode_text(text))
+
+    def send_clipboard_image(self, png_bytes: bytes) -> None:
+        """Push a PNG image onto the host's clipboard."""
+        if not self._connected or self._channel is None:
+            raise ConnectionError("viewer is not connected")
+        self._channel.send_typed(MessageType.CLIPBOARD, encode_image(png_bytes))
+
+    def _handle_clipboard_payload(self, payload: bytes) -> None:
+        try:
+            kind, data = decode_clipboard(payload)
+        except ClipboardSyncError as error:
+            autocontrol_logger.info(
+                "remote_desktop viewer bad CLIPBOARD: %r", error,
+            )
+            return
+        if self._on_clipboard is not None:
+            try:
+                self._on_clipboard(kind, data)
+            except Exception:  # noqa: BLE001
+                autocontrol_logger.exception(
+                    "remote_desktop viewer on_clipboard callback raised"
+                )
+
     # context manager ----------------------------------------------------
 
     def __enter__(self) -> "RemoteDesktopViewer":
@@ -240,6 +274,9 @@ class RemoteDesktopViewer:
                             autocontrol_logger.exception(
                                 "remote_desktop viewer on_audio callback raised"
                             )
+                    continue
+                if msg_type is MessageType.CLIPBOARD:
+                    self._handle_clipboard_payload(payload)
                     continue
                 if msg_type is MessageType.PING:
                     continue

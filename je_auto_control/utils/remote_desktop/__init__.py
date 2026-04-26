@@ -13,6 +13,9 @@ from je_auto_control.utils.remote_desktop.audio import (
     AudioBackendError, AudioCapture, AudioPlayer,
     is_audio_backend_available,
 )
+from je_auto_control.utils.remote_desktop.clipboard_sync import (
+    ClipboardSyncError,
+)
 from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
 from je_auto_control.utils.remote_desktop.host_id import (
     HostIdError, format_host_id, generate_host_id, load_or_create_host_id,
@@ -42,4 +45,5 @@ __all__ = [
     "load_or_create_host_id", "parse_host_id", "validate_host_id",
     "AudioBackendError", "AudioCapture", "AudioPlayer",
     "is_audio_backend_available",
+    "ClipboardSyncError",
 ]

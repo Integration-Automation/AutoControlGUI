@@ -33,6 +33,7 @@ class MessageType(enum.IntEnum):
     FRAME = 0x10  # host -> viewer: JPEG frame
     AUDIO = 0x11  # host -> viewer: PCM audio chunk
     INPUT = 0x20  # viewer -> host: JSON input message
+    CLIPBOARD = 0x21  # either way: clipboard payload (text or image)
     PING = 0x30  # either way: liveness
 
 
