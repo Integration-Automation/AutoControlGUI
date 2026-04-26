@@ -133,6 +133,61 @@ def _build_insecure_client_context() -> ssl.SSLContext:
     return ctx
 
 
+# --- shared UI building blocks -------------------------------------------
+
+
+_BADGE_STYLES = {
+    "stopped": "background-color: #888; color: white;",
+    "starting": "background-color: #cc7000; color: white;",
+    "running": "background-color: #2a8c4a; color: white;",
+    "idle": "background-color: #888; color: white;",
+    "connecting": "background-color: #cc7000; color: white;",
+    "live": "background-color: #2a8c4a; color: white;",
+    "error": "background-color: #b03030; color: white;",
+}
+
+
+class _StatusBadge(QLabel):
+    """Small coloured pill that summarises the current host / viewer state."""
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setMinimumWidth(96)
+        self.set_state("stopped", "")
+
+    def set_state(self, state: str, text: str) -> None:
+        style = _BADGE_STYLES.get(state, _BADGE_STYLES["stopped"])
+        self.setStyleSheet(
+            "padding: 4px 12px; border-radius: 10px; "
+            "font-weight: bold; " + style
+        )
+        self.setText(text)
+
+
+class _CollapsibleSection(QGroupBox):
+    """``QGroupBox`` with a checkable header that hides/shows its body."""
+
+    def __init__(self, title: str = "",
+                 parent: Optional[QWidget] = None) -> None:
+        super().__init__(title, parent)
+        self.setCheckable(True)
+        self.setChecked(False)
+        self._body = QWidget(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(8, 14, 8, 8)
+        outer.addWidget(self._body)
+        self._body.setVisible(False)
+        self.toggled.connect(self._body.setVisible)
+
+    @property
+    def body(self) -> QWidget:
+        return self._body
+
+    def set_body_layout(self, layout) -> None:
+        self._body.setLayout(layout)
+
+
 class _FrameDisplay(QWidget):
     """Paints the latest frame and emits remapped input events.
 
@@ -290,8 +345,11 @@ class _HostPanel(TranslatableMixin, QWidget):
         self._tr_init()
         self._host_id_label = QLabel("---")
         self._host_id_label.setStyleSheet(
-            "font-size: 18pt; font-weight: bold; color: #2070d0;"
+            "font-family: 'Consolas', 'Menlo', 'Courier New', monospace; "
+            "font-size: 26pt; font-weight: bold; color: #2070d0; "
+            "letter-spacing: 2px;"
         )
+        self._badge = _StatusBadge()
         self._token = QLineEdit()
         self._bind = QLineEdit("127.0.0.1")
         self._port = QSpinBox()
@@ -311,7 +369,6 @@ class _HostPanel(TranslatableMixin, QWidget):
         self._enable_audio.setChecked(False)
         if not is_audio_backend_available():
             self._enable_audio.setEnabled(False)
-        self._status = QLabel()
         self._preview = _FrameDisplay()
         # Preview is read-only — a host watching their own stream shouldn't
         # trigger fake input on themselves through the local widget.
@@ -319,6 +376,7 @@ class _HostPanel(TranslatableMixin, QWidget):
         self._start_btn: Optional[QPushButton] = None
         self._stop_btn: Optional[QPushButton] = None
         self._copy_id_btn: Optional[QPushButton] = None
+        self._copy_share_btn: Optional[QPushButton] = None
         self._refresh_timer = QTimer(self)
         self._refresh_timer.setInterval(1000)
         self._refresh_timer.timeout.connect(self._refresh_status)
@@ -345,44 +403,64 @@ class _HostPanel(TranslatableMixin, QWidget):
         root = QVBoxLayout(self)
 
         warning = QLabel()
-        warning.setText(_t("rd_host_security_warning"))
         warning.setWordWrap(True)
-        warning.setStyleSheet("color: #cc7000;")
+        warning.setStyleSheet(
+            "color: #cc7000; padding: 6px; border: 1px solid #cc7000; "
+            "border-radius: 4px;"
+        )
         self._tr(warning, "rd_host_security_warning")
         root.addWidget(warning)
 
-        id_group = self._tr(QGroupBox(), "rd_host_id_group")
-        id_layout = QHBoxLayout()
-        id_layout.addWidget(self._tr(QLabel(), "rd_host_id_label"))
-        id_layout.addWidget(self._host_id_label, stretch=1)
-        self._copy_id_btn = self._tr(QPushButton(), "rd_host_id_copy")
-        self._copy_id_btn.clicked.connect(self._copy_host_id)
-        id_layout.addWidget(self._copy_id_btn)
-        id_group.setLayout(id_layout)
-        root.addWidget(id_group)
+        # === Connection card — the focal point ===
+        card = self._tr(QGroupBox(), "rd_host_card_group")
+        card.setStyleSheet("QGroupBox { font-weight: bold; }")
+        card_layout = QVBoxLayout()
 
-        config = self._tr(QGroupBox(), "rd_host_config_group")
-        grid = QVBoxLayout()
+        id_row = QHBoxLayout()
+        id_row.addWidget(self._tr(QLabel(), "rd_host_id_label"))
+        id_row.addWidget(self._host_id_label, stretch=1)
+        id_row.addWidget(self._badge)
+        card_layout.addLayout(id_row)
+
         token_row = QHBoxLayout()
         token_row.addWidget(self._tr(QLabel(), "rd_token_label"))
         token_row.addWidget(self._token, stretch=1)
         gen_btn = self._tr(QPushButton(), "rd_token_generate")
         gen_btn.clicked.connect(self._generate_token)
         token_row.addWidget(gen_btn)
-        grid.addLayout(token_row)
+        card_layout.addLayout(token_row)
 
+        copy_row = QHBoxLayout()
+        self._copy_id_btn = self._tr(QPushButton(), "rd_host_id_copy")
+        self._copy_id_btn.clicked.connect(self._copy_host_id)
+        self._copy_share_btn = self._tr(QPushButton(), "rd_host_copy_share")
+        self._copy_share_btn.clicked.connect(self._copy_share_text)
+        copy_row.addWidget(self._copy_id_btn)
+        copy_row.addWidget(self._copy_share_btn)
+        copy_row.addStretch()
+        card_layout.addLayout(copy_row)
+
+        card.setLayout(card_layout)
+        root.addWidget(card)
+
+        # === Basic connection settings ===
+        basics = self._tr(QGroupBox(), "rd_host_basics_group")
+        basics_layout = QVBoxLayout()
         bind_row = QHBoxLayout()
         bind_row.addWidget(self._tr(QLabel(), "rd_bind_label"))
         bind_row.addWidget(self._bind, stretch=1)
         bind_row.addWidget(self._tr(QLabel(), "rd_port_label"))
         bind_row.addWidget(self._port)
-        grid.addLayout(bind_row)
+        bind_row.addWidget(self._tr(QLabel(), "rd_transport_label"))
+        bind_row.addWidget(self._transport)
+        basics_layout.addLayout(bind_row)
+        basics.setLayout(basics_layout)
+        root.addWidget(basics)
 
-        transport_row = QHBoxLayout()
-        transport_row.addWidget(self._tr(QLabel(), "rd_transport_label"))
-        transport_row.addWidget(self._transport)
-        transport_row.addStretch()
-        grid.addLayout(transport_row)
+        # === Advanced (collapsible) ===
+        advanced = _CollapsibleSection()
+        self._tr(advanced, "rd_advanced_group", setter="setTitle")
+        adv_layout = QVBoxLayout()
 
         tls_row = QHBoxLayout()
         tls_row.addWidget(self._tr(QLabel(), "rd_tls_cert_label"))
@@ -390,7 +468,7 @@ class _HostPanel(TranslatableMixin, QWidget):
         cert_browse = self._tr(QPushButton(), "rd_browse")
         cert_browse.clicked.connect(self._browse_cert)
         tls_row.addWidget(cert_browse)
-        grid.addLayout(tls_row)
+        adv_layout.addLayout(tls_row)
 
         key_row = QHBoxLayout()
         key_row.addWidget(self._tr(QLabel(), "rd_tls_key_label"))
@@ -398,7 +476,7 @@ class _HostPanel(TranslatableMixin, QWidget):
         key_browse = self._tr(QPushButton(), "rd_browse")
         key_browse.clicked.connect(self._browse_key)
         key_row.addWidget(key_browse)
-        grid.addLayout(key_row)
+        adv_layout.addLayout(key_row)
 
         media_row = QHBoxLayout()
         media_row.addWidget(self._tr(QLabel(), "rd_fps_label"))
@@ -406,29 +484,29 @@ class _HostPanel(TranslatableMixin, QWidget):
         media_row.addWidget(self._tr(QLabel(), "rd_quality_label"))
         media_row.addWidget(self._quality)
         media_row.addStretch()
-        grid.addLayout(media_row)
+        adv_layout.addLayout(media_row)
 
-        audio_row = QHBoxLayout()
-        audio_row.addWidget(self._tr(self._enable_audio, "rd_enable_audio"))
-        audio_row.addStretch()
-        grid.addLayout(audio_row)
+        adv_layout.addWidget(self._tr(self._enable_audio, "rd_enable_audio"))
 
-        config.setLayout(grid)
-        root.addWidget(config)
+        advanced.set_body_layout(adv_layout)
+        root.addWidget(advanced)
 
+        # === Primary action row ===
         btn_row = QHBoxLayout()
         self._start_btn = self._tr(QPushButton(), "rd_host_start")
+        self._start_btn.setMinimumHeight(36)
+        self._start_btn.setStyleSheet("font-weight: bold;")
         self._start_btn.clicked.connect(self._start)
         self._stop_btn = self._tr(QPushButton(), "rd_host_stop")
+        self._stop_btn.setMinimumHeight(36)
         self._stop_btn.clicked.connect(self._stop)
-        btn_row.addWidget(self._start_btn)
-        btn_row.addWidget(self._stop_btn)
-        btn_row.addStretch()
+        btn_row.addWidget(self._start_btn, stretch=2)
+        btn_row.addWidget(self._stop_btn, stretch=1)
         root.addLayout(btn_row)
 
+        # === Preview ===
         root.addWidget(self._tr(QLabel(), "rd_host_preview_label"))
         root.addWidget(self._preview, stretch=1)
-        root.addWidget(self._status)
 
     def _generate_token(self) -> None:
         self._token.setText(secrets.token_urlsafe(24))
@@ -438,6 +516,32 @@ class _HostPanel(TranslatableMixin, QWidget):
         if host is None:
             return
         QGuiApplication.clipboard().setText(format_host_id(host.host_id))
+
+    def _copy_share_text(self) -> None:
+        """Copy a one-line bundle of address / port / token / id (token leak risk)."""
+        host = registry.host
+        if host is None:
+            QMessageBox.information(
+                self, _t("rd_host_copy_share"),
+                _t("rd_host_copy_share_unavailable"),
+            )
+            return
+        confirm = QMessageBox.question(
+            self, _t("rd_host_copy_share"),
+            _t("rd_host_copy_share_confirm"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+        bundle = (
+            f"AutoControl Remote Desktop\n"
+            f"Host ID: {format_host_id(host.host_id)}\n"
+            f"Address: {self._bind.text().strip() or '127.0.0.1'}\n"
+            f"Port:    {host.port}\n"
+            f"Transport: {self._transport.currentText()}\n"
+            f"Token:   {self._token.text().strip()}"
+        )
+        QGuiApplication.clipboard().setText(bundle)
 
     def _browse_cert(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -513,17 +617,19 @@ class _HostPanel(TranslatableMixin, QWidget):
     def _refresh_status(self) -> None:
         status = registry.host_status()
         if status["running"]:
-            text = (_t("rd_host_status_running")
-                    .replace("{port}", str(status["port"]))
-                    .replace("{n}", str(status["connected_clients"])))
             host_id = status.get("host_id") or ""
             self._host_id_label.setText(
                 format_host_id(host_id) if host_id else "---"
             )
+            self._badge.set_state(
+                "running",
+                _t("rd_badge_running")
+                .replace("{port}", str(status["port"]))
+                .replace("{n}", str(status["connected_clients"])),
+            )
         else:
-            text = _t("rd_host_status_stopped")
             self._host_id_label.setText("---")
-        self._status.setText(text)
+            self._badge.set_state("stopped", _t("rd_badge_stopped"))
 
     def _refresh_preview(self) -> None:
         host = registry.host
@@ -557,6 +663,10 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._port.setValue(0)
         self._token = QLineEdit()
         self._host_id = QLineEdit()
+        self._host_id.setStyleSheet(
+            "font-family: 'Consolas', 'Menlo', 'Courier New', monospace; "
+            "font-size: 18pt; letter-spacing: 1px;"
+        )
         self._transport = QComboBox()
         self._transport.addItems(["TCP", "WebSocket", "TLS", "WSS"])
         self._tls_insecure = QCheckBox()
@@ -565,15 +675,19 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._enable_audio.setChecked(False)
         if not is_audio_backend_available():
             self._enable_audio.setEnabled(False)
+        self._badge = _StatusBadge()
         self._status = QLabel()
+        self._status.setStyleSheet("color: #555; font-size: 9pt;")
         self._display = _FrameDisplay()
         self._connect_btn: Optional[QPushButton] = None
         self._disconnect_btn: Optional[QPushButton] = None
+        self._action_row: Optional[QWidget] = None
         self._connected = False
         self._audio_player: Optional[AudioPlayer] = None
         self._progress_bar = QProgressBar()
         self._progress_bar.setVisible(False)
         self._progress_label = QLabel()
+        self._progress_label.setVisible(False)
         self._active_progress_id: Optional[str] = None
         self._build_layout()
         self._apply_placeholders()
@@ -590,54 +704,62 @@ class _ViewerPanel(TranslatableMixin, QWidget):
 
     def _build_layout(self) -> None:
         root = QVBoxLayout(self)
-        connect_group = self._tr(QGroupBox(), "rd_viewer_config_group")
-        grid = QVBoxLayout()
 
-        host_id_row = QHBoxLayout()
-        host_id_row.addWidget(self._tr(QLabel(), "rd_host_id_label"))
-        host_id_row.addWidget(self._host_id, stretch=1)
-        grid.addLayout(host_id_row)
+        # === Connection card ===
+        card = self._tr(QGroupBox(), "rd_viewer_card_group")
+        card.setStyleSheet("QGroupBox { font-weight: bold; }")
+        card_layout = QVBoxLayout()
 
-        host_row = QHBoxLayout()
-        host_row.addWidget(self._tr(QLabel(), "rd_bind_label"))
-        host_row.addWidget(self._host_field, stretch=1)
-        host_row.addWidget(self._tr(QLabel(), "rd_port_label"))
-        host_row.addWidget(self._port)
-        grid.addLayout(host_row)
+        id_row = QHBoxLayout()
+        id_row.addWidget(self._tr(QLabel(), "rd_host_id_label"))
+        id_row.addWidget(self._host_id, stretch=1)
+        id_row.addWidget(self._badge)
+        card_layout.addLayout(id_row)
+
+        addr_row = QHBoxLayout()
+        addr_row.addWidget(self._tr(QLabel(), "rd_bind_label"))
+        addr_row.addWidget(self._host_field, stretch=1)
+        addr_row.addWidget(self._tr(QLabel(), "rd_port_label"))
+        addr_row.addWidget(self._port)
+        addr_row.addWidget(self._tr(QLabel(), "rd_transport_label"))
+        addr_row.addWidget(self._transport)
+        card_layout.addLayout(addr_row)
 
         token_row = QHBoxLayout()
         token_row.addWidget(self._tr(QLabel(), "rd_token_label"))
         token_row.addWidget(self._token, stretch=1)
-        grid.addLayout(token_row)
+        card_layout.addLayout(token_row)
 
-        transport_row = QHBoxLayout()
-        transport_row.addWidget(self._tr(QLabel(), "rd_transport_label"))
-        transport_row.addWidget(self._transport)
-        transport_row.addWidget(self._tr(self._tls_insecure,
-                                         "rd_tls_insecure"))
-        transport_row.addStretch()
-        grid.addLayout(transport_row)
+        card.setLayout(card_layout)
+        root.addWidget(card)
 
-        feature_row = QHBoxLayout()
-        feature_row.addWidget(self._tr(self._enable_audio,
-                                       "rd_viewer_audio_play"))
-        feature_row.addStretch()
-        grid.addLayout(feature_row)
+        # === Advanced (collapsible) ===
+        advanced = _CollapsibleSection()
+        self._tr(advanced, "rd_advanced_group", setter="setTitle")
+        adv_layout = QVBoxLayout()
+        adv_layout.addWidget(self._tr(self._tls_insecure, "rd_tls_insecure"))
+        adv_layout.addWidget(self._tr(self._enable_audio,
+                                      "rd_viewer_audio_play"))
+        advanced.set_body_layout(adv_layout)
+        root.addWidget(advanced)
 
-        connect_group.setLayout(grid)
-        root.addWidget(connect_group)
-
+        # === Connect / Disconnect ===
         btn_row = QHBoxLayout()
         self._connect_btn = self._tr(QPushButton(), "rd_viewer_connect")
+        self._connect_btn.setMinimumHeight(36)
+        self._connect_btn.setStyleSheet("font-weight: bold;")
         self._connect_btn.clicked.connect(self._connect)
         self._disconnect_btn = self._tr(QPushButton(), "rd_viewer_disconnect")
+        self._disconnect_btn.setMinimumHeight(36)
         self._disconnect_btn.clicked.connect(self._disconnect)
-        btn_row.addWidget(self._connect_btn)
-        btn_row.addWidget(self._disconnect_btn)
-        btn_row.addStretch()
+        btn_row.addWidget(self._connect_btn, stretch=2)
+        btn_row.addWidget(self._disconnect_btn, stretch=1)
         root.addLayout(btn_row)
 
-        action_row = QHBoxLayout()
+        # === Live actions (only visible while connected) ===
+        action_row_widget = QWidget()
+        action_row = QHBoxLayout(action_row_widget)
+        action_row.setContentsMargins(0, 0, 0, 0)
         push_clip_btn = self._tr(QPushButton(), "rd_viewer_push_clipboard")
         push_clip_btn.clicked.connect(self._push_clipboard_to_host)
         send_file_btn = self._tr(QPushButton(), "rd_viewer_send_file")
@@ -645,8 +767,11 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         action_row.addWidget(push_clip_btn)
         action_row.addWidget(send_file_btn)
         action_row.addStretch()
-        root.addLayout(action_row)
+        action_row_widget.setVisible(False)
+        self._action_row = action_row_widget
+        root.addWidget(action_row_widget)
 
+        # === Frame display + progress ===
         root.addWidget(self._display, stretch=1)
         root.addWidget(self._progress_label)
         root.addWidget(self._progress_bar)
@@ -773,10 +898,13 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._refresh_status()
 
     def _refresh_status(self) -> None:
-        if self._connected and registry.viewer_status()["connected"]:
-            self._status.setText(_t("rd_viewer_status_connected"))
+        live = self._connected and registry.viewer_status()["connected"]
+        if live:
+            self._badge.set_state("live", _t("rd_badge_live"))
         else:
-            self._status.setText(_t("rd_viewer_status_idle"))
+            self._badge.set_state("idle", _t("rd_badge_idle"))
+        if self._action_row is not None:
+            self._action_row.setVisible(live)
 
     # --- slot handlers (run on GUI thread) -----------------------------
 

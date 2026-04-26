@@ -396,6 +396,20 @@ traditional_chinese_word_dict = {
     "rd_host_status_running": "運行中 port {port} — {n} 個 viewer",
     "rd_host_status_stopped": "Host 已停止",
     "rd_host_preview_label": "預覽（viewer 看到的畫面）：",
+    "rd_host_card_group": "連線",
+    "rd_viewer_card_group": "連線到遠端 Host",
+    "rd_host_basics_group": "連線設定",
+    "rd_advanced_group": "進階",
+    "rd_host_copy_share": "複製分享資訊",
+    "rd_host_copy_share_unavailable": "請先啟動 Host 才能分享。",
+    "rd_host_copy_share_confirm": (
+        "複製會把位址、port、Host ID 跟 TOKEN 一起放到剪貼簿。"
+        "貼出去的對象等同取得本機完整控制權，確定？"
+    ),
+    "rd_badge_running": "RUNNING · :{port} · {n} 個 viewer",
+    "rd_badge_stopped": "STOPPED",
+    "rd_badge_idle": "尚未連線",
+    "rd_badge_live": "連線中",
     "rd_host_id_group": "Host ID（給遠端的人）",
     "rd_host_id_label": "Host ID：",
     "rd_host_id_copy": "複製",

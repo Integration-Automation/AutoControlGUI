@@ -395,6 +395,20 @@ simplified_chinese_word_dict = {
     "rd_host_status_running": "运行中 端口 {port} — {n} 个 viewer",
     "rd_host_status_stopped": "Host 已停止",
     "rd_host_preview_label": "预览（viewer 看到的画面）：",
+    "rd_host_card_group": "连线",
+    "rd_viewer_card_group": "连接到远程 Host",
+    "rd_host_basics_group": "连接设置",
+    "rd_advanced_group": "高级",
+    "rd_host_copy_share": "复制分享信息",
+    "rd_host_copy_share_unavailable": "请先启动 Host 再分享。",
+    "rd_host_copy_share_confirm": (
+        "复制会把地址、端口、Host ID 与 TOKEN 一起放到剪贴板。"
+        "粘贴出去的对象等同取得本机完整控制权，确定?"
+    ),
+    "rd_badge_running": "RUNNING · :{port} · {n} 个 viewer",
+    "rd_badge_stopped": "STOPPED",
+    "rd_badge_idle": "未连接",
+    "rd_badge_live": "已连接",
     "rd_host_id_group": "Host ID（给远程的人）",
     "rd_host_id_label": "Host ID:",
     "rd_host_id_copy": "复制",

@@ -401,6 +401,21 @@ japanese_word_dict = {
     "rd_host_status_running": "稼働中 ポート {port} — ビューア {n} 名",
     "rd_host_status_stopped": "ホストは停止中",
     "rd_host_preview_label": "プレビュー（ビューアの表示）:",
+    "rd_host_card_group": "接続",
+    "rd_viewer_card_group": "リモートホストへ接続",
+    "rd_host_basics_group": "接続設定",
+    "rd_advanced_group": "詳細設定",
+    "rd_host_copy_share": "共有情報をコピー",
+    "rd_host_copy_share_unavailable": "ホストを起動してから共有してください。",
+    "rd_host_copy_share_confirm": (
+        "コピーするとアドレス・ポート・ホスト ID・トークンを"
+        "クリップボードに置きます。貼り付けた相手はこのマシンを"
+        "完全に操作できるようになります。続けますか?"
+    ),
+    "rd_badge_running": "RUNNING · :{port} · ビューア {n} 名",
+    "rd_badge_stopped": "STOPPED",
+    "rd_badge_idle": "未接続",
+    "rd_badge_live": "接続中",
     "rd_host_id_group": "ホスト ID（ビューアに伝える）",
     "rd_host_id_label": "ホスト ID:",
     "rd_host_id_copy": "コピー",

@@ -401,6 +401,21 @@ english_word_dict = {
     "rd_host_status_running": "Running on port {port} — {n} viewer(s)",
     "rd_host_status_stopped": "Host is stopped",
     "rd_host_preview_label": "Preview (what viewers see):",
+    "rd_host_card_group": "Connection",
+    "rd_viewer_card_group": "Connect to a remote host",
+    "rd_host_basics_group": "Connection settings",
+    "rd_advanced_group": "Advanced",
+    "rd_host_copy_share": "Copy share text",
+    "rd_host_copy_share_unavailable": "Start the host first to share its details.",
+    "rd_host_copy_share_confirm": (
+        "Copying will place the address, port, host ID and TOKEN onto your "
+        "clipboard. Anyone you paste this to gains full control of this "
+        "machine. Continue?"
+    ),
+    "rd_badge_running": "RUNNING · :{port} · {n} viewer(s)",
+    "rd_badge_stopped": "STOPPED",
+    "rd_badge_idle": "NOT CONNECTED",
+    "rd_badge_live": "LIVE",
     "rd_host_id_group": "Host ID (share with viewers)",
     "rd_host_id_label": "Host ID:",
     "rd_host_id_copy": "Copy",
