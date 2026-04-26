@@ -23,6 +23,10 @@ from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue,
 )
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
+from je_auto_control.utils.llm.planner import (
+    plan_actions as llm_plan_actions,
+    run_from_description as llm_run_from_description,
+)
 from je_auto_control.utils.ocr.ocr_engine import (
     click_text as ocr_click_text,
     find_text_regex as ocr_find_text_regex,
@@ -95,6 +99,34 @@ def _vlm_locate_as_list(description: str,
         description, screen_region=screen_region, model=model,
     )
     return None if coords is None else [coords[0], coords[1]]
+
+
+def _llm_plan_for_executor(description: str,
+                           examples: Optional[list] = None,
+                           model: Optional[str] = None,
+                           max_tokens: int = 2048) -> list:
+    """Executor adapter: plan without executing, using current command set."""
+    return llm_plan_actions(
+        description,
+        known_commands=executor.known_commands(),
+        examples=examples,
+        model=model,
+        max_tokens=int(max_tokens),
+    )
+
+
+def _llm_run_for_executor(description: str,
+                          examples: Optional[list] = None,
+                          model: Optional[str] = None,
+                          max_tokens: int = 2048) -> Dict[str, Any]:
+    """Executor adapter: plan and execute against the global executor."""
+    return llm_run_from_description(
+        description,
+        executor=executor,
+        examples=examples,
+        model=model,
+        max_tokens=int(max_tokens),
+    )
 
 
 def _ocr_read_region_as_dicts(region: Optional[List[int]] = None,
@@ -260,6 +292,10 @@ class Executor:
             # MCP server (Model Context Protocol stdio bridge)
             "AC_start_mcp_server": start_mcp_stdio_server,
             "AC_start_mcp_http_server": start_mcp_http_server,
+
+            # LLM action planner
+            "AC_llm_plan": _llm_plan_for_executor,
+            "AC_llm_run": _llm_run_for_executor,
         }
 
     def known_commands(self) -> set:
