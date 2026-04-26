@@ -23,6 +23,9 @@
   - [Accessibility 元件搜索](#accessibility-元件搜索)
   - [AI 元件定位（VLM）](#ai-元件定位vlm)
   - [OCR 屏幕文字识别](#ocr-屏幕文字识别)
+  - [LLM 动作规划器](#llm-动作规划器)
+  - [运行期变量与流程控制](#运行期变量与流程控制)
+  - [远程桌面](#远程桌面)
   - [剪贴板](#剪贴板)
   - [截图](#截图)
   - [动作录制与回放](#动作录制与回放)
@@ -56,7 +59,10 @@
 - **图像识别** — 使用 OpenCV 模板匹配在屏幕上定位 UI 元素，支持可配置的检测阈值
 - **Accessibility 元件搜索** — 通过操作系统无障碍树（Windows UIA / macOS AX）按名称/角色定位按钮、菜单、控件
 - **AI 元件定位（VLM）** — 用自然语言描述 UI 元素，由视觉语言模型（Anthropic / OpenAI）返回屏幕坐标
-- **OCR** — 使用 Tesseract 从屏幕提取文字，可搜索、点击或等待文字出现
+- **OCR** — 使用 Tesseract 从屏幕提取文字，可搜索、点击或等待文字出现；支持 regex 搜索与整块区域 dump
+- **LLM 动作规划器** — 用 Claude 把自然语言描述翻译成验证过的 `AC_*` 动作清单
+- **运行期变量与流程控制** — 执行时 `${var}` 替换，加上 `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` 让脚本数据驱动
+- **远程桌面** — 用 token 认证的 TCP 协议串流本机画面并接收输入，**或** 连接到他机观看与控制（host + viewer GUI 内置）。可选 TLS（HTTPS 级加密）、WebSocket 传输（``ws://`` + ``wss://``，穿墙／浏览器友好）、持久化 9 位数 Host ID、host→viewer 音频串流、双向剪贴板同步（文字 + 图片）、分块文件传输（拖放 + 进度条；任意目的路径；无大小上限）
 - **剪贴板** — 于 Windows / macOS / Linux 读写系统剪贴板文本
 - **截图与屏幕录制** — 捕获全屏或指定区域为图片，录制屏幕为视频（AVI/MP4）
 - **动作录制与回放** — 录制鼠标/键盘事件并重新播放
@@ -402,6 +408,155 @@ ac.wait_for_text("加载完成", timeout=15.0)
 ac.set_tesseract_cmd(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
 ```
 
+把区域（或整屏）内所有识别到的文字 dump 出来，或用 regex 搜索变动内容：
+
+```python
+import je_auto_control as ac
+
+# TextMatch 列表，含文字、边界框、置信度
+for match in ac.read_text_in_region(region=[0, 0, 800, 600]):
+    print(match.text, match.center, match.confidence)
+
+# Regex（接受字符串或 compiled re.Pattern）
+for match in ac.find_text_regex(r"Order#\d+"):
+    print(match.text, match.center)
+```
+
+GUI：**OCR Reader** 分页。
+
+### LLM 动作规划器
+
+把自然语言描述交给 LLM（默认 Anthropic Claude），翻译成验证过的 `AC_*` 动作清单。输出采用宽松解析（剥 code fence、从散文中抽出第一个 JSON array），再用 executor 同样的 schema 验证，所以结果可以直接喂给 `execute_action`：
+
+```python
+import je_auto_control as ac
+from je_auto_control.utils.executor.action_executor import executor
+
+actions = ac.plan_actions(
+    "点击 Submit 按钮，然后输入 'done' 并保存",
+    known_commands=executor.known_commands(),
+)
+executor.execute_action(actions)
+
+# 或者一行做完：
+ac.run_from_description("打开记事本并输入 hello", executor=executor)
+```
+
+| 变量 | 效果 |
+|---|---|
+| `ANTHROPIC_API_KEY` | 启用 Anthropic 后端 |
+| `AUTOCONTROL_LLM_BACKEND` | 强制指定 `anthropic` |
+| `AUTOCONTROL_LLM_MODEL` | 覆盖默认模型（如 `claude-opus-4-7`） |
+
+GUI：**LLM Planner** 分页 — 描述输入框、`QThread` 后台执行的 *Plan* 按钮、预览指令清单，以及 *Run plan* 按钮。
+
+### 运行期变量与流程控制
+
+executor 改成「每次调用」才解析 `${var}` placeholder（不会事先展平），所以嵌套的 `body` / `then` / `else` 列表会保留 placeholder，每次重复执行时重新绑定。配合新的变量修改命令，脚本可以数据驱动而不需要 Python 黏合：
+
+```json
+[
+    ["AC_set_var", {"name": "items", "value": ["alpha", "beta"]}],
+    ["AC_set_var", {"name": "i", "value": 0}],
+    ["AC_for_each", {
+        "items": "${items}", "as": "name",
+        "body": [
+            ["AC_inc_var", {"name": "i"}],
+            ["AC_if_var", {
+                "name": "i", "op": "ge", "value": 2,
+                "then": [["AC_break"]], "else": []
+            }]
+        ]
+    }]
+]
+```
+
+`AC_if_var` 比较运算符：`eq`、`ne`、`lt`、`le`、`gt`、`ge`、`contains`、`startswith`、`endswith`。GUI：**Variables** 分页 — 实时查看 `executor.variables`，支持单条设置、JSON 批量 seed、清空。
+
+### 远程桌面
+
+把本机画面串流给别人看 / 控制，**或** 观看并控制别人的机器。协议是 raw TCP 上的长度前缀框架（不引入额外依赖），先做一轮 HMAC-SHA256 challenge / response 认证；认证失败的 viewer 在看到任何画面前就被踢掉。JPEG frame 按照配置的 FPS / 质量产生，通过共享 latest-frame slot 广播给通过认证的 viewers，慢的 viewer 只会丢 frame 而不会卡其他人。Viewer 输入消息是 JSON，host 端用允许列表验证后才通过既有 wrapper 派发。
+
+```python
+# 被远程 — 启动 host 把 token + port 给对方
+from je_auto_control import RemoteDesktopHost
+host = RemoteDesktopHost(token="hunter2", bind="127.0.0.1",
+                          port=0, fps=10, quality=70)
+host.start()
+print("listening on", host.port, "viewers:", host.connected_clients)
+```
+
+```python
+# 控制他机 — 连接 viewer 并发送输入
+from je_auto_control import RemoteDesktopViewer
+viewer = RemoteDesktopViewer(host="10.0.0.5", port=51234, token="hunter2",
+                              on_frame=lambda jpeg: ...)
+viewer.connect()
+viewer.send_input({"action": "mouse_move", "x": 100, "y": 200})
+viewer.send_input({"action": "type", "text": "hello"})
+viewer.disconnect()
+```
+
+GUI：**Remote Desktop** 分页，内含两个子分页。
+
+- **Host**（被远程的本机）— Token 字段附 *生成* 按钮、bind 地址安全提示、启动 / 停止控制、实时刷新的 port + viewer 数量状态栏，以及 4fps 预览面板让被远程的人看到 viewer 看到的画面。
+- **Viewer**（控制他机）— 地址 / port / token 表单、*连接* / *断开*、自绘 frame display widget，会把 JPEG 等比缩放绘入。display 上的鼠标 / 滚轮 / 键盘事件会用最新 frame 的尺寸映射回原始远程屏幕的像素坐标，再用 `INPUT` 消息发回。
+
+> ⚠️ 取得 host:port 与 token 的人，等同拥有本机完整鼠标 / 键盘控制权。默认仅绑 `127.0.0.1`；要对外暴露请务必搭配 SSH tunnel 或 TLS 前端。Token 是唯一防线 — 请当作密码保管。
+
+**加密传输与替代协议**：传 `ssl_context` 给 `RemoteDesktopHost` 或 `RemoteDesktopViewer` 即套上 TLS。要穿墙／给浏览器接，用内置的 WebSocket 版本（无额外依赖），加 `ssl_context` 即 `wss://`：
+
+```python
+from je_auto_control import (
+    WebSocketDesktopHost, WebSocketDesktopViewer,
+)
+host = WebSocketDesktopHost(token="hunter2", ssl_context=server_ctx)
+viewer = WebSocketDesktopViewer(
+    host="example.com", port=443, token="hunter2",
+    ssl_context=client_ctx, expected_host_id="123456789",
+)
+```
+
+**持久化 Host ID**：每台 host 有稳定的 9 位数字 ID（存在 `~/.je_auto_control/remote_host_id`），在 `AUTH_OK` 中声明，viewer 通过 `expected_host_id` 验证：
+
+```python
+print(host.host_id)            # 例如 "123456789"
+viewer = RemoteDesktopViewer(
+    host=..., port=..., token=...,
+    expected_host_id="123456789",   # 不一致就抛 AuthenticationError
+)
+```
+
+**音频串流（host → viewer）**：可选 `sounddevice` 依赖；host 端 `enable_audio=True` 开启，viewer 端接 `AudioPlayer`（或自己的 callback）：
+
+```python
+host = RemoteDesktopHost(token="tok", enable_audio=True)
+
+from je_auto_control.utils.remote_desktop import AudioPlayer
+player = AudioPlayer(); player.start()
+viewer = RemoteDesktopViewer(host=..., on_audio=player.play)
+```
+
+**剪贴板同步（文字 + 图片，双向）**：明确调用，没有自动 polling 循环。图片剪贴板在 Windows（CF_DIB via ctypes）和 Linux（`xclip -t image/png`）支持；macOS get 走 Pillow ImageGrab、set 暂时需要 PyObjC。
+
+```python
+viewer.send_clipboard_text("hello")
+viewer.send_clipboard_image(open("logo.png", "rb").read())
+host.broadcast_clipboard_text("greetings")
+```
+
+**文件传输 + 进度**：双向、分块、目的路径任意、无大小上限；GUI viewer 还可以拖放：
+
+```python
+viewer.send_file(
+    "local.bin", "/tmp/uploaded.bin",
+    on_progress=lambda tid, done, total: print(done, total),
+)
+host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
+```
+
+> ⚠️ 路径无限制、大小无上限。任何拿到 token 的人都能把任意文件写到任意位置，也能塞满磁盘 — 必须等同信任 token 持有者，或自己继承 `FileReceiver` 在 `handle_begin` 内验证 dest_path。
+
 ### 剪贴板
 
 ```python
@@ -488,10 +643,13 @@ je_auto_control.execute_action([
 | 屏幕 | `AC_screen_size`, `AC_screenshot` |
 | Accessibility | `AC_a11y_list`, `AC_a11y_find`, `AC_a11y_click` |
 | VLM（AI 定位） | `AC_vlm_locate`, `AC_vlm_click` |
-| OCR | `AC_locate_text`, `AC_click_text`, `AC_wait_text` |
+| OCR | `AC_locate_text`, `AC_click_text`, `AC_wait_text`, `AC_read_text_in_region`, `AC_find_text_regex` |
+| LLM 规划器 | `AC_llm_plan`, `AC_llm_run` |
 | 剪贴板 | `AC_clipboard_get`, `AC_clipboard_set` |
 | 窗口 | `AC_list_windows`, `AC_focus_window`, `AC_wait_window`, `AC_close_window` |
-| 流程控制 | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_while_image`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry` |
+| 流程控制 | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_if_var`, `AC_while_image`, `AC_for_each`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry` |
+| 变量 | `AC_set_var`, `AC_get_var`, `AC_inc_var` |
+| 远程桌面 | `AC_start_remote_host`, `AC_stop_remote_host`, `AC_remote_host_status`, `AC_remote_connect`, `AC_remote_disconnect`, `AC_remote_viewer_status`, `AC_remote_send_input` |
 | 录制 | `AC_record`, `AC_stop_record`, `AC_set_record_enable` |
 | 报告 | `AC_generate_html`, `AC_generate_json`, `AC_generate_xml`, `AC_generate_html_report`, `AC_generate_json_report`, `AC_generate_xml_report` |
 | 执行记录 | `AC_history_list`, `AC_history_clear` |

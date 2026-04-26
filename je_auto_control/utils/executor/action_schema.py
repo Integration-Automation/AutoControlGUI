@@ -12,9 +12,11 @@ from je_auto_control.utils.exception.exceptions import AutoControlActionExceptio
 FLOW_BODY_KEYS = {
     "AC_if_image_found": ("then", "else"),
     "AC_if_pixel": ("then", "else"),
+    "AC_if_var": ("then", "else"),
     "AC_loop": ("body",),
     "AC_while_image": ("body",),
     "AC_retry": ("body",),
+    "AC_for_each": ("body",),
 }
 
 

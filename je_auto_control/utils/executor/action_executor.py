@@ -23,13 +23,25 @@ from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue,
 )
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
+from je_auto_control.utils.llm.planner import (
+    plan_actions as llm_plan_actions,
+    run_from_description as llm_run_from_description,
+)
+from je_auto_control.utils.remote_desktop.registry import (
+    registry as remote_desktop_registry,
+)
 from je_auto_control.utils.ocr.ocr_engine import (
     click_text as ocr_click_text,
+    find_text_regex as ocr_find_text_regex,
     locate_text_center as ocr_locate_text_center,
+    read_text_in_region as ocr_read_text_in_region,
     wait_for_text as ocr_wait_for_text,
 )
 from je_auto_control.utils.run_history.history_store import default_history_store
-from je_auto_control.utils.script_vars.interpolate import interpolate_actions
+from je_auto_control.utils.script_vars.interpolate import (
+    interpolate_actions, interpolate_value,
+)
+from je_auto_control.utils.script_vars.scope import VariableScope
 from je_auto_control.utils.generate_report.generate_html_report import generate_html, generate_html_report
 from je_auto_control.utils.generate_report.generate_json_report import generate_json, generate_json_report
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml, generate_xml_report
@@ -92,6 +104,112 @@ def _vlm_locate_as_list(description: str,
     return None if coords is None else [coords[0], coords[1]]
 
 
+def _remote_start_host(token: str,
+                       bind: str = "127.0.0.1",
+                       port: int = 0,
+                       fps: float = 10.0,
+                       quality: int = 70,
+                       region: Optional[List[int]] = None,
+                       max_clients: int = 4) -> Dict[str, Any]:
+    """Executor adapter: start the singleton remote-desktop host."""
+    return remote_desktop_registry.start_host(
+        token=token, bind=bind, port=int(port),
+        fps=float(fps), quality=int(quality),
+        region=region, max_clients=int(max_clients),
+    )
+
+
+def _remote_stop_host() -> Dict[str, Any]:
+    return remote_desktop_registry.stop_host()
+
+
+def _remote_host_status() -> Dict[str, Any]:
+    return remote_desktop_registry.host_status()
+
+
+def _remote_connect(host: str, port: int, token: str,
+                    timeout: float = 5.0) -> Dict[str, Any]:
+    """Executor adapter: connect the singleton viewer."""
+    return remote_desktop_registry.connect_viewer(
+        host=host, port=int(port), token=token, timeout=float(timeout),
+    )
+
+
+def _remote_disconnect() -> Dict[str, Any]:
+    return remote_desktop_registry.disconnect_viewer()
+
+
+def _remote_viewer_status() -> Dict[str, Any]:
+    return remote_desktop_registry.viewer_status()
+
+
+def _remote_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
+    return remote_desktop_registry.send_input(action)
+
+
+def _llm_plan_for_executor(description: str,
+                           examples: Optional[list] = None,
+                           model: Optional[str] = None,
+                           max_tokens: int = 2048) -> list:
+    """Executor adapter: plan without executing, using current command set."""
+    return llm_plan_actions(
+        description,
+        known_commands=executor.known_commands(),
+        examples=examples,
+        model=model,
+        max_tokens=int(max_tokens),
+    )
+
+
+def _llm_run_for_executor(description: str,
+                          examples: Optional[list] = None,
+                          model: Optional[str] = None,
+                          max_tokens: int = 2048) -> Dict[str, Any]:
+    """Executor adapter: plan and execute against the global executor."""
+    return llm_run_from_description(
+        description,
+        executor=executor,
+        examples=examples,
+        model=model,
+        max_tokens=int(max_tokens),
+    )
+
+
+def _ocr_read_region_as_dicts(region: Optional[List[int]] = None,
+                              lang: str = "eng",
+                              min_confidence: float = 60.0) -> List[dict]:
+    """Executor adapter: dump OCR hits in a region as JSON-friendly dicts."""
+    return [
+        {
+            "text": match.text, "x": match.x, "y": match.y,
+            "width": match.width, "height": match.height,
+            "confidence": match.confidence,
+        }
+        for match in ocr_read_text_in_region(
+            region=region, lang=lang, min_confidence=float(min_confidence),
+        )
+    ]
+
+
+def _ocr_find_regex_as_dicts(pattern: str,
+                             lang: str = "eng",
+                             region: Optional[List[int]] = None,
+                             min_confidence: float = 60.0,
+                             flags: int = 0) -> List[dict]:
+    """Executor adapter: regex OCR search returning JSON-friendly dicts."""
+    return [
+        {
+            "text": match.text, "x": match.x, "y": match.y,
+            "width": match.width, "height": match.height,
+            "confidence": match.confidence,
+        }
+        for match in ocr_find_text_regex(
+            pattern, lang=lang, region=region,
+            min_confidence=float(min_confidence), flags=int(flags),
+        )
+    ]
+
+
 def _history_list_as_dicts(limit: int = 100,
                            source_type: Optional[str] = None) -> List[dict]:
     """Executor adapter: list run history as plain dicts (JSON-friendly)."""
@@ -120,8 +238,13 @@ class Executor:
     - 支援流程控制指令 (AC_loop, AC_if_image_found 等)
     """
 
+    # Args keys that hold nested action lists; runtime interpolation must
+    # leave them untouched so each iteration re-reads current variable state.
+    _DEFERRED_ARG_KEYS: frozenset = frozenset({"body", "then", "else"})
+
     def __init__(self):
         self._block_commands = BLOCK_COMMANDS
+        self.variables = VariableScope()
         # 事件字典，對應字串名稱到函式
         self.event_dict: dict = {
             # Mouse 滑鼠相關
@@ -186,6 +309,8 @@ class Executor:
             "AC_locate_text": ocr_locate_text_center,
             "AC_wait_text": ocr_wait_for_text,
             "AC_click_text": ocr_click_text,
+            "AC_read_text_in_region": _ocr_read_region_as_dicts,
+            "AC_find_text_regex": _ocr_find_regex_as_dicts,
 
             # Window management
             "AC_list_windows": list_windows,
@@ -213,11 +338,47 @@ class Executor:
             # MCP server (Model Context Protocol stdio bridge)
             "AC_start_mcp_server": start_mcp_stdio_server,
             "AC_start_mcp_http_server": start_mcp_http_server,
+
+            # LLM action planner
+            "AC_llm_plan": _llm_plan_for_executor,
+            "AC_llm_run": _llm_run_for_executor,
+
+            # Remote desktop host (this machine streams to others)
+            "AC_start_remote_host": _remote_start_host,
+            "AC_stop_remote_host": _remote_stop_host,
+            "AC_remote_host_status": _remote_host_status,
+
+            # Remote desktop viewer (this machine controls others)
+            "AC_remote_connect": _remote_connect,
+            "AC_remote_disconnect": _remote_disconnect,
+            "AC_remote_viewer_status": _remote_viewer_status,
+            "AC_remote_send_input": _remote_send_input,
         }
 
     def known_commands(self) -> set:
         """Return the set of all command names the executor recognises."""
         return set(self.event_dict.keys()) | set(self._block_commands.keys())
+
+    def _resolve_runtime_args(self, args: Any) -> Any:
+        """Interpolate ``${var}`` placeholders against the current scope.
+
+        Keys inside :attr:`_DEFERRED_ARG_KEYS` (``body``/``then``/``else``)
+        are left as-is so nested action lists keep their placeholders for
+        per-iteration evaluation.
+        """
+        if not self.variables:
+            return args
+        if isinstance(args, dict):
+            resolved: Dict[str, Any] = {}
+            for key, value in args.items():
+                if key in self._DEFERRED_ARG_KEYS:
+                    resolved[key] = value
+                else:
+                    resolved[key] = interpolate_value(value, self.variables)
+            return resolved
+        if isinstance(args, list):
+            return [interpolate_value(item, self.variables) for item in args]
+        return args
 
     def _execute_event(self, action: list) -> Any:
         """
@@ -232,16 +393,17 @@ class Executor:
                 raise AutoControlActionException(
                     f"{name} requires a dict of arguments"
                 )
-            return block_handler(self, args)
+            return block_handler(self, self._resolve_runtime_args(args))
 
         event = self.event_dict.get(name)
         if event is None:
             raise AutoControlActionException(f"Unknown action: {name}")
 
         if len(action) == 2:
-            if isinstance(action[1], dict):
-                return event(**action[1])
-            return event(*action[1])
+            resolved = self._resolve_runtime_args(action[1])
+            if isinstance(resolved, dict):
+                return event(**resolved)
+            return event(*resolved)
         if len(action) == 1:
             return event()
         raise AutoControlActionException(cant_execute_action_error_message + " " + str(action))
@@ -354,6 +516,12 @@ def execute_files(execute_files_list: list) -> List[Dict[str, str]]:
 
 def execute_action_with_vars(action_list: list, variables: dict
                              ) -> Dict[str, str]:
-    """Interpolate ``${name}`` placeholders with ``variables`` and execute."""
+    """Interpolate ``${name}`` placeholders with ``variables`` and execute.
+
+    The same mapping seeds the runtime variable scope so flow-control
+    commands (``AC_set_var``/``AC_if_var``/...) can read and mutate the
+    same values during execution.
+    """
     resolved = interpolate_actions(action_list, variables)
+    executor.variables.update_many(variables)
     return executor.execute_action(resolved)

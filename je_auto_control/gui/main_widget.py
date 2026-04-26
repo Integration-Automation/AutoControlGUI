@@ -16,13 +16,17 @@ from je_auto_control.gui._report_tab import ReportTabMixin
 from je_auto_control.gui.hotkeys_tab import HotkeysTab
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
 from je_auto_control.gui.live_hud_tab import LiveHUDTab
+from je_auto_control.gui.llm_planner_tab import LLMPlannerTab
+from je_auto_control.gui.ocr_tab import OCRReaderTab
 from je_auto_control.gui.plugins_tab import PluginsTab
 from je_auto_control.gui.recording_editor_tab import RecordingEditorTab
+from je_auto_control.gui.remote_desktop_tab import RemoteDesktopTab
 from je_auto_control.gui.run_history_tab import RunHistoryTab
 from je_auto_control.gui.scheduler_tab import SchedulerTab
 from je_auto_control.gui.script_builder import ScriptBuilderTab
 from je_auto_control.gui.selector import crop_template_to_file, open_region_selector
 from je_auto_control.gui.triggers_tab import TriggersTab
+from je_auto_control.gui.variables_tab import VariablesTab
 from je_auto_control.gui.vlm_tab import VLMTab
 from je_auto_control.gui.window_tab import WindowManagerTab
 from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot, get_pixel
@@ -90,6 +94,10 @@ class AutoControlGUIWidget(
         self._add_tab("run_history", "tab_run_history", RunHistoryTab())
         self._add_tab("accessibility", "tab_accessibility", AccessibilityTab())
         self._add_tab("vlm", "tab_vlm", VLMTab())
+        self._add_tab("ocr_reader", "tab_ocr_reader", OCRReaderTab())
+        self._add_tab("variables", "tab_variables", VariablesTab())
+        self._add_tab("llm_planner", "tab_llm_planner", LLMPlannerTab())
+        self._add_tab("remote_desktop", "tab_remote_desktop", RemoteDesktopTab())
         self._add_tab("plugins", "tab_plugins", PluginsTab())
         layout.addWidget(self.tabs)
 

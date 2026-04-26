@@ -282,3 +282,350 @@ Action-JSON 指令：``AC_vlm_locate``、``AC_vlm_click``。GUI：
 截圖檔存於 ``~/.je_auto_control/artifacts/``，相關紀錄被 prune 或整個
 歷史被清除時會一併刪除。GUI：**Run History** 分頁 — 雙擊截圖欄位可開
 啟 OS 預覽。
+
+
+OCR — 區域 dump 與 regex 搜尋
+=============================
+
+原本 OCR 模組只支援字串／精確比對，新增兩個 API 補強其他常見場景::
+
+   import je_auto_control as ac
+
+   # 把區域（或整個螢幕）內辨識到的所有文字傾倒出來
+   for match in ac.read_text_in_region(region=[0, 0, 800, 600]):
+       print(match.text, match.center, match.confidence)
+
+   # Regex 搜尋 — 適合內容會變的文字（訂單編號、錯誤代碼）
+   for match in ac.find_text_regex(r"Order#\d+"):
+       print(match.text, match.center)
+
+   # 也接受 compiled pattern 與 flags
+   import re
+   ac.find_text_regex(re.compile(r"foo", re.IGNORECASE))
+
+Action-JSON 指令::
+
+   [["AC_read_text_in_region", {"region": [0, 0, 800, 600]}]]
+   [["AC_find_text_regex", {"pattern": "Order#\\d+"}]]
+
+GUI：**OCR Reader** 分頁。可用既有的選取 overlay 圈出區域（留空則整螢幕），
+設定語言／最低信心度後按 *抓取區域全部文字* 或 *用 regex 搜尋*。結果
+以 JSON 列出，含文字、邊界框、信心度。
+
+
+執行期變數與資料驅動流程控制
+============================
+
+過去 :mod:`script_vars.interpolate` 只能在執行前一次性把 ``${var}``
+取代成靜態 mapping 中的值，腳本沒辦法在執行時修改狀態。``VariableScope``
+是 executor 暴露給流程控制指令的執行期 mapping，讓它們能讀寫與
+runtime interpolator 相同的容器。
+
+executor 現在改成「每次呼叫」才解析 ``${var}`` placeholder（不會
+事先攤平），所以巢狀的 ``body`` / ``then`` / ``else`` 清單會保留
+placeholder，每次重複執行時重新繫結 — 因此 ``AC_for_each`` 走訪
+list 時，body 內看到的就是當前的元素。
+
+::
+
+   import je_auto_control as ac
+   from je_auto_control.utils.executor.action_executor import executor
+
+   executor.execute_action([
+       ["AC_set_var", {"name": "items", "value": ["alpha", "beta"]}],
+       ["AC_set_var", {"name": "i", "value": 0}],
+       ["AC_for_each", {
+           "items": "${items}", "as": "name",
+           "body": [
+               ["AC_inc_var", {"name": "i"}],
+               ["AC_if_var", {
+                   "name": "i", "op": "ge", "value": 2,
+                   "then": [["AC_break"]], "else": [],
+               }],
+           ],
+       }],
+   ])
+
+``AC_if_var`` 的比較運算子：``eq``、``ne``、``lt``、``le``、``gt``、
+``ge``、``contains``、``startswith``、``endswith``。
+
+Action-JSON 指令：``AC_set_var``、``AC_get_var``、``AC_inc_var``、
+``AC_if_var``、``AC_for_each``。
+
+GUI：**Variables** 分頁 — 即時檢視 ``executor.variables``，可單筆設
+定、JSON 整批 seed、清空，反映 ``AC_set_var`` / ``AC_for_each`` 在執
+行期的變動。
+
+
+LLM 動作規劃器
+==============
+
+把一段中／英文描述交給 LLM（預設 Anthropic Claude），生成驗證過的
+``AC_*`` 動作清單。輸出採寬鬆解析（會剝 code fence、從散文中抽出
+第一個 JSON array），再用 executor 同樣的 schema 驗證，所以結果可
+以直接餵給 ``execute_action``::
+
+   import je_auto_control as ac
+   from je_auto_control.utils.executor.action_executor import executor
+
+   actions = ac.plan_actions(
+       "點擊 Submit 按鈕，然後輸入 'done' 並儲存",
+       known_commands=executor.known_commands(),
+   )
+   executor.execute_action(actions)
+
+   # 或者一行做完：
+   ac.run_from_description("開記事本，輸入 hello", executor=executor)
+
+後端選擇對齊 :mod:`vision.backends`：
+
+- Anthropic（``anthropic`` SDK，``ANTHROPIC_API_KEY``）— 預設
+- 用 ``AUTOCONTROL_LLM_BACKEND``、``AUTOCONTROL_LLM_MODEL`` 覆寫
+
+Action-JSON 指令：``AC_llm_plan``、``AC_llm_run``。
+
+GUI：**LLM Planner** 分頁。描述輸入框、``QThread`` 背景執行的 *Plan*
+按鈕、預覽指令清單、以及 *Run plan* 按鈕 — 長時間呼叫不會卡 UI。
+
+
+遠端桌面（Host + Viewer）
+=========================
+
+把本機畫面串流給別人看／控制，**或** 觀看並控制別人的機器 — 雙向都有
+headless API 與 GUI 分頁。
+
+協定是 raw TCP 上的長度前綴框架（沒有額外相依），先做一輪 HMAC-SHA256
+challenge/response 認證；認證失敗的 viewer 在看到任何畫面前就被踢掉。
+JPEG frame 依設定的 FPS／品質產生，透過共享 latest-frame slot 廣播給
+通過認證的 viewers，慢的 viewer 只會掉 frame 而不會卡其他人。Viewer
+輸入訊息是 JSON，host 端用允許清單驗證後才透過既有 mouse／keyboard
+wrapper 派送。
+
+Headless host（被別人遠端）::
+
+   from je_auto_control import RemoteDesktopHost
+
+   host = RemoteDesktopHost(
+       token="hunter2",          # 共用密鑰（HMAC key）
+       bind="127.0.0.1",         # 預設值；要對外請走 SSH tunnel
+                                 # 或可信的 VPN
+       port=0,                   # 0 = 自動指派
+       fps=10, quality=70,
+   )
+   host.start()
+   print("listening on", host.port, "viewers:", host.connected_clients)
+   # ...
+   host.stop()
+
+Headless viewer（控制別人）::
+
+   from je_auto_control import RemoteDesktopViewer
+
+   viewer = RemoteDesktopViewer(
+       host="10.0.0.5", port=51234, token="hunter2",
+       on_frame=lambda jpeg_bytes: ...,   # 顯示或存檔
+   )
+   viewer.connect()
+   viewer.send_input({"action": "mouse_move", "x": 100, "y": 200})
+   viewer.send_input({"action": "type", "text": "hello"})
+   viewer.disconnect()
+
+輸入訊息允許清單（host 派送前驗證）：
+
+- ``mouse_move`` ``{x, y}``
+- ``mouse_click`` ``{x?, y?, button}``
+- ``mouse_press`` / ``mouse_release`` ``{button}``
+- ``mouse_scroll`` ``{x?, y?, amount}``
+- ``key_press`` / ``key_release`` ``{keycode}``
+- ``type`` ``{text}``
+- ``ping``
+
+Action-JSON 指令（使用 :mod:`utils.remote_desktop.registry` 的單例）::
+
+   AC_start_remote_host       # token, bind, port, fps, quality, region
+   AC_stop_remote_host
+   AC_remote_host_status      # → {running, port, connected_clients}
+
+   AC_remote_connect          # host, port, token, timeout
+   AC_remote_disconnect
+   AC_remote_viewer_status    # → {connected}
+   AC_remote_send_input       # action: {...}
+
+GUI：**Remote Desktop** 分頁，內含兩個子分頁。
+
+- **Host**（被遠端的本機）— Token 欄位附 *產生* 按鈕（24 bytes
+  URL-safe 隨機字串）、bind 位址安全提示、啟動／停止控制、即時刷新
+  的 port + viewer 數量狀態列，以及底部 4fps 的預覽面板，讓被遠端
+  的人看到 viewer 看到的畫面。
+- **Viewer**（控制別人）— 位址／port／token 表單、*連線* / *中斷
+  連線*，以及自繪的 frame display widget，會把 JPEG 等比縮放繪入。
+  display 上的滑鼠／滾輪／鍵盤事件，會用最新 frame 的尺寸把 widget
+  座標映射回原始遠端螢幕的像素座標，再用 ``INPUT`` 訊息送回。
+
+.. warning::
+   取得 host:port 與 token 的人，等同擁有本機完整滑鼠／鍵盤控制權。
+   預設只綁 ``127.0.0.1``；要對外暴露請務必搭配 SSH tunnel 或 TLS
+   前端。Token 是唯一防線 — 請當作密碼來保管。
+
+
+遠端桌面 — 加密傳輸、音訊、剪貼簿、檔案傳輸
+============================================
+
+Host ID 握手
+------------
+
+每台 host 現在都有一個穩定的 9 位數字 ID，存在
+``~/.je_auto_control/remote_host_id``，重啟後仍是同一個。ID 在
+``AUTH_OK`` 訊息內回傳（只有通過認證的 viewer 才看得到），viewer 可
+以指定 ``expected_host_id`` 驗證，避免「同樣位址但是別的程序」的
+冒充攻擊::
+
+   from je_auto_control import RemoteDesktopHost, RemoteDesktopViewer
+   host = RemoteDesktopHost(token="tok")
+   print(host.host_id)        # 例如 "123456789"
+
+   viewer = RemoteDesktopViewer(
+       host="10.0.0.5", port=51234, token="tok",
+       expected_host_id="123456789",
+   )
+   viewer.connect()           # 不一致就拋 AuthenticationError
+
+另外提供 ``format_host_id("123456789") == "123 456 789"`` 與
+``parse_host_id("123 456 789") == "123456789"`` 助手。GUI 會顯示分組
+過的 ID 並有 *複製* 按鈕；viewer 端的輸入欄接受常見的空白／破折號。
+
+TLS
+---
+
+``RemoteDesktopHost`` 與 ``RemoteDesktopViewer`` 都接受
+``ssl.SSLContext`` 參數。設定後，host 會把每條接受的連線在伺服器側
+套上 TLS；viewer 在客戶端側套上。失敗的握手會被記錄並關閉，不會
+進到 connected client 計數::
+
+   import ssl
+   ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+   ctx.load_cert_chain("cert.pem", "key.pem")
+   host = RemoteDesktopHost(token="tok", ssl_context=ctx)
+
+   client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+   client_ctx.load_verify_locations("cert.pem")
+   viewer = RemoteDesktopViewer(host=..., ssl_context=client_ctx)
+
+自簽憑證 loopback 測試時，把 ``ctx.check_hostname = False`` 與
+``ctx.verify_mode = ssl.CERT_NONE`` 設在 client context 上。GUI host
+分頁有 TLS 憑證／私鑰的檔案選擇器；viewer 分頁有 *忽略憑證驗證* 的
+checkbox 配自簽用。
+
+WebSocket 傳輸
+--------------
+
+新增 ``WebSocketDesktopHost`` / ``WebSocketDesktopViewer``，用 RFC
+6455 BINARY frame 傳同樣的 typed message。實作放在 in-tree（沒有
+額外相依）；每個 application message 對應一個完整的 WS frame，所以
+不需要重組機制。同一個 ``ssl_context`` 也是 ``wss://`` 的開關::
+
+   from je_auto_control import (
+       WebSocketDesktopHost, WebSocketDesktopViewer,
+   )
+   host = WebSocketDesktopHost(token="tok", ssl_context=ctx)   # wss://
+   viewer = WebSocketDesktopViewer(
+       host="example.com", port=443, token="tok",
+       ssl_context=client_ctx, path="/rd",
+   )
+
+為什麼用 WS：穿牆友善、容易接反向代理、跟瀏覽器 viewer 相容。GUI
+viewer 的傳輸下拉（*TCP* / *WebSocket* / *TLS* / *WSS*）會自動選對
+應的 class。
+
+音訊串流
+--------
+
+新增 ``AUDIO`` 訊息類型，攜帶 16-bit signed PCM 區塊（預設 16 kHz
+mono，每塊 50 ms / 1600 bytes）。``sounddevice`` 為 optional 相依，
+延遲載入；沒裝就 host 端音訊回報停用且整個 host 仍能運作::
+
+   host = RemoteDesktopHost(
+       token="tok", enable_audio=True, audio_device=None,    # 預設 mic
+       audio_sample_rate=16000, audio_channels=1,
+   )
+
+   from je_auto_control.utils.remote_desktop import AudioPlayer
+   player = AudioPlayer(); player.start()
+   viewer = RemoteDesktopViewer(host=..., on_audio=player.play)
+
+Host 把每塊抓到的音訊透過每個 client 一個有上限的 deque（~2.5 秒緩
+衝）廣播出去；慢的 viewer 只會丟掉舊的音訊塊，不會卡到大家的擷取
+執行緒。如果要抓系統聲音（而非 mic），用 device index 指定 — Win
+是 WASAPI loopback、Linux 是 PulseAudio monitor source、macOS 要
+BlackHole 之類。GUI：Host 分頁的 *串流系統音訊*，Viewer 分頁的 *播
+放接收的音訊*。
+
+剪貼簿同步（文字 + 圖片）
+-------------------------
+
+新增 ``CLIPBOARD`` 訊息類型，payload 是 JSON envelope，方便日後加新
+類別不用動到 framing：
+
+* ``{"kind": "text", "text": "..."}``
+* ``{"kind": "image", "format": "png", "data_b64": "..."}``
+
+``utils/clipboard/clipboard.py`` 補上 ``get_clipboard_image`` /
+``set_clipboard_image``；Windows 用 ctypes 寫 CF_DIB（Pillow 把 PNG
+轉成 BMP 再去掉 14 byte file header 變成 DIB），Linux 走
+``xclip -t image/png``，macOS get 走 Pillow ImageGrab、set 暫時拋
+NotImplemented 等 PyObjC backend。同步是「明確呼叫」的（避免雙向
+auto-poll 造成 paste 迴圈）::
+
+   # Viewer 把本機剪貼簿送到 host
+   viewer.send_clipboard_text("hello")
+   viewer.send_clipboard_image(open("logo.png", "rb").read())
+
+   # Host 把本機剪貼簿送到所有 viewers
+   host.broadcast_clipboard_text("greetings")
+   host.broadcast_clipboard_image(png_bytes)
+
+   # Viewer 接收回 callback，自己決定要不要 paste
+   viewer = RemoteDesktopViewer(
+       host=..., on_clipboard=lambda kind, data: ...,
+   )
+
+GUI：Viewer 分頁有 *把本機剪貼簿文字送到 Host* 按鈕；host 收到後
+透過上述 helpers 套用到本機剪貼簿。
+
+檔案傳輸 + 進度
+---------------
+
+三個新訊息組成一次傳輸：
+
+* ``FILE_BEGIN`` — JSON ``{transfer_id, dest_path, size}``
+* ``FILE_CHUNK`` — 36-byte ASCII transfer id + 原始 payload
+* ``FILE_END``   — JSON ``{transfer_id, status, error?}``
+
+雙向、分塊（256 KiB / chunk）、**沒有總大小上限**、**沒有目的路徑
+限制**（拿到 token 就視為信任使用者）。進度由兩端各自本地計算，不
+需要額外的 wire 訊息::
+
+   from je_auto_control.utils.remote_desktop import (
+       FileReceiver, RemoteDesktopHost, RemoteDesktopViewer, send_file,
+   )
+
+   # Viewer 上傳到 host
+   viewer.send_file("local.bin", "/tmp/uploaded.bin",
+                    on_progress=lambda tid, done, total: print(done, total))
+
+   # Host 下發到所有 viewer（viewer 需要設一個 FileReceiver 來收）
+   viewer.set_file_receiver(FileReceiver(
+       on_progress=..., on_complete=...,
+   ))
+   host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
+
+GUI：*傳送檔案...* 按鈕開啟檔案選擇器 + 目的路徑提示，上傳跑在
+``QThread`` 上，底下 ``QProgressBar`` 綁到 sender 的 progress 事
+件。Frame display widget 也接受 dragEnter／drop 拖放本機檔案，丟進
+去就走同一個流程上傳。
+
+.. warning::
+   路徑無限制、大小無上限。任何拿到 token 的人都能把任意檔案寫到
+   任意位置（覆蓋 ``C:\\Windows\\System32\\*.dll`` 都可能），也能
+   塞滿磁碟。Token 持有者必須等同信任使用者；要更嚴格的話請自行
+   繼承 ``FileReceiver`` 在 ``handle_begin`` 內驗證 dest_path。

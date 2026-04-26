@@ -178,9 +178,95 @@ def exec_continue(executor: Any, args: Mapping[str, Any]) -> None:
     raise LoopContinue()
 
 
+def exec_set_var(executor: Any, args: Mapping[str, Any]) -> Any:
+    """Store ``value`` under ``name`` in the executor's variable scope."""
+    name = args["name"]
+    value = args.get("value")
+    executor.variables.set(name, value)
+    return value
+
+
+def exec_get_var(executor: Any, args: Mapping[str, Any]) -> Any:
+    """Return the variable named ``name`` (or ``default`` if missing)."""
+    return executor.variables.get_value(args["name"], args.get("default"))
+
+
+def exec_inc_var(executor: Any, args: Mapping[str, Any]) -> Any:
+    """Increment a numeric variable by ``by`` (default 1) and return new value."""
+    name = args["name"]
+    delta = args.get("by", 1)
+    current = executor.variables.get_value(name, 0)
+    try:
+        new_value = current + delta
+    except TypeError as error:
+        raise AutoControlActionException(
+            f"AC_inc_var: variable {name!r} is not numeric: {current!r}"
+        ) from error
+    executor.variables.set(name, new_value)
+    return new_value
+
+
+_COMPARATORS: Dict[str, Callable[[Any, Any], bool]] = {
+    "eq": lambda a, b: a == b,
+    "ne": lambda a, b: a != b,
+    "lt": lambda a, b: a < b,
+    "le": lambda a, b: a <= b,
+    "gt": lambda a, b: a > b,
+    "ge": lambda a, b: a >= b,
+    "contains": lambda a, b: b in a,
+    "startswith": lambda a, b: isinstance(a, str) and a.startswith(b),
+    "endswith": lambda a, b: isinstance(a, str) and a.endswith(b),
+}
+
+
+def exec_if_var(executor: Any, args: Mapping[str, Any]) -> Any:
+    """Run ``then`` when ``variable op value`` holds, else run ``else``."""
+    name = args["name"]
+    op = args.get("op", "eq")
+    comparator = _COMPARATORS.get(op)
+    if comparator is None:
+        raise AutoControlActionException(
+            f"AC_if_var: unsupported op {op!r}; "
+            f"expected one of {sorted(_COMPARATORS)}"
+        )
+    current = executor.variables.get_value(name)
+    try:
+        matched = comparator(current, args.get("value"))
+    except TypeError as error:
+        raise AutoControlActionException(
+            f"AC_if_var: cannot compare {current!r} {op} {args.get('value')!r}"
+        ) from error
+    key = "then" if matched else "else"
+    return _run_branch(executor, args.get(key))
+
+
+def exec_for_each(executor: Any, args: Mapping[str, Any]) -> int:
+    """Bind each item in ``items`` to ``as`` and execute ``body``."""
+    items = args["items"]
+    if not isinstance(items, (list, tuple)):
+        raise AutoControlActionException(
+            f"AC_for_each: items must be a list, got {type(items).__name__}"
+        )
+    var_name = args.get("as", "item")
+    body = args.get("body") or []
+    iterations = 0
+    for item in items:
+        executor.variables.set(var_name, item)
+        try:
+            executor.execute_action(body, _validated=True)
+        except LoopContinue:
+            iterations += 1
+            continue
+        except LoopBreak:
+            break
+        iterations += 1
+    return iterations
+
+
 BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_if_image_found": exec_if_image_found,
     "AC_if_pixel": exec_if_pixel,
+    "AC_if_var": exec_if_var,
     "AC_wait_image": exec_wait_image,
     "AC_wait_pixel": exec_wait_pixel,
     "AC_sleep": exec_sleep,
@@ -189,4 +275,8 @@ BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_retry": exec_retry,
     "AC_break": exec_break,
     "AC_continue": exec_continue,
+    "AC_set_var": exec_set_var,
+    "AC_get_var": exec_get_var,
+    "AC_inc_var": exec_inc_var,
+    "AC_for_each": exec_for_each,
 }

@@ -4,29 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/AutoControl/executor/executor_bad_file.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/AutoControl/executor/executor_folder.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/AutoControl/executor/executor_one_file.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/AutoControl/keyword/bad_keyword_1.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/AutoControl/keyword/keyword1.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/AutoControl/keyword/keyword2.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/CLAUDE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dev_requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/dev_requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/gui/main_widget.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/gui/main_widget.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/gui/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/gui/main_window.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/osx/screen/osx_screen.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/osx/screen/osx_screen.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/executor/action_executor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/file_process/get_dir_file_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/file_process/get_dir_file_list.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/project/create_project_structure.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/project/create_project_structure.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/utils/xml/change_xml_structure/change_xml_structure.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/utils/xml/change_xml_structure/change_xml_structure.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/windows/window/windows_window_manage.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/windows/window/windows_window_manage.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/je_auto_control/wrapper/auto_control_image.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-    </list>
+    <list default="true" id="ce52034b-fc98-493c-a523-a87dbdd34a11" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

@@ -24,6 +24,9 @@
   - [Accessibility Element Finder](#accessibility-element-finder)
   - [AI Element Locator (VLM)](#ai-element-locator-vlm)
   - [OCR (Text on Screen)](#ocr-text-on-screen)
+  - [LLM Action Planner](#llm-action-planner)
+  - [Runtime Variables & Control Flow](#runtime-variables--control-flow)
+  - [Remote Desktop](#remote-desktop)
   - [Clipboard](#clipboard)
   - [Screenshot](#screenshot)
   - [Action Recording & Playback](#action-recording--playback)
@@ -57,7 +60,10 @@
 - **Image Recognition** — locate UI elements on screen using OpenCV template matching with configurable threshold
 - **Accessibility Element Finder** — query the OS accessibility tree (Windows UIA / macOS AX) to locate buttons, menus, and controls by name/role
 - **AI Element Locator (VLM)** — describe a UI element in plain language and let a vision-language model (Anthropic / OpenAI) find its screen coordinates
-- **OCR** — extract text from screen regions using Tesseract; wait for, click, or locate rendered text
+- **OCR** — extract text from screen regions using Tesseract; wait for, click, or locate rendered text; regex search and full-region dump
+- **LLM Action Planner** — translate a plain-language description into a validated `AC_*` action list using Claude
+- **Runtime Variables & Control Flow** — `${var}` substitution at execution time, plus `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` for data-driven scripts
+- **Remote Desktop** — stream this machine's screen and accept remote input over a token-authenticated TCP protocol, *or* connect to another machine and view + control it (host + viewer GUIs included). Optional TLS (HTTPS-grade encryption), WebSocket transport (ws:// + wss:// for browser / firewall-friendly clients), persistent 9-digit Host ID, host→viewer audio streaming, bidirectional clipboard sync (text + image), and chunked file transfer (drag-drop + progress bar; arbitrary destination path; no size cap)
 - **Clipboard** — read/write system clipboard text on Windows, macOS, and Linux
 - **Screenshot & Screen Recording** — capture full screen or regions as images, record screen to video (AVI/MP4)
 - **Action Recording & Playback** — record mouse/keyboard events and replay them
@@ -408,6 +414,201 @@ If Tesseract is not on `PATH`, point at it explicitly:
 ac.set_tesseract_cmd(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
 ```
 
+Dump every recognised text record in a region (or full screen), or
+search by regex when the text varies:
+
+```python
+import je_auto_control as ac
+
+# Every hit in a region as TextMatch records (text, bounding box, confidence)
+for match in ac.read_text_in_region(region=[0, 0, 800, 600]):
+    print(match.text, match.center, match.confidence)
+
+# Regex — accepts a pattern string or a compiled re.Pattern
+for match in ac.find_text_regex(r"Order#\d+"):
+    print(match.text, match.center)
+```
+
+GUI: **OCR Reader** tab.
+
+### LLM Action Planner
+
+Translate plain-language descriptions into validated `AC_*` action lists
+using an LLM (Anthropic Claude by default). Output is leniently parsed
+(strips code fences, extracts the first JSON array from prose) and then
+validated by the same schema the executor uses, so the result can be
+piped straight into `execute_action`:
+
+```python
+import je_auto_control as ac
+from je_auto_control.utils.executor.action_executor import executor
+
+actions = ac.plan_actions(
+    "click the Submit button, then type 'done' and save",
+    known_commands=executor.known_commands(),
+)
+executor.execute_action(actions)
+
+# Or in a single call:
+ac.run_from_description("open Notepad and type hello", executor=executor)
+```
+
+| Variable | Effect |
+|---|---|
+| `ANTHROPIC_API_KEY` | Enables the Anthropic backend |
+| `AUTOCONTROL_LLM_BACKEND` | `anthropic` to force a backend |
+| `AUTOCONTROL_LLM_MODEL` | Override the default model (e.g. `claude-opus-4-7`) |
+
+GUI: **LLM Planner** tab — description box, `QThread`-backed *Plan*
+button, action-list preview, and a *Run plan* button.
+
+### Runtime Variables & Control Flow
+
+The executor resolves `${var}` placeholders **per command call** rather
+than pre-flattening, so nested `body` / `then` / `else` lists keep their
+placeholders and re-bind on every iteration. Combined with new mutation
+commands, scripts can drive themselves from data without Python glue:
+
+```json
+[
+    ["AC_set_var", {"name": "items", "value": ["alpha", "beta"]}],
+    ["AC_set_var", {"name": "i", "value": 0}],
+    ["AC_for_each", {
+        "items": "${items}", "as": "name",
+        "body": [
+            ["AC_inc_var", {"name": "i"}],
+            ["AC_if_var", {
+                "name": "i", "op": "ge", "value": 2,
+                "then": [["AC_break"]], "else": []
+            }]
+        ]
+    }]
+]
+```
+
+`AC_if_var` operators: `eq`, `ne`, `lt`, `le`, `gt`, `ge`, `contains`,
+`startswith`, `endswith`. GUI: **Variables** tab — live view of
+`executor.variables` with single-set, JSON seed, and clear-all controls.
+
+### Remote Desktop
+
+Stream this machine's screen and accept remote input, **or** view and
+control another machine. The wire format is a length-prefixed framing
+on raw TCP (no extra deps), starting with an HMAC-SHA256
+challenge / response handshake; viewers that fail auth are dropped
+before they can see a frame. JPEG frames are produced at the configured
+FPS / quality and broadcast to authenticated viewers via a shared
+latest-frame slot, so a slow viewer drops frames instead of blocking
+the rest. Viewer input is JSON, validated against an allowlist, and
+applied through the existing wrappers.
+
+```python
+# Be remoted — start a host and hand the token + port to whoever views you
+from je_auto_control import RemoteDesktopHost
+host = RemoteDesktopHost(token="hunter2", bind="127.0.0.1",
+                          port=0, fps=10, quality=70)
+host.start()
+print("listening on", host.port, "viewers:", host.connected_clients)
+```
+
+```python
+# Control another machine — connect a viewer and send input
+from je_auto_control import RemoteDesktopViewer
+viewer = RemoteDesktopViewer(host="10.0.0.5", port=51234, token="hunter2",
+                              on_frame=lambda jpeg: ...)
+viewer.connect()
+viewer.send_input({"action": "mouse_move", "x": 100, "y": 200})
+viewer.send_input({"action": "type", "text": "hello"})
+viewer.disconnect()
+```
+
+GUI: **Remote Desktop** tab with two sub-tabs.
+
+- **Host** — token field with a *Generate* button, security warning
+  about the bind address, start / stop controls, refreshing port +
+  viewer-count status, and a 4 fps preview pane below the controls so
+  the user being remoted sees what viewers see.
+- **Viewer** — address / port / token form, *Connect* / *Disconnect*,
+  and a custom frame-display widget that paints incoming JPEG frames
+  scaled with `KeepAspectRatio`. Mouse / wheel / key events on the
+  display are remapped from widget coordinates back to the remote
+  screen's pixel space using the latest frame's dimensions, then
+  forwarded as `INPUT` messages.
+
+> ⚠️ Anyone with the host:port and token gets full mouse / keyboard
+> control of the host machine. Default bind is `127.0.0.1`; expose
+> externally only via SSH tunnel or TLS front-end. The token is the
+> only line of defence — treat it like a password.
+
+**Encrypted transports + alternate protocols.** Pass an `ssl_context`
+to either `RemoteDesktopHost` or `RemoteDesktopViewer` to wrap every
+connection in TLS. For firewall-friendly access, use the in-tree
+WebSocket variants (no extra deps) — same protocol, RFC 6455 framing,
+and `wss://` if you also pass `ssl_context`:
+
+```python
+from je_auto_control import (
+    WebSocketDesktopHost, WebSocketDesktopViewer,
+)
+host = WebSocketDesktopHost(token="hunter2", ssl_context=server_ctx)
+viewer = WebSocketDesktopViewer(
+    host="example.com", port=443, token="hunter2",
+    ssl_context=client_ctx, expected_host_id="123456789",
+)
+```
+
+**Persistent Host ID.** Every host owns a stable 9-digit numeric ID
+(persisted at `~/.je_auto_control/remote_host_id`), announced in
+`AUTH_OK` and verifiable via the viewer's `expected_host_id`:
+
+```python
+print(host.host_id)            # e.g. "123456789"
+viewer = RemoteDesktopViewer(
+    host=..., port=..., token=...,
+    expected_host_id="123456789",   # AuthenticationError on mismatch
+)
+```
+
+**Audio streaming (host → viewer).** Optional `sounddevice` dep; opt
+in with `enable_audio=True` on the host, attach an `AudioPlayer` (or
+your own callback) on the viewer:
+
+```python
+host = RemoteDesktopHost(token="tok", enable_audio=True)
+
+from je_auto_control.utils.remote_desktop import AudioPlayer
+player = AudioPlayer(); player.start()
+viewer = RemoteDesktopViewer(host=..., on_audio=player.play)
+```
+
+**Clipboard sync (text + image, bidirectional).** Explicit per-call —
+no auto-poll loops. Image clipboard works on Windows (CF_DIB via
+ctypes) and Linux (`xclip -t image/png`); macOS get is supported via
+Pillow ImageGrab, set requires PyObjC.
+
+```python
+viewer.send_clipboard_text("hello")
+viewer.send_clipboard_image(open("logo.png", "rb").read())
+host.broadcast_clipboard_text("greetings")
+```
+
+**File transfer with progress.** Bidirectional, chunked, arbitrary
+destination path, no size cap; the GUI viewer also accepts drag-drop:
+
+```python
+viewer.send_file(
+    "local.bin", "/tmp/uploaded.bin",
+    on_progress=lambda tid, done, total: print(done, total),
+)
+host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
+```
+
+> ⚠️ Path is unrestricted and there is no aggregate size limit.
+> Anyone with the token can write any file to any location and can
+> fill the disk — keep "trusted token holders == trusted users" in
+> mind, or wrap with your own `FileReceiver` subclass that vets
+> destination paths.
+
 ### Clipboard
 
 ```python
@@ -494,10 +695,13 @@ je_auto_control.execute_action([
 | Screen | `AC_screen_size`, `AC_screenshot` |
 | Accessibility | `AC_a11y_list`, `AC_a11y_find`, `AC_a11y_click` |
 | VLM (AI Locator) | `AC_vlm_locate`, `AC_vlm_click` |
-| OCR | `AC_locate_text`, `AC_click_text`, `AC_wait_text` |
+| OCR | `AC_locate_text`, `AC_click_text`, `AC_wait_text`, `AC_read_text_in_region`, `AC_find_text_regex` |
+| LLM planner | `AC_llm_plan`, `AC_llm_run` |
 | Clipboard | `AC_clipboard_get`, `AC_clipboard_set` |
 | Window | `AC_list_windows`, `AC_focus_window`, `AC_wait_window`, `AC_close_window` |
-| Flow control | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_while_image`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry` |
+| Flow control | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_if_var`, `AC_while_image`, `AC_for_each`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry` |
+| Variables | `AC_set_var`, `AC_get_var`, `AC_inc_var` |
+| Remote desktop | `AC_start_remote_host`, `AC_stop_remote_host`, `AC_remote_host_status`, `AC_remote_connect`, `AC_remote_disconnect`, `AC_remote_viewer_status`, `AC_remote_send_input` |
 | Record | `AC_record`, `AC_stop_record`, `AC_set_record_enable` |
 | Report | `AC_generate_html`, `AC_generate_json`, `AC_generate_xml`, `AC_generate_html_report`, `AC_generate_json_report`, `AC_generate_xml_report` |
 | Run history | `AC_history_list`, `AC_history_clear` |

@@ -59,8 +59,24 @@ from je_auto_control.utils.hotkey.hotkey_daemon import (
 )
 # OCR (headless)
 from je_auto_control.utils.ocr.ocr_engine import (
-    TextMatch, click_text, find_text_matches, locate_text_center,
-    set_tesseract_cmd, wait_for_text,
+    TextMatch, click_text, find_text_matches, find_text_regex,
+    locate_text_center, read_text_in_region, set_tesseract_cmd,
+    wait_for_text,
+)
+# LLM action planner (headless)
+from je_auto_control.utils.llm import (
+    LLMBackend, LLMNotAvailableError, LLMPlanError,
+    plan_actions, run_from_description,
+)
+# Remote desktop (headless)
+from je_auto_control.utils.remote_desktop import (
+    AuthenticationError as RemoteDesktopAuthError,
+    InputDispatchError as RemoteDesktopInputError,
+    ProtocolError as RemoteDesktopProtocolError,
+    RemoteDesktopHost, RemoteDesktopViewer,
+)
+from je_auto_control.utils.remote_desktop.registry import (
+    registry as remote_desktop_registry,
 )
 # MCP server (headless stdio bridge for Claude / other MCP clients)
 from je_auto_control.utils.mcp_server import (
@@ -103,6 +119,7 @@ from je_auto_control.utils.scheduler.scheduler import (
 from je_auto_control.utils.script_vars.interpolate import (
     interpolate_actions, interpolate_value, load_vars_from_json,
 )
+from je_auto_control.utils.script_vars.scope import VariableScope
 # Watchers (headless)
 from je_auto_control.utils.watcher.watcher import (
     LogTail, MouseWatcher, PixelWatcher,
@@ -203,7 +220,8 @@ __all__ = [
     "add_command_to_executor", "test_record_instance", "pil_screenshot",
     # OCR
     "TextMatch", "find_text_matches", "locate_text_center", "wait_for_text",
-    "click_text", "set_tesseract_cmd",
+    "click_text", "set_tesseract_cmd", "read_text_in_region",
+    "find_text_regex",
     # Recording editor
     "trim_actions", "insert_action", "remove_action", "filter_actions",
     "adjust_delays", "scale_coordinates",
@@ -211,6 +229,7 @@ __all__ = [
     "Scheduler", "ScheduledJob", "default_scheduler",
     # Script variables
     "interpolate_actions", "interpolate_value", "load_vars_from_json",
+    "VariableScope",
     # Watchers
     "MouseWatcher", "PixelWatcher", "LogTail",
     # Window manager
@@ -246,6 +265,13 @@ __all__ = [
     "click_accessibility_element",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
+    # LLM action planner
+    "LLMBackend", "LLMNotAvailableError", "LLMPlanError",
+    "plan_actions", "run_from_description",
+    # Remote desktop
+    "RemoteDesktopHost", "RemoteDesktopViewer",
+    "RemoteDesktopAuthError", "RemoteDesktopInputError",
+    "RemoteDesktopProtocolError", "remote_desktop_registry",
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",
