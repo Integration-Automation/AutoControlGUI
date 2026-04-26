@@ -579,9 +579,13 @@ A new ``AUDIO`` message type carries 16-bit signed PCM blocks (default
 ``sounddevice`` dependency is loaded lazily — without it, audio is
 reported disabled and the host stays up::
 
+   from je_auto_control.utils.remote_desktop import AudioCaptureConfig
    host = RemoteDesktopHost(
-       token="tok", enable_audio=True, audio_device=None,    # default mic
-       audio_sample_rate=16000, audio_channels=1,
+       token="tok",
+       audio_config=AudioCaptureConfig(
+           enabled=True, device=None,             # default mic
+           sample_rate=16000, channels=1,
+       ),
    )
 
    from je_auto_control.utils.remote_desktop import AudioPlayer

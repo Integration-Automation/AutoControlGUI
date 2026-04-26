@@ -570,11 +570,17 @@ viewer = RemoteDesktopViewer(
 ```
 
 **Audio streaming (host → viewer).** Optional `sounddevice` dep; opt
-in with `enable_audio=True` on the host, attach an `AudioPlayer` (or
-your own callback) on the viewer:
+in with an `AudioCaptureConfig` on the host, attach an `AudioPlayer`
+(or your own callback) on the viewer:
 
 ```python
-host = RemoteDesktopHost(token="tok", enable_audio=True)
+from je_auto_control.utils.remote_desktop import AudioCaptureConfig
+host = RemoteDesktopHost(
+    token="tok",
+    audio_config=AudioCaptureConfig(enabled=True),    # default mic
+)
+# Or pick a loopback / monitor device:
+# audio_config=AudioCaptureConfig(enabled=True, device=12)
 
 from je_auto_control.utils.remote_desktop import AudioPlayer
 player = AudioPlayer(); player.start()

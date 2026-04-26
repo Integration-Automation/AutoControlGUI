@@ -527,10 +527,16 @@ viewer = RemoteDesktopViewer(
 )
 ```
 
-**音訊串流（host → viewer）**：選用 `sounddevice` 相依；host 端 `enable_audio=True` 開啟，viewer 端接 `AudioPlayer`（或自己的 callback）：
+**音訊串流（host → viewer）**：選用 `sounddevice` 相依；host 用 `AudioCaptureConfig` 開啟，viewer 端接 `AudioPlayer`（或自己的 callback）：
 
 ```python
-host = RemoteDesktopHost(token="tok", enable_audio=True)
+from je_auto_control.utils.remote_desktop import AudioCaptureConfig
+host = RemoteDesktopHost(
+    token="tok",
+    audio_config=AudioCaptureConfig(enabled=True),    # 預設 mic
+)
+# 或指定 loopback / monitor 裝置：
+# audio_config=AudioCaptureConfig(enabled=True, device=12)
 
 from je_auto_control.utils.remote_desktop import AudioPlayer
 player = AudioPlayer(); player.start()

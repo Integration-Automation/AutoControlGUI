@@ -544,9 +544,13 @@ viewer 的傳輸下拉（*TCP* / *WebSocket* / *TLS* / *WSS*）會自動選對
 mono，每塊 50 ms / 1600 bytes）。``sounddevice`` 為 optional 相依，
 延遲載入；沒裝就 host 端音訊回報停用且整個 host 仍能運作::
 
+   from je_auto_control.utils.remote_desktop import AudioCaptureConfig
    host = RemoteDesktopHost(
-       token="tok", enable_audio=True, audio_device=None,    # 預設 mic
-       audio_sample_rate=16000, audio_channels=1,
+       token="tok",
+       audio_config=AudioCaptureConfig(
+           enabled=True, device=None,             # 預設 mic
+           sample_rate=16000, channels=1,
+       ),
    )
 
    from je_auto_control.utils.remote_desktop import AudioPlayer
