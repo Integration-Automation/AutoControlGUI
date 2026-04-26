@@ -104,6 +104,7 @@ from je_auto_control.utils.scheduler.scheduler import (
 from je_auto_control.utils.script_vars.interpolate import (
     interpolate_actions, interpolate_value, load_vars_from_json,
 )
+from je_auto_control.utils.script_vars.scope import VariableScope
 # Watchers (headless)
 from je_auto_control.utils.watcher.watcher import (
     LogTail, MouseWatcher, PixelWatcher,
@@ -213,6 +214,7 @@ __all__ = [
     "Scheduler", "ScheduledJob", "default_scheduler",
     # Script variables
     "interpolate_actions", "interpolate_value", "load_vars_from_json",
+    "VariableScope",
     # Watchers
     "MouseWatcher", "PixelWatcher", "LogTail",
     # Window manager
