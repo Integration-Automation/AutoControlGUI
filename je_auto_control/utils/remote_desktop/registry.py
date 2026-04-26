@@ -5,6 +5,7 @@ and at most one active viewer without juggling handles. Holding those
 references here keeps :mod:`action_executor` thin and avoids circular
 imports between the executor and the host/viewer classes.
 """
+import ssl
 from typing import Any, Callable, Dict, Optional, Sequence
 
 from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
@@ -36,14 +37,16 @@ class _RemoteDesktopRegistry:
                    quality: int = 70,
                    region: Optional[Sequence[int]] = None,
                    max_clients: int = 4,
-                   host_id: Optional[str] = None) -> Dict[str, Any]:
+                   host_id: Optional[str] = None,
+                   ssl_context: Optional[ssl.SSLContext] = None,
+                   ) -> Dict[str, Any]:
         """Stop any existing host, then start a fresh one with the given config."""
         self.stop_host()
         host = RemoteDesktopHost(
             token=token, bind=bind, port=int(port),
             fps=float(fps), quality=int(quality),
             region=region, max_clients=int(max_clients),
-            host_id=host_id,
+            host_id=host_id, ssl_context=ssl_context,
         )
         host.start()
         self._host = host
@@ -75,6 +78,8 @@ class _RemoteDesktopRegistry:
                        on_frame: Optional[FrameCallback] = None,
                        on_error: Optional[ErrorCallback] = None,
                        expected_host_id: Optional[str] = None,
+                       ssl_context: Optional[ssl.SSLContext] = None,
+                       server_hostname: Optional[str] = None,
                        ) -> Dict[str, Any]:
         """Disconnect any existing viewer, then connect a fresh one.
 
@@ -82,12 +87,15 @@ class _RemoteDesktopRegistry:
         thread starts, so no frame can arrive while the GUI is still
         attaching its callbacks. When ``expected_host_id`` is provided
         the handshake is rejected if the server reports a different ID.
+        Pass an ``ssl_context`` to upgrade the connection to TLS.
         """
         self.disconnect_viewer()
         viewer = RemoteDesktopViewer(
             host=host, port=int(port), token=token,
             on_frame=on_frame, on_error=on_error,
             expected_host_id=expected_host_id,
+            ssl_context=ssl_context,
+            server_hostname=server_hostname,
         )
         viewer.connect(timeout=float(timeout))
         self._viewer = viewer

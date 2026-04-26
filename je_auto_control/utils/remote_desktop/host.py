@@ -1,6 +1,7 @@
 """TCP host that streams JPEG frames and applies viewer input."""
 import json
 import socket
+import ssl
 import threading
 import time
 from io import BytesIO
@@ -214,6 +215,7 @@ class RemoteDesktopHost:
                  frame_provider: Optional[FrameProvider] = None,
                  input_dispatcher: Optional[InputDispatcher] = None,
                  host_id: Optional[str] = None,
+                 ssl_context: Optional[ssl.SSLContext] = None,
                  ) -> None:
         if not isinstance(token, str) or not token:
             raise ValueError("token must be a non-empty string")
@@ -224,6 +226,7 @@ class RemoteDesktopHost:
         self._host_id = (validate_host_id(host_id) if host_id
                          else load_or_create_host_id())
         self._token = token
+        self._ssl_context = ssl_context
         self._bind = bind
         self._requested_port = int(port)
         self._period = 1.0 / float(fps)
@@ -332,7 +335,10 @@ class RemoteDesktopHost:
                 continue
             except OSError:
                 return
-            handler = _ClientHandler(self, client_sock, address)
+            wrapped = self._maybe_wrap_tls(client_sock, address)
+            if wrapped is None:
+                continue
+            handler = _ClientHandler(self, wrapped, address)
             with self._clients_lock:
                 if len(self._clients) >= self._max_clients:
                     autocontrol_logger.info(
@@ -344,6 +350,29 @@ class RemoteDesktopHost:
                 self._clients.append(handler)
             handler.start()
             self._reap_dead_clients()
+
+    def _maybe_wrap_tls(self, client_sock: socket.socket,
+                        address) -> Optional[socket.socket]:
+        """Return a TLS-wrapped socket when an ssl_context is configured."""
+        if self._ssl_context is None:
+            return client_sock
+        try:
+            client_sock.settimeout(_AUTH_TIMEOUT_S)
+            wrapped = self._ssl_context.wrap_socket(
+                client_sock, server_side=True,
+            )
+            wrapped.settimeout(None)
+            return wrapped
+        except (ssl.SSLError, OSError) as error:
+            autocontrol_logger.info(
+                "remote_desktop TLS handshake from %s failed: %r",
+                address, error,
+            )
+            try:
+                client_sock.close()
+            except OSError:
+                pass
+            return None
 
     def _capture_loop(self) -> None:
         next_tick = time.monotonic()

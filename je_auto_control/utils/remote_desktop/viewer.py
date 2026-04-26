@@ -1,6 +1,7 @@
 """TCP viewer that receives JPEG frames and forwards input messages."""
 import json
 import socket
+import ssl
 import threading
 from typing import Any, Callable, Mapping, Optional
 
@@ -43,6 +44,8 @@ class RemoteDesktopViewer:
                  on_frame: Optional[FrameCallback] = None,
                  on_error: Optional[ErrorCallback] = None,
                  expected_host_id: Optional[str] = None,
+                 ssl_context: Optional[ssl.SSLContext] = None,
+                 server_hostname: Optional[str] = None,
                  ) -> None:
         if not isinstance(host, str) or not host:
             raise ValueError("host must be a non-empty string")
@@ -56,6 +59,8 @@ class RemoteDesktopViewer:
         self._expected_host_id = (validate_host_id(expected_host_id)
                                   if expected_host_id else None)
         self._remote_host_id: Optional[str] = None
+        self._ssl_context = ssl_context
+        self._server_hostname = server_hostname
         self._sock: Optional[socket.socket] = None
         self._send_lock = threading.Lock()
         self._shutdown = threading.Event()
@@ -72,22 +77,23 @@ class RemoteDesktopViewer:
         return self._remote_host_id
 
     def connect(self, timeout: float = _DEFAULT_CONNECT_TIMEOUT_S) -> None:
-        """Open the TCP connection and complete the auth handshake.
+        """Open the (optionally TLS) connection and complete the auth handshake.
 
         Spawns a receiver thread on success. Raises
         :class:`AuthenticationError` if the handshake fails.
         """
         if self._connected:
             return
-        sock = socket.create_connection(
+        raw_sock = socket.create_connection(
             (self._host, self._port), timeout=timeout,
         )
-        sock.settimeout(_DEFAULT_AUTH_TIMEOUT_S)
+        raw_sock.settimeout(_DEFAULT_AUTH_TIMEOUT_S)
         try:
+            sock = self._maybe_wrap_tls(raw_sock)
             self._handshake(sock)
-        except (AuthenticationError, ProtocolError, OSError):
+        except (AuthenticationError, ProtocolError, OSError, ssl.SSLError):
             try:
-                sock.close()
+                raw_sock.close()
             except OSError:
                 pass
             raise
@@ -99,6 +105,19 @@ class RemoteDesktopViewer:
             target=self._recv_loop, name="rd-viewer", daemon=True,
         )
         self._receiver.start()
+
+    def _maybe_wrap_tls(self, raw_sock: socket.socket) -> socket.socket:
+        """Return a TLS-wrapped socket when an ssl_context was configured."""
+        if self._ssl_context is None:
+            return raw_sock
+        hostname = self._server_hostname or self._host
+        if (self._ssl_context.check_hostname is False
+                and self._ssl_context.verify_mode == ssl.CERT_NONE):
+            # ``wrap_socket`` rejects server_hostname when verification is off.
+            hostname = None
+        return self._ssl_context.wrap_socket(
+            raw_sock, server_hostname=hostname,
+        )
 
     def disconnect(self, timeout: float = 2.0) -> None:
         """Close the connection and join the receiver thread."""
