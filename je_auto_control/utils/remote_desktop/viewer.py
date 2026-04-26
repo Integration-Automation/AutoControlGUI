@@ -28,6 +28,7 @@ ErrorCallback = Callable[[Exception], None]
 
 _DEFAULT_AUTH_TIMEOUT_S = 5.0
 _DEFAULT_CONNECT_TIMEOUT_S = 5.0
+_NOT_CONNECTED_MESSAGE = "viewer is not connected"
 
 
 def _extract_host_id(payload: bytes) -> Optional[str]:
@@ -107,7 +108,7 @@ class RemoteDesktopViewer:
             sock = self._maybe_wrap_tls(raw_sock)
             channel = self._build_channel(sock)
             self._handshake(channel)
-        except (AuthenticationError, ProtocolError, OSError, ssl.SSLError):
+        except (AuthenticationError, ProtocolError, OSError):
             try:
                 raw_sock.close()
             except OSError:
@@ -157,7 +158,7 @@ class RemoteDesktopViewer:
     def send_input(self, action: Mapping[str, Any]) -> None:
         """JSON-encode ``action`` and forward it as an INPUT message."""
         if not self._connected or self._channel is None:
-            raise ConnectionError("viewer is not connected")
+            raise ConnectionError(_NOT_CONNECTED_MESSAGE)
         if not isinstance(action, Mapping):
             raise TypeError("action must be a mapping")
         payload = json.dumps(dict(action), ensure_ascii=False).encode("utf-8")
@@ -166,19 +167,19 @@ class RemoteDesktopViewer:
     def send_ping(self) -> None:
         """Send a no-op PING message; the host treats it as liveness."""
         if not self._connected or self._channel is None:
-            raise ConnectionError("viewer is not connected")
+            raise ConnectionError(_NOT_CONNECTED_MESSAGE)
         self._channel.send_typed(MessageType.PING, b"")
 
     def send_clipboard_text(self, text: str) -> None:
         """Push ``text`` onto the host's clipboard."""
         if not self._connected or self._channel is None:
-            raise ConnectionError("viewer is not connected")
+            raise ConnectionError(_NOT_CONNECTED_MESSAGE)
         self._channel.send_typed(MessageType.CLIPBOARD, encode_text(text))
 
     def send_clipboard_image(self, png_bytes: bytes) -> None:
         """Push a PNG image onto the host's clipboard."""
         if not self._connected or self._channel is None:
-            raise ConnectionError("viewer is not connected")
+            raise ConnectionError(_NOT_CONNECTED_MESSAGE)
         self._channel.send_typed(MessageType.CLIPBOARD, encode_image(png_bytes))
 
     def set_file_receiver(self, receiver: FileReceiver) -> None:
@@ -198,7 +199,7 @@ class RemoteDesktopViewer:
         a non-blocking upload should run this in a worker thread.
         """
         if not self._connected or self._channel is None:
-            raise ConnectionError("viewer is not connected")
+            raise ConnectionError(_NOT_CONNECTED_MESSAGE)
         return send_file(self._channel, source_path, dest_path,
                          on_progress=on_progress)
 
@@ -281,52 +282,84 @@ class RemoteDesktopViewer:
             return
         try:
             while not self._shutdown.is_set():
-                try:
-                    msg_type, payload = channel.read_typed()
-                except (OSError, ConnectionError, ProtocolError) as error:
-                    if not self._shutdown.is_set() and self._on_error is not None:
-                        try:
-                            self._on_error(error)
-                        except Exception:  # noqa: BLE001  # callback isolation
-                            autocontrol_logger.exception(
-                                "remote_desktop viewer on_error callback raised"
-                            )
+                if not self._read_and_dispatch(channel):
                     return
-                if msg_type is MessageType.FRAME:
-                    if self._on_frame is not None:
-                        try:
-                            self._on_frame(payload)
-                        except Exception as error:  # noqa: BLE001
-                            autocontrol_logger.exception(
-                                "remote_desktop viewer on_frame callback raised"
-                            )
-                            if self._on_error is not None:
-                                try:
-                                    self._on_error(error)
-                                except Exception:  # noqa: BLE001
-                                    pass
-                    continue
-                if msg_type is MessageType.AUDIO:
-                    if self._on_audio is not None:
-                        try:
-                            self._on_audio(payload)
-                        except Exception:  # noqa: BLE001
-                            autocontrol_logger.exception(
-                                "remote_desktop viewer on_audio callback raised"
-                            )
-                    continue
-                if msg_type is MessageType.CLIPBOARD:
-                    self._handle_clipboard_payload(payload)
-                    continue
-                if msg_type in (MessageType.FILE_BEGIN,
-                                MessageType.FILE_CHUNK,
-                                MessageType.FILE_END):
-                    self._handle_file_payload(msg_type, payload)
-                    continue
-                if msg_type is MessageType.PING:
-                    continue
-                autocontrol_logger.info(
-                    "remote_desktop viewer ignoring %s message", msg_type.name,
-                )
         finally:
             self._connected = False
+
+    def _read_and_dispatch(self, channel: MessageChannel) -> bool:
+        """Read one typed message and dispatch it; return False on disconnect."""
+        try:
+            msg_type, payload = channel.read_typed()
+        except (OSError, ProtocolError) as error:
+            self._notify_error(error)
+            return False
+        handler = _RECV_HANDLERS.get(msg_type)
+        if handler is None:
+            autocontrol_logger.info(
+                "remote_desktop viewer ignoring %s message", msg_type.name,
+            )
+            return True
+        handler(self, payload, msg_type)
+        return True
+
+    # --- per-message dispatch helpers ---------------------------------
+
+    def _on_recv_frame(self, payload: bytes,
+                       msg_type: MessageType) -> None:
+        del msg_type
+        if self._on_frame is None:
+            return
+        try:
+            self._on_frame(payload)
+        except Exception as error:  # noqa: BLE001  callback isolation
+            autocontrol_logger.exception(
+                "remote_desktop viewer on_frame callback raised"
+            )
+            self._notify_error(error)
+
+    def _on_recv_audio(self, payload: bytes,
+                       msg_type: MessageType) -> None:
+        del msg_type
+        if self._on_audio is None:
+            return
+        try:
+            self._on_audio(payload)
+        except Exception:  # noqa: BLE001
+            autocontrol_logger.exception(
+                "remote_desktop viewer on_audio callback raised"
+            )
+
+    def _on_recv_clipboard(self, payload: bytes,
+                           msg_type: MessageType) -> None:
+        del msg_type
+        self._handle_clipboard_payload(payload)
+
+    def _on_recv_file(self, payload: bytes,
+                      msg_type: MessageType) -> None:
+        self._handle_file_payload(msg_type, payload)
+
+    def _on_recv_ping(self, payload: bytes,
+                      msg_type: MessageType) -> None:
+        del payload, msg_type
+
+    def _notify_error(self, error: BaseException) -> None:
+        if self._shutdown.is_set() or self._on_error is None:
+            return
+        try:
+            self._on_error(error)
+        except Exception:  # noqa: BLE001  callback isolation
+            autocontrol_logger.exception(
+                "remote_desktop viewer on_error callback raised"
+            )
+
+
+_RECV_HANDLERS = {
+    MessageType.FRAME: RemoteDesktopViewer._on_recv_frame,
+    MessageType.AUDIO: RemoteDesktopViewer._on_recv_audio,
+    MessageType.CLIPBOARD: RemoteDesktopViewer._on_recv_clipboard,
+    MessageType.FILE_BEGIN: RemoteDesktopViewer._on_recv_file,
+    MessageType.FILE_CHUNK: RemoteDesktopViewer._on_recv_file,
+    MessageType.FILE_END: RemoteDesktopViewer._on_recv_file,
+    MessageType.PING: RemoteDesktopViewer._on_recv_ping,
+}

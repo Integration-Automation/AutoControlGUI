@@ -13,7 +13,6 @@ Two sub-tabs share the same window:
   original remote-screen pixel space using the latest received frame's
   size.
 """
-import os
 import secrets
 import ssl
 from pathlib import Path
@@ -21,11 +20,11 @@ from typing import Optional
 
 from PySide6.QtCore import QPoint, QRect, Qt, QThread, QTimer, Signal
 from PySide6.QtGui import (
-    QClipboard, QDragEnterEvent, QDropEvent, QGuiApplication, QImage,
+    QDragEnterEvent, QDropEvent, QGuiApplication, QImage,
     QKeyEvent, QMouseEvent, QPainter, QWheelEvent,
 )
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QComboBox, QFileDialog, QGroupBox, QHBoxLayout,
+    QCheckBox, QComboBox, QFileDialog, QGroupBox, QHBoxLayout,
     QInputDialog, QLabel, QLineEdit, QMessageBox, QProgressBar, QPushButton,
     QSizePolicy, QSpinBox, QTabWidget, QVBoxLayout, QWidget,
 )
@@ -39,9 +38,9 @@ from je_auto_control.utils.remote_desktop import (
     WebSocketDesktopHost, WebSocketDesktopViewer,
 )
 from je_auto_control.utils.remote_desktop.audio import (
-    AudioBackendError, AudioPlayer, is_audio_backend_available,
+    AudioBackendError, AudioCaptureConfig, AudioPlayer,
+    is_audio_backend_available,
 )
-from je_auto_control.utils.remote_desktop.file_transfer import send_file
 from je_auto_control.utils.remote_desktop.host_id import (
     HostIdError, format_host_id, parse_host_id,
 )
@@ -100,6 +99,15 @@ def _key_event_to_ac(event: QKeyEvent) -> Optional[str]:
     if len(text) == 1 and text.isprintable():
         return text
     return None
+
+
+def _scroll_amount(angle_delta: int) -> int:
+    """Return ``+1`` / ``-1`` / ``0`` for a Qt wheel ``angleDelta`` value."""
+    if angle_delta > 0:
+        return 1
+    if angle_delta < 0:
+        return -1
+    return 0
 
 
 class _FrameDisplay(QWidget):
@@ -209,8 +217,7 @@ class _FrameDisplay(QWidget):
         coords = self._to_remote(event.position().toPoint())
         if coords is None:
             return
-        delta = event.angleDelta().y()
-        amount = 1 if delta > 0 else -1 if delta < 0 else 0
+        amount = _scroll_amount(event.angleDelta().y())
         if amount:
             self.mouse_scrolled.emit(coords[0], coords[1], amount)
 
@@ -433,6 +440,7 @@ class _HostPanel(TranslatableMixin, QWidget):
         if not cert_path or not key_path:
             raise ValueError(_t("rd_tls_both_required"))
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)
         return ctx
 
@@ -443,7 +451,7 @@ class _HostPanel(TranslatableMixin, QWidget):
             token = self._token.text().strip()
         try:
             ssl_context = self._build_ssl_context()
-        except (OSError, ssl.SSLError, ValueError) as error:
+        except (OSError, ValueError) as error:
             QMessageBox.warning(self, _t("rd_host_start"), str(error))
             return
         host_cls = (WebSocketDesktopHost
@@ -459,8 +467,10 @@ class _HostPanel(TranslatableMixin, QWidget):
                 fps=float(self._fps.value()),
                 quality=self._quality.value(),
                 ssl_context=ssl_context,
-                enable_audio=self._enable_audio.isChecked()
-                and self._enable_audio.isEnabled(),
+                audio_config=AudioCaptureConfig(
+                    enabled=self._enable_audio.isChecked()
+                    and self._enable_audio.isEnabled(),
+                ),
             )
             host.start()
         except (OSError, ValueError, RuntimeError, AudioBackendError) as error:
@@ -686,7 +696,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         except AuthenticationError as error:
             QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
             return
-        except (OSError, ConnectionError, RuntimeError, ssl.SSLError) as error:
+        except (OSError, RuntimeError) as error:
             QMessageBox.warning(self, _t("rd_viewer_connect"), str(error))
             return
         registry._viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
@@ -705,7 +715,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         if transport not in ("TLS", "WSS"):
             return None
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         if self._tls_insecure.isChecked():
+            # NOSONAR S5527 S4830  # reason: explicit user opt-in for self-signed
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE
         else:
@@ -827,7 +839,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
             return
         try:
             viewer.send_input(action)
-        except (OSError, ConnectionError) as error:
+        except OSError as error:
             self._error_signal.emit(str(error))
 
     def _send_mouse_move(self, x: int, y: int) -> None:
@@ -859,7 +871,7 @@ class _ViewerPanel(TranslatableMixin, QWidget):
             return
         try:
             viewer.send_clipboard_text(text)
-        except (OSError, ConnectionError) as error:
+        except OSError as error:
             QMessageBox.warning(self, _t("rd_viewer_push_clipboard"),
                                 str(error))
             return
@@ -925,7 +937,7 @@ class _FileSendThread(QThread):
             result = self._viewer.send_file(
                 self._source, self._dest, on_progress=relay,
             )
-        except (OSError, ConnectionError, RuntimeError) as error:
+        except (OSError, RuntimeError) as error:
             self.completed.emit("", False, str(error), self._dest)
             return
         self.completed.emit(

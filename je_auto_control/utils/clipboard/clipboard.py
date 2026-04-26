@@ -16,6 +16,8 @@ import sys
 from io import BytesIO
 from typing import Optional
 
+_OPEN_CLIPBOARD_FAILED = "OpenClipboard failed"
+
 
 def get_clipboard() -> str:
     """Return the current clipboard text (empty string if empty)."""
@@ -83,7 +85,7 @@ def _win_get() -> str:
     kernel32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
 
     if not user32.OpenClipboard(None):
-        raise RuntimeError("OpenClipboard failed")
+        raise RuntimeError(_OPEN_CLIPBOARD_FAILED)
     try:
         handle = user32.GetClipboardData(cf_unicodetext)
         if not handle:
@@ -131,7 +133,7 @@ def _win_set(text: str) -> None:
     ctypes.memmove(pointer, ctypes.addressof(data), size)  # NOSONAR S5655 false positive — Array is accepted by addressof
     kernel32.GlobalUnlock(handle)
     if not user32.OpenClipboard(None):
-        raise RuntimeError("OpenClipboard failed")
+        raise RuntimeError(_OPEN_CLIPBOARD_FAILED)
     try:
         user32.EmptyClipboard()
         if not user32.SetClipboardData(cf_unicodetext, handle):
@@ -256,7 +258,7 @@ def _win_set_image(png_bytes: bytes) -> None:
     ctypes.memmove(pointer, dib, len(dib))
     kernel32.GlobalUnlock(handle)
     if not user32.OpenClipboard(None):
-        raise RuntimeError("OpenClipboard failed")
+        raise RuntimeError(_OPEN_CLIPBOARD_FAILED)
     try:
         user32.EmptyClipboard()
         if not user32.SetClipboardData(cf_dib, handle):

@@ -47,7 +47,7 @@ def server_handshake(sock: socket.socket) -> str:
     request = _read_http_message(sock)
     request_line = request.split("\r\n", 1)[0]
     parts = request_line.split(" ")
-    if len(parts) < 3 or not parts[0].upper() == "GET":
+    if len(parts) < 3 or parts[0].upper() != "GET":
         _send_http_error(sock, 400, "Bad Request")
         raise WsProtocolError(f"bad request line {request_line!r}")
     path = parts[1] or "/"
@@ -131,7 +131,13 @@ def _parse_headers(text: str) -> dict:
 
 
 def _compute_accept(key: str) -> str:
-    digest = hashlib.sha1(key.encode("ascii") + WS_GUID).digest()
+    # RFC 6455 mandates SHA-1 for the Sec-WebSocket-Accept handshake;
+    # ``usedforsecurity=False`` tells linters this is a protocol-required
+    # checksum, not a cryptographic primitive.
+    digest = hashlib.sha1(  # nosec B324  # reason: RFC 6455 handshake
+        key.encode("ascii") + WS_GUID,
+        usedforsecurity=False,
+    ).digest()
     return base64.b64encode(digest).decode("ascii")
 
 
@@ -170,7 +176,8 @@ def _send_frame(sock: socket.socket, opcode: int, payload: bytes,
             f"payload too large: {len(payload)} > {MAX_FRAME_PAYLOAD_BYTES}"
         )
     header = bytearray()
-    header.append(0x80 | (opcode & 0x0F))  # FIN=1, RSV=0, opcode
+    # First byte: FIN bit set, no reserved bits, low nibble is opcode.
+    header.append(0x80 | (opcode & 0x0F))
     length = len(payload)
     mask_bit = 0x80 if mask else 0
     if length < 126:

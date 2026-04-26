@@ -8,6 +8,7 @@ shutting down with the client.
 """
 import threading
 import time
+from typing import Optional
 
 import pytest
 
@@ -15,7 +16,7 @@ from je_auto_control.utils.remote_desktop import (
     RemoteDesktopHost, RemoteDesktopViewer,
 )
 from je_auto_control.utils.remote_desktop.audio import (
-    AudioBackendError, AudioCapture, AudioPlayer,
+    AudioBackendError, AudioCapture, AudioCaptureConfig, AudioPlayer,
 )
 
 
@@ -39,14 +40,14 @@ class _FakeStream:
 
 class _FakeSounddevice:
     def __init__(self) -> None:
-        self.last_input: _FakeStream = None
-        self.last_output: _FakeStream = None
+        self.last_input: Optional[_FakeStream] = None
+        self.last_output: Optional[_FakeStream] = None
 
-    def RawInputStream(self, **kwargs) -> _FakeStream:  # noqa: N802
+    def RawInputStream(self, **kwargs) -> _FakeStream:  # noqa: N802  # NOSONAR S100  # mirrors sounddevice API
         self.last_input = _FakeStream(**kwargs)
         return self.last_input
 
-    def RawOutputStream(self, **kwargs) -> _FakeStream:  # noqa: N802
+    def RawOutputStream(self, **kwargs) -> _FakeStream:  # noqa: N802  # NOSONAR S100  # mirrors sounddevice API
         self.last_output = _FakeStream(**kwargs)
         return self.last_output
 
@@ -143,7 +144,7 @@ def _start_audio_host():
         frame_provider=lambda: b"frame",
         input_dispatcher=lambda *_a, **_k: None,
         host_id="555444333",
-        enable_audio=True, audio_capture=capture,
+        audio_config=AudioCaptureConfig(enabled=True), audio_capture=capture,
     )
     host.start()
     capture.on_block = host._broadcast_audio  # noqa: SLF001
@@ -236,14 +237,15 @@ def test_audio_capture_failure_leaves_host_running():
             raise AudioBackendError("no portaudio")
 
         def stop(self):
-            pass
+            # No teardown needed — start() never opened a real stream.
+            return None
 
     host = RemoteDesktopHost(
         token="tok", bind="127.0.0.1", port=0, fps=50.0,
         frame_provider=lambda: b"frame",
         input_dispatcher=lambda *_a, **_k: None,
         host_id="600600600",
-        enable_audio=True, audio_capture=_Failing(),
+        audio_config=AudioCaptureConfig(enabled=True), audio_capture=_Failing(),
     )
     host.start()
     try:

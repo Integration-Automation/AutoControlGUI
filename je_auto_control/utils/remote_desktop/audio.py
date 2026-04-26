@@ -11,6 +11,7 @@ Defaults are 16 kHz, mono, 50 ms blocks (1600 bytes per block, ~32 KB/s)
 without noticeably starving the video pipe.
 """
 import threading
+from dataclasses import dataclass
 from typing import Callable, Optional
 
 DEFAULT_SAMPLE_RATE = 16_000
@@ -45,6 +46,17 @@ def is_audio_backend_available() -> bool:
     except AudioBackendError:
         return False
     return True
+
+
+@dataclass(frozen=True)
+class AudioCaptureConfig:
+    """Bundled tuning knobs for :class:`RemoteDesktopHost` audio capture."""
+
+    enabled: bool = False
+    device: Optional[int] = None
+    sample_rate: int = DEFAULT_SAMPLE_RATE
+    channels: int = DEFAULT_CHANNELS
+    block_frames: int = DEFAULT_BLOCK_FRAMES
 
 
 class AudioCapture:
@@ -125,9 +137,9 @@ class AudioCapture:
             return
         try:
             self._on_block(bytes(indata))
-        except Exception:  # noqa: BLE001  callback isolation
+        except Exception:  # noqa: BLE001  callback isolation  # nosec B110  # reason: PortAudio callback must never raise
             # We must not propagate user callback errors back into PortAudio.
-            pass
+            return
 
 
 class AudioPlayer:

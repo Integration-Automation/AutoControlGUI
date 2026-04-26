@@ -149,7 +149,7 @@ def test_viewer_uploads_file_to_host_dropbox(tmp_path: Path):
         result = viewer.send_file(str(src), str(dest))
         assert result.success is True
         assert _wait_until(lambda: bool(host_completes))
-        tid, ok, err, written_path = host_completes[-1]
+        _tid, ok, err, written_path = host_completes[-1]
         assert ok is True
         assert err is None
         assert Path(written_path) == dest

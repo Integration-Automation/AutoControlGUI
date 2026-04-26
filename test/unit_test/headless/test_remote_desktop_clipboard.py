@@ -41,7 +41,7 @@ def test_encode_decode_image_round_trip():
 
 def test_encode_text_rejects_non_string():
     with pytest.raises(TypeError):
-        encode_text(123)  # type: ignore[arg-type]
+        encode_text(123)  # type: ignore[arg-type]  # NOSONAR S5655  # intentional bad-type test
 
 
 def test_encode_image_rejects_empty():

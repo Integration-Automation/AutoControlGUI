@@ -20,7 +20,7 @@ import json
 import os
 import threading
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Tuple
 
@@ -29,6 +29,10 @@ from je_auto_control.utils.remote_desktop.protocol import MessageType
 
 DEFAULT_CHUNK_SIZE = 256 * 1024
 TRANSFER_ID_LEN = 36  # str(uuid.uuid4()) length
+
+_INVALID_TRANSFER_ID_MESSAGE = (
+    f"transfer_id must be a {TRANSFER_ID_LEN}-char UUID string"
+)
 
 ProgressCallback = Callable[[str, int, int], None]
 CompleteCallback = Callable[[str, bool, Optional[str], str], None]
@@ -45,7 +49,7 @@ def new_transfer_id() -> str:
 
 def encode_begin(transfer_id: str, dest_path: str, size: int) -> bytes:
     if len(transfer_id) != TRANSFER_ID_LEN:
-        raise FileTransferError("transfer_id must be a 36-char UUID string")
+        raise FileTransferError(_INVALID_TRANSFER_ID_MESSAGE)
     return json.dumps({
         "transfer_id": transfer_id,
         "dest_path": str(dest_path),
@@ -70,7 +74,7 @@ def decode_begin(payload: bytes) -> Tuple[str, str, int]:
 
 def encode_chunk(transfer_id: str, chunk: bytes) -> bytes:
     if len(transfer_id) != TRANSFER_ID_LEN:
-        raise FileTransferError("transfer_id must be a 36-char UUID string")
+        raise FileTransferError(_INVALID_TRANSFER_ID_MESSAGE)
     return transfer_id.encode("ascii") + bytes(chunk)
 
 
@@ -84,7 +88,7 @@ def decode_chunk(payload: bytes) -> Tuple[str, bytes]:
 def encode_end(transfer_id: str, status: str = "ok",
                error: Optional[str] = None) -> bytes:
     if len(transfer_id) != TRANSFER_ID_LEN:
-        raise FileTransferError("transfer_id must be a 36-char UUID string")
+        raise FileTransferError(_INVALID_TRANSFER_ID_MESSAGE)
     body: Dict[str, Any] = {"transfer_id": transfer_id, "status": status}
     if error is not None:
         body["error"] = str(error)
@@ -257,7 +261,7 @@ def send_file(channel, source_path: str, dest_path: str,
                 bytes_sent += len(chunk)
                 if on_progress is not None:
                     on_progress(transfer_id, bytes_sent, total_size)
-    except (OSError, ConnectionError) as error:
+    except OSError as error:
         channel.send_typed(
             MessageType.FILE_END,
             encode_end(transfer_id, status="error", error=str(error)),

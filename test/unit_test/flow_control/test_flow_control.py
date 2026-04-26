@@ -183,7 +183,8 @@ def test_runtime_interpolation_preserves_value_type(executor_with_hooks):
         ["AC_set_var", {"name": "n", "value": 42}],
         ["AC_capture", {"payload": "${n}"}],
     ])
-    assert seen == [42]
+    assert len(seen) == 1
+    assert seen[0] == 42
     assert isinstance(seen[0], int)
 
 

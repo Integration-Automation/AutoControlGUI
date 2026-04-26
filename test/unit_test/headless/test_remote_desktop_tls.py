@@ -73,6 +73,7 @@ def _generate_self_signed(tmp_path: Path) -> Tuple[Path, Path]:
 
 def _server_context(cert_path: Path, key_path: Path) -> ssl.SSLContext:
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     ctx.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
     return ctx
 
@@ -80,6 +81,7 @@ def _server_context(cert_path: Path, key_path: Path) -> ssl.SSLContext:
 def _trusting_client_context(ca_path: Path) -> ssl.SSLContext:
     """Verifying client context that trusts only the supplied test CA cert."""
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     ctx.load_verify_locations(cafile=str(ca_path))
     ctx.check_hostname = True
     ctx.verify_mode = ssl.CERT_REQUIRED
@@ -87,7 +89,9 @@ def _trusting_client_context(ca_path: Path) -> ssl.SSLContext:
 
 
 def _insecure_client_context() -> ssl.SSLContext:
+    # NOSONAR S5527 S4830 S4423  # reason: self-signed loopback test
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
     return ctx

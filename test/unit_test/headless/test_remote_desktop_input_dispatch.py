@@ -37,7 +37,7 @@ def test_unknown_action_is_rejected(fake_wrappers):
 
 def test_non_mapping_message_is_rejected():
     with pytest.raises(InputDispatchError):
-        dispatch_input(["not", "a", "mapping"])  # type: ignore[arg-type]
+        dispatch_input(["not", "a", "mapping"])  # type: ignore[arg-type]  # NOSONAR S5655  # intentional bad-type test
 
 
 def test_ping_returns_none_without_calling_wrappers(fake_wrappers):

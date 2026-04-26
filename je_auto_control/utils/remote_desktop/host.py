@@ -10,12 +10,13 @@ from typing import Any, Callable, Deque, List, Mapping, Optional, Sequence
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.audio import (
-    AudioBackendError, AudioCapture, DEFAULT_BLOCK_FRAMES as _AUDIO_BLOCK_FRAMES,
+    AudioBackendError, AudioCapture, AudioCaptureConfig,
+    DEFAULT_BLOCK_FRAMES as _AUDIO_BLOCK_FRAMES,
     DEFAULT_CHANNELS as _AUDIO_CHANNELS,
     DEFAULT_SAMPLE_RATE as _AUDIO_SAMPLE_RATE,
 )
 from je_auto_control.utils.remote_desktop.auth import (
-    NONCE_BYTES, make_nonce, verify_response,
+    make_nonce, verify_response,
 )
 from je_auto_control.utils.remote_desktop.clipboard_sync import (
     ClipboardSyncError, decode as decode_clipboard, encode_image, encode_text,
@@ -106,7 +107,7 @@ class _ClientHandler:
         )
         self._sender_thread.start()
         self._receiver_thread.start()
-        if self._host._audio_enabled:
+        if self._host._audio_config.enabled:
             self._audio_sender_thread = threading.Thread(
                 target=self._audio_send_loop, name="rd-audio", daemon=True,
             )
@@ -163,7 +164,7 @@ class _ClientHandler:
                 continue
             try:
                 self._channel.send_typed(MessageType.FRAME, frame)
-            except (OSError, ConnectionError) as error:
+            except OSError as error:
                 autocontrol_logger.info(
                     "remote_desktop send to %s failed: %r",
                     self._address, error,
@@ -185,7 +186,7 @@ class _ClientHandler:
                     chunk = self._audio_queue.popleft()
                 try:
                     self._channel.send_typed(MessageType.AUDIO, chunk)
-                except (OSError, ConnectionError) as error:
+                except OSError as error:
                     autocontrol_logger.info(
                         "remote_desktop audio send to %s failed: %r",
                         self._address, error,
@@ -197,7 +198,7 @@ class _ClientHandler:
         while not self._shutdown.is_set():
             try:
                 msg_type, payload = self._channel.read_typed()
-            except (OSError, ConnectionError, ProtocolError) as error:
+            except (OSError, ProtocolError) as error:
                 if not self._shutdown.is_set():
                     autocontrol_logger.info(
                         "remote_desktop recv from %s ended: %r",
@@ -301,11 +302,7 @@ class RemoteDesktopHost:
                  input_dispatcher: Optional[InputDispatcher] = None,
                  host_id: Optional[str] = None,
                  ssl_context: Optional[ssl.SSLContext] = None,
-                 enable_audio: bool = False,
-                 audio_device: Optional[int] = None,
-                 audio_sample_rate: int = _AUDIO_SAMPLE_RATE,
-                 audio_channels: int = _AUDIO_CHANNELS,
-                 audio_block_frames: int = _AUDIO_BLOCK_FRAMES,
+                 audio_config: Optional[AudioCaptureConfig] = None,
                  audio_capture: Optional[Any] = None,
                  ) -> None:
         if not isinstance(token, str) or not token:
@@ -314,6 +311,8 @@ class RemoteDesktopHost:
             raise ValueError("fps must be positive")
         if not 1 <= int(quality) <= 95:
             raise ValueError("quality must be in [1, 95]")
+        if audio_config is None:
+            audio_config = AudioCaptureConfig()
         self._host_id = (validate_host_id(host_id) if host_id
                          else load_or_create_host_id())
         self._token = token
@@ -327,11 +326,7 @@ class RemoteDesktopHost:
         )
         self._dispatch: InputDispatcher = input_dispatcher or dispatch_input
         self._file_receiver: Optional[FileReceiver] = None
-        self._audio_enabled = bool(enable_audio)
-        self._audio_device = audio_device
-        self._audio_sample_rate = int(audio_sample_rate)
-        self._audio_channels = int(audio_channels)
-        self._audio_block_frames = int(audio_block_frames)
+        self._audio_config = audio_config
         self._audio_capture_override = audio_capture
         self._audio_capture: Optional[AudioCapture] = None
         self._listen_sock: Optional[socket.socket] = None
@@ -354,7 +349,7 @@ class RemoteDesktopHost:
 
     @property
     def audio_enabled(self) -> bool:
-        return self._audio_enabled and self._audio_capture is not None
+        return self._audio_config.enabled and self._audio_capture is not None
 
     @property
     def port(self) -> int:
@@ -427,8 +422,9 @@ class RemoteDesktopHost:
         self._capture_thread = None
 
     def _start_audio_capture(self) -> None:
-        """Open the audio input stream when ``enable_audio`` is set."""
-        if not self._audio_enabled:
+        """Open the audio input stream when audio capture is enabled."""
+        config = self._audio_config
+        if not config.enabled:
             return
         if self._audio_capture_override is not None:
             self._audio_capture = self._audio_capture_override
@@ -443,10 +439,10 @@ class RemoteDesktopHost:
         try:
             capture = AudioCapture(
                 on_block=self._broadcast_audio,
-                device=self._audio_device,
-                sample_rate=self._audio_sample_rate,
-                channels=self._audio_channels,
-                block_frames=self._audio_block_frames,
+                device=config.device,
+                sample_rate=config.sample_rate,
+                channels=config.channels,
+                block_frames=config.block_frames,
             )
             capture.start()
         except (AudioBackendError, OSError, RuntimeError) as error:
@@ -492,7 +488,7 @@ class RemoteDesktopHost:
             try:
                 client._channel.send_typed(MessageType.CLIPBOARD, payload)
                 sent += 1
-            except (OSError, ConnectionError) as error:
+            except OSError as error:
                 autocontrol_logger.info(
                     "remote_desktop clipboard send to %s failed: %r",
                     client.address, error,
@@ -524,7 +520,7 @@ class RemoteDesktopHost:
             try:
                 send_file(client._channel, source_path, dest_path,
                           on_progress=on_progress)
-            except (OSError, ConnectionError, FileTransferError) as error:
+            except (OSError, FileTransferError) as error:
                 autocontrol_logger.info(
                     "remote_desktop file send to %s failed: %r",
                     client.address, error,
@@ -607,7 +603,7 @@ class RemoteDesktopHost:
             )
             wrapped.settimeout(None)
             return wrapped
-        except (ssl.SSLError, OSError) as error:
+        except OSError as error:
             autocontrol_logger.info(
                 "remote_desktop TLS handshake from %s failed: %r",
                 address, error,
@@ -635,7 +631,7 @@ class RemoteDesktopHost:
                 self._frame_cond.notify_all()
             next_tick += self._period
             sleep_for = max(0.0, next_tick - time.monotonic())
-            if sleep_for == 0.0:
+            if sleep_for <= 0.0:
                 next_tick = time.monotonic()
             self._shutdown.wait(sleep_for)
 
