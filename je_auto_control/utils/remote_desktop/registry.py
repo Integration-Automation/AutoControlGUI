@@ -35,13 +35,15 @@ class _RemoteDesktopRegistry:
                    fps: float = 10.0,
                    quality: int = 70,
                    region: Optional[Sequence[int]] = None,
-                   max_clients: int = 4) -> Dict[str, Any]:
+                   max_clients: int = 4,
+                   host_id: Optional[str] = None) -> Dict[str, Any]:
         """Stop any existing host, then start a fresh one with the given config."""
         self.stop_host()
         host = RemoteDesktopHost(
             token=token, bind=bind, port=int(port),
             fps=float(fps), quality=int(quality),
             region=region, max_clients=int(max_clients),
+            host_id=host_id,
         )
         host.start()
         self._host = host
@@ -57,28 +59,35 @@ class _RemoteDesktopRegistry:
     def host_status(self) -> Dict[str, Any]:
         host = self._host
         if host is None:
-            return {"running": False, "port": 0, "connected_clients": 0}
+            return {
+                "running": False, "port": 0, "connected_clients": 0,
+                "host_id": None,
+            }
         return {
             "running": host.is_running,
             "port": host.port,
             "connected_clients": host.connected_clients,
+            "host_id": host.host_id,
         }
 
     def connect_viewer(self, host: str, port: int, token: str,
                        timeout: float = 5.0,
                        on_frame: Optional[FrameCallback] = None,
                        on_error: Optional[ErrorCallback] = None,
+                       expected_host_id: Optional[str] = None,
                        ) -> Dict[str, Any]:
         """Disconnect any existing viewer, then connect a fresh one.
 
         ``on_frame`` and ``on_error`` are wired before the receiver
         thread starts, so no frame can arrive while the GUI is still
-        attaching its callbacks.
+        attaching its callbacks. When ``expected_host_id`` is provided
+        the handshake is rejected if the server reports a different ID.
         """
         self.disconnect_viewer()
         viewer = RemoteDesktopViewer(
             host=host, port=int(port), token=token,
             on_frame=on_frame, on_error=on_error,
+            expected_host_id=expected_host_id,
         )
         viewer.connect(timeout=float(timeout))
         self._viewer = viewer
@@ -94,8 +103,11 @@ class _RemoteDesktopRegistry:
     def viewer_status(self) -> Dict[str, Any]:
         viewer = self._viewer
         if viewer is None:
-            return {"connected": False}
-        return {"connected": viewer.connected}
+            return {"connected": False, "host_id": None}
+        return {
+            "connected": viewer.connected,
+            "host_id": viewer.remote_host_id,
+        }
 
     def send_input(self, action: Dict[str, Any]) -> Dict[str, Any]:
         """Forward ``action`` through the connected viewer, raise if offline."""

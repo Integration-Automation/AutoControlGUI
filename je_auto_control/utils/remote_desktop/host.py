@@ -10,6 +10,9 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.auth import (
     NONCE_BYTES, make_nonce, verify_response,
 )
+from je_auto_control.utils.remote_desktop.host_id import (
+    load_or_create_host_id, validate_host_id,
+)
 from je_auto_control.utils.remote_desktop.input_dispatch import (
     InputDispatchError, dispatch_input,
 )
@@ -102,7 +105,10 @@ class _ClientHandler:
         if not verify_response(self._host._token, nonce, payload):
             self._send(MessageType.AUTH_FAIL, b"bad token")
             raise AuthenticationError("bad token")
-        self._send(MessageType.AUTH_OK, b"")
+        ok_payload = json.dumps(
+            {"host_id": self._host.host_id}, ensure_ascii=False,
+        ).encode("utf-8")
+        self._send(MessageType.AUTH_OK, ok_payload)
         self._sock.settimeout(None)
 
     def _send(self, message_type: MessageType, payload: bytes) -> None:
@@ -207,6 +213,7 @@ class RemoteDesktopHost:
                  max_clients: int = 4,
                  frame_provider: Optional[FrameProvider] = None,
                  input_dispatcher: Optional[InputDispatcher] = None,
+                 host_id: Optional[str] = None,
                  ) -> None:
         if not isinstance(token, str) or not token:
             raise ValueError("token must be a non-empty string")
@@ -214,6 +221,8 @@ class RemoteDesktopHost:
             raise ValueError("fps must be positive")
         if not 1 <= int(quality) <= 95:
             raise ValueError("quality must be in [1, 95]")
+        self._host_id = (validate_host_id(host_id) if host_id
+                         else load_or_create_host_id())
         self._token = token
         self._bind = bind
         self._requested_port = int(port)
@@ -235,6 +244,11 @@ class RemoteDesktopHost:
         self._port: int = 0
 
     # public API ----------------------------------------------------------
+
+    @property
+    def host_id(self) -> str:
+        """The 9-digit numeric ID viewers use to verify this host."""
+        return self._host_id
 
     @property
     def port(self) -> int:

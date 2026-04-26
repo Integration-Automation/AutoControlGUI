@@ -10,6 +10,10 @@ it to untrusted networks should be paired with an SSH tunnel or TLS
 front-end.
 """
 from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
+from je_auto_control.utils.remote_desktop.host_id import (
+    HostIdError, format_host_id, generate_host_id, load_or_create_host_id,
+    parse_host_id, validate_host_id,
+)
 from je_auto_control.utils.remote_desktop.input_dispatch import (
     InputDispatchError, dispatch_input,
 )
@@ -25,4 +29,6 @@ __all__ = [
     "InputDispatchError", "AuthenticationError", "ProtocolError",
     "MessageType", "encode_frame", "decode_frame_header",
     "dispatch_input", "registry",
+    "HostIdError", "format_host_id", "generate_host_id",
+    "load_or_create_host_id", "parse_host_id", "validate_host_id",
 ]
