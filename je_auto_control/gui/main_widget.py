@@ -20,6 +20,7 @@ from je_auto_control.gui.llm_planner_tab import LLMPlannerTab
 from je_auto_control.gui.ocr_tab import OCRReaderTab
 from je_auto_control.gui.plugins_tab import PluginsTab
 from je_auto_control.gui.recording_editor_tab import RecordingEditorTab
+from je_auto_control.gui.remote_desktop_tab import RemoteDesktopTab
 from je_auto_control.gui.run_history_tab import RunHistoryTab
 from je_auto_control.gui.scheduler_tab import SchedulerTab
 from je_auto_control.gui.script_builder import ScriptBuilderTab
@@ -96,6 +97,7 @@ class AutoControlGUIWidget(
         self._add_tab("ocr_reader", "tab_ocr_reader", OCRReaderTab())
         self._add_tab("variables", "tab_variables", VariablesTab())
         self._add_tab("llm_planner", "tab_llm_planner", LLMPlannerTab())
+        self._add_tab("remote_desktop", "tab_remote_desktop", RemoteDesktopTab())
         self._add_tab("plugins", "tab_plugins", PluginsTab())
         layout.addWidget(self.tabs)
 

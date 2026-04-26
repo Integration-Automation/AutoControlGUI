@@ -30,6 +30,7 @@ english_word_dict = {
     "tab_ocr_reader": "OCR Reader",
     "tab_variables": "Variables",
     "tab_llm_planner": "LLM Planner",
+    "tab_remote_desktop": "Remote Desktop",
 
     # Auto Click Tab
     "interval_time": "Interval (ms):",
@@ -377,6 +378,36 @@ english_word_dict = {
     "llm_no_plan": "Click Plan first",
     "llm_running": "Running...",
     "llm_run_done": "Done",
+
+    # Remote Desktop Tab
+    "rd_host_tab": "Host (this machine)",
+    "rd_viewer_tab": "Viewer (control another)",
+    "rd_host_security_warning": (
+        "WARNING: anyone with the host:port and token gets full mouse / "
+        "keyboard control of this machine. Default bind is 127.0.0.1; "
+        "expose to a network only via SSH tunnel or trusted VPN."
+    ),
+    "rd_host_config_group": "Host configuration",
+    "rd_viewer_config_group": "Connect to a remote host",
+    "rd_token_label": "Token:",
+    "rd_token_placeholder": "shared secret (HMAC key)",
+    "rd_token_generate": "Generate",
+    "rd_bind_label": "Address:",
+    "rd_port_label": "Port:",
+    "rd_fps_label": "FPS:",
+    "rd_quality_label": "JPEG quality:",
+    "rd_host_start": "Start host",
+    "rd_host_stop": "Stop host",
+    "rd_host_status_running": "Running on port {port} — {n} viewer(s)",
+    "rd_host_status_stopped": "Host is stopped",
+    "rd_viewer_connect": "Connect",
+    "rd_viewer_disconnect": "Disconnect",
+    "rd_viewer_required_fields": (
+        "Address, port, and token are all required."
+    ),
+    "rd_viewer_status_connected": "Connected — receiving frames",
+    "rd_viewer_status_idle": "Not connected",
+    "rd_viewer_error": "Remote desktop error",
 
     # Menu bar
     "menu_file": "File",

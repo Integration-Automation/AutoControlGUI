@@ -26,6 +26,7 @@ traditional_chinese_word_dict = {
     "tab_ocr_reader": "OCR 讀取",
     "tab_variables": "執行期變數",
     "tab_llm_planner": "LLM 腳本規劃",
+    "tab_remote_desktop": "遠端桌面",
 
     # Auto Click Tab
     "interval_time": "間隔時間 (ms)：",
@@ -373,6 +374,33 @@ traditional_chinese_word_dict = {
     "llm_no_plan": "請先按下「規劃」",
     "llm_running": "執行中...",
     "llm_run_done": "完成",
+
+    # Remote Desktop Tab
+    "rd_host_tab": "被遠端（本機）",
+    "rd_viewer_tab": "遠端他人（控制他機）",
+    "rd_host_security_warning": (
+        "警告：取得本機 host:port 與 token 的人，可以完全控制本機的滑鼠／鍵盤。"
+        "預設只綁 127.0.0.1；要對外請透過 SSH tunnel 或可信的 VPN。"
+    ),
+    "rd_host_config_group": "Host 設定",
+    "rd_viewer_config_group": "連線到遠端 Host",
+    "rd_token_label": "Token：",
+    "rd_token_placeholder": "共用密鑰（HMAC key）",
+    "rd_token_generate": "產生",
+    "rd_bind_label": "位址：",
+    "rd_port_label": "Port：",
+    "rd_fps_label": "FPS：",
+    "rd_quality_label": "JPEG 品質：",
+    "rd_host_start": "啟動 Host",
+    "rd_host_stop": "停止 Host",
+    "rd_host_status_running": "運行中 port {port} — {n} 個 viewer",
+    "rd_host_status_stopped": "Host 已停止",
+    "rd_viewer_connect": "連線",
+    "rd_viewer_disconnect": "中斷連線",
+    "rd_viewer_required_fields": "位址、port、token 都必須填寫。",
+    "rd_viewer_status_connected": "已連線 — 正在接收畫面",
+    "rd_viewer_status_idle": "尚未連線",
+    "rd_viewer_error": "遠端桌面錯誤",
 
     # Menu bar
     "menu_file": "檔案",

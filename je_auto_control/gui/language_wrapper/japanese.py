@@ -30,6 +30,7 @@ japanese_word_dict = {
     "tab_ocr_reader": "OCR リーダー",
     "tab_variables": "実行時変数",
     "tab_llm_planner": "LLM プランナー",
+    "tab_remote_desktop": "リモートデスクトップ",
 
     # Auto Click Tab
     "interval_time": "間隔 (ms):",
@@ -377,6 +378,34 @@ japanese_word_dict = {
     "llm_no_plan": "まず「プラン作成」を押してください",
     "llm_running": "実行中...",
     "llm_run_done": "完了",
+
+    # Remote Desktop Tab
+    "rd_host_tab": "ホスト（このマシン）",
+    "rd_viewer_tab": "ビューア（他マシンを操作）",
+    "rd_host_security_warning": (
+        "警告：host:port と token を知る相手は、このマシンのマウス／キーボードを"
+        "完全に操作できます。既定は 127.0.0.1。外部公開は SSH トンネルか"
+        "信頼できる VPN 経由で行ってください。"
+    ),
+    "rd_host_config_group": "ホスト設定",
+    "rd_viewer_config_group": "リモートホストへ接続",
+    "rd_token_label": "トークン:",
+    "rd_token_placeholder": "共有シークレット（HMAC キー）",
+    "rd_token_generate": "生成",
+    "rd_bind_label": "アドレス:",
+    "rd_port_label": "ポート:",
+    "rd_fps_label": "FPS:",
+    "rd_quality_label": "JPEG 品質:",
+    "rd_host_start": "ホスト開始",
+    "rd_host_stop": "ホスト停止",
+    "rd_host_status_running": "稼働中 ポート {port} — ビューア {n} 名",
+    "rd_host_status_stopped": "ホストは停止中",
+    "rd_viewer_connect": "接続",
+    "rd_viewer_disconnect": "切断",
+    "rd_viewer_required_fields": "アドレス・ポート・トークンはすべて必須です。",
+    "rd_viewer_status_connected": "接続中 — フレーム受信中",
+    "rd_viewer_status_idle": "未接続",
+    "rd_viewer_error": "リモートデスクトップエラー",
 
     # Menu bar
     "menu_file": "ファイル",
