@@ -1,7 +1,10 @@
 "use strict";
 
 const POLL_MS = 5000;
-const TOKEN_KEY = "ac-rest-token";
+// sessionStorage KEY (not a token value). Codacy's hardcoded-password
+// pattern triggers on any literal that ends in "token"; this is just
+// the storage slot name.
+const TOKEN_STORAGE_KEY = "ac-rest-token";  // NOSONAR
 const PANELS = ["diagnostics", "sessions", "inspector", "usb", "audit"];
 
 const tokenInput = document.getElementById("token");
@@ -11,12 +14,12 @@ const serverInfo = document.getElementById("server-info");
 let pollTimer = null;
 
 document.addEventListener("DOMContentLoaded", () => {
-  const cached = sessionStorage.getItem(TOKEN_KEY);
+  const cached = sessionStorage.getItem(TOKEN_STORAGE_KEY);
   if (cached) {
     tokenInput.value = cached;
   }
   saveBtn.addEventListener("click", () => {
-    sessionStorage.setItem(TOKEN_KEY, tokenInput.value.trim());
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, tokenInput.value.trim());
     refreshAll();
   });
   serverInfo.textContent = `${location.protocol}//${location.host}`;
@@ -25,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function getToken() {
-  return tokenInput.value.trim() || sessionStorage.getItem(TOKEN_KEY) || "";
+  return tokenInput.value.trim() || sessionStorage.getItem(TOKEN_STORAGE_KEY) || "";
 }
 
 async function fetchJson(path) {
@@ -58,8 +61,36 @@ function clearRows(name) {
   if (rows.tagName === "PRE") {
     rows.textContent = "—";
   } else {
-    rows.innerHTML = "";
+    clearChildren(rows);
   }
+}
+
+function clearChildren(node) {
+  while (node.firstChild) {
+    node.removeChild(node.firstChild);
+  }
+}
+
+// Build a <tr> from cell descriptors and append it to ``tbody``. Each
+// cell is either a string (rendered via textContent so any HTML in the
+// payload is treated as literal text) or an object {text, className}.
+// Using createElement + textContent eliminates the innerHTML/escapeHtml
+// dance that tripped Codacy's no-unsanitized-property and Sonar
+// insecure-innerhtml rules — there is no template parsing here, so an
+// attacker-controlled value can never become DOM markup.
+function appendRow(tbody, cells) {
+  const tr = document.createElement("tr");
+  for (const cell of cells) {
+    const td = document.createElement("td");
+    if (cell && typeof cell === "object") {
+      td.textContent = cell.text == null ? "" : String(cell.text);
+      if (cell.className) td.className = cell.className;
+    } else {
+      td.textContent = cell == null ? "" : String(cell);
+    }
+    tr.appendChild(td);
+  }
+  tbody.appendChild(tr);
 }
 
 async function refreshAll() {
@@ -83,14 +114,13 @@ async function refreshDiagnostics() {
       `${data.count} checks, ${data.failed} failed`,
       data.ok ? "ok" : "error");
     const tbody = panelEl("diagnostics").querySelector("[data-rows]");
-    tbody.innerHTML = "";
+    clearChildren(tbody);
     for (const check of data.checks) {
-      const tr = document.createElement("tr");
-      tr.innerHTML =
-        `<td>${escapeHtml(check.name)}</td>` +
-        `<td class="sev-${check.severity}">${escapeHtml(check.severity)}</td>` +
-        `<td>${escapeHtml(check.detail)}</td>`;
-      tbody.appendChild(tr);
+      appendRow(tbody, [
+        check.name,
+        { text: check.severity, className: `sev-${check.severity}` },
+        check.detail,
+      ]);
     }
   } catch (error) {
     setPanelStatus("diagnostics", String(error.message || error), "error");
@@ -116,15 +146,14 @@ async function refreshInspector() {
       `${data.sample_count} samples / window ${data.window_seconds.toFixed(1)}s`,
       "ok");
     const tbody = panelEl("inspector").querySelector("[data-rows]");
-    tbody.innerHTML = "";
+    clearChildren(tbody);
     for (const [metric, stats] of Object.entries(data.metrics || {})) {
-      const tr = document.createElement("tr");
-      tr.innerHTML =
-        `<td>${escapeHtml(metric)}</td>` +
-        `<td>${formatStat(stats.last)}</td>` +
-        `<td>${formatStat(stats.avg)}</td>` +
-        `<td>${formatStat(stats.p95)}</td>`;
-      tbody.appendChild(tr);
+      appendRow(tbody, [
+        metric,
+        formatStat(stats.last),
+        formatStat(stats.avg),
+        formatStat(stats.p95),
+      ]);
     }
   } catch (error) {
     setPanelStatus("inspector", String(error.message || error), "error");
@@ -139,15 +168,14 @@ async function refreshUsb() {
       `${data.count} devices via ${data.backend}` + (data.error ? ` (${data.error})` : ""),
       data.error ? "error" : "ok");
     const tbody = panelEl("usb").querySelector("[data-rows]");
-    tbody.innerHTML = "";
+    clearChildren(tbody);
     for (const dev of data.devices) {
-      const tr = document.createElement("tr");
-      tr.innerHTML =
-        `<td>${escapeHtml(dev.vendor_id || "-")}</td>` +
-        `<td>${escapeHtml(dev.product_id || "-")}</td>` +
-        `<td>${escapeHtml(dev.manufacturer || "")}</td>` +
-        `<td>${escapeHtml(dev.product || "")}</td>`;
-      tbody.appendChild(tr);
+      appendRow(tbody, [
+        dev.vendor_id || "-",
+        dev.product_id || "-",
+        dev.manufacturer || "",
+        dev.product || "",
+      ]);
     }
   } catch (error) {
     setPanelStatus("usb", String(error.message || error), "error");
@@ -160,15 +188,14 @@ async function refreshAudit() {
     const data = await fetchJson("/audit/list?limit=20");
     setPanelStatus("audit", `${data.count} most recent rows`, "ok");
     const tbody = panelEl("audit").querySelector("[data-rows]");
-    tbody.innerHTML = "";
+    clearChildren(tbody);
     for (const row of data.rows) {
-      const tr = document.createElement("tr");
-      tr.innerHTML =
-        `<td>${escapeHtml(row.ts || "")}</td>` +
-        `<td>${escapeHtml(row.event_type || "")}</td>` +
-        `<td>${escapeHtml(row.host_id || "")}</td>` +
-        `<td>${escapeHtml(row.detail || "")}</td>`;
-      tbody.appendChild(tr);
+      appendRow(tbody, [
+        row.ts || "",
+        row.event_type || "",
+        row.host_id || "",
+        row.detail || "",
+      ]);
     }
   } catch (error) {
     setPanelStatus("audit", String(error.message || error), "error");
@@ -179,13 +206,4 @@ async function refreshAudit() {
 function formatStat(value) {
   if (value === null || value === undefined) return "-";
   return Number(value).toFixed(2);
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }

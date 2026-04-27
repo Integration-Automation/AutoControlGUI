@@ -70,6 +70,15 @@ class WebRTCDesktopViewer:
         self._read_only = False
         self._host_fingerprint: Optional[str] = None
         self._closed = threading.Event()
+        # Pin fire-and-forget asyncio tasks so they aren't reaped before
+        # they finish (S7502). Tasks self-discard via a done callback.
+        self._background_tasks: set = set()
+
+    def _spawn_bg(self, coro) -> "asyncio.Task":
+        task = asyncio.ensure_future(coro)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
 
     # --- public sync API ----------------------------------------------------
 
@@ -487,6 +496,9 @@ class WebRTCDesktopViewer:
         autocontrol_logger.info("webrtc viewer: playing host voice")
 
     async def _consume_video(self, track) -> None:
+        # CancelledError is intentionally not caught — it must propagate
+        # so the awaiter knows the consumer ended via cancellation
+        # rather than a stream error (S7497).
         try:
             while not self._closed.is_set():
                 frame = await track.recv()
@@ -495,8 +507,6 @@ class WebRTCDesktopViewer:
                         self._on_frame(frame)
                     except (RuntimeError, OSError) as error:
                         autocontrol_logger.debug("frame cb: %r", error)
-        except asyncio.CancelledError:
-            return
         except (OSError, RuntimeError) as error:
             autocontrol_logger.info("webrtc viewer: video stream ended: %r", error)
 
@@ -547,7 +557,7 @@ class WebRTCDesktopViewer:
         elif msg_type == "renegotiate_offer":
             sdp = data.get("sdp")
             if isinstance(sdp, str) and self._pc is not None:
-                asyncio.ensure_future(self._async_handle_renegotiate(sdp))
+                self._spawn_bg(self._async_handle_renegotiate(sdp))
         elif msg_type in ("delete_inbox_response", "request_file_response"):
             if self._on_inbox_op_result is None:
                 return

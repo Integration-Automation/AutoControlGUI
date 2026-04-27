@@ -206,7 +206,7 @@ def _linux_node_to_device(node: Path) -> Optional[UsbDevice]:
 
 def _run_capture(cmd: List[str], backend: str) -> Any:
     try:
-        completed = subprocess.run(  # nosec B603 B607  # reason: argv list, not shell string; commands are project-controlled
+        completed = subprocess.run(  # nosec B603 B607  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: argv list (never shell=True); cmd is built from project-controlled allowlists in _enumerate_via_lsusb / _enumerate_via_system_profiler — no user input flows in
             cmd, capture_output=True, text=True,
             timeout=_SUBPROCESS_TIMEOUT_S, check=False,
         )

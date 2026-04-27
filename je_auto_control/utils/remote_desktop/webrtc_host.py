@@ -107,6 +107,10 @@ class WebRTCDesktopHost:
         self._authenticated = False
         self._has_pending_viewer = False
         self._auth_deadline_handle = None
+        # Hold strong refs to fire-and-forget tasks so the asyncio event
+        # loop doesn't garbage-collect them mid-flight (S7502). Tasks
+        # remove themselves from this set in their done callback.
+        self._background_tasks: set = set()
         self._closed = threading.Event()
         self._lock = threading.Lock()
 
@@ -238,6 +242,13 @@ class WebRTCDesktopHost:
             self._auth_deadline_handle.cancel()
             self._auth_deadline_handle = None
 
+    def _spawn_bg(self, coro) -> "asyncio.Task":
+        """Schedule ``coro`` and pin a strong ref while it runs (S7502)."""
+        task = asyncio.ensure_future(coro)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
+
     # --- channel wiring -----------------------------------------------------
 
     def _wire_viewer_video_handler(self, pc: RTCPeerConnection) -> None:
@@ -245,7 +256,7 @@ class WebRTCDesktopHost:
         def _on_track(track) -> None:
             if track.kind == "video":
                 autocontrol_logger.info("webrtc host: receiving viewer video")
-                self._viewer_video_task = asyncio.ensure_future(
+                self._viewer_video_task = self._spawn_bg(
                     self._consume_viewer_video(track),
                 )
             elif track.kind == "audio":
@@ -478,11 +489,11 @@ class WebRTCDesktopHost:
                 except (RuntimeError, OSError) as error:
                     autocontrol_logger.debug("annotation cb: %r", error)
         elif msg_type == "renegotiate_request":
-            asyncio.ensure_future(self._async_renegotiate())
+            self._spawn_bg(self._async_renegotiate())
         elif msg_type == "renegotiate_answer":
             sdp = data.get("sdp")
             if isinstance(sdp, str) and self._pc is not None:
-                asyncio.ensure_future(self._async_apply_renegotiate_answer(sdp))
+                self._spawn_bg(self._async_apply_renegotiate_answer(sdp))
 
     async def _async_apply_renegotiate_answer(self, sdp: str) -> None:
         if self._pc is None:
@@ -506,7 +517,7 @@ class WebRTCDesktopHost:
                 receiver = transceiver.receiver
                 if receiver is None or receiver.track is None:
                     continue
-                self._viewer_video_task = asyncio.ensure_future(
+                self._viewer_video_task = self._spawn_bg(
                     self._consume_viewer_video(receiver.track),
                 )
                 autocontrol_logger.info(
@@ -546,7 +557,7 @@ class WebRTCDesktopHost:
         if self._pc is None:
             return
         get_bridge().call_soon(
-            lambda: asyncio.ensure_future(self._async_renegotiate()),
+            lambda: self._spawn_bg(self._async_renegotiate()),
         )
 
     def enable_accept_viewer_video(self) -> None:
@@ -575,7 +586,7 @@ class WebRTCDesktopHost:
         )
         if already < 2:
             self._pc.addTransceiver("video", direction="recvonly")
-        asyncio.ensure_future(self._async_renegotiate())
+        self._spawn_bg(self._async_renegotiate())
 
     def _add_recvonly_audio_and_renegotiate(self) -> None:
         if self._pc is None:
@@ -585,7 +596,7 @@ class WebRTCDesktopHost:
         )
         if already < 1:
             self._pc.addTransceiver("audio", direction="recvonly")
-        asyncio.ensure_future(self._async_renegotiate())
+        self._spawn_bg(self._async_renegotiate())
 
     def disable_accept_viewer_video(self) -> None:
         """Mark the recvonly video slot inactive + stop the consume task."""
@@ -615,7 +626,7 @@ class WebRTCDesktopHost:
         if self._viewer_video_task is not None:
             self._viewer_video_task.cancel()
             self._viewer_video_task = None
-        asyncio.ensure_future(self._async_renegotiate())
+        self._spawn_bg(self._async_renegotiate())
 
     def _deactivate_recvonly_audio(self) -> None:
         if self._pc is None:
@@ -632,7 +643,7 @@ class WebRTCDesktopHost:
             except (RuntimeError, OSError) as error:
                 autocontrol_logger.debug("opus receiver stop: %r", error)
             self._opus_audio_receiver = None
-        asyncio.ensure_future(self._async_renegotiate())
+        self._spawn_bg(self._async_renegotiate())
 
     def _ensure_files_receiver(self):
         from je_auto_control.utils.remote_desktop.webrtc_files import (
@@ -872,7 +883,7 @@ class WebRTCDesktopHost:
 
     def _schedule_close_after_fail(self) -> None:
         loop = asyncio.get_event_loop()
-        loop.call_later(0.5, lambda: asyncio.ensure_future(self._async_stop()))
+        loop.call_later(0.5, lambda: self._spawn_bg(self._async_stop()))
 
     def _enforce_auth_deadline(self) -> None:
         if self._authenticated:
@@ -880,7 +891,7 @@ class WebRTCDesktopHost:
         autocontrol_logger.warning(
             "webrtc host: viewer failed to authenticate within grace period",
         )
-        asyncio.ensure_future(self._async_stop())
+        self._spawn_bg(self._async_stop())
 
     def _dispatch_input_safely(self, payload: Any) -> None:
         if not isinstance(payload, dict):

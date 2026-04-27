@@ -1,4 +1,6 @@
 """Tests for the WebRTC inspector ring buffer (round 26)."""
+import pytest
+
 from je_auto_control.utils.remote_desktop.webrtc_inspector import (
     WebRTCInspector, default_webrtc_inspector,
 )
@@ -9,7 +11,7 @@ def test_empty_inspector_summary_is_zero():
     inspector = WebRTCInspector(capacity=10)
     summary = inspector.summary()
     assert summary["sample_count"] == 0
-    assert summary["window_seconds"] == 0.0
+    assert summary["window_seconds"] == pytest.approx(0.0)
     assert summary["metrics"] == {}
 
 
@@ -24,11 +26,11 @@ def test_summary_computes_per_metric_statistics():
         inspector.record(StatsSnapshot(rtt_ms=10.0 + i,
                                        bitrate_kbps=1000.0 + i * 100))
     metrics = inspector.summary()["metrics"]
-    assert metrics["rtt_ms"]["last"] == 12.0
-    assert metrics["rtt_ms"]["min"] == 10.0
-    assert metrics["rtt_ms"]["max"] == 12.0
-    assert metrics["bitrate_kbps"]["max"] == 1200.0
-    assert abs(metrics["bitrate_kbps"]["avg"] - 1100.0) < 1e-6
+    assert metrics["rtt_ms"]["last"] == pytest.approx(12.0)
+    assert metrics["rtt_ms"]["min"] == pytest.approx(10.0)
+    assert metrics["rtt_ms"]["max"] == pytest.approx(12.0)
+    assert metrics["bitrate_kbps"]["max"] == pytest.approx(1200.0)
+    assert metrics["bitrate_kbps"]["avg"] == pytest.approx(1100.0)
 
 
 def test_summary_handles_metric_with_only_none_values():
@@ -49,7 +51,7 @@ def test_recent_returns_age_seconds_in_chronological_order():
     recent = inspector.recent(3)
     assert len(recent) == 3
     # Most recent sample has age 0; older samples have larger ages.
-    assert recent[-1]["age_seconds"] == 0.0
+    assert recent[-1]["age_seconds"] == pytest.approx(0.0)
     assert recent[0]["age_seconds"] >= recent[-1]["age_seconds"]
 
 
@@ -60,7 +62,7 @@ def test_ring_eviction_keeps_only_capacity_samples():
     summary = inspector.summary()
     assert summary["sample_count"] == 4
     # Oldest 6 evicted; most recent should be 9.0.
-    assert summary["metrics"]["rtt_ms"]["last"] == 9.0
+    assert summary["metrics"]["rtt_ms"]["last"] == pytest.approx(9.0)
 
 
 def test_reset_returns_cleared_count():

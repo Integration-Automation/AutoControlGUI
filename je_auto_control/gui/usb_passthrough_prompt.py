@@ -122,6 +122,11 @@ class PromptBridge(QObject):
         )
         if not done.wait(timeout=wait_timeout_s):
             return False
+        # NOSONAR pythonbugs:S2583 — Sonar can't see through the
+        # cross-thread QMetaObject.invokeMethod + queued slot above:
+        # ``result`` is mutated by ``_show_dialog`` on the GUI thread
+        # (line 145–146) before ``done`` is set, so neither key is
+        # guaranteed False at this point.
         if result["allow"] and result["remember"] and self._acl is not None:
             self._acl.add_rule(AclRule(
                 vendor_id=vendor_id, product_id=product_id,

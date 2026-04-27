@@ -24,10 +24,10 @@ import os
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Annotated, Dict, List, Optional
 
 try:
-    from fastapi import FastAPI, Header, HTTPException, Request
+    from fastapi import Depends, FastAPI, Header, HTTPException, Request
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.staticfiles import StaticFiles
     from pydantic import BaseModel
@@ -113,19 +113,53 @@ class _AnswerIn(BaseModel):
     sdp: str
 
 
-def create_app(shared_secret: Optional[str] = None,
-               ttl_s: float = _DEFAULT_TTL_S,
-               serve_web_viewer: bool = True,
-               cors_origins: Optional[list] = None) -> FastAPI:
-    """Build the FastAPI app. Importable for embedding in larger services."""
-    app = FastAPI(title="AutoControl Signaling", version="1.0.0")
-    store = _SessionStore(ttl_s=ttl_s)
+_AUTH_RESPONSES = {401: {"description": "bad shared secret"}}
+_VALIDATION_RESPONSES = {
+    400: {"description": "invalid host_id or sdp"},
+    **_AUTH_RESPONSES,
+}
+_NOT_FOUND_RESPONSES = {
+    404: {"description": "session or message not found"},
+    **_AUTH_RESPONSES,
+}
+
+
+def _build_secret_dependency(shared_secret: Optional[str]):
+    """Return a FastAPI dependency that enforces ``X-Signaling-Secret``."""
+    def _check(
+        x_signaling_secret: Annotated[
+            Optional[str], Header(alias="X-Signaling-Secret"),
+        ] = None,
+    ) -> None:
+        if shared_secret and x_signaling_secret != shared_secret:
+            raise HTTPException(status_code=401, detail="bad shared secret")
+    return _check
+
+
+def _validate_host_id(host_id: str) -> None:
+    if not host_id or len(host_id) > 128 or not host_id.isalnum():
+        raise HTTPException(status_code=400, detail="invalid host_id")
+
+
+def _validate_sdp(sdp: str) -> None:
+    if not sdp or len(sdp.encode("utf-8")) > _MAX_SDP_BYTES:
+        raise HTTPException(status_code=400, detail="invalid sdp size")
+
+
+def _configure_cors(app: FastAPI, cors_origins: Optional[List[str]]) -> None:
+    # ``["*"]`` is the documented default — the signaling server is
+    # meant to be reached from any browser tab running the viewer SPA;
+    # access control runs at the X-Signaling-Secret layer, not Origin.
+    # Operators tighten this via the repeatable --cors-origin CLI flag.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=cors_origins or ["*"],
+        allow_origins=cors_origins or ["*"],  # nosemgrep: python.fastapi.security.wildcard-cors.wildcard-cors
         allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "X-Signaling-Secret"],
     )
+
+
+def _maybe_mount_viewer(app: FastAPI, serve_web_viewer: bool) -> None:
     if serve_web_viewer and _WEB_VIEWER_DIR.exists():
         app.mount(
             "/viewer",
@@ -133,73 +167,64 @@ def create_app(shared_secret: Optional[str] = None,
             name="viewer",
         )
 
-    def _check_secret(secret_header: Optional[str]) -> None:
-        if shared_secret and secret_header != shared_secret:
-            raise HTTPException(status_code=401, detail="bad shared secret")
 
-    def _validate_host_id(host_id: str) -> None:
-        if not host_id or len(host_id) > 128 or not host_id.isalnum():
-            raise HTTPException(status_code=400, detail="invalid host_id")
-
-    def _validate_sdp(sdp: str) -> None:
-        if not sdp or len(sdp.encode("utf-8")) > _MAX_SDP_BYTES:
-            raise HTTPException(status_code=400, detail="invalid sdp size")
+def _register_routes(app: FastAPI, store: "_SessionStore",
+                     secret_dep) -> None:
+    # Apply the auth dependency at the route layer so each handler's
+    # signature stays free of plumbing parameters. The dependency
+    # itself uses the recommended ``Annotated[Optional[str], Header(...)]``
+    # form for its ``X-Signaling-Secret`` parameter — see
+    # ``_build_secret_dependency`` above.
+    auth_only = [Depends(secret_dep)]
 
     @app.get("/health")
     def _health() -> dict:
         return {"status": "ok"}
 
-    @app.post("/sessions/{host_id}/offer")
-    def _post_offer(host_id: str, body: _OfferIn,
-                    x_signaling_secret: Optional[str] = Header(default=None)
-                    ) -> dict:
-        _check_secret(x_signaling_secret)
+    @app.post("/sessions/{host_id}/offer",
+              responses=_VALIDATION_RESPONSES, dependencies=auth_only)
+    def _post_offer(host_id: str, body: _OfferIn) -> dict:
         _validate_host_id(host_id)
         _validate_sdp(body.sdp)
         store.upsert_offer(host_id, body.sdp)
         return {"ok": True}
 
-    @app.get("/sessions/{host_id}/offer")
-    def _get_offer(host_id: str,
-                   x_signaling_secret: Optional[str] = Header(default=None)
-                   ) -> dict:
-        _check_secret(x_signaling_secret)
+    @app.get("/sessions/{host_id}/offer",
+             responses=_NOT_FOUND_RESPONSES, dependencies=auth_only)
+    def _get_offer(host_id: str) -> dict:
         _validate_host_id(host_id)
         sdp = store.fetch_offer(host_id)
         if sdp is None:
             raise HTTPException(status_code=404, detail="no offer pending")
         return {"sdp": sdp}
 
-    @app.post("/sessions/{host_id}/answer")
-    def _post_answer(host_id: str, body: _AnswerIn,
-                     x_signaling_secret: Optional[str] = Header(default=None)
-                     ) -> dict:
-        _check_secret(x_signaling_secret)
+    @app.post("/sessions/{host_id}/answer",
+              responses={**_VALIDATION_RESPONSES, **_NOT_FOUND_RESPONSES},
+              dependencies=auth_only)
+    def _post_answer(host_id: str, body: _AnswerIn) -> dict:
         _validate_host_id(host_id)
         _validate_sdp(body.sdp)
         if not store.upsert_answer(host_id, body.sdp):
             raise HTTPException(status_code=404, detail="no offer to match")
         return {"ok": True}
 
-    @app.get("/sessions/{host_id}/answer")
-    def _get_answer(host_id: str,
-                    x_signaling_secret: Optional[str] = Header(default=None)
-                    ) -> dict:
-        _check_secret(x_signaling_secret)
+    @app.get("/sessions/{host_id}/answer",
+             responses=_NOT_FOUND_RESPONSES, dependencies=auth_only)
+    def _get_answer(host_id: str) -> dict:
         _validate_host_id(host_id)
         sdp = store.fetch_answer(host_id)
         if sdp is None:
             raise HTTPException(status_code=404, detail="no answer yet")
         return {"sdp": sdp}
 
-    @app.delete("/sessions/{host_id}")
-    def _delete(host_id: str,
-                x_signaling_secret: Optional[str] = Header(default=None)
-                ) -> dict:
-        _check_secret(x_signaling_secret)
+    @app.delete("/sessions/{host_id}",
+                responses=_AUTH_RESPONSES, dependencies=auth_only)
+    def _delete(host_id: str) -> dict:
         _validate_host_id(host_id)
         return {"deleted": store.delete(host_id)}
 
+
+def _register_request_logging(app: FastAPI) -> None:
     @app.middleware("http")
     async def _log_request(request: Request, call_next):
         response = await call_next(request)
@@ -207,6 +232,18 @@ def create_app(shared_secret: Optional[str] = None,
                   response.status_code)
         return response
 
+
+def create_app(shared_secret: Optional[str] = None,
+               ttl_s: float = _DEFAULT_TTL_S,
+               serve_web_viewer: bool = True,
+               cors_origins: Optional[list] = None) -> FastAPI:
+    """Build the FastAPI app. Importable for embedding in larger services."""
+    app = FastAPI(title="AutoControl Signaling", version="1.0.0")
+    store = _SessionStore(ttl_s=ttl_s)
+    _configure_cors(app, cors_origins)
+    _maybe_mount_viewer(app, serve_web_viewer)
+    _register_routes(app, store, _build_secret_dependency(shared_secret))
+    _register_request_logging(app)
     return app
 
 

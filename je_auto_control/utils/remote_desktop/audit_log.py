@@ -80,14 +80,19 @@ class AuditLog:
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type)"
         )
-        # Add chain columns to pre-existing tables.
-        for column in ("prev_hash", "row_hash"):
-            try:
-                self._conn.execute(
-                    f"ALTER TABLE events ADD COLUMN {column} TEXT"
-                )
-            except sqlite3.OperationalError:
-                pass  # Column already exists — that's fine.
+        # Add chain columns to pre-existing tables. Column names are
+        # split out as explicit literal SQL statements rather than
+        # interpolated, so the SQL strings here are fully static —
+        # this is the form that satisfies Semgrep / Sonar's
+        # raw-SQL-construction rules without resorting to suppressions.
+        try:
+            self._conn.execute("ALTER TABLE events ADD COLUMN prev_hash TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists — that's fine.
+        try:
+            self._conn.execute("ALTER TABLE events ADD COLUMN row_hash TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists — that's fine.
         self._backfill_chain_locked()
 
     def _backfill_chain_locked(self) -> None:
@@ -237,23 +242,26 @@ def _compute_row_hash(prev_hash: Optional[str], ts: str, event_type: str,
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+_QUERY_SQL = (
+    "SELECT id, ts, event_type, host_id, viewer_id, detail"
+    " FROM events"
+    " WHERE (? IS NULL OR event_type = ?)"
+    " AND (? IS NULL OR host_id = ?)"
+    " ORDER BY id DESC LIMIT ?"
+)
+
+
 def _build_query_sql(*, event_type: Optional[str], host_id: Optional[str],
                      limit: int) -> Tuple[str, list]:
-    sql = ("SELECT id, ts, event_type, host_id, viewer_id, detail"
-           " FROM events")
-    clauses: List[str] = []
-    args: list = []
-    if event_type:
-        clauses.append("event_type = ?")
-        args.append(event_type)
-    if host_id:
-        clauses.append("host_id = ?")
-        args.append(host_id)
-    if clauses:
-        sql += " WHERE " + " AND ".join(clauses)
-    sql += " ORDER BY id DESC LIMIT ?"
-    args.append(limit)
-    return sql, args
+    """Return a static SQL string + bound args for an audit-log query.
+
+    The SQL is a single fixed template; optional filters are toggled
+    by passing ``None`` to the matching parameters. Keeping the SQL
+    literal-only means there is no string concatenation for static
+    analysers to mistake for SQL injection.
+    """
+    args: list = [event_type, event_type, host_id, host_id, int(limit)]
+    return _QUERY_SQL, args
 
 
 _default_audit_log: Optional[AuditLog] = None
