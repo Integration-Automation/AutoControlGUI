@@ -38,13 +38,6 @@ FrameProvider = Callable[[], bytes]
 InputDispatcher = Callable[[Mapping[str, Any]], Any]
 
 _AUTH_TIMEOUT_S = 60.0
-# Ceiling for the pre-auth handshake step (TLS wrap + WS upgrade GET).
-# Legitimate handshakes complete in milliseconds; 5 s is generous enough
-# to absorb scheduler starvation on slow CI runners but short enough to
-# fast-fail when a client speaks the wrong protocol (e.g. plain-TCP auth
-# bytes hitting a WS server). Kept distinct from _AUTH_TIMEOUT_S so the
-# subsequent auth-message exchange retains its longer budget.
-_HANDSHAKE_RECV_TIMEOUT_S = 5.0
 _DEFAULT_QUALITY = 70
 
 
@@ -561,18 +554,6 @@ class RemoteDesktopHost:
                 continue
             except OSError:
                 return
-            # accept() returns a new socket that INHERITS the listener's
-            # 0.5 s timeout. That is fine for the accept poll itself but
-            # fatally tight for the handshake that follows: a slow CI
-            # runner can't deliver the TLS / WS upgrade request inside
-            # 500 ms, the recv times out, server drops, and the client's
-            # separate auth wait ticks down to its own timeout. Promote
-            # to a handshake-specific budget — long enough for runner
-            # starvation, short enough to fast-fail on protocol mismatch.
-            try:
-                client_sock.settimeout(_HANDSHAKE_RECV_TIMEOUT_S)
-            except OSError:
-                pass
             wrapped = self._maybe_wrap_tls(client_sock, address)
             if wrapped is None:
                 continue
@@ -613,9 +594,7 @@ class RemoteDesktopHost:
         if self._ssl_context is None:
             return client_sock
         try:
-            # Use the handshake-specific budget so a peer that never
-            # speaks TLS (or cuts off mid-ClientHello) fails fast.
-            client_sock.settimeout(_HANDSHAKE_RECV_TIMEOUT_S)
+            client_sock.settimeout(_AUTH_TIMEOUT_S)
             wrapped = self._ssl_context.wrap_socket(
                 client_sock, server_side=True,
             )
