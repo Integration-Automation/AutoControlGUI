@@ -7,6 +7,9 @@ from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.remote_desktop._helpers import _t
 from je_auto_control.gui.remote_desktop.host_panel import _HostPanel
 from je_auto_control.gui.remote_desktop.viewer_panel import _ViewerPanel
+from je_auto_control.gui.remote_desktop.webrtc_panel import (
+    _WebRTCHostPanel, _WebRTCViewerPanel,
+)
 
 
 class RemoteDesktopTab(TranslatableMixin, QWidget):
@@ -19,13 +22,21 @@ class RemoteDesktopTab(TranslatableMixin, QWidget):
         self._tabs = QTabWidget()
         self._host_panel = _HostPanel()
         self._viewer_panel = _ViewerPanel()
-        host_index = self._tabs.addTab(self._host_panel, _t("rd_host_tab"))
-        viewer_index = self._tabs.addTab(self._viewer_panel, _t("rd_viewer_tab"))
-        self._tr_tab(self._tabs, host_index, "rd_host_tab")
-        self._tr_tab(self._tabs, viewer_index, "rd_viewer_tab")
+        self._webrtc_host_panel = _WebRTCHostPanel()
+        self._webrtc_viewer_panel = _WebRTCViewerPanel()
+        sub_panels = [
+            (self._host_panel, "rd_host_tab"),
+            (self._viewer_panel, "rd_viewer_tab"),
+            (self._webrtc_host_panel, "rd_webrtc_host_tab"),
+            (self._webrtc_viewer_panel, "rd_webrtc_viewer_tab"),
+        ]
+        for panel, key in sub_panels:
+            index = self._tabs.addTab(panel, _t(key))
+            self._tr_tab(self._tabs, index, key)
         layout.addWidget(self._tabs)
+        self._sub_panels = [panel for panel, _key in sub_panels]
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
-        self._host_panel.retranslate()
-        self._viewer_panel.retranslate()
+        for panel in self._sub_panels:
+            panel.retranslate()

@@ -97,6 +97,31 @@ from je_auto_control.utils.plugin_loader.plugin_loader import (
 from je_auto_control.utils.rest_api.rest_server import (
     RestApiServer, start_rest_api_server,
 )
+# Admin console (headless multi-host client)
+from je_auto_control.utils.admin import (
+    AdminConsoleClient, AdminHost, default_admin_console,
+)
+# WebRTC inspector (headless rolling stats history)
+from je_auto_control.utils.remote_desktop.webrtc_inspector import (
+    WebRTCInspector, default_webrtc_inspector,
+)
+# USB device enumeration + hotplug + passthrough Phase 2a (read-only on
+# the wire by default — passthrough opcode dispatch needs an explicit
+# opt-in via enable_usb_passthrough() or JE_AUTOCONTROL_USB_PASSTHROUGH=1)
+from je_auto_control.utils.usb import (
+    UsbAcl, UsbDevice, UsbEnumerationResult, UsbEvent, UsbHotplugWatcher,
+    UsbPassthroughClient, UsbPassthroughSession, default_usb_watcher,
+    enable_usb_passthrough, is_usb_passthrough_enabled, list_usb_devices,
+)
+# System diagnostics (headless self-test)
+from je_auto_control.utils.diagnostics import (
+    Check, DiagnosticsReport, run_diagnostics,
+)
+# Config bundle (export / import user configuration)
+from je_auto_control.utils.config_bundle import (
+    ConfigBundleExporter, ConfigBundleImporter, ImportReport,
+    export_config_bundle, import_config_bundle,
+)
 # Run history (headless)
 from je_auto_control.utils.run_history.history_store import (
     HistoryStore, RunRecord, default_history_store,
@@ -253,6 +278,21 @@ __all__ = [
     "register_plugin_commands",
     # REST API
     "RestApiServer", "start_rest_api_server",
+    # Admin console
+    "AdminConsoleClient", "AdminHost", "default_admin_console",
+    # WebRTC inspector
+    "WebRTCInspector", "default_webrtc_inspector",
+    # USB enumeration + hotplug + passthrough Phase 2a/2a.1/40
+    "UsbDevice", "UsbEnumerationResult", "list_usb_devices",
+    "UsbEvent", "UsbHotplugWatcher", "default_usb_watcher",
+    "UsbPassthroughSession", "UsbPassthroughClient",
+    "UsbAcl",
+    "enable_usb_passthrough", "is_usb_passthrough_enabled",
+    # System diagnostics
+    "Check", "DiagnosticsReport", "run_diagnostics",
+    # Config bundle
+    "ConfigBundleExporter", "ConfigBundleImporter", "ImportReport",
+    "export_config_bundle", "import_config_bundle",
     # Triggers
     "TriggerEngine", "default_trigger_engine",
     "ImageAppearsTrigger", "WindowAppearsTrigger",

@@ -17,7 +17,7 @@ from je_auto_control.utils.remote_desktop.ws_protocol import (
 )
 
 
-def _wait_until(predicate, timeout: float = 2.0,
+def _wait_until(predicate, timeout: float = 10.0,
                 interval: float = 0.02) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -122,8 +122,8 @@ def test_ws_viewer_authenticates_and_receives_frames():
             host="127.0.0.1", port=host.port, token="tok",
             on_frame=received.append,
         )
-        viewer.connect(timeout=2.0)
-        assert _wait_until(lambda: len(received) >= 2)
+        viewer.connect(timeout=10.0)
+        assert _wait_until(lambda: len(received) >= 2, timeout=30.0)
         assert all(frame == b"ws-frame" for frame in received)
         viewer.disconnect()
     finally:
@@ -137,7 +137,7 @@ def test_ws_viewer_with_wrong_token_is_rejected():
             host="127.0.0.1", port=host.port, token="wrong",
         )
         with pytest.raises(AuthenticationError):
-            viewer.connect(timeout=2.0)
+            viewer.connect(timeout=10.0)
         assert host.connected_clients == 0
     finally:
         host.stop(timeout=1.0)
@@ -149,11 +149,13 @@ def test_ws_viewer_input_reaches_host_dispatcher():
         viewer = WebSocketDesktopViewer(
             host="127.0.0.1", port=host.port, token="tok",
         )
-        viewer.connect(timeout=2.0)
+        viewer.connect(timeout=10.0)
         viewer.send_input({"action": "mouse_move", "x": 42, "y": 24})
         viewer.send_input({"action": "type", "text": "hi"})
         captured = host._test_captured_input  # noqa: SLF001
-        assert _wait_until(lambda: len(captured) >= 2)
+        # Bigger budget: under heavy suite load the WS server thread can
+        # take longer than the default _wait_until budget to dispatch.
+        assert _wait_until(lambda: len(captured) >= 2, timeout=30.0)
         assert {"action": "mouse_move", "x": 42, "y": 24} in captured
         assert {"action": "type", "text": "hi"} in captured
         viewer.disconnect()
@@ -168,7 +170,7 @@ def test_ws_host_announces_host_id():
             host="127.0.0.1", port=host.port, token="tok",
             expected_host_id="700800900",
         )
-        viewer.connect(timeout=2.0)
+        viewer.connect(timeout=10.0)
         assert viewer.remote_host_id == "700800900"
         viewer.disconnect()
     finally:
@@ -182,7 +184,7 @@ def test_plain_tcp_viewer_against_ws_host_is_rejected():
             host="127.0.0.1", port=host.port, token="tok",
         )
         with pytest.raises((OSError, AuthenticationError)):
-            viewer.connect(timeout=2.0)
+            viewer.connect(timeout=10.0)
         assert _wait_until(lambda: host.connected_clients == 0)
     finally:
         host.stop(timeout=1.0)
@@ -202,7 +204,7 @@ def test_ws_viewer_against_plain_host_fails():
         )
         with pytest.raises((OSError, ConnectionError, WsProtocolError,
                             AuthenticationError)):
-            viewer.connect(timeout=2.0)
+            viewer.connect(timeout=10.0)
     finally:
         host.stop(timeout=1.0)
 

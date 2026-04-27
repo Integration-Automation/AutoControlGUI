@@ -19,8 +19,15 @@ from je_auto_control.gui.live_hud_tab import LiveHUDTab
 from je_auto_control.gui.llm_planner_tab import LLMPlannerTab
 from je_auto_control.gui.ocr_tab import OCRReaderTab
 from je_auto_control.gui.plugins_tab import PluginsTab
+from je_auto_control.gui.admin_console_tab import AdminConsoleTab
+from je_auto_control.gui.audit_log_tab import AuditLogTab
+from je_auto_control.gui.diagnostics_tab import DiagnosticsTab
+from je_auto_control.gui.inspector_tab import InspectorTab
 from je_auto_control.gui.recording_editor_tab import RecordingEditorTab
+from je_auto_control.gui.usb_browser_tab import UsbBrowserTab
+from je_auto_control.gui.usb_devices_tab import UsbDevicesTab
 from je_auto_control.gui.remote_desktop_tab import RemoteDesktopTab
+from je_auto_control.gui.rest_api_tab import RestApiTab
 from je_auto_control.gui.run_history_tab import RunHistoryTab
 from je_auto_control.gui.scheduler_tab import SchedulerTab
 from je_auto_control.gui.script_builder import ScriptBuilderTab
@@ -55,6 +62,8 @@ class _TabEntry:
     key: str
     title_key: str
     widget: QWidget
+    category: str = "core"
+    default_visible: bool = False
 
 
 # =============================================================================
@@ -78,27 +87,62 @@ class AutoControlGUIWidget(
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self._on_tab_close_requested)
 
-        self._add_tab("auto_click", "tab_auto_click", self._build_auto_click_tab())
-        self._add_tab("screenshot", "tab_screenshot", self._build_screenshot_tab())
-        self._add_tab("image_detect", "tab_image_detect", self._build_image_detect_tab())
-        self._add_tab("record", "tab_record", self._build_record_tab())
-        self._add_tab("script", "tab_script", self._build_script_tab())
-        self._add_tab("script_builder", "tab_script_builder", ScriptBuilderTab())
-        self._add_tab("recording_editor", "tab_recording_editor", RecordingEditorTab())
-        self._add_tab("window_manager", "tab_window_manager", WindowManagerTab())
-        self._add_tab("scheduler", "tab_scheduler", SchedulerTab())
-        self._add_tab("live_hud", "tab_live_hud", LiveHUDTab())
-        self._add_tab("report", "tab_report", self._build_report_tab())
-        self._add_tab("hotkeys", "tab_hotkeys", HotkeysTab())
-        self._add_tab("triggers", "tab_triggers", TriggersTab())
-        self._add_tab("run_history", "tab_run_history", RunHistoryTab())
-        self._add_tab("accessibility", "tab_accessibility", AccessibilityTab())
-        self._add_tab("vlm", "tab_vlm", VLMTab())
-        self._add_tab("ocr_reader", "tab_ocr_reader", OCRReaderTab())
-        self._add_tab("variables", "tab_variables", VariablesTab())
-        self._add_tab("llm_planner", "tab_llm_planner", LLMPlannerTab())
-        self._add_tab("remote_desktop", "tab_remote_desktop", RemoteDesktopTab())
-        self._add_tab("plugins", "tab_plugins", PluginsTab())
+        self._add_tab("auto_click", "tab_auto_click", self._build_auto_click_tab(),
+                      category="core", default_visible=True)
+        self._add_tab("screenshot", "tab_screenshot", self._build_screenshot_tab(),
+                      category="core", default_visible=True)
+        self._add_tab("image_detect", "tab_image_detect", self._build_image_detect_tab(),
+                      category="core", default_visible=True)
+        self._add_tab("record", "tab_record", self._build_record_tab(),
+                      category="core", default_visible=True)
+        self._add_tab("script_builder", "tab_script_builder", ScriptBuilderTab(),
+                      category="core", default_visible=True)
+        self._add_tab("script", "tab_script", self._build_script_tab(),
+                      category="editing")
+        self._add_tab("recording_editor", "tab_recording_editor", RecordingEditorTab(),
+                      category="editing")
+        self._add_tab("variables", "tab_variables", VariablesTab(),
+                      category="editing")
+        self._add_tab("vlm", "tab_vlm", VLMTab(),
+                      category="detection")
+        self._add_tab("ocr_reader", "tab_ocr_reader", OCRReaderTab(),
+                      category="detection")
+        self._add_tab("accessibility", "tab_accessibility", AccessibilityTab(),
+                      category="detection")
+        self._add_tab("live_hud", "tab_live_hud", LiveHUDTab(),
+                      category="detection")
+        self._add_tab("llm_planner", "tab_llm_planner", LLMPlannerTab(),
+                      category="detection")
+        self._add_tab("scheduler", "tab_scheduler", SchedulerTab(),
+                      category="automation")
+        self._add_tab("hotkeys", "tab_hotkeys", HotkeysTab(),
+                      category="automation")
+        self._add_tab("triggers", "tab_triggers", TriggersTab(),
+                      category="automation")
+        self._add_tab("run_history", "tab_run_history", RunHistoryTab(),
+                      category="automation")
+        self._add_tab("window_manager", "tab_window_manager", WindowManagerTab(),
+                      category="system")
+        self._add_tab("plugins", "tab_plugins", PluginsTab(),
+                      category="system")
+        self._add_tab("remote_desktop", "tab_remote_desktop", RemoteDesktopTab(),
+                      category="system", default_visible=True)
+        self._add_tab("rest_api", "tab_rest_api", RestApiTab(),
+                      category="system")
+        self._add_tab("admin_console", "tab_admin_console", AdminConsoleTab(),
+                      category="system")
+        self._add_tab("audit_log", "tab_audit_log", AuditLogTab(),
+                      category="system")
+        self._add_tab("inspector", "tab_inspector", InspectorTab(),
+                      category="system")
+        self._add_tab("usb_devices", "tab_usb_devices", UsbDevicesTab(),
+                      category="system")
+        self._add_tab("usb_browser", "tab_usb_browser", UsbBrowserTab(),
+                      category="system")
+        self._add_tab("diagnostics", "tab_diagnostics", DiagnosticsTab(),
+                      category="system")
+        self._add_tab("report", "tab_report", self._build_report_tab(),
+                      category="system")
         layout.addWidget(self.tabs)
 
         self.setLayout(layout)
@@ -110,9 +154,16 @@ class AutoControlGUIWidget(
 
     # --- tab registry API ----------------------------------------------------
 
-    def _add_tab(self, key: str, title_key: str, widget: QWidget) -> None:
-        self._tab_entries.append(_TabEntry(key=key, title_key=title_key, widget=widget))
-        self.tabs.addTab(widget, language_wrapper.translate(title_key, title_key))
+    def _add_tab(
+            self, key: str, title_key: str, widget: QWidget,
+            category: str = "core", default_visible: bool = False,
+    ) -> None:
+        self._tab_entries.append(_TabEntry(
+            key=key, title_key=title_key, widget=widget,
+            category=category, default_visible=default_visible,
+        ))
+        if default_visible:
+            self.tabs.addTab(widget, language_wrapper.translate(title_key, title_key))
 
     def _find_entry(self, key: str):
         for entry in self._tab_entries:
@@ -127,6 +178,7 @@ class AutoControlGUIWidget(
                 "key": entry.key,
                 "title": language_wrapper.translate(entry.title_key, entry.title_key),
                 "visible": self.tabs.indexOf(entry.widget) != -1,
+                "category": entry.category,
             }
             for entry in self._tab_entries
         ]

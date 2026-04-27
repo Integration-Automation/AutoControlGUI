@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#101010" />
+<link rel="manifest" href="manifest.webmanifest" />
+<title>AutoControl Web Viewer</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #101010; --fg: #eee; --header-bg: #1a1a1a;
+    --header-border: #2a2a2a; --input-bg: #0d0d0d; --input-border: #333;
+    --label-color: #aaa; --status-color: #ccaa55; --stats-bg: #161616;
+    --stats-fg: #888; --row-hover: #1f1f1f; --row-bottom: #222;
+    --primary: #c97a00; --primary-hover: #d98a00;
+    --selected: #3a2c10;
+  }
+  body.light {
+    --bg: #fafafa; --fg: #222; --header-bg: #f0f0f0;
+    --header-border: #d8d8d8; --input-bg: #fff; --input-border: #ccc;
+    --label-color: #555; --status-color: #806010; --stats-bg: #ececec;
+    --stats-fg: #555; --row-hover: #e8e8e8; --row-bottom: #d8d8d8;
+    --primary: #c97a00; --primary-hover: #b06600;
+    --selected: #f0d4a0;
+    color-scheme: light;
+  }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+               font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  header { padding: 8px 12px; background: var(--header-bg);
+           border-bottom: 1px solid var(--header-border); display: flex;
+           gap: 8px; align-items: center; flex-wrap: wrap; }
+  header label { font-size: 12px; color: #aaa; }
+  header input[type=text], header input[type=password] {
+    background: #0d0d0d; border: 1px solid #333; color: #eee;
+    padding: 4px 6px; border-radius: 4px; font-size: 12px; width: 12em;
+  }
+  header button { background: #444; color: #eee; border: 0;
+                  padding: 6px 12px; border-radius: 4px; cursor: pointer;
+                  font-size: 12px; }
+  header button:hover { background: #555; }
+  header button.primary { background: #c97a00; }
+  header button.primary:hover { background: #d98a00; }
+  header select { background: #0d0d0d; border: 1px solid #333; color: #eee;
+                  padding: 4px 6px; border-radius: 4px; font-size: 12px; }
+  #status { font-size: 12px; color: #ccaa55; }
+  #conn-info { font-size: 11px; color: #888; margin-left: auto;
+               font-family: Consolas, monospace; }
+  #quality-dot { display: inline-block; width: 12px; height: 12px;
+                 border-radius: 6px; background: #555; }
+  #quality-dot.good { background: #3a9c3a; }
+  #quality-dot.fair { background: #c9a23a; }
+  #quality-dot.poor { background: #cc4444; }
+  #stats { font-family: Consolas, monospace; font-size: 11px;
+           color: #888; padding: 4px 12px; background: #161616;
+           border-top: 1px solid #222; }
+  #ice-panel { background: #161616; border-top: 1px solid #2a2a2a;
+               padding: 6px 12px; font-size: 12px; }
+  #ice-panel summary { cursor: pointer; color: #c97a00; user-select: none; }
+  #ice-panel .ice-grid { display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 8px; margin-top: 6px; }
+  #ice-panel input { background: #0d0d0d; border: 1px solid #333; color: #eee;
+                     padding: 3px 6px; border-radius: 3px; font-size: 12px; }
+  #ice-panel label { color: #aaa; align-self: center; }
+  #files-panel { background: #161616; border-top: 1px solid #2a2a2a;
+                 padding: 6px 12px; max-height: 200px; overflow-y: auto;
+                 font-size: 12px; }
+  #files-panel.dragover { background: #2a2010; }
+  #files-panel summary { cursor: pointer; color: #c97a00; user-select: none; }
+  #files-panel .toolbar { display: flex; gap: 6px; margin: 6px 0; }
+  #files-panel .toolbar button {
+    background: #333; color: #ddd; border: 0;
+    padding: 4px 10px; border-radius: 4px; cursor: pointer;
+  }
+  #files-panel .toolbar button:hover { background: #444; }
+  #files-table { width: 100%; border-collapse: collapse; color: #ccc; }
+  #files-table th, #files-table td {
+    padding: 3px 6px; text-align: left;
+    border-bottom: 1px solid #222;
+  }
+  #files-table th { color: #c97a00; font-weight: normal; }
+  #files-table tr.selected td { background: #3a2c10; }
+  #files-table tr:hover td { background: #1f1f1f; }
+  #screen-wrap { flex: 1 1 auto; display: flex; align-items: center;
+                 justify-content: center; background: #000; overflow: hidden;
+                 position: relative; }
+  #screen { max-width: 100%; max-height: 100%; cursor: crosshair;
+            display: block; }
+  #placeholder { color: #555; font-size: 14px; padding: 24px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <label for="server-url" data-i18n="label_server">Server</label>
+  <input type="text" id="server-url" data-i18n-placeholder="ph_server" />
+  <label for="host-id" data-i18n="label_host_id">Host ID</label>
+  <input type="text" id="host-id" data-i18n-placeholder="ph_host_id" />
+  <label for="token" data-i18n="label_token">Token</label>
+  <input type="password" id="token" data-i18n-placeholder="ph_token" />
+  <label for="secret" data-i18n="label_secret">Server secret</label>
+  <input type="password" id="secret" data-i18n-placeholder="ph_secret" />
+  <button id="connect" class="primary" data-i18n="btn_connect">Connect</button>
+  <button id="disconnect" disabled data-i18n="btn_disconnect">Disconnect</button>
+  <button id="cad" disabled data-i18n="btn_cad">Ctrl+Alt+Del</button>
+  <button id="mic" disabled data-i18n="btn_mic_off">Mic Off</button>
+  <button id="opus-mic" disabled data-i18n="btn_opus_off">Opus Off</button>
+  <button id="share-screen" disabled data-i18n="btn_share_off">Share Off</button>
+  <button id="send-file" disabled data-i18n="btn_send_file">Send file...</button>
+  <input type="file" id="file-input" hidden />
+  <select id="lang-select" title="Language">
+    <option value="auto">Auto</option>
+    <option value="en">English</option>
+    <option value="zh_TW">繁體中文</option>
+    <option value="zh_CN">简体中文</option>
+    <option value="ja">日本語</option>
+  </select>
+  <button id="theme-toggle" title="Theme">☼</button>
+  <button id="fullscreen-btn" title="Fullscreen">⛶</button>
+  <span id="conn-info"></span>
+  <span id="quality-dot" title=""></span>
+  <span id="status">idle</span>
+</header>
+
+<details id="ice-panel">
+  <summary data-i18n="ice_summary">Advanced (STUN / TURN)</summary>
+  <div class="ice-grid">
+    <label data-i18n="label_stun">STUN URL</label>
+    <input type="text" id="stun-url" data-i18n-placeholder="ph_stun" />
+    <label data-i18n="label_turn">TURN URL</label>
+    <input type="text" id="turn-url" data-i18n-placeholder="ph_turn" />
+    <label data-i18n="label_turn_user">TURN user</label>
+    <input type="text" id="turn-user" />
+    <label data-i18n="label_turn_cred">TURN cred</label>
+    <input type="password" id="turn-cred" />
+  </div>
+</details>
+
+<div id="screen-wrap">
+  <video id="screen" autoplay playsinline></video>
+  <div id="placeholder" data-i18n="placeholder_connect">Fill the fields above and click Connect.</div>
+</div>
+
+<details id="files-panel">
+  <summary data-i18n="files_summary">Remote inbox files (drag local files here to upload)</summary>
+  <div class="toolbar">
+    <button id="files-refresh" data-i18n="btn_refresh">Refresh</button>
+    <button id="files-pull" data-i18n="btn_pull_selected">Pull selected</button>
+    <button id="files-delete" data-i18n="btn_delete_selected">Delete selected</button>
+  </div>
+  <table id="files-table">
+    <thead><tr>
+      <th data-i18n="col_name">Name</th>
+      <th data-i18n="col_size">Size</th>
+      <th data-i18n="col_mtime">Modified</th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+</details>
+
+<div id="stats">no stats</div>
+
+<script>
+"use strict";
+
+const STRINGS = {
+  en: {
+    label_server: "Server", label_host_id: "Host ID",
+    label_token: "Token", label_secret: "Server secret",
+    label_stun: "STUN URL", label_turn: "TURN URL",
+    label_turn_user: "TURN user", label_turn_cred: "TURN cred",
+    ph_stun: "stun:stun.l.google.com:19302",
+    ph_turn: "turn:turn.example.com:3478 (optional)",
+    ice_summary: "Advanced (STUN / TURN)",
+    ph_server: "https://signaling.example.com",
+    ph_host_id: "abcd1234", ph_token: "shared secret",
+    ph_secret: "(optional)",
+    btn_connect: "Connect", btn_disconnect: "Disconnect",
+    btn_cad: "Ctrl+Alt+Del",
+    btn_mic_off: "Mic Off", btn_mic_on: "Mic On",
+    btn_opus_off: "Opus Off", btn_opus_on: "Opus On",
+    btn_share_off: "Share Off", btn_share_on: "Share On",
+    btn_send_file: "Send file...", btn_refresh: "Refresh",
+    btn_pull_selected: "Pull selected",
+    btn_delete_selected: "Delete selected",
+    col_name: "Name", col_size: "Size", col_mtime: "Modified",
+    files_summary: "Remote inbox files (drag local files here to upload)",
+    placeholder_connect: "Fill the fields above and click Connect.",
+    status_idle: "idle", status_connected: "connected",
+    status_no_stats: "no stats", status_disconnected: "disconnected",
+    status_polling_offer: "polling for offer...",
+    status_got_offer: "got offer; building answer...",
+    status_pushed_answer: "answer pushed; waiting for host accept...",
+    status_required_fields: "server URL, host ID, and token required",
+    status_fp_mismatch: "rejected: fingerprint mismatch",
+    status_auth_rejected: "auth rejected by host",
+    err_mic: "mic error: {msg}", err_opus_mic: "opus mic error: {msg}",
+    err_share_screen: "share screen error: {msg}",
+    err_signaling: "signaling: {msg}",
+    err_renegotiate: "renegotiate failed: {msg}",
+    err_send: "send err: {msg}",
+    msg_sending: "sending {name} {sent}/{total}",
+    msg_sent: "sent {name}", msg_received: "received {name}",
+    msg_receiving: "receiving {name}",
+    msg_files_channel_not_ready: "file channel not ready",
+    msg_delete_failed: "delete {name} failed: {error}",
+    msg_pull_failed: "pull {name} failed: {error}",
+    msg_upload_failed: "upload {name} failed: {error}",
+    confirm_fp_changed:
+      "WARNING: host fingerprint changed!\n\nExpected: {expected}\nGot: {got}\n\n" +
+      "This could be a different machine on the same host_id, or an attacker. " +
+      "Trust the new fingerprint anyway?",
+    confirm_delete_files: "Delete {n} file(s) from the host inbox?",
+    quality_unknown: "No quality data yet",
+    quality_good: "Good (RTT < 80ms, loss < 1%)",
+    quality_fair: "Fair (RTT < 200ms, loss < 5%)",
+    quality_poor: "Poor (high RTT or loss)",
+  },
+  zh_TW: {
+    label_server: "伺服器", label_host_id: "Host ID",
+    label_token: "Token", label_secret: "伺服器密鑰",
+    label_stun: "STUN URL", label_turn: "TURN URL",
+    label_turn_user: "TURN 使用者", label_turn_cred: "TURN 密碼",
+    ph_stun: "stun:stun.l.google.com:19302",
+    ph_turn: "turn:turn.example.com:3478（選填）",
+    ice_summary: "進階（STUN / TURN）",
+    ph_server: "https://signaling.example.com",
+    ph_host_id: "abcd1234", ph_token: "共用密鑰",
+    ph_secret: "（選填）",
+    btn_connect: "連線", btn_disconnect: "中斷",
+    btn_cad: "Ctrl+Alt+Del",
+    btn_mic_off: "麥克風 關", btn_mic_on: "麥克風 開",
+    btn_opus_off: "Opus 關", btn_opus_on: "Opus 開",
+    btn_share_off: "分享 關", btn_share_on: "分享 開",
+    btn_send_file: "傳檔案...", btn_refresh: "重新整理",
+    btn_pull_selected: "下載所選",
+    btn_delete_selected: "刪除所選",
+    col_name: "檔名", col_size: "大小", col_mtime: "修改時間",
+    files_summary: "Host 端 inbox（把本機檔案拖進來即上傳）",
+    placeholder_connect: "請填上方欄位後按連線。",
+    status_idle: "閒置", status_connected: "已連線",
+    status_no_stats: "尚無統計", status_disconnected: "已中斷",
+    status_polling_offer: "輪詢 offer 中...",
+    status_got_offer: "收到 offer，建立 answer...",
+    status_pushed_answer: "answer 已送出，等候 host 接受...",
+    status_required_fields: "伺服器 URL、Host ID、token 都要填",
+    status_fp_mismatch: "拒絕：fingerprint 不符",
+    status_auth_rejected: "host 拒絕認證",
+    err_mic: "麥克風錯誤：{msg}", err_opus_mic: "Opus 麥克風錯誤：{msg}",
+    err_share_screen: "分享螢幕錯誤：{msg}",
+    err_signaling: "signaling：{msg}",
+    err_renegotiate: "重新協商失敗：{msg}",
+    err_send: "傳送失敗：{msg}",
+    msg_sending: "傳送中 {name} {sent}/{total}",
+    msg_sent: "已傳送 {name}", msg_received: "已收到 {name}",
+    msg_receiving: "接收中 {name}",
+    msg_files_channel_not_ready: "檔案通道尚未開啟",
+    msg_delete_failed: "刪除 {name} 失敗：{error}",
+    msg_pull_failed: "下載 {name} 失敗：{error}",
+    msg_upload_failed: "上傳 {name} 失敗：{error}",
+    confirm_fp_changed:
+      "警告：host fingerprint 改變了！\n\n預期：{expected}\n實際：{got}\n\n" +
+      "可能是同一個 host_id 換了機器，也可能是攻擊。仍然信任新的 fingerprint？",
+    confirm_delete_files: "確定從 host inbox 刪除 {n} 個檔案？",
+    quality_unknown: "尚無品質資料",
+    quality_good: "良好（RTT < 80ms，封包遺失 < 1%）",
+    quality_fair: "尚可（RTT < 200ms，封包遺失 < 5%）",
+    quality_poor: "不佳（RTT 高或封包遺失多）",
+  },
+  zh_CN: {
+    label_server: "服务器", label_host_id: "Host ID",
+    label_token: "Token", label_secret: "服务器密钥",
+    label_stun: "STUN URL", label_turn: "TURN URL",
+    label_turn_user: "TURN 用户", label_turn_cred: "TURN 密码",
+    ph_stun: "stun:stun.l.google.com:19302",
+    ph_turn: "turn:turn.example.com:3478 (可选)",
+    ice_summary: "高级 (STUN / TURN)",
+    ph_server: "https://signaling.example.com",
+    ph_host_id: "abcd1234", ph_token: "共享密钥",
+    ph_secret: "(可选)",
+    btn_connect: "连接", btn_disconnect: "断开",
+    btn_cad: "Ctrl+Alt+Del",
+    btn_mic_off: "麦克风 关", btn_mic_on: "麦克风 开",
+    btn_opus_off: "Opus 关", btn_opus_on: "Opus 开",
+    btn_share_off: "分享 关", btn_share_on: "分享 开",
+    btn_send_file: "发送文件...", btn_refresh: "刷新",
+    btn_pull_selected: "下载所选",
+    btn_delete_selected: "删除所选",
+    col_name: "文件名", col_size: "大小", col_mtime: "修改时间",
+    files_summary: "Host 的 inbox (拖本机文件到这里上传)",
+    placeholder_connect: "填好上方字段后点连接。",
+    status_idle: "空闲", status_connected: "已连接",
+    status_no_stats: "暂无统计", status_disconnected: "已断开",
+    status_polling_offer: "查询 offer 中...",
+    status_got_offer: "收到 offer，正在构建 answer...",
+    status_pushed_answer: "answer 已发送，等待 host 接受...",
+    status_required_fields: "需填服务器 URL、Host ID、token",
+    status_fp_mismatch: "拒绝：fingerprint 不匹配",
+    status_auth_rejected: "host 拒绝认证",
+    err_mic: "麦克风错误: {msg}", err_opus_mic: "Opus 麦克风错误: {msg}",
+    err_share_screen: "屏幕共享错误: {msg}",
+    err_signaling: "signaling: {msg}",
+    err_renegotiate: "重新协商失败: {msg}",
+    err_send: "发送失败: {msg}",
+    msg_sending: "发送中 {name} {sent}/{total}",
+    msg_sent: "已发送 {name}", msg_received: "已收到 {name}",
+    msg_receiving: "接收中 {name}",
+    msg_files_channel_not_ready: "文件通道未就绪",
+    msg_delete_failed: "删除 {name} 失败: {error}",
+    msg_pull_failed: "下载 {name} 失败: {error}",
+    msg_upload_failed: "上传 {name} 失败: {error}",
+    confirm_fp_changed:
+      "警告: host fingerprint 已变更!\n\n期望: {expected}\n实际: {got}\n\n" +
+      "可能是同 host_id 换了机器，也可能是攻击。仍然信任新的 fingerprint?",
+    confirm_delete_files: "确定从 host inbox 删除 {n} 个文件?",
+    quality_unknown: "暂无品质数据",
+    quality_good: "良好 (RTT < 80ms, 丢包 < 1%)",
+    quality_fair: "尚可 (RTT < 200ms, 丢包 < 5%)",
+    quality_poor: "差 (高 RTT 或丢包)",
+  },
+  ja: {
+    label_server: "サーバ", label_host_id: "Host ID",
+    label_token: "Token", label_secret: "サーバ秘密鍵",
+    label_stun: "STUN URL", label_turn: "TURN URL",
+    label_turn_user: "TURN ユーザ", label_turn_cred: "TURN 鍵",
+    ph_stun: "stun:stun.l.google.com:19302",
+    ph_turn: "turn:turn.example.com:3478（任意）",
+    ice_summary: "詳細（STUN / TURN）",
+    ph_server: "https://signaling.example.com",
+    ph_host_id: "abcd1234", ph_token: "共有鍵",
+    ph_secret: "（任意）",
+    btn_connect: "接続", btn_disconnect: "切断",
+    btn_cad: "Ctrl+Alt+Del",
+    btn_mic_off: "マイク オフ", btn_mic_on: "マイク オン",
+    btn_opus_off: "Opus オフ", btn_opus_on: "Opus オン",
+    btn_share_off: "共有 オフ", btn_share_on: "共有 オン",
+    btn_send_file: "ファイル送信...", btn_refresh: "更新",
+    btn_pull_selected: "選択をダウンロード",
+    btn_delete_selected: "選択を削除",
+    col_name: "名前", col_size: "サイズ", col_mtime: "更新日時",
+    files_summary: "ホストの受信箱（ローカルファイルをドロップしてアップロード）",
+    placeholder_connect: "上の入力を埋めて接続を押してください。",
+    status_idle: "アイドル", status_connected: "接続済み",
+    status_no_stats: "統計なし", status_disconnected: "切断済み",
+    status_polling_offer: "オファーを問い合わせ中...",
+    status_got_offer: "オファー受信、Answer を作成中...",
+    status_pushed_answer: "Answer 送信済み、ホストの承認待ち...",
+    status_required_fields: "サーバ URL、Host ID、token は必須",
+    status_fp_mismatch: "拒否: fingerprint 不一致",
+    status_auth_rejected: "ホストが認証を拒否",
+    err_mic: "マイクエラー: {msg}", err_opus_mic: "Opus マイクエラー: {msg}",
+    err_share_screen: "画面共有エラー: {msg}",
+    err_signaling: "シグナリング: {msg}",
+    err_renegotiate: "再交渉失敗: {msg}",
+    err_send: "送信失敗: {msg}",
+    msg_sending: "送信中 {name} {sent}/{total}",
+    msg_sent: "送信完了 {name}", msg_received: "受信 {name}",
+    msg_receiving: "受信中 {name}",
+    msg_files_channel_not_ready: "ファイルチャネル未準備",
+    msg_delete_failed: "削除 {name} 失敗: {error}",
+    msg_pull_failed: "取得 {name} 失敗: {error}",
+    msg_upload_failed: "アップロード {name} 失敗: {error}",
+    confirm_fp_changed:
+      "警告: ホスト fingerprint が変更されました!\n\n期待値: {expected}\n実際: {got}\n\n" +
+      "同じ host_id で別マシンの可能性、または攻撃の可能性があります。新しい fingerprint を信頼しますか?",
+    confirm_delete_files: "ホスト受信箱から {n} 件削除しますか?",
+    quality_unknown: "品質データなし",
+    quality_good: "良好 (RTT < 80ms, 損失 < 1%)",
+    quality_fair: "普通 (RTT < 200ms, 損失 < 5%)",
+    quality_poor: "悪い (RTT 高 / 損失多)",
+  },
+};
+
+function detectLanguage() {
+  const lang = (navigator.language || "en").toLowerCase();
+  if (lang.startsWith("zh-tw") || lang.startsWith("zh-hk")
+      || lang.startsWith("zh-hant")) return "zh_TW";
+  if (lang.startsWith("zh")) return "zh_CN";
+  if (lang.startsWith("ja")) return "ja";
+  return "en";
+}
+
+function resolveActiveLang() {
+  const stored = localStorage.getItem("ac_lang");
+  if (stored && stored !== "auto" && STRINGS[stored]) return stored;
+  return detectLanguage();
+}
+
+let LANG = resolveActiveLang();
+let dict = STRINGS[LANG] || STRINGS.en;
+
+function t(key, vars) {
+  let s = dict[key] || STRINGS.en[key] || key;
+  if (vars) {
+    for (const k in vars) {
+      s = s.split("{" + k + "}").join(String(vars[k]));
+    }
+  }
+  return s;
+}
+
+function applyI18n() {
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+}
+
+function setLanguage(choice) {
+  // choice: "auto" | "en" | "zh_TW" | "zh_CN" | "ja"
+  localStorage.setItem("ac_lang", choice);
+  LANG = (choice === "auto") ? detectLanguage()
+       : (STRINGS[choice] ? choice : detectLanguage());
+  dict = STRINGS[LANG] || STRINGS.en;
+  applyI18n();
+  // Re-render labels that aren't covered by data-i18n attributes:
+  if (els.status && els.status.textContent === ""
+      || els.status && !connectedNow()) {
+    els.status.textContent = t("status_idle");
+  }
+  if (els.stats && els.stats.textContent !== "")
+    els.stats.textContent = t("status_no_stats");
+  // Buttons that toggle between two states need re-syncing
+  if (els.mic) els.mic.textContent = micState ? t("btn_mic_on") : t("btn_mic_off");
+  if (els.opusMic)
+    els.opusMic.textContent = opusMicStream ? t("btn_opus_on") : t("btn_opus_off");
+  if (els.shareScreen)
+    els.shareScreen.textContent = screenStream
+      ? t("btn_share_on") : t("btn_share_off");
+}
+
+function connectedNow() {
+  return pc !== null && pc.connectionState === "connected";
+}
+
+const els = {
+  serverUrl: document.getElementById("server-url"),
+  hostId: document.getElementById("host-id"),
+  token: document.getElementById("token"),
+  secret: document.getElementById("secret"),
+  connect: document.getElementById("connect"),
+  disconnect: document.getElementById("disconnect"),
+  cad: document.getElementById("cad"),
+  mic: document.getElementById("mic"),
+  opusMic: document.getElementById("opus-mic"),
+  shareScreen: document.getElementById("share-screen"),
+  sendFile: document.getElementById("send-file"),
+  fileInput: document.getElementById("file-input"),
+  langSelect: document.getElementById("lang-select"),
+  themeBtn: document.getElementById("theme-toggle"),
+  fullscreenBtn: document.getElementById("fullscreen-btn"),
+  status: document.getElementById("status"),
+  screen: document.getElementById("screen"),
+  placeholder: document.getElementById("placeholder"),
+  stats: document.getElementById("stats"),
+};
+
+let pc = null;
+let controlChannel = null;
+let micChannel = null;
+let filesChannel = null;
+let viewerId = loadOrCreateViewerId();
+let statsTimer = null;
+let micState = null;  // { context, source, worklet, stream }  (PCM-over-DC path)
+let opusMicStream = null;  // MediaStream for Opus track
+let screenStream = null;  // MediaStream for getDisplayMedia
+let connectedAt = null;
+let connInfoTimer = null;
+
+restoreSavedFields();
+
+function loadOrCreateViewerId() {
+  let id = localStorage.getItem("ac_viewer_id");
+  if (!id || id.length !== 32) {
+    id = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map(b => b.toString(16).padStart(2, "0")).join("");
+    localStorage.setItem("ac_viewer_id", id);
+  }
+  return id;
+}
+
+function restoreSavedFields() {
+  const saved = JSON.parse(localStorage.getItem("ac_last_connect") || "{}");
+  if (saved.serverUrl) els.serverUrl.value = saved.serverUrl;
+  if (saved.hostId) els.hostId.value = saved.hostId;
+  // never restore token / secret (sensitive)
+  const ice = JSON.parse(localStorage.getItem("ac_ice") || "{}");
+  if (ice.stun) document.getElementById("stun-url").value = ice.stun;
+  if (ice.turn) document.getElementById("turn-url").value = ice.turn;
+  if (ice.turnUser)
+    document.getElementById("turn-user").value = ice.turnUser;
+  // turnCred is sensitive; do not restore
+}
+
+const DEFAULT_STUN_SERVERS = [
+  "stun:stun.l.google.com:19302",
+  "stun:stun1.l.google.com:19302",
+  "stun:stun.cloudflare.com:3478",
+  "stun:stun.nextcloud.com:443",
+  "stun:openrelay.metered.ca:80",
+];
+
+function buildIceServers() {
+  const stunOverride = (document.getElementById("stun-url").value || "").trim();
+  const turn = (document.getElementById("turn-url").value || "").trim();
+  const turnUser = (document.getElementById("turn-user").value || "").trim();
+  const turnCred = document.getElementById("turn-cred").value || "";
+  localStorage.setItem("ac_ice", JSON.stringify({
+    stun: stunOverride, turn, turnUser,  // turnCred deliberately not persisted
+  }));
+  // Override (single STUN) when user typed one, else fall back to multi-STUN bundle
+  const stunUrls = stunOverride ? [stunOverride] : DEFAULT_STUN_SERVERS;
+  const servers = stunUrls.map((urls) => ({ urls }));
+  if (turn) {
+    const entry = { urls: turn };
+    if (turnUser) entry.username = turnUser;
+    if (turnCred) entry.credential = turnCred;
+    servers.push(entry);
+  }
+  return servers;
+}
+
+function setStatus(text, color = "#ccaa55") {
+  els.status.textContent = text;
+  els.status.style.color = color;
+}
+
+function setConnected(value) {
+  els.connect.disabled = value;
+  els.disconnect.disabled = !value;
+  els.cad.disabled = !value;
+  els.mic.disabled = !value;
+  els.opusMic.disabled = !value;
+  els.shareScreen.disabled = !value;
+  els.sendFile.disabled = !value;
+  els.placeholder.style.display = value ? "none" : "block";
+  if (!value) {
+    els.mic.textContent = t("btn_mic_off");
+    els.mic.classList.remove("primary");
+    els.opusMic.textContent = t("btn_opus_off");
+    els.opusMic.classList.remove("primary");
+    els.shareScreen.textContent = t("btn_share_off");
+    els.shareScreen.classList.remove("primary");
+    if (opusMicStream) {
+      opusMicStream.getTracks().forEach(t => t.stop());
+      opusMicStream = null;
+    }
+    if (screenStream) {
+      screenStream.getTracks().forEach(t => t.stop());
+      screenStream = null;
+    }
+  }
+}
+
+async function signalingFetch(path, options = {}) {
+  const url = els.serverUrl.value.replace(/\/$/, "") + path;
+  const headers = { "Content-Type": "application/json", ...options.headers };
+  if (els.secret.value) headers["X-Signaling-Secret"] = els.secret.value;
+  const response = await fetch(url, { ...options, headers });
+  if (!response.ok) {
+    throw new Error(`signaling ${path} -> HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+async function pollOffer(hostId, deadlineMs) {
+  while (Date.now() < deadlineMs) {
+    try {
+      const data = await signalingFetch(
+        `/sessions/${encodeURIComponent(hostId)}/offer`,
+      );
+      if (data && data.sdp) return data.sdp;
+    } catch (error) {
+      if (!String(error).includes("404")) throw error;
+    }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  throw new Error("timed out waiting for host offer");
+}
+
+async function connect() {
+  if (!els.serverUrl.value || !els.hostId.value || !els.token.value) {
+    setStatus(t("status_required_fields"), "#ff6666");
+    return;
+  }
+  localStorage.setItem("ac_last_connect", JSON.stringify({
+    serverUrl: els.serverUrl.value,
+    hostId: els.hostId.value,
+  }));
+  setStatus(t("status_polling_offer"));
+  try {
+    const offerSdp = await pollOffer(els.hostId.value, Date.now() + 60000);
+    setStatus(t("status_got_offer"));
+    pc = new RTCPeerConnection({ iceServers: buildIceServers() });
+    pc.ontrack = (event) => {
+      els.screen.srcObject = event.streams[0];
+    };
+    pc.ondatachannel = (event) => {
+      const ch = event.channel;
+      if (ch.label === "mic") {
+        micChannel = ch;
+        return;
+      }
+      if (ch.label === "files") {
+        filesChannel = ch;
+        wireIncomingFiles(ch);
+        return;
+      }
+      controlChannel = ch;
+      controlChannel.onopen = () => sendAuth();
+      controlChannel.onmessage = handleControlMessage;
+      if (controlChannel.readyState === "open") sendAuth();
+    };
+    pc.onconnectionstatechange = () => {
+      setStatus("conn: " + pc.connectionState);
+      if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
+        teardown();
+      }
+    };
+    await pc.setRemoteDescription({ type: "offer", sdp: offerSdp });
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await iceGatheringComplete(pc);
+    await signalingFetch(
+      `/sessions/${encodeURIComponent(els.hostId.value)}/answer`,
+      { method: "POST", body: JSON.stringify({ sdp: pc.localDescription.sdp }) },
+    );
+    setStatus(t("status_pushed_answer"));
+    setConnected(true);
+    startStatsLoop();
+  } catch (error) {
+    setStatus(t("err_signaling", { msg: error.message }), "#ff6666");
+    teardown();
+  }
+}
+
+function sendAuth() {
+  send({ type: "auth", token: els.token.value, viewer_id: viewerId });
+}
+
+function send(payload) {
+  if (controlChannel && controlChannel.readyState === "open") {
+    controlChannel.send(JSON.stringify(payload));
+  }
+}
+
+async function startOpusMic() {
+  if (opusMicStream || !pc) return;
+  try {
+    opusMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    for (const track of opusMicStream.getAudioTracks()) {
+      pc.addTrack(track, opusMicStream);
+    }
+    requestRenegotiation();
+    els.opusMic.textContent = t("btn_opus_on");
+    els.opusMic.classList.add("primary");
+  } catch (error) {
+    setStatus(t("err_opus_mic", { msg: error.message }), "#ff6666");
+  }
+}
+
+function stopOpusMic() {
+  if (!opusMicStream) return;
+  for (const sender of pc.getSenders()) {
+    if (sender.track && sender.track.kind === "audio"
+        && opusMicStream.getTracks().includes(sender.track)) {
+      sender.replaceTrack(null);
+    }
+  }
+  opusMicStream.getTracks().forEach((tr) => tr.stop());
+  opusMicStream = null;
+  els.opusMic.textContent = t("btn_opus_off");
+  els.opusMic.classList.remove("primary");
+}
+
+async function startShareScreen() {
+  if (screenStream || !pc) return;
+  try {
+    screenStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: 24 }, audio: false,
+    });
+    for (const track of screenStream.getVideoTracks()) {
+      pc.addTrack(track, screenStream);
+      track.onended = () => stopShareScreen();
+    }
+    requestRenegotiation();
+    els.shareScreen.textContent = t("btn_share_on");
+    els.shareScreen.classList.add("primary");
+  } catch (error) {
+    setStatus(t("err_share_screen", { msg: error.message }), "#ff6666");
+  }
+}
+
+function stopShareScreen() {
+  if (!screenStream) return;
+  for (const sender of pc.getSenders()) {
+    if (sender.track && sender.track.kind === "video"
+        && screenStream.getTracks().includes(sender.track)) {
+      sender.replaceTrack(null);
+    }
+  }
+  screenStream.getTracks().forEach((tr) => tr.stop());
+  screenStream = null;
+  els.shareScreen.textContent = t("btn_share_off");
+  els.shareScreen.classList.remove("primary");
+}
+
+function requestRenegotiation() {
+  if (controlChannel && controlChannel.readyState === "open") {
+    controlChannel.send(JSON.stringify({ type: "renegotiate_request" }));
+  }
+}
+
+async function handleRenegotiateOffer(sdp) {
+  if (!pc) return;
+  try {
+    await pc.setRemoteDescription({ type: "offer", sdp });
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await iceGatheringComplete(pc);
+    controlChannel.send(JSON.stringify({
+      type: "renegotiate_answer", sdp: pc.localDescription.sdp,
+    }));
+  } catch (error) {
+    setStatus(t("err_renegotiate", { msg: error.message }), "#ff6666");
+  }
+}
+
+function refreshFiles() {
+  if (controlChannel && controlChannel.readyState === "open") {
+    controlChannel.send(JSON.stringify({ type: "list_inbox" }));
+  }
+}
+
+function selectedFileNames() {
+  return Array.from(document.querySelectorAll("#files-table tr.selected"))
+    .map(tr => tr.dataset.name);
+}
+
+function pullSelected() {
+  const names = selectedFileNames();
+  if (!names.length || !controlChannel) return;
+  for (const n of names) {
+    controlChannel.send(JSON.stringify({ type: "request_file", name: n }));
+  }
+}
+
+function deleteSelected() {
+  const names = selectedFileNames();
+  if (!names.length || !controlChannel) return;
+  if (!confirm(t("confirm_delete_files", { n: names.length }))) return;
+  for (const n of names) {
+    controlChannel.send(JSON.stringify({ type: "delete_inbox_file", name: n }));
+  }
+}
+
+function renderFilesTable(files) {
+  const tbody = document.querySelector("#files-table tbody");
+  tbody.innerHTML = "";
+  for (const entry of files) {
+    const tr = document.createElement("tr");
+    tr.dataset.name = entry.name;
+    const fmtTime = entry.mtime
+      ? new Date(entry.mtime * 1000).toISOString().slice(0, 19).replace("T", " ")
+      : "";
+    tr.innerHTML = `<td></td><td></td><td></td>`;
+    tr.children[0].textContent = entry.name;
+    tr.children[1].textContent = entry.size.toLocaleString();
+    tr.children[2].textContent = fmtTime;
+    tr.addEventListener("click", (e) => {
+      if (!e.ctrlKey && !e.metaKey) {
+        document.querySelectorAll("#files-table tr.selected")
+          .forEach(r => r.classList.remove("selected"));
+      }
+      tr.classList.toggle("selected");
+    });
+    tbody.appendChild(tr);
+  }
+}
+
+function handleControlMessage(event) {
+  let data;
+  try { data = JSON.parse(event.data); } catch { return; }
+  if (data.type === "renegotiate_offer") {
+    handleRenegotiateOffer(data.sdp);
+    return;
+  }
+  if (data.type === "list_inbox_response") {
+    renderFilesTable(data.files || []);
+    return;
+  }
+  if (data.type === "delete_inbox_response") {
+    if (data.ok) refreshFiles();
+    else setStatus(t("msg_delete_failed",
+      { name: data.name, error: data.error || "" }), "#ff6666");
+    return;
+  }
+  if (data.type === "request_file_response" && !data.ok) {
+    setStatus(t("msg_pull_failed",
+      { name: data.name, error: data.error || "" }), "#ff6666");
+    return;
+  }
+  if (data.type === "auth_ok") {
+    const fp = data.fingerprint || "";
+    const known = JSON.parse(localStorage.getItem("ac_known_hosts") || "{}");
+    const expected = known[els.hostId.value];
+    if (expected && expected !== fp) {
+      const ok = confirm(t("confirm_fp_changed", {
+        expected: expected.slice(0, 32) + "...",
+        got: fp.slice(0, 32) + "...",
+      }));
+      if (!ok) {
+        teardown();
+        setStatus(t("status_fp_mismatch"), "#ff6666");
+        return;
+      }
+    }
+    if (fp) {
+      known[els.hostId.value] = fp;
+      localStorage.setItem("ac_known_hosts", JSON.stringify(known));
+    }
+    setStatus(t("status_connected"), "#88cc66");
+    connectedAt = Date.now();
+    if (connInfoTimer) clearInterval(connInfoTimer);
+    connInfoTimer = setInterval(updateConnInfo, 1000);
+    updateConnInfo();
+    setTimeout(refreshFiles, 200);
+  } else if (data.type === "auth_fail") {
+    setStatus(t("status_auth_rejected"), "#ff6666");
+    teardown();
+  }
+}
+
+function iceGatheringComplete(peer) {
+  return new Promise((resolve) => {
+    if (peer.iceGatheringState === "complete") return resolve();
+    const check = () => {
+      if (peer.iceGatheringState === "complete") {
+        peer.removeEventListener("icegatheringstatechange", check);
+        resolve();
+      }
+    };
+    peer.addEventListener("icegatheringstatechange", check);
+    setTimeout(resolve, 8000);
+  });
+}
+
+function teardown() {
+  if (statsTimer) { clearInterval(statsTimer); statsTimer = null; }
+  stopMic();
+  if (controlChannel) { try { controlChannel.close(); } catch {} controlChannel = null; }
+  if (micChannel) { try { micChannel.close(); } catch {} micChannel = null; }
+  if (filesChannel) { try { filesChannel.close(); } catch {} filesChannel = null; }
+  if (pc) { try { pc.close(); } catch {} pc = null; }
+  els.screen.srcObject = null;
+  setConnected(false);
+  els.stats.textContent = t("status_no_stats");
+  const dot = document.getElementById("quality-dot");
+  dot.classList.remove("good", "fair", "poor");
+  dot.title = t("quality_unknown");
+  connectedAt = null;
+  if (connInfoTimer) { clearInterval(connInfoTimer); connInfoTimer = null; }
+  document.getElementById("conn-info").textContent = "";
+}
+
+async function startMic() {
+  if (micState || !micChannel) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true },
+    });
+    const context = new (window.AudioContext || window.webkitAudioContext)({
+      sampleRate: 16000,
+    });
+    await context.audioWorklet.addModule("mic-worklet.js");
+    const source = context.createMediaStreamSource(stream);
+    const worklet = new AudioWorkletNode(context, "mic-pcm-processor");
+    worklet.port.onmessage = (e) => {
+      if (micChannel && micChannel.readyState === "open") {
+        try { micChannel.send(e.data); } catch {}
+      }
+    };
+    source.connect(worklet);
+    micState = { stream, context, source, worklet };
+    els.mic.textContent = t("btn_mic_on");
+    els.mic.classList.add("primary");
+  } catch (error) {
+    setStatus(t("err_mic", { msg: error.message }), "#ff6666");
+  }
+}
+
+function stopMic() {
+  if (!micState) return;
+  try { micState.source.disconnect(); } catch {}
+  try { micState.worklet.disconnect(); } catch {}
+  try { micState.context.close(); } catch {}
+  try { micState.stream.getTracks().forEach((tr) => tr.stop()); } catch {}
+  micState = null;
+  els.mic.textContent = t("btn_mic_off");
+  els.mic.classList.remove("primary");
+}
+
+async function sendLocalFile(file) {
+  if (!filesChannel || filesChannel.readyState !== "open") {
+    setStatus(t("msg_files_channel_not_ready"), "#ff6666");
+    return;
+  }
+  const transferId = Array.from(crypto.getRandomValues(new Uint8Array(8)))
+    .map(b => b.toString(16).padStart(2, "0")).join("");
+  filesChannel.send(JSON.stringify({
+    type: "file_begin", name: file.name,
+    size: file.size, transfer_id: transferId,
+  }));
+  const chunkSize = 16 * 1024;
+  let offset = 0;
+  setStatus(t("msg_sending", { name: file.name, sent: 0, total: file.size }));
+  while (offset < file.size) {
+    const slice = file.slice(offset, offset + chunkSize);
+    const buf = await slice.arrayBuffer();
+    while (filesChannel.bufferedAmount > 4 * 1024 * 1024) {
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    filesChannel.send(buf);
+    offset += buf.byteLength;
+    if (offset % (256 * 1024) < chunkSize) {
+      setStatus(t("msg_sending",
+        { name: file.name, sent: offset, total: file.size }));
+    }
+  }
+  filesChannel.send(JSON.stringify({
+    type: "file_end", transfer_id: transferId,
+  }));
+  setStatus(t("msg_sent", { name: file.name }), "#88cc66");
+}
+
+let incomingFile = null;  // { name, size, written, chunks, transferId }
+
+function wireIncomingFiles(channel) {
+  channel.onmessage = (event) => {
+    const data = event.data;
+    if (typeof data === "string") {
+      let envelope;
+      try { envelope = JSON.parse(data); } catch { return; }
+      if (envelope.type === "file_begin") {
+        incomingFile = {
+          name: envelope.name, size: envelope.size,
+          written: 0, chunks: [],
+          transferId: envelope.transfer_id,
+        };
+        setStatus(t("msg_receiving", { name: envelope.name }));
+      } else if (envelope.type === "file_end" && incomingFile) {
+        const blob = new Blob(incomingFile.chunks);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = incomingFile.name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        setStatus(t("msg_received", { name: incomingFile.name }), "#88cc66");
+        incomingFile = null;
+      } else if (envelope.type === "file_abort") {
+        incomingFile = null;
+      }
+    } else if (incomingFile) {
+      incomingFile.chunks.push(data);
+      incomingFile.written += data.byteLength || data.size || 0;
+    }
+  };
+}
+
+async function startStatsLoop() {
+  let prevBytes = 0, prevFrames = 0, prevPackets = 0, prevLost = 0;
+  let prevTime = performance.now();
+  statsTimer = setInterval(async () => {
+    if (!pc) return;
+    const now = performance.now();
+    const dt = (now - prevTime) / 1000;
+    prevTime = now;
+    const stats = await pc.getStats();
+    let bytes = 0, frames = 0, packets = 0, lost = 0, rtt = null, jitter = null;
+    stats.forEach((entry) => {
+      if (entry.type === "inbound-rtp" && entry.kind === "video") {
+        bytes = entry.bytesReceived || 0;
+        frames = entry.framesDecoded || 0;
+        packets = entry.packetsReceived || 0;
+        lost = entry.packetsLost || 0;
+        jitter = entry.jitter;
+      } else if (entry.type === "candidate-pair" && entry.state === "succeeded") {
+        if (entry.currentRoundTripTime != null) rtt = entry.currentRoundTripTime;
+      } else if (entry.type === "remote-inbound-rtp") {
+        if (entry.roundTripTime != null) rtt = entry.roundTripTime;
+      }
+    });
+    const fps = dt > 0 ? (frames - prevFrames) / dt : 0;
+    const kbps = dt > 0 ? ((bytes - prevBytes) * 8 / 1000) / dt : 0;
+    const recentTotal = (packets + lost) - (prevPackets + prevLost);
+    const lossPct = recentTotal > 0
+      ? ((lost - prevLost) / recentTotal) * 100 : 0;
+    prevBytes = bytes; prevFrames = frames;
+    prevPackets = packets; prevLost = lost;
+    const parts = [
+      `FPS ${fps.toFixed(1)}`,
+      `${kbps.toFixed(0)} kbps`,
+    ];
+    if (rtt != null) parts.push(`RTT ${(rtt * 1000).toFixed(0)} ms`);
+    if (lossPct > 0) parts.push(`loss ${lossPct.toFixed(1)}%`);
+    if (jitter != null) parts.push(`jitter ${(jitter * 1000).toFixed(1)}ms`);
+    els.stats.textContent = parts.join("  |  ");
+    updateQualityDot(rtt, lossPct);
+  }, 1000);
+}
+
+function updateConnInfo() {
+  const el = document.getElementById("conn-info");
+  if (!connectedAt) {
+    el.textContent = "";
+    return;
+  }
+  const hostId = els.hostId.value.trim() || "?";
+  const myShort = (viewerId || "").slice(0, 8);
+  const elapsedSec = Math.floor((Date.now() - connectedAt) / 1000);
+  const h = Math.floor(elapsedSec / 3600);
+  const m = Math.floor((elapsedSec % 3600) / 60);
+  const s = elapsedSec % 60;
+  const dur = h > 0
+    ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+    : `${m}:${String(s).padStart(2, "0")}`;
+  el.textContent = `me=${myShort}…  →  [${hostId}]  ${dur}`;
+}
+
+function applyTheme() {
+  const stored = localStorage.getItem("ac_theme") || "dark";
+  document.body.classList.toggle("light", stored === "light");
+  els.themeBtn.textContent = stored === "light" ? "☾" : "☼";
+}
+
+function toggleTheme() {
+  const next = (localStorage.getItem("ac_theme") || "dark") === "dark"
+    ? "light" : "dark";
+  localStorage.setItem("ac_theme", next);
+  applyTheme();
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else if (document.exitFullscreen) {
+    document.exitFullscreen();
+  }
+}
+
+function updateQualityDot(rttSec, lossPct) {
+  const dot = document.getElementById("quality-dot");
+  dot.classList.remove("good", "fair", "poor");
+  if (rttSec == null) {
+    dot.title = t("quality_unknown");
+    return;
+  }
+  const rttMs = rttSec * 1000;
+  if (rttMs < 80 && lossPct < 1.0) {
+    dot.classList.add("good");
+    dot.title = t("quality_good");
+  } else if (rttMs < 200 && lossPct < 5.0) {
+    dot.classList.add("fair");
+    dot.title = t("quality_fair");
+  } else {
+    dot.classList.add("poor");
+    dot.title = t("quality_poor");
+  }
+}
+
+function disconnect() {
+  teardown();
+  setStatus(t("status_disconnected"));
+}
+
+function frameToHostCoords(event) {
+  const rect = els.screen.getBoundingClientRect();
+  const vw = els.screen.videoWidth || rect.width;
+  const vh = els.screen.videoHeight || rect.height;
+  if (rect.width <= 0 || rect.height <= 0) return null;
+  const scale = Math.min(rect.width / vw, rect.height / vh);
+  const drawW = vw * scale, drawH = vh * scale;
+  const offX = (rect.width - drawW) / 2;
+  const offY = (rect.height - drawH) / 2;
+  const localX = event.clientX - rect.left - offX;
+  const localY = event.clientY - rect.top - offY;
+  if (localX < 0 || localY < 0 || localX > drawW || localY > drawH) return null;
+  return [Math.round(localX / scale), Math.round(localY / scale)];
+}
+
+const BUTTON_NAMES = ["mouse_left", "mouse_middle", "mouse_right"];
+
+els.screen.addEventListener("mousemove", (e) => {
+  const c = frameToHostCoords(e);
+  if (c) send({ type: "input", payload: { type: "mouse_move", x: c[0], y: c[1] }});
+});
+els.screen.addEventListener("mousedown", (e) => {
+  const c = frameToHostCoords(e);
+  if (c) {
+    send({ type: "input", payload: {
+      type: "mouse_press", x: c[0], y: c[1],
+      button: BUTTON_NAMES[e.button] || "mouse_left",
+    }});
+    e.preventDefault();
+  }
+});
+els.screen.addEventListener("mouseup", (e) => {
+  const c = frameToHostCoords(e);
+  if (c) send({ type: "input", payload: {
+    type: "mouse_release", x: c[0], y: c[1],
+    button: BUTTON_NAMES[e.button] || "mouse_left",
+  }});
+});
+els.screen.addEventListener("contextmenu", (e) => e.preventDefault());
+els.screen.addEventListener("wheel", (e) => {
+  const c = frameToHostCoords(e);
+  if (c) {
+    send({ type: "input", payload: {
+      type: "mouse_scroll", x: c[0], y: c[1],
+      amount: -Math.sign(e.deltaY) * 3,
+    }});
+    e.preventDefault();
+  }
+}, { passive: false });
+
+window.addEventListener("keydown", (e) => {
+  if (!controlChannel) return;
+  if (document.activeElement && ["INPUT", "TEXTAREA"]
+      .includes(document.activeElement.tagName)) return;
+  if (e.key.length === 1) {
+    send({ type: "input", payload: { type: "type_text", text: e.key }});
+  }
+  e.preventDefault();
+});
+
+els.connect.addEventListener("click", connect);
+els.disconnect.addEventListener("click", disconnect);
+els.cad.addEventListener("click", () => send({ type: "send_sas" }));
+els.mic.addEventListener("click", () => {
+  if (micState) stopMic(); else startMic();
+});
+els.opusMic.addEventListener("click", () => {
+  if (opusMicStream) stopOpusMic(); else startOpusMic();
+});
+els.shareScreen.addEventListener("click", () => {
+  if (screenStream) stopShareScreen(); else startShareScreen();
+});
+els.sendFile.addEventListener("click", () => els.fileInput.click());
+els.fileInput.addEventListener("change", () => {
+  const file = els.fileInput.files && els.fileInput.files[0];
+  if (file) {
+    sendLocalFile(file).catch((e) =>
+      setStatus(t("err_send", { msg: String(e) }), "#ff6666"));
+  }
+  els.fileInput.value = "";
+});
+
+document.getElementById("files-refresh").addEventListener("click", refreshFiles);
+document.getElementById("files-pull").addEventListener("click", pullSelected);
+document.getElementById("files-delete").addEventListener("click", deleteSelected);
+
+const filesPanel = document.getElementById("files-panel");
+filesPanel.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  filesPanel.classList.add("dragover");
+});
+filesPanel.addEventListener("dragleave", () => {
+  filesPanel.classList.remove("dragover");
+});
+filesPanel.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  filesPanel.classList.remove("dragover");
+  if (!filesChannel || filesChannel.readyState !== "open") return;
+  const droppedFiles = Array.from(e.dataTransfer.files || []);
+  for (const f of droppedFiles) {
+    try { await sendLocalFile(f); } catch (err) {
+      setStatus(t("msg_upload_failed",
+        { name: f.name, error: String(err) }), "#ff6666");
+    }
+  }
+  setTimeout(refreshFiles, 300);
+});
+
+applyI18n();
+applyTheme();
+els.status.textContent = t("status_idle");
+els.stats.textContent = t("status_no_stats");
+els.langSelect.value = localStorage.getItem("ac_lang") || "auto";
+els.langSelect.addEventListener("change", () => {
+  setLanguage(els.langSelect.value);
+});
+els.themeBtn.addEventListener("click", toggleTheme);
+els.fullscreenBtn.addEventListener("click", toggleFullscreen);
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>

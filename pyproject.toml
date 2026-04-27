@@ -46,11 +46,29 @@ content-type = "text/markdown"
 [tool.setuptools.packages]
 find = { namespaces = false }
 
+[tool.setuptools.package-data]
+"je_auto_control.utils.remote_desktop" = [
+    "web_viewer/*.html",
+    "web_viewer/*.js",
+    "web_viewer/*.svg",
+    "web_viewer/*.webmanifest",
+    "web_viewer/mic-worklet.js",
+]
+
 [project.optional-dependencies]
 gui = ["PySide6==6.11.0", "qt-material==2.17"]
+webrtc = ["aiortc>=1.14.0", "av>=14.0.0"]
+signaling = ["fastapi>=0.115", "uvicorn>=0.32"]
+discovery = ["zeroconf>=0.130"]
 
 [tool.bandit]
-exclude_dirs = ["test", "docs", ".venv", "build", "dist"]
+exclude_dirs = [
+    "test", "docs", ".venv", "build", "dist",
+    # UI translation dicts — strings like "Token:" / "Bearer 權杖:" trip
+    # B105 (hardcoded-password) heuristics. They are not credentials and
+    # don't flow into any auth code; exclude wholesale.
+    "language_wrapper",
+]
 # B101 (use of assert) — pytest test code intentionally uses assert.
 # Library code is enforced by CLAUDE.md (no assert in non-test code).
 skips = ["B101"]

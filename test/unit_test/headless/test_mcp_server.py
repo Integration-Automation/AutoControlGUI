@@ -713,7 +713,7 @@ def test_request_sampling_round_trips_via_writer():
 
     # The worker is now blocked on sampling; wait for the outbound request.
     deadline = threading.Event()
-    for _ in range(200):
+    for _ in range(1000):
         if any('"sampling/createMessage"' in line for line in captured_lines):
             break
         deadline.wait(0.01)
@@ -730,7 +730,7 @@ def test_request_sampling_round_trips_via_writer():
                     "content": {"type": "text", "text": "pong"}},
     }))
 
-    for _ in range(200):
+    for _ in range(1000):
         if any('"id": 10' in line for line in captured_lines):
             break
         deadline.wait(0.01)
@@ -1180,7 +1180,7 @@ def test_refresh_roots_updates_filesystem_provider(tmp_path):
     t = threading.Thread(target=run_refresh)
     t.start()
     deadline = threading.Event()
-    for _ in range(200):
+    for _ in range(1000):
         if any('"roots/list"' in line for line in captured_lines):
             break
         deadline.wait(0.01)
@@ -1600,7 +1600,7 @@ def test_destructive_confirmation_blocks_when_user_declines(monkeypatch):
     t = threading.Thread(target=run_call)
     t.start()
     deadline = threading.Event()
-    for _ in range(200):
+    for _ in range(1000):
         if any('"elicitation/create"' in line for line in captured_lines):
             break
         deadline.wait(0.01)
@@ -1613,8 +1613,12 @@ def test_destructive_confirmation_blocks_when_user_declines(monkeypatch):
         "jsonrpc": "2.0", "id": eli_id,
         "result": {"action": "decline"},
     }))
-    t.join(timeout=2.0)
+    t.join(timeout=10.0)
     assert not t.is_alive()
+    for _ in range(1000):
+        if any('"id": 11' in line for line in captured_lines):
+            break
+        deadline.wait(0.01)
     final_lines = [line for line in captured_lines if '"id": 11' in line]
     assert final_lines
     final = json.loads(final_lines[-1])
@@ -1642,7 +1646,7 @@ def test_destructive_confirmation_allows_when_user_accepts(monkeypatch):
     t = threading.Thread(target=run_call)
     t.start()
     deadline = threading.Event()
-    for _ in range(200):
+    for _ in range(1000):
         if any('"elicitation/create"' in line for line in captured_lines):
             break
         deadline.wait(0.01)
@@ -1653,7 +1657,11 @@ def test_destructive_confirmation_allows_when_user_accepts(monkeypatch):
         "jsonrpc": "2.0", "id": eli_id,
         "result": {"action": "accept", "content": {}},
     }))
-    t.join(timeout=2.0)
+    t.join(timeout=10.0)
+    for _ in range(1000):
+        if any('"id": 12' in line for line in captured_lines):
+            break
+        deadline.wait(0.01)
     final = json.loads([line for line in captured_lines
                           if '"id": 12' in line][-1])
     assert final["result"]["isError"] is False

@@ -1,0 +1,18 @@
+{
+  "name": "AutoControl Web Viewer",
+  "short_name": "AC Viewer",
+  "description": "WebRTC viewer for AutoControl remote-desktop hosts.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#101010",
+  "theme_color": "#101010",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

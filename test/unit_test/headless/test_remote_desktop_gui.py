@@ -16,6 +16,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 PIL = pytest.importorskip("PIL.Image")
 pyside = pytest.importorskip("PySide6.QtWidgets")
+# These tests round-trip JPEG frames through the WebRTC stack — skip
+# entirely on environments that lack the optional 'webrtc' extra (aiortc
+# + PyAV), since the registry singleton imports webrtc_transport on use.
+pytest.importorskip("av")
+pytest.importorskip("aiortc")
 
 from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402

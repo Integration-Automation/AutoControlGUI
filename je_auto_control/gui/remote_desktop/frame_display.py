@@ -30,10 +30,13 @@ class _FrameDisplay(QWidget):
     key_released = Signal(str)
     type_text = Signal(str)
     files_dropped = Signal(list)
+    annotation_event = Signal(str, int, int)  # action: begin|point|end
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._image: Optional[QImage] = None
+        self._pen_mode = False
+        self._pen_drawing = False
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMouseTracking(True)
         self.setSizePolicy(
@@ -42,6 +45,12 @@ class _FrameDisplay(QWidget):
         self.setMinimumSize(320, 200)
         self.setStyleSheet("background-color: #101010;")
         self.setAcceptDrops(True)
+
+    def set_pen_mode(self, value: bool) -> None:
+        self._pen_mode = bool(value)
+        self._pen_drawing = False
+        self.setCursor(Qt.CursorShape.CrossCursor if self._pen_mode
+                       else Qt.CursorShape.ArrowCursor)
 
     def set_image(self, image: QImage) -> None:
         self._image = image
@@ -97,13 +106,22 @@ class _FrameDisplay(QWidget):
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802
         coords = self._to_remote(event.position().toPoint())
-        if coords is not None:
-            self.mouse_moved.emit(*coords)
+        if coords is None:
+            return
+        if self._pen_mode:
+            if self._pen_drawing:
+                self.annotation_event.emit("point", coords[0], coords[1])
+            return
+        self.mouse_moved.emit(*coords)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
         self.setFocus()
         coords = self._to_remote(event.position().toPoint())
         if coords is None:
+            return
+        if self._pen_mode:
+            self._pen_drawing = True
+            self.annotation_event.emit("begin", coords[0], coords[1])
             return
         button = _qt_button_name(event.button())
         if button is not None:
@@ -112,6 +130,11 @@ class _FrameDisplay(QWidget):
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802
         coords = self._to_remote(event.position().toPoint())
         if coords is None:
+            return
+        if self._pen_mode:
+            if self._pen_drawing:
+                self.annotation_event.emit("end", coords[0], coords[1])
+            self._pen_drawing = False
             return
         button = _qt_button_name(event.button())
         if button is not None:
