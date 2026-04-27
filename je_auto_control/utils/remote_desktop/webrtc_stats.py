@@ -93,21 +93,29 @@ class StatsPoller:
         delta_t = (now - self._prev_sample_time) if self._prev_sample_time else None
         self._prev_sample_time = now
         for entry in report.values():
-            stat_type = getattr(entry, "type", None)
-            if stat_type == "inbound-rtp" and getattr(entry, "kind", "") == "video":
-                self._update_inbound(entry, delta_t, snap)
-            elif stat_type == "remote-inbound-rtp":
-                rtt = getattr(entry, "roundTripTime", None)
-                if rtt is not None:
-                    snap.rtt_ms = float(rtt) * 1000.0
-                jitter = getattr(entry, "jitter", None)
-                if jitter is not None:
-                    snap.jitter_ms = float(jitter) * 1000.0
-            elif stat_type == "candidate-pair":
-                rtt = getattr(entry, "currentRoundTripTime", None)
-                if rtt is not None and snap.rtt_ms is None:
-                    snap.rtt_ms = float(rtt) * 1000.0
+            self._absorb_entry(entry, delta_t, snap)
         return snap
+
+    def _absorb_entry(self, entry, delta_t,
+                      snap: StatsSnapshot) -> None:
+        stat_type = getattr(entry, "type", None)
+        if stat_type == "inbound-rtp" and getattr(entry, "kind", "") == "video":
+            self._update_inbound(entry, delta_t, snap)
+        elif stat_type == "remote-inbound-rtp":
+            self._absorb_remote_inbound(entry, snap)
+        elif stat_type == "candidate-pair":
+            rtt = getattr(entry, "currentRoundTripTime", None)
+            if rtt is not None and snap.rtt_ms is None:
+                snap.rtt_ms = float(rtt) * 1000.0
+
+    @staticmethod
+    def _absorb_remote_inbound(entry, snap: StatsSnapshot) -> None:
+        rtt = getattr(entry, "roundTripTime", None)
+        if rtt is not None:
+            snap.rtt_ms = float(rtt) * 1000.0
+        jitter = getattr(entry, "jitter", None)
+        if jitter is not None:
+            snap.jitter_ms = float(jitter) * 1000.0
 
     def _update_inbound(self, entry, delta_t, snap: StatsSnapshot) -> None:
         bytes_received = int(getattr(entry, "bytesReceived", 0) or 0)

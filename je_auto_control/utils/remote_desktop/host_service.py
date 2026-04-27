@@ -393,56 +393,77 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _cmd_init(args) -> int:
+    path = write_default_config(args.config)
+    print(f"Wrote stub config: {path}")
+    print("Edit the file (token, server_url, host_id) before running 'run'.")
+    return 0
+
+
+def _cmd_run(args) -> int:
+    config = load_config(args.config)
+    run_daemon(config)
+    return 0
+
+
+def _cmd_available_codecs(_args) -> int:
+    from je_auto_control.utils.remote_desktop.hw_codec import (
+        available_hardware_codecs,
+    )
+    codecs = available_hardware_codecs()
+    if codecs:
+        print("Available hardware codecs:")
+        for name in codecs:
+            print(f"  {name}")
+    else:
+        print("No hardware H.264 codecs available; will use libx264.")
+    return 0
+
+
+def _cmd_install_windows_service(args) -> int:
+    return _install_windows_service(args.config or _DEFAULT_CONFIG_PATH)
+
+
+def _cmd_generate_launchd(args) -> int:
+    _generate_launchd_plist(args.config or _DEFAULT_CONFIG_PATH, args.output)
+    print(f"Wrote launchd plist: {args.output}")
+    print("Activate with:")
+    print(f"  cp {args.output} ~/Library/LaunchAgents/")
+    print(f"  launchctl load ~/Library/LaunchAgents/{args.output.name}")
+    return 0
+
+
+def _cmd_generate_systemd(args) -> int:
+    _generate_systemd_unit(args.config or _DEFAULT_CONFIG_PATH, args.output)
+    print(f"Wrote systemd unit: {args.output}")
+    print("Activate with:")
+    print(f"  mkdir -p ~/.config/systemd/user && cp {args.output} "
+          "~/.config/systemd/user/")
+    print(f"  systemctl --user enable --now {args.output.stem}")
+    return 0
+
+
+_COMMAND_DISPATCH = {
+    "init": _cmd_init,
+    "configure": lambda _args: _interactive_configure(),
+    "status": lambda _args: _print_status(),
+    "restart-windows-service": lambda _args: _restart_windows_service(),
+    "run": _cmd_run,
+    "available-codecs": _cmd_available_codecs,
+    "install-windows-service": _cmd_install_windows_service,
+    "generate-launchd": _cmd_generate_launchd,
+    "generate-systemd": _cmd_generate_systemd,
+}
+
+
 def main(argv: Optional[list] = None) -> int:
     args = _build_arg_parser().parse_args(argv)
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    if args.command == "init":
-        path = write_default_config(args.config)
-        print(f"Wrote stub config: {path}")
-        print("Edit the file (token, server_url, host_id) before running 'run'.")
-        return 0
-    if args.command == "configure":
-        return _interactive_configure()
-    if args.command == "status":
-        return _print_status()
-    if args.command == "restart-windows-service":
-        return _restart_windows_service()
-    if args.command == "run":
-        config = load_config(args.config)
-        run_daemon(config)
-        return 0
-    if args.command == "available-codecs":
-        from je_auto_control.utils.remote_desktop.hw_codec import (
-            available_hardware_codecs,
-        )
-        codecs = available_hardware_codecs()
-        if codecs:
-            print("Available hardware codecs:")
-            for name in codecs:
-                print(f"  {name}")
-        else:
-            print("No hardware H.264 codecs available; will use libx264.")
-        return 0
-    if args.command == "install-windows-service":
-        return _install_windows_service(args.config or _DEFAULT_CONFIG_PATH)
-    if args.command == "generate-launchd":
-        _generate_launchd_plist(args.config or _DEFAULT_CONFIG_PATH, args.output)
-        print(f"Wrote launchd plist: {args.output}")
-        print("Activate with:")
-        print(f"  cp {args.output} ~/Library/LaunchAgents/")
-        print("  launchctl load ~/Library/LaunchAgents/"
-              f"{args.output.name}")
-        return 0
-    if args.command == "generate-systemd":
-        _generate_systemd_unit(args.config or _DEFAULT_CONFIG_PATH, args.output)
-        print(f"Wrote systemd unit: {args.output}")
-        print("Activate with:")
-        print(f"  mkdir -p ~/.config/systemd/user && cp {args.output} "
-              "~/.config/systemd/user/")
-        print(f"  systemctl --user enable --now {args.output.stem}")
-        return 0
-    return 1
+    handler = _COMMAND_DISPATCH.get(args.command)
+    if handler is None:
+        return 1
+    return handler(args)
 
 
 if __name__ == "__main__":

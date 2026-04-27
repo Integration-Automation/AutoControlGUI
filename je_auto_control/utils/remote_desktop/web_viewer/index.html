@@ -791,54 +791,63 @@ function renderFilesTable(files) {
 function handleControlMessage(event) {
   let data;
   try { data = JSON.parse(event.data); } catch { return; }
-  if (data.type === "renegotiate_offer") {
-    handleRenegotiateOffer(data.sdp);
-    return;
-  }
-  if (data.type === "list_inbox_response") {
-    renderFilesTable(data.files || []);
-    return;
-  }
-  if (data.type === "delete_inbox_response") {
+  const handler = CONTROL_MESSAGE_HANDLERS[data.type];
+  if (handler) handler(data);
+}
+
+const CONTROL_MESSAGE_HANDLERS = {
+  renegotiate_offer: (data) => handleRenegotiateOffer(data.sdp),
+  list_inbox_response: (data) => renderFilesTable(data.files || []),
+  delete_inbox_response: (data) => {
     if (data.ok) refreshFiles();
     else setStatus(t("msg_delete_failed",
       { name: data.name, error: data.error || "" }), "#ff6666");
-    return;
-  }
-  if (data.type === "request_file_response" && !data.ok) {
-    setStatus(t("msg_pull_failed",
-      { name: data.name, error: data.error || "" }), "#ff6666");
-    return;
-  }
-  if (data.type === "auth_ok") {
-    const fp = data.fingerprint || "";
-    const known = JSON.parse(localStorage.getItem("ac_known_hosts") || "{}");
-    const expected = known[els.hostId.value];
-    if (expected && expected !== fp) {
-      const ok = confirm(t("confirm_fp_changed", {
-        expected: expected.slice(0, 32) + "...",
-        got: fp.slice(0, 32) + "...",
-      }));
-      if (!ok) {
-        teardown();
-        setStatus(t("status_fp_mismatch"), "#ff6666");
-        return;
-      }
+  },
+  request_file_response: (data) => {
+    if (!data.ok) {
+      setStatus(t("msg_pull_failed",
+        { name: data.name, error: data.error || "" }), "#ff6666");
     }
-    if (fp) {
-      known[els.hostId.value] = fp;
-      localStorage.setItem("ac_known_hosts", JSON.stringify(known));
-    }
-    setStatus(t("status_connected"), "#88cc66");
-    connectedAt = Date.now();
-    if (connInfoTimer) clearInterval(connInfoTimer);
-    connInfoTimer = setInterval(updateConnInfo, 1000);
-    updateConnInfo();
-    setTimeout(refreshFiles, 200);
-  } else if (data.type === "auth_fail") {
+  },
+  auth_ok: handleAuthOk,
+  auth_fail: () => {
     setStatus(t("status_auth_rejected"), "#ff6666");
     teardown();
+  },
+};
+
+function handleAuthOk(data) {
+  const fp = data.fingerprint || "";
+  if (!verifyFingerprint(fp)) return;
+  rememberFingerprint(fp);
+  setStatus(t("status_connected"), "#88cc66");
+  connectedAt = Date.now();
+  if (connInfoTimer) clearInterval(connInfoTimer);
+  connInfoTimer = setInterval(updateConnInfo, 1000);
+  updateConnInfo();
+  setTimeout(refreshFiles, 200);
+}
+
+function verifyFingerprint(fp) {
+  const known = JSON.parse(localStorage.getItem("ac_known_hosts") || "{}");
+  const expected = known[els.hostId.value];
+  if (!expected || expected === fp) return true;
+  const ok = confirm(t("confirm_fp_changed", {
+    expected: expected.slice(0, 32) + "...",
+    got: fp.slice(0, 32) + "...",
+  }));
+  if (!ok) {
+    teardown();
+    setStatus(t("status_fp_mismatch"), "#ff6666");
   }
+  return ok;
+}
+
+function rememberFingerprint(fp) {
+  if (!fp) return;
+  const known = JSON.parse(localStorage.getItem("ac_known_hosts") || "{}");
+  known[els.hostId.value] = fp;
+  localStorage.setItem("ac_known_hosts", JSON.stringify(known));
 }
 
 function iceGatheringComplete(peer) {

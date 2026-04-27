@@ -138,36 +138,46 @@ class HostPublishLoopWorker(QThread):
 
     def run(self) -> None:
         while not self.isInterruptionRequested():
-            session_id = None
-            try:
-                session_id, offer = self._multi_host.create_session_offer()
-                signaling_client.push_offer(
-                    self._server_url, self._host_id, offer,
-                    secret=self._secret,
-                )
-                self.offer_published.emit(session_id)
-                answer = signaling_client.wait_for_answer(
-                    self._server_url, self._host_id,
-                    secret=self._secret, timeout_s=self._wait_timeout_s,
-                )
-                self._multi_host.accept_session_answer(session_id, answer)
-                self.session_connected.emit(session_id)
-            except signaling_client.SignalingError as error:
-                # Timeout waiting for answer is expected when no one connects.
-                if "no answer" in str(error):
-                    if session_id is not None:
-                        self._safe_stop_session(session_id)
-                    continue
-                self.failed.emit(str(error))
-                if session_id is not None:
-                    self._safe_stop_session(session_id)
+            if not self._publish_one_session():
                 return
-            except (ValueError, RuntimeError, OSError) as error:
-                autocontrol_logger.warning("publish loop: %r", error)
-                self.failed.emit(str(error))
-                if session_id is not None:
-                    self._safe_stop_session(session_id)
-                return
+
+    def _publish_one_session(self) -> bool:
+        """Run one publish-and-wait cycle. Return False to stop the loop."""
+        session_id = None
+        try:
+            session_id, offer = self._multi_host.create_session_offer()
+            signaling_client.push_offer(
+                self._server_url, self._host_id, offer,
+                secret=self._secret,
+            )
+            self.offer_published.emit(session_id)
+            answer = signaling_client.wait_for_answer(
+                self._server_url, self._host_id,
+                secret=self._secret, timeout_s=self._wait_timeout_s,
+            )
+            self._multi_host.accept_session_answer(session_id, answer)
+            self.session_connected.emit(session_id)
+            return True
+        except signaling_client.SignalingError as error:
+            return self._handle_signaling_error(session_id, error)
+        except (ValueError, RuntimeError, OSError) as error:
+            autocontrol_logger.warning("publish loop: %r", error)
+            self.failed.emit(str(error))
+            self._safe_stop_session_if(session_id)
+            return False
+
+    def _handle_signaling_error(self, session_id, error) -> bool:
+        # Timeout waiting for answer is expected when no one connects.
+        if "no answer" in str(error):
+            self._safe_stop_session_if(session_id)
+            return True
+        self.failed.emit(str(error))
+        self._safe_stop_session_if(session_id)
+        return False
+
+    def _safe_stop_session_if(self, session_id) -> None:
+        if session_id is not None:
+            self._safe_stop_session(session_id)
 
     def _safe_stop_session(self, session_id: str) -> None:
         try:

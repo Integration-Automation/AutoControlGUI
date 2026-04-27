@@ -55,63 +55,90 @@ class AdaptiveBitrateController:
             if not self._enabled or self._track is None:
                 return
             current_fps = int(self._track.fps)
-            # Hard bitrate cap takes priority — step down immediately if over.
-            if (self._max_bitrate_kbps > 0
-                    and snapshot.bitrate_kbps is not None
-                    and snapshot.bitrate_kbps > self._max_bitrate_kbps):
-                new_fps = max(self._floor_fps, current_fps - _STEP)
-                if new_fps != current_fps:
-                    autocontrol_logger.info(
-                        "adaptive_bitrate: cap %d kbps exceeded "
-                        "(actual %.0f) %d -> %d fps",
-                        self._max_bitrate_kbps, snapshot.bitrate_kbps,
-                        current_fps, new_fps,
-                    )
-                    self._track.set_target_fps(new_fps)
-                self._down_streak = 0
-                self._up_streak = 0
+            if self._react_to_hard_cap(snapshot, current_fps):
                 return
-            should_down = (
-                (snapshot.packet_loss_pct is not None
-                 and snapshot.packet_loss_pct > _LOSS_DOWN_PCT)
-                or (snapshot.rtt_ms is not None and snapshot.rtt_ms > _RTT_DOWN_MS)
+            self._react_to_quality(snapshot, current_fps)
+
+    def _react_to_hard_cap(self, snapshot: StatsSnapshot,
+                           current_fps: int) -> bool:
+        """Step down immediately when configured bitrate cap is exceeded."""
+        if not (self._max_bitrate_kbps > 0
+                and snapshot.bitrate_kbps is not None
+                and snapshot.bitrate_kbps > self._max_bitrate_kbps):
+            return False
+        new_fps = max(self._floor_fps, current_fps - _STEP)
+        if new_fps != current_fps:
+            autocontrol_logger.info(
+                "adaptive_bitrate: cap %d kbps exceeded "
+                "(actual %.0f) %d -> %d fps",
+                self._max_bitrate_kbps, snapshot.bitrate_kbps,
+                current_fps, new_fps,
             )
-            should_up = (
-                snapshot.packet_loss_pct is not None
-                and snapshot.packet_loss_pct < _LOSS_UP_PCT
-                and (snapshot.rtt_ms is None or snapshot.rtt_ms < _RTT_DOWN_MS)
+            self._track.set_target_fps(new_fps)
+        self._down_streak = 0
+        self._up_streak = 0
+        return True
+
+    def _react_to_quality(self, snapshot: StatsSnapshot,
+                          current_fps: int) -> None:
+        if self._should_downscale(snapshot):
+            self._handle_downscale(snapshot, current_fps)
+        elif self._should_upscale(snapshot) and current_fps < self._max_fps:
+            self._handle_upscale(snapshot, current_fps)
+        else:
+            self._down_streak = 0
+            self._up_streak = 0
+
+    @staticmethod
+    def _should_downscale(snapshot: StatsSnapshot) -> bool:
+        return (
+            (snapshot.packet_loss_pct is not None
+             and snapshot.packet_loss_pct > _LOSS_DOWN_PCT)
+            or (snapshot.rtt_ms is not None and snapshot.rtt_ms > _RTT_DOWN_MS)
+        )
+
+    @staticmethod
+    def _should_upscale(snapshot: StatsSnapshot) -> bool:
+        return (
+            snapshot.packet_loss_pct is not None
+            and snapshot.packet_loss_pct < _LOSS_UP_PCT
+            and (snapshot.rtt_ms is None or snapshot.rtt_ms < _RTT_DOWN_MS)
+        )
+
+    def _handle_downscale(self, snapshot: StatsSnapshot,
+                          current_fps: int) -> None:
+        self._down_streak += 1
+        self._up_streak = 0
+        if self._down_streak < _DOWNSCALE_STREAK:
+            return
+        new_fps = max(self._floor_fps, current_fps - _STEP)
+        if new_fps != current_fps:
+            rtt_label = (
+                "{:.0f}ms".format(snapshot.rtt_ms) if snapshot.rtt_ms else "?"
             )
-            if should_down:
-                self._down_streak += 1
-                self._up_streak = 0
-                if self._down_streak >= _DOWNSCALE_STREAK:
-                    new_fps = max(self._floor_fps, current_fps - _STEP)
-                    if new_fps != current_fps:
-                        autocontrol_logger.info(
-                            "adaptive_bitrate: down %d -> %d fps (loss=%.1f%% rtt=%s)",
-                            current_fps, new_fps,
-                            snapshot.packet_loss_pct or 0.0,
-                            "{:.0f}ms".format(snapshot.rtt_ms)
-                            if snapshot.rtt_ms else "?",
-                        )
-                        self._track.set_target_fps(new_fps)
-                    self._down_streak = 0
-            elif should_up and current_fps < self._max_fps:
-                self._up_streak += 1
-                self._down_streak = 0
-                if self._up_streak >= _UPSCALE_STREAK:
-                    new_fps = min(self._max_fps, current_fps + _STEP)
-                    if new_fps != current_fps:
-                        autocontrol_logger.info(
-                            "adaptive_bitrate: up %d -> %d fps (loss=%.1f%%)",
-                            current_fps, new_fps,
-                            snapshot.packet_loss_pct or 0.0,
-                        )
-                        self._track.set_target_fps(new_fps)
-                    self._up_streak = 0
-            else:
-                self._down_streak = 0
-                self._up_streak = 0
+            autocontrol_logger.info(
+                "adaptive_bitrate: down %d -> %d fps (loss=%.1f%% rtt=%s)",
+                current_fps, new_fps,
+                snapshot.packet_loss_pct or 0.0, rtt_label,
+            )
+            self._track.set_target_fps(new_fps)
+        self._down_streak = 0
+
+    def _handle_upscale(self, snapshot: StatsSnapshot,
+                        current_fps: int) -> None:
+        self._up_streak += 1
+        self._down_streak = 0
+        if self._up_streak < _UPSCALE_STREAK:
+            return
+        new_fps = min(self._max_fps, current_fps + _STEP)
+        if new_fps != current_fps:
+            autocontrol_logger.info(
+                "adaptive_bitrate: up %d -> %d fps (loss=%.1f%%)",
+                current_fps, new_fps,
+                snapshot.packet_loss_pct or 0.0,
+            )
+            self._track.set_target_fps(new_fps)
+        self._up_streak = 0
 
     @property
     def current_fps(self) -> int:

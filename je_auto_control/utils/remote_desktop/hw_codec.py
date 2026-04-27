@@ -59,6 +59,39 @@ def active_hardware_codec() -> Optional[str]:
     return _active_codec
 
 
+def _shape_changed(self_codec, frame, target_bitrate) -> bool:
+    if self_codec is None:
+        return False
+    return (
+        frame.width != self_codec.width
+        or frame.height != self_codec.height
+        or abs(target_bitrate - self_codec.bit_rate)
+        / self_codec.bit_rate > 0.1
+    )
+
+
+def _open_codec_context(target: str, frame, target_bitrate: int,
+                        max_frame_rate: int):
+    """Create a fresh CodecContext for ``target`` (or libx264 on failure)."""
+    try:
+        ctx = av.CodecContext.create(target, "w")
+    except (av.FFmpegError, ValueError, OSError) as exc:
+        autocontrol_logger.warning(
+            "hw codec %s create failed, using libx264: %r", target, exc,
+        )
+        ctx = av.CodecContext.create("libx264", "w")
+    ctx.width = frame.width
+    ctx.height = frame.height
+    ctx.bit_rate = target_bitrate
+    ctx.pix_fmt = "yuv420p"
+    from fractions import Fraction
+    ctx.framerate = Fraction(max_frame_rate, 1)
+    ctx.time_base = Fraction(1, max_frame_rate)
+    ctx.options = {"level": "31", "tune": "zerolatency"}
+    ctx.profile = "Baseline"
+    return ctx
+
+
 def install_hardware_codec(codec_name: str) -> bool:
     """Make aiortc's H264Encoder use ``codec_name`` instead of libx264.
 
@@ -75,7 +108,6 @@ def install_hardware_codec(codec_name: str) -> bool:
         return False
     try:
         from aiortc.codecs import h264 as aiortc_h264  # type: ignore
-        import fractions  # noqa: F401  used inside patched method
     except ImportError as error:
         autocontrol_logger.warning("aiortc h264 module unavailable: %r", error)
         return False
@@ -87,40 +119,22 @@ def install_hardware_codec(codec_name: str) -> bool:
 
         def patched(self, frame, force_keyframe):
             # Replicate aiortc's reset-on-shape-change but with hw codec.
-            if self.codec and (
-                frame.width != self.codec.width
-                or frame.height != self.codec.height
-                or abs(self.target_bitrate - self.codec.bit_rate)
-                / self.codec.bit_rate > 0.1
-            ):
+            if _shape_changed(self.codec, frame, self.target_bitrate):
                 self.buffer_data = b""
                 self.buffer_pts = None
                 self.codec = None
-            if force_keyframe:
-                frame.pict_type = av.video.frame.PictureType.I
-            else:
-                frame.pict_type = av.video.frame.PictureType.NONE
+            frame.pict_type = (
+                av.video.frame.PictureType.I if force_keyframe
+                else av.video.frame.PictureType.NONE
+            )
             if self.codec is None:
-                try:
-                    self.codec = av.CodecContext.create(target, "w")
-                except (av.FFmpegError, ValueError, OSError) as exc:
-                    autocontrol_logger.warning(
-                        "hw codec %s create failed, using libx264: %r",
-                        target, exc,
-                    )
-                    self.codec = av.CodecContext.create("libx264", "w")
-                self.codec.width = frame.width
-                self.codec.height = frame.height
-                self.codec.bit_rate = self.target_bitrate
-                self.codec.pix_fmt = "yuv420p"
-                from fractions import Fraction
-                self.codec.framerate = Fraction(aiortc_h264.MAX_FRAME_RATE, 1)
-                self.codec.time_base = Fraction(1, aiortc_h264.MAX_FRAME_RATE)
-                self.codec.options = {"level": "31", "tune": "zerolatency"}
-                self.codec.profile = "Baseline"
-            data_to_send = b""
-            for package in self.codec.encode(frame):
-                data_to_send += bytes(package)
+                self.codec = _open_codec_context(
+                    target, frame, self.target_bitrate,
+                    aiortc_h264.MAX_FRAME_RATE,
+                )
+            data_to_send = b"".join(
+                bytes(p) for p in self.codec.encode(frame)
+            )
             if data_to_send:
                 yield from self._split_bitstream(data_to_send)
 

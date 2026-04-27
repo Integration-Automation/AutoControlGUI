@@ -327,20 +327,24 @@ class WebRTCDesktopHost:
         except (RuntimeError, OSError) as error:
             autocontrol_logger.debug("getStats remote ip: %r", error)
             return
+        ip = self._extract_remote_ip(report)
+        if ip:
+            self._remote_ip = ip
+            autocontrol_logger.info("webrtc host: remote ip = %s", ip)
+
+    @staticmethod
+    def _extract_remote_ip(report) -> Optional[str]:
         for entry in report.values():
-            if (getattr(entry, "type", None) == "candidate-pair"
-                    and getattr(entry, "selected", False)):
-                remote_id = getattr(entry, "remoteCandidateId", None)
-                if remote_id and remote_id in report:
-                    cand = report[remote_id]
-                    ip = (getattr(cand, "ip", None)
-                          or getattr(cand, "address", None))
-                    if ip:
-                        self._remote_ip = str(ip)
-                        autocontrol_logger.info(
-                            "webrtc host: remote ip = %s", self._remote_ip,
-                        )
-                return
+            if (getattr(entry, "type", None) != "candidate-pair"
+                    or not getattr(entry, "selected", False)):
+                continue
+            remote_id = getattr(entry, "remoteCandidateId", None)
+            if not remote_id or remote_id not in report:
+                return None
+            cand = report[remote_id]
+            ip = getattr(cand, "ip", None) or getattr(cand, "address", None)
+            return str(ip) if ip else None
+        return None
 
     def _wire_mic_channel(self, channel) -> None:
         @channel.on("message")
@@ -367,14 +371,7 @@ class WebRTCDesktopHost:
             if isinstance(message, str) and "file_begin" in message:
                 if not self._rate_limiter.allow_file():
                     if self._rate_limiter.should_warn_files():
-                        try:
-                            default_audit_log().log(
-                                "rate_limit_files",
-                                viewer_id=self._pending_viewer_id,
-                                detail=f"remote_ip={self._remote_ip}",
-                            )
-                        except (RuntimeError, OSError):
-                            pass
+                        self._safe_audit_log("rate_limit_files")
                     return
             self._files_receiver.handle_message(
                 message,
@@ -443,57 +440,78 @@ class WebRTCDesktopHost:
             self._authenticated = False
 
     def _handle_ctrl_message(self, message: Any) -> None:
-        if not isinstance(message, str):
-            return
-        try:
-            data = json.loads(message)
-        except json.JSONDecodeError:
-            autocontrol_logger.debug("webrtc host: bad json")
-            return
-        if not isinstance(data, dict):
+        data = self._parse_ctrl_envelope(message)
+        if data is None:
             return
         msg_type = data.get("type")
         if not self._authenticated:
             if msg_type == "auth":
                 self._handle_auth(data)
             return
-        if msg_type == "input":
-            if not self._permissions.allow_input:
-                return
-            if not self._rate_limiter.allow_input():
-                if self._rate_limiter.should_warn_input():
-                    try:
-                        default_audit_log().log(
-                            "rate_limit_input",
-                            viewer_id=self._pending_viewer_id,
-                            detail=f"remote_ip={self._remote_ip}",
-                        )
-                    except (RuntimeError, OSError):
-                        pass
-                return
-            self._dispatch_input_safely(data.get("payload"))
-        elif msg_type == "send_sas":
-            if not self._permissions.allow_input:
-                return
-            self._handle_send_sas()
-        elif msg_type == "list_inbox":
-            self._handle_list_inbox()
-        elif msg_type == "request_file":
-            self._handle_request_file(data)
-        elif msg_type == "delete_inbox_file":
-            self._handle_delete_inbox_file(data)
-        elif msg_type == "annotate":
-            if self._on_annotation is not None:
-                try:
-                    self._on_annotation(dict(data))
-                except (RuntimeError, OSError) as error:
-                    autocontrol_logger.debug("annotation cb: %r", error)
-        elif msg_type == "renegotiate_request":
-            self._spawn_bg(self._async_renegotiate())
-        elif msg_type == "renegotiate_answer":
-            sdp = data.get("sdp")
-            if isinstance(sdp, str) and self._pc is not None:
-                self._spawn_bg(self._async_apply_renegotiate_answer(sdp))
+        handler = self._authenticated_handlers().get(msg_type)
+        if handler is not None:
+            handler(data)
+
+    @staticmethod
+    def _parse_ctrl_envelope(message: Any) -> Optional[dict]:
+        if not isinstance(message, str):
+            return None
+        try:
+            data = json.loads(message)
+        except json.JSONDecodeError:
+            autocontrol_logger.debug("webrtc host: bad json")
+            return None
+        return data if isinstance(data, dict) else None
+
+    def _authenticated_handlers(self) -> dict:
+        return {
+            "input": self._handle_input_message,
+            "send_sas": self._handle_send_sas_message,
+            "list_inbox": lambda _data: self._handle_list_inbox(),
+            "request_file": self._handle_request_file,
+            "delete_inbox_file": self._handle_delete_inbox_file,
+            "annotate": self._handle_annotate,
+            "renegotiate_request":
+                lambda _data: self._spawn_bg(self._async_renegotiate()),
+            "renegotiate_answer": self._handle_renegotiate_answer,
+        }
+
+    def _handle_input_message(self, data: dict) -> None:
+        if not self._permissions.allow_input:
+            return
+        if not self._rate_limiter.allow_input():
+            if self._rate_limiter.should_warn_input():
+                self._safe_audit_log("rate_limit_input")
+            return
+        self._dispatch_input_safely(data.get("payload"))
+
+    def _handle_send_sas_message(self, _data: dict) -> None:
+        if not self._permissions.allow_input:
+            return
+        self._handle_send_sas()
+
+    def _handle_annotate(self, data: dict) -> None:
+        if self._on_annotation is None:
+            return
+        try:
+            self._on_annotation(dict(data))
+        except (RuntimeError, OSError) as error:
+            autocontrol_logger.debug("annotation cb: %r", error)
+
+    def _handle_renegotiate_answer(self, data: dict) -> None:
+        sdp = data.get("sdp")
+        if isinstance(sdp, str) and self._pc is not None:
+            self._spawn_bg(self._async_apply_renegotiate_answer(sdp))
+
+    def _safe_audit_log(self, event_type: str) -> None:
+        try:
+            default_audit_log().log(
+                event_type,
+                viewer_id=self._pending_viewer_id,
+                detail=f"remote_ip={self._remote_ip}",
+            )
+        except (RuntimeError, OSError):
+            pass
 
     async def _async_apply_renegotiate_answer(self, sdp: str) -> None:
         if self._pc is None:
@@ -505,35 +523,50 @@ class WebRTCDesktopHost:
         except (RuntimeError, OSError) as error:
             autocontrol_logger.warning("apply renegotiate answer: %r", error)
             return
-        # Viewer may have just attached a fresh track. If our consume task
-        # has died (because the previous track stopped), spawn a new one
-        # against the same receiver.
-        if (self._config.accept_viewer_video
-                and self._viewer_video_task is None):
-            video_ts = [
-                t for t in self._pc.getTransceivers() if t.kind == "video"
-            ]
-            for transceiver in video_ts[1:]:  # skip our outbound slot
-                receiver = transceiver.receiver
-                if receiver is None or receiver.track is None:
-                    continue
-                self._viewer_video_task = self._spawn_bg(
-                    self._consume_viewer_video(receiver.track),
-                )
-                autocontrol_logger.info(
-                    "webrtc host: re-spawned viewer video consume task",
-                )
-                break
-        if (self._config.accept_viewer_audio_opus
-                and self._opus_audio_receiver is None):
-            for transceiver in self._pc.getTransceivers():
-                if transceiver.kind != "audio":
-                    continue
-                receiver = transceiver.receiver
-                if receiver is None or receiver.track is None:
-                    continue
-                self._start_opus_audio_receive(receiver.track)
-                break
+        # Viewer may have just attached a fresh track. If our consume
+        # task has died (because the previous track stopped), spawn a
+        # new one against the same receiver.
+        self._maybe_resubscribe_viewer_video()
+        self._maybe_resubscribe_viewer_audio()
+
+    def _maybe_resubscribe_viewer_video(self) -> None:
+        if not (self._config.accept_viewer_video
+                and self._viewer_video_task is None
+                and self._pc is not None):
+            return
+        video_ts = [
+            t for t in self._pc.getTransceivers() if t.kind == "video"
+        ]
+        for transceiver in video_ts[1:]:  # skip our outbound slot
+            track = self._receiver_track(transceiver)
+            if track is None:
+                continue
+            self._viewer_video_task = self._spawn_bg(
+                self._consume_viewer_video(track),
+            )
+            autocontrol_logger.info(
+                "webrtc host: re-spawned viewer video consume task",
+            )
+            return
+
+    def _maybe_resubscribe_viewer_audio(self) -> None:
+        if not (self._config.accept_viewer_audio_opus
+                and self._opus_audio_receiver is None
+                and self._pc is not None):
+            return
+        for transceiver in self._pc.getTransceivers():
+            if transceiver.kind != "audio":
+                continue
+            track = self._receiver_track(transceiver)
+            if track is None:
+                continue
+            self._start_opus_audio_receive(track)
+            return
+
+    @staticmethod
+    def _receiver_track(transceiver):
+        receiver = transceiver.receiver
+        return receiver.track if receiver is not None else None
 
     async def _async_renegotiate(self) -> None:
         """Host-initiated renegotiation: new offer → viewer over ctrl channel."""
@@ -754,39 +787,15 @@ class WebRTCDesktopHost:
     def _handle_auth(self, data: Mapping[str, Any]) -> None:
         token = data.get("token")
         if not isinstance(token, str) or token != self._token:
-            self._send_ctrl({"type": "auth_fail"})
-            try:
-                default_audit_log().log(
-                    "auth_fail",
-                    viewer_id=str(data.get("viewer_id", "")) or None,
-                    detail=f"remote_ip={self._remote_ip}",
-                )
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("audit log auth_fail: %r", error)
-            get_bridge().call_soon(self._schedule_close_after_fail)
+            self._reject_auth(data)
             return
         viewer_id = data.get("viewer_id")
         self._pending_viewer_id = (
             viewer_id if isinstance(viewer_id, str) else None
         )
-        if self._is_trusted_viewer(self._pending_viewer_id):
-            autocontrol_logger.info(
-                "webrtc host: viewer_id %s is trusted; auto-approving",
-                self._pending_viewer_id,
-            )
-            if self._trust_list is not None:
-                try:
-                    self._trust_list.touch(self._pending_viewer_id)
-                except (RuntimeError, OSError) as error:
-                    autocontrol_logger.debug("trust touch: %r", error)
-            self._approve_pending_viewer()
+        if self._auto_approve_via_trust():
             return
-        if self._is_ip_whitelisted(self._remote_ip):
-            autocontrol_logger.info(
-                "webrtc host: remote ip %s matches whitelist; auto-approving",
-                self._remote_ip,
-            )
-            self._approve_pending_viewer()
+        if self._auto_approve_via_whitelist():
             return
         if self._on_pending_viewer is None:
             self._approve_pending_viewer()
@@ -796,6 +805,43 @@ class WebRTCDesktopHost:
             self._on_pending_viewer()
         except (RuntimeError, OSError) as error:
             autocontrol_logger.warning("pending viewer cb: %r", error)
+
+    def _reject_auth(self, data: Mapping[str, Any]) -> None:
+        self._send_ctrl({"type": "auth_fail"})
+        try:
+            default_audit_log().log(
+                "auth_fail",
+                viewer_id=str(data.get("viewer_id", "")) or None,
+                detail=f"remote_ip={self._remote_ip}",
+            )
+        except (RuntimeError, OSError) as error:
+            autocontrol_logger.debug("audit log auth_fail: %r", error)
+        get_bridge().call_soon(self._schedule_close_after_fail)
+
+    def _auto_approve_via_trust(self) -> bool:
+        if not self._is_trusted_viewer(self._pending_viewer_id):
+            return False
+        autocontrol_logger.info(
+            "webrtc host: viewer_id %s is trusted; auto-approving",
+            self._pending_viewer_id,
+        )
+        if self._trust_list is not None:
+            try:
+                self._trust_list.touch(self._pending_viewer_id)
+            except (RuntimeError, OSError) as error:
+                autocontrol_logger.debug("trust touch: %r", error)
+        self._approve_pending_viewer()
+        return True
+
+    def _auto_approve_via_whitelist(self) -> bool:
+        if not self._is_ip_whitelisted(self._remote_ip):
+            return False
+        autocontrol_logger.info(
+            "webrtc host: remote ip %s matches whitelist; auto-approving",
+            self._remote_ip,
+        )
+        self._approve_pending_viewer()
+        return True
 
     def _is_ip_whitelisted(self, ip: Optional[str]) -> bool:
         if not ip or not self._ip_whitelist:

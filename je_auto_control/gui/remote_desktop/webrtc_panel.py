@@ -148,73 +148,59 @@ def _build_advanced_group(panel: TranslatableMixin,
     return group
 
 
+def _checked_or(panel, attr: str, default: bool = False) -> bool:
+    """Return ``panel.<attr>.isChecked()`` if the widget exists, else default."""
+    widget = getattr(panel, attr, None)
+    return widget.isChecked() if widget is not None else default
+
+
+def _read_region(panel) -> Optional[tuple]:
+    edit = getattr(panel, "_region_edit", None)
+    if edit is None:
+        return None
+    text = edit.text().strip()
+    if not text:
+        return None
+    try:
+        parts = [int(p.strip()) for p in text.split(",")]
+    except (ValueError, TypeError):
+        return None
+    return tuple(parts) if len(parts) == 4 else None
+
+
 def _read_webrtc_config(panel) -> WebRTCConfig:
     """Build a WebRTCConfig from the advanced group + monitor/fps fields."""
     from je_auto_control.utils.remote_desktop.webrtc_transport import (
         _DEFAULT_STUN_SERVERS,
     )
     stun_field = panel._stun_edit.text().strip()
-    if stun_field:
-        ice_servers = [stun_field]
-    else:
-        ice_servers = list(_DEFAULT_STUN_SERVERS)
-    turn_url = panel._turn_edit.text().strip() or None
-    show_cursor = (panel._cursor_check.isChecked()
-                   if hasattr(panel, "_cursor_check") else True)
-    accept_viewer_video = (
-        panel._accept_viewer_video_check.isChecked()
-        if hasattr(panel, "_accept_viewer_video_check") else False
+    ice_servers = [stun_field] if stun_field else list(_DEFAULT_STUN_SERVERS)
+    monitor = (
+        int(panel._monitor_combo.currentData() or _DEFAULT_MONITOR)
+        if hasattr(panel, "_monitor_combo") else _DEFAULT_MONITOR
     )
-    accept_opus_audio = (
-        panel._accept_opus_audio_check.isChecked()
-        if hasattr(panel, "_accept_opus_audio_check") else False
-    )
-    share_my_screen = (
-        panel._share_my_screen_check.isChecked()
-        if hasattr(panel, "_share_my_screen_check") else False
-    )
-    share_opus_mic = (
-        panel._share_opus_mic_check.isChecked()
-        if hasattr(panel, "_share_opus_mic_check") else False
-    )
+    fps = (int(panel._fps_spin.value())
+           if hasattr(panel, "_fps_spin") else _DEFAULT_FPS)
     max_bitrate = (
         int(panel._max_bitrate_spin.value())
         if hasattr(panel, "_max_bitrate_spin") else 0
     )
-    region = None
-    if hasattr(panel, "_region_edit"):
-        text = panel._region_edit.text().strip()
-        if text:
-            try:
-                parts = [int(p.strip()) for p in text.split(",")]
-                if len(parts) == 4:
-                    region = tuple(parts)
-            except (ValueError, TypeError):
-                region = None
-    config = WebRTCConfig(
+    return WebRTCConfig(
         ice_servers=ice_servers,
-        turn_url=turn_url,
+        turn_url=panel._turn_edit.text().strip() or None,
         turn_username=panel._turn_user_edit.text().strip() or None,
         turn_credential=panel._turn_cred_edit.text() or None,
-        monitor_index=(
-            int(panel._monitor_combo.currentData() or _DEFAULT_MONITOR)
-            if hasattr(panel, "_monitor_combo") else _DEFAULT_MONITOR
-        ),
-        fps=int(panel._fps_spin.value()) if hasattr(panel, "_fps_spin")
-        else _DEFAULT_FPS,
-        show_cursor=show_cursor,
-        accept_viewer_video=accept_viewer_video,
-        accept_viewer_audio_opus=accept_opus_audio,
-        share_my_screen=share_my_screen,
-        share_my_audio_opus=share_opus_mic,
+        monitor_index=monitor,
+        fps=fps,
+        show_cursor=_checked_or(panel, "_cursor_check", default=True),
+        accept_viewer_video=_checked_or(panel, "_accept_viewer_video_check"),
+        accept_viewer_audio_opus=_checked_or(panel, "_accept_opus_audio_check"),
+        share_my_screen=_checked_or(panel, "_share_my_screen_check"),
+        share_my_audio_opus=_checked_or(panel, "_share_opus_mic_check"),
         max_bitrate_kbps=max_bitrate,
-        region=region,
-        host_voice=(
-            panel._host_voice_check.isChecked()
-            if hasattr(panel, "_host_voice_check") else False
-        ),
+        region=_read_region(panel),
+        host_voice=_checked_or(panel, "_host_voice_check"),
     )
-    return config
 
 
 class _WebRTCHostPanel(TranslatableMixin, QWidget):
@@ -995,7 +981,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
             self._sessions_table.setItem(row, 4, QTableWidgetItem(connected))
 
     def _on_sessions_context_menu(self, position) -> None:
-        from PySide6.QtWidgets import QApplication, QMenu
+        from PySide6.QtWidgets import QMenu
         if self._multi_host is None:
             return
         row = self._sessions_table.rowAt(position.y())
@@ -1019,20 +1005,27 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         if chosen is disc:
             self._on_disconnect_selected()
         elif chosen is trust and viewer_id:
-            try:
-                # find the actual full viewer_id from the host
-                with self._multi_host._lock:
-                    host = self._multi_host._sessions.get(sid)
-                full_vid = host.pending_viewer_id if host is not None else None
-                if full_vid:
-                    self._trust_list.add(full_vid, label=f"sess {sid[:6]}")
-                    self._refresh_trusted_list()
-            except (RuntimeError, OSError, ValueError) as error:
-                autocontrol_logger.warning("trust viewer: %r", error)
+            self._trust_session_viewer(sid)
         elif chosen is copy_id and sid:
-            clip = QApplication.clipboard()
-            if clip is not None:
-                clip.setText(sid)
+            self._copy_session_id_to_clipboard(sid)
+
+    def _trust_session_viewer(self, sid: str) -> None:
+        try:
+            with self._multi_host._lock:
+                host = self._multi_host._sessions.get(sid)
+            full_vid = host.pending_viewer_id if host is not None else None
+            if full_vid:
+                self._trust_list.add(full_vid, label=f"sess {sid[:6]}")
+                self._refresh_trusted_list()
+        except (RuntimeError, OSError, ValueError) as error:
+            autocontrol_logger.warning("trust viewer: %r", error)
+
+    @staticmethod
+    def _copy_session_id_to_clipboard(sid: str) -> None:
+        from PySide6.QtWidgets import QApplication
+        clip = QApplication.clipboard()
+        if clip is not None:
+            clip.setText(sid)
 
     def _on_disconnect_selected(self) -> None:
         if self._multi_host is None:

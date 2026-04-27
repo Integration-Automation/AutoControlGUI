@@ -366,28 +366,37 @@ class KnownHostsDialog(QDialog):
         entries = self._known.list_entries()
         self._table.setRowCount(len(entries))
         for row, (host_id, fps) in enumerate(sorted(entries.items())):
-            items = [
-                QTableWidgetItem(host_id),
-                QTableWidgetItem(_short_fp(fps.get("app_fp"))),
-                QTableWidgetItem(_short_fp(fps.get("dtls_fp"))),
-                QTableWidgetItem(_format_last_seen(fps.get("last_seen"))),
-            ]
-            is_stale = False
-            last_seen = fps.get("last_seen")
-            if last_seen:
-                try:
-                    dt = datetime.fromisoformat(last_seen)
-                    if now - dt > stale_after:
-                        is_stale = True
-                except (TypeError, ValueError):
-                    pass
-            if is_stale:
-                tip = _t("rd_webrtc_kh_stale_tip")
-                for it in items:
-                    it.setForeground(stale_color)
-                    it.setToolTip(tip)
-            for col, item in enumerate(items):
-                self._table.setItem(row, col, item)
+            self._populate_row(row, host_id, fps,
+                               now=now, stale_after=stale_after,
+                               stale_color=stale_color)
+
+    def _populate_row(self, row: int, host_id: str, fps: dict, *,
+                      now, stale_after, stale_color) -> None:
+        items = [
+            QTableWidgetItem(host_id),
+            QTableWidgetItem(_short_fp(fps.get("app_fp"))),
+            QTableWidgetItem(_short_fp(fps.get("dtls_fp"))),
+            QTableWidgetItem(_format_last_seen(fps.get("last_seen"))),
+        ]
+        if self._is_stale(fps.get("last_seen"), now=now,
+                          stale_after=stale_after):
+            tip = _t("rd_webrtc_kh_stale_tip")
+            for it in items:
+                it.setForeground(stale_color)
+                it.setToolTip(tip)
+        for col, item in enumerate(items):
+            self._table.setItem(row, col, item)
+
+    @staticmethod
+    def _is_stale(last_seen, *, now, stale_after) -> bool:
+        if not last_seen:
+            return False
+        from datetime import datetime
+        try:
+            dt = datetime.fromisoformat(last_seen)
+        except (TypeError, ValueError):
+            return False
+        return now - dt > stale_after
 
     def _on_forget(self) -> None:
         rows = sorted(
@@ -454,57 +463,74 @@ class KnownHostsDialog(QDialog):
             QMessageBox.warning(self, "WebRTC", str(error))
 
     def _on_import(self) -> None:
-        import json
-        path, _filter = QFileDialog.getOpenFileName(
-            self, _t("rd_webrtc_kh_import"), "", "JSON (*.json);;All (*)",
-        )
-        if not path:
-            return
-        try:
-            with open(path, "r", encoding="utf-8") as fh:
-                data = json.load(fh)
-        except (OSError, json.JSONDecodeError) as error:
-            QMessageBox.warning(self, "WebRTC", str(error))
-            return
-        if not isinstance(data, dict):
-            QMessageBox.warning(
-                self, "WebRTC", _t("rd_webrtc_kh_import_bad"),
-            )
+        data = self._prompt_import_data()
+        if data is None:
             return
         existing = self._known.list_entries()
         added = 0
         skipped = 0
         for host_id, value in data.items():
-            if not isinstance(host_id, str):
-                continue
-            app_fp = None
-            dtls_fp = None
-            if isinstance(value, str):
-                app_fp = value
-            elif isinstance(value, dict):
-                app_fp = value.get("app_fp")
-                dtls_fp = value.get("dtls_fp")
-            else:
-                continue
-            if host_id in existing:
-                result = QMessageBox.question(
-                    self, "WebRTC",
-                    _t("rd_webrtc_kh_import_overwrite").format(host=host_id),
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                )
-                if result != QMessageBox.StandardButton.Yes:
-                    skipped += 1
-                    continue
-            if isinstance(app_fp, str) and app_fp:
-                self._known.remember(host_id, app_fp)
-            if isinstance(dtls_fp, str) and dtls_fp:
-                self._known.remember_dtls_fingerprint(host_id, dtls_fp)
-            added += 1
+            outcome = self._import_one(host_id, value, existing)
+            if outcome == "added":
+                added += 1
+            elif outcome == "skipped":
+                skipped += 1
         QMessageBox.information(
             self, "WebRTC",
             _t("rd_webrtc_kh_import_done").format(added=added, skipped=skipped),
         )
         self._refresh()
+
+    def _prompt_import_data(self):
+        import json
+        path, _filter = QFileDialog.getOpenFileName(
+            self, _t("rd_webrtc_kh_import"), "", "JSON (*.json);;All (*)",
+        )
+        if not path:
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError) as error:
+            QMessageBox.warning(self, "WebRTC", str(error))
+            return None
+        if not isinstance(data, dict):
+            QMessageBox.warning(
+                self, "WebRTC", _t("rd_webrtc_kh_import_bad"),
+            )
+            return None
+        return data
+
+    def _import_one(self, host_id, value, existing) -> str:
+        """Return ``"added"``, ``"skipped"``, or ``"ignored"`` per entry."""
+        if not isinstance(host_id, str):
+            return "ignored"
+        app_fp, dtls_fp = self._extract_fingerprints(value)
+        if app_fp is None and dtls_fp is None:
+            return "ignored"
+        if host_id in existing and not self._confirm_overwrite(host_id):
+            return "skipped"
+        if isinstance(app_fp, str) and app_fp:
+            self._known.remember(host_id, app_fp)
+        if isinstance(dtls_fp, str) and dtls_fp:
+            self._known.remember_dtls_fingerprint(host_id, dtls_fp)
+        return "added"
+
+    @staticmethod
+    def _extract_fingerprints(value):
+        if isinstance(value, str):
+            return value, None
+        if isinstance(value, dict):
+            return value.get("app_fp"), value.get("dtls_fp")
+        return None, None
+
+    def _confirm_overwrite(self, host_id: str) -> bool:
+        result = QMessageBox.question(
+            self, "WebRTC",
+            _t("rd_webrtc_kh_import_overwrite").format(host=host_id),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        return result == QMessageBox.StandardButton.Yes
 
     def _on_forget_stale(self) -> None:
         from datetime import datetime, timedelta, timezone

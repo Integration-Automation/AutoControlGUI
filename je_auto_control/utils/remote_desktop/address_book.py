@@ -85,32 +85,60 @@ class AddressBook:
             raise ValueError("host_id and server_url are required")
         now = datetime.now(timezone.utc).isoformat()
         with self._lock:
-            for entry in self._entries:
-                if (entry.get("host_id") == host_id
-                        and entry.get("server_url") == server_url):
-                    entry["last_used"] = now
-                    if label:
-                        entry["label"] = label
-                    if mac_address is not None:
-                        entry["mac_address"] = mac_address
-                    if broadcast_address is not None:
-                        entry["broadcast_address"] = broadcast_address
-                    entry.setdefault("favorite", False)
-                    self._save()
-                    return
-            new_entry = {
-                "label": label,
-                "server_url": server_url,
-                "host_id": host_id,
-                "last_used": now,
-                "favorite": False,
-            }
-            if mac_address:
-                new_entry["mac_address"] = mac_address
-            if broadcast_address:
-                new_entry["broadcast_address"] = broadcast_address
-            self._entries.append(new_entry)
+            existing = self._find_entry_locked(host_id, server_url)
+            if existing is not None:
+                self._refresh_entry_locked(
+                    existing, now=now, label=label,
+                    mac_address=mac_address,
+                    broadcast_address=broadcast_address,
+                )
+            else:
+                self._entries.append(self._build_entry(
+                    host_id=host_id, server_url=server_url,
+                    label=label, now=now,
+                    mac_address=mac_address,
+                    broadcast_address=broadcast_address,
+                ))
             self._save()
+
+    def _find_entry_locked(self, host_id: str,
+                           server_url: str) -> Optional[dict]:
+        for entry in self._entries:
+            if (entry.get("host_id") == host_id
+                    and entry.get("server_url") == server_url):
+                return entry
+        return None
+
+    @staticmethod
+    def _refresh_entry_locked(entry: dict, *, now: str, label: str,
+                              mac_address: Optional[str],
+                              broadcast_address: Optional[str]) -> None:
+        entry["last_used"] = now
+        if label:
+            entry["label"] = label
+        if mac_address is not None:
+            entry["mac_address"] = mac_address
+        if broadcast_address is not None:
+            entry["broadcast_address"] = broadcast_address
+        entry.setdefault("favorite", False)
+
+    @staticmethod
+    def _build_entry(*, host_id: str, server_url: str,
+                     label: str, now: str,
+                     mac_address: Optional[str],
+                     broadcast_address: Optional[str]) -> dict:
+        new_entry = {
+            "label": label,
+            "server_url": server_url,
+            "host_id": host_id,
+            "last_used": now,
+            "favorite": False,
+        }
+        if mac_address:
+            new_entry["mac_address"] = mac_address
+        if broadcast_address:
+            new_entry["broadcast_address"] = broadcast_address
+        return new_entry
 
     def set_tags(self, *, host_id: str, server_url: str,
                  tags: list) -> None:

@@ -526,49 +526,73 @@ class WebRTCDesktopViewer:
         if not isinstance(data, dict):
             return
         msg_type = data.get("type")
-        if msg_type == "auth_ok":
-            self._authenticated = True
-            self._read_only = bool(data.get("read_only", False))
-            fingerprint = data.get("fingerprint")
-            if isinstance(fingerprint, str) and fingerprint:
-                self._host_fingerprint = fingerprint
-                if self._on_fingerprint is not None:
-                    try:
-                        self._on_fingerprint(fingerprint)
-                    except (RuntimeError, OSError) as error:
-                        autocontrol_logger.debug("fingerprint cb: %r", error)
-            self._fire_auth_result(True)
-        elif msg_type == "auth_fail":
-            self._authenticated = False
-            self._fire_auth_result(False)
-        elif msg_type == "read_only":
-            self._read_only = bool(data.get("value", False))
-        elif msg_type == "permissions":
-            value = data.get("value")
-            if isinstance(value, dict):
-                self._read_only = not bool(value.get("allow_input", True))
-        elif msg_type == "list_inbox_response":
-            files = data.get("files") or []
-            if self._on_inbox_listing is not None:
-                try:
-                    self._on_inbox_listing(files)
-                except (RuntimeError, OSError) as error:
-                    autocontrol_logger.debug("inbox listing cb: %r", error)
-        elif msg_type == "renegotiate_offer":
-            sdp = data.get("sdp")
-            if isinstance(sdp, str) and self._pc is not None:
-                self._spawn_bg(self._async_handle_renegotiate(sdp))
+        handler = self._ctrl_dispatch.get(msg_type)
+        if handler is not None:
+            handler(data)
         elif msg_type in ("delete_inbox_response", "request_file_response"):
-            if self._on_inbox_op_result is None:
-                return
-            try:
-                self._on_inbox_op_result(
-                    str(data.get("name", "")),
-                    bool(data.get("ok", False)),
-                    data.get("error"),
-                )
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("inbox op cb: %r", error)
+            self._handle_inbox_op_result(data)
+
+    @property
+    def _ctrl_dispatch(self) -> dict:
+        return {
+            "auth_ok": self._handle_auth_ok,
+            "auth_fail": self._handle_auth_fail,
+            "read_only": self._handle_read_only_msg,
+            "permissions": self._handle_permissions_msg,
+            "list_inbox_response": self._handle_list_inbox_response,
+            "renegotiate_offer": self._handle_renegotiate_offer,
+        }
+
+    def _handle_auth_ok(self, data: dict) -> None:
+        self._authenticated = True
+        self._read_only = bool(data.get("read_only", False))
+        fingerprint = data.get("fingerprint")
+        if isinstance(fingerprint, str) and fingerprint:
+            self._host_fingerprint = fingerprint
+            if self._on_fingerprint is not None:
+                try:
+                    self._on_fingerprint(fingerprint)
+                except (RuntimeError, OSError) as error:
+                    autocontrol_logger.debug("fingerprint cb: %r", error)
+        self._fire_auth_result(True)
+
+    def _handle_auth_fail(self, _data: dict) -> None:
+        self._authenticated = False
+        self._fire_auth_result(False)
+
+    def _handle_read_only_msg(self, data: dict) -> None:
+        self._read_only = bool(data.get("value", False))
+
+    def _handle_permissions_msg(self, data: dict) -> None:
+        value = data.get("value")
+        if isinstance(value, dict):
+            self._read_only = not bool(value.get("allow_input", True))
+
+    def _handle_list_inbox_response(self, data: dict) -> None:
+        if self._on_inbox_listing is None:
+            return
+        files = data.get("files") or []
+        try:
+            self._on_inbox_listing(files)
+        except (RuntimeError, OSError) as error:
+            autocontrol_logger.debug("inbox listing cb: %r", error)
+
+    def _handle_renegotiate_offer(self, data: dict) -> None:
+        sdp = data.get("sdp")
+        if isinstance(sdp, str) and self._pc is not None:
+            self._spawn_bg(self._async_handle_renegotiate(sdp))
+
+    def _handle_inbox_op_result(self, data: dict) -> None:
+        if self._on_inbox_op_result is None:
+            return
+        try:
+            self._on_inbox_op_result(
+                str(data.get("name", "")),
+                bool(data.get("ok", False)),
+                data.get("error"),
+            )
+        except (RuntimeError, OSError) as error:
+            autocontrol_logger.debug("inbox op cb: %r", error)
 
     def _fire_auth_result(self, ok: bool) -> None:
         if self._on_auth_result is None:
