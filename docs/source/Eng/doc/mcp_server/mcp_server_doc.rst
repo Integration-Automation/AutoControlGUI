@@ -70,6 +70,18 @@ Scheduler / triggers / hotkeys
   ``ac_hotkey_bind``, ``ac_hotkey_unbind``, ``ac_hotkey_list``,
   ``ac_hotkey_daemon_start``, ``ac_hotkey_daemon_stop``.
 
+Remote desktop (TCP host + viewer registry)
+  ``ac_remote_host_start``, ``ac_remote_host_stop``,
+  ``ac_remote_host_status``, ``ac_remote_viewer_connect``,
+  ``ac_remote_viewer_disconnect``, ``ac_remote_viewer_status``,
+  ``ac_remote_viewer_send_input``. These wrap the same singleton
+  registry the GUI's Remote Desktop tab uses, so a model can spin
+  up a host (``token``, ``bind``, ``port``, ``fps``, ``quality``,
+  ``host_id``), open a viewer to another machine, query status, and
+  forward mouse / keyboard / type / hotkey actions through the
+  active viewer. Status tools are read-only and survive
+  ``--readonly`` mode; ``send_input`` is destructive by design.
+
 Every tool carries the MCP 2025-06-18 ``annotations`` block
 (``readOnlyHint``, ``destructiveHint``, ``idempotentHint``,
 ``openWorldHint``) so well-behaved clients can auto-approve

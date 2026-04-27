@@ -213,6 +213,37 @@ def test_read_only_registry_drops_destructive_tools():
             "ac_list_action_commands"}.issubset(safe_names)
 
 
+def test_remote_desktop_tools_are_registered():
+    """The ac_remote_* tool group exposes the registry singletons over MCP."""
+    by_name = {tool.name: tool for tool in build_default_tool_registry()}
+    expected = {
+        "ac_remote_host_start", "ac_remote_host_stop",
+        "ac_remote_host_status", "ac_remote_viewer_connect",
+        "ac_remote_viewer_disconnect", "ac_remote_viewer_status",
+        "ac_remote_viewer_send_input",
+    }
+    assert expected.issubset(by_name.keys())
+    # Status tools must be read-only so they survive --readonly mode.
+    assert by_name["ac_remote_host_status"].annotations.read_only is True
+    assert by_name["ac_remote_viewer_status"].annotations.read_only is True
+    # Side-effecting tools must NOT claim read-only.
+    assert by_name["ac_remote_host_start"].annotations.read_only is False
+    assert by_name["ac_remote_viewer_send_input"].annotations.read_only is False
+    # Token field is required on the host start schema.
+    start_schema = by_name["ac_remote_host_start"].input_schema
+    assert "token" in start_schema["required"]
+
+
+def test_remote_desktop_status_tools_survive_read_only_mode():
+    """Status / observer ac_remote_* tools must survive --readonly filtering."""
+    safe_names = {tool.name
+                  for tool in build_default_tool_registry(read_only=True)}
+    assert "ac_remote_host_status" in safe_names
+    assert "ac_remote_viewer_status" in safe_names
+    assert "ac_remote_host_start" not in safe_names
+    assert "ac_remote_viewer_send_input" not in safe_names
+
+
 def test_read_only_env_var_is_honored(monkeypatch):
     monkeypatch.setenv("JE_AUTOCONTROL_MCP_READONLY", "1")
     safe = build_default_tool_registry()
