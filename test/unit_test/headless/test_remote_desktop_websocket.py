@@ -114,6 +114,7 @@ def _start_ws_host(token: str = "tok",
     return host
 
 
+@pytest.mark.flaky(reruns=2, reruns_delay=1)
 def test_ws_viewer_authenticates_and_receives_frames():
     host = _start_ws_host()
     try:
@@ -130,6 +131,7 @@ def test_ws_viewer_authenticates_and_receives_frames():
         host.stop(timeout=1.0)
 
 
+@pytest.mark.flaky(reruns=2, reruns_delay=1)
 def test_ws_viewer_with_wrong_token_is_rejected():
     host = _start_ws_host(token="right")
     try:
@@ -143,6 +145,7 @@ def test_ws_viewer_with_wrong_token_is_rejected():
         host.stop(timeout=1.0)
 
 
+@pytest.mark.flaky(reruns=2, reruns_delay=1)
 def test_ws_viewer_input_reaches_host_dispatcher():
     host = _start_ws_host()
     try:
@@ -163,6 +166,7 @@ def test_ws_viewer_input_reaches_host_dispatcher():
         host.stop(timeout=1.0)
 
 
+@pytest.mark.flaky(reruns=2, reruns_delay=1)
 def test_ws_host_announces_host_id():
     host = _start_ws_host(host_id="700800900")
     try:

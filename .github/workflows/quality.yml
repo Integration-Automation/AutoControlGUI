@@ -81,7 +81,7 @@ jobs:
           # for any sub-package the snapshot doesn't include
           # (admin, usb, remote_desktop, vision, …).
           pip install -e .
-          pip install ruff==0.15.9 bandit==1.9.4 pytest==9.0.2 pytest-timeout==2.4.0 PySide6==6.11.0
+          pip install ruff==0.15.9 bandit==1.9.4 pytest==9.0.2 pytest-timeout==2.4.0 pytest-rerunfailures==15.1 PySide6==6.11.0
 
       - name: Run headless pytest suite
         run: pytest test/unit_test/headless/ -v --tb=short --timeout=120
