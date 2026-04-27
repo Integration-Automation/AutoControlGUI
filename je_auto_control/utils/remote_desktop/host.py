@@ -37,7 +37,7 @@ from je_auto_control.utils.remote_desktop.transport import (
 FrameProvider = Callable[[], bytes]
 InputDispatcher = Callable[[Mapping[str, Any]], Any]
 
-_AUTH_TIMEOUT_S = 5.0
+_AUTH_TIMEOUT_S = 15.0
 _DEFAULT_QUALITY = 70
 
 

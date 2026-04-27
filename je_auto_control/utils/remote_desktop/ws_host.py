@@ -17,7 +17,7 @@ from je_auto_control.utils.remote_desktop.ws_protocol import (
     WsProtocolError, server_handshake,
 )
 
-_HANDSHAKE_TIMEOUT_S = 5.0
+_HANDSHAKE_TIMEOUT_S = 15.0
 
 
 class WebSocketDesktopHost(RemoteDesktopHost):
