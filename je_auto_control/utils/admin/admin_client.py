@@ -13,7 +13,6 @@ import json
 import os
 import threading
 import time
-import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
@@ -128,7 +127,7 @@ class AdminConsoleClient:
         start = time.monotonic()
         try:
             sessions = self._http_get(host, "/sessions")
-        except (urllib.error.URLError, OSError, ValueError, TimeoutError) as error:
+        except (OSError, ValueError, TimeoutError) as error:  # urllib.error.URLError is an OSError subclass; keep TimeoutError for Python 3.10 where it isn't (NOSONAR python:S5713)
             return HostStatus(
                 label=host.label, base_url=host.base_url, healthy=False,
                 latency_ms=(time.monotonic() - start) * 1000.0,
@@ -145,7 +144,7 @@ class AdminConsoleClient:
     def _safe_get(self, host: AdminHost, path: str) -> Optional[Dict[str, Any]]:
         try:
             return self._http_get(host, path)
-        except (urllib.error.URLError, OSError, ValueError, TimeoutError) as error:
+        except (OSError, ValueError, TimeoutError) as error:  # urllib.error.URLError is an OSError subclass; keep TimeoutError for Python 3.10 where it isn't (NOSONAR python:S5713)
             autocontrol_logger.warning(
                 "admin: %s GET %s failed: %r", host.label, path, error,
             )
@@ -156,7 +155,7 @@ class AdminConsoleClient:
         try:
             payload = self._http_post(host, "/execute", {"actions": actions})
             return {"label": host.label, "ok": True, "result": payload}
-        except (urllib.error.URLError, OSError, ValueError, TimeoutError) as error:
+        except (OSError, ValueError, TimeoutError) as error:  # urllib.error.URLError is an OSError subclass; keep TimeoutError for Python 3.10 where it isn't (NOSONAR python:S5713)
             return {"label": host.label, "ok": False, "error": str(error)}
 
     def _http_get(self, host: AdminHost, path: str) -> Dict[str, Any]:

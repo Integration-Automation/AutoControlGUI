@@ -15,7 +15,6 @@ enumerate path works against any reachable REST server today.
 from __future__ import annotations
 
 import json
-import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
 
@@ -80,7 +79,7 @@ class _FetchWorker(QObject):
             devices = fetch_remote_devices(
                 base_url=self._base_url, token=self._token,
             )
-        except (urllib.error.URLError, ValueError, OSError, TimeoutError) as error:
+        except (ValueError, OSError, TimeoutError) as error:  # NOSONAR python:S5713  # URLError is an OSError subclass; TimeoutError diverges from OSError on Python 3.10
             self.failed.emit(str(error))
             return
         self.finished.emit(devices)

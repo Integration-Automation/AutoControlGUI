@@ -250,13 +250,16 @@ class RemoteFilesTable(QTableWidget):
 
     # --- drag-and-drop ------------------------------------------------------
 
-    def dragEnterEvent(self, event) -> None:  # noqa: N802 Qt override
+    def _accept_url_drag(self, event) -> None:
+        """Shared drag handler: accept iff the payload carries file URLs."""
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
 
+    def dragEnterEvent(self, event) -> None:  # noqa: N802 Qt override
+        self._accept_url_drag(event)
+
     def dragMoveEvent(self, event) -> None:  # noqa: N802 Qt override
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
+        self._accept_url_drag(event)
 
     def dropEvent(self, event) -> None:  # noqa: N802 Qt override
         urls = event.mimeData().urls()
@@ -540,7 +543,7 @@ class KnownHostsDialog(QDialog):
         )
         if result != _QMB.StandardButton.Yes:
             return
-        for host_id in list(self._known.list_entries().keys()):
+        for host_id in list(self._known.list_entries().keys()):  # NOSONAR python:S7504  # forget() mutates the underlying mapping — list() is required to avoid RuntimeError
             self._known.forget(host_id)
         self._refresh()
 

@@ -126,13 +126,13 @@
 <details id="ice-panel">
   <summary data-i18n="ice_summary">Advanced (STUN / TURN)</summary>
   <div class="ice-grid">
-    <label data-i18n="label_stun">STUN URL</label>
+    <label data-i18n="label_stun" for="stun-url">STUN URL</label>
     <input type="text" id="stun-url" data-i18n-placeholder="ph_stun" />
-    <label data-i18n="label_turn">TURN URL</label>
+    <label data-i18n="label_turn" for="turn-url">TURN URL</label>
     <input type="text" id="turn-url" data-i18n-placeholder="ph_turn" />
-    <label data-i18n="label_turn_user">TURN user</label>
+    <label data-i18n="label_turn_user" for="turn-user">TURN user</label>
     <input type="text" id="turn-user" />
-    <label data-i18n="label_turn_cred">TURN cred</label>
+    <label data-i18n="label_turn_cred" for="turn-cred">TURN cred</label>
     <input type="password" id="turn-cred" />
   </div>
 </details>
@@ -412,8 +412,15 @@ function applyI18n() {
 function setLanguage(choice) {
   // choice: "auto" | "en" | "zh_TW" | "zh_CN" | "ja"
   localStorage.setItem("ac_lang", choice);
-  LANG = (choice === "auto") ? detectLanguage()
-       : (STRINGS[choice] ? choice : detectLanguage());
+  let resolved;
+  if (choice === "auto") {
+    resolved = detectLanguage();
+  } else if (STRINGS[choice]) {
+    resolved = choice;
+  } else {
+    resolved = detectLanguage();
+  }
+  LANG = resolved;
   dict = STRINGS[LANG] || STRINGS.en;
   applyI18n();
   // Re-render labels that aren't covered by data-i18n attributes:
@@ -936,7 +943,8 @@ async function sendLocalFile(file) {
   setStatus(t("msg_sent", { name: file.name }), "#88cc66");
 }
 
-let incomingFile = null;  // { name, size, written, chunks, transferId }
+// shape (when set): name, size, written, chunks[], transferId
+let incomingFile = null;
 
 function wireIncomingFiles(channel) {
   channel.onmessage = (event) => {
@@ -1060,10 +1068,10 @@ function updateQualityDot(rttSec, lossPct) {
     return;
   }
   const rttMs = rttSec * 1000;
-  if (rttMs < 80 && lossPct < 1.0) {
+  if (rttMs < 80 && lossPct < 1) {
     dot.classList.add("good");
     dot.title = t("quality_good");
-  } else if (rttMs < 200 && lossPct < 5.0) {
+  } else if (rttMs < 200 && lossPct < 5) {
     dot.classList.add("fair");
     dot.title = t("quality_fair");
   } else {

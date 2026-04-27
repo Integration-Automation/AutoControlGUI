@@ -66,6 +66,9 @@ _POST_ROUTES: Dict[str, HandlerFn] = {
 # can liveness-check without holding the bearer token.
 _PUBLIC_PATHS = frozenset({"/health"})
 
+_PATH_METRICS = "/metrics"
+_PATH_DASHBOARD = "/dashboard"
+
 _MAX_BODY_BYTES = 1_000_000
 
 
@@ -80,22 +83,23 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802  # reason: stdlib API
         parsed = urlparse(self.path)
-        if parsed.path == "/metrics":
+        if parsed.path == _PATH_METRICS:
             self._serve_metrics()
             return
-        if parsed.path == "/dashboard" or parsed.path.startswith("/dashboard/"):
+        if (parsed.path == _PATH_DASHBOARD
+                or parsed.path.startswith(_PATH_DASHBOARD + "/")):
             self._serve_dashboard(parsed.path)
             return
         if parsed.path == "/docs":
-            self._serve_dashboard("/dashboard/swagger.html")
+            self._serve_dashboard(_PATH_DASHBOARD + "/swagger.html")
             return
         self._dispatch("GET", _GET_ROUTES, body=None)
 
     def _serve_dashboard(self, path: str) -> None:
-        if path == "/dashboard":
+        if path == _PATH_DASHBOARD:
             asset = "index.html"
         else:
-            asset = path[len("/dashboard/"):]
+            asset = path[len(_PATH_DASHBOARD + "/"):]
         body, content_type, status = _load_dashboard_asset(asset)
         self.send_response(status)
         self.send_header("Content-Type", content_type)
@@ -104,7 +108,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "private, max-age=60")
         self.end_headers()
         self.wfile.write(body)
-        self._metrics().record_request("GET", "/dashboard", status)
+        self._metrics().record_request("GET", _PATH_DASHBOARD, status)
 
     def _serve_metrics(self) -> None:
         client_ip = self.client_address[0] if self.client_address else "?"
@@ -132,7 +136,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
-        self._metrics().record_request("GET", "/metrics", 200)
+        self._metrics().record_request("GET", _PATH_METRICS, 200)
 
     def do_POST(self) -> None:  # noqa: N802  # reason: stdlib API
         body = self._read_json_body()
@@ -274,28 +278,32 @@ _DASHBOARD_MIME: Dict[str, str] = {
     ".svg": "image/svg+xml",
     ".png": "image/png",
 }
+_TEXT_PLAIN_UTF8 = "text/plain; charset=utf-8"
+_NOT_FOUND_BODY = b"not found"
 # Conservative whitelist — alphanumerics, dot, dash, underscore. No path
-# separators, no parent traversal, no leading dots.
-_DASHBOARD_ASSET_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._-]*$")
+# separators, no parent traversal, no leading dots. ``\w`` would also
+# match (it's [A-Za-z0-9_]), but the explicit class makes the intent
+# more legible at the cost of a tiny S6353 noise we accept.
+_DASHBOARD_ASSET_RE = re.compile(r"^\w[\w.-]*$")
 
 
 def _load_dashboard_asset(asset: str) -> Tuple[bytes, str, int]:
     if not _DASHBOARD_ASSET_RE.match(asset):
-        return b"not found", "text/plain; charset=utf-8", 404
+        return _NOT_FOUND_BODY, _TEXT_PLAIN_UTF8, 404
     target = (_DASHBOARD_DIR / asset).resolve()
     try:
         target.relative_to(_DASHBOARD_DIR)
     except ValueError:
-        return b"not found", "text/plain; charset=utf-8", 404
+        return _NOT_FOUND_BODY, _TEXT_PLAIN_UTF8, 404
     if not target.is_file():
-        return b"not found", "text/plain; charset=utf-8", 404
+        return _NOT_FOUND_BODY, _TEXT_PLAIN_UTF8, 404
     suffix = target.suffix.lower()
     mime = _DASHBOARD_MIME.get(suffix, "application/octet-stream")
     try:
         body = target.read_bytes()
     except OSError as error:
         autocontrol_logger.warning("dashboard asset read %s: %r", asset, error)
-        return b"read error", "text/plain; charset=utf-8", 500
+        return b"read error", _TEXT_PLAIN_UTF8, 500
     return body, mime, 200
 
 

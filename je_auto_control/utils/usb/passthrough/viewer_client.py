@@ -47,6 +47,7 @@ from je_auto_control.utils.usb.passthrough.protocol import (
 _DEFAULT_REPLY_TIMEOUT_S = 10.0
 _DEFAULT_CREDIT_TIMEOUT_S = 30.0
 _INITIAL_CREDIT_GUESS = 16
+_CLIENT_SHUT_DOWN_MSG = "client is shut down"
 
 
 class UsbClientError(Exception):
@@ -227,7 +228,7 @@ class UsbPassthroughClient:
         )
         with self._lock:
             if self._closed:
-                raise UsbClientClosed("client is shut down")
+                raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
             if self._open_pending is not None:
                 raise UsbClientError("another open is in progress")
             self._open_pending = request
@@ -263,7 +264,7 @@ class UsbPassthroughClient:
         )
         with self._lock:
             if self._closed:
-                raise UsbClientClosed("client is shut down")
+                raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
             self._pending[int(claim_id)] = request
         self._consume_credit(claim_id)
         self._send(Frame(op=Opcode.CLOSE, claim_id=int(claim_id)))
@@ -282,7 +283,7 @@ class UsbPassthroughClient:
         request = _PendingRequest(expected_op=op, event=threading.Event())
         with self._lock:
             if self._closed:
-                raise UsbClientClosed("client is shut down")
+                raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
             self._pending[int(claim_id)] = request
         self._consume_credit(claim_id)
         self._send(Frame(

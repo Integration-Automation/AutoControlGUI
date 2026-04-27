@@ -58,7 +58,7 @@ class _GUID(ctypes.Structure):
     ]
 
 
-class _SP_DEVICE_INTERFACE_DATA(ctypes.Structure):
+class _SP_DEVICE_INTERFACE_DATA(ctypes.Structure):  # NOSONAR python:S101  # name mirrors the WinAPI SetupAPI struct verbatim — renaming would obscure the cross-reference to MSDN
     _fields_ = [
         ("cbSize", wintypes.DWORD),
         ("InterfaceClassGuid", _GUID),
@@ -67,7 +67,7 @@ class _SP_DEVICE_INTERFACE_DATA(ctypes.Structure):
     ]
 
 
-class _WINUSB_SETUP_PACKET(ctypes.Structure):
+class _WINUSB_SETUP_PACKET(ctypes.Structure):  # NOSONAR python:S101  # WinUSB API verbatim — see MSDN WINUSB_SETUP_PACKET
     _fields_ = [
         ("RequestType", ctypes.c_ubyte),
         ("Request", ctypes.c_ubyte),
@@ -92,7 +92,9 @@ _PIPE_TRANSFER_TIMEOUT = 0x03
 
 
 _VID_PID_RE = re.compile(
-    r"vid_([0-9A-Fa-f]{4})&pid_([0-9A-Fa-f]{4})", re.IGNORECASE,
+    # IGNORECASE already covers A-F vs a-f; keep the class to a single
+    # case range to satisfy S5869 about duplicated character class members.
+    r"vid_([0-9A-F]{4})&pid_([0-9A-F]{4})", re.IGNORECASE,
 )
 
 

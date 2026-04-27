@@ -281,6 +281,10 @@ def _restart_windows_service() -> int:
 
 
 def _install_windows_service(config_path: Path) -> int:
+    # config_path is part of the public install contract — kept on the
+    # signature for symmetry with the Linux installer even though the
+    # Windows service auto-discovers its config at runtime.
+    del config_path  # suppress S1172
     try:
         import win32serviceutil  # type: ignore  # noqa: F401
     except ImportError:

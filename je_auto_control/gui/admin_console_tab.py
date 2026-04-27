@@ -194,10 +194,12 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
             self._table.setItem(row, 0, QTableWidgetItem(host.label))
             self._table.setItem(row, 1, QTableWidgetItem(host.base_url))
             status = status_by_label.get(host.label)
-            health_text = "?" if status is None else (
-                _t("admin_health_ok") if status.healthy
-                else _t("admin_health_down")
-            )
+            if status is None:
+                health_text = "?"
+            elif status.healthy:
+                health_text = _t("admin_health_ok")
+            else:
+                health_text = _t("admin_health_down")
             latency_text = "-" if status is None else f"{status.latency_ms:.0f} ms"
             jobs_text = "-" if status is None or status.job_count is None \
                 else str(status.job_count)

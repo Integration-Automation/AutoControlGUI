@@ -1,6 +1,11 @@
 _SCRIPT_LABEL = "Script:"
 _REMOVE_SELECTED = "Remove selected"
 _SELECT_SCRIPT = "Select script"
+_TOKEN_LABEL = "Token:"
+_HOST_LABEL = "Host:"
+_PORT_LABEL = "Port:"
+_STOP_HOST = "Stop host"
+_CLEAR_ALL = "Clear all"
 
 english_word_dict = {
     # Main
@@ -124,11 +129,11 @@ english_word_dict = {
     # Admin console tab
     "admin_add_group": "Register host",
     "admin_add": "Add",
-    "admin_remove": "Remove selected",
+    "admin_remove": _REMOVE_SELECTED,
     "admin_refresh": "Poll all",
     "admin_label": "Label:",
     "admin_url": "Base URL:",
-    "admin_token": "Token:",
+    "admin_token": _TOKEN_LABEL,
     "admin_broadcast_group": "Broadcast",
     "admin_actions_label": "Actions JSON (sent to every host):",
     "admin_broadcast_run": "Run on all hosts",
@@ -144,9 +149,9 @@ english_word_dict = {
     # REST API tab
     "rest_config_group": "REST API config",
     "rest_status_group": "REST API status",
-    "rest_host": "Host:",
-    "rest_port": "Port:",
-    "rest_token": "Token:",
+    "rest_host": _HOST_LABEL,
+    "rest_port": _PORT_LABEL,
+    "rest_token": _TOKEN_LABEL,
     "rest_token_ph": "leave blank to auto-generate",
     "rest_enable_audit": "Write audit log",
     "rest_start": "Start",
@@ -173,7 +178,7 @@ english_word_dict = {
     "rd_webrtc_answer_input_label": "Paste viewer's answer SDP:",
     "rd_webrtc_paste_answer": "paste the answer SDP here",
     "rd_webrtc_apply_answer": "Apply answer",
-    "rd_webrtc_stop_host": "Stop host",
+    "rd_webrtc_stop_host": _STOP_HOST,
     "rd_webrtc_offer_input_label": "Paste host's offer SDP:",
     "rd_webrtc_paste_offer": "paste the offer SDP here",
     "rd_webrtc_create_answer": "Create answer",
@@ -222,8 +227,8 @@ english_word_dict = {
     "rd_webrtc_host_id_required": "Host ID is required",
     # Trust list / accept dialog
     "rd_webrtc_trusted_group": "Trusted viewers (auto-accept)",
-    "rd_webrtc_remove_trusted": "Remove selected",
-    "rd_webrtc_clear_trusted": "Clear all",
+    "rd_webrtc_remove_trusted": _REMOVE_SELECTED,
+    "rd_webrtc_clear_trusted": _CLEAR_ALL,
     "rd_webrtc_clear_trust_confirm": "Remove every trusted viewer?",
     "rd_webrtc_pending_viewer_title": "Incoming viewer",
     "rd_webrtc_reject": "Reject",
@@ -300,7 +305,7 @@ english_word_dict = {
     "rd_webrtc_kh_col_app_fp": "App fingerprint",
     "rd_webrtc_kh_col_dtls_fp": "DTLS fingerprint",
     "rd_webrtc_kh_forget": "Forget selected",
-    "rd_webrtc_kh_clear_all": "Clear all",
+    "rd_webrtc_kh_clear_all": _CLEAR_ALL,
     "rd_webrtc_kh_close": "Close",
     "rd_webrtc_kh_clear_confirm": "Forget every known host?",
     "rd_webrtc_kh_copy_app": "Copy app fp",
@@ -344,13 +349,13 @@ english_word_dict = {
     "rd_webrtc_copy_fingerprint": "Copy",
     "rd_webrtc_ab_export": "Export book...",
     "rd_webrtc_ab_import": "Import book...",
-    "rd_webrtc_ab_clear": "Clear all",
+    "rd_webrtc_ab_clear": _CLEAR_ALL,
     "rd_webrtc_ab_clear_confirm": "Clear the entire address book?",
     "rd_webrtc_ab_import_done": "Imported {n} address-book entries",
     "rd_webrtc_tray_idle": "AutoControl host: idle",
     "rd_webrtc_tray_running": "AutoControl host: {n} viewer(s)",
     "rd_webrtc_tray_open": "Open window",
-    "rd_webrtc_tray_stop": "Stop host",
+    "rd_webrtc_tray_stop": _STOP_HOST,
     "rd_webrtc_tray_quit": "Quit",
     "rd_webrtc_region_label": "Region (x,y,w,h):",
     "rd_webrtc_region_placeholder": "leave blank for full screen",
@@ -367,7 +372,7 @@ english_word_dict = {
     "rd_webrtc_audit_title": "Audit log",
     "rd_webrtc_audit_filter_type": "Type:",
     "rd_webrtc_audit_filter_type_ph": "auth_ok / auth_fail / file_received / ...",
-    "rd_webrtc_audit_filter_host": "Host:",
+    "rd_webrtc_audit_filter_host": _HOST_LABEL,
     "rd_webrtc_audit_refresh": "Refresh",
     "rd_webrtc_audit_col_ts": "Timestamp",
     "rd_webrtc_audit_col_type": "Event",
@@ -565,8 +570,8 @@ english_word_dict = {
     # Socket / REST Tab
     "ss_tcp_group": "TCP socket server",
     "ss_rest_group": "REST API server",
-    "ss_host_label": "Host:",
-    "ss_port_label": "Port:",
+    "ss_host_label": _HOST_LABEL,
+    "ss_port_label": _PORT_LABEL,
     "ss_tcp_any_check": "Bind TCP to 0.0.0.0 (exposes to network)",
     "ss_rest_any_check": "Bind REST to 0.0.0.0 (exposes to network)",
     "ss_tcp_stopped": "TCP stopped",
@@ -707,7 +712,7 @@ english_word_dict = {
     "vars_col_value": "Value",
     "vars_count": "{n} variables",
     "vars_refresh": "Refresh",
-    "vars_clear": "Clear all",
+    "vars_clear": _CLEAR_ALL,
     "vars_clear_confirm": "Clear every runtime variable?",
     "vars_set_group": "Set one",
     "vars_name_label": "Name:",
@@ -751,15 +756,15 @@ english_word_dict = {
     ),
     "rd_host_config_group": "Host configuration",
     "rd_viewer_config_group": "Connect to a remote host",
-    "rd_token_label": "Token:",
+    "rd_token_label": _TOKEN_LABEL,
     "rd_token_placeholder": "shared secret (HMAC key)",
     "rd_token_generate": "Generate",
     "rd_bind_label": "Address:",
-    "rd_port_label": "Port:",
+    "rd_port_label": _PORT_LABEL,
     "rd_fps_label": "FPS:",
     "rd_quality_label": "JPEG quality:",
     "rd_host_start": "Start host",
-    "rd_host_stop": "Stop host",
+    "rd_host_stop": _STOP_HOST,
     "rd_host_status_running": "Running on port {port} — {n} viewer(s)",
     "rd_host_status_stopped": "Host is stopped",
     "rd_host_preview_label": "Preview (what viewers see):",

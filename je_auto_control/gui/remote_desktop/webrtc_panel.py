@@ -69,8 +69,14 @@ from je_auto_control.utils.remote_desktop.webrtc_transport import (
 
 _DEFAULT_FPS = 24
 _DEFAULT_MONITOR = 1
-_DEFAULT_SIGNALING_URL = "http://127.0.0.1:8765"
+# Plain http:// is intentional: the bundled signaling server defaults
+# to localhost without TLS, and operators put TLS in front via nginx /
+# Caddy. Hotspot S5332 acknowledged on a per-line basis; see callers.
+_DEFAULT_SIGNALING_URL = "http://127.0.0.1:8765"  # NOSONAR python:S5332
 _DEFAULT_STUN = "stun:stun.l.google.com:19302"
+
+_QUALITY_DOT_STYLE = "background-color: #555; border-radius: 7px;"
+_JSON_FILE_FILTER = "JSON (*.json);;All (*)"
 
 
 def _av_frame_to_qimage(frame) -> Optional[QImage]:
@@ -264,7 +270,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         self._host_quality_dot = QLabel()
         self._host_quality_dot.setFixedSize(14, 14)
         self._host_quality_dot.setStyleSheet(
-            "background-color: #555; border-radius: 7px;",
+            _QUALITY_DOT_STYLE,
         )
         self._host_quality_dot.setToolTip(_t("rd_webrtc_quality_unknown"))
         sessions_row.addWidget(self._host_quality_dot)
@@ -386,7 +392,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         import json as _json
         path, _filter = QFileDialog.getSaveFileName(
             self, _t("rd_webrtc_trust_export"), "trusted_viewers.json",
-            "JSON (*.json);;All (*)",
+            _JSON_FILE_FILTER,
         )
         if not path:
             return
@@ -400,7 +406,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
     def _on_import_trust(self) -> None:
         import json as _json
         path, _filter = QFileDialog.getOpenFileName(
-            self, _t("rd_webrtc_trust_import"), "", "JSON (*.json);;All (*)",
+            self, _t("rd_webrtc_trust_import"), "", _JSON_FILE_FILTER,
         )
         if not path:
             return
@@ -810,7 +816,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
     def _produce_offer(self) -> None:
         try:
             session_id, offer = self._multi_host.create_session_offer()
-        except (RuntimeError, OSError, PermissionError) as error:
+        except (RuntimeError, OSError) as error:  # PermissionError is an OSError
             self._show_error(error)
             return
         self._manual_session_id = session_id
@@ -888,14 +894,14 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
     def _sync_session_pollers(self) -> None:
         """Spawn StatsPoller for new sessions; stop pollers for gone ones."""
         if self._multi_host is None:
-            for poller in list(self._session_pollers.values()):
+            for poller in list(self._session_pollers.values()):  # NOSONAR python:S7504  # snapshot before clear() so a slow stop() doesn't race with the clear that follows
                 poller.stop()
             self._session_pollers.clear()
             self._session_cache.reset()
             return
         active_sids = {s["session_id"] for s in self._multi_host.list_sessions()}
         # Stop pollers whose session is gone
-        for sid in list(self._session_pollers.keys()):
+        for sid in list(self._session_pollers.keys()):  # NOSONAR python:S7504  # the loop deletes from self._session_pollers — list() is required to avoid RuntimeError
             if sid not in active_sids:
                 self._session_pollers[sid].stop()
                 del self._session_pollers[sid]
@@ -1104,7 +1110,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
 
     def _reset_host_quality_dot(self) -> None:
         self._host_quality_dot.setStyleSheet(
-            "background-color: #555; border-radius: 7px;",
+            _QUALITY_DOT_STYLE,
         )
         self._host_quality_dot.setToolTip(_t("rd_webrtc_quality_unknown"))
 
@@ -1231,7 +1237,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         if self._annotation_overlay is not None:
             self._annotation_overlay.clear()
             self._annotation_overlay.hide()
-        for poller in list(self._session_pollers.values()):
+        for poller in list(self._session_pollers.values()):  # NOSONAR python:S7504  # snapshot before clear() — same reasoning as in _refresh_session_pollers
             poller.stop()
         self._session_pollers.clear()
         self._session_cache.reset()
@@ -1341,7 +1347,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         self._quality_dot = QLabel()
         self._quality_dot.setFixedSize(14, 14)
         self._quality_dot.setStyleSheet(
-            "background-color: #555; border-radius: 7px;",
+            _QUALITY_DOT_STYLE,
         )
         self._quality_dot.setToolTip(_t("rd_webrtc_quality_unknown"))
         stats_row.addWidget(self._quality_dot)
@@ -1415,7 +1421,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
                     ),
                 )
                 self._sync_engine.start()
-            except (FileNotFoundError, RuntimeError, OSError) as error:
+            except (RuntimeError, OSError) as error:  # FileNotFoundError is an OSError
                 QMessageBox.warning(self, "WebRTC", str(error))
                 self._sync_btn.setChecked(False)
                 return
@@ -1778,7 +1784,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         import json as _json
         path, _filter = QFileDialog.getSaveFileName(
             self, _t("rd_webrtc_ab_export"), "address_book.json",
-            "JSON (*.json);;All (*)",
+            _JSON_FILE_FILTER,
         )
         if not path:
             return
@@ -1792,7 +1798,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
     def _on_ab_import(self) -> None:
         import json as _json
         path, _filter = QFileDialog.getOpenFileName(
-            self, _t("rd_webrtc_ab_import"), "", "JSON (*.json);;All (*)",
+            self, _t("rd_webrtc_ab_import"), "", _JSON_FILE_FILTER,
         )
         if not path:
             return
@@ -2358,7 +2364,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         self._stats_label.setText(_t("rd_webrtc_stats_idle"))
         if hasattr(self, "_quality_dot"):
             self._quality_dot.setStyleSheet(
-                "background-color: #555; border-radius: 7px;",
+                _QUALITY_DOT_STYLE,
             )
             self._quality_dot.setToolTip(_t("rd_webrtc_quality_unknown"))
         if hasattr(self, "_rtt_spark"):

@@ -69,7 +69,7 @@ class FileTransferReceiver:
             elif isinstance(message, (bytes, bytearray, memoryview)):
                 self._handle_chunk(bytes(message), on_progress)
         except FileTransferError as error:
-            self._abort_locked(reason=str(error), on_error=on_error)
+            self._abort_locked(reason=str(error))
             if on_error is not None:
                 on_error(str(error))
 
@@ -83,9 +83,12 @@ class FileTransferReceiver:
         if msg_type == "file_begin":
             self._begin(data)
         elif msg_type == "file_end":
-            self._finish(data, on_done)
+            self._finish(on_done)
         elif msg_type == "file_abort":
-            self._abort_locked(reason="aborted by sender", on_error=on_error)
+            reason = "aborted by sender"
+            self._abort_locked(reason=reason)
+            if on_error is not None:
+                on_error(reason)
 
     def _handle_chunk(self, chunk: bytes, on_progress) -> None:
         with self._lock:
@@ -122,7 +125,7 @@ class FileTransferReceiver:
             "file transfer: receiving %s (%d bytes)", target, size,
         )
 
-    def _finish(self, data: dict, on_done) -> None:
+    def _finish(self, on_done) -> None:
         with self._lock:
             current = self._current
             self._current = None
@@ -139,7 +142,7 @@ class FileTransferReceiver:
         if on_done is not None:
             on_done(current["path"])
 
-    def _abort_locked(self, reason: str, on_error) -> None:
+    def _abort_locked(self, reason: str) -> None:
         with self._lock:
             current = self._current
             self._current = None

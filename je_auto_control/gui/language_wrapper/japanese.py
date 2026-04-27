@@ -2,6 +2,9 @@ _SCRIPT = "スクリプト"
 _SCRIPT_LABEL = "スクリプト:"
 _REMOVE_SELECTED = "選択項目を削除"
 _SELECT_SCRIPT = "スクリプトを選択"
+_TOKEN_LABEL = "トークン:"
+_STOP_HOST_JA = "ホスト停止"
+_CLEAR_ALL_JA = "すべて削除"
 
 japanese_word_dict = {
     "application_name": "AutoControlGUI",
@@ -128,7 +131,7 @@ japanese_word_dict = {
     "admin_refresh": "全件ポーリング",
     "admin_label": "ラベル:",
     "admin_url": "ベース URL:",
-    "admin_token": "トークン:",
+    "admin_token": _TOKEN_LABEL,
     "admin_broadcast_group": "ブロードキャスト",
     "admin_actions_label": "アクション JSON (全ホストへ送信):",
     "admin_broadcast_run": "全ホストで実行",
@@ -146,7 +149,7 @@ japanese_word_dict = {
     "rest_status_group": "REST API 状態",
     "rest_host": "ホスト:",
     "rest_port": "ポート:",
-    "rest_token": "トークン:",
+    "rest_token": _TOKEN_LABEL,
     "rest_token_ph": "空欄で自動生成",
     "rest_enable_audit": "監査ログを記録",
     "rest_start": "開始",
@@ -173,7 +176,7 @@ japanese_word_dict = {
     "rd_webrtc_answer_input_label": "ビューアの Answer SDP を貼り付け:",
     "rd_webrtc_paste_answer": "Answer SDP をここに貼り付け",
     "rd_webrtc_apply_answer": "Answer 適用",
-    "rd_webrtc_stop_host": "ホスト停止",
+    "rd_webrtc_stop_host": _STOP_HOST_JA,
     "rd_webrtc_offer_input_label": "ホストの Offer SDP を貼り付け:",
     "rd_webrtc_paste_offer": "Offer SDP をここに貼り付け",
     "rd_webrtc_create_answer": "Answer 生成",
@@ -223,7 +226,7 @@ japanese_word_dict = {
     # 信頼リスト / 受け入れダイアログ
     "rd_webrtc_trusted_group": "信頼済みビューア（自動承認）",
     "rd_webrtc_remove_trusted": "選択を削除",
-    "rd_webrtc_clear_trusted": "すべて削除",
+    "rd_webrtc_clear_trusted": _CLEAR_ALL_JA,
     "rd_webrtc_clear_trust_confirm": "信頼済みビューアをすべて削除しますか？",
     "rd_webrtc_pending_viewer_title": "新規接続要求",
     "rd_webrtc_reject": "拒否",
@@ -300,7 +303,7 @@ japanese_word_dict = {
     "rd_webrtc_kh_col_app_fp": "App fingerprint",
     "rd_webrtc_kh_col_dtls_fp": "DTLS fingerprint",
     "rd_webrtc_kh_forget": "選択を忘れる",
-    "rd_webrtc_kh_clear_all": "すべて削除",
+    "rd_webrtc_kh_clear_all": _CLEAR_ALL_JA,
     "rd_webrtc_kh_close": "閉じる",
     "rd_webrtc_kh_clear_confirm": "全ての既知ホストを忘れますか？",
     "rd_webrtc_kh_copy_app": "App fp コピー",
@@ -344,13 +347,13 @@ japanese_word_dict = {
     "rd_webrtc_copy_fingerprint": "コピー",
     "rd_webrtc_ab_export": "アドレス帳エクスポート...",
     "rd_webrtc_ab_import": "アドレス帳インポート...",
-    "rd_webrtc_ab_clear": "すべて削除",
+    "rd_webrtc_ab_clear": _CLEAR_ALL_JA,
     "rd_webrtc_ab_clear_confirm": "アドレス帳全件削除しますか？",
     "rd_webrtc_ab_import_done": "{n} 件インポート完了",
     "rd_webrtc_tray_idle": "AutoControl host: アイドル",
     "rd_webrtc_tray_running": "AutoControl host: {n} ビューア",
     "rd_webrtc_tray_open": "ウィンドウを開く",
-    "rd_webrtc_tray_stop": "ホスト停止",
+    "rd_webrtc_tray_stop": _STOP_HOST_JA,
     "rd_webrtc_tray_quit": "終了",
     "rd_webrtc_region_label": "領域 (x,y,w,h):",
     "rd_webrtc_region_placeholder": "全画面なら空欄",
@@ -751,7 +754,7 @@ japanese_word_dict = {
     ),
     "rd_host_config_group": "ホスト設定",
     "rd_viewer_config_group": "リモートホストへ接続",
-    "rd_token_label": "トークン:",
+    "rd_token_label": _TOKEN_LABEL,
     "rd_token_placeholder": "共有シークレット（HMAC キー）",
     "rd_token_generate": "生成",
     "rd_bind_label": "アドレス:",
@@ -759,7 +762,7 @@ japanese_word_dict = {
     "rd_fps_label": "FPS:",
     "rd_quality_label": "JPEG 品質:",
     "rd_host_start": "ホスト開始",
-    "rd_host_stop": "ホスト停止",
+    "rd_host_stop": _STOP_HOST_JA,
     "rd_host_status_running": "稼働中 ポート {port} — ビューア {n} 名",
     "rd_host_status_stopped": "ホストは停止中",
     "rd_host_preview_label": "プレビュー（ビューアの表示）:",

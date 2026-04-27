@@ -120,6 +120,9 @@ class _BrowseListener:
         self._on_change(snapshot)
 
     def remove_service(self, zc: "Zeroconf", type_: str, name: str) -> None:
+        # zc / type_ are positional callback parameters required by the
+        # Zeroconf ServiceListener interface; we only need ``name`` here.
+        del zc, type_  # suppress S1172 about the unused signature args
         with self._lock:
             self._services.pop(name, None)
             snapshot = dict(self._services)

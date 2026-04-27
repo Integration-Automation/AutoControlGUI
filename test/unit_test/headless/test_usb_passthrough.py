@@ -312,8 +312,8 @@ def test_initial_credits_set_on_open():
     backend = FakeUsbBackend(devices=[_SAMPLE_DEVICE])
     session = UsbPassthroughSession(backend, initial_credits=5)
     claim_id = _open_and_get_claim(session, backend)
-    credits = session.credits_for(claim_id)
-    assert credits == {"inbound": 5, "outbound": 5}
+    credit_state = session.credits_for(claim_id)
+    assert credit_state == {"inbound": 5, "outbound": 5}
 
 
 def test_credit_exhaustion_returns_error():
@@ -348,8 +348,8 @@ def test_credit_message_replenishes_outbound():
     )
     # CREDIT messages produce no reply.
     assert replies == []
-    credits = session.credits_for(claim_id)
-    assert credits["outbound"] == 10  # 3 initial + 7 grant
+    credit_state = session.credits_for(claim_id)
+    assert credit_state["outbound"] == 10  # 3 initial + 7 grant
 
 
 def test_credit_message_with_bad_payload_is_ignored():

@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Tuple
 
 _BEARER_SCHEME_NAME = "BearerAuth"
 _API_VERSION = "1.0.0"
+_JSON_MEDIA_TYPE = "application/json"
 
 
 # Per-endpoint metadata. Each value is a dict with keys:
@@ -247,15 +248,15 @@ def _operation_object(method: str, path: str,
         op["requestBody"] = {
             "required": True,
             "content": {
-                "application/json": {"schema": meta["request_body"]},
+                _JSON_MEDIA_TYPE: {"schema": meta["request_body"]},
             },
         }
     return op
 
 
 def _build_responses(meta: Dict[str, Any]) -> Dict[str, Any]:
-    media_type = meta.get("non_json_response", "application/json")
-    schema = ({"type": "string"} if media_type != "application/json"
+    media_type = meta.get("non_json_response", _JSON_MEDIA_TYPE)
+    schema = ({"type": "string"} if media_type != _JSON_MEDIA_TYPE
               else {"type": "object"})
     responses: Dict[str, Any] = {
         "200": {
@@ -266,16 +267,16 @@ def _build_responses(meta: Dict[str, Any]) -> Dict[str, Any]:
     if not meta.get("public"):
         responses["401"] = {
             "description": "Missing or wrong bearer token.",
-            "content": {"application/json": {"schema": _error_schema()}},
+            "content": {_JSON_MEDIA_TYPE: {"schema": _error_schema()}},
         }
         responses["429"] = {
             "description": "Rate limited or locked out after repeated auth failures.",
-            "content": {"application/json": {"schema": _error_schema()}},
+            "content": {_JSON_MEDIA_TYPE: {"schema": _error_schema()}},
         }
     if meta.get("request_body"):
         responses["400"] = {
             "description": "Bad request body.",
-            "content": {"application/json": {"schema": _error_schema()}},
+            "content": {_JSON_MEDIA_TYPE: {"schema": _error_schema()}},
         }
     return responses
 
