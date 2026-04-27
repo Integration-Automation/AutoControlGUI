@@ -283,7 +283,10 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         self._sessions_table.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers,
         )
-        self._sessions_table.setMaximumHeight(140)
+        # Hint at a comfortable starting height, but let the table
+        # grow with the window instead of pinning it at 140 px even
+        # when the operator has a 4K monitor's worth of space.
+        self._sessions_table.setMinimumHeight(140)
         self._sessions_table.setSelectionBehavior(
             QAbstractItemView.SelectionBehavior.SelectRows,
         )
