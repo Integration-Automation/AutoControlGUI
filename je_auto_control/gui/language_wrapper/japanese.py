@@ -809,6 +809,8 @@ japanese_word_dict = {
     "rd_viewer_status_connected": "接続中 — フレーム受信中",
     "rd_viewer_status_idle": "未接続",
     "rd_viewer_error": "リモートデスクトップエラー",
+    "rd_remote_screen_title": "リモートデスクトップ — ライブセッション",
+    "rd_remote_screen_title_with_id": "リモートデスクトップ — {host_id}",
 
     # Menu bar
     "menu_file": "ファイル",

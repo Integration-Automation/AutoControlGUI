@@ -27,6 +27,9 @@ from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.remote_desktop._helpers import _t
 from je_auto_control.gui.remote_desktop.blanking_overlay import BlankingOverlay
 from je_auto_control.gui.remote_desktop.frame_display import _FrameDisplay
+from je_auto_control.gui.remote_desktop.remote_screen_window import (
+    RemoteScreenWindow,
+)
 from je_auto_control.gui.remote_desktop.sparkline import Sparkline
 from je_auto_control.gui.remote_desktop.annotation_overlay import (
     HostAnnotationOverlay,
@@ -1287,6 +1290,9 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         self._sync_engine = None
         self._auto_reconnect_attempts = 0
         self._user_initiated_disconnect = False
+        # AnyDesk-style pop-out: created on auth_ok, hidden on stop.
+        # Set by _ensure_screen_window().
+        self._screen_window: Optional[RemoteScreenWindow] = None
         self._signals = _PanelSignals()
         self._signals.frame.connect(self._on_frame_image)
         self._signals.state.connect(self._on_state)
@@ -1300,13 +1306,28 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+        # Essentials always visible: address book + recommended
+        # signaling-server flow + WebRTC config.
         layout.addWidget(self._build_address_book_group())
         layout.addWidget(self._build_signaling_group())
         layout.addWidget(self._build_config_group())
-        layout.addWidget(self._build_manual_group())
+        # Heavy / rarely-used groups now collapse by default so the
+        # tab fits on a normal display without scrolling.
+        layout.addWidget(self._wrap_collapsed(
+            self._build_manual_group(),
+            "rd_webrtc_manual_group",
+        ))
         layout.addWidget(_build_advanced_group(self))
-        layout.addWidget(self._build_remote_files_group())
-        layout.addWidget(self._build_sync_group())
+        layout.addWidget(self._wrap_collapsed(
+            self._build_remote_files_group(),
+            "rd_webrtc_files_group",
+        ))
+        layout.addWidget(self._wrap_collapsed(
+            self._build_sync_group(),
+            "rd_webrtc_sync_group",
+        ))
         self._status_label = QLabel(_t("rd_webrtc_status_idle"))
         layout.addWidget(self._status_label)
         action_row = QHBoxLayout()
@@ -1358,8 +1379,16 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         self._bitrate_spark.setToolTip("kbps")
         spark_row.addWidget(self._bitrate_spark, stretch=1)
         layout.addLayout(spark_row)
+        # Hidden _FrameDisplay placeholder kept around so the rest of
+        # the class (pen mode toggle, image setter) doesn't have to
+        # branch between "popup open" and "popup closed". It also lets
+        # the panel decode frames before the operator opens the popup.
+        # When the popup IS open, frames + input round-trip through
+        # the popup's display instead.
         self._frame_display = _FrameDisplay()
-        layout.addWidget(self._frame_display, stretch=1)
+        self._frame_display.setVisible(False)
+        layout.addWidget(self._frame_display)
+        layout.addStretch(1)
         self._wire_input_signals()
 
     def _build_sync_group(self) -> QGroupBox:
@@ -1727,6 +1756,29 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         )
         self._quality_dot.setToolTip(_t(tip_key))
 
+    def _wrap_collapsed(self, inner: QGroupBox,
+                        title_key: str) -> "_CollapsibleSection":
+        """Wrap an existing groupbox in a collapsed-by-default container.
+
+        The inner group keeps its own translated title, so we just pass
+        it through the wrapper's body. Heavy / rarely-used groups
+        (manual SDP, remote files, sync) hide their bodies by default
+        so the panel doesn't scroll past the fold on a normal display.
+        """
+        from je_auto_control.gui.remote_desktop._helpers import (
+            _CollapsibleSection,
+        )
+        section = _CollapsibleSection()
+        # Translate the wrapper title; the inner groupbox already has
+        # its own header so we strip its frame to avoid double chrome.
+        self._tr(section, title_key, setter="setTitle")
+        inner.setStyleSheet("QGroupBox { border: none; margin-top: 0px; }")
+        body = QVBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.addWidget(inner)
+        section.set_body_layout(body)
+        return section
+
     def _build_address_book_group(self) -> QGroupBox:
         group = self._tr(QGroupBox(), "rd_webrtc_address_book_group")
         layout = QVBoxLayout()
@@ -2046,29 +2098,41 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         return group
 
     def _wire_input_signals(self) -> None:
-        fd = self._frame_display
-        fd.mouse_moved.connect(
+        # Wire the hidden inline _FrameDisplay too, even though it
+        # never gets focus while the popup is open — leaves the slots
+        # in place if the panel ever reverts to inline display in the
+        # future.
+        self._wire_display_input(self._frame_display)
+
+    def _wire_display_input(self, source) -> None:
+        """Wire mouse / keyboard / annotation signals from ``source``.
+
+        ``source`` can be a :class:`_FrameDisplay` or a
+        :class:`RemoteScreenWindow` — both expose the same Signal
+        names with matching shapes.
+        """
+        source.mouse_moved.connect(
             lambda x, y: self._send({"type": "mouse_move",
                                      "x": int(x), "y": int(y)}))
-        fd.mouse_pressed.connect(
+        source.mouse_pressed.connect(
             lambda x, y, b: self._send({"type": "mouse_press",
                                         "x": int(x), "y": int(y),
                                         "button": b}))
-        fd.mouse_released.connect(
+        source.mouse_released.connect(
             lambda x, y, b: self._send({"type": "mouse_release",
                                         "x": int(x), "y": int(y),
                                         "button": b}))
-        fd.mouse_scrolled.connect(
+        source.mouse_scrolled.connect(
             lambda x, y, a: self._send({"type": "mouse_scroll",
                                         "x": int(x), "y": int(y),
                                         "amount": int(a)}))
-        fd.key_pressed.connect(
+        source.key_pressed.connect(
             lambda k: self._send({"type": "key_press", "keycode": k}))
-        fd.key_released.connect(
+        source.key_released.connect(
             lambda k: self._send({"type": "key_release", "keycode": k}))
-        fd.type_text.connect(
+        source.type_text.connect(
             lambda text: self._send({"type": "type_text", "text": text}))
-        fd.annotation_event.connect(self._on_annotation_segment)
+        source.annotation_event.connect(self._on_annotation_segment)
 
     def _on_annotation_segment(self, action: str, x: int, y: int) -> None:
         if self._viewer is None or not self._viewer.authenticated:
@@ -2084,6 +2148,8 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
 
     def _on_toggle_pen(self, checked: bool) -> None:
         self._frame_display.set_pen_mode(checked)
+        if self._screen_window is not None:
+            self._screen_window.set_pen_mode(checked)
         self._pen_btn.setText(_t("rd_webrtc_pen_on" if checked
                                  else "rd_webrtc_pen_off"))
 
@@ -2196,7 +2262,43 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         self._auto_reconnect_attempts = 0
         self._stop_viewer_if_any()
         self._frame_display.clear()
+        self._close_screen_window()
         self._status_label.setText(_t("rd_webrtc_status_idle"))
+
+    # --- pop-out screen window ---------------------------------------------
+
+    def _ensure_screen_window(self) -> RemoteScreenWindow:
+        if self._screen_window is not None:
+            return self._screen_window
+        host_id = self._host_id_edit.text().strip()
+        title = (
+            _t("rd_remote_screen_title_with_id").replace("{host_id}", host_id)
+            if host_id else _t("rd_remote_screen_title")
+        )
+        window = RemoteScreenWindow(title, parent=self)
+        # Wire the popup's input signals so mouse/keyboard inside the
+        # popup feed the WebRTC control channel just like the hidden
+        # inline display would.
+        self._wire_display_input(window)
+        window.closed.connect(self._on_screen_window_closed)
+        self._screen_window = window
+        return window
+
+    def _close_screen_window(self) -> None:
+        window = self._screen_window
+        self._screen_window = None
+        if window is not None:
+            try:
+                window.closed.disconnect(self._on_screen_window_closed)
+            except (RuntimeError, TypeError):
+                pass
+            window.hide()
+            window.deleteLater()
+
+    def _on_screen_window_closed(self) -> None:
+        # Operator dismissed the popup → fall through to disconnect.
+        if self._viewer is not None:
+            self._on_stop()
 
     # --- helpers -----------------------------------------------------------
 
@@ -2282,7 +2384,13 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             self._signals.frame.emit(image)
 
     def _on_frame_image(self, image: QImage) -> None:
-        self._frame_display.set_image(image)
+        # When the popup is open it owns the visible display; while
+        # closed (pre-auth or after stop), the hidden inline display
+        # still renders so debugging tools / screenshots work.
+        if self._screen_window is not None:
+            self._screen_window.set_image(image)
+        else:
+            self._frame_display.set_image(image)
 
     def _on_state(self, state: str) -> None:
         self._status_label.setText(f"{_t('rd_webrtc_state_label')} {state}")
@@ -2310,6 +2418,13 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
                 except OSError as error:
                     autocontrol_logger.debug("known_hosts touch: %r", error)
             self._start_stats_polling()
+            # AnyDesk-style: surface the live screen in its own window
+            # so the workspace isn't fighting the control panel for
+            # vertical space.
+            window = self._ensure_screen_window()
+            window.show()
+            window.raise_()
+            window.activateWindow()
         else:
             self._stop_stats_polling()
 

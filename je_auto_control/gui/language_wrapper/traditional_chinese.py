@@ -798,6 +798,8 @@ traditional_chinese_word_dict = {
     "rd_viewer_status_connected": "已連線 — 正在接收畫面",
     "rd_viewer_status_idle": "尚未連線",
     "rd_viewer_error": "遠端桌面錯誤",
+    "rd_remote_screen_title": "遠端桌面 — 即時連線",
+    "rd_remote_screen_title_with_id": "遠端桌面 — {host_id}",
 
     # Menu bar
     "menu_file": "檔案",

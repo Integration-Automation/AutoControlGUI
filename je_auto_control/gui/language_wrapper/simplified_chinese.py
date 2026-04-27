@@ -797,6 +797,8 @@ simplified_chinese_word_dict = {
     "rd_viewer_status_connected": "已连接 — 正在接收画面",
     "rd_viewer_status_idle": "未连接",
     "rd_viewer_error": "远程桌面错误",
+    "rd_remote_screen_title": "远程桌面 — 实时会话",
+    "rd_remote_screen_title_with_id": "远程桌面 — {host_id}",
 
     # Menu bar
     "menu_file": "文件",

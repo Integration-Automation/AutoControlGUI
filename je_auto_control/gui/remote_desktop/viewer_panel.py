@@ -16,7 +16,9 @@ from je_auto_control.gui.remote_desktop._helpers import (
     _CollapsibleSection, _StatusBadge, _build_insecure_client_context,
     _build_verifying_client_context, _t,
 )
-from je_auto_control.gui.remote_desktop.frame_display import _FrameDisplay
+from je_auto_control.gui.remote_desktop.remote_screen_window import (
+    RemoteScreenWindow,
+)
 from je_auto_control.utils.remote_desktop import (
     FileReceiver, RemoteDesktopViewer, WebSocketDesktopViewer,
 )
@@ -66,7 +68,11 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._badge = _StatusBadge()
         self._status = QLabel()
         self._status.setStyleSheet("color: #555; font-size: 9pt;")
-        self._display = _FrameDisplay()
+        # _screen_window is created lazily on connect — the AnyDesk-style
+        # popout. While disconnected we hold ``None`` and the panel
+        # itself stays compact instead of devoting half its height to a
+        # blank frame area.
+        self._screen_window: Optional[RemoteScreenWindow] = None
         self._connect_btn: Optional[QPushButton] = None
         self._disconnect_btn: Optional[QPushButton] = None
         self._action_row: Optional[QWidget] = None
@@ -92,11 +98,27 @@ class _ViewerPanel(TranslatableMixin, QWidget):
 
     def _build_layout(self) -> None:
         root = QVBoxLayout(self)
+        root.setContentsMargins(12, 12, 12, 12)
+        root.setSpacing(8)
 
-        # === Connection card ===
+        root.addWidget(self._build_card())
+        root.addWidget(self._build_advanced())
+        root.addLayout(self._build_button_row())
+        root.addWidget(self._build_action_row())
+
+        # The remote desktop opens in its own popup window on connect
+        # (AnyDesk-style), so the panel itself only carries control
+        # surface, status, and transfer progress.
+        root.addWidget(self._progress_label)
+        root.addWidget(self._progress_bar)
+        root.addWidget(self._status)
+        root.addStretch(1)
+
+    def _build_card(self) -> QGroupBox:
         card = self._tr(QGroupBox(), "rd_viewer_card_group")
         card.setStyleSheet("QGroupBox { font-weight: bold; }")
         card_layout = QVBoxLayout()
+        card_layout.setSpacing(6)
 
         id_row = QHBoxLayout()
         id_row.addWidget(self._tr(QLabel(), "rd_host_id_label"))
@@ -119,9 +141,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         card_layout.addLayout(token_row)
 
         card.setLayout(card_layout)
-        root.addWidget(card)
+        return card
 
-        # === Advanced (collapsible) ===
+    def _build_advanced(self) -> _CollapsibleSection:
         advanced = _CollapsibleSection()
         self._tr(advanced, "rd_advanced_group", setter="setTitle")
         adv_layout = QVBoxLayout()
@@ -129,9 +151,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         adv_layout.addWidget(self._tr(self._enable_audio,
                                       "rd_viewer_audio_play"))
         advanced.set_body_layout(adv_layout)
-        root.addWidget(advanced)
+        return advanced
 
-        # === Connect / Disconnect ===
+    def _build_button_row(self) -> QHBoxLayout:
         btn_row = QHBoxLayout()
         self._connect_btn = self._tr(QPushButton(), "rd_viewer_connect")
         self._connect_btn.setMinimumHeight(36)
@@ -142,9 +164,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         self._disconnect_btn.clicked.connect(self._disconnect)
         btn_row.addWidget(self._connect_btn, stretch=2)
         btn_row.addWidget(self._disconnect_btn, stretch=1)
-        root.addLayout(btn_row)
+        return btn_row
 
-        # === Live actions (only visible while connected) ===
+    def _build_action_row(self) -> QWidget:
         action_row_widget = QWidget()
         action_row = QHBoxLayout(action_row_widget)
         action_row.setContentsMargins(0, 0, 0, 0)
@@ -157,35 +179,20 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         action_row.addStretch()
         action_row_widget.setVisible(False)
         self._action_row = action_row_widget
-        root.addWidget(action_row_widget)
-
-        # === Frame display + progress ===
-        root.addWidget(self._display, stretch=1)
-        root.addWidget(self._progress_label)
-        root.addWidget(self._progress_bar)
-        root.addWidget(self._status)
+        return action_row_widget
 
     def _wire_signals(self) -> None:
+        # Cross-thread frame / event marshalling — the Signals fire on
+        # the network thread, the slots run on the GUI thread.
         self._frame_signal.connect(self._on_frame_main)
         self._error_signal.connect(self._on_error_main)
         self._audio_signal.connect(self._on_audio_main)
         self._clipboard_signal.connect(self._on_clipboard_main)
         self._file_progress_signal.connect(self._on_file_progress_main)
         self._file_complete_signal.connect(self._on_file_complete_main)
-        self._display.mouse_moved.connect(self._send_mouse_move)
-        self._display.mouse_pressed.connect(self._send_mouse_press)
-        self._display.mouse_released.connect(self._send_mouse_release)
-        self._display.mouse_scrolled.connect(self._send_mouse_scroll)
-        self._display.key_pressed.connect(
-            lambda k: self._send({"action": "key_press", "keycode": k})
-        )
-        self._display.key_released.connect(
-            lambda k: self._send({"action": "key_release", "keycode": k})
-        )
-        self._display.type_text.connect(
-            lambda text: self._send({"action": "type", "text": text})
-        )
-        self._display.files_dropped.connect(self._on_files_dropped)
+        # Input-forwarding signals come from the popup window (see
+        # _ensure_screen_window). They aren't wired here because the
+        # window is created lazily on connect.
 
     # --- connection lifecycle ------------------------------------------
 
@@ -238,6 +245,13 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         registry._viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
         self._connected = True
         self._start_audio_player_if_requested()
+        # AnyDesk-style: open the live screen in its own window so the
+        # operator gets a real workspace and the control panel stays
+        # uncluttered.
+        window = self._ensure_screen_window()
+        window.show()
+        window.raise_()
+        window.activateWindow()
         self._refresh_status()
 
     def _parse_host_id_input(self) -> Optional[str]:
@@ -279,11 +293,60 @@ class _ViewerPanel(TranslatableMixin, QWidget):
         registry.disconnect_viewer()
         self._stop_audio_player()
         self._connected = False
-        self._display.clear()
+        self._close_screen_window()
         self._progress_bar.setVisible(False)
         self._progress_label.setText("")
         self._active_progress_id = None
         self._refresh_status()
+
+    # --- pop-out screen window ----------------------------------------
+
+    def _ensure_screen_window(self) -> RemoteScreenWindow:
+        """Create-on-demand the AnyDesk-style remote-desktop window."""
+        if self._screen_window is not None:
+            return self._screen_window
+        host_id = self._host_id.text().strip()
+        title = (
+            _t("rd_remote_screen_title_with_id").replace("{host_id}", host_id)
+            if host_id else _t("rd_remote_screen_title")
+        )
+        window = RemoteScreenWindow(title, parent=self)
+        window.mouse_moved.connect(self._send_mouse_move)
+        window.mouse_pressed.connect(self._send_mouse_press)
+        window.mouse_released.connect(self._send_mouse_release)
+        window.mouse_scrolled.connect(self._send_mouse_scroll)
+        window.key_pressed.connect(
+            lambda k: self._send({"action": "key_press", "keycode": k})
+        )
+        window.key_released.connect(
+            lambda k: self._send({"action": "key_release", "keycode": k})
+        )
+        window.type_text.connect(
+            lambda text: self._send({"action": "type", "text": text})
+        )
+        window.files_dropped.connect(self._on_files_dropped)
+        # If the operator closes the popup, mirror the action by
+        # disconnecting — same behaviour AnyDesk has when you ✕ the
+        # session window.
+        window.closed.connect(self._on_screen_window_closed)
+        self._screen_window = window
+        return window
+
+    def _close_screen_window(self) -> None:
+        window = self._screen_window
+        self._screen_window = None
+        if window is not None:
+            try:
+                window.closed.disconnect(self._on_screen_window_closed)
+            except (RuntimeError, TypeError):
+                pass
+            window.hide()
+            window.deleteLater()
+
+    def _on_screen_window_closed(self) -> None:
+        # Operator dismissed the popup → fall through to disconnect.
+        if self._connected:
+            self._disconnect()
 
     def _refresh_status(self) -> None:
         live = self._connected and registry.viewer_status()["connected"]
@@ -298,9 +361,9 @@ class _ViewerPanel(TranslatableMixin, QWidget):
 
     def _on_frame_main(self, payload: bytes) -> None:
         image = QImage.fromData(payload, "JPEG")
-        if image.isNull():
+        if image.isNull() or self._screen_window is None:
             return
-        self._display.set_image(image)
+        self._screen_window.set_image(image)
 
     def _on_error_main(self, message: str) -> None:
         self._connected = False
