@@ -24,7 +24,9 @@ from PySide6.QtWidgets import (
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
-from je_auto_control.gui.remote_desktop._helpers import _t
+from je_auto_control.gui.remote_desktop._helpers import (
+    _CollapsibleSection, _t,
+)
 from je_auto_control.gui.remote_desktop.blanking_overlay import BlankingOverlay
 from je_auto_control.gui.remote_desktop.frame_display import _FrameDisplay
 from je_auto_control.gui.remote_desktop.remote_screen_window import (
@@ -1757,7 +1759,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         self._quality_dot.setToolTip(_t(tip_key))
 
     def _wrap_collapsed(self, inner: QGroupBox,
-                        title_key: str) -> "_CollapsibleSection":
+                        title_key: str) -> _CollapsibleSection:
         """Wrap an existing groupbox in a collapsed-by-default container.
 
         The inner group keeps its own translated title, so we just pass
@@ -1765,9 +1767,6 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         (manual SDP, remote files, sync) hide their bodies by default
         so the panel doesn't scroll past the fold on a normal display.
         """
-        from je_auto_control.gui.remote_desktop._helpers import (
-            _CollapsibleSection,
-        )
         section = _CollapsibleSection()
         # Translate the wrapper title; the inner groupbox already has
         # its own header so we strip its frame to avoid double chrome.
