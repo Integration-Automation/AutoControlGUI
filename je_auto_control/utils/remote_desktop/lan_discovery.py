@@ -41,7 +41,13 @@ def _local_ip() -> str:
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
-            sock.connect(("8.8.8.8", 80))  # nosec B113  # reason: UDP no-traffic probe; no actual packet sent
+            # Connect-to-public-IP trick to discover the local interface
+            # the kernel would pick for outbound traffic; UDP, so no
+            # packet is sent and 8.8.8.8 (Google DNS) just stands in for
+            # "any reachable public IP". NOSONAR python:S1313 because
+            # the literal IS the well-known anycast probe address —
+            # parameterising it would obscure intent.
+            sock.connect(("8.8.8.8", 80))  # nosec B113  # NOSONAR python:S1313
             return sock.getsockname()[0]
         finally:
             sock.close()

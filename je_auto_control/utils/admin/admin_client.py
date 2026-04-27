@@ -169,6 +169,10 @@ class AdminConsoleClient:
                       method: str, body: Optional[Dict[str, Any]],
                       ) -> Dict[str, Any]:
         url = f"{host.base_url}{path}"
+        # NOSONAR python:S5332 — this is a scheme allowlist check, not
+        # a URL emission. Both http:// and https:// must be accepted
+        # because the operator points the admin console at whatever
+        # the host is actually listening on.
         if not url.startswith(("http://", "https://")):
             raise ValueError(f"unsupported URL scheme: {url}")
         headers = {"Authorization": f"Bearer {host.token}"}

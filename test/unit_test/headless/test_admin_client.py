@@ -26,6 +26,9 @@ def client(tmp_path):
 
 
 def _url(server):
+    # NOSONAR python:S5332 — tests run against a stub localhost HTTP
+    # server fixture; TLS would force every test to mint certs and
+    # offers no real coverage benefit here.
     host, port = server.address
     return f"http://{host}:{port}"
 
@@ -39,6 +42,9 @@ def test_add_host_round_trip(client, two_servers):
 
 
 def test_add_host_validates_required_fields(client):
+    # NOSONAR python:S5332 — these literals are placeholder URL strings
+    # passed to a validator that only checks emptiness; no traffic is
+    # ever sent to "http://x".
     with pytest.raises(ValueError):
         client.add_host(label="", base_url="http://x", token="t")
     with pytest.raises(ValueError):

@@ -346,6 +346,11 @@ class RestApiServer:
 
     @property
     def base_url(self) -> str:
+        # NOSONAR python:S5332 — the embedded HTTP server binds to
+        # localhost and is meant to sit behind an operator-managed
+        # reverse proxy that terminates TLS. Returning http:// here
+        # reflects what's actually listening; admins compose the
+        # public https:// URL upstream.
         host, port = self._address
         return f"http://{host}:{port}"
 

@@ -52,7 +52,11 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         self._client = default_admin_console()
         self._label_input = QLineEdit()
         self._url_input = QLineEdit()
-        self._url_input.setPlaceholderText("http://host:9939")
+        # Placeholder text only — the operator types the real URL.
+        # Default scheme is http to match the bundled local server;
+        # production deployments should put TLS in front via a reverse
+        # proxy and the operator can paste an https://… URL here.
+        self._url_input.setPlaceholderText("http://host:9939")  # NOSONAR python:S5332
         self._token_input = QLineEdit()
         self._token_input.setEchoMode(QLineEdit.Password)
         self._table = QTableWidget(0, 5)
