@@ -26,7 +26,7 @@ AudioCallback = Callable[[bytes], None]
 ClipboardCallback = Callable[[str, Any], None]
 ErrorCallback = Callable[[Exception], None]
 
-_DEFAULT_AUTH_TIMEOUT_S = 15.0
+_DEFAULT_AUTH_TIMEOUT_S = 60.0
 _DEFAULT_CONNECT_TIMEOUT_S = 5.0
 _NOT_CONNECTED_MESSAGE = "viewer is not connected"
 
