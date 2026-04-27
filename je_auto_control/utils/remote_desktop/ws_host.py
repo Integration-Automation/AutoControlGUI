@@ -17,7 +17,13 @@ from je_auto_control.utils.remote_desktop.ws_protocol import (
     WsProtocolError, server_handshake,
 )
 
-_HANDSHAKE_TIMEOUT_S = 60.0
+# Ceiling for the WS upgrade exchange. A legitimate handshake on
+# loopback completes in microseconds; 5 s easily absorbs scheduler
+# starvation on a loaded CI runner while still letting the server
+# fast-fail when a peer never sends "\r\n\r\n" (e.g. a plain-TCP
+# viewer pointed at a WS host). The auth exchange that follows uses
+# its own, much longer budget defined in :mod:`host`.
+_HANDSHAKE_TIMEOUT_S = 5.0
 
 
 class WebSocketDesktopHost(RemoteDesktopHost):
