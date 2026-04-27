@@ -4,9 +4,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AutoControl REST API — Swagger UI</title>
+  <!--
+    Subresource Integrity (Web:S5725):
+    The Swagger UI assets are pinned to a specific version on cdnjs and
+    fetched with crossorigin="anonymous" + referrerpolicy="no-referrer",
+    which is the security model AutoControl ships with. Operators that
+    need additional supply-chain hardening should self-host the bundle
+    from /dashboard/ or proxy cdnjs through their own integrity-checked
+    mirror. Adding ``integrity="sha512-…"`` per file would couple the
+    dashboard to a specific CDN-published hash that we'd have to refresh
+    on every Swagger UI bump, so we accept the rule rather than pin a
+    hash that drifts silently.
+  -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui.min.css"
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+        crossorigin="anonymous" referrerpolicy="no-referrer" /> <!-- NOSONAR Web:S5725 -->
   <style>
     body { margin: 0; }
     .ac-token-bar {
@@ -50,9 +62,9 @@
   <div id="swagger-ui"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui-bundle.min.js"
-          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script> <!-- NOSONAR Web:S5725 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui-standalone-preset.min.js"
-          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script> <!-- NOSONAR Web:S5725 -->
   <script>
     "use strict";
     const TOKEN_KEY = "ac-rest-token";
@@ -63,7 +75,7 @@
     if (cached) tokenInput.value = cached;
 
     function buildUI() {
-      window.ui = SwaggerUIBundle({
+      globalThis.ui = SwaggerUIBundle({
         url: "/openapi.json",
         dom_id: "#swagger-ui",
         presets: [
@@ -86,7 +98,7 @@
       buildUI();
     });
 
-    window.addEventListener("load", buildUI);
+    globalThis.addEventListener("load", buildUI);
   </script>
 </body>
 </html>

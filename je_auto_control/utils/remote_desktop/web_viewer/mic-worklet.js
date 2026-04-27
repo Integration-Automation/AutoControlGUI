@@ -7,9 +7,8 @@ class PcmProcessor extends AudioWorkletProcessor {
   // true to keep the node alive; returning false would silently kill
   // the mic stream. Both branches are deliberately the same value.
   process(inputs) {
-    const input = inputs[0];
-    if (!input || !input[0]) return true;
-    const samples = input[0];  // Float32Array, [-1, 1]
+    const samples = inputs[0]?.[0];  // optional chain (S6582): no input → keep node alive
+    if (!samples) return true;
     const int16 = new Int16Array(samples.length);
     for (let i = 0; i < samples.length; i++) {
       // i is a numeric loop counter, never user input; the "object

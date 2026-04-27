@@ -879,9 +879,8 @@ async function startMic() {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true },
     });
-    const context = new (window.AudioContext || window.webkitAudioContext)({
-      sampleRate: 16000,
-    });
+    const AudioCtx = globalThis.AudioContext || globalThis.webkitAudioContext;
+    const context = new AudioCtx({ sampleRate: 16000 });
     await context.audioWorklet.addModule("mic-worklet.js");
     const source = context.createMediaStreamSource(stream);
     const worklet = new AudioWorkletNode(context, "mic-pcm-processor");
@@ -1135,7 +1134,7 @@ els.screen.addEventListener("wheel", (e) => {
   }
 }, { passive: false });
 
-window.addEventListener("keydown", (e) => {
+globalThis.addEventListener("keydown", (e) => {
   if (!controlChannel) return;
   if (document.activeElement && ["INPUT", "TEXTAREA"]
       .includes(document.activeElement.tagName)) return;
@@ -1205,6 +1204,9 @@ els.themeBtn.addEventListener("click", toggleTheme);
 els.fullscreenBtn.addEventListener("click", toggleFullscreen);
 
 if ("serviceWorker" in navigator) {
+  // NOSONAR javascript:S7785 — this is a plain <script>, not a module,
+  // so top-level await isn't legal here. Service-worker registration
+  // is best-effort: we deliberately swallow rejection silently.
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 </script>
