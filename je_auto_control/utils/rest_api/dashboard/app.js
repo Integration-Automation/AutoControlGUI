@@ -1,9 +1,11 @@
 "use strict";
 
 const POLL_MS = 5000;
-// sessionStorage KEY (not a token value). Codacy's hardcoded-password
-// pattern triggers on any literal that ends in "token"; this is just
-// the storage slot name.
+// nosemgrep: codacy.javascript.security.hard-coded-password
+// This is the sessionStorage SLOT NAME for the bearer token, not the
+// token itself. Codacy/Semgrep's hardcoded-password pattern fires on
+// any literal that contains the word "token"; the value here is a
+// public storage key (visible in DevTools) and never a credential.
 const TOKEN_STORAGE_KEY = "ac-rest-token";  // NOSONAR
 const PANELS = ["diagnostics", "sessions", "inspector", "usb", "audit"];
 
@@ -67,7 +69,7 @@ function clearRows(name) {
 
 function clearChildren(node) {
   while (node.firstChild) {
-    node.removeChild(node.firstChild);
+    node.firstChild.remove();
   }
 }
 

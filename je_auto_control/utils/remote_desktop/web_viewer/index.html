@@ -409,34 +409,39 @@ function applyI18n() {
   });
 }
 
+function _resolveLanguageChoice(choice) {
+  if (choice !== "auto" && STRINGS[choice]) return choice;
+  return detectLanguage();
+}
+
+function _refreshDynamicLabels() {
+  if ((els.status && els.status.textContent === "")
+      || (els.status && !connectedNow())) {
+    els.status.textContent = t("status_idle");
+  }
+  if (els.stats && els.stats.textContent !== "") {
+    els.stats.textContent = t("status_no_stats");
+  }
+  if (els.mic) {
+    els.mic.textContent = micState ? t("btn_mic_on") : t("btn_mic_off");
+  }
+  if (els.opusMic) {
+    els.opusMic.textContent =
+      opusMicStream ? t("btn_opus_on") : t("btn_opus_off");
+  }
+  if (els.shareScreen) {
+    els.shareScreen.textContent =
+      screenStream ? t("btn_share_on") : t("btn_share_off");
+  }
+}
+
 function setLanguage(choice) {
   // choice: "auto" | "en" | "zh_TW" | "zh_CN" | "ja"
   localStorage.setItem("ac_lang", choice);
-  let resolved;
-  if (choice === "auto") {
-    resolved = detectLanguage();
-  } else if (STRINGS[choice]) {
-    resolved = choice;
-  } else {
-    resolved = detectLanguage();
-  }
-  LANG = resolved;
+  LANG = _resolveLanguageChoice(choice);
   dict = STRINGS[LANG] || STRINGS.en;
   applyI18n();
-  // Re-render labels that aren't covered by data-i18n attributes:
-  if (els.status && els.status.textContent === ""
-      || els.status && !connectedNow()) {
-    els.status.textContent = t("status_idle");
-  }
-  if (els.stats && els.stats.textContent !== "")
-    els.stats.textContent = t("status_no_stats");
-  // Buttons that toggle between two states need re-syncing
-  if (els.mic) els.mic.textContent = micState ? t("btn_mic_on") : t("btn_mic_off");
-  if (els.opusMic)
-    els.opusMic.textContent = opusMicStream ? t("btn_opus_on") : t("btn_opus_off");
-  if (els.shareScreen)
-    els.shareScreen.textContent = screenStream
-      ? t("btn_share_on") : t("btn_share_off");
+  _refreshDynamicLabels();
 }
 
 function connectedNow() {
@@ -1213,10 +1218,10 @@ els.themeBtn.addEventListener("click", toggleTheme);
 els.fullscreenBtn.addEventListener("click", toggleFullscreen);
 
 if ("serviceWorker" in navigator) {
-  // NOSONAR javascript:S7785 — this is a plain <script>, not a module,
-  // so top-level await isn't legal here. Service-worker registration
-  // is best-effort: we deliberately swallow rejection silently.
-  navigator.serviceWorker.register("sw.js").catch(() => {});
+  // This file is a plain <script>, not a module, so top-level await is
+  // not legal here. Service-worker registration is best-effort: any
+  // rejection is silently swallowed.
+  navigator.serviceWorker.register("sw.js").catch(() => {});  // NOSONAR — non-module script: top-level await not allowed
 }
 </script>
 </body>

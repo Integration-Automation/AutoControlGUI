@@ -44,10 +44,10 @@ def _local_ip() -> str:
             # Connect-to-public-IP trick to discover the local interface
             # the kernel would pick for outbound traffic; UDP, so no
             # packet is sent and 8.8.8.8 (Google DNS) just stands in for
-            # "any reachable public IP". NOSONAR python:S1313 because
-            # the literal IS the well-known anycast probe address —
-            # parameterising it would obscure intent.
-            sock.connect(("8.8.8.8", 80))  # nosec B113  # NOSONAR python:S1313
+            # "any reachable public IP". The literal is the well-known
+            # anycast probe address — parameterising it would obscure
+            # intent — see the next line for the suppression marker.
+            sock.connect(("8.8.8.8", 80))  # nosec B113  # NOSONAR — literal is the well-known Google DNS anycast address used as a routing probe target
             return sock.getsockname()[0]
         finally:
             sock.close()

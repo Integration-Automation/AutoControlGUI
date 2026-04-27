@@ -332,7 +332,10 @@ async def wait_for_ice_gathering(pc: RTCPeerConnection,
             future.set_result(None)
 
     try:
-        await asyncio.wait_for(future, timeout=timeout)
+        # asyncio.timeout() context manager only landed in Python 3.11;
+        # this project supports 3.10, where wait_for(timeout=...) is the
+        # idiomatic primitive.
+        await asyncio.wait_for(future, timeout=timeout)  # NOSONAR — Python 3.10 compatibility (asyncio.timeout requires 3.11+)
     except asyncio.TimeoutError:
         autocontrol_logger.warning(
             "webrtc: ICE gather timeout; sending what we have",

@@ -138,12 +138,14 @@ def _build_secret_dependency(shared_secret: Optional[str]):
 
 def _validate_host_id(host_id: str) -> None:
     if not host_id or len(host_id) > 128 or not host_id.isalnum():
-        raise HTTPException(status_code=400, detail="invalid host_id")
+        # 400 is documented at every caller route via _VALIDATION_RESPONSES.
+        raise HTTPException(status_code=400, detail="invalid host_id")  # NOSONAR — see _VALIDATION_RESPONSES
 
 
 def _validate_sdp(sdp: str) -> None:
     if not sdp or len(sdp.encode("utf-8")) > _MAX_SDP_BYTES:
-        raise HTTPException(status_code=400, detail="invalid sdp size")
+        # 400 is documented at every caller route via _VALIDATION_RESPONSES.
+        raise HTTPException(status_code=400, detail="invalid sdp size")  # NOSONAR — see _VALIDATION_RESPONSES
 
 
 def _configure_cors(app: FastAPI, cors_origins: Optional[List[str]]) -> None:
@@ -205,7 +207,8 @@ def _register_routes(app: FastAPI, store: "_SessionStore",
         _validate_host_id(host_id)
         _validate_sdp(body.sdp)
         if not store.upsert_answer(host_id, body.sdp):
-            raise HTTPException(status_code=404, detail="no offer to match")
+            # 404 documented via _NOT_FOUND_RESPONSES on this route.
+            raise HTTPException(status_code=404, detail="no offer to match")  # NOSONAR
         return {"ok": True}
 
     @app.get("/sessions/{host_id}/answer",

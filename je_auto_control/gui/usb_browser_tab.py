@@ -48,7 +48,7 @@ def fetch_remote_devices(*, base_url: str,
     if not base_url:
         raise ValueError("base_url is required")
     base = base_url.rstrip("/")
-    if not base.startswith(("http://", "https://")):
+    if not base.startswith(("http://", "https://")):  # NOSONAR — scheme allowlist check, not a URL emission
         base = f"{_TEST_SCHEME}://{base}"
     url = f"{base}/usb/devices"
     headers = {"Authorization": f"Bearer {token}"} if token else {}
@@ -79,7 +79,7 @@ class _FetchWorker(QObject):
             devices = fetch_remote_devices(
                 base_url=self._base_url, token=self._token,
             )
-        except (ValueError, OSError, TimeoutError) as error:  # NOSONAR python:S5713  # URLError is an OSError subclass; TimeoutError diverges from OSError on Python 3.10
+        except (ValueError, OSError, TimeoutError) as error:  # NOSONAR — TimeoutError is not an OSError on Python 3.10; URLError already is, so it was dropped
             self.failed.emit(str(error))
             return
         self.finished.emit(devices)

@@ -46,11 +46,11 @@ def main(argv: Optional[list] = None) -> int:
 def _do_export(output: Path, root: Optional[Path]) -> int:
     bundle = export_config_bundle(root=root)
     output.parent.mkdir(parents=True, exist_ok=True)
-    # NOSONAR pythonsecurity:S2083 — the path comes from argv on a CLI
-    # entry point. The operator running ``python -m ... export <file>``
-    # is the trust boundary; restricting where they can write would
-    # break the documented export workflow.
-    output.write_text(
+    # The output path comes from argv on a CLI entry point. The operator
+    # running ``python -m ... export <file>`` is the trust boundary;
+    # restricting where they can write would break the documented
+    # export workflow.
+    output.write_text(  # NOSONAR — operator-controlled CLI argument by design (see comment above)
         json.dumps(bundle, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )

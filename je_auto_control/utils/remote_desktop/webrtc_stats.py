@@ -51,10 +51,10 @@ class StatsPoller:
         future = get_bridge().submit(self._async_start())
         try:
             future.result(timeout=2.0)
-        except (RuntimeError, TimeoutError, OSError) as error:  # NOSONAR python:S5713  # TimeoutError is *not* an OSError on Python 3.10 (this project's lowest supported version); only the 3.11+ unification makes the catch redundant. Keep both for 3.10 compatibility.
+        except (RuntimeError, TimeoutError, OSError) as error:  # NOSONAR — TimeoutError is not an OSError on Python 3.10 (project lowest supported); the redundancy only appears on 3.11+
             autocontrol_logger.warning("stats poller start: %r", error)
 
-    async def _async_start(self) -> None:  # NOSONAR python:S7503  # must be a coroutine: it's submitted through asyncio.run_coroutine_threadsafe via the bridge.submit API; the body only schedules the loop task
+    async def _async_start(self) -> None:  # NOSONAR — must remain a coroutine: it is submitted via asyncio.run_coroutine_threadsafe through bridge.submit; the body only schedules the loop task
         if self._task is not None:
             return
         self._task = asyncio.ensure_future(self._loop())

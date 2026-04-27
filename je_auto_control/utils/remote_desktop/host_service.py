@@ -78,7 +78,7 @@ def write_default_config(path: Optional[Path] = None) -> Path:
     target = Path(path) if path else _DEFAULT_CONFIG_PATH
     target.parent.mkdir(parents=True, exist_ok=True)
     template = {
-        "token": "CHANGE_ME_BEFORE_USE",  # nosec B105  # NOSONAR python:S6418  # reason: placeholder in stub config the user MUST edit before installing the service
+        "token": "CHANGE_ME_BEFORE_USE",  # nosec B105  # NOSONAR — placeholder in stub config the user MUST edit before installing the service
         "server_url": "https://your-signaling-server.example.com",
         "host_id": "abcd1234",
         "server_secret": None,  # nosec B105  # reason: explicit None placeholder

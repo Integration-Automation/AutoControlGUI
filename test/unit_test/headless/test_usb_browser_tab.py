@@ -23,12 +23,12 @@ def rest_server():
 
 
 def test_fetch_returns_list_against_real_server(rest_server):
-    # NOSONAR python:S5332 — the rest_server fixture binds to localhost
-    # without TLS; production deployments terminate TLS at a reverse
-    # proxy. These test URLs never leave the loopback interface.
     host, port = rest_server.address
+    # Loopback fixture URL — TLS termination happens at the reverse
+    # proxy in production. These URLs never leave 127.0.0.1.
     devices = fetch_remote_devices(
-        base_url=f"http://{host}:{port}", token=rest_server.token,
+        base_url=f"http://{host}:{port}",  # NOSONAR — loopback test fixture
+        token=rest_server.token,
     )
     assert isinstance(devices, list)
     # Each entry, if any, has the expected keys.
@@ -45,11 +45,11 @@ def test_fetch_rejects_missing_url():
 
 def test_fetch_propagates_http_error(rest_server):
     """Wrong token surfaces the 401 as a urllib HTTPError."""
-    # NOSONAR python:S5332 — see test_fetch_returns_list_against_real_server.
     host, port = rest_server.address
     with pytest.raises(urllib.error.HTTPError):
         fetch_remote_devices(
-            base_url=f"http://{host}:{port}", token="not-the-token",
+            base_url=f"http://{host}:{port}",  # NOSONAR — loopback test fixture
+            token="not-the-token",
         )
 
 
@@ -63,9 +63,9 @@ def test_fetch_accepts_url_without_scheme(rest_server):
 
 
 def test_fetch_strips_trailing_slash(rest_server):
-    # NOSONAR python:S5332 — see test_fetch_returns_list_against_real_server.
     host, port = rest_server.address
     devices = fetch_remote_devices(
-        base_url=f"http://{host}:{port}/", token=rest_server.token,
+        base_url=f"http://{host}:{port}/",  # NOSONAR — loopback test fixture
+        token=rest_server.token,
     )
     assert isinstance(devices, list)
