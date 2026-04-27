@@ -24,3 +24,7 @@ AutoControl 所有功能的完整使用指南。
    doc/cli/cli_doc
    doc/create_project/create_project_doc
    doc/new_features/new_features_doc
+   doc/operations_layer/operations_layer_doc
+   doc/operations_layer/usb_passthrough_design
+   doc/operations_layer/usb_passthrough_security_review
+   doc/operations_layer/usb_passthrough_operator_guide

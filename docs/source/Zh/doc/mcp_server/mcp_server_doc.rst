@@ -69,6 +69,18 @@ list-changed 通知與 elicitation。
   ``ac_hotkey_bind``、``ac_hotkey_unbind``、``ac_hotkey_list``、
   ``ac_hotkey_daemon_start``、``ac_hotkey_daemon_stop``。
 
+遠端桌面(TCP host + viewer registry)
+  ``ac_remote_host_start``、``ac_remote_host_stop``、
+  ``ac_remote_host_status``、``ac_remote_viewer_connect``、
+  ``ac_remote_viewer_disconnect``、``ac_remote_viewer_status``、
+  ``ac_remote_viewer_send_input``。這組工具直接包裝 GUI 的「遠端
+  桌面」分頁所用的 process-global registry,模型可以代為啟動 host
+  (``token``、``bind``、``port``、``fps``、``quality``、
+  ``host_id``)、連線 viewer 至另一台主機、查詢狀態,並透過目前的
+  viewer 將滑鼠 / 鍵盤 / type / hotkey 動作轉送給遠端 host。狀態
+  類工具屬於唯讀,在 ``--readonly`` 模式下仍然可用;
+  ``send_input`` 屬於破壞性工具。
+
 每個工具都會帶上 MCP 2025-06-18 規範的 ``annotations``
 (``readOnlyHint``、``destructiveHint``、``idempotentHint``、
 ``openWorldHint``),client 可以據此自動允許唯讀查詢,並在執行破壞

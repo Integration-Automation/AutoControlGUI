@@ -26,7 +26,7 @@ AudioCallback = Callable[[bytes], None]
 ClipboardCallback = Callable[[str, Any], None]
 ErrorCallback = Callable[[Exception], None]
 
-_DEFAULT_AUTH_TIMEOUT_S = 5.0
+_DEFAULT_AUTH_TIMEOUT_S = 60.0
 _DEFAULT_CONNECT_TIMEOUT_S = 5.0
 _NOT_CONNECTED_MESSAGE = "viewer is not connected"
 
@@ -103,7 +103,11 @@ class RemoteDesktopViewer:
         raw_sock = socket.create_connection(
             (self._host, self._port), timeout=timeout,
         )
-        raw_sock.settimeout(_DEFAULT_AUTH_TIMEOUT_S)
+        # If the caller explicitly asked for a longer connect budget,
+        # honor it for the handshake too — otherwise a slow remote (CI
+        # runners, high-latency links) trips the 5 s default before the
+        # caller's window expires.
+        raw_sock.settimeout(max(_DEFAULT_AUTH_TIMEOUT_S, float(timeout)))
         try:
             sock = self._maybe_wrap_tls(raw_sock)
             channel = self._build_channel(sock)

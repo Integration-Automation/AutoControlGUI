@@ -579,9 +579,13 @@ A new ``AUDIO`` message type carries 16-bit signed PCM blocks (default
 ``sounddevice`` dependency is loaded lazily — without it, audio is
 reported disabled and the host stays up::
 
+   from je_auto_control.utils.remote_desktop import AudioCaptureConfig
    host = RemoteDesktopHost(
-       token="tok", enable_audio=True, audio_device=None,    # default mic
-       audio_sample_rate=16000, audio_channels=1,
+       token="tok",
+       audio_config=AudioCaptureConfig(
+           enabled=True, device=None,             # default mic
+           sample_rate=16000, channels=1,
+       ),
    )
 
    from je_auto_control.utils.remote_desktop import AudioPlayer
@@ -669,3 +673,120 @@ upload flow.
    Keep ``trusted token holders == trusted users`` in mind, or wrap
    the headless API in your own restricted ``FileReceiver`` subclass
    that vets the destination path.
+
+
+Remote desktop — AnyDesk-style popout window
+============================================
+
+The viewer panel no longer renders the live remote screen inline —
+when the viewer authenticates, a dedicated top-level
+:class:`RemoteScreenWindow` opens with the remote desktop, and the
+panel shrinks back to the connection card + controls. Closing the
+popup ✕ disconnects the session, matching AnyDesk's session-window
+ergonomics.
+
+* New module: ``je_auto_control/gui/remote_desktop/remote_screen_window.py``
+* Wraps a ``_FrameDisplay`` and re-emits its mouse / keyboard /
+  drag-and-drop / annotation signals so the panel keeps a single
+  signal source after the popout.
+* Bottom footer carries the optional file-transfer progress label /
+  bar; hidden when no transfer is active.
+* Both the TCP ``_ViewerPanel`` and the WebRTC
+  ``_WebRTCViewerPanel`` open the popup on connect / on auth_ok and
+  close it on disconnect / on stop.
+
+Why
+   The previous layout fought for vertical space: a frame display +
+   connection card + collapsibles + action row + stats + sparklines
+   + transfer progress + status bar all stacked on one tab. Pulling
+   the live screen out into its own window leaves the operator with
+   a real workspace and keeps the control surface uncluttered.
+
+
+Remote desktop — responsive sub-tab sizing
+==========================================
+
+Every Remote Desktop sub-tab is now wrapped in a ``QScrollArea``
+with ``setWidgetResizable(True)``. The wrapper lives in
+``gui/remote_desktop/tab.py`` (helper ``_wrap_in_scroll_area``).
+
+* Small / shrunk window: a vertical scrollbar appears instead of
+  clipping the dense WebRTC panels.
+* Enlarged / 4K window: the inner panel widget grows horizontally
+  with the viewport, so the connection card and session table
+  stretch edge-to-edge instead of clustering at the top-left.
+* The bottom ``addStretch(1)`` in each panel still pushes content
+  up when there is leftover height, so the layout doesn't sag.
+
+Heavy / rarely used groups (Manual SDP, Remote Files, Sync) on the
+WebRTC viewer tab are also wrapped in collapsed-by-default
+``_CollapsibleSection`` shells via the new ``_wrap_collapsed``
+helper, halving the panel's first-paint height.
+
+Removed the previous hard ``setMaximumHeight(140)`` on the WebRTC
+host's session table: ``setMinimumHeight(140)`` keeps 140 px as a
+starting hint without capping the table on large displays.
+
+
+Remote desktop — MCP tool surface
+=================================
+
+The MCP server now wraps the same singleton remote-desktop
+registry the GUI uses. The tools live under a new
+``remote_desktop_tools()`` factory in
+``je_auto_control/utils/mcp_server/tools/_factories.py``:
+
+``ac_remote_host_start``
+   Start (or restart) the singleton TCP host with ``token``,
+   ``bind``, ``port``, ``fps``, ``quality``, ``max_clients``,
+   ``host_id``. Returns
+   ``{running, port, host_id, connected_clients}``.
+
+``ac_remote_host_stop``
+   Stop the host (no-op when nothing is running).
+
+``ac_remote_host_status``
+   Read-only snapshot of the host registry. Survives
+   ``--readonly`` mode.
+
+``ac_remote_viewer_connect``
+   Open the singleton viewer to a remote host, supporting
+   ``expected_host_id`` to verify the 9-digit ID before accepting
+   the session.
+
+``ac_remote_viewer_disconnect`` / ``ac_remote_viewer_status``
+   Close / observe the active viewer (status is read-only).
+
+``ac_remote_viewer_send_input``
+   Forward an input action dict (``mouse_move``, ``mouse_press``,
+   ``mouse_release``, ``mouse_scroll``, ``key_press``,
+   ``key_release``, ``type``, ``hotkey``) through the connected
+   viewer to the remote host. Destructive — stripped under
+   ``--readonly``.
+
+A model can now drive a complete remote-control flow without
+clicking through the GUI:
+
+.. code-block:: text
+
+   ac_remote_host_start(token="tok", bind="127.0.0.1", port=0)
+     → {"running": true, "port": 51234, "host_id": "123456789",
+        "connected_clients": 0}
+
+   # … on a different machine …
+   ac_remote_viewer_connect(host="10.0.0.5", port=51234, token="tok",
+                            expected_host_id="123456789")
+     → {"connected": true, "host_id": "123456789"}
+
+   ac_remote_viewer_send_input(action={
+       "action": "mouse_move", "x": 100, "y": 200,
+   })
+   ac_remote_viewer_send_input(action={
+       "action": "type", "text": "hello",
+   })
+
+The status / observer tools (``ac_remote_host_status``,
+``ac_remote_viewer_status``) are read-only and survive the MCP
+server's ``--readonly`` filter; everything that mutates state is
+correctly tagged ``destructiveHint: true`` so MCP clients can
+prompt for user confirmation.

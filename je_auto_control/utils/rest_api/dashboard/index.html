@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoControl Dashboard</title>
+  <link rel="stylesheet" href="/dashboard/app.css" />
+</head>
+<body>
+  <header>
+    <h1>AutoControl Dashboard</h1>
+    <div class="token-row">
+      <label for="token">Bearer token</label>
+      <input id="token" type="password" autocomplete="off" />
+      <button id="save-token" type="button">Save</button>
+      <span id="server-info"></span>
+    </div>
+  </header>
+
+  <main>
+    <section data-panel="diagnostics">
+      <h2>Diagnostics</h2>
+      <div class="panel-status" data-status></div>
+      <table>
+        <thead><tr><th>Check</th><th>Severity</th><th>Detail</th></tr></thead>
+        <tbody data-rows></tbody>
+      </table>
+    </section>
+
+    <section data-panel="sessions">
+      <h2>Remote desktop sessions</h2>
+      <pre data-rows>—</pre>
+    </section>
+
+    <section data-panel="inspector">
+      <h2>WebRTC inspector</h2>
+      <div class="panel-status" data-status></div>
+      <table>
+        <thead><tr><th>Metric</th><th>Last</th><th>Avg</th><th>P95</th></tr></thead>
+        <tbody data-rows></tbody>
+      </table>
+    </section>
+
+    <section data-panel="usb">
+      <h2>USB devices</h2>
+      <div class="panel-status" data-status></div>
+      <table>
+        <thead><tr><th>VID</th><th>PID</th><th>Manufacturer</th><th>Product</th></tr></thead>
+        <tbody data-rows></tbody>
+      </table>
+    </section>
+
+    <section data-panel="audit">
+      <h2>Audit log (most recent)</h2>
+      <div class="panel-status" data-status></div>
+      <table>
+        <thead><tr><th>Time</th><th>Event</th><th>Host</th><th>Detail</th></tr></thead>
+        <tbody data-rows></tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer>
+    <span>Polling every 5s. Open the AutoControl REST API tab to find your bearer token.</span>
+  </footer>
+
+  <script src="/dashboard/app.js"></script>
+</body>
+</html>

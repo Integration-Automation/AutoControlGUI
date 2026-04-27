@@ -30,6 +30,12 @@ from je_auto_control.utils.llm.planner import (
 from je_auto_control.utils.remote_desktop.registry import (
     registry as remote_desktop_registry,
 )
+from je_auto_control.utils.rest_api.rest_registry import (
+    rest_api_registry,
+)
+from je_auto_control.utils.admin.admin_client import (
+    default_admin_console,
+)
 from je_auto_control.utils.ocr.ocr_engine import (
     click_text as ocr_click_text,
     find_text_regex as ocr_find_text_regex,
@@ -145,6 +151,162 @@ def _remote_viewer_status() -> Dict[str, Any]:
 
 def _remote_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
     return remote_desktop_registry.send_input(action)
+
+
+def _rest_api_start(host: str = "127.0.0.1",
+                    port: int = 9939,
+                    token: Optional[str] = None,
+                    enable_audit: bool = True) -> Dict[str, Any]:
+    """Executor adapter: start the singleton REST API server."""
+    return rest_api_registry.start(
+        host=host, port=int(port), token=token,
+        enable_audit=bool(enable_audit),
+    )
+
+
+def _rest_api_stop() -> Dict[str, Any]:
+    return rest_api_registry.stop()
+
+
+def _rest_api_status() -> Dict[str, Any]:
+    return rest_api_registry.status()
+
+
+def _admin_add_host(label: str, base_url: str, token: str,
+                    tags: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Executor adapter: register a remote AutoControl REST endpoint."""
+    host = default_admin_console().add_host(
+        label=label, base_url=base_url, token=token, tags=tags,
+    )
+    return {"label": host.label, "base_url": host.base_url, "tags": host.tags}
+
+
+def _admin_remove_host(label: str) -> Dict[str, Any]:
+    return {"removed": default_admin_console().remove_host(label)}
+
+
+def _admin_list_hosts() -> List[Dict[str, Any]]:
+    return [
+        {"label": h.label, "base_url": h.base_url, "tags": list(h.tags)}
+        for h in default_admin_console().list_hosts()
+    ]
+
+
+def _admin_poll(labels: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    return [
+        {
+            "label": s.label, "base_url": s.base_url, "healthy": s.healthy,
+            "latency_ms": s.latency_ms, "error": s.error,
+            "sessions": s.sessions, "job_count": s.job_count,
+        }
+        for s in default_admin_console().poll_all(labels=labels)
+    ]
+
+
+def _admin_broadcast_execute(actions: List[Any],
+                             labels: Optional[List[str]] = None,
+                             ) -> List[Dict[str, Any]]:
+    return default_admin_console().broadcast_execute(
+        actions=actions, labels=labels,
+    )
+
+
+def _audit_log_list(event_type: Optional[str] = None,
+                    host_id: Optional[str] = None,
+                    limit: int = 200) -> List[Dict[str, Any]]:
+    """Executor adapter: query the audit log."""
+    from je_auto_control.utils.remote_desktop.audit_log import default_audit_log
+    return default_audit_log().query(
+        event_type=event_type, host_id=host_id, limit=int(limit),
+    )
+
+
+def _audit_log_verify() -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.audit_log import default_audit_log
+    result = default_audit_log().verify_chain()
+    return {
+        "ok": result.ok,
+        "broken_at_id": result.broken_at_id,
+        "total_rows": result.total_rows,
+    }
+
+
+def _audit_log_clear() -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.audit_log import default_audit_log
+    return {"deleted": default_audit_log().clear()}
+
+
+def _inspector_recent(n: int = 60) -> List[Dict[str, Any]]:
+    """Executor adapter: most recent N WebRTC stat samples."""
+    from je_auto_control.utils.remote_desktop.webrtc_inspector import (
+        default_webrtc_inspector,
+    )
+    return default_webrtc_inspector().recent(int(n))
+
+
+def _inspector_summary() -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.webrtc_inspector import (
+        default_webrtc_inspector,
+    )
+    return default_webrtc_inspector().summary()
+
+
+def _inspector_reset() -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.webrtc_inspector import (
+        default_webrtc_inspector,
+    )
+    return {"cleared": default_webrtc_inspector().reset()}
+
+
+def _list_usb_devices() -> Dict[str, Any]:
+    """Executor adapter: enumerate USB devices on this host."""
+    from je_auto_control.utils.usb.usb_devices import list_usb_devices
+    return list_usb_devices().to_dict()
+
+
+def _diagnose() -> Dict[str, Any]:
+    """Executor adapter: run system diagnostics and return the report."""
+    from je_auto_control.utils.diagnostics.diagnostics import run_diagnostics
+    return run_diagnostics().to_dict()
+
+
+def _config_export() -> Dict[str, Any]:
+    """Executor adapter: build the config bundle dict in-memory."""
+    from je_auto_control.utils.config_bundle import export_config_bundle
+    return export_config_bundle()
+
+
+def _config_import(bundle: Dict[str, Any],
+                   dry_run: bool = False) -> Dict[str, Any]:
+    """Executor adapter: apply a config bundle dict to the user config root."""
+    from je_auto_control.utils.config_bundle import import_config_bundle
+    return import_config_bundle(bundle, dry_run=bool(dry_run)).to_dict()
+
+
+def _usb_watch_start(poll_interval_s: float = 2.0) -> Dict[str, Any]:
+    """Executor adapter: start the singleton USB hotplug watcher."""
+    from je_auto_control.utils.usb.usb_watcher import default_usb_watcher
+    watcher = default_usb_watcher()
+    # poll_interval_s is consumed at watcher construction time only;
+    # honor it on a fresh singleton, otherwise just (re-)start.
+    watcher.start()
+    return {"running": watcher.is_running, "interval_s": poll_interval_s}
+
+
+def _usb_watch_stop() -> Dict[str, Any]:
+    from je_auto_control.utils.usb.usb_watcher import default_usb_watcher
+    watcher = default_usb_watcher()
+    watcher.stop()
+    return {"running": watcher.is_running}
+
+
+def _usb_recent_events(since: int = 0,
+                       limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    from je_auto_control.utils.usb.usb_watcher import default_usb_watcher
+    return default_usb_watcher().recent_events(
+        since=int(since),
+        limit=int(limit) if limit is not None else None,
+    )
 
 
 def _llm_plan_for_executor(description: str,
@@ -353,6 +515,43 @@ class Executor:
             "AC_remote_disconnect": _remote_disconnect,
             "AC_remote_viewer_status": _remote_viewer_status,
             "AC_remote_send_input": _remote_send_input,
+
+            # REST API (HTTP front-end exposing the headless API)
+            "AC_rest_api_start": _rest_api_start,
+            "AC_rest_api_stop": _rest_api_stop,
+            "AC_rest_api_status": _rest_api_status,
+
+            # Admin console (manage many remote AutoControl REST hosts)
+            "AC_admin_add_host": _admin_add_host,
+            "AC_admin_remove_host": _admin_remove_host,
+            "AC_admin_list_hosts": _admin_list_hosts,
+            "AC_admin_poll": _admin_poll,
+            "AC_admin_broadcast_execute": _admin_broadcast_execute,
+
+            # Audit log (tamper-evident security log)
+            "AC_audit_log_list": _audit_log_list,
+            "AC_audit_log_verify": _audit_log_verify,
+            "AC_audit_log_clear": _audit_log_clear,
+
+            # WebRTC inspector (live stat history)
+            "AC_inspector_recent": _inspector_recent,
+            "AC_inspector_summary": _inspector_summary,
+            "AC_inspector_reset": _inspector_reset,
+
+            # USB device enumeration (read-only)
+            "AC_list_usb_devices": _list_usb_devices,
+
+            # USB hotplug watcher (Phase 1.5)
+            "AC_usb_watch_start": _usb_watch_start,
+            "AC_usb_watch_stop": _usb_watch_stop,
+            "AC_usb_recent_events": _usb_recent_events,
+
+            # System diagnostics
+            "AC_diagnose": _diagnose,
+
+            # Config bundle export / import
+            "AC_config_export": _config_export,
+            "AC_config_import": _config_import,
         }
 
     def known_commands(self) -> set:

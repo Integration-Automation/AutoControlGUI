@@ -102,9 +102,18 @@ def client_handshake(sock: socket.socket, host: str, port: int,
 
 
 def _read_http_message(sock: socket.socket) -> str:
+    # Byte-by-byte read until "\r\n\r\n". A bulk recv(1024) would
+    # over-read into the next message: when the peer packs the HTTP
+    # response and the first protocol frame into a single TCP segment
+    # (common on loopback under load), the post-header bytes end up in
+    # this buffer and are dropped on return — the next recv() then
+    # blocks forever on bytes that already arrived. Loopback syscalls
+    # are microseconds; ~150 of them per handshake is well below the
+    # noise floor of the WS upgrade itself.
     buf = bytearray()
-    while b"\r\n\r\n" not in buf:
-        chunk = sock.recv(1024)
+    terminator = b"\r\n\r\n"
+    while not buf.endswith(terminator):
+        chunk = sock.recv(1)
         if not chunk:
             raise WsProtocolError("connection closed during handshake")
         buf.extend(chunk)

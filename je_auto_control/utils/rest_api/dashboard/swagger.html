@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoControl REST API — Swagger UI</title>
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui.min.css"
+        integrity="sha512-+9UD8YSD9GF7FzOH38L9S6y56aYNx3R4dYbOCgvTJ2ZHpJScsahNdaMQJU/8osUiz9FPu0YZ8wdKf4evUbsGSg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    body { margin: 0; }
+    .ac-token-bar {
+      padding: 10px 16px;
+      background: #14171c;
+      color: #e6e6e6;
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .ac-token-bar input[type="password"] {
+      flex: 1;
+      min-width: 240px;
+      padding: 6px 10px;
+      background: #0f1216;
+      border: 1px solid #333a44;
+      color: #e6e6e6;
+      border-radius: 4px;
+    }
+    .ac-token-bar button {
+      padding: 6px 14px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .ac-token-bar small { color: #9aa3af; }
+  </style>
+</head>
+<body>
+  <div class="ac-token-bar">
+    <strong>Bearer token</strong>
+    <input id="ac-token" type="password" autocomplete="off"
+           placeholder="paste token from the REST API tab" />
+    <button id="ac-apply" type="button">Apply</button>
+    <small>Token kept in sessionStorage; cleared on tab close.</small>
+  </div>
+  <div id="swagger-ui"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui-bundle.min.js"
+          integrity="sha512-7ihPQv5ibiTr0DW6onbl2MIKegdT6vjpPySyIb4Ftp68kER6Z7Yiub0tFoMmCHzZfQE9+M+KSjQndv6NhYxDgg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui-standalone-preset.min.js"
+          integrity="sha512-UrYi+60Ci3WWWcoDXbMmzpoi1xpERbwjPGij6wTh8fXl81qNdioNNHExr9ttnBebKF0ZbVnPlTPlw+zECUK1Xw=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script>
+    "use strict";
+    const TOKEN_KEY = "ac-rest-token";
+    const tokenInput = document.getElementById("ac-token");
+    const applyBtn = document.getElementById("ac-apply");
+
+    const cached = sessionStorage.getItem(TOKEN_KEY);
+    if (cached) tokenInput.value = cached;
+
+    function buildUI() {
+      globalThis.ui = SwaggerUIBundle({
+        url: "/openapi.json",
+        dom_id: "#swagger-ui",
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset,
+        ],
+        layout: "StandaloneLayout",
+        deepLinking: true,
+        tryItOutEnabled: true,
+        requestInterceptor: (req) => {
+          const token = sessionStorage.getItem(TOKEN_KEY);
+          if (token) req.headers["Authorization"] = "Bearer " + token;
+          return req;
+        },
+      });
+    }
+
+    applyBtn.addEventListener("click", () => {
+      sessionStorage.setItem(TOKEN_KEY, tokenInput.value.trim());
+      buildUI();
+    });
+
+    globalThis.addEventListener("load", buildUI);
+  </script>
+</body>
+</html>

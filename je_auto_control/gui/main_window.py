@@ -17,6 +17,24 @@ def _t(key: str, default: str = "") -> str:
     return language_wrapper.translate(key, default or key)
 
 
+_TAB_CATEGORIES = (
+    ("core", "menu_view_cat_core", "Core"),
+    ("editing", "menu_view_cat_editing", "Editing"),
+    ("detection", "menu_view_cat_detection", "Detection & Vision"),
+    ("automation", "menu_view_cat_automation", "Automation Engines"),
+    ("system", "menu_view_cat_system", "System"),
+)
+
+_TEXT_SIZE_PRESETS = (
+    ("menu_view_text_auto", "Auto", 0),
+    ("menu_view_text_small", "Small", 10),
+    ("menu_view_text_normal", "Normal", 12),
+    ("menu_view_text_large", "Large", 14),
+    ("menu_view_text_xlarge", "Extra Large", 16),
+    ("menu_view_text_xxlarge", "Huge", 20),
+)
+
+
 class AutoControlGUIUI(QMainWindow, QtStyleTools):
     """Main window: menu bar + AutoControlGUIWidget (which owns the tabs)."""
 
@@ -27,8 +45,9 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
             from ctypes import windll
             windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.app_id)
 
-        self.setStyleSheet("font-size: 12pt; font-family: 'Lato';")
+        self._user_font_pt: int = 0  # 0 means auto-detect from screen
         self.apply_stylesheet(self, "dark_amber.xml")
+        self._apply_font_pt(self._user_font_pt)
 
         self.setWindowTitle(_t("application_name", "AutoControlGUI"))
         self.resize(1000, 760)
@@ -69,6 +88,9 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
         tabs_menu = menu.addMenu(_t("menu_view_tabs", "Tabs"))
         self._view_menu = tabs_menu
         self._rebuild_tabs_menu()
+        menu.addSeparator()
+        text_menu = menu.addMenu(_t("menu_view_text_size", "Text Size"))
+        self._build_text_size_menu(text_menu)
         return menu
 
     def _rebuild_tabs_menu(self) -> None:
@@ -76,13 +98,60 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
             return
         self._view_menu.clear()
         self._tab_actions = []
+        entries_by_cat: dict = {}
         for entry in self.auto_control_gui_widget.list_registered_tabs():
+            entries_by_cat.setdefault(entry["category"], []).append(entry)
+        for cat_key, title_key, default in _TAB_CATEGORIES:
+            entries = entries_by_cat.pop(cat_key, [])
+            if entries:
+                self._add_category_submenu(_t(title_key, default), entries)
+        for cat_key, entries in entries_by_cat.items():
+            if entries:
+                self._add_category_submenu(cat_key.title(), entries)
+
+    def _add_category_submenu(self, label: str, entries: list) -> None:
+        sub = self._view_menu.addMenu(label)
+        for entry in entries:
             action = QAction(entry["title"], self, checkable=True)
             action.setChecked(entry["visible"])
             action.setData(entry["key"])
             action.toggled.connect(self._on_tab_action_toggled)
-            self._view_menu.addAction(action)
+            sub.addAction(action)
             self._tab_actions.append(action)
+
+    def _build_text_size_menu(self, menu: QMenu) -> None:
+        group = QActionGroup(menu)
+        group.setExclusive(True)
+        for label_key, default_label, pt in _TEXT_SIZE_PRESETS:
+            action = QAction(_t(label_key, default_label), menu, checkable=True)
+            action.setData(pt)
+            action.setChecked(pt == self._user_font_pt)
+            action.triggered.connect(self._on_text_size_selected)
+            group.addAction(action)
+            menu.addAction(action)
+
+    def _detect_auto_font_pt(self) -> int:
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            return 12
+        height = screen.geometry().height()
+        if height >= 2000:
+            return 16
+        if height >= 1300:
+            return 14
+        return 12
+
+    def _apply_font_pt(self, pt: int) -> None:
+        effective = pt if pt > 0 else self._detect_auto_font_pt()
+        self.setStyleSheet(f"font-size: {effective}pt; font-family: 'Lato';")
+
+    def _on_text_size_selected(self) -> None:
+        action = self.sender()
+        if not isinstance(action, QAction):
+            return
+        data = action.data()
+        self._user_font_pt = int(data) if data is not None else 0
+        self._apply_font_pt(self._user_font_pt)
 
     def _on_tab_action_toggled(self, checked: bool) -> None:
         action = self.sender()

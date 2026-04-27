@@ -63,7 +63,7 @@
 - **OCR** — extract text from screen regions using Tesseract; wait for, click, or locate rendered text; regex search and full-region dump
 - **LLM Action Planner** — translate a plain-language description into a validated `AC_*` action list using Claude
 - **Runtime Variables & Control Flow** — `${var}` substitution at execution time, plus `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` for data-driven scripts
-- **Remote Desktop** — stream this machine's screen and accept remote input over a token-authenticated TCP protocol, *or* connect to another machine and view + control it (host + viewer GUIs included). Optional TLS (HTTPS-grade encryption), WebSocket transport (ws:// + wss:// for browser / firewall-friendly clients), persistent 9-digit Host ID, host→viewer audio streaming, bidirectional clipboard sync (text + image), and chunked file transfer (drag-drop + progress bar; arbitrary destination path; no size cap)
+- **Remote Desktop** — stream this machine's screen and accept remote input over a token-authenticated TCP protocol, *or* connect to another machine and view + control it (host + viewer GUIs included). Optional TLS (HTTPS-grade encryption), WebSocket transport (ws:// + wss:// for browser / firewall-friendly clients), persistent 9-digit Host ID, host→viewer audio streaming, bidirectional clipboard sync (text + image), and chunked file transfer (drag-drop + progress bar; arbitrary destination path; no size cap). Plus folder sync (additive mirror — local deletions never propagate) and a self-hosted coturn TURN config bundle generator (turnserver.conf + systemd unit + docker-compose + README). **AnyDesk-style popout**: when the viewer authenticates, the live remote desktop opens in its own resizable top-level window so the control panel stays uncluttered. The Remote Desktop tabs are wrapped in `QScrollArea` so the panel stays usable on small windows and stretches edge-to-edge on 4K displays. Driveable headlessly via `je_auto_control` and over MCP through the new `ac_remote_*` tools
 - **Clipboard** — read/write system clipboard text on Windows, macOS, and Linux
 - **Screenshot & Screen Recording** — capture full screen or regions as images, record screen to video (AVI/MP4)
 - **Action Recording & Playback** — record mouse/keyboard events and replay them
@@ -73,8 +73,8 @@
 - **Event Triggers** — fire scripts when an image appears, a window opens, a pixel changes, or a file is modified
 - **Run History** — SQLite-backed run log across scheduler / triggers / hotkeys / REST with auto error-screenshot artifacts
 - **Report Generation** — export test records as HTML, JSON, or XML reports with success/failure status
-- **MCP Server** — JSON-RPC 2.0 Model Context Protocol server (stdio + HTTP/SSE) so Claude Desktop / Claude Code / custom tool-use loops can drive AutoControl. ~90 tools, full protocol coverage (resources, prompts, sampling, roots, logging, progress, cancellation, elicitation), bearer-token auth + TLS, audit log, rate limit, plugin hot-reload, CI fake backend
-- **Remote Automation** — TCP socket server **and** REST API server to receive automation commands
+- **MCP Server** — JSON-RPC 2.0 Model Context Protocol server (stdio + HTTP/SSE) so Claude Desktop / Claude Code / custom tool-use loops can drive AutoControl. ~100 tools, full protocol coverage (resources, prompts, sampling, roots, logging, progress, cancellation, elicitation), bearer-token auth + TLS, audit log, rate limit, plugin hot-reload, CI fake backend. New in this release: `ac_remote_host_start` / `ac_remote_host_stop` / `ac_remote_host_status` / `ac_remote_viewer_connect` / `ac_remote_viewer_disconnect` / `ac_remote_viewer_status` / `ac_remote_viewer_send_input` wrap the same singleton remote-desktop registry the GUI uses, so a model can spin up a host, open a viewer to another machine, and forward mouse / keyboard / type / hotkey actions through the active session
+- **Remote Automation** — TCP socket server **and** hardened REST API: bearer-token auth, per-IP rate limit + lockout, SQLite audit hook, Prometheus `/metrics`, OpenAPI-style endpoint table (`/health`, `/screen_size`, `/sessions`, `/screenshot`, `/execute`, `/audit/list`, `/audit/verify`, `/inspector/recent`, `/usb/devices`, `/diagnose`, ...), and a vanilla-JS browser dashboard at `/dashboard` (any phone with HTTP reach can monitor the host)
 - **Plugin Loader** — drop `.py` files exposing `AC_*` callables into a directory and register them as executor commands at runtime
 - **Shell Integration** — execute shell commands within automation workflows with async output capture
 - **Callback Executor** — trigger automation functions with callback hooks for chaining operations
@@ -84,6 +84,15 @@
 - **GUI Application** — built-in PySide6 graphical interface with live language switching (English / 繁體中文 / 简体中文 / 日本語)
 - **CLI Runner** — `python -m je_auto_control.cli run|list-jobs|start-server|start-rest`
 - **Cross-Platform** — unified API across Windows, macOS, and Linux (X11)
+- **Multi-Host Admin Console** — register N AutoControl REST endpoints in one address book, poll them in parallel for health/sessions/jobs, broadcast actions to all of them. Persisted to `~/.je_auto_control/admin_hosts.json` (mode 0600 on POSIX). Bad-token hosts surface as unhealthy with the actual HTTP error
+- **Tamper-Evident Audit Log** — SQLite events table with SHA-256 hash chain (`prev_hash` + `row_hash` per row); editing any past row breaks the chain. `verify_chain()` walks rows top-down and reports the first broken link. Legacy tables get backfilled at startup ("trust on first use")
+- **WebRTC Packet Inspector** — process-global rolling window of `StatsSnapshot` samples (default 600 / ~10 min @ 1Hz) fed by the existing WebRTC stats pollers. Per-metric `last/min/max/avg/p95` for RTT, FPS, bitrate, packet loss, jitter
+- **USB Device Enumeration** — read-only cross-platform device listing. Tries pyusb (libusb) first; falls back to platform-specific (Windows `Get-PnpDevice`, macOS `system_profiler`, Linux `/sys/bus/usb/devices`). Phase 2 (passthrough) intentionally deferred pending design review
+- **System Diagnostics** — single-command "is everything OK?" probe across platform, optional deps, executor command count, audit chain, screenshot, mouse, disk space, REST registry. CLI exits 0 if all green / 1 otherwise; REST `/diagnose`; severity-tagged GUI tab
+- **USB Hotplug Events** — polling-based hotplug watcher (`UsbHotplugWatcher`) with bounded ring buffer + sequence-numbered events; `GET /usb/events?since=N` lets late subscribers catch up. GUI auto-refresh toggle on the USB tab.
+- **OpenAPI 3.1 + Swagger UI** — `GET /openapi.json` (auth-gated, generated from the live route table) + `GET /docs` (browser Swagger UI with bearer token bar). Drift test in CI catches new routes added without metadata.
+- **Configuration Bundle** — single-file JSON export/import of user config (admin hosts, address book, trusted viewers, known hosts, host service, IDs). Atomic write with `<name>.bak.<timestamp>` backups; CLI `python -m je_auto_control.utils.config_bundle export|import`; `POST /config/{export,import}`; GUI buttons on the REST API tab.
+- **USB Passthrough (experimental, opt-in)** — wire-level protocol over a WebRTC `usb` DataChannel (10 opcodes, CREDIT-based flow control, 16 KiB payload cap). Host-side `UsbPassthroughSession` end-to-end on the Linux libusb backend; Windows `WinUSB` backend with full ctypes wiring (hardware-unverified); macOS `IOKit` skeleton. Viewer-side blocking client (`UsbPassthroughClient` → `ClientHandle.control_transfer / bulk_transfer / interrupt_transfer`). Persistent ACL (`~/.je_auto_control/usb_acl.json`, default deny, mode 0600) with host-side prompt QDialog and tamper-evident audit-log integration. Default off — opt-in via `enable_usb_passthrough(True)` or `JE_AUTOCONTROL_USB_PASSTHROUGH=1`. Phase 2e external security review checklist included; default-on requires sign-off.
 
 ---
 
@@ -105,6 +114,7 @@ flowchart LR
         APIUser[["Custom Anthropic /<br/>OpenAI tool loops"]]
         HTTPClient[["HTTP / SSE clients"]]
         TCPClient[["Socket / REST clients"]]
+        Browser[["Browser<br/>(/dashboard · /docs)"]]
         GUIUser[["PySide6 GUI"]]
         CLIUser[["python -m<br/>je_auto_control[.cli]"]]
         Library[["Library users<br/>(import je_auto_control)"]]
@@ -114,8 +124,9 @@ flowchart LR
         direction TB
         Stdio["MCP stdio<br/>JSON-RPC 2.0"]
         HTTPMCP["MCP HTTP /<br/>SSE + auth + TLS"]
-        REST["REST server<br/>:9939"]
+        REST["REST server :9939<br/>bearer auth · rate-limit ·<br/>OpenAPI · /metrics · /dashboard"]
         Socket["Socket server<br/>:9938"]
+        WebRTC["WebRTC sessions<br/>(remote desktop ·<br/>files · audio · USB)"]
     end
 
     subgraph MCP["mcp_server/"]
@@ -137,6 +148,28 @@ flowchart LR
         IOUtils["clipboard/ · cv2_utils/ ·<br/>shell_process/ · json/"]
     end
 
+    subgraph Ops["Operations Layer (utils/)"]
+        direction TB
+        Admin["admin/<br/>multi-host poll +<br/>broadcast"]
+        Audit["remote_desktop/<br/>audit_log<br/>(SHA-256 chain)"]
+        Inspector["remote_desktop/<br/>webrtc_inspector"]
+        Diag["diagnostics/<br/>self-test"]
+        ConfigB["config_bundle/<br/>export/import"]
+    end
+
+    subgraph USB["USB"]
+        direction TB
+        UsbEnum["usb/<br/>list + hotplug events"]
+        UsbPass["usb/passthrough/<br/>session · client · ACL ·<br/>libusb · WinUSB · IOKit"]
+    end
+
+    subgraph Remote["Remote Desktop (utils/remote_desktop/)"]
+        direction TB
+        RDHost["host · webrtc_host ·<br/>signaling · multi_viewer"]
+        RDFiles["webrtc_files · file_sync ·<br/>clipboard_sync · audio"]
+        RDTrust["trust_list · fingerprint ·<br/>turn_config · lan_discovery"]
+    end
+
     subgraph Backends["Per-OS Backends"]
         direction TB
         Win["windows/<br/>Win32 ctypes"]
@@ -149,6 +182,7 @@ flowchart LR
     HTTPClient --> HTTPMCP
     TCPClient --> Socket
     TCPClient --> REST
+    Browser --> REST
 
     Stdio --> Dispatcher
     HTTPMCP --> Dispatcher
@@ -167,13 +201,27 @@ flowchart LR
     Resources --> Wrapper
 
     REST --> Executor
+    REST --> Ops
+    REST --> USB
     Socket --> Executor
+    WebRTC --> Remote
+    WebRTC --> UsbPass
 
     GUIUser --> Wrapper
     GUIUser --> Recorder
+    GUIUser --> Ops
+    GUIUser --> USB
+    GUIUser --> Remote
     CLIUser --> Executor
     Library --> Wrapper
     Library --> Executor
+    Library --> Ops
+
+    Admin --> REST
+    Inspector -.- WebRTC
+    Audit -.- REST
+    Audit -.- USB
+    UsbPass --> Backends
 
     Wrapper --> Backends
     Vision -.- Wrapper
@@ -203,11 +251,17 @@ je_auto_control/
     ├── vision/                 # VLM-based locator (Anthropic / OpenAI backends)
     ├── ocr/                    # Tesseract-backed text locator
     ├── clipboard/              # Cross-platform clipboard (text + image)
+    ├── llm/                    # Plain-language → AC_* action planner
     ├── scheduler/              # Interval + cron scheduler
     ├── hotkey/                 # Global hotkey daemon
     ├── triggers/               # Image/window/pixel/file triggers
     ├── run_history/            # SQLite run log + error-screenshot artifacts
-    ├── rest_api/               # Stdlib HTTP/REST server
+    ├── rest_api/               # Stdlib HTTP/REST server — auth · audit · rate-limit · OpenAPI · /metrics · dashboard · Swagger UI
+    ├── admin/                  # Multi-host AdminConsoleClient (poll + broadcast)
+    ├── diagnostics/            # System self-test runner + CLI
+    ├── config_bundle/          # Single-file user-config export / import
+    ├── usb/                    # Cross-platform enumeration, hotplug events, passthrough/{protocol, session, viewer client, ACL, libusb / WinUSB / IOKit}
+    ├── remote_desktop/         # WebRTC host + viewer, signalling, multi-viewer, file/clipboard/audio sync, audit log (hash chain), trust list, TURN config, mDNS discovery, WebRTC stats inspector
     ├── plugin_loader/          # Dynamic AC_* plugin discovery
     ├── socket_server/          # TCP socket server for remote automation
     ├── shell_process/          # Shell command manager
@@ -570,11 +624,17 @@ viewer = RemoteDesktopViewer(
 ```
 
 **Audio streaming (host → viewer).** Optional `sounddevice` dep; opt
-in with `enable_audio=True` on the host, attach an `AudioPlayer` (or
-your own callback) on the viewer:
+in with an `AudioCaptureConfig` on the host, attach an `AudioPlayer`
+(or your own callback) on the viewer:
 
 ```python
-host = RemoteDesktopHost(token="tok", enable_audio=True)
+from je_auto_control.utils.remote_desktop import AudioCaptureConfig
+host = RemoteDesktopHost(
+    token="tok",
+    audio_config=AudioCaptureConfig(enabled=True),    # default mic
+)
+# Or pick a loopback / monitor device:
+# audio_config=AudioCaptureConfig(enabled=True, device=12)
 
 from je_auto_control.utils.remote_desktop import AudioPlayer
 player = AudioPlayer(); player.start()

@@ -62,7 +62,7 @@
 - **OCR** — 使用 Tesseract 从屏幕提取文字，可搜索、点击或等待文字出现；支持 regex 搜索与整块区域 dump
 - **LLM 动作规划器** — 用 Claude 把自然语言描述翻译成验证过的 `AC_*` 动作清单
 - **运行期变量与流程控制** — 执行时 `${var}` 替换，加上 `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` 让脚本数据驱动
-- **远程桌面** — 用 token 认证的 TCP 协议串流本机画面并接收输入，**或** 连接到他机观看与控制（host + viewer GUI 内置）。可选 TLS（HTTPS 级加密）、WebSocket 传输（``ws://`` + ``wss://``，穿墙／浏览器友好）、持久化 9 位数 Host ID、host→viewer 音频串流、双向剪贴板同步（文字 + 图片）、分块文件传输（拖放 + 进度条；任意目的路径；无大小上限）
+- **远程桌面** — 用 token 认证的 TCP 协议串流本机画面并接收输入，**或** 连接到他机观看与控制（host + viewer GUI 内置）。可选 TLS（HTTPS 级加密）、WebSocket 传输（``ws://`` + ``wss://``，穿墙／浏览器友好）、持久化 9 位数 Host ID、host→viewer 音频串流、双向剪贴板同步（文字 + 图片）、分块文件传输（拖放 + 进度条；任意目的路径；无大小上限）。另含文件夹同步（增量镜像 — 本地删除不会传出去）与自建 coturn TURN 配置包生成器（turnserver.conf + systemd unit + docker-compose + README）。**AnyDesk 风格弹出窗口**：viewer 认证成功后远程桌面会开在独立的可调整大小顶层窗口，控制面板保持简洁；Remote Desktop 子分页外层包了 `QScrollArea`，小窗口下可滚动、4K 屏幕下会铺满。同时支持 headless API 与 MCP 工具 (`ac_remote_*`) 直接驱动
 - **剪贴板** — 于 Windows / macOS / Linux 读写系统剪贴板文本
 - **截图与屏幕录制** — 捕获全屏或指定区域为图片，录制屏幕为视频（AVI/MP4）
 - **动作录制与回放** — 录制鼠标/键盘事件并重新播放
@@ -72,8 +72,8 @@
 - **事件触发器** — 检测到图像出现、窗口出现、像素变化或文件变动时自动执行脚本
 - **执行历史** — 使用 SQLite 记录 scheduler / triggers / hotkeys / REST 的执行结果；错误时自动附带截图
 - **报告生成** — 将测试记录导出为 HTML、JSON 或 XML 报告，包含成功/失败状态
-- **MCP 服务器** — JSON-RPC 2.0 Model Context Protocol 服务（stdio + HTTP/SSE），让 Claude Desktop / Claude Code / 自定义 tool-use 循环直接驱动 AutoControl。约 90 个工具,完整协议支持(resources、prompts、sampling、roots、logging、progress、cancellation、elicitation),Bearer token 验证 + TLS、审计 log、rate limit、plugin 热加载、CI fake backend
-- **远程自动化** — 同时提供 TCP Socket 服务器与 REST API 服务器
+- **MCP 服务器** — JSON-RPC 2.0 Model Context Protocol 服务（stdio + HTTP/SSE），让 Claude Desktop / Claude Code / 自定义 tool-use 循环直接驱动 AutoControl。约 100 个工具,完整协议支持(resources、prompts、sampling、roots、logging、progress、cancellation、elicitation),Bearer token 验证 + TLS、审计 log、rate limit、plugin 热加载、CI fake backend。**本次新增** `ac_remote_host_start` / `ac_remote_host_stop` / `ac_remote_host_status` / `ac_remote_viewer_connect` / `ac_remote_viewer_disconnect` / `ac_remote_viewer_status` / `ac_remote_viewer_send_input` 包装 GUI 远程桌面分页所用的 process-global registry，模型可以直接启动 host、连线 viewer、转发 mouse／keyboard／type／hotkey 动作
+- **远程自动化** — TCP Socket 服务器 **加上** 强化版 REST API：bearer token 认证、per-IP 速率限制 + 失败锁定、SQLite 审计 hook、Prometheus `/metrics`、完整端点列表（`/health`、`/screen_size`、`/sessions`、`/screenshot`、`/execute`、`/audit/list`、`/audit/verify`、`/inspector/recent`、`/usb/devices`、`/diagnose`、…），以及 vanilla-JS 的浏览器 dashboard `/dashboard`（任何能 HTTP 连到主机的手机都能监控）
 - **插件加载器** — 将定义 `AC_*` 可调用对象的 `.py` 文件放入目录，运行时即可注册为 executor 命令
 - **Shell 集成** — 在自动化流程中执行 Shell 命令，支持异步输出捕获
 - **回调执行器** — 触发自动化函数后自动调用回调函数，实现操作串联
@@ -83,6 +83,15 @@
 - **GUI 应用程序** — 内置 PySide6 图形界面，支持即时切换语言（English / 繁體中文 / 简体中文 / 日本語）
 - **CLI 运行器** — `python -m je_auto_control.cli run|list-jobs|start-server|start-rest`
 - **跨平台** — 统一 API，支持 Windows、macOS、Linux（X11）
+- **多主机管理控制台** — 在一份通讯录中注册 N 个远程 AutoControl REST 端点，并行轮询 health/sessions/jobs，把同一份动作清单广播给全部主机。储存于 `~/.je_auto_control/admin_hosts.json`（POSIX 上模式 0600）。Token 错误的主机会以实际 HTTP 错误显示为不健康
+- **可检测篡改的审计日志** — SQLite events 表加上 SHA-256 哈希链（每条记录含 `prev_hash` + `row_hash`）；修改任何过去记录都会打断哈希链。`verify_chain()` 自顶向下走访并报告第一个断点。既有数据表会在启动时回填（"初次使用即信任"）
+- **WebRTC 包监测** — 由既有 WebRTC stats 轮询喂入的进程级 `StatsSnapshot` 滚动窗口（默认 600 条 / 1 Hz 约 10 分钟）。对 RTT、FPS、bitrate、丢包率、jitter 各回 `last/min/max/avg/p95`
+- **USB 设备列举** — 只读的跨平台 USB 设备列举。优先尝试 pyusb（libusb）；若无则退回平台特定命令（Windows `Get-PnpDevice`、macOS `system_profiler`、Linux `/sys/bus/usb/devices`）。第二阶段（passthrough）刻意延后待设计审查
+- **系统诊断** — 一键"目前正常吗？"探测：平台、可选依赖包、executor 命令数、审计链、截图、鼠标、磁盘空间、REST registry。CLI 全绿 exit 0／否则 1；REST `/diagnose`；按严重度上色的 GUI 分页
+- **USB Hotplug 事件** — 轮询式 hotplug 监测（`UsbHotplugWatcher`），含 bounded ring buffer 与带序号的事件；`GET /usb/events?since=N` 让晚加入的订阅者补上进度。USB 分页有自动刷新切换钮。
+- **OpenAPI 3.1 + Swagger UI** — `GET /openapi.json`（auth-gated，从活的路由表生成）+ `GET /docs`（浏览器版 Swagger UI 含 bearer token 栏）。CI 上有 drift 测试，新加路由忘记写 metadata 会被拦下。
+- **配置包导出／导入** — 单一 JSON 文件，导出／导入用户配置（admin hosts、address book、trusted viewers、known hosts、host service、IDs）。原子写入加 `<name>.bak.<时间戳>` 备份；CLI `python -m je_auto_control.utils.config_bundle export|import`；`POST /config/{export,import}`；REST API 分页有按钮。
+- **USB Passthrough（实验性、需主动启用）** — wire-level 协议走 WebRTC `usb` DataChannel（10 个 opcode、CREDIT 流量控制、16 KiB payload 上限）。Host 端 `UsbPassthroughSession` 在 Linux libusb backend 上端到端运行；Windows `WinUSB` backend 含完整 ctypes 接线（硬件未验证）；macOS `IOKit` 为骨架。Viewer 端阻塞式 client（`UsbPassthroughClient` → `ClientHandle.control_transfer / bulk_transfer / interrupt_transfer`）。持久化 ACL（`~/.je_auto_control/usb_acl.json`，默认 deny，POSIX mode 0600），含 host 端 prompt QDialog 与可检测篡改审计日志整合。默认 off — 用 `enable_usb_passthrough(True)` 或 `JE_AUTOCONTROL_USB_PASSTHROUGH=1` 启用。Phase 2e 外部安全审查清单已附；默认启用前需要签核。
 
 ---
 
@@ -103,6 +112,7 @@ flowchart LR
         APIUser[["自定义 Anthropic /<br/>OpenAI tool-use 循环"]]
         HTTPClient[["HTTP / SSE clients"]]
         TCPClient[["Socket / REST clients"]]
+        Browser[["浏览器<br/>(/dashboard · /docs)"]]
         GUIUser[["PySide6 GUI"]]
         CLIUser[["python -m<br/>je_auto_control[.cli]"]]
         Library[["Library 使用者<br/>(import je_auto_control)"]]
@@ -112,8 +122,9 @@ flowchart LR
         direction TB
         Stdio["MCP stdio<br/>JSON-RPC 2.0"]
         HTTPMCP["MCP HTTP /<br/>SSE + auth + TLS"]
-        REST["REST 服务器<br/>:9939"]
+        REST["REST 服务器 :9939<br/>bearer auth · rate-limit ·<br/>OpenAPI · /metrics · /dashboard"]
         Socket["Socket 服务器<br/>:9938"]
+        WebRTC["WebRTC sessions<br/>(远程桌面 ·<br/>文件 · 音频 · USB)"]
     end
 
     subgraph MCP["mcp_server/"]
@@ -135,6 +146,28 @@ flowchart LR
         IOUtils["clipboard/ · cv2_utils/ ·<br/>shell_process/ · json/"]
     end
 
+    subgraph Ops["运维层 (utils/)"]
+        direction TB
+        Admin["admin/<br/>多主机轮询 +<br/>广播"]
+        Audit["remote_desktop/<br/>audit_log<br/>(SHA-256 链)"]
+        Inspector["remote_desktop/<br/>webrtc_inspector"]
+        Diag["diagnostics/<br/>自我诊断"]
+        ConfigB["config_bundle/<br/>导出/导入"]
+    end
+
+    subgraph USB["USB"]
+        direction TB
+        UsbEnum["usb/<br/>列举 + hotplug"]
+        UsbPass["usb/passthrough/<br/>session · client · ACL ·<br/>libusb · WinUSB · IOKit"]
+    end
+
+    subgraph Remote["远程桌面 (utils/remote_desktop/)"]
+        direction TB
+        RDHost["host · webrtc_host ·<br/>signaling · multi_viewer"]
+        RDFiles["webrtc_files · file_sync ·<br/>clipboard_sync · audio"]
+        RDTrust["trust_list · fingerprint ·<br/>turn_config · lan_discovery"]
+    end
+
     subgraph Backends["操作系统后端"]
         direction TB
         Win["windows/<br/>Win32 ctypes"]
@@ -147,6 +180,7 @@ flowchart LR
     HTTPClient --> HTTPMCP
     TCPClient --> Socket
     TCPClient --> REST
+    Browser --> REST
 
     Stdio --> Dispatcher
     HTTPMCP --> Dispatcher
@@ -165,13 +199,27 @@ flowchart LR
     Resources --> Wrapper
 
     REST --> Executor
+    REST --> Ops
+    REST --> USB
     Socket --> Executor
+    WebRTC --> Remote
+    WebRTC --> UsbPass
 
     GUIUser --> Wrapper
     GUIUser --> Recorder
+    GUIUser --> Ops
+    GUIUser --> USB
+    GUIUser --> Remote
     CLIUser --> Executor
     Library --> Wrapper
     Library --> Executor
+    Library --> Ops
+
+    Admin --> REST
+    Inspector -.- WebRTC
+    Audit -.- REST
+    Audit -.- USB
+    UsbPass --> Backends
 
     Wrapper --> Backends
     Vision -.- Wrapper
@@ -201,11 +249,17 @@ je_auto_control/
     ├── vision/                 # VLM 元件定位（Anthropic / OpenAI）
     ├── ocr/                    # Tesseract 文字定位
     ├── clipboard/              # 跨平台剪贴板（文字 + 图像）
+    ├── llm/                    # 自然语言 → AC_* 动作规划器
     ├── scheduler/              # Interval + cron 调度器
     ├── hotkey/                 # 全局热键守护进程
     ├── triggers/               # 图像/窗口/像素/文件 触发器
     ├── run_history/            # SQLite 执行记录 + 错误截图
-    ├── rest_api/               # 纯 stdlib HTTP/REST 服务器
+    ├── rest_api/               # 纯 stdlib HTTP/REST 服务器 — auth · audit · rate-limit · OpenAPI · /metrics · dashboard · Swagger UI
+    ├── admin/                  # 多主机 AdminConsoleClient（轮询 + 广播）
+    ├── diagnostics/            # 系统自我诊断 + CLI
+    ├── config_bundle/          # 单文件用户配置导出／导入
+    ├── usb/                    # 跨平台列举、hotplug 事件、passthrough/{protocol, session, viewer client, ACL, libusb / WinUSB / IOKit}
+    ├── remote_desktop/         # WebRTC host + viewer、signalling、multi-viewer、文件／剪贴板／音频同步、审计日志（哈希链）、信任列表、TURN 配置、mDNS 发现、WebRTC stats inspector
     ├── plugin_loader/          # 动态 AC_* 插件搜索与注册
     ├── socket_server/          # TCP Socket 服务器（远程自动化）
     ├── shell_process/          # Shell 命令管理器
@@ -527,10 +581,16 @@ viewer = RemoteDesktopViewer(
 )
 ```
 
-**音频串流（host → viewer）**：可选 `sounddevice` 依赖；host 端 `enable_audio=True` 开启，viewer 端接 `AudioPlayer`（或自己的 callback）：
+**音频串流（host → viewer）**：可选 `sounddevice` 依赖；host 用 `AudioCaptureConfig` 开启，viewer 端接 `AudioPlayer`（或自己的 callback）：
 
 ```python
-host = RemoteDesktopHost(token="tok", enable_audio=True)
+from je_auto_control.utils.remote_desktop import AudioCaptureConfig
+host = RemoteDesktopHost(
+    token="tok",
+    audio_config=AudioCaptureConfig(enabled=True),    # 默认 mic
+)
+# 或指定 loopback / monitor 设备:
+# audio_config=AudioCaptureConfig(enabled=True, device=12)
 
 from je_auto_control.utils.remote_desktop import AudioPlayer
 player = AudioPlayer(); player.start()

@@ -6,10 +6,15 @@ from je_auto_control.utils.mcp_server.server import MCPServer
 
 
 def _write(path, body):
-    path.write_text(body, encoding="utf-8")
-    # Bump mtime to ensure the watcher picks it up even on coarse FSes.
-    now = time.time()
     import os
+    # On Windows + GitHub-runner filesystems, mtime resolution can be
+    # coarser than back-to-back test writes — the second write of the
+    # same file can land with the same mtime as the first, defeating
+    # mtime-based reload detection. Always force mtime forward past
+    # any previous value on this path.
+    previous = path.stat().st_mtime if path.exists() else 0.0
+    path.write_text(body, encoding="utf-8")
+    now = max(time.time(), previous + 1.0)
     os.utime(path, (now, now))
 
 

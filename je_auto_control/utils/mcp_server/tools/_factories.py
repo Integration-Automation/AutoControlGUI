@@ -849,9 +849,110 @@ def hotkey_tools() -> List[MCPTool]:
     ]
 
 
+def remote_desktop_tools() -> List[MCPTool]:
+    """MCP wrappers for the remote-desktop registry singletons."""
+    return [
+        MCPTool(
+            name="ac_remote_host_start",
+            description=(
+                "Start (or restart) the singleton TCP remote-desktop "
+                "host this process owns. Returns "
+                "{running, port, host_id, connected_clients}."
+            ),
+            input_schema=schema({
+                "token": {"type": "string",
+                          "description": "Bearer token clients must present"},
+                "bind": {"type": "string",
+                         "description": "Bind address (default 127.0.0.1)"},
+                "port": {"type": "integer",
+                         "description": "Listen port; 0 → kernel-assigned"},
+                "fps": {"type": "number",
+                        "description": "Target frames per second"},
+                "quality": {"type": "integer",
+                            "description": "JPEG quality (1–95)"},
+                "max_clients": {"type": "integer"},
+                "host_id": {"type": "string",
+                            "description": "Optional 9-digit ID; auto-generated when omitted"},
+            }, required=["token"]),
+            handler=h.remote_host_start,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_remote_host_stop",
+            description="Stop the singleton TCP remote-desktop host.",
+            input_schema=schema({"timeout": {"type": "number"}}),
+            handler=h.remote_host_stop,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_remote_host_status",
+            description=(
+                "Read-only snapshot of the host: "
+                "{running, port, host_id, connected_clients}."
+            ),
+            input_schema=schema({}),
+            handler=h.remote_host_status,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_remote_viewer_connect",
+            description=(
+                "Connect the singleton viewer to a remote host and wait "
+                "for the auth handshake. Returns "
+                "{connected, host_id}."
+            ),
+            input_schema=schema({
+                "host": {"type": "string"},
+                "port": {"type": "integer"},
+                "token": {"type": "string"},
+                "timeout": {"type": "number"},
+                "expected_host_id": {
+                    "type": "string",
+                    "description": "If set, the handshake fails when the "
+                                   "host advertises a different ID.",
+                },
+            }, required=["host", "port", "token"]),
+            handler=h.remote_viewer_connect,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_remote_viewer_disconnect",
+            description="Disconnect the singleton viewer.",
+            input_schema=schema({"timeout": {"type": "number"}}),
+            handler=h.remote_viewer_disconnect,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_remote_viewer_status",
+            description="Read-only viewer state: {connected, host_id}.",
+            input_schema=schema({}),
+            handler=h.remote_viewer_status,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_remote_viewer_send_input",
+            description=(
+                "Forward an input action (mouse_move / mouse_press / "
+                "mouse_release / mouse_scroll / key_press / key_release / "
+                "type / hotkey) through the connected viewer to the "
+                "remote host."
+            ),
+            input_schema=schema({
+                "action": {
+                    "type": "object",
+                    "description": "Input payload, e.g. "
+                                   "{action: 'mouse_move', x: 100, y: 200}",
+                },
+            }, required=["action"]),
+            handler=h.remote_viewer_send_input,
+            annotations=DESTRUCTIVE,
+        ),
+    ]
+
+
 ALL_FACTORIES = (
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
     semantic_locator_tools, scheduler_tools, trigger_tools, hotkey_tools,
-    screen_record_tools, process_and_shell_tools,
+    screen_record_tools, process_and_shell_tools, remote_desktop_tools,
 )

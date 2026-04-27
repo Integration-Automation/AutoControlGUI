@@ -22,7 +22,7 @@ class FakeState:
     clipboard_text: str = ""
     typed_text: List[str] = field(default_factory=list)
     keys_pressed: List[Any] = field(default_factory=list)
-    mouse_actions: List[Tuple[str, Any, ...]] = field(default_factory=list)
+    mouse_actions: List[Tuple[Any, ...]] = field(default_factory=list)
 
 
 def fake_state() -> FakeState:
