@@ -87,12 +87,17 @@ class AutoControlGUIWidget(
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self._on_tab_close_requested)
 
+        # Default UI keeps only the last three of the previously-visible
+        # tabs (record / script_builder / remote_desktop) so the launcher
+        # opens on a focused capture+script+remote workflow. The earlier
+        # core tabs (auto_click / screenshot / image_detect) are still
+        # registered and reachable from the View menu's "show tab" list.
         self._add_tab("auto_click", "tab_auto_click", self._build_auto_click_tab(),
-                      category="core", default_visible=True)
+                      category="core")
         self._add_tab("screenshot", "tab_screenshot", self._build_screenshot_tab(),
-                      category="core", default_visible=True)
+                      category="core")
         self._add_tab("image_detect", "tab_image_detect", self._build_image_detect_tab(),
-                      category="core", default_visible=True)
+                      category="core")
         self._add_tab("record", "tab_record", self._build_record_tab(),
                       category="core", default_visible=True)
         self._add_tab("script_builder", "tab_script_builder", ScriptBuilderTab(),
