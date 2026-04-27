@@ -153,6 +153,62 @@ def _remote_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
     return remote_desktop_registry.send_input(action)
 
 
+# --- Virtual gamepad (ViGEm) -----------------------------------------------
+
+def _gamepad_press(button: str) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().press_button(button)
+    return {"button": button, "state": "down"}
+
+
+def _gamepad_release(button: str) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().release_button(button)
+    return {"button": button, "state": "up"}
+
+
+def _gamepad_click(button: str) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().click_button(button)
+    return {"button": button, "state": "click"}
+
+
+def _gamepad_dpad(direction: str) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_dpad(direction)
+    return {"dpad": direction}
+
+
+def _gamepad_left_stick(x: int, y: int) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_left_stick(int(x), int(y))
+    return {"left_stick": [int(x), int(y)]}
+
+
+def _gamepad_right_stick(x: int, y: int) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_right_stick(int(x), int(y))
+    return {"right_stick": [int(x), int(y)]}
+
+
+def _gamepad_left_trigger(value: int) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_left_trigger(int(value))
+    return {"left_trigger": int(value)}
+
+
+def _gamepad_right_trigger(value: int) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_right_trigger(int(value))
+    return {"right_trigger": int(value)}
+
+
+def _gamepad_reset() -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().reset()
+    return {"reset": True}
+
+
 def _rest_api_start(host: str = "127.0.0.1",
                     port: int = 9939,
                     token: Optional[str] = None,
@@ -515,6 +571,17 @@ class Executor:
             "AC_remote_disconnect": _remote_disconnect,
             "AC_remote_viewer_status": _remote_viewer_status,
             "AC_remote_send_input": _remote_send_input,
+
+            # Virtual gamepad (ViGEm — drives games that ignore SendInput)
+            "AC_gamepad_press": _gamepad_press,
+            "AC_gamepad_release": _gamepad_release,
+            "AC_gamepad_click": _gamepad_click,
+            "AC_gamepad_dpad": _gamepad_dpad,
+            "AC_gamepad_left_stick": _gamepad_left_stick,
+            "AC_gamepad_right_stick": _gamepad_right_stick,
+            "AC_gamepad_left_trigger": _gamepad_left_trigger,
+            "AC_gamepad_right_trigger": _gamepad_right_trigger,
+            "AC_gamepad_reset": _gamepad_reset,
 
             # REST API (HTTP front-end exposing the headless API)
             "AC_rest_api_start": _rest_api_start,

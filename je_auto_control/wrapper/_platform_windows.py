@@ -1,3 +1,5 @@
+import os
+
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.windows.core.utils import win32_keypress_check
@@ -55,6 +57,54 @@ from je_auto_control.windows.mouse.win32_ctype_mouse_control import (
 )
 from je_auto_control.windows.record.win32_record import win32_recorder
 from je_auto_control.windows.screen import win32_screen
+
+
+def _select_input_backend():
+    """Pick keyboard/mouse modules based on JE_AUTOCONTROL_WIN32_BACKEND.
+
+    Default is ``sendinput`` (the existing ctypes / SendInput backend).
+    Set the env var to ``interception`` to route synthetic input
+    through the Interception driver instead — required for games that
+    read input via ``GetRawInputData`` and ignore SendInput. Falls back
+    to SendInput with a warning when the driver isn't installed, so
+    deployments can roll the driver out lazily.
+    """
+    backend = os.environ.get(
+        "JE_AUTOCONTROL_WIN32_BACKEND", "sendinput",
+    ).strip().lower()
+    if backend != "interception":
+        return win32_ctype_keyboard_control, win32_ctype_mouse_control
+    try:
+        from je_auto_control.windows.interception import (
+            keyboard as interception_keyboard,
+            mouse as interception_mouse,
+            is_available,
+        )
+    except ImportError as error:  # defensive: optional sub-package
+        autocontrol_logger.warning(
+            "Interception backend requested but module import failed: "
+            "%r — falling back to SendInput.", error,
+        )
+        return win32_ctype_keyboard_control, win32_ctype_mouse_control
+    if not is_available():
+        autocontrol_logger.warning(
+            "Interception backend requested but the driver is not "
+            "available — falling back to SendInput. Install the "
+            "driver from https://github.com/oblitum/Interception",
+        )
+        return win32_ctype_keyboard_control, win32_ctype_mouse_control
+    autocontrol_logger.info("Win32 input backend: Interception driver")
+    # Refresh the mouse-button tuples to use Interception flag bits
+    # so the wrapper's mouse_keys_table dispatches correctly.
+    global win32_mouse_left, win32_mouse_middle, win32_mouse_right
+    global win32_mouse_x1, win32_mouse_x2
+    win32_mouse_left = interception_mouse.win32_mouse_left
+    win32_mouse_middle = interception_mouse.win32_mouse_middle
+    win32_mouse_right = interception_mouse.win32_mouse_right
+    win32_mouse_x1 = interception_mouse.win32_mouse_x1
+    win32_mouse_x2 = interception_mouse.win32_mouse_x2
+    return interception_keyboard, interception_mouse
+
 
 autocontrol_logger.info("Load Windows Setting")
 
@@ -262,9 +312,8 @@ mouse_keys_table = {
 }
 
 special_mouse_keys_table = None
-keyboard = win32_ctype_keyboard_control
+keyboard, mouse = _select_input_backend()
 keyboard_check = win32_keypress_check
-mouse = win32_ctype_mouse_control
 screen = win32_screen
 recorder = win32_recorder
 

@@ -739,3 +739,118 @@ registry 包成工具,工廠函式為
 ``ac_remote_viewer_status``)為唯讀,可以通過 MCP server 的
 ``--readonly`` 過濾;會修改狀態的工具都正確帶上
 ``destructiveHint: true``,MCP client 端可以據此跳出使用者確認。
+
+
+驅動層輸入後端 — 驅動不接受 SendInput / XTest 的遊戲
+=====================================================
+
+預設的 Windows(SendInput)與 Linux(XTest)輸入路徑落在 user-mode
+/ X-server 那一層;會用 ``GetRawInputData``(Win)或 ``evdev``
+(Linux)直接讀 raw input 的遊戲會跳過這些層,完全忽略合成事件。
+新增三個可選的後端可以解決這個問題。
+
+Interception(Windows)
+------------------------
+
+Oblita 的 WHQL-signed Interception driver
+(https://github.com/oblitum/Interception)在 HID 層注入鍵鼠事件,
+OS 看到的就是「真實裝置」事件。
+
+* 新增子套件:``je_auto_control/windows/interception/``
+  (``_dll.py`` ctypes bindings + ``keyboard.py`` + ``mouse.py``)。
+* 與 ``win32_ctype_keyboard_control`` /
+  ``win32_ctype_mouse_control`` 公開介面完全一致 — wrapper 在啟動
+  時直接換模組,呼叫端不需要任何修改。
+* 透過 ``JE_AUTOCONTROL_WIN32_BACKEND=interception`` 啟用;若
+  driver 沒裝,wrapper 會打 warning 並回到 SendInput,所以可以分
+  階段佈署。
+* 用 ``JE_AUTOCONTROL_INTERCEPTION_KEYBOARD`` /
+  ``JE_AUTOCONTROL_INTERCEPTION_MOUSE`` 覆寫 device id(預設
+  ``1`` / ``11``)。
+
+操作步驟::
+
+   # 1. 以系統管理員身份安裝 driver(一次性,需要重開機)
+   install-interception.exe /install
+
+   # 2. 告訴 AutoControl 走這條路
+   setx JE_AUTOCONTROL_WIN32_BACKEND interception
+
+uinput(Linux)
+----------------
+
+kernel 自帶的合成輸入閘道。透過 ``/dev/uinput`` 送出的事件會被
+建立成一個全新的 HID 裝置,任何讀 ``evdev`` 的程式(包含大部分
+遊戲與 SDL2 app)都會視為真實輸入。
+
+* 新增子套件:``je_auto_control/linux_with_x11/uinput/``
+  (``_device.py`` 直接用 ctypes + ioctl 包 ``/dev/uinput`` +
+  ``keyboard.py`` + ``mouse.py``)。
+* 無第三方依賴 — 全程 ctypes + ioctl。
+* 透過 ``JE_AUTOCONTROL_LINUX_BACKEND=uinput`` 啟用;若
+  ``/dev/uinput`` 沒寫入權限,會 warning 後回退到 XTest。
+
+操作步驟::
+
+   # 載入 kernel module
+   sudo modprobe uinput
+
+   # 一次性測試:直接放寬權限
+   sudo chmod 666 /dev/uinput
+
+   # 持續性權限,寫一個 udev rule:
+   echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' \
+     | sudo tee /etc/udev/rules.d/99-autocontrol-uinput.rules
+   sudo udevadm control --reload && sudo udevadm trigger
+   sudo usermod -aG input $USER  # 重新登入後生效
+
+   # 啟用後端
+   export JE_AUTOCONTROL_LINUX_BACKEND=uinput
+
+ViGEm 虛擬手把(Windows)
+-------------------------
+
+針對「完全不吃鍵鼠、只認手把」的遊戲,可以用 ViGEmBus 建立一個虛
+擬 Xbox 360 / DualShock 4 控制器;AutoControl 透過第三方 ``vgamepad``
+套件來驅動它。
+
+* 新增模組:``je_auto_control/utils/gamepad/`` 提供友善的
+  ``VirtualGamepad`` API(字串名稱的 button / dpad / stick /
+  trigger,支援 context manager)。
+* Headless::
+
+     from je_auto_control import VirtualGamepad
+     with VirtualGamepad() as pad:
+         pad.click_button("a")               # A 鍵
+         pad.set_left_stick(16000, 0)        # int16 stick 偏移
+         pad.set_right_trigger(255)          # 0..255 力度
+         pad.set_dpad("up")                  # 按住方向鍵上
+         pad.update()                        # 把狀態 flush 給 driver
+
+* Executor 指令:``AC_gamepad_press``、``AC_gamepad_release``、
+  ``AC_gamepad_click``、``AC_gamepad_dpad``、
+  ``AC_gamepad_left_stick`` / ``_right_stick``、
+  ``AC_gamepad_left_trigger`` / ``_right_trigger``,以及
+  ``AC_gamepad_reset``。
+
+* MCP 工具:同名加上 ``ac_`` 前綴(``ac_gamepad_press``、
+  ``ac_gamepad_left_stick`` …),所以模型可以透過 MCP 玩只支援
+  手把的遊戲。
+
+操作步驟::
+
+   # 1. 安裝 ViGEmBus driver(一次性,需要重開機)
+   #    https://github.com/nefarius/ViGEmBus/releases
+   # 2. 安裝 Python wrapper:
+   pip install vgamepad
+
+反作弊注意事項
+---------------
+
+驅動層注入比 SendInput / XTest 更難偵測,但帶 kernel-mode driver
+的反作弊(Vanguard、有 kernel module 的 Easy Anti-Cheat、
+BattlEye)依然可以列舉 Interception / ViGEmBus / 新建立的 uinput
+裝置然後拒絕啟動。
+
+這三個後端針對的是合法用途 — 輔助科技、遊戲 GUI 測試、從 headless
+環境控制執行遊戲的遠端機器 — **不是** 通用反作弊繞過工具。

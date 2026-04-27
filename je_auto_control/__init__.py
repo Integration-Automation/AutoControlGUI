@@ -78,6 +78,11 @@ from je_auto_control.utils.remote_desktop import (
 from je_auto_control.utils.remote_desktop.registry import (
     registry as remote_desktop_registry,
 )
+from je_auto_control.utils.gamepad import (
+    GamepadUnavailable, VirtualGamepad,
+    default_gamepad as default_virtual_gamepad,
+    is_available as is_virtual_gamepad_available,
+)
 # MCP server (headless stdio bridge for Claude / other MCP clients)
 from je_auto_control.utils.mcp_server import (
     AuditLogger, HttpMCPServer, MCPContent, MCPPrompt, MCPPromptArgument,
@@ -312,6 +317,9 @@ __all__ = [
     "RemoteDesktopHost", "RemoteDesktopViewer",
     "RemoteDesktopAuthError", "RemoteDesktopInputError",
     "RemoteDesktopProtocolError", "remote_desktop_registry",
+    # Virtual gamepad (ViGEm)
+    "VirtualGamepad", "GamepadUnavailable",
+    "default_virtual_gamepad", "is_virtual_gamepad_available",
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",

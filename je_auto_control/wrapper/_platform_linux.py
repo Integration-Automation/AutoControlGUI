@@ -215,9 +215,51 @@ special_mouse_keys_table = {
     "scroll_right": x11_linux_scroll_direction_right,
 }
 
-keyboard = x11_linux_keyboard_control
+def _select_input_backend():
+    """Pick keyboard/mouse modules based on JE_AUTOCONTROL_LINUX_BACKEND.
+
+    Default is ``x11`` (the existing XTest backend). Set the env var
+    to ``uinput`` to route synthetic input through ``/dev/uinput`` —
+    required for games that read evdev and ignore XTest. Falls back
+    to XTest with a warning when ``/dev/uinput`` isn't writable, so
+    deployments can roll permissions out lazily.
+    """
+    import os
+
+    from je_auto_control.utils.logging.logging_instance import (
+        autocontrol_logger,
+    )
+    backend = os.environ.get(
+        "JE_AUTOCONTROL_LINUX_BACKEND", "x11",
+    ).strip().lower()
+    if backend != "uinput":
+        return x11_linux_keyboard_control, x11_linux_mouse_control
+    try:
+        from je_auto_control.linux_with_x11.uinput import (
+            keyboard as uinput_keyboard,
+            mouse as uinput_mouse,
+            is_available,
+        )
+    except ImportError as error:
+        autocontrol_logger.warning(
+            "uinput backend requested but module import failed: "
+            "%r — falling back to XTest.", error,
+        )
+        return x11_linux_keyboard_control, x11_linux_mouse_control
+    if not is_available():
+        autocontrol_logger.warning(
+            "uinput backend requested but /dev/uinput is not writable "
+            "— falling back to XTest. Run "
+            "`sudo modprobe uinput && sudo chmod 666 /dev/uinput` "
+            "or install the udev rule documented in new_features.",
+        )
+        return x11_linux_keyboard_control, x11_linux_mouse_control
+    autocontrol_logger.info("Linux input backend: uinput (kernel)")
+    return uinput_keyboard, uinput_mouse
+
+
+keyboard, mouse = _select_input_backend()
 keyboard_check = x11_linux_listener
-mouse = x11_linux_mouse_control
 screen = x11_linux_screen
 recorder = x11_linux_recoder
 

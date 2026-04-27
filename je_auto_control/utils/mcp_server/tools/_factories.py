@@ -950,9 +950,103 @@ def remote_desktop_tools() -> List[MCPTool]:
     ]
 
 
+def gamepad_tools() -> List[MCPTool]:
+    """MCP wrappers for the ViGEm virtual-gamepad facade."""
+    return [
+        MCPTool(
+            name="ac_gamepad_press",
+            description=(
+                "Press a virtual Xbox 360 button (a / b / x / y / lb / "
+                "rb / back / start / guide / ls / rs)."
+            ),
+            input_schema=schema({"button": {"type": "string"}},
+                                required=["button"]),
+            handler=h.gamepad_press,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_gamepad_release",
+            description="Release a virtual Xbox 360 button.",
+            input_schema=schema({"button": {"type": "string"}},
+                                required=["button"]),
+            handler=h.gamepad_release,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_gamepad_click",
+            description="Press then release a virtual Xbox 360 button.",
+            input_schema=schema({"button": {"type": "string"}},
+                                required=["button"]),
+            handler=h.gamepad_click,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_gamepad_dpad",
+            description=(
+                "Hold a dpad direction (up / down / left / right / "
+                "up_left / up_right / down_left / down_right / none)."
+            ),
+            input_schema=schema({"direction": {"type": "string"}},
+                                required=["direction"]),
+            handler=h.gamepad_dpad,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_gamepad_left_stick",
+            description=(
+                "Move the left analogue stick. ``x`` and ``y`` are "
+                "signed-int16 (-32768..32767)."
+            ),
+            input_schema=schema({
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+            }, required=["x", "y"]),
+            handler=h.gamepad_left_stick,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_gamepad_right_stick",
+            description="Move the right analogue stick (signed-int16).",
+            input_schema=schema({
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+            }, required=["x", "y"]),
+            handler=h.gamepad_right_stick,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_gamepad_left_trigger",
+            description="Set left-trigger pressure (0..255).",
+            input_schema=schema({"value": {"type": "integer"}},
+                                required=["value"]),
+            handler=h.gamepad_left_trigger,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_gamepad_right_trigger",
+            description="Set right-trigger pressure (0..255).",
+            input_schema=schema({"value": {"type": "integer"}},
+                                required=["value"]),
+            handler=h.gamepad_right_trigger,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_gamepad_reset",
+            description=(
+                "Clear every pressed button / stick offset / trigger "
+                "pressure on the virtual gamepad."
+            ),
+            input_schema=schema({}),
+            handler=h.gamepad_reset,
+            annotations=DESTRUCTIVE,
+        ),
+    ]
+
+
 ALL_FACTORIES = (
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
     semantic_locator_tools, scheduler_tools, trigger_tools, hotkey_tools,
     screen_record_tools, process_and_shell_tools, remote_desktop_tools,
+    gamepad_tools,
 )
