@@ -86,6 +86,64 @@ def test_recv_handles_extended_payload_length():
         client.close()
 
 
+def test_handshake_does_not_over_read_into_next_frame():
+    """Regression: server pack of 101 + first WS frame in one segment.
+
+    When the host sends the HTTP upgrade response and the AUTH_CHALLENGE
+    frame back-to-back, the kernel coalesces them on loopback. A bulk
+    ``recv(1024)`` inside ``client_handshake`` would consume both, then
+    discard the post-header bytes — the next ``recv_message`` then
+    blocks forever on data that already arrived. Verify the handshake
+    leaves any trailing bytes in the kernel buffer.
+    """
+    server, client = _make_socketpair()
+    try:
+        import threading
+
+        # Drive client_handshake on a thread; on the server side we
+        # send 101 and a WS BINARY frame in a single sendall to mimic
+        # the production race that flaked CI.
+        done = threading.Event()
+
+        def client_side():
+            client_handshake(client, "127.0.0.1", 1234, path="/")
+            done.set()
+
+        thread = threading.Thread(target=client_side, daemon=True)
+        thread.start()
+        # Read the GET request, then send 101 + a tiny WS frame fused.
+        request = b""
+        while b"\r\n\r\n" not in request:
+            request += server.recv(1024)
+        sec_key = ""
+        for line in request.decode("iso-8859-1").split("\r\n"):
+            if line.lower().startswith("sec-websocket-key:"):
+                sec_key = line.split(":", 1)[1].strip()
+        import base64
+        import hashlib
+        accept = base64.b64encode(hashlib.sha1(  # nosec B324
+            (sec_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode("ascii"),
+            usedforsecurity=False,
+        ).digest()).decode("ascii")
+        response = (
+            "HTTP/1.1 101 Switching Protocols\r\n"
+            "Upgrade: websocket\r\n"
+            "Connection: Upgrade\r\n"
+            f"Sec-WebSocket-Accept: {accept}\r\n"
+            "\r\n"
+        ).encode("ascii")
+        # WS BINARY frame: FIN=1, opcode=2, len=3, payload=b"hi!"
+        ws_frame = b"\x82\x03hi!"
+        server.sendall(response + ws_frame)
+        assert done.wait(timeout=2.0)
+        # The frame must still be readable — i.e. handshake didn't
+        # swallow the bytes that followed "\r\n\r\n".
+        assert recv_message(client) == b"hi!"
+    finally:
+        server.close()
+        client.close()
+
+
 def test_handshake_rejects_non_websocket_request():
     server, client = _make_socketpair()
     try:
@@ -114,7 +172,6 @@ def _start_ws_host(token: str = "tok",
     return host
 
 
-@pytest.mark.flaky(reruns=2, reruns_delay=1)
 def test_ws_viewer_authenticates_and_receives_frames():
     host = _start_ws_host()
     try:
@@ -131,7 +188,6 @@ def test_ws_viewer_authenticates_and_receives_frames():
         host.stop(timeout=1.0)
 
 
-@pytest.mark.flaky(reruns=2, reruns_delay=1)
 def test_ws_viewer_with_wrong_token_is_rejected():
     host = _start_ws_host(token="right")
     try:
@@ -145,7 +201,6 @@ def test_ws_viewer_with_wrong_token_is_rejected():
         host.stop(timeout=1.0)
 
 
-@pytest.mark.flaky(reruns=2, reruns_delay=1)
 def test_ws_viewer_input_reaches_host_dispatcher():
     host = _start_ws_host()
     try:
@@ -166,7 +221,6 @@ def test_ws_viewer_input_reaches_host_dispatcher():
         host.stop(timeout=1.0)
 
 
-@pytest.mark.flaky(reruns=2, reruns_delay=1)
 def test_ws_host_announces_host_id():
     host = _start_ws_host(host_id="700800900")
     try:
