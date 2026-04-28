@@ -790,3 +790,123 @@ The status / observer tools (``ac_remote_host_status``,
 server's ``--readonly`` filter; everything that mutates state is
 correctly tagged ``destructiveHint: true`` so MCP clients can
 prompt for user confirmation.
+
+
+Driver-level input backends — drive games that ignore SendInput / XTest
+========================================================================
+
+The default Windows (SendInput) and Linux (XTest) input paths sit at
+the user-mode / X-server layer. Modern games that read input via
+``GetRawInputData`` (Win) or ``evdev`` (Linux) skip those layers
+entirely and ignore synthetic events. Three optional backends bridge
+the gap.
+
+Interception (Windows)
+----------------------
+
+Oblita's WHQL-signed Interception driver
+(https://github.com/oblitum/Interception) injects keyboard / mouse
+events at the HID layer; the OS sees them as real-hardware events.
+
+* New sub-package: ``je_auto_control/windows/interception/``
+  (``_dll.py`` ctypes bindings + ``keyboard.py`` + ``mouse.py``).
+* Same public surface as ``win32_ctype_keyboard_control`` /
+  ``win32_ctype_mouse_control`` — the platform wrapper just swaps
+  modules, no caller changes.
+* Opt-in via ``JE_AUTOCONTROL_WIN32_BACKEND=interception``; the
+  wrapper falls back to SendInput with a warning when the driver is
+  missing, so deployments can roll the driver out lazily.
+* Override device IDs with ``JE_AUTOCONTROL_INTERCEPTION_KEYBOARD``
+  / ``JE_AUTOCONTROL_INTERCEPTION_MOUSE`` (defaults: ``1`` / ``11``).
+
+Operator setup::
+
+   # 1. Install the driver as Administrator (one-time, requires reboot)
+   install-interception.exe /install
+
+   # 2. Tell AutoControl to route through it
+   setx JE_AUTOCONTROL_WIN32_BACKEND interception
+
+uinput (Linux)
+--------------
+
+The kernel's synthetic-input gateway. Events emitted via
+``/dev/uinput`` show up as a brand-new HID device, so anything reading
+``evdev`` (most games + SDL2 apps) sees them as real input.
+
+* New sub-package: ``je_auto_control/linux_with_x11/uinput/``
+  (``_device.py`` ctypes wrapper around ``ioctl`` + ``keyboard.py`` +
+  ``mouse.py``).
+* No third-party dependency — direct ``ctypes`` + ``ioctl`` to
+  ``/dev/uinput``.
+* Opt-in via ``JE_AUTOCONTROL_LINUX_BACKEND=uinput``; falls back to
+  XTest with a warning when ``/dev/uinput`` isn't writable.
+
+Operator setup::
+
+   # Load the kernel module if it isn't already.
+   sudo modprobe uinput
+
+   # Grant write access. For one-off testing:
+   sudo chmod 666 /dev/uinput
+
+   # For persistent provisioning, drop a udev rule:
+   echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' \
+     | sudo tee /etc/udev/rules.d/99-autocontrol-uinput.rules
+   sudo udevadm control --reload && sudo udevadm trigger
+   sudo usermod -aG input $USER  # log out / back in to apply
+
+   # Then opt in:
+   export JE_AUTOCONTROL_LINUX_BACKEND=uinput
+
+ViGEm virtual gamepad (Windows)
+-------------------------------
+
+For games that don't take keyboard input at all but read controllers,
+ViGEmBus exposes a virtual Xbox 360 / DualShock 4 controller that
+AutoControl drives through the third-party ``vgamepad`` Python
+package.
+
+* New module: ``je_auto_control/utils/gamepad/`` with a friendly
+  ``VirtualGamepad`` API (string-keyed buttons / dpad / sticks /
+  triggers, context manager).
+* Headless::
+
+     from je_auto_control import VirtualGamepad
+     with VirtualGamepad() as pad:
+         pad.click_button("a")               # face button A
+         pad.set_left_stick(16000, 0)        # int16 stick offsets
+         pad.set_right_trigger(255)          # 0..255 pressure
+         pad.set_dpad("up")                  # hold dpad up
+         pad.update()                        # flush → driver
+
+* Executor commands: ``AC_gamepad_press``, ``AC_gamepad_release``,
+  ``AC_gamepad_click``, ``AC_gamepad_dpad``,
+  ``AC_gamepad_left_stick`` / ``_right_stick``,
+  ``AC_gamepad_left_trigger`` / ``_right_trigger``, and
+  ``AC_gamepad_reset``.
+
+* MCP tools: same names with the ``ac_`` prefix
+  (``ac_gamepad_press``, ``ac_gamepad_left_stick``, …) — so a model
+  can play a gamepad-only game over MCP.
+
+Operator setup::
+
+   # 1. Install the ViGEmBus driver (one-time, requires reboot)
+   #    https://github.com/nefarius/ViGEmBus/releases
+   # 2. Install the Python wrapper:
+   pip install vgamepad
+
+Anti-cheat caveat (all three)
+-----------------------------
+
+Driver-level injection is harder to detect than SendInput / XTest,
+but anti-cheat systems with a kernel-mode driver of their own
+(Vanguard, Easy Anti-Cheat with kernel module, BattlEye) can still
+enumerate Interception / ViGEmBus / a freshly-created uinput device
+and refuse to launch.
+
+These backends target legitimate use cases — accessibility software,
+GUI testing of games that lock out user-mode input, controlling a
+remote game-running machine from a headless setup — and aren't a
+generic anti-cheat bypass.

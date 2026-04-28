@@ -1,5 +1,6 @@
 import json
 from dataclasses import dataclass
+from typing import Optional
 
 from PySide6.QtCore import QTimer, Signal, QObject
 from PySide6.QtGui import QIntValidator, QDoubleValidator, QKeyEvent, Qt
@@ -19,6 +20,8 @@ from je_auto_control.gui.live_hud_tab import LiveHUDTab
 from je_auto_control.gui.llm_planner_tab import LLMPlannerTab
 from je_auto_control.gui.ocr_tab import OCRReaderTab
 from je_auto_control.gui.plugins_tab import PluginsTab
+from je_auto_control.gui.profiler_tab import ProfilerTab
+from je_auto_control.gui.secrets_tab import SecretsTab
 from je_auto_control.gui.admin_console_tab import AdminConsoleTab
 from je_auto_control.gui.audit_log_tab import AuditLogTab
 from je_auto_control.gui.diagnostics_tab import DiagnosticsTab
@@ -26,13 +29,24 @@ from je_auto_control.gui.inspector_tab import InspectorTab
 from je_auto_control.gui.recording_editor_tab import RecordingEditorTab
 from je_auto_control.gui.usb_browser_tab import UsbBrowserTab
 from je_auto_control.gui.usb_devices_tab import UsbDevicesTab
-from je_auto_control.gui.remote_desktop_tab import RemoteDesktopTab
+# Remote desktop relies on the optional `webrtc` extra (aiortc + PyAV).
+# Importing it eagerly would break embedders (e.g. PyBreeze) that install
+# je_auto_control without the extra; fall back to a placeholder tab that
+# tells the user how to enable it.
+try:
+    from je_auto_control.gui.remote_desktop_tab import RemoteDesktopTab
+    _REMOTE_DESKTOP_IMPORT_ERROR: Optional[ImportError] = None
+except ImportError as _remote_desktop_error:
+    RemoteDesktopTab = None  # type: ignore[assignment]
+    _REMOTE_DESKTOP_IMPORT_ERROR = _remote_desktop_error
 from je_auto_control.gui.rest_api_tab import RestApiTab
 from je_auto_control.gui.run_history_tab import RunHistoryTab
 from je_auto_control.gui.scheduler_tab import SchedulerTab
 from je_auto_control.gui.script_builder import ScriptBuilderTab
 from je_auto_control.gui.selector import crop_template_to_file, open_region_selector
 from je_auto_control.gui.triggers_tab import TriggersTab
+from je_auto_control.gui.webhooks_tab import WebhooksTab
+from je_auto_control.gui.email_triggers_tab import EmailTriggersTab
 from je_auto_control.gui.variables_tab import VariablesTab
 from je_auto_control.gui.vlm_tab import VLMTab
 from je_auto_control.gui.window_tab import WindowManagerTab
@@ -87,12 +101,17 @@ class AutoControlGUIWidget(
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self._on_tab_close_requested)
 
+        # Default UI keeps only the last three of the previously-visible
+        # tabs (record / script_builder / remote_desktop) so the launcher
+        # opens on a focused capture+script+remote workflow. The earlier
+        # core tabs (auto_click / screenshot / image_detect) are still
+        # registered and reachable from the View menu's "show tab" list.
         self._add_tab("auto_click", "tab_auto_click", self._build_auto_click_tab(),
-                      category="core", default_visible=True)
+                      category="core")
         self._add_tab("screenshot", "tab_screenshot", self._build_screenshot_tab(),
-                      category="core", default_visible=True)
+                      category="core")
         self._add_tab("image_detect", "tab_image_detect", self._build_image_detect_tab(),
-                      category="core", default_visible=True)
+                      category="core")
         self._add_tab("record", "tab_record", self._build_record_tab(),
                       category="core", default_visible=True)
         self._add_tab("script_builder", "tab_script_builder", ScriptBuilderTab(),
@@ -102,6 +121,8 @@ class AutoControlGUIWidget(
         self._add_tab("recording_editor", "tab_recording_editor", RecordingEditorTab(),
                       category="editing")
         self._add_tab("variables", "tab_variables", VariablesTab(),
+                      category="editing")
+        self._add_tab("secrets", "tab_secrets", SecretsTab(),
                       category="editing")
         self._add_tab("vlm", "tab_vlm", VLMTab(),
                       category="detection")
@@ -119,14 +140,23 @@ class AutoControlGUIWidget(
                       category="automation")
         self._add_tab("triggers", "tab_triggers", TriggersTab(),
                       category="automation")
+        self._add_tab("webhooks", "tab_webhooks", WebhooksTab(),
+                      category="automation")
+        self._add_tab("email_triggers", "tab_email_triggers",
+                      EmailTriggersTab(), category="automation")
         self._add_tab("run_history", "tab_run_history", RunHistoryTab(),
+                      category="automation")
+        self._add_tab("profiler", "tab_profiler", ProfilerTab(),
                       category="automation")
         self._add_tab("window_manager", "tab_window_manager", WindowManagerTab(),
                       category="system")
         self._add_tab("plugins", "tab_plugins", PluginsTab(),
                       category="system")
-        self._add_tab("remote_desktop", "tab_remote_desktop", RemoteDesktopTab(),
-                      category="system", default_visible=True)
+        self._add_tab(
+            "remote_desktop", "tab_remote_desktop",
+            self._build_remote_desktop_tab(),
+            category="system", default_visible=True,
+        )
         self._add_tab("rest_api", "tab_rest_api", RestApiTab(),
                       category="system")
         self._add_tab("admin_console", "tab_admin_console", AdminConsoleTab(),
@@ -151,6 +181,26 @@ class AutoControlGUIWidget(
         self.repeat_count = 0
         self.repeat_max = 0
         self._record_data = []
+
+    @staticmethod
+    def _build_remote_desktop_tab() -> QWidget:
+        """Return the real remote-desktop tab, or a placeholder if the
+        ``webrtc`` extra is not installed."""
+        if RemoteDesktopTab is not None:
+            return RemoteDesktopTab()
+        placeholder = QWidget()
+        layout = QVBoxLayout(placeholder)
+        message = QLabel(
+            "Remote Desktop is unavailable: the optional 'webrtc' extra "
+            "(aiortc + PyAV) is not installed.\n\n"
+            "Install with:\n    pip install je_auto_control[webrtc]\n\n"
+            f"Underlying error: {_REMOTE_DESKTOP_IMPORT_ERROR!r}",
+        )
+        message.setWordWrap(True)
+        message.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        layout.addWidget(message)
+        layout.addStretch()
+        return placeholder
 
     # --- tab registry API ----------------------------------------------------
 

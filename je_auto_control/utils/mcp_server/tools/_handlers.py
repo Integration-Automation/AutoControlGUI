@@ -981,3 +981,60 @@ def remote_viewer_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
     """Forward ``action`` (mouse_move / type / etc.) through the viewer."""
     from je_auto_control.utils.remote_desktop.registry import registry
     return registry.send_input(action)
+
+
+# === Virtual gamepad (ViGEm) ================================================
+
+def gamepad_press(button: str) -> Dict[str, Any]:
+    """Press a virtual Xbox 360 button by friendly name."""
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().press_button(button)
+    return {"button": button, "state": "down"}
+
+
+def gamepad_release(button: str) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().release_button(button)
+    return {"button": button, "state": "up"}
+
+
+def gamepad_click(button: str) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().click_button(button)
+    return {"button": button, "state": "click"}
+
+
+def gamepad_dpad(direction: str) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_dpad(direction)
+    return {"dpad": direction}
+
+
+def gamepad_left_stick(x: int, y: int) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_left_stick(int(x), int(y))
+    return {"left_stick": [int(x), int(y)]}
+
+
+def gamepad_right_stick(x: int, y: int) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_right_stick(int(x), int(y))
+    return {"right_stick": [int(x), int(y)]}
+
+
+def gamepad_left_trigger(value: int) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_left_trigger(int(value))
+    return {"left_trigger": int(value)}
+
+
+def gamepad_right_trigger(value: int) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_right_trigger(int(value))
+    return {"right_trigger": int(value)}
+
+
+def gamepad_reset() -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().reset()
+    return {"reset": True}

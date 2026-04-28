@@ -78,6 +78,11 @@ from je_auto_control.utils.remote_desktop import (
 from je_auto_control.utils.remote_desktop.registry import (
     registry as remote_desktop_registry,
 )
+from je_auto_control.utils.gamepad import (
+    GamepadUnavailable, VirtualGamepad,
+    default_gamepad as default_virtual_gamepad,
+    is_available as is_virtual_gamepad_available,
+)
 # MCP server (headless stdio bridge for Claude / other MCP clients)
 from je_auto_control.utils.mcp_server import (
     AuditLogger, HttpMCPServer, MCPContent, MCPPrompt, MCPPromptArgument,
@@ -122,6 +127,15 @@ from je_auto_control.utils.config_bundle import (
     ConfigBundleExporter, ConfigBundleImporter, ImportReport,
     export_config_bundle, import_config_bundle,
 )
+# Profiler (headless)
+from je_auto_control.utils.profiler import (
+    ActionProfiler, ActionStats, default_profiler,
+)
+# Secrets (headless)
+from je_auto_control.utils.secrets import (
+    SecretManager, SecretStoreError, SecretStoreLocked,
+    default_secret_manager, default_secret_store_path,
+)
 # Run history (headless)
 from je_auto_control.utils.run_history.history_store import (
     HistoryStore, RunRecord, default_history_store,
@@ -130,6 +144,12 @@ from je_auto_control.utils.run_history.history_store import (
 from je_auto_control.utils.triggers.trigger_engine import (
     FilePathTrigger, ImageAppearsTrigger, PixelColorTrigger, TriggerEngine,
     WindowAppearsTrigger, default_trigger_engine,
+)
+from je_auto_control.utils.triggers.webhook_server import (
+    WebhookTrigger, WebhookTriggerServer, default_webhook_server,
+)
+from je_auto_control.utils.triggers.email_trigger import (
+    EmailTrigger, EmailTriggerWatcher, default_email_trigger_watcher,
 )
 # Recording editor (headless helpers)
 from je_auto_control.utils.recording_edit.editor import (
@@ -297,6 +317,14 @@ __all__ = [
     "TriggerEngine", "default_trigger_engine",
     "ImageAppearsTrigger", "WindowAppearsTrigger",
     "PixelColorTrigger", "FilePathTrigger",
+    "WebhookTrigger", "WebhookTriggerServer", "default_webhook_server",
+    "EmailTrigger", "EmailTriggerWatcher",
+    "default_email_trigger_watcher",
+    # Profiler
+    "ActionProfiler", "ActionStats", "default_profiler",
+    # Secret manager
+    "SecretManager", "SecretStoreError", "SecretStoreLocked",
+    "default_secret_manager", "default_secret_store_path",
     # Run history
     "HistoryStore", "RunRecord", "default_history_store",
     # Accessibility
@@ -312,6 +340,9 @@ __all__ = [
     "RemoteDesktopHost", "RemoteDesktopViewer",
     "RemoteDesktopAuthError", "RemoteDesktopInputError",
     "RemoteDesktopProtocolError", "remote_desktop_registry",
+    # Virtual gamepad (ViGEm)
+    "VirtualGamepad", "GamepadUnavailable",
+    "default_virtual_gamepad", "is_virtual_gamepad_available",
     "generate_html", "generate_html_report", "generate_json", "generate_json_report", "generate_xml",
     "generate_xml_report", "get_dir_files_as_list", "create_project_dir", "start_autocontrol_socket_server",
     "callback_executor", "package_manager", "ShellManager", "default_shell_manager",

@@ -63,6 +63,7 @@
 - **LLM 動作規劃器** — 用 Claude 把自然語言描述翻譯成驗證過的 `AC_*` 動作清單
 - **執行期變數與流程控制** — 執行時 `${var}` 取代，加上 `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` 讓腳本資料驅動
 - **遠端桌面** — 用 token 認證的 TCP 協定串流本機畫面並接收輸入，**或** 連線到他機觀看與控制（host + viewer GUI 皆內建）。可選 TLS（HTTPS 級加密）、WebSocket 傳輸（``ws://`` + ``wss://``，穿牆／瀏覽器友善）、持久化 9 位數 Host ID、host→viewer 音訊串流、雙向剪貼簿同步（文字 + 圖片）、分塊檔案傳輸（拖放 + 進度條；任意目的路徑；無大小上限）。另含資料夾同步（增量鏡像 — 本地刪除不會傳出去）與自架 coturn TURN 設定包產生器（turnserver.conf + systemd unit + docker-compose + README）。**AnyDesk 風格彈出視窗**：viewer 認證成功後遠端桌面會開在獨立的可調整大小頂層視窗，控制面板維持簡潔；Remote Desktop 子分頁外層包了 `QScrollArea`，小視窗下可捲動、4K 螢幕下會延展到整寬。同時可由 headless API 與 MCP 工具（`ac_remote_*`）直接驅動
+- **驅動層輸入後端（可選）** — 針對忽略 SendInput（Win）或 XTest（Linux）的遊戲／應用:**Interception driver 後端**(Windows,HID 層鍵鼠注入,使用 Oblita WHQL-signed driver,以 `JE_AUTOCONTROL_WIN32_BACKEND=interception` 啟用)、**uinput 後端**(Linux,kernel `/dev/uinput` 合成 HID 裝置,以 `JE_AUTOCONTROL_LINUX_BACKEND=uinput` 啟用),以及 **ViGEm 虛擬手把**(Windows,針對只認手把的遊戲,提供虛擬 Xbox 360 手把 + 友善的 button / dpad / stick / trigger API,並暴露為 `AC_gamepad_*` 執行器指令與 `ac_gamepad_*` MCP 工具)。三者在 driver 沒裝時都會優雅 fallback,不影響既有部署
 - **剪貼簿** — 於 Windows / macOS / Linux 讀寫系統剪貼簿文字
 - **截圖與螢幕錄製** — 擷取全螢幕或指定區域為圖片，錄製螢幕為影片（AVI/MP4）
 - **動作錄製與回放** — 錄製滑鼠/鍵盤事件並重新播放

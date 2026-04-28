@@ -43,7 +43,9 @@ from je_auto_control.utils.ocr.ocr_engine import (
     read_text_in_region as ocr_read_text_in_region,
     wait_for_text as ocr_wait_for_text,
 )
+from je_auto_control.utils.profiler.profiler import default_profiler
 from je_auto_control.utils.run_history.history_store import default_history_store
+from je_auto_control.utils.secrets import default_secret_manager
 from je_auto_control.utils.script_vars.interpolate import (
     interpolate_actions, interpolate_value,
 )
@@ -151,6 +153,62 @@ def _remote_viewer_status() -> Dict[str, Any]:
 
 def _remote_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
     return remote_desktop_registry.send_input(action)
+
+
+# --- Virtual gamepad (ViGEm) -----------------------------------------------
+
+def _gamepad_press(button: str) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().press_button(button)
+    return {"button": button, "state": "down"}
+
+
+def _gamepad_release(button: str) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().release_button(button)
+    return {"button": button, "state": "up"}
+
+
+def _gamepad_click(button: str) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().click_button(button)
+    return {"button": button, "state": "click"}
+
+
+def _gamepad_dpad(direction: str) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_dpad(direction)
+    return {"dpad": direction}
+
+
+def _gamepad_left_stick(x: int, y: int) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_left_stick(int(x), int(y))
+    return {"left_stick": [int(x), int(y)]}
+
+
+def _gamepad_right_stick(x: int, y: int) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_right_stick(int(x), int(y))
+    return {"right_stick": [int(x), int(y)]}
+
+
+def _gamepad_left_trigger(value: int) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_left_trigger(int(value))
+    return {"left_trigger": int(value)}
+
+
+def _gamepad_right_trigger(value: int) -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().set_right_trigger(int(value))
+    return {"right_trigger": int(value)}
+
+
+def _gamepad_reset() -> Dict[str, Any]:
+    from je_auto_control.utils.gamepad import default_gamepad
+    default_gamepad().reset()
+    return {"reset": True}
 
 
 def _rest_api_start(host: str = "127.0.0.1",
@@ -372,6 +430,219 @@ def _ocr_find_regex_as_dicts(pattern: str,
     ]
 
 
+def _email_trigger_add(host: str, username: str, password: str,
+                       script_path: str,
+                       port: Optional[int] = None,
+                       use_ssl: bool = True,
+                       mailbox: str = "INBOX",
+                       search_criteria: str = "UNSEEN",
+                       mark_seen: bool = True,
+                       poll_seconds: float = 60.0) -> Dict[str, Any]:
+    """Executor adapter: register an IMAP poll trigger."""
+    from je_auto_control.utils.triggers.email_trigger import (
+        default_email_trigger_watcher,
+    )
+    trigger = default_email_trigger_watcher.add(
+        host=host, username=username, password=password,
+        script_path=script_path, port=port, use_ssl=bool(use_ssl),
+        mailbox=mailbox, search_criteria=search_criteria,
+        mark_seen=bool(mark_seen), poll_seconds=float(poll_seconds),
+    )
+    return {
+        "id": trigger.trigger_id, "host": trigger.host,
+        "username": trigger.username, "mailbox": trigger.mailbox,
+        "search_criteria": trigger.search_criteria,
+        "poll_seconds": trigger.poll_seconds,
+    }
+
+
+def _email_trigger_remove(trigger_id: str) -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.email_trigger import (
+        default_email_trigger_watcher,
+    )
+    return {"removed": default_email_trigger_watcher.remove(trigger_id)}
+
+
+def _email_trigger_list() -> List[Dict[str, Any]]:
+    from je_auto_control.utils.triggers.email_trigger import (
+        default_email_trigger_watcher,
+    )
+    rows: List[Dict[str, Any]] = []
+    for trigger in default_email_trigger_watcher.list_triggers():
+        rows.append({
+            "id": trigger.trigger_id, "host": trigger.host,
+            "username": trigger.username, "mailbox": trigger.mailbox,
+            "script_path": trigger.script_path,
+            "search_criteria": trigger.search_criteria,
+            "poll_seconds": trigger.poll_seconds,
+            "enabled": trigger.enabled, "fired": trigger.fired,
+            "last_error": trigger.last_error,
+        })
+    return rows
+
+
+def _email_trigger_start() -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.email_trigger import (
+        default_email_trigger_watcher,
+    )
+    default_email_trigger_watcher.start()
+    return {"running": default_email_trigger_watcher.is_running}
+
+
+def _email_trigger_stop() -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.email_trigger import (
+        default_email_trigger_watcher,
+    )
+    default_email_trigger_watcher.stop()
+    return {"running": default_email_trigger_watcher.is_running}
+
+
+def _email_trigger_poll_once() -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.email_trigger import (
+        default_email_trigger_watcher,
+    )
+    return {"fired": default_email_trigger_watcher.poll_once()}
+
+
+def _webhook_start(host: str = "127.0.0.1", port: int = 0) -> Dict[str, Any]:
+    """Executor adapter: start the webhook HTTP server."""
+    from je_auto_control.utils.triggers.webhook_server import (
+        default_webhook_server,
+    )
+    bound_host, bound_port = default_webhook_server.start(host, int(port))
+    return {"host": bound_host, "port": bound_port}
+
+
+def _webhook_stop() -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.webhook_server import (
+        default_webhook_server,
+    )
+    default_webhook_server.stop()
+    return {"running": default_webhook_server.is_running}
+
+
+def _webhook_add(path: str, script_path: str,
+                 methods: Optional[List[str]] = None,
+                 token: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.webhook_server import (
+        default_webhook_server,
+    )
+    trigger = default_webhook_server.add(
+        path=path, script_path=script_path,
+        methods=methods, token=token,
+    )
+    return {
+        "id": trigger.webhook_id, "path": trigger.path,
+        "methods": list(trigger.methods),
+        "script_path": trigger.script_path,
+        "has_token": bool(trigger.token),
+    }
+
+
+def _webhook_remove(webhook_id: str) -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.webhook_server import (
+        default_webhook_server,
+    )
+    return {"removed": default_webhook_server.remove(webhook_id)}
+
+
+def _webhook_list() -> List[Dict[str, Any]]:
+    from je_auto_control.utils.triggers.webhook_server import (
+        default_webhook_server,
+    )
+    rows: List[Dict[str, Any]] = []
+    for trigger in default_webhook_server.list_webhooks():
+        rows.append({
+            "id": trigger.webhook_id, "path": trigger.path,
+            "methods": list(trigger.methods),
+            "script_path": trigger.script_path,
+            "enabled": trigger.enabled, "fired": trigger.fired,
+            "has_token": bool(trigger.token),
+        })
+    return rows
+
+
+def _webhook_status() -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.webhook_server import (
+        default_webhook_server,
+    )
+    bound = default_webhook_server.bound_address
+    return {
+        "running": default_webhook_server.is_running,
+        "host": bound[0] if bound else None,
+        "port": bound[1] if bound else None,
+        "registered": len(default_webhook_server.list_webhooks()),
+    }
+
+
+def _secret_initialize(passphrase: str) -> Dict[str, Any]:
+    """Executor adapter: create a fresh vault under ``passphrase``."""
+    default_secret_manager.initialize(passphrase)
+    return {
+        "initialized": True,
+        "path": str(default_secret_manager.path),
+        "unlocked": default_secret_manager.is_unlocked,
+    }
+
+
+def _secret_unlock(passphrase: str) -> Dict[str, Any]:
+    return {"unlocked": default_secret_manager.unlock(passphrase)}
+
+
+def _secret_lock() -> Dict[str, Any]:
+    default_secret_manager.lock()
+    return {"unlocked": default_secret_manager.is_unlocked}
+
+
+def _secret_set(name: str, value: str) -> Dict[str, Any]:
+    default_secret_manager.set(name, value)
+    return {"name": name, "saved": True}
+
+
+def _secret_remove(name: str) -> Dict[str, Any]:
+    return {"name": name, "removed": default_secret_manager.remove(name)}
+
+
+def _secret_list() -> List[str]:
+    return default_secret_manager.list_names()
+
+
+def _secret_status() -> Dict[str, Any]:
+    return {
+        "path": str(default_secret_manager.path),
+        "initialized": default_secret_manager.is_initialized,
+        "unlocked": default_secret_manager.is_unlocked,
+    }
+
+
+def _profiler_stats_as_dicts(limit: Optional[int] = None) -> List[dict]:
+    """Executor adapter: dump profiler stats as JSON-friendly dicts."""
+    rows = default_profiler.stats()
+    if limit is not None:
+        rows = rows[: max(0, int(limit))]
+    return [row.to_dict() for row in rows]
+
+
+def _profiler_hot_spots_as_dicts(limit: int = 10) -> List[dict]:
+    """Executor adapter: top N actions by total time, as dicts."""
+    return [row.to_dict() for row in default_profiler.hot_spots(int(limit))]
+
+
+def _profiler_enable() -> Dict[str, Any]:
+    default_profiler.enable()
+    return {"enabled": default_profiler.enabled}
+
+
+def _profiler_disable() -> Dict[str, Any]:
+    default_profiler.disable()
+    return {"enabled": default_profiler.enabled}
+
+
+def _profiler_reset() -> Dict[str, Any]:
+    default_profiler.reset()
+    return {"reset": True}
+
+
 def _history_list_as_dicts(limit: int = 100,
                            source_type: Optional[str] = None) -> List[dict]:
     """Executor adapter: list run history as plain dicts (JSON-friendly)."""
@@ -488,6 +759,38 @@ class Executor:
             "AC_history_list": _history_list_as_dicts,
             "AC_history_clear": default_history_store.clear,
 
+            # Profiler
+            "AC_profiler_enable": _profiler_enable,
+            "AC_profiler_disable": _profiler_disable,
+            "AC_profiler_reset": _profiler_reset,
+            "AC_profiler_stats": _profiler_stats_as_dicts,
+            "AC_profiler_hot_spots": _profiler_hot_spots_as_dicts,
+
+            # Webhook trigger (HTTP push triggers)
+            "AC_webhook_start": _webhook_start,
+            "AC_webhook_stop": _webhook_stop,
+            "AC_webhook_add": _webhook_add,
+            "AC_webhook_remove": _webhook_remove,
+            "AC_webhook_list": _webhook_list,
+            "AC_webhook_status": _webhook_status,
+
+            # Email/IMAP poll trigger
+            "AC_email_trigger_add": _email_trigger_add,
+            "AC_email_trigger_remove": _email_trigger_remove,
+            "AC_email_trigger_list": _email_trigger_list,
+            "AC_email_trigger_start": _email_trigger_start,
+            "AC_email_trigger_stop": _email_trigger_stop,
+            "AC_email_trigger_poll_once": _email_trigger_poll_once,
+
+            # Secret manager (encrypted vault for ${secrets.NAME})
+            "AC_secret_init": _secret_initialize,
+            "AC_secret_unlock": _secret_unlock,
+            "AC_secret_lock": _secret_lock,
+            "AC_secret_set": _secret_set,
+            "AC_secret_remove": _secret_remove,
+            "AC_secret_list": _secret_list,
+            "AC_secret_status": _secret_status,
+
             # Accessibility-tree widget location
             "AC_a11y_list": _a11y_list_as_dicts,
             "AC_a11y_find": _a11y_find_as_dict,
@@ -515,6 +818,17 @@ class Executor:
             "AC_remote_disconnect": _remote_disconnect,
             "AC_remote_viewer_status": _remote_viewer_status,
             "AC_remote_send_input": _remote_send_input,
+
+            # Virtual gamepad (ViGEm — drives games that ignore SendInput)
+            "AC_gamepad_press": _gamepad_press,
+            "AC_gamepad_release": _gamepad_release,
+            "AC_gamepad_click": _gamepad_click,
+            "AC_gamepad_dpad": _gamepad_dpad,
+            "AC_gamepad_left_stick": _gamepad_left_stick,
+            "AC_gamepad_right_stick": _gamepad_right_stick,
+            "AC_gamepad_left_trigger": _gamepad_left_trigger,
+            "AC_gamepad_right_trigger": _gamepad_right_trigger,
+            "AC_gamepad_reset": _gamepad_reset,
 
             # REST API (HTTP front-end exposing the headless API)
             "AC_rest_api_start": _rest_api_start,
@@ -657,8 +971,10 @@ class Executor:
                         raise_on_error: bool) -> None:
         """Execute a single action, recording the result or raising."""
         key = "execute: " + str(action)
+        action_name = action[0] if action and isinstance(action[0], str) else "<invalid>"
         try:
-            record[key] = self._execute_event(action)
+            with default_profiler.measure(action_name):
+                record[key] = self._execute_event(action)
         except (LoopBreak, LoopContinue):
             raise
         except (AutoControlActionException, OSError, RuntimeError,
