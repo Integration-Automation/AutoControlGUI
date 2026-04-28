@@ -910,3 +910,189 @@ These backends target legitimate use cases — accessibility software,
 GUI testing of games that lock out user-mode input, controlling a
 remote game-running machine from a headless setup — and aren't a
 generic anti-cheat bypass.
+
+
+Per-action profiler
+===================
+
+Records wall-clock duration for every ``AC_*`` action so you can answer
+"which step is dominating this script's runtime?" without external
+tooling. Profiling is opt-in — when disabled, the executor wrapper has
+zero overhead::
+
+   import je_auto_control as ac
+   ac.default_profiler.enable()
+   ac.execute_action([["AC_locate_image_center", {"image": "btn.png"}],
+                      ["AC_click_mouse"]])
+   for row in ac.default_profiler.hot_spots(limit=5):
+       print(row.name, row.calls, row.average_seconds)
+
+Action-JSON commands::
+
+   [["AC_profiler_enable"]]
+   [["AC_profiler_stats", {"limit": 10}]]
+   [["AC_profiler_hot_spots", {"limit": 5}]]
+   [["AC_profiler_reset"]]
+   [["AC_profiler_disable"]]
+
+GUI: **Profiler** tab — live hot-spot table (calls / total / avg / min /
+max / share) refreshed every second. Toggle recording, reset stats, or
+export the snapshot through the headless API.
+
+
+Run history timeline + failure thumbnails
+=========================================
+
+The Run History tab gains a Gantt-style strip beneath the filter row:
+each scheduler / trigger / hotkey / webhook / email fire is rendered as
+a coloured bar on a horizontal time axis (green = ok, red = error,
+amber = still running). Selecting a bar syncs the table row, and a
+right-hand preview panel surfaces the failure screenshot already
+captured by the artifact manager.
+
+Headless callers query the same data through the existing run history
+store::
+
+   import je_auto_control as ac
+   for row in ac.default_history_store.list_runs(limit=20):
+       print(row.id, row.status, row.duration_seconds, row.artifact_path)
+
+No new commands — the store API is unchanged. The GUI is purely a
+thin visualization wrapper over the existing `runs` table.
+
+
+Encrypted secret manager
+========================
+
+Action scripts that need API tokens, IMAP passwords, etc. should never
+embed plaintext. The new vault stores Fernet-encrypted entries under
+``~/.je_auto_control/secrets/vault.json``; a passphrase derives the
+key via PBKDF2-HMAC-SHA256 (600,000 iterations, 16-byte salt)::
+
+   import je_auto_control as ac
+   ac.default_secret_manager.initialize("my-vault-passphrase")
+   ac.default_secret_manager.set("github_token", "ghp_xxxxx")
+   ac.default_secret_manager.lock()
+
+   # later — in the same process or a new run:
+   ac.default_secret_manager.unlock("my-vault-passphrase")
+
+Action-JSON commands::
+
+   [["AC_secret_init",   {"passphrase": "..."}]]
+   [["AC_secret_unlock", {"passphrase": "..."}]]
+   [["AC_secret_set",    {"name": "github_token", "value": "ghp_xxx"}]]
+   [["AC_secret_list"]]
+   [["AC_secret_remove", {"name": "github_token"}]]
+   [["AC_secret_lock"]]
+   [["AC_secret_status"]]
+
+Action scripts reference vault entries through ``${secrets.NAME}``
+placeholders. The interpolator routes the ``secrets.`` namespace to the
+vault rather than the regular variable scope, so plaintext values never
+land in the variable bag::
+
+   [["AC_shell_command",
+     {"command": "curl -H \"Authorization: Bearer ${secrets.github_token}\" ..."}]]
+
+GUI: **Secrets** tab — initialize the vault, unlock it, add / remove
+entries, change passphrase. The vault file is created with mode 0o600
+on POSIX systems; on Windows the default ACL already restricts
+read access to the owning user.
+
+
+Webhook (HTTP push) trigger
+===========================
+
+A bundled :mod:`http.server` dispatcher fires an action script when an
+external service POSTs to a registered path. Configure path, allowed
+methods, and an optional bearer token; the request method, path, query,
+headers, raw body, and parsed JSON are seeded into the variable scope::
+
+   import je_auto_control as ac
+   ac.default_webhook_server.add(
+       path="/jobs/build", script_path="hooks/on_build.json",
+       methods=["POST"], token="topsecret",
+   )
+   host, port = ac.default_webhook_server.start("127.0.0.1", 0)
+   print("listening on", host, port)
+
+The bound script reads the request through ``${webhook.*}`` placeholders::
+
+   [
+     ["AC_set_var", {"name": "branch", "value": "${webhook.query.ref}"}],
+     ["AC_shell_command",
+      {"command": "echo received build for ${webhook.body}"}]
+   ]
+
+Action-JSON commands::
+
+   [["AC_webhook_start", {"host": "127.0.0.1", "port": 8765}]]
+   [["AC_webhook_add",   {"path": "/jobs", "script_path": "...",
+                          "methods": ["POST"], "token": "..."}]]
+   [["AC_webhook_list"]]
+   [["AC_webhook_remove", {"webhook_id": "abcd1234"}]]
+   [["AC_webhook_status"]]
+   [["AC_webhook_stop"]]
+
+Each fire is recorded in run history as ``trigger`` with source id
+``webhook:<id>`` so the dashboard surfaces webhook activity alongside
+other triggers. The body is capped at 1 MiB and bearer-token comparison
+uses :func:`hmac.compare_digest`. Bind to ``127.0.0.1`` unless the
+listener genuinely needs to be reachable from elsewhere on the network.
+
+GUI: **Webhooks** tab — start/stop the server, register paths, view the
+fire counter and auth state per route.
+
+
+IMAP email trigger
+==================
+
+Poll-based watcher that logs into a mailbox on a configurable interval
+and runs an action script once per matching message::
+
+   import je_auto_control as ac
+   ac.default_email_trigger_watcher.add(
+       host="imap.gmail.com", username="user@example.com",
+       password="app-specific-password",
+       script_path="hooks/on_alert.json",
+       mailbox="INBOX", search_criteria='UNSEEN FROM "alerts@..."',
+       poll_seconds=120, mark_seen=True,
+   )
+   ac.default_email_trigger_watcher.start()
+
+The bound script sees the message metadata via ``${email.*}``::
+
+   [
+     ["AC_if_var", {
+       "name": "email.subject", "op": "contains", "value": "CRITICAL",
+       "then": [["AC_hotkey", {"keys": ["ctrl", "alt", "p"]}]]
+     }]
+   ]
+
+Variables seeded per fire: ``email.uid``, ``email.from``, ``email.to``,
+``email.subject``, ``email.message_id``, ``email.date``, ``email.body``.
+
+Action-JSON commands::
+
+   [["AC_email_trigger_add",       {"host": "...", "username": "...",
+                                    "password": "${secrets.imap_pw}",
+                                    "script_path": "...",
+                                    "mailbox": "INBOX",
+                                    "search_criteria": "UNSEEN",
+                                    "poll_seconds": 120,
+                                    "mark_seen": true,
+                                    "use_ssl": true}]]
+   [["AC_email_trigger_start"]]
+   [["AC_email_trigger_poll_once"]]
+   [["AC_email_trigger_list"]]
+   [["AC_email_trigger_remove", {"trigger_id": "abcd1234"}]]
+   [["AC_email_trigger_stop"]]
+
+The watcher tracks already-fired UIDs in process memory, and optionally
+flags messages ``\\Seen`` so the same mail isn't replayed across
+restarts. TLS is pinned at 1.2 minimum. Combine ``AC_email_trigger_add``
+with ``${secrets.NAME}`` so passwords never appear in the JSON.
+
+GUI: **Email Triggers** tab — register IMAP triggers, start/stop the
+watcher, run a manual poll, inspect last error and fire counter.

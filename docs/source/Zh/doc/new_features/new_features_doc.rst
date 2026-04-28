@@ -854,3 +854,180 @@ BattlEye)依然可以列舉 Interception / ViGEmBus / 新建立的 uinput
 
 這三個後端針對的是合法用途 — 輔助科技、遊戲 GUI 測試、從 headless
 環境控制執行遊戲的遠端機器 — **不是** 通用反作弊繞過工具。
+
+
+效能分析器(Profiler)
+====================
+
+針對每個 ``AC_*`` 動作記錄執行時間,讓你不用外部工具就能回答
+「哪一步是腳本的瓶頸?」分析是 opt-in 的,關閉時 executor 包裝層
+零開銷::
+
+   import je_auto_control as ac
+   ac.default_profiler.enable()
+   ac.execute_action([["AC_locate_image_center", {"image": "btn.png"}],
+                      ["AC_click_mouse"]])
+   for row in ac.default_profiler.hot_spots(limit=5):
+       print(row.name, row.calls, row.average_seconds)
+
+Action JSON 指令::
+
+   [["AC_profiler_enable"]]
+   [["AC_profiler_stats", {"limit": 10}]]
+   [["AC_profiler_hot_spots", {"limit": 5}]]
+   [["AC_profiler_reset"]]
+   [["AC_profiler_disable"]]
+
+GUI: **Profiler** 分頁 — 每秒重新整理熱點表(次數 / 總時間 / 平均 /
+最短 / 最長 / 佔比),支援開關記錄、清除統計,或透過 headless API 匯出
+快照。
+
+
+執行紀錄時間軸 + 失敗截圖
+=========================
+
+Run History 分頁在篩選列下方多了一條 Gantt 風格的時間軸:每筆
+scheduler / trigger / hotkey / webhook / email 觸發都繪成橫向時間
+軸上的色條(綠 = ok、紅 = error、琥珀 = 進行中)。點選色條會同步
+表格列,右側預覽面板顯示由 artifact manager 已捕捉的失敗截圖。
+
+Headless 端讀取相同資料用既有的 run history store::
+
+   import je_auto_control as ac
+   for row in ac.default_history_store.list_runs(limit=20):
+       print(row.id, row.status, row.duration_seconds, row.artifact_path)
+
+沒有新增指令 — store API 維持不變,GUI 只是 ``runs`` 表的薄殼可視化。
+
+
+密鑰管理器(Secret Manager)
+==========================
+
+需要 API token、IMAP 密碼等敏感資訊的腳本,絕不該明文嵌入。新的
+密鑰庫把 Fernet 加密過的條目存在 ``~/.je_auto_control/secrets/vault.json``;
+通行碼透過 PBKDF2-HMAC-SHA256(60 萬次迭代,16 byte 鹽值)推導出金鑰::
+
+   import je_auto_control as ac
+   ac.default_secret_manager.initialize("my-vault-passphrase")
+   ac.default_secret_manager.set("github_token", "ghp_xxxxx")
+   ac.default_secret_manager.lock()
+
+   # 之後 — 在同一個程序或新的 run:
+   ac.default_secret_manager.unlock("my-vault-passphrase")
+
+Action JSON 指令::
+
+   [["AC_secret_init",   {"passphrase": "..."}]]
+   [["AC_secret_unlock", {"passphrase": "..."}]]
+   [["AC_secret_set",    {"name": "github_token", "value": "ghp_xxx"}]]
+   [["AC_secret_list"]]
+   [["AC_secret_remove", {"name": "github_token"}]]
+   [["AC_secret_lock"]]
+   [["AC_secret_status"]]
+
+腳本透過 ``${secrets.NAME}`` 佔位符引用 vault 條目。插補器會把
+``secrets.`` 命名空間導向 vault,而不是普通變數作用域,所以明文值
+永遠不會進到變數袋裡::
+
+   [["AC_shell_command",
+     {"command": "curl -H \"Authorization: Bearer ${secrets.github_token}\" ..."}]]
+
+GUI: **Secrets** 分頁 — 建立 vault、解鎖、新增 / 移除條目、變更
+通行碼。POSIX 系統上 vault 檔以 0o600 建立;Windows 預設 ACL 已限制
+只有擁有者能讀取。
+
+
+Webhook(HTTP push)觸發
+=======================
+
+內建的 :mod:`http.server` dispatcher 在外部服務 POST 到註冊路徑時
+觸發腳本。可設定路徑、允許的方法、可選 bearer token;請求方法、
+路徑、query、headers、原始 body、解析後 JSON 都會種到變數作用域::
+
+   import je_auto_control as ac
+   ac.default_webhook_server.add(
+       path="/jobs/build", script_path="hooks/on_build.json",
+       methods=["POST"], token="topsecret",
+   )
+   host, port = ac.default_webhook_server.start("127.0.0.1", 0)
+   print("listening on", host, port)
+
+綁定的腳本透過 ``${webhook.*}`` 佔位符讀取請求::
+
+   [
+     ["AC_set_var", {"name": "branch", "value": "${webhook.query.ref}"}],
+     ["AC_shell_command",
+      {"command": "echo received build for ${webhook.body}"}]
+   ]
+
+Action JSON 指令::
+
+   [["AC_webhook_start", {"host": "127.0.0.1", "port": 8765}]]
+   [["AC_webhook_add",   {"path": "/jobs", "script_path": "...",
+                          "methods": ["POST"], "token": "..."}]]
+   [["AC_webhook_list"]]
+   [["AC_webhook_remove", {"webhook_id": "abcd1234"}]]
+   [["AC_webhook_status"]]
+   [["AC_webhook_stop"]]
+
+每次觸發以 ``trigger`` 來源寫入 run history,source id 為
+``webhook:<id>``,讓 dashboard 把 webhook 活動和其他 trigger 並排
+顯示。Body 上限 1 MiB,bearer token 比對用
+:func:`hmac.compare_digest`。除非你真的需要從網路其他地方連入,
+否則綁定 ``127.0.0.1``。
+
+GUI: **Webhooks** 分頁 — 啟動 / 停止伺服器、註冊路徑、檢視每條
+路由的觸發次數與驗證狀態。
+
+
+IMAP Email 觸發
+===============
+
+輪詢式 watcher,依設定週期登入信箱,每封符合條件的郵件執行一次
+腳本::
+
+   import je_auto_control as ac
+   ac.default_email_trigger_watcher.add(
+       host="imap.gmail.com", username="user@example.com",
+       password="app-specific-password",
+       script_path="hooks/on_alert.json",
+       mailbox="INBOX", search_criteria='UNSEEN FROM "alerts@..."',
+       poll_seconds=120, mark_seen=True,
+   )
+   ac.default_email_trigger_watcher.start()
+
+腳本透過 ``${email.*}`` 看到郵件中繼資料::
+
+   [
+     ["AC_if_var", {
+       "name": "email.subject", "op": "contains", "value": "CRITICAL",
+       "then": [["AC_hotkey", {"keys": ["ctrl", "alt", "p"]}]]
+     }]
+   ]
+
+每次觸發種入的變數: ``email.uid``、``email.from``、``email.to``、
+``email.subject``、``email.message_id``、``email.date``、``email.body``。
+
+Action JSON 指令::
+
+   [["AC_email_trigger_add",       {"host": "...", "username": "...",
+                                    "password": "${secrets.imap_pw}",
+                                    "script_path": "...",
+                                    "mailbox": "INBOX",
+                                    "search_criteria": "UNSEEN",
+                                    "poll_seconds": 120,
+                                    "mark_seen": true,
+                                    "use_ssl": true}]]
+   [["AC_email_trigger_start"]]
+   [["AC_email_trigger_poll_once"]]
+   [["AC_email_trigger_list"]]
+   [["AC_email_trigger_remove", {"trigger_id": "abcd1234"}]]
+   [["AC_email_trigger_stop"]]
+
+Watcher 在 process 記憶體中追蹤已觸發的 UID,可選擇把訊息標為
+``\\Seen`` 確保跨重啟不會重複觸發。TLS 強制最低 1.2 版。把
+``AC_email_trigger_add`` 跟 ``${secrets.NAME}`` 搭配使用,
+密碼就不會出現在 JSON 裡。
+
+GUI: **Email Triggers** 分頁 — 註冊 IMAP 觸發、啟動 / 停止 watcher、
+手動觸發一次輪詢、檢視最近錯誤與觸發次數。
