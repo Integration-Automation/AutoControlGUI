@@ -17,7 +17,6 @@ Getting Started
 
 .. toctree::
    :maxdepth: 2
-   :caption: Getting Started
 
    getting_started/installation
    getting_started/quickstart
@@ -27,7 +26,6 @@ User Guide (English)
 
 .. toctree::
    :maxdepth: 2
-   :caption: User Guide (English)
 
    Eng/eng_index
 
@@ -36,7 +34,6 @@ User Guide (繁體中文)
 
 .. toctree::
    :maxdepth: 2
-   :caption: 使用者指南 (繁體中文)
 
    Zh/zh_index
 
@@ -45,7 +42,6 @@ API Reference
 
 .. toctree::
    :maxdepth: 2
-   :caption: API Reference
 
    API/api_index
 
