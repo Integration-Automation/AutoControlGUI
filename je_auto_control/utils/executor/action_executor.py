@@ -43,6 +43,7 @@ from je_auto_control.utils.ocr.ocr_engine import (
     read_text_in_region as ocr_read_text_in_region,
     wait_for_text as ocr_wait_for_text,
 )
+from je_auto_control.utils.profiler.profiler import default_profiler
 from je_auto_control.utils.run_history.history_store import default_history_store
 from je_auto_control.utils.script_vars.interpolate import (
     interpolate_actions, interpolate_value,
@@ -428,6 +429,34 @@ def _ocr_find_regex_as_dicts(pattern: str,
     ]
 
 
+def _profiler_stats_as_dicts(limit: Optional[int] = None) -> List[dict]:
+    """Executor adapter: dump profiler stats as JSON-friendly dicts."""
+    rows = default_profiler.stats()
+    if limit is not None:
+        rows = rows[: max(0, int(limit))]
+    return [row.to_dict() for row in rows]
+
+
+def _profiler_hot_spots_as_dicts(limit: int = 10) -> List[dict]:
+    """Executor adapter: top N actions by total time, as dicts."""
+    return [row.to_dict() for row in default_profiler.hot_spots(int(limit))]
+
+
+def _profiler_enable() -> Dict[str, Any]:
+    default_profiler.enable()
+    return {"enabled": default_profiler.enabled}
+
+
+def _profiler_disable() -> Dict[str, Any]:
+    default_profiler.disable()
+    return {"enabled": default_profiler.enabled}
+
+
+def _profiler_reset() -> Dict[str, Any]:
+    default_profiler.reset()
+    return {"reset": True}
+
+
 def _history_list_as_dicts(limit: int = 100,
                            source_type: Optional[str] = None) -> List[dict]:
     """Executor adapter: list run history as plain dicts (JSON-friendly)."""
@@ -543,6 +572,13 @@ class Executor:
             # Run history
             "AC_history_list": _history_list_as_dicts,
             "AC_history_clear": default_history_store.clear,
+
+            # Profiler
+            "AC_profiler_enable": _profiler_enable,
+            "AC_profiler_disable": _profiler_disable,
+            "AC_profiler_reset": _profiler_reset,
+            "AC_profiler_stats": _profiler_stats_as_dicts,
+            "AC_profiler_hot_spots": _profiler_hot_spots_as_dicts,
 
             # Accessibility-tree widget location
             "AC_a11y_list": _a11y_list_as_dicts,
@@ -724,8 +760,10 @@ class Executor:
                         raise_on_error: bool) -> None:
         """Execute a single action, recording the result or raising."""
         key = "execute: " + str(action)
+        action_name = action[0] if action and isinstance(action[0], str) else "<invalid>"
         try:
-            record[key] = self._execute_event(action)
+            with default_profiler.measure(action_name):
+                record[key] = self._execute_event(action)
         except (LoopBreak, LoopContinue):
             raise
         except (AutoControlActionException, OSError, RuntimeError,

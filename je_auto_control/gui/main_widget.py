@@ -19,6 +19,7 @@ from je_auto_control.gui.live_hud_tab import LiveHUDTab
 from je_auto_control.gui.llm_planner_tab import LLMPlannerTab
 from je_auto_control.gui.ocr_tab import OCRReaderTab
 from je_auto_control.gui.plugins_tab import PluginsTab
+from je_auto_control.gui.profiler_tab import ProfilerTab
 from je_auto_control.gui.admin_console_tab import AdminConsoleTab
 from je_auto_control.gui.audit_log_tab import AuditLogTab
 from je_auto_control.gui.diagnostics_tab import DiagnosticsTab
@@ -125,6 +126,8 @@ class AutoControlGUIWidget(
         self._add_tab("triggers", "tab_triggers", TriggersTab(),
                       category="automation")
         self._add_tab("run_history", "tab_run_history", RunHistoryTab(),
+                      category="automation")
+        self._add_tab("profiler", "tab_profiler", ProfilerTab(),
                       category="automation")
         self._add_tab("window_manager", "tab_window_manager", WindowManagerTab(),
                       category="system")

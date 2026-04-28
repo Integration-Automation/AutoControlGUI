@@ -21,6 +21,7 @@ traditional_chinese_word_dict = {
     "tab_shell": "Shell 命令",
     "tab_report": "報告產生",
     "tab_run_history": "執行紀錄",
+    "tab_profiler": "效能分析",
     "tab_accessibility": "無障礙樹",
     "tab_vlm": "AI 定位",
     "tab_ocr_reader": "OCR 讀取",
@@ -647,6 +648,23 @@ traditional_chinese_word_dict = {
     "rh_open_artifact": "開啟截圖",
     "rh_no_artifact": "所選紀錄沒有截圖。",
     "rh_artifact_missing": "截圖檔案已不存在。",
+
+    # Profiler tab
+    "prof_enable": "啟用效能分析",
+    "prof_disable": "停用效能分析",
+    "prof_reset": "清除統計",
+    "prof_refresh": "重新整理",
+    "prof_running": "效能分析中。",
+    "prof_paused": "尚未啟用效能分析。",
+    "prof_total_label": "已追蹤 {n} 個動作",
+    "prof_total_empty": "尚無資料。",
+    "prof_col_name": "動作",
+    "prof_col_calls": "次數",
+    "prof_col_total": "總時間",
+    "prof_col_avg": "平均",
+    "prof_col_min": "最短",
+    "prof_col_max": "最長",
+    "prof_col_share": "佔比",
 
     # Accessibility Tab
     "a11y_app_label": "應用程式：",

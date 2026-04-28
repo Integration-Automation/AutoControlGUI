@@ -127,6 +127,10 @@ from je_auto_control.utils.config_bundle import (
     ConfigBundleExporter, ConfigBundleImporter, ImportReport,
     export_config_bundle, import_config_bundle,
 )
+# Profiler (headless)
+from je_auto_control.utils.profiler import (
+    ActionProfiler, ActionStats, default_profiler,
+)
 # Run history (headless)
 from je_auto_control.utils.run_history.history_store import (
     HistoryStore, RunRecord, default_history_store,
@@ -302,6 +306,8 @@ __all__ = [
     "TriggerEngine", "default_trigger_engine",
     "ImageAppearsTrigger", "WindowAppearsTrigger",
     "PixelColorTrigger", "FilePathTrigger",
+    # Profiler
+    "ActionProfiler", "ActionStats", "default_profiler",
     # Run history
     "HistoryStore", "RunRecord", "default_history_store",
     # Accessibility

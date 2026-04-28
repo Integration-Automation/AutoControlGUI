@@ -28,6 +28,7 @@ japanese_word_dict = {
     "tab_shell": "シェル",
     "tab_report": "レポート",
     "tab_run_history": "実行履歴",
+    "tab_profiler": "プロファイラ",
     "tab_accessibility": "アクセシビリティ",
     "tab_vlm": "AI ロケーター",
     "tab_ocr_reader": "OCR リーダー",
@@ -656,6 +657,23 @@ japanese_word_dict = {
     "rh_open_artifact": "スクリーンショットを開く",
     "rh_no_artifact": "選択した実行にスクリーンショットはありません。",
     "rh_artifact_missing": "スクリーンショットファイルが存在しません。",
+
+    # Profiler tab
+    "prof_enable": "プロファイラを有効化",
+    "prof_disable": "プロファイラを無効化",
+    "prof_reset": "統計をリセット",
+    "prof_refresh": "更新",
+    "prof_running": "プロファイラ計測中。",
+    "prof_paused": "プロファイラは停止中です。",
+    "prof_total_label": "{n} アクションを記録",
+    "prof_total_empty": "サンプルがまだありません。",
+    "prof_col_name": "アクション",
+    "prof_col_calls": "回数",
+    "prof_col_total": "合計",
+    "prof_col_avg": "平均",
+    "prof_col_min": "最小",
+    "prof_col_max": "最大",
+    "prof_col_share": "割合",
 
     # Accessibility Tab
     "a11y_app_label": "アプリ:",

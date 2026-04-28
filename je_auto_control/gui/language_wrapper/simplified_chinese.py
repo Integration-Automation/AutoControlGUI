@@ -20,6 +20,7 @@ simplified_chinese_word_dict = {
     "tab_shell": "Shell 命令",
     "tab_report": "报告生成",
     "tab_run_history": "执行记录",
+    "tab_profiler": "性能分析",
     "tab_accessibility": "无障碍树",
     "tab_vlm": "AI 定位",
     "tab_ocr_reader": "OCR 读取",
@@ -646,6 +647,23 @@ simplified_chinese_word_dict = {
     "rh_open_artifact": "打开截图",
     "rh_no_artifact": "所选记录没有截图。",
     "rh_artifact_missing": "截图文件已不存在。",
+
+    # Profiler tab
+    "prof_enable": "启用性能分析",
+    "prof_disable": "停用性能分析",
+    "prof_reset": "清除统计",
+    "prof_refresh": "刷新",
+    "prof_running": "性能分析中。",
+    "prof_paused": "尚未启用性能分析。",
+    "prof_total_label": "已追踪 {n} 个动作",
+    "prof_total_empty": "暂无数据。",
+    "prof_col_name": "动作",
+    "prof_col_calls": "次数",
+    "prof_col_total": "总时间",
+    "prof_col_avg": "平均",
+    "prof_col_min": "最短",
+    "prof_col_max": "最长",
+    "prof_col_share": "占比",
 
     # Accessibility Tab
     "a11y_app_label": "应用:",

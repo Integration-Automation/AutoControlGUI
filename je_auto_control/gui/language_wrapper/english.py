@@ -30,6 +30,7 @@ english_word_dict = {
     "tab_shell": "Shell Command",
     "tab_report": "Report",
     "tab_run_history": "Run History",
+    "tab_profiler": "Profiler",
     "tab_accessibility": "Accessibility",
     "tab_vlm": "AI Locator",
     "tab_ocr_reader": "OCR Reader",
@@ -658,6 +659,23 @@ english_word_dict = {
     "rh_open_artifact": "Open artifact",
     "rh_no_artifact": "Selected run has no artifact.",
     "rh_artifact_missing": "Artifact file no longer exists.",
+
+    # Profiler tab
+    "prof_enable": "Enable profiler",
+    "prof_disable": "Disable profiler",
+    "prof_reset": "Reset stats",
+    "prof_refresh": "Refresh",
+    "prof_running": "Profiler is recording.",
+    "prof_paused": "Profiler is off — enable to record durations.",
+    "prof_total_label": "{n} actions tracked",
+    "prof_total_empty": "No samples yet.",
+    "prof_col_name": "Action",
+    "prof_col_calls": "Calls",
+    "prof_col_total": "Total",
+    "prof_col_avg": "Avg",
+    "prof_col_min": "Min",
+    "prof_col_max": "Max",
+    "prof_col_share": "Share",
 
     # Accessibility Tab
     "a11y_app_label": "App:",
