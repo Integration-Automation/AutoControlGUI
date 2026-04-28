@@ -45,6 +45,7 @@ from je_auto_control.utils.ocr.ocr_engine import (
 )
 from je_auto_control.utils.profiler.profiler import default_profiler
 from je_auto_control.utils.run_history.history_store import default_history_store
+from je_auto_control.utils.secrets import default_secret_manager
 from je_auto_control.utils.script_vars.interpolate import (
     interpolate_actions, interpolate_value,
 )
@@ -429,6 +430,46 @@ def _ocr_find_regex_as_dicts(pattern: str,
     ]
 
 
+def _secret_initialize(passphrase: str) -> Dict[str, Any]:
+    """Executor adapter: create a fresh vault under ``passphrase``."""
+    default_secret_manager.initialize(passphrase)
+    return {
+        "initialized": True,
+        "path": str(default_secret_manager.path),
+        "unlocked": default_secret_manager.is_unlocked,
+    }
+
+
+def _secret_unlock(passphrase: str) -> Dict[str, Any]:
+    return {"unlocked": default_secret_manager.unlock(passphrase)}
+
+
+def _secret_lock() -> Dict[str, Any]:
+    default_secret_manager.lock()
+    return {"unlocked": default_secret_manager.is_unlocked}
+
+
+def _secret_set(name: str, value: str) -> Dict[str, Any]:
+    default_secret_manager.set(name, value)
+    return {"name": name, "saved": True}
+
+
+def _secret_remove(name: str) -> Dict[str, Any]:
+    return {"name": name, "removed": default_secret_manager.remove(name)}
+
+
+def _secret_list() -> List[str]:
+    return default_secret_manager.list_names()
+
+
+def _secret_status() -> Dict[str, Any]:
+    return {
+        "path": str(default_secret_manager.path),
+        "initialized": default_secret_manager.is_initialized,
+        "unlocked": default_secret_manager.is_unlocked,
+    }
+
+
 def _profiler_stats_as_dicts(limit: Optional[int] = None) -> List[dict]:
     """Executor adapter: dump profiler stats as JSON-friendly dicts."""
     rows = default_profiler.stats()
@@ -579,6 +620,15 @@ class Executor:
             "AC_profiler_reset": _profiler_reset,
             "AC_profiler_stats": _profiler_stats_as_dicts,
             "AC_profiler_hot_spots": _profiler_hot_spots_as_dicts,
+
+            # Secret manager (encrypted vault for ${secrets.NAME})
+            "AC_secret_init": _secret_initialize,
+            "AC_secret_unlock": _secret_unlock,
+            "AC_secret_lock": _secret_lock,
+            "AC_secret_set": _secret_set,
+            "AC_secret_remove": _secret_remove,
+            "AC_secret_list": _secret_list,
+            "AC_secret_status": _secret_status,
 
             # Accessibility-tree widget location
             "AC_a11y_list": _a11y_list_as_dicts,

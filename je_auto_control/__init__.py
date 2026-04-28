@@ -131,6 +131,11 @@ from je_auto_control.utils.config_bundle import (
 from je_auto_control.utils.profiler import (
     ActionProfiler, ActionStats, default_profiler,
 )
+# Secrets (headless)
+from je_auto_control.utils.secrets import (
+    SecretManager, SecretStoreError, SecretStoreLocked,
+    default_secret_manager, default_secret_store_path,
+)
 # Run history (headless)
 from je_auto_control.utils.run_history.history_store import (
     HistoryStore, RunRecord, default_history_store,
@@ -308,6 +313,9 @@ __all__ = [
     "PixelColorTrigger", "FilePathTrigger",
     # Profiler
     "ActionProfiler", "ActionStats", "default_profiler",
+    # Secret manager
+    "SecretManager", "SecretStoreError", "SecretStoreLocked",
+    "default_secret_manager", "default_secret_store_path",
     # Run history
     "HistoryStore", "RunRecord", "default_history_store",
     # Accessibility

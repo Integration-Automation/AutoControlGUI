@@ -20,6 +20,7 @@ from je_auto_control.gui.llm_planner_tab import LLMPlannerTab
 from je_auto_control.gui.ocr_tab import OCRReaderTab
 from je_auto_control.gui.plugins_tab import PluginsTab
 from je_auto_control.gui.profiler_tab import ProfilerTab
+from je_auto_control.gui.secrets_tab import SecretsTab
 from je_auto_control.gui.admin_console_tab import AdminConsoleTab
 from je_auto_control.gui.audit_log_tab import AuditLogTab
 from je_auto_control.gui.diagnostics_tab import DiagnosticsTab
@@ -108,6 +109,8 @@ class AutoControlGUIWidget(
         self._add_tab("recording_editor", "tab_recording_editor", RecordingEditorTab(),
                       category="editing")
         self._add_tab("variables", "tab_variables", VariablesTab(),
+                      category="editing")
+        self._add_tab("secrets", "tab_secrets", SecretsTab(),
                       category="editing")
         self._add_tab("vlm", "tab_vlm", VLMTab(),
                       category="detection")
