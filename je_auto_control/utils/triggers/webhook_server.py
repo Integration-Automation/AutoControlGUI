@@ -99,9 +99,12 @@ class _WebhookHandler(BaseHTTPRequestHandler):
 
     # Signature must mirror BaseHTTPRequestHandler.log_message exactly,
     # including the parameter name 'format' — pylint W0221 trips on
-    # rename or annotation drift.
-    def log_message(self, format, *args):  # noqa: A002 - shadow stdlib 'format' to match parent
+    # rename or annotation drift; the shadow of the stdlib 'format' is
+    # the parent class's choice, not ours.
+    # pylint: disable=redefined-builtin
+    def log_message(self, format, *args):  # noqa: A002
         autocontrol_logger.debug("webhook %s", format % args)
+    # pylint: enable=redefined-builtin
 
     def _read_body(self) -> str:
         length = int(self.headers.get("Content-Length") or 0)

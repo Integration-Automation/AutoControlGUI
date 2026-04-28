@@ -16,8 +16,7 @@ def _local_url(host: str, port: int, path: str) -> str:
     fixture deliberately drives the server over plain HTTP because the
     listener only ever binds to 127.0.0.1 inside the test process.
     """
-    # NOSONAR python:S5332 — loopback test fixture, never reaches the network
-    return f"http://{host}:{port}{path}"
+    return f"http://{host}:{port}{path}"  # NOSONAR python:S5332 - loopback test fixture
 
 
 def _post(url, body=b"", headers=None, method="POST", timeout=2.0):
