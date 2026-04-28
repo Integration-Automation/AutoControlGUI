@@ -430,6 +430,80 @@ def _ocr_find_regex_as_dicts(pattern: str,
     ]
 
 
+def _email_trigger_add(host: str, username: str, password: str,
+                       script_path: str,
+                       port: Optional[int] = None,
+                       use_ssl: bool = True,
+                       mailbox: str = "INBOX",
+                       search_criteria: str = "UNSEEN",
+                       mark_seen: bool = True,
+                       poll_seconds: float = 60.0) -> Dict[str, Any]:
+    """Executor adapter: register an IMAP poll trigger."""
+    from je_auto_control.utils.triggers.email_trigger import (
+        default_email_trigger_watcher,
+    )
+    trigger = default_email_trigger_watcher.add(
+        host=host, username=username, password=password,
+        script_path=script_path, port=port, use_ssl=bool(use_ssl),
+        mailbox=mailbox, search_criteria=search_criteria,
+        mark_seen=bool(mark_seen), poll_seconds=float(poll_seconds),
+    )
+    return {
+        "id": trigger.trigger_id, "host": trigger.host,
+        "username": trigger.username, "mailbox": trigger.mailbox,
+        "search_criteria": trigger.search_criteria,
+        "poll_seconds": trigger.poll_seconds,
+    }
+
+
+def _email_trigger_remove(trigger_id: str) -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.email_trigger import (
+        default_email_trigger_watcher,
+    )
+    return {"removed": default_email_trigger_watcher.remove(trigger_id)}
+
+
+def _email_trigger_list() -> List[Dict[str, Any]]:
+    from je_auto_control.utils.triggers.email_trigger import (
+        default_email_trigger_watcher,
+    )
+    rows: List[Dict[str, Any]] = []
+    for trigger in default_email_trigger_watcher.list_triggers():
+        rows.append({
+            "id": trigger.trigger_id, "host": trigger.host,
+            "username": trigger.username, "mailbox": trigger.mailbox,
+            "script_path": trigger.script_path,
+            "search_criteria": trigger.search_criteria,
+            "poll_seconds": trigger.poll_seconds,
+            "enabled": trigger.enabled, "fired": trigger.fired,
+            "last_error": trigger.last_error,
+        })
+    return rows
+
+
+def _email_trigger_start() -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.email_trigger import (
+        default_email_trigger_watcher,
+    )
+    default_email_trigger_watcher.start()
+    return {"running": default_email_trigger_watcher.is_running}
+
+
+def _email_trigger_stop() -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.email_trigger import (
+        default_email_trigger_watcher,
+    )
+    default_email_trigger_watcher.stop()
+    return {"running": default_email_trigger_watcher.is_running}
+
+
+def _email_trigger_poll_once() -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.email_trigger import (
+        default_email_trigger_watcher,
+    )
+    return {"fired": default_email_trigger_watcher.poll_once()}
+
+
 def _webhook_start(host: str = "127.0.0.1", port: int = 0) -> Dict[str, Any]:
     """Executor adapter: start the webhook HTTP server."""
     from je_auto_control.utils.triggers.webhook_server import (
@@ -699,6 +773,14 @@ class Executor:
             "AC_webhook_remove": _webhook_remove,
             "AC_webhook_list": _webhook_list,
             "AC_webhook_status": _webhook_status,
+
+            # Email/IMAP poll trigger
+            "AC_email_trigger_add": _email_trigger_add,
+            "AC_email_trigger_remove": _email_trigger_remove,
+            "AC_email_trigger_list": _email_trigger_list,
+            "AC_email_trigger_start": _email_trigger_start,
+            "AC_email_trigger_stop": _email_trigger_stop,
+            "AC_email_trigger_poll_once": _email_trigger_poll_once,
 
             # Secret manager (encrypted vault for ${secrets.NAME})
             "AC_secret_init": _secret_initialize,

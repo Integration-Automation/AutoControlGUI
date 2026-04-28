@@ -148,6 +148,9 @@ from je_auto_control.utils.triggers.trigger_engine import (
 from je_auto_control.utils.triggers.webhook_server import (
     WebhookTrigger, WebhookTriggerServer, default_webhook_server,
 )
+from je_auto_control.utils.triggers.email_trigger import (
+    EmailTrigger, EmailTriggerWatcher, default_email_trigger_watcher,
+)
 # Recording editor (headless helpers)
 from je_auto_control.utils.recording_edit.editor import (
     adjust_delays, filter_actions, insert_action, remove_action,
@@ -315,6 +318,8 @@ __all__ = [
     "ImageAppearsTrigger", "WindowAppearsTrigger",
     "PixelColorTrigger", "FilePathTrigger",
     "WebhookTrigger", "WebhookTriggerServer", "default_webhook_server",
+    "EmailTrigger", "EmailTriggerWatcher",
+    "default_email_trigger_watcher",
     # Profiler
     "ActionProfiler", "ActionStats", "default_profiler",
     # Secret manager
