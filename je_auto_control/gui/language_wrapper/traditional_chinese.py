@@ -648,6 +648,10 @@ traditional_chinese_word_dict = {
     "rh_open_artifact": "開啟截圖",
     "rh_no_artifact": "所選紀錄沒有截圖。",
     "rh_artifact_missing": "截圖檔案已不存在。",
+    "rh_timeline_heading": "時間軸（左舊右新）",
+    "rh_preview_heading": "預覽",
+    "rh_preview_empty": "請選擇一筆紀錄以預覽。",
+    "rh_preview_no_artifact": "此次執行沒有截圖。",
 
     # Profiler tab
     "prof_enable": "啟用效能分析",

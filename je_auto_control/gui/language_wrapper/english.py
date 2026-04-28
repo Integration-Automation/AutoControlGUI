@@ -659,6 +659,10 @@ english_word_dict = {
     "rh_open_artifact": "Open artifact",
     "rh_no_artifact": "Selected run has no artifact.",
     "rh_artifact_missing": "Artifact file no longer exists.",
+    "rh_timeline_heading": "Timeline (oldest left → newest right)",
+    "rh_preview_heading": "Preview",
+    "rh_preview_empty": "Select a run to preview.",
+    "rh_preview_no_artifact": "No screenshot for this run.",
 
     # Profiler tab
     "prof_enable": "Enable profiler",

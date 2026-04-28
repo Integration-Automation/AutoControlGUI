@@ -647,6 +647,10 @@ simplified_chinese_word_dict = {
     "rh_open_artifact": "打开截图",
     "rh_no_artifact": "所选记录没有截图。",
     "rh_artifact_missing": "截图文件已不存在。",
+    "rh_timeline_heading": "时间轴（左旧右新）",
+    "rh_preview_heading": "预览",
+    "rh_preview_empty": "请选择一条记录预览。",
+    "rh_preview_no_artifact": "此次执行没有截图。",
 
     # Profiler tab
     "prof_enable": "启用性能分析",

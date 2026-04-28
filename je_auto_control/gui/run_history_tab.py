@@ -1,13 +1,13 @@
 """Run History tab: browse past scheduler / trigger / hotkey fires."""
 import datetime as _dt
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from PySide6.QtCore import QTimer, Qt, QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QDesktopServices, QPixmap
 from PySide6.QtWidgets import (
-    QAbstractItemView, QComboBox, QHBoxLayout, QHeaderView, QLabel,
-    QMessageBox, QPushButton, QTableWidget, QTableWidgetItem,
+    QAbstractItemView, QComboBox, QFrame, QHBoxLayout, QHeaderView, QLabel,
+    QMessageBox, QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget,
 )
 
@@ -15,9 +15,10 @@ from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
+from je_auto_control.gui.run_history_timeline import RunHistoryTimeline
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_HOTKEY, SOURCE_MANUAL, SOURCE_REST, SOURCE_SCHEDULER,
-    SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, STATUS_RUNNING,
+    SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, STATUS_RUNNING, RunRecord,
     default_history_store,
 )
 
@@ -63,6 +64,7 @@ class RunHistoryTab(TranslatableMixin, QWidget):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
+        self._records: List[RunRecord] = []
         self._filter = QComboBox()
         self._populate_filter()
         self._filter.currentIndexChanged.connect(self._refresh)
@@ -75,6 +77,17 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         header.setSectionResizeMode(QHeaderView.Interactive)
         header.setStretchLastSection(True)
         self._count_label = QLabel()
+        self._timeline = RunHistoryTimeline()
+        self._timeline.run_clicked.connect(self._on_timeline_clicked)
+        self._thumb_label = QLabel()
+        self._thumb_label.setAlignment(Qt.AlignCenter)
+        self._thumb_label.setMinimumSize(220, 160)
+        self._thumb_label.setFrameShape(QFrame.StyledPanel)
+        self._thumb_label.setScaledContents(False)
+        self._thumb_caption = QLabel()
+        self._thumb_caption.setWordWrap(True)
+        self._thumb_caption.setAlignment(Qt.AlignTop)
+        self._thumb_caption.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self._timer = QTimer(self)
         self._timer.setInterval(_REFRESH_INTERVAL_MS)
         self._timer.timeout.connect(self._refresh)
@@ -88,6 +101,10 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         self._apply_table_headers()
         self._repopulate_filter_labels()
         self._refresh()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._refresh_preview()
 
     def _populate_filter(self) -> None:
         self._filter.blockSignals(True)
@@ -124,8 +141,27 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         clear_btn.clicked.connect(self._on_clear)
         top.addWidget(clear_btn)
         root.addLayout(top)
-        root.addWidget(self._table, stretch=1)
+
+        self._tr(QLabel(), "rh_timeline_heading")
+        timeline_label = self._tr(QLabel(), "rh_timeline_heading")
+        root.addWidget(timeline_label)
+        root.addWidget(self._timeline)
+
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.addWidget(self._table)
+        preview = QWidget()
+        preview_layout = QVBoxLayout(preview)
+        preview_layout.setContentsMargins(0, 0, 0, 0)
+        preview_layout.addWidget(self._tr(QLabel(), "rh_preview_heading"))
+        preview_layout.addWidget(self._thumb_label, stretch=1)
+        preview_layout.addWidget(self._thumb_caption)
+        splitter.addWidget(preview)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 1)
+        root.addWidget(splitter, stretch=1)
+
         self._table.cellDoubleClicked.connect(self._on_cell_double_clicked)
+        self._table.itemSelectionChanged.connect(self._on_selection_changed)
         open_row = QHBoxLayout()
         self._open_artifact_btn = self._tr(QPushButton(), "rh_open_artifact")
         self._open_artifact_btn.clicked.connect(self._open_selected_artifact)
@@ -149,12 +185,15 @@ class RunHistoryTab(TranslatableMixin, QWidget):
             runs = default_history_store.list_runs(limit=500, source_type=source)
         except ValueError:
             runs = []
+        self._records = runs
         self._table.setRowCount(len(runs))
         for row, record in enumerate(runs):
             self._set_row(row, record)
         self._count_label.setText(
             _t("rh_count_label").replace("{n}", str(len(runs))),
         )
+        self._timeline.set_records(runs)
+        self._refresh_preview()
 
     def _set_row(self, row: int, record) -> None:
         status_key = _STATUS_LABEL_KEYS.get(record.status, record.status)
@@ -175,6 +214,54 @@ class RunHistoryTab(TranslatableMixin, QWidget):
             item = QTableWidgetItem(text)
             item.setFlags(item.flags() & ~Qt.ItemIsEditable)
             self._table.setItem(row, col, item)
+
+    def _selected_record(self) -> Optional[RunRecord]:
+        row = self._table.currentRow()
+        if row < 0 or row >= len(self._records):
+            return None
+        return self._records[row]
+
+    def _on_selection_changed(self) -> None:
+        record = self._selected_record()
+        self._timeline.set_highlighted(record.id if record is not None else None)
+        self._refresh_preview()
+
+    def _on_timeline_clicked(self, run_id: int) -> None:
+        for row, record in enumerate(self._records):
+            if record.id == run_id:
+                self._table.selectRow(row)
+                return
+
+    def _refresh_preview(self) -> None:
+        record = self._selected_record()
+        if record is None:
+            self._thumb_label.clear()
+            self._thumb_label.setText(_t("rh_preview_empty"))
+            self._thumb_caption.setText("")
+            return
+        path = record.artifact_path
+        if not path:
+            self._thumb_label.clear()
+            self._thumb_label.setText(_t("rh_preview_no_artifact"))
+        else:
+            pixmap = QPixmap(path)
+            if pixmap.isNull():
+                self._thumb_label.clear()
+                self._thumb_label.setText(_t("rh_artifact_missing"))
+            else:
+                self._thumb_label.setPixmap(pixmap.scaled(
+                    self._thumb_label.size(), Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation,
+                ))
+        caption = (
+            f"#{record.id} • {record.source_type}/{record.source_id}\n"
+            f"{record.script_path}\n"
+            f"{_format_time(record.started_at)} • "
+            f"{_format_duration(record.duration_seconds)}"
+        )
+        if record.error_text:
+            caption += f"\n{record.error_text}"
+        self._thumb_caption.setText(caption)
 
     def _selected_artifact_path(self) -> Optional[str]:
         row = self._table.currentRow()

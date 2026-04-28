@@ -657,6 +657,10 @@ japanese_word_dict = {
     "rh_open_artifact": "スクリーンショットを開く",
     "rh_no_artifact": "選択した実行にスクリーンショットはありません。",
     "rh_artifact_missing": "スクリーンショットファイルが存在しません。",
+    "rh_timeline_heading": "タイムライン（左:古い → 右:新しい）",
+    "rh_preview_heading": "プレビュー",
+    "rh_preview_empty": "実行を選択するとプレビューが表示されます。",
+    "rh_preview_no_artifact": "この実行のスクリーンショットはありません。",
 
     # Profiler tab
     "prof_enable": "プロファイラを有効化",
