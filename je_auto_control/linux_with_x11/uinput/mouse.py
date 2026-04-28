@@ -57,11 +57,9 @@ def position() -> Tuple[int, int]:
 
 def set_position(x: int, y: int) -> None:
     """Move to absolute ``(x, y)`` by emitting the relative delta."""
-    cur = position()
-    if cur is None:
-        return
-    dx = int(x) - int(cur[0])
-    dy = int(y) - int(cur[1])
+    cur_x, cur_y = position()
+    dx = int(x) - int(cur_x)
+    dy = int(y) - int(cur_y)
     if dx == 0 and dy == 0:
         return
     emit_combo([
