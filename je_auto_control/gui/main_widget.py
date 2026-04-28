@@ -28,7 +28,16 @@ from je_auto_control.gui.inspector_tab import InspectorTab
 from je_auto_control.gui.recording_editor_tab import RecordingEditorTab
 from je_auto_control.gui.usb_browser_tab import UsbBrowserTab
 from je_auto_control.gui.usb_devices_tab import UsbDevicesTab
-from je_auto_control.gui.remote_desktop_tab import RemoteDesktopTab
+# Remote desktop relies on the optional `webrtc` extra (aiortc + PyAV).
+# Importing it eagerly would break embedders (e.g. PyBreeze) that install
+# je_auto_control without the extra; fall back to a placeholder tab that
+# tells the user how to enable it.
+try:
+    from je_auto_control.gui.remote_desktop_tab import RemoteDesktopTab
+    _REMOTE_DESKTOP_IMPORT_ERROR: ImportError = None
+except ImportError as _remote_desktop_error:
+    RemoteDesktopTab = None  # type: ignore[assignment]
+    _REMOTE_DESKTOP_IMPORT_ERROR = _remote_desktop_error
 from je_auto_control.gui.rest_api_tab import RestApiTab
 from je_auto_control.gui.run_history_tab import RunHistoryTab
 from je_auto_control.gui.scheduler_tab import SchedulerTab
@@ -142,8 +151,11 @@ class AutoControlGUIWidget(
                       category="system")
         self._add_tab("plugins", "tab_plugins", PluginsTab(),
                       category="system")
-        self._add_tab("remote_desktop", "tab_remote_desktop", RemoteDesktopTab(),
-                      category="system", default_visible=True)
+        self._add_tab(
+            "remote_desktop", "tab_remote_desktop",
+            self._build_remote_desktop_tab(),
+            category="system", default_visible=True,
+        )
         self._add_tab("rest_api", "tab_rest_api", RestApiTab(),
                       category="system")
         self._add_tab("admin_console", "tab_admin_console", AdminConsoleTab(),
@@ -168,6 +180,26 @@ class AutoControlGUIWidget(
         self.repeat_count = 0
         self.repeat_max = 0
         self._record_data = []
+
+    @staticmethod
+    def _build_remote_desktop_tab() -> QWidget:
+        """Return the real remote-desktop tab, or a placeholder if the
+        ``webrtc`` extra is not installed."""
+        if RemoteDesktopTab is not None:
+            return RemoteDesktopTab()
+        placeholder = QWidget()
+        layout = QVBoxLayout(placeholder)
+        message = QLabel(
+            "Remote Desktop is unavailable: the optional 'webrtc' extra "
+            "(aiortc + PyAV) is not installed.\n\n"
+            "Install with:\n    pip install je_auto_control[webrtc]\n\n"
+            f"Underlying error: {_REMOTE_DESKTOP_IMPORT_ERROR!r}",
+        )
+        message.setWordWrap(True)
+        message.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        layout.addWidget(message)
+        layout.addStretch()
+        return placeholder
 
     # --- tab registry API ----------------------------------------------------
 
