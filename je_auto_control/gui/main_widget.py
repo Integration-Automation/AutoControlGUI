@@ -35,6 +35,7 @@ from je_auto_control.gui.scheduler_tab import SchedulerTab
 from je_auto_control.gui.script_builder import ScriptBuilderTab
 from je_auto_control.gui.selector import crop_template_to_file, open_region_selector
 from je_auto_control.gui.triggers_tab import TriggersTab
+from je_auto_control.gui.webhooks_tab import WebhooksTab
 from je_auto_control.gui.variables_tab import VariablesTab
 from je_auto_control.gui.vlm_tab import VLMTab
 from je_auto_control.gui.window_tab import WindowManagerTab
@@ -127,6 +128,8 @@ class AutoControlGUIWidget(
         self._add_tab("hotkeys", "tab_hotkeys", HotkeysTab(),
                       category="automation")
         self._add_tab("triggers", "tab_triggers", TriggersTab(),
+                      category="automation")
+        self._add_tab("webhooks", "tab_webhooks", WebhooksTab(),
                       category="automation")
         self._add_tab("run_history", "tab_run_history", RunHistoryTab(),
                       category="automation")

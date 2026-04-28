@@ -145,6 +145,9 @@ from je_auto_control.utils.triggers.trigger_engine import (
     FilePathTrigger, ImageAppearsTrigger, PixelColorTrigger, TriggerEngine,
     WindowAppearsTrigger, default_trigger_engine,
 )
+from je_auto_control.utils.triggers.webhook_server import (
+    WebhookTrigger, WebhookTriggerServer, default_webhook_server,
+)
 # Recording editor (headless helpers)
 from je_auto_control.utils.recording_edit.editor import (
     adjust_delays, filter_actions, insert_action, remove_action,
@@ -311,6 +314,7 @@ __all__ = [
     "TriggerEngine", "default_trigger_engine",
     "ImageAppearsTrigger", "WindowAppearsTrigger",
     "PixelColorTrigger", "FilePathTrigger",
+    "WebhookTrigger", "WebhookTriggerServer", "default_webhook_server",
     # Profiler
     "ActionProfiler", "ActionStats", "default_profiler",
     # Secret manager

@@ -430,6 +430,77 @@ def _ocr_find_regex_as_dicts(pattern: str,
     ]
 
 
+def _webhook_start(host: str = "127.0.0.1", port: int = 0) -> Dict[str, Any]:
+    """Executor adapter: start the webhook HTTP server."""
+    from je_auto_control.utils.triggers.webhook_server import (
+        default_webhook_server,
+    )
+    bound_host, bound_port = default_webhook_server.start(host, int(port))
+    return {"host": bound_host, "port": bound_port}
+
+
+def _webhook_stop() -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.webhook_server import (
+        default_webhook_server,
+    )
+    default_webhook_server.stop()
+    return {"running": default_webhook_server.is_running}
+
+
+def _webhook_add(path: str, script_path: str,
+                 methods: Optional[List[str]] = None,
+                 token: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.webhook_server import (
+        default_webhook_server,
+    )
+    trigger = default_webhook_server.add(
+        path=path, script_path=script_path,
+        methods=methods, token=token,
+    )
+    return {
+        "id": trigger.webhook_id, "path": trigger.path,
+        "methods": list(trigger.methods),
+        "script_path": trigger.script_path,
+        "has_token": bool(trigger.token),
+    }
+
+
+def _webhook_remove(webhook_id: str) -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.webhook_server import (
+        default_webhook_server,
+    )
+    return {"removed": default_webhook_server.remove(webhook_id)}
+
+
+def _webhook_list() -> List[Dict[str, Any]]:
+    from je_auto_control.utils.triggers.webhook_server import (
+        default_webhook_server,
+    )
+    rows: List[Dict[str, Any]] = []
+    for trigger in default_webhook_server.list_webhooks():
+        rows.append({
+            "id": trigger.webhook_id, "path": trigger.path,
+            "methods": list(trigger.methods),
+            "script_path": trigger.script_path,
+            "enabled": trigger.enabled, "fired": trigger.fired,
+            "has_token": bool(trigger.token),
+        })
+    return rows
+
+
+def _webhook_status() -> Dict[str, Any]:
+    from je_auto_control.utils.triggers.webhook_server import (
+        default_webhook_server,
+    )
+    bound = default_webhook_server.bound_address
+    return {
+        "running": default_webhook_server.is_running,
+        "host": bound[0] if bound else None,
+        "port": bound[1] if bound else None,
+        "registered": len(default_webhook_server.list_webhooks()),
+    }
+
+
 def _secret_initialize(passphrase: str) -> Dict[str, Any]:
     """Executor adapter: create a fresh vault under ``passphrase``."""
     default_secret_manager.initialize(passphrase)
@@ -620,6 +691,14 @@ class Executor:
             "AC_profiler_reset": _profiler_reset,
             "AC_profiler_stats": _profiler_stats_as_dicts,
             "AC_profiler_hot_spots": _profiler_hot_spots_as_dicts,
+
+            # Webhook trigger (HTTP push triggers)
+            "AC_webhook_start": _webhook_start,
+            "AC_webhook_stop": _webhook_stop,
+            "AC_webhook_add": _webhook_add,
+            "AC_webhook_remove": _webhook_remove,
+            "AC_webhook_list": _webhook_list,
+            "AC_webhook_status": _webhook_status,
 
             # Secret manager (encrypted vault for ${secrets.NAME})
             "AC_secret_init": _secret_initialize,
