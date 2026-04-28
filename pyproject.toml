@@ -20,7 +20,8 @@ dependencies = [
     "pyobjc==12.1;platform_system=='Darwin'",
     "python-Xlib==0.33;platform_system=='Linux'",
     "mss==10.2.0",
-    "defusedxml==0.7.1"
+    "defusedxml==0.7.1",
+    "cryptography>=42.0.0"
 ]
 classifiers = [
     "Programming Language :: Python :: 3.10",

@@ -3,8 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from je_auto_control.utils.script_vars.interpolate import interpolate_value
-from je_auto_control.utils.secrets.secret_store import (
+# The vault depends on ``cryptography``; declared in pyproject.toml but skip
+# cleanly when an older environment hasn't refreshed the lockfile yet.
+pytest.importorskip("cryptography")
+
+from je_auto_control.utils.script_vars.interpolate import interpolate_value  # noqa: E402
+from je_auto_control.utils.secrets.secret_store import (  # noqa: E402
     SecretManager, SecretStoreError, SecretStoreLocked,
 )
 

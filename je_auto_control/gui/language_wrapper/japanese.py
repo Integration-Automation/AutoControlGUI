@@ -1,5 +1,7 @@
 _SCRIPT = "スクリプト"
 _SCRIPT_LABEL = "スクリプト:"
+_SCRIPT_LABEL_FW = "スクリプト：" # full-width colon variant
+_REMOVE_SEL_FW = "選択を削除"
 _REMOVE_SELECTED = "選択項目を削除"
 _SELECT_SCRIPT = "スクリプトを選択"
 _TOKEN_LABEL = "トークン:"
@@ -131,7 +133,7 @@ japanese_word_dict = {
     # 管理コンソールタブ
     "admin_add_group": "ホストを登録",
     "admin_add": "追加",
-    "admin_remove": "選択を削除",
+    "admin_remove": _REMOVE_SEL_FW,
     "admin_refresh": "全件ポーリング",
     "admin_label": "ラベル:",
     "admin_url": "ベース URL:",
@@ -229,7 +231,7 @@ japanese_word_dict = {
     "rd_webrtc_host_id_required": "Host ID が必要",
     # 信頼リスト / 受け入れダイアログ
     "rd_webrtc_trusted_group": "信頼済みビューア（自動承認）",
-    "rd_webrtc_remove_trusted": "選択を削除",
+    "rd_webrtc_remove_trusted": _REMOVE_SEL_FW,
     "rd_webrtc_clear_trusted": _CLEAR_ALL_JA,
     "rd_webrtc_clear_trust_confirm": "信頼済みビューアをすべて削除しますか？",
     "rd_webrtc_pending_viewer_title": "新規接続要求",
@@ -685,7 +687,7 @@ japanese_word_dict = {
     "eml_script_label": "スクリプト：",
     "eml_browse": "参照",
     "eml_register": "トリガーを登録",
-    "eml_remove": "選択を削除",
+    "eml_remove": _REMOVE_SEL_FW,
     "eml_ssl": "SSL を使用",
     "eml_mark_seen": "発火後に既読にする",
     "eml_required_fields": "ホスト、ユーザー、パスワード、スクリプトが必要です。",
@@ -693,7 +695,7 @@ japanese_word_dict = {
     "eml_col_host": "ホスト",
     "eml_col_user": "ユーザー",
     "eml_col_mailbox": "メールボックス",
-    "eml_col_script": "スクリプト",
+    "eml_col_script": _SCRIPT,
     "eml_col_fired": "発火回数",
     "eml_col_error": "最近のエラー",
 
@@ -708,18 +710,18 @@ japanese_word_dict = {
     "wh_running": "稼働中 {host}:{port}",
     "wh_stopped": "サーバー停止中。",
     "wh_path_label": "パス：",
-    "wh_script_label": "スクリプト：",
+    "wh_script_label": _SCRIPT_LABEL_FW,
     "wh_browse": "参照",
     "wh_methods_label": "メソッド：",
     "wh_token_label": "Token：",
     "wh_token_placeholder": "Bearer トークン (任意)",
     "wh_register": "Webhook を登録",
-    "wh_remove": "選択を削除",
+    "wh_remove": _REMOVE_SEL_FW,
     "wh_path_and_script_required": "パスとスクリプトファイルが必要です。",
     "wh_col_id": "ID",
     "wh_col_path": "パス",
     "wh_col_methods": "メソッド",
-    "wh_col_script": "スクリプト",
+    "wh_col_script": _SCRIPT,
     "wh_col_fired": "発火回数",
     "wh_col_token": "認証？",
     "wh_yes": "あり",

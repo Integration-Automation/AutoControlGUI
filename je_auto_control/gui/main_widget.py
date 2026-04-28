@@ -1,5 +1,6 @@
 import json
 from dataclasses import dataclass
+from typing import Optional
 
 from PySide6.QtCore import QTimer, Signal, QObject
 from PySide6.QtGui import QIntValidator, QDoubleValidator, QKeyEvent, Qt
@@ -34,7 +35,7 @@ from je_auto_control.gui.usb_devices_tab import UsbDevicesTab
 # tells the user how to enable it.
 try:
     from je_auto_control.gui.remote_desktop_tab import RemoteDesktopTab
-    _REMOTE_DESKTOP_IMPORT_ERROR: ImportError = None
+    _REMOTE_DESKTOP_IMPORT_ERROR: Optional[ImportError] = None
 except ImportError as _remote_desktop_error:
     RemoteDesktopTab = None  # type: ignore[assignment]
     _REMOTE_DESKTOP_IMPORT_ERROR = _remote_desktop_error

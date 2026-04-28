@@ -97,8 +97,11 @@ class _WebhookHandler(BaseHTTPRequestHandler):
 
     server_version = "AutoControlWebhook/1.0"
 
-    def log_message(self, fmt: str, *args: Any) -> None:
-        autocontrol_logger.debug("webhook %s", fmt % args)
+    # Signature must mirror BaseHTTPRequestHandler.log_message exactly,
+    # including the parameter name 'format' — pylint W0221 trips on
+    # rename or annotation drift.
+    def log_message(self, format, *args):  # noqa: A002 - shadow stdlib 'format' to match parent
+        autocontrol_logger.debug("webhook %s", format % args)
 
     def _read_body(self) -> str:
         length = int(self.headers.get("Content-Length") or 0)

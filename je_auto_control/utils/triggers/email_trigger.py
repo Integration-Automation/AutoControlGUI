@@ -64,7 +64,8 @@ def _decode_header_value(value: Optional[str]) -> str:
         return ""
     try:
         return str(make_header(decode_header(value)))
-    except (UnicodeDecodeError, ValueError):
+    except ValueError:
+        # UnicodeDecodeError is a subclass of ValueError; one entry is enough.
         return str(value)
 
 
@@ -100,6 +101,9 @@ def _build_payload(uid: str, msg) -> Dict[str, Any]:
 def _connect(trigger: EmailTrigger) -> imaplib.IMAP4:
     """Open and authenticate against the IMAP server."""
     context = ssl_module.create_default_context()
+    # Pin a modern TLS floor; create_default_context already does this on
+    # 3.10+, but stating it explicitly satisfies python:S4423.
+    context.minimum_version = ssl_module.TLSVersion.TLSv1_2
     if trigger.use_ssl:
         client = imaplib.IMAP4_SSL(trigger.host, trigger.port,
                                    ssl_context=context)
@@ -167,8 +171,12 @@ class EmailTriggerWatcher:
             raise ValueError(
                 "host, username, and script_path are required",
             )
-        resolved_port = int(port) if port is not None \
-            else (_DEFAULT_PORT_SSL if use_ssl else _DEFAULT_PORT_PLAIN)
+        if port is not None:
+            resolved_port = int(port)
+        elif use_ssl:
+            resolved_port = _DEFAULT_PORT_SSL
+        else:
+            resolved_port = _DEFAULT_PORT_PLAIN
         trigger = EmailTrigger(
             trigger_id=uuid.uuid4().hex[:8],
             host=str(host), username=str(username), password=str(password),

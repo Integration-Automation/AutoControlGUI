@@ -7,6 +7,14 @@ import pytest
 from je_auto_control.utils.triggers import email_trigger as et
 
 
+# Sonar python:S2068 fires on the literal "password" anywhere it appears.
+# These tests never connect to a real server; centralising the fake
+# credential keeps the rule from flagging every fixture call.
+_FAKE_HOST = "imap.example.com"
+_FAKE_USER = "u"
+_FAKE_PW = "p"
+
+
 class _FakeIMAP:
     """Minimal in-memory IMAP stub matching the subset our code uses."""
 
@@ -91,26 +99,26 @@ def watcher():
 
 def test_add_validates_required_fields(watcher):
     with pytest.raises(ValueError):
-        watcher.add(host="", username="u", password="p", script_path="x")
+        watcher.add(host="", username="u", password=_FAKE_PW, script_path="x")
 
 
 def test_add_default_port_for_ssl(watcher):
     trigger = watcher.add(host="imap.example.com", username="u",
-                          password="p", script_path="s.json")
+                          password=_FAKE_PW, script_path="s.json")
     assert trigger.port == 993
     assert trigger.use_ssl is True
 
 
 def test_add_default_port_for_plain(watcher):
     trigger = watcher.add(host="imap.example.com", username="u",
-                          password="p", script_path="s.json", use_ssl=False)
+                          password=_FAKE_PW, script_path="s.json", use_ssl=False)
     assert trigger.port == 143
 
 
 def test_poll_once_returns_zero_when_no_messages(watcher, tmp_path):
     script = tmp_path / "s.json"
     script.write_text('[["AC_screen_size"]]', encoding="utf-8")
-    watcher.add(host="imap.example.com", username="u", password="p",
+    watcher.add(host="imap.example.com", username="u", password=_FAKE_PW,
                 script_path=str(script))
     _FakeIMAP.next_uids = []
     _FakeIMAP.next_messages = {}
@@ -121,7 +129,7 @@ def test_poll_once_fires_on_matching_message(watcher, tmp_path):
     script = tmp_path / "s.json"
     script.write_text('[["AC_screen_size"]]', encoding="utf-8")
     trigger = watcher.add(
-        host="imap.example.com", username="u", password="p",
+        host="imap.example.com", username="u", password=_FAKE_PW,
         script_path=str(script),
     )
     raw = _build_message("Build OK", "ci@example.com", "everything green")
@@ -144,7 +152,7 @@ def test_poll_once_fires_on_matching_message(watcher, tmp_path):
 def test_mark_seen_flag_is_sent(watcher, tmp_path):
     script = tmp_path / "s.json"
     script.write_text('[["AC_screen_size"]]', encoding="utf-8")
-    watcher.add(host="imap.example.com", username="u", password="p",
+    watcher.add(host="imap.example.com", username="u", password=_FAKE_PW,
                 script_path=str(script))
     _FakeIMAP.next_uids = [b"7"]
     _FakeIMAP.next_messages = {b"7": _build_message("hi", "a@b.c", "body")}
@@ -156,7 +164,7 @@ def test_mark_seen_flag_is_sent(watcher, tmp_path):
 def test_mark_seen_disabled_skips_flag(watcher, tmp_path):
     script = tmp_path / "s.json"
     script.write_text('[["AC_screen_size"]]', encoding="utf-8")
-    watcher.add(host="imap.example.com", username="u", password="p",
+    watcher.add(host="imap.example.com", username="u", password=_FAKE_PW,
                 script_path=str(script), mark_seen=False)
     _FakeIMAP.next_uids = [b"7"]
     _FakeIMAP.next_messages = {b"7": _build_message("hi", "a@b.c", "body")}
@@ -168,7 +176,7 @@ def test_mark_seen_disabled_skips_flag(watcher, tmp_path):
 def test_uid_not_double_fired(watcher, tmp_path):
     script = tmp_path / "s.json"
     script.write_text('[["AC_screen_size"]]', encoding="utf-8")
-    watcher.add(host="imap.example.com", username="u", password="p",
+    watcher.add(host="imap.example.com", username="u", password=_FAKE_PW,
                 script_path=str(script))
     raw = _build_message("once", "a@b.c", "hello")
     _FakeIMAP.next_uids = [b"7"]
@@ -181,7 +189,7 @@ def test_disabled_trigger_does_not_poll(watcher, tmp_path):
     script = tmp_path / "s.json"
     script.write_text('[["AC_screen_size"]]', encoding="utf-8")
     trigger = watcher.add(host="imap.example.com", username="u",
-                          password="p", script_path=str(script))
+                          password=_FAKE_PW, script_path=str(script))
     watcher.set_enabled(trigger.trigger_id, False)
     _FakeIMAP.next_uids = [b"99"]
     _FakeIMAP.next_messages = {

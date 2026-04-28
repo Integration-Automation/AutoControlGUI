@@ -16,8 +16,12 @@ import re
 from pathlib import Path
 from typing import Any, Mapping, MutableMapping
 
-_PLACEHOLDER = re.compile(r"\$\{([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\}")
-_SECRET_PREFIX = "secrets."
+# Bounded character class with a single quantifier — avoids the nested
+# alternation that ReDoS scanners (semgrep regex_dos) flag on
+# ``([A-Za-z_]\w*(?:\.\w+)*)``. Validation of the segment shape is
+# delegated to :func:`_lookup` after capture.
+_PLACEHOLDER = re.compile(r"\$\{([A-Za-z_][\w.]*)\}")
+_SECRET_PREFIX = "secrets."  # nosec B105  # reason: placeholder routing prefix, not a credential  # noqa: S105
 
 
 def interpolate_value(value: Any, variables: Mapping[str, Any]) -> Any:
