@@ -61,7 +61,7 @@ find = { namespaces = false }
 ]
 
 [project.optional-dependencies]
-gui = ["PySide6==6.11.0", "qt-material==2.17"]
+gui = ["PySide6==6.11.1", "qt-material==2.17"]
 webrtc = ["aiortc>=1.14.0", "av>=14.0.0"]
 signaling = ["fastapi>=0.115", "uvicorn>=0.32"]
 discovery = ["zeroconf>=0.130"]
