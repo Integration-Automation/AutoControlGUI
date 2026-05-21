@@ -46,6 +46,12 @@ from je_auto_control.utils.run_history.history_store import (
 
 _DEFAULT_BIND = "127.0.0.1"
 _MAX_BODY_BYTES = 1 << 20  # 1 MiB cap
+# Cap how much we'll drain from a rejected request so a hostile client
+# can't make us spin reading a multi-GiB body. 4× the body cap covers
+# typical "client sent slightly too much" cases; beyond that we close
+# and accept the TCP RST.
+_DRAIN_CAP_MULTIPLE = 4
+_DRAIN_CHUNK_BYTES = 64 * 1024
 
 
 @dataclass
@@ -111,14 +117,33 @@ class _WebhookHandler(BaseHTTPRequestHandler):
         if length <= 0:
             return ""
         if length > _MAX_BODY_BYTES:
-            self.send_error(HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
-                            "body too large")
+            self._reject_with_drain(
+                HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "body too large", length,
+            )
             return ""
         raw = self.rfile.read(length)
         try:
             return raw.decode("utf-8")
         except UnicodeDecodeError:
             return raw.decode("latin-1", errors="replace")
+
+    def _reject_with_drain(self, status: HTTPStatus, message: str,
+                           length: int) -> None:
+        """Send ``status`` then discard the request body before closing.
+
+        Without the drain Windows TCP sends RST (not FIN) when the
+        socket closes with unread bytes in the receive buffer; the
+        client surfaces that as WinError 10053 *before* it can read
+        the response, masking the 4xx status.
+        """
+        self.send_error(status, message)
+        cap = min(int(length), _MAX_BODY_BYTES * _DRAIN_CAP_MULTIPLE)
+        remaining = cap
+        while remaining > 0:
+            chunk = self.rfile.read(min(remaining, _DRAIN_CHUNK_BYTES))
+            if not chunk:
+                break
+            remaining -= len(chunk)
 
     def _collect_headers(self) -> Dict[str, str]:
         return {key.lower(): value for key, value in self.headers.items()}
@@ -134,12 +159,17 @@ class _WebhookHandler(BaseHTTPRequestHandler):
     def _dispatch(self, method: str) -> None:
         registry: WebhookTriggerServer = self.server.webhook_owner  # type: ignore[attr-defined]
         parsed = urlparse(self.path)
+        declared_length = int(self.headers.get("Content-Length") or 0)
         trigger = registry.match(parsed.path, method)
         if trigger is None:
-            self.send_error(HTTPStatus.NOT_FOUND, "no webhook bound")
+            self._reject_with_drain(
+                HTTPStatus.NOT_FOUND, "no webhook bound", declared_length,
+            )
             return
         if not registry.authorize(trigger, self.headers.get("Authorization")):
-            self.send_error(HTTPStatus.UNAUTHORIZED, "bad token")
+            self._reject_with_drain(
+                HTTPStatus.UNAUTHORIZED, "bad token", declared_length,
+            )
             return
         body = self._read_body()
         if body == "" and int(self.headers.get("Content-Length") or 0) > 0:
