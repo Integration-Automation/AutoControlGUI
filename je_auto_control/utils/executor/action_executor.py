@@ -155,6 +155,112 @@ def _remote_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
     return remote_desktop_registry.send_input(action)
 
 
+# --- WebSocket-transport remote desktop ------------------------------------
+
+def _ws_start_host(token: str,
+                   bind: str = "127.0.0.1",
+                   port: int = 0,
+                   fps: float = 10.0,
+                   quality: int = 70,
+                   region: Optional[List[int]] = None,
+                   max_clients: int = 4) -> Dict[str, Any]:
+    """Executor adapter: start the singleton WebSocket-transport host."""
+    return remote_desktop_registry.start_ws_host(
+        token=token, bind=bind, port=int(port),
+        fps=float(fps), quality=int(quality),
+        region=region, max_clients=int(max_clients),
+    )
+
+
+def _ws_stop_host() -> Dict[str, Any]:
+    return remote_desktop_registry.stop_ws_host()
+
+
+def _ws_host_status() -> Dict[str, Any]:
+    return remote_desktop_registry.ws_host_status()
+
+
+def _ws_connect(host: str, port: int, token: str,
+                path: str = "/",
+                timeout: float = 5.0) -> Dict[str, Any]:
+    """Executor adapter: connect the singleton WS viewer."""
+    return remote_desktop_registry.connect_ws_viewer(
+        host=host, port=int(port), token=token,
+        path=path, timeout=float(timeout),
+    )
+
+
+def _ws_disconnect() -> Dict[str, Any]:
+    return remote_desktop_registry.disconnect_ws_viewer()
+
+
+def _ws_viewer_status() -> Dict[str, Any]:
+    return remote_desktop_registry.ws_viewer_status()
+
+
+def _ws_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
+    return remote_desktop_registry.ws_send_input(action)
+
+
+# --- WebRTC-transport remote desktop (manual SDP signaling) ----------------
+
+def _webrtc_start_host(token: str,
+                       read_only: bool = False) -> Dict[str, Any]:
+    """Executor adapter: allocate the singleton WebRTC host.
+
+    Follow up with ``AC_webrtc_create_offer`` then
+    ``AC_webrtc_accept_answer`` once the viewer's answer SDP arrives.
+    """
+    return remote_desktop_registry.start_webrtc_host(
+        token=token, read_only=bool(read_only),
+    )
+
+
+def _webrtc_create_offer(peer_label: str = "remote viewer") -> Dict[str, Any]:
+    return remote_desktop_registry.webrtc_create_offer(peer_label=peer_label)
+
+
+def _webrtc_accept_answer(answer_sdp: str) -> Dict[str, Any]:
+    return remote_desktop_registry.webrtc_accept_answer(answer_sdp)
+
+
+def _webrtc_stop_host() -> Dict[str, Any]:
+    return remote_desktop_registry.stop_webrtc_host()
+
+
+def _webrtc_host_status() -> Dict[str, Any]:
+    return remote_desktop_registry.webrtc_host_status()
+
+
+def _webrtc_start_viewer(token: str,
+                         viewer_id: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: allocate the singleton WebRTC viewer."""
+    return remote_desktop_registry.start_webrtc_viewer(
+        token=token, viewer_id=viewer_id,
+    )
+
+
+def _webrtc_process_offer(offer_sdp: str,
+                          expected_dtls_fingerprint: Optional[str] = None,
+                          ) -> Dict[str, Any]:
+    return remote_desktop_registry.webrtc_process_offer(
+        offer_sdp,
+        expected_dtls_fingerprint=expected_dtls_fingerprint,
+    )
+
+
+def _webrtc_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
+    return remote_desktop_registry.webrtc_send_input(action)
+
+
+def _webrtc_stop_viewer() -> Dict[str, Any]:
+    return remote_desktop_registry.stop_webrtc_viewer()
+
+
+def _webrtc_viewer_status() -> Dict[str, Any]:
+    return remote_desktop_registry.webrtc_viewer_status()
+
+
 # --- Virtual gamepad (ViGEm) -----------------------------------------------
 
 def _gamepad_press(button: str) -> Dict[str, Any]:
@@ -818,6 +924,31 @@ class Executor:
             "AC_remote_disconnect": _remote_disconnect,
             "AC_remote_viewer_status": _remote_viewer_status,
             "AC_remote_send_input": _remote_send_input,
+
+            # WebSocket-transport remote desktop host
+            "AC_start_ws_host": _ws_start_host,
+            "AC_stop_ws_host": _ws_stop_host,
+            "AC_ws_host_status": _ws_host_status,
+
+            # WebSocket-transport remote desktop viewer
+            "AC_ws_connect": _ws_connect,
+            "AC_ws_disconnect": _ws_disconnect,
+            "AC_ws_viewer_status": _ws_viewer_status,
+            "AC_ws_send_input": _ws_send_input,
+
+            # WebRTC-transport host (manual SDP exchange)
+            "AC_start_webrtc_host": _webrtc_start_host,
+            "AC_webrtc_create_offer": _webrtc_create_offer,
+            "AC_webrtc_accept_answer": _webrtc_accept_answer,
+            "AC_stop_webrtc_host": _webrtc_stop_host,
+            "AC_webrtc_host_status": _webrtc_host_status,
+
+            # WebRTC-transport viewer (manual SDP exchange)
+            "AC_start_webrtc_viewer": _webrtc_start_viewer,
+            "AC_webrtc_process_offer": _webrtc_process_offer,
+            "AC_webrtc_send_input": _webrtc_send_input,
+            "AC_stop_webrtc_viewer": _webrtc_stop_viewer,
+            "AC_webrtc_viewer_status": _webrtc_viewer_status,
 
             # Virtual gamepad (ViGEm — drives games that ignore SendInput)
             "AC_gamepad_press": _gamepad_press,
