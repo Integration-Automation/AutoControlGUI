@@ -141,6 +141,16 @@ from je_auto_control.utils.secrets import (
     SecretManager, SecretStoreError, SecretStoreLocked,
     default_secret_manager, default_secret_store_path,
 )
+# Observability (Prometheus metrics + OpenTelemetry traces, headless)
+from je_auto_control.utils.observability import (
+    Counter as MetricCounter,
+    Gauge as MetricGauge,
+    Histogram as MetricHistogram,
+    MetricRegistry, PrometheusExporter, Tracer,
+    default_exporter as default_metrics_exporter,
+    default_registry as default_metric_registry,
+    default_tracer, render_metrics_text, traced,
+)
 # Run history (headless)
 from je_auto_control.utils.run_history.history_store import (
     HistoryStore, RunRecord, default_history_store,
@@ -330,6 +340,11 @@ __all__ = [
     # Secret manager
     "SecretManager", "SecretStoreError", "SecretStoreLocked",
     "default_secret_manager", "default_secret_store_path",
+    # Observability (Prometheus + OpenTelemetry)
+    "MetricCounter", "MetricGauge", "MetricHistogram",
+    "MetricRegistry", "default_metric_registry",
+    "PrometheusExporter", "default_metrics_exporter", "render_metrics_text",
+    "Tracer", "default_tracer", "traced",
     # Run history
     "HistoryStore", "RunRecord", "default_history_store",
     # Accessibility
