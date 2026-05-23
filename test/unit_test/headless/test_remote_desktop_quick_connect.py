@@ -273,7 +273,8 @@ def test_approval_dialog_rejects_when_operator_clicks_deny(qapp, monkeypatch):
             def attempt():
                 try:
                     viewer.connect(timeout=5.0)
-                except (AuthenticationError, OSError, ConnectionError) as exc:
+                except (AuthenticationError, OSError) as exc:
+                    # ConnectionError already inherits from OSError.
                     captured["error"] = exc
                 finally:
                     done.set()

@@ -1,3 +1,5 @@
+_TOKEN_LABEL_ZH = "Token："
+
 traditional_chinese_word_dict = {
     # Main
     "application_name": "AutoControlGUI",
@@ -702,7 +704,7 @@ traditional_chinese_word_dict = {
     "wh_script_label": "腳本：",
     "wh_browse": "瀏覽",
     "wh_methods_label": "方法：",
-    "wh_token_label": "Token：",
+    "wh_token_label": _TOKEN_LABEL_ZH,
     "wh_token_placeholder": "可選的 Bearer token",
     "wh_register": "註冊 webhook",
     "wh_remove": "移除所選",
@@ -865,7 +867,7 @@ traditional_chinese_word_dict = {
     "rd_quick_target_label": "輸入 host:port",
     "rd_quick_target_ph": "例如 192.168.1.10:5555",
     "rd_quick_token_ph": "共用 token",
-    "rd_quick_viewer_token": "Token：",
+    "rd_quick_viewer_token": _TOKEN_LABEL_ZH,
     "rd_quick_connect_btn": "連線",
     "rd_quick_disconnect_btn": "中斷",
     "rd_quick_recent": "近期連線",
@@ -892,7 +894,7 @@ traditional_chinese_word_dict = {
     ),
     "rd_host_config_group": "Host 設定",
     "rd_viewer_config_group": "連線到遠端 Host",
-    "rd_token_label": "Token：",
+    "rd_token_label": _TOKEN_LABEL_ZH,
     "rd_token_placeholder": "共用密鑰（HMAC key）",
     "rd_token_generate": "產生",
     "rd_bind_label": "位址：",

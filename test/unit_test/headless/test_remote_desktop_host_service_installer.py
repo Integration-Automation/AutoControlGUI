@@ -1,6 +1,5 @@
 """Phase 3.1: host_service installer output tests."""
 import json
-from pathlib import Path
 
 import pytest
 

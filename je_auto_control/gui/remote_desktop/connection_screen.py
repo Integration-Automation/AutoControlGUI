@@ -41,9 +41,6 @@ from je_auto_control.utils.remote_desktop.connect_coordinator import (
     ConnectTarget, UnresolvableTargetError, parse_target,
 )
 from je_auto_control.utils.remote_desktop.host_id import format_host_id
-from je_auto_control.utils.remote_desktop.protocol import (
-    AuthenticationError,
-)
 from je_auto_control.utils.remote_desktop.registry import registry
 
 _HOST_ID_CSS = (
@@ -401,7 +398,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
                 on_cursor=self._on_remote_cursor,
             )
             viewer.connect(timeout=5.0)
-        except (AuthenticationError, OSError, RuntimeError) as error:
+        except (OSError, RuntimeError) as error:
+            # AuthenticationError is a subclass of RuntimeError; the
+            # tuple above already catches it.
             QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
             return
         registry._viewer = viewer  # noqa: SLF001  centralised lifecycle ownership
@@ -422,7 +421,9 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
                 on_cursor=self._on_remote_cursor,
             )
             viewer.connect(timeout=5.0)
-        except (AuthenticationError, OSError, RuntimeError) as error:
+        except (OSError, RuntimeError) as error:
+            # AuthenticationError is a subclass of RuntimeError; the
+            # tuple above already catches it.
             QMessageBox.warning(self, _t("rd_quick_connect_btn"), str(error))
             return
         registry._ws_viewer = viewer  # noqa: SLF001  centralised lifecycle ownership

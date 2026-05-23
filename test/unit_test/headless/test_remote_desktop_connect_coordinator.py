@@ -5,13 +5,17 @@ from je_auto_control.utils.remote_desktop.connect_coordinator import (
     ConnectTarget, UnresolvableTargetError, parse_target,
 )
 
+# RFC 1918 example string used to exercise the parser. The test never
+# opens a real socket — the parser only validates string structure.
+_LAN_IP_FIXTURE = "192.168.1.10"  # NOSONAR python:S1313  # reason: RFC 1918 test fixture, no network I/O
+
 
 # --- TCP direct ---------------------------------------------------------
 
 def test_parse_bare_host_port_is_tcp():
-    target = parse_target("192.168.1.10:5555")
+    target = parse_target(f"{_LAN_IP_FIXTURE}:5555")
     assert target.kind == "tcp"
-    assert target.host == "192.168.1.10"
+    assert target.host == _LAN_IP_FIXTURE
     assert target.port == 5555
     assert target.is_direct
 
@@ -100,6 +104,7 @@ def test_parse_target_rejects_bad_input(bad):
 
 def test_parse_target_rejects_non_string():
     with pytest.raises(UnresolvableTargetError):
+        # NOSONAR python:S5655  # reason: intentional bad-type negative test
         parse_target(12345)  # type: ignore[arg-type]
 
 

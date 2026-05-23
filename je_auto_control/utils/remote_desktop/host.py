@@ -85,6 +85,9 @@ def _interpret_approval(result: Any) -> str:
 
 _AUTH_TIMEOUT_S = 60.0
 _DEFAULT_QUALITY = 70
+_FILE_MSG_TYPES = frozenset({
+    MessageType.FILE_BEGIN, MessageType.FILE_CHUNK, MessageType.FILE_END,
+})
 
 
 def _candidate_totp_codes(secret: str):
@@ -463,29 +466,31 @@ class _ClientHandler:
                     )
                 self.stop()
                 return
-            if msg_type is MessageType.PING:
-                continue
-            if msg_type is MessageType.INPUT:
-                # Phase 5.3: drop input from view-only viewers so they
-                # can watch but cannot drive the mouse / keyboard.
-                if self.permission == PERMISSION_VIEW_ONLY:
-                    continue
+            self._route_incoming(msg_type, payload)
+
+    def _route_incoming(self, msg_type: MessageType, payload: bytes) -> None:
+        """Dispatch one received message to the matching handler."""
+        if msg_type is MessageType.PING:
+            return
+        if msg_type is MessageType.INPUT:
+            # Phase 5.3: drop input from view-only viewers so they can
+            # watch but cannot drive the mouse / keyboard.
+            if self.permission != PERMISSION_VIEW_ONLY:
                 self._handle_input_payload(payload)
-                continue
-            if msg_type is MessageType.CLIPBOARD:
-                self._handle_clipboard_payload(payload)
-                continue
-            if msg_type is MessageType.CHAT:
-                self._handle_chat_payload(payload)
-                continue
-            if msg_type in (MessageType.FILE_BEGIN, MessageType.FILE_CHUNK,
-                            MessageType.FILE_END):
-                self._handle_file_payload(msg_type, payload)
-                continue
-            autocontrol_logger.info(
-                "remote_desktop unexpected msg %s from %s",
-                msg_type.name, self._address,
-            )
+            return
+        if msg_type is MessageType.CLIPBOARD:
+            self._handle_clipboard_payload(payload)
+            return
+        if msg_type is MessageType.CHAT:
+            self._handle_chat_payload(payload)
+            return
+        if msg_type in _FILE_MSG_TYPES:
+            self._handle_file_payload(msg_type, payload)
+            return
+        autocontrol_logger.info(
+            "remote_desktop unexpected msg %s from %s",
+            msg_type.name, self._address,
+        )
 
     def _handle_file_payload(self, msg_type: MessageType,
                              payload: bytes) -> None:
@@ -577,28 +582,29 @@ class RemoteDesktopHost:
     ``stop()`` can be called from any thread.
     """
 
-    def __init__(self, token: str,
-                 bind: str = "127.0.0.1",
-                 port: int = 0,
-                 fps: float = 10.0,
-                 quality: int = _DEFAULT_QUALITY,
-                 region: Optional[Sequence[int]] = None,
-                 max_clients: int = 4,
-                 frame_provider: Optional[FrameProvider] = None,
-                 input_dispatcher: Optional[InputDispatcher] = None,
-                 host_id: Optional[str] = None,
-                 ssl_context: Optional[ssl.SSLContext] = None,
-                 audio_config: Optional[AudioCaptureConfig] = None,
-                 audio_capture: Optional[Any] = None,
-                 on_pending_viewer: Optional[PendingViewerCallback] = None,
-                 cursor_provider: Optional[CursorProvider] = None,
-                 enable_cursor_broadcast: bool = True,
-                 ip_allowlist: Optional[Sequence[str]] = None,
-                 monitor_index: Optional[int] = None,
-                 single_use_tokens: Optional[Sequence[str]] = None,
-                 on_chat: Optional[Callable[[str, str], None]] = None,
-                 totp_secret: Optional[str] = None,
-                 ) -> None:
+    def __init__(  # NOSONAR python:S107  # reason: each kwarg is a documented public knob; bundling further would split the API across patterns and force every existing caller (registry, host_panel, tests in 8 files) into a wrapper object for marginal benefit
+            self, token: str,
+            bind: str = "127.0.0.1",
+            port: int = 0,
+            fps: float = 10.0,
+            quality: int = _DEFAULT_QUALITY,
+            region: Optional[Sequence[int]] = None,
+            max_clients: int = 4,
+            frame_provider: Optional[FrameProvider] = None,
+            input_dispatcher: Optional[InputDispatcher] = None,
+            host_id: Optional[str] = None,
+            ssl_context: Optional[ssl.SSLContext] = None,
+            audio_config: Optional[AudioCaptureConfig] = None,
+            audio_capture: Optional[Any] = None,
+            on_pending_viewer: Optional[PendingViewerCallback] = None,
+            cursor_provider: Optional[CursorProvider] = None,
+            enable_cursor_broadcast: bool = True,
+            ip_allowlist: Optional[Sequence[str]] = None,
+            monitor_index: Optional[int] = None,
+            single_use_tokens: Optional[Sequence[str]] = None,
+            on_chat: Optional[Callable[[str, str], None]] = None,
+            totp_secret: Optional[str] = None,
+            ) -> None:
         _validate_host_args(token, fps, int(quality))
         if audio_config is None:
             audio_config = AudioCaptureConfig()
@@ -873,7 +879,9 @@ class RemoteDesktopHost:
                 ):
                     return True
         with self._single_use_lock:
-            for code in list(self._single_use_tokens):
+            # No list() copy needed: ``return True`` exits before the
+            # mutation could affect a subsequent iteration step.
+            for code in self._single_use_tokens:
                 if verify_response(code, nonce, payload):
                     self._single_use_tokens.discard(code)
                     return True

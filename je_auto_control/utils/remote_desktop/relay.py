@@ -173,7 +173,8 @@ class RelayServer:
             client_sock.settimeout(_HANDSHAKE_TIMEOUT_S)
             handshake = _read_exact(client_sock, _HANDSHAKE_BYTES)
             client_sock.settimeout(None)
-        except (OSError, ConnectionError) as error:
+        except OSError as error:
+            # ConnectionError already inherits from OSError.
             autocontrol_logger.info("relay handshake failed: %r", error)
             try:
                 client_sock.close()

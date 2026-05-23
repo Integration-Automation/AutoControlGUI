@@ -1,9 +1,7 @@
 """Phase 1.2: viewer-side rolling stats tests."""
-import threading
 import time
 from io import BytesIO
 
-import pytest
 
 from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
 from je_auto_control.utils.remote_desktop.viewer import RemoteDesktopViewer

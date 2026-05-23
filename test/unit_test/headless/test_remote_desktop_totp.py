@@ -10,7 +10,8 @@ from je_auto_control.utils.remote_desktop.totp import (
 # RFC 6238 SHA-1 test vector: secret ``12345678901234567890`` (ASCII)
 # corresponds to base32 ``GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ`` and yields
 # the code ``94287082`` at Unix time 59 with 8-digit output.
-_RFC_SECRET_B32 = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+# NOSONAR python:S6418  # reason: published RFC 6238 reference test vector
+_RFC_SECRET_B32 = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"  # nosec B105  # reason: RFC test vector
 
 
 def test_rfc6238_known_vector_8_digit():
@@ -63,6 +64,7 @@ def test_verify_rejects_malformed_input():
     secret = generate_secret()
     assert verify_code(secret, "abcdef") is False
     assert verify_code(secret, "12345") is False  # too short
+    # NOSONAR python:S5655  # reason: intentional bad-type negative test
     assert verify_code(secret, 123456) is False  # type: ignore[arg-type]
 
 
@@ -85,7 +87,8 @@ def test_invalid_secret_raises():
 
 
 def test_provisioning_uri_contains_secret_and_issuer():
-    secret = "GEZDGNBVGY3TQOJQ"
+    # NOSONAR python:S6418  # reason: literal base32 test vector, not a real secret
+    secret = "GEZDGNBVGY3TQOJQ"  # nosec B105  # reason: test-only RFC fixture
     uri = provisioning_uri(secret, account="alice", issuer="MyApp")
     assert uri.startswith("otpauth://totp/")
     assert "secret=GEZDGNBVGY3TQOJQ" in uri

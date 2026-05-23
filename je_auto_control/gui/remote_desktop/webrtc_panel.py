@@ -709,8 +709,9 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
 
     # --- handlers ----------------------------------------------------------
 
-    def prefill(self, token: str = "", host_id: str = "",
-                signaling_url: str = "") -> None:
+    def prefill(self, token: Optional[str] = None,
+                host_id: Optional[str] = None,
+                signaling_url: Optional[str] = None) -> None:
         """Hand-off entry point used by the Quick Connect screen.
 
         Populates the signaling-flow fields so the operator can click
@@ -2028,8 +2029,9 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         if signaling:
             self._server_edit.setText(signaling)
 
-    def prefill(self, host_id: str = "", token: str = "",
-                signaling_url: str = "") -> None:
+    def prefill(self, host_id: Optional[str] = None,
+                token: Optional[str] = None,
+                signaling_url: Optional[str] = None) -> None:
         """Hand-off entry point used by the Quick Connect screen.
 
         Populates the signaling-flow fields without auto-clicking

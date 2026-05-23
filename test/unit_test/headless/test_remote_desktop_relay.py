@@ -1,6 +1,5 @@
 """Phase 3.3: tests for the in-process TCP relay."""
 import socket
-import threading
 import time
 
 import pytest
