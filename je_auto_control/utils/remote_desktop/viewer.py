@@ -65,6 +65,20 @@ def _extract_resume_info(payload: bytes) -> Tuple[Optional[str], Optional[float]
     return token, ttl
 
 
+def _extract_codec(payload: bytes) -> Optional[str]:
+    """Phase 6.8: pull the negotiated codec name from AUTH_OK JSON."""
+    if not payload:
+        return None
+    try:
+        body = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(body, dict):
+        return None
+    codec = body.get("codec")
+    return codec if isinstance(codec, str) else None
+
+
 class RemoteDesktopViewer:
     """Connect to a :class:`RemoteDesktopHost` and stream frames + input.
 
@@ -115,6 +129,8 @@ class RemoteDesktopViewer:
         # skip both the approval popup and HMAC handshake setup cost.
         self._resume_token: Optional[str] = None
         self._resume_ttl: Optional[float] = None
+        # Phase 6.8: codec negotiated in AUTH_OK; None = legacy raw JPEG.
+        self._negotiated_codec: Optional[str] = None
         self._ssl_context = ssl_context
         self._server_hostname = server_hostname
         self._channel: Optional[MessageChannel] = None
@@ -151,6 +167,11 @@ class RemoteDesktopViewer:
     def resume_ttl(self) -> Optional[float]:
         """Phase 6.6: seconds the resume token stays valid on the host."""
         return self._resume_ttl
+
+    @property
+    def negotiated_codec(self) -> Optional[str]:
+        """Phase 6.8: codec name announced in AUTH_OK (``"jpeg"`` / ``"h264"`` / ``"hevc"``)."""
+        return self._negotiated_codec
 
     def connect(self, timeout: float = _DEFAULT_CONNECT_TIMEOUT_S) -> None:
         """Open the (optionally TLS) connection and complete the auth handshake.
@@ -323,6 +344,7 @@ class RemoteDesktopViewer:
             token, ttl = _extract_resume_info(payload)
             self._resume_token = token
             self._resume_ttl = ttl
+            self._negotiated_codec = _extract_codec(payload)
             self._verify_host_id(self._remote_host_id)
             return
         if msg_type is MessageType.AUTH_FAIL:

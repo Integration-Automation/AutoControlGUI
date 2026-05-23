@@ -34,6 +34,9 @@ from je_auto_control.utils.remote_desktop.protocol import (
 from je_auto_control.utils.remote_desktop.resume_tokens import (
     ResumeTokenStore,
 )
+from je_auto_control.utils.remote_desktop.video_codec import (
+    CODEC_JPEG, CodecProvider, JpegPassthrough, codec_tag,
+)
 from je_auto_control.utils.remote_desktop.transport import (
     MessageChannel, TcpMessageChannel,
 )
@@ -419,7 +422,8 @@ class _ClientHandler:
         ok_payload = json.dumps(
             {"host_id": self._host.host_id,
              "resume_token": resume_token,
-             "resume_ttl": self._host._resume_store.ttl},
+             "resume_ttl": self._host._resume_store.ttl,
+             "codec": self._host._codec_provider.name},
             ensure_ascii=False,
         ).encode("utf-8")
         self._channel.send_typed(MessageType.AUTH_OK, ok_payload)
@@ -620,6 +624,7 @@ class RemoteDesktopHost:
             single_use_tokens: Optional[Sequence[str]] = None,
             on_chat: Optional[Callable[[str, str], None]] = None,
             totp_secret: Optional[str] = None,
+            codec_provider: Optional[CodecProvider] = None,
             ) -> None:
         _validate_host_args(token, fps, int(quality))
         if audio_config is None:
@@ -671,6 +676,12 @@ class RemoteDesktopHost:
         # Phase 6.6: in-memory resume tokens — viewer reconnects within
         # the TTL skip the approval popup and re-use the saved permission.
         self._resume_store = ResumeTokenStore()
+        # Phase 6.8: pluggable video codec. Default JPEG passthrough
+        # keeps the wire format byte-for-byte identical to pre-6.8
+        # clients; opt in to H.264 by passing an H264CodecProvider.
+        self._codec_provider: CodecProvider = (
+            codec_provider if codec_provider is not None else JpegPassthrough()
+        )
         self._listen_sock: Optional[socket.socket] = None
         self._accept_thread: Optional[threading.Thread] = None
         self._capture_thread: Optional[threading.Thread] = None
@@ -1174,16 +1185,37 @@ class RemoteDesktopHost:
             # bandwidth at idle.
             frame_hash = hash(frame)
             if frame_hash != last_frame_hash:
-                with self._frame_cond:
-                    self._latest_frame = frame
-                    self._latest_seq += 1
-                    self._frame_cond.notify_all()
+                # Phase 6.8: hand the JPEG to the configured codec.
+                # JpegPassthrough yields the bytes unchanged so the
+                # wire format stays identical for stock clients.
+                for encoded in self._encode_for_wire(frame):
+                    with self._frame_cond:
+                        self._latest_frame = encoded
+                        self._latest_seq += 1
+                        self._frame_cond.notify_all()
                 last_frame_hash = frame_hash
             next_tick += self._period
             sleep_for = max(0.0, next_tick - time.monotonic())
             if sleep_for <= 0.0:
                 next_tick = time.monotonic()
             self._shutdown.wait(sleep_for)
+
+    def _encode_for_wire(self, jpeg_bytes: bytes):
+        """Wrap codec output with a 1-byte tag (skipped for JPEG)."""
+        provider = self._codec_provider
+        if provider.name == CODEC_JPEG:
+            yield jpeg_bytes  # legacy wire format: no tag, raw JPEG
+            return
+        tag = bytes([codec_tag(provider.name)])
+        try:
+            packets = provider.encode_jpeg(jpeg_bytes)
+        except (OSError, RuntimeError, ValueError) as error:
+            autocontrol_logger.warning(
+                "remote_desktop codec %s failed: %r", provider.name, error,
+            )
+            return
+        for packet in packets:
+            yield tag + bytes(packet)
 
     def _reap_dead_clients(self) -> None:
         with self._clients_lock:
