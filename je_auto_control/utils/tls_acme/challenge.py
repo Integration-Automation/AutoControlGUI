@@ -51,7 +51,7 @@ class HttpChallengeServer:
     flow, stop.
     """
 
-    def __init__(self, *, host: str = "0.0.0.0",  # noqa: S104  # NOSONAR python:S5332  # reason: server must be reachable by Let's Encrypt's HTTP-01 validator from the public internet
+    def __init__(self, *, host: str = "0.0.0.0",  # noqa: S104  # nosec B104  # NOSONAR python:S5332  # reason: server must be reachable by Let's Encrypt's HTTP-01 validator from the public internet
                  port: int = 80) -> None:
         self._host = host
         self._port = int(port)

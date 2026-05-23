@@ -14,12 +14,11 @@ exception_list = [
     ImageNotFoundException
 ]
 
-for index, value in enumerate(exception_list):
+for value in exception_list:
     try:
         print(value)
-        if exception_list[index] != ImageNotFoundException:
-            raise exception_list[index]()
-        else:
-            raise exception_list[index]("test.png")
+        if value is not ImageNotFoundException:
+            raise value()
+        raise value("test.png")
     except Exception as error:
         print(repr(error))

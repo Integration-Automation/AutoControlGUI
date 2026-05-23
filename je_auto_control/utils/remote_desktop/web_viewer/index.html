@@ -1221,7 +1221,7 @@ if ("serviceWorker" in navigator) {
   // This file is a plain <script>, not a module, so top-level await is
   // not legal here. Service-worker registration is best-effort: any
   // rejection is silently swallowed.
-  navigator.serviceWorker.register("sw.js").catch(() => {});  // NOSONAR — non-module script: top-level await not allowed
+  navigator.serviceWorker.register("sw.js").catch(() => {});  // NOSONAR javascript:S7785 — non-module script: top-level await not allowed
 }
 </script>
 </body>

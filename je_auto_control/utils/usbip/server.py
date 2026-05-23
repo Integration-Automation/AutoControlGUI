@@ -32,7 +32,7 @@ class UsbIpServer:
     """Thread-per-connection USB/IP server bound to ``UrbBackend``."""
 
     def __init__(self, backend: UrbBackend, *,
-                 host: str = "0.0.0.0",  # noqa: S104  # NOSONAR python:S5332  # reason: USB/IP clients connect from other machines on the LAN
+                 host: str = "0.0.0.0",  # noqa: S104  # nosec B104  # NOSONAR python:S5332  # reason: USB/IP clients connect from other machines on the LAN
                  port: int = 3240) -> None:
         self._backend = backend
         self._host = host

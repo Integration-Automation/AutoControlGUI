@@ -399,8 +399,8 @@ if sys.platform == "win32":  # pragma: no cover - Windows-only
                 )
                 try:
                     config = load_config()
-                except (OSError, ValueError) as error:
-                    logging.error("config load failed: %r", error)
+                except (OSError, ValueError):
+                    logging.exception("config load failed")
                     return
                 run_daemon(config)
     except ImportError:
