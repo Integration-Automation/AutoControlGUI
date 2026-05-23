@@ -70,7 +70,7 @@ class AdbClient:
             cmd.extend(["-s", target])
         cmd.extend(args)
         try:
-            result = subprocess.run(  # nosec B603  # reason: argv list, no shell, adb path resolved by shutil.which / explicit override
+            result = subprocess.run(  # nosec B603  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: argv list, no shell, adb path resolved by shutil.which / explicit override
                 cmd, input=input_bytes,
                 capture_output=True, timeout=timeout or self._timeout,
                 check=False,

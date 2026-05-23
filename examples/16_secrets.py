@@ -23,7 +23,7 @@ def main() -> None:
 
     # Demo-only passphrase. In production you would prompt for this or
     # pull it from a platform keyring — never hardcode a real one.
-    passphrase = "correct horse battery staple"  # NOSONAR python:S2068  # reason: example illustrating the API, throwaway vault
+    passphrase = "correct horse battery staple"  # nosec B105  # NOSONAR python:S2068  # reason: example illustrating the API, throwaway vault
     manager.initialize(passphrase)
     print(f"created vault at {manager.path}")
 

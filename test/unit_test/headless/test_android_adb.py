@@ -58,6 +58,7 @@ def test_explicit_adb_path_overrides_path_lookup(stub_adb_path):
 
 def _patched_run(returncode: int = 0, stdout: bytes = b"",
                  stderr: bytes = b""):
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: building a CompletedProcess mock, no real process
     completed = subprocess.CompletedProcess(
         args=[], returncode=returncode, stdout=stdout, stderr=stderr,
     )

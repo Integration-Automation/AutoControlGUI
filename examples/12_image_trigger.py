@@ -24,7 +24,7 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    engine = ac.default_trigger_engine()
+    engine = ac.default_trigger_engine
     trigger = engine.add(ac.ImageAppearsTrigger(
         trigger_id="",                       # auto-generated
         script_path=str(SCRIPT),

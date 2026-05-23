@@ -52,11 +52,11 @@ EXPOSE 9939 9940 8765
 
 # Entry script handles Xvfb startup + the host process.
 COPY docker/entrypoint.sh /usr/local/bin/autocontrol-entrypoint
-RUN chmod +x /usr/local/bin/autocontrol-entrypoint
 
-# Drop privileges — Xvfb + AutoControl do not need root. Create the
-# user after all apt / pip installs so the image layers stay reusable.
-RUN groupadd --system --gid 1001 autocontrol \
+# One RUN layer: make the entrypoint executable, create the unprivileged
+# ``autocontrol`` user (uid 1001), and hand /app over to it.
+RUN chmod +x /usr/local/bin/autocontrol-entrypoint \
+    && groupadd --system --gid 1001 autocontrol \
     && useradd --system --uid 1001 --gid autocontrol \
        --home-dir /app --shell /usr/sbin/nologin autocontrol \
     && chown -R autocontrol:autocontrol /app

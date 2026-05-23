@@ -33,7 +33,7 @@ def main() -> None:
     # GET /screen_size — simple read-only call.
     # Loopback HTTP is intentional in this example; production exposure
     # over the network requires ``ssl_context=`` on both server + client.
-    with urllib.request.urlopen(
+    with urllib.request.urlopen(  # nosec B310  # reason: loopback host:port literal, no user input
             urllib.request.Request(
                 f"http://{host}:{port}/screen_size",  # NOSONAR python:S5332  # reason: loopback demo
                 headers=headers,
@@ -48,7 +48,7 @@ def main() -> None:
             ["AC_screenshot", {"file_path": "rest_demo.png"}],
         ],
     }).encode("utf-8")
-    with urllib.request.urlopen(
+    with urllib.request.urlopen(  # nosec B310  # reason: loopback host:port literal, no user input
             urllib.request.Request(
                 f"http://{host}:{port}/execute",  # NOSONAR python:S5332  # reason: loopback demo
                 data=payload, headers=headers, method="POST",

@@ -23,7 +23,7 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    daemon = ac.default_hotkey_daemon()
+    daemon = ac.default_hotkey_daemon
     binding = daemon.bind("ctrl+shift+f9", str(SCRIPT))
     print(f"bound {binding.combo} → {binding.script_path}")
 

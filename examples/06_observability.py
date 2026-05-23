@@ -32,7 +32,7 @@ def main() -> None:
         do_work()
 
     # Self-scrape to show the resulting Prometheus text.
-    with urllib.request.urlopen(
+    with urllib.request.urlopen(  # nosec B310  # reason: literal http://127.0.0.1 URL, no user input
             f"http://127.0.0.1:{exporter.port}/metrics", timeout=2.0,
     ) as resp:
         text = resp.read().decode("utf-8")

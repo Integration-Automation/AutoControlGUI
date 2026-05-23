@@ -178,7 +178,9 @@ class LibUsbBackend(UrbBackend):
             return UrbResponse(
                 status=0, actual_length=len(payload), data=payload,
             )
-        written = device.write(
+        # ``device.write`` is libusb's bulk-out write, not a filesystem
+        # write — the Semgrep rule was authored for Django HTTP handlers.
+        written = device.write(  # nosemgrep: python.django.security.injection.request-data-write.request-data-write  # reason: libusb bulk-out, not file write; passthrough is opt-in via JE_AUTOCONTROL_USB_PASSTHROUGH=1
             endpoint, request.transfer_buffer,
             timeout=_USB_TIMEOUT_MS,
         )

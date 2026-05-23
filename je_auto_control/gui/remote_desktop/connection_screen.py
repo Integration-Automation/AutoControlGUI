@@ -595,7 +595,7 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         broadcast = (entry or {}).get("broadcast_address") if entry else None
         try:
             send_magic_packet(
-                mac, broadcast=broadcast or "255.255.255.255",
+                mac, broadcast_address=broadcast or "255.255.255.255",
             )
         except (OSError, ValueError) as error:
             QMessageBox.warning(

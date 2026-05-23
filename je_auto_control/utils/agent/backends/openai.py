@@ -44,7 +44,7 @@ class OpenAIAgentBackend(AgentBackend):
         if self._client is not None:
             return self._client
         try:
-            import openai
+            import openai  # nosemgrep: codacy.python.openai.import-without-guardrails  # reason: Guardrails is an unrelated content-filter SDK; we apply content safety at the action-executor allowlist + audit layer
         except ImportError as exc:
             raise AgentBackendError(
                 "openai SDK not installed (pip install openai).",

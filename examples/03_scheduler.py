@@ -12,7 +12,7 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    scheduler = ac.default_scheduler()
+    scheduler = ac.default_scheduler
     job = scheduler.add_job(
         script_path=str(actions_path),
         interval_seconds=30.0,

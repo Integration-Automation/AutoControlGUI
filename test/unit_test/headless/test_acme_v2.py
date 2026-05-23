@@ -189,7 +189,7 @@ def _stub_response(stub: "_StubServer", method: str, url: str,
         return 200, _authz_body(stub), headers
     if url.endswith("/chall/1"):
         return 200, {"type": "http-01", "status": "pending"}, headers
-    if url.endswith("/order/1/finalize") or url.endswith("/order/1"):
+    if url.endswith(("/order/1/finalize", "/order/1")):
         return 200, _ORDER_BODY, headers
     if url.endswith("/cert/1"):
         return 200, stub.issued_cert, headers

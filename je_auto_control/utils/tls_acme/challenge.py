@@ -38,7 +38,7 @@ class _ChallengeHandler(http.server.BaseHTTPRequestHandler):
 
     # Silence the default stderr access log; this server is short-lived
     # and noisy logging on every challenge poll just confuses the user.
-    def log_message(self, format: str, *args) -> None:  # noqa: A002, D401
+    def log_message(self, format: str, *args) -> None:  # noqa: A002, D401  # pylint: disable=W0622  # reason: signature dictated by BaseHTTPRequestHandler
         return
 
 
@@ -142,7 +142,7 @@ def run_certbot(domain: str, *,
         args.append("--staging")
     if extra_args:
         args.extend(extra_args)
-    subprocess.run(  # nosec B603  # reason: argv list, no shell, binary path resolved by shutil.which
+    subprocess.run(  # nosec B603  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: argv list, no shell, binary path resolved by shutil.which
         args, check=True, timeout=timeout, capture_output=True,
     )
     return Path("/etc/letsencrypt/live") / domain / "fullchain.pem"
