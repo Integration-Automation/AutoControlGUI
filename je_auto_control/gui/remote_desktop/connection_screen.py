@@ -21,8 +21,8 @@ from typing import Optional
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QGuiApplication, QImage
 from PySide6.QtWidgets import (
-    QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-    QMessageBox, QPushButton, QVBoxLayout, QWidget,
+    QGroupBox, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
+    QListWidgetItem, QMenu, QMessageBox, QPushButton, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -42,6 +42,9 @@ from je_auto_control.utils.remote_desktop.connect_coordinator import (
 )
 from je_auto_control.utils.remote_desktop.host_id import format_host_id
 from je_auto_control.utils.remote_desktop.registry import registry
+from je_auto_control.utils.remote_desktop.wake_on_lan import (
+    send_magic_packet,
+)
 
 _HOST_ID_CSS = (
     "font-family: 'Consolas', 'Menlo', 'Courier New', monospace; "
@@ -118,6 +121,11 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
         self._connect_token.setEchoMode(QLineEdit.EchoMode.Password)
         self._recent = QListWidget()
         self._recent.itemActivated.connect(self._on_recent_activated)
+        # Phase 6.1: right-click a recent entry → "Wake host" via
+        # build_magic_packet / send_magic_packet (the MAC is stored in
+        # AddressBook when the operator saved it for a previous session).
+        self._recent.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._recent.customContextMenuRequested.connect(self._on_recent_menu)
         self._start_btn: Optional[QPushButton] = None
         self._stop_btn: Optional[QPushButton] = None
         self._connect_btn: Optional[QPushButton] = None
@@ -551,6 +559,80 @@ class QuickConnectScreen(TranslatableMixin, QWidget):
     def _on_recent_activated(self, item: QListWidgetItem) -> None:
         target = item.data(Qt.ItemDataRole.UserRole) or item.text()
         self._connect_target.setText(str(target))
+
+    def _on_recent_menu(self, pos) -> None:
+        """Right-click menu on the Recent list: edit MAC, send WoL."""
+        item = self._recent.itemAt(pos)
+        if item is None:
+            return
+        host_id = str(item.data(Qt.ItemDataRole.UserRole) or item.text())
+        entry = self._find_address_book_entry(host_id)
+        menu = QMenu(self._recent)
+        wake = menu.addAction(_t("rd_quick_wake_host"))
+        edit = menu.addAction(_t("rd_quick_edit_mac"))
+        chosen = menu.exec(self._recent.mapToGlobal(pos))
+        if chosen is wake:
+            self._send_wake_on_lan(entry, host_id)
+        elif chosen is edit:
+            self._edit_recent_mac(entry, host_id)
+
+    def _find_address_book_entry(self, host_id: str):
+        for entry in self._book.list_entries():
+            if entry.get("host_id") == host_id:
+                return entry
+        return None
+
+    def _send_wake_on_lan(self, entry, host_id: str) -> None:
+        mac = (entry or {}).get("mac_address") if entry else None
+        if not mac:
+            mac, ok = QInputDialog.getText(
+                self, _t("rd_quick_wake_host"),
+                _t("rd_quick_wol_mac_prompt"),
+            )
+            if not ok or not mac:
+                return
+            self._save_mac_to_book(host_id, mac)
+        broadcast = (entry or {}).get("broadcast_address") if entry else None
+        try:
+            send_magic_packet(
+                mac, broadcast_address=broadcast or "255.255.255.255",
+            )
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(
+                self, _t("rd_quick_wake_host"), str(error),
+            )
+            return
+        QMessageBox.information(
+            self, _t("rd_quick_wake_host"),
+            _t("rd_quick_wol_sent").replace("{mac}", mac),
+        )
+
+    def _edit_recent_mac(self, entry, host_id: str) -> None:
+        current = (entry or {}).get("mac_address") if entry else ""
+        mac, ok = QInputDialog.getText(
+            self, _t("rd_quick_edit_mac"),
+            _t("rd_quick_wol_mac_prompt"),
+            text=str(current or ""),
+        )
+        if not ok or not mac:
+            return
+        self._save_mac_to_book(host_id, mac)
+
+    def _save_mac_to_book(self, host_id: str, mac: str) -> None:
+        """Persist the MAC against the matching AddressBook entry."""
+        for entry in self._book.list_entries():
+            if entry.get("host_id") == host_id:
+                try:
+                    self._book.upsert(
+                        host_id=host_id,
+                        server_url=entry.get("server_url", host_id),
+                        label=entry.get("label", ""),
+                        mac_address=mac,
+                    )
+                except (ValueError, OSError):
+                    return
+                self._refresh_recent()
+                return
 
     # --- status -------------------------------------------------------
 

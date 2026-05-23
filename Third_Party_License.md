@@ -21,7 +21,7 @@ Full copies of the upstream license texts are archived under `LICENSEs/`.
 
 | Package | Version | License | Purpose |
 |---|---|---|---|
-| [PySide6](https://pypi.org/project/PySide6/) | 6.11.0 | LGPL-3.0 / Qt Commercial | Qt 6 GUI framework used by `start_autocontrol_gui()` |
+| [PySide6](https://pypi.org/project/PySide6/) | 6.11.1 | LGPL-3.0 / Qt Commercial | Qt 6 GUI framework used by `start_autocontrol_gui()` |
 | [qt-material](https://pypi.org/project/qt-material/) | 2.17 | BSD-2-Clause | Material Design themes for PySide6 |
 
 ### Optional feature dependencies (loaded lazily, not pinned)

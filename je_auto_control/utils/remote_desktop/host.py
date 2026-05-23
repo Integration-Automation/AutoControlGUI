@@ -31,6 +31,12 @@ from je_auto_control.utils.remote_desktop.input_dispatch import (
 from je_auto_control.utils.remote_desktop.protocol import (
     AuthenticationError, MessageType, ProtocolError,
 )
+from je_auto_control.utils.remote_desktop.resume_tokens import (
+    ResumeTokenStore,
+)
+from je_auto_control.utils.remote_desktop.video_codec import (
+    CODEC_JPEG, CodecProvider, JpegPassthrough, codec_tag,
+)
 from je_auto_control.utils.remote_desktop.transport import (
     MessageChannel, TcpMessageChannel,
 )
@@ -390,21 +396,35 @@ class _ClientHandler:
             raise AuthenticationError(
                 f"expected AUTH_RESPONSE, got {msg_type.name}"
             )
-        if not self._host._verify_token(nonce, payload):
-            self._channel.send_typed(MessageType.AUTH_FAIL, b"bad token")
-            raise AuthenticationError("bad token")
-        # Host operator gates the session *before* AUTH_OK so the viewer
-        # surfaces the rejection as an AuthenticationError instead of
-        # connecting and then mysteriously disconnecting.
-        permission = self._resolve_permission()
-        if permission == PERMISSION_DENIED:
-            self._channel.send_typed(
-                MessageType.AUTH_FAIL, b"rejected by host",
-            )
-            raise AuthenticationError("rejected by host")
-        self.permission = permission
+        # Phase 6.6: a viewer reconnecting with a valid resume token
+        # signs with that token directly — host short-circuits the
+        # approval popup and reuses the saved permission.
+        resumed = self._host._try_consume_resume(nonce, payload)
+        if resumed is not None:
+            self.permission = resumed
+        else:
+            if not self._host._verify_token(nonce, payload):
+                self._channel.send_typed(MessageType.AUTH_FAIL, b"bad token")
+                raise AuthenticationError("bad token")
+            # Host operator gates the session *before* AUTH_OK so the
+            # viewer surfaces the rejection as an AuthenticationError
+            # instead of connecting and then mysteriously disconnecting.
+            permission = self._resolve_permission()
+            if permission == PERMISSION_DENIED:
+                self._channel.send_typed(
+                    MessageType.AUTH_FAIL, b"rejected by host",
+                )
+                raise AuthenticationError("rejected by host")
+            self.permission = permission
+        # Issue a fresh resume token so the viewer can reconnect
+        # within the store's TTL without the approval popup.
+        resume_token = self._host._resume_store.issue(self.permission)
         ok_payload = json.dumps(
-            {"host_id": self._host.host_id}, ensure_ascii=False,
+            {"host_id": self._host.host_id,
+             "resume_token": resume_token,
+             "resume_ttl": self._host._resume_store.ttl,
+             "codec": self._host._codec_provider.name},
+            ensure_ascii=False,
         ).encode("utf-8")
         self._channel.send_typed(MessageType.AUTH_OK, ok_payload)
         self._channel.settimeout(None)
@@ -484,6 +504,9 @@ class _ClientHandler:
         if msg_type is MessageType.CHAT:
             self._handle_chat_payload(payload)
             return
+        if msg_type is MessageType.USB_LIST_REQUEST:
+            self._handle_usb_list_request()
+            return
         if msg_type in _FILE_MSG_TYPES:
             self._handle_file_payload(msg_type, payload)
             return
@@ -507,6 +530,35 @@ class _ClientHandler:
                 "remote_desktop bad file message from %s: %r",
                 self._address, error,
             )
+
+    def _handle_usb_list_request(self) -> None:
+        """Phase 6.9: enumerate the host's USB devices and ship the list back.
+
+        Uses the existing :func:`list_usb_devices` helper so we get the
+        same cross-platform behaviour as the standalone USB module.
+        Errors fall back to an empty payload — the viewer should
+        treat that as "host has no usable USB backend" rather than
+        crashing.
+        """
+        try:
+            from je_auto_control.utils.usb import list_usb_devices
+            result = list_usb_devices()
+            body = {
+                "backend": result.backend,
+                "devices": [d.to_dict() for d in result.devices],
+            }
+        except (ImportError, OSError, RuntimeError) as error:
+            autocontrol_logger.info(
+                "usb_list from %s failed: %r", self._address, error,
+            )
+            body = {"backend": "unavailable", "devices": []}
+        try:
+            self._channel.send_typed(
+                MessageType.USB_LIST_RESPONSE,
+                json.dumps(body, ensure_ascii=False).encode("utf-8"),
+            )
+        except OSError:
+            pass
 
     def _handle_chat_payload(self, payload: bytes) -> None:
         """Forward viewer-originated chat to the host's optional callback."""
@@ -604,6 +656,7 @@ class RemoteDesktopHost:
             single_use_tokens: Optional[Sequence[str]] = None,
             on_chat: Optional[Callable[[str, str], None]] = None,
             totp_secret: Optional[str] = None,
+            codec_provider: Optional[CodecProvider] = None,
             ) -> None:
         _validate_host_args(token, fps, int(quality))
         if audio_config is None:
@@ -652,6 +705,15 @@ class RemoteDesktopHost:
         self._on_chat = on_chat
         # Phase 4.1: TOTP secret. None disables 2FA (default).
         self._totp_secret = totp_secret
+        # Phase 6.6: in-memory resume tokens — viewer reconnects within
+        # the TTL skip the approval popup and re-use the saved permission.
+        self._resume_store = ResumeTokenStore()
+        # Phase 6.8: pluggable video codec. Default JPEG passthrough
+        # keeps the wire format byte-for-byte identical to pre-6.8
+        # clients; opt in to H.264 by passing an H264CodecProvider.
+        self._codec_provider: CodecProvider = (
+            codec_provider if codec_provider is not None else JpegPassthrough()
+        )
         self._listen_sock: Optional[socket.socket] = None
         self._accept_thread: Optional[threading.Thread] = None
         self._capture_thread: Optional[threading.Thread] = None
@@ -856,6 +918,21 @@ class RemoteDesktopHost:
                     client.address, error,
                 )
         return len(clients)
+
+    def _try_consume_resume(self, nonce: bytes,
+                            payload: bytes) -> Optional[str]:
+        """Phase 6.6: find a resume token whose HMAC matches ``payload``.
+
+        Returns the saved permission string and removes the matching
+        token from the store. Returns ``None`` when no token in the
+        store signed this nonce — caller then falls back to the normal
+        ``_verify_token`` path.
+        """
+        for token, perm in self._resume_store.list_active().items():
+            if verify_response(token, nonce, payload):
+                self._resume_store.remove(token)
+                return perm
+        return None
 
     def _verify_token(self, nonce: bytes, payload: bytes) -> bool:
         """Phase 4.2 + 4.1: token / single-use code / TOTP-bound token.
@@ -1140,16 +1217,37 @@ class RemoteDesktopHost:
             # bandwidth at idle.
             frame_hash = hash(frame)
             if frame_hash != last_frame_hash:
-                with self._frame_cond:
-                    self._latest_frame = frame
-                    self._latest_seq += 1
-                    self._frame_cond.notify_all()
+                # Phase 6.8: hand the JPEG to the configured codec.
+                # JpegPassthrough yields the bytes unchanged so the
+                # wire format stays identical for stock clients.
+                for encoded in self._encode_for_wire(frame):
+                    with self._frame_cond:
+                        self._latest_frame = encoded
+                        self._latest_seq += 1
+                        self._frame_cond.notify_all()
                 last_frame_hash = frame_hash
             next_tick += self._period
             sleep_for = max(0.0, next_tick - time.monotonic())
             if sleep_for <= 0.0:
                 next_tick = time.monotonic()
             self._shutdown.wait(sleep_for)
+
+    def _encode_for_wire(self, jpeg_bytes: bytes):
+        """Wrap codec output with a 1-byte tag (skipped for JPEG)."""
+        provider = self._codec_provider
+        if provider.name == CODEC_JPEG:
+            yield jpeg_bytes  # legacy wire format: no tag, raw JPEG
+            return
+        tag = bytes([codec_tag(provider.name)])
+        try:
+            packets = provider.encode_jpeg(jpeg_bytes)
+        except (OSError, RuntimeError, ValueError) as error:
+            autocontrol_logger.warning(
+                "remote_desktop codec %s failed: %r", provider.name, error,
+            )
+            return
+        for packet in packets:
+            yield tag + bytes(packet)
 
     def _reap_dead_clients(self) -> None:
         with self._clients_lock:

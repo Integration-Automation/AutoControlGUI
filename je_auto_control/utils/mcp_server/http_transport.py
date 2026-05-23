@@ -26,6 +26,9 @@ from je_auto_control.utils.mcp_server.server import (
 DEFAULT_PATH = "/mcp"
 _MAX_BODY = 1_000_000
 _SSE_MEDIA_TYPE = "text/event-stream"
+# Cap drain reads so a hostile Content-Length can't make us spin forever.
+_DRAIN_CHUNK = 64 * 1024
+_DRAIN_CAP_MULTIPLE = 4
 
 
 class _MCPHttpHandler(BaseHTTPRequestHandler):
@@ -142,6 +145,24 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self._write_headers(status, body)
         self.wfile.write(body)
+        if status >= 400:
+            # Drain any unread request body before the socket closes.
+            # Without this, Windows TCP turns "close with unread bytes"
+            # into RST and the client surfaces WinError 10053 before it
+            # can read the 4xx response.
+            self._drain_body()
+
+    def _drain_body(self) -> None:
+        declared = int(self.headers.get("Content-Length") or 0)
+        if declared <= 0:
+            return
+        cap = min(declared, _MAX_BODY * _DRAIN_CAP_MULTIPLE)
+        remaining = cap
+        while remaining > 0:
+            chunk = self.rfile.read(min(remaining, _DRAIN_CHUNK))
+            if not chunk:
+                break
+            remaining -= len(chunk)
 
     def _send_raw_json(self, raw_json: str) -> None:
         body = raw_json.encode("utf-8")

@@ -48,6 +48,37 @@ def _extract_host_id(payload: bytes) -> Optional[str]:
     return value if isinstance(value, str) else None
 
 
+def _extract_resume_info(payload: bytes) -> Tuple[Optional[str], Optional[float]]:
+    """Pull ``(resume_token, resume_ttl)`` from an AUTH_OK JSON payload."""
+    if not payload:
+        return None, None
+    try:
+        body = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None, None
+    if not isinstance(body, dict):
+        return None, None
+    token = body.get("resume_token")
+    ttl = body.get("resume_ttl")
+    token = token if isinstance(token, str) else None
+    ttl = float(ttl) if isinstance(ttl, (int, float)) else None
+    return token, ttl
+
+
+def _extract_codec(payload: bytes) -> Optional[str]:
+    """Phase 6.8: pull the negotiated codec name from AUTH_OK JSON."""
+    if not payload:
+        return None
+    try:
+        body = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(body, dict):
+        return None
+    codec = body.get("codec")
+    return codec if isinstance(codec, str) else None
+
+
 class RemoteDesktopViewer:
     """Connect to a :class:`RemoteDesktopHost` and stream frames + input.
 
@@ -93,6 +124,13 @@ class RemoteDesktopViewer:
         self._expected_host_id = (validate_host_id(expected_host_id)
                                   if expected_host_id else None)
         self._remote_host_id: Optional[str] = None
+        # Phase 6.6: AUTH_OK ships a resume token + TTL; viewer surfaces
+        # them so callers can reconnect with `token=resume_token` and
+        # skip both the approval popup and HMAC handshake setup cost.
+        self._resume_token: Optional[str] = None
+        self._resume_ttl: Optional[float] = None
+        # Phase 6.8: codec negotiated in AUTH_OK; None = legacy raw JPEG.
+        self._negotiated_codec: Optional[str] = None
         self._ssl_context = ssl_context
         self._server_hostname = server_hostname
         self._channel: Optional[MessageChannel] = None
@@ -100,6 +138,12 @@ class RemoteDesktopViewer:
         self._shutdown = threading.Event()
         self._receiver: Optional[threading.Thread] = None
         self._connected = False
+        # Phase 6.9: latest USB device list pushed by the host in
+        # response to a USB_LIST_REQUEST. Reader threads write,
+        # callers block on the event until a fresh reply arrives.
+        self._usb_lock = threading.Lock()
+        self._usb_event = threading.Event()
+        self._usb_payload: Optional[Dict[str, Any]] = None
         # Phase 1.2: rolling counters so the GUI can render an FPS /
         # kbps overlay without reaching into private state. Lock
         # because the recv thread writes and the GUI thread reads.
@@ -119,6 +163,21 @@ class RemoteDesktopViewer:
     def remote_host_id(self) -> Optional[str]:
         """The host ID announced in AUTH_OK; ``None`` until handshake completes."""
         return self._remote_host_id
+
+    @property
+    def resume_token(self) -> Optional[str]:
+        """Phase 6.6: host-issued reconnect token; ``None`` until AUTH_OK."""
+        return self._resume_token
+
+    @property
+    def resume_ttl(self) -> Optional[float]:
+        """Phase 6.6: seconds the resume token stays valid on the host."""
+        return self._resume_ttl
+
+    @property
+    def negotiated_codec(self) -> Optional[str]:
+        """Phase 6.8: codec name announced in AUTH_OK (``"jpeg"`` / ``"h264"`` / ``"hevc"``)."""
+        return self._negotiated_codec
 
     def connect(self, timeout: float = _DEFAULT_CONNECT_TIMEOUT_S) -> None:
         """Open the (optionally TLS) connection and complete the auth handshake.
@@ -288,6 +347,10 @@ class RemoteDesktopViewer:
         msg_type, payload = channel.read_typed()
         if msg_type is MessageType.AUTH_OK:
             self._remote_host_id = _extract_host_id(payload)
+            token, ttl = _extract_resume_info(payload)
+            self._resume_token = token
+            self._resume_ttl = ttl
+            self._negotiated_codec = _extract_codec(payload)
             self._verify_host_id(self._remote_host_id)
             return
         if msg_type is MessageType.AUTH_FAIL:
@@ -420,6 +483,28 @@ class RemoteDesktopViewer:
                       msg_type: MessageType) -> None:
         del payload, msg_type
 
+    def list_remote_usb_devices(self,
+                                timeout: float = 5.0) -> Dict[str, Any]:
+        """Phase 6.9: ask the host for its USB device list (synchronous).
+
+        Sends a ``USB_LIST_REQUEST`` and blocks until the matching
+        ``USB_LIST_RESPONSE`` arrives or ``timeout`` elapses. Returns
+        ``{"backend": ..., "devices": [...]}``. Raises
+        :class:`TimeoutError` on timeout, :class:`RuntimeError` when
+        the viewer is not connected.
+        """
+        if self._channel is None or not self.connected:
+            raise RuntimeError(_NOT_CONNECTED_MESSAGE)
+        with self._usb_lock:
+            self._usb_payload = None
+            self._usb_event.clear()
+        self._channel.send_typed(MessageType.USB_LIST_REQUEST, b"")
+        if not self._usb_event.wait(timeout=float(timeout)):
+            raise TimeoutError("USB_LIST_RESPONSE not received before timeout")
+        with self._usb_lock:
+            return dict(self._usb_payload or {"backend": "unknown",
+                                              "devices": []})
+
     def send_chat(self, text: str, sender: str = "viewer") -> None:
         """Phase 5.2: send a chat message to the host."""
         if self._channel is None:
@@ -431,6 +516,19 @@ class RemoteDesktopViewer:
             {"sender": sender, "text": text, "ts": _time.time()},
         ).encode("utf-8")
         self._channel.send_typed(MessageType.CHAT, payload)
+
+    def _on_recv_usb_list(self, payload: bytes,
+                          msg_type: MessageType) -> None:
+        del msg_type
+        try:
+            body = json.loads(payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            body = {"backend": "invalid", "devices": []}
+        if not isinstance(body, dict):
+            body = {"backend": "invalid", "devices": []}
+        with self._usb_lock:
+            self._usb_payload = body
+        self._usb_event.set()
 
     def _on_recv_chat(self, payload: bytes,
                      msg_type: MessageType) -> None:
@@ -508,5 +606,6 @@ _RECV_HANDLERS = {
     MessageType.FILE_END: RemoteDesktopViewer._on_recv_file,
     MessageType.CURSOR: RemoteDesktopViewer._on_recv_cursor,
     MessageType.CHAT: RemoteDesktopViewer._on_recv_chat,
+    MessageType.USB_LIST_RESPONSE: RemoteDesktopViewer._on_recv_usb_list,
     MessageType.PING: RemoteDesktopViewer._on_recv_ping,
 }

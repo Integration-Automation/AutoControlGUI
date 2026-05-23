@@ -1,0 +1,54 @@
+# Reusable GitHub Actions workflow — drop this into a repo that hosts
+# AutoControl action JSON files (``*.action.json`` by default) and get
+# PR-level validation for free. The workflow:
+#   1. Installs je_auto_control from PyPI (or a configurable ref).
+#   2. Globs every action JSON file matching ``files``.
+#   3. Runs ``python -m je_auto_control.utils.action_lint`` over each.
+# Any ``error``-severity finding fails the workflow.
+
+name: action-json-lint
+
+on:
+  workflow_call:
+    inputs:
+      files:
+        description: "Glob for action JSON files to lint."
+        required: false
+        type: string
+        default: "**/*.action.json"
+      autocontrol_ref:
+        description: "Pip spec for je_auto_control (e.g. == 0.1.0 or git+https://...)."
+        required: false
+        type: string
+        default: "je_auto_control"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install je_auto_control
+        env:
+          AUTOCONTROL_REF: ${{ inputs.autocontrol_ref }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "$AUTOCONTROL_REF"
+
+      - name: Lint action JSON files
+        shell: bash
+        env:
+          FILES_GLOB: ${{ inputs.files }}
+        run: |
+          shopt -s globstar nullglob
+          files=( $FILES_GLOB )
+          if [ ${#files[@]} -eq 0 ]; then
+              echo "No files matched $FILES_GLOB — nothing to lint."
+              exit 0
+          fi
+          echo "Linting ${#files[@]} files..."
+          python -m je_auto_control.utils.action_lint "${files[@]}"

@@ -473,6 +473,112 @@ def _usb_recent_events(since: int = 0,
     )
 
 
+def _ac_web_run(action: Optional[Dict[str, Any]] = None,
+                **action_kwargs: Any) -> Any:
+    """Bridge one WR_* action into the WebRunner executor (Phase 7.7).
+
+    Accepts ``{"action": "WR_*", "params": {...}}`` either as a positional
+    dict or unpacked kwargs so it composes with the existing AC_ schema.
+    """
+    from je_auto_control.utils.webrunner_bridge import run_webrunner_action
+    payload = action if isinstance(action, dict) else action_kwargs
+    return run_webrunner_action(payload)
+
+
+def _ac_web_run_actions(actions: list) -> list:
+    """Bridge a list of WR_* actions through the WebRunner executor."""
+    from je_auto_control.utils.webrunner_bridge import run_webrunner_actions
+    return run_webrunner_actions(actions)
+
+
+def _ac_web_available() -> bool:
+    """Return True when ``je_web_runner`` is importable."""
+    from je_auto_control.utils.webrunner_bridge import is_webrunner_available
+    return is_webrunner_available()
+
+
+def _ac_web_list_commands() -> list:
+    """Return every WR_* command the local WebRunner install exposes."""
+    from je_auto_control.utils.webrunner_bridge import list_webrunner_commands
+    return list_webrunner_commands()
+
+
+# --- Android via ADB (Phase 9.7) ---------------------------------------
+
+_android_client_cache: Dict[Optional[str], Any] = {}
+
+
+def _android_client(serial: Optional[str] = None,
+                    adb_path: Optional[str] = None) -> Any:
+    """Build (or return) a cached :class:`AdbClient` for ``serial``."""
+    key = (serial, adb_path)
+    cached = _android_client_cache.get(key)
+    if cached is not None:
+        return cached
+    from je_auto_control.android import AdbClient
+    cached = AdbClient(adb_path=adb_path, default_serial=serial)
+    _android_client_cache[key] = cached
+    return cached
+
+
+def _ac_android_tap(x: int, y: int,
+                    serial: Optional[str] = None,
+                    adb_path: Optional[str] = None) -> None:
+    """Send a single ``input tap`` to an Android device."""
+    _android_client(serial, adb_path).tap(int(x), int(y))
+
+
+def _ac_android_swipe(x1: int, y1: int, x2: int, y2: int,
+                      duration_ms: int = 250,
+                      serial: Optional[str] = None,
+                      adb_path: Optional[str] = None) -> None:
+    """Send a touch swipe via ``input swipe``."""
+    _android_client(serial, adb_path).swipe(
+        int(x1), int(y1), int(x2), int(y2),
+        duration_ms=int(duration_ms),
+    )
+
+
+def _ac_android_key(key: str,
+                    serial: Optional[str] = None,
+                    adb_path: Optional[str] = None) -> None:
+    """Send a keycode (``KEYCODE_HOME`` etc.) via ``input keyevent``."""
+    _android_client(serial, adb_path).key_event(key)
+
+
+def _ac_android_text(text: str,
+                     serial: Optional[str] = None,
+                     adb_path: Optional[str] = None) -> None:
+    """Type a string via ``input text``."""
+    _android_client(serial, adb_path).text(text)
+
+
+def _ac_android_screenshot(file_path: str,
+                           serial: Optional[str] = None,
+                           adb_path: Optional[str] = None) -> str:
+    """Capture the live Android screen and save it as PNG at ``file_path``."""
+    path = _android_client(serial, adb_path).save_screenshot(file_path)
+    return str(path)
+
+
+def _ac_android_list_devices(adb_path: Optional[str] = None) -> list:
+    """Return ``{serial, state, model, …}`` for every adb-attached device."""
+    devices = _android_client(None, adb_path).list_devices()
+    return [
+        {"serial": d.serial, "state": d.state,
+         "model": d.model, "product": d.product,
+         "transport_id": d.transport_id}
+        for d in devices
+    ]
+
+
+def _ac_android_shell(command: str,
+                      serial: Optional[str] = None,
+                      adb_path: Optional[str] = None) -> str:
+    """Run an ``adb shell`` command and return its stdout."""
+    return _android_client(serial, adb_path).shell(command)
+
+
 def _llm_plan_for_executor(description: str,
                            examples: Optional[list] = None,
                            model: Optional[str] = None,
@@ -767,6 +873,49 @@ def _history_list_as_dicts(limit: int = 100,
     ]
 
 
+_EXECUTOR_METRIC_CACHE: Dict[str, Any] = {}
+
+
+def _executor_metrics():
+    """Lazily register the action-executor Counter + Histogram (Phase 10.1)."""
+    if "calls" in _EXECUTOR_METRIC_CACHE:
+        return _EXECUTOR_METRIC_CACHE
+    from je_auto_control.utils.observability import (
+        Counter, Histogram, default_registry,
+    )
+    registry = default_registry()
+    _EXECUTOR_METRIC_CACHE["calls"] = registry.register(Counter(
+        "autocontrol_action_calls_total",
+        "Number of AC_* actions executed, partitioned by name + outcome.",
+        label_names=("action", "outcome"),
+    ))
+    _EXECUTOR_METRIC_CACHE["duration"] = registry.register(Histogram(
+        "autocontrol_action_duration_seconds",
+        "Wall-clock duration of each AC_* action call.",
+        label_names=("action",),
+    ))
+    return _EXECUTOR_METRIC_CACHE
+
+
+def _observe_executor_metrics(action: str, started_at: float,
+                              *, error: Optional[BaseException]) -> None:
+    """Emit Counter + Histogram samples for one action execution."""
+    import time as _time
+    try:
+        metrics = _executor_metrics()
+    except (ImportError, ValueError, RuntimeError):
+        return
+    duration = max(0.0, _time.monotonic() - started_at)
+    outcome = "error" if error is not None else "ok"
+    try:
+        metrics["calls"].inc(labels={"action": action, "outcome": outcome})
+        metrics["duration"].observe(duration, labels={"action": action})
+    except ValueError:
+        # Defensive: if the label set drifts (e.g. tests reset the registry)
+        # we'd rather lose a sample than crash the executor.
+        pass
+
+
 class Executor:
     """
     Executor
@@ -909,6 +1058,21 @@ class Executor:
             # MCP server (Model Context Protocol stdio bridge)
             "AC_start_mcp_server": start_mcp_stdio_server,
             "AC_start_mcp_http_server": start_mcp_http_server,
+
+            # WebRunner bridge (browser automation via je_web_runner)
+            "AC_web_run": _ac_web_run,
+            "AC_web_run_actions": _ac_web_run_actions,
+            "AC_web_available": _ac_web_available,
+            "AC_web_list_commands": _ac_web_list_commands,
+
+            # Android via ADB (Phase 9.7)
+            "AC_android_tap": _ac_android_tap,
+            "AC_android_swipe": _ac_android_swipe,
+            "AC_android_key": _ac_android_key,
+            "AC_android_text": _ac_android_text,
+            "AC_android_screenshot": _ac_android_screenshot,
+            "AC_android_list_devices": _ac_android_list_devices,
+            "AC_android_shell": _ac_android_shell,
 
             # LLM action planner
             "AC_llm_plan": _llm_plan_for_executor,
@@ -1101,15 +1265,19 @@ class Executor:
     def _run_one_action(self, action: list, record: Dict[str, Any],
                         raise_on_error: bool) -> None:
         """Execute a single action, recording the result or raising."""
+        import time as _time
         key = "execute: " + str(action)
         action_name = action[0] if action and isinstance(action[0], str) else "<invalid>"
+        started = _time.monotonic()
         try:
             with default_profiler.measure(action_name):
                 record[key] = self._execute_event(action)
+            _observe_executor_metrics(action_name, started, error=None)
         except (LoopBreak, LoopContinue):
             raise
         except (AutoControlActionException, OSError, RuntimeError,
                 AttributeError, TypeError, ValueError) as error:
+            _observe_executor_metrics(action_name, started, error=error)
             if raise_on_error:
                 raise
             autocontrol_logger.info(

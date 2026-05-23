@@ -1,0 +1,66 @@
+# Default values for the autocontrol Helm chart.
+# Override these via ``helm install --set`` or ``-f my-values.yaml``.
+
+image:
+  repository: autocontrol
+  # Override per release. Empty falls back to Chart.AppVersion so the
+  # image and chart stay in lock-step; using ``latest`` is rejected by
+  # most security scanners and isn't reproducible across pulls.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# A shared HMAC token must be provided; the chart refuses to install
+# without it. Generate one with: ``python -c "import secrets; print(secrets.token_urlsafe(24))"``.
+# Production deployments should set this through a SealedSecret or
+# external-secrets so the value never lives in plain Helm values.
+auth:
+  token: ""  # NOSONAR python:S2068  # required value; empty default forces explicit set
+
+# Per-service knobs. Set ``enabled: false`` to skip a service entirely.
+rest:
+  enabled: true
+  replicas: 1
+  port: 9939
+  service:
+    type: ClusterIP
+
+remoteHost:
+  enabled: true
+  replicas: 1
+  port: 9940
+  service:
+    type: ClusterIP
+
+signaling:
+  enabled: true
+  replicas: 1
+  port: 8765
+  service:
+    type: ClusterIP
+
+# Xvfb virtual display geometry — apps that need a different resolution
+# (e.g. PyQt5 tests at 1920x1080) override this here.
+display:
+  geometry: "1280x800x24"
+
+# Optional Ingress for the REST API (the other two are TCP-only and
+# shouldn't go through a typical HTTP ingress).
+ingress:
+  enabled: false
+  className: ""
+  host: "autocontrol.example.local"
+  tls: false
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+    ephemeral-storage: 256Mi
+  limits:
+    cpu: "2"
+    memory: 1Gi
+    ephemeral-storage: 1Gi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

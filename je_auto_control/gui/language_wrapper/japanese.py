@@ -149,6 +149,9 @@ japanese_word_dict = {
     "admin_col_jobs": "ジョブ",
     "admin_health_ok": "OK",
     "admin_health_down": "停止",
+    "admin_thumb_group": "ライブ画面サムネイル",
+    "admin_thumb_interval": "更新間隔：",
+    "admin_thumb_refresh_now": "今すぐ更新",
 
     # REST API tab
     "rest_config_group": "REST API 設定",
@@ -899,6 +902,10 @@ japanese_word_dict = {
     "rd_quick_publish_signaling": (
         "シグナリングに公開（ビューアが 9 桁 ID で接続できるようにする）"
     ),
+    "rd_quick_wake_host": "ホストを起動（WoL）",
+    "rd_quick_edit_mac": "MAC アドレスを編集…",
+    "rd_quick_wol_mac_prompt": "MAC アドレス（AA:BB:CC:DD:EE:FF）:",
+    "rd_quick_wol_sent": "マジックパケットを {mac} へ送信しました。",
     "rd_host_security_warning": (
         "警告：host:port と token を知る相手は、このマシンのマウス／キーボードを"
         "完全に操作できます。既定は 127.0.0.1。外部公開は SSH トンネルか"

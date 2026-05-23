@@ -139,7 +139,11 @@ def generate_html() -> str:
         else:
             event_str = make_html_table(event_str, record_data, "failure_table_head")
 
-    return _html_string.format(event_table=event_str)
+    # ``str.format`` is unusable here — the inline CSS in ``_html_string``
+    # contains literal braces that the formatter tries to parse as fields.
+    # A literal replace keeps the template readable without doubling
+    # every ``{`` and ``}`` in the stylesheet.
+    return _html_string.replace("{event_table}", event_str)
 
 
 def generate_html_report(html_name: str = "default_name") -> None:

@@ -36,6 +36,7 @@
   - [事件触发器](#事件触发器)
   - [执行历史](#执行历史)
   - [报告生成](#报告生成)
+  - [可观测性（Prometheus / OpenTelemetry）](#可观测性prometheus--opentelemetry)
   - [远程自动化（Socket / REST）](#远程自动化socket--rest)
   - [插件加载器](#插件加载器)
   - [Shell 命令执行](#shell-命令执行)
@@ -59,7 +60,7 @@
 - **图像识别** — 使用 OpenCV 模板匹配在屏幕上定位 UI 元素，支持可配置的检测阈值
 - **Accessibility 元件搜索** — 通过操作系统无障碍树（Windows UIA / macOS AX）按名称/角色定位按钮、菜单、控件
 - **AI 元件定位（VLM）** — 用自然语言描述 UI 元素，由视觉语言模型（Anthropic / OpenAI）返回屏幕坐标
-- **OCR** — 使用 Tesseract 从屏幕提取文字，可搜索、点击或等待文字出现；支持 regex 搜索与整块区域 dump
+- **OCR** — 三个可插拔后端（Tesseract 用于 ASCII、EasyOCR 无外部可执行文件且支持 CJK、PaddleOCR 中／日／韩质量最高），统一 API 与标准语言代码；后端由 `backend=` 参数、`AUTOCONTROL_OCR_BACKEND` 环境变量或自动探测决定。可搜索、点击或等待文字出现；支持 regex 搜索与整块区域 dump
 - **LLM 动作规划器** — 用 Claude 把自然语言描述翻译成验证过的 `AC_*` 动作清单
 - **运行期变量与流程控制** — 执行时 `${var}` 替换，加上 `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` 让脚本数据驱动
 - **远程桌面** — 用 token 认证的 TCP 协议串流本机画面并接收输入，**或** 连接到他机观看与控制（host + viewer GUI 内置）。可选 TLS（HTTPS 级加密）、WebSocket 传输（``ws://`` + ``wss://``，穿墙／浏览器友好）、持久化 9 位数 Host ID、host→viewer 音频串流、双向剪贴板同步（文字 + 图片）、分块文件传输（拖放 + 进度条；任意目的路径；无大小上限）。另含文件夹同步（增量镜像 — 本地删除不会传出去）与自建 coturn TURN 配置包生成器（turnserver.conf + systemd unit + docker-compose + README）。**AnyDesk 风格弹出窗口**：viewer 认证成功后远程桌面会开在独立的可调整大小顶层窗口，控制面板保持简洁；Remote Desktop 子分页外层包了 `QScrollArea`，小窗口下可滚动、4K 屏幕下会铺满。同时支持 headless API 与 MCP 工具 (`ac_remote_*`) 直接驱动
@@ -331,6 +332,12 @@ sudo apt-get install cmake libssl-dev
 
 ## 快速开始
 
+想要可以直接复制粘贴的完整脚本而不只是 API 片段？
+[`examples/`](../examples/) 目录收录 17 个独立示例：截屏+点击、OCR、
+调度器、远程桌面、agent loop、可观测性、录制/回放、运行期变量、
+窗口管理、热键、图像触发器、HTML 报告、MCP stdio bridge、REST API、
+secret vault，以及插件加载。
+
 ### 鼠标控制
 
 ```python
@@ -457,11 +464,23 @@ ac.click_text("Submit")
 ac.wait_for_text("加载完成", timeout=15.0)
 ```
 
+选择后端 — 设置 ``AUTOCONTROL_OCR_BACKEND=tesseract|easyocr|paddleocr``
+或在调用时传入 ``backend=``；都不设置时会自动挑第一个 import 成功的：
+
+```python
+ac.find_text_matches("登录", lang="chi_sim", backend="easyocr")
+ac.click_text("Sign in", backend="tesseract")
+```
+
 若 Tesseract 不在 `PATH` 中，可手动指定路径：
 
 ```python
 ac.set_tesseract_cmd(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
 ```
+
+各后端安装路径与标准语言代码表见
+[docs/source/Eng/doc/ocr_backends/ocr_backends_doc.rst](../docs/source/Eng/doc/ocr_backends/ocr_backends_doc.rst)
+或[繁体中文版本](../docs/source/Zh/doc/ocr_backends/ocr_backends_doc.rst)。
 
 把区域（或整屏）内所有识别到的文字 dump 出来，或用 regex 搜索变动内容：
 
@@ -552,12 +571,132 @@ viewer.send_input({"action": "type", "text": "hello"})
 viewer.disconnect()
 ```
 
-GUI：**Remote Desktop** 分页，内含两个子分页。
-
-- **Host**（被远程的本机）— Token 字段附 *生成* 按钮、bind 地址安全提示、启动 / 停止控制、实时刷新的 port + viewer 数量状态栏，以及 4fps 预览面板让被远程的人看到 viewer 看到的画面。
-- **Viewer**（控制他机）— 地址 / port / token 表单、*连接* / *断开*、自绘 frame display widget，会把 JPEG 等比缩放绘入。display 上的鼠标 / 滚轮 / 键盘事件会用最新 frame 的尺寸映射回原始远程屏幕的像素坐标，再用 `INPUT` 消息发回。
+GUI：**Remote Desktop** 分页默认打开的是 **快速连线**（AnyDesk 风格）— 一边是超大本机 Host ID，另一边一个输入框接受 `host:port`、`ws://`、`wss://` 或 9 位数字 Host ID，搭配 *连接* 与 *开始被远程* 两个主要按钮。近期连线会跨 session 记住。进阶的逐传输子分页（既有 TCP / WS host + viewer、WebRTC host + viewer 含手动 SDP / 自定义编码器 / TLS pinning）仍只差一个 click。WebRTC 子分页采延迟载入，没装 `[webrtc]` extra 也能正常开启整个分页。
 
 > ⚠️ 取得 host:port 与 token 的人，等同拥有本机完整鼠标 / 键盘控制权。默认仅绑 `127.0.0.1`；要对外暴露请务必搭配 SSH tunnel 或 TLS 前端。Token 是唯一防线 — 请当作密码保管。
+
+**快速连线的 headless API**。撑起 GUI 输入框的 transport coordinator 也对外开放，脚本可以走同样的解析路径：
+
+```python
+from je_auto_control import parse_remote_desktop_target
+parse_remote_desktop_target("192.168.1.10:5555")
+# ConnectTarget(kind='tcp', host='192.168.1.10', port=5555, ...)
+parse_remote_desktop_target("ws://hub:8765/desk")
+# ConnectTarget(kind='ws', host='hub', port=8765, path='/desk')
+parse_remote_desktop_target("123-456-789")
+# ConnectTarget(kind='webrtc_id', host_id='123456789')
+```
+
+**连接审批 + 仅检视模式**。可选 callback 守住每一个 incoming session，AnyDesk 风格。返回 `"view_only"` admit 但丢掉 viewer 的 `INPUT`；返回 falsy（或 raise）就送 `AUTH_FAIL "rejected by host"`：
+
+```python
+from je_auto_control import RemoteDesktopHost, PendingViewer
+
+def gate(p: PendingViewer) -> str:
+    if p.address[0].startswith("10."):
+        return "view_only"
+    return "full"  # 或 True
+
+host = RemoteDesktopHost(token="tok", on_pending_viewer=gate)
+```
+
+**IP 白名单（CIDR + 单一 IP）**。在 TLS / auth 之前就拒绝范围外的对端，攻击者连探测都不行：
+
+```python
+host = RemoteDesktopHost(
+    token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"],
+)
+```
+
+**一次性分享码** — 额外的 token，认证成功一次后自毁；客服支援流程很好用：
+
+```python
+host = RemoteDesktopHost(token="tok", single_use_tokens=["abc123"])
+host.add_single_use_token("9k4ndx")    # 运行时加
+host.revoke_single_use_token("abc123") # 还没被用就先撤销
+```
+
+**TOTP 2FA（RFC 6238，纯 stdlib）**。在 token 之上加一层 6 位数字 OTP；host 接受 ±1 时间步的 clock drift：
+
+```python
+from je_auto_control.utils.remote_desktop.totp import (
+    generate_secret, generate_code, provisioning_uri,
+)
+secret = generate_secret()
+print(provisioning_uri(secret, account="alice"))  # 给 QR code 用的 otpauth:// URI
+
+host = RemoteDesktopHost(token="tok", totp_secret=secret)
+viewer = RemoteDesktopViewer(
+    host=..., token="tok", totp_code=generate_code(secret),
+)
+```
+
+**多屏幕选择**。指定某一屏幕截取，而非合并虚拟桌面：
+
+```python
+from je_auto_control import list_host_monitors, RemoteDesktopHost
+print(list_host_monitors())
+# [{'index': 0, 'is_combined': True, ...},
+#  {'index': 1, ...},
+#  {'index': 2, ...}]
+host = RemoteDesktopHost(token="tok", monitor_index=1)
+```
+
+**远程光标 overlay**。host 每秒 30 Hz 广播 cursor 位置（静止桌面去重）；viewer 的弹出窗口会在 JPEG 流上叠一个箭头，看得到 host 鼠标位置。可用 `enable_cursor_broadcast=False` 关掉。
+
+**多 viewer 协作光标 + 文字 chat**。两个新 message type（`CHAT` 与 `CURSOR` 带 `viewer_id`）。搭配 `MultiViewerHost` 把一个 viewer 的指针 echo 给其他人；chat channel 给操作者之间临时对话用：
+
+```python
+host = RemoteDesktopHost(
+    token="tok", on_chat=lambda sender, text: print(sender, ":", text),
+)
+host.broadcast_chat("session starts in 30s")
+host.broadcast_viewer_cursor("alice", 200, 300)
+
+viewer = RemoteDesktopViewer(
+    host=..., on_chat=lambda s, t: ...,
+    on_viewer_cursor=lambda vid, x, y: ...,
+)
+viewer.send_chat("ack")
+```
+
+**相对鼠标模式（FPS / CAD）**。新输入 action 送 delta 而非绝对坐标：
+
+```python
+viewer.send_input({"action": "mouse_move_relative", "dx": 5, "dy": -3})
+```
+
+**动态截取**。capture loop 会 hash 每张编码后的 JPEG；重复 frame 直接跳过，所以静止桌面几乎零带宽。新 viewer 在 auth 后立即拿到最新 frame，不会看到一片黑。
+
+**即时统计**（FPS / kbps / 累计 — 3 秒滑动窗口）：
+
+```python
+viewer.stats()
+# {'fps': 24.3, 'kbps': 4801.2, 'frames': 720.0, 'bytes': 1.8e7, 'uptime': 30.2}
+```
+
+**JPEG 序列录影（不需要 PyAV）**。TCP path 的 session 录影：每张 frame 写到磁盘，再加一份 `manifest.json` 让播放器可以原速重放：
+
+```python
+from je_auto_control.utils.remote_desktop.jpeg_recorder import (
+    JpegSequenceRecorder,
+)
+rec = JpegSequenceRecorder("~/recordings/2026-05-23")
+rec.start()
+viewer = RemoteDesktopViewer(host=..., on_frame=rec.record_frame)
+# ... session ...
+rec.stop()  # 在 .jpg 旁边写出 manifest.json
+```
+
+**TCP relay（WebRTC fallback）**。当 P2P 失败（严格 NAT、移动 CGNAT、酒店 Wi-Fi），两端都向 relay 主动连线、交换一个 32-byte session ID，relay 在中间互转 bytes。同一模块附 `encode_handshake(role, session_id)` 给 client 用：
+
+```python
+from je_auto_control.utils.remote_desktop.relay import RelayServer
+relay = RelayServer(bind="0.0.0.0", port=9000)  # NOSONAR  # 对外 relay
+relay.start()
+```
+
+**服务安装器（无人值守 host）**。`python -m je_auto_control.utils.remote_desktop.host_service ...` 提供 `configure` / `init` / `run`，以及每个平台的安装命令：`install-windows-service` / `uninstall-windows-service`（需 pywin32）、`generate-launchd` / `uninstall-launchd`、`generate-systemd` / `uninstall-systemd`。
 
 **加密传输与替代协议**：传 `ssl_context` 给 `RemoteDesktopHost` 或 `RemoteDesktopViewer` 即套上 TLS。要穿墙／给浏览器接，用内置的 WebSocket 版本（无额外依赖），加 `ssl_context` 即 `wss://`：
 
@@ -879,6 +1018,35 @@ xml_string = je_auto_control.generate_xml()
 
 报告内容包含：每个记录动作的函数名称、参数、时间戳及异常信息（如有）。HTML 报告中成功的动作以青色显示，失败的动作以红色显示。
 
+### 可观测性（Prometheus / OpenTelemetry）
+
+纯标准库的 metric 原语加上 OpenTelemetry 兼容 tracer，
+executor 与 agent loop 会自动发送调用次数与延迟分布 metric，
+不用手动 instrument。
+
+```python
+import je_auto_control as ac
+
+# 在 http://127.0.0.1:9090 开放 /metrics，给 Prometheus scrape。
+exporter = ac.default_metrics_exporter()
+exporter.start()
+
+# 自定义 metric — 形状与 prometheus_client 相同。
+counter = ac.default_metric_registry().register(ac.MetricCounter(
+    "myapp_widgets_built_total", "widgets built",
+    label_names=("kind",),
+))
+counter.inc(labels={"kind": "blue"})
+
+# 把 callable 包进 span — 未安装 opentelemetry-api 时为 no-op。
+@ac.traced("my_pipeline.process_one")
+def process_one(item): ...
+```
+
+内建 metric 清单见
+[docs/source/Eng/doc/observability/observability_doc.rst](../docs/source/Eng/doc/observability/observability_doc.rst)
+或[繁体中文版](../docs/source/Zh/doc/observability/observability_doc.rst)。
+
 ### 远程自动化（Socket / REST）
 
 提供两种服务器：原始 TCP socket 与纯 stdlib HTTP/REST。默认均绑定
@@ -1115,6 +1283,13 @@ python -m je_auto_control.cli start-rest   --port 9939
 git clone https://github.com/Intergration-Automation-Testing/AutoControl.git
 cd AutoControl
 pip install -r dev_requirements.txt
+```
+
+可复现的安装走已 commit 的 `uv.lock`：
+
+```bash
+uv sync               # 依锁文件同步整条依赖链
+uv lock --upgrade     # 编辑 pyproject.toml 后重新锁
 ```
 
 ### 运行测试

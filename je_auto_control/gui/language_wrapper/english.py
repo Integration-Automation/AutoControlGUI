@@ -149,6 +149,9 @@ english_word_dict = {
     "admin_col_jobs": "Jobs",
     "admin_health_ok": "OK",
     "admin_health_down": "DOWN",
+    "admin_thumb_group": "Live screen thumbnails",
+    "admin_thumb_interval": "Refresh every:",
+    "admin_thumb_refresh_now": "Refresh now",
 
     # REST API tab
     "rest_config_group": "REST API config",
@@ -899,6 +902,10 @@ english_word_dict = {
     "rd_quick_publish_signaling": (
         "Publish via signaling (let viewers connect by 9-digit ID)"
     ),
+    "rd_quick_wake_host": "Wake host (WoL)",
+    "rd_quick_edit_mac": "Edit MAC address…",
+    "rd_quick_wol_mac_prompt": "MAC address (AA:BB:CC:DD:EE:FF):",
+    "rd_quick_wol_sent": "Magic packet sent to {mac}.",
     "rd_host_security_warning": (
         "WARNING: anyone with the host:port and token gets full mouse / "
         "keyboard control of this machine. Default bind is 127.0.0.1; "

@@ -139,6 +139,9 @@ simplified_chinese_word_dict = {
     "admin_col_jobs": "任务",
     "admin_health_ok": "正常",
     "admin_health_down": "离线",
+    "admin_thumb_group": "实时画面缩图",
+    "admin_thumb_interval": "刷新间隔：",
+    "admin_thumb_refresh_now": "立刻刷新",
 
     # REST API 分页
     "rest_config_group": "REST API 配置",
@@ -885,6 +888,10 @@ simplified_chinese_word_dict = {
     "rd_quick_approval_view_only": "仅检视",
     "rd_quick_approval_deny": "拒绝",
     "rd_quick_publish_signaling": "发布到 signaling（让对方用 9 位数 ID 连线）",
+    "rd_quick_wake_host": "唤醒主机（WoL）",
+    "rd_quick_edit_mac": "编辑 MAC 地址…",
+    "rd_quick_wol_mac_prompt": "MAC 地址（AA:BB:CC:DD:EE:FF）：",
+    "rd_quick_wol_sent": "Magic packet 已发送到 {mac}。",
     "rd_host_security_warning": (
         "警告：取得本机 host:port 与 token 的人，可以完全控制本机的鼠标／键盘。"
         "默认仅绑 127.0.0.1；要对外请透过 SSH tunnel 或可信的 VPN。"

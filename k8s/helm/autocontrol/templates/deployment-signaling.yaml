@@ -1,0 +1,34 @@
+{{- if .Values.signaling.enabled -}}
+{{- $component := "signaling" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "autocontrol.fullname" (merge (dict "component" $component) .) }}
+  labels:
+    {{- include "autocontrol.labels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+spec:
+  replicas: {{ .Values.signaling.replicas }}
+  selector:
+    matchLabels:
+      {{- include "autocontrol.selectorLabels" (merge (dict "component" $component) .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "autocontrol.selectorLabels" (merge (dict "component" $component) .) | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: signaling
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["signaling"]
+          ports:
+            - name: http
+              containerPort: {{ .Values.signaling.port }}
+          env:
+            - name: XVFB_GEOMETRY
+              value: {{ .Values.display.geometry | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+{{- end }}
