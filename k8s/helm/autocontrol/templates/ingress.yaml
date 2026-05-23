@@ -1,0 +1,30 @@
+{{- if and .Values.rest.enabled .Values.ingress.enabled -}}
+{{- $component := "rest" -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "autocontrol.fullname" (merge (dict "component" $component) .) }}
+  labels:
+    {{- include "autocontrol.labels" . | nindent 4 }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "autocontrol.fullname" (merge (dict "component" $component) .) }}
+                port:
+                  name: http
+  {{- if .Values.ingress.tls }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ .Release.Name }}-{{ .Chart.Name }}-tls
+  {{- end }}
+{{- end }}

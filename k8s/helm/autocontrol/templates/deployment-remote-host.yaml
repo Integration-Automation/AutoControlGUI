@@ -1,0 +1,40 @@
+{{- if .Values.remoteHost.enabled -}}
+{{- $component := "remote-host" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "autocontrol.fullname" (merge (dict "component" $component) .) }}
+  labels:
+    {{- include "autocontrol.labels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+spec:
+  replicas: {{ .Values.remoteHost.replicas }}
+  selector:
+    matchLabels:
+      {{- include "autocontrol.selectorLabels" (merge (dict "component" $component) .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "autocontrol.selectorLabels" (merge (dict "component" $component) .) | nindent 8 }}
+    spec:
+      containers:
+        - name: remote-host
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["remote-host"]
+          ports:
+            - name: tcp
+              containerPort: {{ .Values.remoteHost.port }}
+          env:
+            - name: AC_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-{{ .Chart.Name }}-auth
+                  key: AC_TOKEN
+            - name: AC_PORT
+              value: {{ .Values.remoteHost.port | quote }}
+            - name: XVFB_GEOMETRY
+              value: {{ .Values.display.geometry | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+{{- end }}

@@ -1,0 +1,18 @@
+apiVersion: v2
+name: autocontrol
+description: |
+  AutoControl headless host stack — REST API, Remote Desktop TCP host,
+  and WebRTC signaling server — packaged for Kubernetes. Pairs with
+  the docker/Dockerfile shipped at the repo root.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - automation
+  - remote-desktop
+  - rest-api
+  - testing
+sources:
+  - https://github.com/Integration-Automation/AutoControlGUI
+maintainers:
+  - name: JE-Chen

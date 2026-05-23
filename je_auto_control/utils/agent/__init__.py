@@ -21,8 +21,12 @@ from je_auto_control.utils.agent.agent_loop import (
     AgentBackend, AgentBudget, AgentLoop, AgentResult, AgentStep,
     FakeAgentBackend, run_agent,
 )
+from je_auto_control.utils.agent.backends import (
+    AgentBackendError, AnthropicAgentBackend, OpenAIAgentBackend,
+)
 
 __all__ = [
     "AgentBackend", "AgentBudget", "AgentLoop", "AgentResult",
     "AgentStep", "FakeAgentBackend", "run_agent",
+    "AnthropicAgentBackend", "OpenAIAgentBackend", "AgentBackendError",
 ]
