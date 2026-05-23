@@ -149,6 +149,9 @@ japanese_word_dict = {
     "admin_col_jobs": "ジョブ",
     "admin_health_ok": "OK",
     "admin_health_down": "停止",
+    "admin_thumb_group": "ライブ画面サムネイル",
+    "admin_thumb_interval": "更新間隔：",
+    "admin_thumb_refresh_now": "今すぐ更新",
 
     # REST API tab
     "rest_config_group": "REST API 設定",

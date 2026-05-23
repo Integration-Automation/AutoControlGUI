@@ -149,6 +149,9 @@ english_word_dict = {
     "admin_col_jobs": "Jobs",
     "admin_health_ok": "OK",
     "admin_health_down": "DOWN",
+    "admin_thumb_group": "Live screen thumbnails",
+    "admin_thumb_interval": "Refresh every:",
+    "admin_thumb_refresh_now": "Refresh now",
 
     # REST API tab
     "rest_config_group": "REST API config",

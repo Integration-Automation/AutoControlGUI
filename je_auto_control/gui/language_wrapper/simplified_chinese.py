@@ -139,6 +139,9 @@ simplified_chinese_word_dict = {
     "admin_col_jobs": "任务",
     "admin_health_ok": "正常",
     "admin_health_down": "离线",
+    "admin_thumb_group": "实时画面缩图",
+    "admin_thumb_interval": "刷新间隔：",
+    "admin_thumb_refresh_now": "立刻刷新",
 
     # REST API 分页
     "rest_config_group": "REST API 配置",

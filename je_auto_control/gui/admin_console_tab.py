@@ -1,12 +1,13 @@
 """Admin console tab: manage many remote AutoControl REST endpoints."""
 import json
-from typing import List, Optional
+from typing import Dict, List, Optional
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, QSize, QThread, QTimer, Qt, Signal
+from PySide6.QtGui import QIcon, QImage, QPixmap
 from PySide6.QtWidgets import (
-    QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox,
-    QPushButton, QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout,
-    QWidget,
+    QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget,
+    QListWidgetItem, QMessageBox, QPushButton, QSpinBox, QTableWidget,
+    QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -43,6 +44,23 @@ class _PollWorker(QObject):
         self.finished.emit(result)
 
 
+class _ThumbnailWorker(QObject):
+    """Phase 6.5 GUI: poll fetch_thumbnails off the GUI thread."""
+
+    finished = Signal(dict)
+
+    def __init__(self, client: AdminConsoleClient) -> None:
+        super().__init__()
+        self._client = client
+
+    def run(self) -> None:
+        try:
+            result = self._client.fetch_thumbnails()
+        except (OSError, RuntimeError, ValueError):
+            result = {}
+        self.finished.emit(result)
+
+
 class AdminConsoleTab(TranslatableMixin, QWidget):
     """Thin Qt surface over :class:`AdminConsoleClient`."""
 
@@ -68,15 +86,46 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         self._broadcast_output = QTextEdit()
         self._broadcast_output.setReadOnly(True)
         self._poll_thread: Optional[QThread] = None
+        # Phase 6.5: live-thumbnail grid + auto-poll timer.
+        self._thumbnails = QListWidget()
+        self._thumbnails.setViewMode(QListWidget.ViewMode.IconMode)
+        self._thumbnails.setIconSize(QSize(200, 150))
+        self._thumbnails.setResizeMode(QListWidget.ResizeMode.Adjust)
+        self._thumbnails.setMovement(QListWidget.Movement.Static)
+        self._thumbnails.setSpacing(10)
+        self._thumb_interval = QSpinBox()
+        self._thumb_interval.setRange(0, 600)
+        self._thumb_interval.setValue(10)
+        self._thumb_interval.setSuffix(" s")
+        self._thumb_interval.valueChanged.connect(self._on_thumb_interval_changed)
+        self._thumb_timer = QTimer(self)
+        self._thumb_timer.timeout.connect(self._refresh_thumbnails)
+        self._thumb_thread: Optional[QThread] = None
         self._build_layout()
         self._refresh_table()
+        self._apply_thumb_interval()
 
     def _build_layout(self) -> None:
         root = QVBoxLayout(self)
         root.addWidget(self._build_add_group())
         root.addWidget(self._table, stretch=1)
         root.addLayout(self._build_button_row())
+        root.addWidget(self._build_thumbnails_group(), stretch=1)
         root.addWidget(self._build_broadcast_group(), stretch=1)
+
+    def _build_thumbnails_group(self) -> QGroupBox:
+        group = self._tr(QGroupBox(), "admin_thumb_group")
+        layout = QVBoxLayout(group)
+        controls = QHBoxLayout()
+        controls.addWidget(self._tr(QLabel(), "admin_thumb_interval"))
+        controls.addWidget(self._thumb_interval)
+        refresh = self._tr(QPushButton(), "admin_thumb_refresh_now")
+        refresh.clicked.connect(self._refresh_thumbnails)
+        controls.addWidget(refresh)
+        controls.addStretch(1)
+        layout.addLayout(controls)
+        layout.addWidget(self._thumbnails, stretch=1)
+        return group
 
     def _build_add_group(self) -> QGroupBox:
         group = self._tr(QGroupBox(), "admin_add_group")
@@ -175,6 +224,58 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
 
     def _on_poll_thread_done(self) -> None:
         self._poll_thread = None
+
+    # --- live thumbnails (Phase 6.5 GUI) -------------------------------
+
+    def _on_thumb_interval_changed(self, _value: int) -> None:
+        self._apply_thumb_interval()
+
+    def _apply_thumb_interval(self) -> None:
+        seconds = self._thumb_interval.value()
+        if seconds <= 0:
+            self._thumb_timer.stop()
+            return
+        self._thumb_timer.start(seconds * 1000)
+
+    def _refresh_thumbnails(self) -> None:
+        if self._thumb_thread is not None:
+            return
+        thread = QThread(self)
+        worker = _ThumbnailWorker(self._client)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.finished.connect(self._apply_thumbnails)
+        worker.finished.connect(thread.quit)
+        thread.finished.connect(self._on_thumb_thread_done)
+        self._thumb_thread = thread
+        thread.start()
+
+    def _on_thumb_thread_done(self) -> None:
+        self._thumb_thread = None
+
+    def _apply_thumbnails(self, png_by_label: Dict[str, Optional[bytes]]) -> None:
+        """Paint every host as one tile; placeholder when fetch failed."""
+        self._thumbnails.clear()
+        for label, png in png_by_label.items():
+            item = QListWidgetItem(label)
+            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            icon = self._icon_for(png)
+            if icon is not None:
+                item.setIcon(icon)
+            self._thumbnails.addItem(item)
+
+    @staticmethod
+    def _icon_for(png: Optional[bytes]) -> Optional[QIcon]:
+        if not png:
+            return None
+        image = QImage.fromData(png, "PNG")
+        if image.isNull():
+            return None
+        scaled = image.scaled(
+            200, 150, Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        return QIcon(QPixmap.fromImage(scaled))
 
     def _selected_labels(self) -> List[str]:
         rows = sorted({i.row() for i in self._table.selectedIndexes()})

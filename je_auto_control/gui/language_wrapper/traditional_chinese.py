@@ -142,6 +142,9 @@ traditional_chinese_word_dict = {
     "admin_col_jobs": "工作",
     "admin_health_ok": "正常",
     "admin_health_down": "離線",
+    "admin_thumb_group": "即時畫面縮圖",
+    "admin_thumb_interval": "刷新間隔：",
+    "admin_thumb_refresh_now": "立刻刷新",
 
     # REST API 分頁
     "rest_config_group": "REST API 設定",
