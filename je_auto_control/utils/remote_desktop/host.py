@@ -504,6 +504,9 @@ class _ClientHandler:
         if msg_type is MessageType.CHAT:
             self._handle_chat_payload(payload)
             return
+        if msg_type is MessageType.USB_LIST_REQUEST:
+            self._handle_usb_list_request()
+            return
         if msg_type in _FILE_MSG_TYPES:
             self._handle_file_payload(msg_type, payload)
             return
@@ -527,6 +530,35 @@ class _ClientHandler:
                 "remote_desktop bad file message from %s: %r",
                 self._address, error,
             )
+
+    def _handle_usb_list_request(self) -> None:
+        """Phase 6.9: enumerate the host's USB devices and ship the list back.
+
+        Uses the existing :func:`list_usb_devices` helper so we get the
+        same cross-platform behaviour as the standalone USB module.
+        Errors fall back to an empty payload — the viewer should
+        treat that as "host has no usable USB backend" rather than
+        crashing.
+        """
+        try:
+            from je_auto_control.utils.usb import list_usb_devices
+            result = list_usb_devices()
+            body = {
+                "backend": result.backend,
+                "devices": [d.to_dict() for d in result.devices],
+            }
+        except (ImportError, OSError, RuntimeError) as error:
+            autocontrol_logger.info(
+                "usb_list from %s failed: %r", self._address, error,
+            )
+            body = {"backend": "unavailable", "devices": []}
+        try:
+            self._channel.send_typed(
+                MessageType.USB_LIST_RESPONSE,
+                json.dumps(body, ensure_ascii=False).encode("utf-8"),
+            )
+        except OSError:
+            pass
 
     def _handle_chat_payload(self, payload: bytes) -> None:
         """Forward viewer-originated chat to the host's optional callback."""

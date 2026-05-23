@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autocontrol-lsp"
+version = "0.1.0"
+description = "Language server (completion + hover) for AutoControl AC_* action JSON files."
+authors = [
+  { name = "JE-Chen" },
+]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = [
+  # Only stdlib — but discovery imports je_auto_control at runtime
+  # to pull the AC_* command list out of the executor. So a working
+  # install needs je_auto_control on the PYTHONPATH:
+  "je_auto_control",
+]
+
+[project.scripts]
+autocontrol-lsp = "autocontrol_lsp.server.server:run"
+
+[tool.setuptools.packages.find]
+include = ["autocontrol_lsp*"]
+exclude = ["vscode*", "tests*"]

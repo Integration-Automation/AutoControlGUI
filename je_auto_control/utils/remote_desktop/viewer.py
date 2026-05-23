@@ -138,6 +138,12 @@ class RemoteDesktopViewer:
         self._shutdown = threading.Event()
         self._receiver: Optional[threading.Thread] = None
         self._connected = False
+        # Phase 6.9: latest USB device list pushed by the host in
+        # response to a USB_LIST_REQUEST. Reader threads write,
+        # callers block on the event until a fresh reply arrives.
+        self._usb_lock = threading.Lock()
+        self._usb_event = threading.Event()
+        self._usb_payload: Optional[Dict[str, Any]] = None
         # Phase 1.2: rolling counters so the GUI can render an FPS /
         # kbps overlay without reaching into private state. Lock
         # because the recv thread writes and the GUI thread reads.
@@ -477,6 +483,28 @@ class RemoteDesktopViewer:
                       msg_type: MessageType) -> None:
         del payload, msg_type
 
+    def list_remote_usb_devices(self,
+                                timeout: float = 5.0) -> Dict[str, Any]:
+        """Phase 6.9: ask the host for its USB device list (synchronous).
+
+        Sends a ``USB_LIST_REQUEST`` and blocks until the matching
+        ``USB_LIST_RESPONSE`` arrives or ``timeout`` elapses. Returns
+        ``{"backend": ..., "devices": [...]}``. Raises
+        :class:`TimeoutError` on timeout, :class:`RuntimeError` when
+        the viewer is not connected.
+        """
+        if self._channel is None or not self.connected:
+            raise RuntimeError(_NOT_CONNECTED_MESSAGE)
+        with self._usb_lock:
+            self._usb_payload = None
+            self._usb_event.clear()
+        self._channel.send_typed(MessageType.USB_LIST_REQUEST, b"")
+        if not self._usb_event.wait(timeout=float(timeout)):
+            raise TimeoutError("USB_LIST_RESPONSE not received before timeout")
+        with self._usb_lock:
+            return dict(self._usb_payload or {"backend": "unknown",
+                                              "devices": []})
+
     def send_chat(self, text: str, sender: str = "viewer") -> None:
         """Phase 5.2: send a chat message to the host."""
         if self._channel is None:
@@ -488,6 +516,19 @@ class RemoteDesktopViewer:
             {"sender": sender, "text": text, "ts": _time.time()},
         ).encode("utf-8")
         self._channel.send_typed(MessageType.CHAT, payload)
+
+    def _on_recv_usb_list(self, payload: bytes,
+                          msg_type: MessageType) -> None:
+        del msg_type
+        try:
+            body = json.loads(payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            body = {"backend": "invalid", "devices": []}
+        if not isinstance(body, dict):
+            body = {"backend": "invalid", "devices": []}
+        with self._usb_lock:
+            self._usb_payload = body
+        self._usb_event.set()
 
     def _on_recv_chat(self, payload: bytes,
                      msg_type: MessageType) -> None:
@@ -565,5 +606,6 @@ _RECV_HANDLERS = {
     MessageType.FILE_END: RemoteDesktopViewer._on_recv_file,
     MessageType.CURSOR: RemoteDesktopViewer._on_recv_cursor,
     MessageType.CHAT: RemoteDesktopViewer._on_recv_chat,
+    MessageType.USB_LIST_RESPONSE: RemoteDesktopViewer._on_recv_usb_list,
     MessageType.PING: RemoteDesktopViewer._on_recv_ping,
 }

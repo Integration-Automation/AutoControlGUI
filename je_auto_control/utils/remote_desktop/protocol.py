@@ -39,6 +39,8 @@ class MessageType(enum.IntEnum):
     FILE_END = 0x24  # either way: JSON status for a finished transfer
     CURSOR = 0x25  # host -> viewer: JSON {x, y, visible, viewer_id?}
     CHAT = 0x26  # either way: JSON {sender, text, ts}
+    USB_LIST_REQUEST = 0x27   # viewer -> host: empty payload
+    USB_LIST_RESPONSE = 0x28  # host -> viewer: JSON {backend, devices}
     PING = 0x30  # either way: liveness
 
 

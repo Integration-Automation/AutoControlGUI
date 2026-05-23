@@ -1,0 +1,46 @@
+{
+  "name": "autocontrol-lsp",
+  "displayName": "AutoControl Action JSON",
+  "description": "Language-server completion + hover for AutoControl AC_* action-JSON files.",
+  "version": "0.1.0",
+  "publisher": "je-chen",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:json"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "AutoControl LSP",
+      "properties": {
+        "autocontrolLsp.python.path": {
+          "type": "string",
+          "default": "python",
+          "description": "Python interpreter that hosts the LSP server (must have je_auto_control importable)."
+        },
+        "autocontrolLsp.server.module": {
+          "type": "string",
+          "default": "autocontrol_lsp.server",
+          "description": "Module path to launch the LSP server (overrideable for forks)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --platform=node --external:vscode",
+    "watch": "npm run build -- --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.4.0",
+    "vscode-languageclient": "^9.0.1"
+  }
+}
