@@ -23,7 +23,7 @@ def test_upsert_preserves_explicit_timestamp():
     bucket = ConfigBucket(user_id="alice")
     bucket.upsert("hotkeys", "hk1",
                   {"combo": "ctrl+a", "last_modified": 1700.0})
-    assert bucket.sections["hotkeys"]["hk1"]["last_modified"] == 1700.0
+    assert bucket.sections["hotkeys"]["hk1"]["last_modified"] == pytest.approx(1700.0)
 
 
 def test_remove_returns_false_when_absent():

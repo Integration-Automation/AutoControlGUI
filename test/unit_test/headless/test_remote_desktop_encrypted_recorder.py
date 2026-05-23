@@ -44,7 +44,7 @@ def test_manifest_signature_rejects_tampered_data(tmp_path):
     # Flip a byte in frame_count.
     raw = json.loads(manifest.read_text(encoding="utf-8"))
     raw["frame_count"] = 999
-    manifest.write_text(json.dumps(raw), encoding="utf-8")
+    manifest.write_text(json.dumps(raw), encoding="utf-8")  # NOSONAR python:S2083  # reason: tmp_path is pytest-controlled, never user input
     assert verify_manifest(manifest, rec.hmac_key) is False
 
 

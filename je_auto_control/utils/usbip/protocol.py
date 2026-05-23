@@ -52,9 +52,9 @@ _INTF_SIZE = struct.calcsize(_INTF_FMT)
 # CMD_SUBMIT header — 48 bytes, follows the URB framing header (16 bytes).
 _URB_HEADER_FMT = "!IIIII"  # command, seqnum, devid, direction, ep
 _URB_HEADER_SIZE = struct.calcsize(_URB_HEADER_FMT)
-_CMD_SUBMIT_FMT = "!IIiII8s"  # transfer_flags, transfer_buffer_length,
-                              # start_frame, number_of_packets, interval,
-                              # setup[8]
+# Field order: transfer_flags, transfer_buffer_length, start_frame,
+# number_of_packets, interval, setup[8]
+_CMD_SUBMIT_FMT = "!IIiII8s"
 _CMD_SUBMIT_SIZE = struct.calcsize(_CMD_SUBMIT_FMT)
 _RET_SUBMIT_FMT = "!IIiII8s"  # status, actual_length, start_frame,
                               # number_of_packets, error_count, setup[8]
@@ -67,10 +67,14 @@ class UsbIpError(ValueError):
 
 @dataclass
 class UsbIpInterface:
-    """One interface descriptor exposed by a device."""
-    bInterfaceClass: int
-    bInterfaceSubClass: int
-    bInterfaceProtocol: int
+    """One interface descriptor exposed by a device.
+
+    Field names follow the USB 2.0 spec; renaming them to snake_case
+    would diverge from every USB tooling reader.
+    """
+    bInterfaceClass: int  # NOSONAR python:S116  # reason: USB 2.0 spec name
+    bInterfaceSubClass: int  # NOSONAR python:S116  # reason: USB 2.0 spec name
+    bInterfaceProtocol: int  # NOSONAR python:S116  # reason: USB 2.0 spec name
 
 
 @dataclass
@@ -178,7 +182,8 @@ class CmdSubmit:
     """Decoded USBIP_CMD_SUBMIT — one URB to forward to the real device."""
     seqnum: int
     devid: int
-    direction: int  # 0 = OUT (host→device), 1 = IN (device→host)
+    # direction: 0 = OUT (host→device), 1 = IN (device→host)
+    direction: int
     ep: int
     transfer_flags: int
     transfer_buffer_length: int

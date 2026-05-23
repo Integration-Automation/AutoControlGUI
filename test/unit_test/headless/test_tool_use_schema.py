@@ -73,10 +73,14 @@ def test_run_tool_call_dispatches_through_executor():
         "je_auto_control.utils.executor.action_executor.executor.event_dict",
         {"AC_screenshot": fake_screenshot},
     ):
-        result = run_tool_call("AC_screenshot", {"file_path": "/tmp/x.png"})
+        # "/tmp/x.png" is just a string passed to the fake; no FS access.
+        result = run_tool_call(
+            "AC_screenshot",
+            {"file_path": "/tmp/x.png"},  # NOSONAR python:S5443  # reason: literal arg, fake handler never writes
+        )
     assert result == {"ok": True}
     assert captured["called"] is True
-    assert captured["file_path"] == "/tmp/x.png"
+    assert captured["file_path"] == "/tmp/x.png"  # NOSONAR python:S5443  # reason: comparing literal echoed by the fake
 
 
 def test_run_tool_call_rejects_unknown_command():

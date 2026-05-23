@@ -119,7 +119,7 @@ class AdminConsoleClient:
         def grab(host: AdminHost) -> tuple:
             try:
                 body = self._http_get(host, "/screenshot")
-            except (OSError, ValueError, TimeoutError) as error:
+            except (OSError, ValueError) as error:
                 autocontrol_logger.info(
                     "admin: thumbnail %s failed: %r", host.label, error,
                 )

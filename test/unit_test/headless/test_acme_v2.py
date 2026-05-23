@@ -39,8 +39,10 @@ def account_key():
 def test_public_jwk_has_rs256_fields(account_key):
     jwk = public_jwk(account_key)
     assert jwk["kty"] == "RSA"
-    assert isinstance(jwk["e"], str) and len(jwk["e"]) > 0
-    assert isinstance(jwk["n"], str) and len(jwk["n"]) > 100
+    assert isinstance(jwk["e"], str)
+    assert jwk["e"]
+    assert isinstance(jwk["n"], str)
+    assert len(jwk["n"]) > 100
 
 
 def test_thumbprint_is_deterministic(account_key):
@@ -106,7 +108,8 @@ def test_sign_compact_requires_url_and_nonce(account_key):
 def test_csr_to_b64url_round_trip(account_key):
     csr = generate_csr(account_key, common_name="host.example.com")
     encoded = csr_to_b64url(csr)
-    assert isinstance(encoded, str) and len(encoded) > 50
+    assert isinstance(encoded, str)
+    assert len(encoded) > 50
     # All RFC 7515 base64url chars only.
     assert set(encoded) <= set(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
@@ -143,61 +146,66 @@ class _StubServer:
         return f"nonce-{self.nonce_counter}"
 
 
-def _install_stub(monkeypatch, stub: _StubServer) -> List[Tuple]:
+_ORDER_BODY = {
+    "status": "valid",
+    "authorizations": ["https://acme.example/authz/1"],
+    "finalize": "https://acme.example/order/1/finalize",
+    "certificate": "https://acme.example/cert/1",
+}
+
+
+def _authz_body(stub: "_StubServer") -> dict:
+    return {
+        "status": stub.auth_status,
+        "identifier": {"type": "dns", "value": "example.com"},
+        "challenges": [{
+            "type": "http-01",
+            "url": "https://acme.example/chall/1",
+            "token": "tok-1",
+            "status": "pending",
+        }],
+    }
+
+
+def _stub_response(stub: "_StubServer", method: str, url: str,
+                    headers: dict) -> Tuple[int, object, dict]:
+    """Return one canned ACME response for a stubbed URL."""
+    if method == "GET" and url.endswith("/directory"):
+        return 200, stub.directory(), {}
+    if method == "HEAD" and "/new-nonce" in url:
+        return 200, b"", {"Replay-Nonce": stub.next_nonce()}
+    if "/new-acct" in url:
+        headers["Location"] = "https://acme.example/acct/1"
+        return 201, {"status": "valid"}, headers
+    if "/new-order" in url:
+        headers["Location"] = "https://acme.example/order/1"
+        return 201, {
+            "status": stub.order_status,
+            "authorizations": ["https://acme.example/authz/1"],
+            "finalize": "https://acme.example/order/1/finalize",
+            "identifiers": [{"type": "dns", "value": "example.com"}],
+        }, headers
+    if url.endswith("/authz/1"):
+        return 200, _authz_body(stub), headers
+    if url.endswith("/chall/1"):
+        return 200, {"type": "http-01", "status": "pending"}, headers
+    if url.endswith("/order/1/finalize") or url.endswith("/order/1"):
+        return 200, _ORDER_BODY, headers
+    if url.endswith("/cert/1"):
+        return 200, stub.issued_cert, headers
+    return 404, b"", headers
+
+
+def _install_stub(monkeypatch, stub: "_StubServer") -> List[Tuple]:
     """Patch AcmeClient._http to read from the stub."""
     recorded: List[Tuple] = []
 
     def fake_http(self, method, url, *, body=None,
                   content_type=None, accept=None):
         recorded.append((method, url))
-        if method == "GET" and url.endswith("/directory"):
-            return 200, stub.directory(), {}
-        if method == "HEAD" and "/new-nonce" in url:
-            return 200, b"", {"Replay-Nonce": stub.next_nonce()}
-        # All other POSTs in this stub are JWS-signed; pretend we
-        # accepted them and return a sensible body.
-        headers = {"Replay-Nonce": stub.next_nonce()}
-        if "/new-acct" in url:
-            headers["Location"] = "https://acme.example/acct/1"
-            return 201, {"status": "valid"}, headers
-        if "/new-order" in url:
-            headers["Location"] = "https://acme.example/order/1"
-            return 201, {
-                "status": stub.order_status,
-                "authorizations": ["https://acme.example/authz/1"],
-                "finalize": "https://acme.example/order/1/finalize",
-                "identifiers": [{"type": "dns", "value": "example.com"}],
-            }, headers
-        if url.endswith("/authz/1"):
-            return 200, {
-                "status": stub.auth_status,
-                "identifier": {"type": "dns", "value": "example.com"},
-                "challenges": [{
-                    "type": "http-01",
-                    "url": "https://acme.example/chall/1",
-                    "token": "tok-1",
-                    "status": "pending",
-                }],
-            }, headers
-        if url.endswith("/chall/1"):
-            return 200, {"type": "http-01", "status": "pending"}, headers
-        if url.endswith("/order/1/finalize"):
-            return 200, {
-                "status": "valid",
-                "authorizations": ["https://acme.example/authz/1"],
-                "finalize": "https://acme.example/order/1/finalize",
-                "certificate": "https://acme.example/cert/1",
-            }, headers
-        if url.endswith("/order/1"):
-            return 200, {
-                "status": "valid",
-                "authorizations": ["https://acme.example/authz/1"],
-                "finalize": "https://acme.example/order/1/finalize",
-                "certificate": "https://acme.example/cert/1",
-            }, headers
-        if url.endswith("/cert/1"):
-            return 200, stub.issued_cert, headers
-        return 404, b"", headers
+        return _stub_response(
+            stub, method, url, {"Replay-Nonce": stub.next_nonce()},
+        )
 
     monkeypatch.setattr(AcmeClient, "_http", fake_http)
     return recorded

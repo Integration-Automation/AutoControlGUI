@@ -58,7 +58,7 @@ def test_player_empty_when_nothing_recorded(tmp_path):
     player = TimelinePlayer(tmp_path)
     assert player.frame_count == 0
     assert player.action_count == 0
-    assert player.duration_s == 0.0
+    assert player.duration_s == pytest.approx(0.0)
     assert player.at_step(0).frame is None
 
 
@@ -118,7 +118,7 @@ def test_actions_window_joined_into_snapshot(tmp_path):
     names = [a.action_name for a in snap.actions]
     assert names == ["AC_click_mouse", "AC_type_keyboard"]
     # Relative time on the first frame is 0.
-    assert snap.relative_time_s == 0.0
+    assert snap.relative_time_s == pytest.approx(0.0)
 
 
 def test_actions_in_window_explicit_range(tmp_path):
@@ -157,15 +157,15 @@ def test_duration_spans_first_to_last_event(tmp_path):
     player = TimelinePlayer(tmp_path)
     # started_at = min(frame 100, action 99) = 99
     # stopped_at = max(frame 110, action 120) = 120
-    assert player.started_at == 99.0
-    assert player.stopped_at == 120.0
-    assert player.duration_s == 21.0
+    assert player.started_at == pytest.approx(99.0)
+    assert player.stopped_at == pytest.approx(120.0)
+    assert player.duration_s == pytest.approx(21.0)
 
 
 def test_frame_ref_from_manifest_entry_handles_missing_fields():
     ref = FrameRef.from_manifest_entry({"filename": "x.jpg"})
     assert ref.filename == "x.jpg"
-    assert ref.timestamp == 0.0
+    assert ref.timestamp == pytest.approx(0.0)
     assert ref.size == 0
 
 

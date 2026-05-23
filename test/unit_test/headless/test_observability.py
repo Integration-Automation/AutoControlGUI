@@ -20,10 +20,10 @@ def registry():
 
 def test_counter_starts_at_zero_and_increments():
     counter = Counter("test_counter", "doc")
-    assert counter.value() == 0.0
+    assert counter.value() == pytest.approx(0.0)
     counter.inc()
     counter.inc(3)
-    assert counter.value() == 4.0
+    assert counter.value() == pytest.approx(4.0)
 
 
 def test_counter_rejects_negative_increment():
@@ -186,7 +186,6 @@ def _free_port() -> int:
 
 
 def test_render_metrics_text_uses_default_registry():
-    text = render_metrics_text()
     # Default registry may be populated by other tests; either way the
     # output is a string. Best to register a marker metric and look for it.
     from je_auto_control.utils.observability import default_registry

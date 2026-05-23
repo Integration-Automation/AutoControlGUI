@@ -133,13 +133,15 @@ def test_store_loads_from_disk(tmp_path):
 
 
 def test_explicit_token_is_accepted(tmp_path):
+    # Fake token; the test exercises the explicit-token branch.
+    fake_token = "my-secret-token-1234567890"  # NOSONAR python:S6418  # reason: test fixture, not a real secret
     store = UserStore(path=tmp_path / "users.json")
     stored_plain = store.add_user(
         user_id="alice", display_name="A", role=Role.VIEWER,
-        token="my-secret-token-1234567890",
+        token=fake_token,
     )
-    assert stored_plain == "my-secret-token-1234567890"
-    record = store.authenticate("my-secret-token-1234567890")
+    assert stored_plain == fake_token
+    record = store.authenticate(fake_token)
     assert record.user_id == "alice"
 
 

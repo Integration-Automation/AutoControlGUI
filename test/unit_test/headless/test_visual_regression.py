@@ -20,7 +20,7 @@ def test_identical_images_match(tmp_path):
         tmp_path / "g.png", actual=_solid(32, 32, (100, 200, 50)),
     )
     assert result.matched is True
-    assert result.diff_pct == 0.0
+    assert result.diff_pct == pytest.approx(0.0)
     assert result.differing_pixels == 0
 
 
@@ -30,7 +30,7 @@ def test_completely_different_images_fail(tmp_path):
         tmp_path / "g.png", actual=_solid(16, 16, (255, 255, 255)),
     )
     assert result.matched is False
-    assert result.diff_pct == 100.0
+    assert result.diff_pct == pytest.approx(100.0)
     assert result.diff_image is not None
 
 

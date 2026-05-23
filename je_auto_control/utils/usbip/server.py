@@ -77,7 +77,7 @@ class UsbIpServer:
         if self._accept_thread is not None:
             self._accept_thread.join(timeout=timeout)
             self._accept_thread = None
-        for worker in list(self._workers):
+        for worker in self._workers:
             worker.join(timeout=timeout)
         self._workers.clear()
 
@@ -117,7 +117,7 @@ class UsbIpServer:
     def _serve(self, sock: socket.socket) -> None:
         """One OP request, then optionally a stream of URB commands."""
         raw = _recv_exact(sock, _OP_HEADER_BYTES)
-        version, command, _status = parse_op_header(raw)
+        _version, command, _status = parse_op_header(raw)
         if command == OP_REQ_DEVLIST:
             self._serve_devlist(sock)
             return

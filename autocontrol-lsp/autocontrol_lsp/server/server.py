@@ -83,27 +83,34 @@ def _write_message(stream, message: Dict[str, Any]) -> None:
 
 
 def run(input_stream=None, output_stream=None) -> int:
-    """Run the LSP loop. ``input``/``output`` default to ``sys.stdin/stdout``."""
+    """Run the LSP loop. Returns 0 on clean shutdown, 1 on transport error."""
     inp = input_stream or sys.stdin.buffer
     out = output_stream or sys.stdout.buffer
-    while True:
-        request = _read_message(inp)
-        if request is None:
-            return 0
-        method = request.get("method")
-        if method == "exit":
-            return 0
-        params = request.get("params") or {}
-        result = _dispatch(method, params) if isinstance(method, str) else None
-        request_id = request.get("id")
-        if request_id is None:
-            continue  # notification; no response needed
-        reply: Dict[str, Any] = {"jsonrpc": "2.0", "id": request_id}
-        if result is None:
-            reply["error"] = {"code": -32601, "message": f"method not found: {method}"}
-        else:
-            reply["result"] = result
-        _write_message(out, reply)
+    try:
+        while True:
+            request = _read_message(inp)
+            if request is None:
+                return 0
+            method = request.get("method")
+            if method == "exit":
+                return 0
+            params = request.get("params") or {}
+            result = (
+                _dispatch(method, params) if isinstance(method, str) else None
+            )
+            request_id = request.get("id")
+            if request_id is None:
+                continue  # notification; no response needed
+            reply: Dict[str, Any] = {"jsonrpc": "2.0", "id": request_id}
+            if result is None:
+                reply["error"] = {
+                    "code": -32601, "message": f"method not found: {method}",
+                }
+            else:
+                reply["result"] = result
+            _write_message(out, reply)
+    except (OSError, ValueError):
+        return 1
 
 
 if __name__ == "__main__":  # pragma: no cover - entry point

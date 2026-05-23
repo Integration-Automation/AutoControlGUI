@@ -30,8 +30,8 @@ def populated_admin_tab(qapp, tmp_path, monkeypatch):
     from je_auto_control.utils.admin.admin_client import AdminConsoleClient
     from je_auto_control.gui import admin_console_tab as tab_mod
     client = AdminConsoleClient(persist_path=tmp_path / "hosts.json")
-    client.add_host("alpha", "http://a.example", "tok-a")
-    client.add_host("beta", "http://b.example", "tok-b")
+    client.add_host("alpha", "http://a.example", "tok-a")  # NOSONAR python:S5332  # reason: test fixture, no real network
+    client.add_host("beta", "http://b.example", "tok-b")  # NOSONAR python:S5332  # reason: test fixture, no real network
     monkeypatch.setattr(
         tab_mod, "default_admin_console", lambda: client,
     )
@@ -96,7 +96,7 @@ def test_thumb_interval_zero_stops_the_timer(populated_admin_tab):
 def test_thumbnail_worker_pulls_through_admin_client(populated_admin_tab):
     """The headless worker calls fetch_thumbnails and emits the result."""
     from je_auto_control.gui.admin_console_tab import _ThumbnailWorker
-    tab, client = populated_admin_tab
+    _tab, client = populated_admin_tab
     png = _png_bytes()
     captured = []
     with patch.object(

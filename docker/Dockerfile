@@ -54,5 +54,13 @@ EXPOSE 9939 9940 8765
 COPY docker/entrypoint.sh /usr/local/bin/autocontrol-entrypoint
 RUN chmod +x /usr/local/bin/autocontrol-entrypoint
 
+# Drop privileges — Xvfb + AutoControl do not need root. Create the
+# user after all apt / pip installs so the image layers stay reusable.
+RUN groupadd --system --gid 1001 autocontrol \
+    && useradd --system --uid 1001 --gid autocontrol \
+       --home-dir /app --shell /usr/sbin/nologin autocontrol \
+    && chown -R autocontrol:autocontrol /app
+USER autocontrol
+
 ENTRYPOINT ["/usr/local/bin/autocontrol-entrypoint"]
 CMD ["rest"]

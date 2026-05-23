@@ -3,7 +3,10 @@
 
 image:
   repository: autocontrol
-  tag: latest
+  # Override per release. Empty falls back to Chart.AppVersion so the
+  # image and chart stay in lock-step; using ``latest`` is rejected by
+  # most security scanners and isn't reproducible across pulls.
+  tag: ""
   pullPolicy: IfNotPresent
 
 # A shared HMAC token must be provided; the chart refuses to install
@@ -52,9 +55,11 @@ resources:
   requests:
     cpu: 200m
     memory: 256Mi
+    ephemeral-storage: 256Mi
   limits:
     cpu: "2"
     memory: 1Gi
+    ephemeral-storage: 1Gi
 
 nodeSelector: {}
 tolerations: []

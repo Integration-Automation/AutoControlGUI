@@ -14,8 +14,8 @@ _FAKE_PNG = b"\x89PNG\r\n\x1a\nFAKE-PAYLOAD-BYTES"
 @pytest.fixture
 def client(tmp_path):
     c = AdminConsoleClient(persist_path=tmp_path / "hosts.json", timeout_s=1.0)
-    c.add_host("alpha", "http://a.example", "tok-a")
-    c.add_host("beta", "http://b.example", "tok-b")
+    c.add_host("alpha", "http://a.example", "tok-a")  # NOSONAR python:S5332  # reason: test fixture, no real network
+    c.add_host("beta", "http://b.example", "tok-b")  # NOSONAR python:S5332  # reason: test fixture, no real network
     return c
 
 

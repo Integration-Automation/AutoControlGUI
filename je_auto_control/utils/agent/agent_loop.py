@@ -120,44 +120,47 @@ class AgentLoop:
             if time.monotonic() - started_at > self._budget.wall_seconds:
                 result.final_message = "wall_seconds budget exhausted"
                 return
-            screenshot = self._screenshot_fn()
-            decision = self._backend.decide_next_action(
-                goal, screenshot, result.steps,
-            )
-            if decision.get("stop"):
-                result.succeeded = True
-                result.final_message = decision.get("message")
-                result.steps.append(AgentStep(
-                    index=index, tool=None, arguments=None,
-                    stop_reason=result.final_message,
-                ))
+            if self._take_one_step(goal, index, result, metrics):
                 return
-            tool = decision.get("tool")
-            args = decision.get("input") or {}
-            if not isinstance(tool, str):
-                result.final_message = f"backend returned no tool: {decision!r}"
-                return
-            step = AgentStep(index=index, tool=tool, arguments=dict(args))
-            from je_auto_control.utils.observability import default_tracer
-            tracer = default_tracer()
-            with tracer.start_as_current_span(
-                    "agent_loop.tool_call", {"tool": tool},
-            ):
-                try:
-                    step.result = self._tool_runner(tool, args)
-                except (ValueError, RuntimeError, OSError) as error:
-                    step.error = f"{type(error).__name__}: {error}"
-            result.steps.append(step)
-            if metrics:
-                outcome = "error" if step.error else "ok"
-                metrics["steps"].inc(
-                    labels={"tool": tool, "outcome": outcome},
-                )
-            if step.error:
-                # Surface the error to the model on the next turn, but
-                # don't abort — the agent might recover.
-                continue
         result.final_message = "max_steps budget exhausted"
+
+    def _take_one_step(self, goal: str, index: int,
+                       result: AgentResult, metrics) -> bool:
+        """Run one observe→decide→act cycle. Returns True when the loop should stop."""
+        decision = self._backend.decide_next_action(
+            goal, self._screenshot_fn(), result.steps,
+        )
+        if decision.get("stop"):
+            result.succeeded = True
+            result.final_message = decision.get("message")
+            result.steps.append(AgentStep(
+                index=index, tool=None, arguments=None,
+                stop_reason=result.final_message,
+            ))
+            return True
+        tool = decision.get("tool")
+        if not isinstance(tool, str):
+            result.final_message = f"backend returned no tool: {decision!r}"
+            return True
+        step = self._dispatch_tool(index, tool, decision.get("input") or {})
+        result.steps.append(step)
+        if metrics:
+            outcome = "error" if step.error else "ok"
+            metrics["steps"].inc(labels={"tool": tool, "outcome": outcome})
+        return False
+
+    def _dispatch_tool(self, index: int, tool: str,
+                       args: Dict[str, Any]) -> "AgentStep":
+        from je_auto_control.utils.observability import default_tracer
+        step = AgentStep(index=index, tool=tool, arguments=dict(args))
+        with default_tracer().start_as_current_span(
+                "agent_loop.tool_call", {"tool": tool},
+        ):
+            try:
+                step.result = self._tool_runner(tool, args)
+            except (ValueError, RuntimeError, OSError) as error:
+                step.error = f"{type(error).__name__}: {error}"
+        return step
 
 
 def _default_tool_runner(name: str, args: Dict[str, Any]) -> Any:

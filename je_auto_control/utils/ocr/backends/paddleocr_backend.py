@@ -66,7 +66,9 @@ def _get_reader(lang: str):
         reader = _readers.get(code)
         if reader is not None:
             return reader
-        PaddleOCR = _load()
+        # PaddleOCR is the upstream class name; keep the case to match
+        # the library's public API.
+        PaddleOCR = _load()  # NOSONAR python:S117  # reason: third-party class name
         # ``show_log=False`` silences the per-call banner; use_gpu=False
         # keeps the default CPU-only install path working.
         reader = PaddleOCR(use_angle_cls=True, lang=code, show_log=False)

@@ -31,9 +31,12 @@ def main() -> None:
                "Content-Type": "application/json"}
 
     # GET /screen_size — simple read-only call.
+    # Loopback HTTP is intentional in this example; production exposure
+    # over the network requires ``ssl_context=`` on both server + client.
     with urllib.request.urlopen(
             urllib.request.Request(
-                f"http://{host}:{port}/screen_size", headers=headers,
+                f"http://{host}:{port}/screen_size",  # NOSONAR python:S5332  # reason: loopback demo
+                headers=headers,
             ),
             timeout=5.0,
     ) as resp:
@@ -47,7 +50,7 @@ def main() -> None:
     }).encode("utf-8")
     with urllib.request.urlopen(
             urllib.request.Request(
-                f"http://{host}:{port}/execute",
+                f"http://{host}:{port}/execute",  # NOSONAR python:S5332  # reason: loopback demo
                 data=payload, headers=headers, method="POST",
             ),
             timeout=10.0,

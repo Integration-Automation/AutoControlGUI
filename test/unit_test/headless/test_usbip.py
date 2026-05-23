@@ -227,8 +227,8 @@ def test_server_forwards_urb_to_backend():
         )
         sock.sendall(cmd + body)
         # Server should reply USBIP_RET_SUBMIT + 4 data bytes.
-        ret_header = _recv(sock, 20)  # URB header
-        ret_body = _recv(sock, 28)    # RET_SUBMIT body
+        _recv(sock, 20)  # URB header
+        _recv(sock, 28)  # RET_SUBMIT body
         data = _recv(sock, 4)
         assert data == b"PONG"
         # And the backend recorded the call.

@@ -103,9 +103,30 @@ class ActionLinter:
             sig = inspect.signature(callable_obj)
         except (TypeError, ValueError):
             return []
-        missing: List[str] = []
-        unknown: List[str] = []
+        accepted, missing, accepts_kwargs = self._scan_signature(sig, params)
+        unknown = (
+            [p for p in params if p not in accepted]
+            if not accepts_kwargs else []
+        )
+        issues: List[LintIssue] = [
+            LintIssue(idx, LintSeverity.ERROR, "missing-param",
+                      f"{name} requires parameter {m!r}")
+            for m in missing
+        ]
+        issues.extend(
+            LintIssue(idx, LintSeverity.WARNING, "unknown-param",
+                      f"{name} has no parameter {u!r}")
+            for u in unknown
+        )
+        return issues
+
+    @staticmethod
+    def _scan_signature(sig: inspect.Signature,
+                         params: Dict[str, Any],
+                         ) -> tuple:
+        """Walk a Signature → (accepted_names, missing_required, accepts_kwargs)."""
         accepted: List[str] = []
+        missing: List[str] = []
         accepts_kwargs = False
         for pname, param in sig.parameters.items():
             if pname == "self":
@@ -116,25 +137,9 @@ class ActionLinter:
             if param.kind == inspect.Parameter.VAR_POSITIONAL:
                 continue
             accepted.append(pname)
-            if (param.default is inspect.Parameter.empty
-                    and pname not in params):
+            if param.default is inspect.Parameter.empty and pname not in params:
                 missing.append(pname)
-        if not accepts_kwargs:
-            for pname in params:
-                if pname not in accepted:
-                    unknown.append(pname)
-        issues: List[LintIssue] = []
-        for m in missing:
-            issues.append(LintIssue(
-                idx, LintSeverity.ERROR, "missing-param",
-                f"{name} requires parameter {m!r}",
-            ))
-        for u in unknown:
-            issues.append(LintIssue(
-                idx, LintSeverity.WARNING, "unknown-param",
-                f"{name} has no parameter {u!r}",
-            ))
-        return issues
+        return accepted, missing, accepts_kwargs
 
 
 def lint_actions(actions: Sequence[Any]) -> List[LintIssue]:

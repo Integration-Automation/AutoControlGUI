@@ -143,11 +143,13 @@ class LibUsbBackend(UrbBackend):
         """Control transfer (ep 0). Setup packet lives in ``request.setup``."""
         if len(request.setup) != 8:
             return UrbResponse(status=-22, actual_length=0)  # -EINVAL
-        bmRequestType = request.setup[0]
-        bRequest = request.setup[1]
-        wValue = int.from_bytes(request.setup[2:4], "little")
-        wIndex = int.from_bytes(request.setup[4:6], "little")
-        wLength = int.from_bytes(request.setup[6:8], "little")
+        # USB 2.0 setup-packet field names are camelCase per the spec;
+        # using snake_case here would diverge from libusb / kernel APIs.
+        bmRequestType = request.setup[0]  # NOSONAR python:S117  # reason: USB 2.0 spec name
+        bRequest = request.setup[1]  # NOSONAR python:S117  # reason: USB 2.0 spec name
+        wValue = int.from_bytes(request.setup[2:4], "little")  # NOSONAR python:S117  # reason: USB 2.0 spec name
+        wIndex = int.from_bytes(request.setup[4:6], "little")  # NOSONAR python:S117  # reason: USB 2.0 spec name
+        wLength = int.from_bytes(request.setup[6:8], "little")  # NOSONAR python:S117  # reason: USB 2.0 spec name
         if _direction_in(request.direction):
             data = device.ctrl_transfer(
                 bmRequestType, bRequest, wValue, wIndex,

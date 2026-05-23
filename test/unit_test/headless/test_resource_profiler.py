@@ -49,12 +49,12 @@ def test_report_aggregates_cpu_and_rss():
     ])
     report = prof.report()
     assert report.sample_count == 3
-    assert report.cpu_percent_max == 80.0
-    assert report.cpu_percent_avg == round((10 + 80 + 20) / 3, 2)
+    assert report.cpu_percent_max == pytest.approx(80.0)
+    assert report.cpu_percent_avg == pytest.approx(round((10 + 80 + 20) / 3, 2))
     assert report.rss_bytes_max == 300
     assert set(report.per_action.keys()) == {"AC_a", "AC_b"}
     assert report.per_action["AC_a"]["samples"] == 2
-    assert report.per_action["AC_a"]["cpu_percent_max"] == 80.0
+    assert report.per_action["AC_a"]["cpu_percent_max"] == pytest.approx(80.0)
 
 
 def test_per_action_idle_when_no_span_tag():

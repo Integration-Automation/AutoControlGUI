@@ -153,8 +153,10 @@ class H264CodecProvider(CodecProvider):
         self._closed = True
         if self._stream is not None:
             try:
-                for _ in self._stream.encode(None):
-                    pass
+                # Drain remaining buffered packets — PyAV requires iterating
+                # ``encode(None)`` to flush trailing frames before close.
+                for _packet in self._stream.encode(None):
+                    del _packet
             except (ValueError, RuntimeError):
                 pass
         if self._container is not None:

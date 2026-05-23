@@ -136,8 +136,10 @@ def test_lint_to_dict_round_trip():
 
 def test_cli_exit_code_zero_on_clean_file(tmp_path):
     actions_file = tmp_path / "ok.action.json"
+    # The "/tmp/x.png" inside the JSON is just a payload value the linter
+    # never opens — no real file is touched.
     actions_file.write_text(
-        json.dumps([["AC_screenshot", {"file_path": "/tmp/x.png"}]]),
+        json.dumps([["AC_screenshot", {"file_path": "/tmp/x.png"}]]),  # NOSONAR python:S5443  # reason: literal payload, never opened
         encoding="utf-8",
     )
     assert _main([str(actions_file)]) == 0
