@@ -1,0 +1,44 @@
+# docker-compose for the three AutoControl host services. Bring all up
+# at once with ``docker compose up`` so the REST API, Remote Desktop
+# TCP host, and WebRTC signaling server share the same Docker network.
+#
+# Build the image from the repo root before first run::
+#
+#     docker build -f docker/Dockerfile -t autocontrol:latest .
+#     AC_TOKEN=$(python -c 'import secrets; print(secrets.token_urlsafe(24))')
+#     export AC_TOKEN
+#     docker compose -f docker/docker-compose.yml up
+
+services:
+  rest:
+    image: autocontrol:latest
+    container_name: autocontrol-rest
+    command: ["rest"]
+    environment:
+      - AC_TOKEN=${AC_TOKEN:?token required - export AC_TOKEN before up}
+      - XVFB_GEOMETRY=${XVFB_GEOMETRY:-1280x800x24}
+    ports:
+      - "9939:9939"
+    restart: unless-stopped
+
+  remote-host:
+    image: autocontrol:latest
+    container_name: autocontrol-remote
+    command: ["remote-host"]
+    environment:
+      - AC_TOKEN=${AC_TOKEN:?token required}
+      - AC_PORT=9940
+      - XVFB_GEOMETRY=${XVFB_GEOMETRY:-1280x800x24}
+    ports:
+      - "9940:9940"
+    restart: unless-stopped
+
+  signaling:
+    image: autocontrol:latest
+    container_name: autocontrol-signaling
+    command: ["signaling"]
+    environment:
+      - XVFB_GEOMETRY=${XVFB_GEOMETRY:-1280x800x24}
+    ports:
+      - "8765:8765"
+    restart: unless-stopped

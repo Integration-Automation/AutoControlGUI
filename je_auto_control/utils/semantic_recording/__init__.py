@@ -25,8 +25,13 @@ from je_auto_control.utils.semantic_recording.enrich import (
 from je_auto_control.utils.semantic_recording.replay import (
     AnchorLocator, relocate_action, relocate_recording,
 )
+from je_auto_control.utils.semantic_recording.self_healing import (
+    ReplayResult, SelfHealingReplayer, StepResult, self_healing_replay,
+)
 
 __all__ = [
     "AnchorResolver", "enrich_action", "enrich_recording",
     "AnchorLocator", "relocate_action", "relocate_recording",
+    "SelfHealingReplayer", "ReplayResult", "StepResult",
+    "self_healing_replay",
 ]

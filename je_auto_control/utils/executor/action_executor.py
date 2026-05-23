@@ -473,6 +473,36 @@ def _usb_recent_events(since: int = 0,
     )
 
 
+def _ac_web_run(action: Optional[Dict[str, Any]] = None,
+                **action_kwargs: Any) -> Any:
+    """Bridge one WR_* action into the WebRunner executor (Phase 7.7).
+
+    Accepts ``{"action": "WR_*", "params": {...}}`` either as a positional
+    dict or unpacked kwargs so it composes with the existing AC_ schema.
+    """
+    from je_auto_control.utils.webrunner_bridge import run_webrunner_action
+    payload = action if isinstance(action, dict) else action_kwargs
+    return run_webrunner_action(payload)
+
+
+def _ac_web_run_actions(actions: list) -> list:
+    """Bridge a list of WR_* actions through the WebRunner executor."""
+    from je_auto_control.utils.webrunner_bridge import run_webrunner_actions
+    return run_webrunner_actions(actions)
+
+
+def _ac_web_available() -> bool:
+    """Return True when ``je_web_runner`` is importable."""
+    from je_auto_control.utils.webrunner_bridge import is_webrunner_available
+    return is_webrunner_available()
+
+
+def _ac_web_list_commands() -> list:
+    """Return every WR_* command the local WebRunner install exposes."""
+    from je_auto_control.utils.webrunner_bridge import list_webrunner_commands
+    return list_webrunner_commands()
+
+
 def _llm_plan_for_executor(description: str,
                            examples: Optional[list] = None,
                            model: Optional[str] = None,
@@ -909,6 +939,12 @@ class Executor:
             # MCP server (Model Context Protocol stdio bridge)
             "AC_start_mcp_server": start_mcp_stdio_server,
             "AC_start_mcp_http_server": start_mcp_http_server,
+
+            # WebRunner bridge (browser automation via je_web_runner)
+            "AC_web_run": _ac_web_run,
+            "AC_web_run_actions": _ac_web_run_actions,
+            "AC_web_available": _ac_web_available,
+            "AC_web_list_commands": _ac_web_list_commands,
 
             # LLM action planner
             "AC_llm_plan": _llm_plan_for_executor,
