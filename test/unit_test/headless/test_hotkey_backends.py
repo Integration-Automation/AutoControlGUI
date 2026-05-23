@@ -68,7 +68,11 @@ def test_daemon_routes_through_backend(monkeypatch):
     binding = daemon.bind("ctrl+alt+1", "script.json")
     try:
         daemon.start()
-        assert fake.ran.wait(timeout=2.0), "backend run_forever should have started"
+        # 5 s instead of 2 s: under PR-CI load on Windows the daemon
+        # thread occasionally takes >2 s to be scheduled even though
+        # ``Thread.start()`` returns immediately. Bumping the timeout
+        # keeps the test deterministic without changing what it asserts.
+        assert fake.ran.wait(timeout=5.0), "backend run_forever should have started"
         time.sleep(0.05)
     finally:
         daemon.stop(timeout=1.0)

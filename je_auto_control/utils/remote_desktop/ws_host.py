@@ -35,3 +35,6 @@ class WebSocketDesktopHost(RemoteDesktopHost):
             ) from error
         sock.settimeout(None)
         return WsMessageChannel(sock, mask_outgoing=False)
+
+    def _transport_name(self) -> str:
+        return "ws"

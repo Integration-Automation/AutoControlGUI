@@ -75,6 +75,11 @@ from je_auto_control.utils.remote_desktop import (
     ProtocolError as RemoteDesktopProtocolError,
     RemoteDesktopHost, RemoteDesktopViewer,
 )
+from je_auto_control.utils.remote_desktop.connect_coordinator import (
+    ConnectTarget as RemoteDesktopConnectTarget,
+    UnresolvableTargetError as RemoteDesktopUnresolvableTargetError,
+    parse_target as parse_remote_desktop_target,
+)
 from je_auto_control.utils.remote_desktop.registry import (
     registry as remote_desktop_registry,
 )
@@ -340,6 +345,8 @@ __all__ = [
     "RemoteDesktopHost", "RemoteDesktopViewer",
     "RemoteDesktopAuthError", "RemoteDesktopInputError",
     "RemoteDesktopProtocolError", "remote_desktop_registry",
+    "RemoteDesktopConnectTarget", "RemoteDesktopUnresolvableTargetError",
+    "parse_remote_desktop_target",
     # Virtual gamepad (ViGEm)
     "VirtualGamepad", "GamepadUnavailable",
     "default_virtual_gamepad", "is_virtual_gamepad_available",

@@ -37,6 +37,8 @@ class MessageType(enum.IntEnum):
     FILE_BEGIN = 0x22  # either way: JSON metadata for an incoming transfer
     FILE_CHUNK = 0x23  # either way: 36-byte transfer id + chunk bytes
     FILE_END = 0x24  # either way: JSON status for a finished transfer
+    CURSOR = 0x25  # host -> viewer: JSON {x, y, visible, viewer_id?}
+    CHAT = 0x26  # either way: JSON {sender, text, ts}
     PING = 0x30  # either way: liveness
 
 

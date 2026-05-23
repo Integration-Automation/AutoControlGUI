@@ -4,8 +4,8 @@ from typing import Optional
 
 from PySide6.QtCore import QPoint, QRect, Qt, Signal
 from PySide6.QtGui import (
-    QDragEnterEvent, QDropEvent, QImage, QKeyEvent, QMouseEvent, QPainter,
-    QWheelEvent,
+    QColor, QDragEnterEvent, QDropEvent, QImage, QKeyEvent, QMouseEvent,
+    QPainter, QPen, QWheelEvent,
 )
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
@@ -37,6 +37,10 @@ class _FrameDisplay(QWidget):
         self._image: Optional[QImage] = None
         self._pen_mode = False
         self._pen_drawing = False
+        # Remote host cursor position in *host* screen coords. ``None``
+        # while no CURSOR message has been received yet; the overlay is
+        # then suppressed so we don't draw a stale arrow over the frame.
+        self._remote_cursor: Optional[tuple] = None
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMouseTracking(True)
         self.setSizePolicy(
@@ -45,6 +49,16 @@ class _FrameDisplay(QWidget):
         self.setMinimumSize(320, 200)
         self.setStyleSheet("background-color: #101010;")
         self.setAcceptDrops(True)
+
+    def set_remote_cursor(self, x: int, y: int) -> None:
+        """Record the host's cursor position and trigger a repaint."""
+        self._remote_cursor = (int(x), int(y))
+        self.update()
+
+    def clear_remote_cursor(self) -> None:
+        """Hide the cursor overlay (e.g. on disconnect)."""
+        self._remote_cursor = None
+        self.update()
 
     def set_pen_mode(self, value: bool) -> None:
         self._pen_mode = bool(value)
@@ -73,6 +87,36 @@ class _FrameDisplay(QWidget):
         target = self._fit_rect()
         if target.isValid():
             painter.drawImage(target, self._image)
+            self._paint_remote_cursor(painter, target)
+
+    def _paint_remote_cursor(self, painter: QPainter, target: QRect) -> None:
+        """Overlay the host cursor on top of the latest frame."""
+        cursor = self._remote_cursor
+        if cursor is None or self._image is None:
+            return
+        host_x, host_y = cursor
+        img_w = self._image.width()
+        img_h = self._image.height()
+        if img_w <= 0 or img_h <= 0:
+            return
+        # Map host screen coords -> widget coords using the same scale
+        # paintEvent used for the frame image, so the cursor lands
+        # exactly where the host would draw it locally.
+        scale_x = target.width() / img_w
+        scale_y = target.height() / img_h
+        wx = target.x() + int(host_x * scale_x)
+        wy = target.y() + int(host_y * scale_y)
+        # Draw a simple arrow-ish triangle in white with a black outline
+        # so it stays visible over both light and dark host backgrounds.
+        outline_pen = QPen(QColor(0, 0, 0), 2)
+        fill_pen = QPen(QColor(255, 255, 255), 1)
+        for offset, pen in ((1, outline_pen), (0, fill_pen)):
+            painter.setPen(pen)
+            painter.drawLine(wx, wy, wx + 12 + offset, wy + 4)
+            painter.drawLine(wx, wy, wx + 4, wy + 12 + offset)
+            painter.drawLine(
+                wx + 12 + offset, wy + 4, wx + 4, wy + 12 + offset,
+            )
 
     def _fit_rect(self) -> QRect:
         if self._image is None or self._image.isNull():

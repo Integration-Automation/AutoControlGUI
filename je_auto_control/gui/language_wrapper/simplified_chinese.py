@@ -844,8 +844,47 @@ simplified_chinese_word_dict = {
     "llm_run_done": "完成",
 
     # Remote Desktop Tab
-    "rd_host_tab": "被远程（本机）",
-    "rd_viewer_tab": "远程他人（控制他机）",
+    "rd_quick_tab": "快速连线",
+    "rd_webrtc_unavailable_tab": "WebRTC（未启用）",
+    "rd_webrtc_missing_extras": (
+        "当前安装未启用 WebRTC。请执行：\n\n"
+        "    pip install je_auto_control[webrtc]\n\n"
+        "以启用 WebRTC 被远程 / 远程他人 子分页。"
+    ),
+    "rd_host_tab": "进阶 — TCP 被远程",
+    "rd_viewer_tab": "进阶 — TCP 远程他人",
+    "rd_quick_this_machine": "本机",
+    "rd_quick_remote_machine": "连线到远端",
+    "rd_quick_your_id": "本机 ID：",
+    "rd_quick_copy_id": "复制 ID",
+    "rd_quick_host_token": "Token（分享给远端）：",
+    "rd_quick_generate": "生成",
+    "rd_quick_start_host": "开始被远程",
+    "rd_quick_stop_host": "停止",
+    "rd_quick_target_label": "输入 host:port",
+    "rd_quick_target_ph": "例如 192.168.1.10:5555",
+    "rd_quick_token_ph": "共用 token",
+    "rd_quick_viewer_token": "Token：",
+    "rd_quick_connect_btn": "连线",
+    "rd_quick_disconnect_btn": "断开",
+    "rd_quick_recent": "近期连线",
+    "rd_quick_required_fields": "目标地址与 token 都必须填写。",
+    "rd_quick_bad_target": "格式应为 host:port（port 为 1-65535）。",
+    "rd_quick_hosting": "运行中 port {port} — {n} 个观看者",
+    "rd_quick_not_hosting": "未开启",
+    "rd_quick_connected": "已连线",
+    "rd_quick_disconnected": "未连线",
+    "rd_quick_approval_title": "有人要连线",
+    "rd_quick_approval_message": (
+        "有观看者正在尝试连线。\n\n"
+        "  地址：     {address}\n"
+        "  传输方式： {transport}\n\n"
+        "要允许这个连线吗？"
+    ),
+    "rd_quick_approval_allow": "允许",
+    "rd_quick_approval_view_only": "仅检视",
+    "rd_quick_approval_deny": "拒绝",
+    "rd_quick_publish_signaling": "发布到 signaling（让对方用 9 位数 ID 连线）",
     "rd_host_security_warning": (
         "警告：取得本机 host:port 与 token 的人，可以完全控制本机的鼠标／键盘。"
         "默认仅绑 127.0.0.1；要对外请透过 SSH tunnel 或可信的 VPN。"

@@ -280,6 +280,63 @@ def _restart_windows_service() -> int:
     return 0
 
 
+def _uninstall_windows_service() -> int:
+    """Stop and remove the Windows service (Admin required)."""
+    if sys.platform != "win32":
+        print("uninstall-windows-service is Windows-only.", file=sys.stderr)
+        return 2
+    import subprocess  # nosec B404  # reason: fixed sc argv
+    try:
+        subprocess.run(  # nosec B603 B607  # reason: fixed argv list, no shell
+            ["sc", "stop", "JeAutoControlRemoteHost"],
+            timeout=15, check=False,
+        )
+        result = subprocess.run(  # nosec B603 B607  # reason: fixed argv list
+            ["sc", "delete", "JeAutoControlRemoteHost"],
+            timeout=15, check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        print(f"sc command failed: {error}", file=sys.stderr)
+        return 1
+    if result.returncode != 0:
+        print("sc delete failed — service may not have been installed.")
+        return 1
+    print("Service uninstalled.")
+    return 0
+
+
+def _uninstall_launchd_plist(output_path: Path) -> int:
+    """Print the launchctl unload command + remove the plist file."""
+    if not output_path.exists():
+        print(f"No plist at {output_path}.")
+        return 1
+    print("Run to deactivate:")
+    print(f"  launchctl unload ~/Library/LaunchAgents/{output_path.name}")
+    print(f"  rm ~/Library/LaunchAgents/{output_path.name}")
+    try:
+        output_path.unlink()
+        print(f"Removed local copy: {output_path}")
+    except OSError as error:
+        print(f"Could not remove local copy: {error}")
+    return 0
+
+
+def _uninstall_systemd_unit(output_path: Path) -> int:
+    """Print the systemctl disable command + remove the unit file."""
+    if not output_path.exists():
+        print(f"No unit at {output_path}.")
+        return 1
+    print("Run to deactivate:")
+    print(f"  systemctl --user disable --now {output_path.stem}")
+    print(f"  rm ~/.config/systemd/user/{output_path.name}")
+    try:
+        output_path.unlink()
+        print(f"Removed local copy: {output_path}")
+    except OSError as error:
+        print(f"Could not remove local copy: {error}")
+    return 0
+
+
 def _install_windows_service(config_path: Path) -> int:
     # config_path is part of the public install contract — kept on the
     # signature for symmetry with the Linux installer even though the
@@ -381,15 +438,26 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                            help="install the Windows service (admin required)")
     win_p.add_argument("--config", type=Path, default=None)
 
+    sub.add_parser("uninstall-windows-service",
+                   help="stop + delete the Windows service (admin required)")
+
     mac_p = sub.add_parser("generate-launchd",
                            help="emit a launchd plist for macOS")
     mac_p.add_argument("output", type=Path)
     mac_p.add_argument("--config", type=Path, default=None)
 
+    mac_u = sub.add_parser("uninstall-launchd",
+                           help="print launchctl unload + remove plist")
+    mac_u.add_argument("output", type=Path)
+
     lin_p = sub.add_parser("generate-systemd",
                            help="emit a systemd unit for Linux user services")
     lin_p.add_argument("output", type=Path)
     lin_p.add_argument("--config", type=Path, default=None)
+
+    lin_u = sub.add_parser("uninstall-systemd",
+                           help="print systemctl disable + remove unit")
+    lin_u.add_argument("output", type=Path)
     return parser
 
 
@@ -451,8 +519,11 @@ _COMMAND_DISPATCH = {
     "run": _cmd_run,
     "available-codecs": _cmd_available_codecs,
     "install-windows-service": _cmd_install_windows_service,
+    "uninstall-windows-service": lambda _args: _uninstall_windows_service(),
     "generate-launchd": _cmd_generate_launchd,
+    "uninstall-launchd": lambda args: _uninstall_launchd_plist(args.output),
     "generate-systemd": _cmd_generate_systemd,
+    "uninstall-systemd": lambda args: _uninstall_systemd_unit(args.output),
 }
 
 

@@ -19,7 +19,10 @@ from je_auto_control.utils.remote_desktop.clipboard_sync import (
 from je_auto_control.utils.remote_desktop.file_transfer import (
     FileReceiver, FileSendResult, FileTransferError, send_file,
 )
-from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
+from je_auto_control.utils.remote_desktop.host import (
+    PendingViewer, PendingViewerCallback, RemoteDesktopHost,
+    list_host_monitors,
+)
 from je_auto_control.utils.remote_desktop.host_id import (
     HostIdError, format_host_id, generate_host_id, load_or_create_host_id,
     parse_host_id, validate_host_id,
@@ -148,6 +151,7 @@ def is_webrtc_available() -> bool:
 
 __all__ = [
     "RemoteDesktopHost", "RemoteDesktopViewer",
+    "PendingViewer", "PendingViewerCallback", "list_host_monitors",
     "WebSocketDesktopHost", "WebSocketDesktopViewer",
     "WebRTCDesktopHost", "WebRTCDesktopViewer", "WebRTCConfig",
     "is_webrtc_available", "signaling_client",
