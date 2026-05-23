@@ -48,6 +48,23 @@ def _extract_host_id(payload: bytes) -> Optional[str]:
     return value if isinstance(value, str) else None
 
 
+def _extract_resume_info(payload: bytes) -> Tuple[Optional[str], Optional[float]]:
+    """Pull ``(resume_token, resume_ttl)`` from an AUTH_OK JSON payload."""
+    if not payload:
+        return None, None
+    try:
+        body = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None, None
+    if not isinstance(body, dict):
+        return None, None
+    token = body.get("resume_token")
+    ttl = body.get("resume_ttl")
+    token = token if isinstance(token, str) else None
+    ttl = float(ttl) if isinstance(ttl, (int, float)) else None
+    return token, ttl
+
+
 class RemoteDesktopViewer:
     """Connect to a :class:`RemoteDesktopHost` and stream frames + input.
 
@@ -93,6 +110,11 @@ class RemoteDesktopViewer:
         self._expected_host_id = (validate_host_id(expected_host_id)
                                   if expected_host_id else None)
         self._remote_host_id: Optional[str] = None
+        # Phase 6.6: AUTH_OK ships a resume token + TTL; viewer surfaces
+        # them so callers can reconnect with `token=resume_token` and
+        # skip both the approval popup and HMAC handshake setup cost.
+        self._resume_token: Optional[str] = None
+        self._resume_ttl: Optional[float] = None
         self._ssl_context = ssl_context
         self._server_hostname = server_hostname
         self._channel: Optional[MessageChannel] = None
@@ -119,6 +141,16 @@ class RemoteDesktopViewer:
     def remote_host_id(self) -> Optional[str]:
         """The host ID announced in AUTH_OK; ``None`` until handshake completes."""
         return self._remote_host_id
+
+    @property
+    def resume_token(self) -> Optional[str]:
+        """Phase 6.6: host-issued reconnect token; ``None`` until AUTH_OK."""
+        return self._resume_token
+
+    @property
+    def resume_ttl(self) -> Optional[float]:
+        """Phase 6.6: seconds the resume token stays valid on the host."""
+        return self._resume_ttl
 
     def connect(self, timeout: float = _DEFAULT_CONNECT_TIMEOUT_S) -> None:
         """Open the (optionally TLS) connection and complete the auth handshake.
@@ -288,6 +320,9 @@ class RemoteDesktopViewer:
         msg_type, payload = channel.read_typed()
         if msg_type is MessageType.AUTH_OK:
             self._remote_host_id = _extract_host_id(payload)
+            token, ttl = _extract_resume_info(payload)
+            self._resume_token = token
+            self._resume_ttl = ttl
             self._verify_host_id(self._remote_host_id)
             return
         if msg_type is MessageType.AUTH_FAIL:

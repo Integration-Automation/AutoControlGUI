@@ -31,6 +31,9 @@ from je_auto_control.utils.remote_desktop.input_dispatch import (
 from je_auto_control.utils.remote_desktop.protocol import (
     AuthenticationError, MessageType, ProtocolError,
 )
+from je_auto_control.utils.remote_desktop.resume_tokens import (
+    ResumeTokenStore,
+)
 from je_auto_control.utils.remote_desktop.transport import (
     MessageChannel, TcpMessageChannel,
 )
@@ -390,21 +393,34 @@ class _ClientHandler:
             raise AuthenticationError(
                 f"expected AUTH_RESPONSE, got {msg_type.name}"
             )
-        if not self._host._verify_token(nonce, payload):
-            self._channel.send_typed(MessageType.AUTH_FAIL, b"bad token")
-            raise AuthenticationError("bad token")
-        # Host operator gates the session *before* AUTH_OK so the viewer
-        # surfaces the rejection as an AuthenticationError instead of
-        # connecting and then mysteriously disconnecting.
-        permission = self._resolve_permission()
-        if permission == PERMISSION_DENIED:
-            self._channel.send_typed(
-                MessageType.AUTH_FAIL, b"rejected by host",
-            )
-            raise AuthenticationError("rejected by host")
-        self.permission = permission
+        # Phase 6.6: a viewer reconnecting with a valid resume token
+        # signs with that token directly — host short-circuits the
+        # approval popup and reuses the saved permission.
+        resumed = self._host._try_consume_resume(nonce, payload)
+        if resumed is not None:
+            self.permission = resumed
+        else:
+            if not self._host._verify_token(nonce, payload):
+                self._channel.send_typed(MessageType.AUTH_FAIL, b"bad token")
+                raise AuthenticationError("bad token")
+            # Host operator gates the session *before* AUTH_OK so the
+            # viewer surfaces the rejection as an AuthenticationError
+            # instead of connecting and then mysteriously disconnecting.
+            permission = self._resolve_permission()
+            if permission == PERMISSION_DENIED:
+                self._channel.send_typed(
+                    MessageType.AUTH_FAIL, b"rejected by host",
+                )
+                raise AuthenticationError("rejected by host")
+            self.permission = permission
+        # Issue a fresh resume token so the viewer can reconnect
+        # within the store's TTL without the approval popup.
+        resume_token = self._host._resume_store.issue(self.permission)
         ok_payload = json.dumps(
-            {"host_id": self._host.host_id}, ensure_ascii=False,
+            {"host_id": self._host.host_id,
+             "resume_token": resume_token,
+             "resume_ttl": self._host._resume_store.ttl},
+            ensure_ascii=False,
         ).encode("utf-8")
         self._channel.send_typed(MessageType.AUTH_OK, ok_payload)
         self._channel.settimeout(None)
@@ -652,6 +668,9 @@ class RemoteDesktopHost:
         self._on_chat = on_chat
         # Phase 4.1: TOTP secret. None disables 2FA (default).
         self._totp_secret = totp_secret
+        # Phase 6.6: in-memory resume tokens — viewer reconnects within
+        # the TTL skip the approval popup and re-use the saved permission.
+        self._resume_store = ResumeTokenStore()
         self._listen_sock: Optional[socket.socket] = None
         self._accept_thread: Optional[threading.Thread] = None
         self._capture_thread: Optional[threading.Thread] = None
@@ -856,6 +875,21 @@ class RemoteDesktopHost:
                     client.address, error,
                 )
         return len(clients)
+
+    def _try_consume_resume(self, nonce: bytes,
+                            payload: bytes) -> Optional[str]:
+        """Phase 6.6: find a resume token whose HMAC matches ``payload``.
+
+        Returns the saved permission string and removes the matching
+        token from the store. Returns ``None`` when no token in the
+        store signed this nonce — caller then falls back to the normal
+        ``_verify_token`` path.
+        """
+        for token, perm in self._resume_store.list_active().items():
+            if verify_response(token, nonce, payload):
+                self._resume_store.remove(token)
+                return perm
+        return None
 
     def _verify_token(self, nonce: bytes, payload: bytes) -> bool:
         """Phase 4.2 + 4.1: token / single-use code / TOTP-bound token.

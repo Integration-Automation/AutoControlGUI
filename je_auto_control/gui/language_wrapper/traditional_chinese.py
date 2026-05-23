@@ -888,6 +888,10 @@ traditional_chinese_word_dict = {
     "rd_quick_approval_view_only": "僅檢視",
     "rd_quick_approval_deny": "拒絕",
     "rd_quick_publish_signaling": "發布到 signaling（讓對方用 9 位數 ID 連線）",
+    "rd_quick_wake_host": "喚醒主機（WoL）",
+    "rd_quick_edit_mac": "編輯 MAC 位址…",
+    "rd_quick_wol_mac_prompt": "MAC 位址（AA:BB:CC:DD:EE:FF）：",
+    "rd_quick_wol_sent": "Magic packet 已送出到 {mac}。",
     "rd_host_security_warning": (
         "警告：取得本機 host:port 與 token 的人，可以完全控制本機的滑鼠／鍵盤。"
         "預設只綁 127.0.0.1；要對外請透過 SSH tunnel 或可信的 VPN。"

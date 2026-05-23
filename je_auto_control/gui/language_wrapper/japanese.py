@@ -899,6 +899,10 @@ japanese_word_dict = {
     "rd_quick_publish_signaling": (
         "シグナリングに公開（ビューアが 9 桁 ID で接続できるようにする）"
     ),
+    "rd_quick_wake_host": "ホストを起動（WoL）",
+    "rd_quick_edit_mac": "MAC アドレスを編集…",
+    "rd_quick_wol_mac_prompt": "MAC アドレス（AA:BB:CC:DD:EE:FF）:",
+    "rd_quick_wol_sent": "マジックパケットを {mac} へ送信しました。",
     "rd_host_security_warning": (
         "警告：host:port と token を知る相手は、このマシンのマウス／キーボードを"
         "完全に操作できます。既定は 127.0.0.1。外部公開は SSH トンネルか"
