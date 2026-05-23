@@ -104,8 +104,7 @@ def test_parse_target_rejects_bad_input(bad):
 
 def test_parse_target_rejects_non_string():
     with pytest.raises(UnresolvableTargetError):
-        # NOSONAR python:S5655  # reason: intentional bad-type negative test
-        parse_target(12345)  # type: ignore[arg-type]
+        parse_target(12345)  # type: ignore[arg-type]  # NOSONAR python:S5655  # reason: intentional bad-type negative test
 
 
 # --- discriminator helpers ---------------------------------------------

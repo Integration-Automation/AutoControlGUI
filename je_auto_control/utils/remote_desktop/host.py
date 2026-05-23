@@ -582,8 +582,8 @@ class RemoteDesktopHost:
     ``stop()`` can be called from any thread.
     """
 
-    def __init__(  # NOSONAR python:S107  # reason: each kwarg is a documented public knob; bundling further would split the API across patterns and force every existing caller (registry, host_panel, tests in 8 files) into a wrapper object for marginal benefit
-            self, token: str,
+    def __init__(
+            self, token: str,  # NOSONAR python:S107  # reason: each kwarg is a documented public knob; bundling further would split the API across patterns and force every existing caller (registry, host_panel, tests in 8 files) through a wrapper object for marginal benefit
             bind: str = "127.0.0.1",
             port: int = 0,
             fps: float = 10.0,

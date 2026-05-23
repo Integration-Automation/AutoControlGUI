@@ -56,8 +56,8 @@ class RemoteDesktopViewer:
     Qt). ``send_input`` is safe to call from any thread.
     """
 
-    def __init__(  # NOSONAR python:S107  # reason: each callback is a documented public hook; bundling further would force every caller (viewer_panel, registry, 10+ test files) through a wrapper object for marginal benefit
-            self, host: str, port: int, token: str,
+    def __init__(
+            self, host: str, port: int, token: str,  # NOSONAR python:S107  # reason: each callback is a documented public hook; bundling further would force every caller (viewer_panel, registry, 10+ test files) through a wrapper object for marginal benefit
             on_frame: Optional[FrameCallback] = None,
             on_error: Optional[ErrorCallback] = None,
             on_audio: Optional[AudioCallback] = None,

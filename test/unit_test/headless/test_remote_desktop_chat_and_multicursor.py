@@ -95,8 +95,7 @@ def test_broadcast_chat_with_empty_text_is_noop(jpeg_bytes):
     host.start()
     try:
         assert host.broadcast_chat("") == 0
-        # NOSONAR python:S5655  # reason: intentional bad-type negative test
-        assert host.broadcast_chat(None) == 0  # type: ignore[arg-type]
+        assert host.broadcast_chat(None) == 0  # type: ignore[arg-type]  # NOSONAR python:S5655  # reason: intentional bad-type negative test
     finally:
         host.stop(timeout=1.0)
 

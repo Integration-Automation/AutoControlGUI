@@ -57,11 +57,11 @@ def test_start_twice_raises(tmp_path):
 
 
 def test_record_frame_with_non_bytes_payload(tmp_path):
-    """NOSONAR python:S5655  # reason: intentional bad-type negative test."""
+    """Intentional bad-type negative test."""
     rec = JpegSequenceRecorder(str(tmp_path / "rec"))
     rec.start()
-    rec.record_frame("not-bytes")  # type: ignore[arg-type]
-    rec.record_frame(None)  # type: ignore[arg-type]
+    rec.record_frame("not-bytes")  # type: ignore[arg-type]  # NOSONAR python:S5655  # reason: intentional bad-type negative test
+    rec.record_frame(None)  # type: ignore[arg-type]  # NOSONAR python:S5655  # reason: intentional bad-type negative test
     assert rec.frame_count == 0
 
 

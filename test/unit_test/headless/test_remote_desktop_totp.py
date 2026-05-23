@@ -64,8 +64,7 @@ def test_verify_rejects_malformed_input():
     secret = generate_secret()
     assert verify_code(secret, "abcdef") is False
     assert verify_code(secret, "12345") is False  # too short
-    # NOSONAR python:S5655  # reason: intentional bad-type negative test
-    assert verify_code(secret, 123456) is False  # type: ignore[arg-type]
+    assert verify_code(secret, 123456) is False  # type: ignore[arg-type]  # NOSONAR python:S5655  # reason: intentional bad-type negative test
 
 
 def test_decode_secret_handles_spaces_and_lowercase():
@@ -87,8 +86,7 @@ def test_invalid_secret_raises():
 
 
 def test_provisioning_uri_contains_secret_and_issuer():
-    # NOSONAR python:S6418  # reason: literal base32 test vector, not a real secret
-    secret = "GEZDGNBVGY3TQOJQ"  # nosec B105  # reason: test-only RFC fixture
+    secret = "GEZDGNBVGY3TQOJQ"  # nosec B105  # NOSONAR python:S6418  # reason: published RFC 6238 test vector, not a real credential
     uri = provisioning_uri(secret, account="alice", issuer="MyApp")
     assert uri.startswith("otpauth://totp/")
     assert "secret=GEZDGNBVGY3TQOJQ" in uri
