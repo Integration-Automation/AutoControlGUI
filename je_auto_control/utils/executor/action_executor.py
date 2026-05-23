@@ -873,6 +873,49 @@ def _history_list_as_dicts(limit: int = 100,
     ]
 
 
+_EXECUTOR_METRIC_CACHE: Dict[str, Any] = {}
+
+
+def _executor_metrics():
+    """Lazily register the action-executor Counter + Histogram (Phase 10.1)."""
+    if "calls" in _EXECUTOR_METRIC_CACHE:
+        return _EXECUTOR_METRIC_CACHE
+    from je_auto_control.utils.observability import (
+        Counter, Histogram, default_registry,
+    )
+    registry = default_registry()
+    _EXECUTOR_METRIC_CACHE["calls"] = registry.register(Counter(
+        "autocontrol_action_calls_total",
+        "Number of AC_* actions executed, partitioned by name + outcome.",
+        label_names=("action", "outcome"),
+    ))
+    _EXECUTOR_METRIC_CACHE["duration"] = registry.register(Histogram(
+        "autocontrol_action_duration_seconds",
+        "Wall-clock duration of each AC_* action call.",
+        label_names=("action",),
+    ))
+    return _EXECUTOR_METRIC_CACHE
+
+
+def _observe_executor_metrics(action: str, started_at: float,
+                              *, error: Optional[BaseException]) -> None:
+    """Emit Counter + Histogram samples for one action execution."""
+    import time as _time
+    try:
+        metrics = _executor_metrics()
+    except (ImportError, ValueError, RuntimeError):
+        return
+    duration = max(0.0, _time.monotonic() - started_at)
+    outcome = "error" if error is not None else "ok"
+    try:
+        metrics["calls"].inc(labels={"action": action, "outcome": outcome})
+        metrics["duration"].observe(duration, labels={"action": action})
+    except ValueError:
+        # Defensive: if the label set drifts (e.g. tests reset the registry)
+        # we'd rather lose a sample than crash the executor.
+        pass
+
+
 class Executor:
     """
     Executor
@@ -1222,15 +1265,19 @@ class Executor:
     def _run_one_action(self, action: list, record: Dict[str, Any],
                         raise_on_error: bool) -> None:
         """Execute a single action, recording the result or raising."""
+        import time as _time
         key = "execute: " + str(action)
         action_name = action[0] if action and isinstance(action[0], str) else "<invalid>"
+        started = _time.monotonic()
         try:
             with default_profiler.measure(action_name):
                 record[key] = self._execute_event(action)
+            _observe_executor_metrics(action_name, started, error=None)
         except (LoopBreak, LoopContinue):
             raise
         except (AutoControlActionException, OSError, RuntimeError,
                 AttributeError, TypeError, ValueError) as error:
+            _observe_executor_metrics(action_name, started, error=error)
             if raise_on_error:
                 raise
             autocontrol_logger.info(

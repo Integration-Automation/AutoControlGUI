@@ -99,10 +99,27 @@ class AgentLoop:
     def run(self, goal: str) -> AgentResult:
         started_at = time.monotonic()
         result = AgentResult(succeeded=False)
+        metrics = _agent_metrics()
+        if metrics:
+            metrics["runs"].inc()
+        from je_auto_control.utils.observability import default_tracer
+        tracer = default_tracer()
+        with tracer.start_as_current_span(
+                "agent_loop.run", {"goal": goal[:120]},
+        ):
+            self._run_loop(goal, started_at, result, metrics)
+        result.elapsed_s = round(time.monotonic() - started_at, 3)
+        if metrics:
+            outcome = "succeeded" if result.succeeded else "failed"
+            metrics["outcome"].inc(labels={"outcome": outcome})
+        return result
+
+    def _run_loop(self, goal: str, started_at: float,
+                  result: AgentResult, metrics) -> None:
         for index in range(self._budget.max_steps):
             if time.monotonic() - started_at > self._budget.wall_seconds:
                 result.final_message = "wall_seconds budget exhausted"
-                break
+                return
             screenshot = self._screenshot_fn()
             decision = self._backend.decide_next_action(
                 goal, screenshot, result.steps,
@@ -114,32 +131,70 @@ class AgentLoop:
                     index=index, tool=None, arguments=None,
                     stop_reason=result.final_message,
                 ))
-                break
+                return
             tool = decision.get("tool")
             args = decision.get("input") or {}
             if not isinstance(tool, str):
                 result.final_message = f"backend returned no tool: {decision!r}"
-                break
+                return
             step = AgentStep(index=index, tool=tool, arguments=dict(args))
-            try:
-                step.result = self._tool_runner(tool, args)
-            except (ValueError, RuntimeError, OSError) as error:
-                step.error = f"{type(error).__name__}: {error}"
+            from je_auto_control.utils.observability import default_tracer
+            tracer = default_tracer()
+            with tracer.start_as_current_span(
+                    "agent_loop.tool_call", {"tool": tool},
+            ):
+                try:
+                    step.result = self._tool_runner(tool, args)
+                except (ValueError, RuntimeError, OSError) as error:
+                    step.error = f"{type(error).__name__}: {error}"
             result.steps.append(step)
+            if metrics:
+                outcome = "error" if step.error else "ok"
+                metrics["steps"].inc(
+                    labels={"tool": tool, "outcome": outcome},
+                )
             if step.error:
                 # Surface the error to the model on the next turn, but
                 # don't abort — the agent might recover.
                 continue
-        else:
-            result.final_message = "max_steps budget exhausted"
-        result.elapsed_s = round(time.monotonic() - started_at, 3)
-        return result
+        result.final_message = "max_steps budget exhausted"
 
 
 def _default_tool_runner(name: str, args: Dict[str, Any]) -> Any:
     """Default tool dispatch goes through the executor."""
     from je_auto_control.utils.tool_use_schema import run_tool_call
     return run_tool_call(name, args)
+
+
+_AGENT_METRIC_CACHE: Dict[str, Any] = {}
+
+
+def _agent_metrics():
+    """Lazy-register agent-loop metrics into the default Prometheus registry."""
+    if "runs" in _AGENT_METRIC_CACHE:
+        return _AGENT_METRIC_CACHE
+    try:
+        from je_auto_control.utils.observability import (
+            Counter, default_registry,
+        )
+        registry = default_registry()
+    except ImportError:
+        return None
+    _AGENT_METRIC_CACHE["runs"] = registry.register(Counter(
+        "autocontrol_agent_runs_total",
+        "Number of AgentLoop runs started.",
+    ))
+    _AGENT_METRIC_CACHE["steps"] = registry.register(Counter(
+        "autocontrol_agent_steps_total",
+        "Number of AgentLoop steps executed, partitioned by tool + outcome.",
+        label_names=("tool", "outcome"),
+    ))
+    _AGENT_METRIC_CACHE["outcome"] = registry.register(Counter(
+        "autocontrol_agent_outcomes_total",
+        "Final outcome of each AgentLoop run.",
+        label_names=("outcome",),
+    ))
+    return _AGENT_METRIC_CACHE
 
 
 def run_agent(goal: str, backend: AgentBackend, **kwargs) -> AgentResult:
