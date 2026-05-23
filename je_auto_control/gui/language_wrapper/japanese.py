@@ -856,8 +856,49 @@ japanese_word_dict = {
     "llm_run_done": "完了",
 
     # Remote Desktop Tab
-    "rd_host_tab": "ホスト（このマシン）",
-    "rd_viewer_tab": "ビューア（他マシンを操作）",
+    "rd_quick_tab": "クイック接続",
+    "rd_webrtc_unavailable_tab": "WebRTC（未対応）",
+    "rd_webrtc_missing_extras": (
+        "現在のインストールでは WebRTC が利用できません。以下を実行：\n\n"
+        "    pip install je_auto_control[webrtc]\n\n"
+        "して WebRTC ホスト／ビューア タブを有効にしてください。"
+    ),
+    "rd_host_tab": "詳細 — TCP ホスト",
+    "rd_viewer_tab": "詳細 — TCP ビューア",
+    "rd_quick_this_machine": "このマシン",
+    "rd_quick_remote_machine": "リモートに接続",
+    "rd_quick_your_id": "自分の ID：",
+    "rd_quick_copy_id": "ID をコピー",
+    "rd_quick_host_token": "トークン（相手に共有）：",
+    "rd_quick_generate": "生成",
+    "rd_quick_start_host": "ホスト開始",
+    "rd_quick_stop_host": "停止",
+    "rd_quick_target_label": "host:port を入力",
+    "rd_quick_target_ph": "例: 192.168.1.10:5555",
+    "rd_quick_token_ph": "共有トークン",
+    "rd_quick_viewer_token": "トークン：",
+    "rd_quick_connect_btn": "接続",
+    "rd_quick_disconnect_btn": "切断",
+    "rd_quick_recent": "最近の接続",
+    "rd_quick_required_fields": "宛先とトークンの両方が必要です。",
+    "rd_quick_bad_target": "host:port 形式で入力してください（port は 1-65535）。",
+    "rd_quick_hosting": "ポート {port} で稼働中 — {n} 人接続中",
+    "rd_quick_not_hosting": "停止中",
+    "rd_quick_connected": "接続済み",
+    "rd_quick_disconnected": "未接続",
+    "rd_quick_approval_title": "接続要求",
+    "rd_quick_approval_message": (
+        "ビューアが接続を試みています。\n\n"
+        "  アドレス：   {address}\n"
+        "  トランスポート： {transport}\n\n"
+        "このセッションを許可しますか？"
+    ),
+    "rd_quick_approval_allow": "許可",
+    "rd_quick_approval_view_only": "閲覧のみ",
+    "rd_quick_approval_deny": "拒否",
+    "rd_quick_publish_signaling": (
+        "シグナリングに公開（ビューアが 9 桁 ID で接続できるようにする）"
+    ),
     "rd_host_security_warning": (
         "警告：host:port と token を知る相手は、このマシンのマウス／キーボードを"
         "完全に操作できます。既定は 127.0.0.1。外部公開は SSH トンネルか"

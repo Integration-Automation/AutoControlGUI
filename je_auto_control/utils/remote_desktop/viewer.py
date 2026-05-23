@@ -1,9 +1,11 @@
 """TCP viewer that receives JPEG frames and forwards input messages."""
+import collections
 import json
 import socket
 import ssl
 import threading
-from typing import Any, Callable, Mapping, Optional
+import time as _time_module
+from typing import Any, Callable, Deque, Dict, Mapping, Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.auth import compute_response
@@ -24,6 +26,9 @@ from je_auto_control.utils.remote_desktop.transport import (
 FrameCallback = Callable[[bytes], None]
 AudioCallback = Callable[[bytes], None]
 ClipboardCallback = Callable[[str, Any], None]
+CursorCallback = Callable[[int, int], None]
+ViewerCursorCallback = Callable[[str, int, int], None]
+ChatCallback = Callable[[str, str], None]
 ErrorCallback = Callable[[Exception], None]
 
 _DEFAULT_AUTH_TIMEOUT_S = 60.0
@@ -56,6 +61,10 @@ class RemoteDesktopViewer:
                  on_error: Optional[ErrorCallback] = None,
                  on_audio: Optional[AudioCallback] = None,
                  on_clipboard: Optional[ClipboardCallback] = None,
+                 on_cursor: Optional[CursorCallback] = None,
+                 on_viewer_cursor: Optional[ViewerCursorCallback] = None,
+                 on_chat: Optional[ChatCallback] = None,
+                 totp_code: Optional[str] = None,
                  expected_host_id: Optional[str] = None,
                  ssl_context: Optional[ssl.SSLContext] = None,
                  server_hostname: Optional[str] = None,
@@ -66,11 +75,19 @@ class RemoteDesktopViewer:
             raise ValueError("token must be a non-empty string")
         self._host = host
         self._port = int(port)
-        self._token = token
+        # Phase 4.1: when a TOTP code is supplied, the effective HMAC
+        # key is "token:CODE" — host tries the same combination across
+        # a ±1-step window so clock drift doesn't lock viewers out.
+        self._token = (
+            f"{token}:{totp_code}" if totp_code else token
+        )
         self._on_frame = on_frame
         self._on_error = on_error
         self._on_audio = on_audio
         self._on_clipboard = on_clipboard
+        self._on_cursor = on_cursor
+        self._on_viewer_cursor = on_viewer_cursor
+        self._on_chat = on_chat
         self._file_receiver: Optional[FileReceiver] = None
         self._expected_host_id = (validate_host_id(expected_host_id)
                                   if expected_host_id else None)
@@ -82,6 +99,16 @@ class RemoteDesktopViewer:
         self._shutdown = threading.Event()
         self._receiver: Optional[threading.Thread] = None
         self._connected = False
+        # Phase 1.2: rolling counters so the GUI can render an FPS /
+        # kbps overlay without reaching into private state. Lock
+        # because the recv thread writes and the GUI thread reads.
+        self._stats_lock = threading.Lock()
+        self._stats_window: Deque[Tuple[float, int]] = collections.deque(
+            maxlen=120,
+        )
+        self._frames_total = 0
+        self._bytes_total = 0
+        self._connected_at: Optional[float] = None
 
     @property
     def connected(self) -> bool:
@@ -312,6 +339,9 @@ class RemoteDesktopViewer:
     def _on_recv_frame(self, payload: bytes,
                        msg_type: MessageType) -> None:
         del msg_type
+        # Phase 1.2: record the frame in the rolling stats window first
+        # so even a slow on_frame callback doesn't skew the rate calc.
+        self._record_frame(len(payload))
         if self._on_frame is None:
             return
         try:
@@ -321,6 +351,48 @@ class RemoteDesktopViewer:
                 "remote_desktop viewer on_frame callback raised"
             )
             self._notify_error(error)
+
+    def _record_frame(self, byte_count: int) -> None:
+        """Append a frame to the rolling stats window."""
+        now = _time_module.monotonic()
+        with self._stats_lock:
+            self._stats_window.append((now, int(byte_count)))
+            self._frames_total += 1
+            self._bytes_total += int(byte_count)
+            if self._connected_at is None:
+                self._connected_at = now
+
+    def stats(self) -> Dict[str, float]:
+        """Phase 1.2: snapshot of FPS / kbps / totals over a 3-second window.
+
+        ``fps`` and ``kbps`` reflect the most recent activity; ``frames``
+        and ``bytes`` are session totals; ``uptime`` is wall seconds
+        since the first FRAME message. Safe to call from any thread.
+        """
+        now = _time_module.monotonic()
+        with self._stats_lock:
+            window = list(self._stats_window)
+            frames_total = self._frames_total
+            bytes_total = self._bytes_total
+            connected_at = self._connected_at
+        cutoff = now - 3.0
+        recent = [(ts, n) for ts, n in window if ts >= cutoff]
+        if recent:
+            span = max(now - recent[0][0], 0.001)
+            recent_bytes = sum(n for _ts, n in recent)
+            fps = len(recent) / span
+            kbps = (recent_bytes * 8.0 / 1000.0) / span
+        else:
+            fps = 0.0
+            kbps = 0.0
+        uptime = (now - connected_at) if connected_at else 0.0
+        return {
+            "fps": round(fps, 2),
+            "kbps": round(kbps, 2),
+            "frames": float(frames_total),
+            "bytes": float(bytes_total),
+            "uptime": round(uptime, 2),
+        }
 
     def _on_recv_audio(self, payload: bytes,
                        msg_type: MessageType) -> None:
@@ -347,6 +419,74 @@ class RemoteDesktopViewer:
                       msg_type: MessageType) -> None:
         del payload, msg_type
 
+    def send_chat(self, text: str, sender: str = "viewer") -> None:
+        """Phase 5.2: send a chat message to the host."""
+        if self._channel is None:
+            raise RuntimeError(_NOT_CONNECTED_MESSAGE)
+        if not isinstance(text, str) or not text:
+            return
+        import time as _time
+        payload = json.dumps(
+            {"sender": sender, "text": text, "ts": _time.time()},
+        ).encode("utf-8")
+        self._channel.send_typed(MessageType.CHAT, payload)
+
+    def _on_recv_chat(self, payload: bytes,
+                     msg_type: MessageType) -> None:
+        del msg_type
+        if self._on_chat is None:
+            return
+        try:
+            body = json.loads(payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return
+        if not isinstance(body, dict):
+            return
+        sender = body.get("sender", "host")
+        text = body.get("text")
+        if not isinstance(text, str) or not text:
+            return
+        try:
+            self._on_chat(str(sender), text)
+        except Exception:  # noqa: BLE001  callback isolation
+            autocontrol_logger.exception(
+                "remote_desktop viewer on_chat callback raised"
+            )
+
+    def _on_recv_cursor(self, payload: bytes,
+                        msg_type: MessageType) -> None:
+        del msg_type
+        try:
+            body = json.loads(payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return
+        if not isinstance(body, dict):
+            return
+        x = body.get("x")
+        y = body.get("y")
+        if not isinstance(x, int) or not isinstance(y, int):
+            return
+        viewer_id = body.get("viewer_id")
+        # Phase 5.1: a CURSOR with viewer_id is one of *other* viewers'
+        # cursors echoed via MultiViewerHost; routes to a separate
+        # callback so the existing on_cursor stays single-pointer.
+        if viewer_id and self._on_viewer_cursor is not None:
+            try:
+                self._on_viewer_cursor(str(viewer_id), x, y)
+            except Exception:  # noqa: BLE001  callback isolation
+                autocontrol_logger.exception(
+                    "remote_desktop viewer on_viewer_cursor callback raised"
+                )
+            return
+        if self._on_cursor is None:
+            return
+        try:
+            self._on_cursor(x, y)
+        except Exception:  # noqa: BLE001  callback isolation
+            autocontrol_logger.exception(
+                "remote_desktop viewer on_cursor callback raised"
+            )
+
     def _notify_error(self, error: BaseException) -> None:
         if self._shutdown.is_set() or self._on_error is None:
             return
@@ -365,5 +505,7 @@ _RECV_HANDLERS = {
     MessageType.FILE_BEGIN: RemoteDesktopViewer._on_recv_file,
     MessageType.FILE_CHUNK: RemoteDesktopViewer._on_recv_file,
     MessageType.FILE_END: RemoteDesktopViewer._on_recv_file,
+    MessageType.CURSOR: RemoteDesktopViewer._on_recv_cursor,
+    MessageType.CHAT: RemoteDesktopViewer._on_recv_chat,
     MessageType.PING: RemoteDesktopViewer._on_recv_ping,
 }

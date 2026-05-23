@@ -709,6 +709,21 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
 
     # --- handlers ----------------------------------------------------------
 
+    def prefill(self, token: str = "", host_id: str = "",
+                signaling_url: str = "") -> None:
+        """Hand-off entry point used by the Quick Connect screen.
+
+        Populates the signaling-flow fields so the operator can click
+        "Publish & wait for viewer" without retyping a token they
+        already shared on the Quick Connect tab.
+        """
+        if token:
+            self._token_edit.setText(token)
+        if host_id:
+            self._host_id_edit.setText(host_id)
+        if signaling_url and hasattr(self, "_server_edit"):
+            self._server_edit.setText(signaling_url)
+
     def _on_regen_id(self) -> None:
         self._host_id_edit.setText(generate_host_id())
 
@@ -2012,6 +2027,22 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             self._host_id_edit.setText(host_id)
         if signaling:
             self._server_edit.setText(signaling)
+
+    def prefill(self, host_id: str = "", token: str = "",
+                signaling_url: str = "") -> None:
+        """Hand-off entry point used by the Quick Connect screen.
+
+        Populates the signaling-flow fields without auto-clicking
+        Connect so the operator can sanity-check before the session
+        starts. Empty strings are ignored so callers can fill only the
+        fields they actually know.
+        """
+        if host_id:
+            self._host_id_edit.setText(host_id)
+        if token:
+            self._token_edit.setText(token)
+        if signaling_url:
+            self._server_edit.setText(signaling_url)
 
     def _build_config_group(self) -> QGroupBox:
         group = self._tr(QGroupBox(), "rd_webrtc_config_group")

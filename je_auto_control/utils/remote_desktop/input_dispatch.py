@@ -17,7 +17,8 @@ class InputDispatchError(ValueError):
 
 
 _ALLOWED_ACTIONS = {
-    "mouse_move", "mouse_click", "mouse_press", "mouse_release",
+    "mouse_move", "mouse_move_relative",
+    "mouse_click", "mouse_press", "mouse_release",
     "mouse_scroll", "key_press", "key_release", "type", "ping",
 }
 
@@ -28,8 +29,8 @@ def _import_wrappers():
         press_keyboard_key, release_keyboard_key, write,
     )
     from je_auto_control.wrapper.auto_control_mouse import (
-        click_mouse, mouse_scroll, press_mouse, release_mouse,
-        set_mouse_position,
+        click_mouse, get_mouse_position, mouse_scroll, press_mouse,
+        release_mouse, set_mouse_position,
     )
     return {
         "click_mouse": click_mouse,
@@ -37,6 +38,7 @@ def _import_wrappers():
         "press_mouse": press_mouse,
         "release_mouse": release_mouse,
         "set_mouse_position": set_mouse_position,
+        "get_mouse_position": get_mouse_position,
         "press_keyboard_key": press_keyboard_key,
         "release_keyboard_key": release_keyboard_key,
         "write": write,
@@ -61,6 +63,19 @@ def dispatch_input(message: Mapping[str, Any]) -> Any:
 def _apply_mouse_move(message: Mapping[str, Any], wrappers: Dict[str, Any]) -> Any:
     return wrappers["set_mouse_position"](
         int(message["x"]), int(message["y"]),
+    )
+
+
+def _apply_mouse_move_relative(message: Mapping[str, Any],
+                               wrappers: Dict[str, Any]) -> Any:
+    """Add ``(dx, dy)`` to the current cursor position (FPS / CAD games)."""
+    current = wrappers["get_mouse_position"]()
+    if current is None:
+        raise InputDispatchError("get_mouse_position returned None")
+    dx = int(message.get("dx", 0))
+    dy = int(message.get("dy", 0))
+    return wrappers["set_mouse_position"](
+        int(current[0]) + dx, int(current[1]) + dy,
     )
 
 
@@ -107,6 +122,7 @@ def _apply_type(message: Mapping[str, Any], wrappers: Dict[str, Any]) -> Any:
 
 _APPLIERS: Dict[str, Callable[[Mapping[str, Any], Dict[str, Any]], Any]] = {
     "mouse_move": _apply_mouse_move,
+    "mouse_move_relative": _apply_mouse_move_relative,
     "mouse_click": _apply_mouse_click,
     "mouse_press": _apply_mouse_press,
     "mouse_release": _apply_mouse_release,

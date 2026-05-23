@@ -856,8 +856,49 @@ english_word_dict = {
     "llm_run_done": "Done",
 
     # Remote Desktop Tab
-    "rd_host_tab": "Host (this machine)",
-    "rd_viewer_tab": "Viewer (control another)",
+    "rd_quick_tab": "Quick Connect",
+    "rd_webrtc_unavailable_tab": "WebRTC (unavailable)",
+    "rd_webrtc_missing_extras": (
+        "WebRTC is not available in this install. Run:\n\n"
+        "    pip install je_auto_control[webrtc]\n\n"
+        "to enable the WebRTC Host and Viewer sub-tabs."
+    ),
+    "rd_host_tab": "Advanced — TCP Host",
+    "rd_viewer_tab": "Advanced — TCP Viewer",
+    "rd_quick_this_machine": "This machine",
+    "rd_quick_remote_machine": "Connect to remote",
+    "rd_quick_your_id": "Your ID:",
+    "rd_quick_copy_id": "Copy ID",
+    "rd_quick_host_token": "Token (share with viewer):",
+    "rd_quick_generate": "Generate",
+    "rd_quick_start_host": "Start hosting",
+    "rd_quick_stop_host": "Stop",
+    "rd_quick_target_label": "Enter host:port",
+    "rd_quick_target_ph": "e.g. 192.168.1.10:5555",
+    "rd_quick_token_ph": "Shared token",
+    "rd_quick_viewer_token": "Token:",
+    "rd_quick_connect_btn": "Connect",
+    "rd_quick_disconnect_btn": "Disconnect",
+    "rd_quick_recent": "Recent connections",
+    "rd_quick_required_fields": "Target and token are both required.",
+    "rd_quick_bad_target": "Expected host:port (port must be 1-65535).",
+    "rd_quick_hosting": "Hosting on port {port} — {n} viewer(s)",
+    "rd_quick_not_hosting": "Not hosting",
+    "rd_quick_connected": "Connected",
+    "rd_quick_disconnected": "Disconnected",
+    "rd_quick_approval_title": "Incoming viewer",
+    "rd_quick_approval_message": (
+        "A viewer is trying to connect.\n\n"
+        "  Address:    {address}\n"
+        "  Transport:  {transport}\n\n"
+        "Allow this session?"
+    ),
+    "rd_quick_approval_allow": "Allow",
+    "rd_quick_approval_view_only": "View only",
+    "rd_quick_approval_deny": "Deny",
+    "rd_quick_publish_signaling": (
+        "Publish via signaling (let viewers connect by 9-digit ID)"
+    ),
     "rd_host_security_warning": (
         "WARNING: anyone with the host:port and token gets full mouse / "
         "keyboard control of this machine. Default bind is 127.0.0.1; "
