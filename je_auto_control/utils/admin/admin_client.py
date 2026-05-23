@@ -103,6 +103,41 @@ class AdminConsoleClient:
         with ThreadPoolExecutor(max_workers=self._max_parallel) as pool:
             return list(pool.map(self._poll_one, targets))
 
+    def fetch_thumbnails(self, *, labels: Optional[List[str]] = None,
+                         ) -> Dict[str, Optional[bytes]]:
+        """Phase 6.5: pull a base64 PNG screenshot from every targeted host.
+
+        Returns ``label → png_bytes`` (or ``None`` on a host that
+        errored). The Cross-host Dashboard polls this on a timer and
+        scales the resulting image down to a thumbnail tile.
+        """
+        import base64
+        targets = self._resolve_targets(labels)
+        if not targets:
+            return {}
+
+        def grab(host: AdminHost) -> tuple:
+            try:
+                body = self._http_get(host, "/screenshot")
+            except (OSError, ValueError, TimeoutError) as error:
+                autocontrol_logger.info(
+                    "admin: thumbnail %s failed: %r", host.label, error,
+                )
+                return host.label, None
+            if not isinstance(body, dict) or body.get("encoding") != "base64":
+                return host.label, None
+            data = body.get("data")
+            if not isinstance(data, str):
+                return host.label, None
+            try:
+                return host.label, base64.b64decode(data)
+            except (ValueError, base64.binascii.Error):
+                return host.label, None
+
+        with ThreadPoolExecutor(max_workers=self._max_parallel) as pool:
+            results = list(pool.map(grab, targets))
+        return dict(results)
+
     def broadcast_execute(self, actions: List[Any],
                           *, labels: Optional[List[str]] = None,
                           ) -> List[Dict[str, Any]]:
