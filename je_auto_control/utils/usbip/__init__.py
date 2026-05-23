@@ -36,6 +36,7 @@ Windows) and lives in the platform-specific backends shipped in
 from je_auto_control.utils.usbip.backend import (
     FakeUrbBackend, UrbBackend, UrbRequest, UrbResponse,
 )
+from je_auto_control.utils.usbip.libusb_backend import LibUsbBackend
 from je_auto_control.utils.usbip.protocol import (
     OP_REP_DEVLIST, OP_REP_IMPORT, OP_REQ_DEVLIST, OP_REQ_IMPORT,
     PROTOCOL_VERSION, USBIP_CMD_SUBMIT, USBIP_CMD_UNLINK,
@@ -49,6 +50,7 @@ from je_auto_control.utils.usbip.server import (
 
 __all__ = [
     "FakeUrbBackend", "UrbBackend", "UrbRequest", "UrbResponse",
+    "LibUsbBackend",
     "OP_REP_DEVLIST", "OP_REP_IMPORT", "OP_REQ_DEVLIST", "OP_REQ_IMPORT",
     "PROTOCOL_VERSION", "USBIP_CMD_SUBMIT", "USBIP_CMD_UNLINK",
     "USBIP_RET_SUBMIT", "USBIP_RET_UNLINK", "UsbIpDevice", "UsbIpError",

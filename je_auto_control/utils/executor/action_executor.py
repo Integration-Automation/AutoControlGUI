@@ -503,6 +503,82 @@ def _ac_web_list_commands() -> list:
     return list_webrunner_commands()
 
 
+# --- Android via ADB (Phase 9.7) ---------------------------------------
+
+_android_client_cache: Dict[Optional[str], Any] = {}
+
+
+def _android_client(serial: Optional[str] = None,
+                    adb_path: Optional[str] = None) -> Any:
+    """Build (or return) a cached :class:`AdbClient` for ``serial``."""
+    key = (serial, adb_path)
+    cached = _android_client_cache.get(key)
+    if cached is not None:
+        return cached
+    from je_auto_control.android import AdbClient
+    cached = AdbClient(adb_path=adb_path, default_serial=serial)
+    _android_client_cache[key] = cached
+    return cached
+
+
+def _ac_android_tap(x: int, y: int,
+                    serial: Optional[str] = None,
+                    adb_path: Optional[str] = None) -> None:
+    """Send a single ``input tap`` to an Android device."""
+    _android_client(serial, adb_path).tap(int(x), int(y))
+
+
+def _ac_android_swipe(x1: int, y1: int, x2: int, y2: int,
+                      duration_ms: int = 250,
+                      serial: Optional[str] = None,
+                      adb_path: Optional[str] = None) -> None:
+    """Send a touch swipe via ``input swipe``."""
+    _android_client(serial, adb_path).swipe(
+        int(x1), int(y1), int(x2), int(y2),
+        duration_ms=int(duration_ms),
+    )
+
+
+def _ac_android_key(key: str,
+                    serial: Optional[str] = None,
+                    adb_path: Optional[str] = None) -> None:
+    """Send a keycode (``KEYCODE_HOME`` etc.) via ``input keyevent``."""
+    _android_client(serial, adb_path).key_event(key)
+
+
+def _ac_android_text(text: str,
+                     serial: Optional[str] = None,
+                     adb_path: Optional[str] = None) -> None:
+    """Type a string via ``input text``."""
+    _android_client(serial, adb_path).text(text)
+
+
+def _ac_android_screenshot(file_path: str,
+                           serial: Optional[str] = None,
+                           adb_path: Optional[str] = None) -> str:
+    """Capture the live Android screen and save it as PNG at ``file_path``."""
+    path = _android_client(serial, adb_path).save_screenshot(file_path)
+    return str(path)
+
+
+def _ac_android_list_devices(adb_path: Optional[str] = None) -> list:
+    """Return ``{serial, state, model, …}`` for every adb-attached device."""
+    devices = _android_client(None, adb_path).list_devices()
+    return [
+        {"serial": d.serial, "state": d.state,
+         "model": d.model, "product": d.product,
+         "transport_id": d.transport_id}
+        for d in devices
+    ]
+
+
+def _ac_android_shell(command: str,
+                      serial: Optional[str] = None,
+                      adb_path: Optional[str] = None) -> str:
+    """Run an ``adb shell`` command and return its stdout."""
+    return _android_client(serial, adb_path).shell(command)
+
+
 def _llm_plan_for_executor(description: str,
                            examples: Optional[list] = None,
                            model: Optional[str] = None,
@@ -945,6 +1021,15 @@ class Executor:
             "AC_web_run_actions": _ac_web_run_actions,
             "AC_web_available": _ac_web_available,
             "AC_web_list_commands": _ac_web_list_commands,
+
+            # Android via ADB (Phase 9.7)
+            "AC_android_tap": _ac_android_tap,
+            "AC_android_swipe": _ac_android_swipe,
+            "AC_android_key": _ac_android_key,
+            "AC_android_text": _ac_android_text,
+            "AC_android_screenshot": _ac_android_screenshot,
+            "AC_android_list_devices": _ac_android_list_devices,
+            "AC_android_shell": _ac_android_shell,
 
             # LLM action planner
             "AC_llm_plan": _llm_plan_for_executor,
