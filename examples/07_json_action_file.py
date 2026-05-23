@@ -16,10 +16,10 @@ ACTION_FILE = Path(__file__).with_name("hello_world.json")
 
 def main() -> None:
     actions = [
-        {"command": "AC_screenshot", "file_path": "before.png"},
-        {"command": "AC_set_mouse_position", "x": 100, "y": 100},
-        {"command": "AC_click_mouse", "mouse_keycode": "mouse_left"},
-        {"command": "AC_screenshot", "file_path": "after.png"},
+        ["AC_screenshot", {"file_path": "before.png"}],
+        ["AC_set_mouse_position", {"x": 100, "y": 100}],
+        ["AC_click_mouse", {"mouse_keycode": "mouse_left"}],
+        ["AC_screenshot", {"file_path": "after.png"}],
     ]
     ACTION_FILE.write_text(json.dumps(actions, indent=2), encoding="utf-8")
 

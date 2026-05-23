@@ -8,7 +8,7 @@ import je_auto_control as ac
 def main() -> None:
     actions_path = Path(__file__).with_name("hello.json")
     actions_path.write_text(
-        '[{"command": "AC_screenshot", "file_path": "scheduled.png"}]',
+        '[["AC_screenshot", {"file_path": "scheduled.png"}]]',
         encoding="utf-8",
     )
 
