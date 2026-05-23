@@ -37,6 +37,7 @@
   - [Event Triggers](#event-triggers)
   - [Run History](#run-history)
   - [Report Generation](#report-generation)
+  - [Observability (Prometheus / OpenTelemetry)](#observability-prometheus--opentelemetry)
   - [Remote Automation (Socket / REST)](#remote-automation-socket--rest)
   - [Plugin Loader](#plugin-loader)
   - [Shell Command Execution](#shell-command-execution)
@@ -60,7 +61,7 @@
 - **Image Recognition** — locate UI elements on screen using OpenCV template matching with configurable threshold
 - **Accessibility Element Finder** — query the OS accessibility tree (Windows UIA / macOS AX) to locate buttons, menus, and controls by name/role
 - **AI Element Locator (VLM)** — describe a UI element in plain language and let a vision-language model (Anthropic / OpenAI) find its screen coordinates
-- **OCR** — extract text from screen regions using Tesseract; wait for, click, or locate rendered text; regex search and full-region dump
+- **OCR** — extract text from screen regions through three pluggable backends (Tesseract for ASCII, EasyOCR for CJK without an external binary, PaddleOCR for highest-quality Chinese / Japanese / Korean). Single unified API + canonical language codes; backend chosen by `backend=` kwarg, `AUTOCONTROL_OCR_BACKEND` env var, or auto-detection. Wait for, click, or locate rendered text; regex search and full-region dump
 - **LLM Action Planner** — translate a plain-language description into a validated `AC_*` action list using Claude
 - **Runtime Variables & Control Flow** — `${var}` substitution at execution time, plus `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` for data-driven scripts
 - **Remote Desktop** — stream this machine's screen and accept remote input over a token-authenticated TCP protocol, *or* connect to another machine and view + control it (host + viewer GUIs included). Optional TLS (HTTPS-grade encryption), WebSocket transport (ws:// + wss:// for browser / firewall-friendly clients), persistent 9-digit Host ID, host→viewer audio streaming, bidirectional clipboard sync (text + image), and chunked file transfer (drag-drop + progress bar; arbitrary destination path; no size cap). Plus folder sync (additive mirror — local deletions never propagate) and a self-hosted coturn TURN config bundle generator (turnserver.conf + systemd unit + docker-compose + README). **AnyDesk-style popout**: when the viewer authenticates, the live remote desktop opens in its own resizable top-level window so the control panel stays uncluttered. The Remote Desktop tabs are wrapped in `QScrollArea` so the panel stays usable on small windows and stretches edge-to-edge on 4K displays. Driveable headlessly via `je_auto_control` and over MCP through the new `ac_remote_*` tools
@@ -94,6 +95,7 @@
 - **OpenAPI 3.1 + Swagger UI** — `GET /openapi.json` (auth-gated, generated from the live route table) + `GET /docs` (browser Swagger UI with bearer token bar). Drift test in CI catches new routes added without metadata.
 - **Configuration Bundle** — single-file JSON export/import of user config (admin hosts, address book, trusted viewers, known hosts, host service, IDs). Atomic write with `<name>.bak.<timestamp>` backups; CLI `python -m je_auto_control.utils.config_bundle export|import`; `POST /config/{export,import}`; GUI buttons on the REST API tab.
 - **USB Passthrough (experimental, opt-in)** — wire-level protocol over a WebRTC `usb` DataChannel (10 opcodes, CREDIT-based flow control, 16 KiB payload cap). Host-side `UsbPassthroughSession` end-to-end on the Linux libusb backend; Windows `WinUSB` backend with full ctypes wiring (hardware-unverified); macOS `IOKit` skeleton. Viewer-side blocking client (`UsbPassthroughClient` → `ClientHandle.control_transfer / bulk_transfer / interrupt_transfer`). Persistent ACL (`~/.je_auto_control/usb_acl.json`, default deny, mode 0600) with host-side prompt QDialog and tamper-evident audit-log integration. Default off — opt-in via `enable_usb_passthrough(True)` or `JE_AUTOCONTROL_USB_PASSTHROUGH=1`. Phase 2e external security review checklist included; default-on requires sign-off.
+- **Observability (Prometheus + OpenTelemetry)** — stdlib-only `Counter` / `Gauge` / `Histogram` registry with a tiny built-in HTTP exporter on `/metrics`, plus an OpenTelemetry-compatible tracer that upgrades to real OTel spans when the SDK is installed. The executor and agent loop emit `autocontrol_action_calls_total{action,outcome}`, `autocontrol_action_duration_seconds`, and `autocontrol_agent_steps_total{tool,outcome}` automatically — drop the URL into a Prometheus scrape config and you have a Grafana dashboard with zero per-script wiring.
 
 ---
 
@@ -334,6 +336,14 @@ third-party components and their licenses.
 
 ## Quick Start
 
+Looking for copy-pasteable end-to-end scripts instead of API snippets?
+The [`examples/`](examples/) directory has 17 self-contained programs
+covering screenshot + click, OCR, the headless scheduler, remote
+desktop, the agent loop, observability, recording / replay, runtime
+variables, window management, hotkeys, image triggers, HTML reports,
+the MCP stdio bridge, the REST API, the secrets vault, and plugin
+loading.
+
 ### Mouse Control
 
 ```python
@@ -463,11 +473,25 @@ ac.click_text("Submit")
 ac.wait_for_text("Loading complete", timeout=15.0)
 ```
 
+Backend selection — set ``AUTOCONTROL_OCR_BACKEND=tesseract|easyocr|paddleocr``
+or pass ``backend=`` per call; otherwise auto-detection picks the first
+one that imports:
+
+```python
+ac.find_text_matches("登入", lang="chi_tra", backend="easyocr")
+ac.click_text("Sign in", backend="tesseract")
+```
+
 If Tesseract is not on `PATH`, point at it explicitly:
 
 ```python
 ac.set_tesseract_cmd(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
 ```
+
+Backend install paths and the canonical lang-code table are in
+[docs/source/Eng/doc/ocr_backends/ocr_backends_doc.rst](docs/source/Eng/doc/ocr_backends/ocr_backends_doc.rst)
+(or the [繁體中文](docs/source/Zh/doc/ocr_backends/ocr_backends_doc.rst)
+version).
 
 Dump every recognised text record in a region (or full screen), or
 search by regex when the text varies:
@@ -1086,6 +1110,36 @@ xml_string = je_auto_control.generate_xml()
 
 Reports include: function name, parameters, timestamp, and exception info (if any) for each recorded action. HTML reports display successful actions in cyan and failed actions in red.
 
+### Observability (Prometheus / OpenTelemetry)
+
+Stdlib-only metric primitives plus an OpenTelemetry-compatible tracer
+fallback. The executor and agent loop emit call counts and latency
+histograms automatically — no per-script wiring required.
+
+```python
+import je_auto_control as ac
+
+# Expose /metrics on http://127.0.0.1:9090 for Prometheus to scrape.
+exporter = ac.default_metrics_exporter()
+exporter.start()
+
+# Add your own metric — same shapes as prometheus_client.
+counter = ac.default_metric_registry().register(ac.MetricCounter(
+    "myapp_widgets_built_total", "widgets built",
+    label_names=("kind",),
+))
+counter.inc(labels={"kind": "blue"})
+
+# Wrap a callable in a span — no-op until opentelemetry-api is installed.
+@ac.traced("my_pipeline.process_one")
+def process_one(item): ...
+```
+
+Built-in metrics are listed in
+[docs/source/Eng/doc/observability/observability_doc.rst](docs/source/Eng/doc/observability/observability_doc.rst)
+(or the [繁體中文](docs/source/Zh/doc/observability/observability_doc.rst)
+version).
+
 ### Remote Automation (Socket / REST)
 
 Two servers are available — a raw TCP socket and a stdlib HTTP/REST
@@ -1346,6 +1400,13 @@ an int), otherwise treated as a string.
 git clone https://github.com/Intergration-Automation-Testing/AutoControl.git
 cd AutoControl
 pip install -r dev_requirements.txt
+```
+
+Reproducible installs use the committed `uv.lock`:
+
+```bash
+uv sync               # install pinned versions across the whole dep tree
+uv lock --upgrade     # refresh after editing pyproject.toml
 ```
 
 ### Running Tests

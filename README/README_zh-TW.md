@@ -36,6 +36,7 @@
   - [事件觸發器](#事件觸發器)
   - [執行歷史](#執行歷史)
   - [報告產生](#報告產生)
+  - [可觀測性（Prometheus / OpenTelemetry）](#可觀測性prometheus--opentelemetry)
   - [遠端自動化（Socket / REST）](#遠端自動化socket--rest)
   - [外掛載入器](#外掛載入器)
   - [Shell 命令執行](#shell-命令執行)
@@ -59,7 +60,7 @@
 - **圖像辨識** — 使用 OpenCV 模板匹配在螢幕上定位 UI 元素，支援可設定的偵測閾值
 - **Accessibility 元件搜尋** — 透過作業系統無障礙樹（Windows UIA / macOS AX）依名稱/角色定位按鈕、選單、控制項
 - **AI 元件定位（VLM）** — 用自然語言描述 UI 元素，交由視覺語言模型（Anthropic / OpenAI）取得螢幕座標
-- **OCR** — 使用 Tesseract 從螢幕擷取文字，可搜尋、點擊或等待文字出現；支援 regex 搜尋與整塊區域 dump
+- **OCR** — 三個可插拔後端（Tesseract 用於 ASCII、EasyOCR 不需外部執行檔且支援 CJK、PaddleOCR 中／日／韓品質最佳），統一 API 與標準語言代碼；後端由 `backend=` 參數、`AUTOCONTROL_OCR_BACKEND` 環境變數或自動偵測決定。可搜尋、點擊或等待文字出現；支援 regex 搜尋與整塊區域 dump
 - **LLM 動作規劃器** — 用 Claude 把自然語言描述翻譯成驗證過的 `AC_*` 動作清單
 - **執行期變數與流程控制** — 執行時 `${var}` 取代，加上 `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` 讓腳本資料驅動
 - **遠端桌面** — 用 token 認證的 TCP 協定串流本機畫面並接收輸入，**或** 連線到他機觀看與控制（host + viewer GUI 皆內建）。可選 TLS（HTTPS 級加密）、WebSocket 傳輸（``ws://`` + ``wss://``，穿牆／瀏覽器友善）、持久化 9 位數 Host ID、host→viewer 音訊串流、雙向剪貼簿同步（文字 + 圖片）、分塊檔案傳輸（拖放 + 進度條；任意目的路徑；無大小上限）。另含資料夾同步（增量鏡像 — 本地刪除不會傳出去）與自架 coturn TURN 設定包產生器（turnserver.conf + systemd unit + docker-compose + README）。**AnyDesk 風格彈出視窗**：viewer 認證成功後遠端桌面會開在獨立的可調整大小頂層視窗，控制面板維持簡潔；Remote Desktop 子分頁外層包了 `QScrollArea`，小視窗下可捲動、4K 螢幕下會延展到整寬。同時可由 headless API 與 MCP 工具（`ac_remote_*`）直接驅動
@@ -331,6 +332,12 @@ sudo apt-get install cmake libssl-dev
 
 ## 快速開始
 
+想要可以直接複製貼上的完整腳本而不只是 API 片段？
+[`examples/`](../examples/) 資料夾收錄 17 支獨立範例：截圖+點擊、OCR、
+排程器、遠端桌面、agent loop、可觀測性、錄製/回放、執行期變數、
+視窗管理、熱鍵、影像觸發、HTML 報告、MCP stdio bridge、REST API、
+secret vault，以及外掛載入。
+
 ### 滑鼠控制
 
 ```python
@@ -457,11 +464,23 @@ ac.click_text("Submit")
 ac.wait_for_text("載入完成", timeout=15.0)
 ```
 
+選擇後端 — 設定 ``AUTOCONTROL_OCR_BACKEND=tesseract|easyocr|paddleocr``
+或在呼叫時傳入 ``backend=``；都不設定時會自動挑第一個 import 成功的：
+
+```python
+ac.find_text_matches("登入", lang="chi_tra", backend="easyocr")
+ac.click_text("Sign in", backend="tesseract")
+```
+
 若 Tesseract 不在 `PATH` 中，可手動指定路徑：
 
 ```python
 ac.set_tesseract_cmd(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
 ```
+
+各後端安裝路徑與標準語言代碼表見
+[docs/source/Eng/doc/ocr_backends/ocr_backends_doc.rst](../docs/source/Eng/doc/ocr_backends/ocr_backends_doc.rst)
+或[繁體中文版本](../docs/source/Zh/doc/ocr_backends/ocr_backends_doc.rst)。
 
 把區域（或整螢幕）內所有辨識到的文字 dump 出來，或用 regex 搜尋變動內容：
 
@@ -999,6 +1018,35 @@ xml_string = je_auto_control.generate_xml()
 
 報告內容包含：每個紀錄動作的函式名稱、參數、時間戳記及例外資訊（如有）。HTML 報告中成功的動作以青色顯示，失敗的動作以紅色顯示。
 
+### 可觀測性（Prometheus / OpenTelemetry）
+
+純標準函式庫的 metric 元件加上 OpenTelemetry 相容 tracer，
+executor 與 agent loop 都會自動發送呼叫次數與延遲分布 metric，
+不用手動 instrument。
+
+```python
+import je_auto_control as ac
+
+# 在 http://127.0.0.1:9090 開放 /metrics，給 Prometheus scrape。
+exporter = ac.default_metrics_exporter()
+exporter.start()
+
+# 自訂 metric — 形狀與 prometheus_client 相同。
+counter = ac.default_metric_registry().register(ac.MetricCounter(
+    "myapp_widgets_built_total", "widgets built",
+    label_names=("kind",),
+))
+counter.inc(labels={"kind": "blue"})
+
+# 把 callable 包進 span — 未安裝 opentelemetry-api 時為 no-op。
+@ac.traced("my_pipeline.process_one")
+def process_one(item): ...
+```
+
+內建 metric 清單見
+[docs/source/Eng/doc/observability/observability_doc.rst](../docs/source/Eng/doc/observability/observability_doc.rst)
+或[繁體中文版本](../docs/source/Zh/doc/observability/observability_doc.rst)。
+
 ### 遠端自動化（Socket / REST）
 
 提供兩種伺服器：原始 TCP socket 與純 stdlib HTTP/REST。預設均綁定
@@ -1235,6 +1283,13 @@ python -m je_auto_control.cli start-rest   --port 9939
 git clone https://github.com/Intergration-Automation-Testing/AutoControl.git
 cd AutoControl
 pip install -r dev_requirements.txt
+```
+
+可重現的安裝走已 commit 的 `uv.lock`：
+
+```bash
+uv sync               # 依鎖檔同步整條相依鏈
+uv lock --upgrade     # 編輯 pyproject.toml 後重新鎖
 ```
 
 ### 執行測試
