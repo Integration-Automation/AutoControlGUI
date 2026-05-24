@@ -8,8 +8,11 @@ import io
 import json
 import math
 import os
+import sys
 import threading
 from typing import Any, Dict, List
+
+import pytest
 
 from je_auto_control.utils.mcp_server.context import (
     OperationCancelledError, ToolCallContext,
@@ -1343,6 +1346,10 @@ def test_window_geometry_tools_present_in_default_registry():
             "ac_window_maximize", "ac_window_restore"}.issubset(names)
 
 
+@pytest.mark.skipif(
+    sys.platform not in ("win32", "cygwin", "msys"),
+    reason="windows_window_manage uses ctypes.WINFUNCTYPE; Win32-only.",
+)
 def test_window_move_calls_into_windows_manager(monkeypatch):
     import je_auto_control.utils.mcp_server.tools._handlers as handlers
     import je_auto_control.wrapper.auto_control_window as window_module
@@ -1368,6 +1375,10 @@ def test_window_move_calls_into_windows_manager(monkeypatch):
                        "width": 800, "height": 600}
 
 
+@pytest.mark.skipif(
+    sys.platform not in ("win32", "cygwin", "msys"),
+    reason="windows_window_manage uses ctypes.WINFUNCTYPE; Win32-only.",
+)
 def test_window_minimize_uses_show_command_six(monkeypatch):
     """ShowWindow flag 6 is SW_MINIMIZE."""
     import je_auto_control.wrapper.auto_control_window as window_module

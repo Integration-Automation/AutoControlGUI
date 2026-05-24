@@ -5,6 +5,11 @@
 and can be imported directly from headless tests::
 
     from je_auto_control.gui.script_builder.step_model import Step
+
+``__all__`` is empty on purpose: Pylint's E0603 refuses to certify
+``ScriptBuilderTab`` because it is not bound at module-load time.
+Callers reach the tab via attribute access, which falls through to
+:func:`__getattr__` and loads the Qt submodule on demand.
 """
 
 
@@ -18,4 +23,4 @@ def __getattr__(name):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-__all__ = ["ScriptBuilderTab"]
+__all__: list[str] = []
