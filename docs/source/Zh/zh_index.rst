@@ -24,6 +24,7 @@ AutoControl 所有功能的完整使用指南。
    doc/cli/cli_doc
    doc/create_project/create_project_doc
    doc/new_features/new_features_doc
+   doc/new_features/v2_features_doc
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
    doc/operations_layer/operations_layer_doc
