@@ -292,16 +292,6 @@ from je_auto_control.utils.start_exe.start_another_process import start_exe
 # test record
 from je_auto_control.utils.test_record.record_test_class import \
     test_record_instance
-# Windows-only modules (ctypes.WINFUNCTYPE / Win32 API) — gate the
-# import so ``import je_auto_control`` keeps working on macOS / Linux.
-# The facade wrappers re-import these on demand and raise
-# NotImplementedError for the Windows-only operations on other OSes.
-import sys as _sys_for_platform_check  # noqa: E402
-if _sys_for_platform_check.platform in ("win32", "cygwin", "msys"):
-    from je_auto_control.windows.window import windows_window_manage  # noqa: E402
-else:
-    windows_window_manage = None  # type: ignore[assignment]
-del _sys_for_platform_check
 from je_auto_control.wrapper.auto_control_image import locate_all_image
 from je_auto_control.wrapper.auto_control_image import locate_and_click
 from je_auto_control.wrapper.auto_control_image import locate_image_center
@@ -338,6 +328,15 @@ from je_auto_control.wrapper.auto_control_window import (
     close_window_by_title, find_window, focus_window, list_windows,
     show_window_by_title, wait_for_window,
 )
+# Windows-only modules (ctypes.WINFUNCTYPE / Win32 API) — gated so
+# ``import je_auto_control`` keeps working on macOS / Linux. Kept last
+# so every preceding statement is a plain top-level import (ruff E402).
+import sys as _sys_for_platform_check  # noqa: E402
+if _sys_for_platform_check.platform in ("win32", "cygwin", "msys"):
+    from je_auto_control.windows.window import windows_window_manage  # noqa: E402
+else:
+    windows_window_manage = None  # type: ignore[assignment]
+del _sys_for_platform_check
 
 
 def start_autocontrol_gui(*args, **kwargs):
