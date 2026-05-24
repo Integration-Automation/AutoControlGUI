@@ -40,8 +40,7 @@ def _run(argv: list, *, timeout: float = 10.0) -> bytes:
     # argv comes from a private allow-list (grim / wlr-randr absolute
     # paths via shutil.which), never user input; no shell=True.
     try:
-        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
-        completed = subprocess.run(  # nosec B603
+        completed = subprocess.run(  # nosec B603  # nosemgrep
             argv, check=True, timeout=timeout,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )

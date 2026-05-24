@@ -96,8 +96,7 @@ def _fake_run(captured):
         captured.append(list(argv))
         # CompletedProcess is a *constructor* (not a process spawn);
         # used here to mock subprocess.run's return value.
-        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
-        result = subprocess.CompletedProcess(argv, 0, b"", b"")
+        result = subprocess.CompletedProcess(argv, 0, b"", b"")  # nosemgrep
         return result
     return runner
 
@@ -234,9 +233,8 @@ def test_screenshot_calls_grim_with_path():
     with patch.object(wayland_screen, "binary_path",
                       return_value="/usr/bin/grim"), \
          patch.object(wayland_screen.subprocess, "run",
-                      # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
                       side_effect=lambda argv, **kw: (captured.append(argv)
-                       or subprocess.CompletedProcess(argv, 0, b"", b""))):
+                       or subprocess.CompletedProcess(argv, 0, b"", b""))):  # nosemgrep
         wayland_screen.screenshot("out.png")
     assert captured == [["/usr/bin/grim", "out.png"]]
 

@@ -10,7 +10,7 @@ function send(command, extra = {}) {
     });
 }
 
-// eslint-disable-next-line security-node/detect-unhandled-async-errors
+/* eslint-disable security-node/detect-unhandled-async-errors */
 async function refresh() {
     const reply = await send("status");
     const state = reply.state || {};
@@ -19,6 +19,7 @@ async function refresh() {
     document.getElementById("count").textContent =
         String((state.actions || []).length);
 }
+/* eslint-enable security-node/detect-unhandled-async-errors */
 
 // Wrap every async event-handler invocation of refresh() in a logged
 // .catch so a thrown promise can't drop silently

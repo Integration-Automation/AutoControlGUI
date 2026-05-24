@@ -45,8 +45,7 @@ def _run(argv: list, *, timeout: float = 5.0) -> None:
     # argv comes from a private allow-list (wtype / ydotool absolute
     # paths via shutil.which), never user input; no shell=True.
     try:
-        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
-        subprocess.run(  # nosec B603
+        subprocess.run(  # nosec B603  # nosemgrep
             argv, check=True, timeout=timeout,
             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
         )

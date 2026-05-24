@@ -26,9 +26,10 @@ async function loadState() {
     // fires on the spread of an unsanitised storage value. ``stored``
     // is whatever chrome.storage round-trips for us; we only ever
     // copy own enumerable properties onto a fresh default.
-    // eslint-disable-next-line security/detect-object-injection
+    /* eslint-disable security/detect-object-injection */
     const saved = Object.prototype.hasOwnProperty.call(stored, STATE_KEY)
         ? stored[STATE_KEY] : null;
+    /* eslint-enable security/detect-object-injection */
     if (saved == null || typeof saved !== "object") {
         return Object.assign({}, DEFAULT_STATE);
     }
@@ -81,7 +82,7 @@ export function actionFor(event) {
     }
 }
 
-// eslint-disable-next-line security-node/detect-unhandled-async-errors
+/* eslint-disable security-node/detect-unhandled-async-errors */
 async function handleMessage(message, _sender, sendResponse) {
     const state = await loadState();
     switch (message?.command) {
@@ -129,6 +130,7 @@ async function handleMessage(message, _sender, sendResponse) {
             sendResponse({ ok: false, reason: "unknown command" });
     }
 }
+/* eslint-enable security-node/detect-unhandled-async-errors */
 
 if (typeof chrome !== "undefined" && chrome.runtime) {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
