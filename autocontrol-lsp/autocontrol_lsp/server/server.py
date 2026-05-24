@@ -172,11 +172,11 @@ def run(input_stream=None, output_stream=None) -> int:
     out = output_stream or sys.stdout.buffer
     server = LspServer()
     try:
-        while _process_one_message(inp, out, server):
-            pass
+        while True:
+            if not _process_one_message(inp, out, server):
+                return 0
     except (OSError, ValueError):
         return 1
-    return 0
 
 
 def _process_one_message(inp, out, server: LspServer) -> bool:

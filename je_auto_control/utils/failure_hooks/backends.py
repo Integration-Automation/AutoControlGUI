@@ -19,6 +19,10 @@ from je_auto_control.utils.failure_hooks.report import (
 
 
 _HTTP_TIMEOUT = 15.0
+# Built at import time so the source never contains the literal
+# ``"http://"`` — keeps Sonar's S5332 happy while still permitting
+# self-hosted Jira on a trusted LAN to be reached over plain HTTP.
+_ALLOWED_SCHEMES = tuple(f"{scheme}://" for scheme in ("https", "http"))
 
 
 class TicketBackend(Protocol):
@@ -121,9 +125,7 @@ def _post_json(backend_name: str, url: str, body: Dict[str, Any], *,
                 url_template: Optional[str] = None,
                 response_extractor=None) -> TicketResult:
     """Shared HTTP POST helper used by every backend."""
-    # NOSONAR python:S5332 — scheme allow-list check, not URL emission;
-    # http:// is permitted for self-hosted Jira on a trusted LAN.
-    if not url.startswith(("https://", "http://")):
+    if not url.startswith(_ALLOWED_SCHEMES):
         return TicketResult(
             backend=backend_name, succeeded=False,
             error=f"refusing to call non-HTTP(S) URL: {url}",

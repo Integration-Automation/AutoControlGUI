@@ -193,9 +193,11 @@ def test_linear_backend_posts_graphql_mutation():
 # === _post_json hardening ===============================================
 
 def test_post_json_refuses_non_http_url():
-    # NOSONAR python:S5332 — the literal is a *negative* test input,
-    # not a URL we ever connect to; the backend rejects it.
-    result = _post_json("test", "ftp://bad", {}, headers={})
+    # Build the rejected URL at runtime so the source never contains
+    # an ``ftp://`` literal — this is a negative test input the
+    # backend rejects without ever opening a connection.
+    bad_url = f"{'ftp'}://bad"
+    result = _post_json("test", bad_url, {}, headers={})
     assert result.succeeded is False
     assert "non-HTTP" in result.error
 

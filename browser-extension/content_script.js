@@ -51,12 +51,10 @@
         if (typeof globalThis.CSS?.escape === "function") {
             return globalThis.CSS.escape(value);
         }
-        // Bare-bones fallback for browsers without CSS.escape. Use
-        // ``String.raw`` so the regex escape literal reads as written.
-        return String(value).replace(
-            new RegExp(String.raw`(["\\\]])`, "g"),
-            String.raw`\$1`,
-        );
+        // Bare-bones fallback for browsers without CSS.escape. The
+        // regex literal matches ``"``, ``\`` or ``]``; ``String.raw``
+        // keeps the leading backslash in the replacement intact.
+        return String(value).replace(/(["\\\]])/g, String.raw`\$1`);
     }
 
     function send(event) {

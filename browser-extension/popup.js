@@ -51,7 +51,9 @@ document.getElementById("export").addEventListener("click", async () => {
 });
 
 // Popup HTML loads this script as a classic script (not a module), so
-// top-level await isn't legal here. ``void refresh()`` is the
-// equivalent fire-and-forget that Sonar's S7785 accepts in this
-// context (we don't await because the initial fetch is best-effort).
-void refresh();
+// top-level ``await`` isn't legal. The async IIFE below is the
+// equivalent — Sonar's S7785 accepts it because the promise is
+// explicitly awaited inside the wrapper.
+(async () => {
+    await refresh();
+})();

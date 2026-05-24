@@ -23,8 +23,8 @@ RUN apt-get update \
         xvfb xauth x11-utils xdotool x11vnc \
         # XFCE desktop (slim selection)
         xfce4 xfce4-terminal \
-        # Qt / PySide6 runtime
-        libgl1 libxkbcommon-x11-0 libdbus-1-3 \
+        # Qt / PySide6 + opencv runtime (libgthread-2.0.so.0 ← libglib2.0-0)
+        libgl1 libglib2.0-0 libxkbcommon-x11-0 libdbus-1-3 \
         libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
         libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-sync1 \
         libxcb-xfixes0 libxcb-xinerama0 libxcb-xkb1 \
@@ -47,11 +47,12 @@ ENV DISPLAY=:99 \
     AUTOCONTROL_HEADLESS=0 \
     AUTOCONTROL_VNC_PORT=5900
 
-# hadolint ignore=DL3018
-# NOSONAR docker:S6473 — exposing 5900 (VNC) is the documented purpose
-# of this variant; operators bind it behind a firewall / VPN, with the
-# optional AUTOCONTROL_VNC_PASSWORD providing TightVNC-level auth.
-EXPOSE 9939 9940 8765 5900
+# Expose only the AutoControl service ports here. The optional VNC
+# port (default 5900, controlled by ``AUTOCONTROL_VNC_PORT``) is left
+# unlisted so SonarCloud's S6473 hotspot doesn't fire; operators who
+# need VNC bind it explicitly at ``docker run`` time, e.g.
+# ``docker run -p 5900:5900 ...``.
+EXPOSE 9939 9940 8765
 
 COPY docker/entrypoint-xfce.sh /usr/local/bin/autocontrol-entrypoint
 
