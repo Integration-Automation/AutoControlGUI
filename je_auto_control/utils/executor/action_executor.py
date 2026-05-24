@@ -474,6 +474,63 @@ def _presence_clear() -> Dict[str, Any]:
     return {"cleared": True}
 
 
+def _run_agent(goal: str,
+               backend: str = "anthropic",
+               max_steps: int = 25,
+               wall_seconds: float = 300.0,
+               model: Optional[str] = None,
+               max_tokens: int = 1024) -> Dict[str, Any]:
+    """Executor adapter: drive the closed-loop ``AgentLoop`` against ``goal``.
+
+    ``backend`` selects between the production backends (Anthropic /
+    OpenAI). The Anthropic computer-use raw path remains available
+    via :func:`_computer_use` / ``AC_computer_use``.
+    """
+    from je_auto_control.utils.agent import AgentBudget, AgentLoop
+    from je_auto_control.utils.agent.backends import (
+        AgentBackendError, AnthropicAgentBackend, OpenAIAgentBackend,
+    )
+    from je_auto_control.utils.tool_use_schema import (
+        export_anthropic_tools, export_openai_tools,
+    )
+    name = (backend or "anthropic").strip().lower()
+    if name == "anthropic":
+        tools = export_anthropic_tools()
+        backend_obj = AnthropicAgentBackend(
+            tools=tools,
+            model=model or "claude-opus-4-7",
+            max_tokens=int(max_tokens),
+        )
+    elif name == "openai":
+        tools = export_openai_tools()
+        backend_obj = OpenAIAgentBackend(
+            tools=tools,
+            model=model or "gpt-4o",
+            max_tokens=int(max_tokens),
+        )
+    else:
+        raise ValueError(f"unknown agent backend: {backend!r}")
+    budget = AgentBudget(
+        max_steps=int(max_steps), wall_seconds=float(wall_seconds),
+    )
+    result = AgentLoop(backend_obj, budget=budget).run(goal)
+    return {
+        "succeeded": bool(result.succeeded),
+        "elapsed_s": float(result.elapsed_s),
+        "final_message": result.final_message,
+        "steps": [
+            {
+                "index": step.index,
+                "tool": step.tool,
+                "arguments": step.arguments,
+                "error": step.error,
+                "stop_reason": step.stop_reason,
+            }
+            for step in result.steps
+        ],
+    }
+
+
 def _computer_use(goal: str,
                   display_width_px: Optional[int] = None,
                   display_height_px: Optional[int] = None,
@@ -1477,6 +1534,9 @@ class Executor:
 
             # Computer-use (Anthropic computer_20250124 closed-loop agent)
             "AC_computer_use": _computer_use,
+
+            # Generic plan→act→verify→retry agent loop (Anthropic / OpenAI)
+            "AC_run_agent": _run_agent,
 
             # Cross-host DAG orchestrator
             "AC_run_dag": _run_dag,

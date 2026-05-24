@@ -1093,6 +1093,21 @@ def computer_use(goal: str,
     return result_to_dict(result)
 
 
+def run_agent(goal: str,
+              backend: str = "anthropic",
+              max_steps: int = 25,
+              wall_seconds: float = 300.0,
+              model: Optional[str] = None,
+              max_tokens: int = 1024) -> Dict[str, Any]:
+    """Drive the generic plan→act→verify→retry AgentLoop against ``goal``."""
+    from je_auto_control.utils.executor.action_executor import _run_agent
+    return _run_agent(
+        goal=goal, backend=backend,
+        max_steps=int(max_steps), wall_seconds=float(wall_seconds),
+        model=model, max_tokens=int(max_tokens),
+    )
+
+
 # === Scheduler / triggers / hotkey daemon ===================================
 
 def _job_to_dict(job: Any) -> Dict[str, Any]:

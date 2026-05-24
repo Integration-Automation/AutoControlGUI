@@ -762,6 +762,26 @@ def computer_use_tools() -> List[MCPTool]:
             handler=h.computer_use,
             annotations=DESTRUCTIVE,
         ),
+        MCPTool(
+            name="ac_run_agent",
+            description=("Drive the generic plan→act→verify→retry "
+                         "AgentLoop against goal. backend='anthropic' "
+                         "uses tool-use messages; 'openai' uses the "
+                         "Responses API. Returns {succeeded, "
+                         "final_message, elapsed_s, steps[]}. Requires "
+                         "the matching SDK + API key."),
+            input_schema=schema({
+                "goal": {"type": "string"},
+                "backend": {"type": "string",
+                             "enum": ["anthropic", "openai"]},
+                "max_steps": {"type": "integer"},
+                "wall_seconds": {"type": "number"},
+                "model": {"type": "string"},
+                "max_tokens": {"type": "integer"},
+            }, required=["goal"]),
+            handler=h.run_agent,
+            annotations=DESTRUCTIVE,
+        ),
     ]
 
 
