@@ -22,18 +22,17 @@ const DEFAULT_STATE = {
 
 async function loadState() {
     const stored = await chrome.storage.local.get(STATE_KEY);
-    // Object.assign sidesteps ESLint's object-injection rule that
-    // fires on the spread of an unsanitised storage value. ``stored``
-    // is whatever chrome.storage round-trips for us; we only ever
-    // copy own enumerable properties onto a fresh default.
+    // ``stored`` is whatever chrome.storage round-trips for us; we
+    // only ever copy own enumerable properties onto a fresh default
+    // — Object.hasOwn is the modern (ES2022) safe lookup.
     /* eslint-disable security/detect-object-injection */
-    const saved = Object.prototype.hasOwnProperty.call(stored, STATE_KEY)
+    const saved = Object.hasOwn(stored, STATE_KEY)
         ? stored[STATE_KEY] : null;
     /* eslint-enable security/detect-object-injection */
     if (saved == null || typeof saved !== "object") {
-        return Object.assign({}, DEFAULT_STATE);
+        return { ...DEFAULT_STATE };
     }
-    return Object.assign({}, DEFAULT_STATE, saved);
+    return { ...DEFAULT_STATE, ...saved };
 }
 
 async function saveState(state) {
@@ -142,8 +141,12 @@ if (typeof chrome !== "undefined" && chrome.runtime) {
             console.error("handleMessage failed:", error);
             try {
                 sendResponse({ ok: false, reason: String(error) });
-            } catch (_) {
-                /* sendResponse may already have fired; ignore. */
+            } catch (replyError) {
+                // The message port may already be closed (popup
+                // dismissed before reply). Log so the swallow is
+                // visible in devtools — the original error is the
+                // one the caller actually cares about.
+                console.debug("sendResponse failed:", replyError);
             }
         });
         return true;
