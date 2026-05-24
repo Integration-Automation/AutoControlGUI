@@ -1,3 +1,4 @@
+/* eslint-env webextensions, browser */
 // Content script — observes DOM events in the current tab and forwards
 // them to the background service worker for AutoControl-action
 // translation. Selectors are computed locally so the background never

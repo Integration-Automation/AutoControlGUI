@@ -87,7 +87,12 @@ def fetch_slack_messages(channel_id: str, *,
         headers={"Authorization": f"Bearer {token}"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=30.0) as resp:
+        # nosec B310  # reason: URL is built from the literal
+        # ``https://slack.com/api/...`` above — scheme is fixed,
+        # never user-supplied, so file:// / custom schemes can't
+        # reach urlopen here.
+        with urllib.request.urlopen(  # noqa: S310
+                request, timeout=30.0) as resp:
             body = json.loads(resp.read().decode("utf-8"))
     except urllib.error.URLError as error:
         print(f"  warning: Slack call failed ({error}); using stub")

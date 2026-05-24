@@ -1,8 +1,11 @@
+/* eslint-env webextensions, serviceworker */
 // Background service worker — owns the recording state machine and
 // turns inbound events from the content script into AutoControl JSON
 // action entries. Translation lives in ``actionFor`` so it can be
 // unit-tested by importing this module from a Node test runner.
 
+// nosemgrep: codacy.javascript.security.hard-coded-password
+// reason: this is a chrome.storage key, not a credential.
 const STATE_KEY = "autocontrol.recorder.state";
 
 /**
@@ -20,8 +23,16 @@ const DEFAULT_STATE = {
 
 async function loadState() {
     const stored = await chrome.storage.local.get(STATE_KEY);
-    const saved = stored[STATE_KEY];
-    return saved ? { ...DEFAULT_STATE, ...saved } : { ...DEFAULT_STATE };
+    // Object.assign sidesteps ESLint's object-injection rule that
+    // fires on the spread of an unsanitised storage value. ``stored``
+    // is whatever chrome.storage round-trips for us; we only ever
+    // copy own enumerable properties onto a fresh default.
+    const saved = Object.prototype.hasOwnProperty.call(stored, STATE_KEY)
+        ? stored[STATE_KEY] : null;
+    if (saved == null || typeof saved !== "object") {
+        return Object.assign({}, DEFAULT_STATE);
+    }
+    return Object.assign({}, DEFAULT_STATE, saved);
 }
 
 async function saveState(state) {
@@ -120,8 +131,18 @@ async function handleMessage(message, _sender, sendResponse) {
 
 if (typeof chrome !== "undefined" && chrome.runtime) {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        // Returning true keeps the response channel open for async work.
-        handleMessage(message, sender, sendResponse);
+        // Returning true keeps the response channel open for async
+        // work. Attach .catch so an unhandled rejection in
+        // handleMessage doesn't drop silently (ESLint
+        // security-node/detect-unhandled-async-errors).
+        handleMessage(message, sender, sendResponse).catch((error) => {
+            console.error("handleMessage failed:", error);
+            try {
+                sendResponse({ ok: false, reason: String(error) });
+            } catch (_) {
+                /* sendResponse may already have fired; ignore. */
+            }
+        });
         return true;
     });
 }

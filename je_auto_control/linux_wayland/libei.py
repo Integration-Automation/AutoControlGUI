@@ -144,7 +144,8 @@ class LibeiBackend:
         with self._lock:
             if self._handle is None:
                 return
-            self._symbols.ei_unref(self._handle) if self._symbols else None
+            if self._symbols is not None:
+                self._symbols.ei_unref(self._handle)
             self._handle = None
 
     def press_key(self, keycode: int) -> None:

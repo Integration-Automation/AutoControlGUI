@@ -100,7 +100,9 @@ function postJson(path: string, payload: unknown): Promise<RestReply> {
         try {
             parsed = new URL(path, url);
         } catch (error) {
-            reject(error);
+            reject(error instanceof Error
+                ? error
+                : new Error(String(error)));
             return;
         }
         const isHttps = parsed.protocol === "https:";
@@ -120,10 +122,12 @@ function postJson(path: string, payload: unknown): Promise<RestReply> {
         const request = httpModule.request(requestOptions, (response) => {
             const chunks: Buffer[] = [];
             response.on("data", (chunk: Buffer) => chunks.push(chunk));
-            response.on("end", () => resolve({
-                statusCode: response.statusCode || 0,
-                body: Buffer.concat(chunks).toString("utf-8"),
-            }));
+            response.on("end", () => {
+                resolve({
+                    statusCode: response.statusCode || 0,
+                    body: Buffer.concat(chunks).toString("utf-8"),
+                });
+            });
         });
         request.on("error", reject);
         request.write(body);

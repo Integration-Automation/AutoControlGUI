@@ -28,7 +28,7 @@ class _WaylandRecorder:
         raise NotImplementedError(self._reason)
 
 
-wayland_recoder = _WaylandRecorder()
+wayland_recorder = _WaylandRecorder()
 
 
-__all__ = ["wayland_recoder"]
+__all__ = ["wayland_recorder"]

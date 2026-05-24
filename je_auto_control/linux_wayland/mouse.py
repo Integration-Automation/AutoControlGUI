@@ -40,6 +40,9 @@ def _require_ydotool() -> str:
 
 
 def _run(argv: list, *, timeout: float = 5.0) -> None:
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+    # reason: argv comes from a private allow-list (ydotool absolute
+    # path via shutil.which), never user input; no shell=True.
     try:
         subprocess.run(  # nosec B603  # reason: argv-list, validated binary
             argv, check=True, timeout=timeout,

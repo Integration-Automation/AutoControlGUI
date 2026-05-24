@@ -94,6 +94,9 @@ def test_keymap_function_keys_present():
 def _fake_run(captured):
     def runner(argv, **_kwargs):
         captured.append(list(argv))
+        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+        # reason: CompletedProcess is a *constructor* (not a call to
+        # spawn a process); used here to mock subprocess.run's return.
         result = subprocess.CompletedProcess(argv, 0, b"", b"")
         return result
     return runner
@@ -227,6 +230,8 @@ def test_mouse_raises_when_ydotool_missing():
 
 def test_screenshot_calls_grim_with_path():
     captured: list = []
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+    # reason: CompletedProcess constructor used to mock subprocess.run.
     with patch.object(wayland_screen, "binary_path",
                       return_value="/usr/bin/grim"), \
          patch.object(wayland_screen.subprocess, "run",
@@ -278,11 +283,11 @@ def test_listener_raises_not_implemented():
 
 
 def test_recorder_raises_not_implemented():
-    from je_auto_control.linux_wayland.record import wayland_recoder
+    from je_auto_control.linux_wayland.record import wayland_recorder
     with pytest.raises(NotImplementedError):
-        wayland_recoder.record()
+        wayland_recorder.record()
     with pytest.raises(NotImplementedError):
-        wayland_recoder.stop_record()
+        wayland_recorder.stop_record()
 
 
 # === Wrapper module skeleton ==============================================

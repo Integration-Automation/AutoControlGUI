@@ -37,6 +37,9 @@ def _require_grim() -> str:
 
 
 def _run(argv: list, *, timeout: float = 10.0) -> bytes:
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+    # reason: argv comes from a private allow-list (grim / wlr-randr
+    # absolute paths via shutil.which), never user input; no shell=True.
     try:
         completed = subprocess.run(  # nosec B603  # reason: argv-list, validated binary
             argv, check=True, timeout=timeout,

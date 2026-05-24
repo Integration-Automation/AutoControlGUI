@@ -42,7 +42,7 @@ keyboard = wayland_keyboard
 mouse = wayland_mouse
 keyboard_check = wayland_listener
 screen = wayland_screen
-recorder = wayland_record.wayland_recoder
+recorder = wayland_record.wayland_recorder
 
 
 if None in [keyboard_keys_table, mouse_keys_table, special_mouse_keys_table,

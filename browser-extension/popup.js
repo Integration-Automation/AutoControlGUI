@@ -1,3 +1,4 @@
+/* eslint-env webextensions, browser */
 // Popup UI — talks to the background service worker via runtime
 // messages. No DOM crawling here; selectors come from content_script.
 
@@ -18,22 +19,31 @@ async function refresh() {
         String((state.actions || []).length);
 }
 
+// Wrap every async event-handler invocation of refresh() in a logged
+// .catch so a thrown promise can't drop silently
+// (ESLint security-node/detect-unhandled-async-errors).
+function safeRefresh() {
+    refresh().catch((error) => {
+        console.error("refresh failed:", error);
+    });
+}
+
 document.getElementById("start").addEventListener("click", async () => {
     const [tab] = await chrome.tabs.query({
         active: true, currentWindow: true,
     });
     await send("start", { startUrl: tab?.url });
-    refresh();
+    safeRefresh();
 });
 
 document.getElementById("stop").addEventListener("click", async () => {
     await send("stop");
-    refresh();
+    safeRefresh();
 });
 
 document.getElementById("reset").addEventListener("click", async () => {
     await send("reset");
-    refresh();
+    safeRefresh();
 });
 
 document.getElementById("export").addEventListener("click", async () => {
@@ -50,10 +60,5 @@ document.getElementById("export").addEventListener("click", async () => {
     });
 });
 
-// Popup HTML loads this script as a classic script (not a module), so
-// top-level ``await`` isn't legal. The async IIFE below is the
-// equivalent — Sonar's S7785 accepts it because the promise is
-// explicitly awaited inside the wrapper.
-(async () => {
-    await refresh();
-})();
+// Kick off the initial refresh — safeRefresh() logs any failure.
+safeRefresh();
