@@ -245,7 +245,7 @@ def test_screenshot_passes_screen_region():
                       return_value="/usr/bin/grim"), \
          patch.object(wayland_screen.subprocess, "run",
                       side_effect=lambda argv, **kw: (captured.append(argv)
-                       or subprocess.CompletedProcess(argv, 0, b"", b""))):
+                       or subprocess.CompletedProcess(argv, 0, b"", b""))):  # nosemgrep
         wayland_screen.screenshot("out.png", screen_region=[10, 20, 110, 220])
     assert captured == [[
         "/usr/bin/grim", "-g", "10,20 100x200", "out.png",
@@ -257,7 +257,7 @@ def test_screen_size_uses_wlr_randr_when_available():
                       side_effect=lambda name: "/usr/bin/" + name), \
          patch.object(
             wayland_screen.subprocess, "run",
-            return_value=subprocess.CompletedProcess(
+            return_value=subprocess.CompletedProcess(  # nosemgrep
                 ["wlr-randr"], 0, b" HDMI-A-1 1920x1080@60.000Hz\n", b"",
             ),
         ):
