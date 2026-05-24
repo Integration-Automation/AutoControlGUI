@@ -396,3 +396,47 @@ def start_rest_api_server(host: str = "127.0.0.1", port: int = 9939,
 
 
 __all__ = ["RestApiServer", "start_rest_api_server"]
+
+
+def _main(argv: Optional[list] = None) -> int:
+    """Foreground entrypoint used by ``python -m je_auto_control.utils.rest_api.rest_server``.
+
+    Starts a :class:`RestApiServer` and blocks the main thread until
+    SIGINT/SIGTERM. Token comes from ``AC_TOKEN`` if not given on the
+    CLI so the container ENTRYPOINT can pass it via ``-e AC_TOKEN=…``.
+    """
+    import argparse
+    import os
+    import signal
+    import time
+
+    parser = argparse.ArgumentParser(prog="rest_server")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=9939)
+    parser.add_argument("--token", default=os.environ.get("AC_TOKEN"))
+    parser.add_argument("--no-audit", action="store_true")
+    args = parser.parse_args(argv)
+
+    server = start_rest_api_server(
+        host=args.host, port=args.port,
+        token=args.token, enable_audit=not args.no_audit,
+    )
+
+    stop_event = threading.Event()
+
+    def _handle_signal(_signum, _frame):
+        stop_event.set()
+
+    signal.signal(signal.SIGINT, _handle_signal)
+    signal.signal(signal.SIGTERM, _handle_signal)
+
+    try:
+        while not stop_event.is_set():
+            time.sleep(0.5)
+    finally:
+        server.stop()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main())
