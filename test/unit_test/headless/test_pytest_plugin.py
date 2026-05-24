@@ -163,7 +163,14 @@ pytest_plugins = ["pytester"]
 
 
 def test_plugin_capture_screenshot_on_failure(pytester, monkeypatch):
-    """End-to-end: a failing test marked @autocontrol gets a screenshot."""
+    """End-to-end: a failing test marked @autocontrol gets a screenshot.
+
+    The plugin loads via the ``pytest11`` entry point declared in
+    ``pyproject.toml`` whenever the package is pip-installed (CI uses
+    ``pip install -e .``). We deliberately don't pass ``-p`` here —
+    doing so would double-register the plugin on installed runs and
+    abort the inner pytest before a summary line is emitted.
+    """
     pytester.makepyfile(
         """
         import pytest
@@ -188,8 +195,14 @@ def test_plugin_capture_screenshot_on_failure(pytester, monkeypatch):
         """,
     )
     pytester.syspathinsert()
-    result = pytester.runpytest("-p", "je_auto_control.utils.pytest_plugin.plugin")
-    result.assert_outcomes(failed=1)
+    result = pytester.runpytest_subprocess()
+    # ret == 1 means the inner test ran and failed (which is what we
+    # asked it to do). Checking exit code is more robust than parsing
+    # the summary line, which can vary across pytest versions.
+    assert result.ret == 1, (
+        f"inner pytest exit {result.ret}; stdout tail: "
+        f"{result.stdout.str()[-400:]!r}"
+    )
 
 
 def test_plugin_no_screenshot_for_unmarked_failure(pytester):
@@ -200,7 +213,10 @@ def test_plugin_no_screenshot_for_unmarked_failure(pytester):
         """,
     )
     pytester.syspathinsert()
-    result = pytester.runpytest("-p", "je_auto_control.utils.pytest_plugin.plugin")
-    result.assert_outcomes(failed=1)
+    result = pytester.runpytest_subprocess()
+    assert result.ret == 1, (
+        f"inner pytest exit {result.ret}; stdout tail: "
+        f"{result.stdout.str()[-400:]!r}"
+    )
     out = result.stdout.str()
     assert "autocontrol-screenshot" not in out

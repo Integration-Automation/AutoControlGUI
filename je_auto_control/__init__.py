@@ -465,6 +465,14 @@ __all__ = [
     # A/B locator framework
     "ABRunOutcome", "ab_best_strategy", "ab_locate",
     "ab_report_for", "default_ab_store",
+    # Self-healing locator (image → VLM fallback)
+    "HealEvent", "HealEventLog", "HealOutcome", "SelfHealError",
+    "default_heal_log", "self_heal_click", "self_heal_locate",
+    # WebRunner bridge (browser automation via je_web_runner)
+    "WebRunnerBridgeError", "is_webrunner_available",
+    "list_webrunner_commands", "run_webrunner_action",
+    "run_webrunner_actions", "web_current_url", "web_open",
+    "web_quit", "web_screenshot",
     # Remote desktop
     "RemoteDesktopHost", "RemoteDesktopViewer",
     "RemoteDesktopAuthError", "RemoteDesktopInputError",

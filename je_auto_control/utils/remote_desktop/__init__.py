@@ -181,4 +181,7 @@ __all__ = [
     "is_audio_backend_available",
     "ClipboardSyncError",
     "FileReceiver", "FileSendResult", "FileTransferError", "send_file",
+    "PresenceError", "PresenceListener", "PresenceRegistry",
+    "ROLE_CONTROLLER", "ROLE_OBSERVER", "ViewerPresence",
+    "default_presence_registry",
 ]
