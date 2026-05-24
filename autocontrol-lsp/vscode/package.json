@@ -1,8 +1,8 @@
 {
   "name": "autocontrol-lsp",
   "displayName": "AutoControl Action JSON",
-  "description": "Language-server completion + hover for AutoControl AC_* action-JSON files.",
-  "version": "0.1.0",
+  "description": "Language-server completion + hover for AutoControl AC_* action-JSON files, plus a one-click Run that hits the local REST API.",
+  "version": "0.2.0",
   "publisher": "je-chen",
   "engines": {
     "vscode": "^1.85.0"
@@ -12,7 +12,10 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:json"
+    "onLanguage:json",
+    "onCommand:autocontrol.runScript",
+    "onCommand:autocontrol.takeScreenshot",
+    "onCommand:autocontrol.previewScript"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -28,8 +31,63 @@
           "type": "string",
           "default": "autocontrol_lsp.server",
           "description": "Module path to launch the LSP server (overrideable for forks)."
+        },
+        "autocontrolLsp.rest.url": {
+          "type": "string",
+          "default": "http://127.0.0.1:9939",
+          "description": "Base URL of the AutoControl REST API used by the Run / Screenshot commands."
+        },
+        "autocontrolLsp.rest.token": {
+          "type": "string",
+          "default": "",
+          "description": "Bearer token for the REST API. Leave blank to read from the AC_TOKEN environment variable."
         }
       }
+    },
+    "commands": [
+      {
+        "command": "autocontrol.runScript",
+        "title": "AutoControl: Run current script via REST API",
+        "category": "AutoControl"
+      },
+      {
+        "command": "autocontrol.takeScreenshot",
+        "title": "AutoControl: Take screenshot (REST API)",
+        "category": "AutoControl"
+      },
+      {
+        "command": "autocontrol.previewScript",
+        "title": "AutoControl: Preview script as step tree",
+        "category": "AutoControl"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "autocontrol.runScript",
+          "when": "resourceLangId == json",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "autocontrol.runScript",
+          "when": "resourceLangId == json"
+        },
+        {
+          "command": "autocontrol.previewScript",
+          "when": "resourceLangId == json"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "autocontrolScriptSteps",
+          "name": "AutoControl Steps",
+          "when": "resourceLangId == json"
+        }
+      ]
     }
   },
   "scripts": {

@@ -19,12 +19,16 @@ the click that broke?".
 The headless player is what the GUI scrubber binds to. Tests cover
 the join logic, lookup performance, and the manifest schema.
 """
+from je_auto_control.utils.time_travel.controller import (
+    ReplayState, TraceReplayController,
+)
 from je_auto_control.utils.time_travel.player import (
     ActionEvent, FrameRef, TimelinePlayer, TimelineSnapshot,
     load_action_log, save_action_log,
 )
 
 __all__ = [
-    "ActionEvent", "FrameRef", "TimelinePlayer", "TimelineSnapshot",
+    "ActionEvent", "FrameRef", "ReplayState", "TimelinePlayer",
+    "TimelineSnapshot", "TraceReplayController",
     "load_action_log", "save_action_log",
 ]

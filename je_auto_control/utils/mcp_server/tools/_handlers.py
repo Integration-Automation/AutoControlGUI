@@ -732,6 +732,367 @@ def vlm_click(description: str,
                                       model=model))
 
 
+def self_heal_locate(template_path: Optional[str] = None,
+                     description: Optional[str] = None,
+                     detect_threshold: float = 0.9,
+                     screen_region: Optional[List[int]] = None,
+                     model: Optional[str] = None,
+                     raise_on_miss: bool = False) -> Dict[str, Any]:
+    from je_auto_control.utils.self_healing import self_heal_locate as _impl
+    return _impl(
+        template_path=template_path, description=description,
+        detect_threshold=float(detect_threshold),
+        screen_region=screen_region, model=model,
+        raise_on_miss=bool(raise_on_miss),
+    ).to_dict()
+
+
+def self_heal_click(template_path: Optional[str] = None,
+                    description: Optional[str] = None,
+                    mouse_keycode: str = "mouse_left",
+                    detect_threshold: float = 0.9,
+                    screen_region: Optional[List[int]] = None,
+                    model: Optional[str] = None,
+                    raise_on_miss: bool = False) -> Dict[str, Any]:
+    from je_auto_control.utils.self_healing import self_heal_click as _impl
+    return _impl(
+        template_path=template_path, description=description,
+        mouse_keycode=mouse_keycode,
+        detect_threshold=float(detect_threshold),
+        screen_region=screen_region, model=model,
+        raise_on_miss=bool(raise_on_miss),
+    ).to_dict()
+
+
+def self_heal_log_list(limit: int = 50) -> List[Dict[str, Any]]:
+    from je_auto_control.utils.self_healing import default_heal_log
+    return [event.to_dict()
+            for event in default_heal_log.list_events(limit=int(limit))]
+
+
+def self_heal_log_clear() -> Dict[str, Any]:
+    from je_auto_control.utils.self_healing import default_heal_log
+    default_heal_log.clear()
+    return {"cleared": True, "path": str(default_heal_log.path)}
+
+
+# === WebRunner bridge (browser automation via je_web_runner) ================
+
+def web_available() -> bool:
+    from je_auto_control.utils.webrunner_bridge import is_webrunner_available
+    return bool(is_webrunner_available())
+
+
+def web_list_commands() -> List[str]:
+    from je_auto_control.utils.webrunner_bridge import list_webrunner_commands
+    return list(list_webrunner_commands())
+
+
+def web_run(action: Dict[str, Any]) -> Any:
+    from je_auto_control.utils.webrunner_bridge import run_webrunner_action
+    return run_webrunner_action(action)
+
+
+def web_run_actions(actions: List[Dict[str, Any]]) -> List[Any]:
+    from je_auto_control.utils.webrunner_bridge import run_webrunner_actions
+    return list(run_webrunner_actions(actions))
+
+
+def web_open(url: str, browser: str = "chrome") -> Any:
+    from je_auto_control.utils.webrunner_bridge import web_open as _open
+    return _open(url, browser=browser)
+
+
+def web_quit() -> Any:
+    from je_auto_control.utils.webrunner_bridge import web_quit as _quit
+    return _quit()
+
+
+def web_screenshot(file_path: str) -> Any:
+    from je_auto_control.utils.webrunner_bridge import (
+        web_screenshot as _shot,
+    )
+    return _shot(file_path)
+
+
+def web_current_url() -> Any:
+    from je_auto_control.utils.webrunner_bridge import (
+        web_current_url as _url,
+    )
+    return _url()
+
+
+def run_dag(definition: Dict[str, Any],
+            max_parallel: int = 4) -> Dict[str, Any]:
+    from je_auto_control.utils.dag import run_dag as _run_dag
+    return _run_dag(definition, max_parallel=int(max_parallel)).to_dict()
+
+
+def a11y_dump(app_name: Optional[str] = None,
+              max_results: int = 500) -> Dict[str, Any]:
+    from je_auto_control.utils.accessibility import dump_accessibility_tree
+    return dump_accessibility_tree(
+        app_name=app_name, max_results=int(max_results),
+    ).to_dict()
+
+
+def a11y_record_start(app_name: Optional[str] = None,
+                      poll_interval_s: float = 0.25,
+                      min_movement_px: int = 8) -> Dict[str, Any]:
+    from je_auto_control.utils.executor.action_executor import (
+        _a11y_record_start,
+    )
+    return _a11y_record_start(
+        app_name=app_name,
+        poll_interval_s=float(poll_interval_s),
+        min_movement_px=int(min_movement_px),
+    )
+
+
+def a11y_record_stop() -> List[Dict[str, Any]]:
+    from je_auto_control.utils.executor.action_executor import (
+        _a11y_record_stop,
+    )
+    return _a11y_record_stop()
+
+
+def ab_locate(target_id: str,
+              strategies: Dict[str, Dict[str, Any]],
+              max_parallel: int = 4,
+              record: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.ab_locator import ab_locate as _impl
+    from je_auto_control.utils.anchor_locator import (
+        Locator as AnchorLocator,
+    )
+    locators = {name: AnchorLocator(**spec)
+                for name, spec in strategies.items()}
+    return _impl(
+        target_id=target_id, strategies=locators,
+        max_parallel=int(max_parallel), record=bool(record),
+    ).to_dict()
+
+
+def ab_report(target_id: str) -> Dict[str, Any]:
+    from je_auto_control.utils.ab_locator import ab_report_for
+    return ab_report_for(target_id).to_dict()
+
+
+def ab_best_strategy(target_id: str) -> Dict[str, Any]:
+    from je_auto_control.utils.ab_locator import ab_best_strategy as _impl
+    return {"target_id": target_id, "strategy": _impl(target_id)}
+
+
+def failure_hook_fire(source: str, source_id: str,
+                       error_text: str = "",
+                       script_path: Optional[str] = None,
+                       screenshot_path: Optional[str] = None,
+                       log_tail: str = "",
+                       metadata: Optional[Dict[str, Any]] = None,
+                       ) -> List[Dict[str, Any]]:
+    from je_auto_control.utils.failure_hooks import (
+        FailureReport, default_failure_hook_manager,
+    )
+    report = FailureReport(
+        source=source, source_id=source_id, error_text=error_text,
+        script_path=script_path, screenshot_path=screenshot_path,
+        log_tail=log_tail, metadata=dict(metadata or {}),
+    )
+    return [result.to_dict()
+            for result in default_failure_hook_manager.fire(report)]
+
+
+def failure_hook_list() -> List[Dict[str, Any]]:
+    from je_auto_control.utils.failure_hooks import default_failure_hook_manager
+    return default_failure_hook_manager.list_backends()
+
+
+def costs_record(provider: str, model: str,
+                  input_tokens: int, output_tokens: int,
+                  label: Optional[str] = None,
+                  run_id: Optional[str] = None,
+                  user: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.cost_telemetry import record_llm_call
+    return record_llm_call(
+        provider=provider, model=model,
+        input_tokens=int(input_tokens),
+        output_tokens=int(output_tokens),
+        label=label, run_id=run_id, user=user,
+    ).to_dict()
+
+
+def costs_summary(limit: int = 10000) -> Dict[str, Any]:
+    from je_auto_control.utils.cost_telemetry import (
+        default_cost_store, summarise_llm_costs,
+    )
+    events = default_cost_store.list_events(limit=int(limit))
+    return summarise_llm_costs(events).to_dict()
+
+
+def costs_list(limit: int = 100) -> List[Dict[str, Any]]:
+    from je_auto_control.utils.cost_telemetry import default_cost_store
+    return [event.to_dict()
+            for event in default_cost_store.list_events(limit=int(limit))]
+
+
+def wait_screen_stable(region: Optional[List[int]] = None,
+                        timeout_s: float = 10.0,
+                        poll_interval_s: float = 0.2,
+                        stable_for_s: float = 0.5,
+                        max_pixel_diff: int = 0) -> Dict[str, Any]:
+    from je_auto_control.utils.smart_waits import wait_until_screen_stable
+    return wait_until_screen_stable(
+        region=region, timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        stable_for_s=float(stable_for_s),
+        max_pixel_diff=int(max_pixel_diff),
+    ).to_dict()
+
+
+def wait_pixel_changes(x: int, y: int,
+                        timeout_s: float = 10.0,
+                        poll_interval_s: float = 0.1,
+                        rgb_tolerance: int = 5) -> Dict[str, Any]:
+    from je_auto_control.utils.smart_waits import wait_until_pixel_changes
+    return wait_until_pixel_changes(
+        x=int(x), y=int(y),
+        timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        rgb_tolerance=int(rgb_tolerance),
+    ).to_dict()
+
+
+def wait_region_idle(region: List[int],
+                      timeout_s: float = 10.0,
+                      poll_interval_s: float = 0.2,
+                      stable_for_s: float = 0.5,
+                      max_pixel_diff: int = 0) -> Dict[str, Any]:
+    from je_auto_control.utils.smart_waits import wait_until_region_idle
+    return wait_until_region_idle(
+        region=region, timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        stable_for_s=float(stable_for_s),
+        max_pixel_diff=int(max_pixel_diff),
+    ).to_dict()
+
+
+def ocr_read_structure(region: Optional[List[int]] = None,
+                        lang: str = "eng",
+                        min_confidence: float = 60.0,
+                        ) -> Dict[str, Any]:
+    from je_auto_control.utils.ocr.structure import read_structure
+    return read_structure(
+        region=region, lang=lang,
+        min_confidence=float(min_confidence),
+    ).to_dict()
+
+
+def anchor_locate(anchor: Dict[str, Any], target: Dict[str, Any],
+                  relation: str = "near",
+                  max_distance_px: float = 200.0) -> Dict[str, Any]:
+    from je_auto_control.utils.anchor_locator import (
+        Locator, anchor_locate as _impl,
+    )
+    return _impl(
+        anchor=Locator(**anchor), target=Locator(**target),
+        relation=relation, max_distance_px=float(max_distance_px),
+    ).to_dict()
+
+
+def anchor_click(anchor: Dict[str, Any], target: Dict[str, Any],
+                 mouse_keycode: str = "mouse_left",
+                 relation: str = "near",
+                 max_distance_px: float = 200.0) -> Dict[str, Any]:
+    outcome = anchor_locate(anchor, target, relation, max_distance_px)
+    if outcome.get("found") and outcome.get("target_coords"):
+        cx, cy = outcome["target_coords"]
+        from je_auto_control.wrapper.auto_control_mouse import (
+            click_mouse, set_mouse_position,
+        )
+        set_mouse_position(int(cx), int(cy))
+        click_mouse(mouse_keycode, int(cx), int(cy))
+    return outcome
+
+
+def chatops_dispatch(message: str,
+                     context: Optional[Dict[str, Any]] = None,
+                     script_root: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.chatops import (
+        CommandRouter, register_chatops_default_commands,
+    )
+    router = CommandRouter()
+    register_chatops_default_commands(router)
+    merged: Dict[str, Any] = dict(context or {})
+    if script_root is not None:
+        merged.setdefault("script_root", script_root)
+    result = router.dispatch(message, context=merged)
+    return {"matched": False} if result is None else {
+        "matched": True, **result.to_dict(),
+    }
+
+
+def presence_register(viewer_id: str, label: str = "",
+                      role: str = "observer") -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.presence import (
+        default_presence_registry,
+    )
+    return default_presence_registry().register(
+        viewer_id, label, role=role,
+    ).to_dict()
+
+
+def presence_unregister(viewer_id: str) -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.presence import (
+        default_presence_registry,
+    )
+    return {"viewer_id": viewer_id,
+            "removed": default_presence_registry().unregister(viewer_id)}
+
+
+def presence_update_cursor(viewer_id: str, x: int, y: int) -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.presence import (
+        default_presence_registry,
+    )
+    return default_presence_registry().update_cursor(
+        viewer_id, int(x), int(y),
+    ).to_dict()
+
+
+def presence_set_role(viewer_id: str, role: str) -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.presence import (
+        default_presence_registry,
+    )
+    return default_presence_registry().update_role(viewer_id, role).to_dict()
+
+
+def presence_list() -> List[Dict[str, Any]]:
+    from je_auto_control.utils.remote_desktop.presence import (
+        default_presence_registry,
+    )
+    return [row.to_dict() for row in default_presence_registry().list()]
+
+
+def computer_use(goal: str,
+                 display_width_px: Optional[int] = None,
+                 display_height_px: Optional[int] = None,
+                 display_number: Optional[int] = None,
+                 max_steps: int = 25,
+                 wall_seconds: float = 300.0,
+                 model: str = "claude-opus-4-7",
+                 max_tokens: int = 1024) -> Dict[str, Any]:
+    from je_auto_control.utils.agent.computer_use import (
+        result_to_dict, run_computer_use,
+    )
+    result = run_computer_use(
+        goal,
+        display_width_px=display_width_px,
+        display_height_px=display_height_px,
+        display_number=display_number,
+        max_steps=int(max_steps), wall_seconds=float(wall_seconds),
+        model=model, max_tokens=int(max_tokens),
+    )
+    return result_to_dict(result)
+
+
 # === Scheduler / triggers / hotkey daemon ===================================
 
 def _job_to_dict(job: Any) -> Dict[str, Any]:

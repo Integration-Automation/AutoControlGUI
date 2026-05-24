@@ -10,6 +10,7 @@ from je_auto_control.utils.accessibility.backends import get_backend
 from je_auto_control.utils.accessibility.element import (
     AccessibilityElement, AccessibilityNotAvailableError, element_matches,
 )
+from je_auto_control.utils.accessibility.tree import AXTreeNode
 
 
 def list_accessibility_elements(app_name: Optional[str] = None,
@@ -56,8 +57,45 @@ def click_accessibility_element(name: Optional[str] = None,
     return True
 
 
+def dump_accessibility_tree(app_name: Optional[str] = None,
+                             max_results: int = 500) -> AXTreeNode:
+    """Return a flat-but-nested-by-app tree dump.
+
+    Backends that don't expose a true parent-child API (yet) emit a
+    flat list under one synthetic root per app, so callers can still
+    pretty-print / iterate predictably until a true hierarchical
+    walker lands per platform.
+    """
+    elements = list_accessibility_elements(
+        app_name=app_name, max_results=int(max_results),
+    )
+    by_app: dict = {}
+    for element in elements:
+        app = element.app_name or "(unknown)"
+        by_app.setdefault(app, []).append(element)
+    children = []
+    for app, items in sorted(by_app.items()):
+        children.append(AXTreeNode(
+            name=app, role="AXApplication",
+            bounds=(0, 0, 0, 0),
+            app_name=app,
+            children=[AXTreeNode(
+                name=el.name, role=el.role,
+                bounds=tuple(el.bounds),
+                app_name=el.app_name,
+                process_id=int(el.process_id),
+            ) for el in items],
+        ))
+    root_app = app_name or "(all)"
+    return AXTreeNode(
+        name=root_app, role="AXRoot", bounds=(0, 0, 0, 0),
+        app_name=root_app, children=children,
+    )
+
+
 __all__ = [
     "AccessibilityElement", "AccessibilityNotAvailableError",
-    "list_accessibility_elements", "find_accessibility_element",
-    "click_accessibility_element",
+    "AXTreeNode",
+    "click_accessibility_element", "dump_accessibility_tree",
+    "find_accessibility_element", "list_accessibility_elements",
 ]

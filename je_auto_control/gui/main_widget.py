@@ -13,6 +13,10 @@ from PySide6.QtWidgets import (
 from je_auto_control.gui._auto_click_tab import AutoClickTabMixin
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.accessibility_tab import AccessibilityTab
+from je_auto_control.gui.computer_use_tab import ComputerUseTab
+from je_auto_control.gui.chatops_tab import ChatOpsTab
+from je_auto_control.gui.dag_tab import DagTab
+from je_auto_control.gui.trace_replay_tab import TraceReplayTab
 from je_auto_control.gui._report_tab import ReportTabMixin
 from je_auto_control.gui.hotkeys_tab import HotkeysTab
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import language_wrapper
@@ -20,6 +24,7 @@ from je_auto_control.gui.live_hud_tab import LiveHUDTab
 from je_auto_control.gui.llm_planner_tab import LLMPlannerTab
 from je_auto_control.gui.ocr_tab import OCRReaderTab
 from je_auto_control.gui.plugins_tab import PluginsTab
+from je_auto_control.gui.presence_tab import PresenceTab
 from je_auto_control.gui.profiler_tab import ProfilerTab
 from je_auto_control.gui.secrets_tab import SecretsTab
 from je_auto_control.gui.admin_console_tab import AdminConsoleTab
@@ -42,13 +47,16 @@ except ImportError as _remote_desktop_error:
 from je_auto_control.gui.rest_api_tab import RestApiTab
 from je_auto_control.gui.run_history_tab import RunHistoryTab
 from je_auto_control.gui.scheduler_tab import SchedulerTab
+from je_auto_control.gui.flow_editor import FlowEditorTab
 from je_auto_control.gui.script_builder import ScriptBuilderTab
+from je_auto_control.gui.self_healing_tab import SelfHealingTab
 from je_auto_control.gui.selector import crop_template_to_file, open_region_selector
 from je_auto_control.gui.triggers_tab import TriggersTab
 from je_auto_control.gui.webhooks_tab import WebhooksTab
 from je_auto_control.gui.email_triggers_tab import EmailTriggersTab
 from je_auto_control.gui.variables_tab import VariablesTab
 from je_auto_control.gui.vlm_tab import VLMTab
+from je_auto_control.gui.webrunner_tab import WebRunnerTab
 from je_auto_control.gui.window_tab import WindowManagerTab
 from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot, get_pixel
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_image_center, locate_and_click
@@ -116,6 +124,8 @@ class AutoControlGUIWidget(
                       category="core", default_visible=True)
         self._add_tab("script_builder", "tab_script_builder", ScriptBuilderTab(),
                       category="core", default_visible=True)
+        self._add_tab("flow_editor", "tab_flow_editor", FlowEditorTab(),
+                      category="editing")
         self._add_tab("script", "tab_script", self._build_script_tab(),
                       category="editing")
         self._add_tab("recording_editor", "tab_recording_editor", RecordingEditorTab(),
@@ -126,6 +136,8 @@ class AutoControlGUIWidget(
                       category="editing")
         self._add_tab("vlm", "tab_vlm", VLMTab(),
                       category="detection")
+        self._add_tab("self_healing", "tab_self_healing", SelfHealingTab(),
+                      category="detection")
         self._add_tab("ocr_reader", "tab_ocr_reader", OCRReaderTab(),
                       category="detection")
         self._add_tab("accessibility", "tab_accessibility", AccessibilityTab(),
@@ -133,6 +145,8 @@ class AutoControlGUIWidget(
         self._add_tab("live_hud", "tab_live_hud", LiveHUDTab(),
                       category="detection")
         self._add_tab("llm_planner", "tab_llm_planner", LLMPlannerTab(),
+                      category="detection")
+        self._add_tab("computer_use", "tab_computer_use", ComputerUseTab(),
                       category="detection")
         self._add_tab("scheduler", "tab_scheduler", SchedulerTab(),
                       category="automation")
@@ -152,11 +166,21 @@ class AutoControlGUIWidget(
                       category="system")
         self._add_tab("plugins", "tab_plugins", PluginsTab(),
                       category="system")
+        self._add_tab("webrunner", "tab_webrunner", WebRunnerTab(),
+                      category="automation")
+        self._add_tab("dag_runner", "tab_dag_runner", DagTab(),
+                      category="automation")
+        self._add_tab("chatops", "tab_chatops", ChatOpsTab(),
+                      category="automation")
+        self._add_tab("trace_replay", "tab_trace_replay", TraceReplayTab(),
+                      category="automation")
         self._add_tab(
             "remote_desktop", "tab_remote_desktop",
             self._build_remote_desktop_tab(),
             category="system", default_visible=True,
         )
+        self._add_tab("presence", "tab_presence", PresenceTab(),
+                      category="system")
         self._add_tab("rest_api", "tab_rest_api", RestApiTab(),
                       category="system")
         self._add_tab("admin_console", "tab_admin_console", AdminConsoleTab(),

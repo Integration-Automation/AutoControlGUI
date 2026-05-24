@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>AutoControl Recorder</title>
+    <style>
+        body { font-family: -apple-system, Segoe UI, sans-serif;
+                margin: 12px; min-width: 240px; }
+        h1 { font-size: 14px; margin: 0 0 8px 0; }
+        .row { display: flex; gap: 6px; margin-top: 8px; }
+        button { padding: 6px 10px; cursor: pointer; }
+        #status { font-size: 12px; color: #666; margin-top: 8px; }
+        #count { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>AutoControl Web Recorder</h1>
+    <div class="row">
+        <button id="start">Start</button>
+        <button id="stop">Stop</button>
+        <button id="reset">Reset</button>
+    </div>
+    <div class="row">
+        <button id="export">Download JSON</button>
+    </div>
+    <div id="status">
+        State: <span id="state">idle</span> &middot;
+        <span id="count">0</span> events
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

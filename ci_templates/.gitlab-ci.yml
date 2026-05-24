@@ -1,0 +1,90 @@
+# GitLab CI template for AutoControl.
+#
+# Copy this file to the repo root as ``.gitlab-ci.yml`` (or include it
+# from your existing pipeline) to get the same coverage the GitHub
+# Actions Docker workflow provides:
+#
+# * ``build`` — build the AutoControl image from ``docker/Dockerfile``;
+# * ``test`` — run the headless pytest suite inside the image with Xvfb;
+# * ``smoke`` — start the REST API container and curl /health.
+#
+# Requirements on the GitLab runner:
+#
+# * A Docker-in-Docker (``dind``) executor — set GitLab runner config
+#   to ``privileged = true`` or use the shared SaaS runner.
+# * No GitLab Container Registry credentials needed for build-only.
+#   Push to a registry by uncommenting the registry block at the
+#   bottom and setting the matching CI/CD variables.
+
+stages:
+  - build
+  - test
+  - smoke
+
+variables:
+  IMAGE_TAG: autocontrol:ci
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
+default:
+  image: docker:24-cli
+  services:
+    - docker:24-dind
+
+build:
+  stage: build
+  script:
+    - docker info
+    - docker build -f docker/Dockerfile -t "$IMAGE_TAG" .
+    - docker save "$IMAGE_TAG" -o image.tar
+  artifacts:
+    paths:
+      - image.tar
+    expire_in: 1 hour
+
+test-headless:
+  stage: test
+  needs: ["build"]
+  script:
+    - docker load -i image.tar
+    - |
+      docker run --rm \
+        --user root \
+        -v "$CI_PROJECT_DIR:/work" -w /work \
+        --entrypoint /bin/sh \
+        "$IMAGE_TAG" -c "
+          pip install --no-cache-dir -r dev_requirements.txt &&
+          xvfb-run -a -s '-screen 0 1280x800x24' \
+            python -m pytest test/unit_test/headless -q --tb=short
+        "
+
+smoke-rest:
+  stage: smoke
+  needs: ["build"]
+  script:
+    - docker load -i image.tar
+    - docker run --rm -d --name ac-rest -p 9939:9939
+        -e AC_TOKEN=ci-token "$IMAGE_TAG" rest
+    - |
+      for attempt in 1 2 3 4 5 6 7 8 9 10; do
+        if docker exec ac-rest sh -c "command -v curl >/dev/null && curl -fsS -H 'Authorization: Bearer ci-token' http://127.0.0.1:9939/health"; then
+          echo "REST API is up"
+          break
+        fi
+        sleep 2
+      done
+    - docker logs ac-rest || true
+    - docker stop ac-rest
+
+# Uncomment to push the image to the GitLab Container Registry on tag builds.
+#
+# publish:
+#   stage: smoke
+#   needs: ["build"]
+#   rules:
+#     - if: '$CI_COMMIT_TAG'
+#   script:
+#     - docker load -i image.tar
+#     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+#     - docker tag "$IMAGE_TAG" "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
+#     - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"

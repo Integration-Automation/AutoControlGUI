@@ -200,3 +200,101 @@ def test_ac_web_run_dispatches_to_bridge():
             {"action": "WR_quit", "params": {}},
         ) == {"done": True}
     fake.assert_called_once_with()
+
+
+# --- convenience helpers --------------------------------------------
+
+def test_web_open_runs_driver_then_navigate():
+    from je_auto_control.utils.webrunner_bridge import web_open
+    calls = []
+
+    def driver(**params):
+        calls.append(("driver", params))
+        return "driver-ok"
+
+    def to_url(**params):
+        calls.append(("to_url", params))
+        return "nav-ok"
+
+    fake_exec = _fake_executor({
+        "WR_get_webdriver_manager": driver,
+        "WR_to_url": to_url,
+    })
+    with patch(
+        "je_auto_control.utils.webrunner_bridge.bridge._executor",
+        return_value=fake_exec,
+    ):
+        result = web_open("https://example.com", browser="firefox")
+    assert result == "nav-ok"
+    assert calls[0] == ("driver", {"webdriver_name": "firefox"})
+    assert calls[1] == ("to_url", {"url": "https://example.com"})
+
+
+def test_web_open_rejects_blank_url():
+    from je_auto_control.utils.webrunner_bridge import web_open
+    with pytest.raises(WebRunnerBridgeError):
+        web_open("   ")
+
+
+def test_web_quit_invokes_wr_quit():
+    from je_auto_control.utils.webrunner_bridge import web_quit
+    quit_fn = MagicMock(return_value=True)
+    fake_exec = _fake_executor({"WR_quit": quit_fn})
+    with patch(
+        "je_auto_control.utils.webrunner_bridge.bridge._executor",
+        return_value=fake_exec,
+    ):
+        assert web_quit() is True
+    quit_fn.assert_called_once_with()
+
+
+def test_web_screenshot_passes_file_name():
+    from je_auto_control.utils.webrunner_bridge import web_screenshot
+    seen = {}
+
+    def shot(file_name=None):
+        seen["file_name"] = file_name
+        return file_name
+
+    fake_exec = _fake_executor({"WR_save_screenshot": shot})
+    with patch(
+        "je_auto_control.utils.webrunner_bridge.bridge._executor",
+        return_value=fake_exec,
+    ):
+        assert web_screenshot("out.png") == "out.png"
+    assert seen["file_name"] == "out.png"
+
+
+def test_web_screenshot_rejects_blank_path():
+    from je_auto_control.utils.webrunner_bridge import web_screenshot
+    with pytest.raises(WebRunnerBridgeError):
+        web_screenshot("")
+
+
+def test_executor_registers_new_web_commands():
+    from je_auto_control.utils.executor.action_executor import executor
+    commands = executor.known_commands()
+    assert {
+        "AC_web_open", "AC_web_quit", "AC_web_screenshot",
+        "AC_web_current_url",
+    } <= commands
+
+
+def test_mcp_factory_registers_web_tools():
+    from je_auto_control.utils.mcp_server.tools import (
+        build_default_tool_registry,
+    )
+    names = {tool.name for tool in build_default_tool_registry()}
+    assert {
+        "ac_web_available", "ac_web_list_commands", "ac_web_run",
+        "ac_web_run_actions", "ac_web_open", "ac_web_quit",
+        "ac_web_screenshot", "ac_web_current_url",
+    } <= names
+
+
+def test_facade_exports_webrunner_bridge():
+    import je_auto_control as ac
+    for name in ("is_webrunner_available", "run_webrunner_action",
+                  "web_open", "web_quit", "web_screenshot",
+                  "web_current_url", "WebRunnerBridgeError"):
+        assert hasattr(ac, name), f"missing facade export: {name}"

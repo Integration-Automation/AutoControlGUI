@@ -641,6 +641,566 @@ def semantic_locator_tools() -> List[MCPTool]:
     ]
 
 
+def presence_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_presence_register",
+            description=("Register a viewer in the multi-viewer presence "
+                         "roster (role: controller | observer). Used by the "
+                         "remote-desktop host to track who is currently "
+                         "watching and who is allowed to push input."),
+            input_schema=schema({
+                "viewer_id": {"type": "string"},
+                "label": {"type": "string"},
+                "role": {"type": "string",
+                         "enum": ["controller", "observer"]},
+            }, required=["viewer_id"]),
+            handler=h.presence_register,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_presence_unregister",
+            description="Drop a viewer from the presence roster.",
+            input_schema=schema({
+                "viewer_id": {"type": "string"},
+            }, required=["viewer_id"]),
+            handler=h.presence_unregister,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_presence_update_cursor",
+            description=("Update the cached cursor position of one viewer so "
+                         "other viewers can render its ghost cursor."),
+            input_schema=schema({
+                "viewer_id": {"type": "string"},
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+            }, required=["viewer_id", "x", "y"]),
+            handler=h.presence_update_cursor,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_presence_set_role",
+            description=("Promote / demote a viewer between controller and "
+                         "observer roles. Observers are read-only."),
+            input_schema=schema({
+                "viewer_id": {"type": "string"},
+                "role": {"type": "string",
+                         "enum": ["controller", "observer"]},
+            }, required=["viewer_id", "role"]),
+            handler=h.presence_set_role,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_presence_list",
+            description="List every viewer currently in the presence roster.",
+            input_schema=schema({}),
+            handler=h.presence_list,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def chatops_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_chatops_dispatch",
+            description=("Route one chat message through the default chat-ops "
+                         "command router. Returns {matched, text, "
+                         "succeeded, ...} so the calling bot can post the "
+                         "reply back to Slack / Discord / webhook."),
+            input_schema=schema({
+                "message": {"type": "string"},
+                "context": {"type": "object"},
+                "script_root": {"type": "string"},
+            }, required=["message"]),
+            handler=h.chatops_dispatch,
+            annotations=DESTRUCTIVE,
+        ),
+    ]
+
+
+def dag_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_run_dag",
+            description=("Execute a cross-host DAG (directed acyclic graph) "
+                         "of automation steps. Each node carries (host, "
+                         "actions|action_file, depends_on). Local nodes run "
+                         "in-process; remote nodes go through the admin "
+                         "console REST clients. Failures cascade — "
+                         "downstream nodes are skipped, not retried."),
+            input_schema=schema({
+                "definition": {"type": "object"},
+                "max_parallel": {"type": "integer"},
+            }, required=["definition"]),
+            handler=h.run_dag,
+            annotations=DESTRUCTIVE,
+        ),
+    ]
+
+
+def computer_use_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_computer_use",
+            description=("Drive Anthropic's Computer-Use agent loop to "
+                         "accomplish goal on the live screen. Wraps "
+                         "ComputerUseAgentBackend + AgentLoop. Returns "
+                         "{succeeded, final_message, elapsed_s, steps[]}. "
+                         "Requires anthropic SDK + ANTHROPIC_API_KEY."),
+            input_schema=schema({
+                "goal": {"type": "string"},
+                "display_width_px": {"type": "integer"},
+                "display_height_px": {"type": "integer"},
+                "display_number": {"type": "integer"},
+                "max_steps": {"type": "integer"},
+                "wall_seconds": {"type": "number"},
+                "model": {"type": "string"},
+                "max_tokens": {"type": "integer"},
+            }, required=["goal"]),
+            handler=h.computer_use,
+            annotations=DESTRUCTIVE,
+        ),
+    ]
+
+
+def webrunner_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_web_available",
+            description=("Check whether je_web_runner (browser automation) "
+                         "is installed in this environment."),
+            input_schema=schema({}),
+            handler=h.web_available,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_web_list_commands",
+            description=("List every WR_* command exposed by the installed "
+                         "WebRunner (~440 Selenium / Playwright actions)."),
+            input_schema=schema({}),
+            handler=h.web_list_commands,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_web_run",
+            description=("Run one WR_* WebRunner action. action is a dict "
+                         "of the form {\"action\": \"WR_*\", "
+                         "\"params\": {...}} matching the JSON action "
+                         "schema."),
+            input_schema=schema({
+                "action": {"type": "object"},
+            }, required=["action"]),
+            handler=h.web_run,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_web_run_actions",
+            description=("Run a list of WR_* actions in order. Stops at the "
+                         "first failure."),
+            input_schema=schema({
+                "actions": {"type": "array",
+                             "items": {"type": "object"}},
+            }, required=["actions"]),
+            handler=h.web_run_actions,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_web_open",
+            description=("Convenience: start a Selenium browser driver and "
+                         "navigate to url. browser defaults to chrome."),
+            input_schema=schema({
+                "url": {"type": "string"},
+                "browser": {"type": "string"},
+            }, required=["url"]),
+            handler=h.web_open,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_web_quit",
+            description="Convenience: quit every active WebRunner browser session.",
+            input_schema=schema({}),
+            handler=h.web_quit,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_web_screenshot",
+            description="Convenience: save a screenshot of the active browser tab.",
+            input_schema=schema({
+                "file_path": {"type": "string"},
+            }, required=["file_path"]),
+            handler=h.web_screenshot,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_web_current_url",
+            description="Convenience: return the active browser tab's URL.",
+            input_schema=schema({}),
+            handler=h.web_current_url,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def a11y_tree_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_a11y_dump",
+            description=("Dump the accessibility tree as a nested JSON "
+                         "structure (root → app → element). Pairs with the "
+                         "existing ac_a11y_list / ac_a11y_find which only "
+                         "return flat lists."),
+            input_schema=schema({
+                "app_name": {"type": "string"},
+                "max_results": {"type": "integer"},
+            }),
+            handler=h.a11y_dump,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_a11y_record_start",
+            description=("Start the polling accessibility recorder. "
+                         "Captures focus / bounds changes on the focused "
+                         "element so they can be replayed later. Stop "
+                         "with ac_a11y_record_stop."),
+            input_schema=schema({
+                "app_name": {"type": "string"},
+                "poll_interval_s": {"type": "number"},
+                "min_movement_px": {"type": "integer"},
+            }),
+            handler=h.a11y_record_start,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_a11y_record_stop",
+            description=("Stop the recorder and return every captured "
+                         "event in chronological order."),
+            input_schema=schema({}),
+            handler=h.a11y_record_stop,
+            annotations=NON_DESTRUCTIVE,
+        ),
+    ]
+
+
+def ab_locator_tools() -> List[MCPTool]:
+    locator_schema = {
+        "type": "object",
+        "properties": {
+            "kind": {"type": "string",
+                     "enum": ["image", "ocr", "vlm", "a11y"]},
+            "template_path": {"type": "string"},
+            "detect_threshold": {"type": "number"},
+            "text": {"type": "string"},
+            "min_confidence": {"type": "number"},
+            "description": {"type": "string"},
+            "model": {"type": "string"},
+            "role": {"type": "string"},
+            "name": {"type": "string"},
+        },
+        "required": ["kind"],
+    }
+    return [
+        MCPTool(
+            name="ac_ab_locate",
+            description=("Race N locator strategies (keyed by name) for the "
+                         "same target. Returns per-strategy result and a "
+                         "winner; appends per-strategy win/loss counts to "
+                         "the on-disk ledger for ac_ab_best_strategy."),
+            input_schema=schema({
+                "target_id": {"type": "string"},
+                "strategies": {
+                    "type": "object",
+                    "additionalProperties": locator_schema,
+                },
+                "max_parallel": {"type": "integer"},
+                "record": {"type": "boolean"},
+            }, required=["target_id", "strategies"]),
+            handler=h.ab_locate,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_ab_report",
+            description=("Return the historical strategies + success rate "
+                         "for one target_id."),
+            input_schema=schema({
+                "target_id": {"type": "string"},
+            }, required=["target_id"]),
+            handler=h.ab_report,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_ab_best_strategy",
+            description=("Recommend the historically-best strategy name for "
+                         "target_id, or null if no data yet."),
+            input_schema=schema({
+                "target_id": {"type": "string"},
+            }, required=["target_id"]),
+            handler=h.ab_best_strategy,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def failure_hook_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_failure_hook_fire",
+            description=("Fan a failure report out to every registered "
+                         "ticket backend (Jira / Linear / GitHub). Use from "
+                         "scheduler / trigger / REST error handlers to file "
+                         "a ticket automatically when a run breaks."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "source_id": {"type": "string"},
+                "error_text": {"type": "string"},
+                "script_path": {"type": "string"},
+                "screenshot_path": {"type": "string"},
+                "log_tail": {"type": "string"},
+                "metadata": {"type": "object"},
+            }, required=["source", "source_id"]),
+            handler=h.failure_hook_fire,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_failure_hook_list",
+            description="List every registered failure-hook backend.",
+            input_schema=schema({}),
+            handler=h.failure_hook_list,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def cost_telemetry_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_costs_record",
+            description=("Append one LLM API call to the cost-telemetry "
+                         "log so spend can be aggregated per model / "
+                         "provider / day. estimated_usd is auto-derived "
+                         "from the bundled pricing table."),
+            input_schema=schema({
+                "provider": {"type": "string"},
+                "model": {"type": "string"},
+                "input_tokens": {"type": "integer"},
+                "output_tokens": {"type": "integer"},
+                "label": {"type": "string"},
+                "run_id": {"type": "string"},
+                "user": {"type": "string"},
+            }, required=["provider", "model",
+                          "input_tokens", "output_tokens"]),
+            handler=h.costs_record,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_costs_summary",
+            description=("Aggregate cost events by model / provider / day. "
+                         "Returns total_calls, total_usd, by_model, "
+                         "by_provider, by_day."),
+            input_schema=schema({
+                "limit": {"type": "integer"},
+            }),
+            handler=h.costs_summary,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_costs_list",
+            description="Return the most-recent N cost events as a list.",
+            input_schema=schema({
+                "limit": {"type": "integer"},
+            }),
+            handler=h.costs_list,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def smart_wait_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_wait_screen_stable",
+            description=("Block until the screen stops moving (consecutive "
+                         "frames differ by <= max_pixel_diff bytes for "
+                         "stable_for_s seconds). Smarter than time.sleep."),
+            input_schema=schema({
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"},
+                "stable_for_s": {"type": "number"},
+                "max_pixel_diff": {"type": "integer"},
+            }),
+            handler=h.wait_screen_stable,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_wait_pixel_changes",
+            description=("Block until the pixel at (x, y) differs from its "
+                         "initial RGB by more than rgb_tolerance."),
+            input_schema=schema({
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"},
+                "rgb_tolerance": {"type": "integer"},
+            }, required=["x", "y"]),
+            handler=h.wait_pixel_changes,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_wait_region_idle",
+            description=("Block until a sub-region stops moving. "
+                         "region = [x1, y1, x2, y2]."),
+            input_schema=schema({
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"},
+                "stable_for_s": {"type": "number"},
+                "max_pixel_diff": {"type": "integer"},
+            }, required=["region"]),
+            handler=h.wait_region_idle,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def ocr_structure_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_ocr_read_structure",
+            description=("Run OCR over region (or whole screen) and return "
+                         "matches grouped into rows, tables (sets of rows "
+                         "sharing column alignment), and form-field "
+                         "key:value pairs. Each cell carries its original "
+                         "bbox so callers can click on the value of "
+                         "'Username:' without picking pixel offsets."),
+            input_schema=schema({
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "lang": {"type": "string"},
+                "min_confidence": {"type": "number"},
+            }),
+            handler=h.ocr_read_structure,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def anchor_locator_tools() -> List[MCPTool]:
+    locator_schema = {
+        "type": "object",
+        "properties": {
+            "kind": {"type": "string",
+                     "enum": ["image", "ocr", "vlm", "a11y"]},
+            "template_path": {"type": "string"},
+            "detect_threshold": {"type": "number"},
+            "text": {"type": "string"},
+            "min_confidence": {"type": "number"},
+            "region": {"type": "array", "items": {"type": "integer"}},
+            "description": {"type": "string"},
+            "model": {"type": "string"},
+            "role": {"type": "string"},
+            "name": {"type": "string"},
+            "app_name": {"type": "string"},
+        },
+        "required": ["kind"],
+    }
+    return [
+        MCPTool(
+            name="ac_anchor_locate",
+            description=("Find target element by spatial relation to anchor "
+                         "(above / below / left_of / right_of / near). Both "
+                         "anchor and target are Locator objects {kind, …} "
+                         "and may use different backends — e.g. anchor by "
+                         "OCR text, target by image template."),
+            input_schema=schema({
+                "anchor": locator_schema,
+                "target": locator_schema,
+                "relation": {"type": "string",
+                              "enum": ["above", "below", "left_of",
+                                       "right_of", "near"]},
+                "max_distance_px": {"type": "number"},
+            }, required=["anchor", "target"]),
+            handler=h.anchor_locate,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_anchor_click",
+            description="Anchor-locate then click the resolved target point.",
+            input_schema=schema({
+                "anchor": locator_schema,
+                "target": locator_schema,
+                "relation": {"type": "string",
+                              "enum": ["above", "below", "left_of",
+                                       "right_of", "near"]},
+                "max_distance_px": {"type": "number"},
+                "mouse_keycode": {"type": "string"},
+            }, required=["anchor", "target"]),
+            handler=h.anchor_click,
+            annotations=DESTRUCTIVE,
+        ),
+    ]
+
+
+def self_healing_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_self_heal_locate",
+            description=("Locate an element by image template; if the template "
+                         "match misses, fall back to a vision-language model "
+                         "using the natural-language ``description``. Every "
+                         "attempt is appended to the self-healing audit log. "
+                         "Returns {found, coordinates, method, ...}."),
+            input_schema=schema({
+                "template_path": {"type": "string"},
+                "description": {"type": "string"},
+                "detect_threshold": {"type": "number"},
+                "screen_region": {"type": "array",
+                                   "items": {"type": "integer"}},
+                "model": {"type": "string"},
+                "raise_on_miss": {"type": "boolean"},
+            }),
+            handler=h.self_heal_locate,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_self_heal_click",
+            description=("Self-heal locate then click the resolved point. "
+                         "Provide template_path, description, or both — "
+                         "description triggers the VLM fallback when the "
+                         "template fails."),
+            input_schema=schema({
+                "template_path": {"type": "string"},
+                "description": {"type": "string"},
+                "mouse_keycode": {"type": "string"},
+                "detect_threshold": {"type": "number"},
+                "screen_region": {"type": "array",
+                                   "items": {"type": "integer"}},
+                "model": {"type": "string"},
+                "raise_on_miss": {"type": "boolean"},
+            }),
+            handler=h.self_heal_click,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_self_heal_log_list",
+            description=("Return the most-recent self-healing events recorded "
+                         "by ac_self_heal_locate / ac_self_heal_click."),
+            input_schema=schema({
+                "limit": {"type": "integer"},
+            }),
+            handler=h.self_heal_log_list,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_self_heal_log_clear",
+            description="Wipe the self-healing audit log.",
+            input_schema=schema({}),
+            handler=h.self_heal_log_clear,
+            annotations=DESTRUCTIVE,
+        ),
+    ]
+
+
 def scheduler_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -1046,7 +1606,11 @@ def gamepad_tools() -> List[MCPTool]:
 ALL_FACTORIES = (
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
-    semantic_locator_tools, scheduler_tools, trigger_tools, hotkey_tools,
-    screen_record_tools, process_and_shell_tools, remote_desktop_tools,
-    gamepad_tools,
+    semantic_locator_tools, self_healing_tools, anchor_locator_tools,
+    ab_locator_tools, a11y_tree_tools, ocr_structure_tools,
+    smart_wait_tools, cost_telemetry_tools, failure_hook_tools,
+    computer_use_tools, dag_tools, presence_tools, chatops_tools,
+    webrunner_tools,
+    scheduler_tools, trigger_tools, hotkey_tools, screen_record_tools,
+    process_and_shell_tools, remote_desktop_tools, gamepad_tools,
 )
