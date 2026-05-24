@@ -70,7 +70,7 @@
 - **動作錄製與回放** — 錄製滑鼠/鍵盤事件並重新播放
 - **JSON 腳本執行** — 使用 JSON 動作檔案定義並執行自動化流程（支援 dry-run 與逐步除錯）
 - **排程器** — 以 interval 或 cron 表示式執行腳本，interval 與 cron job 可同時存在
-- **全域熱鍵** — 將 OS 熱鍵綁定到 action 腳本（目前為 Windows，macOS/Linux 保留擴充介面）
+- **全域熱鍵** — 跨平台綁定 OS 熱鍵到 action 腳本：Windows (`RegisterHotKey`)、macOS (`CGEventTap`，需 Accessibility 權限)、Linux X11 (`XGrabKey`，含 NumLock / CapsLock 變體遮罩)。Wayland 不支援。三個平台共用同一個 API；`backends/` 在 `start()` 時自動挑後端
 - **事件觸發器** — 偵測到影像出現、視窗出現、像素變化或檔案變動時自動執行腳本
 - **執行歷史** — 以 SQLite 紀錄 scheduler / triggers / hotkeys / REST 的執行結果；錯誤時自動附上截圖
 - **報告產生** — 將測試紀錄匯出為 HTML、JSON 或 XML 報告，包含成功/失敗狀態
@@ -949,9 +949,10 @@ ac.default_scheduler.start()
 
 ### 全域熱鍵
 
-將 OS 熱鍵綁定到 action JSON 腳本（Windows 後端；macOS / Linux 的
-`start()` 目前會拋出 `NotImplementedError`，介面已依 Strategy pattern
-預留）。
+將 OS 熱鍵綁定到 action JSON 腳本。跨平台 — Windows 用
+`RegisterHotKey`、macOS 用 `CGEventTap`（需要 Accessibility 權限）、
+Linux X11 用 `XGrabKey`（不支援 Wayland）。呼叫端三個平台一樣，
+daemon 在 `start()` 時自動挑後端。
 
 ```python
 from je_auto_control import default_hotkey_daemon

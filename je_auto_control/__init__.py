@@ -68,6 +68,15 @@ from je_auto_control.utils.llm import (
     LLMBackend, LLMNotAvailableError, LLMPlanError,
     plan_actions, run_from_description,
 )
+# Agent loop + production backends (headless)
+from je_auto_control.utils.agent.agent_loop import (
+    AgentBackend, AgentBudget, AgentLoop, AgentResult, AgentStep,
+    FakeAgentBackend, run_agent,
+)
+from je_auto_control.utils.agent.backends import (
+    AgentBackendError, AnthropicAgentBackend, ComputerUseAgentBackend,
+    OpenAIAgentBackend,
+)
 # Remote desktop (headless)
 from je_auto_control.utils.remote_desktop import (
     AuthenticationError as RemoteDesktopAuthError,
@@ -356,6 +365,11 @@ __all__ = [
     # LLM action planner
     "LLMBackend", "LLMNotAvailableError", "LLMPlanError",
     "plan_actions", "run_from_description",
+    # Agent loop + production backends
+    "AgentBackend", "AgentBudget", "AgentLoop", "AgentResult", "AgentStep",
+    "FakeAgentBackend", "run_agent",
+    "AgentBackendError", "AnthropicAgentBackend", "ComputerUseAgentBackend",
+    "OpenAIAgentBackend",
     # Remote desktop
     "RemoteDesktopHost", "RemoteDesktopViewer",
     "RemoteDesktopAuthError", "RemoteDesktopInputError",

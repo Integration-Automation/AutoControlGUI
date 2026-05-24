@@ -71,7 +71,7 @@
 - **Action Recording & Playback** — record mouse/keyboard events and replay them
 - **JSON-Based Action Scripting** — define and execute automation flows using JSON action files (dry-run + step debug)
 - **Scheduler** — run scripts on an interval or cron expression; jobs persist across restarts
-- **Global Hotkey Daemon** — bind OS-level hotkeys to action scripts (Windows today; macOS/Linux stubs in place)
+- **Global Hotkey Daemon** — bind OS-level hotkeys to action scripts on all three desktops: Windows (`RegisterHotKey`), macOS (`CGEventTap`, needs Accessibility permission), and Linux X11 (`XGrabKey` with NumLock / CapsLock variant masking). Wayland is not supported. Same `bind()` / `start()` API across platforms; the Strategy-pattern dispatch in `backends/` auto-picks the right backend at start time
 - **Event Triggers** — fire scripts when an image appears, a window opens, a pixel changes, or a file is modified
 - **Run History** — SQLite-backed run log across scheduler / triggers / hotkeys / REST with auto error-screenshot artifacts
 - **Report Generation** — export test records as HTML, JSON, or XML reports with success/failure status
@@ -1040,9 +1040,11 @@ Both flavours coexist; `job.is_cron` tells them apart.
 
 ### Global Hotkey Daemon
 
-Bind OS-level hotkeys to action JSON scripts (Windows backend today;
-macOS / Linux raise `NotImplementedError` on `start()` with Strategy-
-pattern seams in place).
+Bind OS-level hotkeys to action JSON scripts. Cross-platform — Windows
+uses `RegisterHotKey`, macOS uses `CGEventTap` (requires Accessibility
+permission), Linux X11 uses `XGrabKey` (Wayland not supported). The
+same call sites work everywhere; the daemon picks the backend at
+`start()` time.
 
 ```python
 from je_auto_control import default_hotkey_daemon

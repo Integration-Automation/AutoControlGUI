@@ -19,6 +19,9 @@ or the API key isn't configured.
 from je_auto_control.utils.agent.backends.anthropic import (
     AnthropicAgentBackend,
 )
+from je_auto_control.utils.agent.backends.anthropic_computer_use import (
+    ComputerUseAgentBackend,
+)
 from je_auto_control.utils.agent.backends.base import (
     AgentBackendError, build_default_system_prompt,
 )
@@ -27,6 +30,6 @@ from je_auto_control.utils.agent.backends.openai import (
 )
 
 __all__ = [
-    "AnthropicAgentBackend", "OpenAIAgentBackend",
+    "AnthropicAgentBackend", "ComputerUseAgentBackend", "OpenAIAgentBackend",
     "AgentBackendError", "build_default_system_prompt",
 ]
