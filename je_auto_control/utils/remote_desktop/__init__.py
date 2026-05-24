@@ -30,6 +30,11 @@ from je_auto_control.utils.remote_desktop.host_id import (
 from je_auto_control.utils.remote_desktop.input_dispatch import (
     InputDispatchError, dispatch_input,
 )
+from je_auto_control.utils.remote_desktop.presence import (
+    PresenceError, PresenceListener, PresenceRegistry,
+    ROLE_CONTROLLER, ROLE_OBSERVER, ViewerPresence,
+    default_presence_registry,
+)
 from je_auto_control.utils.remote_desktop.protocol import (
     AuthenticationError, MessageType, ProtocolError,
     decode_frame_header, encode_frame,
@@ -176,4 +181,7 @@ __all__ = [
     "is_audio_backend_available",
     "ClipboardSyncError",
     "FileReceiver", "FileSendResult", "FileTransferError", "send_file",
+    "PresenceError", "PresenceListener", "PresenceRegistry",
+    "ROLE_CONTROLLER", "ROLE_OBSERVER", "ViewerPresence",
+    "default_presence_registry",
 ]

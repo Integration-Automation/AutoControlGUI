@@ -36,6 +36,12 @@ glue between AutoControl's public API and your code.
 | [`16_secrets.py`](16_secrets.py) | Store and read credentials from the Fernet-encrypted secret vault. |
 | [`17_plugin_loading.py`](17_plugin_loading.py) | Load extra `AC_*` commands from an external plugin file. |
 
+## End-to-end pipeline
+
+| Script | What it shows |
+| --- | --- |
+| [`18_slack_daily_report.py`](18_slack_daily_report.py) | Full daily workflow: pull Slack messages → Anthropic summary → HTML/PDF report → SMTP email, on a cron schedule. Every external service degrades to a stub so the script always runs to completion. |
+
 ## Running
 
 Each script is standalone and uses only the package facade

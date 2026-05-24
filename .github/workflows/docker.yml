@@ -1,0 +1,110 @@
+name: AutoControl Docker CI
+
+on:
+  push:
+    branches: [ "dev", "main" ]
+    paths:
+      - "docker/**"
+      - "je_auto_control/**"
+      - "pyproject.toml"
+      - ".github/workflows/docker.yml"
+  pull_request:
+    branches: [ "dev", "main" ]
+    paths:
+      - "docker/**"
+      - "je_auto_control/**"
+      - "pyproject.toml"
+      - ".github/workflows/docker.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-image:
+    name: Build AutoControl container
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+
+      - name: Build image (no push)
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        with:
+          context: .
+          file: docker/Dockerfile
+          tags: autocontrol:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Image size
+        run: docker image inspect autocontrol:ci --format='size={{.Size}} bytes'
+
+  headless-tests:
+    name: Headless pytest inside the image
+    needs: build-image
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+
+      - name: Rebuild image (cached)
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        with:
+          context: .
+          file: docker/Dockerfile
+          tags: autocontrol:ci
+          load: true
+          cache-from: type=gha
+
+      # Mount the repo so pytest can read tests + write the artifact.
+      - name: Run headless tests under Xvfb
+        run: |
+          docker run --rm \
+            --user root \
+            -v "$PWD:/work" -w /work \
+            --entrypoint /bin/sh \
+            autocontrol:ci -c "
+              pip install --no-cache-dir -r dev_requirements.txt &&
+              xvfb-run -a -s '-screen 0 1280x800x24' \
+                python -m pytest test/unit_test/headless -q --tb=short
+            "
+
+      - name: Smoke test the entrypoint (rest mode)
+        run: |
+          # Run without --rm so a quick crash leaves the container in
+          # place for ``docker logs`` to inspect afterwards. Final
+          # ``docker rm -f`` cleans up regardless of exit state.
+          docker run -d --name ac-rest -p 9939:9939 \
+            -e AC_TOKEN=ci-token autocontrol:ci rest
+          ok=0
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS -H "Authorization: Bearer ci-token" \
+                http://127.0.0.1:9939/health; then
+              echo "REST API is up"
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          echo "::group::docker logs ac-rest"
+          docker logs ac-rest || true
+          echo "::endgroup::"
+          echo "::group::docker inspect (state)"
+          docker inspect --format '{{json .State}}' ac-rest || true
+          echo "::endgroup::"
+          docker rm -f ac-rest >/dev/null 2>&1 || true
+          if [ "$ok" -ne 1 ]; then
+            echo "REST health probe never succeeded" >&2
+            exit 1
+          fi

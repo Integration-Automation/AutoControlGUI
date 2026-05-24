@@ -54,3 +54,59 @@ def test_dockerignore_keeps_build_context_lean():
 def test_dockerfile_exposes_each_service_port(expected_port):
     raw = (_DOCKER_DIR / "Dockerfile").read_text(encoding="utf-8")
     assert expected_port in raw
+
+
+# --- XFCE variant ---------------------------------------------------
+
+def test_xfce_dockerfile_exists_and_includes_xfce_and_vnc():
+    raw = (_DOCKER_DIR / "Dockerfile.xfce").read_text(encoding="utf-8")
+    assert "FROM python:" in raw
+    assert "xfce4" in raw.lower()
+    assert "x11vnc" in raw
+    # Exposes the VNC port on top of the slim image's ports.
+    assert "5900" in raw
+    for port in ("9939", "9940", "8765"):
+        assert port in raw
+
+
+def test_xfce_entrypoint_starts_xvfb_xfce_vnc():
+    raw = (_DOCKER_DIR / "entrypoint-xfce.sh").read_text(encoding="utf-8")
+    for tool in ("Xvfb", "startxfce4", "x11vnc"):
+        assert tool in raw, f"xfce entrypoint missing {tool}"
+    for mode in ("rest", "remote-host", "signaling", "shell"):
+        assert f"\n    {mode})" in raw, \
+            f"xfce entrypoint missing case branch for {mode}"
+
+
+# --- CI templates ---------------------------------------------------
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def test_github_actions_docker_workflow_exists():
+    raw = (_REPO_ROOT / ".github" / "workflows" / "docker.yml").read_text(
+        encoding="utf-8",
+    )
+    assert "docker/setup-buildx-action" in raw
+    assert "autocontrol:ci" in raw
+    assert "headless-tests" in raw
+    # Workflow must execute pytest, not just build the image.
+    assert "pytest" in raw
+
+
+def test_gitlab_template_covers_build_test_smoke_stages():
+    raw = (_REPO_ROOT / "ci_templates" / ".gitlab-ci.yml").read_text(
+        encoding="utf-8",
+    )
+    for stage in ("build", "test", "smoke"):
+        assert stage in raw, f"gitlab template missing stage: {stage}"
+    assert "docker:24-dind" in raw
+    assert "pytest" in raw
+
+
+def test_docs_run_in_ci_page_exists_and_covers_both_pipelines():
+    raw = (_REPO_ROOT / "docs" / "source" / "getting_started" /
+           "run_in_ci.rst").read_text(encoding="utf-8")
+    for needle in ("GitHub Actions", "GitLab CI", "Kubernetes",
+                    "Dockerfile.xfce", "JE_AUTOCONTROL_LINUX_DISPLAY_SERVER"):
+        assert needle in raw, f"docs page missing section: {needle}"

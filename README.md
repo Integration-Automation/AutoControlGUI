@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-05)](#whats-new-2026-05)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Installation](#installation)
@@ -54,6 +55,49 @@
 
 ---
 
+## What's new (2026-05)
+
+Twenty-three additions covering smarter locators, deeper IDE / ops
+tooling, two new platforms, and fresh integrations. Each ships with a
+headless API, an `AC_*` executor command, an `ac_*` MCP tool, and
+(where it makes sense) a Qt GUI tab. Full reference page:
+[`docs/source/Eng/doc/new_features/v2_features_doc.rst`](docs/source/Eng/doc/new_features/v2_features_doc.rst).
+
+**Locator + selector intelligence**
+- **Self-healing locator** — `image_template → VLM` fallback with a JSON-lines audit log (`AC_self_heal_locate / _click`).
+- **Anchor-based locator** — find element B by spatial relation (`above`, `below`, `left_of`, `right_of`, `near`) to anchor A; anchor and target can use different backends (image / OCR / VLM / a11y).
+- **OCR with structured output** — cluster raw OCR matches into rows, tables, and `label:value` form fields (`AC_ocr_read_structure`).
+- **Smart waits** — `wait_until_screen_stable`, `wait_until_pixel_changes`, `wait_until_region_idle`: frame-diff replacements for `time.sleep`.
+- **A/B locator framework** — race N strategies for the same target; recommend the historically best one from a persisted ledger.
+
+**Operations + observability**
+- **LLM cost telemetry** — per-call token + USD log with day / model / provider rollup (`record_llm_call`, `summarise_llm_costs`).
+- **Trace replay UI** — scrubbable timeline over the existing time-travel recordings with per-step action list.
+- **Failure → ticket automation** — fan a failure report out to Jira / Linear / GitHub Issues when a scheduled / triggered / REST run fails.
+- **Container CI templates** — GitHub Actions + GitLab CI workflows that build the image, run the headless pytest suite under Xvfb, and smoke-test the REST entrypoint; XFCE+x11vnc Dockerfile variant for flows that need a real WM.
+- **Cross-host DAG orchestrator** — parallel execution with skip-on-failure cascade across local + admin-console-registered hosts (`run_dag`, `AC_run_dag`).
+- **Multi-viewer presence** — roster + controller/observer roles for the remote desktop, with a thread-safe Python `PresenceRegistry` independent of aiortc.
+
+**Agent + integrations**
+- **Computer-use high-level API** — `run_computer_use(goal, ...)` wraps `ComputerUseAgentBackend` + `AgentLoop`; auto-detects display size; bounded by `max_steps` / `wall_seconds`.
+- **WebRunner convenience commands** — `web_open` / `web_quit` / `web_screenshot` / `web_current_url` on top of the existing `je_web_runner` bridge; same surface exposed as `AC_web_*` and `ac_web_*`.
+- **Chat-ops bot** — transport-agnostic `CommandRouter` + polling Slack adapter. Built-in commands: `/help`, `/scripts`, `/run`, `/screenshot`, `/status`. RBAC via `required_role`.
+
+**Platform coverage**
+- **Wayland CLI backend** — `wtype` / `ydotool` / `grim` with `XDG_SESSION_TYPE` auto-detect and X11 (XWayland) fallback; override via `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11|wayland|auto`.
+- **Wayland libei native** — ctypes binding to `libei.so.*` for microsecond-latency input; opt-in via `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei|cli|auto`. Defaults to libei when loadable.
+- **macOS Accessibility deep-dive** — recursive `dump_accessibility_tree()` plus a polling `AccessibilityRecorder` for focus / bounds events.
+
+**Developer experience**
+- **autocontrol-lsp completion** — the language server now tracks `didOpen` / `didChange` / `didClose`, publishes diagnostics for invalid JSON and unknown `AC_*` commands, and provides signature help generated from the live executor table.
+- **`.pyi` stub generator** — `python -m je_auto_control.utils.stubs.generator je_auto_control/actions.pyi` emits an IDE-facing stub so every `AC_*` command autocompletes with parameter hints.
+- **VS Code extension** — bundled extension now ships `AutoControl: Run / Screenshot / Preview` commands that hit the local REST API.
+- **Browser extension recorder** — Manifest V3 extension under `browser-extension/`: capture clicks, typing, navigation, form submissions in a tab and export them as `AC_web_*` / `WR_*` JSON.
+- **pytest plugin + Gherkin BDD** — `pytest11` entry point auto-loads; `@pytest.mark.autocontrol` arms screenshot-on-failure; `bdd_steps.register_pytest_bdd_steps(pytest_bdd)` wires `Given/When/Then` onto every `AC_*` verb.
+- **Visual flow editor** — node-based view that round-trips to the same JSON action format the list-based Script Builder uses.
+
+---
+
 ## Features
 
 - **Mouse Automation** — move, click, press, release, drag, and scroll with precise coordinate control
@@ -71,7 +115,7 @@
 - **Action Recording & Playback** — record mouse/keyboard events and replay them
 - **JSON-Based Action Scripting** — define and execute automation flows using JSON action files (dry-run + step debug)
 - **Scheduler** — run scripts on an interval or cron expression; jobs persist across restarts
-- **Global Hotkey Daemon** — bind OS-level hotkeys to action scripts (Windows today; macOS/Linux stubs in place)
+- **Global Hotkey Daemon** — bind OS-level hotkeys to action scripts on all three desktops: Windows (`RegisterHotKey`), macOS (`CGEventTap`, needs Accessibility permission), and Linux X11 (`XGrabKey` with NumLock / CapsLock variant masking). Wayland hotkeys are still compositor-dependent (each session bus exposes a different shortcut portal); a Wayland session can still drive AutoControl via the new Wayland input backend (see [What's new (2026-05)](#whats-new-2026-05)). Same `bind()` / `start()` API across platforms; the Strategy-pattern dispatch in `backends/` auto-picks the right backend at start time
 - **Event Triggers** — fire scripts when an image appears, a window opens, a pixel changes, or a file is modified
 - **Run History** — SQLite-backed run log across scheduler / triggers / hotkeys / REST with auto error-screenshot artifacts
 - **Report Generation** — export test records as HTML, JSON, or XML reports with success/failure status
@@ -1040,9 +1084,11 @@ Both flavours coexist; `job.is_cron` tells them apart.
 
 ### Global Hotkey Daemon
 
-Bind OS-level hotkeys to action JSON scripts (Windows backend today;
-macOS / Linux raise `NotImplementedError` on `start()` with Strategy-
-pattern seams in place).
+Bind OS-level hotkeys to action JSON scripts. Cross-platform — Windows
+uses `RegisterHotKey`, macOS uses `CGEventTap` (requires Accessibility
+permission), Linux X11 uses `XGrabKey` (Wayland not supported). The
+same call sites work everywhere; the daemon picks the backend at
+`start()` time.
 
 ```python
 from je_auto_control import default_hotkey_daemon

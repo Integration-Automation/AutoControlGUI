@@ -39,6 +39,9 @@ classifiers = [
 [project.scripts]
 je_auto_control_mcp = "je_auto_control.utils.mcp_server.__main__:main"
 
+[project.entry-points.pytest11]
+je_auto_control = "je_auto_control.utils.pytest_plugin.plugin"
+
 [project.urls]
 Homepage = "https://github.com/Intergration-Automation-Testing/AutoControl"
 Documentation = "https://autocontrol.readthedocs.io/en/latest/"

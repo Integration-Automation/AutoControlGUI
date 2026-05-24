@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-05)](#本次更新-2026-05)
 - [功能特性](#功能特性)
 - [架构](#架构)
 - [安装](#安装)
@@ -53,6 +54,49 @@
 
 ---
 
+## 本次更新 (2026-05)
+
+新增 23 个功能，覆盖更聪明的定位器、更深的 IDE / 运维工具、两个新平台后端，
+以及几个新集成。每个功能都遵循框架既有模式：headless Python API、
+`AC_*` executor 命令、`ac_*` MCP 工具，以及（适用时）Qt GUI 选项卡。
+完整参考页面：
+[`docs/source/Zh/doc/new_features/v2_features_doc.rst`](../docs/source/Zh/doc/new_features/v2_features_doc.rst)。
+
+**定位器与选择器智能化**
+- **自愈定位器** — `image_template → VLM` 后备并写入 JSON-lines 审计记录（`AC_self_heal_locate / _click`）。
+- **锚点定位器** — 按空间关系（`above` / `below` / `left_of` / `right_of` / `near`）找到目标；锚点与目标可使用不同 backend（image / OCR / VLM / a11y）。
+- **结构化 OCR** — 将原始 OCR match 聚合为 rows、tables、`label:value` 表单字段（`AC_ocr_read_structure`）。
+- **智能等待** — `wait_until_screen_stable`、`wait_until_pixel_changes`、`wait_until_region_idle`：用 frame-diff 取代 `time.sleep`。
+- **A/B 定位器框架** — 并行跑 N 个策略，依持久化的历史成绩推荐最佳。
+
+**运维与可观测性**
+- **LLM 成本遥测** — 每次调用的 token / USD 记录，按天 / 模型 / 提供方汇总（`record_llm_call`、`summarise_llm_costs`）。
+- **追踪回放 UI** — 在现有 time-travel 录像上拖动时间轴并逐步显示动作。
+- **失败 → 工单自动化** — 调度器／触发器／REST 任务失败时自动分发 Jira / Linear / GitHub Issues。
+- **容器化 CI 模板** — GitHub Actions + GitLab CI workflow：构建镜像、跑 headless pytest（Xvfb 容器内）、smoke-test REST entrypoint；另含 XFCE+x11vnc Dockerfile 变体。
+- **跨主机 DAG 编排** — 跨 local + admin-console 已注册主机并行执行，失败时下游 cascade 为 `skipped`（`run_dag`、`AC_run_dag`）。
+- **多 viewer 名单** — 为远程桌面提供控制者 / 观察者角色，纯 Python `PresenceRegistry` 独立于 aiortc。
+
+**代理与集成**
+- **Computer-use 高阶 API** — `run_computer_use(goal, ...)` 封装 `ComputerUseAgentBackend` + `AgentLoop`；自动检测屏幕大小；以 `max_steps` / `wall_seconds` 为预算。
+- **WebRunner 便利命令** — 在既有 `je_web_runner` 桥接之上的 `web_open` / `web_quit` / `web_screenshot` / `web_current_url`；同步以 `AC_web_*`、`ac_web_*` 暴露。
+- **Chat-ops 机器人** — 传输层中立的 `CommandRouter` + Slack polling adapter。内置命令：`/help`、`/scripts`、`/run`、`/screenshot`、`/status`。RBAC 通过 `required_role`。
+
+**平台覆盖**
+- **Wayland CLI 后端** — `wtype` / `ydotool` / `grim`，按 `XDG_SESSION_TYPE` 自动检测，CLI 工具未装时回退到 X11 (XWayland)；可用 `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11|wayland|auto` 覆盖。
+- **Wayland libei 原生后端** — 对 `libei.so.*` 的 ctypes 绑定，绕过 CLI shim 取得微秒级延迟；以 `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei|cli|auto` 启用，默认在 libei 可加载时用 libei。
+- **macOS Accessibility 强化** — 递归 `dump_accessibility_tree()` 与 polling `AccessibilityRecorder`，捕捉 focus / bounds 事件。
+
+**开发者体验**
+- **autocontrol-lsp 完整化** — 追踪 `didOpen` / `didChange` / `didClose`、发布 JSON 与未知 `AC_*` 命令的 diagnostics、由即时的 executor 表生成 signature help。
+- **`.pyi` stub 生成器** — `python -m je_auto_control.utils.stubs.generator je_auto_control/actions.pyi` 写出 IDE 端 stub 文件，所有 `AC_*` 命令在 IDE 内可 autocomplete 并显示参数提示。
+- **VS Code 扩展** — 内置扩展新增 `AutoControl: Run / Screenshot / Preview` 命令，直接打本机 REST API。
+- **浏览器扩展录制器** — `browser-extension/` 下的 Manifest V3 扩展：捕捉标签页的点击、输入、导航与表单提交，导出为 `AC_web_*` / `WR_*` JSON。
+- **pytest plugin + Gherkin BDD** — `pytest11` entry point 自动加载；`@pytest.mark.autocontrol` 开启失败自动截屏；`bdd_steps.register_pytest_bdd_steps(pytest_bdd)` 一次把 `Given/When/Then` 对应到每一个 `AC_*` verb。
+- **可视化流程编辑器** — node-based 视图与既有 list-based Script Builder 使用同一份 JSON 格式，互相兼容。
+
+---
+
 ## 功能特性
 
 - **鼠标自动化** — 移动、点击、按下、释放、拖拽、滚动，支持精确坐标控制
@@ -70,7 +114,7 @@
 - **动作录制与回放** — 录制鼠标/键盘事件并重新播放
 - **JSON 脚本执行** — 使用 JSON 动作文件定义并执行自动化流程（支持 dry-run 与逐步调试）
 - **调度器** — 以 interval 或 cron 表达式执行脚本，两类调度可同时存在
-- **全局热键** — 将 OS 热键绑定到 action 脚本（当前支持 Windows，macOS/Linux 保留扩展接口）
+- **全局热键** — 跨平台绑定 OS 热键到 action 脚本：Windows (`RegisterHotKey`)、macOS (`CGEventTap`，需 Accessibility 权限)、Linux X11 (`XGrabKey`，含 NumLock / CapsLock 变体掩码)。Wayland 不支持。三个平台共享同一个 API；`backends/` 在 `start()` 时自动挑后端
 - **事件触发器** — 检测到图像出现、窗口出现、像素变化或文件变动时自动执行脚本
 - **执行历史** — 使用 SQLite 记录 scheduler / triggers / hotkeys / REST 的执行结果；错误时自动附带截图
 - **报告生成** — 将测试记录导出为 HTML、JSON 或 XML 报告，包含成功/失败状态
@@ -949,9 +993,10 @@ ac.default_scheduler.start()
 
 ### 全局热键
 
-将 OS 热键绑定到 action JSON 脚本（Windows 后端；macOS / Linux 的
-`start()` 目前会抛出 `NotImplementedError`，接口已按 Strategy pattern
-保留）。
+将 OS 热键绑定到 action JSON 脚本。跨平台 — Windows 用
+`RegisterHotKey`、macOS 用 `CGEventTap`（需要 Accessibility 权限）、
+Linux X11 用 `XGrabKey`（不支持 Wayland）。三个平台同一个 API；daemon
+在 `start()` 时自动挑后端。
 
 ```python
 from je_auto_control import default_hotkey_daemon

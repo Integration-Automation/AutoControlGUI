@@ -42,12 +42,24 @@ from je_auto_control.utils.executor.action_executor import executor
 # Accessibility (headless)
 from je_auto_control.utils.accessibility import (
     AccessibilityElement, AccessibilityNotAvailableError,
-    click_accessibility_element, find_accessibility_element,
-    list_accessibility_elements,
+    AccessibilityRecorder, AXRecorderEvent, AXTreeNode,
+    click_accessibility_element, dump_accessibility_tree,
+    find_accessibility_element, list_accessibility_elements,
 )
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
+)
+# Self-healing locator (image template first, VLM fallback, audit log)
+from je_auto_control.utils.self_healing import (
+    HealEvent, HealEventLog, HealOutcome, SelfHealError,
+    default_heal_log, self_heal_click, self_heal_locate,
+)
+# WebRunner bridge (headless: optional je_web_runner dependency)
+from je_auto_control.utils.webrunner_bridge import (
+    WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
+    run_webrunner_action, run_webrunner_actions,
+    web_current_url, web_open, web_quit, web_screenshot,
 )
 # Clipboard (headless)
 from je_auto_control.utils.clipboard.clipboard import (
@@ -67,6 +79,66 @@ from je_auto_control.utils.ocr.ocr_engine import (
 from je_auto_control.utils.llm import (
     LLMBackend, LLMNotAvailableError, LLMPlanError,
     plan_actions, run_from_description,
+)
+# Agent loop + production backends (headless)
+from je_auto_control.utils.agent.agent_loop import (
+    AgentBackend, AgentBudget, AgentLoop, AgentResult, AgentStep,
+    FakeAgentBackend, run_agent,
+)
+from je_auto_control.utils.agent.backends import (
+    AgentBackendError, AnthropicAgentBackend, ComputerUseAgentBackend,
+    OpenAIAgentBackend,
+)
+from je_auto_control.utils.agent.computer_use import (
+    result_to_dict as computer_use_result_to_dict,
+    run_computer_use,
+)
+# Cross-host DAG orchestrator
+from je_auto_control.utils.dag import (
+    DagDefinition, DagDefinitionError, DagNode, DagRunResult,
+    NodeResult, parse_dag, run_dag,
+)
+# Remote-desktop presence (multi-viewer roster + roles)
+from je_auto_control.utils.remote_desktop.presence import (
+    PresenceError, PresenceRegistry, ROLE_CONTROLLER, ROLE_OBSERVER,
+    ViewerPresence, default_presence_registry,
+)
+# Chat-ops bot (Slack / generic command router)
+from je_auto_control.utils.chatops import (
+    ChatOpsError, CommandResult, CommandRouter, SlackBot, SlackError,
+    make_default_slack_bot, register_chatops_default_commands,
+)
+# Anchor-based locators (spatial composition of locator backends)
+from je_auto_control.utils.anchor_locator import (
+    AnchorLocatorError, AnchorOutcome, Locator as AnchorLocator,
+    a11y_locator, anchor_locate, image_locator, ocr_locator,
+    vlm_locator,
+)
+# Structured OCR (rows / tables / form fields)
+from je_auto_control.utils.ocr.structure import (
+    OCRField, OCRRow, OCRTable, StructuredOCR,
+    cluster_matches as ocr_cluster_matches,
+    read_structure as ocr_read_structure,
+)
+# Smart waits (frame-diff replacements for time.sleep)
+from je_auto_control.utils.smart_waits import (
+    WaitOutcome, wait_until_pixel_changes, wait_until_region_idle,
+    wait_until_screen_stable,
+)
+# Cost telemetry (per-LLM-call token + USD tracking)
+from je_auto_control.utils.cost_telemetry import (
+    CostEvent, CostSummary, default_cost_store, estimate_llm_usd,
+    record_llm_call, summarise_llm_costs,
+)
+# Failure → ticket automation (Jira / Linear / GitHub fan-out)
+from je_auto_control.utils.failure_hooks import (
+    FailureHookManager, FailureReport, GitHubBackend, JiraBackend,
+    LinearBackend, TicketResult, default_failure_hook_manager,
+)
+# A/B locator framework (race N strategies, recommend best)
+from je_auto_control.utils.ab_locator import (
+    ABRunOutcome, ab_best_strategy, ab_locate, ab_report_for,
+    default_ab_store,
 )
 # Remote desktop (headless)
 from je_auto_control.utils.remote_desktop import (
@@ -220,8 +292,6 @@ from je_auto_control.utils.start_exe.start_another_process import start_exe
 # test record
 from je_auto_control.utils.test_record.record_test_class import \
     test_record_instance
-# Windows
-from je_auto_control.windows.window import windows_window_manage
 from je_auto_control.wrapper.auto_control_image import locate_all_image
 from je_auto_control.wrapper.auto_control_image import locate_and_click
 from je_auto_control.wrapper.auto_control_image import locate_image_center
@@ -258,6 +328,15 @@ from je_auto_control.wrapper.auto_control_window import (
     close_window_by_title, find_window, focus_window, list_windows,
     show_window_by_title, wait_for_window,
 )
+# Windows-only modules (ctypes.WINFUNCTYPE / Win32 API) — gated so
+# ``import je_auto_control`` keeps working on macOS / Linux. Kept last
+# so every preceding statement is a plain top-level import (ruff E402).
+import sys as _sys_for_platform_check  # noqa: E402
+if _sys_for_platform_check.platform in ("win32", "cygwin", "msys"):
+    from je_auto_control.windows.window import windows_window_manage  # noqa: E402
+else:
+    windows_window_manage = None  # type: ignore[assignment]
+del _sys_for_platform_check
 
 
 def start_autocontrol_gui(*args, **kwargs):
@@ -349,13 +428,58 @@ __all__ = [
     "HistoryStore", "RunRecord", "default_history_store",
     # Accessibility
     "AccessibilityElement", "AccessibilityNotAvailableError",
-    "list_accessibility_elements", "find_accessibility_element",
-    "click_accessibility_element",
+    "AccessibilityRecorder", "AXRecorderEvent", "AXTreeNode",
+    "click_accessibility_element", "dump_accessibility_tree",
+    "find_accessibility_element", "list_accessibility_elements",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     # LLM action planner
     "LLMBackend", "LLMNotAvailableError", "LLMPlanError",
     "plan_actions", "run_from_description",
+    # Agent loop + production backends
+    "AgentBackend", "AgentBudget", "AgentLoop", "AgentResult", "AgentStep",
+    "FakeAgentBackend", "run_agent",
+    "AgentBackendError", "AnthropicAgentBackend", "ComputerUseAgentBackend",
+    "OpenAIAgentBackend",
+    "run_computer_use", "computer_use_result_to_dict",
+    # DAG orchestrator
+    "DagDefinition", "DagDefinitionError", "DagNode", "DagRunResult",
+    "NodeResult", "parse_dag", "run_dag",
+    # Multi-viewer presence
+    "PresenceError", "PresenceRegistry", "ROLE_CONTROLLER",
+    "ROLE_OBSERVER", "ViewerPresence", "default_presence_registry",
+    # Chat-ops bot
+    "ChatOpsError", "CommandResult", "CommandRouter", "SlackBot",
+    "SlackError", "make_default_slack_bot",
+    "register_chatops_default_commands",
+    # Anchor-based locator
+    "AnchorLocator", "AnchorLocatorError", "AnchorOutcome",
+    "a11y_locator", "anchor_locate", "image_locator", "ocr_locator",
+    "vlm_locator",
+    # Structured OCR
+    "OCRField", "OCRRow", "OCRTable", "StructuredOCR",
+    "ocr_cluster_matches", "ocr_read_structure",
+    # Smart waits
+    "WaitOutcome", "wait_until_pixel_changes",
+    "wait_until_region_idle", "wait_until_screen_stable",
+    # Cost telemetry
+    "CostEvent", "CostSummary", "default_cost_store",
+    "estimate_llm_usd", "record_llm_call", "summarise_llm_costs",
+    # Failure → ticket
+    "FailureHookManager", "FailureReport", "GitHubBackend",
+    "JiraBackend", "LinearBackend", "TicketResult",
+    "default_failure_hook_manager",
+    # A/B locator framework
+    "ABRunOutcome", "ab_best_strategy", "ab_locate",
+    "ab_report_for", "default_ab_store",
+    # Self-healing locator (image → VLM fallback)
+    "HealEvent", "HealEventLog", "HealOutcome", "SelfHealError",
+    "default_heal_log", "self_heal_click", "self_heal_locate",
+    # WebRunner bridge (browser automation via je_web_runner)
+    "WebRunnerBridgeError", "is_webrunner_available",
+    "list_webrunner_commands", "run_webrunner_action",
+    "run_webrunner_actions", "web_current_url", "web_open",
+    "web_quit", "web_screenshot",
     # Remote desktop
     "RemoteDesktopHost", "RemoteDesktopViewer",
     "RemoteDesktopAuthError", "RemoteDesktopInputError",

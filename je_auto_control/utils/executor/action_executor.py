@@ -12,6 +12,11 @@ from je_auto_control.utils.exception.exceptions import (
 from je_auto_control.utils.accessibility.accessibility_api import (
     click_accessibility_element, find_accessibility_element,
 )
+from je_auto_control.utils.self_healing import (
+    default_heal_log,
+    self_heal_click as _self_heal_click_impl,
+    self_heal_locate as _self_heal_locate_impl,
+)
 from je_auto_control.utils.vision.vlm_api import (
     click_by_description, locate_by_description,
 )
@@ -110,6 +115,386 @@ def _vlm_locate_as_list(description: str,
         description, screen_region=screen_region, model=model,
     )
     return None if coords is None else [coords[0], coords[1]]
+
+
+def _self_heal_locate(template_path: Optional[str] = None,
+                      description: Optional[str] = None,
+                      detect_threshold: float = 0.9,
+                      screen_region: Optional[List[int]] = None,
+                      model: Optional[str] = None,
+                      raise_on_miss: bool = False) -> Dict[str, Any]:
+    """Executor adapter: template-first locate with VLM fallback."""
+    outcome = _self_heal_locate_impl(
+        template_path=template_path, description=description,
+        detect_threshold=float(detect_threshold),
+        screen_region=screen_region, model=model,
+        raise_on_miss=bool(raise_on_miss),
+    )
+    return outcome.to_dict()
+
+
+def _self_heal_click(template_path: Optional[str] = None,
+                     description: Optional[str] = None,
+                     mouse_keycode: str = "mouse_left",
+                     detect_threshold: float = 0.9,
+                     screen_region: Optional[List[int]] = None,
+                     model: Optional[str] = None,
+                     raise_on_miss: bool = False) -> Dict[str, Any]:
+    """Executor adapter: locate with self-heal, then click."""
+    outcome = _self_heal_click_impl(
+        template_path=template_path, description=description,
+        mouse_keycode=mouse_keycode,
+        detect_threshold=float(detect_threshold),
+        screen_region=screen_region, model=model,
+        raise_on_miss=bool(raise_on_miss),
+    )
+    return outcome.to_dict()
+
+
+def _self_heal_log_list(limit: int = 50) -> List[Dict[str, Any]]:
+    """Executor adapter: return the recent self-healing events."""
+    return [event.to_dict()
+            for event in default_heal_log.list_events(limit=int(limit))]
+
+
+def _self_heal_log_clear() -> Dict[str, Any]:
+    default_heal_log.clear()
+    return {"cleared": True, "path": str(default_heal_log.path)}
+
+
+def _run_dag(definition: Dict[str, Any],
+             max_parallel: int = 4) -> Dict[str, Any]:
+    """Executor adapter: run a cross-host DAG definition."""
+    from je_auto_control.utils.dag import run_dag
+    return run_dag(definition, max_parallel=int(max_parallel)).to_dict()
+
+
+_AX_RECORDER_SINGLETON = None
+
+
+def _a11y_dump(app_name: Optional[str] = None,
+                max_results: int = 500) -> Dict[str, Any]:
+    """Executor adapter: dump the accessibility tree as nested dict."""
+    from je_auto_control.utils.accessibility import dump_accessibility_tree
+    return dump_accessibility_tree(
+        app_name=app_name, max_results=int(max_results),
+    ).to_dict()
+
+
+def _a11y_record_start(app_name: Optional[str] = None,
+                        poll_interval_s: float = 0.25,
+                        min_movement_px: int = 8) -> Dict[str, Any]:
+    """Executor adapter: start the singleton accessibility recorder."""
+    from je_auto_control.utils.accessibility import AccessibilityRecorder
+    global _AX_RECORDER_SINGLETON
+    if (_AX_RECORDER_SINGLETON is not None
+            and _AX_RECORDER_SINGLETON.is_running):
+        return {"running": True, "already": True}
+    _AX_RECORDER_SINGLETON = AccessibilityRecorder(
+        app_name=app_name,
+        poll_interval_s=float(poll_interval_s),
+        min_movement_px=int(min_movement_px),
+    )
+    _AX_RECORDER_SINGLETON.start()
+    return {"running": True, "already": False}
+
+
+def _a11y_record_stop() -> List[Dict[str, Any]]:
+    """Executor adapter: stop the recorder and return the captured events."""
+    global _AX_RECORDER_SINGLETON
+    if _AX_RECORDER_SINGLETON is None:
+        return []
+    events = _AX_RECORDER_SINGLETON.stop()
+    _AX_RECORDER_SINGLETON = None
+    return [event.to_dict() for event in events]
+
+
+def _a11y_record_events() -> List[Dict[str, Any]]:
+    """Executor adapter: peek at events without stopping the recorder."""
+    if _AX_RECORDER_SINGLETON is None:
+        return []
+    return [event.to_dict() for event in _AX_RECORDER_SINGLETON.events()]
+
+
+def _ab_locate(target_id: str,
+               strategies: Dict[str, Dict[str, Any]],
+               max_parallel: int = 4,
+               record: bool = True) -> Dict[str, Any]:
+    """Executor adapter: race N locator strategies for the same target."""
+    from je_auto_control.utils.ab_locator import ab_locate
+    from je_auto_control.utils.anchor_locator import (
+        Locator as AnchorLocator,
+    )
+    locators = {name: AnchorLocator(**spec)
+                for name, spec in strategies.items()}
+    return ab_locate(
+        target_id=target_id, strategies=locators,
+        max_parallel=int(max_parallel), record=bool(record),
+    ).to_dict()
+
+
+def _ab_report(target_id: str) -> Dict[str, Any]:
+    from je_auto_control.utils.ab_locator import ab_report_for
+    return ab_report_for(target_id).to_dict()
+
+
+def _ab_best_strategy(target_id: str) -> Dict[str, Any]:
+    from je_auto_control.utils.ab_locator import ab_best_strategy
+    return {"target_id": target_id,
+            "strategy": ab_best_strategy(target_id)}
+
+
+def _ab_clear() -> Dict[str, Any]:
+    from je_auto_control.utils.ab_locator import default_ab_store
+    default_ab_store.clear()
+    return {"cleared": True}
+
+
+def _failure_hook_fire(source: str, source_id: str,
+                       error_text: str = "",
+                       script_path: Optional[str] = None,
+                       screenshot_path: Optional[str] = None,
+                       log_tail: str = "",
+                       metadata: Optional[Dict[str, Any]] = None,
+                       ) -> List[Dict[str, Any]]:
+    """Executor adapter: file a ticket through every registered backend."""
+    from je_auto_control.utils.failure_hooks import (
+        FailureReport, default_failure_hook_manager,
+    )
+    report = FailureReport(
+        source=source, source_id=source_id, error_text=error_text,
+        script_path=script_path, screenshot_path=screenshot_path,
+        log_tail=log_tail, metadata=dict(metadata or {}),
+    )
+    return [result.to_dict()
+            for result in default_failure_hook_manager.fire(report)]
+
+
+def _failure_hook_list() -> List[Dict[str, Any]]:
+    from je_auto_control.utils.failure_hooks import default_failure_hook_manager
+    return default_failure_hook_manager.list_backends()
+
+
+def _failure_hook_clear() -> Dict[str, Any]:
+    from je_auto_control.utils.failure_hooks import default_failure_hook_manager
+    default_failure_hook_manager.clear()
+    return {"cleared": True}
+
+
+def _costs_record(provider: str, model: str,
+                  input_tokens: int, output_tokens: int,
+                  label: Optional[str] = None,
+                  run_id: Optional[str] = None,
+                  user: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: append one LLM call to the cost-telemetry log."""
+    from je_auto_control.utils.cost_telemetry import record_llm_call
+    event = record_llm_call(
+        provider=provider, model=model,
+        input_tokens=int(input_tokens),
+        output_tokens=int(output_tokens),
+        label=label, run_id=run_id, user=user,
+    )
+    return event.to_dict()
+
+
+def _costs_summary(limit: int = 10000) -> Dict[str, Any]:
+    """Executor adapter: aggregate cost events by model / provider / day."""
+    from je_auto_control.utils.cost_telemetry import (
+        default_cost_store, summarise_llm_costs,
+    )
+    events = default_cost_store.list_events(limit=int(limit))
+    return summarise_llm_costs(events).to_dict()
+
+
+def _costs_list(limit: int = 100) -> List[Dict[str, Any]]:
+    from je_auto_control.utils.cost_telemetry import default_cost_store
+    return [event.to_dict()
+            for event in default_cost_store.list_events(limit=int(limit))]
+
+
+def _costs_clear() -> Dict[str, Any]:
+    from je_auto_control.utils.cost_telemetry import default_cost_store
+    default_cost_store.clear()
+    return {"cleared": True, "path": str(default_cost_store.path)}
+
+
+def _wait_screen_stable(region: Optional[List[int]] = None,
+                        timeout_s: float = 10.0,
+                        poll_interval_s: float = 0.2,
+                        stable_for_s: float = 0.5,
+                        max_pixel_diff: int = 0) -> Dict[str, Any]:
+    """Executor adapter: smart wait for the screen to stop moving."""
+    from je_auto_control.utils.smart_waits import wait_until_screen_stable
+    return wait_until_screen_stable(
+        region=region, timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        stable_for_s=float(stable_for_s),
+        max_pixel_diff=int(max_pixel_diff),
+    ).to_dict()
+
+
+def _wait_pixel_changes(x: int, y: int,
+                         timeout_s: float = 10.0,
+                         poll_interval_s: float = 0.1,
+                         rgb_tolerance: int = 5) -> Dict[str, Any]:
+    """Executor adapter: smart wait for one pixel to change colour."""
+    from je_auto_control.utils.smart_waits import wait_until_pixel_changes
+    return wait_until_pixel_changes(
+        x=int(x), y=int(y),
+        timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        rgb_tolerance=int(rgb_tolerance),
+    ).to_dict()
+
+
+def _wait_region_idle(region: List[int],
+                      timeout_s: float = 10.0,
+                      poll_interval_s: float = 0.2,
+                      stable_for_s: float = 0.5,
+                      max_pixel_diff: int = 0) -> Dict[str, Any]:
+    """Executor adapter: smart wait for a sub-region to stop moving."""
+    from je_auto_control.utils.smart_waits import wait_until_region_idle
+    return wait_until_region_idle(
+        region=region, timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        stable_for_s=float(stable_for_s),
+        max_pixel_diff=int(max_pixel_diff),
+    ).to_dict()
+
+
+def _ocr_read_structure(region: Optional[List[int]] = None,
+                        lang: str = "eng",
+                        min_confidence: float = 60.0,
+                        ) -> Dict[str, Any]:
+    """Executor adapter: structured OCR (rows / tables / form fields)."""
+    from je_auto_control.utils.ocr.structure import read_structure
+    structured = read_structure(
+        region=region, lang=lang,
+        min_confidence=float(min_confidence),
+    )
+    return structured.to_dict()
+
+
+def _anchor_locate(anchor: Dict[str, Any], target: Dict[str, Any],
+                   relation: str = "near",
+                   max_distance_px: float = 200.0) -> Dict[str, Any]:
+    """Executor adapter: anchor-based spatial locator."""
+    from je_auto_control.utils.anchor_locator import (
+        Locator, anchor_locate,
+    )
+    anchor_loc = Locator(**anchor)
+    target_loc = Locator(**target)
+    outcome = anchor_locate(
+        anchor=anchor_loc, target=target_loc,
+        relation=relation, max_distance_px=float(max_distance_px),
+    )
+    return outcome.to_dict()
+
+
+def _anchor_click(anchor: Dict[str, Any], target: Dict[str, Any],
+                  mouse_keycode: str = "mouse_left",
+                  relation: str = "near",
+                  max_distance_px: float = 200.0) -> Dict[str, Any]:
+    """Executor adapter: anchor-locate + click."""
+    outcome = _anchor_locate(anchor, target, relation, max_distance_px)
+    if outcome.get("found") and outcome.get("target_coords"):
+        cx, cy = outcome["target_coords"]
+        from je_auto_control.wrapper.auto_control_mouse import (
+            click_mouse, set_mouse_position,
+        )
+        set_mouse_position(int(cx), int(cy))
+        click_mouse(mouse_keycode, int(cx), int(cy))
+    return outcome
+
+
+def _chatops_dispatch(message: str,
+                      context: Optional[Dict[str, Any]] = None,
+                      script_root: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: route one chat message through the default router."""
+    from je_auto_control.utils.chatops import (
+        CommandRouter, register_chatops_default_commands,
+    )
+    router = CommandRouter()
+    register_chatops_default_commands(router)
+    merged_context: Dict[str, Any] = dict(context or {})
+    if script_root is not None:
+        merged_context.setdefault("script_root", script_root)
+    result = router.dispatch(message, context=merged_context)
+    return {"matched": False} if result is None else {
+        "matched": True, **result.to_dict(),
+    }
+
+
+def _presence_register(viewer_id: str, label: str = "",
+                       role: str = "observer") -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.presence import (
+        default_presence_registry,
+    )
+    return default_presence_registry().register(
+        viewer_id, label, role=role,
+    ).to_dict()
+
+
+def _presence_unregister(viewer_id: str) -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.presence import (
+        default_presence_registry,
+    )
+    removed = default_presence_registry().unregister(viewer_id)
+    return {"viewer_id": viewer_id, "removed": removed}
+
+
+def _presence_update_cursor(viewer_id: str, x: int, y: int) -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.presence import (
+        default_presence_registry,
+    )
+    return default_presence_registry().update_cursor(
+        viewer_id, int(x), int(y),
+    ).to_dict()
+
+
+def _presence_set_role(viewer_id: str, role: str) -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.presence import (
+        default_presence_registry,
+    )
+    return default_presence_registry().update_role(viewer_id, role).to_dict()
+
+
+def _presence_list() -> List[Dict[str, Any]]:
+    from je_auto_control.utils.remote_desktop.presence import (
+        default_presence_registry,
+    )
+    return [row.to_dict() for row in default_presence_registry().list()]
+
+
+def _presence_clear() -> Dict[str, Any]:
+    from je_auto_control.utils.remote_desktop.presence import (
+        default_presence_registry,
+    )
+    default_presence_registry().clear()
+    return {"cleared": True}
+
+
+def _computer_use(goal: str,
+                  display_width_px: Optional[int] = None,
+                  display_height_px: Optional[int] = None,
+                  display_number: Optional[int] = None,
+                  max_steps: int = 25,
+                  wall_seconds: float = 300.0,
+                  model: str = "claude-opus-4-7",
+                  max_tokens: int = 1024) -> Dict[str, Any]:
+    """Executor adapter: run Anthropic Computer-Use to achieve ``goal``."""
+    from je_auto_control.utils.agent.computer_use import (
+        result_to_dict, run_computer_use,
+    )
+    result = run_computer_use(
+        goal,
+        display_width_px=display_width_px,
+        display_height_px=display_height_px,
+        display_number=display_number,
+        max_steps=int(max_steps), wall_seconds=float(wall_seconds),
+        model=model, max_tokens=int(max_tokens),
+    )
+    return result_to_dict(result)
 
 
 def _remote_start_host(token: str,
@@ -501,6 +886,31 @@ def _ac_web_list_commands() -> list:
     """Return every WR_* command the local WebRunner install exposes."""
     from je_auto_control.utils.webrunner_bridge import list_webrunner_commands
     return list_webrunner_commands()
+
+
+def _ac_web_open(url: str, browser: str = "chrome",
+                 **driver_kwargs: Any) -> Any:
+    """Convenience executor: start a browser then navigate to ``url``."""
+    from je_auto_control.utils.webrunner_bridge import web_open
+    return web_open(url, browser=browser, **driver_kwargs)
+
+
+def _ac_web_quit() -> Any:
+    """Convenience executor: tear down WebRunner driver sessions."""
+    from je_auto_control.utils.webrunner_bridge import web_quit
+    return web_quit()
+
+
+def _ac_web_screenshot(file_path: str) -> Any:
+    """Convenience executor: save a screenshot of the active browser."""
+    from je_auto_control.utils.webrunner_bridge import web_screenshot
+    return web_screenshot(file_path)
+
+
+def _ac_web_current_url() -> Any:
+    """Convenience executor: return the active browser tab's URL."""
+    from je_auto_control.utils.webrunner_bridge import web_current_url
+    return web_current_url()
 
 
 # --- Android via ADB (Phase 9.7) ---------------------------------------
@@ -1050,10 +1460,66 @@ class Executor:
             "AC_a11y_list": _a11y_list_as_dicts,
             "AC_a11y_find": _a11y_find_as_dict,
             "AC_a11y_click": click_accessibility_element,
+            "AC_a11y_dump": _a11y_dump,
+            "AC_a11y_record_start": _a11y_record_start,
+            "AC_a11y_record_stop": _a11y_record_stop,
+            "AC_a11y_record_events": _a11y_record_events,
 
             # VLM-based element locator
             "AC_vlm_locate": _vlm_locate_as_list,
             "AC_vlm_click": click_by_description,
+
+            # Self-healing locator (template-first, VLM fallback, audit log)
+            "AC_self_heal_locate": _self_heal_locate,
+            "AC_self_heal_click": _self_heal_click,
+            "AC_self_heal_log_list": _self_heal_log_list,
+            "AC_self_heal_log_clear": _self_heal_log_clear,
+
+            # Computer-use (Anthropic computer_20250124 closed-loop agent)
+            "AC_computer_use": _computer_use,
+
+            # Cross-host DAG orchestrator
+            "AC_run_dag": _run_dag,
+
+            # Chat-ops slash-command router
+            "AC_chatops_dispatch": _chatops_dispatch,
+
+            # Anchor-based locator (spatial composition of locator backends)
+            "AC_anchor_locate": _anchor_locate,
+            "AC_anchor_click": _anchor_click,
+
+            # Structured OCR (rows / tables / form fields)
+            "AC_ocr_read_structure": _ocr_read_structure,
+
+            # Smart waits (frame-diff replacements for time.sleep)
+            "AC_wait_screen_stable": _wait_screen_stable,
+            "AC_wait_pixel_changes": _wait_pixel_changes,
+            "AC_wait_region_idle": _wait_region_idle,
+
+            # Cost telemetry (LLM token + USD tracking)
+            "AC_costs_record": _costs_record,
+            "AC_costs_summary": _costs_summary,
+            "AC_costs_list": _costs_list,
+            "AC_costs_clear": _costs_clear,
+
+            # Failure → ticket automation (Jira / Linear / GitHub fan-out)
+            "AC_failure_hook_fire": _failure_hook_fire,
+            "AC_failure_hook_list": _failure_hook_list,
+            "AC_failure_hook_clear": _failure_hook_clear,
+
+            # A/B locator framework (race N locator strategies)
+            "AC_ab_locate": _ab_locate,
+            "AC_ab_report": _ab_report,
+            "AC_ab_best_strategy": _ab_best_strategy,
+            "AC_ab_clear": _ab_clear,
+
+            # Multi-viewer presence roster (read-only / controller roles)
+            "AC_presence_register": _presence_register,
+            "AC_presence_unregister": _presence_unregister,
+            "AC_presence_update_cursor": _presence_update_cursor,
+            "AC_presence_set_role": _presence_set_role,
+            "AC_presence_list": _presence_list,
+            "AC_presence_clear": _presence_clear,
 
             # MCP server (Model Context Protocol stdio bridge)
             "AC_start_mcp_server": start_mcp_stdio_server,
@@ -1064,6 +1530,10 @@ class Executor:
             "AC_web_run_actions": _ac_web_run_actions,
             "AC_web_available": _ac_web_available,
             "AC_web_list_commands": _ac_web_list_commands,
+            "AC_web_open": _ac_web_open,
+            "AC_web_quit": _ac_web_quit,
+            "AC_web_screenshot": _ac_web_screenshot,
+            "AC_web_current_url": _ac_web_current_url,
 
             # Android via ADB (Phase 9.7)
             "AC_android_tap": _ac_android_tap,

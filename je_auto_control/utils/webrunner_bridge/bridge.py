@@ -77,8 +77,52 @@ def run_webrunner_actions(actions: List[Mapping[str, Any]]) -> List[Any]:
     return [run_webrunner_action(a) for a in actions]
 
 
+def web_open(url: str, browser: str = "chrome",
+             **driver_kwargs: Any) -> Any:
+    """Convenience: start a Selenium driver then navigate to ``url``.
+
+    Equivalent to ``WR_get_webdriver_manager`` + ``WR_to_url`` in one
+    call so JSON scripts and MCP clients can begin a browser flow
+    without first looking up the WebRunner driver API.
+    """
+    if not isinstance(url, str) or not url.strip():
+        raise WebRunnerBridgeError("web_open requires a non-empty url string")
+    if not isinstance(browser, str) or not browser.strip():
+        raise WebRunnerBridgeError("web_open requires a browser name")
+    run_webrunner_action({
+        "action": "WR_get_webdriver_manager",
+        "params": {"webdriver_name": browser, **driver_kwargs},
+    })
+    return run_webrunner_action({
+        "action": "WR_to_url", "params": {"url": url},
+    })
+
+
+def web_quit() -> Any:
+    """Convenience: tear down every active WebRunner driver session."""
+    return run_webrunner_action({"action": "WR_quit"})
+
+
+def web_screenshot(file_path: str) -> Any:
+    """Convenience: save a full-page screenshot of the active browser."""
+    if not isinstance(file_path, str) or not file_path.strip():
+        raise WebRunnerBridgeError(
+            "web_screenshot requires a non-empty file_path",
+        )
+    return run_webrunner_action({
+        "action": "WR_save_screenshot",
+        "params": {"file_name": file_path},
+    })
+
+
+def web_current_url() -> Any:
+    """Convenience: return the active browser tab's URL."""
+    return run_webrunner_action({"action": "WR_get_current_url"})
+
+
 __all__ = [
     "WebRunnerBridgeError", "is_webrunner_available",
     "list_webrunner_commands", "run_webrunner_action",
-    "run_webrunner_actions",
+    "run_webrunner_actions", "web_current_url", "web_open",
+    "web_quit", "web_screenshot",
 ]

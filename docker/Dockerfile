@@ -12,13 +12,14 @@ ARG DEBIAN_FRONTEND=noninteractive
 # Minimum apt set:
 # - xvfb + xauth: virtual X server so the host can capture a "screen".
 # - x11-utils + xdotool: useful for diagnostics, optional.
-# - libgl1: PySide6 hard-requires libGL.so.1 at import time.
+# - libgl1: PySide6 + opencv-python hard-require libGL.so.1 at import.
+# - libglib2.0-0: opencv-python needs libgthread-2.0.so.0 from glib.
 # - libxkbcommon-x11-0 + libdbus-1-3 + libxcb-*: Qt platform plugins.
 # - libusb-1.0-0: USB enumeration via pyusb / libusb.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         xvfb xauth x11-utils xdotool \
-        libgl1 \
+        libgl1 libglib2.0-0 \
         libxkbcommon-x11-0 libdbus-1-3 \
         libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
         libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-sync1 \

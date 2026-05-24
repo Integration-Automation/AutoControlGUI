@@ -8,7 +8,10 @@ keyboard input, image recognition, screen capture, action scripting, and report 
 
 .. note::
 
-   AutoControl does not currently support Linux Wayland. This may be added in a future release.
+   AutoControl supports Linux Wayland via CLI bridges (wtype + ydotool +
+   grim). See :doc:`getting_started/run_in_ci` for compositor / install
+   notes. Set ``JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11`` to force the
+   XWayland fallback.
 
 ----
 
@@ -20,6 +23,7 @@ Getting Started
 
    getting_started/installation
    getting_started/quickstart
+   getting_started/run_in_ci
 
 User Guide (English)
 ====================

@@ -21,11 +21,13 @@ clear ``RuntimeError`` instead of a confusing ImportError.
 """
 from je_auto_control.utils.webrunner_bridge.bridge import (
     WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
-    run_webrunner_action, run_webrunner_actions,
+    run_webrunner_action, run_webrunner_actions, web_current_url,
+    web_open, web_quit, web_screenshot,
 )
 
 __all__ = [
     "WebRunnerBridgeError", "is_webrunner_available",
     "list_webrunner_commands", "run_webrunner_action",
-    "run_webrunner_actions",
+    "run_webrunner_actions", "web_current_url", "web_open",
+    "web_quit", "web_screenshot",
 ]

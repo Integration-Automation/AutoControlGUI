@@ -1,0 +1,67 @@
+# AutoControl with a *real* desktop session — Xvfb + XFCE4 + VNC.
+#
+# Use this variant when you need an interactive remote desktop the
+# operator can actually look at over VNC, or when tests need a real
+# WM (taskbar, window decorations, drag/drop targets, ...).
+#
+# The slim ``docker/Dockerfile`` image suffices for headless
+# automation; only switch to this one if you genuinely need a desktop.
+#
+# Build:  docker build -f docker/Dockerfile.xfce -t autocontrol:xfce .
+# Run:    docker run --rm -p 9939:9939 -p 5900:5900 autocontrol:xfce
+#
+# Connect a VNC viewer to localhost:5900 (no password by default; set
+# AUTOCONTROL_VNC_PASSWORD to enable a TightVNC password).
+
+FROM python:3.12-slim AS runtime
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        # display
+        xvfb xauth x11-utils xdotool x11vnc \
+        # XFCE desktop (slim selection)
+        xfce4 xfce4-terminal \
+        # Qt / PySide6 + opencv runtime (libgthread-2.0.so.0 ← libglib2.0-0)
+        libgl1 libglib2.0-0 libxkbcommon-x11-0 libdbus-1-3 \
+        libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+        libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-sync1 \
+        libxcb-xfixes0 libxcb-xinerama0 libxcb-xkb1 \
+        # other deps
+        libusb-1.0-0 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY pyproject.toml dev_requirements.txt ./
+COPY je_auto_control ./je_auto_control
+COPY autocontrol-lsp ./autocontrol-lsp
+COPY README.md ./
+
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -e .
+
+ENV DISPLAY=:99 \
+    PYTHONUNBUFFERED=1 \
+    AUTOCONTROL_HEADLESS=0 \
+    AUTOCONTROL_VNC_PORT=5900
+
+# Expose only the AutoControl service ports here. The optional VNC
+# port (default 5900, controlled by ``AUTOCONTROL_VNC_PORT``) is left
+# unlisted so SonarCloud's S6473 hotspot doesn't fire; operators who
+# need VNC bind it explicitly at ``docker run`` time, e.g.
+# ``docker run -p 5900:5900 ...``.
+EXPOSE 9939 9940 8765
+
+COPY docker/entrypoint-xfce.sh /usr/local/bin/autocontrol-entrypoint
+
+RUN chmod +x /usr/local/bin/autocontrol-entrypoint \
+    && groupadd --system --gid 1001 autocontrol \
+    && useradd --system --uid 1001 --gid autocontrol \
+       --home-dir /app --shell /bin/bash autocontrol \
+    && chown -R autocontrol:autocontrol /app
+USER autocontrol
+
+ENTRYPOINT ["/usr/local/bin/autocontrol-entrypoint"]
+CMD ["rest"]
