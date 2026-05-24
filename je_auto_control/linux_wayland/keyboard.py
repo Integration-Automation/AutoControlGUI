@@ -42,11 +42,11 @@ def _require(name: str, hint: str) -> str:
 
 
 def _run(argv: list, *, timeout: float = 5.0) -> None:
-    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
-    # reason: argv comes from a private allow-list (wtype / ydotool
-    # absolute paths via shutil.which), never user input; no shell=True.
+    # argv comes from a private allow-list (wtype / ydotool absolute
+    # paths via shutil.which), never user input; no shell=True.
     try:
-        subprocess.run(  # nosec B603  # reason: argv-list, validated binary
+        # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+        subprocess.run(  # nosec B603
             argv, check=True, timeout=timeout,
             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
         )

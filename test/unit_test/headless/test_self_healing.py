@@ -230,10 +230,10 @@ def test_package_facade_stays_qt_free():
         "qt = [m for m in sys.modules if 'PySide6' in m]\n"
         "import json; print(json.dumps(qt))\n"
     )
+    # subprocess spawned with [sys.executable, ...] — known interpreter,
+    # fixed argv list, no shell=True, no user input.
     # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
-    # reason: subprocess spawned with [sys.executable, ...] — known
-    # interpreter, fixed argv list, no shell=True, no user input.
-    result = subprocess.run(
+    result = subprocess.run(  # nosec B603
         [sys.executable, "-c", script],
         capture_output=True, text=True, check=True, timeout=60,
     )

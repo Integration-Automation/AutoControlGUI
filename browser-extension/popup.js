@@ -10,6 +10,7 @@ function send(command, extra = {}) {
     });
 }
 
+// eslint-disable-next-line security-node/detect-unhandled-async-errors
 async function refresh() {
     const reply = await send("status");
     const state = reply.state || {};

@@ -94,9 +94,9 @@ def test_keymap_function_keys_present():
 def _fake_run(captured):
     def runner(argv, **_kwargs):
         captured.append(list(argv))
+        # CompletedProcess is a *constructor* (not a process spawn);
+        # used here to mock subprocess.run's return value.
         # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
-        # reason: CompletedProcess is a *constructor* (not a call to
-        # spawn a process); used here to mock subprocess.run's return.
         result = subprocess.CompletedProcess(argv, 0, b"", b"")
         return result
     return runner
@@ -230,11 +230,11 @@ def test_mouse_raises_when_ydotool_missing():
 
 def test_screenshot_calls_grim_with_path():
     captured: list = []
-    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
-    # reason: CompletedProcess constructor used to mock subprocess.run.
+    # CompletedProcess constructor used to mock subprocess.run.
     with patch.object(wayland_screen, "binary_path",
                       return_value="/usr/bin/grim"), \
          patch.object(wayland_screen.subprocess, "run",
+                      # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
                       side_effect=lambda argv, **kw: (captured.append(argv)
                        or subprocess.CompletedProcess(argv, 0, b"", b""))):
         wayland_screen.screenshot("out.png")

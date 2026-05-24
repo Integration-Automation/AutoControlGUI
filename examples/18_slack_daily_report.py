@@ -86,12 +86,10 @@ def fetch_slack_messages(channel_id: str, *,
         f"https://slack.com/api/conversations.history?{params}",
         headers={"Authorization": f"Bearer {token}"},
     )
+    # URL is built from the literal ``https://slack.com/api/...`` above
+    # so file:// / custom schemes can't reach urlopen here.
     try:
-        # nosec B310  # reason: URL is built from the literal
-        # ``https://slack.com/api/...`` above — scheme is fixed,
-        # never user-supplied, so file:// / custom schemes can't
-        # reach urlopen here.
-        with urllib.request.urlopen(  # noqa: S310
+        with urllib.request.urlopen(  # nosec B310  # noqa: S310
                 request, timeout=30.0) as resp:
             body = json.loads(resp.read().decode("utf-8"))
     except urllib.error.URLError as error:

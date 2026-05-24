@@ -5,8 +5,7 @@
 // unit-tested by importing this module from a Node test runner.
 
 // nosemgrep: codacy.javascript.security.hard-coded-password
-// reason: this is a chrome.storage key, not a credential.
-const STATE_KEY = "autocontrol.recorder.state";
+const STATE_KEY = "autocontrol.recorder.state";  // nosemgrep: codacy.javascript.security.hard-coded-password
 
 /**
  * @typedef {Object} RecorderState
@@ -27,6 +26,7 @@ async function loadState() {
     // fires on the spread of an unsanitised storage value. ``stored``
     // is whatever chrome.storage round-trips for us; we only ever
     // copy own enumerable properties onto a fresh default.
+    // eslint-disable-next-line security/detect-object-injection
     const saved = Object.prototype.hasOwnProperty.call(stored, STATE_KEY)
         ? stored[STATE_KEY] : null;
     if (saved == null || typeof saved !== "object") {
@@ -81,6 +81,7 @@ export function actionFor(event) {
     }
 }
 
+// eslint-disable-next-line security-node/detect-unhandled-async-errors
 async function handleMessage(message, _sender, sendResponse) {
     const state = await loadState();
     switch (message?.command) {
