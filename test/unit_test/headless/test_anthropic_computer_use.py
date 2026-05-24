@@ -111,7 +111,7 @@ def test_drag_requires_both_endpoints():
         _decision_from_computer_action({"action": "left_click_drag"})
 
 
-def test_drag_translates_to_AC_drag():
+def test_drag_translates_to_AC_drag():  # NOSONAR python:S1542  # reason: name mirrors the AC_drag executor command under test
     out = _decision_from_computer_action({
         "action": "left_click_drag",
         "start_coordinate": [0, 0],
@@ -226,7 +226,7 @@ def test_backend_handles_tool_use_then_threads_result():
                for c in tool_results[0]["content"])
 
 
-def test_backend_rewraps_client_failures_as_AgentBackendError():
+def test_backend_rewraps_client_failures_as_AgentBackendError():  # NOSONAR python:S1542  # reason: name mirrors the AgentBackendError class under test
     class _BoomClient:
         class messages:
             @staticmethod

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import inspect
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
@@ -186,14 +187,17 @@ def _cli(argv: Optional[List[str]] = None) -> int:
         help="Output path (omit to print to stdout).",
     )
     args = parser.parse_args(argv)
-    signatures = collect_signatures()
-    body = render_pyi(signatures)
-    if args.path:
-        write_pyi(Path(args.path), signatures)
-        print(f"wrote {len(signatures)} signatures to {args.path}")
-        return 0
-    import sys
-    sys.stdout.write(body)
+    try:
+        signatures = collect_signatures()
+        body = render_pyi(signatures)
+        if args.path:
+            write_pyi(Path(args.path), signatures)
+            print(f"wrote {len(signatures)} signatures to {args.path}")
+        else:
+            sys.stdout.write(body)
+    except (OSError, ValueError, TypeError) as error:
+        print(f"stub generation failed: {error}", file=sys.stderr)
+        return 1
     return 0
 
 

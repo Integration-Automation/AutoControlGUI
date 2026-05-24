@@ -3,9 +3,9 @@
 // and exposes a tree view of the current script's steps.
 
 import * as vscode from "vscode";
-import * as http from "http";
-import * as https from "https";
-import { URL } from "url";
+import * as http from "node:http";
+import * as https from "node:https";
+import { URL } from "node:url";
 import {
     LanguageClient,
     LanguageClientOptions,
@@ -18,20 +18,17 @@ let stepProvider: ScriptStepProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
     client = startLanguageClient();
-    context.subscriptions.push({ dispose: () => client?.stop() });
-
     stepProvider = new ScriptStepProvider();
+    // Consolidate every subscription into a single push() call (S7778):
+    // VS Code accepts a varargs subscriber list, so building the array
+    // up front keeps the call site flat and avoids repeated diffs.
     context.subscriptions.push(
+        { dispose: () => client?.stop() },
         vscode.window.registerTreeDataProvider(
             "autocontrolScriptSteps", stepProvider,
         ),
-    );
-    context.subscriptions.push(
         vscode.window.onDidChangeActiveTextEditor(() => stepProvider?.refresh()),
         vscode.workspace.onDidChangeTextDocument(() => stepProvider?.refresh()),
-    );
-
-    context.subscriptions.push(
         vscode.commands.registerCommand(
             "autocontrol.runScript", runCurrentScript,
         ),
@@ -193,7 +190,7 @@ async function takeScreenshot(): Promise<void> {
 // --- Tree view ----------------------------------------------------
 
 class ScriptStepProvider implements vscode.TreeDataProvider<StepItem> {
-    private emitter = new vscode.EventEmitter<StepItem | undefined>();
+    private readonly emitter = new vscode.EventEmitter<StepItem | undefined>();
     readonly onDidChangeTreeData = this.emitter.event;
 
     refresh(): void { this.emitter.fire(undefined); }
@@ -202,7 +199,7 @@ class ScriptStepProvider implements vscode.TreeDataProvider<StepItem> {
 
     getChildren(): vscode.ProviderResult<StepItem[]> {
         const editor = vscode.window.activeTextEditor;
-        if (!editor || editor.document.languageId !== "json") {
+        if (editor?.document.languageId !== "json") {
             return [];
         }
         let parsed: unknown;

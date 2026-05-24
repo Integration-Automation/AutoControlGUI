@@ -218,7 +218,7 @@ def _ancestor_index(dag: DagDefinition) -> Dict[str, Set[str]]:
     ancestors: Dict[str, Set[str]] = {}
     for nid in dag.topological_order():
         own: Set[str] = set(parents[nid])
-        for parent in list(parents[nid]):
+        for parent in parents[nid]:
             own.update(ancestors.get(parent, set()))
         ancestors[nid] = own
     return ancestors

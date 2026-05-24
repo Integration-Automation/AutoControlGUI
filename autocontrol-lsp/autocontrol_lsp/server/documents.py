@@ -60,10 +60,7 @@ class DocumentStore:
                  version: Optional[int] = None) -> TextDocument:
         with self._lock:
             existing = self._docs.get(uri)
-        next_version = (
-            int(version) if version is not None
-            else (existing.version + 1 if existing else 0)
-        )
+        next_version = _resolve_next_version(version, existing)
         return self.open(uri, text, next_version)
 
     def close(self, uri: str) -> bool:
@@ -102,6 +99,16 @@ class DocumentStore:
 
 
 # --- helpers -------------------------------------------------
+
+def _resolve_next_version(override: Optional[int],
+                           existing: Optional[TextDocument]) -> int:
+    """Pick the next document version: explicit override → existing+1 → 0."""
+    if override is not None:
+        return int(override)
+    if existing is not None:
+        return existing.version + 1
+    return 0
+
 
 _WORD_CHARS = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_")
 

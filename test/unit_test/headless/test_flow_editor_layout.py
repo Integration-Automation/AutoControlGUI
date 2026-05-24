@@ -19,8 +19,8 @@ def test_layout_empty_list_produces_empty_output():
     layout = layout_steps([])
     assert layout.nodes == []
     assert layout.edges == []
-    assert layout.width == 0.0
-    assert layout.height == 0.0
+    assert layout.width == pytest.approx(0.0)
+    assert layout.height == pytest.approx(0.0)
 
 
 def test_layout_single_step_places_at_origin():
@@ -38,9 +38,10 @@ def test_layout_two_top_level_steps_stacked_vertically():
     layout = layout_steps(_flat(["AC_screenshot", "AC_click_mouse"]))
     assert len(layout.nodes) == 2
     first, second = layout.nodes
-    assert first.y == 0.0
-    assert second.y == first.y + NODE_HEIGHT + V_GAP
-    assert first.x == second.x == 0.0
+    assert first.y == pytest.approx(0.0)
+    assert second.y == pytest.approx(first.y + NODE_HEIGHT + V_GAP)
+    assert first.x == pytest.approx(0.0)
+    assert second.x == pytest.approx(0.0)
     # No control-flow edges between sibling top-level nodes.
     assert layout.edges == []
 

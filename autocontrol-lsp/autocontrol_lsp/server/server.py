@@ -172,26 +172,30 @@ def run(input_stream=None, output_stream=None) -> int:
     out = output_stream or sys.stdout.buffer
     server = LspServer()
     try:
-        while True:
-            request = _read_message(inp)
-            if request is None or request.get("method") == "exit":
-                return 0
-            method = request.get("method")
-            params = request.get("params") or {}
-            if not isinstance(method, str):
-                continue
-            request_id = request.get("id")
-            if request_id is None:
-                server.handle_notification(method, params)
-                for payload in server.drain_diagnostics():
-                    _publish_diagnostics(out, payload)
-                continue
-            result = server.dispatch(method, params)
-            _write_message(out, _build_reply(method, request_id, result))
-            for payload in server.drain_diagnostics():
-                _publish_diagnostics(out, payload)
+        while _process_one_message(inp, out, server):
+            pass
     except (OSError, ValueError):
         return 1
+    return 0
+
+
+def _process_one_message(inp, out, server: LspServer) -> bool:
+    """Read one LSP message and dispatch it. Returns False to end the loop."""
+    request = _read_message(inp)
+    if request is None or request.get("method") == "exit":
+        return False
+    method = request.get("method")
+    params = request.get("params") or {}
+    if not isinstance(method, str):
+        return True
+    if request.get("id") is None:
+        server.handle_notification(method, params)
+    else:
+        result = server.dispatch(method, params)
+        _write_message(out, _build_reply(method, request["id"], result))
+    for payload in server.drain_diagnostics():
+        _publish_diagnostics(out, payload)
+    return True
 
 
 if __name__ == "__main__":  # pragma: no cover - entry point

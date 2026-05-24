@@ -1,4 +1,5 @@
 _TOKEN_LABEL_ZH = "Token："
+_BROWSE = "瀏覽..."  # NOSONAR python:S1192 — shared button label
 
 traditional_chinese_word_dict = {
     # Main
@@ -403,7 +404,7 @@ traditional_chinese_word_dict = {
     "rd_webrtc_sync_start": "開始同步",
     "rd_webrtc_sync_stop": "停止同步",
     "rd_webrtc_sync_dir_required": "請先選一個本機資料夾",
-    "rd_webrtc_browse": "瀏覽...",
+    "rd_webrtc_browse": _BROWSE,
 
     # Auto Click Tab
     "interval_time": "間隔時間 (ms)：",
@@ -807,7 +808,7 @@ traditional_chinese_word_dict = {
     "self_heal_desc_placeholder": "失敗時用的自然語言備援（選填）",
     "self_heal_threshold_label": "比對門檻：",
     "self_heal_click_check": "定位後自動點擊",
-    "self_heal_browse": "瀏覽...",
+    "self_heal_browse": _BROWSE,
     "self_heal_locate_btn": "定位",
     "self_heal_click_btn": "定位並點擊",
     "self_heal_refresh": "重新整理記錄",
@@ -832,7 +833,7 @@ traditional_chinese_word_dict = {
     "web_url_label": "網址：",
     "web_browser_label": "瀏覽器：",
     "web_screenshot_label": "截圖路徑：",
-    "web_browse": "瀏覽...",
+    "web_browse": _BROWSE,
     "web_open_btn": "開啟",
     "web_quit_btn": "結束",
     "web_screenshot_btn": "截圖",
@@ -904,7 +905,7 @@ traditional_chinese_word_dict = {
     "chatops_cmd_label": "指令：",
     "chatops_cmd_placeholder": "/help",
     "chatops_output_label": "輸出：",
-    "chatops_browse_btn": "瀏覽...",
+    "chatops_browse_btn": _BROWSE,
     "chatops_send_btn": "送出",
 
     # Flow Editor Tab
@@ -1076,7 +1077,7 @@ traditional_chinese_word_dict = {
     "rd_tls_key_placeholder": "PEM 私鑰路徑（選填）",
     "rd_tls_both_required": "TLS 憑證與金鑰必須一併提供",
     "rd_tls_insecure": "忽略憑證驗證（自簽用）",
-    "rd_browse": "瀏覽...",
+    "rd_browse": _BROWSE,
     "rd_enable_audio": "串流系統音訊（sounddevice）",
     "rd_viewer_audio_play": "播放接收的音訊（sounddevice）",
     "rd_viewer_push_clipboard": "把本機剪貼簿文字送到 Host",

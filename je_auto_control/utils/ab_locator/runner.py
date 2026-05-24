@@ -68,7 +68,7 @@ def ab_locate(*, target_id: str,
     items = list(strategies.items())
     with ThreadPoolExecutor(max_workers=pool_size) as pool:
         results = list(pool.map(_run_one, items))
-    by_name = {name: res for name, res in results}
+    by_name = dict(results)
     winner = _pick_winner(by_name)
     if record:
         target_store = store if store is not None else default_ab_store

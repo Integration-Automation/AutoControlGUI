@@ -38,7 +38,7 @@ def test_estimate_usd_uses_known_pricing():
 
 
 def test_estimate_usd_returns_zero_for_unknown_model():
-    assert estimate_llm_usd("not-real", 1000, 1000) == 0.0
+    assert estimate_llm_usd("not-real", 1000, 1000) == pytest.approx(0.0)
 
 
 def test_estimate_usd_respects_override():
@@ -73,7 +73,7 @@ def test_record_honours_explicit_cost(temp_store):
         input_tokens=100, output_tokens=50,
         estimated_usd=2.5,
     )
-    assert event.estimated_usd == 2.5
+    assert event.estimated_usd == pytest.approx(2.5)
 
 
 def test_record_stamps_provider_model_and_label(temp_store):
@@ -132,8 +132,8 @@ def test_summarise_aggregates_by_model_provider_day(temp_store):
     assert summary.total_input_tokens == 13000
 
 
-def test_summarise_handles_empty_log():
-    empty_store = CostStore(path=Path("/tmp/never_exists.jsonl"))
+def test_summarise_handles_empty_log(tmp_path):
+    empty_store = CostStore(path=tmp_path / "never_exists.jsonl")
     assert empty_store.summarise().total_calls == 0
 
 

@@ -72,10 +72,10 @@ def test_backend_reports_unavailable_when_symbols_missing():
 def test_backend_connect_calls_new_sender_and_setup_socket():
     symbols = _fake_symbols()
     backend = LibeiBackend(symbols=symbols)
-    backend.connect(socket_path=b"/tmp/eis-test")
+    backend.connect(socket_path=b"./eis-test")
     symbols.ei_new_sender.assert_called_once_with(b"je_auto_control")
     symbols.ei_setup_backend_socket.assert_called_once_with(
-        0xDEADBEEF, b"/tmp/eis-test",
+        0xDEADBEEF, b"./eis-test",
     )
 
 

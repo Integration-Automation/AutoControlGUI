@@ -47,6 +47,10 @@ ENV DISPLAY=:99 \
     AUTOCONTROL_HEADLESS=0 \
     AUTOCONTROL_VNC_PORT=5900
 
+# hadolint ignore=DL3018
+# NOSONAR docker:S6473 — exposing 5900 (VNC) is the documented purpose
+# of this variant; operators bind it behind a firewall / VPN, with the
+# optional AUTOCONTROL_VNC_PASSWORD providing TightVNC-level auth.
 EXPOSE 9939 9940 8765 5900
 
 COPY docker/entrypoint-xfce.sh /usr/local/bin/autocontrol-entrypoint

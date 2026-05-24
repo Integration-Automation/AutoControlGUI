@@ -12,7 +12,7 @@
      * data-name > nth-of-type fallback.
      */
     function selectorFor(element) {
-        if (!element || element.nodeType !== 1) { return ""; }
+        if (element?.nodeType !== 1) { return ""; }
         if (element.id) {
             return "#" + cssEscape(element.id);
         }
@@ -29,7 +29,7 @@
     function nthOfTypeSelector(element) {
         const path = [];
         let node = element;
-        while (node && node.nodeType === 1 && node !== document.documentElement) {
+        while (node?.nodeType === 1 && node !== document.documentElement) {
             const tag = node.tagName.toLowerCase();
             const parent = node.parentElement;
             if (!parent) {
@@ -48,11 +48,15 @@
     }
 
     function cssEscape(value) {
-        if (window.CSS && typeof window.CSS.escape === "function") {
-            return window.CSS.escape(value);
+        if (typeof globalThis.CSS?.escape === "function") {
+            return globalThis.CSS.escape(value);
         }
-        // Bare-bones fallback for browsers without CSS.escape.
-        return String(value).replace(/(["\\\]])/g, "\\$1");
+        // Bare-bones fallback for browsers without CSS.escape. Use
+        // ``String.raw`` so the regex escape literal reads as written.
+        return String(value).replace(
+            new RegExp(String.raw`(["\\\]])`, "g"),
+            String.raw`\$1`,
+        );
     }
 
     function send(event) {
@@ -94,7 +98,7 @@
         });
     }, true);
 
-    window.addEventListener("popstate", () => {
+    globalThis.addEventListener("popstate", () => {
         send({ type: "navigate", url: location.href });
     });
 

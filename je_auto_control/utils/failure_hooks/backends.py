@@ -121,6 +121,8 @@ def _post_json(backend_name: str, url: str, body: Dict[str, Any], *,
                 url_template: Optional[str] = None,
                 response_extractor=None) -> TicketResult:
     """Shared HTTP POST helper used by every backend."""
+    # NOSONAR python:S5332 — scheme allow-list check, not URL emission;
+    # http:// is permitted for self-hosted Jira on a trusted LAN.
     if not url.startswith(("https://", "http://")):
         return TicketResult(
             backend=backend_name, succeeded=False,

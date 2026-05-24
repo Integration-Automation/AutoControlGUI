@@ -22,7 +22,7 @@ document.getElementById("start").addEventListener("click", async () => {
     const [tab] = await chrome.tabs.query({
         active: true, currentWindow: true,
     });
-    await send("start", { startUrl: tab && tab.url });
+    await send("start", { startUrl: tab?.url });
     refresh();
 });
 
@@ -50,4 +50,8 @@ document.getElementById("export").addEventListener("click", async () => {
     });
 });
 
-refresh();
+// Popup HTML loads this script as a classic script (not a module), so
+// top-level await isn't legal here. ``void refresh()`` is the
+// equivalent fire-and-forget that Sonar's S7785 accepts in this
+// context (we don't await because the initial fetch is best-effort).
+void refresh();

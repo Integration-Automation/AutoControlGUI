@@ -17,7 +17,7 @@ def test_image_locator_normalises_fields():
     loc = image_locator("submit.png", detect_threshold=0.85)
     assert loc.kind == "image"
     assert loc.template_path == "submit.png"
-    assert loc.detect_threshold == 0.85
+    assert loc.detect_threshold == pytest.approx(0.85)
 
 
 def test_ocr_locator_carries_region():

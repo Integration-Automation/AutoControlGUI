@@ -1,3 +1,6 @@
+_BROWSE = "浏览..."  # NOSONAR python:S1192 — shared button label
+_LOCATE_CLICK = "定位并点击"  # NOSONAR python:S1192
+
 simplified_chinese_word_dict = {
     "application_name": "AutoControlGUI",
 
@@ -400,7 +403,7 @@ simplified_chinese_word_dict = {
     "rd_webrtc_sync_start": "开始同步",
     "rd_webrtc_sync_stop": "停止同步",
     "rd_webrtc_sync_dir_required": "请先选一个本机目录",
-    "rd_webrtc_browse": "浏览...",
+    "rd_webrtc_browse": _BROWSE,
 
     # Auto Click Tab
     "interval_time": "间隔时间 (ms):",
@@ -449,7 +452,7 @@ simplified_chinese_word_dict = {
     "threshold_label": "阈值 (0.0~1.0):",
     "locate_image": "定位图像",
     "locate_all": "定位全部",
-    "locate_click": "定位并点击",
+    "locate_click": _LOCATE_CLICK,
     "detection_result": "检测结果:",
     "draw_image_check": "标记检测结果",
 
@@ -789,7 +792,7 @@ simplified_chinese_word_dict = {
     "vlm_model_label": "模型：",
     "vlm_model_placeholder": "选填（例如 claude-opus-4-7）",
     "vlm_locate": "定位",
-    "vlm_click": "定位并点击",
+    "vlm_click": _LOCATE_CLICK,
     "vlm_result": "位置：({x}, {y})",
     "vlm_ok": "完成",
     "vlm_not_found": "找不到匹配元素",
@@ -804,9 +807,9 @@ simplified_chinese_word_dict = {
     "self_heal_desc_placeholder": "失败时使用的自然语言备援（选填）",
     "self_heal_threshold_label": "比对阈值：",
     "self_heal_click_check": "定位后自动点击",
-    "self_heal_browse": "浏览...",
+    "self_heal_browse": _BROWSE,
     "self_heal_locate_btn": "定位",
-    "self_heal_click_btn": "定位并点击",
+    "self_heal_click_btn": _LOCATE_CLICK,
     "self_heal_refresh": "刷新记录",
     "self_heal_clear": "清空记录",
     "self_heal_clear_confirm": "确认清空自我修复审计记录？",
@@ -829,7 +832,7 @@ simplified_chinese_word_dict = {
     "web_url_label": "网址：",
     "web_browser_label": "浏览器：",
     "web_screenshot_label": "截图路径：",
-    "web_browse": "浏览...",
+    "web_browse": _BROWSE,
     "web_open_btn": "打开",
     "web_quit_btn": "结束",
     "web_screenshot_btn": "截图",
@@ -901,7 +904,7 @@ simplified_chinese_word_dict = {
     "chatops_cmd_label": "命令：",
     "chatops_cmd_placeholder": "/help",
     "chatops_output_label": "输出：",
-    "chatops_browse_btn": "浏览...",
+    "chatops_browse_btn": _BROWSE,
     "chatops_send_btn": "发送",
 
     # Flow Editor Tab
@@ -1073,7 +1076,7 @@ simplified_chinese_word_dict = {
     "rd_tls_key_placeholder": "PEM 私钥路径（选填）",
     "rd_tls_both_required": "TLS 证书与密钥必须一并提供",
     "rd_tls_insecure": "忽略证书验证（自签用）",
-    "rd_browse": "浏览...",
+    "rd_browse": _BROWSE,
     "rd_enable_audio": "串流系统音频（sounddevice）",
     "rd_viewer_audio_play": "播放接收的音频（sounddevice）",
     "rd_viewer_push_clipboard": "把本机剪贴板文字发送到 Host",

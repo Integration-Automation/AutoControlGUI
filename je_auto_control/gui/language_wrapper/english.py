@@ -6,6 +6,10 @@ _HOST_LABEL = "Host:"
 _PORT_LABEL = "Port:"
 _STOP_HOST = "Stop host"
 _CLEAR_ALL = "Clear all"
+_BROWSE = "Browse..."  # NOSONAR python:S1192 — shared button label
+_CLEAR_LOG = "Clear log"  # NOSONAR python:S1192
+_OUTPUT_LABEL = "Output:"  # NOSONAR python:S1192
+_MODEL_LABEL = "Model:"  # NOSONAR python:S1192
 
 english_word_dict = {
     # Main
@@ -127,7 +131,7 @@ english_word_dict = {
     "audit_filter_limit": "Limit:",
     "audit_refresh": "Refresh",
     "audit_verify": "Verify chain",
-    "audit_clear": "Clear log",
+    "audit_clear": _CLEAR_LOG,
     "audit_clear_confirm": "Wipe every audit row? This cannot be undone.",
     "audit_clear_done": "Cleared {count} audit rows.",
     "audit_verify_ok": "Chain OK ({total} rows).",
@@ -412,7 +416,7 @@ english_word_dict = {
     "rd_webrtc_sync_start": "Start sync",
     "rd_webrtc_sync_stop": "Stop sync",
     "rd_webrtc_sync_dir_required": "Pick a local folder first",
-    "rd_webrtc_browse": "Browse...",
+    "rd_webrtc_browse": _BROWSE,
 
     # Auto Click Tab
     "interval_time": "Interval (ms):",
@@ -497,7 +501,7 @@ english_word_dict = {
     # Shell Tab
     "shell_command_label": "Shell Command:",
     "execute_shell": "Execute",
-    "shell_output": "Output:",
+    "shell_output": _OUTPUT_LABEL,
     "start_exe_label": "Executable Path:",
     "start_exe": "Start Executable",
 
@@ -600,7 +604,7 @@ english_word_dict = {
     "hud_watchers_group": "Watchers",
     "hud_start": "Start HUD",
     "hud_stop": "Stop HUD",
-    "hud_clear": "Clear log",
+    "hud_clear": _CLEAR_LOG,
     "hud_recent_log": "Recent log:",
     "hud_mouse_prefix": "Mouse:",
     "hud_pixel_prefix": "Pixel:",
@@ -798,7 +802,7 @@ english_word_dict = {
     # VLM (AI Locator) Tab
     "vlm_desc_label": "Describe:",
     "vlm_desc_placeholder": "e.g. the green Submit button",
-    "vlm_model_label": "Model:",
+    "vlm_model_label": _MODEL_LABEL,
     "vlm_model_placeholder": "optional override (e.g. claude-opus-4-7)",
     "vlm_locate": "Locate",
     "vlm_click": "Locate & click",
@@ -816,11 +820,11 @@ english_word_dict = {
     "self_heal_desc_placeholder": "natural-language fallback (optional)",
     "self_heal_threshold_label": "Match threshold:",
     "self_heal_click_check": "Click after locating",
-    "self_heal_browse": "Browse...",
+    "self_heal_browse": _BROWSE,
     "self_heal_locate_btn": "Locate",
     "self_heal_click_btn": "Locate & click",
     "self_heal_refresh": "Refresh log",
-    "self_heal_clear": "Clear log",
+    "self_heal_clear": _CLEAR_LOG,
     "self_heal_clear_confirm": "Wipe the self-healing audit log?",
     "self_heal_inputs_required": "Provide a template path or description",
     "self_heal_hit": "Hit at ({x}, {y})",
@@ -841,7 +845,7 @@ english_word_dict = {
     "web_url_label": "URL:",
     "web_browser_label": "Browser:",
     "web_screenshot_label": "Screenshot path:",
-    "web_browse": "Browse...",
+    "web_browse": _BROWSE,
     "web_open_btn": "Open",
     "web_quit_btn": "Quit",
     "web_screenshot_btn": "Screenshot",
@@ -852,7 +856,7 @@ english_word_dict = {
     "web_run_btn": "Run",
     "web_refresh_btn": "List commands",
     "web_commands_label": "WR_* commands:",
-    "web_output_label": "Output:",
+    "web_output_label": _OUTPUT_LABEL,
     "web_url_required": "URL is required",
     "web_screenshot_required": "Screenshot path is required",
     "web_action_required": "Action name is required",
@@ -861,7 +865,7 @@ english_word_dict = {
     # Computer-Use Tab
     "computer_use_goal_label": "Goal:",
     "computer_use_goal_placeholder": "e.g. open Slack and post 'good morning' in #general",
-    "computer_use_model_label": "Model:",
+    "computer_use_model_label": _MODEL_LABEL,
     "computer_use_max_steps_label": "Max steps:",
     "computer_use_wall_seconds_label": "Wall seconds:",
     "computer_use_max_tokens_label": "Max tokens / turn:",
@@ -912,8 +916,8 @@ english_word_dict = {
     "chatops_root_placeholder": "directory of .json scripts /run can execute",
     "chatops_cmd_label": "Command:",
     "chatops_cmd_placeholder": "/help",
-    "chatops_output_label": "Output:",
-    "chatops_browse_btn": "Browse...",
+    "chatops_output_label": _OUTPUT_LABEL,
+    "chatops_browse_btn": _BROWSE,
     "chatops_send_btn": "Send",
 
     # Flow Editor Tab
@@ -984,7 +988,7 @@ english_word_dict = {
     "llm_desc_placeholder": (
         "e.g. open Notepad, type 'hello world', save as test.txt"
     ),
-    "llm_model_label": "Model:",
+    "llm_model_label": _MODEL_LABEL,
     "llm_model_placeholder": "optional override (e.g. claude-opus-4-7)",
     "llm_plan_btn": "Plan",
     "llm_run_btn": "Run plan",
@@ -1089,7 +1093,7 @@ english_word_dict = {
     "rd_tls_key_placeholder": "PEM private key path (optional)",
     "rd_tls_both_required": "TLS cert and key must both be provided",
     "rd_tls_insecure": "Skip cert verification (self-signed)",
-    "rd_browse": "Browse...",
+    "rd_browse": _BROWSE,
     "rd_enable_audio": "Stream system audio (sounddevice)",
     "rd_viewer_audio_play": "Play received audio (sounddevice)",
     "rd_viewer_push_clipboard": "Push my clipboard text to host",

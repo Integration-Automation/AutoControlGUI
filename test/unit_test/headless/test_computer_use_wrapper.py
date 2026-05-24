@@ -54,7 +54,7 @@ def test_result_to_dict_renders_steps_and_metadata():
     data = result_to_dict(result)
     assert data["succeeded"] is True
     assert data["final_message"] == "done"
-    assert data["elapsed_s"] == 1.25
+    assert data["elapsed_s"] == pytest.approx(1.25)
     assert len(data["steps"]) == 2
     assert data["steps"][0]["tool"] == "AC_screenshot"
 

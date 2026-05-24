@@ -148,7 +148,7 @@ def test_report_to_dict_includes_winner(temp_store):
                        succeeded=True, elapsed_ms=1.0)
     data = temp_store.report("t").to_dict()
     assert data["best_strategy"] == "image"
-    assert data["best_success_rate"] == 1.0
+    assert data["best_success_rate"] == pytest.approx(1.0)
 
 
 def test_all_reports_lists_every_target(temp_store):

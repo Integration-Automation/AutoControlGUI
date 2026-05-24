@@ -20,7 +20,8 @@ const DEFAULT_STATE = {
 
 async function loadState() {
     const stored = await chrome.storage.local.get(STATE_KEY);
-    return { ...DEFAULT_STATE, ...(stored[STATE_KEY] || {}) };
+    const saved = stored[STATE_KEY];
+    return saved ? { ...DEFAULT_STATE, ...saved } : { ...DEFAULT_STATE };
 }
 
 async function saveState(state) {

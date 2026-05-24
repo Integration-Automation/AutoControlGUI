@@ -2,6 +2,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from je_auto_control.utils.time_travel import (
     ReplayState, TimelinePlayer, TraceReplayController,
 )
@@ -147,7 +149,7 @@ def test_state_relative_time_is_zero_at_first_frame(tmp_path):
     controller = TraceReplayController(
         TimelinePlayer(_build_recording(tmp_path)),
     )
-    assert controller.state().relative_time_s == 0.0
+    assert controller.state().relative_time_s == pytest.approx(0.0)
 
 
 def test_state_to_dict_round_trip(tmp_path):

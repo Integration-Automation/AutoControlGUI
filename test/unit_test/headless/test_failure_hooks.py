@@ -16,7 +16,7 @@ def test_failure_report_renders_summary_and_body():
     report = FailureReport(
         source="scheduler", source_id="nightly",
         error_text="boom\ntraceback", script_path="x.json",
-        screenshot_path="/tmp/x.png", log_tail="last line",
+        screenshot_path="screenshot.png", log_tail="last line",
         metadata={"region": "us-east"},
     )
     summary = report.render_summary()
@@ -193,6 +193,8 @@ def test_linear_backend_posts_graphql_mutation():
 # === _post_json hardening ===============================================
 
 def test_post_json_refuses_non_http_url():
+    # NOSONAR python:S5332 — the literal is a *negative* test input,
+    # not a URL we ever connect to; the backend rejects it.
     result = _post_json("test", "ftp://bad", {}, headers={})
     assert result.succeeded is False
     assert "non-HTTP" in result.error

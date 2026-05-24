@@ -17,7 +17,9 @@ from je_auto_control.linux_wayland._detect import WAYLAND_GRIM, binary_path
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
-_RESOLUTION_RE = re.compile(r"(\d+)x(\d+)")
+_RESOLUTION_RE = re.compile(  # NOSONAR python:S5852  # reason: anchored short ``\d+`` runs, no nested quantifiers — not vulnerable to ReDoS
+    r"(\d+)x(\d+)",
+)
 _INSTALL_HINT_GRIM = (
     "grim is required for Wayland screenshots. "
     "Install with your package manager (e.g. `apt install grim`)."

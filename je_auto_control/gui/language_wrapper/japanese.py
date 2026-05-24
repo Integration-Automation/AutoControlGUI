@@ -7,6 +7,8 @@ _SELECT_SCRIPT = "スクリプトを選択"
 _TOKEN_LABEL = "トークン:"
 _STOP_HOST_JA = "ホスト停止"
 _CLEAR_ALL_JA = "すべて削除"
+_BROWSE = "参照..."  # NOSONAR python:S1192 — shared button label
+_LOCATE_CLICK = "検索してクリック"  # NOSONAR python:S1192
 
 japanese_word_dict = {
     "application_name": "AutoControlGUI",
@@ -412,7 +414,7 @@ japanese_word_dict = {
     "rd_webrtc_sync_start": "同期開始",
     "rd_webrtc_sync_stop": "同期停止",
     "rd_webrtc_sync_dir_required": "ローカルフォルダを選択してください",
-    "rd_webrtc_browse": "参照...",
+    "rd_webrtc_browse": _BROWSE,
 
     # Auto Click Tab
     "interval_time": "間隔 (ms):",
@@ -461,7 +463,7 @@ japanese_word_dict = {
     "threshold_label": "閾値 (0.0~1.0):",
     "locate_image": "画像検索",
     "locate_all": "全て検索",
-    "locate_click": "検索してクリック",
+    "locate_click": _LOCATE_CLICK,
     "detection_result": "検出結果:",
     "draw_image_check": "検出結果を描画",
 
@@ -801,7 +803,7 @@ japanese_word_dict = {
     "vlm_model_label": "モデル:",
     "vlm_model_placeholder": "任意 (例: claude-opus-4-7)",
     "vlm_locate": "検索",
-    "vlm_click": "検索してクリック",
+    "vlm_click": _LOCATE_CLICK,
     "vlm_result": "位置: ({x}, {y})",
     "vlm_ok": "完了",
     "vlm_not_found": "一致する要素が見つかりません",
@@ -816,9 +818,9 @@ japanese_word_dict = {
     "self_heal_desc_placeholder": "失敗時のフォールバック説明（任意）",
     "self_heal_threshold_label": "マッチ閾値:",
     "self_heal_click_check": "検索後にクリック",
-    "self_heal_browse": "参照...",
+    "self_heal_browse": _BROWSE,
     "self_heal_locate_btn": "検索",
-    "self_heal_click_btn": "検索してクリック",
+    "self_heal_click_btn": _LOCATE_CLICK,
     "self_heal_refresh": "ログを更新",
     "self_heal_clear": "ログを消去",
     "self_heal_clear_confirm": "セルフヒーリング監査ログを消去しますか？",
@@ -841,7 +843,7 @@ japanese_word_dict = {
     "web_url_label": "URL:",
     "web_browser_label": "ブラウザ:",
     "web_screenshot_label": "スクリーンショットパス:",
-    "web_browse": "参照...",
+    "web_browse": _BROWSE,
     "web_open_btn": "開く",
     "web_quit_btn": "終了",
     "web_screenshot_btn": "撮影",
@@ -913,7 +915,7 @@ japanese_word_dict = {
     "chatops_cmd_label": "コマンド:",
     "chatops_cmd_placeholder": "/help",
     "chatops_output_label": "出力:",
-    "chatops_browse_btn": "参照...",
+    "chatops_browse_btn": _BROWSE,
     "chatops_send_btn": "送信",
 
     # Flow Editor Tab
@@ -1089,7 +1091,7 @@ japanese_word_dict = {
     "rd_tls_key_placeholder": "PEM 秘密鍵パス（任意）",
     "rd_tls_both_required": "TLS 証明書とキーは両方必要",
     "rd_tls_insecure": "証明書検証をスキップ（自己署名用）",
-    "rd_browse": "参照...",
+    "rd_browse": _BROWSE,
     "rd_enable_audio": "システム音声をストリーム（sounddevice）",
     "rd_viewer_audio_play": "受信音声を再生（sounddevice）",
     "rd_viewer_push_clipboard": "ローカルのクリップボード文字をホストへ送信",

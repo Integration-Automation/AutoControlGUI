@@ -176,7 +176,15 @@ def render_report(summary: str, raw_messages: Sequence[SlackMessage],
 <ul>{rows}</ul>
 </body></html>
 """
-    html_path = output_dir / f"digest-{today}.html"
+    # Anchor the filename inside output_dir's resolved path so a
+    # malicious ``today`` (e.g. ``../etc/passwd``) can't escape — even
+    # though ``today`` is internally generated, validating here keeps
+    # Sonar's S2083 happy and protects future callers.
+    safe_name = os.path.basename(f"digest-{today}.html")
+    safe_root = output_dir.resolve()
+    html_path = (safe_root / safe_name).resolve()
+    if safe_root not in html_path.parents:
+        raise ValueError(f"refusing path-traversal name: {today!r}")
     html_path.write_text(html, encoding="utf-8")
     try:
         from weasyprint import HTML
@@ -212,6 +220,10 @@ def email_report(artefact: Path, *,
         filename=artefact.name,
     )
     context = ssl.create_default_context()
+    # Pin the minimum to TLS 1.2 even on older Pythons whose defaults
+    # may still allow TLS 1.0/1.1 (S4423). Python 3.10+ already does
+    # this by default; the explicit assignment is a belt-and-braces.
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     with smtplib.SMTP(smtp_host, smtp_port, timeout=30.0) as server:
         server.starttls(context=context)
         if smtp_user and smtp_pass:
