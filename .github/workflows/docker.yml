@@ -82,15 +82,29 @@ jobs:
 
       - name: Smoke test the entrypoint (rest mode)
         run: |
-          docker run --rm -d --name ac-rest -p 9939:9939 \
+          # Run without --rm so a quick crash leaves the container in
+          # place for ``docker logs`` to inspect afterwards. Final
+          # ``docker rm -f`` cleans up regardless of exit state.
+          docker run -d --name ac-rest -p 9939:9939 \
             -e AC_TOKEN=ci-token autocontrol:ci rest
+          ok=0
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             if curl -fsS -H "Authorization: Bearer ci-token" \
                 http://127.0.0.1:9939/health; then
               echo "REST API is up"
+              ok=1
               break
             fi
             sleep 2
           done
+          echo "::group::docker logs ac-rest"
           docker logs ac-rest || true
-          docker stop ac-rest
+          echo "::endgroup::"
+          echo "::group::docker inspect (state)"
+          docker inspect --format '{{json .State}}' ac-rest || true
+          echo "::endgroup::"
+          docker rm -f ac-rest >/dev/null 2>&1 || true
+          if [ "$ok" -ne 1 ]; then
+            echo "REST health probe never succeeded" >&2
+            exit 1
+          fi
