@@ -56,10 +56,11 @@
 
 ## 本次更新 (2026-05)
 
-新增 23 个功能，覆盖更聪明的定位器、更深的 IDE / 运维工具、两个新平台后端，
-以及几个新集成。每个功能都遵循框架既有模式：headless Python API、
-`AC_*` executor 命令、`ac_*` MCP 工具，以及（适用时）Qt GUI 选项卡。
-完整参考页面：
+新增 27 个功能，覆盖更聪明的定位器、更深的 IDE / 运维工具、
+四个新平台后端（Wayland、Wayland-libei、Android widget tree、iOS）、
+截屏 PII 脱敏，以及通用 plan-execute-verify agent 循环。
+每个功能都遵循框架既有模式：headless Python API、`AC_*` executor 命令、
+`ac_*` MCP 工具，以及（适用时）Qt GUI 选项卡。完整参考页面：
 [`docs/source/Zh/doc/new_features/v2_features_doc.rst`](../docs/source/Zh/doc/new_features/v2_features_doc.rst)。
 
 **定位器与选择器智能化**
@@ -79,13 +80,20 @@
 
 **代理与集成**
 - **Computer-use 高阶 API** — `run_computer_use(goal, ...)` 封装 `ComputerUseAgentBackend` + `AgentLoop`；自动检测屏幕大小；以 `max_steps` / `wall_seconds` 为预算。
+- **通用 agent 循环 JSON / MCP 接入** — `AC_run_agent` / `ac_run_agent` 把闭环 `AgentLoop`（规划 → 执行 → 验证 → 重试）开放给 JSON action 和 MCP 客户端，支持 Anthropic / OpenAI 两种 backend；既有的 Anthropic 原生 Computer-Use 路径仍通过 `AC_computer_use` 提供。
 - **WebRunner 便利命令** — 在既有 `je_web_runner` 桥接之上的 `web_open` / `web_quit` / `web_screenshot` / `web_current_url`；同步以 `AC_web_*`、`ac_web_*` 暴露。
 - **Chat-ops 机器人** — 传输层中立的 `CommandRouter` + Slack polling adapter。内置命令：`/help`、`/scripts`、`/run`、`/screenshot`、`/status`。RBAC 通过 `required_role`。
+
+**隐私与安全**
+- **截屏 PII 脱敏** — `RedactionEngine` 内置检测：email / 信用卡 / SSN / 电话（regex 比对调用方提供的 OCR token）以及 accessibility tree 标记的 secure-text 字段；可指定强制模糊区域。默认策略通过环境变量 `JE_AUTOCONTROL_REDACTION=off|moderate|strict` 控制。执行器命令 `AC_redact_screenshot` 与 MCP `ac_redact_screenshot` 都已接入。
 
 **平台覆盖**
 - **Wayland CLI 后端** — `wtype` / `ydotool` / `grim`，按 `XDG_SESSION_TYPE` 自动检测，CLI 工具未装时回退到 X11 (XWayland)；可用 `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11|wayland|auto` 覆盖。
 - **Wayland libei 原生后端** — 对 `libei.so.*` 的 ctypes 绑定，绕过 CLI shim 取得微秒级延迟；以 `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei|cli|auto` 启用，默认在 libei 可加载时用 libei。
 - **macOS Accessibility 强化** — 递归 `dump_accessibility_tree()` 与 polling `AccessibilityRecorder`，捕捉 focus / bounds 事件。
+- **Android — adb shell 原语** — `AC_android_tap/swipe/key/text/screenshot` 直接通过 `adb` 驱动任何 USB / Wi-Fi adb 连接的手机，不需要常驻 daemon。
+- **Android — uiautomator2 widget tree** — `AC_android_find_element/click_element/dump_hierarchy` 在 adb 路径之上加上 selector（`text` / `resource_id` / `description` / `class_name`）查找与实时 XML hierarchy dump。
+- **iOS — WebDriverAgent / XCUITest** — 新的 `je_auto_control.ios.*` 命名空间：`tap`、`swipe`、`long_press`、`type_text`、`press_key`、`screenshot`、`screen_size`、`find_element` / `click_element`（XCUITest selector：`name`、`class_name`、`predicate`）、`dump_source`。新增七个 `AC_ios_*` executor 命令与对应 `ac_ios_*` MCP 工具。`facebook-wda` 为可选 pip 依赖、懒加载，非 macOS 主机 import 仍可成功。
 
 **开发者体验**
 - **autocontrol-lsp 完整化** — 追踪 `didOpen` / `didChange` / `didClose`、发布 JSON 与未知 `AC_*` 命令的 diagnostics、由即时的 executor 表生成 signature help。
@@ -128,7 +136,8 @@
 - **窗口管理** — 直接将键盘/鼠标事件发送至指定窗口（Windows/Linux）
 - **GUI 应用程序** — 内置 PySide6 图形界面，支持即时切换语言（English / 繁體中文 / 简体中文 / 日本語）
 - **CLI 运行器** — `python -m je_auto_control.cli run|list-jobs|start-server|start-rest`
-- **跨平台** — 统一 API，支持 Windows、macOS、Linux（X11）
+- **跨平台** — 统一 API，支持 Windows、macOS、Linux（X11 + Wayland）、Android（adb + uiautomator2）、iOS（WebDriverAgent / facebook-wda）
+- **截屏 PII 脱敏** — `RedactionEngine` 在截屏上传 VLM、写入 audit log 或通过 REST 返回前，把 email / 信用卡号 / SSN / 电话 / secure-text 字段 / 强制区域模糊掉。通过环境变量 `JE_AUTOCONTROL_REDACTION=off|moderate|strict` 或逐次调用指定策略
 - **多主机管理控制台** — 在一份通讯录中注册 N 个远程 AutoControl REST 端点，并行轮询 health/sessions/jobs，把同一份动作清单广播给全部主机。储存于 `~/.je_auto_control/admin_hosts.json`（POSIX 上模式 0600）。Token 错误的主机会以实际 HTTP 错误显示为不健康
 - **可检测篡改的审计日志** — SQLite events 表加上 SHA-256 哈希链（每条记录含 `prev_hash` + `row_hash`）；修改任何过去记录都会打断哈希链。`verify_chain()` 自顶向下走访并报告第一个断点。既有数据表会在启动时回填（"初次使用即信任"）
 - **WebRTC 包监测** — 由既有 WebRTC stats 轮询喂入的进程级 `StatsSnapshot` 滚动窗口（默认 600 条 / 1 Hz 约 10 分钟）。对 RTT、FPS、bitrate、丢包率、jitter 各回 `last/min/max/avg/p95`

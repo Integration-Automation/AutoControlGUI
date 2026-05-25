@@ -352,3 +352,88 @@ format the list-based **Script Builder** uses, so the two views stay
 compatible. The pure-Python layout helper
 (``je_auto_control.gui.flow_editor.layout_steps``) is unit-tested
 without Qt.
+
+
+Generic agent loop (JSON + MCP)
+-------------------------------
+
+``AC_run_agent`` / ``ac_run_agent`` expose the closed-loop
+``AgentLoop`` (plan → act → verify → retry) to the JSON action
+language and the MCP tool registry. Parameters:
+
+* ``goal`` — natural-language objective.
+* ``backend`` — ``"anthropic"`` (uses ``export_anthropic_tools()``
+  with tool-use messages) or ``"openai"`` (uses ``export_openai_tools()``
+  with Chat Completions function calling).
+* ``max_steps`` (default 25) and ``wall_seconds`` (default 300.0).
+* ``model`` / ``max_tokens`` — backend-specific overrides.
+
+The Anthropic-only Computer-Use raw path (``computer_20250124``) is
+still available via ``AC_computer_use`` / ``ac_computer_use`` and is
+the right choice when the agent needs to drive a desktop the model
+itself sees pixel-for-pixel.
+
+
+Screenshot PII redaction
+------------------------
+
+The new ``je_auto_control.utils.redaction`` package introduces a
+``RedactionEngine`` plus three pre-baked policies
+(``POLICY_OFF / MODERATE / STRICT``). Built-in detectors:
+
+* Regex against caller-supplied OCR tokens — email, credit card,
+  SSN, phone.
+* Accessibility-tree secure-text-entry fields (the engine reads
+  ``[{"is_password": True, "bbox": [x1, y1, x2, y2]}, ...]`` from
+  ``context["accessibility"]``).
+* Forced regions for sticky overlays the rules cannot see.
+
+The default policy is resolved from ``JE_AUTOCONTROL_REDACTION``
+(``off`` / ``moderate`` / ``strict``). Per-call control:
+
+.. code-block:: python
+
+   from je_auto_control import redact_png_bytes, POLICY_STRICT
+   redacted_bytes, result = redact_png_bytes(png_bytes, policy=POLICY_STRICT)
+
+Wired through ``AC_redact_screenshot`` and ``ac_redact_screenshot``,
+which read PNG bytes from disk, run the engine, and write the
+redacted image to ``output_path`` (or overwrite the source). The
+return value lists the merged bounding boxes for audit.
+
+
+Android backend (uiautomator2 widget tree)
+------------------------------------------
+
+Adds widget-aware automation on top of the existing
+``AC_android_tap / swipe / key / text / screenshot`` adb-shell path:
+
+* ``AC_android_find_element`` — select by ``text`` /
+  ``resource_id`` / ``description`` / ``class_name``. Returns
+  ``{x1, y1, x2, y2}``.
+* ``AC_android_click_element`` — same selectors, taps the centre,
+  returns ``{x, y}``.
+* ``AC_android_dump_hierarchy`` — live XML widget tree.
+
+``je_auto_control/android/client.py`` exposes ``UIAutomatorDevice``
+as the Python entry point, with optional ``serial`` selection for
+multi-device rigs. ``uiautomator2`` is a lazy optional dependency.
+
+
+iOS backend (XCUITest via WebDriverAgent)
+-----------------------------------------
+
+New ``je_auto_control.ios`` namespace with:
+
+* ``tap`` / ``long_press`` / ``swipe`` / ``type_text`` /
+  ``press_key`` — touch + key primitives.
+* ``screenshot`` / ``screen_size`` — capture + bounds.
+* ``find_element`` / ``click_element`` — selector by ``name``
+  (label / accessibility id), ``class_name``
+  (``XCUIElementTypeButton`` …), or full ``predicate``
+  (NSPredicate string).
+* ``dump_source`` — XCUITest page source XML.
+
+Seven new ``AC_ios_*`` executor commands and matching ``ac_ios_*``
+MCP tools. ``facebook-wda`` is a lazy optional dependency; importing
+``je_auto_control.ios`` on a non-Mac host does not fail.
