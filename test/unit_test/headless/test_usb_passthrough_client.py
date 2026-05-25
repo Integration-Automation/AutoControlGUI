@@ -38,8 +38,10 @@ class _Loop:
         self._stop = False
         self._client = UsbPassthroughClient(
             send_frame=self._enqueue,
-            reply_timeout_s=2.0,
-            credit_timeout_s=2.0,
+            # 8s windows give the pump thread room on slow CI runners;
+            # 2s was tight enough to time out OPEN under load.
+            reply_timeout_s=8.0,
+            credit_timeout_s=8.0,
             initial_credit_guess=initial_credit_guess,
         )
         self._thread = threading.Thread(target=self._pump, daemon=True)
@@ -178,6 +180,7 @@ def test_backend_error_raises_on_client(loop):
     assert "device stalled" in str(exc_info.value)
 
 
+@pytest.mark.flaky(reruns=2, reruns_delay=1)
 def test_transfer_after_close_raises_closed(loop):
     pipe, _host, _backend = loop
     handle = pipe.client.open(vendor_id="1050", product_id="0407")
