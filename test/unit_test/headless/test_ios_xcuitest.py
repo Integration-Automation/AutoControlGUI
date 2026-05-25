@@ -179,10 +179,13 @@ def test_executor_tap_routes_through_ios_module(monkeypatch):
 
     monkeypatch.setattr("je_auto_control.ios.tap", fake_tap)
     from je_auto_control.utils.executor.action_executor import _ac_ios_tap
-    result = _ac_ios_tap(x=11, y=22, url="http://example:8100")
+    # URL string is opaque here — never dialed; only round-tripped through
+    # IOSDevice.url. Use https:// so Sonar's S5332 stays quiet.
+    sentinel_url = "https://example:8100"
+    result = _ac_ios_tap(x=11, y=22, url=sentinel_url)
     assert result == {"x": 11, "y": 22}
     assert seen["coords"] == (11, 22)
-    assert seen["device"].url == "http://example:8100"
+    assert seen["device"].url == sentinel_url
 
 
 # === optional-dep + import probe ============================================
