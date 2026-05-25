@@ -503,10 +503,10 @@ def _run_agent(goal: str,
         )
     elif name == "openai":
         tools = export_openai_tools()
+        # OpenAIAgentBackend does not accept max_tokens (Anthropic-only).
         backend_obj = OpenAIAgentBackend(
             tools=tools,
             model=model or "gpt-4o",
-            max_tokens=int(max_tokens),
         )
     else:
         raise ValueError(f"unknown agent backend: {backend!r}")
