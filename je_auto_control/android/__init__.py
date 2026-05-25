@@ -32,7 +32,18 @@ WebDriverAgent, which is its own infrastructure problem.
 from je_auto_control.android.adb_client import (
     AdbClient, AdbError, AdbNotAvailable, AndroidDevice,
 )
+from je_auto_control.android.client import (
+    UIAutomatorDevice, UIAutomatorUnavailableError,
+    default_ui_device, reset_default_ui_device,
+)
+from je_auto_control.android.find import (
+    ElementNotFoundError, click_element, dump_hierarchy, find_element,
+)
 
 __all__ = [
     "AdbClient", "AdbError", "AdbNotAvailable", "AndroidDevice",
+    "ElementNotFoundError",
+    "UIAutomatorDevice", "UIAutomatorUnavailableError",
+    "click_element", "default_ui_device", "dump_hierarchy",
+    "find_element", "reset_default_ui_device",
 ]

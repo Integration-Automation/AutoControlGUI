@@ -338,3 +338,83 @@ AC JSON 腳本的 node-based 視圖。與 list-based **Script Builder**
 共用同一份 JSON 格式 — 兩個視圖完全相容。純 Python 的 layout
 helper（``je_auto_control.gui.flow_editor.layout_steps``）可單元
 測試（無需 Qt）。
+
+
+通用 agent 迴圈（JSON + MCP）
+-----------------------------
+
+``AC_run_agent`` / ``ac_run_agent`` 把閉環 ``AgentLoop``
+（規劃 → 執行 → 驗證 → 重試）開放給 JSON action 與 MCP。參數：
+
+* ``goal`` — 自然語言目標。
+* ``backend`` — ``"anthropic"``（透過 ``export_anthropic_tools()``
+  以 tool-use messages 驅動）或 ``"openai"``（``export_openai_tools()``
+  + Chat Completions function calling）。
+* ``max_steps``（預設 25）、``wall_seconds``（預設 300.0）。
+* ``model`` / ``max_tokens`` — backend 專屬覆寫。
+
+Anthropic 原生 Computer-Use 路徑（``computer_20250124``）仍透過
+``AC_computer_use`` / ``ac_computer_use`` 提供，適合需要由模型
+直接看見桌面像素的場景。
+
+
+截圖 PII 遮罩
+-------------
+
+新模組 ``je_auto_control.utils.redaction``：``RedactionEngine``
+加上三個現成政策（``POLICY_OFF / MODERATE / STRICT``）。
+內建偵測器：
+
+* 對呼叫端提供的 OCR token 做 regex — email、信用卡、SSN、電話。
+* Accessibility tree 的 secure-text 欄位（engine 讀
+  ``context["accessibility"]`` 內 ``[{"is_password": True, "bbox":
+  [x1, y1, x2, y2]}, ...]``）。
+* 強制模糊區域，覆蓋規則看不到的疊加層。
+
+預設政策由環境變數 ``JE_AUTOCONTROL_REDACTION``
+（``off`` / ``moderate`` / ``strict``）決定。逐次呼叫：
+
+.. code-block:: python
+
+   from je_auto_control import redact_png_bytes, POLICY_STRICT
+   redacted_bytes, result = redact_png_bytes(png_bytes, policy=POLICY_STRICT)
+
+``AC_redact_screenshot`` 與 ``ac_redact_screenshot`` 從磁碟讀取
+PNG、跑 engine、寫回 ``output_path``（未指定時覆蓋原檔），並回傳
+合併後的 bounding box list 供稽核。
+
+
+Android backend（uiautomator2 widget tree）
+-------------------------------------------
+
+在既有 ``AC_android_tap / swipe / key / text / screenshot`` 的
+adb-shell 路徑之上加上 widget-aware 自動化：
+
+* ``AC_android_find_element`` — 以 ``text`` / ``resource_id`` /
+  ``description`` / ``class_name`` 為 selector，回傳
+  ``{x1, y1, x2, y2}``。
+* ``AC_android_click_element`` — 同樣的 selector，點擊中心並
+  回傳 ``{x, y}``。
+* ``AC_android_dump_hierarchy`` — 即時 XML widget tree。
+
+Python 入口為 ``je_auto_control.android.UIAutomatorDevice``，支援
+``serial`` 指定多裝置。``uiautomator2`` 為可選相依、懶載入。
+
+
+iOS backend（XCUITest via WebDriverAgent）
+------------------------------------------
+
+新增命名空間 ``je_auto_control.ios``：
+
+* ``tap`` / ``long_press`` / ``swipe`` / ``type_text`` /
+  ``press_key`` — 觸控與按鍵原語。
+* ``screenshot`` / ``screen_size`` — 擷取與尺寸。
+* ``find_element`` / ``click_element`` — selector：``name``
+  （label / accessibility id）、``class_name``
+  （``XCUIElementTypeButton`` …）或完整 ``predicate``
+  （NSPredicate 字串）。
+* ``dump_source`` — XCUITest 頁面 source XML。
+
+新增 7 個 ``AC_ios_*`` executor 命令與對應 ``ac_ios_*`` MCP 工具。
+``facebook-wda`` 為可選 pip 相依、懶載入，非 macOS 主機 import
+``je_auto_control.ios`` 仍可成功。

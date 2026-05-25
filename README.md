@@ -57,10 +57,12 @@
 
 ## What's new (2026-05)
 
-Twenty-three additions covering smarter locators, deeper IDE / ops
-tooling, two new platforms, and fresh integrations. Each ships with a
-headless API, an `AC_*` executor command, an `ac_*` MCP tool, and
-(where it makes sense) a Qt GUI tab. Full reference page:
+Twenty-seven additions covering smarter locators, deeper IDE / ops
+tooling, four new platforms (Wayland, Wayland-libei, Android
+widget-tree, iOS), screenshot PII redaction, and a generic
+plan-execute-verify agent loop. Each ships with a headless API, an
+`AC_*` executor command, an `ac_*` MCP tool, and (where it makes
+sense) a Qt GUI tab. Full reference page:
 [`docs/source/Eng/doc/new_features/v2_features_doc.rst`](docs/source/Eng/doc/new_features/v2_features_doc.rst).
 
 **Locator + selector intelligence**
@@ -80,13 +82,20 @@ headless API, an `AC_*` executor command, an `ac_*` MCP tool, and
 
 **Agent + integrations**
 - **Computer-use high-level API** — `run_computer_use(goal, ...)` wraps `ComputerUseAgentBackend` + `AgentLoop`; auto-detects display size; bounded by `max_steps` / `wall_seconds`.
+- **Generic agent loop JSON + MCP** — `AC_run_agent` / `ac_run_agent` expose the closed-loop `AgentLoop` (plan → act → verify → retry) with pluggable Anthropic / OpenAI backends; the Anthropic-only Computer-Use raw path remains via `AC_computer_use`.
 - **WebRunner convenience commands** — `web_open` / `web_quit` / `web_screenshot` / `web_current_url` on top of the existing `je_web_runner` bridge; same surface exposed as `AC_web_*` and `ac_web_*`.
 - **Chat-ops bot** — transport-agnostic `CommandRouter` + polling Slack adapter. Built-in commands: `/help`, `/scripts`, `/run`, `/screenshot`, `/status`. RBAC via `required_role`.
+
+**Privacy + safety**
+- **Screenshot PII redaction** — `RedactionEngine` with built-in detectors for email / credit card / SSN / phone (regex against caller-supplied OCR tokens) plus accessibility-tree secure-text-field detection. Forced regions for sticky overlays. Env-var-driven default policy `JE_AUTOCONTROL_REDACTION=off|moderate|strict`. Wired through `AC_redact_screenshot` + `ac_redact_screenshot`.
 
 **Platform coverage**
 - **Wayland CLI backend** — `wtype` / `ydotool` / `grim` with `XDG_SESSION_TYPE` auto-detect and X11 (XWayland) fallback; override via `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11|wayland|auto`.
 - **Wayland libei native** — ctypes binding to `libei.so.*` for microsecond-latency input; opt-in via `JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=libei|cli|auto`. Defaults to libei when loadable.
 - **macOS Accessibility deep-dive** — recursive `dump_accessibility_tree()` plus a polling `AccessibilityRecorder` for focus / bounds events.
+- **Android — adb shell primitives** — `AC_android_tap/swipe/key/text/screenshot` route through `adb` for any phone over USB / Wi-Fi adb. No daemon required.
+- **Android — uiautomator2 widget tree** — `AC_android_find_element/click_element/dump_hierarchy` add selector-based widget lookup (`text` / `resource_id` / `description` / `class_name`) and live XML hierarchy dump on top of the adb path.
+- **iOS — XCUITest via WebDriverAgent** — new `je_auto_control.ios.*` namespace: `tap`, `swipe`, `long_press`, `type_text`, `press_key`, `screenshot`, `screen_size`, `find_element` / `click_element` (XCUITest selectors: `name`, `class_name`, `predicate`), `dump_source`. Seven new `AC_ios_*` executor commands and matching `ac_ios_*` MCP tools. `facebook-wda` is an optional pip dep; loads lazily so non-Mac hosts still import the package.
 
 **Developer experience**
 - **autocontrol-lsp completion** — the language server now tracks `didOpen` / `didChange` / `didClose`, publishes diagnostics for invalid JSON and unknown `AC_*` commands, and provides signature help generated from the live executor table.
@@ -129,7 +138,8 @@ headless API, an `AC_*` executor command, an `ac_*` MCP tool, and
 - **Window Management** — send keyboard/mouse events directly to specific windows (Windows/Linux)
 - **GUI Application** — built-in PySide6 graphical interface with live language switching (English / 繁體中文 / 简体中文 / 日本語)
 - **CLI Runner** — `python -m je_auto_control.cli run|list-jobs|start-server|start-rest`
-- **Cross-Platform** — unified API across Windows, macOS, and Linux (X11)
+- **Cross-Platform** — unified API across Windows, macOS, Linux (X11 + Wayland), Android (adb + uiautomator2), and iOS (WebDriverAgent / facebook-wda)
+- **Screenshot PII redaction** — `RedactionEngine` blurs emails / credit cards / SSNs / phones / secure-text fields / forced regions before screenshots leave the host (VLM upload, audit log, REST). Policy via env var `JE_AUTOCONTROL_REDACTION=off|moderate|strict` or per-call
 - **Multi-Host Admin Console** — register N AutoControl REST endpoints in one address book, poll them in parallel for health/sessions/jobs, broadcast actions to all of them. Persisted to `~/.je_auto_control/admin_hosts.json` (mode 0600 on POSIX). Bad-token hosts surface as unhealthy with the actual HTTP error
 - **Tamper-Evident Audit Log** — SQLite events table with SHA-256 hash chain (`prev_hash` + `row_hash` per row); editing any past row breaks the chain. `verify_chain()` walks rows top-down and reports the first broken link. Legacy tables get backfilled at startup ("trust on first use")
 - **WebRTC Packet Inspector** — process-global rolling window of `StatsSnapshot` samples (default 600 / ~10 min @ 1Hz) fed by the existing WebRTC stats pollers. Per-metric `last/min/max/avg/p95` for RTT, FPS, bitrate, packet loss, jitter

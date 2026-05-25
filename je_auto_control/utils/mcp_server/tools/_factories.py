@@ -740,6 +740,162 @@ def dag_tools() -> List[MCPTool]:
     ]
 
 
+def android_widget_tools() -> List[MCPTool]:
+    """uiautomator2-backed Android widget tree operations.
+
+    Complements the existing adb-based AC_android_* primitives by
+    adding selector-based element lookup (find / click / dump). Each
+    tool accepts a ``serial`` to target one device in a multi-device
+    rig.
+    """
+    selector_schema = {
+        "text": {"type": "string"},
+        "resource_id": {"type": "string"},
+        "description": {"type": "string"},
+        "class_name": {"type": "string"},
+        "timeout_s": {"type": "number"},
+        "serial": {"type": "string"},
+    }
+    return [
+        MCPTool(
+            name="ac_android_find_element",
+            description=("Find an Android widget by text / resource_id / "
+                         "description / class_name via uiautomator2. "
+                         "Returns {x1, y1, x2, y2}. Raises if no match "
+                         "within timeout_s."),
+            input_schema=schema(selector_schema),
+            handler=h.android_find_element,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_android_click_element",
+            description=("Tap the first widget matching the selectors. "
+                         "Returns {x, y} click centre. Driven by "
+                         "uiautomator2 so the daemon sees the press."),
+            input_schema=schema(selector_schema),
+            handler=h.android_click_element,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_android_dump_hierarchy",
+            description=("Return the device's current widget tree as "
+                         "an XML string."),
+            input_schema=schema({"serial": {"type": "string"}}),
+            handler=h.android_dump_hierarchy,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def ios_tools() -> List[MCPTool]:
+    """XCUITest-backed iOS surface (WebDriverAgent / facebook-wda)."""
+    selector_schema = {
+        "name": {"type": "string"},
+        "class_name": {"type": "string"},
+        "predicate": {"type": "string"},
+        "timeout_s": {"type": "number"},
+        "url": {"type": "string"},
+    }
+    return [
+        MCPTool(
+            name="ac_ios_tap",
+            description="Tap absolute (x, y) on the iOS device via WDA.",
+            input_schema=schema({
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "url": {"type": "string"},
+            }, required=["x", "y"]),
+            handler=h.ios_tap,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_ios_swipe",
+            description=("Swipe from (x1, y1) to (x2, y2) over "
+                         "duration_s seconds."),
+            input_schema=schema({
+                "x1": {"type": "integer"},
+                "y1": {"type": "integer"},
+                "x2": {"type": "integer"},
+                "y2": {"type": "integer"},
+                "duration_s": {"type": "number"},
+                "url": {"type": "string"},
+            }, required=["x1", "y1", "x2", "y2"]),
+            handler=h.ios_swipe,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_ios_type",
+            description="Send text to the currently focused iOS input.",
+            input_schema=schema({
+                "text": {"type": "string"},
+                "url": {"type": "string"},
+            }, required=["text"]),
+            handler=h.ios_type,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_ios_screenshot",
+            description="Save the device screen as a PNG to file_path.",
+            input_schema=schema({
+                "file_path": {"type": "string"},
+                "url": {"type": "string"},
+            }, required=["file_path"]),
+            handler=h.ios_screenshot,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_ios_find_element",
+            description=("Find an XCUITest element by name / class_name / "
+                         "predicate. Returns {x1, y1, x2, y2}."),
+            input_schema=schema(selector_schema),
+            handler=h.ios_find_element,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_ios_click_element",
+            description="Tap the first XCUITest element matching the selectors.",
+            input_schema=schema(selector_schema),
+            handler=h.ios_click_element,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_ios_dump_source",
+            description="Return the XCUITest page source XML for the active app.",
+            input_schema=schema({"url": {"type": "string"}}),
+            handler=h.ios_dump_source,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def redaction_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_redact_screenshot",
+            description=("Blur PII regions in a saved screenshot. "
+                         "policy: 'off'|'moderate'|'strict'. Optional "
+                         "regions (list of [x1,y1,x2,y2]) are blurred "
+                         "unconditionally. Returns {output_path, boxes, "
+                         "detectors_used}."),
+            input_schema=schema({
+                "file_path": {"type": "string"},
+                "output_path": {"type": "string"},
+                "policy": {"type": "string",
+                            "enum": ["off", "moderate", "strict"]},
+                "regions": {"type": "array",
+                             "items": {"type": "array",
+                                       "items": {"type": "integer"}}},
+                "accessibility": {"type": "array",
+                                   "items": {"type": "object"}},
+                "ocr": {"type": "array",
+                         "items": {"type": "object"}},
+            }, required=["file_path"]),
+            handler=h.redact_screenshot,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def computer_use_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -760,6 +916,26 @@ def computer_use_tools() -> List[MCPTool]:
                 "max_tokens": {"type": "integer"},
             }, required=["goal"]),
             handler=h.computer_use,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_run_agent",
+            description=("Drive the generic plan→act→verify→retry "
+                         "AgentLoop against goal. backend='anthropic' "
+                         "uses tool-use messages; 'openai' uses the "
+                         "Responses API. Returns {succeeded, "
+                         "final_message, elapsed_s, steps[]}. Requires "
+                         "the matching SDK + API key."),
+            input_schema=schema({
+                "goal": {"type": "string"},
+                "backend": {"type": "string",
+                             "enum": ["anthropic", "openai"]},
+                "max_steps": {"type": "integer"},
+                "wall_seconds": {"type": "number"},
+                "model": {"type": "string"},
+                "max_tokens": {"type": "integer"},
+            }, required=["goal"]),
+            handler=h.run_agent,
             annotations=DESTRUCTIVE,
         ),
     ]
@@ -1610,7 +1786,7 @@ ALL_FACTORIES = (
     ab_locator_tools, a11y_tree_tools, ocr_structure_tools,
     smart_wait_tools, cost_telemetry_tools, failure_hook_tools,
     computer_use_tools, dag_tools, presence_tools, chatops_tools,
-    webrunner_tools,
+    redaction_tools, android_widget_tools, ios_tools, webrunner_tools,
     scheduler_tools, trigger_tools, hotkey_tools, screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
 )

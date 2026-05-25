@@ -55,6 +55,14 @@ from je_auto_control.utils.self_healing import (
     HealEvent, HealEventLog, HealOutcome, SelfHealError,
     default_heal_log, self_heal_click, self_heal_locate,
 )
+# Screenshot PII redaction (blur regions before VLM upload / audit log).
+from je_auto_control.utils.redaction import (
+    POLICY_MODERATE, POLICY_OFF, POLICY_STRICT,
+    RedactionEngine, RedactionPolicy, RedactionResult,
+    default_policy as default_redaction_policy,
+    policy_from_name as redaction_policy_from_name,
+    redact_png_bytes,
+)
 # WebRunner bridge (headless: optional je_web_runner dependency)
 from je_auto_control.utils.webrunner_bridge import (
     WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
@@ -475,6 +483,11 @@ __all__ = [
     # Self-healing locator (image → VLM fallback)
     "HealEvent", "HealEventLog", "HealOutcome", "SelfHealError",
     "default_heal_log", "self_heal_click", "self_heal_locate",
+    # Screenshot redaction (PII blur)
+    "POLICY_MODERATE", "POLICY_OFF", "POLICY_STRICT",
+    "RedactionEngine", "RedactionPolicy", "RedactionResult",
+    "default_redaction_policy", "redaction_policy_from_name",
+    "redact_png_bytes",
     # WebRunner bridge (browser automation via je_web_runner)
     "WebRunnerBridgeError", "is_webrunner_available",
     "list_webrunner_commands", "run_webrunner_action",

@@ -1,6 +1,8 @@
 """Tests for the Scheduler headless module."""
 import time
 
+import pytest
+
 from je_auto_control.utils.scheduler.scheduler import Scheduler
 
 
@@ -22,6 +24,7 @@ def test_set_enabled_toggles_flag():
     assert sched.set_enabled("no-such-job", True) is False
 
 
+@pytest.mark.flaky(reruns=2, reruns_delay=1)
 def test_job_fires_and_updates_runs(monkeypatch):
     executed = []
     sched = Scheduler(
@@ -35,11 +38,13 @@ def test_job_fires_and_updates_runs(monkeypatch):
     job = sched.add_job("fake.json", interval_seconds=0.1, repeat=False)
     sched.start()
     try:
-        deadline = time.monotonic() + 2.0
+        # 8s budget so a sluggish Windows-2022 CI runner has headroom
+        # past the 100 ms tick — the previous 2s timed out under load.
+        deadline = time.monotonic() + 8.0
         while time.monotonic() < deadline and sched.list_jobs():
             time.sleep(0.05)
     finally:
-        sched.stop(timeout=1.0)
+        sched.stop(timeout=2.0)
     assert executed, "executor should have been called at least once"
     # Non-repeating job is removed after firing.
     assert all(j.job_id != job.job_id for j in sched.list_jobs())

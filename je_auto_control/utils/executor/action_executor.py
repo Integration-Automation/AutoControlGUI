@@ -474,6 +474,105 @@ def _presence_clear() -> Dict[str, Any]:
     return {"cleared": True}
 
 
+def _run_agent(goal: str,
+               backend: str = "anthropic",
+               max_steps: int = 25,
+               wall_seconds: float = 300.0,
+               model: Optional[str] = None,
+               max_tokens: int = 1024) -> Dict[str, Any]:
+    """Executor adapter: drive the closed-loop ``AgentLoop`` against ``goal``.
+
+    ``backend`` selects between the production backends (Anthropic /
+    OpenAI). The Anthropic computer-use raw path remains available
+    via :func:`_computer_use` / ``AC_computer_use``.
+    """
+    from je_auto_control.utils.agent import AgentBudget, AgentLoop
+    from je_auto_control.utils.agent.backends import (
+        AnthropicAgentBackend, OpenAIAgentBackend,
+    )
+    from je_auto_control.utils.tool_use_schema import (
+        export_anthropic_tools, export_openai_tools,
+    )
+    name = (backend or "anthropic").strip().lower()
+    if name == "anthropic":
+        tools = export_anthropic_tools()
+        backend_obj = AnthropicAgentBackend(
+            tools=tools,
+            model=model or "claude-opus-4-7",
+            max_tokens=int(max_tokens),
+        )
+    elif name == "openai":
+        tools = export_openai_tools()
+        # OpenAIAgentBackend does not accept max_tokens (Anthropic-only).
+        backend_obj = OpenAIAgentBackend(
+            tools=tools,
+            model=model or "gpt-4o",
+        )
+    else:
+        raise ValueError(f"unknown agent backend: {backend!r}")
+    budget = AgentBudget(
+        max_steps=int(max_steps), wall_seconds=float(wall_seconds),
+    )
+    result = AgentLoop(backend_obj, budget=budget).run(goal)
+    return {
+        "succeeded": bool(result.succeeded),
+        "elapsed_s": float(result.elapsed_s),
+        "final_message": result.final_message,
+        "steps": [
+            {
+                "index": step.index,
+                "tool": step.tool,
+                "arguments": step.arguments,
+                "error": step.error,
+                "stop_reason": step.stop_reason,
+            }
+            for step in result.steps
+        ],
+    }
+
+
+def _redact_screenshot(file_path: str,
+                       output_path: Optional[str] = None,
+                       policy: str = "moderate",
+                       regions: Optional[List[List[int]]] = None,
+                       accessibility: Optional[List[Dict[str, Any]]] = None,
+                       ocr: Optional[List[Dict[str, Any]]] = None,
+                       ) -> Dict[str, Any]:
+    """Executor adapter: blur PII regions in a saved screenshot.
+
+    Reads ``file_path``, applies the chosen redaction policy
+    (optionally with caller-supplied accessibility / OCR context),
+    and writes the result to ``output_path`` (or overwrites the
+    source when omitted). Returns ``{output_path, boxes,
+    detectors_used}`` for downstream audit.
+    """
+    from je_auto_control.utils.redaction import (
+        RedactionEngine, policy_from_name,
+    )
+    target = output_path or file_path
+    chosen = policy_from_name(policy)
+    if regions:
+        chosen = chosen.with_extra_regions(
+            [tuple(int(v) for v in r) for r in regions],
+        )
+    engine = RedactionEngine(chosen)
+    context: Dict[str, Any] = {}
+    if accessibility is not None:
+        context["accessibility"] = list(accessibility)
+    if ocr is not None:
+        context["ocr"] = [(item["text"], item["bbox"]) for item in ocr]
+    with open(file_path, "rb") as src:
+        png_bytes = src.read()
+    redacted, result = engine.redact_bytes(png_bytes, context)
+    with open(target, "wb") as dest:
+        dest.write(redacted)
+    return {
+        "output_path": str(target),
+        "boxes": [list(b) for b in result.boxes],
+        "detectors_used": list(result.detectors_used),
+    }
+
+
 def _computer_use(goal: str,
                   display_width_px: Optional[int] = None,
                   display_height_px: Optional[int] = None,
@@ -989,6 +1088,120 @@ def _ac_android_shell(command: str,
     return _android_client(serial, adb_path).shell(command)
 
 
+def _ac_android_find_element(text: Optional[str] = None,
+                              resource_id: Optional[str] = None,
+                              description: Optional[str] = None,
+                              class_name: Optional[str] = None,
+                              timeout_s: float = 5.0,
+                              serial: Optional[str] = None,
+                              ) -> Dict[str, int]:
+    """Find an Android widget via uiautomator2; return its bounding rect."""
+    from je_auto_control.android import (
+        UIAutomatorDevice, find_element,
+    )
+    device = UIAutomatorDevice(serial=serial)
+    x1, y1, x2, y2 = find_element(
+        text=text, resource_id=resource_id, description=description,
+        class_name=class_name, timeout_s=float(timeout_s), device=device,
+    )
+    return {"x1": x1, "y1": y1, "x2": x2, "y2": y2}
+
+
+def _ac_android_click_element(text: Optional[str] = None,
+                               resource_id: Optional[str] = None,
+                               description: Optional[str] = None,
+                               class_name: Optional[str] = None,
+                               timeout_s: float = 5.0,
+                               serial: Optional[str] = None,
+                               ) -> Dict[str, int]:
+    """Tap the first widget matching the selectors; return click centre."""
+    from je_auto_control.android import (
+        UIAutomatorDevice, click_element,
+    )
+    device = UIAutomatorDevice(serial=serial)
+    cx, cy = click_element(
+        text=text, resource_id=resource_id, description=description,
+        class_name=class_name, timeout_s=float(timeout_s), device=device,
+    )
+    return {"x": cx, "y": cy}
+
+
+def _ac_android_dump_hierarchy(serial: Optional[str] = None) -> str:
+    """Return the device's widget tree as an XML string."""
+    from je_auto_control.android import UIAutomatorDevice, dump_hierarchy
+    device = UIAutomatorDevice(serial=serial)
+    return dump_hierarchy(device=device)
+
+
+# === iOS executor adapters (WebDriverAgent / facebook-wda) ==================
+
+def _ios_device(url: Optional[str]) -> Any:
+    from je_auto_control.ios import IOSDevice
+    return IOSDevice(url=url)
+
+
+def _ac_ios_tap(x: int, y: int, url: Optional[str] = None) -> Dict[str, int]:
+    from je_auto_control.ios import tap
+    tap(int(x), int(y), device=_ios_device(url))
+    return {"x": int(x), "y": int(y)}
+
+
+def _ac_ios_swipe(x1: int, y1: int, x2: int, y2: int,
+                  duration_s: float = 0.5,
+                  url: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.ios import swipe
+    swipe(int(x1), int(y1), int(x2), int(y2),
+          duration_s=float(duration_s), device=_ios_device(url))
+    return {"x1": int(x1), "y1": int(y1),
+            "x2": int(x2), "y2": int(y2)}
+
+
+def _ac_ios_type(text: str, url: Optional[str] = None) -> str:
+    from je_auto_control.ios import type_text
+    type_text(text, device=_ios_device(url))
+    return text
+
+
+def _ac_ios_screenshot(file_path: str,
+                       url: Optional[str] = None) -> str:
+    from je_auto_control.ios import screenshot
+    written = screenshot(file_path, device=_ios_device(url))
+    if written is None:
+        raise RuntimeError("screenshot returned no path")
+    return written
+
+
+def _ac_ios_find_element(name: Optional[str] = None,
+                          class_name: Optional[str] = None,
+                          predicate: Optional[str] = None,
+                          timeout_s: float = 5.0,
+                          url: Optional[str] = None) -> Dict[str, int]:
+    from je_auto_control.ios import find_element
+    x1, y1, x2, y2 = find_element(
+        name=name, class_name=class_name, predicate=predicate,
+        timeout_s=float(timeout_s), device=_ios_device(url),
+    )
+    return {"x1": x1, "y1": y1, "x2": x2, "y2": y2}
+
+
+def _ac_ios_click_element(name: Optional[str] = None,
+                           class_name: Optional[str] = None,
+                           predicate: Optional[str] = None,
+                           timeout_s: float = 5.0,
+                           url: Optional[str] = None) -> Dict[str, int]:
+    from je_auto_control.ios import click_element
+    cx, cy = click_element(
+        name=name, class_name=class_name, predicate=predicate,
+        timeout_s=float(timeout_s), device=_ios_device(url),
+    )
+    return {"x": cx, "y": cy}
+
+
+def _ac_ios_dump_source(url: Optional[str] = None) -> str:
+    from je_auto_control.ios import dump_source
+    return dump_source(device=_ios_device(url))
+
+
 def _llm_plan_for_executor(description: str,
                            examples: Optional[list] = None,
                            model: Optional[str] = None,
@@ -1478,6 +1691,13 @@ class Executor:
             # Computer-use (Anthropic computer_20250124 closed-loop agent)
             "AC_computer_use": _computer_use,
 
+            # Generic plan→act→verify→retry agent loop (Anthropic / OpenAI)
+            "AC_run_agent": _run_agent,
+
+            # Screenshot PII redaction (blur emails / credit cards /
+            # password fields / explicit regions before upload).
+            "AC_redact_screenshot": _redact_screenshot,
+
             # Cross-host DAG orchestrator
             "AC_run_dag": _run_dag,
 
@@ -1536,6 +1756,19 @@ class Executor:
             "AC_web_current_url": _ac_web_current_url,
 
             # Android via ADB (Phase 9.7)
+            # uiautomator2 widget tree (find / click / dump)
+            "AC_android_find_element": _ac_android_find_element,
+            "AC_android_click_element": _ac_android_click_element,
+            "AC_android_dump_hierarchy": _ac_android_dump_hierarchy,
+            # iOS XCUITest (WebDriverAgent / facebook-wda)
+            "AC_ios_tap": _ac_ios_tap,
+            "AC_ios_swipe": _ac_ios_swipe,
+            "AC_ios_type": _ac_ios_type,
+            "AC_ios_screenshot": _ac_ios_screenshot,
+            "AC_ios_find_element": _ac_ios_find_element,
+            "AC_ios_click_element": _ac_ios_click_element,
+            "AC_ios_dump_source": _ac_ios_dump_source,
+            # Existing adb-based primitives
             "AC_android_tap": _ac_android_tap,
             "AC_android_swipe": _ac_android_swipe,
             "AC_android_key": _ac_android_key,
