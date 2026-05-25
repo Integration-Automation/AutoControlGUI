@@ -18,7 +18,7 @@ otherwise know about (e.g. the user's wallet popup).
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 
@@ -27,7 +27,7 @@ DETECTOR_EMAIL = "email"
 DETECTOR_CREDIT_CARD = "credit_card"
 DETECTOR_SSN = "ssn"
 DETECTOR_PHONE = "phone"
-DETECTOR_PASSWORD_FIELD = "password_field"
+DETECTOR_PASSWORD_FIELD = "password_field"  # nosec B105  # detector tag, not a credential
 
 
 @dataclass(frozen=True)

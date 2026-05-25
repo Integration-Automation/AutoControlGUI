@@ -488,7 +488,7 @@ def _run_agent(goal: str,
     """
     from je_auto_control.utils.agent import AgentBudget, AgentLoop
     from je_auto_control.utils.agent.backends import (
-        AgentBackendError, AnthropicAgentBackend, OpenAIAgentBackend,
+        AnthropicAgentBackend, OpenAIAgentBackend,
     )
     from je_auto_control.utils.tool_use_schema import (
         export_anthropic_tools, export_openai_tools,
