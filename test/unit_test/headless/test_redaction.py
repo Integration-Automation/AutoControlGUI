@@ -13,11 +13,11 @@ from je_auto_control.utils.redaction import (
     default_policy, policy_from_name, redact_png_bytes,
 )
 from je_auto_control.utils.redaction.policies import (
-    DETECTOR_CREDIT_CARD, DETECTOR_EMAIL, DETECTOR_PASSWORD_FIELD,
+    DETECTOR_CREDIT_CARD, DETECTOR_EMAIL, DETECTOR_SECURE_FIELD,
 )
 from je_auto_control.utils.redaction.rules import (
     merge_boxes, build_detector_chain, regex_detector,
-    password_field_detector,
+    secure_field_detector,
 )
 
 
@@ -63,8 +63,8 @@ def test_credit_card_regex_detector_handles_spaces():
     assert boxes == [(0, 0, 300, 30)]
 
 
-def test_password_field_detector_uses_accessibility_tree():
-    detector = password_field_detector()
+def test_secure_field_detector_uses_accessibility_tree():
+    detector = secure_field_detector()
     boxes = detector(None, {
         "accessibility": [
             {"is_password": True, "bbox": [5, 5, 100, 25]},
@@ -74,8 +74,8 @@ def test_password_field_detector_uses_accessibility_tree():
     assert boxes == [(5, 5, 100, 25)]
 
 
-def test_password_field_detector_skips_missing_bbox():
-    detector = password_field_detector()
+def test_secure_field_detector_skips_missing_bbox():
+    detector = secure_field_detector()
     boxes = detector(None, {
         "accessibility": [{"is_password": True}],
     })
@@ -112,9 +112,9 @@ def test_engine_returns_original_when_no_matches():
     assert result.boxes == ()
 
 
-def test_engine_blurs_password_field_bbox():
+def test_engine_blurs_secure_field_bbox():
     engine = RedactionEngine(RedactionPolicy(
-        detectors=(DETECTOR_PASSWORD_FIELD,),
+        detectors=(DETECTOR_SECURE_FIELD,),
         blur_radius=10,
     ))
     image = _solid_image()

@@ -21,7 +21,7 @@ from je_auto_control.utils.redaction.engine import (
     RedactionEngine, RedactionResult,
 )
 from je_auto_control.utils.redaction.policies import (
-    DETECTOR_CREDIT_CARD, DETECTOR_EMAIL, DETECTOR_PASSWORD_FIELD,
+    DETECTOR_CREDIT_CARD, DETECTOR_EMAIL, DETECTOR_SECURE_FIELD,
     DETECTOR_PHONE, DETECTOR_SSN,
     POLICY_MODERATE, POLICY_OFF, POLICY_STRICT,
     RedactionPolicy, policy_from_name,
@@ -54,7 +54,7 @@ def redact_png_bytes(png_bytes: bytes,
 
 __all__ = [
     "BoundingBox",
-    "DETECTOR_CREDIT_CARD", "DETECTOR_EMAIL", "DETECTOR_PASSWORD_FIELD",
+    "DETECTOR_CREDIT_CARD", "DETECTOR_EMAIL", "DETECTOR_SECURE_FIELD",
     "DETECTOR_PHONE", "DETECTOR_SSN",
     "POLICY_MODERATE", "POLICY_OFF", "POLICY_STRICT",
     "RedactionEngine", "RedactionPolicy", "RedactionResult",

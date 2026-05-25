@@ -16,7 +16,7 @@ import re
 from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 from je_auto_control.utils.redaction.policies import (
-    DETECTOR_CREDIT_CARD, DETECTOR_EMAIL, DETECTOR_PASSWORD_FIELD,
+    DETECTOR_CREDIT_CARD, DETECTOR_EMAIL, DETECTOR_SECURE_FIELD,
     DETECTOR_PHONE, DETECTOR_SSN,
 )
 
@@ -71,7 +71,7 @@ def regex_detector(name: str) -> DetectorFn:
     return _detect
 
 
-def password_field_detector() -> DetectorFn:
+def secure_field_detector() -> DetectorFn:
     """Detector that blurs accessibility-flagged password input fields.
 
     Requires ``context["accessibility"]`` — a list of dicts with at
@@ -110,8 +110,8 @@ def build_detector_chain(detectors: Iterable[str],
     for name in detectors:
         if name in _REGEX_BY_DETECTOR:
             chain.append(regex_detector(name))
-        elif name == DETECTOR_PASSWORD_FIELD:
-            chain.append(password_field_detector())
+        elif name == DETECTOR_SECURE_FIELD:
+            chain.append(secure_field_detector())
         # Unknown detector names are silently skipped — old policies
         # serialised to disk must keep loading after a rule rename.
     chain.append(static_region_detector(regions))
@@ -167,5 +167,5 @@ def _normalise_bbox(bbox) -> BoundingBox:
 __all__ = [
     "BoundingBox", "DetectorFn",
     "build_detector_chain", "merge_boxes",
-    "password_field_detector", "regex_detector", "static_region_detector",
+    "secure_field_detector", "regex_detector", "static_region_detector",
 ]
