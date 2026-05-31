@@ -141,12 +141,12 @@
 - **多主机管理控制台** — 在一份通讯录中注册 N 个远程 AutoControl REST 端点，并行轮询 health/sessions/jobs，把同一份动作清单广播给全部主机。储存于 `~/.je_auto_control/admin_hosts.json`（POSIX 上模式 0600）。Token 错误的主机会以实际 HTTP 错误显示为不健康
 - **可检测篡改的审计日志** — SQLite events 表加上 SHA-256 哈希链（每条记录含 `prev_hash` + `row_hash`）；修改任何过去记录都会打断哈希链。`verify_chain()` 自顶向下走访并报告第一个断点。既有数据表会在启动时回填（"初次使用即信任"）
 - **WebRTC 包监测** — 由既有 WebRTC stats 轮询喂入的进程级 `StatsSnapshot` 滚动窗口（默认 600 条 / 1 Hz 约 10 分钟）。对 RTT、FPS、bitrate、丢包率、jitter 各回 `last/min/max/avg/p95`
-- **USB 设备列举** — 只读的跨平台 USB 设备列举。优先尝试 pyusb（libusb）；若无则退回平台特定命令（Windows `Get-PnpDevice`、macOS `system_profiler`、Linux `/sys/bus/usb/devices`）。第二阶段（passthrough）刻意延后待设计审查
+- **USB 设备列举** — 只读的跨平台 USB 设备列举。优先尝试 pyusb（libusb）；若无则退回平台特定命令（Windows `Get-PnpDevice`、macOS `system_profiler`、Linux `/sys/bus/usb/devices`）。第二阶段 passthrough 构建于此（见下）
 - **系统诊断** — 一键"目前正常吗？"探测：平台、可选依赖包、executor 命令数、审计链、截图、鼠标、磁盘空间、REST registry。CLI 全绿 exit 0／否则 1；REST `/diagnose`；按严重度上色的 GUI 分页
 - **USB Hotplug 事件** — 轮询式 hotplug 监测（`UsbHotplugWatcher`），含 bounded ring buffer 与带序号的事件；`GET /usb/events?since=N` 让晚加入的订阅者补上进度。USB 分页有自动刷新切换钮。
 - **OpenAPI 3.1 + Swagger UI** — `GET /openapi.json`（auth-gated，从活的路由表生成）+ `GET /docs`（浏览器版 Swagger UI 含 bearer token 栏）。CI 上有 drift 测试，新加路由忘记写 metadata 会被拦下。
 - **配置包导出／导入** — 单一 JSON 文件，导出／导入用户配置（admin hosts、address book、trusted viewers、known hosts、host service、IDs）。原子写入加 `<name>.bak.<时间戳>` 备份；CLI `python -m je_auto_control.utils.config_bundle export|import`；`POST /config/{export,import}`；REST API 分页有按钮。
-- **USB Passthrough（实验性、需主动启用）** — wire-level 协议走 WebRTC `usb` DataChannel（10 个 opcode、CREDIT 流量控制、16 KiB payload 上限）。Host 端 `UsbPassthroughSession` 在 Linux libusb backend 上端到端运行；Windows `WinUSB` backend 含完整 ctypes 接线（硬件未验证）；macOS `IOKit` 为骨架。Viewer 端阻塞式 client（`UsbPassthroughClient` → `ClientHandle.control_transfer / bulk_transfer / interrupt_transfer`）。持久化 ACL（`~/.je_auto_control/usb_acl.json`，默认 deny，POSIX mode 0600），含 host 端 prompt QDialog 与可检测篡改审计日志整合。默认 off — 用 `enable_usb_passthrough(True)` 或 `JE_AUTOCONTROL_USB_PASSTHROUGH=1` 启用。Phase 2e 外部安全审查清单已附；默认启用前需要签核。
+- **USB Passthrough（需主动启用）** — 让远端 viewer 使用实体插在 host 上的 USB 设备，走 WebRTC `usb` DataChannel。Wire-level 协议（11 个 opcode 含 `RESUME`、CREDIT 流量控制、16 KiB payload 上限，超量传输以 EOF 分片）。八个原始未决问题全部解决：可靠有序 channel、LIST 走 channel（ACL 过滤）、per-claim credit、Linux kernel driver detach/reattach、ACL **HMAC-SHA256 完整性**（篡改 fail-closed；密钥可插拔 — Windows DPAPI 或 passphrase vault）。**Backend：**`LibusbBackend`（production）、`WinusbBackend`（ctypes）、`IokitBackend`（原生 IOKit 列举 + libusb 传输）— Windows/macOS *硬件未验证*；`default_passthrough_backend()` 依 OS 自动挑。Viewer 端阻塞式 client（`control/bulk/interrupt_transfer`、`list_devices`、`resume`）；in-process `UsbLoopback` 让同机可走完整堆栈 share+use。**已接入 WebRTC** host/viewer（`viewer.usb_client()`）并含断线可续租的 **resume token**。持久化 ACL（默认 deny、mode 0600），含 host 端 prompt 对话框、滥用 **rate-limit / lockout** 与可检测篡改审计整合。五个驱动面：AnyDesk 风 **GUI 面板**（分享 + ACL 允许/封锁 + 本机/远端使用）、`AC_usb_*` executor 命令（JSON / socket / 调度器）、**REST** `/usb/...`、一级 **MCP** `ac_usb_*` 工具、以及 Python API。默认 off — 用 `enable_usb_passthrough(True)` 或 `JE_AUTOCONTROL_USB_PASSTHROUGH=1` 启用；默认启用仍待 Phase 2e 外部安全签核 + 实机硬件验证。
 
 ---
 
@@ -213,7 +213,7 @@ flowchart LR
     subgraph USB["USB"]
         direction TB
         UsbEnum["usb/<br/>列举 + hotplug"]
-        UsbPass["usb/passthrough/<br/>session · client · ACL ·<br/>libusb · WinUSB · IOKit"]
+        UsbPass["usb/passthrough/<br/>session · client · ACL(HMAC) ·<br/>libusb · WinUSB · IOKit ·<br/>loopback · webrtc channel · commands"]
     end
 
     subgraph Remote["远程桌面 (utils/remote_desktop/)"]
@@ -313,7 +313,7 @@ je_auto_control/
     ├── admin/                  # 多主机 AdminConsoleClient（轮询 + 广播）
     ├── diagnostics/            # 系统自我诊断 + CLI
     ├── config_bundle/          # 单文件用户配置导出／导入
-    ├── usb/                    # 跨平台列举、hotplug 事件、passthrough/{protocol, session, viewer client, ACL, libusb / WinUSB / IOKit}
+    ├── usb/                    # 跨平台列举、hotplug 事件、passthrough/{protocol, session, viewer client, loopback, webrtc channel, ACL+HMAC, descriptor, key providers, commands, libusb / WinUSB / IOKit}
     ├── remote_desktop/         # WebRTC host + viewer、signalling、multi-viewer、文件／剪贴板／音频同步、审计日志（哈希链）、信任列表、TURN 配置、mDNS 发现、WebRTC stats inspector
     ├── plugin_loader/          # 动态 AC_* 插件搜索与注册
     ├── socket_server/          # TCP Socket 服务器（远程自动化）
