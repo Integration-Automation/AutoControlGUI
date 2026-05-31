@@ -5,18 +5,21 @@ host's USB devices via :http:get:`/usb/devices`, and (when a WebRTC
 ``usb`` DataChannel is wired up — Phase 2 follow-up) issue OPEN against
 a row.
 
-This tab is **read-only by default**: clicking *Open* in this Phase 2a.1
-build raises a clear "WebRTC channel not wired" message, because the
-viewer-side ``UsbPassthroughClient`` needs a transport callable that
-actually drives the host's ``usb`` DataChannel — that wiring is a
-separate piece of work in the WebRTC viewer integration. The browse +
-enumerate path works against any reachable REST server today.
+Clicking *Open* against a **localhost** target opens the device on this
+machine over the in-process loopback transport and reads its descriptor
+(a full protocol-stack round trip). Against a **remote** target it shows
+a clear "WebRTC channel not wired" message, because driving a remote
+host's ``usb`` DataChannel is a separate piece of the WebRTC viewer
+integration. The browse + enumerate path works against any reachable
+REST server today; for the simple share/use flow see the *USB Sharing*
+panel.
 """
 from __future__ import annotations
 
 import json
+import urllib.parse
 import urllib.request
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from PySide6.QtCore import QObject, QThread, Signal
 from PySide6.QtWidgets import (
@@ -35,6 +38,64 @@ def _t(key: str) -> str:
 
 
 _TEST_SCHEME = "http"  # NOSONAR localhost-friendly default; users may type https://
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", ""})
+# Standard USB GET_DESCRIPTOR (device) — a harmless liveness probe.
+_DESC_REQUEST_TYPE = 0x80
+_DESC_REQUEST = 0x06
+_DESC_VALUE = 0x0100
+_DESC_LENGTH = 18
+
+
+def _is_loopback_target(base_url: str) -> bool:
+    """True if ``base_url`` points at this machine (so a local open is valid)."""
+    text = base_url.strip()
+    if not text.startswith(("http://", "https://")):
+        text = f"{_TEST_SCHEME}://{text}"
+    host = urllib.parse.urlsplit(text).hostname or ""
+    return host.lower() in _LOOPBACK_HOSTS
+
+
+def open_local_descriptor(*, vendor_id: str, product_id: str,
+                          serial: Optional[str]) -> bytes:
+    """Open a device on this machine over loopback and read its descriptor.
+
+    Headless helper (no Qt) so the local-open path is unit-testable.
+    Raises ``RuntimeError`` / ``UsbClientError`` if the device can't be
+    claimed (e.g. not bound to WinUSB, or denied by the ACL).
+    """
+    from je_auto_control.utils.usb.passthrough import UsbAcl, UsbLoopback
+    # Gate on the operator's persisted ACL — opening a local device the
+    # user hasn't allowed should fail closed, same as a remote claim.
+    with UsbLoopback(acl=UsbAcl(), viewer_id="usb-browser") as loop:
+        handle = loop.open(
+            vendor_id=vendor_id, product_id=product_id, serial=serial,
+        )
+        try:
+            return handle.control_transfer(
+                bm_request_type=_DESC_REQUEST_TYPE, b_request=_DESC_REQUEST,
+                w_value=_DESC_VALUE, length=_DESC_LENGTH,
+            )
+        finally:
+            handle.close()
+
+
+class _CallWorker(QObject):
+    """Runs one callable off the GUI thread and reports the outcome."""
+
+    finished = Signal(object)
+    failed = Signal(str)
+
+    def __init__(self, fn: Callable[[], Any]) -> None:
+        super().__init__()
+        self._fn = fn
+
+    def run(self) -> None:
+        try:
+            result = self._fn()
+        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: surface any backend/transport error to the status line
+            self.failed.emit(str(error))
+            return
+        self.finished.emit(result)
 
 
 def fetch_remote_devices(*, base_url: str,
@@ -101,6 +162,7 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
             QHeaderView.ResizeMode.ResizeToContents,
         )
         self._fetch_thread: Optional[QThread] = None
+        self._open_thread: Optional[QThread] = None
         self._build_layout()
         self._apply_table_headers()
 
@@ -195,14 +257,54 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
                 _t("usb_browser_open_select_first"),
             )
             return
-        # Phase 2a.1 ships the host-side claim path and the
-        # UsbPassthroughClient blocking API, but the viewer GUI does not
-        # yet have a WebRTC `usb` DataChannel to drive. Surface that
-        # honestly instead of pretending a click does something.
-        QMessageBox.information(
-            self, _t("usb_browser_open"),
-            _t("usb_browser_open_unwired"),
+        if not _is_loopback_target(self._url_input.text()):
+            # A true remote host needs the WebRTC `usb` DataChannel, which
+            # the viewer GUI does not yet drive. Surface that honestly.
+            QMessageBox.information(
+                self, _t("usb_browser_open"),
+                _t("usb_browser_open_unwired"),
+            )
+            return
+        if self._open_thread is not None:
+            return
+        row = rows[0]
+        vid = self._row_text(row, 0)
+        pid = self._row_text(row, 1)
+        serial = self._row_text(row, 4) or None
+        self._start_local_open(vid, pid, serial)
+
+    def _start_local_open(self, vid: str, pid: str,
+                          serial: Optional[str]) -> None:
+        thread = QThread(self)
+        worker = _CallWorker(lambda: open_local_descriptor(
+            vendor_id=vid, product_id=pid, serial=serial,
+        ))
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.finished.connect(
+            lambda descriptor: self._on_local_opened(vid, pid, descriptor),
         )
+        worker.failed.connect(self._apply_failure)
+        worker.finished.connect(thread.quit)
+        worker.failed.connect(thread.quit)
+        thread.finished.connect(self._on_open_done)
+        self._open_thread = thread
+        thread.start()
+
+    def _on_open_done(self) -> None:
+        self._open_thread = None
+
+    def _on_local_opened(self, vid: str, pid: str, descriptor: bytes) -> None:
+        self._status_label.setText(
+            _t("usb_browser_open_loopback").format(
+                vid=vid, pid=pid, hex=descriptor.hex() or "(empty)",
+            ),
+        )
+
+    def _row_text(self, row: int, col: int) -> str:
+        item = self._table.item(row, col)
+        text = item.text() if item is not None else ""
+        return "" if text == "-" else text
 
 
 __all__ = ["UsbBrowserTab", "fetch_remote_devices"]

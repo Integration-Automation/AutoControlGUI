@@ -2,9 +2,10 @@
 USB Passthrough — 操作員指南
 ============================================================
 
-實際把 host 機器上的 USB 裝置借給遠端 viewer 用的步驟手冊。對應
-Phase 2a.1（目前已 ship 狀態）— host 端在 Linux libusb 上端到端
-運作；Windows WinUSB 為硬體未驗證；macOS IOKit 尚未實作。
+實際把 host 機器上的 USB 裝置借給遠端 viewer 用的步驟手冊。host 端在
+Linux libusb 上端到端運作；Windows WinUSB 與 macOS IOKit 已實作但
+**硬體未驗證**——兩者都必須先通過 Phase 2e 硬體測試矩陣才能用於
+production。``default_passthrough_backend()`` 會依當前 OS 自動挑 backend。
 
 如果你是安全審查者而非操作員，請看
 :doc:`usb_passthrough_security_review`\ 。如果你想要協定細節，
@@ -69,11 +70,19 @@ ctypes 接線已寫但尚未對實體硬體驗證。視為 alpha。步驟：
 2. 綁好後裝置應該會出現在 ``WinusbBackend().list()`` 中。
 3. 在依賴 transfer 之前需要硬體測試。期待的測試矩陣見安全審查清單。
 
-macOS（IOKit）— *尚未實作*
---------------------------
+macOS（IOKit）— *硬體未驗證*
+----------------------------
 
-骨架已存在；``IokitBackend()`` 可以建構，但 ``list`` / ``open``
-會拋 ``NotImplementedError``\ 。請追蹤 Phase 2c。
+``IokitBackend`` 透過原生 IOKit（``ctypes``，不需 pyobjc）列舉 USB
+裝置，所以 ``IokitBackend().list()`` 可用。claim 裝置做 transfer 則
+委派給 libusb，請安裝：``pip install pyusb`` 與 ``brew install libusb``\ 。
+注意：
+
+1. 直接散布（非 App Store）的 build 必須 notarisation；libusb 存取
+   裝置不需特殊 entitlement。
+2. System Integrity Protection 會藏起 Apple 內部裝置與某些 USB-C
+   週邊——它們不會出現在 ``list()`` 也無法 claim，屬正常。
+3. transfer 為硬體未驗證；依賴前請看安全審查清單的測試矩陣。
 
 
 啟用 feature
@@ -121,13 +130,29 @@ ACL 預設為 ``"deny"``\ ，所以 viewer 無法 claim 操作員未核准的裝
 
 3. 直接編輯 ``~/.je_auto_control/usb_acl.json``\ 。檔案有權限檢查
    （POSIX 上 mode ``0600``\ ）。壞 JSON 或未知 ``version`` 會退到
-   預設 deny。
+   預設 deny。**若你手動編輯檔案，HMAC 簽章會對不上而導致 ACL
+   fail-closed**\ （見下）——請改用 ``UsbAcl`` 重新儲存以刷新簽章。
 
 決策優先序：
 
 - 第一個 match 的 rule 勝。``prompt_on_open=True`` 表示每次都重問
   操作員，即使 rule 是 ``allow=True``\ 。
 - 沒有 rule match 時套用檔案的 ``default``\ （預設 ``"deny"``\ ）。
+
+ACL 檔案完整性（HMAC）
+----------------------
+
+ACL 旁附一個 ``usb_acl.json.sig`` sidecar HMAC-SHA256 簽章。載入時對
+檔案位元組驗證；不符就 **fail-closed**\ （default-deny，
+``UsbAcl.integrity_ok`` 回 ``False``\ ）。這擋住偷偷改寫 JSON 想給自己
+授權的 process。
+
+- 預設簽章金鑰是隨機 32-byte 檔 ``usb_acl.json.key``\ （POSIX 上 mode
+  ``0600``\ ），首次儲存時建立。
+- 高保證情境請從平台 keychain 衍生金鑰並明確傳入：
+  ``UsbAcl(hmac_key=<bytes>)``\ 。否則同使用者身分的 process 可讀金鑰檔
+  而偽造簽章。
+- 傳 ``UsbAcl(require_signature=True)`` 可連 legacy 未簽章檔也一併拒絕。
 
 
 啟動 host
@@ -229,10 +254,13 @@ OPEN 後 host 鍵盤停止運作                   Linux：HID 裝置被 claim �
 尚未發布的部分
 ==============
 
-- WebRTC viewer GUI 沒有自動把 ``usb`` DataChannel 接起來 — *USB
-  Browser* 分頁的 *Open* 按鈕會顯示「尚未串接」訊息。今天可以從
-  Python 驅動協定。
-- Windows WinUSB transfer 方法已寫但尚未對實體硬體驗證。請勿用於
-  production。
-- macOS IOKit backend 未實作（Phase 2c）。
+- *USB 分享* 分頁是簡易的 AnyDesk 風介面：左側啟用分享並對本機裝置
+  做 ACL 允許／封鎖；右側經 in-process channel 列出分享裝置並 *開啟*
+  其中一個（讀描述元即證明整條堆疊運作）。*USB Browser* 分頁的 *Open*
+  按鈕現在對 **localhost** 目標也會走同一條 loopback 路徑。
+- 跨機器開啟仍需 WebRTC ``usb`` DataChannel，viewer GUI 尚未自動串接 —
+  對遠端主機按 *Open* 會顯示「尚未串接」訊息。今天可以從 Python 驅動
+  協定（含經 channel 的 ``UsbPassthroughClient.list_devices()``\ ）。
+- Windows WinUSB 與 macOS IOKit 的 transfer 路徑已寫但尚未對實體硬體
+  驗證。在 Phase 2e 硬體測試矩陣通過前請勿用於 production。
 - Phase 2e 外部安全審查尚未簽核；feature flag 必須維持顯式 opt-in。

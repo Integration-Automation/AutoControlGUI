@@ -431,6 +431,93 @@ def test_usb_handle_is_an_abc():
 
 
 # ---------------------------------------------------------------------------
+# OQ7 — libusb kernel-driver detach / reattach lifecycle
+# ---------------------------------------------------------------------------
+
+
+class _FakeInterface:
+    def __init__(self, number: int) -> None:
+        self.bInterfaceNumber = number
+
+
+class _FakeKernelDevice:
+    """Stand-in for a pyusb device exercising the detach/reattach path."""
+
+    def __init__(self, interfaces, *, active=None,
+                 detach_error=None, config_error=None) -> None:
+        self._interfaces = [_FakeInterface(n) for n in interfaces]
+        self._active = set(interfaces if active is None else active)
+        self._detach_error = detach_error
+        self._config_error = config_error
+        self.detached: list = []
+        self.attached: list = []
+        self.reset_called = False
+
+    def get_active_configuration(self):
+        if self._config_error is not None:
+            raise self._config_error
+        return self._interfaces
+
+    def is_kernel_driver_active(self, number: int) -> bool:
+        return number in self._active
+
+    def detach_kernel_driver(self, number: int) -> None:
+        if self._detach_error is not None:
+            raise self._detach_error
+        self.detached.append(number)
+        self._active.discard(number)
+
+    def attach_kernel_driver(self, number: int) -> None:
+        self.attached.append(number)
+
+    def reset(self) -> None:
+        self.reset_called = True
+
+
+def _make_libusb_handle(device):
+    from je_auto_control.utils.usb.passthrough.backend import _LibusbHandle
+    return _LibusbHandle(device)
+
+
+def test_open_detaches_active_kernel_drivers():
+    device = _FakeKernelDevice([0, 1])
+    _make_libusb_handle(device)
+    assert device.detached == [0, 1]
+
+
+def test_close_reattaches_detached_drivers():
+    device = _FakeKernelDevice([0, 1])
+    handle = _make_libusb_handle(device)
+    handle.close()
+    assert device.attached == [0, 1]
+    assert device.reset_called is True
+
+
+def test_inactive_interfaces_are_left_alone():
+    device = _FakeKernelDevice([0, 1], active=[])
+    handle = _make_libusb_handle(device)
+    assert device.detached == []
+    handle.close()
+    assert device.attached == []
+
+
+def test_detach_not_implemented_is_tolerated():
+    # libusb on Windows / macOS raises NotImplementedError for detach.
+    device = _FakeKernelDevice([0], detach_error=NotImplementedError())
+    handle = _make_libusb_handle(device)
+    assert device.detached == []
+    handle.close()  # must not raise
+    assert device.attached == []
+
+
+def test_missing_active_configuration_is_tolerated():
+    device = _FakeKernelDevice([0], config_error=ValueError("no config"))
+    handle = _make_libusb_handle(device)
+    assert device.detached == []
+    handle.close()  # must not raise
+
+
+# ---------------------------------------------------------------------------
 # Feature flag — default off
 # ---------------------------------------------------------------------------
 

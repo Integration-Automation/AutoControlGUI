@@ -3,9 +3,11 @@ USB Passthrough — Operator Guide
 ============================================================
 
 Step-by-step recipe for getting a USB device on a host machine to
-respond to traffic from a remote viewer. Assumes Phase 2a.1 (current
-shipping state) — host-side end-to-end works on Linux libusb; Windows
-WinUSB is hardware-unverified; macOS IOKit is not yet implemented.
+respond to traffic from a remote viewer. Host-side end-to-end works on
+Linux libusb; Windows WinUSB and macOS IOKit are implemented but
+**hardware-unverified** — both must pass the Phase 2e hardware test
+matrix before production use. ``default_passthrough_backend()`` picks
+the right backend for the current OS.
 
 If you're a security reviewer instead of an operator, you want
 :doc:`usb_passthrough_security_review`. If you're a developer wanting
@@ -76,11 +78,21 @@ hardware. Treat as alpha. Steps:
 3. Hardware testing is required before relying on transfers. See
    the security review checklist for the expected test matrix.
 
-macOS (IOKit) — *not yet implemented*
+macOS (IOKit) — *hardware-unverified*
 -------------------------------------
 
-The skeleton exists; ``IokitBackend()`` constructs but ``list`` /
-``open`` raise ``NotImplementedError``. Track Phase 2c.
+``IokitBackend`` enumerates USB devices natively through IOKit
+(``ctypes``; no pyobjc needed), so ``IokitBackend().list()`` works.
+Claiming a device for transfers delegates to libusb, so install it:
+``pip install pyusb`` and ``brew install libusb``. Notes:
+
+1. A directly distributed (non App Store) build must be notarised.
+   libusb device access needs no special entitlement.
+2. System Integrity Protection hides Apple internal devices and some
+   USB-C peripherals — they will not appear in ``list()`` and cannot be
+   claimed. This is expected.
+3. Transfers are hardware-unverified; see the security review checklist
+   for the expected test matrix before relying on them.
 
 
 Enabling the feature
@@ -129,7 +141,10 @@ operator hasn't approved. Add per-device rules:
 
 3. By editing ``~/.je_auto_control/usb_acl.json`` directly. The file
    is permission-checked (mode ``0600`` on POSIX). Bad JSON or an
-   unknown ``version`` falls back to default-deny.
+   unknown ``version`` falls back to default-deny. **If you hand-edit
+   the file, the HMAC signature will no longer match and the ACL fails
+   closed** (see below) — re-save through ``UsbAcl`` instead, which
+   refreshes the signature.
 
 Decision precedence:
 
@@ -137,6 +152,23 @@ Decision precedence:
   operator each time, even if the rule is ``allow=True``.
 - If no rule matches, the file's ``default`` (``"deny"`` out of the
   box) applies.
+
+ACL file integrity (HMAC)
+-------------------------
+
+The ACL is protected by an HMAC-SHA256 signature stored in a sidecar
+``usb_acl.json.sig``. On load the signature is verified against the
+file bytes; a mismatch makes the ACL **fail closed** (default-deny,
+``UsbAcl.integrity_ok`` reports ``False``). This stops a process that
+silently rewrites the JSON from granting itself access.
+
+- By default the signing key is a random 32-byte file
+  ``usb_acl.json.key`` (mode ``0600`` on POSIX), created on first save.
+- For higher assurance, derive the key from a platform keychain and
+  pass it explicitly: ``UsbAcl(hmac_key=<bytes>)``. A same-user process
+  that can read the key file could otherwise forge a signature.
+- Pass ``UsbAcl(require_signature=True)`` to reject even legacy
+  unsigned files outright.
 
 
 Starting the host
@@ -241,11 +273,19 @@ Audit chain shows ``broken_at_id``          Someone edited ``audit.db`` directly
 What is *not* shipped yet
 =========================
 
-- WebRTC viewer GUI does not auto-wire the ``usb`` DataChannel — the
-  *USB Browser* tab's *Open* button shows a "not yet wired" message.
-  You can drive the protocol from Python today.
-- Windows WinUSB transfer methods are written but not validated
-  against real hardware. Do not use in production.
-- macOS IOKit backend is unimplemented (Phase 2c).
+- The *USB Sharing* tab is the simple, AnyDesk-style surface: enable
+  sharing on the left and Allow / Block local devices in the ACL; on the
+  right, list the shared devices over the in-process channel and *Open*
+  one (a descriptor read proves the full stack). The *USB Browser* tab's
+  *Open* button now also works against a **localhost** target via the
+  same loopback path.
+- Cross-machine open still needs the WebRTC ``usb`` DataChannel, which
+  the viewer GUI does not yet auto-wire — against a remote host the
+  *Open* button shows a "not yet wired" message. You can drive the
+  protocol from Python today (including
+  ``UsbPassthroughClient.list_devices()`` over the channel).
+- Windows WinUSB and macOS IOKit transfer paths are written but not yet
+  validated against real hardware. Do not use in production until the
+  Phase 2e hardware test matrix passes.
 - Phase 2e external security review has not been signed; the feature
   flag must remain explicit opt-in.

@@ -237,3 +237,75 @@ def test_save_persists_to_disk_with_safe_mode(tmp_path):
     if _os.name == "posix":
         mode = path.stat().st_mode & 0o777
         assert mode == 0o600
+
+
+# ---------------------------------------------------------------------------
+# OQ8 — file integrity (HMAC signature)
+# ---------------------------------------------------------------------------
+
+
+def test_save_writes_sidecar_signature(tmp_path):
+    path = tmp_path / "acl.json"
+    acl = UsbAcl(path=path)
+    acl.add_rule(AclRule(vendor_id="1050", product_id="0407", allow=True))
+    sig = path.with_name(path.name + ".sig")
+    assert sig.exists()
+    assert acl.integrity_ok is True
+    assert acl.verify_integrity() is True
+
+
+def test_tampered_acl_file_fails_closed(tmp_path):
+    path = tmp_path / "acl.json"
+    a = UsbAcl(path=path, default_policy="allow")
+    a.add_rule(AclRule(vendor_id="1050", product_id="0407", allow=True))
+    # Tamper: rewrite the JSON without refreshing the signature.
+    forged = json.loads(path.read_text(encoding="utf-8"))
+    forged["default"] = "allow"
+    forged["rules"].append({
+        "vendor_id": "dead", "product_id": "beef", "allow": True,
+    })
+    path.write_text(json.dumps(forged), encoding="utf-8")
+    # Reload: signature no longer matches → fail closed.
+    b = UsbAcl(path=path)
+    assert b.integrity_ok is False
+    assert b.default_policy == "deny"
+    assert b.list_rules() == []
+    assert b.decide(vendor_id="dead", product_id="beef", serial=None) == "deny"
+
+
+def test_explicit_key_roundtrip_and_wrong_key_fails(tmp_path):
+    path = tmp_path / "acl.json"
+    key_a = b"\x01" * 32
+    a = UsbAcl(path=path, hmac_key=key_a, default_policy="allow")
+    a.add_rule(AclRule(vendor_id="1050", product_id="0407", allow=True))
+    # Same key → loads.
+    same = UsbAcl(path=path, hmac_key=key_a)
+    assert same.integrity_ok is True
+    assert len(same.list_rules()) == 1
+    # Different key → signature mismatch → fail closed.
+    other = UsbAcl(path=path, hmac_key=b"\x02" * 32)
+    assert other.integrity_ok is False
+    assert other.list_rules() == []
+
+
+def test_require_signature_rejects_legacy_unsigned(tmp_path):
+    path = tmp_path / "acl.json"
+    path.write_text(json.dumps({
+        "version": 1, "default": "allow",
+        "rules": [{"vendor_id": "1050", "product_id": "0407", "allow": True}],
+    }), encoding="utf-8")
+    acl = UsbAcl(path=path, require_signature=True)
+    assert acl.integrity_ok is False
+    assert acl.default_policy == "deny"
+
+
+def test_legacy_unsigned_file_still_loads_by_default(tmp_path):
+    path = tmp_path / "acl.json"
+    path.write_text(json.dumps({
+        "version": 1, "default": "allow",
+        "rules": [{"vendor_id": "1050", "product_id": "0407", "allow": True}],
+    }), encoding="utf-8")
+    acl = UsbAcl(path=path)
+    assert acl.integrity_ok is True
+    assert acl.default_policy == "allow"
+    assert len(acl.list_rules()) == 1

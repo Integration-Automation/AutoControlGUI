@@ -50,9 +50,15 @@ ACL
       ``test_save_persists_to_disk_with_safe_mode``).
 - [ ] Recommend storing the ACL on a filesystem that supports POSIX
       permissions; document the Windows ACL story in the deploy guide.
-- [ ] **OPEN question 8 — ACL integrity (HMAC / keychain)**. Currently
-      a process running as the user can rewrite the ACL silently. If
-      that's not acceptable, file the follow-up project before sign-off.
+- [ ] **OQ8 — ACL integrity (HMAC) implemented**. The ACL carries an
+      HMAC-SHA256 sidecar signature and fails closed on tamper (tests
+      ``test_tampered_acl_file_fails_closed``,
+      ``test_explicit_key_roundtrip_and_wrong_key_fails``). **Residual
+      risk:** the default key lives in a same-user-readable
+      ``usb_acl.json.key``; a same-identity process can still forge a
+      signature. High-assurance deployments should pass a
+      keychain-derived key via ``UsbAcl(hmac_key=...)`` — confirm
+      whether the deployment does.
 
 
 Audit
@@ -131,11 +137,15 @@ Per-OS requirements
 - [ ] **Linux libusb**: ``libusb_detach_kernel_driver`` invoked before
       a HID device is claimed; reattached on close. Confirm host OS
       keyboard / mouse remains functional after a session.
-- [ ] **Windows WinUSB** (Phase 2b — *not yet shipped*): the device
-      must already be associated with WinUSB (Zadig / libwdi).
-      Document the operator-facing instructions.
-- [ ] **macOS IOKit** (Phase 2c — *not yet shipped*): notarisation
-      story for non-App-Store distribution. Document SIP exclusions.
+- [ ] **Windows WinUSB** (Phase 2b — *implemented, hardware-unverified*):
+      the device must already be associated with WinUSB (Zadig /
+      libwdi); only bound devices appear in ``list()``. Sign off only
+      after running the bulk / HID / composite test matrix on real
+      hardware.
+- [ ] **macOS IOKit** (Phase 2c — *implemented, hardware-unverified*):
+      native IOKit enumeration + libusb transfers. Notarisation for
+      non-App-Store distribution; document SIP exclusions. Sign off only
+      after running the test matrix on real hardware.
 - [ ] All three backends: opening a device that another driver owns
       surfaces as a clear "busy" RuntimeError, not a hang or crash.
 

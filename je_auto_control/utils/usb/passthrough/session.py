@@ -5,10 +5,10 @@ the ``usb`` DataChannel are passed to ``handle_frame()``; replies are
 returned as a list of frames the caller is expected to send back over
 the same channel.
 
-Phase 2a.1 implements OPEN/OPENED, CLOSE/CLOSED, and the three transfer
-opcodes (CTRL/BULK/INT) plus a CREDIT-based inbound flow control.
-``LIST`` responses, viewer-side flow control, and the actual viewer
-client stay TODO for later phases.
+Handles OPEN/OPENED, CLOSE/CLOSED, the three transfer opcodes
+(CTRL/BULK/INT) with CREDIT-based inbound flow control, and
+LIST-over-channel (ACL-filtered). Oversize replies are fragmented with
+``FLAG_EOF``. The symmetric viewer side lives in ``viewer_client``.
 
 OPEN payload (UTF-8 JSON)::
 
@@ -67,7 +67,7 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.usb.passthrough.acl import UsbAcl
 from je_auto_control.utils.usb.passthrough.backend import UsbBackend, UsbHandle
 from je_auto_control.utils.usb.passthrough.protocol import (
-    Frame, Opcode,
+    Frame, Opcode, fragment_payload,
 )
 
 
@@ -156,11 +156,47 @@ class UsbPassthroughSession:
         if frame.op == Opcode.CREDIT:
             self._handle_credit(frame)
             return []
-        if frame.op in (Opcode.OPENED, Opcode.CLOSED, Opcode.ERROR,
-                        Opcode.LIST):
+        if frame.op == Opcode.LIST:
+            return self._handle_list(frame)
+        if frame.op in (Opcode.OPENED, Opcode.CLOSED, Opcode.ERROR):
             # Responses we don't expect to receive on the host side here.
             return []
         return [_error_frame(frame.claim_id, f"unsupported opcode {frame.op}")]
+
+    # --- LIST ---------------------------------------------------------------
+
+    def _handle_list(self, frame: Frame) -> List[Frame]:
+        """Enumerate backend devices the ACL would not outright deny.
+
+        Resolves open question 3: the device list rides the same ``usb``
+        DataChannel as transfers instead of forcing a second REST round
+        trip. Devices the ACL denies are filtered out so the viewer never
+        learns they exist.
+        """
+        try:
+            devices = self._backend.list()
+        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: backends raise their own error types
+            return [_error_frame(frame.claim_id, f"list failed: {error}")]
+        visible = [
+            {
+                "vendor_id": dev.vendor_id,
+                "product_id": dev.product_id,
+                "serial": dev.serial,
+                "bus_location": dev.bus_location,
+            }
+            for dev in devices
+            if self._list_visible(dev.vendor_id, dev.product_id, dev.serial)
+        ]
+        payload = _encode_json_payload({"devices": visible})
+        return fragment_payload(Opcode.LIST, frame.claim_id, payload)
+
+    def _list_visible(self, vendor_id: str, product_id: str,
+                      serial: Optional[str]) -> bool:
+        if self._acl is None:
+            return True
+        return self._acl.decide(
+            vendor_id=vendor_id, product_id=product_id, serial=serial,
+        ) != "deny"
 
     # --- OPEN / CLOSE -------------------------------------------------------
 
@@ -310,20 +346,18 @@ class UsbPassthroughSession:
             reply_payload = _encode_json_payload(
                 {"ok": False, "error": str(error)},
             )
-            return [
-                Frame(op=_reply_opcode(frame.op), claim_id=frame.claim_id,
-                      payload=reply_payload),
-                self._make_credit_frame(frame.claim_id, _TOPUP_PER_REPLY),
-            ]
-        reply_payload = _encode_json_payload({
-            "ok": True,
-            "data": base64.b64encode(result_bytes).decode("ascii"),
-        })
-        return [
-            Frame(op=_reply_opcode(frame.op), claim_id=frame.claim_id,
-                  payload=reply_payload),
-            self._make_credit_frame(frame.claim_id, _TOPUP_PER_REPLY),
-        ]
+        else:
+            reply_payload = _encode_json_payload({
+                "ok": True,
+                "data": base64.b64encode(result_bytes).decode("ascii"),
+            })
+        # Fragment so an oversize IN transfer (open question 2) spans
+        # multiple EOF-terminated frames instead of breaching the cap.
+        frames = fragment_payload(
+            _reply_opcode(frame.op), frame.claim_id, reply_payload,
+        )
+        frames.append(self._make_credit_frame(frame.claim_id, _TOPUP_PER_REPLY))
+        return frames
 
     def _handle_credit(self, frame: Frame) -> None:
         try:

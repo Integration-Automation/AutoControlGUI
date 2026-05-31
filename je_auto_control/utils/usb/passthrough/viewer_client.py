@@ -40,7 +40,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.usb.passthrough.protocol import (
-    Frame, Opcode,
+    FLAG_EOF, Frame, Opcode,
 )
 
 
@@ -64,11 +64,17 @@ class UsbClientClosed(UsbClientError):
 
 @dataclass
 class _PendingRequest:
-    """One outstanding viewer→host request awaiting a reply frame."""
+    """One outstanding viewer→host request awaiting a reply.
+
+    The reply is stored as ``(reply_op, reply_payload)`` rather than a
+    :class:`Frame` because a reassembled payload (open question 2) may
+    exceed the per-frame cap that :class:`Frame` enforces.
+    """
 
     expected_op: Opcode
     event: threading.Event
-    reply: Optional[Frame] = None
+    reply_op: Optional[Opcode] = None
+    reply_payload: bytes = b""
     cancelled: bool = False
 
 
@@ -175,6 +181,10 @@ class UsbPassthroughClient:
         self._credits: Dict[int, int] = {}
         self._credit_events: Dict[int, threading.Event] = {}
         self._open_pending: Optional[_PendingRequest] = None
+        self._list_pending: Optional[_PendingRequest] = None
+        # Reassembly buffers for fragmented replies, keyed by claim_id
+        # (open question 2). LIST uses claim_id 0.
+        self._reasm: Dict[int, bytearray] = {}
         self._initial_credit_guess = max(1, int(initial_credit_guess))
         self._closed = False
 
@@ -187,8 +197,12 @@ class UsbPassthroughClient:
             pending: List[_PendingRequest] = list(self._pending.values())
             if self._open_pending is not None:
                 pending.append(self._open_pending)
+            if self._list_pending is not None:
+                pending.append(self._list_pending)
             self._pending.clear()
             self._open_pending = None
+            self._list_pending = None
+            self._reasm.clear()
             credit_events = list(self._credit_events.values())
         for request in pending:
             request.cancelled = True
@@ -204,13 +218,18 @@ class UsbPassthroughClient:
             self._on_opened(frame)
             return
         if frame.op == Opcode.CLOSED:
-            self._complete_pending(frame.claim_id, frame, Opcode.CLOSED)
+            self._complete_pending(frame.claim_id, frame.payload, Opcode.CLOSED)
             return
         if frame.op == Opcode.CREDIT:
             self._on_credit(frame)
             return
         if frame.op in (Opcode.CTRL, Opcode.BULK, Opcode.INT):
-            self._complete_pending(frame.claim_id, frame, frame.op)
+            assembled = self._reassemble(frame)
+            if assembled is not None:
+                self._complete_pending(frame.claim_id, assembled, frame.op)
+            return
+        if frame.op == Opcode.LIST:
+            self._on_list(frame)
             return
         if frame.op == Opcode.ERROR:
             self._on_error(frame)
@@ -218,6 +237,18 @@ class UsbPassthroughClient:
         autocontrol_logger.debug(
             "passthrough client: ignoring incoming opcode %s", frame.op,
         )
+
+    def _reassemble(self, frame: Frame) -> Optional[bytes]:
+        """Buffer a fragment; return the full payload once EOF arrives."""
+        cid = int(frame.claim_id)
+        with self._lock:
+            buffer = self._reasm.setdefault(cid, bytearray())
+            buffer.extend(frame.payload)
+            if not (frame.flags & FLAG_EOF):
+                return None
+            full = bytes(buffer)
+            self._reasm.pop(cid, None)
+        return full
 
     # --- Outbound: open / close ---------------------------------------------
 
@@ -246,10 +277,9 @@ class UsbPassthroughClient:
             raise UsbClientTimeout("OPEN timed out")
         if request.cancelled:
             raise UsbClientClosed("client shut down before OPEN reply")
-        reply = request.reply
-        if reply is None:
+        if request.reply_op is None:
             raise UsbClientError("event signalled without a reply")
-        body = _decode_json(reply.payload)
+        body = _decode_json(request.reply_payload)
         if not body.get("ok"):
             raise UsbClientError(body.get("error", "open failed"))
         claim_id = int(body["claim_id"])
@@ -257,6 +287,34 @@ class UsbPassthroughClient:
             self._credits[claim_id] = self._initial_credit_guess
             self._credit_events[claim_id] = threading.Event()
         return ClientHandle(self, claim_id)
+
+    def list_devices(self) -> List[Dict[str, Any]]:
+        """Ask the host for the ACL-visible device list (open question 3).
+
+        Blocks until the host replies. Returns a list of dicts with
+        ``vendor_id`` / ``product_id`` / ``serial`` / ``bus_location``.
+        """
+        request = _PendingRequest(
+            expected_op=Opcode.LIST, event=threading.Event(),
+        )
+        with self._lock:
+            if self._closed:
+                raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
+            if self._list_pending is not None:
+                raise UsbClientError("another list is in progress")
+            self._list_pending = request
+        self._send(Frame(op=Opcode.LIST))
+        if not request.event.wait(timeout=self._reply_timeout):
+            with self._lock:
+                if self._list_pending is request:
+                    self._list_pending = None
+                self._reasm.pop(0, None)
+            raise UsbClientTimeout("LIST timed out")
+        if request.cancelled:
+            raise UsbClientClosed("client shut down before LIST reply")
+        body = _decode_json(request.reply_payload)
+        devices = body.get("devices")
+        return list(devices) if isinstance(devices, list) else []
 
     def _exchange_close(self, claim_id: int) -> None:
         request = _PendingRequest(
@@ -296,13 +354,12 @@ class UsbPassthroughClient:
             raise UsbClientTimeout(f"{op.name} timed out for claim {claim_id}")
         if request.cancelled:
             raise UsbClientClosed("client shut down before reply")
-        reply = request.reply
-        if reply is None:
+        if request.reply_op is None:
             raise UsbClientError("event signalled without a reply")
-        if reply.op == Opcode.ERROR:
-            err = _decode_json(reply.payload).get("error", "host ERROR")
+        if request.reply_op == Opcode.ERROR:
+            err = _decode_json(request.reply_payload).get("error", "host ERROR")
             raise UsbClientError(err)
-        body = _decode_json(reply.payload)
+        body = _decode_json(request.reply_payload)
         if not body.get("ok"):
             raise UsbClientError(body.get("error", "transfer failed"))
         return base64.b64decode(body.get("data") or "")
@@ -314,7 +371,20 @@ class UsbPassthroughClient:
             request = self._open_pending
             self._open_pending = None
         if request is not None:
-            request.reply = frame
+            request.reply_op = frame.op
+            request.reply_payload = frame.payload
+            request.event.set()
+
+    def _on_list(self, frame: Frame) -> None:
+        assembled = self._reassemble(frame)
+        if assembled is None:
+            return
+        with self._lock:
+            request = self._list_pending
+            self._list_pending = None
+        if request is not None:
+            request.reply_op = Opcode.LIST
+            request.reply_payload = assembled
             request.event.set()
 
     def _on_credit(self, frame: Frame) -> None:
@@ -338,16 +408,18 @@ class UsbPassthroughClient:
         # the claim_id; if none, log and drop.
         with self._lock:
             request = self._pending.pop(int(frame.claim_id), None)
+            self._reasm.pop(int(frame.claim_id), None)
         if request is None:
             autocontrol_logger.warning(
                 "passthrough client: unsolicited ERROR for claim %s: %s",
                 frame.claim_id, frame.payload[:200],
             )
             return
-        request.reply = frame
+        request.reply_op = frame.op
+        request.reply_payload = frame.payload
         request.event.set()
 
-    def _complete_pending(self, claim_id: int, frame: Frame,
+    def _complete_pending(self, claim_id: int, payload: bytes,
                           expected_op: Opcode) -> None:
         with self._lock:
             request = self._pending.get(int(claim_id))
@@ -356,7 +428,8 @@ class UsbPassthroughClient:
             if request.expected_op != expected_op:
                 return
             self._pending.pop(int(claim_id), None)
-        request.reply = frame
+        request.reply_op = expected_op
+        request.reply_payload = payload
         request.event.set()
 
     # --- Credit helpers ----------------------------------------------------

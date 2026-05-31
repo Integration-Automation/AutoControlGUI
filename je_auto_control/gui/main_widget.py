@@ -34,6 +34,7 @@ from je_auto_control.gui.inspector_tab import InspectorTab
 from je_auto_control.gui.recording_editor_tab import RecordingEditorTab
 from je_auto_control.gui.usb_browser_tab import UsbBrowserTab
 from je_auto_control.gui.usb_devices_tab import UsbDevicesTab
+from je_auto_control.gui.usb_passthrough_panel import UsbPassthroughPanel
 # Remote desktop relies on the optional `webrtc` extra (aiortc + PyAV).
 # Importing it eagerly would break embedders (e.g. PyBreeze) that install
 # je_auto_control without the extra; fall back to a placeholder tab that
@@ -192,6 +193,8 @@ class AutoControlGUIWidget(
         self._add_tab("usb_devices", "tab_usb_devices", UsbDevicesTab(),
                       category="system")
         self._add_tab("usb_browser", "tab_usb_browser", UsbBrowserTab(),
+                      category="system")
+        self._add_tab("usb_share", "tab_usb_share", UsbPassthroughPanel(),
                       category="system")
         self._add_tab("diagnostics", "tab_diagnostics", DiagnosticsTab(),
                       category="system")

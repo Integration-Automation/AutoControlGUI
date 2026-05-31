@@ -1,37 +1,43 @@
 ================================================
-USB Passthrough — Phase 2 Design (DRAFT)
+USB Passthrough — Phase 2 Design
 ================================================
 
-.. warning::
-   **DRAFT — Linux-libusb path complete; cross-platform backends are
-   structural skeletons only.**
+.. note::
+   **All software-side work is complete; the eight open questions are
+   resolved (see "Design decisions").** Two items remain that cannot
+   be completed in code: **verification against real USB hardware** and
+   the **external human security sign-off (Phase 2e)**. The feature
+   flag stays default-off until both are done.
 
-   **Shipped (rounds 27 / 34 / 37 / 39 / 40 / 41 / 42):**
+   **Done and shipped (rounds 27 / 34 / 37 / 39 / 40 / 41 / 42 / 43):**
    Phase 1 (read-only enumeration), Phase 1.5 (hotplug events),
    Phase 2a (protocol + ABCs + ``LibusbBackend`` lifecycle +
    ``FakeUsbBackend`` for tests + feature flag, default off),
    Phase 2a.1 (full ``LibusbBackend`` transfers + CREDIT-based
    inbound flow control + audit hooks),
    **viewer-side ``UsbPassthroughClient``** (blocking
-   open / control_transfer / bulk_transfer / interrupt_transfer / close
-   with outbound credit waits and shutdown propagation),
+   open / control_transfer / bulk_transfer / interrupt_transfer / close /
+   list_devices with outbound credit waits and shutdown propagation),
    Phase 2d (``UsbAcl`` persistent allow-list, ACL-gated OPEN with
    prompt-callback path, audit-log integration via the existing
-   tamper-evident chain).
+   tamper-evident chain), Phase 2d.1 (ACL file HMAC-SHA256 integrity,
+   fail-closed on tamper).
 
-   **Structural-only:** ``WinusbBackend`` (Phase 2b) and
-   ``IokitBackend`` (Phase 2c) — class scaffolding + platform /
-   dependency validation in place; ``list`` and ``open`` raise
-   ``NotImplementedError`` referencing the in-module TODO list.
-   These need ctypes / pyobjc wiring **plus hardware testing** to
-   become real.
+   **Phase 2b — Windows ``WinUSB``:** SetupAPI enumeration + ``WinUsb_*``
+   transfer ctypes wiring complete (**hardware-unverified**).
 
-   **Process step:** Phase 2e — see
-   :doc:`usb_passthrough_security_review` for the reviewer
-   checklist that must be signed before the feature flag flips
-   to default-on.
+   **Phase 2c — macOS ``IOKit``:** native IOKit enumeration via ctypes
+   complete; device claim / transfers delegate to libusb (the
+   hardware-proven path on macOS). See the ``iokit_backend`` module
+   docstring (**hardware-unverified**).
 
-   Open questions stay flagged inline as ``OPEN`` for reviewers.
+   **Backend selection:** ``default_passthrough_backend()`` picks
+   WinUSB / IOKit / libusb by OS automatically.
+
+   **Remaining process step:** Phase 2e — see
+   :doc:`usb_passthrough_security_review` for the reviewer checklist
+   that must be signed by an external reviewer before the feature flag
+   flips to default-on, plus the per-backend hardware test matrix.
 
 .. contents::
    :local:
@@ -76,8 +82,13 @@ than they tolerate loss; the existing video/audio channels already
 demonstrate that the underlying SCTP transport handles ordered
 reliable streams adequately.
 
-OPEN: Should we use ``maxPacketLifeTime`` instead, with a generous
-budget (~5 s)? Worth measuring on real WAN links before shipping.
+**Resolved (OQ1):** keep ``ordered=True`` + ``maxRetransmits=None``
+(fully reliable, ordered). USB control transfers (WebAuthn signing,
+descriptor reads) have zero tolerance for loss — a partially-lost
+stream corrupts the device state machine — so reliable-ordered
+semantics matter more than shaving a few ms of retransmit latency.
+The bounded-loss ``maxPacketLifeTime`` model is left for a future
+loss-tolerant high-throughput use case (YAGNI today).
 
 Framing
 -------
@@ -96,10 +107,13 @@ Each channel message is one length-prefixed protocol frame::
 - payload: opcode-specific. Bounded to 16 KiB to keep DataChannel
   message sizes reasonable.
 
-OPEN: Do we need fragmentation above 16 KiB? Most USB transfers fit;
-control transfers are bounded by the device's wMaxPacketSize. A
-follow-up frame with the same ``claim_id`` and a continuation flag
-would be a low-cost addition.
+**Resolved (OQ2):** fragmentation implemented.
+``protocol.fragment_payload()`` splits a payload larger than 16 KiB
+into multiple same-``claim_id`` frames, clearing ``FLAG_EOF`` on all
+but the last; the receiver concatenates consecutive frame payloads
+until it sees EOF. Both transfer replies and ``LIST`` replies use this
+path; the common single-frame case still sends exactly one EOF-flagged
+frame, so existing behaviour is unchanged.
 
 Operations
 ----------
@@ -119,10 +133,13 @@ Op (hex)          Direction                                  Purpose
 ``0xFF ERROR``    either                                     Protocol error / unsupported op
 ================  =========================================  ==============
 
-OPEN: Should ``LIST`` go through the channel at all, or should the
-viewer use the existing REST ``/usb/devices`` endpoint and only use
-the channel for transfers? The latter is simpler but couples the
-two transports.
+**Resolved (OQ3):** ``LIST`` goes over the channel. The session
+handles a ``LIST`` frame and returns the devices the ACL would not
+deny (a denied device is never even revealed to the viewer); the
+viewer calls ``UsbPassthroughClient.list_devices()``. Enumeration and
+transfers share one already-authenticated channel instead of coupling
+in a second REST transport, and ACL filtering reuses the same logic as
+the claim decision.
 
 Backpressure
 ------------
@@ -132,9 +149,13 @@ Each side starts with a credit window of 16 outstanding frames per
 message with a positive integer replenishes. Without flow control
 a slow remote USB device would balloon DataChannel send buffers.
 
-OPEN: Should credits be per-endpoint (IN/OUT separately) instead of
-per-claim? Bulk endpoints are independent, so per-endpoint is more
-faithful to the hardware. Costs more state.
+**Resolved (OQ4):** keep per-claim credits. They already meet the core
+goal — stopping a slow remote device from ballooning the host send
+buffer — with the least state and the simplest reasoning.
+Per-endpoint credits would track IN/OUT and each bulk endpoint
+separately for a meaningful complexity jump that only matters when
+multiple endpoints on one claim saturate at once; that is YAGNI until
+real measurement shows head-of-line blocking.
 
 
 Per-OS driver wrappers
@@ -166,25 +187,33 @@ Windows — WinUSB
 - ``ctypes`` wrappers around ``winusb.dll`` are public API; no kernel
   driver authoring required.
 
-OPEN: WinUSB requires the device to be *not already claimed* by another
-driver. This rules out devices that the host OS thinks it owns
-(printers, hubs, keyboards). We will need an in-app prompt explaining
-why a particular device cannot be claimed.
+**Resolved (OQ5):** WinUSB requires the device to be *not already
+claimed* by another driver, and only devices already bound to
+``winusb.sys`` appear in ``WinusbBackend.list()``. Devices the host OS
+owns (printers, hubs, keyboards) therefore never list — the viewer
+only ever sees the claimable subset and cannot mistake a system device
+for one it could claim. An OPEN for a vid/pid not in the list returns a
+clear ``no device matches`` error; the operator guide explains binding
+a device to WinUSB via Zadig / libwdi.
 
 macOS — IOKit
 -------------
 
-- ``IOUSBHostInterface`` (modern, since 10.12) or ``IOUSBInterfaceInterface``
-  (older but ubiquitous) via ``pyobjc``.
-- Requires entitlement signing if shipped through the App Store; for
-  dev / direct distribution this is fine but the binary must be
-  notarised.
-- IOKit's ``CompletionMethod`` callbacks integrate with ``CFRunLoop``,
-  not asyncio. We will need a thread that owns the runloop and
-  marshals completions back to the WebRTC bridge thread.
+- Enumeration uses native IOKit through ``ctypes`` (no ``pyobjc``
+  dependency): ``IOServiceGetMatchingServices`` over ``IOUSBDevice``
+  plus ``IORegistryEntryCreateCFProperty`` reads of idVendor / idProduct
+  / serial / locationID.
+- Claim and transfers delegate to libusb (see OQ6) rather than
+  hand-rolling the COM-style ``IOUSBHostInterface`` plugin vtable.
 
-OPEN: System Integrity Protection blocks claiming Apple devices and
-some USB-C peripherals. Document the limit clearly.
+**Resolved (OQ6):** enumeration is native IOKit; claim / transfers
+delegate to libusb — the hardware-proven USB path on macOS — which
+avoids hand-coding an ``IOUSBHostInterface`` plugin vtable that could
+not be verified without hardware. A directly distributed (non
+App Store) build must be notarised; libusb device access needs no
+special entitlement, but System Integrity Protection still hides Apple
+internal devices and some USB-C peripherals. The operator guide
+documents the SIP exclusion boundary.
 
 Linux — libusb
 --------------
@@ -194,10 +223,13 @@ Linux — libusb
 - Hot-detach handling: libusb fires ``LIBUSB_TRANSFER_NO_DEVICE``
   on in-flight transfers; we map that to ``CLOSED`` on the channel.
 
-OPEN: Some distros default to attaching ``usbhid`` to anything that
-looks like a HID. We must call ``libusb_detach_kernel_driver`` and,
-on close, ``libusb_attach_kernel_driver`` to restore — otherwise the
-host OS loses input devices.
+**Resolved (OQ7):** implemented. ``_LibusbHandle`` calls
+``detach_kernel_driver`` for each interface of the active configuration
+that the kernel actually holds on open, remembers which it touched, and
+``attach_kernel_driver`` restores them on close — otherwise the host OS
+permanently loses its keyboard / mouse after the session. libusb on
+Windows / macOS raises ``NotImplementedError`` for detach, which is
+tolerated and skipped (those platforms arbitrate drivers in the OS).
 
 
 Security & ACL
@@ -226,9 +258,18 @@ Stored in ``~/.je_auto_control/usb_acl.json``::
 - Allow rules can be persisted with a "remember" checkbox in the
   prompt.
 
-OPEN: Should we sign or HMAC the ACL file so a compromised host
-process cannot silently grant itself access? Probably yes, with a
-master key derived from a user passphrase or platform keychain.
+**Resolved (OQ8):** HMAC-SHA256 implemented. The ACL carries a sidecar
+``<acl>.sig`` signature, verified on load; a mismatch fails closed
+(default-deny, ``integrity_ok`` False) so a process that silently
+rewrites the JSON cannot grant itself access without also forging the
+signature. The signing key is pluggable — a deployment can pass a
+keychain-derived key via the constructor's ``hmac_key=``; absent that,
+a random key file is generated next to the ACL (``0o600`` on POSIX).
+Note: a same-user process can still read the key file and forge a
+signature, so keychain-derived keys are recommended for high-assurance
+deployments (see operator guide). Files written before signing existed
+are treated as legacy (still load, signed on next save); pass
+``require_signature=True`` to reject unsigned files.
 
 Audit
 -----
@@ -251,28 +292,41 @@ Phasing
 1. **Done — Phase 1**: read-only enumeration (``list_usb_devices``).
 2. **Done — Phase 1.5**: hotplug events (``UsbHotplugWatcher``,
    ``/usb/events``).
-3. **Phase 2a (this design)**: protocol skeleton + ``UsbBackend`` ABC
-   + Linux ``libusb`` backend behind a feature flag.
-4. **Phase 2b**: Windows ``WinUSB`` backend.
-5. **Phase 2c**: macOS ``IOKit`` backend.
-6. **Phase 2d**: ACL persistence + host-side prompt UI + audit
-   integration.
-7. **Phase 2e**: external security review *before* default-on.
+3. **Done — Phase 2a**: protocol + ``UsbBackend`` ABC + Linux
+   ``libusb`` backend behind a feature flag.
+4. **Done — Phase 2b**: Windows ``WinUSB`` backend (ctypes,
+   hardware-unverified).
+5. **Done — Phase 2c**: macOS ``IOKit`` backend (native enumeration +
+   libusb transfers, hardware-unverified).
+6. **Done — Phase 2d / 2d.1**: ACL persistence + host-side prompt
+   callback + audit integration + ACL file HMAC integrity.
+7. **In progress — Phase 2e**: external security review *before*
+   default-on, **plus** the per-backend real-hardware test matrix.
+   Both inherently require hardware and an external reviewer and cannot
+   be completed in code alone.
 
-Each subphase is its own multi-round project. Estimated effort
-(experienced contributor): ~1 week per backend, ~1 week for ACL/UI,
-plus the security review which depends on a reviewer's calendar.
+The feature flag stays default-off until Phase 2e is signed off.
 
 
-Open questions, summarised
-==========================
+Design decisions (formerly open questions)
+==========================================
 
-1. ``maxRetransmits=None`` vs ``maxPacketLifeTime`` for the channel.
-2. Frame fragmentation above 16 KiB.
-3. ``LIST`` over the channel vs. exclusively over REST.
-4. Backpressure granularity (per-claim vs per-endpoint).
-5. What WinUSB cannot claim, and how to communicate that to the
-   viewer.
-6. macOS entitlement story for non-App-Store distribution.
-7. Linux kernel-driver detach/reattach lifecycle.
-8. ACL file integrity (HMAC vs platform keychain).
+All eight original open questions are resolved; see the matching
+sections above for the implementation.
+
+1. **OQ1 — channel reliability**: ``maxRetransmits=None`` (fully
+   reliable, ordered).
+2. **OQ2 — frame fragmentation**: implemented via ``fragment_payload``
+   + EOF reassembly.
+3. **OQ3 — ``LIST`` over the channel**: yes, ACL-filtered, over the
+   channel.
+4. **OQ4 — backpressure granularity**: per-claim (per-endpoint is
+   YAGNI).
+5. **OQ5 — what WinUSB cannot claim**: only WinUSB-bound devices list;
+   a failed claim returns a clear error.
+6. **OQ6 — macOS distribution**: native IOKit enumeration + libusb
+   transfers; notarisation, no special entitlement, SIP boundary
+   documented.
+7. **OQ7 — Linux kernel driver**: detach on open, reattach on close.
+8. **OQ8 — ACL integrity**: HMAC-SHA256 sidecar, pluggable
+   (keychain-capable) key.

@@ -8,6 +8,7 @@ can return arbitrary bytes or raise.
 from __future__ import annotations
 
 import abc
+import platform
 import threading
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
@@ -149,11 +150,59 @@ class _LibusbHandle(UsbHandle):
         self._device = device
         self._closed = False
         self._lock = threading.Lock()
+        # OQ7 — on Linux the kernel's usbhid driver claims anything that
+        # looks like a HID device. Detach it on open so we can claim the
+        # interface, and remember which interfaces we touched so close()
+        # can hand them back to the kernel (otherwise the host OS loses
+        # its keyboard / mouse for good).
+        self._detached_interfaces: List[int] = []
+        self._detach_kernel_drivers()
+
+    def _detach_kernel_drivers(self) -> None:
+        for number in self._active_interface_numbers():
+            try:
+                if self._device.is_kernel_driver_active(number):
+                    self._device.detach_kernel_driver(number)
+                    self._detached_interfaces.append(number)
+            except NotImplementedError:
+                # libusb on Windows / macOS doesn't support detach — the
+                # OS handles driver arbitration. Nothing to do.
+                return
+            except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: detach is best-effort; a claim failure later will surface clearly
+                autocontrol_logger.debug(
+                    "libusb: detach interface %s skipped: %r", number, error,
+                )
+
+    def _reattach_kernel_drivers(self) -> None:
+        for number in self._detached_interfaces:
+            try:
+                self._device.attach_kernel_driver(number)
+            except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: best-effort restore; surface via logger
+                autocontrol_logger.debug(
+                    "libusb: reattach interface %s failed: %r", number, error,
+                )
+        self._detached_interfaces.clear()
+
+    def _active_interface_numbers(self) -> List[int]:
+        try:
+            config = self._device.get_active_configuration()
+        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: a device with no active config has nothing to detach
+            autocontrol_logger.debug(
+                "libusb: no active configuration to detach: %r", error,
+            )
+            return []
+        numbers: List[int] = []
+        for interface in config:
+            number = getattr(interface, "bInterfaceNumber", None)
+            if number is not None and int(number) not in numbers:
+                numbers.append(int(number))
+        return numbers
 
     def close(self) -> None:
         with self._lock:
             if self._closed:
                 return
+            self._reattach_kernel_drivers()
             try:
                 self._device.reset()
             except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: best-effort cleanup; surface via logger so it's not invisible
@@ -377,7 +426,38 @@ class FakeUsbHandle(UsbHandle):
         return b"\x00" * int(kwargs.get("length", 0))
 
 
+# ---------------------------------------------------------------------------
+# Backend factory
+# ---------------------------------------------------------------------------
+
+
+def default_passthrough_backend() -> UsbBackend:
+    """Return the right :class:`UsbBackend` for the current OS.
+
+    * Windows → ``WinusbBackend`` (devices must be bound to WinUSB).
+    * macOS → ``IokitBackend`` (native IOKit enumeration, libusb transfers).
+    * everything else (Linux/BSD) → :class:`LibusbBackend`.
+
+    Backend-specific imports stay lazy so importing this module never
+    drags in ctypes bindings for a foreign platform. Raises
+    ``RuntimeError`` if the chosen backend's dependencies are missing.
+    """
+    system = platform.system()
+    if system == "Windows":
+        from je_auto_control.utils.usb.passthrough.winusb_backend import (
+            WinusbBackend,
+        )
+        return WinusbBackend()
+    if system == "Darwin":
+        from je_auto_control.utils.usb.passthrough.iokit_backend import (
+            IokitBackend,
+        )
+        return IokitBackend()
+    return LibusbBackend()
+
+
 __all__ = [
     "BackendDevice", "FakeUsbBackend", "FakeUsbHandle",
     "LibusbBackend", "UsbBackend", "UsbHandle",
+    "default_passthrough_backend",
 ]
