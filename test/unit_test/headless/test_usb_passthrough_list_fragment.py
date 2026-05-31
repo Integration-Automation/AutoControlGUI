@@ -1,6 +1,8 @@
 """Tests for open questions 2 (fragmentation) and 3 (LIST over channel)."""
 import json
 
+import pytest
+
 from je_auto_control.utils.usb.passthrough import (
     AclRule, FLAG_EOF, Frame, MAX_PAYLOAD_BYTES, Opcode, UsbAcl,
     UsbPassthroughClient, UsbPassthroughSession, fragment_payload,
@@ -119,6 +121,45 @@ def test_client_list_devices_round_trip(tmp_path):
         devices = loop.client.list_devices()
         assert [d["vendor_id"] for d in devices] == ["1050"]
         assert devices[0]["serial"] == "ABC123"
+    finally:
+        loop.client.shutdown()
+
+
+def test_client_resume_after_reconnect_keeps_claim():
+    """A new client RESUMEs a claim the host session still holds."""
+    host = UsbPassthroughSession(FakeUsbBackend(devices=[_SAMPLE]))
+    loop1 = _SyncLoop(host)
+    handle = loop1.client.open(vendor_id="1050", product_id="0407")
+    token = handle.resume_token
+    claim_id = handle.claim_id
+    assert token
+    # Simulate a transport drop: tear down the viewer client only; the
+    # host session keeps the claim alive (no close_all).
+    loop1.client.shutdown()
+    assert host.active_claim_count == 1
+
+    # Reconnect with a brand-new client over the same host session.
+    loop2 = _SyncLoop(host)
+    try:
+        resumed = loop2.client.resume(token)
+        assert resumed.claim_id == claim_id
+        backend_handle = next(
+            iter(host._backend._open_handles.values())  # type: ignore[attr-defined]
+        )
+        backend_handle.transfer_hook = lambda kind, kwargs: b"\x01"
+        assert resumed.control_transfer(
+            bm_request_type=0xC0, b_request=6, length=1,
+        ) == b"\x01"
+    finally:
+        loop2.client.shutdown()
+
+
+def test_client_resume_unknown_token_raises():
+    host = UsbPassthroughSession(FakeUsbBackend(devices=[_SAMPLE]))
+    loop = _SyncLoop(host)
+    try:
+        with pytest.raises(Exception):
+            loop.client.resume("not-a-real-token")
     finally:
         loop.client.shutdown()
 

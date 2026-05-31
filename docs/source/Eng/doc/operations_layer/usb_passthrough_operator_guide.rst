@@ -279,11 +279,13 @@ What is *not* shipped yet
   one (a descriptor read proves the full stack). The *USB Browser* tab's
   *Open* button now also works against a **localhost** target via the
   same loopback path.
-- Cross-machine open still needs the WebRTC ``usb`` DataChannel, which
-  the viewer GUI does not yet auto-wire — against a remote host the
-  *Open* button shows a "not yet wired" message. You can drive the
-  protocol from Python today (including
-  ``UsbPassthroughClient.list_devices()`` over the channel).
+- Cross-machine transport is now wired: the WebRTC host creates a
+  ``usb`` DataChannel and the viewer exposes ``viewer.usb_client()``
+  (a ``UsbChannelClient`` with ``list_devices`` / ``open`` / ``resume``).
+  Drive it from Python today over a live WebRTC session. The simple
+  *USB Browser* / *USB Sharing* panels still use the local loopback +
+  REST paths; auto-wiring those panels to a live WebRTC viewer session
+  is the remaining GUI integration step.
 - Windows WinUSB and macOS IOKit transfer paths are written but not yet
   validated against real hardware. Do not use in production until the
   Phase 2e hardware test matrix passes.

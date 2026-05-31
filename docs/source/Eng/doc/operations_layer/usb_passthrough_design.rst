@@ -77,6 +77,17 @@ Channel
 
 A dedicated WebRTC ``DataChannel`` named ``usb`` per session, with
 ``ordered=True`` and ``maxRetransmits=None`` (full reliability).
+
+**Wired up:** the host (``webrtc_host``) creates the ``usb`` channel and
+feeds it to a session through ``UsbChannelHost`` (gated on viewer
+authentication + the feature flag); the viewer (``webrtc_viewer``)
+wraps the incoming channel in ``UsbChannelClient``, exposed via
+``viewer.usb_client()`` for ``list_devices`` / ``open`` / ``resume``.
+The adapters are transport-decoupled and unit-tested with a fake
+channel (see ``test_usb_webrtc_channel``). **Reconnect:** OPENED carries
+a ``resume_token``; if the host session outlives the viewer's transport
+drop, the viewer sends ``RESUME{resume_token}`` to re-bind the existing
+claim — keeping device state and ``claim_id`` — instead of re-OPENing.
 Bulk and interrupt USB transfers tolerate the latency far better
 than they tolerate loss; the existing video/audio channels already
 demonstrate that the underlying SCTP transport handles ordered
@@ -130,6 +141,7 @@ Op (hex)          Direction                                  Purpose
 ``0x07 CREDIT``   viewer ↔ host                              Backpressure window update
 ``0x08 CLOSE``    viewer → host                              Release the claim
 ``0x09 CLOSED``   host → viewer                              Acknowledgement (or unsolicited on host-side disconnect)
+``0x0A RESUME``   viewer → host                              Re-bind an existing claim after reconnect via resume_token
 ``0xFF ERROR``    either                                     Protocol error / unsupported op
 ================  =========================================  ==============
 

@@ -39,6 +39,7 @@ class Opcode(enum.IntEnum):
     CREDIT = 0x07
     CLOSE = 0x08
     CLOSED = 0x09
+    RESUME = 0x0A
     ERROR = 0xFF
 
 

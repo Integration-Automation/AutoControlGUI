@@ -91,15 +91,22 @@ class ClientHandle:
     and return ``bytes``. Backend errors raise :class:`UsbClientError`.
     """
 
-    def __init__(self, client: "UsbPassthroughClient", claim_id: int) -> None:
+    def __init__(self, client: "UsbPassthroughClient", claim_id: int,
+                 resume_token: str = "") -> None:
         self._client = client
         self._claim_id = claim_id
+        self._resume_token = resume_token
         self._closed = False
         self._lock = threading.Lock()
 
     @property
     def claim_id(self) -> int:
         return self._claim_id
+
+    @property
+    def resume_token(self) -> str:
+        """Opaque token to re-bind this claim after a transport reconnect."""
+        return self._resume_token
 
     @property
     def closed(self) -> bool:
@@ -282,11 +289,47 @@ class UsbPassthroughClient:
         body = _decode_json(request.reply_payload)
         if not body.get("ok"):
             raise UsbClientError(body.get("error", "open failed"))
+        return self._bind_claim(body)
+
+    def resume(self, resume_token: str) -> ClientHandle:
+        """Re-bind a claim after a reconnect using a token from ``open``.
+
+        The host session must still hold the claim (it outlived the
+        viewer's transport drop). Returns a fresh :class:`ClientHandle`
+        for the same ``claim_id``; raises :class:`UsbClientError` if the
+        token is unknown or expired.
+        """
+        request = _PendingRequest(
+            expected_op=Opcode.OPENED, event=threading.Event(),
+        )
+        with self._lock:
+            if self._closed:
+                raise UsbClientClosed(_CLIENT_SHUT_DOWN_MSG)
+            if self._open_pending is not None:
+                raise UsbClientError("another open is in progress")
+            self._open_pending = request
+        self._send(Frame(
+            op=Opcode.RESUME,
+            payload=json.dumps({"resume_token": resume_token}).encode("utf-8"),
+        ))
+        if not request.event.wait(timeout=self._reply_timeout):
+            with self._lock:
+                if self._open_pending is request:
+                    self._open_pending = None
+            raise UsbClientTimeout("RESUME timed out")
+        if request.cancelled:
+            raise UsbClientClosed("client shut down before RESUME reply")
+        body = _decode_json(request.reply_payload)
+        if not body.get("ok"):
+            raise UsbClientError(body.get("error", "resume failed"))
+        return self._bind_claim(body)
+
+    def _bind_claim(self, body: Dict[str, Any]) -> ClientHandle:
         claim_id = int(body["claim_id"])
         with self._lock:
             self._credits[claim_id] = self._initial_credit_guess
             self._credit_events[claim_id] = threading.Event()
-        return ClientHandle(self, claim_id)
+        return ClientHandle(self, claim_id, str(body.get("resume_token", "")))
 
     def list_devices(self) -> List[Dict[str, Any]]:
         """Ask the host for the ACL-visible device list (open question 3).

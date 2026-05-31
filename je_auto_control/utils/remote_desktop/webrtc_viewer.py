@@ -59,6 +59,8 @@ class WebRTCDesktopViewer:
         self._mic_sender = None  # Optional[MicUplinkSender]
         self._files_channel = None
         self._files_receiver = None  # Optional[FileTransferReceiver]
+        self._usb_channel = None
+        self._usb_client = None  # Optional[UsbChannelClient]
         self._on_file_received = None
         self._on_inbox_listing: Optional[InboxListingCallback] = None
         self._on_inbox_op_result: Optional[InboxOpResultCallback] = None
@@ -274,6 +276,19 @@ class WebRTCDesktopViewer:
                 on_done=self._on_viewer_file_done,
             )
 
+    def _wire_usb_channel(self, channel) -> None:
+        """Attach a USB passthrough client to the ``usb`` DataChannel.
+
+        Exposed via :meth:`usb_client` so the GUI can drive
+        ``list_devices`` / ``open`` against the remote host's devices.
+        """
+        from je_auto_control.utils.usb.passthrough import UsbChannelClient
+        self._usb_client = UsbChannelClient(channel)
+
+    def usb_client(self):
+        """Return the live USB passthrough client, or None if not wired."""
+        return self._usb_client
+
     def _on_viewer_file_done(self, path) -> None:
         if self._on_file_received is not None:
             try:
@@ -459,6 +474,10 @@ class WebRTCDesktopViewer:
             if channel.label == "files":
                 self._files_channel = channel
                 self._wire_files_channel(channel)
+                return
+            if channel.label == "usb":
+                self._usb_channel = channel
+                self._wire_usb_channel(channel)
                 return
             self._control_channel = channel
             self._wire_control_channel(channel)

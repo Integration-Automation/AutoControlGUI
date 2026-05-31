@@ -144,6 +144,7 @@ simplified_chinese_word_dict = {
     "usb_share_acl_exported": "ACL 已导出。",
     "usb_share_acl_imported": "已导入 {count} 条规则。",
     "usb_share_acl_import_failed": "ACL 读写失败：{error}",
+    "usb_share_auto_refresh": "自动刷新(热插拔)",
 
     # 包监测分页
     "inspector_metrics_group": "汇总指标",

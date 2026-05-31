@@ -155,6 +155,7 @@ english_word_dict = {
     "usb_share_acl_exported": "ACL exported.",
     "usb_share_acl_imported": "Imported {count} rule(s).",
     "usb_share_acl_import_failed": "ACL I/O failed: {error}",
+    "usb_share_auto_refresh": "Auto-refresh (hotplug)",
 
     # Inspector tab
     "inspector_metrics_group": "Rolling metrics",

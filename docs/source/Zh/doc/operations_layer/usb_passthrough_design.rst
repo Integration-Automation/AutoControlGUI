@@ -70,6 +70,16 @@ Channel
 
 每個 session 一條專用的 WebRTC ``DataChannel``\ ，名稱 ``usb``\ ，
 ``ordered=True`` 且 ``maxRetransmits=None``\ （完全可靠傳輸）。
+
+**已串接：** host（``webrtc_host``）會建立 ``usb`` channel 並以
+``UsbChannelHost`` 餵給 session（綁定 viewer 認證 + feature flag）；
+viewer（``webrtc_viewer``）收到該 channel 後以 ``UsbChannelClient``
+包裝，透過 ``viewer.usb_client()`` 供上層呼叫 ``list_devices`` /
+``open`` / ``resume``。adapter 與 transport 解耦，可用 fake channel
+單測（見 ``test_usb_webrtc_channel``）。**斷線續租：** OPENED 會帶
+``resume_token``；若 host session 撐過 viewer 的 transport 中斷，
+viewer 重連後送 ``RESUME{resume_token}`` 即可重綁原 claim、保留裝置
+狀態，不需重新 OPEN。
 USB 的 bulk 與 interrupt 傳輸對延遲的容忍度遠高於對遺失的容忍度；
 既有的 video/audio channel 也已示範底層 SCTP 傳輸足以承擔有序可靠
 串流。
@@ -118,6 +128,7 @@ Op (hex)          方向                                   用途
 ``0x07 CREDIT``   viewer ↔ host                          Backpressure 視窗更新
 ``0x08 CLOSE``    viewer → host                          釋放 claim
 ``0x09 CLOSED``   host → viewer                          確認（host 端斷線時也可主動發出）
+``0x0A RESUME``   viewer → host                          重連後以 resume_token 重新綁定既有 claim
 ``0xFF ERROR``    雙向                                   協定錯誤／不支援 op
 ================  =====================================  ======================
 

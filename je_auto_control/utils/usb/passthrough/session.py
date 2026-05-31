@@ -59,6 +59,7 @@ from __future__ import annotations
 
 import base64
 import json
+import secrets
 import threading
 import time
 from dataclasses import dataclass
@@ -121,11 +122,12 @@ class _AbuseTracker:
 
 @dataclass
 class _ClaimState:
-    """Per-claim handle + credit accounting."""
+    """Per-claim handle + credit accounting + resume token."""
 
     handle: UsbHandle
     inbound_credits: int = _DEFAULT_INITIAL_CREDITS
     outbound_credits: int = _DEFAULT_INITIAL_CREDITS
+    resume_token: str = ""
 
 
 class UsbPassthroughSession:
@@ -149,6 +151,7 @@ class UsbPassthroughSession:
         self._audit_log = audit_log  # Late-bound; resolved on first use.
         self._lock = threading.Lock()
         self._claims: Dict[int, _ClaimState] = {}
+        self._resume_index: Dict[str, int] = {}
         self._next_claim_id = 1
         self._abuse = _AbuseTracker()
 
@@ -173,6 +176,7 @@ class UsbPassthroughSession:
         with self._lock:
             handles = [c.handle for c in self._claims.values()]
             self._claims.clear()
+            self._resume_index.clear()
         for handle in handles:
             try:
                 handle.close()
@@ -199,6 +203,8 @@ class UsbPassthroughSession:
         """Route one incoming frame; return zero or more reply frames."""
         if frame.op == Opcode.OPEN:
             return [self._handle_open(frame)]
+        if frame.op == Opcode.RESUME:
+            return [self._handle_resume(frame)]
         if frame.op == Opcode.CLOSE:
             return [self._handle_close(frame)]
         if frame.op == Opcode.CTRL:
@@ -286,6 +292,7 @@ class UsbPassthroughSession:
             self._audit("usb_open_backend_error", vendor_id, product_id,
                         serial, detail=str(error))
             return _opened_failure(frame.claim_id, str(error))
+        resume_token = secrets.token_hex(16)
         with self._lock:
             claim_id = self._next_claim_id
             self._next_claim_id = (self._next_claim_id % 0xFFFE) + 1
@@ -293,12 +300,42 @@ class UsbPassthroughSession:
                 handle=handle,
                 inbound_credits=self._initial_credits,
                 outbound_credits=self._initial_credits,
+                resume_token=resume_token,
             )
+            self._resume_index[resume_token] = claim_id
         self._audit("usb_open_allowed", vendor_id, product_id, serial,
                     detail=f"claim_id={claim_id}")
         return Frame(
             op=Opcode.OPENED, claim_id=claim_id,
-            payload=_encode_json_payload({"ok": True, "claim_id": claim_id}),
+            payload=_encode_json_payload({
+                "ok": True, "claim_id": claim_id,
+                "resume_token": resume_token,
+            }),
+        )
+
+    def _handle_resume(self, frame: Frame) -> Frame:
+        """Re-bind a still-open claim to a reconnecting viewer.
+
+        Resolves claim continuity (open question / Phase 2 resilience):
+        if the host session outlived a viewer transport drop, the viewer
+        replays its ``resume_token`` instead of re-OPENing, keeping the
+        device state and claim_id intact.
+        """
+        try:
+            token = str(_decode_json_payload(frame.payload)["resume_token"])
+        except (KeyError, ValueError, TypeError) as error:
+            return _opened_failure(frame.claim_id, f"bad RESUME payload: {error}")
+        with self._lock:
+            claim_id = self._resume_index.get(token)
+            claim = self._claims.get(claim_id) if claim_id is not None else None
+        if claim is None:
+            return _opened_failure(frame.claim_id, "unknown or expired resume token")
+        self._audit("usb_resume", "?", "?", None, detail=f"claim_id={claim_id}")
+        return Frame(
+            op=Opcode.OPENED, claim_id=claim_id,
+            payload=_encode_json_payload({
+                "ok": True, "claim_id": claim_id, "resume_token": token,
+            }),
         )
 
     def _acl_decision(self, vendor_id: str, product_id: str,
@@ -360,6 +397,8 @@ class UsbPassthroughSession:
     def _handle_close(self, frame: Frame) -> Frame:
         with self._lock:
             claim = self._claims.pop(int(frame.claim_id), None)
+            if claim is not None and claim.resume_token:
+                self._resume_index.pop(claim.resume_token, None)
         if claim is None:
             return _error_frame(
                 frame.claim_id, f"unknown claim_id {frame.claim_id}",

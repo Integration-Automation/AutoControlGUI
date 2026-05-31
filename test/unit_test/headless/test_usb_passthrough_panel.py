@@ -119,3 +119,30 @@ def test_panel_enable_is_idempotent(qapp, tmp_path):
     finally:
         panel._disable_sharing()
         panel.deleteLater()
+
+
+def test_panel_hotplug_toggle_starts_and_stops(qapp, tmp_path):
+    panel, _acl = _make_panel(qapp, tmp_path)
+    try:
+        panel._auto_check.setChecked(True)
+        assert panel._hotplug_timer.isActive() is True
+        panel._poll_hotplug()  # must not raise even with no events
+        panel._auto_check.setChecked(False)
+        assert panel._hotplug_timer.isActive() is False
+    finally:
+        panel.deleteLater()
+
+
+def test_panel_export_import_acl_round_trip(qapp, tmp_path):
+    panel, acl = _make_panel(qapp, tmp_path)
+    try:
+        acl.add_rule(AclRule(vendor_id="1050", product_id="0407", allow=True))
+        out = tmp_path / "exp.json"
+        from je_auto_control.utils.usb.passthrough import (
+            export_acl_to_file, import_acl_from_file,
+        )
+        export_acl_to_file(acl, out)
+        fresh = UsbAcl(path=tmp_path / "fresh.json")
+        assert import_acl_from_file(fresh, out) == 1
+    finally:
+        panel.deleteLater()

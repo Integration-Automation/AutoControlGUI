@@ -99,6 +99,8 @@ class WebRTCDesktopHost:
         self._mic_receiver = None  # Optional[MicUplinkReceiver]
         self._files_channel = None
         self._files_receiver = None  # Optional[FileTransferReceiver]
+        self._usb_channel = None
+        self._usb_host = None  # Optional[UsbChannelHost]
         self._on_file_received: Optional[Callable] = None
         self._on_viewer_video_frame: Optional[Callable] = None
         self._viewer_video_task = None
@@ -187,6 +189,8 @@ class WebRTCDesktopHost:
         self._wire_mic_channel(self._mic_channel)
         self._files_channel = self._pc.createDataChannel("files")
         self._wire_files_channel(self._files_channel)
+        self._usb_channel = self._pc.createDataChannel("usb")
+        self._wire_usb_channel(self._usb_channel)
         self._wire_state_handlers(self._pc)
         self._wire_viewer_video_handler(self._pc)
         offer = await self._pc.createOffer()
@@ -377,6 +381,36 @@ class WebRTCDesktopHost:
                 message,
                 on_done=self._on_file_done,
             )
+
+    def _wire_usb_channel(self, channel) -> None:
+        """Carry USB passthrough over the ``usb`` DataChannel.
+
+        Gated on viewer authentication *and* the global passthrough flag
+        (default off); per-device access is governed by the host's
+        ``UsbAcl`` (default deny). The session is built lazily on the
+        first frame so a host without the USB backend installed pays
+        nothing until a viewer actually uses the channel.
+        """
+        from je_auto_control.utils.usb.passthrough import UsbChannelHost
+
+        def _factory():
+            from je_auto_control.utils.usb.passthrough import (
+                UsbAcl, UsbPassthroughSession, default_passthrough_backend,
+            )
+            return UsbPassthroughSession(
+                default_passthrough_backend(), acl=UsbAcl(),
+                viewer_id=getattr(self, "_viewer_id", None),
+            )
+
+        def _enabled() -> bool:
+            from je_auto_control.utils.usb.passthrough import (
+                is_usb_passthrough_enabled,
+            )
+            return bool(self._authenticated) and is_usb_passthrough_enabled()
+
+        self._usb_host = UsbChannelHost(
+            channel, session_factory=_factory, enabled_check=_enabled,
+        )
 
     def set_file_received_callback(self, callback) -> None:
         """Register a sync callback ``cb(path: Path)`` for completed transfers."""

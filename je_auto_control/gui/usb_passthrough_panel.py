@@ -19,11 +19,11 @@ from __future__ import annotations
 
 from typing import Any, Callable, List, Optional
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
-    QFileDialog, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QMessageBox, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout,
-    QWidget,
+    QCheckBox, QFileDialog, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
+    QLineEdit, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem,
+    QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -37,6 +37,7 @@ from je_auto_control.utils.usb.passthrough import (
     export_acl_to_file, import_acl_from_file,
 )
 from je_auto_control.utils.usb.usb_devices import list_usb_devices
+from je_auto_control.utils.usb.usb_watcher import default_usb_watcher
 
 
 def _t(key: str) -> str:
@@ -84,6 +85,12 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         self._thread: Optional[QThread] = None
         self._host_badge = _StatusBadge()
         self._viewer_status = QLabel("")
+        self._auto_check = QCheckBox()
+        self._auto_check.toggled.connect(self._on_auto_toggled)
+        self._hotplug_timer = QTimer(self)
+        self._hotplug_timer.setInterval(2000)
+        self._hotplug_timer.timeout.connect(self._poll_hotplug)
+        self._last_seen_seq = 0
         self._local_table = _make_table(5)
         self._shared_table = _make_table(4)
         self._remote_url = QLineEdit("http://127.0.0.1:9939")
@@ -133,6 +140,8 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         acl_row.addWidget(refresh_btn)
         acl_row.addWidget(allow_btn)
         acl_row.addWidget(block_btn)
+        self._tr(self._auto_check, "usb_share_auto_refresh")
+        acl_row.addWidget(self._auto_check)
         layout.addLayout(acl_row)
         io_row = QHBoxLayout()
         export_btn = self._tr(QPushButton(), "usb_share_export_acl")
@@ -250,6 +259,25 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
             ]
             for col, text in enumerate(cells):
                 self._local_table.setItem(row, col, QTableWidgetItem(text))
+
+    def _on_auto_toggled(self, on: bool) -> None:
+        watcher = default_usb_watcher()
+        if on:
+            watcher.start()
+            self._hotplug_timer.start()
+        else:
+            self._hotplug_timer.stop()
+            watcher.stop()
+
+    def _poll_hotplug(self) -> None:
+        watcher = default_usb_watcher()
+        if not watcher.is_running:
+            return
+        events = watcher.recent_events(since=self._last_seen_seq, limit=20)
+        if not events:
+            return
+        self._last_seen_seq = events[-1]["seq"]
+        self._refresh_local_devices()
 
     def _set_policy(self, allow: bool) -> None:
         row = _selected_row(self._local_table)
@@ -408,6 +436,9 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         return "" if text == "-" else text
 
     def closeEvent(self, event) -> None:  # noqa: N802  # Qt override name
+        self._hotplug_timer.stop()
+        if self._auto_check.isChecked():
+            default_usb_watcher().stop()
         self._disable_sharing()
         super().closeEvent(event)
 

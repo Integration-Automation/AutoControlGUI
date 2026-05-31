@@ -400,6 +400,56 @@ def test_backend_handle_close_is_idempotent():
 
 
 # ---------------------------------------------------------------------------
+# Resume tokens (claim continuity across reconnect)
+# ---------------------------------------------------------------------------
+
+
+def _resume_frame(token: str) -> Frame:
+    return Frame(op=Opcode.RESUME,
+                 payload=json.dumps({"resume_token": token}).encode("utf-8"))
+
+
+def test_open_emits_resume_token():
+    session = UsbPassthroughSession(FakeUsbBackend(devices=[_SAMPLE_DEVICE]))
+    body = json.loads(session.handle_frame(_make_open_frame())[0].payload)
+    assert body["ok"] is True
+    assert isinstance(body["resume_token"], str) and body["resume_token"]
+
+
+def test_resume_rebinds_same_claim():
+    backend = FakeUsbBackend(devices=[_SAMPLE_DEVICE])
+    session = UsbPassthroughSession(backend)
+    opened = json.loads(session.handle_frame(_make_open_frame())[0].payload)
+    token = opened["resume_token"]
+    claim_id = opened["claim_id"]
+    # Simulate a viewer reconnect: same session, replay the token.
+    reply = session.handle_frame(_resume_frame(token))[0]
+    body = json.loads(reply.payload.decode("utf-8"))
+    assert reply.op == Opcode.OPENED
+    assert body["ok"] is True
+    assert body["claim_id"] == claim_id
+    # The claim was never closed, so it is still serviceable.
+    assert session.active_claim_count == 1
+
+
+def test_resume_unknown_token_fails():
+    session = UsbPassthroughSession(FakeUsbBackend(devices=[_SAMPLE_DEVICE]))
+    body = json.loads(session.handle_frame(_resume_frame("deadbeef"))[0].payload)
+    assert body["ok"] is False
+    assert "resume token" in body["error"]
+
+
+def test_resume_after_close_fails():
+    backend = FakeUsbBackend(devices=[_SAMPLE_DEVICE])
+    session = UsbPassthroughSession(backend)
+    opened = json.loads(session.handle_frame(_make_open_frame())[0].payload)
+    token, claim_id = opened["resume_token"], opened["claim_id"]
+    session.handle_frame(Frame(op=Opcode.CLOSE, claim_id=claim_id))
+    body = json.loads(session.handle_frame(_resume_frame(token))[0].payload)
+    assert body["ok"] is False
+
+
+# ---------------------------------------------------------------------------
 # Abuse tracking / lockout
 # ---------------------------------------------------------------------------
 

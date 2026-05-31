@@ -42,6 +42,9 @@ from je_auto_control.utils.usb.passthrough.viewer_client import (
     ClientHandle, UsbClientClosed, UsbClientError, UsbClientTimeout,
     UsbPassthroughClient,
 )
+from je_auto_control.utils.usb.passthrough.webrtc_channel import (
+    UsbChannelClient, UsbChannelHost,
+)
 
 __all__ = [
     "FakeUsbBackend", "LibusbBackend", "UsbBackend", "UsbHandle",
@@ -56,6 +59,7 @@ __all__ = [
     "SessionError", "UsbPassthroughSession",
     "ClientHandle", "UsbClientClosed", "UsbClientError", "UsbClientTimeout",
     "UsbPassthroughClient",
+    "UsbChannelClient", "UsbChannelHost",
     "AclRule", "UsbAcl", "default_acl_path",
     "export_acl_to_file", "import_acl_from_file",
     "VaultKeyProvider", "dpapi_available", "load_or_create_dpapi_key",

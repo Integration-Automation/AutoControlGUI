@@ -153,6 +153,7 @@ japanese_word_dict = {
     "usb_share_acl_exported": "ACL をエクスポートしました。",
     "usb_share_acl_imported": "{count} 件のルールをインポートしました。",
     "usb_share_acl_import_failed": "ACL 入出力に失敗：{error}",
+    "usb_share_auto_refresh": "自動更新(ホットプラグ)",
 
     # 監視タブ
     "inspector_metrics_group": "集約メトリクス",
