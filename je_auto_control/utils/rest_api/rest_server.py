@@ -29,6 +29,11 @@ from je_auto_control.utils.rest_api.rest_handlers import (
     handle_inspector_summary, handle_jobs, handle_mouse_position,
     handle_openapi, handle_remote_sessions, handle_screen_size,
     handle_screenshot, handle_usb_devices, handle_usb_events, handle_windows,
+    handle_usb_passthrough_status, handle_usb_passthrough_enable,
+    handle_usb_acl_list, handle_usb_acl_add, handle_usb_acl_remove,
+    handle_usb_acl_default, handle_usb_loopback_devices,
+    handle_usb_loopback_open, handle_usb_remote_devices,
+    handle_usb_remote_open,
 )
 from je_auto_control.utils.rest_api.rest_metrics import RestMetrics
 
@@ -51,6 +56,10 @@ _GET_ROUTES: Dict[str, HandlerFn] = {
     "/inspector/summary": handle_inspector_summary,
     "/usb/devices": handle_usb_devices,
     "/usb/events": handle_usb_events,
+    "/usb/passthrough/status": handle_usb_passthrough_status,
+    "/usb/acl": handle_usb_acl_list,
+    "/usb/loopback/devices": handle_usb_loopback_devices,
+    "/usb/remote/devices": handle_usb_remote_devices,
     "/diagnose": handle_diagnose,
     "/openapi.json": handle_openapi,
 }
@@ -60,6 +69,12 @@ _POST_ROUTES: Dict[str, HandlerFn] = {
     "/execute_file": handle_execute_file,
     "/config/export": handle_config_export,
     "/config/import": handle_config_import,
+    "/usb/passthrough/enable": handle_usb_passthrough_enable,
+    "/usb/acl/add": handle_usb_acl_add,
+    "/usb/acl/remove": handle_usb_acl_remove,
+    "/usb/acl/default": handle_usb_acl_default,
+    "/usb/loopback/open": handle_usb_loopback_open,
+    "/usb/remote/open": handle_usb_remote_open,
 }
 
 # /health is intentionally unauthenticated so probes / load balancers

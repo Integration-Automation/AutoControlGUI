@@ -281,6 +281,15 @@ JSON action 範例::
       ["AC_usb_loopback_open", {"vendor_id": "1050", "product_id": "0407"}]
     ]
 
+同樣的操作另外提供兩個介面：
+
+* **REST API** — ``GET/POST /usb/passthrough/...``、``/usb/acl...``、
+  ``/usb/loopback/...``、``/usb/remote/...``\ （需 bearer token；見
+  ``/openapi.json``\ ）。ACL 匯入/匯出刻意 **不** 開 REST（伺服器端
+  檔案路徑風險）。
+* **MCP** — 一級 ``ac_usb_*`` 工具（``ac_usb_loopback_open`` …），帶
+  JSON Schema，agent 可直接呼叫。
+
 
 尚未發布的部分
 ==============

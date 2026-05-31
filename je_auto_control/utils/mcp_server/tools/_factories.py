@@ -1779,6 +1779,113 @@ def gamepad_tools() -> List[MCPTool]:
     ]
 
 
+_VID_PID = {
+    "vendor_id": {"type": "string"},
+    "product_id": {"type": "string"},
+    "serial": {"type": "string"},
+}
+
+
+def usb_passthrough_tools() -> List[MCPTool]:
+    """First-class MCP tools for USB passthrough (default-off feature)."""
+    return [
+        MCPTool(
+            name="ac_usb_passthrough_enable",
+            description=("Toggle the USB passthrough feature flag. Default "
+                         "off; must be enabled before any usb channel is "
+                         "honoured."),
+            input_schema=schema({"enabled": {"type": "boolean"}}),
+            handler=h.usb_passthrough_enable,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_usb_passthrough_status",
+            description="Report whether USB passthrough is enabled.",
+            input_schema=schema({}),
+            handler=h.usb_passthrough_status,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_usb_acl_list",
+            description=("List USB ACL rules plus the default policy and the "
+                         "HMAC integrity state."),
+            input_schema=schema({}),
+            handler=h.usb_acl_list,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_usb_acl_add",
+            description=("Add a per-device USB ACL rule (allow/deny, optional "
+                         "prompt-on-open). vendor_id/product_id are 4 hex "
+                         "digits, e.g. 1050/0407."),
+            input_schema=schema({
+                **_VID_PID,
+                "allow": {"type": "boolean"},
+                "prompt_on_open": {"type": "boolean"},
+                "label": {"type": "string"},
+            }, required=["vendor_id", "product_id"]),
+            handler=h.usb_acl_add,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_usb_acl_remove",
+            description="Remove a per-device USB ACL rule.",
+            input_schema=schema(
+                dict(_VID_PID), required=["vendor_id", "product_id"],
+            ),
+            handler=h.usb_acl_remove,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_usb_acl_set_default",
+            description="Set the USB ACL default policy (allow | deny).",
+            input_schema=schema({
+                "policy": {"type": "string", "enum": ["allow", "deny"]},
+            }, required=["policy"]),
+            handler=h.usb_acl_set_default,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_usb_loopback_list",
+            description=("List ACL-visible USB devices on this machine over "
+                         "the in-process loopback channel."),
+            input_schema=schema({}),
+            handler=h.usb_loopback_list,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_usb_loopback_open",
+            description=("Claim a local USB device over loopback and read its "
+                         "device descriptor (a full protocol-stack probe). "
+                         "Fails closed if the ACL denies it."),
+            input_schema=schema(
+                dict(_VID_PID), required=["vendor_id", "product_id"],
+            ),
+            handler=h.usb_loopback_open,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_usb_remote_list",
+            description=("List the remote host's USB devices over the live "
+                         "WebRTC usb channel. Requires a connected WebRTC "
+                         "viewer."),
+            input_schema=schema({}),
+            handler=h.usb_remote_list,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_usb_remote_open",
+            description=("Claim a remote USB device over the live WebRTC usb "
+                         "channel and read its descriptor."),
+            input_schema=schema(
+                dict(_VID_PID), required=["vendor_id", "product_id"],
+            ),
+            handler=h.usb_remote_open,
+            annotations=NON_DESTRUCTIVE,
+        ),
+    ]
+
+
 ALL_FACTORIES = (
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
@@ -1789,4 +1896,5 @@ ALL_FACTORIES = (
     redaction_tools, android_widget_tools, ios_tools, webrunner_tools,
     scheduler_tools, trigger_tools, hotkey_tools, screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
+    usb_passthrough_tools,
 )

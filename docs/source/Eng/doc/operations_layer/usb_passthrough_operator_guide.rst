@@ -301,6 +301,15 @@ Example JSON action::
       ["AC_usb_loopback_open", {"vendor_id": "1050", "product_id": "0407"}]
     ]
 
+The same operations are exposed over two more surfaces:
+
+* **REST API** — ``GET/POST /usb/passthrough/...``, ``/usb/acl...``,
+  ``/usb/loopback/...``, ``/usb/remote/...`` (bearer-token gated; see
+  ``/openapi.json``). ACL export/import are intentionally *not* on REST
+  (server-side file paths).
+* **MCP** — first-class ``ac_usb_*`` tools (``ac_usb_loopback_open`` …)
+  with JSON Schemas, so an agent can call them directly.
+
 
 What is *not* shipped yet
 =========================

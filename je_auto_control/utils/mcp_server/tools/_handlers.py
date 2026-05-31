@@ -1535,3 +1535,64 @@ def gamepad_reset() -> Dict[str, Any]:
     from je_auto_control.utils.gamepad import default_gamepad
     default_gamepad().reset()
     return {"reset": True}
+
+
+# --- USB passthrough — delegate to the shared command module -------------
+
+
+def usb_passthrough_enable(enabled: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import commands
+    return commands.passthrough_enable(enabled)
+
+
+def usb_passthrough_status() -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import commands
+    return commands.passthrough_status()
+
+
+def usb_acl_list() -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import commands
+    return commands.acl_list()
+
+
+def usb_acl_add(vendor_id: str, product_id: str,
+                serial: Optional[str] = None, allow: bool = True,
+                prompt_on_open: bool = False, label: str = "") -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import commands
+    return commands.acl_add(
+        vendor_id, product_id, serial=serial, allow=allow,
+        prompt_on_open=prompt_on_open, label=label,
+    )
+
+
+def usb_acl_remove(vendor_id: str, product_id: str,
+                   serial: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import commands
+    return commands.acl_remove(vendor_id, product_id, serial=serial)
+
+
+def usb_acl_set_default(policy: str) -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import commands
+    return commands.acl_set_default(policy)
+
+
+def usb_loopback_list() -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import commands
+    return commands.loopback_list()
+
+
+def usb_loopback_open(vendor_id: str, product_id: str,
+                      serial: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import commands
+    return commands.loopback_open(vendor_id, product_id, serial=serial)
+
+
+def usb_remote_list() -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import commands
+    return commands.remote_list()
+
+
+def usb_remote_open(vendor_id: str, product_id: str,
+                    serial: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import commands
+    return commands.remote_open(vendor_id, product_id, serial=serial)

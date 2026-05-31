@@ -296,6 +296,115 @@ def handle_usb_events(ctx: RouteContext) -> HandlerResult:
     }
 
 
+def _usb_body(ctx: RouteContext) -> Dict[str, Any]:
+    return ctx.body if isinstance(ctx.body, dict) else {}
+
+
+def _usb_vid_pid(body: Dict[str, Any]) -> Tuple[str, str, Optional[str]]:
+    vendor_id = body.get("vendor_id")
+    product_id = body.get("product_id")
+    if not vendor_id or not product_id:
+        raise ValueError("vendor_id and product_id are required")
+    serial = body.get("serial")
+    return str(vendor_id), str(product_id), (
+        None if serial is None else str(serial)
+    )
+
+
+def _usb_command(thunk) -> HandlerResult:
+    """Run a passthrough command thunk and map errors to status codes."""
+    try:
+        return 200, thunk()
+    except ValueError as error:
+        return 400, {"error": str(error)}
+    except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: REST boundary returns the domain error (ACL deny / no device); never raw secrets
+        autocontrol_logger.error("rest usb passthrough failed: %r", error)
+        return 500, {"error": str(error)}
+
+
+def handle_usb_passthrough_status(_ctx: RouteContext) -> HandlerResult:
+    from je_auto_control.utils.usb.passthrough import commands
+    return _usb_command(commands.passthrough_status)
+
+
+def handle_usb_passthrough_enable(ctx: RouteContext) -> HandlerResult:
+    from je_auto_control.utils.usb.passthrough import commands
+    enabled = bool(_usb_body(ctx).get("enabled", True))
+    return _usb_command(lambda: commands.passthrough_enable(enabled))
+
+
+def handle_usb_acl_list(_ctx: RouteContext) -> HandlerResult:
+    from je_auto_control.utils.usb.passthrough import commands
+    return _usb_command(commands.acl_list)
+
+
+def handle_usb_acl_add(ctx: RouteContext) -> HandlerResult:
+    from je_auto_control.utils.usb.passthrough import commands
+    body = _usb_body(ctx)
+    try:
+        vendor_id, product_id, serial = _usb_vid_pid(body)
+    except ValueError as error:
+        return 400, {"error": str(error)}
+    return _usb_command(lambda: commands.acl_add(
+        vendor_id, product_id, serial=serial,
+        allow=bool(body.get("allow", True)),
+        prompt_on_open=bool(body.get("prompt_on_open", False)),
+        label=str(body.get("label", "")),
+    ))
+
+
+def handle_usb_acl_remove(ctx: RouteContext) -> HandlerResult:
+    from je_auto_control.utils.usb.passthrough import commands
+    body = _usb_body(ctx)
+    try:
+        vendor_id, product_id, serial = _usb_vid_pid(body)
+    except ValueError as error:
+        return 400, {"error": str(error)}
+    return _usb_command(
+        lambda: commands.acl_remove(vendor_id, product_id, serial=serial),
+    )
+
+
+def handle_usb_acl_default(ctx: RouteContext) -> HandlerResult:
+    from je_auto_control.utils.usb.passthrough import commands
+    policy = str(_usb_body(ctx).get("policy", ""))
+    if policy not in ("allow", "deny"):
+        return 400, {"error": "policy must be 'allow' or 'deny'"}
+    return _usb_command(lambda: commands.acl_set_default(policy))
+
+
+def handle_usb_loopback_devices(_ctx: RouteContext) -> HandlerResult:
+    from je_auto_control.utils.usb.passthrough import commands
+    return _usb_command(commands.loopback_list)
+
+
+def handle_usb_loopback_open(ctx: RouteContext) -> HandlerResult:
+    from je_auto_control.utils.usb.passthrough import commands
+    try:
+        vendor_id, product_id, serial = _usb_vid_pid(_usb_body(ctx))
+    except ValueError as error:
+        return 400, {"error": str(error)}
+    return _usb_command(
+        lambda: commands.loopback_open(vendor_id, product_id, serial=serial),
+    )
+
+
+def handle_usb_remote_devices(_ctx: RouteContext) -> HandlerResult:
+    from je_auto_control.utils.usb.passthrough import commands
+    return _usb_command(commands.remote_list)
+
+
+def handle_usb_remote_open(ctx: RouteContext) -> HandlerResult:
+    from je_auto_control.utils.usb.passthrough import commands
+    try:
+        vendor_id, product_id, serial = _usb_vid_pid(_usb_body(ctx))
+    except ValueError as error:
+        return 400, {"error": str(error)}
+    return _usb_command(
+        lambda: commands.remote_open(vendor_id, product_id, serial=serial),
+    )
+
+
 def handle_inspector_summary(_ctx: RouteContext) -> HandlerResult:
     try:
         from je_auto_control.utils.remote_desktop.webrtc_inspector import (
@@ -333,4 +442,9 @@ __all__ = [
     "handle_inspector_recent", "handle_inspector_summary",
     "handle_usb_devices", "handle_usb_events", "handle_diagnose",
     "handle_openapi", "handle_config_export", "handle_config_import",
+    "handle_usb_passthrough_status", "handle_usb_passthrough_enable",
+    "handle_usb_acl_list", "handle_usb_acl_add", "handle_usb_acl_remove",
+    "handle_usb_acl_default", "handle_usb_loopback_devices",
+    "handle_usb_loopback_open", "handle_usb_remote_devices",
+    "handle_usb_remote_open",
 ]
