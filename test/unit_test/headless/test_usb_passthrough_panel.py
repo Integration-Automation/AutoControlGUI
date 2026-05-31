@@ -133,6 +133,60 @@ def test_panel_hotplug_toggle_starts_and_stops(qapp, tmp_path):
         panel.deleteLater()
 
 
+def test_panel_remote_source_uses_provider(qapp, tmp_path):
+    """When 'Remote (WebRTC)' is selected, the panel routes to the
+    injected provider's client instead of the local loopback."""
+    backend = FakeUsbBackend(devices=[_SAMPLE])
+    acl = UsbAcl(path=tmp_path / "acl.json")
+    acl.add_rule(AclRule(vendor_id="1050", product_id="0407", allow=True))
+    remote = UsbLoopback(backend=backend, acl=acl, viewer_id="remote")
+    panel = _panel_mod.UsbPassthroughPanel(
+        acl=UsbAcl(path=tmp_path / "host_acl.json"),
+        loopback_factory=lambda: UsbLoopback(
+            backend=FakeUsbBackend(devices=[]), acl=acl,
+        ),
+        remote_client_provider=lambda: remote,
+    )
+    try:
+        # Index 1 == "Remote (WebRTC)".
+        panel._source_combo.setCurrentIndex(1)
+        client = panel._active_use_client()
+        assert client is remote
+        assert [d["vendor_id"] for d in client.list_devices()] == ["1050"]
+    finally:
+        remote.close()
+        panel.deleteLater()
+
+
+def test_panel_remote_source_without_session_warns(qapp, tmp_path):
+    panel = _panel_mod.UsbPassthroughPanel(
+        acl=UsbAcl(path=tmp_path / "acl.json"),
+        loopback_factory=lambda: UsbLoopback(
+            backend=FakeUsbBackend(devices=[]),
+            acl=UsbAcl(path=tmp_path / "acl.json"),
+        ),
+        remote_client_provider=lambda: None,  # no live WebRTC session
+    )
+    try:
+        panel._source_combo.setCurrentIndex(1)
+        import pytest as _pytest
+        with _pytest.raises(RuntimeError):
+            panel._active_use_client()
+    finally:
+        panel.deleteLater()
+
+
+def test_panel_local_source_is_default(qapp, tmp_path):
+    panel, _acl = _make_panel(qapp, tmp_path)
+    try:
+        assert panel._source_combo.currentIndex() == 0
+        panel._enable_sharing()
+        assert panel._active_use_client() is panel._loopback
+    finally:
+        panel._disable_sharing()
+        panel.deleteLater()
+
+
 def test_panel_export_import_acl_round_trip(qapp, tmp_path):
     panel, acl = _make_panel(qapp, tmp_path)
     try:

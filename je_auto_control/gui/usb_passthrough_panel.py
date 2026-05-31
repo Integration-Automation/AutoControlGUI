@@ -21,9 +21,9 @@ from typing import Any, Callable, List, Optional
 
 from PySide6.QtCore import QObject, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
-    QCheckBox, QFileDialog, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
-    QLineEdit, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem,
-    QVBoxLayout, QWidget,
+    QCheckBox, QComboBox, QFileDialog, QGroupBox, QHBoxLayout, QHeaderView,
+    QLabel, QLineEdit, QMessageBox, QPushButton, QTableWidget,
+    QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -76,15 +76,22 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
     def __init__(self, parent: Optional[QWidget] = None, *,
                  acl: Optional[UsbAcl] = None,
                  loopback_factory: Optional[Callable[[], UsbLoopback]] = None,
+                 remote_client_provider: Optional[
+                     Callable[[], Optional[Any]]
+                 ] = None,
                  ) -> None:
         super().__init__(parent)
         self._tr_init()
         self._acl = acl if acl is not None else UsbAcl()
         self._loopback_factory = loopback_factory or self._default_loopback
+        self._remote_client_provider = (
+            remote_client_provider or _default_remote_client
+        )
         self._loopback: Optional[UsbLoopback] = None
         self._thread: Optional[QThread] = None
         self._host_badge = _StatusBadge()
         self._viewer_status = QLabel("")
+        self._source_combo = QComboBox()
         self._auto_check = QCheckBox()
         self._auto_check.toggled.connect(self._on_auto_toggled)
         self._hotplug_timer = QTimer(self)
@@ -97,6 +104,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         self._remote_token = QLineEdit()
         self._remote_token.setEchoMode(QLineEdit.EchoMode.Password)
         self._build_layout()
+        self._populate_source_combo()
         self._apply_local_headers()
         self._apply_shared_headers()
         self._refresh_local_devices()
@@ -161,6 +169,10 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         intro = self._tr(QLabel(), "usb_share_intro")
         intro.setWordWrap(True)
         layout.addWidget(intro)
+        source_row = QHBoxLayout()
+        source_row.addWidget(self._tr(QLabel(), "usb_share_source_label"))
+        source_row.addWidget(self._source_combo, stretch=1)
+        layout.addLayout(source_row)
         layout.addWidget(self._shared_table, stretch=1)
         use_row = QHBoxLayout()
         list_btn = self._tr(QPushButton(), "usb_share_fetch_shared")
@@ -204,8 +216,18 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
             _t("usb_share_col_product"), _t("usb_share_col_serial"),
         ])
 
+    def _populate_source_combo(self) -> None:
+        index = max(0, self._source_combo.currentIndex())
+        self._source_combo.blockSignals(True)
+        self._source_combo.clear()
+        self._source_combo.addItem(_t("usb_share_source_local"))
+        self._source_combo.addItem(_t("usb_share_source_remote"))
+        self._source_combo.setCurrentIndex(index)
+        self._source_combo.blockSignals(False)
+
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
+        self._populate_source_combo()
         self._apply_local_headers()
         self._apply_shared_headers()
         self._refresh_host_badge()
@@ -330,15 +352,40 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         )
         self._refresh_local_devices()
 
-    # --- use (loopback) ----------------------------------------------------
+    # --- use (loopback or live WebRTC) -------------------------------------
+
+    def _source_is_remote(self) -> bool:
+        return self._source_combo.currentIndex() == 1
+
+    def _active_use_client(self) -> Any:
+        """Return the client for the selected source, or raise a friendly error.
+
+        Both the loopback bundle and the WebRTC ``UsbChannelClient``
+        expose ``list_devices`` and ``open`` with the same signatures, so
+        the use actions are source-agnostic.
+        """
+        if self._source_is_remote():
+            client = self._remote_client_provider()
+            if client is None:
+                raise RuntimeError(_t("usb_share_no_webrtc"))
+            return client
+        if self._loopback is None:
+            raise RuntimeError(_t("usb_share_enable_first"))
+        return self._loopback
+
+    def _use_client_or_warn(self) -> Any:
+        try:
+            return self._active_use_client()
+        except RuntimeError as error:
+            self._info(str(error))
+            return None
 
     def _list_shared(self) -> None:
-        loop = self._loopback
-        if loop is None:
-            self._info(_t("usb_share_enable_first"))
+        client = self._use_client_or_warn()
+        if client is None:
             return
         self._viewer_status.setText(_t("usb_share_listing"))
-        self._run_async(loop.list_devices, self._apply_shared, self._fail)
+        self._run_async(client.list_devices, self._apply_shared, self._fail)
 
     def _apply_shared(self, devices: List[dict]) -> None:
         self._viewer_status.setText(
@@ -354,9 +401,8 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
                 self._shared_table.setItem(row, col, QTableWidgetItem(str(text)))
 
     def _open_selected(self) -> None:
-        loop = self._loopback
-        if loop is None:
-            self._info(_t("usb_share_enable_first"))
+        client = self._use_client_or_warn()
+        if client is None:
             return
         row = _selected_row(self._shared_table)
         if row is None:
@@ -369,7 +415,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
             _t("usb_share_opening").format(vid=vid, pid=pid),
         )
         self._run_async(
-            lambda: _probe_device(loop, vid, pid, serial),
+            lambda: _probe_device(client, vid, pid, serial),
             lambda descriptor: self._opened(vid, pid, descriptor),
             self._fail,
         )
@@ -458,10 +504,23 @@ def _selected_row(table: QTableWidget) -> Optional[int]:
     return rows[0] if rows else None
 
 
-def _probe_device(loop: UsbLoopback, vid: str, pid: str,
+def _default_remote_client() -> Optional[Any]:
+    """Return the live WebRTC viewer's USB client, or None if unavailable."""
+    try:
+        from je_auto_control.utils.remote_desktop.registry import registry
+    except ImportError:
+        return None
+    return registry.webrtc_usb_client()
+
+
+def _probe_device(client: Any, vid: str, pid: str,
                   serial: Optional[str]) -> bytes:
-    """Open the device, read its descriptor as a liveness proof, close."""
-    handle = loop.open(vendor_id=vid, product_id=pid, serial=serial)
+    """Open the device, read its descriptor as a liveness proof, close.
+
+    ``client`` is either a :class:`UsbLoopback` or a WebRTC
+    ``UsbChannelClient`` — both expose the same ``open`` signature.
+    """
+    handle = client.open(vendor_id=vid, product_id=pid, serial=serial)
     try:
         return handle.control_transfer(
             bm_request_type=_DESC_REQUEST_TYPE, b_request=_DESC_REQUEST,

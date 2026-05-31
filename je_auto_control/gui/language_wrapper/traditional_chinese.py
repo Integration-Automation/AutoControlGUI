@@ -146,6 +146,10 @@ traditional_chinese_word_dict = {
     "usb_share_acl_imported": "已匯入 {count} 條規則。",
     "usb_share_acl_import_failed": "ACL 讀寫失敗：{error}",
     "usb_share_auto_refresh": "自動刷新(熱插拔)",
+    "usb_share_source_label": "來源：",
+    "usb_share_source_local": "本機(loopback)",
+    "usb_share_source_remote": "遠端(WebRTC)",
+    "usb_share_no_webrtc": "沒有 live WebRTC session — 請先連線 WebRTC viewer。",
 
     # 封包監測分頁
     "inspector_metrics_group": "彙整指標",

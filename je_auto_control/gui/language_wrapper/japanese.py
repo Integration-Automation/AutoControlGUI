@@ -154,6 +154,10 @@ japanese_word_dict = {
     "usb_share_acl_imported": "{count} 件のルールをインポートしました。",
     "usb_share_acl_import_failed": "ACL 入出力に失敗：{error}",
     "usb_share_auto_refresh": "自動更新(ホットプラグ)",
+    "usb_share_source_label": "ソース：",
+    "usb_share_source_local": "ローカル(loopback)",
+    "usb_share_source_remote": "リモート(WebRTC)",
+    "usb_share_no_webrtc": "ライブ WebRTC セッションがありません — 先に WebRTC viewer に接続してください。",
 
     # 監視タブ
     "inspector_metrics_group": "集約メトリクス",

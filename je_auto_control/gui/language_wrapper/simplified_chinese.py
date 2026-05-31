@@ -145,6 +145,10 @@ simplified_chinese_word_dict = {
     "usb_share_acl_imported": "已导入 {count} 条规则。",
     "usb_share_acl_import_failed": "ACL 读写失败：{error}",
     "usb_share_auto_refresh": "自动刷新(热插拔)",
+    "usb_share_source_label": "来源：",
+    "usb_share_source_local": "本机(loopback)",
+    "usb_share_source_remote": "远程(WebRTC)",
+    "usb_share_no_webrtc": "没有 live WebRTC session — 请先连接 WebRTC viewer。",
 
     # 包监测分页
     "inspector_metrics_group": "汇总指标",

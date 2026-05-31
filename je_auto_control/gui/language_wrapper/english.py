@@ -156,6 +156,10 @@ english_word_dict = {
     "usb_share_acl_imported": "Imported {count} rule(s).",
     "usb_share_acl_import_failed": "ACL I/O failed: {error}",
     "usb_share_auto_refresh": "Auto-refresh (hotplug)",
+    "usb_share_source_label": "Source:",
+    "usb_share_source_local": "Local (loopback)",
+    "usb_share_source_remote": "Remote (WebRTC)",
+    "usb_share_no_webrtc": "No live WebRTC session — connect a WebRTC viewer first.",
 
     # Inspector tab
     "inspector_metrics_group": "Rolling metrics",

@@ -258,12 +258,12 @@ OPEN 後 host 鍵盤停止運作                   Linux：HID 裝置被 claim �
   做 ACL 允許／封鎖；右側經 in-process channel 列出分享裝置並 *開啟*
   其中一個（讀描述元即證明整條堆疊運作）。*USB Browser* 分頁的 *Open*
   按鈕現在對 **localhost** 目標也會走同一條 loopback 路徑。
-- 跨機器 transport 已串接：WebRTC host 會建立 ``usb`` DataChannel，
-  viewer 以 ``viewer.usb_client()`` 暴露 ``UsbChannelClient``\ （含
-  ``list_devices`` / ``open`` / ``resume``\ ）。今天即可在 WebRTC session
-  上從 Python 驅動。簡易的 *USB Browser* / *USB 分享* 面板目前仍走本機
-  loopback + REST；把面板自動接到 live WebRTC viewer session 是剩餘的
-  GUI 整合步驟。
+- 跨機器已完整串接：WebRTC host 建立 ``usb`` DataChannel，viewer 以
+  ``viewer.usb_client()`` 暴露 ``UsbChannelClient``\ （含 ``list_devices``
+  / ``open`` / ``resume``\ ）。*USB 分享* 面板有 **來源** 下拉：選
+  *遠端(WebRTC)* 時 List / Open 會對 live WebRTC viewer 的主機操作
+  （經 ``registry.webrtc_usb_client()``\ ）；選 *本機(loopback)* 則走同機。
+  亦可從 Python 驅動。
 - Windows WinUSB 與 macOS IOKit 的 transfer 路徑已寫但尚未對實體硬體
   驗證。在 Phase 2e 硬體測試矩陣通過前請勿用於 production。
 - Phase 2e 外部安全審查尚未簽核；feature flag 必須維持顯式 opt-in。
