@@ -309,3 +309,49 @@ def test_legacy_unsigned_file_still_loads_by_default(tmp_path):
     assert acl.integrity_ok is True
     assert acl.default_policy == "allow"
     assert len(acl.list_rules()) == 1
+
+
+# ---------------------------------------------------------------------------
+# Import / export
+# ---------------------------------------------------------------------------
+
+
+def test_export_then_import_round_trip(tmp_path):
+    from je_auto_control.utils.usb.passthrough import (
+        export_acl_to_file, import_acl_from_file,
+    )
+    src = UsbAcl(path=tmp_path / "a.json", default_policy="allow")
+    src.add_rule(AclRule(vendor_id="1050", product_id="0407",
+                         label="YubiKey", allow=True))
+    out = tmp_path / "export.json"
+    export_acl_to_file(src, out)
+    # The export is plain JSON with no signature sidecar.
+    assert out.exists()
+    assert not out.with_name(out.name + ".sig").exists()
+
+    dst = UsbAcl(path=tmp_path / "b.json")  # default deny
+    count = import_acl_from_file(dst, out, replace=True)
+    assert count == 1
+    assert dst.default_policy == "allow"
+    assert dst.list_rules()[0].label == "YubiKey"
+    # Imported file is re-signed so it survives a reload.
+    reloaded = UsbAcl(path=tmp_path / "b.json")
+    assert reloaded.integrity_ok is True
+    assert len(reloaded.list_rules()) == 1
+
+
+def test_import_merge_appends_rules(tmp_path):
+    dst = UsbAcl(path=tmp_path / "acl.json")
+    dst.add_rule(AclRule(vendor_id="1050", product_id="0407", allow=True))
+    added = dst.import_rules({
+        "version": 1, "default": "deny",
+        "rules": [{"vendor_id": "2222", "product_id": "3333", "allow": True}],
+    })
+    assert added == 1
+    assert len(dst.list_rules()) == 2
+
+
+def test_import_rejects_bad_version(tmp_path):
+    acl = UsbAcl(path=tmp_path / "acl.json")
+    with pytest.raises(ValueError):
+        acl.import_rules({"version": 99, "rules": []})

@@ -140,6 +140,11 @@ traditional_chinese_word_dict = {
     "usb_share_remote_url": "REST URL：",
     "usb_share_remote_token": "權杖：",
     "usb_share_remote_fetch": "取得遠端",
+    "usb_share_export_acl": "匯出 ACL",
+    "usb_share_import_acl": "匯入 ACL",
+    "usb_share_acl_exported": "ACL 已匯出。",
+    "usb_share_acl_imported": "已匯入 {count} 條規則。",
+    "usb_share_acl_import_failed": "ACL 讀寫失敗：{error}",
 
     # 封包監測分頁
     "inspector_metrics_group": "彙整指標",

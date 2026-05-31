@@ -184,6 +184,47 @@ class UsbAcl:
             self._save()
         return removed
 
+    def export_rules(self) -> dict:
+        """Return a portable snapshot (no signature/key) for sharing/backup."""
+        with self._lock:
+            return {
+                "version": _ACL_VERSION,
+                "default": self._state.default,
+                "rules": [r.to_dict() for r in self._state.rules],
+            }
+
+    def import_rules(self, payload: dict, *, replace: bool = False,
+                     persist: bool = True) -> int:
+        """Merge (or replace) rules from an exported snapshot.
+
+        Returns the number of rules imported. Validates the schema; an
+        unsupported version raises ``ValueError``. With ``replace=True``
+        the existing rules and default policy are overwritten, otherwise
+        imported rules are appended. Re-signs the file on persist.
+        """
+        if not isinstance(payload, dict):
+            raise ValueError("import payload must be a JSON object")
+        if int(payload.get("version", 0)) != _ACL_VERSION:
+            raise ValueError(
+                f"unsupported ACL version {payload.get('version')!r}",
+            )
+        raw_rules = payload.get("rules", [])
+        if not isinstance(raw_rules, list):
+            raise ValueError("'rules' must be a list")
+        imported = [AclRule.from_dict(r) for r in raw_rules
+                    if isinstance(r, dict)]
+        with self._lock:
+            if replace:
+                default = str(payload.get("default", self._state.default))
+                if default not in _VALID_DEFAULTS:
+                    default = "deny"
+                self._state = _AclState(default=default, rules=list(imported))
+            else:
+                self._state.rules.extend(imported)
+        if persist:
+            self._save()
+        return len(imported)
+
     def set_default_policy(self, policy: str, *, persist: bool = True) -> None:
         if policy not in _VALID_DEFAULTS:
             raise ValueError(
@@ -361,3 +402,21 @@ class UsbAcl:
 __all__ = [
     "AclRule", "UsbAcl", "default_acl_path",
 ]
+
+
+def export_acl_to_file(acl: "UsbAcl", path: Path) -> None:
+    """Write ``acl``'s rules to ``path`` as plain JSON (no signature)."""
+    Path(path).write_text(
+        json.dumps(acl.export_rules(), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def import_acl_from_file(acl: "UsbAcl", path: Path, *,
+                         replace: bool = False) -> int:
+    """Load rules from ``path`` into ``acl``; return the number imported."""
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    return acl.import_rules(payload, replace=replace)
+
+
+__all__ += ["export_acl_to_file", "import_acl_from_file"]

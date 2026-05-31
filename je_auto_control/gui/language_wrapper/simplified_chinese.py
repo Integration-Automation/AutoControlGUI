@@ -139,6 +139,11 @@ simplified_chinese_word_dict = {
     "usb_share_remote_url": "REST URL：",
     "usb_share_remote_token": "令牌：",
     "usb_share_remote_fetch": "获取远程",
+    "usb_share_export_acl": "导出 ACL",
+    "usb_share_import_acl": "导入 ACL",
+    "usb_share_acl_exported": "ACL 已导出。",
+    "usb_share_acl_imported": "已导入 {count} 条规则。",
+    "usb_share_acl_import_failed": "ACL 读写失败：{error}",
 
     # 包监测分页
     "inspector_metrics_group": "汇总指标",

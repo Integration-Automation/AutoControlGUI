@@ -400,6 +400,45 @@ def test_backend_handle_close_is_idempotent():
 
 
 # ---------------------------------------------------------------------------
+# Abuse tracking / lockout
+# ---------------------------------------------------------------------------
+
+
+def test_repeated_failures_lock_out_the_peer():
+    session = UsbPassthroughSession(FakeUsbBackend(devices=[]))
+    bad = Frame(op=Opcode.CLOSE, claim_id=999)  # unknown claim → ERROR
+    assert session.is_locked_out() is False
+    # Hammer the session with failures until the lockout trips.
+    locked = False
+    for _ in range(40):
+        replies = session.handle_frame(bad)
+        if replies and "locked out" in replies[0].payload.decode("utf-8"):
+            locked = True
+            break
+    assert locked is True
+    assert session.is_locked_out() is True
+
+
+def test_normal_traffic_does_not_lock_out():
+    backend = FakeUsbBackend(devices=[_SAMPLE_DEVICE])
+    session = UsbPassthroughSession(backend)
+    claim_id = _open_and_get_claim(session, backend)
+    handle = next(iter(backend._open_handles.values()))
+    handle.transfer_hook = lambda kind, kwargs: b"\x00"
+    for _ in range(30):
+        session.handle_frame(_transfer_frame(Opcode.BULK, claim_id, {
+            "endpoint": 0x81, "direction": "in", "length": 1,
+        }))
+        # Replenish so credit never runs out (those aren't viewer faults
+        # anyway, but keep the stream clean).
+        session.handle_frame(Frame(
+            op=Opcode.CREDIT, claim_id=claim_id,
+            payload=json.dumps({"credits": 4}).encode("utf-8"),
+        ))
+    assert session.is_locked_out() is False
+
+
+# ---------------------------------------------------------------------------
 # Backend ABC
 # ---------------------------------------------------------------------------
 

@@ -148,6 +148,11 @@ japanese_word_dict = {
     "usb_share_remote_url": "REST URL：",
     "usb_share_remote_token": "トークン：",
     "usb_share_remote_fetch": "遠隔を取得",
+    "usb_share_export_acl": "ACL をエクスポート",
+    "usb_share_import_acl": "ACL をインポート",
+    "usb_share_acl_exported": "ACL をエクスポートしました。",
+    "usb_share_acl_imported": "{count} 件のルールをインポートしました。",
+    "usb_share_acl_import_failed": "ACL 入出力に失敗：{error}",
 
     # 監視タブ
     "inspector_metrics_group": "集約メトリクス",

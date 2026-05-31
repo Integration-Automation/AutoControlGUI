@@ -295,9 +295,10 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
         self._open_thread = None
 
     def _on_local_opened(self, vid: str, pid: str, descriptor: bytes) -> None:
+        from je_auto_control.utils.usb.passthrough import describe_descriptor
         self._status_label.setText(
             _t("usb_browser_open_loopback").format(
-                vid=vid, pid=pid, hex=descriptor.hex() or "(empty)",
+                vid=vid, pid=pid, hex=describe_descriptor(descriptor),
             ),
         )
 

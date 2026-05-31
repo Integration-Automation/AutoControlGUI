@@ -150,6 +150,11 @@ english_word_dict = {
     "usb_share_remote_url": "REST URL:",
     "usb_share_remote_token": "Token:",
     "usb_share_remote_fetch": "Fetch remote",
+    "usb_share_export_acl": "Export ACL",
+    "usb_share_import_acl": "Import ACL",
+    "usb_share_acl_exported": "ACL exported.",
+    "usb_share_acl_imported": "Imported {count} rule(s).",
+    "usb_share_acl_import_failed": "ACL I/O failed: {error}",
 
     # Inspector tab
     "inspector_metrics_group": "Rolling metrics",

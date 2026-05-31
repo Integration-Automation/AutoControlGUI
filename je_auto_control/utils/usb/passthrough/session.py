@@ -60,6 +60,7 @@ from __future__ import annotations
 import base64
 import json
 import threading
+import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
@@ -74,10 +75,48 @@ from je_auto_control.utils.usb.passthrough.protocol import (
 _DEFAULT_MAX_CLAIMS = 4
 _DEFAULT_INITIAL_CREDITS = 16
 _TOPUP_PER_REPLY = 1
+# Abuse tracking: a viewer that provokes this many protocol failures
+# faster than they decay gets locked out for a cool-down. Tuned so
+# normal operation (the odd bad frame) never trips it.
+_ABUSE_MAX_STRIKES = 20.0
+_ABUSE_DECAY_PER_S = 5.0
+_ABUSE_LOCKOUT_S = 5.0
 
 
 class SessionError(Exception):
     """Raised on session-level invariant violations (not protocol parse errors)."""
+
+
+class _AbuseTracker:
+    """Leaky-bucket strike counter that locks out a misbehaving peer."""
+
+    def __init__(self, *, max_strikes: float = _ABUSE_MAX_STRIKES,
+                 decay_per_s: float = _ABUSE_DECAY_PER_S,
+                 lockout_s: float = _ABUSE_LOCKOUT_S) -> None:
+        self._max = float(max_strikes)
+        self._decay = float(decay_per_s)
+        self._lockout_s = float(lockout_s)
+        self._strikes = 0.0
+        self._last = time.monotonic()
+        self._locked_until = 0.0
+        self._lock = threading.Lock()
+
+    def record_strike(self) -> bool:
+        """Count one protocol failure; return True if it triggers lockout."""
+        with self._lock:
+            now = time.monotonic()
+            self._strikes = max(0.0, self._strikes - (now - self._last) * self._decay)
+            self._last = now
+            self._strikes += 1.0
+            if self._strikes >= self._max:
+                self._locked_until = now + self._lockout_s
+                self._strikes = 0.0
+                return True
+            return False
+
+    def is_locked(self) -> bool:
+        with self._lock:
+            return time.monotonic() < self._locked_until
 
 
 @dataclass
@@ -111,6 +150,7 @@ class UsbPassthroughSession:
         self._lock = threading.Lock()
         self._claims: Dict[int, _ClaimState] = {}
         self._next_claim_id = 1
+        self._abuse = _AbuseTracker()
 
     @property
     def active_claim_count(self) -> int:
@@ -141,8 +181,22 @@ class UsbPassthroughSession:
                     "passthrough close_all: handle.close() raised %r", error,
                 )
 
+    def is_locked_out(self) -> bool:
+        """True while the peer is in a rate-limit cool-down."""
+        return self._abuse.is_locked()
+
     def handle_frame(self, frame: Frame) -> List[Frame]:
-        """Process one incoming frame; return zero or more reply frames."""
+        """Process one frame, with abuse tracking, and return replies."""
+        if self._abuse.is_locked():
+            return [_error_frame(frame.claim_id, "rate limited; locked out")]
+        replies = self._dispatch(frame)
+        if _is_misbehaviour(replies) and self._abuse.record_strike():
+            self._audit("usb_rate_limited", "?", "?", None,
+                        detail="viewer locked out for repeated failures")
+        return replies
+
+    def _dispatch(self, frame: Frame) -> List[Frame]:
+        """Route one incoming frame; return zero or more reply frames."""
         if frame.op == Opcode.OPEN:
             return [self._handle_open(frame)]
         if frame.op == Opcode.CLOSE:
@@ -441,6 +495,26 @@ _REPLY_OPCODES: Dict[Opcode, Opcode] = {
 
 def _reply_opcode(request_op: Opcode) -> Opcode:
     return _REPLY_OPCODES.get(request_op, Opcode.ERROR)
+
+
+def _is_misbehaviour(replies: List[Frame]) -> bool:
+    """True if the replies indicate a viewer-caused protocol failure.
+
+    Counts ERROR frames and failed OPENED replies as strikes; a device
+    transfer that fails at the backend (CTRL/BULK/INT with ok=false) is
+    the device's fault, not the viewer's, so it is not counted.
+    """
+    for reply in replies:
+        if reply.op == Opcode.ERROR:
+            return True
+        if reply.op == Opcode.OPENED:
+            try:
+                body = json.loads(reply.payload.decode("utf-8"))
+            except (ValueError, UnicodeDecodeError):
+                return True
+            if not body.get("ok"):
+                return True
+    return False
 
 
 def _decode_b64(value: Any) -> bytes:

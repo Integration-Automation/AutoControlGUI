@@ -21,8 +21,9 @@ from typing import Any, Callable, List, Optional
 
 from PySide6.QtCore import QObject, QThread, Signal
 from PySide6.QtWidgets import (
-    QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox,
-    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QFileDialog, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+    QMessageBox, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout,
+    QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -32,7 +33,8 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
 from je_auto_control.gui.remote_desktop._helpers import _StatusBadge
 from je_auto_control.gui.usb_browser_tab import fetch_remote_devices
 from je_auto_control.utils.usb.passthrough import (
-    AclRule, UsbAcl, UsbLoopback, enable_usb_passthrough,
+    AclRule, UsbAcl, UsbLoopback, describe_descriptor, enable_usb_passthrough,
+    export_acl_to_file, import_acl_from_file,
 )
 from je_auto_control.utils.usb.usb_devices import list_usb_devices
 
@@ -132,6 +134,14 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         acl_row.addWidget(allow_btn)
         acl_row.addWidget(block_btn)
         layout.addLayout(acl_row)
+        io_row = QHBoxLayout()
+        export_btn = self._tr(QPushButton(), "usb_share_export_acl")
+        export_btn.clicked.connect(self._export_acl)
+        import_btn = self._tr(QPushButton(), "usb_share_import_acl")
+        import_btn.clicked.connect(self._import_acl)
+        io_row.addWidget(export_btn)
+        io_row.addWidget(import_btn)
+        layout.addLayout(io_row)
         return group
 
     def _build_viewer_section(self) -> QWidget:
@@ -258,6 +268,40 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         self._viewer_status.setText(_t(key).format(vid=vid, pid=pid))
         self._refresh_local_devices()
 
+    def _export_acl(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self, _t("usb_share_export_acl"), "usb_acl_export.json",
+            "JSON (*.json)",
+        )
+        if not path:
+            return
+        try:
+            export_acl_to_file(self._acl, path)
+        except OSError as error:
+            self._viewer_status.setText(
+                _t("usb_share_acl_import_failed").format(error=str(error)),
+            )
+            return
+        self._viewer_status.setText(_t("usb_share_acl_exported"))
+
+    def _import_acl(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, _t("usb_share_import_acl"), "", "JSON (*.json)",
+        )
+        if not path:
+            return
+        try:
+            count = import_acl_from_file(self._acl, path)
+        except (OSError, ValueError) as error:
+            self._viewer_status.setText(
+                _t("usb_share_acl_import_failed").format(error=str(error)),
+            )
+            return
+        self._viewer_status.setText(
+            _t("usb_share_acl_imported").format(count=count),
+        )
+        self._refresh_local_devices()
+
     # --- use (loopback) ----------------------------------------------------
 
     def _list_shared(self) -> None:
@@ -305,7 +349,7 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
     def _opened(self, vid: str, pid: str, descriptor: bytes) -> None:
         self._viewer_status.setText(
             _t("usb_share_opened").format(
-                vid=vid, pid=pid, hex=descriptor.hex() or "(empty)",
+                vid=vid, pid=pid, hex=describe_descriptor(descriptor),
             ),
         )
 
