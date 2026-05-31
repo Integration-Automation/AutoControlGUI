@@ -270,6 +270,38 @@ Audit chain shows ``broken_at_id``          Someone edited ``audit.db`` directly
 ==========================================  =====================================================
 
 
+Headless control (``AC_usb_*`` commands)
+========================================
+
+Everything the GUI does is also an executor command, so JSON action
+files, the socket server, and the scheduler can drive USB passthrough
+with no GUI:
+
+================================  ============================================
+Command                           Purpose
+================================  ============================================
+``AC_usb_passthrough_enable``     Toggle the feature flag (``enabled`` bool)
+``AC_usb_passthrough_status``     Report whether passthrough is enabled
+``AC_usb_acl_list``               List ACL rules + default + integrity state
+``AC_usb_acl_add``                Add a per-device rule
+``AC_usb_acl_remove``             Remove a rule
+``AC_usb_acl_set_default``        Set the default policy (allow/deny)
+``AC_usb_acl_export`` / ``_import``  Back up / restore the ACL as JSON
+``AC_usb_loopback_list``          List ACL-visible devices over loopback
+``AC_usb_loopback_open``          Claim a local device + read its descriptor
+``AC_usb_remote_list``            List a remote host's devices (live WebRTC)
+``AC_usb_remote_open``            Claim a remote device + read its descriptor
+================================  ============================================
+
+Example JSON action::
+
+    [
+      ["AC_usb_passthrough_enable", {"enabled": true}],
+      ["AC_usb_acl_add", {"vendor_id": "1050", "product_id": "0407"}],
+      ["AC_usb_loopback_open", {"vendor_id": "1050", "product_id": "0407"}]
+    ]
+
+
 What is *not* shipped yet
 =========================
 

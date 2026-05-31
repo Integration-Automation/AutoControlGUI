@@ -251,6 +251,37 @@ OPEN 後 host 鍵盤停止運作                   Linux：HID 裝置被 claim �
 ==========================================  =====================================================
 
 
+無 GUI 控制（``AC_usb_*`` 指令）
+================================
+
+GUI 能做的事都有對應的 executor 指令，所以 JSON action 檔、socket
+server 與排程器都能在沒有 GUI 的情況下驅動 USB passthrough：
+
+================================  ============================================
+指令                              用途
+================================  ============================================
+``AC_usb_passthrough_enable``     切換 feature flag（``enabled`` 布林）
+``AC_usb_passthrough_status``     回報是否已啟用
+``AC_usb_acl_list``               列出 ACL 規則 + 預設 + 完整性狀態
+``AC_usb_acl_add``                新增 per-device 規則
+``AC_usb_acl_remove``             移除規則
+``AC_usb_acl_set_default``        設定預設政策（allow/deny）
+``AC_usb_acl_export`` / ``_import``  以 JSON 備份／還原 ACL
+``AC_usb_loopback_list``          經 loopback 列出 ACL 可見裝置
+``AC_usb_loopback_open``          claim 本機裝置並讀描述元
+``AC_usb_remote_list``            列出遠端主機裝置（live WebRTC）
+``AC_usb_remote_open``            claim 遠端裝置並讀描述元
+================================  ============================================
+
+JSON action 範例::
+
+    [
+      ["AC_usb_passthrough_enable", {"enabled": true}],
+      ["AC_usb_acl_add", {"vendor_id": "1050", "product_id": "0407"}],
+      ["AC_usb_loopback_open", {"vendor_id": "1050", "product_id": "0407"}]
+    ]
+
+
 尚未發布的部分
 ==============
 

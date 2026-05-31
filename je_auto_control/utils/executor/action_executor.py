@@ -957,6 +957,136 @@ def _usb_recent_events(since: int = 0,
     )
 
 
+# --- USB passthrough (Phase 2) ------------------------------------------
+
+
+def _usb_passthrough_enable(enabled: bool = True) -> Dict[str, Any]:
+    """Toggle the USB passthrough feature flag (default off)."""
+    from je_auto_control.utils.usb.passthrough import (
+        enable_usb_passthrough, is_usb_passthrough_enabled,
+    )
+    enable_usb_passthrough(bool(enabled))
+    return {"enabled": is_usb_passthrough_enabled()}
+
+
+def _usb_passthrough_status() -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import is_usb_passthrough_enabled
+    return {"enabled": is_usb_passthrough_enabled()}
+
+
+def _usb_acl_list() -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import UsbAcl
+    acl = UsbAcl()
+    return {
+        "default": acl.default_policy,
+        "integrity_ok": acl.integrity_ok,
+        "rules": [r.to_dict() for r in acl.list_rules()],
+    }
+
+
+def _usb_acl_add(vendor_id: str, product_id: str,
+                 serial: Optional[str] = None, allow: bool = True,
+                 prompt_on_open: bool = False, label: str = "") -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import AclRule, UsbAcl
+    acl = UsbAcl()
+    acl.add_rule(AclRule(
+        vendor_id=str(vendor_id), product_id=str(product_id),
+        serial=(None if serial is None else str(serial)),
+        label=str(label), allow=bool(allow),
+        prompt_on_open=bool(prompt_on_open),
+    ))
+    return {"added": True, "rules": len(acl.list_rules())}
+
+
+def _usb_acl_remove(vendor_id: str, product_id: str,
+                    serial: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import UsbAcl
+    removed = UsbAcl().remove_rule(
+        vendor_id=str(vendor_id), product_id=str(product_id),
+        serial=(None if serial is None else str(serial)),
+    )
+    return {"removed": removed}
+
+
+def _usb_acl_set_default(policy: str) -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import UsbAcl
+    acl = UsbAcl()
+    acl.set_default_policy(str(policy))
+    return {"default": acl.default_policy}
+
+
+def _usb_acl_export(path: str) -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import UsbAcl, export_acl_to_file
+    from pathlib import Path
+    export_acl_to_file(UsbAcl(), Path(path))
+    return {"exported": True, "path": str(path)}
+
+
+def _usb_acl_import(path: str, replace: bool = False) -> Dict[str, Any]:
+    from je_auto_control.utils.usb.passthrough import UsbAcl, import_acl_from_file
+    from pathlib import Path
+    count = import_acl_from_file(UsbAcl(), Path(path), replace=bool(replace))
+    return {"imported": count}
+
+
+def _usb_descriptor_probe(client: Any, vendor_id: str, product_id: str,
+                          serial: Optional[str]) -> Dict[str, Any]:
+    """Open a claim, read the device descriptor, close — return a summary."""
+    from je_auto_control.utils.usb.passthrough import describe_descriptor
+    handle = client.open(
+        vendor_id=str(vendor_id), product_id=str(product_id),
+        serial=(None if serial is None else str(serial)),
+    )
+    try:
+        descriptor = handle.control_transfer(
+            bm_request_type=0x80, b_request=0x06, w_value=0x0100, length=18,
+        )
+    finally:
+        handle.close()
+    return {
+        "ok": True, "vendor_id": str(vendor_id), "product_id": str(product_id),
+        "descriptor_hex": descriptor.hex(),
+        "descriptor": describe_descriptor(descriptor),
+    }
+
+
+def _usb_loopback_list() -> Dict[str, Any]:
+    """List ACL-visible devices over the in-process loopback channel."""
+    from je_auto_control.utils.usb.passthrough import UsbAcl, UsbLoopback
+    with UsbLoopback(acl=UsbAcl(), viewer_id="executor") as loop:
+        return {"devices": loop.list_devices()}
+
+
+def _usb_loopback_open(vendor_id: str, product_id: str,
+                       serial: Optional[str] = None) -> Dict[str, Any]:
+    """Claim a local device over loopback and read its descriptor."""
+    from je_auto_control.utils.usb.passthrough import UsbAcl, UsbLoopback
+    with UsbLoopback(acl=UsbAcl(), viewer_id="executor") as loop:
+        return _usb_descriptor_probe(loop, vendor_id, product_id, serial)
+
+
+def _usb_remote_client() -> Any:
+    """Return the live WebRTC viewer's USB client or raise a clear error."""
+    from je_auto_control.utils.remote_desktop.registry import registry
+    client = registry.webrtc_usb_client()
+    if client is None:
+        raise RuntimeError("no live WebRTC viewer with a usb channel")
+    return client
+
+
+def _usb_remote_list() -> Dict[str, Any]:
+    """List the remote host's devices over the live WebRTC usb channel."""
+    return {"devices": _usb_remote_client().list_devices()}
+
+
+def _usb_remote_open(vendor_id: str, product_id: str,
+                     serial: Optional[str] = None) -> Dict[str, Any]:
+    """Claim a remote device over the live WebRTC usb channel + probe."""
+    return _usb_descriptor_probe(
+        _usb_remote_client(), vendor_id, product_id, serial,
+    )
+
+
 def _ac_web_run(action: Optional[Dict[str, Any]] = None,
                 **action_kwargs: Any) -> Any:
     """Bridge one WR_* action into the WebRunner executor (Phase 7.7).
@@ -1857,6 +1987,20 @@ class Executor:
             "AC_usb_watch_start": _usb_watch_start,
             "AC_usb_watch_stop": _usb_watch_stop,
             "AC_usb_recent_events": _usb_recent_events,
+
+            # USB passthrough (Phase 2) — flag, ACL, local + remote use
+            "AC_usb_passthrough_enable": _usb_passthrough_enable,
+            "AC_usb_passthrough_status": _usb_passthrough_status,
+            "AC_usb_acl_list": _usb_acl_list,
+            "AC_usb_acl_add": _usb_acl_add,
+            "AC_usb_acl_remove": _usb_acl_remove,
+            "AC_usb_acl_set_default": _usb_acl_set_default,
+            "AC_usb_acl_export": _usb_acl_export,
+            "AC_usb_acl_import": _usb_acl_import,
+            "AC_usb_loopback_list": _usb_loopback_list,
+            "AC_usb_loopback_open": _usb_loopback_open,
+            "AC_usb_remote_list": _usb_remote_list,
+            "AC_usb_remote_open": _usb_remote_open,
 
             # System diagnostics
             "AC_diagnose": _diagnose,
