@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06)](#本次更新-2026-06)
 - [本次更新 (2026-05)](#本次更新-2026-05)
 - [功能特性](#功能特性)
 - [架构](#架构)
@@ -53,6 +54,34 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06)
+
+新增 9 个功能，把自动化原语升级成一套完整的 **QA / 测试框架**：验证画面状态、
+用数据驱动脚本、检测并隔离不稳定测试、执行计分套件、输出 CI 原生报告、
+审计无障碍 / i18n、跨设备矩阵并行执行，以及对音频 / 视频做断言。
+每个功能都遵循框架既有模式：headless Python API、`AC_*` executor 命令、
+`ac_*` MCP 工具，以及 Qt GUI 选项卡。完整参考页面：
+[`docs/source/Zh/doc/new_features/v3_features_doc.rst`](../docs/source/Zh/doc/new_features/v3_features_doc.rst)。
+
+**断言**
+- **断言 DSL** — 验证画面状态而不只是操作：`assert_text`（OCR，`regex` + `present=False` 断言不存在）、`assert_image`、`assert_pixel`、`assert_window`。返回 `AssertionResult`，不符时抛出 `AutoControlAssertionException`，可选失败截图（`AC_assert_text / _image / _pixel / _window`）。
+- **媒体断言** — `assert_audio_activity`（录音 + RMS 阈值判断有声 / 静音）与 `assert_video_changes`（视频区段相邻帧平均差异判断动态 / 静止）；纯数值核心，`sounddevice` / OpenCV 延迟加载（`AC_assert_audio / AC_assert_video_changes`）。
+
+**数据驱动执行**
+- **数据源** — `load_rows` 支持 CSV / JSON / SQLite / Excel / 内联；`AC_for_each_row` 块命令每行执行一次 body，字段以 `${row.column}` 取用。SQLite 仅允许单句只读 `SELECT`/`WITH`，路径经 `realpath` 校验。`${var}` 插值现在支持点号路径（dict 键 / list 索引）并保留类型（`AC_load_data`）。
+
+**不稳定检测与隔离**
+- **不稳定报告** — 从执行历史以通过↔失败翻转率给间歇性失败评分，按 script / source 分组（`AC_flaky_report`）。
+- **隔离区** — 套件执行器会遵守的持久化（0600）跳过清单；`auto_quarantine_from_flakiness` 按翻转率阈值自动填入（`AC_quarantine_add / _remove / _list / _clear / _auto`）。
+
+**套件执行器 + CI 报告**
+- **QA 套件编排** — `run_suite` 把 action list 变成具 setup / teardown、标签与数据驱动展开的计分用例；断言失败 → failed、其他异常 → error、被隔离 → skipped（`AC_run_suite`）。
+- **JUnit / Allure 报告** — `write_junit_xml` + `write_allure_results`（或 `AC_run_suite` 的 `junit_path` / `allure_dir`），输出 Jenkins / GitHub Actions / GitLab CI / Allure 原生解析的报告。
+
+**审计、矩阵、媒体**
+- **无障碍 / i18n 审计** — 反向利用 a11y 树 + OCR，找出缺失的可访问名称、WCAG 对比度不足与省略号截断字符串（`AC_audit_accessibility / AC_audit_contrast`）。
+- **移动设备矩阵** — 将单一 action list 并行分发到多台 Android / iOS 设备，每台独立 executor，通过 `${device.*}` 锁定当前设备；逐设备通过 / 失败，失败相互隔离（`AC_run_device_matrix`）。
 
 ## 本次更新 (2026-05)
 
@@ -107,6 +136,7 @@
 
 ## 功能特性
 
+- **QA / 测试框架** — 断言 DSL（`assert_text` / `_image` / `_pixel` / `_window` 加上音频/视频断言）、数据驱动执行（CSV / JSON / SQLite / Excel → `AC_for_each_row`）、具 setup/teardown/标签的计分 `run_suite`、JUnit + Allure 报告输出、不稳定测试检测与自动隔离、无障碍 / i18n 审计（缺失标签、WCAG 对比度、截断），以及并行的移动设备矩阵。详见 [本次更新 (2026-06)](#本次更新-2026-06)
 - **鼠标自动化** — 移动、点击、按下、释放、拖拽、滚动，支持精确坐标控制
 - **键盘自动化** — 按下/释放单一按键、输入字符串、组合键、按键状态检测
 - **图像识别** — 使用 OpenCV 模板匹配在屏幕上定位 UI 元素，支持可配置的检测阈值

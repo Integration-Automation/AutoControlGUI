@@ -573,6 +573,209 @@ def _redact_screenshot(file_path: str,
     }
 
 
+def _assert_text(text: str,
+                 region: Optional[List[int]] = None,
+                 lang: str = "eng",
+                 regex: bool = False,
+                 present: bool = True,
+                 ignore_case: bool = True,
+                 min_confidence: float = 60.0,
+                 raise_on_fail: bool = True,
+                 capture_on_fail: bool = False) -> Dict[str, Any]:
+    """Executor adapter: assert OCR text is (not) on screen."""
+    from je_auto_control.utils.assertion import assert_text
+    return assert_text(
+        text, region=region, lang=lang, regex=bool(regex),
+        present=bool(present), ignore_case=bool(ignore_case),
+        min_confidence=float(min_confidence),
+        raise_on_fail=bool(raise_on_fail),
+        capture_on_fail=bool(capture_on_fail),
+    ).to_dict()
+
+
+def _assert_image(template_path: str,
+                  threshold: float = 0.9,
+                  present: bool = True,
+                  raise_on_fail: bool = True,
+                  capture_on_fail: bool = False) -> Dict[str, Any]:
+    """Executor adapter: assert a template image is (not) on screen."""
+    from je_auto_control.utils.assertion import assert_image
+    return assert_image(
+        template_path, threshold=float(threshold), present=bool(present),
+        raise_on_fail=bool(raise_on_fail),
+        capture_on_fail=bool(capture_on_fail),
+    ).to_dict()
+
+
+def _assert_pixel(x: int, y: int, rgb: List[int],
+                  tolerance: int = 0,
+                  match: bool = True,
+                  raise_on_fail: bool = True,
+                  capture_on_fail: bool = False) -> Dict[str, Any]:
+    """Executor adapter: assert a pixel matches (or differs from) ``rgb``."""
+    from je_auto_control.utils.assertion import assert_pixel
+    return assert_pixel(
+        int(x), int(y), rgb, tolerance=int(tolerance), match=bool(match),
+        raise_on_fail=bool(raise_on_fail),
+        capture_on_fail=bool(capture_on_fail),
+    ).to_dict()
+
+
+def _assert_window(title: str,
+                   exists: bool = True,
+                   ignore_case: bool = True,
+                   raise_on_fail: bool = True,
+                   capture_on_fail: bool = False) -> Dict[str, Any]:
+    """Executor adapter: assert a window matching ``title`` does (not) exist."""
+    from je_auto_control.utils.assertion import assert_window
+    return assert_window(
+        title, exists=bool(exists), ignore_case=bool(ignore_case),
+        raise_on_fail=bool(raise_on_fail),
+        capture_on_fail=bool(capture_on_fail),
+    ).to_dict()
+
+
+def _load_data(source: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Executor adapter: load tabular rows from a data source spec."""
+    from je_auto_control.utils.data_source import load_rows
+    return load_rows(source)
+
+
+def _flaky_report(limit: int = 500,
+                  min_runs: int = 2,
+                  group_by: str = "script_path") -> Dict[str, Any]:
+    """Executor adapter: score run-history flakiness per script / source."""
+    from je_auto_control.utils.flakiness import analyze_flakiness
+    return analyze_flakiness(
+        limit=int(limit), min_runs=int(min_runs), group_by=group_by,
+    ).to_dict()
+
+
+def _run_suite(spec: Dict[str, Any],
+               tags: Optional[List[str]] = None,
+               respect_quarantine: bool = True,
+               junit_path: Optional[str] = None,
+               allure_dir: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: run a QA suite and optionally write CI reports."""
+    from je_auto_control.utils.test_suite import (
+        run_suite, write_allure_results, write_junit_xml,
+    )
+    result = run_suite(
+        spec, executor=executor, tags=tags,
+        respect_quarantine=bool(respect_quarantine),
+    )
+    payload = result.to_dict()
+    reports: Dict[str, Any] = {}
+    if junit_path:
+        reports["junit"] = write_junit_xml(result, junit_path)
+    if allure_dir:
+        reports["allure"] = write_allure_results(result, allure_dir)
+    if reports:
+        payload["reports"] = reports
+    return payload
+
+
+def _quarantine_add(name: str, reason: str = "") -> Dict[str, Any]:
+    from je_auto_control.utils.quarantine import default_quarantine_store
+    return default_quarantine_store().add(name, reason=reason).to_dict()
+
+
+def _quarantine_remove(name: str) -> Dict[str, Any]:
+    from je_auto_control.utils.quarantine import default_quarantine_store
+    return {"name": name, "removed": default_quarantine_store().remove(name)}
+
+
+def _quarantine_list() -> List[Dict[str, Any]]:
+    from je_auto_control.utils.quarantine import default_quarantine_store
+    return [entry.to_dict() for entry in default_quarantine_store().list()]
+
+
+def _quarantine_clear() -> Dict[str, Any]:
+    from je_auto_control.utils.quarantine import default_quarantine_store
+    return {"cleared": default_quarantine_store().clear()}
+
+
+def _quarantine_auto(flip_rate_threshold: float = 0.5,
+                     min_runs: int = 3,
+                     limit: int = 500,
+                     group_by: str = "script_path") -> List[Dict[str, Any]]:
+    from je_auto_control.utils.quarantine import auto_quarantine_from_flakiness
+    return [
+        entry.to_dict()
+        for entry in auto_quarantine_from_flakiness(
+            flip_rate_threshold=float(flip_rate_threshold),
+            min_runs=int(min_runs), limit=int(limit), group_by=group_by,
+        )
+    ]
+
+
+def _audit_accessibility(app_name: Optional[str] = None,
+                         contrast_pairs: Optional[List[Dict[str, Any]]] = None,
+                         texts: Optional[List[str]] = None,
+                         min_ratio: float = 4.5,
+                         max_results: int = 500) -> Dict[str, Any]:
+    """Executor adapter: run the accessibility / i18n audit."""
+    from je_auto_control.utils.a11y_audit import run_audit
+    return run_audit(
+        app_name=app_name, contrast_pairs=contrast_pairs, texts=texts,
+        min_ratio=float(min_ratio), max_results=int(max_results),
+    ).to_dict()
+
+
+def _audit_contrast(foreground: List[int], background: List[int],
+                    min_ratio: float = 4.5) -> Dict[str, Any]:
+    """Executor adapter: WCAG contrast ratio for one colour pair."""
+    from je_auto_control.utils.a11y_audit import contrast_ratio
+    ratio = contrast_ratio(foreground, background)
+    return {
+        "ratio": round(ratio, 2),
+        "passes_aa": ratio >= float(min_ratio),
+        "foreground": list(foreground), "background": list(background),
+    }
+
+
+def _run_device_matrix(actions: List[Any], devices: List[Dict[str, Any]],
+                       max_parallel: int = 4,
+                       var_name: str = "device") -> Dict[str, Any]:
+    """Executor adapter: run an action list across many devices in parallel."""
+    from je_auto_control.utils.device_matrix import run_on_devices
+    return run_on_devices(
+        actions, devices, max_parallel=int(max_parallel), var_name=var_name,
+    ).to_dict()
+
+
+def _assert_audio(duration_s: float = 1.0,
+                  threshold: float = 0.01,
+                  expect_sound: bool = True,
+                  samplerate: int = 44100,
+                  channels: int = 1,
+                  raise_on_fail: bool = True) -> Dict[str, Any]:
+    """Executor adapter: assert audio activity / silence."""
+    from je_auto_control.utils.media_assert import assert_audio_activity
+    return assert_audio_activity(
+        duration_s=float(duration_s), threshold=float(threshold),
+        expect_sound=bool(expect_sound), samplerate=int(samplerate),
+        channels=int(channels), raise_on_fail=bool(raise_on_fail),
+    ).to_dict()
+
+
+def _assert_video_changes(video_path: str,
+                          start_s: float = 0.0,
+                          end_s: Optional[float] = None,
+                          threshold: float = 1.0,
+                          expect_motion: bool = True,
+                          region: Optional[List[int]] = None,
+                          raise_on_fail: bool = True) -> Dict[str, Any]:
+    """Executor adapter: assert a video segment has motion / is static."""
+    from je_auto_control.utils.media_assert import assert_video_changes
+    return assert_video_changes(
+        video_path, start_s=float(start_s),
+        end_s=None if end_s is None else float(end_s),
+        threshold=float(threshold), expect_motion=bool(expect_motion),
+        region=region, raise_on_fail=bool(raise_on_fail),
+    ).to_dict()
+
+
 def _computer_use(goal: str,
                   display_width_px: Optional[int] = None,
                   display_height_px: Optional[int] = None,
@@ -1757,6 +1960,39 @@ class Executor:
             "AC_self_heal_click": _self_heal_click,
             "AC_self_heal_log_list": _self_heal_log_list,
             "AC_self_heal_log_clear": _self_heal_log_clear,
+
+            # Assertion DSL (verify screen state; raise on mismatch)
+            "AC_assert_text": _assert_text,
+            "AC_assert_image": _assert_image,
+            "AC_assert_pixel": _assert_pixel,
+            "AC_assert_window": _assert_window,
+
+            # Data-driven execution (load rows from CSV / JSON / SQLite / ...)
+            "AC_load_data": _load_data,
+
+            # Flaky-test detection (analytics over the run-history store)
+            "AC_flaky_report": _flaky_report,
+
+            # QA suite runner + CI report output (JUnit / Allure)
+            "AC_run_suite": _run_suite,
+
+            # Flaky quarantine (skip known-unstable cases in suites)
+            "AC_quarantine_add": _quarantine_add,
+            "AC_quarantine_remove": _quarantine_remove,
+            "AC_quarantine_list": _quarantine_list,
+            "AC_quarantine_clear": _quarantine_clear,
+            "AC_quarantine_auto": _quarantine_auto,
+
+            # Accessibility / i18n audit (missing labels, contrast, truncation)
+            "AC_audit_accessibility": _audit_accessibility,
+            "AC_audit_contrast": _audit_contrast,
+
+            # Mobile device matrix (parallel script across devices)
+            "AC_run_device_matrix": _run_device_matrix,
+
+            # Media assertions (audio activity, video motion)
+            "AC_assert_audio": _assert_audio,
+            "AC_assert_video_changes": _assert_video_changes,
 
             # Computer-use (Anthropic computer_20250124 closed-loop agent)
             "AC_computer_use": _computer_use,

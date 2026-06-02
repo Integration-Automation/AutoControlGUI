@@ -263,6 +263,37 @@ def exec_for_each(executor: Any, args: Mapping[str, Any]) -> int:
     return iterations
 
 
+def exec_for_each_row(executor: Any, args: Mapping[str, Any]) -> int:
+    """Load rows from a data source and run ``body`` once per row.
+
+    ``source`` is a data-source spec dict (see
+    :mod:`je_auto_control.utils.data_source`). Each row dict is bound to
+    the variable named by ``as`` (default ``row``) so the body can read
+    ``${row.column}``. Honours ``AC_break`` / ``AC_continue``.
+    """
+    from je_auto_control.utils.data_source import load_rows
+    source = args.get("source")
+    if not isinstance(source, dict):
+        raise AutoControlActionException(
+            "AC_for_each_row: 'source' must be a data-source spec dict"
+        )
+    rows = load_rows(source, limit=args.get("limit"))
+    var_name = args.get("as", "row")
+    body = args.get("body") or []
+    iterations = 0
+    for row in rows:
+        executor.variables.set(var_name, row)
+        try:
+            executor.execute_action(body, _validated=True)
+        except LoopContinue:
+            iterations += 1
+            continue
+        except LoopBreak:
+            break
+        iterations += 1
+    return iterations
+
+
 BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_if_image_found": exec_if_image_found,
     "AC_if_pixel": exec_if_pixel,
@@ -279,4 +310,5 @@ BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_get_var": exec_get_var,
     "AC_inc_var": exec_inc_var,
     "AC_for_each": exec_for_each,
+    "AC_for_each_row": exec_for_each_row,
 }

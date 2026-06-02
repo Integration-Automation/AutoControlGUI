@@ -1886,6 +1886,278 @@ def usb_passthrough_tools() -> List[MCPTool]:
     ]
 
 
+def assertion_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_assert_text",
+            description=("Assert OCR text is (present=true) or is not "
+                         "(present=false) on screen. Set regex=true to treat "
+                         "'text' as a regular expression. Raises on mismatch "
+                         "when raise_on_fail is true (default)."),
+            input_schema=schema({
+                "text": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "lang": {"type": "string"},
+                "regex": {"type": "boolean"},
+                "present": {"type": "boolean"},
+                "ignore_case": {"type": "boolean"},
+                "min_confidence": {"type": "number"},
+                "raise_on_fail": {"type": "boolean"},
+                "capture_on_fail": {"type": "boolean"},
+            }, required=["text"]),
+            handler=h.assert_text,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_image",
+            description=("Assert a template image is (or is not) visible on "
+                         "screen at the given match threshold."),
+            input_schema=schema({
+                "template_path": {"type": "string"},
+                "threshold": {"type": "number"},
+                "present": {"type": "boolean"},
+                "raise_on_fail": {"type": "boolean"},
+                "capture_on_fail": {"type": "boolean"},
+            }, required=["template_path"]),
+            handler=h.assert_image,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_pixel",
+            description=("Assert the pixel at (x, y) matches (match=true) or "
+                         "differs from (match=false) rgb within tolerance."),
+            input_schema=schema({
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "rgb": {"type": "array", "items": {"type": "integer"}},
+                "tolerance": {"type": "integer"},
+                "match": {"type": "boolean"},
+                "raise_on_fail": {"type": "boolean"},
+                "capture_on_fail": {"type": "boolean"},
+            }, required=["x", "y", "rgb"]),
+            handler=h.assert_pixel,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_window",
+            description=("Assert a window whose title contains 'title' does "
+                         "(exists=true) or does not (exists=false) exist."),
+            input_schema=schema({
+                "title": {"type": "string"},
+                "exists": {"type": "boolean"},
+                "ignore_case": {"type": "boolean"},
+                "raise_on_fail": {"type": "boolean"},
+                "capture_on_fail": {"type": "boolean"},
+            }, required=["title"]),
+            handler=h.assert_window,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def data_source_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_load_data",
+            description=("Load tabular rows from a data source spec and return "
+                         "them as a list of row objects. 'source' is a dict "
+                         "with kind=csv|json|sqlite|excel|inline plus "
+                         "kind-specific fields (path / query / rows). Combine "
+                         "with the AC_for_each_row flow-control command to "
+                         "drive a script once per row."),
+            input_schema=schema({
+                "source": {"type": "object"},
+                "limit": {"type": "integer"},
+            }, required=["source"]),
+            handler=h.load_data,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def flakiness_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_flaky_report",
+            description=("Score run-history flakiness: group recent runs by "
+                         "script_path (or source_id), count pass/fail flips, "
+                         "and rank scripts that intermittently fail. "
+                         "Read-only analytics over the run-history store."),
+            input_schema=schema({
+                "limit": {"type": "integer"},
+                "min_runs": {"type": "integer"},
+                "group_by": {"type": "string",
+                             "enum": ["script_path", "source_id"]},
+            }),
+            handler=h.flaky_report,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def suite_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_run_suite",
+            description=("Run a QA suite spec (name + optional setup/teardown "
+                         "+ cases) and return per-case pass/fail/error/skip "
+                         "results. Cases with a 'data' source expand to one "
+                         "scored case per row. Pass junit_path / allure_dir to "
+                         "also write CI-native reports. Quarantined case names "
+                         "are skipped."),
+            input_schema=schema({
+                "spec": {"type": "object"},
+                "tags": {"type": "array", "items": {"type": "string"}},
+                "respect_quarantine": {"type": "boolean"},
+                "junit_path": {"type": "string"},
+                "allure_dir": {"type": "string"},
+            }, required=["spec"]),
+            handler=h.run_suite,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def quarantine_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_quarantine_add",
+            description=("Quarantine a case name so the suite runner skips it "
+                         "(records it as skipped, not failed)."),
+            input_schema=schema({
+                "name": {"type": "string"},
+                "reason": {"type": "string"},
+            }, required=["name"]),
+            handler=h.quarantine_add,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_quarantine_remove",
+            description="Release a case name from quarantine.",
+            input_schema=schema({"name": {"type": "string"}},
+                                required=["name"]),
+            handler=h.quarantine_remove,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_quarantine_list",
+            description="List every quarantined case name with its reason.",
+            input_schema=schema({}),
+            handler=h.quarantine_list,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_quarantine_auto",
+            description=("Auto-quarantine flaky scripts from run history whose "
+                         "flip rate meets flip_rate_threshold."),
+            input_schema=schema({
+                "flip_rate_threshold": {"type": "number"},
+                "min_runs": {"type": "integer"},
+                "limit": {"type": "integer"},
+                "group_by": {"type": "string",
+                             "enum": ["script_path", "source_id"]},
+            }),
+            handler=h.quarantine_auto,
+            annotations=NON_DESTRUCTIVE,
+        ),
+    ]
+
+
+def a11y_audit_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_audit_accessibility",
+            description=("Audit the accessibility tree for interactive widgets "
+                         "missing an accessible name; optionally also check "
+                         "supplied foreground/background contrast_pairs (WCAG) "
+                         "and OCR 'texts' for ellipsis truncation. Returns an "
+                         "issue list with severities."),
+            input_schema=schema({
+                "app_name": {"type": "string"},
+                "contrast_pairs": {"type": "array",
+                                   "items": {"type": "object"}},
+                "texts": {"type": "array", "items": {"type": "string"}},
+                "min_ratio": {"type": "number"},
+                "max_results": {"type": "integer"},
+            }),
+            handler=h.audit_accessibility,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_audit_contrast",
+            description=("Compute the WCAG contrast ratio between a foreground "
+                         "and background RGB colour; reports pass/fail against "
+                         "the AA threshold."),
+            input_schema=schema({
+                "foreground": {"type": "array", "items": {"type": "integer"}},
+                "background": {"type": "array", "items": {"type": "integer"}},
+                "min_ratio": {"type": "number"},
+            }, required=["foreground", "background"]),
+            handler=h.audit_contrast,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def device_matrix_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_run_device_matrix",
+            description=("Run one AC_* action list across many mobile devices "
+                         "in parallel (each on an isolated executor). Each "
+                         "device spec (platform + serial/url) is bound to "
+                         "${device.*} so the script targets the current "
+                         "device. Returns per-device pass/fail."),
+            input_schema=schema({
+                "actions": {"type": "array"},
+                "devices": {"type": "array", "items": {"type": "object"}},
+                "max_parallel": {"type": "integer"},
+                "var_name": {"type": "string"},
+            }, required=["actions", "devices"]),
+            handler=h.run_device_matrix,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def media_assert_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_assert_audio",
+            description=("Record from an input device for duration_s and "
+                         "assert sound (expect_sound=true) or silence "
+                         "(false) by comparing RMS level to threshold."),
+            input_schema=schema({
+                "duration_s": {"type": "number"},
+                "threshold": {"type": "number"},
+                "expect_sound": {"type": "boolean"},
+                "samplerate": {"type": "integer"},
+                "channels": {"type": "integer"},
+                "raise_on_fail": {"type": "boolean"},
+            }),
+            handler=h.assert_audio,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_video_changes",
+            description=("Measure mean frame-to-frame difference over a "
+                         "segment of a recorded video and assert motion "
+                         "(expect_motion=true) or a static segment."),
+            input_schema=schema({
+                "video_path": {"type": "string"},
+                "start_s": {"type": "number"},
+                "end_s": {"type": "number"},
+                "threshold": {"type": "number"},
+                "expect_motion": {"type": "boolean"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "raise_on_fail": {"type": "boolean"},
+            }, required=["video_path"]),
+            handler=h.assert_video_changes,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 ALL_FACTORIES = (
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
@@ -1896,5 +2168,7 @@ ALL_FACTORIES = (
     redaction_tools, android_widget_tools, ios_tools, webrunner_tools,
     scheduler_tools, trigger_tools, hotkey_tools, screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
-    usb_passthrough_tools,
+    usb_passthrough_tools, assertion_tools, data_source_tools,
+    flakiness_tools, suite_tools, quarantine_tools,
+    a11y_audit_tools, device_matrix_tools, media_assert_tools,
 )

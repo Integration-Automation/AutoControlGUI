@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06)](#whats-new-2026-06)
 - [What's new (2026-05)](#whats-new-2026-05)
 - [Features](#features)
 - [Architecture](#architecture)
@@ -54,6 +55,35 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06)
+
+Nine additions that turn the automation primitives into a full **QA / test
+framework**: assert screen state, drive scripts from data, detect and
+quarantine flaky tests, run a scored suite, emit CI-native reports, audit
+accessibility / i18n, fan a script across a device matrix, and assert on
+audio / video. Each ships with a headless API, an `AC_*` executor command,
+an `ac_*` MCP tool, and a Qt GUI tab. Full reference page:
+[`docs/source/Eng/doc/new_features/v3_features_doc.rst`](docs/source/Eng/doc/new_features/v3_features_doc.rst).
+
+**Assertions**
+- **Assertion DSL** — verify screen state instead of only driving it: `assert_text` (OCR, `regex` + `present=False` for absence), `assert_image`, `assert_pixel`, `assert_window`. Returns an `AssertionResult`; raises `AutoControlAssertionException` on mismatch with optional failure screenshot (`AC_assert_text / _image / _pixel / _window`).
+- **Media assertions** — `assert_audio_activity` (record + RMS threshold for sound vs silence) and `assert_video_changes` (mean frame-to-frame diff over a segment for motion vs static); pure numeric cores, lazy `sounddevice` / OpenCV (`AC_assert_audio / AC_assert_video_changes`).
+
+**Data-driven execution**
+- **Data sources** — `load_rows` connectors for CSV / JSON / SQLite / Excel / inline; the `AC_for_each_row` block command runs a body once per row with `${row.column}` access. SQLite is single read-only `SELECT`/`WITH` only; paths are `realpath`-validated. `${var}` interpolation now resolves dotted dict-key / list-index paths while preserving types (`AC_load_data`).
+
+**Flaky detection & quarantine**
+- **Flaky report** — score intermittent failures from run history by pass↔fail flip rate, grouped by script / source (`AC_flaky_report`).
+- **Quarantine** — a persistent (mode 0600) skip-list the suite runner honours; `auto_quarantine_from_flakiness` auto-populates it above a flip-rate threshold (`AC_quarantine_add / _remove / _list / _clear / _auto`).
+
+**Suite runner + CI reports**
+- **QA suite orchestration** — `run_suite` turns action lists into scored cases with setup / teardown, tags, and data-driven expansion; assertion failures → failed, other exceptions → error, quarantined → skipped (`AC_run_suite`).
+- **JUnit / Allure reports** — `write_junit_xml` + `write_allure_results` (or `junit_path` / `allure_dir` on `AC_run_suite`) emit reports Jenkins / GitHub Actions / GitLab CI / Allure parse natively.
+
+**Audit, matrix, media**
+- **Accessibility / i18n audit** — reuse the a11y tree + OCR to find missing accessible names, WCAG contrast-ratio failures, and ellipsis-truncated strings (`AC_audit_accessibility / AC_audit_contrast`).
+- **Mobile device matrix** — fan one action list across many Android / iOS devices in parallel, each on an isolated executor, targeting the current device via `${device.*}`; per-device pass/fail, failures isolated (`AC_run_device_matrix`).
 
 ## What's new (2026-05)
 
@@ -109,6 +139,7 @@ sense) a Qt GUI tab. Full reference page:
 
 ## Features
 
+- **QA / Test Framework** — assertion DSL (`assert_text` / `_image` / `_pixel` / `_window` + audio/video assertions), data-driven execution (CSV / JSON / SQLite / Excel → `AC_for_each_row`), a scored `run_suite` with setup/teardown/tags, JUnit + Allure report output, flaky-test detection with auto-quarantine, accessibility / i18n auditing (missing labels, WCAG contrast, truncation), and a parallel mobile device matrix. See [What's new (2026-06)](#whats-new-2026-06)
 - **Mouse Automation** — move, click, press, release, drag, and scroll with precise coordinate control
 - **Keyboard Automation** — press/release individual keys, type strings, hotkey combinations, key state detection
 - **Image Recognition** — locate UI elements on screen using OpenCV template matching with configurable threshold

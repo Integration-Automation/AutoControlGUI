@@ -13,6 +13,13 @@ from PySide6.QtWidgets import (
 from je_auto_control.gui._auto_click_tab import AutoClickTabMixin
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.accessibility_tab import AccessibilityTab
+from je_auto_control.gui.assertions_tab import AssertionsTab
+from je_auto_control.gui.data_source_tab import DataSourceTab
+from je_auto_control.gui.flakiness_tab import FlakinessTab
+from je_auto_control.gui.test_suite_tab import TestSuiteTab
+from je_auto_control.gui.a11y_audit_tab import A11yAuditTab
+from je_auto_control.gui.device_matrix_tab import DeviceMatrixTab
+from je_auto_control.gui.media_checks_tab import MediaChecksTab
 from je_auto_control.gui.computer_use_tab import ComputerUseTab
 from je_auto_control.gui.chatops_tab import ChatOpsTab
 from je_auto_control.gui.dag_tab import DagTab
@@ -159,6 +166,20 @@ class AutoControlGUIWidget(
                       category="automation")
         self._add_tab("email_triggers", "tab_email_triggers",
                       EmailTriggersTab(), category="automation")
+        self._add_tab("test_suite", "tab_test_suite", TestSuiteTab(),
+                      category="core")
+        self._add_tab("assertions", "tab_assertions", AssertionsTab(),
+                      category="core")
+        self._add_tab("data_source", "tab_data_source", DataSourceTab(),
+                      category="core")
+        self._add_tab("flakiness", "tab_flakiness", FlakinessTab(),
+                      category="system")
+        self._add_tab("a11y_audit", "tab_a11y_audit", A11yAuditTab(),
+                      category="core")
+        self._add_tab("device_matrix", "tab_device_matrix", DeviceMatrixTab(),
+                      category="core")
+        self._add_tab("media_checks", "tab_media_checks", MediaChecksTab(),
+                      category="core")
         self._add_tab("run_history", "tab_run_history", RunHistoryTab(),
                       category="automation")
         self._add_tab("profiler", "tab_profiler", ProfilerTab(),
