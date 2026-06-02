@@ -49,7 +49,7 @@ _DESC_LENGTH = 18
 def _is_loopback_target(base_url: str) -> bool:
     """True if ``base_url`` points at this machine (so a local open is valid)."""
     text = base_url.strip()
-    if not text.startswith(("http://", "https://")):
+    if not text.startswith(("http://", "https://")):  # NOSONAR python:S5332 - scheme detection on user input, not an outbound http call
         text = f"{_TEST_SCHEME}://{text}"
     host = urllib.parse.urlsplit(text).hostname or ""
     return host.lower() in _LOOPBACK_HOSTS

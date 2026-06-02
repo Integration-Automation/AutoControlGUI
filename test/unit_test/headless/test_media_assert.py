@@ -16,16 +16,16 @@ from je_auto_control.utils.media_assert import media
 
 
 def test_rms_pure():
-    assert media.rms([]) == 0.0
+    assert media.rms([]) == pytest.approx(0.0)
     assert media.rms([3, 4]) == pytest.approx(math.sqrt((9 + 16) / 2))
-    assert media.rms([0, 0, 0]) == 0.0
+    assert media.rms([0, 0, 0]) == pytest.approx(0.0)
 
 
 def test_mean_frame_diff_pure():
     np = pytest.importorskip("numpy")
     frame_a = np.zeros((2, 2))
     frame_b = np.full((2, 2), 10.0)
-    assert media.mean_frame_diff([frame_a]) == 0.0
+    assert media.mean_frame_diff([frame_a]) == pytest.approx(0.0)
     assert media.mean_frame_diff([frame_a, frame_b]) == pytest.approx(10.0)
 
 
@@ -60,7 +60,7 @@ def test_assert_video_changes_motion(monkeypatch):
         "x.mp4", threshold=1.0, expect_motion=True,
     )
     assert result.passed is True
-    assert result.measured == 9.0
+    assert result.measured == pytest.approx(9.0)
 
 
 def test_assert_video_static_fail(monkeypatch):

@@ -102,7 +102,7 @@ class TestSuiteTab(TranslatableMixin, QWidget):
     def _on_run(self) -> None:
         try:
             result = ac.run_suite(self._parse_spec())
-        except (ValueError, OSError, RuntimeError, json.JSONDecodeError) as err:
+        except (ValueError, OSError, RuntimeError) as err:
             self._summary.setText(_t("suite_error").replace("{error}", str(err)))
             return
         self._last_result = result

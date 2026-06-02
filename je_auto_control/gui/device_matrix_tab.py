@@ -81,7 +81,7 @@ class DeviceMatrixTab(TranslatableMixin, QWidget):
             report = ac.run_on_devices(
                 actions, devices, max_parallel=self._parallel.value(),
             )
-        except (ValueError, RuntimeError, json.JSONDecodeError) as error:
+        except (ValueError, RuntimeError) as error:
             self._summary.setText(_t("dm_error").replace("{error}", str(error)))
             return
         self._render(report.to_dict())

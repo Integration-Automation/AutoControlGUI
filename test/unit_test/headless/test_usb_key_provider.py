@@ -25,7 +25,7 @@ def test_dpapi_available_matches_platform():
 
 @pytest.mark.skipif(not _IS_WINDOWS, reason="DPAPI is Windows-only")
 def test_dpapi_round_trip():
-    secret = b"a-32-byte-key-or-anything-really"
+    secret = b"a-32-byte-key-or-anything-really"  # NOSONAR python:S6418 - test plaintext, not a real credential
     blob = dpapi_protect(secret)
     assert blob != secret  # actually encrypted
     assert dpapi_unprotect(blob) == secret

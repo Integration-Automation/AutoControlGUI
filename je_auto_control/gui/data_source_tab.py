@@ -108,7 +108,7 @@ class DataSourceTab(TranslatableMixin, QWidget):
         try:
             limit = self._limit.value() or None
             rows = load_rows(self._build_source(), limit=limit)
-        except (ValueError, OSError, RuntimeError, json.JSONDecodeError) as error:
+        except (ValueError, OSError, RuntimeError) as error:
             self._status.setText(_t("ds_error").replace("{error}", str(error)))
             return
         self._render_rows(rows)

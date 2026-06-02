@@ -1,6 +1,8 @@
 """Headless tests for the accessibility / i18n audit."""
 from types import SimpleNamespace
 
+import pytest
+
 import je_auto_control as ac
 from je_auto_control.utils.a11y_audit import (
     audit_contrast, audit_missing_labels, contrast_ratio, detect_truncation,
@@ -34,9 +36,9 @@ def test_missing_label_flagged():
 
 def test_contrast_ratio_known_values():
     # black on white is the maximum 21:1
-    assert round(contrast_ratio([0, 0, 0], [255, 255, 255]), 1) == 21.0
+    assert contrast_ratio([0, 0, 0], [255, 255, 255]) == pytest.approx(21.0)
     # identical colours are 1:1
-    assert round(contrast_ratio([120, 120, 120], [120, 120, 120]), 1) == 1.0
+    assert contrast_ratio([120, 120, 120], [120, 120, 120]) == pytest.approx(1.0)
 
 
 def test_audit_contrast_flags_low():
@@ -73,4 +75,4 @@ def test_executor_audit_contrast():
     from je_auto_control.utils.executor.action_executor import executor
     out = executor.event_dict["AC_audit_contrast"]([0, 0, 0], [255, 255, 255])
     assert out["passes_aa"] is True
-    assert out["ratio"] == 21.0
+    assert out["ratio"] == pytest.approx(21.0)

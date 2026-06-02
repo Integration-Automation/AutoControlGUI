@@ -549,7 +549,7 @@ def _is_misbehaviour(replies: List[Frame]) -> bool:
         if reply.op == Opcode.OPENED:
             try:
                 body = json.loads(reply.payload.decode("utf-8"))
-            except (ValueError, UnicodeDecodeError):
+            except ValueError:
                 return True
             if not body.get("ok"):
                 return True

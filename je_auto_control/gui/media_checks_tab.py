@@ -108,7 +108,7 @@ class MediaChecksTab(TranslatableMixin, QWidget):
                 expect_motion=self._video_expect.isChecked(),
                 raise_on_fail=False,
             )
-        except (RuntimeError, OSError, ValueError, FileNotFoundError) as error:
+        except (RuntimeError, OSError, ValueError) as error:
             self._result.setText(str(error))
             return
         self._result.setText(result.message)

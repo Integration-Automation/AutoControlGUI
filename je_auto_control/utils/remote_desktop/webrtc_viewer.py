@@ -465,22 +465,26 @@ class WebRTCDesktopViewer:
 
         @pc.on("datachannel")
         def _on_datachannel(channel) -> None:
-            autocontrol_logger.info(
-                "webrtc viewer: data channel %r open", channel.label,
-            )
-            if channel.label == "mic":
-                self._mic_channel = channel
-                return
-            if channel.label == "files":
-                self._files_channel = channel
-                self._wire_files_channel(channel)
-                return
-            if channel.label == "usb":
-                self._usb_channel = channel
-                self._wire_usb_channel(channel)
-                return
-            self._control_channel = channel
-            self._wire_control_channel(channel)
+            self._attach_datachannel(channel)
+
+    def _attach_datachannel(self, channel) -> None:
+        """Route an inbound data channel to its handler by label."""
+        autocontrol_logger.info(
+            "webrtc viewer: data channel %r open", channel.label,
+        )
+        if channel.label == "mic":
+            self._mic_channel = channel
+            return
+        if channel.label == "files":
+            self._files_channel = channel
+            self._wire_files_channel(channel)
+            return
+        if channel.label == "usb":
+            self._usb_channel = channel
+            self._wire_usb_channel(channel)
+            return
+        self._control_channel = channel
+        self._wire_control_channel(channel)
 
     def _wire_control_channel(self, channel) -> None:
         @channel.on("open")

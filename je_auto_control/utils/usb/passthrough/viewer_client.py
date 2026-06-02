@@ -92,7 +92,7 @@ class ClientHandle:
     """
 
     def __init__(self, client: "UsbPassthroughClient", claim_id: int,
-                 resume_token: str = "") -> None:
+                 resume_token: str = "") -> None:  # nosec B107  # reason: resume_token is a reconnect handle, not a credential; "" means "no token yet"
         self._client = client
         self._claim_id = claim_id
         self._resume_token = resume_token

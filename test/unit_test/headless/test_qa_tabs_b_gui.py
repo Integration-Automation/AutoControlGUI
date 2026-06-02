@@ -40,4 +40,4 @@ def test_device_matrix_tab_runs(app):
 
 def test_media_checks_tab_instantiates(app):
     tab = MediaChecksTab()
-    assert tab._video_threshold.value() == 1.0
+    assert tab._video_threshold.value() == pytest.approx(1.0)

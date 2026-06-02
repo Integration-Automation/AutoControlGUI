@@ -38,7 +38,7 @@ _browser = pytest.importorskip(
     ("127.0.0.1:9939", True),
     ("localhost:9939", True),
     ("http://localhost", True),
-    ("http://192.168.1.5:9939", False),
+    ("http://192.168.1.5:9939", False),  # NOSONAR python:S1313,python:S5332 - test data asserting a non-loopback URL is rejected
     ("https://example.com", False),
 ])
 def test_is_loopback_target(url, expected):

@@ -32,7 +32,7 @@ def test_flaky_script_detected(store):
     assert entry.flaky is True
     assert entry.ok == 2 and entry.error == 2
     assert entry.flips == 3
-    assert entry.flip_rate == 1.0
+    assert entry.flip_rate == pytest.approx(1.0)
     assert report.flaky_count == 1
 
 
@@ -43,7 +43,7 @@ def test_stable_script_not_flaky(store):
     entry = report.entries[0]
     assert entry.flaky is False
     assert entry.flips == 0
-    assert entry.pass_rate == 1.0
+    assert entry.pass_rate == pytest.approx(1.0)
     assert report.flaky_count == 0
 
 

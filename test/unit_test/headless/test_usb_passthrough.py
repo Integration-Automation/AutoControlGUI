@@ -526,7 +526,7 @@ def test_usb_handle_is_an_abc():
 
 class _FakeInterface:
     def __init__(self, number: int) -> None:
-        self.bInterfaceNumber = number
+        self.bInterfaceNumber = number  # NOSONAR python:S116 - mirrors the USB spec descriptor field name
 
 
 class _FakeKernelDevice:
