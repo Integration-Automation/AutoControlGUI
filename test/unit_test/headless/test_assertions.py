@@ -30,7 +30,7 @@ def test_assertion_import_stays_qt_free():
         "qt = [m for m in sys.modules if 'PySide6' in m]\n"
         "import json; print(json.dumps(qt))\n"
     )
-    result = subprocess.run(  # nosec B603
+    result = subprocess.run(  # nosec B603  # nosemgrep
         [sys.executable, "-c", script],
         capture_output=True, text=True, check=True, timeout=60,
     )

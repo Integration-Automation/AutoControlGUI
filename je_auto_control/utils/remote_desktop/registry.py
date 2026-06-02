@@ -363,6 +363,7 @@ class _RemoteDesktopRegistry:
         if viewer is None:
             return None
         getter = getattr(viewer, "usb_client", None)
+        # pylint: disable=not-callable  # reason: guarded by callable(getter)
         return getter() if callable(getter) else None
 
 
