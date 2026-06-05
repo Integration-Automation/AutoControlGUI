@@ -93,6 +93,160 @@ def test_ac_retry_exhausts_and_records_error(executor_with_hooks):
     assert any("exhausted" in repr(v) for v in result.values())
 
 
+# === AC_while_var ==========================================================
+
+def test_ac_while_var_counts_up(executor_with_hooks):
+    ex, state = executor_with_hooks
+    ex.execute_action([
+        ["AC_set_var", {"name": "i", "value": 0}],
+        ["AC_while_var", {
+            "name": "i", "op": "lt", "value": 3,
+            "body": [["AC_noop"], ["AC_inc_var", {"name": "i"}]],
+        }],
+    ])
+    assert state["count"] == 3
+    assert ex.variables.get_value("i") == 3
+
+
+def test_ac_while_var_false_initially_runs_zero_times(executor_with_hooks):
+    ex, state = executor_with_hooks
+    ex.execute_action([
+        ["AC_set_var", {"name": "i", "value": 9}],
+        ["AC_while_var", {
+            "name": "i", "op": "lt", "value": 3,
+            "body": [["AC_noop"]],
+        }],
+    ])
+    assert state["count"] == 0
+
+
+def test_ac_while_var_max_iter_caps_runaway(executor_with_hooks):
+    ex, state = executor_with_hooks
+    # condition never becomes false (i is never mutated) -> capped at max_iter
+    ex.execute_action([
+        ["AC_set_var", {"name": "i", "value": 0}],
+        ["AC_while_var", {
+            "name": "i", "op": "lt", "value": 3, "max_iter": 5,
+            "body": [["AC_noop"]],
+        }],
+    ])
+    assert state["count"] == 5
+
+
+def test_ac_while_var_break_stops(executor_with_hooks):
+    ex, state = executor_with_hooks
+    ex.execute_action([
+        ["AC_set_var", {"name": "i", "value": 0}],
+        ["AC_while_var", {
+            "name": "i", "op": "lt", "value": 100,
+            "body": [["AC_noop"], ["AC_break"]],
+        }],
+    ])
+    assert state["count"] == 1
+
+
+def test_ac_while_var_unknown_op_raises(executor_with_hooks):
+    ex, _ = executor_with_hooks
+    with pytest.raises(AutoControlActionException):
+        ex.execute_action([
+            ["AC_while_var", {
+                "name": "i", "op": "wat", "value": 1, "body": [],
+            }],
+        ], raise_on_error=True)
+
+
+# === AC_try (try / catch / finally) ========================================
+
+@pytest.fixture()
+def executor_try():
+    """Executor with a noop, a failer, and a capture hook for try tests."""
+    executor = Executor()
+    state = {"log": []}
+    executor.event_dict["AC_ok"] = lambda: state["log"].append("ok")
+    executor.event_dict["AC_recover"] = lambda: state["log"].append("recover")
+    executor.event_dict["AC_cleanup"] = lambda: state["log"].append("cleanup")
+
+    def boom():
+        raise RuntimeError("boom")
+
+    executor.event_dict["AC_boom"] = boom
+    return executor, state
+
+
+def test_ac_try_success_skips_catch_runs_finally(executor_try):
+    ex, state = executor_try
+    ex.execute_action([["AC_try", {
+        "body": [["AC_ok"]],
+        "catch": [["AC_recover"]],
+        "finally": [["AC_cleanup"]],
+    }]])
+    assert state["log"] == ["ok", "cleanup"]
+
+
+def test_ac_try_catch_runs_on_failure(executor_try):
+    ex, state = executor_try
+    ex.execute_action([["AC_try", {
+        "body": [["AC_boom"]],
+        "catch": [["AC_recover"]],
+        "finally": [["AC_cleanup"]],
+    }]])
+    assert state["log"] == ["recover", "cleanup"]
+
+
+def test_ac_try_exposes_error_to_var(executor_try):
+    ex, _ = executor_try
+    ex.execute_action([["AC_try", {
+        "body": [["AC_boom"]],
+        "error_var": "err",
+        "catch": [],
+    }]])
+    assert "boom" in str(ex.variables.get_value("err"))
+
+
+def test_ac_try_reraise_propagates_after_finally(executor_try):
+    ex, state = executor_try
+    result = ex.execute_action([["AC_try", {
+        "body": [["AC_boom"]],
+        "catch": [["AC_recover"]],
+        "finally": [["AC_cleanup"]],
+        "reraise": True,
+    }]])
+    # reraised error is captured in the record (raise_on_error defaults off)
+    assert state["log"] == ["recover", "cleanup"]
+    assert any("boom" in repr(v) for v in result.values())
+
+
+def test_ac_try_finally_runs_even_without_catch(executor_try):
+    ex, state = executor_try
+    ex.execute_action([["AC_try", {
+        "body": [["AC_boom"]],
+        "finally": [["AC_cleanup"]],
+    }]])
+    assert state["log"] == ["cleanup"]
+
+
+def test_ac_try_break_propagates_through_try(executor_try):
+    """A loop break inside a try body still stops the enclosing loop."""
+    ex, state = executor_try
+    ex.execute_action([["AC_loop", {
+        "times": 5,
+        "body": [["AC_try", {
+            "body": [["AC_break"]],
+            "finally": [["AC_cleanup"]],
+        }]],
+    }]])
+    # finally ran once, then break stopped the loop after one iteration
+    assert state["log"] == ["cleanup"]
+
+
+def test_ac_try_schema_validates_nested_bodies(executor_try):
+    ex, _ = executor_try
+    with pytest.raises(AutoControlActionException):
+        ex.execute_action([["AC_try", {
+            "body": [["AC_nonexistent"]],
+        }]])
+
+
 def test_schema_rejects_unknown_command(executor_with_hooks):
     ex, _ = executor_with_hooks
     with pytest.raises(AutoControlActionException):

@@ -635,6 +635,88 @@ def _assert_window(title: str,
     ).to_dict()
 
 
+def _assert_clipboard(text: str,
+                      mode: str = "equals",
+                      ignore_case: bool = False,
+                      present: bool = True,
+                      raise_on_fail: bool = True,
+                      capture_on_fail: bool = False) -> Dict[str, Any]:
+    """Executor adapter: assert clipboard text matches ``text``."""
+    from je_auto_control.utils.assertion import assert_clipboard
+    return assert_clipboard(
+        text, mode=mode, ignore_case=bool(ignore_case),
+        present=bool(present), raise_on_fail=bool(raise_on_fail),
+        capture_on_fail=bool(capture_on_fail),
+    ).to_dict()
+
+
+def _assert_process(name: str,
+                    running: bool = True,
+                    raise_on_fail: bool = True,
+                    capture_on_fail: bool = False) -> Dict[str, Any]:
+    """Executor adapter: assert a process matching ``name`` is (not) running."""
+    from je_auto_control.utils.assertion import assert_process
+    return assert_process(
+        name, running=bool(running), raise_on_fail=bool(raise_on_fail),
+        capture_on_fail=bool(capture_on_fail),
+    ).to_dict()
+
+
+def _assert_file(path: str,
+                 exists: bool = True,
+                 contains: Optional[str] = None,
+                 sha256: Optional[str] = None,
+                 min_size: Optional[int] = None,
+                 raise_on_fail: bool = True) -> Dict[str, Any]:
+    """Executor adapter: assert a file's existence / content / hash / size."""
+    from je_auto_control.utils.assertion import assert_file
+    return assert_file(
+        path, exists=bool(exists), contains=contains, sha256=sha256,
+        min_size=None if min_size is None else int(min_size),
+        raise_on_fail=bool(raise_on_fail),
+    ).to_dict()
+
+
+def _assert_http(url: str,
+                 status: int = 200,
+                 contains: Optional[str] = None,
+                 timeout: float = 10.0,
+                 method: str = "GET",
+                 raise_on_fail: bool = True) -> Dict[str, Any]:
+    """Executor adapter: assert an HTTP(S) endpoint status / body."""
+    from je_auto_control.utils.assertion import assert_http
+    return assert_http(
+        url, status=int(status), contains=contains, timeout=float(timeout),
+        method=method, raise_on_fail=bool(raise_on_fail),
+    ).to_dict()
+
+
+def _assert_all(specs: List[Dict[str, Any]],
+                raise_on_fail: bool = True) -> Dict[str, Any]:
+    """Executor adapter: run a batch of assertion specs (soft assertions)."""
+    from je_auto_control.utils.assertion import assert_all
+    return assert_all(specs, raise_on_fail=bool(raise_on_fail)).to_dict()
+
+
+def _assert_any(specs: List[Dict[str, Any]],
+                raise_on_fail: bool = True) -> Dict[str, Any]:
+    """Executor adapter: pass when at least one assertion spec passes."""
+    from je_auto_control.utils.assertion import assert_any
+    return assert_any(specs, raise_on_fail=bool(raise_on_fail)).to_dict()
+
+
+def _assert_eventually(spec: Dict[str, Any],
+                       timeout: float = 5.0,
+                       interval: float = 0.25,
+                       raise_on_fail: bool = True) -> Dict[str, Any]:
+    """Executor adapter: poll one assertion spec until it passes / times out."""
+    from je_auto_control.utils.assertion import assert_eventually
+    return assert_eventually(
+        spec, timeout=float(timeout), interval=float(interval),
+        raise_on_fail=bool(raise_on_fail),
+    ).to_dict()
+
+
 def _load_data(source: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Executor adapter: load tabular rows from a data source spec."""
     from je_auto_control.utils.data_source import load_rows
@@ -1966,6 +2048,13 @@ class Executor:
             "AC_assert_image": _assert_image,
             "AC_assert_pixel": _assert_pixel,
             "AC_assert_window": _assert_window,
+            "AC_assert_clipboard": _assert_clipboard,
+            "AC_assert_process": _assert_process,
+            "AC_assert_file": _assert_file,
+            "AC_assert_http": _assert_http,
+            "AC_assert_all": _assert_all,
+            "AC_assert_any": _assert_any,
+            "AC_assert_eventually": _assert_eventually,
 
             # Data-driven execution (load rows from CSV / JSON / SQLite / ...)
             "AC_load_data": _load_data,

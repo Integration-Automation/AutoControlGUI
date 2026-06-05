@@ -527,6 +527,32 @@ def recording_tools() -> List[MCPTool]:
             handler=h.scale_coordinates,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_dedupe_moves",
+            description=("Collapse each run of consecutive mouse-move actions "
+                         "into its last position — shrinks a raw recording "
+                         "(one event per cursor sample) without changing "
+                         "replay behaviour. move_commands defaults to "
+                         "['AC_set_mouse_position']."),
+            input_schema=schema({
+                "actions": {"type": "array"},
+                "move_commands": {"type": "array",
+                                  "items": {"type": "string"}},
+            }, required=["actions"]),
+            handler=h.dedupe_moves,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_merge_sleeps",
+            description=("Collapse each run of consecutive AC_sleep actions "
+                         "into a single sleep summing their durations — "
+                         "de-clutters a recording's idle delays."),
+            input_schema=schema({
+                "actions": {"type": "array"},
+            }, required=["actions"]),
+            handler=h.merge_sleeps,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
@@ -1950,6 +1976,115 @@ def assertion_tools() -> List[MCPTool]:
                 "capture_on_fail": {"type": "boolean"},
             }, required=["title"]),
             handler=h.assert_window,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_clipboard",
+            description=("Assert the system clipboard text matches 'text'. "
+                         "mode is 'equals' (default), 'contains', or 'regex'. "
+                         "Set present=false to assert the clipboard does NOT "
+                         "match (e.g. a secret was cleared)."),
+            input_schema=schema({
+                "text": {"type": "string"},
+                "mode": {"type": "string",
+                         "enum": ["equals", "contains", "regex"]},
+                "ignore_case": {"type": "boolean"},
+                "present": {"type": "boolean"},
+                "raise_on_fail": {"type": "boolean"},
+                "capture_on_fail": {"type": "boolean"},
+            }, required=["text"]),
+            handler=h.assert_clipboard,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_process",
+            description=("Assert a process whose name contains 'name' is "
+                         "(running=true) or is not (running=false) running. "
+                         "Requires psutil."),
+            input_schema=schema({
+                "name": {"type": "string"},
+                "running": {"type": "boolean"},
+                "raise_on_fail": {"type": "boolean"},
+                "capture_on_fail": {"type": "boolean"},
+            }, required=["name"]),
+            handler=h.assert_process,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_file",
+            description=("Assert a file's state: existence (exists), a "
+                         "substring (contains), a SHA-256 digest (sha256), "
+                         "or a minimum byte size (min_size). Set exists=false "
+                         "to assert the file is absent."),
+            input_schema=schema({
+                "path": {"type": "string"},
+                "exists": {"type": "boolean"},
+                "contains": {"type": "string"},
+                "sha256": {"type": "string"},
+                "min_size": {"type": "integer"},
+                "raise_on_fail": {"type": "boolean"},
+            }, required=["path"]),
+            handler=h.assert_file,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_http",
+            description=("Assert an http/https endpoint returns 'status' "
+                         "(default 200) and optionally that the body contains "
+                         "'contains'. Always uses an explicit timeout; an "
+                         "unreachable host counts as a failed assertion."),
+            input_schema=schema({
+                "url": {"type": "string"},
+                "status": {"type": "integer"},
+                "contains": {"type": "string"},
+                "timeout": {"type": "number"},
+                "method": {"type": "string"},
+                "raise_on_fail": {"type": "boolean"},
+            }, required=["url"]),
+            handler=h.assert_http,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_all",
+            description=("Run a batch of assertion specs as soft assertions: "
+                         "every spec is evaluated (no short-circuit) and all "
+                         "failures are collected before raising. Each spec is "
+                         "an object like {\"kind\": \"text\", \"text\": "
+                         "\"Saved\"}; kind is one of text/image/pixel/window/"
+                         "clipboard."),
+            input_schema=schema({
+                "specs": {"type": "array", "items": {"type": "object"}},
+                "raise_on_fail": {"type": "boolean"},
+            }, required=["specs"]),
+            handler=h.assert_all,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_any",
+            description=("Pass when AT LEAST ONE assertion spec passes (OR "
+                         "semantics; short-circuits on the first pass) — the "
+                         "complement of ac_assert_all. Each spec is an object "
+                         "like {\"kind\": \"text\", \"text\": \"Welcome\"}."),
+            input_schema=schema({
+                "specs": {"type": "array", "items": {"type": "object"}},
+                "raise_on_fail": {"type": "boolean"},
+            }, required=["specs"]),
+            handler=h.assert_any,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_eventually",
+            description=("Retry a single assertion spec until it passes or "
+                         "'timeout' seconds elapse, polling every 'interval' "
+                         "seconds. The spec is an object like {\"kind\": "
+                         "\"window\", \"title\": \"Done\"}."),
+            input_schema=schema({
+                "spec": {"type": "object"},
+                "timeout": {"type": "number"},
+                "interval": {"type": "number"},
+                "raise_on_fail": {"type": "boolean"},
+            }, required=["spec"]),
+            handler=h.assert_eventually,
             annotations=READ_ONLY,
         ),
     ]

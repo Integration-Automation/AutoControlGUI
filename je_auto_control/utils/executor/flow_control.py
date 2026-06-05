@@ -166,6 +166,47 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
     ) from last_error
 
 
+# Errors a protected block may raise that ``AC_try`` is willing to catch.
+# ``LoopBreak`` / ``LoopContinue`` are deliberately excluded so loop
+# control-flow still propagates through a try block.
+_TRY_CATCHABLE = (
+    AutoControlActionException, OSError, RuntimeError,
+    AttributeError, TypeError, ValueError,
+)
+
+
+def exec_try(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Run ``body``; on error run ``catch``; always run ``finally``.
+
+    Unlike ``AC_retry`` (which repeats the same body), ``AC_try`` provides
+    a recovery path: when ``body`` raises, the ``catch`` branch runs
+    instead of aborting the script. The ``finally`` branch always runs —
+    on success, on caught error, or while a re-raise / loop break/continue
+    propagates. The caught error's text is exposed to ``error_var`` (when
+    given) so the ``catch`` branch can inspect it. Set ``reraise`` true to
+    re-raise after the ``catch`` branch (still running ``finally`` first).
+    """
+    body = args.get("body") or []
+    caught_repr: Optional[str] = None
+    try:
+        try:
+            _run_strict(executor, body)
+        except (LoopBreak, LoopContinue):
+            raise
+        except _TRY_CATCHABLE as error:
+            caught_repr = repr(error)
+            autocontrol_logger.info("AC_try caught: %s", caught_repr)
+            error_var = args.get("error_var")
+            if error_var:
+                executor.variables.set(str(error_var), caught_repr)
+            _run_branch(executor, args.get("catch"))
+            if bool(args.get("reraise", False)):
+                raise
+    finally:
+        _run_branch(executor, args.get("finally"))
+    return {"caught": caught_repr}
+
+
 def exec_break(executor: Any, args: Mapping[str, Any]) -> None:
     """Signal the innermost loop to stop."""
     del executor, args
@@ -219,25 +260,53 @@ _COMPARATORS: Dict[str, Callable[[Any, Any], bool]] = {
 }
 
 
-def exec_if_var(executor: Any, args: Mapping[str, Any]) -> Any:
-    """Run ``then`` when ``variable op value`` holds, else run ``else``."""
-    name = args["name"]
+def _compare_var(executor: Any, args: Mapping[str, Any], who: str) -> bool:
+    """Evaluate ``variable op value`` against the executor's variable scope."""
     op = args.get("op", "eq")
     comparator = _COMPARATORS.get(op)
     if comparator is None:
         raise AutoControlActionException(
-            f"AC_if_var: unsupported op {op!r}; "
+            f"{who}: unsupported op {op!r}; "
             f"expected one of {sorted(_COMPARATORS)}"
         )
-    current = executor.variables.get_value(name)
+    current = executor.variables.get_value(args["name"])
     try:
-        matched = comparator(current, args.get("value"))
+        return comparator(current, args.get("value"))
     except TypeError as error:
         raise AutoControlActionException(
-            f"AC_if_var: cannot compare {current!r} {op} {args.get('value')!r}"
+            f"{who}: cannot compare {current!r} {op} {args.get('value')!r}"
         ) from error
+
+
+def exec_if_var(executor: Any, args: Mapping[str, Any]) -> Any:
+    """Run ``then`` when ``variable op value`` holds, else run ``else``."""
+    matched = _compare_var(executor, args, "AC_if_var")
     key = "then" if matched else "else"
     return _run_branch(executor, args.get(key))
+
+
+def exec_while_var(executor: Any, args: Mapping[str, Any]) -> int:
+    """Execute ``body`` while ``variable op value`` holds, up to ``max_iter``.
+
+    The condition is re-checked before every iteration against the live
+    variable scope, so a body that mutates the variable (e.g.
+    ``AC_inc_var``) eventually terminates the loop. ``max_iter`` (default
+    1000) is a safety cap that prevents an unbounded loop when the
+    condition never becomes false; ``AC_break`` / ``AC_continue`` work as
+    in any other loop.
+    """
+    max_iter = int(args.get("max_iter", 1000))
+    body = args.get("body") or []
+    iterations = 0
+    while iterations < max_iter and _compare_var(executor, args, "AC_while_var"):
+        try:
+            executor.execute_action(body, _validated=True)
+        except LoopContinue:
+            pass
+        except LoopBreak:
+            break
+        iterations += 1
+    return iterations
 
 
 def exec_for_each(executor: Any, args: Mapping[str, Any]) -> int:
@@ -303,7 +372,9 @@ BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_sleep": exec_sleep,
     "AC_loop": exec_loop,
     "AC_while_image": exec_while_image,
+    "AC_while_var": exec_while_var,
     "AC_retry": exec_retry,
+    "AC_try": exec_try,
     "AC_break": exec_break,
     "AC_continue": exec_continue,
     "AC_set_var": exec_set_var,

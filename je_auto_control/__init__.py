@@ -135,7 +135,10 @@ from je_auto_control.utils.smart_waits import (
 )
 # Assertion DSL (verify screen state; raise on mismatch)
 from je_auto_control.utils.assertion import (
-    AssertionResult, assert_image, assert_pixel, assert_text, assert_window,
+    AssertionResult, GroupAssertionResult, assert_all, assert_any,
+    assert_clipboard, assert_eventually, assert_file, assert_http,
+    assert_image, assert_pixel, assert_process, assert_text, assert_window,
+    run_assertion_spec,
 )
 # Data-driven execution (load rows from CSV / JSON / SQLite / Excel)
 from je_auto_control.utils.data_source import data_source_kinds, load_rows
@@ -282,8 +285,8 @@ from je_auto_control.utils.triggers.email_trigger import (
 )
 # Recording editor (headless helpers)
 from je_auto_control.utils.recording_edit.editor import (
-    adjust_delays, filter_actions, insert_action, remove_action,
-    scale_coordinates, trim_actions,
+    adjust_delays, dedupe_moves, filter_actions, insert_action,
+    merge_sleeps, remove_action, scale_coordinates, trim_actions,
 )
 # Scheduler (headless)
 from je_auto_control.utils.scheduler.scheduler import (
@@ -405,7 +408,7 @@ __all__ = [
     "find_text_regex",
     # Recording editor
     "trim_actions", "insert_action", "remove_action", "filter_actions",
-    "adjust_delays", "scale_coordinates",
+    "adjust_delays", "scale_coordinates", "dedupe_moves", "merge_sleeps",
     # Scheduler
     "Scheduler", "ScheduledJob", "default_scheduler",
     # Script variables
@@ -506,7 +509,11 @@ __all__ = [
     "wait_until_region_idle", "wait_until_screen_stable",
     # Assertion DSL
     "AssertionResult", "assert_image", "assert_pixel",
-    "assert_text", "assert_window",
+    "assert_text", "assert_window", "assert_clipboard", "assert_process",
+    "assert_file", "assert_http",
+    # Assertion combinators (soft groups + eventual polling)
+    "GroupAssertionResult", "assert_all", "assert_any", "assert_eventually",
+    "run_assertion_spec",
     # Data-driven execution
     "data_source_kinds", "load_rows",
     # Flaky-test detection

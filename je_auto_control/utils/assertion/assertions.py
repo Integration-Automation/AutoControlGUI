@@ -206,6 +206,234 @@ def assert_pixel(x: int, y: int, rgb: Sequence[int],
     )
 
 
+def assert_clipboard(text: str,
+                     mode: str = "equals",
+                     ignore_case: bool = False,
+                     present: bool = True,
+                     raise_on_fail: bool = True,
+                     capture_on_fail: bool = False) -> AssertionResult:
+    """Assert the system clipboard text matches ``text``.
+
+    :param mode: comparison strategy — ``"equals"`` (exact), ``"contains"``
+        (substring), or ``"regex"`` (full-text regular-expression search).
+    :param present: when True the comparison must hold; when False the
+        assertion passes only when the comparison does **not** hold (e.g.
+        verify a secret was cleared from the clipboard).
+    """
+    from je_auto_control.utils.clipboard.clipboard import get_clipboard
+    observed = get_clipboard() or ""
+    matched = _clipboard_matches(observed, text, mode, ignore_case)
+    passed = (matched == present)
+    state = "match" if present else "not match"
+    message = (
+        f"assert_clipboard passed: clipboard does {state} ({mode}) {text!r}"
+        if passed else
+        f"assert_clipboard failed: expected clipboard to {state} ({mode}) "
+        f"{text!r}; clipboard held {observed!r}"
+    )
+    return _finalize(
+        "clipboard", passed, message,
+        expected={"text": text, "mode": mode, "present": present},
+        actual=observed, raise_on_fail=raise_on_fail,
+        capture_on_fail=capture_on_fail,
+    )
+
+
+def _clipboard_matches(observed: str, text: str,
+                       mode: str, ignore_case: bool) -> bool:
+    """Return True when ``observed`` satisfies ``text`` under ``mode``."""
+    if mode == "regex":
+        import re
+        flags = re.IGNORECASE if ignore_case else 0
+        return re.search(text, observed, flags) is not None
+    left = observed.lower() if ignore_case else observed
+    right = text.lower() if ignore_case else text
+    if mode == "contains":
+        return right in left
+    if mode == "equals":
+        return left == right
+    raise AutoControlAssertionException(
+        f"assert_clipboard: unknown mode {mode!r} "
+        "(expected 'equals', 'contains', or 'regex')"
+    )
+
+
+def _evaluate_file(path: Path, exists: bool, contains: Optional[str],
+                   sha256: Optional[str], min_size: Optional[int]
+                   ) -> tuple[bool, str, Dict[str, Any]]:
+    """Return (passed, detail, actual) for a file-state assertion."""
+    present = path.is_file()
+    actual: Dict[str, Any] = {"exists": present}
+    if not present:
+        return (not exists, "file does not exist", actual)
+    if not exists:
+        return (False, "file exists but expected absent", actual)
+    data = path.read_bytes()
+    actual["size"] = len(data)
+    if min_size is not None and len(data) < int(min_size):
+        return (False, f"size {len(data)} < min_size {min_size}", actual)
+    if sha256 is not None:
+        import hashlib
+        digest = hashlib.sha256(data).hexdigest()
+        actual["sha256"] = digest
+        if digest.lower() != sha256.lower():
+            return (False, f"sha256 {digest} != expected {sha256}", actual)
+    if contains is not None:
+        text = data.decode("utf-8", errors="replace")
+        if contains not in text:
+            return (False, f"text {contains!r} not found in file", actual)
+    return (True, "file matches all checks", actual)
+
+
+def assert_file(path: str,
+                exists: bool = True,
+                contains: Optional[str] = None,
+                sha256: Optional[str] = None,
+                min_size: Optional[int] = None,
+                raise_on_fail: bool = True) -> AssertionResult:
+    """Assert a file's state — existence, substring, SHA-256, or minimum size.
+
+    Verifies the outcome of a download / export / log write without a GUI.
+    The path is resolved with :func:`os.path.realpath` before any I/O so
+    relative and symlinked inputs are normalised. When ``exists`` is False
+    the assertion passes only when the file is absent (every other check is
+    skipped). Extra checks (``contains`` / ``sha256`` / ``min_size``) are
+    evaluated only when the file is present and expected to exist.
+    """
+    import os
+    resolved = Path(os.path.realpath(path))
+    passed, detail, actual = _evaluate_file(
+        resolved, exists, contains, sha256, min_size,
+    )
+    message = (
+        f"assert_file passed: {path!r} — {detail}"
+        if passed else
+        f"assert_file failed: {path!r} — {detail}"
+    )
+    return _finalize(
+        "file", passed, message,
+        expected={"path": path, "exists": exists, "contains": contains,
+                  "sha256": sha256, "min_size": min_size},
+        actual=actual, raise_on_fail=raise_on_fail, capture_on_fail=False,
+    )
+
+
+def _http_probe(url: str, timeout: float, method: str
+                ) -> tuple[int, str]:
+    """Issue an HTTP(S) request, returning (status_code, body_text)."""
+    import urllib.error
+    import urllib.request
+    scheme = url.split("://", 1)[0].lower() if "://" in url else ""
+    if scheme not in ("http", "https"):
+        raise AutoControlAssertionException(
+            f"assert_http: only http/https URLs allowed, got {url!r}"
+        )
+    request = urllib.request.Request(url, method=method.upper())
+    try:
+        with urllib.request.urlopen(  # nosec B310  # reason: scheme allow-listed
+                request, timeout=float(timeout)) as response:
+            body = response.read().decode("utf-8", errors="replace")
+            return int(response.status), body
+    except urllib.error.HTTPError as error:
+        body = ""
+        try:
+            body = error.read().decode("utf-8", errors="replace")
+        except (OSError, ValueError):
+            body = ""
+        return int(error.code), body
+
+
+def assert_http(url: str,
+                status: int = 200,
+                contains: Optional[str] = None,
+                timeout: float = 10.0,
+                method: str = "GET",
+                raise_on_fail: bool = True) -> AssertionResult:
+    """Assert an HTTP(S) endpoint returns ``status`` (and optional body text).
+
+    Drives backend health / readiness checks from an automation flow — pair
+    it with :func:`assert_eventually` to poll an endpoint until it comes up.
+    Only ``http``/``https`` URLs are accepted; the request always uses an
+    explicit ``timeout``. A connection failure (DNS / refused / timeout)
+    counts as a failed assertion rather than crashing the script.
+    """
+    import urllib.error
+    actual: Dict[str, Any] = {}
+    try:
+        code, body = _http_probe(url, timeout, method)
+    except urllib.error.URLError as error:
+        passed = False
+        actual = {"error": str(error.reason)}
+        message = f"assert_http failed: {url!r} unreachable — {error.reason}"
+        return _finalize(
+            "http", passed, message,
+            expected={"url": url, "status": status, "contains": contains},
+            actual=actual, raise_on_fail=raise_on_fail, capture_on_fail=False,
+        )
+    actual = {"status": code}
+    status_ok = (code == int(status))
+    body_ok = (contains is None) or (contains in body)
+    passed = status_ok and body_ok
+    if passed:
+        message = f"assert_http passed: {url!r} returned {code}"
+    elif not status_ok:
+        message = f"assert_http failed: {url!r} returned {code}, expected {status}"
+    else:
+        message = f"assert_http failed: {url!r} body missing {contains!r}"
+    return _finalize(
+        "http", passed, message,
+        expected={"url": url, "status": status, "contains": contains},
+        actual=actual, raise_on_fail=raise_on_fail, capture_on_fail=False,
+    )
+
+
+def _running_process_names(name_contains: str) -> List[str]:
+    """Return the names of running processes matching ``name_contains``."""
+    try:
+        import psutil  # type: ignore[import-untyped]
+    except ImportError as error:
+        raise AutoControlAssertionException(
+            "assert_process requires psutil — pip install psutil"
+        ) from error
+    needle = name_contains.lower()
+    names: List[str] = []
+    for proc in psutil.process_iter(["name"]):
+        name = (proc.info or {}).get("name") or ""
+        if needle in name.lower():
+            names.append(name)
+    return names
+
+
+def assert_process(name: str,
+                   running: bool = True,
+                   raise_on_fail: bool = True,
+                   capture_on_fail: bool = False) -> AssertionResult:
+    """Assert a process whose name contains ``name`` is (not) running.
+
+    Useful for confirming a launched application actually started, or that
+    a killed/closed process really exited. Requires ``psutil``.
+
+    :param running: when True a matching process must exist; when False the
+        assertion passes only when no matching process is running.
+    """
+    matches = _running_process_names(name)
+    found = bool(matches)
+    passed = (found == running)
+    state = "running" if running else "not running"
+    message = (
+        f"assert_process passed: a process matching {name!r} is {state}"
+        if passed else
+        f"assert_process failed: expected a process matching {name!r} to "
+        f"be {state}; matches={matches}"
+    )
+    return _finalize(
+        "process", passed, message,
+        expected={"name": name, "running": running},
+        actual=matches, raise_on_fail=raise_on_fail,
+        capture_on_fail=capture_on_fail,
+    )
+
+
 def _window_titles() -> List[str]:
     """Return the titles of every visible top-level window."""
     from je_auto_control.wrapper.auto_control_window import list_windows

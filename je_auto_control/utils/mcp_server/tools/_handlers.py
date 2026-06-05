@@ -680,6 +680,17 @@ def scale_coordinates(actions: List[Any], x_factor: float = 1.0,
                   y_factor=float(y_factor))
 
 
+def dedupe_moves(actions: List[Any],
+                 move_commands: Optional[List[str]] = None) -> List[Any]:
+    from je_auto_control.utils.recording_edit.editor import dedupe_moves as _dedupe
+    return _dedupe(actions, move_commands=move_commands)
+
+
+def merge_sleeps(actions: List[Any]) -> List[Any]:
+    from je_auto_control.utils.recording_edit.editor import merge_sleeps as _merge
+    return _merge(actions)
+
+
 # === Semantic locators (a11y / VLM) =========================================
 
 def a11y_list(app_name: Optional[str] = None,
@@ -1655,6 +1666,81 @@ def assert_window(title: str,
         title, exists=bool(exists), ignore_case=bool(ignore_case),
         raise_on_fail=bool(raise_on_fail),
         capture_on_fail=bool(capture_on_fail),
+    ).to_dict()
+
+
+def assert_clipboard(text: str,
+                     mode: str = "equals",
+                     ignore_case: bool = False,
+                     present: bool = True,
+                     raise_on_fail: bool = True,
+                     capture_on_fail: bool = False) -> Dict[str, Any]:
+    from je_auto_control.utils.assertion import assert_clipboard as _assert
+    return _assert(
+        text, mode=mode, ignore_case=bool(ignore_case),
+        present=bool(present), raise_on_fail=bool(raise_on_fail),
+        capture_on_fail=bool(capture_on_fail),
+    ).to_dict()
+
+
+def assert_process(name: str,
+                   running: bool = True,
+                   raise_on_fail: bool = True,
+                   capture_on_fail: bool = False) -> Dict[str, Any]:
+    from je_auto_control.utils.assertion import assert_process as _assert
+    return _assert(
+        name, running=bool(running), raise_on_fail=bool(raise_on_fail),
+        capture_on_fail=bool(capture_on_fail),
+    ).to_dict()
+
+
+def assert_file(path: str,
+                exists: bool = True,
+                contains: Optional[str] = None,
+                sha256: Optional[str] = None,
+                min_size: Optional[int] = None,
+                raise_on_fail: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.assertion import assert_file as _assert
+    return _assert(
+        path, exists=bool(exists), contains=contains, sha256=sha256,
+        min_size=None if min_size is None else int(min_size),
+        raise_on_fail=bool(raise_on_fail),
+    ).to_dict()
+
+
+def assert_http(url: str,
+                status: int = 200,
+                contains: Optional[str] = None,
+                timeout: float = 10.0,
+                method: str = "GET",
+                raise_on_fail: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.assertion import assert_http as _assert
+    return _assert(
+        url, status=int(status), contains=contains, timeout=float(timeout),
+        method=method, raise_on_fail=bool(raise_on_fail),
+    ).to_dict()
+
+
+def assert_all(specs: List[Dict[str, Any]],
+               raise_on_fail: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.assertion import assert_all as _assert
+    return _assert(specs, raise_on_fail=bool(raise_on_fail)).to_dict()
+
+
+def assert_any(specs: List[Dict[str, Any]],
+               raise_on_fail: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.assertion import assert_any as _assert
+    return _assert(specs, raise_on_fail=bool(raise_on_fail)).to_dict()
+
+
+def assert_eventually(spec: Dict[str, Any],
+                      timeout: float = 5.0,
+                      interval: float = 0.25,
+                      raise_on_fail: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.assertion import assert_eventually as _assert
+    return _assert(
+        spec, timeout=float(timeout), interval=float(interval),
+        raise_on_fail=bool(raise_on_fail),
     ).to_dict()
 
 

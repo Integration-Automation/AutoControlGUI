@@ -67,7 +67,9 @@ an `ac_*` MCP tool, and a Qt GUI tab. Full reference page:
 [`docs/source/Eng/doc/new_features/v3_features_doc.rst`](docs/source/Eng/doc/new_features/v3_features_doc.rst).
 
 **Assertions**
-- **Assertion DSL** — verify screen state instead of only driving it: `assert_text` (OCR, `regex` + `present=False` for absence), `assert_image`, `assert_pixel`, `assert_window`. Returns an `AssertionResult`; raises `AutoControlAssertionException` on mismatch with optional failure screenshot (`AC_assert_text / _image / _pixel / _window`).
+- **Assertion DSL** — verify screen state instead of only driving it: `assert_text` (OCR, `regex` + `present=False` for absence), `assert_image`, `assert_pixel`, `assert_window`, `assert_clipboard` (`equals` / `contains` / `regex`, `present=False` to confirm a secret was cleared), `assert_process` (a named process is / isn't running, via psutil). Returns an `AssertionResult`; raises `AutoControlAssertionException` on mismatch with optional failure screenshot (`AC_assert_text / _image / _pixel / _window / _clipboard / _process`).
+- **Off-screen assertions** — `assert_file` (existence / substring / SHA-256 / minimum size — verify a download or export) and `assert_http` (an http/https endpoint returns a status + optional body text, always with an explicit timeout). Both extend the DSL beyond the screen and plug into the combinators below (`AC_assert_file / AC_assert_http`).
+- **Assertion combinators** — `assert_all([...specs])` runs a batch as *soft assertions* (every spec is checked, all failures collected before raising) and returns a `GroupAssertionResult`; `assert_any([...specs])` is the OR-complement (passes when at least one spec passes, short-circuiting — e.g. *either* a success dialog *or* a redirect confirms a login); `assert_eventually(spec, timeout, interval)` retries one declarative assertion spec until it passes or times out (e.g. poll a health endpoint until it returns 200, or wait for a download file to appear). Both are spec-driven (`{"kind": "text", "text": "Saved"}`, `{"kind": "http", "url": "..."}`) so they work identically from Python, JSON, and MCP across every assertion kind — text/image/pixel/window/clipboard/process/file/http (`AC_assert_all / AC_assert_eventually`).
 - **Media assertions** — `assert_audio_activity` (record + RMS threshold for sound vs silence) and `assert_video_changes` (mean frame-to-frame diff over a segment for motion vs static); pure numeric cores, lazy `sounddevice` / OpenCV (`AC_assert_audio / AC_assert_video_changes`).
 
 **Data-driven execution**
@@ -147,7 +149,7 @@ sense) a Qt GUI tab. Full reference page:
 - **AI Element Locator (VLM)** — describe a UI element in plain language and let a vision-language model (Anthropic / OpenAI) find its screen coordinates
 - **OCR** — extract text from screen regions through three pluggable backends (Tesseract for ASCII, EasyOCR for CJK without an external binary, PaddleOCR for highest-quality Chinese / Japanese / Korean). Single unified API + canonical language codes; backend chosen by `backend=` kwarg, `AUTOCONTROL_OCR_BACKEND` env var, or auto-detection. Wait for, click, or locate rendered text; regex search and full-region dump
 - **LLM Action Planner** — translate a plain-language description into a validated `AC_*` action list using Claude
-- **Runtime Variables & Control Flow** — `${var}` substitution at execution time, plus `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` for data-driven scripts
+- **Runtime Variables & Control Flow** — `${var}` substitution at execution time, plus `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_while_var` / `AC_retry` / `AC_try` for data-driven scripts. `AC_while_var` loops while a variable comparison holds (re-checked each iteration, `max_iter` safety cap). `AC_try` adds try/catch/finally: when `body` fails it runs the `catch` recovery branch instead of aborting, always runs `finally`, exposes the error to `error_var`, and can `reraise` after cleanup (loop `break`/`continue` still propagate through it)
 - **Remote Desktop** — stream this machine's screen and accept remote input over a token-authenticated TCP protocol, *or* connect to another machine and view + control it (host + viewer GUIs included). Optional TLS (HTTPS-grade encryption), WebSocket transport (ws:// + wss:// for browser / firewall-friendly clients), persistent 9-digit Host ID, host→viewer audio streaming, bidirectional clipboard sync (text + image), and chunked file transfer (drag-drop + progress bar; arbitrary destination path; no size cap). Plus folder sync (additive mirror — local deletions never propagate) and a self-hosted coturn TURN config bundle generator (turnserver.conf + systemd unit + docker-compose + README). **AnyDesk-style popout**: when the viewer authenticates, the live remote desktop opens in its own resizable top-level window so the control panel stays uncluttered. The Remote Desktop tabs are wrapped in `QScrollArea` so the panel stays usable on small windows and stretches edge-to-edge on 4K displays. Driveable headlessly via `je_auto_control` and over MCP through the new `ac_remote_*` tools
 - **Driver-level input backends (opt-in)** — for games / apps that ignore SendInput (Win) or XTest (Linux): **Interception driver backend** for Windows (HID-layer keyboard / mouse injection via Oblita's WHQL-signed driver, opt-in via `JE_AUTOCONTROL_WIN32_BACKEND=interception`), **uinput backend** for Linux (kernel `/dev/uinput` synthetic HID device, opt-in via `JE_AUTOCONTROL_LINUX_BACKEND=uinput`), and **ViGEm virtual gamepad** for Windows games that read controllers (virtual Xbox 360 pad with friendly button / dpad / stick / trigger API, exposed as `AC_gamepad_*` executor commands and `ac_gamepad_*` MCP tools). All three fall back gracefully when the driver isn't installed, so existing deployments keep working unchanged
 - **Clipboard** — read/write system clipboard text on Windows, macOS, and Linux
@@ -973,9 +975,16 @@ time.sleep(10)  # Record for 10 seconds
 # Stop recording and get the action list
 actions = je_auto_control.stop_record()
 
+# Clean up the recording before replay: collapse runs of consecutive
+# mouse-move samples into their final position (often shrinks a raw
+# recording by an order of magnitude without changing replay behaviour)
+actions = je_auto_control.dedupe_moves(actions)
+
 # Replay the recorded actions
 je_auto_control.execute_action(actions)
 ```
+
+> Non-destructive recording editors (all return a new list): `dedupe_moves` (collapse mouse-move runs), `merge_sleeps` (sum consecutive `AC_sleep` runs), `trim_actions`, `insert_action`, `remove_action`, `filter_actions`, `adjust_delays` (scale `AC_sleep` delays), `scale_coordinates` (replay at a different resolution). Exposed over MCP as `ac_dedupe_moves` / `ac_merge_sleeps` / `ac_trim_actions` / `ac_adjust_delays` / `ac_scale_coordinates`.
 
 ### JSON Action Scripting
 
@@ -1020,7 +1029,7 @@ je_auto_control.execute_action([
 | LLM planner | `AC_llm_plan`, `AC_llm_run` |
 | Clipboard | `AC_clipboard_get`, `AC_clipboard_set` |
 | Window | `AC_list_windows`, `AC_focus_window`, `AC_wait_window`, `AC_close_window` |
-| Flow control | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_if_var`, `AC_while_image`, `AC_for_each`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry` |
+| Flow control | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_if_var`, `AC_while_image`, `AC_while_var`, `AC_for_each`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry`, `AC_try` |
 | Variables | `AC_set_var`, `AC_get_var`, `AC_inc_var` |
 | Remote desktop | `AC_start_remote_host`, `AC_stop_remote_host`, `AC_remote_host_status`, `AC_remote_connect`, `AC_remote_disconnect`, `AC_remote_viewer_status`, `AC_remote_send_input` |
 | Record | `AC_record`, `AC_stop_record`, `AC_set_record_enable` |
