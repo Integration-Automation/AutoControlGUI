@@ -10,8 +10,14 @@ from je_auto_control.utils.test_suite import (
     write_allure_results, write_junit_xml,
 )
 
-_PASS = ["AC_assert_window", {"title": "zzz_no_window", "exists": False}]
-_FAIL = ["AC_assert_window", {"title": "zzz_no_window", "exists": True}]
+# Use a filesystem assertion so the pass/fail outcome is deterministic on
+# every platform. ``AC_assert_window`` is Windows-only (it raises
+# NotImplementedError on macOS / Linux CI, which the suite runner scores as
+# *error* rather than pass/fail); ``AC_assert_file`` only touches the
+# filesystem and raises ``AutoControlAssertionException`` on mismatch.
+_MISSING_FILE = "zzz_no_such_dir_qa/zzz_no_such_file.tmp"
+_PASS = ["AC_assert_file", {"path": _MISSING_FILE, "exists": False}]
+_FAIL = ["AC_assert_file", {"path": _MISSING_FILE, "exists": True}]
 
 
 def _spec():
