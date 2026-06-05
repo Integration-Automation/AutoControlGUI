@@ -111,6 +111,95 @@ _ENDPOINT_METADATA: Dict[Tuple[str, str], Dict[str, Any]] = {
              "schema": {"type": "integer"}},
         ],
     },
+    ("GET", "/usb/passthrough/status"): {
+        "summary": "Report whether USB passthrough is enabled.",
+        "tag": "usb",
+    },
+    ("POST", "/usb/passthrough/enable"): {
+        "summary": "Toggle the USB passthrough feature flag (default off).",
+        "tag": "usb",
+        "request_body": {
+            "type": "object",
+            "properties": {"enabled": {"type": "boolean"}},
+        },
+    },
+    ("GET", "/usb/acl"): {
+        "summary": "List USB ACL rules, default policy, and integrity state.",
+        "tag": "usb",
+    },
+    ("POST", "/usb/acl/add"): {
+        "summary": "Add a per-device USB ACL rule.",
+        "tag": "usb",
+        "request_body": {
+            "type": "object",
+            "required": ["vendor_id", "product_id"],
+            "properties": {
+                "vendor_id": {"type": "string"},
+                "product_id": {"type": "string"},
+                "serial": {"type": "string"},
+                "allow": {"type": "boolean"},
+                "prompt_on_open": {"type": "boolean"},
+                "label": {"type": "string"},
+            },
+        },
+    },
+    ("POST", "/usb/acl/remove"): {
+        "summary": "Remove a per-device USB ACL rule.",
+        "tag": "usb",
+        "request_body": {
+            "type": "object",
+            "required": ["vendor_id", "product_id"],
+            "properties": {
+                "vendor_id": {"type": "string"},
+                "product_id": {"type": "string"},
+                "serial": {"type": "string"},
+            },
+        },
+    },
+    ("POST", "/usb/acl/default"): {
+        "summary": "Set the USB ACL default policy (allow | deny).",
+        "tag": "usb",
+        "request_body": {
+            "type": "object",
+            "required": ["policy"],
+            "properties": {"policy": {"type": "string",
+                                      "enum": ["allow", "deny"]}},
+        },
+    },
+    ("GET", "/usb/loopback/devices"): {
+        "summary": "List ACL-visible devices over the loopback channel.",
+        "tag": "usb",
+    },
+    ("POST", "/usb/loopback/open"): {
+        "summary": "Claim a local device over loopback; read its descriptor.",
+        "tag": "usb",
+        "request_body": {
+            "type": "object",
+            "required": ["vendor_id", "product_id"],
+            "properties": {
+                "vendor_id": {"type": "string"},
+                "product_id": {"type": "string"},
+                "serial": {"type": "string"},
+            },
+        },
+    },
+    ("GET", "/usb/remote/devices"): {
+        "summary": "List the remote host's devices over the live WebRTC channel.",
+        "tag": "usb",
+    },
+    ("POST", "/usb/remote/open"): {
+        "summary": "Claim a remote device over the live WebRTC channel; probe it.",
+        "tag": "usb",
+        "request_body": {
+            "type": "object",
+            "required": ["vendor_id", "product_id"],
+            "properties": {
+                "vendor_id": {"type": "string"},
+                "product_id": {"type": "string"},
+                "serial": {"type": "string"},
+            },
+        },
+    },
     ("GET", "/diagnose"): {
         "summary": "Run subsystem diagnostics; return per-check results.",
         "tag": "system",

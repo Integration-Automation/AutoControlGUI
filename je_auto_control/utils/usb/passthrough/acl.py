@@ -30,13 +30,36 @@ matching rule wins. If no rule matches, the file's ``default`` applies
 * ``"prompt"`` — defer to the host operator. The session will call
   the ``prompt_callback`` and treat its return value as the decision.
 
-File integrity (HMAC / keychain signing) is intentionally out of scope
-for Phase 2d — see the design doc's "open question 8".
+File integrity (open question 8) — RESOLVED in Phase 2d.1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ACL file is protected by an HMAC-SHA256 signature written to a
+sidecar ``<acl>.sig`` file. On load, the signature is verified against
+the file bytes; a mismatch makes the ACL fail closed (default-deny,
+``integrity_ok`` False) so a process that silently rewrites the JSON
+cannot grant itself access without also forging the signature.
+
+The signing key is pluggable so deployments can derive it from a
+platform keychain: pass ``hmac_key=<bytes>`` to the constructor. When
+no key is supplied, a 32-byte random key is generated once and stored
+next to the ACL as ``<acl>.key`` (mode ``0o600`` on POSIX). This raises
+the bar against naive tampering; a same-user process that can read the
+key file can still forge a signature, which is why keychain-derived
+keys are recommended for high-assurance deployments (see the operator
+guide).
+
+Files written before signing existed are treated as *legacy unsigned*:
+they still load (so upgrades don't lock operators out) but a signature
+is written on the next save. Pass ``require_signature=True`` to refuse
+unsigned files outright.
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
+import secrets
 import threading
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -49,6 +72,9 @@ _ACL_VERSION = 1
 _DEFAULT_PATH_RELATIVE = ".je_auto_control/usb_acl.json"
 _VALID_DEFAULTS = frozenset({"allow", "deny"})
 _VALID_DECISIONS = frozenset({"allow", "deny", "prompt"})
+_SIG_SUFFIX = ".sig"
+_KEY_SUFFIX = ".key"
+_KEY_BYTES = 32
 
 
 def default_acl_path() -> Path:
@@ -100,8 +126,15 @@ class UsbAcl:
     """Persistent per-device allow-list."""
 
     def __init__(self, *, path: Optional[Path] = None,
-                 default_policy: str = "deny") -> None:
+                 default_policy: str = "deny",
+                 hmac_key: Optional[bytes] = None,
+                 require_signature: bool = False) -> None:
         self._path = Path(path) if path is not None else default_acl_path()
+        self._sig_path = self._path.with_name(self._path.name + _SIG_SUFFIX)
+        self._key_path = self._path.with_name(self._path.name + _KEY_SUFFIX)
+        self._explicit_key = bytes(hmac_key) if hmac_key is not None else None
+        self._require_signature = bool(require_signature)
+        self._integrity_ok = True
         self._lock = threading.Lock()
         if default_policy not in _VALID_DEFAULTS:
             raise ValueError(
@@ -114,6 +147,11 @@ class UsbAcl:
     @property
     def path(self) -> Path:
         return self._path
+
+    @property
+    def integrity_ok(self) -> bool:
+        """False once a signature mismatch was seen on load."""
+        return self._integrity_ok
 
     @property
     def default_policy(self) -> str:
@@ -146,6 +184,47 @@ class UsbAcl:
             self._save()
         return removed
 
+    def export_rules(self) -> dict:
+        """Return a portable snapshot (no signature/key) for sharing/backup."""
+        with self._lock:
+            return {
+                "version": _ACL_VERSION,
+                "default": self._state.default,
+                "rules": [r.to_dict() for r in self._state.rules],
+            }
+
+    def import_rules(self, payload: dict, *, replace: bool = False,
+                     persist: bool = True) -> int:
+        """Merge (or replace) rules from an exported snapshot.
+
+        Returns the number of rules imported. Validates the schema; an
+        unsupported version raises ``ValueError``. With ``replace=True``
+        the existing rules and default policy are overwritten, otherwise
+        imported rules are appended. Re-signs the file on persist.
+        """
+        if not isinstance(payload, dict):
+            raise ValueError("import payload must be a JSON object")
+        if int(payload.get("version", 0)) != _ACL_VERSION:
+            raise ValueError(
+                f"unsupported ACL version {payload.get('version')!r}",
+            )
+        raw_rules = payload.get("rules", [])
+        if not isinstance(raw_rules, list):
+            raise ValueError("'rules' must be a list")
+        imported = [AclRule.from_dict(r) for r in raw_rules
+                    if isinstance(r, dict)]
+        with self._lock:
+            if replace:
+                default = str(payload.get("default", self._state.default))
+                if default not in _VALID_DEFAULTS:
+                    default = "deny"
+                self._state = _AclState(default=default, rules=list(imported))
+            else:
+                self._state.rules.extend(imported)
+        if persist:
+            self._save()
+        return len(imported)
+
     def set_default_policy(self, policy: str, *, persist: bool = True) -> None:
         if policy not in _VALID_DEFAULTS:
             raise ValueError(
@@ -168,14 +247,107 @@ class UsbAcl:
                     return "allow" if rule.allow else "deny"
             return self._state.default
 
+    def verify_integrity(self) -> bool:
+        """Re-check the on-disk signature; True if intact or no file."""
+        try:
+            raw = self._path.read_bytes()
+        except OSError:
+            return True
+        return self._verify_signature(raw)
+
+    # --- Integrity (HMAC) --------------------------------------------------
+
+    def _resolve_key(self, *, create: bool) -> Optional[bytes]:
+        """Return the HMAC key, optionally generating + persisting one."""
+        if self._explicit_key is not None:
+            return self._explicit_key
+        try:
+            if self._key_path.exists():
+                return self._key_path.read_bytes()
+            if not create:
+                return None
+            key = secrets.token_bytes(_KEY_BYTES)
+            self._key_path.parent.mkdir(parents=True, exist_ok=True)
+            self._key_path.write_bytes(key)
+            if os.name == "posix":
+                os.chmod(self._key_path, 0o600)
+            return key
+        except OSError as error:
+            autocontrol_logger.warning(
+                "usb acl key access %s failed: %r", self._key_path, error,
+            )
+            return None
+
+    @staticmethod
+    def _compute_sig(data: bytes, key: bytes) -> str:
+        return hmac.new(key, data, hashlib.sha256).hexdigest()
+
+    def _verify_signature(self, raw: bytes) -> bool:
+        """True iff ``raw`` matches the sidecar signature (or is legacy)."""
+        if not self._sig_path.exists():
+            if self._require_signature:
+                autocontrol_logger.warning(
+                    "usb acl %s unsigned and require_signature set — deny",
+                    self._path,
+                )
+                return False
+            autocontrol_logger.info(
+                "usb acl %s has no signature (legacy/unsigned)", self._path,
+            )
+            return True
+        key = self._resolve_key(create=False)
+        if key is None:
+            autocontrol_logger.warning(
+                "usb acl signature present but key unavailable for %s",
+                self._path,
+            )
+            return False
+        try:
+            expected = self._sig_path.read_text(encoding="utf-8").strip()
+        except OSError as error:
+            autocontrol_logger.warning(
+                "usb acl signature read %s failed: %r", self._sig_path, error,
+            )
+            return False
+        return hmac.compare_digest(expected, self._compute_sig(raw, key))
+
+    def _write_signature(self, data: bytes) -> None:
+        key = self._resolve_key(create=True)
+        if key is None:
+            return
+        try:
+            self._sig_path.write_text(
+                self._compute_sig(data, key), encoding="utf-8",
+            )
+            if os.name == "posix":
+                os.chmod(self._sig_path, 0o600)
+        except OSError as error:
+            autocontrol_logger.warning(
+                "usb acl signature write %s failed: %r", self._sig_path, error,
+            )
+
     # --- Persistence -------------------------------------------------------
 
     def _load(self) -> None:
         try:
-            payload = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as error:
+            raw = self._path.read_bytes()
+        except OSError as error:
             autocontrol_logger.warning(
                 "usb acl load %s failed: %r", self._path, error,
+            )
+            return
+        if not self._verify_signature(raw):
+            self._integrity_ok = False
+            autocontrol_logger.warning(
+                "usb acl signature mismatch for %s — refusing to load "
+                "(fail closed, default-deny)", self._path,
+            )
+            return
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except ValueError as error:
+            autocontrol_logger.warning(
+                "usb acl parse %s failed: %r", self._path, error,
             )
             return
         try:
@@ -209,20 +381,42 @@ class UsbAcl:
                 "default": self._state.default,
                 "rules": [r.to_dict() for r in self._state.rules],
             }
+        data = json.dumps(
+            payload, indent=2, ensure_ascii=False,
+        ).encode("utf-8")
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
-            self._path.write_text(
-                json.dumps(payload, indent=2, ensure_ascii=False),
-                encoding="utf-8",
-            )
+            self._path.write_bytes(data)
             if os.name == "posix":
                 os.chmod(self._path, 0o600)
         except OSError as error:
             autocontrol_logger.warning(
                 "usb acl save %s failed: %r", self._path, error,
             )
+            return
+        # A freshly written file is, by definition, intact again.
+        self._write_signature(data)
+        self._integrity_ok = True
 
 
 __all__ = [
     "AclRule", "UsbAcl", "default_acl_path",
 ]
+
+
+def export_acl_to_file(acl: "UsbAcl", path: Path) -> None:
+    """Write ``acl``'s rules to ``path`` as plain JSON (no signature)."""
+    Path(path).write_text(
+        json.dumps(acl.export_rules(), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def import_acl_from_file(acl: "UsbAcl", path: Path, *,
+                         replace: bool = False) -> int:
+    """Load rules from ``path`` into ``acl``; return the number imported."""
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    return acl.import_rules(payload, replace=replace)
+
+
+__all__ += ["export_acl_to_file", "import_acl_from_file"]

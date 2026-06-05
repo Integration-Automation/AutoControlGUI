@@ -363,11 +363,42 @@ over a list while the body sees the current item.
        }],
    ])
 
-Comparison operators for ``AC_if_var``: ``eq``, ``ne``, ``lt``, ``le``,
-``gt``, ``ge``, ``contains``, ``startswith``, ``endswith``.
+Comparison operators for ``AC_if_var`` (and ``AC_while_var``): ``eq``,
+``ne``, ``lt``, ``le``, ``gt``, ``ge``, ``contains``, ``startswith``,
+``endswith``.
+
+``AC_while_var`` loops a ``body`` while a variable comparison holds. The
+condition is re-evaluated against the live scope before every iteration,
+so a body that mutates the variable (e.g. ``AC_inc_var``) terminates the
+loop; ``max_iter`` (default 1000) caps a condition that never turns
+false. ``AC_break`` / ``AC_continue`` work as in any loop::
+
+   executor.execute_action([
+       ["AC_set_var", {"name": "i", "value": 0}],
+       ["AC_while_var", {
+           "name": "i", "op": "lt", "value": 5,
+           "body": [["AC_inc_var", {"name": "i"}]],
+       }],
+   ])
+
+``AC_try`` adds try / catch / finally. When ``body`` raises, the
+``catch`` branch runs instead of aborting the script; ``finally`` always
+runs (on success, on a caught error, or while a ``reraise`` / loop
+break/continue propagates). The error text is exposed to ``error_var``
+for the ``catch`` branch to inspect, and ``reraise=true`` re-raises after
+cleanup::
+
+   executor.execute_action([
+       ["AC_try", {
+           "body": [["AC_click_image", {"image": "dialog_ok.png"}]],
+           "catch": [["AC_set_var", {"name": "dismissed", "value": False}]],
+           "finally": [["AC_screenshot", {"file_path": "after.png"}]],
+           "error_var": "err",
+       }],
+   ])
 
 Action-JSON commands: ``AC_set_var``, ``AC_get_var``, ``AC_inc_var``,
-``AC_if_var``, ``AC_for_each``.
+``AC_if_var``, ``AC_for_each``, ``AC_while_var``, ``AC_try``.
 
 GUI: **Variables** tab — live view of ``executor.variables`` with
 single-set, JSON seed, and clear-all controls; reflects what

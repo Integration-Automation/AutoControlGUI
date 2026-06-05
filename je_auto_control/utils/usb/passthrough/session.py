@@ -5,10 +5,10 @@ the ``usb`` DataChannel are passed to ``handle_frame()``; replies are
 returned as a list of frames the caller is expected to send back over
 the same channel.
 
-Phase 2a.1 implements OPEN/OPENED, CLOSE/CLOSED, and the three transfer
-opcodes (CTRL/BULK/INT) plus a CREDIT-based inbound flow control.
-``LIST`` responses, viewer-side flow control, and the actual viewer
-client stay TODO for later phases.
+Handles OPEN/OPENED, CLOSE/CLOSED, the three transfer opcodes
+(CTRL/BULK/INT) with CREDIT-based inbound flow control, and
+LIST-over-channel (ACL-filtered). Oversize replies are fragmented with
+``FLAG_EOF``. The symmetric viewer side lives in ``viewer_client``.
 
 OPEN payload (UTF-8 JSON)::
 
@@ -59,7 +59,9 @@ from __future__ import annotations
 
 import base64
 import json
+import secrets
 import threading
+import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
@@ -67,26 +69,65 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.usb.passthrough.acl import UsbAcl
 from je_auto_control.utils.usb.passthrough.backend import UsbBackend, UsbHandle
 from je_auto_control.utils.usb.passthrough.protocol import (
-    Frame, Opcode,
+    Frame, Opcode, fragment_payload,
 )
 
 
 _DEFAULT_MAX_CLAIMS = 4
 _DEFAULT_INITIAL_CREDITS = 16
 _TOPUP_PER_REPLY = 1
+# Abuse tracking: a viewer that provokes this many protocol failures
+# faster than they decay gets locked out for a cool-down. Tuned so
+# normal operation (the odd bad frame) never trips it.
+_ABUSE_MAX_STRIKES = 20.0
+_ABUSE_DECAY_PER_S = 5.0
+_ABUSE_LOCKOUT_S = 5.0
 
 
 class SessionError(Exception):
     """Raised on session-level invariant violations (not protocol parse errors)."""
 
 
+class _AbuseTracker:
+    """Leaky-bucket strike counter that locks out a misbehaving peer."""
+
+    def __init__(self, *, max_strikes: float = _ABUSE_MAX_STRIKES,
+                 decay_per_s: float = _ABUSE_DECAY_PER_S,
+                 lockout_s: float = _ABUSE_LOCKOUT_S) -> None:
+        self._max = float(max_strikes)
+        self._decay = float(decay_per_s)
+        self._lockout_s = float(lockout_s)
+        self._strikes = 0.0
+        self._last = time.monotonic()
+        self._locked_until = 0.0
+        self._lock = threading.Lock()
+
+    def record_strike(self) -> bool:
+        """Count one protocol failure; return True if it triggers lockout."""
+        with self._lock:
+            now = time.monotonic()
+            self._strikes = max(0.0, self._strikes - (now - self._last) * self._decay)
+            self._last = now
+            self._strikes += 1.0
+            if self._strikes >= self._max:
+                self._locked_until = now + self._lockout_s
+                self._strikes = 0.0
+                return True
+            return False
+
+    def is_locked(self) -> bool:
+        with self._lock:
+            return time.monotonic() < self._locked_until
+
+
 @dataclass
 class _ClaimState:
-    """Per-claim handle + credit accounting."""
+    """Per-claim handle + credit accounting + resume token."""
 
     handle: UsbHandle
     inbound_credits: int = _DEFAULT_INITIAL_CREDITS
     outbound_credits: int = _DEFAULT_INITIAL_CREDITS
+    resume_token: str = ""
 
 
 class UsbPassthroughSession:
@@ -110,7 +151,9 @@ class UsbPassthroughSession:
         self._audit_log = audit_log  # Late-bound; resolved on first use.
         self._lock = threading.Lock()
         self._claims: Dict[int, _ClaimState] = {}
+        self._resume_index: Dict[str, int] = {}
         self._next_claim_id = 1
+        self._abuse = _AbuseTracker()
 
     @property
     def active_claim_count(self) -> int:
@@ -133,6 +176,7 @@ class UsbPassthroughSession:
         with self._lock:
             handles = [c.handle for c in self._claims.values()]
             self._claims.clear()
+            self._resume_index.clear()
         for handle in handles:
             try:
                 handle.close()
@@ -141,10 +185,26 @@ class UsbPassthroughSession:
                     "passthrough close_all: handle.close() raised %r", error,
                 )
 
+    def is_locked_out(self) -> bool:
+        """True while the peer is in a rate-limit cool-down."""
+        return self._abuse.is_locked()
+
     def handle_frame(self, frame: Frame) -> List[Frame]:
-        """Process one incoming frame; return zero or more reply frames."""
+        """Process one frame, with abuse tracking, and return replies."""
+        if self._abuse.is_locked():
+            return [_error_frame(frame.claim_id, "rate limited; locked out")]
+        replies = self._dispatch(frame)
+        if _is_misbehaviour(replies) and self._abuse.record_strike():
+            self._audit("usb_rate_limited", "?", "?", None,
+                        detail="viewer locked out for repeated failures")
+        return replies
+
+    def _dispatch(self, frame: Frame) -> List[Frame]:
+        """Route one incoming frame; return zero or more reply frames."""
         if frame.op == Opcode.OPEN:
             return [self._handle_open(frame)]
+        if frame.op == Opcode.RESUME:
+            return [self._handle_resume(frame)]
         if frame.op == Opcode.CLOSE:
             return [self._handle_close(frame)]
         if frame.op == Opcode.CTRL:
@@ -156,11 +216,47 @@ class UsbPassthroughSession:
         if frame.op == Opcode.CREDIT:
             self._handle_credit(frame)
             return []
-        if frame.op in (Opcode.OPENED, Opcode.CLOSED, Opcode.ERROR,
-                        Opcode.LIST):
+        if frame.op == Opcode.LIST:
+            return self._handle_list(frame)
+        if frame.op in (Opcode.OPENED, Opcode.CLOSED, Opcode.ERROR):
             # Responses we don't expect to receive on the host side here.
             return []
         return [_error_frame(frame.claim_id, f"unsupported opcode {frame.op}")]
+
+    # --- LIST ---------------------------------------------------------------
+
+    def _handle_list(self, frame: Frame) -> List[Frame]:
+        """Enumerate backend devices the ACL would not outright deny.
+
+        Resolves open question 3: the device list rides the same ``usb``
+        DataChannel as transfers instead of forcing a second REST round
+        trip. Devices the ACL denies are filtered out so the viewer never
+        learns they exist.
+        """
+        try:
+            devices = self._backend.list()
+        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: backends raise their own error types
+            return [_error_frame(frame.claim_id, f"list failed: {error}")]
+        visible = [
+            {
+                "vendor_id": dev.vendor_id,
+                "product_id": dev.product_id,
+                "serial": dev.serial,
+                "bus_location": dev.bus_location,
+            }
+            for dev in devices
+            if self._list_visible(dev.vendor_id, dev.product_id, dev.serial)
+        ]
+        payload = _encode_json_payload({"devices": visible})
+        return fragment_payload(Opcode.LIST, frame.claim_id, payload)
+
+    def _list_visible(self, vendor_id: str, product_id: str,
+                      serial: Optional[str]) -> bool:
+        if self._acl is None:
+            return True
+        return self._acl.decide(
+            vendor_id=vendor_id, product_id=product_id, serial=serial,
+        ) != "deny"
 
     # --- OPEN / CLOSE -------------------------------------------------------
 
@@ -196,6 +292,7 @@ class UsbPassthroughSession:
             self._audit("usb_open_backend_error", vendor_id, product_id,
                         serial, detail=str(error))
             return _opened_failure(frame.claim_id, str(error))
+        resume_token = secrets.token_hex(16)
         with self._lock:
             claim_id = self._next_claim_id
             self._next_claim_id = (self._next_claim_id % 0xFFFE) + 1
@@ -203,12 +300,42 @@ class UsbPassthroughSession:
                 handle=handle,
                 inbound_credits=self._initial_credits,
                 outbound_credits=self._initial_credits,
+                resume_token=resume_token,
             )
+            self._resume_index[resume_token] = claim_id
         self._audit("usb_open_allowed", vendor_id, product_id, serial,
                     detail=f"claim_id={claim_id}")
         return Frame(
             op=Opcode.OPENED, claim_id=claim_id,
-            payload=_encode_json_payload({"ok": True, "claim_id": claim_id}),
+            payload=_encode_json_payload({
+                "ok": True, "claim_id": claim_id,
+                "resume_token": resume_token,
+            }),
+        )
+
+    def _handle_resume(self, frame: Frame) -> Frame:
+        """Re-bind a still-open claim to a reconnecting viewer.
+
+        Resolves claim continuity (open question / Phase 2 resilience):
+        if the host session outlived a viewer transport drop, the viewer
+        replays its ``resume_token`` instead of re-OPENing, keeping the
+        device state and claim_id intact.
+        """
+        try:
+            token = str(_decode_json_payload(frame.payload)["resume_token"])
+        except (KeyError, ValueError, TypeError) as error:
+            return _opened_failure(frame.claim_id, f"bad RESUME payload: {error}")
+        with self._lock:
+            claim_id = self._resume_index.get(token)
+            claim = self._claims.get(claim_id) if claim_id is not None else None
+        if claim is None:
+            return _opened_failure(frame.claim_id, "unknown or expired resume token")
+        self._audit("usb_resume", "?", "?", None, detail=f"claim_id={claim_id}")
+        return Frame(
+            op=Opcode.OPENED, claim_id=claim_id,
+            payload=_encode_json_payload({
+                "ok": True, "claim_id": claim_id, "resume_token": token,
+            }),
         )
 
     def _acl_decision(self, vendor_id: str, product_id: str,
@@ -270,6 +397,8 @@ class UsbPassthroughSession:
     def _handle_close(self, frame: Frame) -> Frame:
         with self._lock:
             claim = self._claims.pop(int(frame.claim_id), None)
+            if claim is not None and claim.resume_token:
+                self._resume_index.pop(claim.resume_token, None)
         if claim is None:
             return _error_frame(
                 frame.claim_id, f"unknown claim_id {frame.claim_id}",
@@ -310,20 +439,18 @@ class UsbPassthroughSession:
             reply_payload = _encode_json_payload(
                 {"ok": False, "error": str(error)},
             )
-            return [
-                Frame(op=_reply_opcode(frame.op), claim_id=frame.claim_id,
-                      payload=reply_payload),
-                self._make_credit_frame(frame.claim_id, _TOPUP_PER_REPLY),
-            ]
-        reply_payload = _encode_json_payload({
-            "ok": True,
-            "data": base64.b64encode(result_bytes).decode("ascii"),
-        })
-        return [
-            Frame(op=_reply_opcode(frame.op), claim_id=frame.claim_id,
-                  payload=reply_payload),
-            self._make_credit_frame(frame.claim_id, _TOPUP_PER_REPLY),
-        ]
+        else:
+            reply_payload = _encode_json_payload({
+                "ok": True,
+                "data": base64.b64encode(result_bytes).decode("ascii"),
+            })
+        # Fragment so an oversize IN transfer (open question 2) spans
+        # multiple EOF-terminated frames instead of breaching the cap.
+        frames = fragment_payload(
+            _reply_opcode(frame.op), frame.claim_id, reply_payload,
+        )
+        frames.append(self._make_credit_frame(frame.claim_id, _TOPUP_PER_REPLY))
+        return frames
 
     def _handle_credit(self, frame: Frame) -> None:
         try:
@@ -407,6 +534,26 @@ _REPLY_OPCODES: Dict[Opcode, Opcode] = {
 
 def _reply_opcode(request_op: Opcode) -> Opcode:
     return _REPLY_OPCODES.get(request_op, Opcode.ERROR)
+
+
+def _is_misbehaviour(replies: List[Frame]) -> bool:
+    """True if the replies indicate a viewer-caused protocol failure.
+
+    Counts ERROR frames and failed OPENED replies as strikes; a device
+    transfer that fails at the backend (CTRL/BULK/INT with ok=false) is
+    the device's fault, not the viewer's, so it is not counted.
+    """
+    for reply in replies:
+        if reply.op == Opcode.ERROR:
+            return True
+        if reply.op == Opcode.OPENED:
+            try:
+                body = json.loads(reply.payload.decode("utf-8"))
+            except ValueError:
+                return True
+            if not body.get("ok"):
+                return True
+    return False
 
 
 def _decode_b64(value: Any) -> bytes:

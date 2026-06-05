@@ -52,12 +52,37 @@ def _interpolate_string(text: str, variables: Mapping[str, Any]) -> Any:
     )
 
 
+_MISSING = object()
+
+
+def _resolve_segment(value: Any, segment: str) -> Any:
+    """Index one path segment into a mapping or sequence; ``_MISSING`` if absent.
+
+    Only dict-key and list-index access are supported — never arbitrary
+    attribute access — so a dotted placeholder cannot reach into the host
+    object graph.
+    """
+    if isinstance(value, Mapping) and segment in value:
+        return value[segment]
+    if isinstance(value, (list, tuple)) and segment.isdigit():
+        index = int(segment)
+        if 0 <= index < len(value):
+            return value[index]
+    return _MISSING
+
+
 def _lookup(name: str, variables: Mapping[str, Any]) -> Any:
     if name.startswith(_VAULT_NAMESPACE):
         return _lookup_secret(name[len(_VAULT_NAMESPACE):])
-    if name not in variables:
+    base, _, path = name.partition(".")
+    if base not in variables:
         raise ValueError(f"Unknown variable: ${{{name}}}")
-    return variables[name]
+    value = variables[base]
+    for segment in filter(None, path.split(".")):
+        value = _resolve_segment(value, segment)
+        if value is _MISSING:
+            raise ValueError(f"Unknown variable: ${{{name}}}")
+    return value
 
 
 def _lookup_secret(secret_name: str) -> str:

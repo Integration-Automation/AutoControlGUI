@@ -39,6 +39,7 @@ class Opcode(enum.IntEnum):
     CREDIT = 0x07
     CLOSE = 0x08
     CLOSED = 0x09
+    RESUME = 0x0A
     ERROR = 0xFF
 
 
@@ -79,6 +80,30 @@ def encode_frame(frame: Frame) -> bytes:
     return header + bytes(frame.payload)
 
 
+def fragment_payload(op: "Opcode", claim_id: int, payload: bytes,
+                     *, base_flags: int = 0) -> list:
+    """Split ``payload`` into EOF-terminated frames (open question 2).
+
+    A payload that fits in a single frame yields exactly one frame with
+    :data:`FLAG_EOF` set. A larger payload is chunked at
+    :data:`MAX_PAYLOAD_BYTES`; every chunk but the last clears
+    ``FLAG_EOF`` and the receiver reassembles by concatenating payloads
+    of consecutive same-``claim_id`` frames until the EOF flag arrives.
+    """
+    data = bytes(payload)
+    frames = []
+    if not data:
+        return [Frame(op=op, flags=base_flags | FLAG_EOF,
+                      claim_id=claim_id, payload=b"")]
+    for start in range(0, len(data), MAX_PAYLOAD_BYTES):
+        chunk = data[start:start + MAX_PAYLOAD_BYTES]
+        is_last = start + MAX_PAYLOAD_BYTES >= len(data)
+        flags = base_flags | (FLAG_EOF if is_last else 0)
+        frames.append(Frame(op=op, flags=flags,
+                            claim_id=claim_id, payload=chunk))
+    return frames
+
+
 def decode_frame(data: bytes) -> Frame:
     """Parse one frame from ``data``; raise :class:`ProtocolError` on failure."""
     if not isinstance(data, (bytes, bytearray, memoryview)):
@@ -102,6 +127,6 @@ def decode_frame(data: bytes) -> Frame:
 
 __all__ = [
     "Frame", "Opcode", "ProtocolError",
-    "decode_frame", "encode_frame",
+    "decode_frame", "encode_frame", "fragment_payload",
     "MAX_PAYLOAD_BYTES", "HEADER_BYTES", "FLAG_EOF",
 ]

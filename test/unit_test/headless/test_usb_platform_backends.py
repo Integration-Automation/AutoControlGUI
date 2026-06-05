@@ -1,14 +1,18 @@
-"""Tests for the WinUSB / IOKit backend skeletons (round 42)."""
+"""Tests for the WinUSB / IOKit backends + the per-OS factory."""
 import platform
 
 import pytest
 
+from je_auto_control.utils.usb.passthrough import (
+    UsbBackend, default_passthrough_backend,
+)
 from je_auto_control.utils.usb.passthrough.winusb_backend import WinusbBackend
 from je_auto_control.utils.usb.passthrough.iokit_backend import IokitBackend
 
 
 _IS_WINDOWS = platform.system() == "Windows"
 _IS_DARWIN = platform.system() == "Darwin"
+_IS_LINUX = platform.system() == "Linux"
 
 
 # ---------------------------------------------------------------------------
@@ -76,14 +80,52 @@ def test_iokit_construct_rejects_non_darwin():
 
 
 @pytest.mark.skipif(not _IS_DARWIN, reason="Darwin-only path")
-def test_iokit_list_raises_not_implemented():
+def test_iokit_list_returns_a_list_without_crashing():
+    """Native IOKit enumeration walks the registry and returns a list
+    (possibly empty) with contract-mandated 4-hex-digit VID/PID."""
     backend = IokitBackend()
-    with pytest.raises(NotImplementedError):
-        backend.list()
+    result = backend.list()
+    assert isinstance(result, list)
+    for device in result:
+        assert isinstance(device.vendor_id, str)
+        assert isinstance(device.product_id, str)
+        assert len(device.vendor_id) == 4
+        assert len(device.product_id) == 4
 
 
 @pytest.mark.skipif(not _IS_DARWIN, reason="Darwin-only path")
-def test_iokit_open_raises_not_implemented():
+def test_iokit_open_absent_device_raises_runtime_error():
+    """open() delegates the claim to libusb; an absent VID/PID raises
+    RuntimeError (or a clear message if libusb isn't installed)."""
     backend = IokitBackend()
-    with pytest.raises(NotImplementedError):
-        backend.open(vendor_id="1050", product_id="0407")
+    with pytest.raises(RuntimeError):
+        backend.open(vendor_id="dead", product_id="beef")
+
+
+# ---------------------------------------------------------------------------
+# default_passthrough_backend factory
+# ---------------------------------------------------------------------------
+
+
+def test_factory_returns_usb_backend_for_current_os():
+    """The factory picks a backend for whichever OS the test runs on.
+
+    Construction can fail if the platform's USB libs are absent (e.g.
+    libusb on a headless Linux CI box) — that surfaces as RuntimeError,
+    which is itself the documented contract.
+    """
+    try:
+        backend = default_passthrough_backend()
+    except RuntimeError:
+        pytest.skip("platform USB backend dependencies unavailable here")
+    assert isinstance(backend, UsbBackend)
+
+
+@pytest.mark.skipif(not _IS_WINDOWS, reason="Windows-only path")
+def test_factory_picks_winusb_on_windows():
+    assert isinstance(default_passthrough_backend(), WinusbBackend)
+
+
+@pytest.mark.skipif(not _IS_DARWIN, reason="Darwin-only path")
+def test_factory_picks_iokit_on_macos():
+    assert isinstance(default_passthrough_backend(), IokitBackend)

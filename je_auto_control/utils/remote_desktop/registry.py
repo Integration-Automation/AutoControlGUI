@@ -352,5 +352,19 @@ class _RemoteDesktopRegistry:
             "authenticated": getattr(viewer, "authenticated", False),
         }
 
+    def webrtc_usb_client(self):
+        """Return the live WebRTC viewer's USB passthrough client, or None.
+
+        The viewer exposes ``usb_client()`` once the host has opened the
+        ``usb`` DataChannel. Returns None when no WebRTC viewer is active
+        or the channel hasn't been negotiated yet.
+        """
+        viewer = self._webrtc_viewer
+        if viewer is None:
+            return None
+        getter = getattr(viewer, "usb_client", None)
+        # pylint: disable=not-callable  # reason: guarded by callable(getter)
+        return getter() if callable(getter) else None
+
 
 registry = _RemoteDesktopRegistry()

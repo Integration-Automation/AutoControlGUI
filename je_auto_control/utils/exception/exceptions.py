@@ -60,6 +60,10 @@ class AutoControlAddCommandException(Exception):
     pass
 
 
+class AutoControlAssertionException(Exception):
+    """Raised when an ``AC_assert_*`` check fails."""
+
+
 class AutoControlArgparseException(Exception):
     pass
 

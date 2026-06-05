@@ -133,6 +133,43 @@ from je_auto_control.utils.smart_waits import (
     WaitOutcome, wait_until_pixel_changes, wait_until_region_idle,
     wait_until_screen_stable,
 )
+# Assertion DSL (verify screen state; raise on mismatch)
+from je_auto_control.utils.assertion import (
+    AssertionResult, GroupAssertionResult, assert_all, assert_any,
+    assert_clipboard, assert_eventually, assert_file, assert_http,
+    assert_image, assert_pixel, assert_process, assert_text, assert_window,
+    run_assertion_spec,
+)
+# Data-driven execution (load rows from CSV / JSON / SQLite / Excel)
+from je_auto_control.utils.data_source import data_source_kinds, load_rows
+# Flaky-test detection (analytics over the run-history store)
+from je_auto_control.utils.flakiness import (
+    FlakinessReport, FlakyEntry, analyze_flakiness,
+)
+# QA suite orchestration + CI report output (JUnit / Allure)
+from je_auto_control.utils.test_suite import (
+    TestCaseResult, TestSuiteResult, run_suite,
+    to_allure_results, to_junit_xml, write_allure_results, write_junit_xml,
+)
+# Flaky-test quarantine (skip known-unstable cases)
+from je_auto_control.utils.quarantine import (
+    QuarantineEntry, QuarantineStore, auto_quarantine_from_flakiness,
+    default_quarantine_store,
+)
+# Accessibility / i18n audit (missing labels, WCAG contrast, truncation)
+from je_auto_control.utils.a11y_audit import (
+    AuditIssue, AuditReport, audit_contrast, audit_missing_labels,
+    contrast_ratio, detect_truncation, run_audit,
+)
+# Mobile device matrix (parallel script execution across devices)
+from je_auto_control.utils.device_matrix import (
+    DeviceResult, MatrixReport, run_on_devices,
+)
+# Media assertions (audio activity, video motion)
+from je_auto_control.utils.media_assert import (
+    MediaAssertionResult, assert_audio_activity, assert_video_changes,
+    measure_audio_rms, video_segment_motion,
+)
 # Cost telemetry (per-LLM-call token + USD tracking)
 from je_auto_control.utils.cost_telemetry import (
     CostEvent, CostSummary, default_cost_store, estimate_llm_usd,
@@ -248,8 +285,8 @@ from je_auto_control.utils.triggers.email_trigger import (
 )
 # Recording editor (headless helpers)
 from je_auto_control.utils.recording_edit.editor import (
-    adjust_delays, filter_actions, insert_action, remove_action,
-    scale_coordinates, trim_actions,
+    adjust_delays, dedupe_moves, filter_actions, insert_action,
+    merge_sleeps, remove_action, scale_coordinates, trim_actions,
 )
 # Scheduler (headless)
 from je_auto_control.utils.scheduler.scheduler import (
@@ -371,7 +408,7 @@ __all__ = [
     "find_text_regex",
     # Recording editor
     "trim_actions", "insert_action", "remove_action", "filter_actions",
-    "adjust_delays", "scale_coordinates",
+    "adjust_delays", "scale_coordinates", "dedupe_moves", "merge_sleeps",
     # Scheduler
     "Scheduler", "ScheduledJob", "default_scheduler",
     # Script variables
@@ -470,6 +507,32 @@ __all__ = [
     # Smart waits
     "WaitOutcome", "wait_until_pixel_changes",
     "wait_until_region_idle", "wait_until_screen_stable",
+    # Assertion DSL
+    "AssertionResult", "assert_image", "assert_pixel",
+    "assert_text", "assert_window", "assert_clipboard", "assert_process",
+    "assert_file", "assert_http",
+    # Assertion combinators (soft groups + eventual polling)
+    "GroupAssertionResult", "assert_all", "assert_any", "assert_eventually",
+    "run_assertion_spec",
+    # Data-driven execution
+    "data_source_kinds", "load_rows",
+    # Flaky-test detection
+    "FlakinessReport", "FlakyEntry", "analyze_flakiness",
+    # QA suite orchestration + CI reports
+    "TestCaseResult", "TestSuiteResult", "run_suite",
+    "to_allure_results", "to_junit_xml",
+    "write_allure_results", "write_junit_xml",
+    # Flaky quarantine
+    "QuarantineEntry", "QuarantineStore",
+    "auto_quarantine_from_flakiness", "default_quarantine_store",
+    # Accessibility / i18n audit
+    "AuditIssue", "AuditReport", "audit_contrast", "audit_missing_labels",
+    "contrast_ratio", "detect_truncation", "run_audit",
+    # Mobile device matrix
+    "DeviceResult", "MatrixReport", "run_on_devices",
+    # Media assertions
+    "MediaAssertionResult", "assert_audio_activity", "assert_video_changes",
+    "measure_audio_rms", "video_segment_motion",
     # Cost telemetry
     "CostEvent", "CostSummary", "default_cost_store",
     "estimate_llm_usd", "record_llm_call", "summarise_llm_costs",

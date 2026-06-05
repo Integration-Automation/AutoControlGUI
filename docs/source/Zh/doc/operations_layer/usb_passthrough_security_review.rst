@@ -45,9 +45,13 @@ ACL
       ``test_save_persists_to_disk_with_safe_mode``\ ）。
 - [ ] 建議把 ACL 放在支援 POSIX 權限的檔案系統上；佈署文件需把
       Windows ACL 故事寫清楚。
-- [ ] **OPEN question 8 — ACL 完整性（HMAC / keychain）**\ 。目前
-      以使用者身分執行的程序可以靜悄悄改寫 ACL。若無法接受，請在
-      sign-off 之前 file 後續專案。
+- [ ] **OQ8 — ACL 完整性（HMAC）已實作**\ 。ACL 旁附 HMAC-SHA256
+      sidecar 簽章，竄改則 fail-closed（測試
+      ``test_tampered_acl_file_fails_closed``\ 、
+      ``test_explicit_key_roundtrip_and_wrong_key_fails``\ ）。**殘留風險：**
+      預設金鑰存於同使用者可讀的 ``usb_acl.json.key``\ ；同身分的
+      process 仍可偽造簽章。高保證部署應透過 ``UsbAcl(hmac_key=...)``
+      改用平台 keychain 衍生金鑰——請審查者確認部署是否採用。
 
 
 稽核
@@ -118,10 +122,13 @@ ACL
 - [ ] **Linux libusb**：HID 裝置 claim 之前呼叫
       ``libusb_detach_kernel_driver``\ ；close 時重新 attach。
       確認 host OS 的鍵盤／滑鼠在 session 結束後仍可運作。
-- [ ] **Windows WinUSB**\ （Phase 2b — *尚未發布*）：裝置必須已經
-      與 WinUSB 關聯（Zadig / libwdi）。把操作者面對的指引寫清楚。
-- [ ] **macOS IOKit**\ （Phase 2c — *尚未發布*）：非 App Store 發行的
-      notarisation 故事。文件化 SIP 排除清單。
+- [ ] **Windows WinUSB**\ （Phase 2b — *已實作，硬體未驗證*）：裝置
+      必須已與 WinUSB 關聯（Zadig / libwdi），只有綁定者會出現在
+      ``list()``\ 。在真實硬體上跑 bulk / HID / composite 測試矩陣後
+      才能簽核。
+- [ ] **macOS IOKit**\ （Phase 2c — *已實作，硬體未驗證*）：原生 IOKit
+      列舉 + libusb 傳輸。非 App Store 發行需 notarisation；文件化 SIP
+      排除清單。在真實硬體上跑測試矩陣後才能簽核。
 - [ ] 三個 backend 都要：開啟已被別 driver 持有的裝置時，要清楚地
       回 "busy" RuntimeError，不 hang 不 crash。
 

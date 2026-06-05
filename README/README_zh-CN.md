@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06)](#本次更新-2026-06)
 - [本次更新 (2026-05)](#本次更新-2026-05)
 - [功能特性](#功能特性)
 - [架构](#架构)
@@ -53,6 +54,36 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06)
+
+新增 9 个功能，把自动化原语升级成一套完整的 **QA / 测试框架**：验证画面状态、
+用数据驱动脚本、检测并隔离不稳定测试、执行计分套件、输出 CI 原生报告、
+审计无障碍 / i18n、跨设备矩阵并行执行，以及对音频 / 视频做断言。
+每个功能都遵循框架既有模式：headless Python API、`AC_*` executor 命令、
+`ac_*` MCP 工具，以及 Qt GUI 选项卡。完整参考页面：
+[`docs/source/Zh/doc/new_features/v3_features_doc.rst`](../docs/source/Zh/doc/new_features/v3_features_doc.rst)。
+
+**断言**
+- **断言 DSL** — 验证画面状态而不只是操作：`assert_text`（OCR，`regex` + `present=False` 断言不存在）、`assert_image`、`assert_pixel`、`assert_window`、`assert_clipboard`（`equals` / `contains` / `regex`，`present=False` 可确认机密已清除）、`assert_process`（指定名称的进程是否运行中，通过 psutil）。返回 `AssertionResult`，不符时抛出 `AutoControlAssertionException`，可选失败截图（`AC_assert_text / _image / _pixel / _window / _clipboard / _process`）。
+- **画面外断言** — `assert_file`（文件存在 / 子串 / SHA-256 / 最小大小，验证下载或导出结果）与 `assert_http`（http/https 端点返回状态码 + 可选正文，一律带显式 timeout）。两者把 DSL 延伸到画面之外，并能接到下方的组合器（`AC_assert_file / AC_assert_http`）。
+- **断言组合器** — `assert_all([...specs])` 以*软断言*方式跑完整批（逐一检查、收齐所有失败才抛出）并返回 `GroupAssertionResult`；`assert_any([...specs])` 是 OR 互补（任一通过即通过、短路 — 例如登录成功对话框*或*重定向其一出现即可）；`assert_eventually(spec, timeout, interval)` 重试单个声明式 spec 直到通过或超时（例如轮询健康检查端点直到返回 200，或等待下载文件出现）。均以 spec 驱动（`{"kind": "text", "text": "Saved"}`、`{"kind": "http", "url": "..."}`），在 Python、JSON、MCP 中行为一致,涵盖全部断言类型 — text/image/pixel/window/clipboard/process/file/http（`AC_assert_all / AC_assert_any / AC_assert_eventually`）。
+- **媒体断言** — `assert_audio_activity`（录音 + RMS 阈值判断有声 / 静音）与 `assert_video_changes`（视频区段相邻帧平均差异判断动态 / 静止）；纯数值核心，`sounddevice` / OpenCV 延迟加载（`AC_assert_audio / AC_assert_video_changes`）。
+
+**数据驱动执行**
+- **数据源** — `load_rows` 支持 CSV / JSON / SQLite / Excel / 内联；`AC_for_each_row` 块命令每行执行一次 body，字段以 `${row.column}` 取用。SQLite 仅允许单句只读 `SELECT`/`WITH`，路径经 `realpath` 校验。`${var}` 插值现在支持点号路径（dict 键 / list 索引）并保留类型（`AC_load_data`）。
+
+**不稳定检测与隔离**
+- **不稳定报告** — 从执行历史以通过↔失败翻转率给间歇性失败评分，按 script / source 分组（`AC_flaky_report`）。
+- **隔离区** — 套件执行器会遵守的持久化（0600）跳过清单；`auto_quarantine_from_flakiness` 按翻转率阈值自动填入（`AC_quarantine_add / _remove / _list / _clear / _auto`）。
+
+**套件执行器 + CI 报告**
+- **QA 套件编排** — `run_suite` 把 action list 变成具 setup / teardown、标签与数据驱动展开的计分用例；断言失败 → failed、其他异常 → error、被隔离 → skipped（`AC_run_suite`）。
+- **JUnit / Allure 报告** — `write_junit_xml` + `write_allure_results`（或 `AC_run_suite` 的 `junit_path` / `allure_dir`），输出 Jenkins / GitHub Actions / GitLab CI / Allure 原生解析的报告。
+
+**审计、矩阵、媒体**
+- **无障碍 / i18n 审计** — 反向利用 a11y 树 + OCR，找出缺失的可访问名称、WCAG 对比度不足与省略号截断字符串（`AC_audit_accessibility / AC_audit_contrast`）。
+- **移动设备矩阵** — 将单一 action list 并行分发到多台 Android / iOS 设备，每台独立 executor，通过 `${device.*}` 锁定当前设备；逐设备通过 / 失败，失败相互隔离（`AC_run_device_matrix`）。
 
 ## 本次更新 (2026-05)
 
@@ -107,6 +138,7 @@
 
 ## 功能特性
 
+- **QA / 测试框架** — 断言 DSL（`assert_text` / `_image` / `_pixel` / `_window` / `_clipboard` / `_process` / `_file` / `_http` 加上音频/视频断言,以及 `assert_all` / `assert_any` / `assert_eventually` 组合器）、数据驱动执行（CSV / JSON / SQLite / Excel → `AC_for_each_row`）、具 setup/teardown/标签的计分 `run_suite`、JUnit + Allure 报告输出、不稳定测试检测与自动隔离、无障碍 / i18n 审计（缺失标签、WCAG 对比度、截断），以及并行的移动设备矩阵。详见 [本次更新 (2026-06)](#本次更新-2026-06)
 - **鼠标自动化** — 移动、点击、按下、释放、拖拽、滚动，支持精确坐标控制
 - **键盘自动化** — 按下/释放单一按键、输入字符串、组合键、按键状态检测
 - **图像识别** — 使用 OpenCV 模板匹配在屏幕上定位 UI 元素，支持可配置的检测阈值
@@ -114,7 +146,7 @@
 - **AI 元件定位（VLM）** — 用自然语言描述 UI 元素，由视觉语言模型（Anthropic / OpenAI）返回屏幕坐标
 - **OCR** — 三个可插拔后端（Tesseract 用于 ASCII、EasyOCR 无外部可执行文件且支持 CJK、PaddleOCR 中／日／韩质量最高），统一 API 与标准语言代码；后端由 `backend=` 参数、`AUTOCONTROL_OCR_BACKEND` 环境变量或自动探测决定。可搜索、点击或等待文字出现；支持 regex 搜索与整块区域 dump
 - **LLM 动作规划器** — 用 Claude 把自然语言描述翻译成验证过的 `AC_*` 动作清单
-- **运行期变量与流程控制** — 执行时 `${var}` 替换，加上 `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` 让脚本数据驱动
+- **运行期变量与流程控制** — 执行时 `${var}` 替换，加上 `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_while_var` / `AC_retry` / `AC_try` 让脚本数据驱动。`AC_while_var` 在变量比较成立时持续循环（每轮重新判断，`max_iter` 安全上限）；`AC_try` 提供 try/catch/finally：`body` 失败时改走 `catch` 恢复分支而非中止、`finally` 必定执行、错误通过 `error_var` 暴露、可在清理后 `reraise`（循环 `break`/`continue` 仍能穿透）
 - **远程桌面** — 用 token 认证的 TCP 协议串流本机画面并接收输入，**或** 连接到他机观看与控制（host + viewer GUI 内置）。可选 TLS（HTTPS 级加密）、WebSocket 传输（``ws://`` + ``wss://``，穿墙／浏览器友好）、持久化 9 位数 Host ID、host→viewer 音频串流、双向剪贴板同步（文字 + 图片）、分块文件传输（拖放 + 进度条；任意目的路径；无大小上限）。另含文件夹同步（增量镜像 — 本地删除不会传出去）与自建 coturn TURN 配置包生成器（turnserver.conf + systemd unit + docker-compose + README）。**AnyDesk 风格弹出窗口**：viewer 认证成功后远程桌面会开在独立的可调整大小顶层窗口，控制面板保持简洁；Remote Desktop 子分页外层包了 `QScrollArea`，小窗口下可滚动、4K 屏幕下会铺满。同时支持 headless API 与 MCP 工具 (`ac_remote_*`) 直接驱动
 - **驱动级输入后端（可选）** — 针对忽略 SendInput（Win）或 XTest（Linux）的游戏／应用：**Interception driver 后端**（Windows，HID 层鍵鼠注入，使用 Oblita WHQL-signed driver，通过 `JE_AUTOCONTROL_WIN32_BACKEND=interception` 启用）、**uinput 后端**（Linux，kernel `/dev/uinput` 合成 HID 设备，通过 `JE_AUTOCONTROL_LINUX_BACKEND=uinput` 启用），以及 **ViGEm 虚拟手柄**（Windows，针对只认手柄的游戏，提供虚拟 Xbox 360 手柄 + 友善的 button / dpad / stick / trigger API，并暴露为 `AC_gamepad_*` 执行器命令与 `ac_gamepad_*` MCP 工具）。三者在 driver 没装时都会优雅 fallback，不影响既有部署
 - **剪贴板** — 于 Windows / macOS / Linux 读写系统剪贴板文本
@@ -141,12 +173,12 @@
 - **多主机管理控制台** — 在一份通讯录中注册 N 个远程 AutoControl REST 端点，并行轮询 health/sessions/jobs，把同一份动作清单广播给全部主机。储存于 `~/.je_auto_control/admin_hosts.json`（POSIX 上模式 0600）。Token 错误的主机会以实际 HTTP 错误显示为不健康
 - **可检测篡改的审计日志** — SQLite events 表加上 SHA-256 哈希链（每条记录含 `prev_hash` + `row_hash`）；修改任何过去记录都会打断哈希链。`verify_chain()` 自顶向下走访并报告第一个断点。既有数据表会在启动时回填（"初次使用即信任"）
 - **WebRTC 包监测** — 由既有 WebRTC stats 轮询喂入的进程级 `StatsSnapshot` 滚动窗口（默认 600 条 / 1 Hz 约 10 分钟）。对 RTT、FPS、bitrate、丢包率、jitter 各回 `last/min/max/avg/p95`
-- **USB 设备列举** — 只读的跨平台 USB 设备列举。优先尝试 pyusb（libusb）；若无则退回平台特定命令（Windows `Get-PnpDevice`、macOS `system_profiler`、Linux `/sys/bus/usb/devices`）。第二阶段（passthrough）刻意延后待设计审查
+- **USB 设备列举** — 只读的跨平台 USB 设备列举。优先尝试 pyusb（libusb）；若无则退回平台特定命令（Windows `Get-PnpDevice`、macOS `system_profiler`、Linux `/sys/bus/usb/devices`）。第二阶段 passthrough 构建于此（见下）
 - **系统诊断** — 一键"目前正常吗？"探测：平台、可选依赖包、executor 命令数、审计链、截图、鼠标、磁盘空间、REST registry。CLI 全绿 exit 0／否则 1；REST `/diagnose`；按严重度上色的 GUI 分页
 - **USB Hotplug 事件** — 轮询式 hotplug 监测（`UsbHotplugWatcher`），含 bounded ring buffer 与带序号的事件；`GET /usb/events?since=N` 让晚加入的订阅者补上进度。USB 分页有自动刷新切换钮。
 - **OpenAPI 3.1 + Swagger UI** — `GET /openapi.json`（auth-gated，从活的路由表生成）+ `GET /docs`（浏览器版 Swagger UI 含 bearer token 栏）。CI 上有 drift 测试，新加路由忘记写 metadata 会被拦下。
 - **配置包导出／导入** — 单一 JSON 文件，导出／导入用户配置（admin hosts、address book、trusted viewers、known hosts、host service、IDs）。原子写入加 `<name>.bak.<时间戳>` 备份；CLI `python -m je_auto_control.utils.config_bundle export|import`；`POST /config/{export,import}`；REST API 分页有按钮。
-- **USB Passthrough（实验性、需主动启用）** — wire-level 协议走 WebRTC `usb` DataChannel（10 个 opcode、CREDIT 流量控制、16 KiB payload 上限）。Host 端 `UsbPassthroughSession` 在 Linux libusb backend 上端到端运行；Windows `WinUSB` backend 含完整 ctypes 接线（硬件未验证）；macOS `IOKit` 为骨架。Viewer 端阻塞式 client（`UsbPassthroughClient` → `ClientHandle.control_transfer / bulk_transfer / interrupt_transfer`）。持久化 ACL（`~/.je_auto_control/usb_acl.json`，默认 deny，POSIX mode 0600），含 host 端 prompt QDialog 与可检测篡改审计日志整合。默认 off — 用 `enable_usb_passthrough(True)` 或 `JE_AUTOCONTROL_USB_PASSTHROUGH=1` 启用。Phase 2e 外部安全审查清单已附；默认启用前需要签核。
+- **USB Passthrough（需主动启用）** — 让远端 viewer 使用实体插在 host 上的 USB 设备，走 WebRTC `usb` DataChannel。Wire-level 协议（11 个 opcode 含 `RESUME`、CREDIT 流量控制、16 KiB payload 上限，超量传输以 EOF 分片）。八个原始未决问题全部解决：可靠有序 channel、LIST 走 channel（ACL 过滤）、per-claim credit、Linux kernel driver detach/reattach、ACL **HMAC-SHA256 完整性**（篡改 fail-closed；密钥可插拔 — Windows DPAPI 或 passphrase vault）。**Backend：**`LibusbBackend`（production）、`WinusbBackend`（ctypes）、`IokitBackend`（原生 IOKit 列举 + libusb 传输）— Windows/macOS *硬件未验证*；`default_passthrough_backend()` 依 OS 自动挑。Viewer 端阻塞式 client（`control/bulk/interrupt_transfer`、`list_devices`、`resume`）；in-process `UsbLoopback` 让同机可走完整堆栈 share+use。**已接入 WebRTC** host/viewer（`viewer.usb_client()`）并含断线可续租的 **resume token**。持久化 ACL（默认 deny、mode 0600），含 host 端 prompt 对话框、滥用 **rate-limit / lockout** 与可检测篡改审计整合。五个驱动面：AnyDesk 风 **GUI 面板**（分享 + ACL 允许/封锁 + 本机/远端使用）、`AC_usb_*` executor 命令（JSON / socket / 调度器）、**REST** `/usb/...`、一级 **MCP** `ac_usb_*` 工具、以及 Python API。默认 off — 用 `enable_usb_passthrough(True)` 或 `JE_AUTOCONTROL_USB_PASSTHROUGH=1` 启用；默认启用仍待 Phase 2e 外部安全签核 + 实机硬件验证。
 
 ---
 
@@ -213,7 +245,7 @@ flowchart LR
     subgraph USB["USB"]
         direction TB
         UsbEnum["usb/<br/>列举 + hotplug"]
-        UsbPass["usb/passthrough/<br/>session · client · ACL ·<br/>libusb · WinUSB · IOKit"]
+        UsbPass["usb/passthrough/<br/>session · client · ACL(HMAC) ·<br/>libusb · WinUSB · IOKit ·<br/>loopback · webrtc channel · commands"]
     end
 
     subgraph Remote["远程桌面 (utils/remote_desktop/)"]
@@ -313,7 +345,7 @@ je_auto_control/
     ├── admin/                  # 多主机 AdminConsoleClient（轮询 + 广播）
     ├── diagnostics/            # 系统自我诊断 + CLI
     ├── config_bundle/          # 单文件用户配置导出／导入
-    ├── usb/                    # 跨平台列举、hotplug 事件、passthrough/{protocol, session, viewer client, ACL, libusb / WinUSB / IOKit}
+    ├── usb/                    # 跨平台列举、hotplug 事件、passthrough/{protocol, session, viewer client, loopback, webrtc channel, ACL+HMAC, descriptor, key providers, commands, libusb / WinUSB / IOKit}
     ├── remote_desktop/         # WebRTC host + viewer、signalling、multi-viewer、文件／剪贴板／音频同步、审计日志（哈希链）、信任列表、TURN 配置、mDNS 发现、WebRTC stats inspector
     ├── plugin_loader/          # 动态 AC_* 插件搜索与注册
     ├── socket_server/          # TCP Socket 服务器（远程自动化）
@@ -853,9 +885,15 @@ time.sleep(10)  # 录制 10 秒
 # 停止录制并获取动作列表
 actions = je_auto_control.stop_record()
 
+# 回放前先清理录制内容：把连续的鼠标移动采样压缩成最后位置
+#（通常能把原始录制缩小一个数量级，且不改变回放行为）
+actions = je_auto_control.dedupe_moves(actions)
+
 # 重新播放录制的动作
 je_auto_control.execute_action(actions)
 ```
+
+> 非破坏式录制编辑器（均返回新的 list）：`dedupe_moves`（压缩鼠标移动）、`merge_sleeps`（合并连续 `AC_sleep`）、`trim_actions`、`insert_action`、`remove_action`、`filter_actions`、`adjust_delays`（缩放 `AC_sleep` 延迟）、`scale_coordinates`（以不同分辨率回放）。通过 MCP 暴露为 `ac_dedupe_moves` / `ac_merge_sleeps` / `ac_trim_actions` / `ac_adjust_delays` / `ac_scale_coordinates`。
 
 ### JSON 脚本执行器
 
@@ -900,7 +938,7 @@ je_auto_control.execute_action([
 | LLM 规划器 | `AC_llm_plan`, `AC_llm_run` |
 | 剪贴板 | `AC_clipboard_get`, `AC_clipboard_set` |
 | 窗口 | `AC_list_windows`, `AC_focus_window`, `AC_wait_window`, `AC_close_window` |
-| 流程控制 | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_if_var`, `AC_while_image`, `AC_for_each`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry` |
+| 流程控制 | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_if_var`, `AC_while_image`, `AC_while_var`, `AC_for_each`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry`, `AC_try` |
 | 变量 | `AC_set_var`, `AC_get_var`, `AC_inc_var` |
 | 远程桌面 | `AC_start_remote_host`, `AC_stop_remote_host`, `AC_remote_host_status`, `AC_remote_connect`, `AC_remote_disconnect`, `AC_remote_viewer_status`, `AC_remote_send_input` |
 | 录制 | `AC_record`, `AC_stop_record`, `AC_set_record_enable` |

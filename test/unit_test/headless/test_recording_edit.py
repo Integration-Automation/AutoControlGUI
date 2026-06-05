@@ -2,8 +2,8 @@
 import pytest
 
 from je_auto_control.utils.recording_edit.editor import (
-    adjust_delays, filter_actions, insert_action, remove_action,
-    scale_coordinates, trim_actions,
+    adjust_delays, dedupe_moves, filter_actions, insert_action,
+    merge_sleeps, remove_action, scale_coordinates, trim_actions,
 )
 
 
@@ -54,3 +54,69 @@ def test_scale_coordinates_multiplies_xy():
     assert result[0][1] == {"x": 200, "y": 600}
     # non-coordinate actions untouched
     assert result[2] == ["AC_type_keyboard", {"keycode": "a"}]
+
+
+def test_dedupe_moves_keeps_last_of_each_run():
+    actions = [
+        ["AC_set_mouse_position", {"x": 1, "y": 1}],
+        ["AC_set_mouse_position", {"x": 2, "y": 2}],
+        ["AC_set_mouse_position", {"x": 3, "y": 3}],
+        ["AC_click_mouse", {"x": 3, "y": 3}],
+        ["AC_set_mouse_position", {"x": 9, "y": 9}],
+    ]
+    result = dedupe_moves(actions)
+    assert result == [
+        ["AC_set_mouse_position", {"x": 3, "y": 3}],
+        ["AC_click_mouse", {"x": 3, "y": 3}],
+        ["AC_set_mouse_position", {"x": 9, "y": 9}],
+    ]
+
+
+def test_dedupe_moves_is_non_destructive():
+    actions = [
+        ["AC_set_mouse_position", {"x": 1, "y": 1}],
+        ["AC_set_mouse_position", {"x": 2, "y": 2}],
+    ]
+    dedupe_moves(actions)
+    assert len(actions) == 2
+
+
+def test_dedupe_moves_no_moves_unchanged():
+    actions = [["AC_click_mouse", {"x": 1, "y": 1}], ["AC_sleep", {"seconds": 1}]]
+    assert dedupe_moves(actions) == actions
+
+
+def test_dedupe_moves_custom_command_names():
+    actions = [
+        ["AC_mouse_move", {"x": 1, "y": 1}],
+        ["AC_mouse_move", {"x": 5, "y": 5}],
+    ]
+    result = dedupe_moves(actions, move_commands=["AC_mouse_move"])
+    assert result == [["AC_mouse_move", {"x": 5, "y": 5}]]
+
+
+def test_merge_sleeps_sums_consecutive_runs():
+    actions = [
+        ["AC_sleep", {"seconds": 1.0}],
+        ["AC_sleep", {"seconds": 0.5}],
+        ["AC_click_mouse", {"x": 1, "y": 1}],
+        ["AC_sleep", {"seconds": 0.2}],
+        ["AC_sleep", {"seconds": 0.3}],
+    ]
+    result = merge_sleeps(actions)
+    assert result == [
+        ["AC_sleep", {"seconds": 1.5}],
+        ["AC_click_mouse", {"x": 1, "y": 1}],
+        ["AC_sleep", {"seconds": pytest.approx(0.5)}],
+    ]
+
+
+def test_merge_sleeps_non_destructive():
+    actions = [["AC_sleep", {"seconds": 1.0}], ["AC_sleep", {"seconds": 2.0}]]
+    merge_sleeps(actions)
+    assert len(actions) == 2
+
+
+def test_merge_sleeps_no_sleeps_unchanged():
+    actions = [["AC_click_mouse", {"x": 1, "y": 1}]]
+    assert merge_sleeps(actions) == actions

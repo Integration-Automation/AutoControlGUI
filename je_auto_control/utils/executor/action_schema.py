@@ -15,7 +15,9 @@ FLOW_BODY_KEYS = {
     "AC_if_var": ("then", "else"),
     "AC_loop": ("body",),
     "AC_while_image": ("body",),
+    "AC_while_var": ("body",),
     "AC_retry": ("body",),
+    "AC_try": ("body", "catch", "finally"),
     "AC_for_each": ("body",),
 }
 

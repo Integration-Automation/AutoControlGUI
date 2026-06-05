@@ -468,6 +468,42 @@ def AC_usb_watch_start(poll_interval_s: float = ...) -> Dict[str, Any]:
 def AC_usb_watch_stop() -> Dict[str, Any]:
     ...
 
+def AC_usb_passthrough_enable(enabled: bool = ...) -> Dict[str, Any]:
+    """Toggle the USB passthrough feature flag (default off)."""
+
+def AC_usb_passthrough_status() -> Dict[str, Any]:
+    ...
+
+def AC_usb_acl_list() -> Dict[str, Any]:
+    ...
+
+def AC_usb_acl_add(vendor_id: str, product_id: str, serial: str | None = ..., allow: bool = ..., prompt_on_open: bool = ..., label: str = ...) -> Dict[str, Any]:
+    """Add a per-device rule to the USB ACL."""
+
+def AC_usb_acl_remove(vendor_id: str, product_id: str, serial: str | None = ...) -> Dict[str, Any]:
+    ...
+
+def AC_usb_acl_set_default(policy: str) -> Dict[str, Any]:
+    ...
+
+def AC_usb_acl_export(path: str) -> Dict[str, Any]:
+    ...
+
+def AC_usb_acl_import(path: str, replace: bool = ...) -> Dict[str, Any]:
+    ...
+
+def AC_usb_loopback_list() -> Dict[str, Any]:
+    """List ACL-visible devices over the in-process loopback channel."""
+
+def AC_usb_loopback_open(vendor_id: str, product_id: str, serial: str | None = ...) -> Dict[str, Any]:
+    """Claim a local device over loopback and read its descriptor."""
+
+def AC_usb_remote_list() -> Dict[str, Any]:
+    """List the remote host's devices over the live WebRTC usb channel."""
+
+def AC_usb_remote_open(vendor_id: str, product_id: str, serial: str | None = ...) -> Dict[str, Any]:
+    """Claim a remote device over the live WebRTC usb channel and probe it."""
+
 def AC_vlm_click(description: str, screen_region: List[int] | None = ..., model: str | None = ..., backend: Any = ...) -> bool:
     """Locate by description, then click the center of the match."""
 

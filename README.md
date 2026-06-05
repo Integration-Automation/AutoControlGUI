@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06)](#whats-new-2026-06)
 - [What's new (2026-05)](#whats-new-2026-05)
 - [Features](#features)
 - [Architecture](#architecture)
@@ -54,6 +55,37 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06)
+
+Nine additions that turn the automation primitives into a full **QA / test
+framework**: assert screen state, drive scripts from data, detect and
+quarantine flaky tests, run a scored suite, emit CI-native reports, audit
+accessibility / i18n, fan a script across a device matrix, and assert on
+audio / video. Each ships with a headless API, an `AC_*` executor command,
+an `ac_*` MCP tool, and a Qt GUI tab. Full reference page:
+[`docs/source/Eng/doc/new_features/v3_features_doc.rst`](docs/source/Eng/doc/new_features/v3_features_doc.rst).
+
+**Assertions**
+- **Assertion DSL** — verify screen state instead of only driving it: `assert_text` (OCR, `regex` + `present=False` for absence), `assert_image`, `assert_pixel`, `assert_window`, `assert_clipboard` (`equals` / `contains` / `regex`, `present=False` to confirm a secret was cleared), `assert_process` (a named process is / isn't running, via psutil). Returns an `AssertionResult`; raises `AutoControlAssertionException` on mismatch with optional failure screenshot (`AC_assert_text / _image / _pixel / _window / _clipboard / _process`).
+- **Off-screen assertions** — `assert_file` (existence / substring / SHA-256 / minimum size — verify a download or export) and `assert_http` (an http/https endpoint returns a status + optional body text, always with an explicit timeout). Both extend the DSL beyond the screen and plug into the combinators below (`AC_assert_file / AC_assert_http`).
+- **Assertion combinators** — `assert_all([...specs])` runs a batch as *soft assertions* (every spec is checked, all failures collected before raising) and returns a `GroupAssertionResult`; `assert_any([...specs])` is the OR-complement (passes when at least one spec passes, short-circuiting — e.g. *either* a success dialog *or* a redirect confirms a login); `assert_eventually(spec, timeout, interval)` retries one declarative assertion spec until it passes or times out (e.g. poll a health endpoint until it returns 200, or wait for a download file to appear). Both are spec-driven (`{"kind": "text", "text": "Saved"}`, `{"kind": "http", "url": "..."}`) so they work identically from Python, JSON, and MCP across every assertion kind — text/image/pixel/window/clipboard/process/file/http (`AC_assert_all / AC_assert_eventually`).
+- **Media assertions** — `assert_audio_activity` (record + RMS threshold for sound vs silence) and `assert_video_changes` (mean frame-to-frame diff over a segment for motion vs static); pure numeric cores, lazy `sounddevice` / OpenCV (`AC_assert_audio / AC_assert_video_changes`).
+
+**Data-driven execution**
+- **Data sources** — `load_rows` connectors for CSV / JSON / SQLite / Excel / inline; the `AC_for_each_row` block command runs a body once per row with `${row.column}` access. SQLite is single read-only `SELECT`/`WITH` only; paths are `realpath`-validated. `${var}` interpolation now resolves dotted dict-key / list-index paths while preserving types (`AC_load_data`).
+
+**Flaky detection & quarantine**
+- **Flaky report** — score intermittent failures from run history by pass↔fail flip rate, grouped by script / source (`AC_flaky_report`).
+- **Quarantine** — a persistent (mode 0600) skip-list the suite runner honours; `auto_quarantine_from_flakiness` auto-populates it above a flip-rate threshold (`AC_quarantine_add / _remove / _list / _clear / _auto`).
+
+**Suite runner + CI reports**
+- **QA suite orchestration** — `run_suite` turns action lists into scored cases with setup / teardown, tags, and data-driven expansion; assertion failures → failed, other exceptions → error, quarantined → skipped (`AC_run_suite`).
+- **JUnit / Allure reports** — `write_junit_xml` + `write_allure_results` (or `junit_path` / `allure_dir` on `AC_run_suite`) emit reports Jenkins / GitHub Actions / GitLab CI / Allure parse natively.
+
+**Audit, matrix, media**
+- **Accessibility / i18n audit** — reuse the a11y tree + OCR to find missing accessible names, WCAG contrast-ratio failures, and ellipsis-truncated strings (`AC_audit_accessibility / AC_audit_contrast`).
+- **Mobile device matrix** — fan one action list across many Android / iOS devices in parallel, each on an isolated executor, targeting the current device via `${device.*}`; per-device pass/fail, failures isolated (`AC_run_device_matrix`).
 
 ## What's new (2026-05)
 
@@ -109,6 +141,7 @@ sense) a Qt GUI tab. Full reference page:
 
 ## Features
 
+- **QA / Test Framework** — assertion DSL (`assert_text` / `_image` / `_pixel` / `_window` + audio/video assertions), data-driven execution (CSV / JSON / SQLite / Excel → `AC_for_each_row`), a scored `run_suite` with setup/teardown/tags, JUnit + Allure report output, flaky-test detection with auto-quarantine, accessibility / i18n auditing (missing labels, WCAG contrast, truncation), and a parallel mobile device matrix. See [What's new (2026-06)](#whats-new-2026-06)
 - **Mouse Automation** — move, click, press, release, drag, and scroll with precise coordinate control
 - **Keyboard Automation** — press/release individual keys, type strings, hotkey combinations, key state detection
 - **Image Recognition** — locate UI elements on screen using OpenCV template matching with configurable threshold
@@ -116,7 +149,7 @@ sense) a Qt GUI tab. Full reference page:
 - **AI Element Locator (VLM)** — describe a UI element in plain language and let a vision-language model (Anthropic / OpenAI) find its screen coordinates
 - **OCR** — extract text from screen regions through three pluggable backends (Tesseract for ASCII, EasyOCR for CJK without an external binary, PaddleOCR for highest-quality Chinese / Japanese / Korean). Single unified API + canonical language codes; backend chosen by `backend=` kwarg, `AUTOCONTROL_OCR_BACKEND` env var, or auto-detection. Wait for, click, or locate rendered text; regex search and full-region dump
 - **LLM Action Planner** — translate a plain-language description into a validated `AC_*` action list using Claude
-- **Runtime Variables & Control Flow** — `${var}` substitution at execution time, plus `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` for data-driven scripts
+- **Runtime Variables & Control Flow** — `${var}` substitution at execution time, plus `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_while_var` / `AC_retry` / `AC_try` for data-driven scripts. `AC_while_var` loops while a variable comparison holds (re-checked each iteration, `max_iter` safety cap). `AC_try` adds try/catch/finally: when `body` fails it runs the `catch` recovery branch instead of aborting, always runs `finally`, exposes the error to `error_var`, and can `reraise` after cleanup (loop `break`/`continue` still propagate through it)
 - **Remote Desktop** — stream this machine's screen and accept remote input over a token-authenticated TCP protocol, *or* connect to another machine and view + control it (host + viewer GUIs included). Optional TLS (HTTPS-grade encryption), WebSocket transport (ws:// + wss:// for browser / firewall-friendly clients), persistent 9-digit Host ID, host→viewer audio streaming, bidirectional clipboard sync (text + image), and chunked file transfer (drag-drop + progress bar; arbitrary destination path; no size cap). Plus folder sync (additive mirror — local deletions never propagate) and a self-hosted coturn TURN config bundle generator (turnserver.conf + systemd unit + docker-compose + README). **AnyDesk-style popout**: when the viewer authenticates, the live remote desktop opens in its own resizable top-level window so the control panel stays uncluttered. The Remote Desktop tabs are wrapped in `QScrollArea` so the panel stays usable on small windows and stretches edge-to-edge on 4K displays. Driveable headlessly via `je_auto_control` and over MCP through the new `ac_remote_*` tools
 - **Driver-level input backends (opt-in)** — for games / apps that ignore SendInput (Win) or XTest (Linux): **Interception driver backend** for Windows (HID-layer keyboard / mouse injection via Oblita's WHQL-signed driver, opt-in via `JE_AUTOCONTROL_WIN32_BACKEND=interception`), **uinput backend** for Linux (kernel `/dev/uinput` synthetic HID device, opt-in via `JE_AUTOCONTROL_LINUX_BACKEND=uinput`), and **ViGEm virtual gamepad** for Windows games that read controllers (virtual Xbox 360 pad with friendly button / dpad / stick / trigger API, exposed as `AC_gamepad_*` executor commands and `ac_gamepad_*` MCP tools). All three fall back gracefully when the driver isn't installed, so existing deployments keep working unchanged
 - **Clipboard** — read/write system clipboard text on Windows, macOS, and Linux
@@ -143,12 +176,12 @@ sense) a Qt GUI tab. Full reference page:
 - **Multi-Host Admin Console** — register N AutoControl REST endpoints in one address book, poll them in parallel for health/sessions/jobs, broadcast actions to all of them. Persisted to `~/.je_auto_control/admin_hosts.json` (mode 0600 on POSIX). Bad-token hosts surface as unhealthy with the actual HTTP error
 - **Tamper-Evident Audit Log** — SQLite events table with SHA-256 hash chain (`prev_hash` + `row_hash` per row); editing any past row breaks the chain. `verify_chain()` walks rows top-down and reports the first broken link. Legacy tables get backfilled at startup ("trust on first use")
 - **WebRTC Packet Inspector** — process-global rolling window of `StatsSnapshot` samples (default 600 / ~10 min @ 1Hz) fed by the existing WebRTC stats pollers. Per-metric `last/min/max/avg/p95` for RTT, FPS, bitrate, packet loss, jitter
-- **USB Device Enumeration** — read-only cross-platform device listing. Tries pyusb (libusb) first; falls back to platform-specific (Windows `Get-PnpDevice`, macOS `system_profiler`, Linux `/sys/bus/usb/devices`). Phase 2 (passthrough) intentionally deferred pending design review
+- **USB Device Enumeration** — read-only cross-platform device listing. Tries pyusb (libusb) first; falls back to platform-specific (Windows `Get-PnpDevice`, macOS `system_profiler`, Linux `/sys/bus/usb/devices`). Phase 2 passthrough builds on this (see below)
 - **System Diagnostics** — single-command "is everything OK?" probe across platform, optional deps, executor command count, audit chain, screenshot, mouse, disk space, REST registry. CLI exits 0 if all green / 1 otherwise; REST `/diagnose`; severity-tagged GUI tab
 - **USB Hotplug Events** — polling-based hotplug watcher (`UsbHotplugWatcher`) with bounded ring buffer + sequence-numbered events; `GET /usb/events?since=N` lets late subscribers catch up. GUI auto-refresh toggle on the USB tab.
 - **OpenAPI 3.1 + Swagger UI** — `GET /openapi.json` (auth-gated, generated from the live route table) + `GET /docs` (browser Swagger UI with bearer token bar). Drift test in CI catches new routes added without metadata.
 - **Configuration Bundle** — single-file JSON export/import of user config (admin hosts, address book, trusted viewers, known hosts, host service, IDs). Atomic write with `<name>.bak.<timestamp>` backups; CLI `python -m je_auto_control.utils.config_bundle export|import`; `POST /config/{export,import}`; GUI buttons on the REST API tab.
-- **USB Passthrough (experimental, opt-in)** — wire-level protocol over a WebRTC `usb` DataChannel (10 opcodes, CREDIT-based flow control, 16 KiB payload cap). Host-side `UsbPassthroughSession` end-to-end on the Linux libusb backend; Windows `WinUSB` backend with full ctypes wiring (hardware-unverified); macOS `IOKit` skeleton. Viewer-side blocking client (`UsbPassthroughClient` → `ClientHandle.control_transfer / bulk_transfer / interrupt_transfer`). Persistent ACL (`~/.je_auto_control/usb_acl.json`, default deny, mode 0600) with host-side prompt QDialog and tamper-evident audit-log integration. Default off — opt-in via `enable_usb_passthrough(True)` or `JE_AUTOCONTROL_USB_PASSTHROUGH=1`. Phase 2e external security review checklist included; default-on requires sign-off.
+- **USB Passthrough (opt-in)** — let a remote viewer use a USB device physically attached to the host, over a WebRTC `usb` DataChannel. Wire-level protocol (11 opcodes incl. `RESUME`, CREDIT-based flow control, 16 KiB payload cap with EOF fragmentation for oversize transfers). All eight original open questions resolved: reliable-ordered channel, LIST-over-channel (ACL-filtered), per-claim credits, Linux kernel-driver detach/reattach, and ACL **HMAC-SHA256 integrity** (fail-closed on tamper; pluggable key — Windows DPAPI or passphrase vault). **Backends:** `LibusbBackend` (production), `WinusbBackend` (ctypes) and `IokitBackend` (native IOKit enumeration + libusb transfers) — Windows/macOS *hardware-unverified*; `default_passthrough_backend()` picks per-OS. Viewer-side blocking client (`control/bulk/interrupt_transfer`, `list_devices`, `resume`); in-process `UsbLoopback` so one machine can share + use a device through the full stack. **Wired into WebRTC** host/viewer (`viewer.usb_client()`) plus claim **resume tokens** that survive a reconnect. Persistent ACL (default deny, mode 0600) with host-side prompt dialog, abuse **rate-limit / lockout**, and tamper-evident audit integration. Five driving surfaces: AnyDesk-style **GUI panel** (share + ACL allow/block + local/remote use), `AC_usb_*` executor commands (JSON / socket / scheduler), **REST** `/usb/...`, first-class **MCP** `ac_usb_*` tools, and the Python API. Default off — opt-in via `enable_usb_passthrough(True)` or `JE_AUTOCONTROL_USB_PASSTHROUGH=1`; default-on still pending Phase 2e external security sign-off + real-hardware verification.
 - **Observability (Prometheus + OpenTelemetry)** — stdlib-only `Counter` / `Gauge` / `Histogram` registry with a tiny built-in HTTP exporter on `/metrics`, plus an OpenTelemetry-compatible tracer that upgrades to real OTel spans when the SDK is installed. The executor and agent loop emit `autocontrol_action_calls_total{action,outcome}`, `autocontrol_action_duration_seconds`, and `autocontrol_agent_steps_total{tool,outcome}` automatically — drop the URL into a Prometheus scrape config and you have a Grafana dashboard with zero per-script wiring.
 
 ---
@@ -217,7 +250,7 @@ flowchart LR
     subgraph USB["USB"]
         direction TB
         UsbEnum["usb/<br/>list + hotplug events"]
-        UsbPass["usb/passthrough/<br/>session · client · ACL ·<br/>libusb · WinUSB · IOKit"]
+        UsbPass["usb/passthrough/<br/>session · client · ACL(HMAC) ·<br/>libusb · WinUSB · IOKit ·<br/>loopback · webrtc channel · commands"]
     end
 
     subgraph Remote["Remote Desktop (utils/remote_desktop/)"]
@@ -317,7 +350,7 @@ je_auto_control/
     ├── admin/                  # Multi-host AdminConsoleClient (poll + broadcast)
     ├── diagnostics/            # System self-test runner + CLI
     ├── config_bundle/          # Single-file user-config export / import
-    ├── usb/                    # Cross-platform enumeration, hotplug events, passthrough/{protocol, session, viewer client, ACL, libusb / WinUSB / IOKit}
+    ├── usb/                    # Cross-platform enumeration, hotplug events, passthrough/{protocol, session, viewer client, loopback, webrtc channel, ACL+HMAC, descriptor, key providers, commands, libusb / WinUSB / IOKit}
     ├── remote_desktop/         # WebRTC host + viewer, signalling, multi-viewer, file/clipboard/audio sync, audit log (hash chain), trust list, TURN config, mDNS discovery, WebRTC stats inspector
     ├── plugin_loader/          # Dynamic AC_* plugin discovery
     ├── socket_server/          # TCP socket server for remote automation
@@ -942,9 +975,16 @@ time.sleep(10)  # Record for 10 seconds
 # Stop recording and get the action list
 actions = je_auto_control.stop_record()
 
+# Clean up the recording before replay: collapse runs of consecutive
+# mouse-move samples into their final position (often shrinks a raw
+# recording by an order of magnitude without changing replay behaviour)
+actions = je_auto_control.dedupe_moves(actions)
+
 # Replay the recorded actions
 je_auto_control.execute_action(actions)
 ```
+
+> Non-destructive recording editors (all return a new list): `dedupe_moves` (collapse mouse-move runs), `merge_sleeps` (sum consecutive `AC_sleep` runs), `trim_actions`, `insert_action`, `remove_action`, `filter_actions`, `adjust_delays` (scale `AC_sleep` delays), `scale_coordinates` (replay at a different resolution). Exposed over MCP as `ac_dedupe_moves` / `ac_merge_sleeps` / `ac_trim_actions` / `ac_adjust_delays` / `ac_scale_coordinates`.
 
 ### JSON Action Scripting
 
@@ -989,7 +1029,7 @@ je_auto_control.execute_action([
 | LLM planner | `AC_llm_plan`, `AC_llm_run` |
 | Clipboard | `AC_clipboard_get`, `AC_clipboard_set` |
 | Window | `AC_list_windows`, `AC_focus_window`, `AC_wait_window`, `AC_close_window` |
-| Flow control | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_if_var`, `AC_while_image`, `AC_for_each`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry` |
+| Flow control | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_if_var`, `AC_while_image`, `AC_while_var`, `AC_for_each`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry`, `AC_try` |
 | Variables | `AC_set_var`, `AC_get_var`, `AC_inc_var` |
 | Remote desktop | `AC_start_remote_host`, `AC_stop_remote_host`, `AC_remote_host_status`, `AC_remote_connect`, `AC_remote_disconnect`, `AC_remote_viewer_status`, `AC_remote_send_input` |
 | Record | `AC_record`, `AC_stop_record`, `AC_set_record_enable` |

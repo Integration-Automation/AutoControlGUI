@@ -400,6 +400,95 @@ def test_backend_handle_close_is_idempotent():
 
 
 # ---------------------------------------------------------------------------
+# Resume tokens (claim continuity across reconnect)
+# ---------------------------------------------------------------------------
+
+
+def _resume_frame(token: str) -> Frame:
+    return Frame(op=Opcode.RESUME,
+                 payload=json.dumps({"resume_token": token}).encode("utf-8"))
+
+
+def test_open_emits_resume_token():
+    session = UsbPassthroughSession(FakeUsbBackend(devices=[_SAMPLE_DEVICE]))
+    body = json.loads(session.handle_frame(_make_open_frame())[0].payload)
+    assert body["ok"] is True
+    assert isinstance(body["resume_token"], str) and body["resume_token"]
+
+
+def test_resume_rebinds_same_claim():
+    backend = FakeUsbBackend(devices=[_SAMPLE_DEVICE])
+    session = UsbPassthroughSession(backend)
+    opened = json.loads(session.handle_frame(_make_open_frame())[0].payload)
+    token = opened["resume_token"]
+    claim_id = opened["claim_id"]
+    # Simulate a viewer reconnect: same session, replay the token.
+    reply = session.handle_frame(_resume_frame(token))[0]
+    body = json.loads(reply.payload.decode("utf-8"))
+    assert reply.op == Opcode.OPENED
+    assert body["ok"] is True
+    assert body["claim_id"] == claim_id
+    # The claim was never closed, so it is still serviceable.
+    assert session.active_claim_count == 1
+
+
+def test_resume_unknown_token_fails():
+    session = UsbPassthroughSession(FakeUsbBackend(devices=[_SAMPLE_DEVICE]))
+    body = json.loads(session.handle_frame(_resume_frame("deadbeef"))[0].payload)
+    assert body["ok"] is False
+    assert "resume token" in body["error"]
+
+
+def test_resume_after_close_fails():
+    backend = FakeUsbBackend(devices=[_SAMPLE_DEVICE])
+    session = UsbPassthroughSession(backend)
+    opened = json.loads(session.handle_frame(_make_open_frame())[0].payload)
+    token, claim_id = opened["resume_token"], opened["claim_id"]
+    session.handle_frame(Frame(op=Opcode.CLOSE, claim_id=claim_id))
+    body = json.loads(session.handle_frame(_resume_frame(token))[0].payload)
+    assert body["ok"] is False
+
+
+# ---------------------------------------------------------------------------
+# Abuse tracking / lockout
+# ---------------------------------------------------------------------------
+
+
+def test_repeated_failures_lock_out_the_peer():
+    session = UsbPassthroughSession(FakeUsbBackend(devices=[]))
+    bad = Frame(op=Opcode.CLOSE, claim_id=999)  # unknown claim → ERROR
+    assert session.is_locked_out() is False
+    # Hammer the session with failures until the lockout trips.
+    locked = False
+    for _ in range(40):
+        replies = session.handle_frame(bad)
+        if replies and "locked out" in replies[0].payload.decode("utf-8"):
+            locked = True
+            break
+    assert locked is True
+    assert session.is_locked_out() is True
+
+
+def test_normal_traffic_does_not_lock_out():
+    backend = FakeUsbBackend(devices=[_SAMPLE_DEVICE])
+    session = UsbPassthroughSession(backend)
+    claim_id = _open_and_get_claim(session, backend)
+    handle = next(iter(backend._open_handles.values()))
+    handle.transfer_hook = lambda kind, kwargs: b"\x00"
+    for _ in range(30):
+        session.handle_frame(_transfer_frame(Opcode.BULK, claim_id, {
+            "endpoint": 0x81, "direction": "in", "length": 1,
+        }))
+        # Replenish so credit never runs out (those aren't viewer faults
+        # anyway, but keep the stream clean).
+        session.handle_frame(Frame(
+            op=Opcode.CREDIT, claim_id=claim_id,
+            payload=json.dumps({"credits": 4}).encode("utf-8"),
+        ))
+    assert session.is_locked_out() is False
+
+
+# ---------------------------------------------------------------------------
 # Backend ABC
 # ---------------------------------------------------------------------------
 
@@ -428,6 +517,93 @@ def test_fake_handle_transfer_after_close_raises():
 def test_usb_handle_is_an_abc():
     """``UsbHandle`` exposes ``close`` as an abstract method."""
     assert "close" in UsbHandle.__abstractmethods__
+
+
+# ---------------------------------------------------------------------------
+# OQ7 — libusb kernel-driver detach / reattach lifecycle
+# ---------------------------------------------------------------------------
+
+
+class _FakeInterface:
+    def __init__(self, number: int) -> None:
+        self.bInterfaceNumber = number  # NOSONAR python:S116 - mirrors the USB spec descriptor field name
+
+
+class _FakeKernelDevice:
+    """Stand-in for a pyusb device exercising the detach/reattach path."""
+
+    def __init__(self, interfaces, *, active=None,
+                 detach_error=None, config_error=None) -> None:
+        self._interfaces = [_FakeInterface(n) for n in interfaces]
+        self._active = set(interfaces if active is None else active)
+        self._detach_error = detach_error
+        self._config_error = config_error
+        self.detached: list = []
+        self.attached: list = []
+        self.reset_called = False
+
+    def get_active_configuration(self):
+        if self._config_error is not None:
+            raise self._config_error
+        return self._interfaces
+
+    def is_kernel_driver_active(self, number: int) -> bool:
+        return number in self._active
+
+    def detach_kernel_driver(self, number: int) -> None:
+        if self._detach_error is not None:
+            raise self._detach_error
+        self.detached.append(number)
+        self._active.discard(number)
+
+    def attach_kernel_driver(self, number: int) -> None:
+        self.attached.append(number)
+
+    def reset(self) -> None:
+        self.reset_called = True
+
+
+def _make_libusb_handle(device):
+    from je_auto_control.utils.usb.passthrough.backend import _LibusbHandle
+    return _LibusbHandle(device)
+
+
+def test_open_detaches_active_kernel_drivers():
+    device = _FakeKernelDevice([0, 1])
+    _make_libusb_handle(device)
+    assert device.detached == [0, 1]
+
+
+def test_close_reattaches_detached_drivers():
+    device = _FakeKernelDevice([0, 1])
+    handle = _make_libusb_handle(device)
+    handle.close()
+    assert device.attached == [0, 1]
+    assert device.reset_called is True
+
+
+def test_inactive_interfaces_are_left_alone():
+    device = _FakeKernelDevice([0, 1], active=[])
+    handle = _make_libusb_handle(device)
+    assert device.detached == []
+    handle.close()
+    assert device.attached == []
+
+
+def test_detach_not_implemented_is_tolerated():
+    # libusb on Windows / macOS raises NotImplementedError for detach.
+    device = _FakeKernelDevice([0], detach_error=NotImplementedError())
+    handle = _make_libusb_handle(device)
+    assert device.detached == []
+    handle.close()  # must not raise
+    assert device.attached == []
+
+
+def test_missing_active_configuration_is_tolerated():
+    device = _FakeKernelDevice([0], config_error=ValueError("no config"))
+    handle = _make_libusb_handle(device)
+    assert device.detached == []
+    handle.close()  # must not raise
 
 
 # ---------------------------------------------------------------------------
