@@ -346,11 +346,38 @@ list 時，body 內看到的就是當前的元素。
        }],
    ])
 
-``AC_if_var`` 的比較運算子：``eq``、``ne``、``lt``、``le``、``gt``、
-``ge``、``contains``、``startswith``、``endswith``。
+``AC_if_var``(與 ``AC_while_var``)的比較運算子：``eq``、``ne``、``lt``、
+``le``、``gt``、``ge``、``contains``、``startswith``、``endswith``。
+
+``AC_while_var`` 在變數比較成立時持續執行 ``body``。每輪迭代前都會對當前
+scope 重新判斷條件,因此會變動該變數的 body(例如 ``AC_inc_var``)能讓迴圈
+終止;``max_iter``(預設 1000)為條件永不為假時的安全上限。``AC_break`` /
+``AC_continue`` 與一般迴圈相同::
+
+   executor.execute_action([
+       ["AC_set_var", {"name": "i", "value": 0}],
+       ["AC_while_var", {
+           "name": "i", "op": "lt", "value": 5,
+           "body": [["AC_inc_var", {"name": "i"}]],
+       }],
+   ])
+
+``AC_try`` 提供 try / catch / finally。``body`` 失敗時改走 ``catch`` 分支而
+非中止腳本;``finally`` 一律執行(成功、捕捉到錯誤,或在 ``reraise`` / 迴圈
+break、continue 穿透時皆然)。錯誤文字會暴露到 ``error_var`` 供 ``catch``
+分支檢視,``reraise=true`` 會在清理後重新拋出::
+
+   executor.execute_action([
+       ["AC_try", {
+           "body": [["AC_click_image", {"image": "dialog_ok.png"}]],
+           "catch": [["AC_set_var", {"name": "dismissed", "value": False}]],
+           "finally": [["AC_screenshot", {"file_path": "after.png"}]],
+           "error_var": "err",
+       }],
+   ])
 
 Action-JSON 指令：``AC_set_var``、``AC_get_var``、``AC_inc_var``、
-``AC_if_var``、``AC_for_each``。
+``AC_if_var``、``AC_for_each``、``AC_while_var``、``AC_try``。
 
 GUI：**Variables** 分頁 — 即時檢視 ``executor.variables``，可單筆設
 定、JSON 整批 seed、清空，反映 ``AC_set_var`` / ``AC_for_each`` 在執

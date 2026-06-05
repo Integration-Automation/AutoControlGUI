@@ -40,6 +40,66 @@ Executor：``AC_assert_text / _image / _pixel / _window``。
 MCP：``ac_assert_*``。GUI：**Assertions** 分頁。
 
 
+畫面外與系統斷言
+----------------
+
+DSL 也能驗證不在畫面上的狀態::
+
+    from je_auto_control import (
+        assert_clipboard, assert_process, assert_file, assert_http,
+    )
+
+    assert_clipboard("ORDER-12345", mode="contains")
+    assert_process("chrome", running=True)
+    assert_file("export.csv", min_size=1, contains="total")
+    assert_http("https://localhost:8080/health", status=200)
+
+* ``assert_clipboard`` — 以 ``equals`` / ``contains`` / ``regex`` 比對剪貼簿
+  文字；``present=False`` 可確認機密已被*清除*。
+* ``assert_process`` — 名稱含指定字串的程序是否正在執行(透過 ``psutil``)。
+* ``assert_file`` — 檔案存在 / 子字串 / SHA-256 / 最小大小;路徑在任何 I/O
+  前先經 ``realpath`` 正規化。用於驗證下載或匯出。
+* ``assert_http`` — ``http``/``https`` 端點回傳狀態碼(與可選內文子字串),
+  一律帶明確 ``timeout``;僅接受 ``http``/``https`` scheme,主機不可達視為
+  斷言失敗而非崩潰。
+
+Executor：``AC_assert_clipboard / _process / _file / _http``。
+MCP：``ac_assert_clipboard / ac_assert_process / ac_assert_file /
+ac_assert_http``。
+
+
+斷言組合器（群組 / OR / 輪詢）
+------------------------------
+
+用宣告式 *spec*(如 ``{"kind": "text", "text": "Saved"}`` 這樣的純 dict)
+組合八種斷言,讓相同檢查在 Python、JSON、MCP 中都能使用而不需傳遞 callable::
+
+    from je_auto_control import assert_all, assert_any, assert_eventually
+
+    # 軟斷言:跑完整批、收齊所有失敗
+    assert_all([
+        {"kind": "window", "title": "Dashboard"},
+        {"kind": "text", "text": "Welcome"},
+    ])
+
+    # OR:任一 spec 通過即通過(短路)
+    assert_any([
+        {"kind": "text", "text": "Success"},
+        {"kind": "window", "title": "Redirecting"},
+    ])
+
+    # 輪詢單一 spec 直到通過或逾時
+    assert_eventually({"kind": "http", "url": "http://localhost:8080/health"},
+                      timeout=30, interval=0.5)
+
+``assert_all``(AND)不短路,回傳彙整所有子結果的 :class:`GroupAssertionResult`;
+``assert_any``(OR)在第一個通過時停止;``assert_eventually`` 依間隔重複檢查
+單一 spec 直到成立 — 適合等待服務啟動或下載檔出現。
+
+Executor：``AC_assert_all / AC_assert_any / AC_assert_eventually``。
+MCP：``ac_assert_all / ac_assert_any / ac_assert_eventually``。
+
+
 媒體斷言（音訊 / 影片）
 ----------------------
 

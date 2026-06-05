@@ -65,7 +65,9 @@
 [`docs/source/Zh/doc/new_features/v3_features_doc.rst`](../docs/source/Zh/doc/new_features/v3_features_doc.rst)。
 
 **断言**
-- **断言 DSL** — 验证画面状态而不只是操作：`assert_text`（OCR，`regex` + `present=False` 断言不存在）、`assert_image`、`assert_pixel`、`assert_window`。返回 `AssertionResult`，不符时抛出 `AutoControlAssertionException`，可选失败截图（`AC_assert_text / _image / _pixel / _window`）。
+- **断言 DSL** — 验证画面状态而不只是操作：`assert_text`（OCR，`regex` + `present=False` 断言不存在）、`assert_image`、`assert_pixel`、`assert_window`、`assert_clipboard`（`equals` / `contains` / `regex`，`present=False` 可确认机密已清除）、`assert_process`（指定名称的进程是否运行中，通过 psutil）。返回 `AssertionResult`，不符时抛出 `AutoControlAssertionException`，可选失败截图（`AC_assert_text / _image / _pixel / _window / _clipboard / _process`）。
+- **画面外断言** — `assert_file`（文件存在 / 子串 / SHA-256 / 最小大小，验证下载或导出结果）与 `assert_http`（http/https 端点返回状态码 + 可选正文，一律带显式 timeout）。两者把 DSL 延伸到画面之外，并能接到下方的组合器（`AC_assert_file / AC_assert_http`）。
+- **断言组合器** — `assert_all([...specs])` 以*软断言*方式跑完整批（逐一检查、收齐所有失败才抛出）并返回 `GroupAssertionResult`；`assert_any([...specs])` 是 OR 互补（任一通过即通过、短路 — 例如登录成功对话框*或*重定向其一出现即可）；`assert_eventually(spec, timeout, interval)` 重试单个声明式 spec 直到通过或超时（例如轮询健康检查端点直到返回 200，或等待下载文件出现）。均以 spec 驱动（`{"kind": "text", "text": "Saved"}`、`{"kind": "http", "url": "..."}`），在 Python、JSON、MCP 中行为一致,涵盖全部断言类型 — text/image/pixel/window/clipboard/process/file/http（`AC_assert_all / AC_assert_any / AC_assert_eventually`）。
 - **媒体断言** — `assert_audio_activity`（录音 + RMS 阈值判断有声 / 静音）与 `assert_video_changes`（视频区段相邻帧平均差异判断动态 / 静止）；纯数值核心，`sounddevice` / OpenCV 延迟加载（`AC_assert_audio / AC_assert_video_changes`）。
 
 **数据驱动执行**
@@ -136,7 +138,7 @@
 
 ## 功能特性
 
-- **QA / 测试框架** — 断言 DSL（`assert_text` / `_image` / `_pixel` / `_window` 加上音频/视频断言）、数据驱动执行（CSV / JSON / SQLite / Excel → `AC_for_each_row`）、具 setup/teardown/标签的计分 `run_suite`、JUnit + Allure 报告输出、不稳定测试检测与自动隔离、无障碍 / i18n 审计（缺失标签、WCAG 对比度、截断），以及并行的移动设备矩阵。详见 [本次更新 (2026-06)](#本次更新-2026-06)
+- **QA / 测试框架** — 断言 DSL（`assert_text` / `_image` / `_pixel` / `_window` / `_clipboard` / `_process` / `_file` / `_http` 加上音频/视频断言,以及 `assert_all` / `assert_any` / `assert_eventually` 组合器）、数据驱动执行（CSV / JSON / SQLite / Excel → `AC_for_each_row`）、具 setup/teardown/标签的计分 `run_suite`、JUnit + Allure 报告输出、不稳定测试检测与自动隔离、无障碍 / i18n 审计（缺失标签、WCAG 对比度、截断），以及并行的移动设备矩阵。详见 [本次更新 (2026-06)](#本次更新-2026-06)
 - **鼠标自动化** — 移动、点击、按下、释放、拖拽、滚动，支持精确坐标控制
 - **键盘自动化** — 按下/释放单一按键、输入字符串、组合键、按键状态检测
 - **图像识别** — 使用 OpenCV 模板匹配在屏幕上定位 UI 元素，支持可配置的检测阈值
@@ -144,7 +146,7 @@
 - **AI 元件定位（VLM）** — 用自然语言描述 UI 元素，由视觉语言模型（Anthropic / OpenAI）返回屏幕坐标
 - **OCR** — 三个可插拔后端（Tesseract 用于 ASCII、EasyOCR 无外部可执行文件且支持 CJK、PaddleOCR 中／日／韩质量最高），统一 API 与标准语言代码；后端由 `backend=` 参数、`AUTOCONTROL_OCR_BACKEND` 环境变量或自动探测决定。可搜索、点击或等待文字出现；支持 regex 搜索与整块区域 dump
 - **LLM 动作规划器** — 用 Claude 把自然语言描述翻译成验证过的 `AC_*` 动作清单
-- **运行期变量与流程控制** — 执行时 `${var}` 替换，加上 `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_retry` 让脚本数据驱动
+- **运行期变量与流程控制** — 执行时 `${var}` 替换，加上 `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_while_var` / `AC_retry` / `AC_try` 让脚本数据驱动。`AC_while_var` 在变量比较成立时持续循环（每轮重新判断，`max_iter` 安全上限）；`AC_try` 提供 try/catch/finally：`body` 失败时改走 `catch` 恢复分支而非中止、`finally` 必定执行、错误通过 `error_var` 暴露、可在清理后 `reraise`（循环 `break`/`continue` 仍能穿透）
 - **远程桌面** — 用 token 认证的 TCP 协议串流本机画面并接收输入，**或** 连接到他机观看与控制（host + viewer GUI 内置）。可选 TLS（HTTPS 级加密）、WebSocket 传输（``ws://`` + ``wss://``，穿墙／浏览器友好）、持久化 9 位数 Host ID、host→viewer 音频串流、双向剪贴板同步（文字 + 图片）、分块文件传输（拖放 + 进度条；任意目的路径；无大小上限）。另含文件夹同步（增量镜像 — 本地删除不会传出去）与自建 coturn TURN 配置包生成器（turnserver.conf + systemd unit + docker-compose + README）。**AnyDesk 风格弹出窗口**：viewer 认证成功后远程桌面会开在独立的可调整大小顶层窗口，控制面板保持简洁；Remote Desktop 子分页外层包了 `QScrollArea`，小窗口下可滚动、4K 屏幕下会铺满。同时支持 headless API 与 MCP 工具 (`ac_remote_*`) 直接驱动
 - **驱动级输入后端（可选）** — 针对忽略 SendInput（Win）或 XTest（Linux）的游戏／应用：**Interception driver 后端**（Windows，HID 层鍵鼠注入，使用 Oblita WHQL-signed driver，通过 `JE_AUTOCONTROL_WIN32_BACKEND=interception` 启用）、**uinput 后端**（Linux，kernel `/dev/uinput` 合成 HID 设备，通过 `JE_AUTOCONTROL_LINUX_BACKEND=uinput` 启用），以及 **ViGEm 虚拟手柄**（Windows，针对只认手柄的游戏，提供虚拟 Xbox 360 手柄 + 友善的 button / dpad / stick / trigger API，并暴露为 `AC_gamepad_*` 执行器命令与 `ac_gamepad_*` MCP 工具）。三者在 driver 没装时都会优雅 fallback，不影响既有部署
 - **剪贴板** — 于 Windows / macOS / Linux 读写系统剪贴板文本
@@ -883,9 +885,15 @@ time.sleep(10)  # 录制 10 秒
 # 停止录制并获取动作列表
 actions = je_auto_control.stop_record()
 
+# 回放前先清理录制内容：把连续的鼠标移动采样压缩成最后位置
+#（通常能把原始录制缩小一个数量级，且不改变回放行为）
+actions = je_auto_control.dedupe_moves(actions)
+
 # 重新播放录制的动作
 je_auto_control.execute_action(actions)
 ```
+
+> 非破坏式录制编辑器（均返回新的 list）：`dedupe_moves`（压缩鼠标移动）、`merge_sleeps`（合并连续 `AC_sleep`）、`trim_actions`、`insert_action`、`remove_action`、`filter_actions`、`adjust_delays`（缩放 `AC_sleep` 延迟）、`scale_coordinates`（以不同分辨率回放）。通过 MCP 暴露为 `ac_dedupe_moves` / `ac_merge_sleeps` / `ac_trim_actions` / `ac_adjust_delays` / `ac_scale_coordinates`。
 
 ### JSON 脚本执行器
 
@@ -930,7 +938,7 @@ je_auto_control.execute_action([
 | LLM 规划器 | `AC_llm_plan`, `AC_llm_run` |
 | 剪贴板 | `AC_clipboard_get`, `AC_clipboard_set` |
 | 窗口 | `AC_list_windows`, `AC_focus_window`, `AC_wait_window`, `AC_close_window` |
-| 流程控制 | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_if_var`, `AC_while_image`, `AC_for_each`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry` |
+| 流程控制 | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_if_var`, `AC_while_image`, `AC_while_var`, `AC_for_each`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry`, `AC_try` |
 | 变量 | `AC_set_var`, `AC_get_var`, `AC_inc_var` |
 | 远程桌面 | `AC_start_remote_host`, `AC_stop_remote_host`, `AC_remote_host_status`, `AC_remote_connect`, `AC_remote_disconnect`, `AC_remote_viewer_status`, `AC_remote_send_input` |
 | 录制 | `AC_record`, `AC_stop_record`, `AC_set_record_enable` |

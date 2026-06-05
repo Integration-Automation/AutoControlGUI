@@ -44,6 +44,72 @@ Executor: ``AC_assert_text / _image / _pixel / _window``.
 MCP: ``ac_assert_*``. GUI: **Assertions** tab.
 
 
+Off-screen and system assertions
+---------------------------------
+
+The DSL also verifies state that is not on the screen::
+
+    from je_auto_control import (
+        assert_clipboard, assert_process, assert_file, assert_http,
+    )
+
+    assert_clipboard("ORDER-12345", mode="contains")
+    assert_process("chrome", running=True)
+    assert_file("export.csv", min_size=1, contains="total")
+    assert_http("https://localhost:8080/health", status=200)
+
+* ``assert_clipboard`` — clipboard text by ``equals`` / ``contains`` /
+  ``regex``; ``present=False`` confirms a secret was *cleared*.
+* ``assert_process`` — a process whose name contains the argument is (or
+  is not) running, via ``psutil``.
+* ``assert_file`` — existence / substring / SHA-256 / minimum size of a
+  file; the path is ``realpath``-normalised before any I/O. Verifies a
+  download or export.
+* ``assert_http`` — an ``http``/``https`` endpoint returns a status code
+  (and optional body substring), always with an explicit ``timeout``.
+  Only ``http``/``https`` schemes are accepted; an unreachable host is a
+  failed assertion, not a crash.
+
+Executor: ``AC_assert_clipboard / _process / _file / _http``.
+MCP: ``ac_assert_clipboard / ac_assert_process / ac_assert_file /
+ac_assert_http``.
+
+
+Assertion combinators (group / OR / poll)
+-----------------------------------------
+
+Compose the eight assertion kinds with declarative *specs* — plain dicts
+like ``{"kind": "text", "text": "Saved"}`` — so the same checks are
+reachable from Python, JSON, and MCP without passing callables::
+
+    from je_auto_control import assert_all, assert_any, assert_eventually
+
+    # soft assertions: run the whole batch, collect every failure
+    assert_all([
+        {"kind": "window", "title": "Dashboard"},
+        {"kind": "text", "text": "Welcome"},
+    ])
+
+    # OR: pass when at least one spec passes (short-circuits)
+    assert_any([
+        {"kind": "text", "text": "Success"},
+        {"kind": "window", "title": "Redirecting"},
+    ])
+
+    # poll any spec until it passes or times out
+    assert_eventually({"kind": "http", "url": "http://localhost:8080/health"},
+                      timeout=30, interval=0.5)
+
+``assert_all`` (AND) never short-circuits and returns a
+:class:`GroupAssertionResult` summarising every sub-result;
+``assert_any`` (OR) stops at the first pass; ``assert_eventually``
+re-checks one spec on an interval until it holds — ideal for waiting on a
+service to come up or a download file to appear.
+
+Executor: ``AC_assert_all / AC_assert_any / AC_assert_eventually``.
+MCP: ``ac_assert_all / ac_assert_any / ac_assert_eventually``.
+
+
 Media assertions (audio / video)
 --------------------------------
 
