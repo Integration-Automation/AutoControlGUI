@@ -1973,6 +1973,32 @@ def _notify(title: str, message: str = "") -> Dict[str, Any]:
     return notify(str(title), str(message)).to_dict()
 
 
+def _region_color_stats(region: Optional[Union[List[int], str]] = None,
+                        buckets: int = 8) -> Dict[str, Any]:
+    """Executor adapter: average + dominant colour of a screen region.
+
+    ``region`` is ``[x1, y1, x2, y2]`` (or a JSON string of it for the
+    visual builder); omit it to analyse the whole screen.
+    """
+    import json
+    import os
+    import tempfile
+    from je_auto_control.utils.color_stats import region_color_stats
+    from je_auto_control.wrapper.auto_control_screen import screenshot
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    handle, tmp = tempfile.mkstemp(prefix="colorstats_", suffix=".png")
+    os.close(handle)
+    try:
+        screenshot(tmp, screen_region=region)
+        return region_color_stats(tmp, buckets=int(buckets)).to_dict()
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
 class Executor:
     """
     Executor
@@ -2368,6 +2394,9 @@ class Executor:
 
             # Desktop notification
             "AC_notify": _notify,
+
+            # Region colour statistics (dominant / average colour)
+            "AC_region_color_stats": _region_color_stats,
         }
 
     def known_commands(self) -> set:

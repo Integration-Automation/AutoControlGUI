@@ -68,6 +68,8 @@ from je_auto_control.utils.redaction import (
 from je_auto_control.utils.annotate import annotate_screenshot
 # Cross-platform desktop notifications.
 from je_auto_control.utils.notify import NotifyResult, notify
+# Region colour statistics (dominant / average colour).
+from je_auto_control.utils.color_stats import ColorStats, region_color_stats
 # WebRunner bridge (headless: optional je_web_runner dependency)
 from je_auto_control.utils.webrunner_bridge import (
     WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
@@ -577,6 +579,8 @@ __all__ = [
     "annotate_screenshot",
     # Desktop notifications
     "NotifyResult", "notify",
+    # Region colour statistics
+    "ColorStats", "region_color_stats",
     # WebRunner bridge (browser automation via je_web_runner)
     "WebRunnerBridgeError", "is_webrunner_available",
     "list_webrunner_commands", "run_webrunner_action",

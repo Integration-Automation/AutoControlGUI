@@ -434,6 +434,16 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Show a cross-platform desktop notification.",
     ))
+    specs.append(CommandSpec(
+        "AC_region_color_stats", "Report", "Region Colour Stats",
+        fields=(
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[0, 0, 200, 100]"),
+            FieldSpec("buckets", FieldType.INT, optional=True, default=8,
+                      min_value=1),
+        ),
+        description="Average + dominant colour of a screen region.",
+    ))
 
 
 _SPECS: Tuple[CommandSpec, ...] = tuple(_build_specs())
