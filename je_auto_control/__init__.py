@@ -64,6 +64,8 @@ from je_auto_control.utils.redaction import (
     policy_from_name as redaction_policy_from_name,
     redact_png_bytes,
 )
+# Screenshot annotation (draw boxes / highlights / arrows / labels).
+from je_auto_control.utils.annotate import annotate_screenshot
 # WebRunner bridge (headless: optional je_web_runner dependency)
 from je_auto_control.utils.webrunner_bridge import (
     WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
@@ -568,6 +570,8 @@ __all__ = [
     "RedactionEngine", "RedactionPolicy", "RedactionResult",
     "default_redaction_policy", "redaction_policy_from_name",
     "redact_png_bytes",
+    # Screenshot annotation
+    "annotate_screenshot",
     # WebRunner bridge (browser automation via je_web_runner)
     "WebRunnerBridgeError", "is_webrunner_available",
     "list_webrunner_commands", "run_webrunner_action",

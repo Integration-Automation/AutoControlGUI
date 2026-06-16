@@ -1938,6 +1938,22 @@ def _verify_action_file(path: str, key: Optional[str] = None,
     ).to_dict()
 
 
+def _annotate_screenshot(source: str,
+                         annotations: Union[List[Dict[str, Any]], str],
+                         output_path: str) -> Dict[str, Any]:
+    """Executor adapter: draw annotations onto a screenshot and save it.
+
+    ``annotations`` may be a list of annotation dicts, or a JSON string of
+    the same (so the visual builder can pass it through a text field).
+    """
+    import json
+    from je_auto_control.utils.annotate import annotate_screenshot
+    if isinstance(annotations, str):
+        annotations = json.loads(annotations) if annotations.strip() else []
+    return {"output_path": annotate_screenshot(
+        source, annotations, output_path)}
+
+
 class Executor:
     """
     Executor
@@ -2323,6 +2339,9 @@ class Executor:
             # Config bundle export / import
             "AC_config_export": _config_export,
             "AC_config_import": _config_import,
+
+            # Screenshot annotation (boxes / highlights / arrows / labels)
+            "AC_annotate_screenshot": _annotate_screenshot,
         }
 
     def known_commands(self) -> set:

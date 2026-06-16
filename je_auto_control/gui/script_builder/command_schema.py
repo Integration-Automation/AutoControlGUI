@@ -367,6 +367,16 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Verify an action file against its signature sidecar.",
     ))
+    specs.append(CommandSpec(
+        "AC_annotate_screenshot", "Report", "Annotate Screenshot",
+        fields=(
+            FieldSpec("source", FieldType.FILE_PATH),
+            FieldSpec("output_path", FieldType.STRING),
+            FieldSpec("annotations", FieldType.STRING, optional=True,
+                      placeholder='[{"type":"box","rect":[10,10,80,40]}]'),
+        ),
+        description="Draw boxes / highlights / arrows / labels onto an image.",
+    ))
 
 
 _SPECS: Tuple[CommandSpec, ...] = tuple(_build_specs())
