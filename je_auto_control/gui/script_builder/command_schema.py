@@ -211,6 +211,21 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         ),
     ))
     specs.append(CommandSpec(
+        "AC_scroll_to_find", "OCR", "Scroll Until Visible",
+        fields=(
+            FieldSpec("target", FieldType.STRING),
+            FieldSpec("kind", FieldType.ENUM, choices=("image", "text"),
+                      default="image"),
+            FieldSpec("direction", FieldType.ENUM,
+                      choices=("down", "up", "left", "right"), default="down"),
+            FieldSpec("max_scrolls", FieldType.INT, optional=True, default=10,
+                      min_value=1),
+            FieldSpec("scroll_amount", FieldType.INT, optional=True, default=3,
+                      min_value=1),
+        ),
+        description="Scroll until a template image or OCR text appears.",
+    ))
+    specs.append(CommandSpec(
         "AC_ocr_to_var", "OCR", "Read Text into Variable",
         fields=(
             FieldSpec("var", FieldType.STRING, default="ocr_text"),

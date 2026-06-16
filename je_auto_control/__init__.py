@@ -75,6 +75,8 @@ from je_auto_control.utils.window_capture import (
     capture_window, get_window_geometry, restore_window_layout,
     save_window_layout,
 )
+# Scroll until a target image / text is visible.
+from je_auto_control.utils.scroll_find import scroll_until_visible
 # WebRunner bridge (headless: optional je_web_runner dependency)
 from je_auto_control.utils.webrunner_bridge import (
     WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
@@ -589,6 +591,8 @@ __all__ = [
     # Per-window capture + window-layout save / restore
     "capture_window", "get_window_geometry",
     "save_window_layout", "restore_window_layout",
+    # Scroll-to-find
+    "scroll_until_visible",
     # WebRunner bridge (browser automation via je_web_runner)
     "WebRunnerBridgeError", "is_webrunner_available",
     "list_webrunner_commands", "run_webrunner_action",

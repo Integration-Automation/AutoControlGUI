@@ -1986,6 +1986,17 @@ def _notify(title: str, message: str = "") -> Dict[str, Any]:
     return notify(str(title), str(message)).to_dict()
 
 
+def _scroll_to_find(target: str, kind: str = "image", direction: str = "down",
+                    max_scrolls: int = 10,
+                    scroll_amount: int = 3) -> Dict[str, Any]:
+    """Executor adapter: scroll until a target image / text is visible."""
+    from je_auto_control.utils.scroll_find import scroll_until_visible
+    return scroll_until_visible(
+        target, kind=kind, direction=direction,
+        max_scrolls=int(max_scrolls), scroll_amount=int(scroll_amount),
+    )
+
+
 def _capture_window(title: str, output_path: str) -> Dict[str, Any]:
     """Executor adapter: screenshot the window matching ``title``."""
     from je_auto_control.utils.window_capture import capture_window
@@ -2432,6 +2443,9 @@ class Executor:
 
             # Region colour statistics (dominant / average colour)
             "AC_region_color_stats": _region_color_stats,
+
+            # Scroll until a target image / text is visible
+            "AC_scroll_to_find": _scroll_to_find,
 
             # Per-window capture + window-layout save / restore
             "AC_capture_window": _capture_window,
