@@ -1,8 +1,17 @@
-"""Tests for flow variable commands: read-file, http, transform."""
+"""Tests for flow variable commands: read-file, http, transform, now,
+random, assert-var."""
+import datetime
+
+import pytest
+
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlAssertionException,
+)
 from je_auto_control.utils.executor import flow_control
 from je_auto_control.utils.executor.action_executor import Executor
 from je_auto_control.utils.executor.flow_control import (
-    exec_http_to_var, exec_read_file_to_var, exec_transform_var,
+    exec_assert_var, exec_http_to_var, exec_now_to_var, exec_random_to_var,
+    exec_read_file_to_var, exec_transform_var,
 )
 
 
@@ -62,3 +71,44 @@ def test_transform_var_replace_and_slice():
     exec_transform_var(executor, {"name": "v", "op": "slice",
                                   "start": 0, "end": 3, "into": "s"})
     assert executor.variables.get_value("s") == "foo"
+
+
+def test_now_to_var_formats_injected_clock(monkeypatch):
+    monkeypatch.setattr(flow_control, "_now",
+                        lambda: datetime.datetime(2026, 1, 2, 3, 4, 5))
+    executor = Executor()
+    result = exec_now_to_var(executor, {"format": "%Y-%m-%d", "var": "d"})
+    assert result["value"] == "2026-01-02"
+    assert executor.variables.get_value("d") == "2026-01-02"
+
+
+def test_random_to_var_int_within_fixed_range():
+    executor = Executor()
+    exec_random_to_var(executor, {"kind": "int", "min": 1, "max": 1, "var": "r"})
+    assert executor.variables.get_value("r") == 1
+
+
+def test_random_to_var_choice():
+    executor = Executor()
+    exec_random_to_var(executor, {"kind": "choice", "choices": ["only"],
+                                  "var": "c"})
+    assert executor.variables.get_value("c") == "only"
+
+
+def test_assert_var_passes_then_raises():
+    executor = Executor()
+    executor.variables.set("v", "Sam")
+    result = exec_assert_var(executor, {"name": "v", "op": "eq",
+                                        "value": "Sam"})
+    assert result["passed"] is True
+    with pytest.raises(AutoControlAssertionException):
+        exec_assert_var(executor, {"name": "v", "op": "eq", "value": "Nope"})
+
+
+def test_assert_var_regex_match():
+    executor = Executor()
+    executor.variables.set("v", "Order #12345")
+    result = exec_assert_var(executor, {"name": "v", "op": "regex",
+                                        "value": r"#\d+",
+                                        "raise_on_fail": False})
+    assert result["passed"] is True

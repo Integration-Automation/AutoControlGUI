@@ -79,6 +79,8 @@ from je_auto_control.utils.window_capture import (
 from je_auto_control.utils.scroll_find import scroll_until_visible
 # Recoverable deletion (move files to the OS recycle bin).
 from je_auto_control.utils.trash import move_to_trash
+# QR code decoding from a screen region / image.
+from je_auto_control.utils.qr import read_qr_codes
 # WebRunner bridge (headless: optional je_web_runner dependency)
 from je_auto_control.utils.webrunner_bridge import (
     WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
@@ -155,7 +157,8 @@ from je_auto_control.utils.assertion import (
     AssertionResult, GroupAssertionResult, assert_all, assert_any,
     assert_by_description, assert_clipboard, assert_duration,
     assert_eventually, assert_file, assert_http, assert_image, assert_pixel,
-    assert_process, assert_text, assert_window, run_assertion_spec,
+    assert_process, assert_text, assert_variable, assert_window,
+    run_assertion_spec,
 )
 # Data-driven execution (load rows from CSV / JSON / SQLite / Excel)
 from je_auto_control.utils.data_source import data_source_kinds, load_rows
@@ -549,6 +552,7 @@ __all__ = [
     "AssertionResult", "assert_image", "assert_pixel",
     "assert_text", "assert_window", "assert_clipboard", "assert_process",
     "assert_file", "assert_http", "assert_by_description", "assert_duration",
+    "assert_variable",
     # Assertion combinators (soft groups + eventual polling)
     "GroupAssertionResult", "assert_all", "assert_any", "assert_eventually",
     "run_assertion_spec",
@@ -602,6 +606,8 @@ __all__ = [
     "scroll_until_visible",
     # Recoverable deletion (recycle bin)
     "move_to_trash",
+    # QR code decoding
+    "read_qr_codes",
     # WebRunner bridge (browser automation via je_web_runner)
     "WebRunnerBridgeError", "is_webrunner_available",
     "list_webrunner_commands", "run_webrunner_action",

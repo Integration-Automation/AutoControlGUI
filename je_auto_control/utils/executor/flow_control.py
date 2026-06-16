@@ -389,6 +389,48 @@ def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
             "returncode": completed.returncode}
 
 
+def _now():
+    import datetime as _dt
+    return _dt.datetime.now()
+
+
+def exec_now_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Store the current local time (strftime format) in a flow variable."""
+    value = _now().strftime(str(args.get("format", "%Y-%m-%d %H:%M:%S")))
+    var_name = args.get("var", "now")
+    executor.variables.set(var_name, value)
+    return {"var": var_name, "value": value}
+
+
+def exec_random_to_var(executor: Any,
+                       args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Store a random value (int / float / choice) in a flow variable."""
+    import random
+    rng = random.Random(args.get("seed"))
+    kind = str(args.get("kind", "int"))
+    if kind == "choice":
+        value: Any = rng.choice(list(args.get("choices") or [None]))
+    elif kind == "float":
+        value = rng.uniform(float(args.get("min", 0.0)),
+                            float(args.get("max", 1.0)))
+    else:
+        value = rng.randint(int(args.get("min", 0)), int(args.get("max", 100)))
+    var_name = args.get("var", "random")
+    executor.variables.set(var_name, value)
+    return {"var": var_name, "value": value}
+
+
+def exec_assert_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Assert a flow variable satisfies a condition (assertion DSL)."""
+    from je_auto_control.utils.assertion import assert_variable
+    name = args["name"]
+    return assert_variable(
+        executor.variables.get_value(name), op=str(args.get("op", "eq")),
+        expected=args.get("value"), name=name,
+        raise_on_fail=bool(args.get("raise_on_fail", True)),
+    ).to_dict()
+
+
 def exec_read_file_to_var(executor: Any,
                           args: Mapping[str, Any]) -> Dict[str, Any]:
     """Read a file's text content into a flow variable."""
@@ -603,4 +645,7 @@ BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_read_file_to_var": exec_read_file_to_var,
     "AC_http_to_var": exec_http_to_var,
     "AC_transform_var": exec_transform_var,
+    "AC_now_to_var": exec_now_to_var,
+    "AC_random_to_var": exec_random_to_var,
+    "AC_assert_var": exec_assert_var,
 }

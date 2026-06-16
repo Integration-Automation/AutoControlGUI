@@ -19,6 +19,7 @@ from je_auto_control.utils.assertion.assertions import (
     assert_pixel,
     assert_process,
     assert_text,
+    assert_variable,
     assert_window,
 )
 from je_auto_control.utils.assertion.combinators import (
@@ -45,6 +46,7 @@ __all__ = [
     "assert_pixel",
     "assert_process",
     "assert_text",
+    "assert_variable",
     "assert_window",
     "run_assertion_spec",
 ]

@@ -225,6 +225,14 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         ),
     ))
     specs.append(CommandSpec(
+        "AC_read_qr", "OCR", "Read QR Codes",
+        fields=(
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[0, 0, 400, 400]"),
+        ),
+        description="Decode QR codes in a screen region (OpenCV).",
+    ))
+    specs.append(CommandSpec(
         "AC_scroll_to_find", "OCR", "Scroll Until Visible",
         fields=(
             FieldSpec("target", FieldType.STRING),
@@ -447,6 +455,39 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("pattern", FieldType.STRING, optional=True),
         ),
         description="String-transform a variable (upper/strip/replace/regex/...).",
+    ))
+    specs.append(CommandSpec(
+        "AC_now_to_var", "Flow", "Timestamp into Variable",
+        fields=(
+            FieldSpec("var", FieldType.STRING, default="now"),
+            FieldSpec("format", FieldType.STRING, optional=True,
+                      default="%Y-%m-%d %H:%M:%S"),
+        ),
+        description="Store the current time (strftime format) in a variable.",
+    ))
+    specs.append(CommandSpec(
+        "AC_random_to_var", "Flow", "Random into Variable",
+        fields=(
+            FieldSpec("var", FieldType.STRING, default="random"),
+            FieldSpec("kind", FieldType.ENUM,
+                      choices=("int", "float", "choice"), default="int"),
+            FieldSpec("min", FieldType.FLOAT, optional=True, default=0.0),
+            FieldSpec("max", FieldType.FLOAT, optional=True, default=100.0),
+            FieldSpec("seed", FieldType.INT, optional=True),
+        ),
+        description="Store a random int / float / choice in a variable.",
+    ))
+    specs.append(CommandSpec(
+        "AC_assert_var", "Flow", "Assert Variable",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("op", FieldType.ENUM,
+                      choices=("eq", "ne", "lt", "le", "gt", "ge",
+                               "contains", "startswith", "endswith",
+                               "regex"), default="eq"),
+            FieldSpec("value", FieldType.STRING, optional=True),
+        ),
+        description="Fail if a flow variable doesn't satisfy the condition.",
     ))
     specs.append(CommandSpec(
         "AC_assert_duration", "Flow", "Assert Duration (perf budget)",

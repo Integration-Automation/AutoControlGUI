@@ -503,6 +503,56 @@ def assert_by_description(description: str,
     )
 
 
+def _variable_satisfies(value: Any, op: str, expected: Any) -> bool:
+    """Return True when ``value op expected`` holds (eq/ne/contains/...)."""
+    import re
+    comparators = {
+        "eq": lambda a, b: a == b,
+        "ne": lambda a, b: a != b,
+        "lt": lambda a, b: a < b,
+        "le": lambda a, b: a <= b,
+        "gt": lambda a, b: a > b,
+        "ge": lambda a, b: a >= b,
+        "contains": lambda a, b: b in a,
+        "startswith": lambda a, b: isinstance(a, str) and a.startswith(b),
+        "endswith": lambda a, b: isinstance(a, str) and a.endswith(b),
+        "regex": lambda a, b: re.search(str(b), str(a)) is not None,
+    }
+    comparator = comparators.get(op)
+    if comparator is None:
+        raise AutoControlAssertionException(
+            f"assert_var: unknown op {op!r}; expected one of "
+            f"{sorted(comparators)}"
+        )
+    try:
+        return bool(comparator(value, expected))
+    except TypeError:
+        return False
+
+
+def assert_variable(value: Any, op: str = "eq", expected: Any = None,
+                    name: str = "variable",
+                    raise_on_fail: bool = True) -> AssertionResult:
+    """Assert that ``value`` satisfies ``op expected`` (eq/ne/contains/regex/…).
+
+    The assertion-DSL companion to the flow ``if_var`` / ``while_var``
+    conditions: instead of branching, fail loudly when a variable doesn't
+    hold the expected value — handy after ``ocr_to_var`` / ``shell_to_var``.
+    """
+    passed = _variable_satisfies(value, op, expected)
+    message = (
+        f"assert_var passed: {name}={value!r} {op} {expected!r}"
+        if passed else
+        f"assert_var failed: expected {name}={value!r} to satisfy "
+        f"{op} {expected!r}"
+    )
+    return _finalize(
+        "variable", passed, message,
+        expected={"op": op, "value": expected}, actual=value,
+        raise_on_fail=raise_on_fail, capture_on_fail=False,
+    )
+
+
 def assert_duration(action: Callable[[], Any], max_ms: float,
                     min_ms: float = 0.0,
                     raise_on_fail: bool = True,

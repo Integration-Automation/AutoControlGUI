@@ -2015,6 +2015,31 @@ def _move_to_trash(path: str) -> Dict[str, Any]:
     return {"trashed": move_to_trash(path)}
 
 
+def _read_qr(region: Optional[Union[List[int], str]] = None) -> Dict[str, Any]:
+    """Executor adapter: decode QR codes in a screen region.
+
+    ``region`` is ``[x1, y1, x2, y2]`` (or a JSON string for the builder);
+    omit it to scan the whole screen.
+    """
+    import json
+    import os
+    import tempfile
+    from je_auto_control.utils.qr import read_qr_codes
+    from je_auto_control.wrapper.auto_control_screen import screenshot
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    handle, tmp = tempfile.mkstemp(prefix="qr_", suffix=".png")
+    os.close(handle)
+    try:
+        screenshot(tmp, screen_region=region)
+        return {"codes": read_qr_codes(tmp)}
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
 def _scroll_to_find(target: str, kind: str = "image", direction: str = "down",
                     max_scrolls: int = 10,
                     scroll_amount: int = 3) -> Dict[str, Any]:
@@ -2483,6 +2508,9 @@ class Executor:
 
             # Recoverable deletion (move a file to the OS recycle bin)
             "AC_move_to_trash": _move_to_trash,
+
+            # QR code decoding from a screen region
+            "AC_read_qr": _read_qr,
 
             # Scroll until a target image / text is visible
             "AC_scroll_to_find": _scroll_to_find,
