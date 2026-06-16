@@ -678,8 +678,9 @@ class MCPServer:
                 "MCP elicitation for %s failed (%r) — refusing call",
                 name, error,
             )
-            raise _MCPError(-32000,
-                             f"User confirmation unavailable for {name}")
+            raise _MCPError(
+                -32000, f"User confirmation unavailable for {name}",
+            ) from error
         action = response.get("action") if isinstance(response, dict) else None
         if action != "accept":
             raise _MCPError(-32000, f"User declined to run {name}: action={action!r}")

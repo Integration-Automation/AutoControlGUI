@@ -49,7 +49,8 @@ def mouse_preprocess(mouse_keycode: Union[int, str], x: int, y: int) -> Tuple[in
         if y is None:
             y = now_y
     except AutoControlMouseException as error:
-        raise AutoControlMouseException(mouse_get_position_error_message + " " + repr(error))
+        raise AutoControlMouseException(
+            mouse_get_position_error_message + " " + repr(error)) from error
 
     return mouse_keycode, x, y
 
