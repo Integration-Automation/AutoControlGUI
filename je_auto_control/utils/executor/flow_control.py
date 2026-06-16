@@ -389,6 +389,96 @@ def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
             "returncode": completed.returncode}
 
 
+def exec_read_file_to_var(executor: Any,
+                          args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Read a file's text content into a flow variable."""
+    from pathlib import Path
+    text = Path(args["path"]).read_text(encoding=args.get("encoding", "utf-8"))
+    var_name = args.get("var", "file_content")
+    executor.variables.set(var_name, text)
+    return {"var": var_name, "length": len(text)}
+
+
+def _http_get(url: str, method: str, timeout: float) -> tuple:
+    """Issue an HTTP(S) GET, returning ``(status, body)``. http/https only."""
+    import urllib.request
+    scheme = url.split("://", 1)[0].lower() if "://" in url else ""
+    if scheme not in ("http", "https"):
+        raise AutoControlActionException(
+            f"AC_http_to_var: only http/https URLs allowed, got {url!r}"
+        )
+    request = urllib.request.Request(url, method=method.upper())
+    with urllib.request.urlopen(  # nosec B310 — scheme allow-listed above
+            request, timeout=timeout) as response:
+        return int(response.status), response.read().decode(
+            "utf-8", errors="replace")
+
+
+def _dig_json(body: str, path: str) -> Any:
+    """Navigate a dotted JSON path, e.g. ``data.0.name``."""
+    data = json.loads(body)
+    for part in str(path).split("."):
+        data = data[int(part)] if isinstance(data, list) else data[part]
+    return data
+
+
+def exec_http_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """GET a URL and store the body (or a JSON field) in a flow variable."""
+    status, body = _http_get(
+        args["url"], str(args.get("method", "GET")),
+        float(args.get("timeout", 30.0)),
+    )
+    json_path = args.get("json_path")
+    value = _dig_json(body, json_path) if json_path else body
+    var_name = args.get("var", "http_response")
+    executor.variables.set(var_name, value)
+    return {"var": var_name, "status": status}
+
+
+_SIMPLE_TRANSFORMS: Dict[str, Callable[[str], str]] = {
+    "upper": str.upper, "lower": str.lower, "strip": str.strip,
+    "title": str.title, "lstrip": str.lstrip, "rstrip": str.rstrip,
+}
+
+
+def _regex_extract(text: str, args: Mapping[str, Any]) -> str:
+    import re
+    match = re.search(str(args.get("pattern", "")), text)
+    return match.group(int(args.get("group", 0))) if match else ""
+
+
+def _slice_text(text: str, args: Mapping[str, Any]) -> str:
+    start = args.get("start")
+    end = args.get("end")
+    return text[(int(start) if start is not None else None):
+                (int(end) if end is not None else None)]
+
+
+def _transform_string(text: str, op: str, args: Mapping[str, Any]) -> str:
+    simple = _SIMPLE_TRANSFORMS.get(op)
+    if simple is not None:
+        return simple(text)
+    if op == "replace":
+        return text.replace(str(args.get("find", "")),
+                            str(args.get("replace_with", "")))
+    if op == "regex":
+        return _regex_extract(text, args)
+    if op == "slice":
+        return _slice_text(text, args)
+    raise AutoControlActionException(f"AC_transform_var: unknown op {op!r}")
+
+
+def exec_transform_var(executor: Any,
+                       args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Apply a string transform to a variable (in place or into ``into``)."""
+    name = args["name"]
+    value = str(executor.variables.get_value(name, ""))
+    result = _transform_string(value, str(args.get("op", "strip")), args)
+    target = args.get("into", name)
+    executor.variables.set(target, result)
+    return {"var": target, "value": result}
+
+
 def exec_ocr_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     """Read OCR text from a screen region into a flow variable.
 
@@ -510,4 +600,7 @@ BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_call_macro": exec_call_macro,
     "AC_ocr_to_var": exec_ocr_to_var,
     "AC_shell_to_var": exec_shell_to_var,
+    "AC_read_file_to_var": exec_read_file_to_var,
+    "AC_http_to_var": exec_http_to_var,
+    "AC_transform_var": exec_transform_var,
 }

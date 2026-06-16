@@ -421,6 +421,22 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec("AC_break", "Flow", "Break Loop"))
     specs.append(CommandSpec("AC_continue", "Flow", "Continue Loop"))
     specs.append(CommandSpec(
+        "AC_transform_var", "Flow", "Transform Variable",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("op", FieldType.ENUM,
+                      choices=("upper", "lower", "strip", "title",
+                               "lstrip", "rstrip", "replace", "regex",
+                               "slice"),
+                      default="strip"),
+            FieldSpec("into", FieldType.STRING, optional=True),
+            FieldSpec("find", FieldType.STRING, optional=True),
+            FieldSpec("replace_with", FieldType.STRING, optional=True),
+            FieldSpec("pattern", FieldType.STRING, optional=True),
+        ),
+        description="String-transform a variable (upper/strip/replace/regex/...).",
+    ))
+    specs.append(CommandSpec(
         "AC_assert_duration", "Flow", "Assert Duration (perf budget)",
         fields=(
             FieldSpec("max_ms", FieldType.FLOAT, default=1000.0, min_value=0.0),
@@ -472,6 +488,27 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("timeout", FieldType.FLOAT, optional=True, default=30.0),
         ),
         description="Run a command and store its stdout in a flow variable.",
+    ))
+    specs.append(CommandSpec(
+        "AC_read_file_to_var", "Shell", "Read File into Variable",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH),
+            FieldSpec("var", FieldType.STRING, default="file_content"),
+            FieldSpec("encoding", FieldType.STRING, optional=True,
+                      default="utf-8"),
+        ),
+        description="Read a file's text content into a flow variable.",
+    ))
+    specs.append(CommandSpec(
+        "AC_http_to_var", "Report", "HTTP GET into Variable",
+        fields=(
+            FieldSpec("url", FieldType.STRING, placeholder="https://..."),
+            FieldSpec("var", FieldType.STRING, default="http_response"),
+            FieldSpec("json_path", FieldType.STRING, optional=True,
+                      placeholder="data.0.name"),
+            FieldSpec("timeout", FieldType.FLOAT, optional=True, default=30.0),
+        ),
+        description="GET a URL; store the body or a JSON field in a variable.",
     ))
     specs.append(CommandSpec(
         "AC_execute_process", "Shell", "Start Executable",
