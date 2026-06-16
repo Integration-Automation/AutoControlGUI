@@ -677,6 +677,7 @@ japanese_word_dict = {
     "re_trim_end": "終了:",
     "re_apply_trim": "トリム適用",
     "re_remove_selected": _REMOVE_SELECTED,
+    "re_undo": "元に戻す (Ctrl+Z)",
     "re_delay_x": "ディレイ倍率",
     "re_floor_ms": "下限 ms:",
     "re_apply_delays": "ディレイ適用",

@@ -666,6 +666,7 @@ simplified_chinese_word_dict = {
     "re_trim_end": "终点:",
     "re_apply_trim": "应用裁剪",
     "re_remove_selected": "移除所选",
+    "re_undo": "撤销 (Ctrl+Z)",
     "re_delay_x": "延迟倍数",
     "re_floor_ms": "下限 ms:",
     "re_apply_delays": "应用延迟",

@@ -670,6 +670,7 @@ traditional_chinese_word_dict = {
     "re_trim_end": "終點：",
     "re_apply_trim": "套用裁剪",
     "re_remove_selected": "移除所選",
+    "re_undo": "復原 (Ctrl+Z)",
     "re_delay_x": "延遲倍數",
     "re_floor_ms": "下限 ms：",
     "re_apply_delays": "套用延遲",

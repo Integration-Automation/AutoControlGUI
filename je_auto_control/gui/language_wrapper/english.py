@@ -791,6 +791,7 @@ english_word_dict = {
     "re_trim_end": "end:",
     "re_apply_trim": "Apply trim",
     "re_remove_selected": _REMOVE_SELECTED,
+    "re_undo": "Undo (Ctrl+Z)",
     "re_delay_x": "Delay x",
     "re_floor_ms": "floor ms:",
     "re_apply_delays": "Apply delays",
