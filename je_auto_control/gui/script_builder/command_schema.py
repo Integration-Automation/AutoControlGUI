@@ -211,6 +211,18 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         ),
     ))
     specs.append(CommandSpec(
+        "AC_ocr_to_var", "OCR", "Read Text into Variable",
+        fields=(
+            FieldSpec("var", FieldType.STRING, default="ocr_text"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[0, 0, 400, 80]"),
+            FieldSpec("lang", FieldType.STRING, optional=True, default="eng"),
+            FieldSpec("min_confidence", FieldType.FLOAT, optional=True,
+                      default=60.0, min_value=0.0, max_value=100.0),
+        ),
+        description="OCR a region and store the text in a flow variable.",
+    ))
+    specs.append(CommandSpec(
         "AC_wait_text", "OCR", "Wait for Text",
         fields=(
             FieldSpec("target", FieldType.STRING),

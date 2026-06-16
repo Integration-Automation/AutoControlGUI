@@ -365,6 +365,27 @@ def exec_for_each_row(executor: Any, args: Mapping[str, Any]) -> int:
     return iterations
 
 
+def exec_ocr_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Read OCR text from a screen region into a flow variable.
+
+    Binds the recognised text under ``var`` (default ``ocr_text``) so later
+    steps can read it as ``${var}`` — the bridge between OCR and the
+    variable scope for data-driven flows.
+    """
+    from je_auto_control.utils.ocr.ocr_engine import read_text_in_region
+    region = args.get("region")
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    matches = read_text_in_region(
+        region=region, lang=args.get("lang", "eng"),
+        min_confidence=float(args.get("min_confidence", 60.0)),
+    )
+    text = " ".join(match.text for match in matches).strip()
+    var_name = args.get("var", "ocr_text")
+    executor.variables.set(var_name, text)
+    return {"var": var_name, "text": text}
+
+
 def exec_assert_duration(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     """Assert ``body`` completes within ``max_ms`` (a performance budget)."""
     from je_auto_control.utils.assertion import assert_duration
@@ -463,4 +484,5 @@ BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_parallel": exec_parallel,
     "AC_define_macro": exec_define_macro,
     "AC_call_macro": exec_call_macro,
+    "AC_ocr_to_var": exec_ocr_to_var,
 }
