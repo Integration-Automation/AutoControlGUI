@@ -1951,6 +1951,19 @@ def _verify_action_file(path: str, key: Optional[str] = None,
     ).to_dict()
 
 
+def _encrypt_action_file(path: str, key: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: Fernet-encrypt an action file to <path>.enc."""
+    from je_auto_control.utils.action_signing import encrypt_action_file
+    return {"encrypted_path": encrypt_action_file(path, key)}
+
+
+def _decrypt_action_file(enc_path: str, key: Optional[str] = None,
+                         output_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: decrypt a Fernet-encrypted action file."""
+    from je_auto_control.utils.action_signing import decrypt_action_file
+    return {"output_path": decrypt_action_file(enc_path, key, output_path)}
+
+
 def _annotate_screenshot(source: str,
                          annotations: Union[List[Dict[str, Any]], str],
                          output_path: str) -> Dict[str, Any]:
@@ -2169,6 +2182,8 @@ class Executor:
             # Action-file integrity (HMAC-SHA256 sign / verify)
             "AC_sign_action_file": _sign_action_file,
             "AC_verify_action_file": _verify_action_file,
+            "AC_encrypt_action_file": _encrypt_action_file,
+            "AC_decrypt_action_file": _decrypt_action_file,
 
             # Data-driven execution (load rows from CSV / JSON / SQLite / ...)
             "AC_load_data": _load_data,

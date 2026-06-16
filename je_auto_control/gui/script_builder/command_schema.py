@@ -429,6 +429,23 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Verify an action file against its signature sidecar.",
     ))
     specs.append(CommandSpec(
+        "AC_encrypt_action_file", "Security", "Encrypt Action File",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH),
+            FieldSpec("key", FieldType.STRING, optional=True),
+        ),
+        description="Fernet-encrypt an action file to <path>.enc.",
+    ))
+    specs.append(CommandSpec(
+        "AC_decrypt_action_file", "Security", "Decrypt Action File",
+        fields=(
+            FieldSpec("enc_path", FieldType.FILE_PATH),
+            FieldSpec("key", FieldType.STRING, optional=True),
+            FieldSpec("output_path", FieldType.STRING, optional=True),
+        ),
+        description="Decrypt a Fernet-encrypted action file.",
+    ))
+    specs.append(CommandSpec(
         "AC_annotate_screenshot", "Report", "Annotate Screenshot",
         fields=(
             FieldSpec("source", FieldType.FILE_PATH),
