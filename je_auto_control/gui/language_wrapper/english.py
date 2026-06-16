@@ -127,6 +127,7 @@ english_word_dict = {
     "assert_kind_image": "Image on screen",
     "assert_kind_pixel": "Pixel colour",
     "assert_kind_window": "Window exists",
+    "assert_kind_vlm": "Screen matches description (VLM)",
     "assert_target": "Target",
     "assert_target_text_hint": "Text / regex to find",
     "assert_target_image_hint": "Template image path",

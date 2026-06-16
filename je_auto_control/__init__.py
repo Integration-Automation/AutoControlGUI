@@ -49,6 +49,7 @@ from je_auto_control.utils.accessibility import (
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
+    verify_description,
 )
 # Self-healing locator (image template first, VLM fallback, audit log)
 from je_auto_control.utils.self_healing import (
@@ -136,9 +137,9 @@ from je_auto_control.utils.smart_waits import (
 # Assertion DSL (verify screen state; raise on mismatch)
 from je_auto_control.utils.assertion import (
     AssertionResult, GroupAssertionResult, assert_all, assert_any,
-    assert_clipboard, assert_eventually, assert_file, assert_http,
-    assert_image, assert_pixel, assert_process, assert_text, assert_window,
-    run_assertion_spec,
+    assert_by_description, assert_clipboard, assert_eventually, assert_file,
+    assert_http, assert_image, assert_pixel, assert_process, assert_text,
+    assert_window, run_assertion_spec,
 )
 # Data-driven execution (load rows from CSV / JSON / SQLite / Excel)
 from je_auto_control.utils.data_source import data_source_kinds, load_rows
@@ -485,6 +486,7 @@ __all__ = [
     "find_accessibility_element", "list_accessibility_elements",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
+    "verify_description",
     # LLM action planner
     "LLMBackend", "LLMNotAvailableError", "LLMPlanError",
     "plan_actions", "run_from_description",
@@ -517,7 +519,7 @@ __all__ = [
     # Assertion DSL
     "AssertionResult", "assert_image", "assert_pixel",
     "assert_text", "assert_window", "assert_clipboard", "assert_process",
-    "assert_file", "assert_http",
+    "assert_file", "assert_http", "assert_by_description",
     # Assertion combinators (soft groups + eventual polling)
     "GroupAssertionResult", "assert_all", "assert_any", "assert_eventually",
     "run_assertion_spec",

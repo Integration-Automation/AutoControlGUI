@@ -635,6 +635,21 @@ def _assert_window(title: str,
     ).to_dict()
 
 
+def _assert_vlm(description: str,
+                present: bool = True,
+                screen_region: Optional[List[int]] = None,
+                model: Optional[str] = None,
+                raise_on_fail: bool = True,
+                capture_on_fail: bool = False) -> Dict[str, Any]:
+    """Executor adapter: assert the screen matches a description (VLM judged)."""
+    from je_auto_control.utils.assertion import assert_by_description
+    return assert_by_description(
+        description, present=bool(present), screen_region=screen_region,
+        model=model, raise_on_fail=bool(raise_on_fail),
+        capture_on_fail=bool(capture_on_fail),
+    ).to_dict()
+
+
 def _assert_clipboard(text: str,
                       mode: str = "equals",
                       ignore_case: bool = False,
@@ -2063,6 +2078,7 @@ class Executor:
             "AC_assert_image": _assert_image,
             "AC_assert_pixel": _assert_pixel,
             "AC_assert_window": _assert_window,
+            "AC_assert_vlm": _assert_vlm,
             "AC_assert_clipboard": _assert_clipboard,
             "AC_assert_process": _assert_process,
             "AC_assert_file": _assert_file,

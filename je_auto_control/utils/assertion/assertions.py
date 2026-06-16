@@ -465,3 +465,39 @@ def assert_window(title: str,
         actual=titles, raise_on_fail=raise_on_fail,
         capture_on_fail=capture_on_fail,
     )
+
+
+def assert_by_description(description: str,
+                          present: bool = True,
+                          screen_region: Optional[Sequence[int]] = None,
+                          model: Optional[str] = None,
+                          backend: Any = None,
+                          raise_on_fail: bool = True,
+                          capture_on_fail: bool = False) -> AssertionResult:
+    """Assert the screen does (or does not) match a natural-language description.
+
+    The semantic complement to :func:`assert_text` / :func:`assert_image`:
+    rather than exact OCR text or a pixel template, ask a vision-language
+    model "is ``description`` true of the current screen?". Requires a
+    configured VLM backend (``ANTHROPIC_API_KEY`` / ``OPENAI_API_KEY``);
+    raises :class:`VLMNotAvailableError` otherwise.
+    """
+    from je_auto_control.utils.vision.vlm_api import verify_description
+    region = list(screen_region) if screen_region is not None else None
+    matched = verify_description(
+        description, screen_region=region, model=model, backend=backend,
+    )
+    passed = (matched == present)
+    state = "shows" if present else "does not show"
+    message = (
+        f"assert_by_description passed: screen {state} {description!r}"
+        if passed else
+        f"assert_by_description failed: expected screen to {state} "
+        f"{description!r} (VLM verdict: {'match' if matched else 'no match'})"
+    )
+    return _finalize(
+        "vlm", passed, message,
+        expected={"description": description, "present": present},
+        actual={"matched": matched},
+        raise_on_fail=raise_on_fail, capture_on_fail=capture_on_fail,
+    )

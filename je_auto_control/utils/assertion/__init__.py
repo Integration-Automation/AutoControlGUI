@@ -10,6 +10,7 @@ Public surface::
 """
 from je_auto_control.utils.assertion.assertions import (
     AssertionResult,
+    assert_by_description,
     assert_clipboard,
     assert_file,
     assert_http,
@@ -33,6 +34,7 @@ __all__ = [
     "GroupAssertionResult",
     "assert_all",
     "assert_any",
+    "assert_by_description",
     "assert_clipboard",
     "assert_eventually",
     "assert_file",
