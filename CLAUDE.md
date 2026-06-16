@@ -229,7 +229,7 @@ Run before every commit; fix all new findings:
 pip install ruff pylint bandit radon
 ruff check je_auto_control/
 pylint je_auto_control/
-bandit -r je_auto_control/ -x je_auto_control/test
+bandit -c pyproject.toml -r je_auto_control/   # uses [tool.bandit] excludes/skips
 radon cc je_auto_control/ -a -nc   # flags functions with CC >= C (>10)
 ```
 
