@@ -365,6 +365,30 @@ def exec_for_each_row(executor: Any, args: Mapping[str, Any]) -> int:
     return iterations
 
 
+def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Run a shell command and store its stdout in a flow variable.
+
+    The command is split into an argv list (never ``shell=True``) and its
+    captured stdout is bound under ``var`` (default ``shell_output``) for
+    later ``${var}`` use — the shell counterpart of ``AC_ocr_to_var``.
+    """
+    import os
+    import shlex
+    import subprocess  # nosec B404 — argv list only, no shell
+    command = args.get("command", args.get("shell_command"))
+    argv = ([str(part) for part in command] if isinstance(command, list)
+            else shlex.split(str(command), posix=(os.name != "nt")))
+    completed = subprocess.run(  # nosec B603 — argv list, no shell  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+        argv, capture_output=True, check=False,
+        timeout=float(args.get("timeout", 30.0)),
+    )
+    output = completed.stdout.decode("utf-8", errors="replace").strip()
+    var_name = args.get("var", "shell_output")
+    executor.variables.set(var_name, output)
+    return {"var": var_name, "output": output,
+            "returncode": completed.returncode}
+
+
 def exec_ocr_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     """Read OCR text from a screen region into a flow variable.
 
@@ -485,4 +509,5 @@ BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_define_macro": exec_define_macro,
     "AC_call_macro": exec_call_macro,
     "AC_ocr_to_var": exec_ocr_to_var,
+    "AC_shell_to_var": exec_shell_to_var,
 }

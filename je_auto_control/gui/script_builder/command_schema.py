@@ -425,6 +425,15 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("shell_command", FieldType.STRING),),
     ))
     specs.append(CommandSpec(
+        "AC_shell_to_var", "Shell", "Shell Output into Variable",
+        fields=(
+            FieldSpec("command", FieldType.STRING),
+            FieldSpec("var", FieldType.STRING, default="shell_output"),
+            FieldSpec("timeout", FieldType.FLOAT, optional=True, default=30.0),
+        ),
+        description="Run a command and store its stdout in a flow variable.",
+    ))
+    specs.append(CommandSpec(
         "AC_execute_process", "Shell", "Start Executable",
         fields=(FieldSpec("program_path", FieldType.FILE_PATH),),
     ))
