@@ -267,6 +267,24 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("title_substring", FieldType.STRING),),
     ))
     specs.append(CommandSpec("AC_list_windows", "Window", "List Windows"))
+    specs.append(CommandSpec(
+        "AC_capture_window", "Window", "Capture Window",
+        fields=(
+            FieldSpec("title", FieldType.STRING),
+            FieldSpec("output_path", FieldType.STRING),
+        ),
+        description="Screenshot the window matching title to a PNG.",
+    ))
+    specs.append(CommandSpec(
+        "AC_save_window_layout", "Window", "Save Window Layout",
+        fields=(FieldSpec("path", FieldType.STRING, optional=True),),
+        description="Snapshot every window's position (optionally to a file).",
+    ))
+    specs.append(CommandSpec(
+        "AC_restore_window_layout", "Window", "Restore Window Layout",
+        fields=(FieldSpec("layout", FieldType.FILE_PATH),),
+        description="Move windows back to a saved layout file.",
+    ))
 
 
 def _add_flow_specs(specs: List[CommandSpec]) -> None:

@@ -70,6 +70,11 @@ from je_auto_control.utils.annotate import annotate_screenshot
 from je_auto_control.utils.notify import NotifyResult, notify
 # Region colour statistics (dominant / average colour).
 from je_auto_control.utils.color_stats import ColorStats, region_color_stats
+# Per-window capture + window-layout save / restore.
+from je_auto_control.utils.window_capture import (
+    capture_window, get_window_geometry, restore_window_layout,
+    save_window_layout,
+)
 # WebRunner bridge (headless: optional je_web_runner dependency)
 from je_auto_control.utils.webrunner_bridge import (
     WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
@@ -581,6 +586,9 @@ __all__ = [
     "NotifyResult", "notify",
     # Region colour statistics
     "ColorStats", "region_color_stats",
+    # Per-window capture + window-layout save / restore
+    "capture_window", "get_window_geometry",
+    "save_window_layout", "restore_window_layout",
     # WebRunner bridge (browser automation via je_web_runner)
     "WebRunnerBridgeError", "is_webrunner_available",
     "list_webrunner_commands", "run_webrunner_action",

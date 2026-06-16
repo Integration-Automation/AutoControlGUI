@@ -1986,6 +1986,26 @@ def _notify(title: str, message: str = "") -> Dict[str, Any]:
     return notify(str(title), str(message)).to_dict()
 
 
+def _capture_window(title: str, output_path: str) -> Dict[str, Any]:
+    """Executor adapter: screenshot the window matching ``title``."""
+    from je_auto_control.utils.window_capture import capture_window
+    return {"output_path": capture_window(title, output_path)}
+
+
+def _save_window_layout(path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: snapshot every window's geometry (optionally to file)."""
+    from je_auto_control.utils.window_capture import save_window_layout
+    layout = save_window_layout(path)
+    return {"count": len(layout), "path": path, "layout": layout}
+
+
+def _restore_window_layout(layout: Union[List[Dict[str, Any]], str]
+                           ) -> Dict[str, Any]:
+    """Executor adapter: move windows back to a saved layout (list or path)."""
+    from je_auto_control.utils.window_capture import restore_window_layout
+    return {"restored": restore_window_layout(layout)}
+
+
 def _region_color_stats(region: Optional[Union[List[int], str]] = None,
                         buckets: int = 8) -> Dict[str, Any]:
     """Executor adapter: average + dominant colour of a screen region.
@@ -2412,6 +2432,11 @@ class Executor:
 
             # Region colour statistics (dominant / average colour)
             "AC_region_color_stats": _region_color_stats,
+
+            # Per-window capture + window-layout save / restore
+            "AC_capture_window": _capture_window,
+            "AC_save_window_layout": _save_window_layout,
+            "AC_restore_window_layout": _restore_window_layout,
         }
 
     def known_commands(self) -> set:
