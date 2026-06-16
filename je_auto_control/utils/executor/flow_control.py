@@ -5,6 +5,8 @@ These commands receive the owning executor and a dict of arguments;
 they may execute nested action lists (``body`` / ``then`` / ``else``)
 by delegating back to ``executor.execute_action``.
 """
+import json
+import threading
 import time
 from typing import Any, Callable, Dict, Mapping, Optional, Sequence
 
@@ -363,6 +365,81 @@ def exec_for_each_row(executor: Any, args: Mapping[str, Any]) -> int:
     return iterations
 
 
+def exec_assert_duration(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Assert ``body`` completes within ``max_ms`` (a performance budget)."""
+    from je_auto_control.utils.assertion import assert_duration
+    body = args.get("body") or []
+    return assert_duration(
+        lambda: executor.execute_action(body, _validated=True),
+        max_ms=float(args.get("max_ms", 1000.0)),
+        min_ms=float(args.get("min_ms", 0.0)),
+        raise_on_fail=bool(args.get("raise_on_fail", True)),
+    ).to_dict()
+
+
+def _as_list(value: Any) -> list:
+    """Accept a native list or a JSON-string list (for the visual builder)."""
+    if isinstance(value, str):
+        return json.loads(value) if value.strip() else []
+    return list(value) if value else []
+
+
+def exec_parallel(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Run each branch action list concurrently on its own isolated executor.
+
+    ``branches`` is a list of action lists (or a JSON string of one). Each
+    branch runs on a fresh :class:`Executor` with a separate variable scope,
+    so concurrent branches never race on shared state.
+    """
+    del executor
+    from je_auto_control.utils.executor.action_executor import Executor
+    branches = _as_list(args.get("branches"))
+    results: list = [None] * len(branches)
+
+    def _run(index: int, branch: Any) -> None:
+        results[index] = Executor().execute_action(branch, _validated=True)
+
+    threads = [threading.Thread(target=_run, args=(idx, branch), daemon=True)
+               for idx, branch in enumerate(branches)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    return {"branches": len(branches), "results": results}
+
+
+def exec_define_macro(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Register a named, parameterised macro for later ``AC_call_macro``."""
+    name = args["name"]
+    raw_params = args.get("params") or []
+    if isinstance(raw_params, str):
+        params = [part.strip() for part in raw_params.split(",") if part.strip()]
+    else:
+        params = [str(part) for part in raw_params]
+    executor.macros[name] = {"params": params, "body": args.get("body") or []}
+    return {"defined": name, "params": params}
+
+
+def exec_call_macro(executor: Any, args: Mapping[str, Any]) -> Any:
+    """Invoke a macro registered by ``AC_define_macro``, binding call args.
+
+    Each parameter is bound into the executor's variable scope before the
+    macro body runs, so the body reads ``${param}`` as usual.
+    """
+    name = args["name"]
+    macro = executor.macros.get(name)
+    if macro is None:
+        raise AutoControlActionException(
+            f"AC_call_macro: unknown macro {name!r}"
+        )
+    raw_args = args.get("args") or {}
+    if isinstance(raw_args, str):
+        raw_args = json.loads(raw_args) if raw_args.strip() else {}
+    for param in macro["params"]:
+        executor.variables.set(param, raw_args.get(param))
+    return executor.execute_action(macro["body"], _validated=True)
+
+
 BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_if_image_found": exec_if_image_found,
     "AC_if_pixel": exec_if_pixel,
@@ -382,4 +459,8 @@ BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_inc_var": exec_inc_var,
     "AC_for_each": exec_for_each,
     "AC_for_each_row": exec_for_each_row,
+    "AC_assert_duration": exec_assert_duration,
+    "AC_parallel": exec_parallel,
+    "AC_define_macro": exec_define_macro,
+    "AC_call_macro": exec_call_macro,
 }

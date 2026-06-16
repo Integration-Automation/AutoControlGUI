@@ -1966,11 +1966,14 @@ class Executor:
 
     # Args keys that hold nested action lists; runtime interpolation must
     # leave them untouched so each iteration re-reads current variable state.
-    _DEFERRED_ARG_KEYS: frozenset = frozenset({"body", "then", "else"})
+    _DEFERRED_ARG_KEYS: frozenset = frozenset(
+        {"body", "then", "else", "branches"})
 
     def __init__(self):
         self._block_commands = BLOCK_COMMANDS
         self.variables = VariableScope()
+        # Named, parameterised macros registered via AC_define_macro.
+        self.macros: Dict[str, Any] = {}
         # 事件字典，對應字串名稱到函式
         self.event_dict: dict = {
             # Mouse 滑鼠相關

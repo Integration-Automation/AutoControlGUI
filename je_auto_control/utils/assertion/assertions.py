@@ -21,7 +21,7 @@ from __future__ import annotations
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlAssertionException,
@@ -499,5 +499,35 @@ def assert_by_description(description: str,
         "vlm", passed, message,
         expected={"description": description, "present": present},
         actual={"matched": matched},
+        raise_on_fail=raise_on_fail, capture_on_fail=capture_on_fail,
+    )
+
+
+def assert_duration(action: Callable[[], Any], max_ms: float,
+                    min_ms: float = 0.0,
+                    raise_on_fail: bool = True,
+                    capture_on_fail: bool = False) -> AssertionResult:
+    """Assert that calling ``action`` completes within a time budget.
+
+    Times ``action()`` and checks the elapsed wall-clock against
+    ``[min_ms, max_ms]`` — a performance-budget check that catches latency
+    regressions in an automation flow. ``action`` always runs to
+    completion; only its duration is judged.
+    """
+    start = time.perf_counter()
+    action()
+    elapsed_ms = (time.perf_counter() - start) * 1000.0
+    passed = float(min_ms) <= elapsed_ms <= float(max_ms)
+    message = (
+        f"assert_duration passed: {elapsed_ms:.1f}ms within "
+        f"[{min_ms}, {max_ms}]ms"
+        if passed else
+        f"assert_duration failed: {elapsed_ms:.1f}ms outside "
+        f"[{min_ms}, {max_ms}]ms"
+    )
+    return _finalize(
+        "duration", passed, message,
+        expected={"min_ms": min_ms, "max_ms": max_ms},
+        actual={"elapsed_ms": round(elapsed_ms, 3)},
         raise_on_fail=raise_on_fail, capture_on_fail=capture_on_fail,
     )

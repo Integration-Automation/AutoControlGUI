@@ -338,6 +338,43 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
     ))
     specs.append(CommandSpec("AC_break", "Flow", "Break Loop"))
     specs.append(CommandSpec("AC_continue", "Flow", "Continue Loop"))
+    specs.append(CommandSpec(
+        "AC_assert_duration", "Flow", "Assert Duration (perf budget)",
+        fields=(
+            FieldSpec("max_ms", FieldType.FLOAT, default=1000.0, min_value=0.0),
+            FieldSpec("min_ms", FieldType.FLOAT, optional=True, default=0.0,
+                      min_value=0.0),
+        ),
+        body_keys=("body",),
+        description="Fail if the body takes longer than max_ms.",
+    ))
+    specs.append(CommandSpec(
+        "AC_parallel", "Flow", "Parallel Branches",
+        fields=(
+            FieldSpec("branches", FieldType.STRING,
+                      placeholder='[[["AC_sleep",{"seconds":1}]]]'),
+        ),
+        description="Run each branch action list concurrently (JSON list).",
+    ))
+    specs.append(CommandSpec(
+        "AC_define_macro", "Flow", "Define Macro",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("params", FieldType.STRING, optional=True,
+                      placeholder="x, y"),
+        ),
+        body_keys=("body",),
+        description="Register a named, parameterised action sub-routine.",
+    ))
+    specs.append(CommandSpec(
+        "AC_call_macro", "Flow", "Call Macro",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("args", FieldType.STRING, optional=True,
+                      placeholder='{"x": 10, "y": 20}'),
+        ),
+        description="Invoke a macro defined by AC_define_macro.",
+    ))
 
 
 def _add_misc_specs(specs: List[CommandSpec]) -> None:
