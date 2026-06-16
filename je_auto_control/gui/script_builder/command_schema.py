@@ -349,6 +349,24 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         "AC_execute_process", "Shell", "Start Executable",
         fields=(FieldSpec("program_path", FieldType.FILE_PATH),),
     ))
+    specs.append(CommandSpec(
+        "AC_sign_action_file", "Security", "Sign Action File",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH),
+            FieldSpec("key", FieldType.STRING, optional=True),
+        ),
+        description="Write an HMAC-SHA256 signature sidecar for an action file.",
+    ))
+    specs.append(CommandSpec(
+        "AC_verify_action_file", "Security", "Verify Action File",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH),
+            FieldSpec("key", FieldType.STRING, optional=True),
+            FieldSpec("raise_on_fail", FieldType.BOOL, optional=True,
+                      default=False),
+        ),
+        description="Verify an action file against its signature sidecar.",
+    ))
 
 
 _SPECS: Tuple[CommandSpec, ...] = tuple(_build_specs())

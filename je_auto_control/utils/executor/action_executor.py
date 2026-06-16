@@ -1923,6 +1923,21 @@ def _human_move(x: int, y: int, duration_s: float = 0.4, curve: float = 0.2,
     return {"x": int(x), "y": int(y), "waypoints": len(path)}
 
 
+def _sign_action_file(path: str, key: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: write an HMAC-SHA256 signature sidecar for a file."""
+    from je_auto_control.utils.action_signing import sign_action_file
+    return {"signature_path": sign_action_file(path, key)}
+
+
+def _verify_action_file(path: str, key: Optional[str] = None,
+                        raise_on_fail: bool = False) -> Dict[str, Any]:
+    """Executor adapter: verify an action file against its signature sidecar."""
+    from je_auto_control.utils.action_signing import verify_action_file
+    return verify_action_file(
+        path, key, raise_on_fail=bool(raise_on_fail),
+    ).to_dict()
+
+
 class Executor:
     """
     Executor
@@ -2086,6 +2101,10 @@ class Executor:
             "AC_assert_all": _assert_all,
             "AC_assert_any": _assert_any,
             "AC_assert_eventually": _assert_eventually,
+
+            # Action-file integrity (HMAC-SHA256 sign / verify)
+            "AC_sign_action_file": _sign_action_file,
+            "AC_verify_action_file": _verify_action_file,
 
             # Data-driven execution (load rows from CSV / JSON / SQLite / ...)
             "AC_load_data": _load_data,
@@ -2438,8 +2457,10 @@ class Executor:
         :return: 每個檔案的執行結果
         """
         autocontrol_logger.info(f"execute_files, execute_files_list: {execute_files_list}")
+        from je_auto_control.utils.action_signing import require_signed_actions
         execute_detail_list = []
         for file in execute_files_list:
+            require_signed_actions(file)
             execute_detail_list.append(self.execute_action(read_action_json(file)))
         return execute_detail_list
 
