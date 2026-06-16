@@ -1954,6 +1954,12 @@ def _annotate_screenshot(source: str,
         source, annotations, output_path)}
 
 
+def _notify(title: str, message: str = "") -> Dict[str, Any]:
+    """Executor adapter: show a cross-platform desktop notification."""
+    from je_auto_control.utils.notify import notify
+    return notify(str(title), str(message)).to_dict()
+
+
 class Executor:
     """
     Executor
@@ -2345,6 +2351,9 @@ class Executor:
 
             # Screenshot annotation (boxes / highlights / arrows / labels)
             "AC_annotate_screenshot": _annotate_screenshot,
+
+            # Desktop notification
+            "AC_notify": _notify,
         }
 
     def known_commands(self) -> set:

@@ -414,6 +414,14 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Draw boxes / highlights / arrows / labels onto an image.",
     ))
+    specs.append(CommandSpec(
+        "AC_notify", "Report", "Desktop Notification",
+        fields=(
+            FieldSpec("title", FieldType.STRING),
+            FieldSpec("message", FieldType.STRING, optional=True),
+        ),
+        description="Show a cross-platform desktop notification.",
+    ))
 
 
 _SPECS: Tuple[CommandSpec, ...] = tuple(_build_specs())

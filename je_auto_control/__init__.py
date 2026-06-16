@@ -66,6 +66,8 @@ from je_auto_control.utils.redaction import (
 )
 # Screenshot annotation (draw boxes / highlights / arrows / labels).
 from je_auto_control.utils.annotate import annotate_screenshot
+# Cross-platform desktop notifications.
+from je_auto_control.utils.notify import NotifyResult, notify
 # WebRunner bridge (headless: optional je_web_runner dependency)
 from je_auto_control.utils.webrunner_bridge import (
     WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
@@ -572,6 +574,8 @@ __all__ = [
     "redact_png_bytes",
     # Screenshot annotation
     "annotate_screenshot",
+    # Desktop notifications
+    "NotifyResult", "notify",
     # WebRunner bridge (browser automation via je_web_runner)
     "WebRunnerBridgeError", "is_webrunner_available",
     "list_webrunner_commands", "run_webrunner_action",
