@@ -295,6 +295,17 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         "AC_close_window", "Window", "Close Window",
         fields=(FieldSpec("title_substring", FieldType.STRING),),
     ))
+    specs.append(CommandSpec(
+        "AC_wait_window_closed", "Window", "Wait for Window to Close",
+        fields=(
+            FieldSpec("title", FieldType.STRING),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True,
+                      default=10.0),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.2, min_value=0.01),
+        ),
+        description="Wait until a window matching the title disappears.",
+    ))
     specs.append(CommandSpec("AC_list_windows", "Window", "List Windows"))
     specs.append(CommandSpec(
         "AC_capture_window", "Window", "Capture Window",

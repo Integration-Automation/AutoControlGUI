@@ -199,6 +199,42 @@ def _default_clipboard_reader() -> Optional[str]:
     return get_clipboard()
 
 
+WindowFinder = Callable[[str, bool], bool]
+
+
+def wait_until_window_closed(title: str, *, case_sensitive: bool = False,
+                             timeout_s: float = 10.0,
+                             poll_interval_s: float = 0.2,
+                             finder: Optional[WindowFinder] = None
+                             ) -> WaitOutcome:
+    """Return when no window matching ``title`` exists (or timeout).
+
+    The closing companion to ``wait_for_window`` (which waits for a window
+    to *appear*). ``finder(title, case_sensitive) -> bool`` reports whether
+    a matching window still exists; it is injectable for tests.
+    """
+    if timeout_s <= 0:
+        raise ValueError("timeout_s must be positive")
+    if poll_interval_s <= 0:
+        raise ValueError("poll_interval_s must be positive")
+    exists = finder or _default_window_finder
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    while time.monotonic() < deadline:
+        samples += 1
+        if not exists(title, case_sensitive):
+            return _finish(True, "window closed", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, "timeout while waiting for window to close",
+                   started, samples)
+
+
+def _default_window_finder(title: str, case_sensitive: bool) -> bool:
+    from je_auto_control.wrapper.auto_control_window import find_window
+    return find_window(title, case_sensitive=case_sensitive) is not None
+
+
 # --- internals -------------------------------------------------
 
 def _frame_diff(a: Frame, b: Frame) -> int:
@@ -236,6 +272,7 @@ def _finish(succeeded: bool, reason: str, started: float,
 
 __all__ = [
     "ClipboardReader", "Frame", "ScreenSampler", "WaitOutcome",
-    "wait_until_clipboard_changes", "wait_until_pixel_changes",
-    "wait_until_region_idle", "wait_until_screen_stable",
+    "WindowFinder", "wait_until_clipboard_changes",
+    "wait_until_pixel_changes", "wait_until_region_idle",
+    "wait_until_screen_stable", "wait_until_window_closed",
 ]

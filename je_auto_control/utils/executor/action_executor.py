@@ -360,6 +360,17 @@ def _wait_clipboard_change(baseline: Optional[str] = None,
     ).to_dict()
 
 
+def _wait_window_closed(title: str, case_sensitive: bool = False,
+                        timeout_s: float = 10.0,
+                        poll_interval_s: float = 0.2) -> Dict[str, Any]:
+    """Executor adapter: wait until a window matching ``title`` disappears."""
+    from je_auto_control.utils.smart_waits import wait_until_window_closed
+    return wait_until_window_closed(
+        title, case_sensitive=bool(case_sensitive),
+        timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
+    ).to_dict()
+
+
 def _wait_region_idle(region: List[int],
                       timeout_s: float = 10.0,
                       poll_interval_s: float = 0.2,
@@ -2284,6 +2295,7 @@ class Executor:
             "AC_wait_pixel_changes": _wait_pixel_changes,
             "AC_wait_region_idle": _wait_region_idle,
             "AC_wait_clipboard_change": _wait_clipboard_change,
+            "AC_wait_window_closed": _wait_window_closed,
 
             # Cost telemetry (LLM token + USD tracking)
             "AC_costs_record": _costs_record,
