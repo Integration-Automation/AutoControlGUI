@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-17)](#whats-new-2026-06-17)
 - [What's new (2026-06)](#whats-new-2026-06)
 - [What's new (2026-05)](#whats-new-2026-05)
 - [Features](#features)
@@ -55,6 +56,61 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-17)
+
+Thirty-plus automation primitives across input realism, vision, flow
+control, triggers, window management, and file security — plus recoverable
+deletion and an editor undo. Each ships with a headless API, an `AC_*`
+executor command, and a visual Script Builder entry; vision and window
+features keep their geometry / IO operations injectable so the logic is
+fully unit-tested. Full reference page:
+[`docs/source/Eng/doc/new_features/v4_features_doc.rst`](docs/source/Eng/doc/new_features/v4_features_doc.rst).
+
+**Human-like input**
+- **Human-like mouse motion** — `move_mouse_humanized` walks an eased, bowed cubic-Bezier path with optional overshoot + jitter, deterministic by `seed` (`AC_human_move`).
+- **Human-like typing** — `type_text_humanized` types character by character with a jittered per-key delay and optional "thinking" pauses, seedable (`AC_human_type`).
+
+**Vision**
+- **VLM natural-language assertion** — `assert_by_description` asks a vision-language model whether the screen matches a description; the `verify()` companion to `locate_by_description` (`AC_assert_vlm`).
+- **Scroll-to-find** — `scroll_until_visible` scrolls a direction until a template image or OCR text appears, or the budget runs out (`AC_scroll_to_find`).
+- **Region colour stats** — `region_color_stats` reports a region's average + dominant colour and that colour's pixel fraction (`AC_region_color_stats`).
+- **QR reading** — `read_qr_codes` decodes QR codes in a screen region via OpenCV's `QRCodeDetector` (no new dependency) (`AC_read_qr`).
+
+**Flow control & variables**
+- **Reusable macros** — `AC_define_macro` / `AC_call_macro`: define a named, parameterised action sub-routine once and call it with `${arg}` bindings.
+- **In-process parallel** — `AC_parallel` runs branch action lists concurrently, each on an isolated executor so branches never race on shared variables.
+- **Performance-budget assertion** — `assert_duration` / `AC_assert_duration` fails a block that takes longer than a millisecond budget.
+- **Read into a variable** — `AC_ocr_to_var`, `AC_shell_to_var`, `AC_read_file_to_var`, `AC_http_to_var` (body or dotted JSON path), `AC_now_to_var` (strftime), `AC_random_to_var` (seeded int / float / choice).
+- **Transform a variable** — `AC_transform_var`: upper / lower / strip / title / replace / regex-extract / slice, in place or into a new variable.
+- **Assert a variable** — `assert_variable` / `AC_assert_var`: eq / ne / lt / gt / contains / regex through the assertion DSL.
+
+**Triggers & smart waits**
+- **Composite triggers** — `AllOfTrigger` / `AnyOfTrigger` / `SequenceTrigger` combine any existing trigger by boolean AND / OR / ordered sequence.
+- **Cron trigger** — `CronTrigger` fires on a five-field cron expression, composing with the boolean triggers (e.g. "at 09:00 *and* only if the image is on screen").
+- **More smart waits** — `wait_until_clipboard_changes` (`AC_wait_clipboard_change`) and `wait_until_window_closed` (`AC_wait_window_closed`).
+
+**Window management**
+- **Per-window capture** — `capture_window` screenshots exactly a window's bounds by title (`AC_capture_window`).
+- **Layout save / restore** — `save_window_layout` / `restore_window_layout` snapshot every window's position to JSON and move them all back later (`AC_save_window_layout` / `AC_restore_window_layout`).
+- **Snap / tile** — `snap_window` moves a window to a screen half, quarter, or maximize (`AC_snap_window`).
+
+**File security & safety**
+- **Action-file signing** — `sign_action_file` / `verify_action_file` (HMAC-SHA256 sidecar); `execute_files` can require signatures via `JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` (`AC_sign_action_file` / `AC_verify_action_file`).
+- **Action-file encryption** — `encrypt_action_file` / `decrypt_action_file` (Fernet, AES-128-CBC + HMAC) (`AC_encrypt_action_file` / `AC_decrypt_action_file`).
+- **Recoverable deletion** — `move_to_trash` sends a file to the OS recycle bin (Win32 `SHFileOperation` undo flag / macOS Trash / Linux XDG trash, preferring `send2trash`) (`AC_move_to_trash`).
+
+**Reporting & notifications**
+- **Screenshot annotation** — `annotate_screenshot` draws labelled boxes / translucent highlights / arrows / text onto a capture (`AC_annotate_screenshot`).
+- **Desktop notifications** — `notify` shows a cross-platform toast (notify-send / osascript / PowerShell), injection-safe (`AC_notify`).
+
+**GUI**
+- **Recording Editor undo** — every edit is snapshotted; **Ctrl+Z** (and an Undo button) restore the prior state.
+- **Triggers tab** — "Combine selected" wraps chosen triggers into a composite; new **Cron** trigger type.
+- **Assertions tab** — new **VLM** ("screen matches description") assertion kind.
+- Every new `AC_*` command appears in the visual **Script Builder**.
+
+**Fixes** — repaired the USB-passthrough approval-prompt crash on PySide6 6.11.1 (`Q_ARG(object)` → a Qt signal), eight stale / broken GUI + USB tests, two lost exception chains, and brought thirteen functions back under the cyclomatic-complexity gate.
 
 ## What's new (2026-06)
 
@@ -142,6 +198,7 @@ sense) a Qt GUI tab. Full reference page:
 ## Features
 
 - **QA / Test Framework** — assertion DSL (`assert_text` / `_image` / `_pixel` / `_window` + audio/video assertions), data-driven execution (CSV / JSON / SQLite / Excel → `AC_for_each_row`), a scored `run_suite` with setup/teardown/tags, JUnit + Allure report output, flaky-test detection with auto-quarantine, accessibility / i18n auditing (missing labels, WCAG contrast, truncation), and a parallel mobile device matrix. See [What's new (2026-06)](#whats-new-2026-06)
+- **Automation toolkit** — human-like mouse motion + typing, VLM / variable / duration assertions, reusable macros + in-process parallel blocks, composite + cron triggers, read-into-a-variable commands (OCR / shell / file / HTTP / time / random), variable transforms, scroll-to-find, region colour stats, QR reading, per-window capture / layout save-restore / snap, screenshot annotation, desktop notifications, action-file signing + encryption, recoverable (recycle-bin) deletion, and Recording-Editor undo. See [What's new (2026-06-17)](#whats-new-2026-06-17)
 - **Mouse Automation** — move, click, press, release, drag, and scroll with precise coordinate control
 - **Keyboard Automation** — press/release individual keys, type strings, hotkey combinations, key state detection
 - **Image Recognition** — locate UI elements on screen using OpenCV template matching with configurable threshold

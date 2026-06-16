@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-17)](#本次更新-2026-06-17)
 - [本次更新 (2026-06)](#本次更新-2026-06)
 - [本次更新 (2026-05)](#本次更新-2026-05)
 - [功能特性](#功能特性)
@@ -54,6 +55,59 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-17)
+
+新增 30+ 个自动化原语，涵盖输入拟真、视觉、流程控制、触发器、窗口管理与文件安全，
+另加“可还原删除（回收站）”与“编辑器 Undo”。每个都附带 headless API、`AC_*` 执行器
+指令，以及可视化脚本构建器项；视觉与窗口功能的 geometry / IO 操作皆可注入，逻辑完全
+单元测试。完整参考页：
+[`docs/source/Eng/doc/new_features/v4_features_doc.rst`](../docs/source/Eng/doc/new_features/v4_features_doc.rst)。
+
+**拟人化输入**
+- **拟人化鼠标移动** — `move_mouse_humanized`：eased bezier 曲线 + overshoot + jitter，seed 可重现（`AC_human_move`）。
+- **拟人化打字** — `type_text_humanized`：每字随机微延迟 + 偶尔停顿，seed 可重现（`AC_human_type`）。
+
+**视觉**
+- **VLM 自然语言断言** — `assert_by_description`：用 VLM 判断画面是否符合描述（`AC_assert_vlm`）。
+- **滚动找元素** — `scroll_until_visible`：往某方向滚动直到图／文字出现（`AC_scroll_to_find`）。
+- **区域颜色统计** — `region_color_stats`：平均色 + 主色 + 占比（`AC_region_color_stats`）。
+- **读 QR code** — `read_qr_codes`：OpenCV QRCodeDetector 从屏幕区域解 QR（`AC_read_qr`）。
+
+**流程控制与变量**
+- **可重用宏** — `AC_define_macro` / `AC_call_macro`：具名、带参数的动作子程序，`${arg}` 绑定。
+- **同进程并行** — `AC_parallel`：多分支并行，各自独立 executor，变量不互相 race。
+- **性能预算断言** — `assert_duration` / `AC_assert_duration`：超过毫秒预算就判失败。
+- **读进变量** — `AC_ocr_to_var`、`AC_shell_to_var`、`AC_read_file_to_var`、`AC_http_to_var`（body 或 dotted JSON path）、`AC_now_to_var`（strftime）、`AC_random_to_var`（seeded）。
+- **变量转换** — `AC_transform_var`：upper／lower／strip／title／replace／regex 取出／slice。
+- **断言变量** — `assert_variable` / `AC_assert_var`：eq／ne／lt／gt／contains／regex。
+
+**触发器与智能等待**
+- **复合触发器** — `AllOfTrigger` / `AnyOfTrigger` / `SequenceTrigger`：布尔 AND／OR／顺序组合任何现有触发器。
+- **Cron 触发器** — `CronTrigger`：五字段 cron 排程，每分钟最多一次，可与布尔触发器组合。
+- **更多智能等待** — `wait_until_clipboard_changes`（`AC_wait_clipboard_change`）、`wait_until_window_closed`（`AC_wait_window_closed`）。
+
+**窗口管理**
+- **单一窗口截图** — `capture_window`：依标题截出该窗口（`AC_capture_window`）。
+- **布局存／还原** — `save_window_layout` / `restore_window_layout`：快照所有窗口位置 → JSON → 一键还原。
+- **贴齐／分割** — `snap_window`：左／右半、四角、最大化（`AC_snap_window`）。
+
+**文件安全**
+- **动作文件签名** — `sign_action_file` / `verify_action_file`（HMAC-SHA256）；`execute_files` 可在 `JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` 下强制验签。
+- **动作文件加密** — `encrypt_action_file` / `decrypt_action_file`（Fernet）。
+- **可还原删除** — `move_to_trash`：送进操作系统回收站（`AC_move_to_trash`）。
+
+**报告与通知**
+- **截图标注** — `annotate_screenshot`：画带标签方框／高亮／箭头／文字（`AC_annotate_screenshot`）。
+- **桌面通知** — `notify`：跨平台 toast，injection-safe（`AC_notify`）。
+
+**GUI**
+- **录制编辑器 Undo** — 每个编辑都快照；**Ctrl+Z** 与 Undo 按钮还原。
+- **触发器页** — “Combine selected”把选中的触发器组成复合；新增 **Cron** 类型。
+- **断言页** — 新增 **VLM** 断言类型。
+- 所有新 `AC_*` 指令都在可视化 **脚本构建器** 可用。
+
+**修复** — 修了 PySide6 6.11.1 上 USB 授权弹窗的 `Q_ARG(object)` crash、8 个 stale／损坏的测试、2 个丢失异常链，并把 13 个函数拉回 CC≤10。
 
 ## 本次更新 (2026-06)
 
