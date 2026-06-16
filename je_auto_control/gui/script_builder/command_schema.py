@@ -149,6 +149,20 @@ def _add_keyboard_specs(specs: List[CommandSpec]) -> None:
         ),
     ))
     specs.append(CommandSpec(
+        "AC_human_type", "Keyboard", "Human-like Type",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="Hello, world"),
+            FieldSpec("base_delay", FieldType.FLOAT, optional=True,
+                      default=0.05, min_value=0.0),
+            FieldSpec("jitter", FieldType.FLOAT, optional=True, default=0.04,
+                      min_value=0.0),
+            FieldSpec("pause_chance", FieldType.FLOAT, optional=True,
+                      default=0.0, min_value=0.0, max_value=1.0),
+            FieldSpec("seed", FieldType.INT, optional=True),
+        ),
+        description="Type text with randomized per-key delays.",
+    ))
+    specs.append(CommandSpec(
         "AC_hotkey", "Keyboard", "Hotkey",
         fields=(
             FieldSpec("key_code_list", FieldType.STRING,

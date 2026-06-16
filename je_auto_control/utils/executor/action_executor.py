@@ -1936,6 +1936,18 @@ def _human_move(x: int, y: int, duration_s: float = 0.4, curve: float = 0.2,
     return {"x": int(x), "y": int(y), "waypoints": len(path)}
 
 
+def _human_type(text: str, base_delay: float = 0.05, jitter: float = 0.04,
+                pause_chance: float = 0.0,
+                seed: Optional[int] = None) -> Dict[str, Any]:
+    """Executor adapter: type text with humanized inter-key delays."""
+    from je_auto_control.utils.humanize.typing import type_text_humanized
+    delays = type_text_humanized(
+        str(text), base_delay=float(base_delay), jitter=float(jitter),
+        pause_chance=float(pause_chance), seed=seed,
+    )
+    return {"chars": len(str(text)), "total_delay_s": round(sum(delays), 3)}
+
+
 def _sign_action_file(path: str, key: Optional[str] = None) -> Dict[str, Any]:
     """Executor adapter: write an HMAC-SHA256 signature sidecar for a file."""
     from je_auto_control.utils.action_signing import sign_action_file
@@ -2075,6 +2087,7 @@ class Executor:
             "AC_mouse_scroll": mouse_scroll,
             "AC_set_mouse_position": set_mouse_position,
             "AC_human_move": _human_move,
+            "AC_human_type": _human_type,
 
             # Keyboard 鍵盤相關
             "AC_get_keyboard_keys_table": get_keyboard_keys_table,
