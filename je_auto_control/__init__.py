@@ -70,10 +70,10 @@ from je_auto_control.utils.annotate import annotate_screenshot
 from je_auto_control.utils.notify import NotifyResult, notify
 # Region colour statistics (dominant / average colour).
 from je_auto_control.utils.color_stats import ColorStats, region_color_stats
-# Per-window capture + window-layout save / restore.
+# Per-window capture, window-layout save / restore, snap/tile.
 from je_auto_control.utils.window_capture import (
     capture_window, get_window_geometry, restore_window_layout,
-    save_window_layout,
+    save_window_layout, snap_window,
 )
 # Scroll until a target image / text is visible.
 from je_auto_control.utils.scroll_find import scroll_until_visible
@@ -595,9 +595,9 @@ __all__ = [
     "NotifyResult", "notify",
     # Region colour statistics
     "ColorStats", "region_color_stats",
-    # Per-window capture + window-layout save / restore
+    # Per-window capture + window-layout save / restore + snap
     "capture_window", "get_window_geometry",
-    "save_window_layout", "restore_window_layout",
+    "save_window_layout", "restore_window_layout", "snap_window",
     # Scroll-to-find
     "scroll_until_visible",
     # Recoverable deletion (recycle bin)

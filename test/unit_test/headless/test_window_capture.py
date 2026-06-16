@@ -1,8 +1,10 @@
 """Tests for window capture + layout save/restore (injected, no real windows)."""
 import json
 
+import pytest
+
 from je_auto_control.utils.window_capture import (
-    capture_window, restore_window_layout, save_window_layout,
+    capture_window, restore_window_layout, save_window_layout, snap_window,
 )
 
 
@@ -71,3 +73,41 @@ def test_restore_window_layout_reads_from_file(tmp_path):
         encoding="utf-8",
     )
     assert restore_window_layout(str(path), mover=lambda *a: True) == 1
+
+
+def test_snap_window_left_half():
+    moved = []
+
+    def mover(title, x, y, width, height):
+        moved.append((title, x, y, width, height))
+        return True
+
+    assert snap_window("Editor", "left", screen_size=lambda: (1000, 800),
+                       mover=mover) is True
+    assert moved == [("Editor", 0, 0, 500, 800)]
+
+
+def test_snap_window_right_half():
+    rects = []
+    snap_window("E", "right", screen_size=lambda: (1000, 800),
+                mover=lambda t, x, y, w, h: rects.append((x, y, w, h)) is None)
+    assert rects == [(500, 0, 500, 800)]
+
+
+def test_snap_window_max_and_quarter():
+    rects = []
+
+    def mover(title, x, y, width, height):
+        rects.append((x, y, width, height))
+        return True
+
+    snap_window("E", "max", screen_size=lambda: (1000, 800), mover=mover)
+    snap_window("E", "bottom-right", screen_size=lambda: (1000, 800),
+                mover=mover)
+    assert rects == [(0, 0, 1000, 800), (500, 400, 500, 400)]
+
+
+def test_snap_window_unknown_position_raises():
+    with pytest.raises(ValueError):
+        snap_window("E", "diagonal", screen_size=lambda: (1000, 800),
+                    mover=lambda *a: True)

@@ -2032,6 +2032,12 @@ def _capture_window(title: str, output_path: str) -> Dict[str, Any]:
     return {"output_path": capture_window(title, output_path)}
 
 
+def _snap_window(title: str, position: str = "left") -> Dict[str, Any]:
+    """Executor adapter: snap a window to a screen region."""
+    from je_auto_control.utils.window_capture import snap_window
+    return {"moved": snap_window(title, position)}
+
+
 def _save_window_layout(path: Optional[str] = None) -> Dict[str, Any]:
     """Executor adapter: snapshot every window's geometry (optionally to file)."""
     from je_auto_control.utils.window_capture import save_window_layout
@@ -2481,10 +2487,11 @@ class Executor:
             # Scroll until a target image / text is visible
             "AC_scroll_to_find": _scroll_to_find,
 
-            # Per-window capture + window-layout save / restore
+            # Per-window capture + window-layout save / restore + snap
             "AC_capture_window": _capture_window,
             "AC_save_window_layout": _save_window_layout,
             "AC_restore_window_layout": _restore_window_layout,
+            "AC_snap_window": _snap_window,
         }
 
     def known_commands(self) -> set:

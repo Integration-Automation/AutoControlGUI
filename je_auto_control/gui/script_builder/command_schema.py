@@ -296,6 +296,18 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("title_substring", FieldType.STRING),),
     ))
     specs.append(CommandSpec(
+        "AC_snap_window", "Window", "Snap / Tile Window",
+        fields=(
+            FieldSpec("title", FieldType.STRING),
+            FieldSpec("position", FieldType.ENUM,
+                      choices=("left", "right", "top", "bottom",
+                               "top-left", "top-right", "bottom-left",
+                               "bottom-right", "max"),
+                      default="left"),
+        ),
+        description="Move a window to a screen half / quarter / maximize.",
+    ))
+    specs.append(CommandSpec(
         "AC_wait_window_closed", "Window", "Wait for Window to Close",
         fields=(
             FieldSpec("title", FieldType.STRING),

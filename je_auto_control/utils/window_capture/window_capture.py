@@ -19,6 +19,7 @@ Rect = Tuple[int, int, int, int]
 GeometryProvider = Callable[[str], Optional[Rect]]
 WindowLister = Callable[[], List[Tuple[int, str]]]
 WindowMover = Callable[[str, int, int, int, int], bool]
+SizeProvider = Callable[[], Tuple[int, int]]
 
 
 def get_window_geometry(title: str,
@@ -124,3 +125,46 @@ def restore_window_layout(layout: Union[List[Dict[str, Any]], str, Path], *,
                           int(entry["width"]), int(entry["height"])):
             restored += 1
     return restored
+
+
+def _snap_rect(position: str, width: int, height: int) -> Rect:
+    half_w = width // 2
+    half_h = height // 2
+    regions = {
+        "left": (0, 0, half_w, height),
+        "right": (half_w, 0, width - half_w, height),
+        "top": (0, 0, width, half_h),
+        "bottom": (0, half_h, width, height - half_h),
+        "top-left": (0, 0, half_w, half_h),
+        "top-right": (half_w, 0, width - half_w, half_h),
+        "bottom-left": (0, half_h, half_w, height - half_h),
+        "bottom-right": (half_w, half_h, width - half_w, height - half_h),
+        "max": (0, 0, width, height),
+    }
+    rect = regions.get(str(position).lower())
+    if rect is None:
+        raise ValueError(
+            f"unknown snap position {position!r}; "
+            f"expected one of {sorted(regions)}",
+        )
+    return rect
+
+
+def _default_screen_size() -> Tuple[int, int]:
+    from je_auto_control.wrapper.auto_control_screen import screen_size
+    size = screen_size()
+    return (int(size[0]), int(size[1]))
+
+
+def snap_window(title: str, position: str = "left", *,
+                mover: Optional[WindowMover] = None,
+                screen_size: Optional[SizeProvider] = None) -> bool:
+    """Move/resize the window matching ``title`` to a screen region.
+
+    ``position`` is one of left / right / top / bottom / top-left /
+    top-right / bottom-left / bottom-right / max. Returns ``True`` when the
+    window moved. The size provider and mover are injectable for tests.
+    """
+    width, height = (screen_size or _default_screen_size)()
+    x, y, w, h = _snap_rect(position, int(width), int(height))
+    return (mover or _default_mover)(title, x, y, w, h)
