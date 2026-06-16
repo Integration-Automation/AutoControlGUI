@@ -400,31 +400,25 @@ class WebRTCDesktopViewer:
         target.sender.replaceTrack(track)
         target.direction = "sendonly"
 
+    @staticmethod
+    def _stop_quietly(obj, label: str) -> None:
+        """Call ``obj.stop()``, swallowing teardown errors with a debug log."""
+        if obj is None:
+            return
+        try:
+            obj.stop()
+        except (RuntimeError, OSError) as error:
+            autocontrol_logger.debug("%s stop: %r", label, error)
+
     async def _async_stop(self) -> None:
-        if self._host_voice_receiver is not None:
-            try:
-                self._host_voice_receiver.stop()
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("host voice stop: %r", error)
-            self._host_voice_receiver = None
-        if self._opus_audio_track is not None:
-            try:
-                self._opus_audio_track.stop()
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("opus mic track stop: %r", error)
-            self._opus_audio_track = None
-        if self._viewer_screen_track is not None:
-            try:
-                self._viewer_screen_track.stop()
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("viewer screen track stop: %r", error)
-            self._viewer_screen_track = None
-        if self._mic_sender is not None:
-            try:
-                self._mic_sender.stop()
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("mic sender stop: %r", error)
-            self._mic_sender = None
+        self._stop_quietly(self._host_voice_receiver, "host voice")
+        self._host_voice_receiver = None
+        self._stop_quietly(self._opus_audio_track, "opus mic track")
+        self._opus_audio_track = None
+        self._stop_quietly(self._viewer_screen_track, "viewer screen track")
+        self._viewer_screen_track = None
+        self._stop_quietly(self._mic_sender, "mic sender")
+        self._mic_sender = None
         if self._receive_task is not None:
             self._receive_task.cancel()
             self._receive_task = None

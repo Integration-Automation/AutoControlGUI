@@ -350,14 +350,8 @@ def _flood_fill_box(mask: Any, visited: Any,
         if visited[y, x] or mask[y, x] == 0:
             continue
         visited[y, x] = True
-        if x < min_x:
-            min_x = x
-        if x > max_x:
-            max_x = x
-        if y < min_y:
-            min_y = y
-        if y > max_y:
-            max_y = y
+        min_x, max_x = min(min_x, x), max(max_x, x)
+        min_y, max_y = min(min_y, y), max(max_y, y)
         stack.extend(((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)))
     return [int(min_x), int(min_y),
             int(max_x - min_x + 1), int(max_y - min_y + 1)]

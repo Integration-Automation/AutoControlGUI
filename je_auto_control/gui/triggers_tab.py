@@ -213,17 +213,20 @@ class TriggersTab(TranslatableMixin, QWidget):
                 **common,
             )
         if idx == 2:
-            w = self._pixel_widgets
-            return PixelColorTrigger(
-                x=int(w["x"].text() or "0"), y=int(w["y"].text() or "0"),
-                target_rgb=(int(w["r"].text() or "0"),
-                            int(w["g"].text() or "0"),
-                            int(w["b"].text() or "0")),
-                tolerance=int(w["tol"].text() or "8"),
-                **common,
-            )
+            return self._build_pixel_trigger(common)
         return FilePathTrigger(
             watch_path=self._file_widgets["path"].text().strip(),
+            **common,
+        )
+
+    def _build_pixel_trigger(self, common: dict):
+        w = self._pixel_widgets
+        return PixelColorTrigger(
+            x=int(w["x"].text() or "0"), y=int(w["y"].text() or "0"),
+            target_rgb=(int(w["r"].text() or "0"),
+                        int(w["g"].text() or "0"),
+                        int(w["b"].text() or "0")),
+            tolerance=int(w["tol"].text() or "8"),
             **common,
         )
 

@@ -1019,18 +1019,25 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         sid = sid_item.data(Qt.ItemDataRole.UserRole) or ""
         viewer_id = viewer_item.text() if viewer_item is not None else ""
         menu = QMenu(self._sessions_table)
-        disc = menu.addAction(_t("rd_webrtc_disconnect_selected"))
-        trust = menu.addAction(_t("rd_webrtc_sess_trust_viewer"))
-        trust.setEnabled(bool(viewer_id))
-        copy_id = menu.addAction(_t("rd_webrtc_sess_copy_id"))
+        actions = {
+            "disconnect": menu.addAction(_t("rd_webrtc_disconnect_selected")),
+            "trust": menu.addAction(_t("rd_webrtc_sess_trust_viewer")),
+            "copy": menu.addAction(_t("rd_webrtc_sess_copy_id")),
+        }
+        actions["trust"].setEnabled(bool(viewer_id))
         chosen = menu.exec(
             self._sessions_table.viewport().mapToGlobal(position),
         )
-        if chosen is disc:
+        self._dispatch_session_menu(chosen, actions, sid, viewer_id)
+
+    def _dispatch_session_menu(self, chosen, actions: dict,
+                               sid: str, viewer_id: str) -> None:
+        """Run the action chosen from the sessions context menu."""
+        if chosen is actions["disconnect"]:
             self._on_disconnect_selected()
-        elif chosen is trust and viewer_id:
+        elif chosen is actions["trust"] and viewer_id:
             self._trust_session_viewer(sid)
-        elif chosen is copy_id and sid:
+        elif chosen is actions["copy"] and sid:
             self._copy_session_id_to_clipboard(sid)
 
     def _trust_session_viewer(self, sid: str) -> None:
@@ -1661,13 +1668,29 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         except (RuntimeError, OSError, ValueError) as error:
             QMessageBox.warning(self, "WebRTC", str(error))
 
+    @staticmethod
+    def _wol_defaults(entry) -> tuple[str, str]:
+        """Return (mac, broadcast) pre-fill values from a book entry."""
+        if entry is None:
+            return "", ""
+        return (entry.get("mac_address", "") or "",
+                entry.get("broadcast_address", "") or "")
+
+    def _persist_wol_entry(self, entry, mac: str, broadcast: str) -> None:
+        """Save the MAC / broadcast just used back onto the book entry."""
+        if entry is None:
+            return
+        self._address_book.upsert(
+            host_id=entry.get("host_id", ""),
+            server_url=entry.get("server_url", ""),
+            mac_address=mac.strip(),
+            broadcast_address=broadcast.strip() or None,
+        )
+        self._refresh_address_book()
+
     def _on_wake_on_lan(self) -> None:
         entry = self._address_list.selected_entry()
-        mac = ""
-        broadcast = ""
-        if entry is not None:
-            mac = entry.get("mac_address", "") or ""
-            broadcast = entry.get("broadcast_address", "") or ""
+        mac, broadcast = self._wol_defaults(entry)
         mac, ok = QInputDialog.getText(
             self, _t("rd_webrtc_wake_on_lan"),
             _t("rd_webrtc_wol_mac_prompt"), text=mac,
@@ -1687,14 +1710,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         except (ValueError, OSError) as error:
             QMessageBox.warning(self, "WebRTC", str(error))
             return
-        if entry is not None:
-            self._address_book.upsert(
-                host_id=entry.get("host_id", ""),
-                server_url=entry.get("server_url", ""),
-                mac_address=mac.strip(),
-                broadcast_address=broadcast.strip() or None,
-            )
-            self._refresh_address_book()
+        self._persist_wol_entry(entry, mac, broadcast)
         QMessageBox.information(
             self, _t("rd_webrtc_wake_on_lan"), _t("rd_webrtc_wol_sent"),
         )
