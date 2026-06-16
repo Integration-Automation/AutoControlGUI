@@ -362,6 +362,10 @@ from je_auto_control.wrapper.auto_control_mouse import release_mouse
 from je_auto_control.wrapper.auto_control_mouse import send_mouse_event_to_window
 from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
 from je_auto_control.wrapper.auto_control_mouse import special_mouse_keys_table
+# Human-like motion (headless)
+from je_auto_control.utils.humanize.motion import (
+    HumanizedMotion, humanized_path, move_mouse_humanized,
+)
 # record
 from je_auto_control.wrapper.auto_control_record import record
 from je_auto_control.wrapper.auto_control_record import stop_record
@@ -393,6 +397,7 @@ def start_autocontrol_gui(*args, **kwargs):
 __all__ = [
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
     "mouse_scroll", "mouse_scroll_error_message", "set_mouse_position", "special_mouse_keys_table",
+    "HumanizedMotion", "humanized_path", "move_mouse_humanized",
     "keyboard_keys_table", "press_keyboard_key", "release_keyboard_key", "type_keyboard", "check_key_is_press",
     "write", "hotkey", "start_exe", "get_keyboard_keys_table",
     "screen_size", "screenshot", "locate_all_image", "locate_image_center", "locate_and_click",

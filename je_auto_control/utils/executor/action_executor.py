@@ -1894,6 +1894,20 @@ def _observe_executor_metrics(action: str, started_at: float,
         pass
 
 
+def _human_move(x: int, y: int, duration_s: float = 0.4, curve: float = 0.2,
+                overshoot: float = 0.0, jitter: float = 1.0,
+                seed: Optional[int] = None) -> Dict[str, Any]:
+    """Executor adapter: move the mouse to (x, y) along a human-like path."""
+    from je_auto_control.utils.humanize.motion import (
+        HumanizedMotion, move_mouse_humanized,
+    )
+    motion = HumanizedMotion(curve=float(curve), overshoot=float(overshoot),
+                             jitter=float(jitter), seed=seed)
+    path = move_mouse_humanized(int(x), int(y),
+                                duration_s=float(duration_s), motion=motion)
+    return {"x": int(x), "y": int(y), "waypoints": len(path)}
+
+
 class Executor:
     """
     Executor
@@ -1922,6 +1936,7 @@ class Executor:
             "AC_release_mouse": release_mouse,
             "AC_mouse_scroll": mouse_scroll,
             "AC_set_mouse_position": set_mouse_position,
+            "AC_human_move": _human_move,
 
             # Keyboard 鍵盤相關
             "AC_get_keyboard_keys_table": get_keyboard_keys_table,

@@ -78,6 +78,21 @@ def _add_mouse_specs(specs: List[CommandSpec]) -> None:
         ),
     ))
     specs.append(CommandSpec(
+        "AC_human_move", "Mouse", "Human-like Move To",
+        fields=(
+            FieldSpec("x", FieldType.INT, default=0),
+            FieldSpec("y", FieldType.INT, default=0),
+            FieldSpec("duration_s", FieldType.FLOAT, optional=True,
+                      default=0.4, min_value=0.0),
+            FieldSpec("curve", FieldType.FLOAT, optional=True, default=0.2),
+            FieldSpec("overshoot", FieldType.FLOAT, optional=True,
+                      default=0.0),
+            FieldSpec("jitter", FieldType.FLOAT, optional=True, default=1.0),
+            FieldSpec("seed", FieldType.INT, optional=True),
+        ),
+        description="Move the cursor along a curved, human-like path.",
+    ))
+    specs.append(CommandSpec(
         "AC_press_mouse", "Mouse", "Press Mouse Button",
         fields=(
             FieldSpec("mouse_keycode", FieldType.ENUM, choices=_MOUSE_BUTTONS,
