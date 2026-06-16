@@ -112,6 +112,48 @@ class FilePathTrigger(_TriggerBase):
         return False
 
 
+@dataclass
+class AllOfTrigger(_TriggerBase):
+    """Fire when *every* child trigger's condition holds at the same poll."""
+    children: List[_TriggerBase] = field(default_factory=list)
+
+    def is_fired(self) -> bool:
+        return bool(self.children) and all(
+            child.is_fired() for child in self.children)
+
+
+@dataclass
+class AnyOfTrigger(_TriggerBase):
+    """Fire when *any* child trigger's condition holds."""
+    children: List[_TriggerBase] = field(default_factory=list)
+
+    def is_fired(self) -> bool:
+        return any(child.is_fired() for child in self.children)
+
+
+@dataclass
+class SequenceTrigger(_TriggerBase):
+    """Fire once each child condition has held, in registration order.
+
+    Children advance one step per poll, so the conditions must become true
+    in sequence over time (not all at once). The step resets after firing.
+    """
+    children: List[_TriggerBase] = field(default_factory=list)
+    _step: int = 0
+
+    def is_fired(self) -> bool:
+        if not self.children:
+            return False
+        if self._step >= len(self.children):
+            self._step = 0
+        if self.children[self._step].is_fired():
+            self._step += 1
+        if self._step >= len(self.children):
+            self._step = 0
+            return True
+        return False
+
+
 class TriggerEngine:
     """Polls registered triggers on a background thread."""
 

@@ -4,8 +4,19 @@ import os
 import time
 
 from je_auto_control.utils.triggers.trigger_engine import (
-    FilePathTrigger, TriggerEngine,
+    AllOfTrigger, AnyOfTrigger, FilePathTrigger, SequenceTrigger,
+    TriggerEngine,
 )
+
+
+class _Flag:
+    """Minimal child trigger whose firing is toggled by ``value`` (duck-typed)."""
+
+    def __init__(self, value: bool = False) -> None:
+        self.value = value
+
+    def is_fired(self) -> bool:
+        return self.value
 
 
 def _write_actions(path, actions):
@@ -79,3 +90,42 @@ def test_engine_set_enabled_suppresses_polling(tmp_path):
 def test_engine_remove_returns_false_for_missing():
     engine = TriggerEngine(executor=lambda actions: None)
     assert engine.remove("nope") is False
+
+
+def test_all_of_trigger_requires_every_child():
+    a, b = _Flag(True), _Flag(False)
+    trig = AllOfTrigger(trigger_id="all", script_path="s.json", children=[a, b])
+    assert trig.is_fired() is False
+    b.value = True
+    assert trig.is_fired() is True
+
+
+def test_all_of_trigger_with_no_children_never_fires():
+    trig = AllOfTrigger(trigger_id="all", script_path="s.json", children=[])
+    assert trig.is_fired() is False
+
+
+def test_any_of_trigger_fires_when_one_child_holds():
+    a, b = _Flag(False), _Flag(False)
+    trig = AnyOfTrigger(trigger_id="any", script_path="s.json", children=[a, b])
+    assert trig.is_fired() is False
+    b.value = True
+    assert trig.is_fired() is True
+
+
+def test_sequence_trigger_requires_ordered_firing():
+    a, b = _Flag(False), _Flag(False)
+    trig = SequenceTrigger(trigger_id="seq", script_path="s.json",
+                           children=[a, b])
+    assert trig.is_fired() is False
+    # The later child firing first must not advance the sequence.
+    b.value = True
+    assert trig.is_fired() is False
+    # First condition holds → advance one step (not complete yet).
+    a.value = True
+    assert trig.is_fired() is False
+    # Second condition completes the sequence and it resets.
+    assert trig.is_fired() is True
+    # Re-arms: one poll per step again.
+    assert trig.is_fired() is False
+    assert trig.is_fired() is True
