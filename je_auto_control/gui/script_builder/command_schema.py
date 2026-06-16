@@ -478,6 +478,11 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("program_path", FieldType.FILE_PATH),),
     ))
     specs.append(CommandSpec(
+        "AC_move_to_trash", "Shell", "Move File to Recycle Bin",
+        fields=(FieldSpec("path", FieldType.FILE_PATH),),
+        description="Delete a file to the OS recycle bin (recoverable).",
+    ))
+    specs.append(CommandSpec(
         "AC_sign_action_file", "Security", "Sign Action File",
         fields=(
             FieldSpec("path", FieldType.FILE_PATH),

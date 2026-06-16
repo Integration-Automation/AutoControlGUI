@@ -2009,6 +2009,12 @@ def _notify(title: str, message: str = "") -> Dict[str, Any]:
     return notify(str(title), str(message)).to_dict()
 
 
+def _move_to_trash(path: str) -> Dict[str, Any]:
+    """Executor adapter: move a file to the OS recycle bin (recoverable)."""
+    from je_auto_control.utils.trash import move_to_trash
+    return {"trashed": move_to_trash(path)}
+
+
 def _scroll_to_find(target: str, kind: str = "image", direction: str = "down",
                     max_scrolls: int = 10,
                     scroll_amount: int = 3) -> Dict[str, Any]:
@@ -2468,6 +2474,9 @@ class Executor:
 
             # Region colour statistics (dominant / average colour)
             "AC_region_color_stats": _region_color_stats,
+
+            # Recoverable deletion (move a file to the OS recycle bin)
+            "AC_move_to_trash": _move_to_trash,
 
             # Scroll until a target image / text is visible
             "AC_scroll_to_find": _scroll_to_find,

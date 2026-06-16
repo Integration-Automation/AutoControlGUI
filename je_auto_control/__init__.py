@@ -77,6 +77,8 @@ from je_auto_control.utils.window_capture import (
 )
 # Scroll until a target image / text is visible.
 from je_auto_control.utils.scroll_find import scroll_until_visible
+# Recoverable deletion (move files to the OS recycle bin).
+from je_auto_control.utils.trash import move_to_trash
 # WebRunner bridge (headless: optional je_web_runner dependency)
 from je_auto_control.utils.webrunner_bridge import (
     WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
@@ -598,6 +600,8 @@ __all__ = [
     "save_window_layout", "restore_window_layout",
     # Scroll-to-find
     "scroll_until_visible",
+    # Recoverable deletion (recycle bin)
+    "move_to_trash",
     # WebRunner bridge (browser automation via je_web_runner)
     "WebRunnerBridgeError", "is_webrunner_available",
     "list_webrunner_commands", "run_webrunner_action",
