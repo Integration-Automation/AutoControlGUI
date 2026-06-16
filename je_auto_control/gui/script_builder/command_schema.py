@@ -289,6 +289,18 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
         ),
     ))
     specs.append(CommandSpec(
+        "AC_wait_clipboard_change", "Flow", "Wait for Clipboard Change",
+        fields=(
+            FieldSpec("target", FieldType.STRING, optional=True),
+            FieldSpec("contains", FieldType.BOOL, optional=True, default=False),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True,
+                      default=10.0),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.2, min_value=0.01),
+        ),
+        description="Wait until the clipboard changes or matches target.",
+    ))
+    specs.append(CommandSpec(
         "AC_loop", "Flow", "Loop (N times)",
         fields=(
             FieldSpec("times", FieldType.INT, default=3, min_value=1),

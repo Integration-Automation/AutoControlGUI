@@ -8,14 +8,14 @@ Public surface::
     )
 """
 from je_auto_control.utils.smart_waits.waits import (
-    Frame, ScreenSampler, WaitOutcome,
-    wait_until_pixel_changes, wait_until_region_idle,
-    wait_until_screen_stable,
+    ClipboardReader, Frame, ScreenSampler, WaitOutcome,
+    wait_until_clipboard_changes, wait_until_pixel_changes,
+    wait_until_region_idle, wait_until_screen_stable,
 )
 
 
 __all__ = [
-    "Frame", "ScreenSampler", "WaitOutcome",
-    "wait_until_pixel_changes", "wait_until_region_idle",
-    "wait_until_screen_stable",
+    "ClipboardReader", "Frame", "ScreenSampler", "WaitOutcome",
+    "wait_until_clipboard_changes", "wait_until_pixel_changes",
+    "wait_until_region_idle", "wait_until_screen_stable",
 ]

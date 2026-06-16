@@ -135,8 +135,8 @@ from je_auto_control.utils.ocr.structure import (
 )
 # Smart waits (frame-diff replacements for time.sleep)
 from je_auto_control.utils.smart_waits import (
-    WaitOutcome, wait_until_pixel_changes, wait_until_region_idle,
-    wait_until_screen_stable,
+    WaitOutcome, wait_until_clipboard_changes, wait_until_pixel_changes,
+    wait_until_region_idle, wait_until_screen_stable,
 )
 # Assertion DSL (verify screen state; raise on mismatch)
 from je_auto_control.utils.assertion import (
@@ -528,6 +528,7 @@ __all__ = [
     # Smart waits
     "WaitOutcome", "wait_until_pixel_changes",
     "wait_until_region_idle", "wait_until_screen_stable",
+    "wait_until_clipboard_changes",
     # Assertion DSL
     "AssertionResult", "assert_image", "assert_pixel",
     "assert_text", "assert_window", "assert_clipboard", "assert_process",

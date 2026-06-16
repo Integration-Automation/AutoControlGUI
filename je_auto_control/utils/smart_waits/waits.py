@@ -149,6 +149,56 @@ def wait_until_region_idle(*, region: Sequence[int],
     )
 
 
+ClipboardReader = Callable[[], Optional[str]]
+
+
+def wait_until_clipboard_changes(*,
+                                 baseline: Optional[str] = None,
+                                 target: Optional[str] = None,
+                                 contains: bool = False,
+                                 timeout_s: float = 10.0,
+                                 poll_interval_s: float = 0.2,
+                                 reader: Optional[ClipboardReader] = None,
+                                 ) -> WaitOutcome:
+    """Return when the clipboard text changes (or matches ``target``).
+
+    Without ``target`` the wait succeeds as soon as the clipboard differs
+    from ``baseline`` (captured at the start when ``baseline`` is None).
+    With ``target`` it succeeds when the clipboard equals ``target`` — or
+    *contains* it when ``contains`` is True. ``reader`` is injectable so
+    tests need no real clipboard.
+    """
+    if timeout_s <= 0:
+        raise ValueError("timeout_s must be positive")
+    if poll_interval_s <= 0:
+        raise ValueError("poll_interval_s must be positive")
+    read = reader or _default_clipboard_reader
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    initial = baseline if baseline is not None else (read() or "")
+    samples = 1
+    while time.monotonic() < deadline:
+        current = read() or ""
+        samples += 1
+        if _clipboard_satisfied(current, initial, target, contains):
+            return _finish(True, "clipboard changed", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, "timeout while waiting for clipboard change",
+                   started, samples)
+
+
+def _clipboard_satisfied(current: str, initial: str,
+                         target: Optional[str], contains: bool) -> bool:
+    if target is not None:
+        return target in current if contains else current == target
+    return current != initial
+
+
+def _default_clipboard_reader() -> Optional[str]:
+    from je_auto_control.utils.clipboard.clipboard import get_clipboard
+    return get_clipboard()
+
+
 # --- internals -------------------------------------------------
 
 def _frame_diff(a: Frame, b: Frame) -> int:
@@ -185,7 +235,7 @@ def _finish(succeeded: bool, reason: str, started: float,
 
 
 __all__ = [
-    "Frame", "ScreenSampler", "WaitOutcome",
-    "wait_until_pixel_changes", "wait_until_region_idle",
-    "wait_until_screen_stable",
+    "ClipboardReader", "Frame", "ScreenSampler", "WaitOutcome",
+    "wait_until_clipboard_changes", "wait_until_pixel_changes",
+    "wait_until_region_idle", "wait_until_screen_stable",
 ]
