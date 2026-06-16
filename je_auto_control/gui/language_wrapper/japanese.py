@@ -595,6 +595,8 @@ japanese_word_dict = {
     "tr_type_window": "ウィンドウ出現",
     "tr_type_pixel": "ピクセル一致",
     "tr_type_file": "ファイル変更",
+    "tr_type_cron": "Cronスケジュール",
+    "tr_cron_label": "Cron（分 時 日 月 曜）:",
     "tr_image_label": "画像:",
     "tr_threshold_label": "閾値:",
     "tr_title_contains_label": "タイトルに含む:",

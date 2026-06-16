@@ -584,6 +584,8 @@ simplified_chinese_word_dict = {
     "tr_type_window": "窗口出现",
     "tr_type_pixel": "像素匹配",
     "tr_type_file": "文件变更",
+    "tr_type_cron": "Cron 排程",
+    "tr_cron_label": "Cron（分 时 日 月 周）:",
     "tr_image_label": "图像:",
     "tr_threshold_label": "阈值:",
     "tr_title_contains_label": "标题包含:",

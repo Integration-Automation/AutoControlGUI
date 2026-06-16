@@ -13,9 +13,9 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.utils.triggers.trigger_engine import (
-    AllOfTrigger, AnyOfTrigger, FilePathTrigger, ImageAppearsTrigger,
-    PixelColorTrigger, SequenceTrigger, WindowAppearsTrigger,
-    default_trigger_engine,
+    AllOfTrigger, AnyOfTrigger, CronTrigger, FilePathTrigger,
+    ImageAppearsTrigger, PixelColorTrigger, SequenceTrigger,
+    WindowAppearsTrigger, default_trigger_engine,
 )
 
 
@@ -25,6 +25,7 @@ def _t(key: str) -> str:
 
 _TYPE_KEYS = (
     "tr_type_image", "tr_type_window", "tr_type_pixel", "tr_type_file",
+    "tr_type_cron",
 )
 
 
@@ -44,6 +45,7 @@ class TriggersTab(TranslatableMixin, QWidget):
         self._window_widgets = self._build_window_form()
         self._pixel_widgets = self._build_pixel_form()
         self._file_widgets = self._build_file_form()
+        self._cron_widgets = self._build_cron_form()
         self._running = False
         self._status = QLabel()
         self._apply_status()
@@ -222,10 +224,24 @@ class TriggersTab(TranslatableMixin, QWidget):
             )
         if idx == 2:
             return self._build_pixel_trigger(common)
-        return FilePathTrigger(
-            watch_path=self._file_widgets["path"].text().strip(),
+        if idx == 3:
+            return FilePathTrigger(
+                watch_path=self._file_widgets["path"].text().strip(),
+                **common,
+            )
+        return CronTrigger(
+            cron=self._cron_widgets["cron"].text().strip() or "* * * * *",
             **common,
         )
+
+    def _build_cron_form(self) -> dict:
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        cron_input = QLineEdit("* * * * *")
+        layout.addWidget(self._tr(QLabel(), "tr_cron_label"))
+        layout.addWidget(cron_input, stretch=1)
+        self._stack.addWidget(widget)
+        return {"cron": cron_input}
 
     def _build_pixel_trigger(self, common: dict):
         w = self._pixel_widgets

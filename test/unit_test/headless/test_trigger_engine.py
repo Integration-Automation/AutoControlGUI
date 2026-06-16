@@ -3,8 +3,12 @@ import json
 import os
 import time
 
+import datetime
+
+import pytest
+
 from je_auto_control.utils.triggers.trigger_engine import (
-    AllOfTrigger, AnyOfTrigger, FilePathTrigger, SequenceTrigger,
+    AllOfTrigger, AnyOfTrigger, CronTrigger, FilePathTrigger, SequenceTrigger,
     TriggerEngine,
 )
 
@@ -129,3 +133,22 @@ def test_sequence_trigger_requires_ordered_firing():
     # Re-arms: one poll per step again.
     assert trig.is_fired() is False
     assert trig.is_fired() is True
+
+
+def test_cron_trigger_fires_once_per_matching_minute():
+    trig = CronTrigger(trigger_id="c", script_path="s.json", cron="* * * * *")
+    assert trig.is_fired() is True   # every-minute cron matches now
+    assert trig.is_fired() is False  # already fired this minute
+
+
+def test_cron_trigger_skips_when_minute_mismatches():
+    other_minute = (datetime.datetime.now().minute + 30) % 60
+    trig = CronTrigger(trigger_id="c", script_path="s.json",
+                       cron=f"{other_minute} * * * *")
+    assert trig.is_fired() is False
+
+
+def test_cron_trigger_rejects_invalid_expression():
+    trig = CronTrigger(trigger_id="c", script_path="s.json", cron="not-cron")
+    with pytest.raises(ValueError):
+        trig.is_fired()

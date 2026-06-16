@@ -588,6 +588,8 @@ traditional_chinese_word_dict = {
     "tr_type_window": "視窗出現",
     "tr_type_pixel": "像素符合",
     "tr_type_file": "檔案變更",
+    "tr_type_cron": "Cron 排程",
+    "tr_cron_label": "Cron（分 時 日 月 週）:",
     "tr_image_label": "影像：",
     "tr_threshold_label": "精確度：",
     "tr_title_contains_label": "標題包含：",

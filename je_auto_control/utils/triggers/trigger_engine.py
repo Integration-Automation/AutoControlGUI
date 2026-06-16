@@ -154,6 +154,34 @@ class SequenceTrigger(_TriggerBase):
         return False
 
 
+@dataclass
+class CronTrigger(_TriggerBase):
+    """Fire when the current local time matches a five-field cron expression.
+
+    Fires at most once per matching minute (tracks the last-fired minute),
+    so it composes cleanly with the boolean/sequence triggers — e.g.
+    ``AllOfTrigger`` of a cron + an image trigger means "at 09:00 *and*
+    only if the image is on screen".
+    """
+    cron: str = "* * * * *"
+    _expr: Optional[object] = None
+    _last_minute: Optional[str] = None
+
+    def is_fired(self) -> bool:
+        import datetime as _dt
+        from je_auto_control.utils.scheduler.cron import parse_cron
+        if self._expr is None:
+            self._expr = parse_cron(self.cron)
+        now = _dt.datetime.now()
+        minute_key = now.strftime("%Y-%m-%d %H:%M")
+        if minute_key == self._last_minute:
+            return False
+        if self._expr.matches(now):
+            self._last_minute = minute_key
+            return True
+        return False
+
+
 class TriggerEngine:
     """Polls registered triggers on a background thread."""
 

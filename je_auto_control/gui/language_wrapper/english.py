@@ -709,6 +709,8 @@ english_word_dict = {
     "tr_type_window": "Window appears",
     "tr_type_pixel": "Pixel matches",
     "tr_type_file": "File changed",
+    "tr_type_cron": "Cron schedule",
+    "tr_cron_label": "Cron (min hr dom mon dow):",
     "tr_image_label": "Image:",
     "tr_threshold_label": "Threshold:",
     "tr_title_contains_label": "Title contains:",

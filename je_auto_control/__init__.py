@@ -282,9 +282,9 @@ from je_auto_control.utils.run_history.history_store import (
 )
 # Triggers (headless)
 from je_auto_control.utils.triggers.trigger_engine import (
-    AllOfTrigger, AnyOfTrigger, FilePathTrigger, ImageAppearsTrigger,
-    PixelColorTrigger, SequenceTrigger, TriggerEngine, WindowAppearsTrigger,
-    default_trigger_engine,
+    AllOfTrigger, AnyOfTrigger, CronTrigger, FilePathTrigger,
+    ImageAppearsTrigger, PixelColorTrigger, SequenceTrigger, TriggerEngine,
+    WindowAppearsTrigger, default_trigger_engine,
 )
 from je_auto_control.utils.triggers.webhook_server import (
     WebhookTrigger, WebhookTriggerServer, default_webhook_server,
@@ -470,7 +470,7 @@ __all__ = [
     "TriggerEngine", "default_trigger_engine",
     "ImageAppearsTrigger", "WindowAppearsTrigger",
     "PixelColorTrigger", "FilePathTrigger",
-    "AllOfTrigger", "AnyOfTrigger", "SequenceTrigger",
+    "AllOfTrigger", "AnyOfTrigger", "SequenceTrigger", "CronTrigger",
     "WebhookTrigger", "WebhookTriggerServer", "default_webhook_server",
     "EmailTrigger", "EmailTriggerWatcher",
     "default_email_trigger_watcher",
