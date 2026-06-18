@@ -20,7 +20,7 @@ def humanized_key_delays(text: str, *, base_delay: float = 0.05,
     ``pause_chance`` probability of an extra ``pause_delay`` (a human
     pausing to think). Deterministic when ``seed`` is set.
     """
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # nosec B311  # reason: non-crypto typing jitter
     delays: List[float] = []
     for _ in text:
         delay = max(0.0, base_delay + rng.uniform(-jitter, jitter))

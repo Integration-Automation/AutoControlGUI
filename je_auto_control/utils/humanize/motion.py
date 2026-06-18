@@ -60,7 +60,7 @@ def humanized_path(start: Point, end: Point,
     is set.
     """
     motion = motion or HumanizedMotion()
-    rng = random.Random(motion.seed)
+    rng = random.Random(motion.seed)  # nosec B311  # reason: non-crypto motion jitter
     sx, sy = float(start[0]), float(start[1])
     ex, ey = float(end[0]), float(end[1])
     dx, dy = ex - sx, ey - sy
