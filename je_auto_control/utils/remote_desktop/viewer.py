@@ -31,7 +31,6 @@ ViewerCursorCallback = Callable[[str, int, int], None]
 ChatCallback = Callable[[str, str], None]
 ErrorCallback = Callable[[Exception], None]
 
-_DEFAULT_AUTH_TIMEOUT_S = 60.0
 _DEFAULT_CONNECT_TIMEOUT_S = 5.0
 _NOT_CONNECTED_MESSAGE = "viewer is not connected"
 
@@ -190,11 +189,13 @@ class RemoteDesktopViewer:
         raw_sock = socket.create_connection(
             (self._host, self._port), timeout=timeout,
         )
-        # If the caller explicitly asked for a longer connect budget,
-        # honor it for the handshake too — otherwise a slow remote (CI
-        # runners, high-latency links) trips the 5 s default before the
-        # caller's window expires.
-        raw_sock.settimeout(max(_DEFAULT_AUTH_TIMEOUT_S, float(timeout)))
+        # Bound the auth handshake by the caller's timeout. A short, explicit
+        # timeout must be honored — e.g. a plain viewer hitting a TLS host has
+        # to fail fast instead of blocking on a handshake that never
+        # completes. The handshake is a tiny HMAC exchange, so the connect
+        # budget is ample; callers needing longer simply pass a larger
+        # timeout.
+        raw_sock.settimeout(float(timeout))
         try:
             sock = self._maybe_wrap_tls(raw_sock)
             channel = self._build_channel(sock)

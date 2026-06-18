@@ -242,7 +242,7 @@ def test_plain_tcp_viewer_against_ws_host_is_rejected():
             host="127.0.0.1", port=host.port, token="tok",
         )
         with pytest.raises((OSError, AuthenticationError)):
-            viewer.connect(timeout=30.0)
+            viewer.connect(timeout=2.0)
         assert _wait_until(lambda: host.connected_clients == 0)
     finally:
         host.stop(timeout=1.0)
