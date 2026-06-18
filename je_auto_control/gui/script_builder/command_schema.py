@@ -624,6 +624,35 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_watchdog_list", "Flow", "Watchdog: List Rules / Hits"))
     specs.append(CommandSpec(
+        "AC_otp_to_var", "Flow", "OTP (TOTP) into Variable",
+        fields=(
+            FieldSpec("secret", FieldType.STRING),
+            FieldSpec("var", FieldType.STRING, default="otp"),
+            FieldSpec("digits", FieldType.INT, optional=True, default=6),
+            FieldSpec("step", FieldType.INT, optional=True, default=30),
+        ),
+        description="Generate a TOTP 2FA code from a base32 secret.",
+    ))
+    specs.append(CommandSpec(
+        "AC_handle_file_dialog", "Native UI", "Handle File Dialog",
+        fields=(
+            FieldSpec("path", FieldType.STRING),
+            FieldSpec("action", FieldType.ENUM,
+                      choices=("open", "save", "folder"),
+                      optional=True, default="open"),
+            FieldSpec("window_title", FieldType.STRING, optional=True),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True,
+                      default=10.0),
+            FieldSpec("confirm_key", FieldType.STRING, optional=True,
+                      default="enter"),
+        ),
+        description="Wait for a native file dialog, type a path, confirm.",
+    ))
+    specs.append(CommandSpec(
+        "AC_assert_session_active", "Flow", "Assert Session Active",
+        description="Fail if the session is locked / non-interactive.",
+    ))
+    specs.append(CommandSpec(
         "AC_shell_command", "Shell", "Shell Command",
         fields=(FieldSpec("shell_command", FieldType.STRING),),
     ))

@@ -1669,6 +1669,50 @@ def process_and_shell_tools() -> List[MCPTool]:
     ]
 
 
+def unattended_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_generate_otp",
+            description=("Generate the current TOTP code from a base32 secret "
+                         "for automated 2FA logins. step/digits default to "
+                         "30/6. Returns the numeric code string."),
+            input_schema=schema({
+                "secret": {"type": "string"},
+                "step": {"type": "integer"},
+                "digits": {"type": "integer"},
+            }, required=["secret"]),
+            handler=h.generate_otp,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_handle_file_dialog",
+            description=("Wait for a native file dialog (action=open|save|"
+                         "folder, or a custom window_title), type 'path' into "
+                         "it, and confirm (default Enter). Returns "
+                         "{handled, title}."),
+            input_schema=schema({
+                "path": {"type": "string"},
+                "action": {"type": "string"},
+                "window_title": {"type": "string"},
+                "timeout_s": {"type": "number"},
+                "confirm_key": {"type": "string"},
+            }, required=["path"]),
+            handler=h.handle_file_dialog,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_assert_session_active",
+            description=("Raise when the interactive session is locked / "
+                         "disconnected (so an unattended run fails clearly "
+                         "instead of emitting phantom input). Returns "
+                         "{interactive: true} when OK."),
+            input_schema=schema({}),
+            handler=h.assert_session_active,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def watchdog_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -2654,6 +2698,7 @@ ALL_FACTORIES = (
     computer_use_tools, dag_tools, presence_tools, chatops_tools,
     redaction_tools, android_widget_tools, ios_tools, webrunner_tools,
     scheduler_tools, trigger_tools, hotkey_tools, watchdog_tools,
+    unattended_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

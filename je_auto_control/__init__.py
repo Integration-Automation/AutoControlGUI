@@ -97,6 +97,18 @@ from je_auto_control.utils.clipboard.clipboard import (
 from je_auto_control.utils.hotkey.hotkey_daemon import (
     HotkeyBinding, HotkeyDaemon, default_hotkey_daemon,
 )
+# OTP/TOTP for automated 2FA logins
+from je_auto_control.utils.otp import (
+    TOTPError, generate_secret, generate_totp, verify_totp,
+)
+# Native file Open/Save/folder dialog helper
+from je_auto_control.utils.file_dialog import (
+    FileDialogDriver, handle_file_dialog,
+)
+# Locked / non-interactive session guard
+from je_auto_control.utils.session_guard import (
+    ensure_interactive_session, is_session_locked,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -494,6 +506,9 @@ __all__ = [
     # Hotkey daemon
     "HotkeyDaemon", "HotkeyBinding", "default_hotkey_daemon",
     "PopupWatchdog", "WatchdogRule", "default_popup_watchdog",
+    "generate_totp", "verify_totp", "generate_secret", "TOTPError",
+    "handle_file_dialog", "FileDialogDriver",
+    "ensure_interactive_session", "is_session_locked",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

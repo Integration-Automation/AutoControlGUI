@@ -92,9 +92,10 @@ def verify_code(secret: str, code: str, *,
     now = time.time() if at is None else at
     base_counter = int(now) // step
     for delta in range(-window, window + 1):
-        expected = _code_for_counter(
-            decoded, base_counter + delta, digits=digits,
-        )
+        counter = base_counter + delta
+        if counter < 0:  # near the epoch the lower window can go negative
+            continue
+        expected = _code_for_counter(decoded, counter, digits=digits)
         if hmac.compare_digest(expected, cleaned):
             return True
     return False

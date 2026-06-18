@@ -440,6 +440,16 @@ def exec_pdf_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     return {"var": var_name, "length": len(text)}
 
 
+def exec_otp_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Generate a TOTP code from a base32 secret into a flow variable (2FA)."""
+    from je_auto_control.utils.otp import generate_totp
+    code = generate_totp(args["secret"], step=int(args.get("step", 30)),
+                         digits=int(args.get("digits", 6)))
+    var_name = args.get("var", "otp")
+    executor.variables.set(var_name, code)
+    return {"var": var_name}
+
+
 def exec_sql_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     """Run a read-only SQLite query and store its result in a flow variable."""
     from je_auto_control.utils.sql.sql_query import query_sqlite
@@ -670,6 +680,7 @@ BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_shell_to_var": exec_shell_to_var,
     "AC_read_file_to_var": exec_read_file_to_var,
     "AC_pdf_to_var": exec_pdf_to_var,
+    "AC_otp_to_var": exec_otp_to_var,
     "AC_sql_to_var": exec_sql_to_var,
     "AC_assert_db": exec_assert_db,
     "AC_http_to_var": exec_http_to_var,

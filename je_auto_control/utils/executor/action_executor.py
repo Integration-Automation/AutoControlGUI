@@ -2289,6 +2289,23 @@ def _watchdog_list() -> Dict[str, Any]:
     return {"running": w.running, "rules": w.rule_names(), "hits": w.hits}
 
 
+def _handle_file_dialog(path: str, action: str = "open",
+                        window_title: Optional[str] = None,
+                        timeout_s: float = 10.0,
+                        confirm_key: str = "enter") -> Dict[str, Any]:
+    """Adapter: wait for a native file dialog, type the path, confirm."""
+    from je_auto_control.utils.file_dialog import handle_file_dialog
+    return handle_file_dialog(path, action=action, window_title=window_title,
+                              timeout_s=float(timeout_s),
+                              confirm_key=confirm_key)
+
+
+def _assert_session_active() -> Dict[str, Any]:
+    """Adapter: raise unless the session is interactive (not locked)."""
+    from je_auto_control.utils.session_guard import ensure_interactive_session
+    return {"interactive": ensure_interactive_session()}
+
+
 class Executor:
     """
     Executor
@@ -2445,6 +2462,8 @@ class Executor:
             "AC_watchdog_start": _watchdog_start,
             "AC_watchdog_stop": _watchdog_stop,
             "AC_watchdog_list": _watchdog_list,
+            "AC_handle_file_dialog": _handle_file_dialog,
+            "AC_assert_session_active": _assert_session_active,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

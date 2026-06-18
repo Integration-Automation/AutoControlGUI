@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 无人值守可靠性](#本次更新-2026-06-19--无人值守可靠性)
 - [本次更新 (2026-06-19) — 弹窗看门狗](#本次更新-2026-06-19--弹窗看门狗)
 - [本次更新 (2026-06-19) — 原生 UI 控制](#本次更新-2026-06-19--原生-ui-控制)
 - [本次更新 (2026-06-19)](#本次更新-2026-06-19)
@@ -59,6 +60,14 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 无人值守可靠性
+
+三个无人值守/登录自动化的社区痛点修复,均 headless 且走完整五层。完整参考:[`docs/source/Eng/doc/new_features/v9_features_doc.rst`](../docs/source/Eng/doc/new_features/v9_features_doc.rst)。
+
+- **2FA 的 OTP / TOTP** — `generate_totp` / `verify_totp`(`AC_otp_to_var`、`ac_generate_otp`):从 base32 secret 生成当下 6 位码,填进登录表单(重用远程桌面 TOTP 引擎)。
+- **原生文件对话框** — `handle_file_dialog`(`AC_handle_file_dialog`):等 OS 打开/保存/文件夹对话框、输入路径、确认,一次完成,driver 可注入。
+- **锁定会话守卫** — `ensure_interactive_session` / `is_session_locked`(`AC_assert_session_active`):工作站锁定/断开时清楚失败,而非发出幽灵点击。
 
 ## 本次更新 (2026-06-19) — 弹窗看门狗
 
