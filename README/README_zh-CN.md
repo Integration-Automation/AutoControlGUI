@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 事务式工作队列](#本次更新-2026-06-19--事务式工作队列)
 - [本次更新 (2026-06-19) — 无人值守可靠性](#本次更新-2026-06-19--无人值守可靠性)
 - [本次更新 (2026-06-19) — 弹窗看门狗](#本次更新-2026-06-19--弹窗看门狗)
 - [本次更新 (2026-06-19) — 原生 UI 控制](#本次更新-2026-06-19--原生-ui-控制)
@@ -60,6 +61,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 事务式工作队列
+
+把 AutoControl 从「跑脚本」升级成「跑机器人」。以 SQLite 为底的工作队列实作生产级 RPA dispatcher/performer:入列项目、一次处理一项、具每项状态/去重/重试,使上千项执行能**崩溃后续跑**且可并行化。纯标准库、走完整五层。完整参考:[`docs/source/Eng/doc/new_features/v10_features_doc.rst`](../docs/source/Eng/doc/new_features/v10_features_doc.rst)。
+
+- **Dispatcher/performer** — `WorkQueue.add()` 入列(依 reference 去重);`get_next()` 原子认领最旧项;`complete()` / `fail()` 记录结果。`AC_queue_add` / `AC_queue_next` / `AC_queue_complete` / `AC_queue_fail` / `AC_queue_stats`。
+- **失败语义** — application 错误重试至 `max_retries`;**business** 错误(`BusinessError` / `kind="business"`)永不重试。`stats()` 给各状态计数供仪表板。
 
 ## 本次更新 (2026-06-19) — 无人值守可靠性
 
