@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Popup Watchdog](#whats-new-2026-06-19--popup-watchdog)
 - [What's new (2026-06-19) — Native UI Control](#whats-new-2026-06-19--native-ui-control)
 - [What's new (2026-06-19)](#whats-new-2026-06-19)
 - [What's new (2026-06-18)](#whats-new-2026-06-18)
@@ -59,6 +60,13 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Popup Watchdog
+
+The #1 cause of unattended-automation failure is an unexpected dialog the script never coded for (UAC, "session expiring", Windows Update, a modal). The popup watchdog runs a concurrent guard thread that watches for registered patterns and dismisses them independently of the main flow. Surfaced by the practitioner pain-point research as the top unattended failure cause; full stack (facade, `AC_*`, MCP, Script Builder), fully headless. Full reference: [`docs/source/Eng/doc/new_features/v8_features_doc.rst`](docs/source/Eng/doc/new_features/v8_features_doc.rst).
+
+- **Auto-dismiss popups** — `default_popup_watchdog.add_window_rule(title, action="close")` then `.start()` (`AC_watchdog_add` / `AC_watchdog_start` / `AC_watchdog_stop` / `AC_watchdog_list`): closes a matching window or presses a key (`enter`/`esc`) when it appears.
+- **Custom rules** — `PopupWatchdog` / `WatchdogRule` pair any detector (image/a11y/text) with a dismisser; a failing rule is logged and skipped, never killing the guard loop.
 
 ## What's new (2026-06-19) — Native UI Control
 

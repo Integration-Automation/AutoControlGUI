@@ -2257,6 +2257,38 @@ def _read_table(name: Optional[str] = None, role: Optional[str] = None,
                               automation_id=automation_id)
 
 
+def _watchdog_add(title: str, action: str = "close",
+                  case_sensitive: bool = False,
+                  name: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: register a popup-dismissal rule on the default watchdog."""
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    default_popup_watchdog.add_window_rule(
+        title, action=str(action), case_sensitive=bool(case_sensitive),
+        name=name)
+    return {"rules": default_popup_watchdog.rule_names()}
+
+
+def _watchdog_start() -> Dict[str, Any]:
+    """Adapter: start the background popup watchdog."""
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    default_popup_watchdog.start()
+    return {"running": True}
+
+
+def _watchdog_stop() -> Dict[str, Any]:
+    """Adapter: stop the background popup watchdog."""
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    default_popup_watchdog.stop()
+    return {"running": False}
+
+
+def _watchdog_list() -> Dict[str, Any]:
+    """Adapter: report the watchdog's rules, run state and dismissals."""
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    w = default_popup_watchdog
+    return {"running": w.running, "rules": w.rule_names(), "hits": w.hits}
+
+
 class Executor:
     """
     Executor
@@ -2409,6 +2441,10 @@ class Executor:
             "AC_control_invoke": _control_invoke,
             "AC_control_toggle": _control_toggle,
             "AC_read_table": _read_table,
+            "AC_watchdog_add": _watchdog_add,
+            "AC_watchdog_start": _watchdog_start,
+            "AC_watchdog_stop": _watchdog_stop,
+            "AC_watchdog_list": _watchdog_list,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
