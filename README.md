@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-18)](#whats-new-2026-06-18)
 - [What's new (2026-06-17)](#whats-new-2026-06-17)
 - [What's new (2026-06)](#whats-new-2026-06)
 - [What's new (2026-05)](#whats-new-2026-05)
@@ -56,6 +57,35 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-18)
+
+Eight headless capabilities that round out scripting, integration, and CI
+use: a real command-line interface, recording-to-code generation, and
+first-class HTTP / SQL / email / PDF / wait steps. Each ships a headless
+Python API, an `AC_*` executor command, an MCP tool, and a visual Script
+Builder entry, and is covered by headless tests (network / SMTP / PDF
+backends are injected, so nothing touches the outside world). Full
+reference page:
+[`docs/source/Eng/doc/new_features/v5_features_doc.rst`](docs/source/Eng/doc/new_features/v5_features_doc.rst).
+
+**Command-line interface**
+- **`je_auto_control` console script** — run and inspect action files from a shell / CI: `run` (with `--var`, `--dry-run`), `validate` (alias `lint`), `list-commands`, `fmt`, `record`, `codegen`, `version`.
+
+**Code generation**
+- **Recording → code** — `generate_code` / `generate_code_file` (`AC_generate_code`, `je_auto_control codegen`) turn a recording or action file into a pytest test, standalone Python, or Robot suite. The default `calls` style emits readable `ac.<fn>(...)` statements, falling back to `ac.execute_action([...])` for flow control.
+
+**Integrations**
+- **HTTP / API** — `http_request` (`AC_http_request`): method, headers, JSON or raw body, basic / bearer auth, explicit timeout; non-2xx responses are returned (not raised) so you can assert on status. `AC_http_to_var` now shares the client and can POST bodies.
+- **SQL** — `query_sqlite` (`AC_sql_to_var` / `AC_assert_db`): read-only, parameter-bound SQLite queries into a variable, or a scalar assertion (e.g. `SELECT COUNT(*) ... == 0`).
+- **Email (SMTP)** — `send_email` (`AC_send_email`): stdlib SMTP with TLS on by default (STARTTLS or implicit SSL over a verified context), attachments, and multiple recipients.
+- **PDF** — `extract_pdf_text` / `pdf_metadata` / `assert_pdf_text` (`AC_pdf_to_var` / `AC_assert_pdf_text`): text extraction and content assertions, backed by the optional `pypdf` extra (`pip install je_auto_control[pdf]`).
+
+**Smart waits**
+- **Wait for a file** — `wait_until_file` (`AC_wait_for_file`) blocks until a file exists and its size stops growing (a download finished writing).
+- **Wait for a TCP port** — `wait_until_port` (`AC_wait_for_port`) blocks until `host:port` accepts connections (pairs with `launch_process`).
+
+**Security** — HTTP / SMTP enforce http/https or TLS with verified certificates and explicit timeouts; SQL is read-only and parameter-bound; file paths are resolved before I/O.
 
 ## What's new (2026-06-17)
 
