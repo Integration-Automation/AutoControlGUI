@@ -655,6 +655,7 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_work_queue_specs(specs)
     _add_tooling_specs(specs)
     _add_authoring_specs(specs)
+    _add_agent_specs(specs)
 
 
 def _add_authoring_specs(specs: List[CommandSpec]) -> None:
@@ -693,6 +694,52 @@ def _add_authoring_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("dry_run", FieldType.BOOL, optional=True,
                           default=False),),
         description="Run 'actions' (JSON view) and return a per-step trace.",
+    ))
+
+
+def _add_agent_specs(specs: List[CommandSpec]) -> None:
+    path = FieldSpec("path", FieldType.FILE_PATH)
+    name = FieldSpec("name", FieldType.STRING)
+    specs.append(CommandSpec(
+        "AC_skill_save", "Agent", "Skill: Save Playbook",
+        fields=(path, name,
+                FieldSpec("description", FieldType.STRING, optional=True),
+                FieldSpec("tags", FieldType.STRING, optional=True)),
+        description="Save a reusable action sequence ('actions' via JSON "
+                    "view) under a name.",
+    ))
+    specs.append(CommandSpec(
+        "AC_skill_run", "Agent", "Skill: Run Playbook",
+        fields=(path, name),
+        description="Execute a stored skill's actions.",
+    ))
+    specs.append(CommandSpec(
+        "AC_skill_list", "Agent", "Skill: List",
+        fields=(path,),
+        description="List saved skill names.",
+    ))
+    specs.append(CommandSpec(
+        "AC_skill_remove", "Agent", "Skill: Remove",
+        fields=(path, name),
+        description="Delete a saved skill.",
+    ))
+    specs.append(CommandSpec(
+        "AC_skill_search", "Agent", "Skill: Search",
+        fields=(path, FieldSpec("query", FieldType.STRING)),
+        description="Search skills by name/description/tags.",
+    ))
+    specs.append(CommandSpec(
+        "AC_guard_text", "Agent", "Guardrail: Scan Text",
+        fields=(FieldSpec("text", FieldType.STRING),
+                FieldSpec("threshold", FieldType.INT, optional=True,
+                          default=2)),
+        description="Scan untrusted text for prompt-injection patterns.",
+    ))
+    specs.append(CommandSpec(
+        "AC_agent_card", "Agent", "A2A Agent Card",
+        fields=(FieldSpec("path", FieldType.FILE_PATH, optional=True,
+                          default="agent-card.json"),),
+        description="Write an A2A agent card describing AutoControl's skills.",
     ))
 
 

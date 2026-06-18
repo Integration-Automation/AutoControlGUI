@@ -2427,6 +2427,54 @@ def _debug_trace(actions: List[Any], dry_run: bool = False) -> Dict[str, Any]:
     return {"trace": trace_actions(actions, dry_run=bool(dry_run))}
 
 
+def _skill_lib(path: str):
+    from je_auto_control.utils.skill_library import SkillLibrary
+    return SkillLibrary(path)
+
+
+def _skill_save(path: str, name: str, actions: List[Any],
+                description: str = "",
+                tags: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Adapter: save a reusable action sequence (skill)."""
+    skill = _skill_lib(path).save(name, actions, description=description,
+                                  tags=tags)
+    return {"name": skill.name, "tags": skill.tags}
+
+
+def _skill_run(path: str, name: str) -> Dict[str, Any]:
+    """Adapter: execute a stored skill's actions."""
+    return {"record": _skill_lib(path).run(name)}
+
+
+def _skill_list(path: str) -> Dict[str, Any]:
+    """Adapter: list saved skill names."""
+    return {"names": _skill_lib(path).names()}
+
+
+def _skill_remove(path: str, name: str) -> Dict[str, Any]:
+    """Adapter: delete a saved skill."""
+    return {"removed": _skill_lib(path).remove(name)}
+
+
+def _skill_search(path: str, query: str) -> Dict[str, Any]:
+    """Adapter: search skills by name/description/tags."""
+    return {"names": [s.name for s in _skill_lib(path).search(query)]}
+
+
+def _guard_text(text: str, threshold: int = 2) -> Dict[str, Any]:
+    """Adapter: assess text for prompt-injection patterns."""
+    from je_auto_control.utils.guardrail import assess_text
+    return assess_text(text, threshold=int(threshold))
+
+
+def _agent_card(path: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: build (or write) the A2A agent card."""
+    from je_auto_control.utils.a2a import build_agent_card, write_agent_card
+    if path:
+        return {"path": write_agent_card(path)}
+    return {"card": build_agent_card()}
+
+
 class Executor:
     """
     Executor
@@ -2600,6 +2648,13 @@ class Executor:
             "AC_element_remove": _element_remove,
             "AC_element_list": _element_list,
             "AC_debug_trace": _debug_trace,
+            "AC_skill_save": _skill_save,
+            "AC_skill_run": _skill_run,
+            "AC_skill_list": _skill_list,
+            "AC_skill_remove": _skill_remove,
+            "AC_skill_search": _skill_search,
+            "AC_guard_text": _guard_text,
+            "AC_agent_card": _agent_card,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

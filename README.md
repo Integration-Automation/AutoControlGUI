@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Agent Toolkit](#whats-new-2026-06-19--agent-toolkit)
 - [What's new (2026-06-19) — Authoring & Debugging](#whats-new-2026-06-19--authoring--debugging)
 - [What's new (2026-06-19) — Test & Tooling Batch](#whats-new-2026-06-19--test--tooling-batch)
 - [What's new (2026-06-19) — Transactional Queue](#whats-new-2026-06-19--transactional-queue)
@@ -64,6 +65,14 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Agent Toolkit
+
+Three pure-stdlib tools for LLM/agent-driven automation, full stack (facade, `AC_*`, MCP, Script Builder). Full reference: [`docs/source/Eng/doc/new_features/v13_features_doc.rst`](docs/source/Eng/doc/new_features/v13_features_doc.rst).
+
+- **Skill / playbook library** — `SkillLibrary` (`AC_skill_save` / `AC_skill_run` / `AC_skill_list` / `AC_skill_remove` / `AC_skill_search`, `ac_skill_*`): store named, reusable action sequences on disk, search them by name/description/tags, and replay across runs — the durable counterpart to in-memory macros.
+- **Prompt-injection guardrail** — `assess_text` / `scan_text` / `redact_text` (`AC_guard_text`, `ac_guard_text`): scan untrusted screen/OCR text for injection patterns (instruction-override, system-prompt exfiltration, jailbreak/chat-template markers …) before feeding it to an LLM; returns `{suspicious, score, findings, redacted}`.
+- **A2A agent card** — `build_agent_card` / `write_agent_card` (`AC_agent_card`, `ac_agent_card`): publish an A2A agent card so other agents can discover and call AutoControl as a GUI-automation peer.
 
 ## What's new (2026-06-19) — Authoring & Debugging
 

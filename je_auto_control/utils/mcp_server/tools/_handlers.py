@@ -888,6 +888,45 @@ def debug_trace(actions, dry_run=False):
     return {"trace": trace_actions(actions, dry_run=bool(dry_run))}
 
 
+def _skill_lib(path):
+    from je_auto_control.utils.skill_library import SkillLibrary
+    return SkillLibrary(path)
+
+
+def skill_save(path, name, actions, description="", tags=None):
+    skill = _skill_lib(path).save(name, actions, description=description,
+                                  tags=tags)
+    return {"name": skill.name, "tags": skill.tags}
+
+
+def skill_run(path, name):
+    return {"record": _skill_lib(path).run(name)}
+
+
+def skill_list(path):
+    return {"names": _skill_lib(path).names()}
+
+
+def skill_remove(path, name):
+    return {"removed": _skill_lib(path).remove(name)}
+
+
+def skill_search(path, query):
+    return {"names": [s.name for s in _skill_lib(path).search(query)]}
+
+
+def guard_text(text, threshold=2):
+    from je_auto_control.utils.guardrail import assess_text
+    return assess_text(text, threshold=int(threshold))
+
+
+def agent_card(path=None):
+    from je_auto_control.utils.a2a import build_agent_card, write_agent_card
+    if path:
+        return {"path": write_agent_card(path)}
+    return {"card": build_agent_card()}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:
