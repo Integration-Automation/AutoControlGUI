@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Unattended Reliability](#whats-new-2026-06-19--unattended-reliability)
 - [What's new (2026-06-19) — Popup Watchdog](#whats-new-2026-06-19--popup-watchdog)
 - [What's new (2026-06-19) — Native UI Control](#whats-new-2026-06-19--native-ui-control)
 - [What's new (2026-06-19)](#whats-new-2026-06-19)
@@ -60,6 +61,14 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Unattended Reliability
+
+Three practitioner-pain fixes for unattended / login automation, all headless and full-stack. Full reference: [`docs/source/Eng/doc/new_features/v9_features_doc.rst`](docs/source/Eng/doc/new_features/v9_features_doc.rst).
+
+- **OTP / TOTP for 2FA** — `generate_totp` / `verify_totp` (`AC_otp_to_var`, `ac_generate_otp`): mint the current 6-digit code from a base32 secret to type into a login form (reuses the remote-desktop TOTP engine).
+- **Native file dialogs** — `handle_file_dialog` (`AC_handle_file_dialog`): wait for the OS Open/Save/folder dialog, type the path, confirm — in one call, with an injectable driver.
+- **Locked-session guard** — `ensure_interactive_session` / `is_session_locked` (`AC_assert_session_active`): fail clearly when the workstation is locked / disconnected instead of emitting phantom clicks.
 
 ## What's new (2026-06-19) — Popup Watchdog
 

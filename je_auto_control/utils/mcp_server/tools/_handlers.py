@@ -776,6 +776,23 @@ def watchdog_list():
     return {"running": w.running, "rules": w.rule_names(), "hits": w.hits}
 
 
+def generate_otp(secret, step=30, digits=6):
+    from je_auto_control.utils.otp import generate_totp
+    return generate_totp(secret, step=int(step), digits=int(digits))
+
+
+def handle_file_dialog(path, action="open", window_title=None,
+                       timeout_s=10.0, confirm_key="enter"):
+    from je_auto_control.utils.file_dialog import handle_file_dialog as _h
+    return _h(path, action=action, window_title=window_title,
+              timeout_s=float(timeout_s), confirm_key=confirm_key)
+
+
+def assert_session_active():
+    from je_auto_control.utils.session_guard import ensure_interactive_session
+    return {"interactive": ensure_interactive_session()}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:
