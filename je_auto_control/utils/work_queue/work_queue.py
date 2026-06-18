@@ -146,15 +146,16 @@ class WorkQueue:
     def list_items(self, *, status: Optional[str] = None,
                    limit: int = 100) -> List[WorkItem]:
         """List items, optionally filtered by status."""
-        query = "SELECT * FROM work_items WHERE queue=?"
-        params: List[Any] = [self._name]
-        if status:
-            query += " AND status=?"
-            params.append(status)
-        query += " ORDER BY id LIMIT ?"
-        params.append(int(limit))
         with self._connect() as conn:
-            rows = conn.execute(query, params).fetchall()
+            if status:
+                rows = conn.execute(
+                    "SELECT * FROM work_items WHERE queue=? AND status=? "
+                    "ORDER BY id LIMIT ?",
+                    (self._name, status, int(limit))).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM work_items WHERE queue=? ORDER BY id "
+                    "LIMIT ?", (self._name, int(limit))).fetchall()
         return [_row_to_item(dict(row)) for row in rows]
 
 
