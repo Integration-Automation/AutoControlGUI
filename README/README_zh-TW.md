@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — 測試與工具三件套](#本次更新-2026-06-19--測試與工具三件套)
 - [本次更新 (2026-06-19) — 交易式工作佇列](#本次更新-2026-06-19--交易式工作佇列)
 - [本次更新 (2026-06-19) — 無人值守可靠性](#本次更新-2026-06-19--無人值守可靠性)
 - [本次更新 (2026-06-19) — 彈窗看門狗](#本次更新-2026-06-19--彈窗看門狗)
@@ -61,6 +62,14 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — 測試與工具三件套
+
+三項純標準庫的生產力工具,走完整五層(facade、`AC_*`、MCP、Script Builder)。完整參考:[`docs/source/Zh/doc/new_features/v11_features_doc.rst`](../docs/source/Zh/doc/new_features/v11_features_doc.rst)。
+
+- **合成測試資料** — `generate_rows(schema, count, seed=...)` / `write_dataset`(`AC_generate_data`、`ac_generate_data`):產生可重現的假資料列(name/email/phone/int/choice/date…),驅動資料驅動執行而不需真實 PII;不需 Faker。
+- **MCP registry 清單** — `write_server_manifest("server.json", include_tools=True)`(`AC_mcp_manifest`、`ac_mcp_manifest`):產生符合 registry 規範的 `server.json`,讓 MCP agent/IDE 能發現此伺服器。
+- **風險導向測試選擇** — `rank_flows` / `select_flows`(`AC_rank_tests` / `AC_select_tests`):依最近失敗、不穩定、陳舊與從未跑過,從 run history 排序流程;先跑最高風險或只跑前 k 個。
 
 ## 本次更新 (2026-06-19) — 交易式工作佇列
 

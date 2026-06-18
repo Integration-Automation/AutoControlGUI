@@ -826,6 +826,37 @@ def queue_stats(db, name="default"):
     return _work_queue(db, name).stats()
 
 
+def generate_data(schema, count=10, path=None, fmt=None, seed=None):
+    from je_auto_control.utils.test_data import generate_rows, write_dataset
+    rows = generate_rows(schema, int(count), seed=seed)
+    if path:
+        return {"path": write_dataset(rows, path, fmt), "count": len(rows)}
+    return {"rows": rows, "count": len(rows)}
+
+
+def mcp_manifest(path=None, include_tools=False):
+    from je_auto_control.utils.mcp_registry import (
+        build_server_manifest, write_server_manifest)
+    if path:
+        return {"path": write_server_manifest(
+            path, include_tools=bool(include_tools))}
+    return {"manifest": build_server_manifest(
+        include_tools=bool(include_tools))}
+
+
+def rank_tests(flows, history_path=None, window=10):
+    from je_auto_control.utils.test_select import rank_flows
+    return {"ranked": rank_flows(flows, history_path=history_path,
+                                 window=int(window))}
+
+
+def select_tests(flows, k=None, threshold=None, history_path=None, window=10):
+    from je_auto_control.utils.test_select import select_flows
+    return {"selected": select_flows(
+        flows, k=k, threshold=threshold, history_path=history_path,
+        window=int(window))}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

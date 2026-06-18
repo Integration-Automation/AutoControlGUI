@@ -1727,6 +1727,74 @@ def work_queue_tools() -> List[MCPTool]:
     ]
 
 
+def synthetic_data_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_generate_data",
+            description=("Generate deterministic synthetic test rows from a "
+                         "field schema (e.g. {name:'name', age:{type:'int', "
+                         "min:18,max:65}}). Same 'seed' -> same rows. Writes "
+                         "JSON/CSV when 'path' is given, else returns rows."),
+            input_schema=schema({
+                "schema": {"type": "object"},
+                "count": {"type": "integer"},
+                "path": {"type": "string"},
+                "fmt": {"type": "string", "enum": ["json", "csv"]},
+                "seed": {"type": "integer"},
+            }, required=["schema"]),
+            handler=h.generate_data,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def mcp_registry_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_mcp_manifest",
+            description=("Build an MCP registry server.json manifest for this "
+                         "AutoControl server (discoverability). Writes to "
+                         "'path' when given, else returns the manifest. "
+                         "include_tools embeds the live tool list."),
+            input_schema=schema({
+                "path": {"type": "string"},
+                "include_tools": {"type": "boolean"},
+            }),
+            handler=h.mcp_manifest,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def test_selection_tools() -> List[MCPTool]:
+    _flows = {"flows": {"type": "array", "items": {"type": "string"}},
+              "history_path": {"type": "string"},
+              "window": {"type": "integer"}}
+    return [
+        MCPTool(
+            name="ac_rank_tests",
+            description=("Score flows by risk (recent failures, flakiness, "
+                         "staleness, never-run) from run history; returns the "
+                         "ranked list, riskiest first."),
+            input_schema=schema(dict(_flows), required=["flows"]),
+            handler=h.rank_tests,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_select_tests",
+            description=("Pick the riskiest flows to run: top-'k', or score "
+                         ">= 'threshold', else all ordered by risk. Returns "
+                         "the selected flow names."),
+            input_schema=schema({
+                "k": {"type": "integer"},
+                "threshold": {"type": "number"}, **_flows,
+            }, required=["flows"]),
+            handler=h.select_tests,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -2757,6 +2825,7 @@ ALL_FACTORIES = (
     redaction_tools, android_widget_tools, ios_tools, webrunner_tools,
     scheduler_tools, trigger_tools, hotkey_tools, watchdog_tools,
     unattended_tools, work_queue_tools,
+    synthetic_data_tools, mcp_registry_tools, test_selection_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
