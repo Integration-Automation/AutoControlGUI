@@ -1295,6 +1295,22 @@ def smart_wait_tools() -> List[MCPTool]:
             handler=h.wait_for_port,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_wait_for_process",
+            description=("Block until a process whose name contains 'name' "
+                         "appears (present=true) or exits (present=false) — "
+                         "e.g. after launching or killing one. Requires "
+                         "psutil. Returns a WaitOutcome (succeeded/reason/"
+                         "elapsed_s)."),
+            input_schema=schema({
+                "name": {"type": "string"},
+                "present": {"type": "boolean"},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"},
+            }, required=["name"]),
+            handler=h.wait_for_process,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

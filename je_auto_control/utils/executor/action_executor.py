@@ -412,6 +412,16 @@ def _wait_for_port(host: str, port: int, timeout_s: float = 30.0,
     ).to_dict()
 
 
+def _wait_for_process(name: str, present: bool = True, timeout_s: float = 30.0,
+                      poll_interval_s: float = 0.25) -> Dict[str, Any]:
+    """Executor adapter: wait until a process appears or exits."""
+    from je_auto_control.utils.smart_waits import wait_until_process
+    return wait_until_process(
+        name, present=bool(present), timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+    ).to_dict()
+
+
 def _ocr_read_structure(region: Optional[List[int]] = None,
                         lang: str = "eng",
                         min_confidence: float = 60.0,
@@ -2439,6 +2449,7 @@ class Executor:
             "AC_wait_region_idle": _wait_region_idle,
             "AC_wait_for_file": _wait_for_file,
             "AC_wait_for_port": _wait_for_port,
+            "AC_wait_for_process": _wait_for_process,
             "AC_wait_clipboard_change": _wait_clipboard_change,
             "AC_wait_window_closed": _wait_window_closed,
 

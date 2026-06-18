@@ -355,6 +355,18 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Wait until a TCP host:port accepts connections.",
     ))
+    specs.append(CommandSpec(
+        "AC_wait_for_process", "Flow", "Wait for Process",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("present", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True,
+                      default=30.0),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.25, min_value=0.01),
+        ),
+        description="Wait until a process appears (or exits). Requires psutil.",
+    ))
     specs.append(CommandSpec("AC_list_windows", "Window", "List Windows"))
     specs.append(CommandSpec(
         "AC_capture_window", "Window", "Capture Window",
