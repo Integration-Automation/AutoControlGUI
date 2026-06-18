@@ -662,6 +662,8 @@ simplified_chinese_word_dict = {
     "re_browse": "浏览",
     "re_load": "载入",
     "re_save_as": "另存为",
+    "re_export_code": "导出为代码",
+    "re_export_target": "选择代码目标",
     "re_trim_start": "裁剪起点:",
     "re_trim_end": "终点:",
     "re_apply_trim": "应用裁剪",

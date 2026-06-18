@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from threading import Lock
 from typing import List, Dict
@@ -42,3 +43,24 @@ def write_action_json(json_save_path: str, action_json: list) -> None:
                 json.dump(action_json, file_to_write, indent=4, ensure_ascii=False)
         except (OSError, TypeError, ValueError) as error:
             raise AutoControlJsonActionException(f"{cant_save_json_error_message}: {repr(error)}") from error
+
+
+def format_action_json(json_file_path: str, check: bool = False) -> bool:
+    """
+    Canonicalise an action JSON file's layout (4-space indent, UTF-8).
+    標準化動作 JSON 檔案的排版
+
+    :param json_file_path: JSON 檔案路徑
+    :param check: 若為 True，只回報是否需要重新排版而不寫入
+    :return: 內容是否改變 (或在 check 模式下是否將會改變)
+    """
+    real_path = os.path.realpath(json_file_path)
+    actions = read_action_json(real_path)
+    canonical = json.dumps(actions, indent=4, ensure_ascii=False)
+    with open(real_path, encoding="utf-8") as read_file:
+        current = read_file.read()
+    changed = current.strip() != canonical.strip()
+    if check or not changed:
+        return changed
+    write_action_json(real_path, actions)
+    return True

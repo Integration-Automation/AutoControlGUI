@@ -55,6 +55,7 @@ from je_auto_control.utils.script_vars.interpolate import (
     interpolate_actions, interpolate_value,
 )
 from je_auto_control.utils.script_vars.scope import VariableScope
+from je_auto_control.utils.http_client.http_client import http_request
 from je_auto_control.utils.generate_report.generate_html_report import generate_html, generate_html_report
 from je_auto_control.utils.generate_report.generate_json_report import generate_json, generate_json_report
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml, generate_xml_report
@@ -383,6 +384,19 @@ def _wait_region_idle(region: List[int],
         poll_interval_s=float(poll_interval_s),
         stable_for_s=float(stable_for_s),
         max_pixel_diff=int(max_pixel_diff),
+    ).to_dict()
+
+
+def _wait_for_file(path: str, timeout_s: float = 30.0,
+                   poll_interval_s: float = 0.25,
+                   stable_for_s: float = 1.0,
+                   min_size: int = 1) -> Dict[str, Any]:
+    """Executor adapter: wait until a file exists and finishes being written."""
+    from je_auto_control.utils.smart_waits import wait_until_file
+    return wait_until_file(
+        path, timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        stable_for_s=float(stable_for_s), min_size=int(min_size),
     ).to_dict()
 
 
@@ -2103,6 +2117,20 @@ def _region_color_stats(region: Optional[Union[List[int], str]] = None,
             pass
 
 
+def _generate_code(source: Any, output: Optional[str] = None,
+                   target: str = "pytest", name: str = "recorded_flow",
+                   style: str = "calls") -> str:
+    """Render an action list/file as code, optionally writing a file."""
+    from je_auto_control.utils.codegen.codegen import (
+        generate_code, generate_code_file,
+    )
+    if output:
+        return generate_code_file(source, output, target=target,
+                                  name=name, style=style)
+    actions = source if isinstance(source, list) else read_action_json(source)
+    return generate_code(actions, target=target, name=name, style=style)
+
+
 class Executor:
     """
     Executor
@@ -2165,6 +2193,8 @@ class Executor:
             "AC_generate_html_report": generate_html_report,
             "AC_generate_json_report": generate_json_report,
             "AC_generate_xml_report": generate_xml_report,
+            "AC_generate_code": _generate_code,
+            "AC_http_request": http_request,
 
             # Record 錄製
             "AC_record": record,
@@ -2331,6 +2361,7 @@ class Executor:
             "AC_wait_screen_stable": _wait_screen_stable,
             "AC_wait_pixel_changes": _wait_pixel_changes,
             "AC_wait_region_idle": _wait_region_idle,
+            "AC_wait_for_file": _wait_for_file,
             "AC_wait_clipboard_change": _wait_clipboard_change,
             "AC_wait_window_closed": _wait_window_closed,
 

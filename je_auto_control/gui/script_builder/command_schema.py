@@ -326,6 +326,21 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Wait until a window matching the title disappears.",
     ))
+    specs.append(CommandSpec(
+        "AC_wait_for_file", "Flow", "Wait for File",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True,
+                      default=30.0),
+            FieldSpec("stable_for_s", FieldType.FLOAT, optional=True,
+                      default=1.0, min_value=0.0),
+            FieldSpec("min_size", FieldType.INT, optional=True, default=1,
+                      min_value=0),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.25, min_value=0.01),
+        ),
+        description="Wait until a file appears and stops growing (download done).",
+    ))
     specs.append(CommandSpec("AC_list_windows", "Window", "List Windows"))
     specs.append(CommandSpec(
         "AC_capture_window", "Window", "Capture Window",
@@ -553,15 +568,61 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Read a file's text content into a flow variable.",
     ))
     specs.append(CommandSpec(
-        "AC_http_to_var", "Report", "HTTP GET into Variable",
+        "AC_sql_to_var", "Report", "SQL Query into Variable",
+        fields=(
+            FieldSpec("database", FieldType.FILE_PATH),
+            FieldSpec("query", FieldType.STRING,
+                      placeholder="SELECT name FROM users WHERE id = ?"),
+            FieldSpec("var", FieldType.STRING, default="sql_result"),
+            FieldSpec("fetch", FieldType.ENUM,
+                      choices=("all", "one", "scalar"),
+                      optional=True, default="all"),
+        ),
+        description=("Run a read-only SQLite SELECT; store rows / a row / a "
+                     "scalar in a variable. Bind values via params (JSON view)."),
+    ))
+    specs.append(CommandSpec(
+        "AC_assert_db", "Report", "Assert SQL Result",
+        fields=(
+            FieldSpec("database", FieldType.FILE_PATH),
+            FieldSpec("query", FieldType.STRING,
+                      placeholder="SELECT COUNT(*) FROM users"),
+            FieldSpec("op", FieldType.ENUM,
+                      choices=("eq", "ne", "lt", "le", "gt", "ge",
+                               "contains", "startswith", "endswith"),
+                      optional=True, default="eq"),
+            FieldSpec("expected", FieldType.STRING, optional=True),
+        ),
+        description=("Run a scalar SELECT and assert its value (use the JSON "
+                     "view for non-string expected values / params)."),
+    ))
+    specs.append(CommandSpec(
+        "AC_http_to_var", "Report", "HTTP Request into Variable",
         fields=(
             FieldSpec("url", FieldType.STRING, placeholder="https://..."),
+            FieldSpec("method", FieldType.ENUM,
+                      choices=("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"),
+                      optional=True, default="GET"),
             FieldSpec("var", FieldType.STRING, default="http_response"),
             FieldSpec("json_path", FieldType.STRING, optional=True,
                       placeholder="data.0.name"),
             FieldSpec("timeout", FieldType.FLOAT, optional=True, default=30.0),
         ),
-        description="GET a URL; store the body or a JSON field in a variable.",
+        description="Request a URL; store the body or a JSON field in a variable.",
+    ))
+    specs.append(CommandSpec(
+        "AC_http_request", "Report", "HTTP Request",
+        fields=(
+            FieldSpec("url", FieldType.STRING, placeholder="https://..."),
+            FieldSpec("method", FieldType.ENUM,
+                      choices=("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"),
+                      default="GET"),
+            FieldSpec("data", FieldType.STRING, optional=True,
+                      placeholder="raw request body"),
+            FieldSpec("timeout", FieldType.FLOAT, optional=True, default=30.0),
+        ),
+        description=("Perform an HTTP(S) request; returns status/headers/text/"
+                     "json. Use the JSON view for headers/json_body/auth."),
     ))
     specs.append(CommandSpec(
         "AC_execute_process", "Shell", "Start Executable",

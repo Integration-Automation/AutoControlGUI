@@ -1263,6 +1263,22 @@ def smart_wait_tools() -> List[MCPTool]:
             handler=h.wait_region_idle,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_wait_for_file",
+            description=("Block until a file exists, is >= min_size bytes, and "
+                         "its size has held steady for stable_for_s seconds "
+                         "(i.e. a download finished writing). Returns a "
+                         "WaitOutcome (succeeded/reason/elapsed_s)."),
+            input_schema=schema({
+                "path": {"type": "string"},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"},
+                "stable_for_s": {"type": "number"},
+                "min_size": {"type": "integer"},
+            }, required=["path"]),
+            handler=h.wait_for_file,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
@@ -2110,6 +2126,99 @@ def data_source_tools() -> List[MCPTool]:
     ]
 
 
+def sql_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_sql_query",
+            description=("Run a read-only SELECT/WITH query against a SQLite "
+                         "database file and return the result. fetch=all (list "
+                         "of row objects), one (a single row or null), or "
+                         "scalar (first column of first row). Bind values via "
+                         "'params' (?/:name placeholders) — never interpolate. "
+                         "A single read-only statement only."),
+            input_schema=schema({
+                "database": {"type": "string"},
+                "query": {"type": "string"},
+                "params": {"type": ["array", "object"]},
+                "fetch": {"type": "string", "enum": ["all", "one", "scalar"]},
+            }, required=["database", "query"]),
+            handler=h.sql_query,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_db",
+            description=("Run a scalar SELECT and assert its value against "
+                         "'expected' with op=eq|ne|lt|le|gt|ge|contains|"
+                         "startswith|endswith (e.g. SELECT COUNT(*) ... == 0). "
+                         "Bind values via 'params'. Raises on failure unless "
+                         "raise_on_fail is false."),
+            input_schema=schema({
+                "database": {"type": "string"},
+                "query": {"type": "string"},
+                "params": {"type": ["array", "object"]},
+                "op": {"type": "string"},
+                "expected": {},
+                "raise_on_fail": {"type": "boolean"},
+            }, required=["database", "query"]),
+            handler=h.assert_db,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def http_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_http_request",
+            description=("Perform an HTTP(S) request and return a response dict "
+                         "(status, ok, headers, text, json, url). method=GET|"
+                         "POST|PUT|PATCH|DELETE|HEAD; send a JSON body via "
+                         "'json_body' or a raw body via 'data'; 'auth' is "
+                         "{type:bearer, token} or {type:basic, username, "
+                         "password}. Non-2xx responses are returned, not raised, "
+                         "so you can assert on status. http/https only."),
+            input_schema=schema({
+                "url": {"type": "string"},
+                "method": {"type": "string",
+                           "enum": ["GET", "POST", "PUT", "PATCH",
+                                    "DELETE", "HEAD"]},
+                "headers": {"type": "object"},
+                "json_body": {"type": "object"},
+                "data": {"type": "string"},
+                "auth": {"type": "object"},
+                "timeout": {"type": "number"},
+            }, required=["url"]),
+            handler=h.http_request,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def codegen_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_generate_code",
+            description=("Generate runnable test code from an action list or a "
+                         "JSON action-file path. target=pytest|python|robot; "
+                         "style=calls (readable ac.<fn>(...) statements, the "
+                         "default) or actions (embed the list and replay via "
+                         "execute_action). Pass 'output' to also write the file. "
+                         "Returns the generated source code."),
+            input_schema=schema({
+                "source": {"type": ["array", "string"],
+                           "description": "Action list, or path to a JSON action file."},
+                "target": {"type": "string",
+                           "enum": ["pytest", "python", "robot"]},
+                "style": {"type": "string", "enum": ["calls", "actions"]},
+                "name": {"type": "string"},
+                "output": {"type": "string"},
+            }, required=["source"]),
+            handler=h.generate_code,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def flakiness_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -2304,6 +2413,7 @@ ALL_FACTORIES = (
     scheduler_tools, trigger_tools, hotkey_tools, screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
-    flakiness_tools, suite_tools, quarantine_tools,
+    sql_tools, http_tools, codegen_tools, flakiness_tools, suite_tools,
+    quarantine_tools,
     a11y_audit_tools, device_matrix_tools, media_assert_tools,
 )

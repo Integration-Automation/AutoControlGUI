@@ -673,6 +673,8 @@ japanese_word_dict = {
     "re_browse": "参照",
     "re_load": "読込",
     "re_save_as": "名前を付けて保存",
+    "re_export_code": "コードとして書き出す",
+    "re_export_target": "コードの出力先を選択",
     "re_trim_start": "トリム開始:",
     "re_trim_end": "終了:",
     "re_apply_trim": "トリム適用",

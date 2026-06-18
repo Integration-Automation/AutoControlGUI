@@ -235,6 +235,69 @@ def _default_window_finder(title: str, case_sensitive: bool) -> bool:
     return find_window(title, case_sensitive=case_sensitive) is not None
 
 
+FileStatReader = Callable[[str], Optional[int]]
+
+
+def wait_until_file(path: str, *,
+                    timeout_s: float = 30.0,
+                    poll_interval_s: float = 0.25,
+                    stable_for_s: float = 1.0,
+                    min_size: int = 1,
+                    stat_reader: Optional[FileStatReader] = None,
+                    ) -> WaitOutcome:
+    """Return when ``path`` exists, is >= ``min_size`` bytes, and its size has
+    held steady for ``stable_for_s`` (i.e. a download has finished writing).
+
+    ``stat_reader(path) -> size or None`` is injectable so tests need no real
+    growing file; the default reports the on-disk size (``None`` when absent).
+    """
+    if timeout_s <= 0:
+        raise ValueError("timeout_s must be positive")
+    if poll_interval_s <= 0:
+        raise ValueError("poll_interval_s must be positive")
+    if stable_for_s < 0:
+        raise ValueError("stable_for_s must be >= 0")
+    read = stat_reader or _default_file_size
+    tracker = _StableSize(float(stable_for_s), int(min_size))
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    while time.monotonic() < deadline:
+        samples += 1
+        if tracker.ready(read(str(path))):
+            return _finish(True, "file ready", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, "timeout while waiting for file", started, samples)
+
+
+class _StableSize:
+    """Track whether a file's size has stayed >= min for long enough."""
+
+    def __init__(self, stable_for_s: float, min_size: int) -> None:
+        self._stable_for_s = stable_for_s
+        self._min_size = min_size
+        self._last: Optional[int] = None
+        self._since: Optional[float] = None
+
+    def ready(self, size: Optional[int]) -> bool:
+        if size is None or size < self._min_size:
+            self._last, self._since = size, None
+            return False
+        now = time.monotonic()
+        if size != self._last:
+            self._last, self._since = size, now
+        return self._since is not None and now - self._since >= self._stable_for_s
+
+
+def _default_file_size(path: str) -> Optional[int]:
+    """Return the on-disk byte size of ``path``, or None if it is absent."""
+    import os
+    try:
+        return os.path.getsize(path)
+    except OSError:
+        return None
+
+
 # --- internals -------------------------------------------------
 
 def _frame_diff(a: Frame, b: Frame) -> int:
@@ -271,8 +334,8 @@ def _finish(succeeded: bool, reason: str, started: float,
 
 
 __all__ = [
-    "ClipboardReader", "Frame", "ScreenSampler", "WaitOutcome",
-    "WindowFinder", "wait_until_clipboard_changes",
-    "wait_until_pixel_changes", "wait_until_region_idle",
+    "ClipboardReader", "FileStatReader", "Frame", "ScreenSampler",
+    "WaitOutcome", "WindowFinder", "wait_until_clipboard_changes",
+    "wait_until_file", "wait_until_pixel_changes", "wait_until_region_idle",
     "wait_until_screen_stable", "wait_until_window_closed",
 ]
