@@ -745,6 +745,12 @@ def control_toggle(name=None, role=None, app_name=None, automation_id=None):
               automation_id=automation_id)
 
 
+def read_table(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.accessibility import read_control_table as _r
+    return _r(name=name, role=role, app_name=app_name,
+              automation_id=automation_id)
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

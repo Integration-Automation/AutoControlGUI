@@ -50,6 +50,10 @@ class _FakeBackend(AccessibilityBackend):
         self.toggled.append(name)
         return True
 
+    def read_table(self, name=None, role=None, app_name=None,
+                   automation_id=None):
+        return [["Sam", "30"], ["Lee", "25"]]
+
 
 @pytest.fixture()
 def fake(monkeypatch):
@@ -89,17 +93,26 @@ def test_executor_commands(fake):
     assert "Stay signed in" in fake.toggled
 
 
+def test_read_table(fake):
+    rows = ac.read_control_table(name="Grid")
+    assert rows == [["Sam", "30"], ["Lee", "25"]]
+    record = ac.execute_action([["AC_read_table", {"name": "Grid"}]])
+    assert any("Sam" in str(v) for v in record.values())
+
+
 def test_facade_and_executor_registered(fake):
     assert ac.control_get_value is api.control_get_value
     assert {"AC_control_get_value", "AC_control_set_value",
-            "AC_control_invoke", "AC_control_toggle"} <= ac.executor.known_commands()
+            "AC_control_invoke", "AC_control_toggle",
+            "AC_read_table"} <= ac.executor.known_commands()
 
 
 def test_mcp_tools_registered():
     from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
     names = {t.name for t in build_default_tool_registry()}
     assert {"ac_control_get_value", "ac_control_set_value",
-            "ac_control_invoke", "ac_control_toggle"} <= names
+            "ac_control_invoke", "ac_control_toggle",
+            "ac_read_table"} <= names
 
 
 def test_unsupported_backend_raises_clearly():
@@ -107,7 +120,8 @@ def test_unsupported_backend_raises_clearly():
     for call in (lambda: backend.get_value(name="x"),
                  lambda: backend.set_value("v", name="x"),
                  lambda: backend.invoke(name="x"),
-                 lambda: backend.toggle(name="x")):
+                 lambda: backend.toggle(name="x"),
+                 lambda: backend.read_table(name="x")):
         with pytest.raises(AccessibilityNotAvailableError):
             call()
 
@@ -116,7 +130,7 @@ def test_builder_specs_present_and_wired():
     from je_auto_control.gui.script_builder.command_schema import _build_specs
     known = ac.executor.known_commands()
     cmds = {s.command for s in _build_specs()}
-    assert {"AC_control_get_value", "AC_control_set_value",
-            "AC_control_invoke", "AC_control_toggle"} <= cmds
-    assert {"AC_control_get_value", "AC_control_set_value",
-            "AC_control_invoke", "AC_control_toggle"} <= known
+    wanted = {"AC_control_get_value", "AC_control_set_value",
+              "AC_control_invoke", "AC_control_toggle", "AC_read_table"}
+    assert wanted <= cmds
+    assert wanted <= known

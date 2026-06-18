@@ -1089,6 +1089,16 @@ def a11y_control_tools() -> List[MCPTool]:
             handler=h.control_toggle,
             annotations=DESTRUCTIVE,
         ),
+        MCPTool(
+            name="ac_read_table",
+            description=("Read a grid/table/list control as rows of cell "
+                         "strings via the accessibility Grid pattern. Located "
+                         "by name/role/app_name/automation_id. Reliable "
+                         "desktop data scraping without OCR."),
+            input_schema=schema(dict(_M)),
+            handler=h.read_table,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

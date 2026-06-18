@@ -65,6 +65,7 @@
 
 - **读取 / 设置值** — `control_get_value` / `control_set_value`(`AC_control_get_value` / `AC_control_set_value`):读 textbox/combo 值(不用 OCR),一次设置值(不必逐键输入)。
 - **调用 / 切换** — `control_invoke` / `control_toggle`(`AC_control_invoke` / `AC_control_toggle`):通过控件模式按按钮或切换复选框。
+- **读取表格/列表** — `read_control_table`(`AC_read_table`):把 grid/list/table 控件抓成逐行单元格字符串——不用 OCR 的桌面数据提取。
 - 以 `name` / `role` / `app_name` / `automation_id`(Windows 稳定标识符)定位,版面/本地化改变也不坏。
 
 ## 本次更新 (2026-06-19)

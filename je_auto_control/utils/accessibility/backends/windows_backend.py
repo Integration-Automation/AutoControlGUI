@@ -24,6 +24,7 @@ _UIA_NAME_PROPERTY = 30005
 _UIA_VALUE_PATTERN_ID = 10002
 _UIA_INVOKE_PATTERN_ID = 10000
 _UIA_TOGGLE_PATTERN_ID = 10015
+_UIA_GRID_PATTERN_ID = 10006
 
 
 def _is_available() -> bool:
@@ -176,6 +177,32 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             return True
         except (OSError, AttributeError):
             return False
+
+    def read_table(self, name=None, role=None, app_name=None,
+                   automation_id=None):
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_GRID_PATTERN_ID,
+                                "IUIAutomationGridPattern") if raw else None
+        if pattern is None:
+            return []
+        try:
+            rows = int(pattern.CurrentRowCount or 0)
+            cols = int(pattern.CurrentColumnCount or 0)
+        except (OSError, AttributeError):
+            return []
+        return [self._read_row(pattern, r, cols) for r in range(rows)]
+
+    @staticmethod
+    def _read_row(pattern, row: int, cols: int):
+        """Read one grid row into a list of cell strings."""
+        cells = []
+        for col in range(cols):
+            try:
+                cell = pattern.GetItem(row, col)
+                cells.append(str(cell.CurrentName or "") if cell else "")
+            except (OSError, AttributeError):
+                cells.append("")
+        return cells
 
 
 def _convert_uia(raw) -> Optional[AccessibilityElement]:

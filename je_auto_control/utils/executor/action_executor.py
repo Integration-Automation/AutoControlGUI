@@ -2248,6 +2248,15 @@ def _control_toggle(name: Optional[str] = None, role: Optional[str] = None,
                           automation_id=automation_id)
 
 
+def _read_table(name: Optional[str] = None, role: Optional[str] = None,
+                app_name: Optional[str] = None,
+                automation_id: Optional[str] = None) -> List[List[str]]:
+    """Adapter: read a grid/table/list control as rows of cell strings."""
+    from je_auto_control.utils.accessibility import read_control_table
+    return read_control_table(name=name, role=role, app_name=app_name,
+                              automation_id=automation_id)
+
+
 class Executor:
     """
     Executor
@@ -2399,6 +2408,7 @@ class Executor:
             "AC_control_set_value": _control_set_value,
             "AC_control_invoke": _control_invoke,
             "AC_control_toggle": _control_toggle,
+            "AC_read_table": _read_table,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

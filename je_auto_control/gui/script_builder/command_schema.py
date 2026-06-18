@@ -596,6 +596,11 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         fields=fields,
         description="Toggle a native control (e.g. a checkbox).",
     ))
+    specs.append(CommandSpec(
+        "AC_read_table", "Native UI", "Read Table / Grid",
+        fields=fields,
+        description="Read a grid/table/list control as rows of cell strings.",
+    ))
 
 
 def _add_misc_specs(specs: List[CommandSpec]) -> None:

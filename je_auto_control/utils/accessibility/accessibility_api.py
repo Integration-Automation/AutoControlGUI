@@ -126,11 +126,20 @@ def control_toggle(name: Optional[str] = None, role: Optional[str] = None,
         name=name, role=role, app_name=app_name, automation_id=automation_id)
 
 
+def read_control_table(name: Optional[str] = None, role: Optional[str] = None,
+                       app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None,
+                       ) -> List[List[str]]:
+    """Read a grid/table/list control as rows of cell strings."""
+    return get_backend().read_table(
+        name=name, role=role, app_name=app_name, automation_id=automation_id)
+
+
 __all__ = [
     "AccessibilityElement", "AccessibilityNotAvailableError",
     "AXTreeNode",
     "click_accessibility_element", "dump_accessibility_tree",
     "find_accessibility_element", "list_accessibility_elements",
     "control_get_value", "control_set_value", "control_invoke",
-    "control_toggle",
+    "control_toggle", "read_control_table",
 ]

@@ -49,6 +49,13 @@ class AccessibilityBackend:
         """Toggle the matched control (e.g. a checkbox)."""
         self._unsupported("toggle")
 
+    def read_table(self, name: Optional[str] = None, role: Optional[str] = None,
+                   app_name: Optional[str] = None,
+                   automation_id: Optional[str] = None,
+                   ) -> List[List[str]]:
+        """Read a grid/table/list control as rows of cell strings."""
+        self._unsupported("read_table")
+
     def _unsupported(self, operation: str):
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(

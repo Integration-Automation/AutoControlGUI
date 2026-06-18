@@ -56,6 +56,22 @@ Invoking and toggling
 Executor commands: ``AC_control_invoke``, ``AC_control_toggle``.
 
 
+Reading tables / grids
+====================
+
+::
+
+    from je_auto_control import read_control_table
+
+    rows = read_control_table(name="Results", app_name="myapp.exe")
+    # -> [["Sam", "30"], ["Lee", "25"], ...]
+
+``read_control_table`` reads a grid/table/list control into rows of cell
+strings via the Grid pattern — reliable desktop data scraping without OCR.
+
+Executor command: ``AC_read_table``.
+
+
 Targeting controls
 =================
 

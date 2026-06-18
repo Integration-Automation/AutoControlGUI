@@ -52,6 +52,22 @@ Builder),並提供 Windows UIAutomation 後端;無法執行該動作的後端會
 執行器指令:``AC_control_invoke``、``AC_control_toggle``。
 
 
+讀取表格 / 清單
+================
+
+::
+
+    from je_auto_control import read_control_table
+
+    rows = read_control_table(name="Results", app_name="myapp.exe")
+    # -> [["Sam", "30"], ["Lee", "25"], ...]
+
+``read_control_table`` 透過 Grid pattern 把 grid/table/list 控制項讀成
+逐列的儲存格字串——不用 OCR 的可靠桌面資料抓取。
+
+執行器指令:``AC_read_table``。
+
+
 定位控制項
 ==========
 
