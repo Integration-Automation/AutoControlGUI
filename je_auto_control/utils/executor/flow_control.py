@@ -406,7 +406,7 @@ def exec_random_to_var(executor: Any,
                        args: Mapping[str, Any]) -> Dict[str, Any]:
     """Store a random value (int / float / choice) in a flow variable."""
     import random
-    rng = random.Random(args.get("seed"))
+    rng = random.Random(args.get("seed"))  # nosec B311  # reason: non-crypto test data
     kind = str(args.get("kind", "int"))
     if kind == "choice":
         value: Any = rng.choice(list(args.get("choices") or [None]))

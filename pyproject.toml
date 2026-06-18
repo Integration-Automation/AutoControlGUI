@@ -21,7 +21,7 @@ dependencies = [
     "python-Xlib==0.33;platform_system=='Linux'",
     "mss==10.2.0",
     "defusedxml==0.7.1",
-    "cryptography>=42.0.0"
+    "cryptography>=48.0.1"
 ]
 classifiers = [
     "Programming Language :: Python :: 3.10",
