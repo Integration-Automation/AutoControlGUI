@@ -63,7 +63,7 @@ def test_sends_with_starttls_by_default():
 
 def test_login_when_credentials_given():
     ac.send_email(_msg(), {"host": "smtp.x.com", "username": "u",
-                           "password": "p"})
+                           "password": "p"})  # NOSONAR python:S2068
     assert _FakeSMTP.instances[-1].logged_in == ("u", "p")
 
 

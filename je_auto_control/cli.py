@@ -149,10 +149,10 @@ def cmd_codegen(args: argparse.Namespace) -> int:
         generate_code_file(args.script, args.output, target=args.target,
                            name=args.name, style=args.style)
         sys.stderr.write(f"Wrote {args.target} code to {args.output}\n")
-        return 0
-    code = generate_code(read_action_json(args.script), target=args.target,
-                         name=args.name, style=args.style)
-    sys.stdout.write(code)
+    else:
+        code = generate_code(read_action_json(args.script), target=args.target,
+                             name=args.name, style=args.style)
+        sys.stdout.write(code)
     return 0
 
 

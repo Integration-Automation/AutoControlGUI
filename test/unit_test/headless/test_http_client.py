@@ -75,7 +75,7 @@ def test_basic_auth_header(monkeypatch):
     monkeypatch.setattr(http_client.urllib.request, "urlopen",
                         _capture_request(captured))
     http_client.http_request("https://api.example", auth={
-        "type": "basic", "username": "u", "password": "p"})
+        "type": "basic", "username": "u", "password": "p"})  # NOSONAR python:S2068
     # base64("u:p") == "dTpw"
     assert captured["request"].headers.get("Authorization") == "Basic dTpw"
 
@@ -109,7 +109,7 @@ def test_timeout_is_passed_through(monkeypatch):
     monkeypatch.setattr(http_client.urllib.request, "urlopen",
                         _capture_request(captured))
     http_client.http_request("https://x", timeout=5)
-    assert captured["timeout"] == 5.0
+    assert captured["timeout"] == pytest.approx(5.0)
 
 
 def test_facade_and_executor_wiring(monkeypatch):

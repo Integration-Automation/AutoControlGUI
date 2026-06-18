@@ -125,7 +125,7 @@ def test_record_subcommand_delegates_to_helper(tmp_path, monkeypatch):
     else:
         assert rc == 0
         assert captured["output"] == out
-        assert captured["timeout"] == 0.0
+        assert captured["timeout"] == pytest.approx(0.0)
 
 
 def test_record_to_json_helper_writes_file(tmp_path, monkeypatch):

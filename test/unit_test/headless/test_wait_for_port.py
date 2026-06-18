@@ -48,10 +48,12 @@ def test_times_out_when_port_closed():
     {"timeout_s": 0}, {"poll_interval_s": 0}, {"port": 0}, {"port": 70000},
 ])
 def test_validation_errors(kwargs):
-    base = {"host": "localhost", "port": 8080, "connector": _connector([True])}
-    base.update(kwargs)
+    params = {"host": "localhost", "port": 8080, "connector": _connector([True])}
+    params.update(kwargs)
+    host = params.pop("host")
+    port = params.pop("port")
     with pytest.raises(ValueError):
-        wait_until_port(base.pop("host"), base.pop("port"), **base)
+        wait_until_port(host, port, **params)
 
 
 def test_real_loopback_listener():

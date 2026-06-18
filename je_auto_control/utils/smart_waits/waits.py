@@ -22,6 +22,9 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
+_TIMEOUT_POSITIVE = "timeout_s must be positive"
+_POLL_POSITIVE = "poll_interval_s must be positive"
+
 
 @dataclass(frozen=True)
 class WaitOutcome:
@@ -78,9 +81,9 @@ def wait_until_screen_stable(*,
     samples; ``timeout_s`` is the absolute cap.
     """
     if timeout_s <= 0:
-        raise ValueError("timeout_s must be positive")
+        raise ValueError(_TIMEOUT_POSITIVE)
     if poll_interval_s <= 0:
-        raise ValueError("poll_interval_s must be positive")
+        raise ValueError(_POLL_POSITIVE)
     if stable_for_s < 0:
         raise ValueError("stable_for_s must be >= 0")
     grab = sampler or _default_sampler
@@ -114,7 +117,7 @@ def wait_until_pixel_changes(*, x: int, y: int,
                               ) -> WaitOutcome:
     """Return when the pixel at ``(x, y)`` changes beyond ``rgb_tolerance``."""
     if timeout_s <= 0:
-        raise ValueError("timeout_s must be positive")
+        raise ValueError(_TIMEOUT_POSITIVE)
     grab = sampler or _default_sampler
     started = time.monotonic()
     deadline = started + float(timeout_s)
@@ -169,9 +172,9 @@ def wait_until_clipboard_changes(*,
     tests need no real clipboard.
     """
     if timeout_s <= 0:
-        raise ValueError("timeout_s must be positive")
+        raise ValueError(_TIMEOUT_POSITIVE)
     if poll_interval_s <= 0:
-        raise ValueError("poll_interval_s must be positive")
+        raise ValueError(_POLL_POSITIVE)
     read = reader or _default_clipboard_reader
     started = time.monotonic()
     deadline = started + float(timeout_s)
@@ -214,9 +217,9 @@ def wait_until_window_closed(title: str, *, case_sensitive: bool = False,
     a matching window still exists; it is injectable for tests.
     """
     if timeout_s <= 0:
-        raise ValueError("timeout_s must be positive")
+        raise ValueError(_TIMEOUT_POSITIVE)
     if poll_interval_s <= 0:
-        raise ValueError("poll_interval_s must be positive")
+        raise ValueError(_POLL_POSITIVE)
     exists = finder or _default_window_finder
     started = time.monotonic()
     deadline = started + float(timeout_s)
@@ -252,9 +255,9 @@ def wait_until_file(path: str, *,
     growing file; the default reports the on-disk size (``None`` when absent).
     """
     if timeout_s <= 0:
-        raise ValueError("timeout_s must be positive")
+        raise ValueError(_TIMEOUT_POSITIVE)
     if poll_interval_s <= 0:
-        raise ValueError("poll_interval_s must be positive")
+        raise ValueError(_POLL_POSITIVE)
     if stable_for_s < 0:
         raise ValueError("stable_for_s must be >= 0")
     read = stat_reader or _default_file_size
@@ -314,9 +317,9 @@ def wait_until_port(host: str, port: int, *,
     injectable so tests need no real listener.
     """
     if timeout_s <= 0:
-        raise ValueError("timeout_s must be positive")
+        raise ValueError(_TIMEOUT_POSITIVE)
     if poll_interval_s <= 0:
-        raise ValueError("poll_interval_s must be positive")
+        raise ValueError(_POLL_POSITIVE)
     if not 0 < int(port) <= 65535:
         raise ValueError("port must be in 1..65535")
     probe = connector or _default_port_connector

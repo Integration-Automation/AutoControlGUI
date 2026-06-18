@@ -71,6 +71,15 @@ def _login_send(server: smtplib.SMTP, username: Optional[str],
     server.send_message(mime)
 
 
+def _tls_context() -> ssl.SSLContext:
+    """Return a hardened TLS context: verified certs over TLS 1.2 or newer."""
+    context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context.check_hostname = True
+    context.verify_mode = ssl.CERT_REQUIRED
+    return context
+
+
 def _deliver(mime: EmailMessage, smtp: Mapping[str, Any]) -> None:
     """Open an SMTP(S) connection per ``smtp`` config and send ``mime``."""
     host = smtp.get("host")
@@ -80,14 +89,13 @@ def _deliver(mime: EmailMessage, smtp: Mapping[str, Any]) -> None:
     timeout = float(smtp.get("timeout", 30.0))
     username, password = smtp.get("username"), smtp.get("password")
     if bool(smtp.get("use_ssl", False)):
-        context = ssl.create_default_context()
         with smtplib.SMTP_SSL(str(host), port, timeout=timeout,
-                              context=context) as server:
+                              context=_tls_context()) as server:
             _login_send(server, username, password, mime)
         return
     with smtplib.SMTP(str(host), port, timeout=timeout) as server:
         if bool(smtp.get("use_tls", True)):
-            server.starttls(context=ssl.create_default_context())
+            server.starttls(context=_tls_context())
         _login_send(server, username, password, mime)
 
 
