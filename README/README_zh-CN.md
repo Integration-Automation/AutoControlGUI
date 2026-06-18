@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19)](#本次更新-2026-06-19)
 - [本次更新 (2026-06-18)](#本次更新-2026-06-18)
 - [本次更新 (2026-06-17)](#本次更新-2026-06-17)
 - [本次更新 (2026-06)](#本次更新-2026-06)
@@ -56,6 +57,14 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19)
+
+两个早已存在、却没接上其余各层的 headless 核心,现在成为一级功能。两者都新增 facade re-export、`AC_*` 执行器指令、MCP 工具与 Script Builder 项目,并有 headless 测试。完整参考:
+[`docs/source/Eng/doc/new_features/v6_features_doc.rst`](../docs/source/Eng/doc/new_features/v6_features_doc.rst)。
+
+- **视觉回归(黄金图像)** — `take_golden` / `compare_to_golden`(`AC_take_golden` / `AC_assert_visual`):捕获基准截图,画面偏离超过像素容差时判失败,并输出高亮差异图与遮罩区域。`AC_assert_visual` 首跑会自动建立基准。纯 PIL。
+- **有限状态机** — `run_state_machine`(`AC_run_state_machine`):把脚本当成声明式 `{initial, states}` spec 驱动,`on_enter` 动作经执行器执行,transition 依 `after` / `if_var_eq` / predicate 触发,并以 `max_steps` / `global_timeout_s` 限制。
 
 ## 本次更新 (2026-06-18)
 

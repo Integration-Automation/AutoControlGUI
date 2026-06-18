@@ -152,6 +152,14 @@ from je_auto_control.utils.smart_waits import (
     wait_until_pixel_changes, wait_until_port, wait_until_region_idle,
     wait_until_screen_stable, wait_until_window_closed,
 )
+# Visual regression (golden-image comparison)
+from je_auto_control.utils.visual_regression import (
+    DiffResult, MaskRegion, compare_to_golden, image_difference, take_golden,
+)
+# Declarative finite-state-machine engine for action JSON
+from je_auto_control.utils.state_machine import (
+    StateMachine, StateMachineError, run_state_machine,
+)
 # Assertion DSL (verify screen state; raise on mismatch)
 from je_auto_control.utils.assertion import (
     AssertionResult, GroupAssertionResult, assert_all, assert_any,
@@ -570,6 +578,10 @@ __all__ = [
     "wait_until_region_idle", "wait_until_screen_stable",
     "wait_until_clipboard_changes", "wait_until_window_closed",
     "wait_until_file", "wait_until_port",
+    # Visual regression + state machine
+    "take_golden", "compare_to_golden", "image_difference",
+    "DiffResult", "MaskRegion",
+    "run_state_machine", "StateMachine", "StateMachineError",
     # Assertion DSL
     "AssertionResult", "assert_image", "assert_pixel",
     "assert_text", "assert_window", "assert_clipboard", "assert_process",

@@ -563,6 +563,29 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("shell_command", FieldType.STRING),),
     ))
     specs.append(CommandSpec(
+        "AC_take_golden", "Report", "Capture Golden Image",
+        fields=(FieldSpec("path", FieldType.FILE_PATH),),
+        description="Capture and save a baseline image for visual regression.",
+    ))
+    specs.append(CommandSpec(
+        "AC_assert_visual", "Report", "Assert Visual (Golden)",
+        fields=(
+            FieldSpec("golden_path", FieldType.FILE_PATH),
+            FieldSpec("tolerance", FieldType.FLOAT, optional=True, default=0.0,
+                      min_value=0.0),
+            FieldSpec("per_pixel_threshold", FieldType.INT, optional=True,
+                      default=16, min_value=0),
+            FieldSpec("diff_path", FieldType.FILE_PATH, optional=True),
+        ),
+        description=("Compare the screen to a golden image; first run creates "
+                     "the baseline. Use the JSON view for a region / masks."),
+    ))
+    specs.append(CommandSpec(
+        "AC_run_state_machine", "Flow", "Run State Machine",
+        description=("Run a finite-state-machine; configure the 'spec' "
+                     "{initial, states} dict in the JSON view."),
+    ))
+    specs.append(CommandSpec(
         "AC_shell_to_var", "Shell", "Shell Output into Variable",
         fields=(
             FieldSpec("command", FieldType.STRING),

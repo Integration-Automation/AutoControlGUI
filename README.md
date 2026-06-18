@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19)](#whats-new-2026-06-19)
 - [What's new (2026-06-18)](#whats-new-2026-06-18)
 - [What's new (2026-06-17)](#whats-new-2026-06-17)
 - [What's new (2026-06)](#whats-new-2026-06)
@@ -57,6 +58,16 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19)
+
+Two headless cores that shipped without the rest of their stack are now
+first-class. Both gain a facade re-export, an `AC_*` executor command, an
+MCP tool, and a Script Builder entry, with headless tests. Full reference:
+[`docs/source/Eng/doc/new_features/v6_features_doc.rst`](docs/source/Eng/doc/new_features/v6_features_doc.rst).
+
+- **Visual regression (golden images)** — `take_golden` / `compare_to_golden` (`AC_take_golden` / `AC_assert_visual`): capture a baseline screenshot and fail when the screen drifts beyond a pixel tolerance, with a highlighted diff image and mask regions. `AC_assert_visual` auto-creates the baseline on first run. PIL-only.
+- **Finite-state machine** — `run_state_machine` (`AC_run_state_machine`): drive a script as a declarative `{initial, states}` spec whose `on_enter` actions run through the executor and whose transitions fire on `after` / `if_var_eq` / predicate guards, bounded by `max_steps` / `global_timeout_s`.
 
 ## What's new (2026-06-18)
 
