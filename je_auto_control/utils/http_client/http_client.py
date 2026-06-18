@@ -13,7 +13,9 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, Mapping, Optional
 
-_ALLOWED_SCHEMES = ("http://", "https://")
+# NOSONAR python:S5332 — http is allow-listed deliberately (other schemes
+# are rejected); plain http is required for internal/localhost endpoints.
+_ALLOWED_SCHEMES = ("http://", "https://")  # NOSONAR python:S5332
 _DEFAULT_TIMEOUT = 30.0
 
 
