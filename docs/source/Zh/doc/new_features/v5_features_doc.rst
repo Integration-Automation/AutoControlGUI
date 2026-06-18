@@ -132,17 +132,23 @@ PDF
 
 兩個用來取代不可靠 ``sleep`` 的等待::
 
-    from je_auto_control import wait_until_file, wait_until_port
+    from je_auto_control import (
+        wait_until_file, wait_until_port, wait_until_process)
 
     wait_until_file("~/Downloads/report.pdf", stable_for_s=1.0)
     wait_until_port("127.0.0.1", 8080, timeout_s=30.0)
+    wait_until_process("myserver", present=True, timeout_s=30.0)
 
 ``wait_until_file`` 會在檔案存在、達到 ``min_size`` 位元組、且大小持續
 ``stable_for_s`` 秒不變(下載寫完)後回傳。``wait_until_port`` 會在
 ``host:port`` 可接受 TCP 連線後回傳——是啟動伺服器的最佳搭檔。兩者都
 回傳 ``WaitOutcome`` 並有硬性 ``timeout_s`` 上限。
 
-執行器指令:``AC_wait_for_file``、``AC_wait_for_port``。
+``wait_until_process`` 會在名稱含目標字串的行程出現(或 ``present=False``
+時結束)後回傳——是 ``launch_process`` / ``kill_process`` 的搭檔(需
+psutil)。
+
+執行器指令:``AC_wait_for_file``、``AC_wait_for_port``、``AC_wait_for_process``。
 
 
 安全性
