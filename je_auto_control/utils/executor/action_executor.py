@@ -2346,6 +2346,48 @@ def _queue_stats(db: str, name: str = "default") -> Dict[str, int]:
     return _queue(db, name).stats()
 
 
+def _generate_data(schema: Dict[str, Any], count: int = 10,
+                   path: Optional[str] = None, fmt: Optional[str] = None,
+                   seed: Optional[int] = None) -> Dict[str, Any]:
+    """Adapter: generate synthetic rows; write to ``path`` when given."""
+    from je_auto_control.utils.test_data import generate_rows, write_dataset
+    rows = generate_rows(schema, int(count), seed=seed)
+    if path:
+        return {"path": write_dataset(rows, path, fmt), "count": len(rows)}
+    return {"rows": rows, "count": len(rows)}
+
+
+def _mcp_manifest(path: Optional[str] = None,
+                  include_tools: bool = False) -> Dict[str, Any]:
+    """Adapter: build (or write) the MCP registry server.json manifest."""
+    from je_auto_control.utils.mcp_registry import (
+        build_server_manifest, write_server_manifest)
+    if path:
+        return {"path": write_server_manifest(
+            path, include_tools=bool(include_tools))}
+    return {"manifest": build_server_manifest(
+        include_tools=bool(include_tools))}
+
+
+def _rank_tests(flows: List[str], history_path: Optional[str] = None,
+                window: int = 10) -> Dict[str, Any]:
+    """Adapter: score flows by risk (riskiest first)."""
+    from je_auto_control.utils.test_select import rank_flows
+    return {"ranked": rank_flows(flows, history_path=history_path,
+                                 window=int(window))}
+
+
+def _select_tests(flows: List[str], k: Optional[int] = None,
+                  threshold: Optional[float] = None,
+                  history_path: Optional[str] = None,
+                  window: int = 10) -> Dict[str, Any]:
+    """Adapter: pick the riskiest flows to run (top-k / threshold)."""
+    from je_auto_control.utils.test_select import select_flows
+    return {"selected": select_flows(
+        flows, k=k, threshold=threshold, history_path=history_path,
+        window=int(window))}
+
+
 class Executor:
     """
     Executor
@@ -2509,6 +2551,10 @@ class Executor:
             "AC_queue_complete": _queue_complete,
             "AC_queue_fail": _queue_fail,
             "AC_queue_stats": _queue_stats,
+            "AC_generate_data": _generate_data,
+            "AC_mcp_manifest": _mcp_manifest,
+            "AC_rank_tests": _rank_tests,
+            "AC_select_tests": _select_tests,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

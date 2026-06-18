@@ -653,6 +653,50 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Fail if the session is locked / non-interactive.",
     ))
     _add_work_queue_specs(specs)
+    _add_tooling_specs(specs)
+
+
+def _add_tooling_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_generate_data", "Data", "Generate Synthetic Data",
+        fields=(
+            FieldSpec("count", FieldType.INT, optional=True, default=10),
+            FieldSpec("path", FieldType.FILE_PATH, optional=True),
+            FieldSpec("fmt", FieldType.ENUM, choices=("json", "csv"),
+                      optional=True),
+            FieldSpec("seed", FieldType.INT, optional=True),
+        ),
+        description="Generate seeded fake rows from a 'schema' (JSON view); "
+                    "writes a file when 'path' is set.",
+    ))
+    specs.append(CommandSpec(
+        "AC_mcp_manifest", "Tools", "MCP Registry Manifest",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH, optional=True,
+                      default="server.json"),
+            FieldSpec("include_tools", FieldType.BOOL, optional=True,
+                      default=False),
+        ),
+        description="Write an MCP registry server.json for this server.",
+    ))
+    specs.append(CommandSpec(
+        "AC_rank_tests", "Testing", "Rank Tests by Risk",
+        fields=(
+            FieldSpec("history_path", FieldType.FILE_PATH, optional=True),
+            FieldSpec("window", FieldType.INT, optional=True, default=10),
+        ),
+        description="Score 'flows' (JSON view) by risk from run history.",
+    ))
+    specs.append(CommandSpec(
+        "AC_select_tests", "Testing", "Select Risky Tests",
+        fields=(
+            FieldSpec("k", FieldType.INT, optional=True),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True),
+            FieldSpec("history_path", FieldType.FILE_PATH, optional=True),
+            FieldSpec("window", FieldType.INT, optional=True, default=10),
+        ),
+        description="Pick riskiest 'flows' (JSON view): top-k or threshold.",
+    ))
 
 
 def _add_work_queue_specs(specs: List[CommandSpec]) -> None:

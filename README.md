@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Test & Tooling Batch](#whats-new-2026-06-19--test--tooling-batch)
 - [What's new (2026-06-19) — Transactional Queue](#whats-new-2026-06-19--transactional-queue)
 - [What's new (2026-06-19) — Unattended Reliability](#whats-new-2026-06-19--unattended-reliability)
 - [What's new (2026-06-19) — Popup Watchdog](#whats-new-2026-06-19--popup-watchdog)
@@ -62,6 +63,14 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Test & Tooling Batch
+
+Three pure-stdlib quality-of-life tools, full stack (facade, `AC_*`, MCP, Script Builder). Full reference: [`docs/source/Eng/doc/new_features/v11_features_doc.rst`](docs/source/Eng/doc/new_features/v11_features_doc.rst).
+
+- **Synthetic test data** — `generate_rows(schema, count, seed=...)` / `write_dataset` (`AC_generate_data`, `ac_generate_data`): deterministic fake rows (name/email/phone/int/choice/date…) to drive data-driven runs without real PII; no Faker.
+- **MCP registry manifest** — `write_server_manifest("server.json", include_tools=True)` (`AC_mcp_manifest`, `ac_mcp_manifest`): publish a registry-valid `server.json` so MCP agents/IDEs can discover this server.
+- **Risk-based test selection** — `rank_flows` / `select_flows` (`AC_rank_tests` / `AC_select_tests`): rank flows by recent failures, flakiness, staleness and never-run from run history; run the riskiest first or only the top-k.
 
 ## What's new (2026-06-19) — Transactional Queue
 

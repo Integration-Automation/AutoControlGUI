@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 测试与工具三件套](#本次更新-2026-06-19--测试与工具三件套)
 - [本次更新 (2026-06-19) — 事务式工作队列](#本次更新-2026-06-19--事务式工作队列)
 - [本次更新 (2026-06-19) — 无人值守可靠性](#本次更新-2026-06-19--无人值守可靠性)
 - [本次更新 (2026-06-19) — 弹窗看门狗](#本次更新-2026-06-19--弹窗看门狗)
@@ -61,6 +62,14 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 测试与工具三件套
+
+三项纯标准库的生产力工具,走完整五层(facade、`AC_*`、MCP、Script Builder)。完整参考:[`docs/source/Zh/doc/new_features/v11_features_doc.rst`](../docs/source/Zh/doc/new_features/v11_features_doc.rst)。
+
+- **合成测试数据** — `generate_rows(schema, count, seed=...)` / `write_dataset`(`AC_generate_data`、`ac_generate_data`):生成可重现的假数据行(name/email/phone/int/choice/date…),驱动数据驱动执行而不需真实 PII;无需 Faker。
+- **MCP registry 清单** — `write_server_manifest("server.json", include_tools=True)`(`AC_mcp_manifest`、`ac_mcp_manifest`):生成符合 registry 规范的 `server.json`,让 MCP agent/IDE 能发现此服务器。
+- **风险导向测试选择** — `rank_flows` / `select_flows`(`AC_rank_tests` / `AC_select_tests`):依最近失败、不稳定、陈旧与从未跑过,从 run history 排序流程;先跑最高风险或只跑前 k 个。
 
 ## 本次更新 (2026-06-19) — 事务式工作队列
 

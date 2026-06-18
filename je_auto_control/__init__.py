@@ -113,6 +113,14 @@ from je_auto_control.utils.session_guard import (
 from je_auto_control.utils.work_queue import (
     BusinessError, WorkItem, WorkQueue,
 )
+# Seeded synthetic test-data generation
+from je_auto_control.utils.test_data import generate_rows, write_dataset
+# Risk-based test selection from run history
+from je_auto_control.utils.test_select import rank_flows, select_flows
+# MCP registry server.json manifest
+from je_auto_control.utils.mcp_registry import (
+    build_server_manifest, write_server_manifest,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -514,6 +522,9 @@ __all__ = [
     "handle_file_dialog", "FileDialogDriver",
     "ensure_interactive_session", "is_session_locked",
     "WorkQueue", "WorkItem", "BusinessError",
+    "generate_rows", "write_dataset",
+    "rank_flows", "select_flows",
+    "build_server_manifest", "write_server_manifest",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
