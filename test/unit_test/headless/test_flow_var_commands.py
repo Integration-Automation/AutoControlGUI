@@ -25,8 +25,9 @@ def test_read_file_to_var(tmp_path):
 
 
 def test_http_to_var_stores_body(monkeypatch):
-    monkeypatch.setattr(flow_control, "_http_get",
-                        lambda url, method, timeout: (200, "BODYTEXT"))
+    import je_auto_control.utils.http_client.http_client as hc
+    monkeypatch.setattr(hc, "http_request",
+                        lambda *a, **k: {"status": 200, "text": "BODYTEXT"})
     executor = Executor()
     result = exec_http_to_var(executor, {"url": "https://x", "var": "resp"})
     assert result["status"] == 200
@@ -34,9 +35,10 @@ def test_http_to_var_stores_body(monkeypatch):
 
 
 def test_http_to_var_extracts_json_path(monkeypatch):
+    import je_auto_control.utils.http_client.http_client as hc
     monkeypatch.setattr(
-        flow_control, "_http_get",
-        lambda url, method, timeout: (200, '{"data": [{"name": "Sam"}]}'))
+        hc, "http_request",
+        lambda *a, **k: {"status": 200, "text": '{"data": [{"name": "Sam"}]}'})
     executor = Executor()
     exec_http_to_var(executor, {"url": "https://x", "var": "n",
                                 "json_path": "data.0.name"})

@@ -953,6 +953,29 @@ def wait_screen_stable(region: Optional[List[int]] = None,
     ).to_dict()
 
 
+def wait_for_file(path: str, timeout_s: float = 30.0,
+                  poll_interval_s: float = 0.25,
+                  stable_for_s: float = 1.0,
+                  min_size: int = 1) -> Dict[str, Any]:
+    from je_auto_control.utils.smart_waits import wait_until_file
+    return wait_until_file(
+        path, timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        stable_for_s=float(stable_for_s), min_size=int(min_size),
+    ).to_dict()
+
+
+def wait_for_port(host: str, port: int, timeout_s: float = 30.0,
+                  poll_interval_s: float = 0.25,
+                  connect_timeout_s: float = 1.0) -> Dict[str, Any]:
+    from je_auto_control.utils.smart_waits import wait_until_port
+    return wait_until_port(
+        host, int(port), timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        connect_timeout_s=float(connect_timeout_s),
+    ).to_dict()
+
+
 def wait_pixel_changes(x: int, y: int,
                         timeout_s: float = 10.0,
                         poll_interval_s: float = 0.1,
@@ -1744,6 +1767,87 @@ def load_data(source: Dict[str, Any],
               limit: Optional[int] = None) -> List[Dict[str, Any]]:
     from je_auto_control.utils.data_source import load_rows
     return load_rows(source, limit=limit if limit is None else int(limit))
+
+
+# --- Ad-hoc SQL query + assertion ------------------------------------------
+
+def sql_query(database: str, query: str,
+              params: Any = None, fetch: str = "all") -> Any:
+    from je_auto_control.utils.sql.sql_query import query_sqlite
+    return query_sqlite(database, query, params=params, fetch=fetch)
+
+
+def assert_db(database: str, query: str, params: Any = None,
+              op: str = "eq", expected: Any = None,
+              raise_on_fail: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.assertion import assert_variable
+    from je_auto_control.utils.sql.sql_query import query_sqlite
+    value = query_sqlite(database, query, params=params, fetch="scalar")
+    return assert_variable(
+        value, op=op, expected=expected, name="ac_assert_db",
+        raise_on_fail=bool(raise_on_fail),
+    ).to_dict()
+
+
+# --- PDF text + assertion --------------------------------------------------
+
+def extract_pdf_text(path: str, pages: Any = None) -> str:
+    from je_auto_control.utils.pdf.pdf_reader import (
+        extract_pdf_text as _extract,
+    )
+    return _extract(path, pages=pages)
+
+
+def assert_pdf_text(path: str, text: str, present: bool = True,
+                    page: Any = None, case_sensitive: bool = True,
+                    raise_on_fail: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.pdf.pdf_reader import (
+        assert_pdf_text as _assert,
+    )
+    return _assert(path, text, present=bool(present), page=page,
+                   case_sensitive=bool(case_sensitive),
+                   raise_on_fail=bool(raise_on_fail))
+
+
+# --- Send email (SMTP) -----------------------------------------------------
+
+def send_email(message: Dict[str, Any],
+               smtp: Dict[str, Any]) -> Dict[str, Any]:
+    from je_auto_control.utils.email_send.email_sender import (
+        send_email as _send,
+    )
+    return _send(message, smtp)
+
+
+# --- HTTP / API request ----------------------------------------------------
+
+def http_request(url: str, method: str = "GET",
+                 headers: Optional[Dict[str, Any]] = None,
+                 json_body: Any = None, data: Any = None,
+                 auth: Optional[Dict[str, Any]] = None,
+                 timeout: float = 30.0) -> Dict[str, Any]:
+    from je_auto_control.utils.http_client.http_client import (
+        http_request as _request,
+    )
+    return _request(url, method=method, headers=headers, json_body=json_body,
+                    data=data, auth=auth, timeout=float(timeout))
+
+
+# --- Codegen: action list -> source code -----------------------------------
+
+def generate_code(source: Any, target: str = "pytest",
+                  name: str = "recorded_flow", style: str = "calls",
+                  output: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.codegen.codegen import (
+        generate_code as _gen, generate_code_file,
+    )
+    from je_auto_control.utils.json.json_file import read_action_json
+    if output:
+        code = generate_code_file(source, output, target=target,
+                                  name=name, style=style)
+        return {"output": output, "code": code}
+    actions = source if isinstance(source, list) else read_action_json(source)
+    return {"code": _gen(actions, target=target, name=name, style=style)}
 
 
 # --- Flaky-test detection --------------------------------------------------

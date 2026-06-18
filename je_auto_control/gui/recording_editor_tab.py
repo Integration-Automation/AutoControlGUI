@@ -4,14 +4,15 @@ from typing import Optional
 
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QFileDialog, QHBoxLayout, QLabel, QLineEdit, QListWidget, QMessageBox,
-    QPushButton, QTextEdit, QVBoxLayout, QWidget,
+    QFileDialog, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
+    QMessageBox, QPushButton, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
+from je_auto_control.utils.codegen.codegen import generate_code_file
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 from je_auto_control.utils.recording_edit.editor import (
     adjust_delays, filter_actions, remove_action, scale_coordinates, trim_actions,
@@ -72,6 +73,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
             ("re_browse", self._browse),
             ("re_load", self._load),
             ("re_save_as", self._save_as),
+            ("re_export_code", self._export_code),
         ):
             btn = self._tr(QPushButton(), key)
             btn.clicked.connect(handler)
@@ -165,6 +167,34 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
             QMessageBox.warning(self, "Error", str(error))
             return
         self._status.setText(f"Saved to {path}")
+
+    _TARGET_FILTERS = {
+        "pytest": "Python (*.py)",
+        "python": "Python (*.py)",
+        "robot": "Robot (*.robot)",
+    }
+
+    def _export_code(self) -> None:
+        """Generate pytest/python/robot source from the loaded actions."""
+        if not self._actions:
+            return
+        target, ok = QInputDialog.getItem(
+            self, _t("re_export_target"), "target",
+            list(self._TARGET_FILTERS), 0, False,
+        )
+        if not ok:
+            return
+        path, _filter = QFileDialog.getSaveFileName(
+            self, _t("re_export_code"), "", self._TARGET_FILTERS[target],
+        )
+        if not path:
+            return
+        try:
+            generate_code_file(self._actions, path, target=target)
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, "Error", str(error))
+            return
+        self._status.setText(f"Exported {target} code to {path}")
 
     def _refresh(self) -> None:
         self._list.clear()

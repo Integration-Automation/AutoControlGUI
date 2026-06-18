@@ -27,6 +27,7 @@ AutoControl 所有功能的完整使用指南。
    doc/new_features/v2_features_doc
    doc/new_features/v3_features_doc
    doc/new_features/v4_features_doc
+   doc/new_features/v5_features_doc
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
    doc/operations_layer/operations_layer_doc

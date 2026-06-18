@@ -666,6 +666,8 @@ traditional_chinese_word_dict = {
     "re_browse": "瀏覽",
     "re_load": "載入",
     "re_save_as": "另存為",
+    "re_export_code": "匯出為程式碼",
+    "re_export_target": "選擇程式碼目標",
     "re_trim_start": "裁剪起點：",
     "re_trim_end": "終點：",
     "re_apply_trim": "套用裁剪",

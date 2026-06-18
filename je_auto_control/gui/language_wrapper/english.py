@@ -787,6 +787,8 @@ english_word_dict = {
     "re_browse": "Browse",
     "re_load": "Load",
     "re_save_as": "Save As",
+    "re_export_code": "Export as code",
+    "re_export_target": "Choose code target",
     "re_trim_start": "Trim start:",
     "re_trim_end": "end:",
     "re_apply_trim": "Apply trim",

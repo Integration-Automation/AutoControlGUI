@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-18)](#本次更新-2026-06-18)
 - [本次更新 (2026-06-17)](#本次更新-2026-06-17)
 - [本次更新 (2026-06)](#本次更新-2026-06)
 - [本次更新 (2026-05)](#本次更新-2026-05)
@@ -55,6 +56,29 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-18)
+
+八项 headless 能力,补齐脚本化、集成与 CI 场景:真正的命令行界面、把录制转成代码,以及一级的 HTTP / SQL / Email / PDF / 等待步骤。每项都附带 headless API、`AC_*` 执行器指令、MCP 工具与可视化脚本构建器项目,并有 headless 测试(网络 / SMTP / PDF 后端均注入,不接触外部系统)。完整参考页:
+[`docs/source/Eng/doc/new_features/v5_features_doc.rst`](../docs/source/Eng/doc/new_features/v5_features_doc.rst)。
+
+**命令行界面**
+- **`je_auto_control` console script** — 在 shell／CI 运行与检查动作文件:`run`(含 `--var`、`--dry-run`)、`validate`(别名 `lint`)、`list-commands`、`fmt`、`record`、`codegen`、`version`。
+
+**代码生成**
+- **录制 → 代码** — `generate_code` / `generate_code_file`(`AC_generate_code`、`je_auto_control codegen`):把录制或动作文件转成 pytest／独立 Python／Robot 脚本。默认 `calls` 风格生成可读的 `ac.<fn>(...)`,流程控制退回 `ac.execute_action([...])`。
+
+**集成**
+- **HTTP / API** — `http_request`(`AC_http_request`):method、headers、JSON／原始 body、basic／bearer 认证、明确超时;非 2xx 返回而非抛异常。`AC_http_to_var` 现共用此客户端,可发送 body。
+- **SQL** — `query_sqlite`(`AC_sql_to_var` / `AC_assert_db`):只读、参数绑定的 SQLite 查询,存入变量或做标量断言。
+- **Email(SMTP)** — `send_email`(`AC_send_email`):标准库 SMTP,默认 TLS(STARTTLS／SSL、已验证证书),支持附件与多收件人。
+- **PDF** — `extract_pdf_text` / `pdf_metadata` / `assert_pdf_text`(`AC_pdf_to_var` / `AC_assert_pdf_text`):文本提取与内容断言,后端为可选 `pypdf`(`pip install je_auto_control[pdf]`)。
+
+**智能等待**
+- **等待文件** — `wait_until_file`(`AC_wait_for_file`):等到文件存在且大小停止增长(下载写完)。
+- **等待 TCP 端口** — `wait_until_port`(`AC_wait_for_port`):等到 `host:port` 可连接(与 `launch_process` 互补)。
+
+**安全性** — HTTP／SMTP 强制 http/https 或已验证 TLS 与明确超时;SQL 只读且参数绑定;文件路径 I/O 前以 `realpath` 解析。
 
 ## 本次更新 (2026-06-17)
 

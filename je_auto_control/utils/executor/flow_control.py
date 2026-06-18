@@ -431,6 +431,39 @@ def exec_assert_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     ).to_dict()
 
 
+def exec_pdf_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Extract a PDF's text (all pages or one page) into a flow variable."""
+    from je_auto_control.utils.pdf.pdf_reader import extract_pdf_text
+    text = extract_pdf_text(args["path"], pages=args.get("page"))
+    var_name = args.get("var", "pdf_text")
+    executor.variables.set(var_name, text)
+    return {"var": var_name, "length": len(text)}
+
+
+def exec_sql_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Run a read-only SQLite query and store its result in a flow variable."""
+    from je_auto_control.utils.sql.sql_query import query_sqlite
+    fetch = str(args.get("fetch", "all"))
+    result = query_sqlite(args["database"], args["query"],
+                          params=args.get("params"), fetch=fetch)
+    var_name = args.get("var", "sql_result")
+    executor.variables.set(var_name, result)
+    return {"var": var_name, "fetch": fetch}
+
+
+def exec_assert_db(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Assert a scalar SQLite query result satisfies a condition."""
+    from je_auto_control.utils.assertion import assert_variable
+    from je_auto_control.utils.sql.sql_query import query_sqlite
+    value = query_sqlite(args["database"], args["query"],
+                         params=args.get("params"), fetch="scalar")
+    return assert_variable(
+        value, op=str(args.get("op", "eq")), expected=args.get("expected"),
+        name="AC_assert_db",
+        raise_on_fail=bool(args.get("raise_on_fail", True)),
+    ).to_dict()
+
+
 def exec_read_file_to_var(executor: Any,
                           args: Mapping[str, Any]) -> Dict[str, Any]:
     """Read a file's text content into a flow variable."""
@@ -439,21 +472,6 @@ def exec_read_file_to_var(executor: Any,
     var_name = args.get("var", "file_content")
     executor.variables.set(var_name, text)
     return {"var": var_name, "length": len(text)}
-
-
-def _http_get(url: str, method: str, timeout: float) -> tuple:
-    """Issue an HTTP(S) GET, returning ``(status, body)``. http/https only."""
-    import urllib.request
-    scheme = url.split("://", 1)[0].lower() if "://" in url else ""
-    if scheme not in ("http", "https"):
-        raise AutoControlActionException(
-            f"AC_http_to_var: only http/https URLs allowed, got {url!r}"
-        )
-    request = urllib.request.Request(url, method=method.upper())
-    with urllib.request.urlopen(  # nosec B310 — scheme allow-listed above
-            request, timeout=timeout) as response:
-        return int(response.status), response.read().decode(
-            "utf-8", errors="replace")
 
 
 def _dig_json(body: str, path: str) -> Any:
@@ -465,16 +483,24 @@ def _dig_json(body: str, path: str) -> Any:
 
 
 def exec_http_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
-    """GET a URL and store the body (or a JSON field) in a flow variable."""
-    status, body = _http_get(
-        args["url"], str(args.get("method", "GET")),
-        float(args.get("timeout", 30.0)),
+    """Request a URL and store the body (or a JSON field) in a flow variable.
+
+    Supports method/headers/json_body/data/auth via the shared HTTP client,
+    so the same command drives plain GET reads and POST/PUT API calls.
+    """
+    from je_auto_control.utils.http_client.http_client import http_request
+    response = http_request(
+        args["url"], method=str(args.get("method", "GET")),
+        headers=args.get("headers"), json_body=args.get("json_body"),
+        data=args.get("data"), auth=args.get("auth"),
+        timeout=float(args.get("timeout", 30.0)),
     )
     json_path = args.get("json_path")
+    body = response["text"]
     value = _dig_json(body, json_path) if json_path else body
     var_name = args.get("var", "http_response")
     executor.variables.set(var_name, value)
-    return {"var": var_name, "status": status}
+    return {"var": var_name, "status": response["status"]}
 
 
 _SIMPLE_TRANSFORMS: Dict[str, Callable[[str], str]] = {
@@ -643,6 +669,9 @@ BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_ocr_to_var": exec_ocr_to_var,
     "AC_shell_to_var": exec_shell_to_var,
     "AC_read_file_to_var": exec_read_file_to_var,
+    "AC_pdf_to_var": exec_pdf_to_var,
+    "AC_sql_to_var": exec_sql_to_var,
+    "AC_assert_db": exec_assert_db,
     "AC_http_to_var": exec_http_to_var,
     "AC_transform_var": exec_transform_var,
     "AC_now_to_var": exec_now_to_var,

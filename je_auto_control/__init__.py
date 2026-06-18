@@ -148,9 +148,9 @@ from je_auto_control.utils.ocr.structure import (
 )
 # Smart waits (frame-diff replacements for time.sleep)
 from je_auto_control.utils.smart_waits import (
-    WaitOutcome, wait_until_clipboard_changes, wait_until_pixel_changes,
-    wait_until_region_idle, wait_until_screen_stable,
-    wait_until_window_closed,
+    WaitOutcome, wait_until_clipboard_changes, wait_until_file,
+    wait_until_pixel_changes, wait_until_port, wait_until_region_idle,
+    wait_until_screen_stable, wait_until_window_closed,
 )
 # Assertion DSL (verify screen state; raise on mismatch)
 from je_auto_control.utils.assertion import (
@@ -347,6 +347,22 @@ from je_auto_control.utils.generate_report.generate_xml_report import \
 # json
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.json.json_file import write_action_json
+from je_auto_control.utils.json.json_file import format_action_json
+# codegen: action list -> pytest / python / robot source
+from je_auto_control.utils.codegen.codegen import (
+    generate_code,
+    generate_code_file,
+)
+# HTTP/API request action (dependency-free, stdlib urllib)
+from je_auto_control.utils.http_client.http_client import http_request
+# Ad-hoc read-only SQL query against SQLite
+from je_auto_control.utils.sql.sql_query import query_sqlite
+# Send email via SMTP
+from je_auto_control.utils.email_send.email_sender import send_email
+# PDF document text extraction + assertion (optional pypdf backend)
+from je_auto_control.utils.pdf.pdf_reader import (
+    assert_pdf_text, extract_pdf_text, pdf_metadata, pdf_page_count,
+)
 # package manager
 from je_auto_control.utils.package_manager.package_manager_class import \
     package_manager
@@ -397,6 +413,7 @@ from je_auto_control.utils.humanize.typing import (
 # record
 from je_auto_control.wrapper.auto_control_record import record
 from je_auto_control.wrapper.auto_control_record import stop_record
+from je_auto_control.wrapper.auto_control_record import record_to_json
 # Screen wrappers
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.auto_control_screen import screenshot
@@ -434,8 +451,12 @@ __all__ = [
     "AutoControlMouseException", "AutoControlCantFindKeyException",
     "AutoControlScreenException", "ImageNotFoundException", "AutoControlJsonActionException",
     "AutoControlRecordException", "AutoControlActionNullException", "AutoControlActionException", "record",
-    "stop_record", "read_action_json", "write_action_json", "execute_action", "execute_files", "executor",
-    "execute_action_with_vars",
+    "stop_record", "read_action_json", "write_action_json", "format_action_json",
+    "execute_action", "execute_files", "executor",
+    "execute_action_with_vars", "record_to_json",
+    "generate_code", "generate_code_file", "http_request", "query_sqlite",
+    "send_email", "assert_pdf_text", "extract_pdf_text", "pdf_metadata",
+    "pdf_page_count",
     "add_command_to_executor", "test_record_instance", "pil_screenshot",
     # OCR
     "TextMatch", "find_text_matches", "locate_text_center", "wait_for_text",
@@ -548,6 +569,7 @@ __all__ = [
     "WaitOutcome", "wait_until_pixel_changes",
     "wait_until_region_idle", "wait_until_screen_stable",
     "wait_until_clipboard_changes", "wait_until_window_closed",
+    "wait_until_file", "wait_until_port",
     # Assertion DSL
     "AssertionResult", "assert_image", "assert_pixel",
     "assert_text", "assert_window", "assert_clipboard", "assert_process",
