@@ -35,7 +35,9 @@ def _open_store(history_path: Optional[str]):
         HistoryStore, default_history_store)
     if history_path:
         return HistoryStore(history_path), True
-    return default_history_store(), False
+    # default_history_store is a shared instance, not a factory — use it
+    # directly and leave it open (the caller must not close it).
+    return default_history_store, False
 
 
 def _runs_by_flow(store: Any, limit: int) -> Dict[str, List[Any]]:

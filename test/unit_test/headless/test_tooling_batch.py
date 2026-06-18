@@ -86,6 +86,17 @@ def test_rank_orders_by_risk(history):
     assert by["flow_fail"]["last_status"] == "error"
 
 
+def test_rank_uses_shared_default_store(monkeypatch):
+    # history_path=None must use the shared default_history_store *instance*
+    # (not call it). Guards against the "not callable" regression.
+    import je_auto_control.utils.run_history as rh
+    from je_auto_control.utils.run_history import HistoryStore
+    monkeypatch.setattr(rh, "default_history_store", HistoryStore(":memory:"))
+    ranked = rank_flows(["never_run"])
+    assert ranked[0]["flow"] == "never_run"
+    assert ranked[0]["runs"] == 0
+
+
 def test_select_top_k_and_threshold(history):
     flows = ["flow_pass", "flow_fail", "flow_new"]
     assert select_flows(flows, k=2, history_path=history) == \
