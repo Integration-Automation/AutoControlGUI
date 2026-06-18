@@ -345,6 +345,45 @@ def _default_port_connector(host: str, port: int, timeout: float) -> bool:
         return False
 
 
+ProcessLister = Callable[[str], List[str]]
+
+
+def wait_until_process(name: str, *, present: bool = True,
+                       timeout_s: float = 30.0,
+                       poll_interval_s: float = 0.25,
+                       lister: Optional[ProcessLister] = None,
+                       ) -> WaitOutcome:
+    """Return when a process whose name contains ``name`` appears, or exits.
+
+    The companion to launching / killing a process: poll until a matching
+    process exists (``present=True``) or is gone (``present=False``).
+    ``lister(name) -> [matching names]`` is injectable so tests need no
+    real processes; the default uses psutil.
+    """
+    if timeout_s <= 0:
+        raise ValueError(_TIMEOUT_POSITIVE)
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
+    find = lister or _default_process_lister
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    verb = "appeared" if present else "exited"
+    while time.monotonic() < deadline:
+        samples += 1
+        if bool(find(name)) == bool(present):
+            return _finish(True, f"process {name!r} {verb}", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, f"timeout waiting for process {name!r} to {verb}",
+                   started, samples)
+
+
+def _default_process_lister(name: str) -> List[str]:
+    """List running process names matching ``name`` (requires psutil)."""
+    from je_auto_control.utils.assertion.assertions import _running_process_names
+    return _running_process_names(name)
+
+
 # --- internals -------------------------------------------------
 
 def _frame_diff(a: Frame, b: Frame) -> int:
@@ -382,8 +421,9 @@ def _finish(succeeded: bool, reason: str, started: float,
 
 __all__ = [
     "ClipboardReader", "FileStatReader", "Frame", "PortConnector",
-    "ScreenSampler", "WaitOutcome", "WindowFinder",
+    "ProcessLister", "ScreenSampler", "WaitOutcome", "WindowFinder",
     "wait_until_clipboard_changes", "wait_until_file",
-    "wait_until_pixel_changes", "wait_until_port", "wait_until_region_idle",
-    "wait_until_screen_stable", "wait_until_window_closed",
+    "wait_until_pixel_changes", "wait_until_port", "wait_until_process",
+    "wait_until_region_idle", "wait_until_screen_stable",
+    "wait_until_window_closed",
 ]

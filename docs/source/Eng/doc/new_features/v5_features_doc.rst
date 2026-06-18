@@ -140,18 +140,24 @@ Smart waits
 
 Two waits that replace unreliable ``sleep`` calls::
 
-    from je_auto_control import wait_until_file, wait_until_port
+    from je_auto_control import (
+        wait_until_file, wait_until_port, wait_until_process)
 
     wait_until_file("~/Downloads/report.pdf", stable_for_s=1.0)
     wait_until_port("127.0.0.1", 8080, timeout_s=30.0)
+    wait_until_process("myserver", present=True, timeout_s=30.0)
 
 ``wait_until_file`` returns once a file exists, is at least ``min_size``
 bytes, and its size has held steady for ``stable_for_s`` (a download has
 finished). ``wait_until_port`` returns once a TCP connection to
-``host:port`` succeeds — the companion to launching a server. Both return
-a ``WaitOutcome`` and honour a hard ``timeout_s`` cap.
+``host:port`` succeeds — the companion to launching a server. ``wait_until_process``
+returns once a process whose name contains the target appears (or, with
+``present=False``, exits) — the companion to ``launch_process`` /
+``kill_process`` (requires psutil). All return a ``WaitOutcome`` and honour
+a hard ``timeout_s`` cap.
 
-Executor commands: ``AC_wait_for_file``, ``AC_wait_for_port``.
+Executor commands: ``AC_wait_for_file``, ``AC_wait_for_port``,
+``AC_wait_for_process``.
 
 
 Security

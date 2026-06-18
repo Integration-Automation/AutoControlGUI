@@ -77,6 +77,7 @@
 **智能等待**
 - **等待文件** — `wait_until_file`(`AC_wait_for_file`):等到文件存在且大小停止增长(下载写完)。
 - **等待 TCP 端口** — `wait_until_port`(`AC_wait_for_port`):等到 `host:port` 可连接(与 `launch_process` 互补)。
+- **等待进程** — `wait_until_process`(`AC_wait_for_process`):等到进程出现或退出(与 `launch_process` / `kill_process` 互补;需 psutil)。
 
 **安全性** — HTTP／SMTP 强制 http/https 或已验证 TLS 与明确超时;SQL 只读且参数绑定;文件路径 I/O 前以 `realpath` 解析。
 

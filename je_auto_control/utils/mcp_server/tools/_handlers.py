@@ -976,6 +976,15 @@ def wait_for_port(host: str, port: int, timeout_s: float = 30.0,
     ).to_dict()
 
 
+def wait_for_process(name: str, present: bool = True, timeout_s: float = 30.0,
+                     poll_interval_s: float = 0.25) -> Dict[str, Any]:
+    from je_auto_control.utils.smart_waits import wait_until_process
+    return wait_until_process(
+        name, present=bool(present), timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+    ).to_dict()
+
+
 def wait_pixel_changes(x: int, y: int,
                         timeout_s: float = 10.0,
                         poll_interval_s: float = 0.1,
