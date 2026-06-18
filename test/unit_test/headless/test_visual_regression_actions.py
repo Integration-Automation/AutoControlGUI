@@ -20,7 +20,7 @@ def test_take_golden_and_match(tmp_path):
     assert golden.exists()
     result = ac.compare_to_golden(str(golden), actual=_img((10, 20, 30)))
     assert result.matched is True
-    assert result.diff_pct == 0.0
+    assert result.diff_pct == pytest.approx(0.0)
 
 
 def test_mismatch_reports_diff(tmp_path):
@@ -28,7 +28,7 @@ def test_mismatch_reports_diff(tmp_path):
     ac.take_golden(str(golden), source=_img((0, 0, 0)))
     result = ac.compare_to_golden(str(golden), actual=_img((255, 255, 255)))
     assert result.matched is False
-    assert result.diff_pct == 100.0
+    assert result.diff_pct == pytest.approx(100.0)
     assert result.diff_image is not None
 
 
