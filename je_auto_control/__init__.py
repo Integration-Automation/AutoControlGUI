@@ -121,6 +121,10 @@ from je_auto_control.utils.test_select import rank_flows, select_flows
 from je_auto_control.utils.mcp_registry import (
     build_server_manifest, write_server_manifest,
 )
+# Named locator repository (object repository) for native UI
+from je_auto_control.utils.element_repository import ElementRepository
+# Step-through debugger / tracer for action lists
+from je_auto_control.utils.flow_debugger import FlowDebugger, trace_actions
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -525,6 +529,8 @@ __all__ = [
     "generate_rows", "write_dataset",
     "rank_flows", "select_flows",
     "build_server_manifest", "write_server_manifest",
+    "ElementRepository",
+    "FlowDebugger", "trace_actions",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
