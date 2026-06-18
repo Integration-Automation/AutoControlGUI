@@ -793,6 +793,39 @@ def assert_session_active():
     return {"interactive": ensure_interactive_session()}
 
 
+def _work_queue(db, name):
+    from je_auto_control.utils.work_queue import WorkQueue
+    return WorkQueue(db, name)
+
+
+def queue_add(db, data, reference=None, name="default"):
+    return {"id": _work_queue(db, name).add(data, reference=reference)}
+
+
+def queue_next(db, name="default"):
+    item = _work_queue(db, name).get_next()
+    return None if item is None else {
+        "id": item.id, "reference": item.reference, "data": item.data,
+        "status": item.status, "retries": item.retries}
+
+
+def queue_complete(db, item_id, output=None, name="default"):
+    _work_queue(db, name).complete(int(item_id), output=output)
+    return {"id": int(item_id), "status": "success"}
+
+
+def queue_fail(db, item_id, error, kind="application", max_retries=3,
+               name="default"):
+    status = _work_queue(db, name).fail(int(item_id), str(error),
+                                        kind=str(kind),
+                                        max_retries=int(max_retries))
+    return {"id": int(item_id), "status": status}
+
+
+def queue_stats(db, name="default"):
+    return _work_queue(db, name).stats()
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

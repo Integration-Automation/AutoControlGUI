@@ -1669,6 +1669,64 @@ def process_and_shell_tools() -> List[MCPTool]:
     ]
 
 
+def work_queue_tools() -> List[MCPTool]:
+    _Q = {"db": {"type": "string"}, "name": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_queue_add",
+            description=("Enqueue a work item into a SQLite-backed queue "
+                         "(dispatcher). 'data' is the item payload; a live "
+                         "duplicate 'reference' is skipped. Returns {id} (null "
+                         "if deduped)."),
+            input_schema=schema({"data": {"type": "object"},
+                                 "reference": {"type": "string"}, **_Q},
+                                required=["db", "data"]),
+            handler=h.queue_add,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_queue_next",
+            description=("Atomically claim the next 'new' work item "
+                         "(performer), marking it in-progress. Returns the "
+                         "item or null when the queue is drained."),
+            input_schema=schema(dict(_Q), required=["db"]),
+            handler=h.queue_next,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_queue_complete",
+            description="Mark a claimed work item successfully processed.",
+            input_schema=schema({"item_id": {"type": "integer"},
+                                 "output": {}, **_Q},
+                                required=["db", "item_id"]),
+            handler=h.queue_complete,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_queue_fail",
+            description=("Fail a work item. kind='application' (default) "
+                         "retries up to max_retries then marks failed; "
+                         "kind='business' fails immediately (bad data, no "
+                         "retry). Returns the resulting status."),
+            input_schema=schema({"item_id": {"type": "integer"},
+                                 "error": {"type": "string"},
+                                 "kind": {"type": "string"},
+                                 "max_retries": {"type": "integer"}, **_Q},
+                                required=["db", "item_id", "error"]),
+            handler=h.queue_fail,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_queue_stats",
+            description=("Return per-status item counts (new / in_progress / "
+                         "success / failed) for a work queue."),
+            input_schema=schema(dict(_Q), required=["db"]),
+            handler=h.queue_stats,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -2698,7 +2756,7 @@ ALL_FACTORIES = (
     computer_use_tools, dag_tools, presence_tools, chatops_tools,
     redaction_tools, android_widget_tools, ios_tools, webrunner_tools,
     scheduler_tools, trigger_tools, hotkey_tools, watchdog_tools,
-    unattended_tools,
+    unattended_tools, work_queue_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

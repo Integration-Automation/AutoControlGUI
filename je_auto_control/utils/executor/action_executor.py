@@ -2306,6 +2306,46 @@ def _assert_session_active() -> Dict[str, Any]:
     return {"interactive": ensure_interactive_session()}
 
 
+def _queue(db: str, name: str):
+    from je_auto_control.utils.work_queue import WorkQueue
+    return WorkQueue(db, name)
+
+
+def _queue_add(db: str, data: Any, reference: Optional[str] = None,
+               name: str = "default") -> Dict[str, Any]:
+    """Adapter: enqueue a work item (skips live duplicate references)."""
+    return {"id": _queue(db, name).add(data, reference=reference)}
+
+
+def _queue_next(db: str, name: str = "default") -> Optional[Dict[str, Any]]:
+    """Adapter: atomically claim the next work item (or None)."""
+    item = _queue(db, name).get_next()
+    return None if item is None else {
+        "id": item.id, "reference": item.reference, "data": item.data,
+        "status": item.status, "retries": item.retries}
+
+
+def _queue_complete(db: str, item_id: int, output: Any = None,
+                    name: str = "default") -> Dict[str, Any]:
+    """Adapter: mark a work item successful."""
+    _queue(db, name).complete(int(item_id), output=output)
+    return {"id": int(item_id), "status": "success"}
+
+
+def _queue_fail(db: str, item_id: int, error: str,
+                kind: str = "application", max_retries: int = 3,
+                name: str = "default") -> Dict[str, Any]:
+    """Adapter: fail a work item (application errors retry, business don't)."""
+    status = _queue(db, name).fail(int(item_id), str(error), kind=str(kind),
+                                   max_retries=int(max_retries))
+    return {"id": int(item_id), "status": status}
+
+
+def _queue_stats(db: str, name: str = "default") -> Dict[str, int]:
+    """Adapter: return per-status counts for a work queue."""
+    return _queue(db, name).stats()
+
+
 class Executor:
     """
     Executor
@@ -2464,6 +2504,11 @@ class Executor:
             "AC_watchdog_list": _watchdog_list,
             "AC_handle_file_dialog": _handle_file_dialog,
             "AC_assert_session_active": _assert_session_active,
+            "AC_queue_add": _queue_add,
+            "AC_queue_next": _queue_next,
+            "AC_queue_complete": _queue_complete,
+            "AC_queue_fail": _queue_fail,
+            "AC_queue_stats": _queue_stats,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

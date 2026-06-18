@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Transactional Queue](#whats-new-2026-06-19--transactional-queue)
 - [What's new (2026-06-19) — Unattended Reliability](#whats-new-2026-06-19--unattended-reliability)
 - [What's new (2026-06-19) — Popup Watchdog](#whats-new-2026-06-19--popup-watchdog)
 - [What's new (2026-06-19) — Native UI Control](#whats-new-2026-06-19--native-ui-control)
@@ -61,6 +62,13 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Transactional Queue
+
+Turn AutoControl from "run a script" into "run a robot." A SQLite-backed work queue implements the production-RPA dispatcher/performer pattern: enqueue items, process one at a time with per-item status, dedup and retry, so a run of thousands is **resumable after a crash** and parallelizable. Pure stdlib, full stack. Full reference: [`docs/source/Eng/doc/new_features/v10_features_doc.rst`](docs/source/Eng/doc/new_features/v10_features_doc.rst).
+
+- **Dispatcher/performer** — `WorkQueue.add()` enqueues (dedupes by reference); `get_next()` atomically claims the oldest item; `complete()` / `fail()` record the outcome. `AC_queue_add` / `AC_queue_next` / `AC_queue_complete` / `AC_queue_fail` / `AC_queue_stats`.
+- **Failure semantics** — application errors retry up to `max_retries`; **business** errors (`BusinessError` / `kind="business"`) never retry. `stats()` gives per-status counts for dashboards.
 
 ## What's new (2026-06-19) — Unattended Reliability
 

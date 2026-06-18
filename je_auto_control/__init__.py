@@ -109,6 +109,10 @@ from je_auto_control.utils.file_dialog import (
 from je_auto_control.utils.session_guard import (
     ensure_interactive_session, is_session_locked,
 )
+# Transactional work queue (dispatcher/performer)
+from je_auto_control.utils.work_queue import (
+    BusinessError, WorkItem, WorkQueue,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -509,6 +513,7 @@ __all__ = [
     "generate_totp", "verify_totp", "generate_secret", "TOTPError",
     "handle_file_dialog", "FileDialogDriver",
     "ensure_interactive_session", "is_session_locked",
+    "WorkQueue", "WorkItem", "BusinessError",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

@@ -652,6 +652,46 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         "AC_assert_session_active", "Flow", "Assert Session Active",
         description="Fail if the session is locked / non-interactive.",
     ))
+    _add_work_queue_specs(specs)
+
+
+def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
+    db = FieldSpec("db", FieldType.FILE_PATH)
+    name = FieldSpec("name", FieldType.STRING, optional=True, default="default")
+    specs.append(CommandSpec(
+        "AC_queue_add", "Queue", "Queue: Add Item",
+        fields=(db, FieldSpec("reference", FieldType.STRING, optional=True),
+                name),
+        description="Enqueue a work item (data via JSON view); dedupes by "
+                    "reference.",
+    ))
+    specs.append(CommandSpec(
+        "AC_queue_next", "Queue", "Queue: Get Next Item",
+        fields=(db, name),
+        description="Atomically claim the next work item (performer).",
+    ))
+    specs.append(CommandSpec(
+        "AC_queue_complete", "Queue", "Queue: Complete Item",
+        fields=(db, FieldSpec("item_id", FieldType.INT), name),
+        description="Mark a work item successfully processed.",
+    ))
+    specs.append(CommandSpec(
+        "AC_queue_fail", "Queue", "Queue: Fail Item",
+        fields=(db, FieldSpec("item_id", FieldType.INT),
+                FieldSpec("error", FieldType.STRING),
+                FieldSpec("kind", FieldType.ENUM,
+                          choices=("application", "business"),
+                          optional=True, default="application"),
+                FieldSpec("max_retries", FieldType.INT, optional=True,
+                          default=3),
+                name),
+        description="Fail an item; application errors retry, business don't.",
+    ))
+    specs.append(CommandSpec(
+        "AC_queue_stats", "Queue", "Queue: Stats",
+        fields=(db, name),
+        description="Per-status counts for a work queue.",
+    ))
     specs.append(CommandSpec(
         "AC_shell_command", "Shell", "Shell Command",
         fields=(FieldSpec("shell_command", FieldType.STRING),),
