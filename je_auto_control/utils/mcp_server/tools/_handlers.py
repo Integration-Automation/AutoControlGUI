@@ -751,6 +751,31 @@ def read_table(name=None, role=None, app_name=None, automation_id=None):
               automation_id=automation_id)
 
 
+def watchdog_add(title, action="close", case_sensitive=False, name=None):
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    default_popup_watchdog.add_window_rule(
+        title, action=action, case_sensitive=bool(case_sensitive), name=name)
+    return {"rules": default_popup_watchdog.rule_names()}
+
+
+def watchdog_start():
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    default_popup_watchdog.start()
+    return {"running": True}
+
+
+def watchdog_stop():
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    default_popup_watchdog.stop()
+    return {"running": False}
+
+
+def watchdog_list():
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    w = default_popup_watchdog
+    return {"running": w.running, "rules": w.rule_names(), "hits": w.hits}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

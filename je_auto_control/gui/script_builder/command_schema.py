@@ -606,6 +606,24 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
 def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_native_control_specs(specs)
     specs.append(CommandSpec(
+        "AC_watchdog_add", "Flow", "Watchdog: Add Popup Rule",
+        fields=(
+            FieldSpec("title", FieldType.STRING),
+            FieldSpec("action", FieldType.STRING, optional=True,
+                      default="close", placeholder="close / enter / esc"),
+            FieldSpec("case_sensitive", FieldType.BOOL, optional=True,
+                      default=False),
+            FieldSpec("name", FieldType.STRING, optional=True),
+        ),
+        description="Auto-dismiss an unexpected window when it appears.",
+    ))
+    specs.append(CommandSpec(
+        "AC_watchdog_start", "Flow", "Watchdog: Start"))
+    specs.append(CommandSpec(
+        "AC_watchdog_stop", "Flow", "Watchdog: Stop"))
+    specs.append(CommandSpec(
+        "AC_watchdog_list", "Flow", "Watchdog: List Rules / Hits"))
+    specs.append(CommandSpec(
         "AC_shell_command", "Shell", "Shell Command",
         fields=(FieldSpec("shell_command", FieldType.STRING),),
     ))

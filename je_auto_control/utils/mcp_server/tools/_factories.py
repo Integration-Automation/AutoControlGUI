@@ -1669,6 +1669,50 @@ def process_and_shell_tools() -> List[MCPTool]:
     ]
 
 
+def watchdog_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_watchdog_add",
+            description=("Register a background popup-dismissal rule: when a "
+                         "window whose title contains 'title' appears, the "
+                         "watchdog closes it (action='close') or presses a key "
+                         "(action='enter'/'esc'). Guards unattended runs "
+                         "against unexpected dialogs (UAC, update prompts)."),
+            input_schema=schema({
+                "title": {"type": "string"},
+                "action": {"type": "string"},
+                "case_sensitive": {"type": "boolean"},
+                "name": {"type": "string"},
+            }, required=["title"]),
+            handler=h.watchdog_add,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_watchdog_start",
+            description=("Start the background popup watchdog (concurrent guard "
+                         "thread that dismisses registered popups)."),
+            input_schema=schema({}),
+            handler=h.watchdog_start,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_watchdog_stop",
+            description="Stop the background popup watchdog.",
+            input_schema=schema({}),
+            handler=h.watchdog_stop,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_watchdog_list",
+            description=("Report the watchdog's run state, registered rules, "
+                         "and the popups it has dismissed."),
+            input_schema=schema({}),
+            handler=h.watchdog_list,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def hotkey_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -2609,7 +2653,8 @@ ALL_FACTORIES = (
     smart_wait_tools, cost_telemetry_tools, failure_hook_tools,
     computer_use_tools, dag_tools, presence_tools, chatops_tools,
     redaction_tools, android_widget_tools, ios_tools, webrunner_tools,
-    scheduler_tools, trigger_tools, hotkey_tools, screen_record_tools,
+    scheduler_tools, trigger_tools, hotkey_tools, watchdog_tools,
+    screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
     sql_tools, http_tools, email_tools, pdf_tools,

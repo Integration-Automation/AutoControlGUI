@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 弹窗看门狗](#本次更新-2026-06-19--弹窗看门狗)
 - [本次更新 (2026-06-19) — 原生 UI 控制](#本次更新-2026-06-19--原生-ui-控制)
 - [本次更新 (2026-06-19)](#本次更新-2026-06-19)
 - [本次更新 (2026-06-18)](#本次更新-2026-06-18)
@@ -58,6 +59,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 弹窗看门狗
+
+无人值守自动化失败的第一大主因,是脚本没写到的意外对话框(UAC、"会话过期"、Windows Update、modal)。弹窗看门狗以并行守卫线程监看注册 pattern,独立于主流程把它们关掉。由社区痛点研究指出为无人值守头号失败主因;走完整五层(facade、`AC_*`、MCP、Script Builder),完全 headless。完整参考:[`docs/source/Eng/doc/new_features/v8_features_doc.rst`](../docs/source/Eng/doc/new_features/v8_features_doc.rst)。
+
+- **自动关闭弹窗** — `default_popup_watchdog.add_window_rule(title, action="close")` 后 `.start()`(`AC_watchdog_add` / `AC_watchdog_start` / `AC_watchdog_stop` / `AC_watchdog_list`):窗口出现时关闭它或按键(`enter`/`esc`)。
+- **自定义规则** — `PopupWatchdog` / `WatchdogRule` 把任意检测器(图/a11y/文本)配对关闭器;坏规则只记录并跳过,绝不让守卫循环停摆。
 
 ## 本次更新 (2026-06-19) — 原生 UI 控制
 

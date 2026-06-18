@@ -97,6 +97,10 @@ from je_auto_control.utils.clipboard.clipboard import (
 from je_auto_control.utils.hotkey.hotkey_daemon import (
     HotkeyBinding, HotkeyDaemon, default_hotkey_daemon,
 )
+# Background popup/interrupt watchdog (unattended automation)
+from je_auto_control.utils.watchdog import (
+    PopupWatchdog, WatchdogRule, default_popup_watchdog,
+)
 # OCR (headless)
 from je_auto_control.utils.ocr.ocr_engine import (
     TextMatch, click_text, find_text_matches, find_text_regex,
@@ -489,6 +493,7 @@ __all__ = [
     "get_clipboard", "set_clipboard",
     # Hotkey daemon
     "HotkeyDaemon", "HotkeyBinding", "default_hotkey_daemon",
+    "PopupWatchdog", "WatchdogRule", "default_popup_watchdog",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
