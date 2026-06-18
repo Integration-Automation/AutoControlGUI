@@ -93,9 +93,53 @@ def dump_accessibility_tree(app_name: Optional[str] = None,
     )
 
 
+def control_get_value(name: Optional[str] = None, role: Optional[str] = None,
+                      app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None) -> Optional[str]:
+    """Read a control's value (e.g. a textbox/combo), or None if not found."""
+    return get_backend().get_value(
+        name=name, role=role, app_name=app_name, automation_id=automation_id)
+
+
+def control_set_value(value: str, name: Optional[str] = None,
+                      role: Optional[str] = None, app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None) -> bool:
+    """Set a control's value directly (no per-key typing). True on success."""
+    return get_backend().set_value(
+        value, name=name, role=role, app_name=app_name,
+        automation_id=automation_id)
+
+
+def control_invoke(name: Optional[str] = None, role: Optional[str] = None,
+                   app_name: Optional[str] = None,
+                   automation_id: Optional[str] = None) -> bool:
+    """Invoke a control's default action (e.g. press a button)."""
+    return get_backend().invoke(
+        name=name, role=role, app_name=app_name, automation_id=automation_id)
+
+
+def control_toggle(name: Optional[str] = None, role: Optional[str] = None,
+                   app_name: Optional[str] = None,
+                   automation_id: Optional[str] = None) -> bool:
+    """Toggle a control (e.g. a checkbox / switch)."""
+    return get_backend().toggle(
+        name=name, role=role, app_name=app_name, automation_id=automation_id)
+
+
+def read_control_table(name: Optional[str] = None, role: Optional[str] = None,
+                       app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None,
+                       ) -> List[List[str]]:
+    """Read a grid/table/list control as rows of cell strings."""
+    return get_backend().read_table(
+        name=name, role=role, app_name=app_name, automation_id=automation_id)
+
+
 __all__ = [
     "AccessibilityElement", "AccessibilityNotAvailableError",
     "AXTreeNode",
     "click_accessibility_element", "dump_accessibility_tree",
     "find_accessibility_element", "list_accessibility_elements",
+    "control_get_value", "control_set_value", "control_invoke",
+    "control_toggle", "read_control_table",
 ]

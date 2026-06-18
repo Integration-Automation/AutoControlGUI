@@ -14,13 +14,17 @@ from je_auto_control.utils.accessibility.backends.base import (
     AccessibilityBackend,
 )
 from je_auto_control.utils.accessibility.element import (
-    AccessibilityElement, AccessibilityNotAvailableError,
+    AccessibilityElement, AccessibilityNotAvailableError, element_matches,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 _TREE_SCOPE_DESCENDANTS = 4
 _UIA_IS_CONTROL_ELEMENT_PROPERTY = 30016
 _UIA_NAME_PROPERTY = 30005
+_UIA_VALUE_PATTERN_ID = 10002
+_UIA_INVOKE_PATTERN_ID = 10000
+_UIA_TOGGLE_PATTERN_ID = 10015
+_UIA_GRID_PATTERN_ID = 10006
 
 
 def _is_available() -> bool:
@@ -39,6 +43,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
     def __init__(self) -> None:
         self.available = _is_available()
         self._automation = None
+        self._uia_module = None
 
     def _ensure_automation(self):
         if self._automation is not None:
@@ -61,6 +66,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             interface=uia_module.IUIAutomation,
         )
         self._automation = automation
+        self._uia_module = uia_module
         return automation
 
     def list_elements(self, app_name: Optional[str] = None,
@@ -86,6 +92,117 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
                 continue
             results.append(element)
         return results
+
+    def _find_raw(self, name, role, app_name, automation_id):
+        """Re-walk the tree and return the first matching raw UIA element."""
+        automation = self._ensure_automation()
+        try:
+            root = automation.GetRootElement()
+            condition = automation.CreatePropertyCondition(
+                _UIA_IS_CONTROL_ELEMENT_PROPERTY, True,
+            )
+            found = root.FindAll(_TREE_SCOPE_DESCENDANTS, condition)
+        except (OSError, AttributeError) as error:
+            autocontrol_logger.error("UIA FindAll failed: %r", error)
+            return None
+        for idx in range(int(found.Length or 0)):
+            raw = found.GetElement(idx)
+            element = _convert_uia(raw)
+            if element is None:
+                continue
+            if automation_id is not None and element.native_id != automation_id:
+                continue
+            if element_matches(element, name=name, role=role, app_name=app_name):
+                return raw
+        return None
+
+    def _pattern(self, raw, pattern_id, interface_name):
+        """Return a queried control pattern interface, or None."""
+        try:
+            unknown = raw.GetCurrentPattern(pattern_id)
+            if not unknown:
+                return None
+            interface = getattr(self._uia_module, interface_name)
+            return unknown.QueryInterface(interface)
+        except (OSError, AttributeError, ValueError):
+            return None
+
+    def get_value(self, name=None, role=None, app_name=None,
+                  automation_id=None) -> Optional[str]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_VALUE_PATTERN_ID,
+                                "IUIAutomationValuePattern") if raw else None
+        if pattern is None:
+            return None
+        try:
+            return str(pattern.CurrentValue or "")
+        except (OSError, AttributeError):
+            return None
+
+    def set_value(self, value, name=None, role=None, app_name=None,
+                  automation_id=None) -> bool:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_VALUE_PATTERN_ID,
+                                "IUIAutomationValuePattern") if raw else None
+        if pattern is None:
+            return False
+        try:
+            pattern.SetValue(str(value))
+            return True
+        except (OSError, AttributeError):
+            return False
+
+    def invoke(self, name=None, role=None, app_name=None,
+               automation_id=None) -> bool:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_INVOKE_PATTERN_ID,
+                                "IUIAutomationInvokePattern") if raw else None
+        if pattern is None:
+            return False
+        try:
+            pattern.Invoke()
+            return True
+        except (OSError, AttributeError):
+            return False
+
+    def toggle(self, name=None, role=None, app_name=None,
+               automation_id=None) -> bool:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_TOGGLE_PATTERN_ID,
+                                "IUIAutomationTogglePattern") if raw else None
+        if pattern is None:
+            return False
+        try:
+            pattern.Toggle()
+            return True
+        except (OSError, AttributeError):
+            return False
+
+    def read_table(self, name=None, role=None, app_name=None,
+                   automation_id=None):
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_GRID_PATTERN_ID,
+                                "IUIAutomationGridPattern") if raw else None
+        if pattern is None:
+            return []
+        try:
+            rows = int(pattern.CurrentRowCount or 0)
+            cols = int(pattern.CurrentColumnCount or 0)
+        except (OSError, AttributeError):
+            return []
+        return [self._read_row(pattern, r, cols) for r in range(rows)]
+
+    @staticmethod
+    def _read_row(pattern, row: int, cols: int):
+        """Read one grid row into a list of cell strings."""
+        cells = []
+        for col in range(cols):
+            try:
+                cell = pattern.GetItem(row, col)
+                cells.append(str(cell.CurrentName or "") if cell else "")
+            except (OSError, AttributeError):
+                cells.append("")
+        return cells
 
 
 def _convert_uia(raw) -> Optional[AccessibilityElement]:
