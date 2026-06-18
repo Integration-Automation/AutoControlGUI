@@ -1859,6 +1859,34 @@ def generate_code(source: Any, target: str = "pytest",
     return {"code": _gen(actions, target=target, name=name, style=style)}
 
 
+# --- Visual regression + state machine -------------------------------------
+
+def take_golden(path: str, region: Optional[List[int]] = None) -> str:
+    from je_auto_control.utils.visual_regression import (
+        take_golden as _take,
+    )
+    return str(_take(path, region=region))
+
+
+def assert_visual(golden_path: str, region: Optional[List[int]] = None,
+                  tolerance: float = 0.0, per_pixel_threshold: int = 16,
+                  diff_path: Optional[str] = None,
+                  create_if_missing: bool = True,
+                  raise_on_fail: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.executor.action_executor import _assert_visual
+    return _assert_visual(
+        golden_path, region=region, tolerance=tolerance,
+        per_pixel_threshold=per_pixel_threshold, diff_path=diff_path,
+        create_if_missing=create_if_missing, raise_on_fail=raise_on_fail)
+
+
+def run_state_machine(spec: Dict[str, Any]) -> Dict[str, Any]:
+    from je_auto_control.utils.state_machine import (
+        run_state_machine as _run,
+    )
+    return _run(spec)
+
+
 # --- Flaky-test detection --------------------------------------------------
 
 def flaky_report(limit: int = 500,

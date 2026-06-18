@@ -2281,6 +2281,60 @@ def http_tools() -> List[MCPTool]:
     ]
 
 
+def visual_regression_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_take_golden",
+            description=("Capture and save a golden/baseline image of the "
+                         "screen (or a [x, y, w, h] region) for later visual "
+                         "regression checks."),
+            input_schema=schema({
+                "path": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+            }, required=["path"]),
+            handler=h.take_golden,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_visual",
+            description=("Compare the screen (or a region) against a golden "
+                         "image; fail when more than 'tolerance' percent of "
+                         "pixels differ beyond per_pixel_threshold. On the "
+                         "first run (golden missing) it captures the baseline "
+                         "and passes unless create_if_missing=false. Pass "
+                         "diff_path to save a highlighted diff on mismatch."),
+            input_schema=schema({
+                "golden_path": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "tolerance": {"type": "number"},
+                "per_pixel_threshold": {"type": "integer"},
+                "diff_path": {"type": "string"},
+                "create_if_missing": {"type": "boolean"},
+                "raise_on_fail": {"type": "boolean"},
+            }, required=["golden_path"]),
+            handler=h.assert_visual,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def state_machine_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_run_state_machine",
+            description=("Run a declarative finite-state-machine 'spec' "
+                         "{initial, states:{name:{on_enter:[...], "
+                         "transitions:[{go_to, after?/if_var_eq?}], final?}}}. "
+                         "on_enter actions run through the executor; returns "
+                         "{final_state, steps, elapsed_s}."),
+            input_schema=schema({"spec": {"type": "object"}},
+                                required=["spec"]),
+            handler=h.run_state_machine,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def codegen_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -2500,7 +2554,8 @@ ALL_FACTORIES = (
     scheduler_tools, trigger_tools, hotkey_tools, screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
-    sql_tools, http_tools, email_tools, pdf_tools, codegen_tools,
+    sql_tools, http_tools, email_tools, pdf_tools,
+    visual_regression_tools, state_machine_tools, codegen_tools,
     flakiness_tools, suite_tools, quarantine_tools,
     a11y_audit_tools, device_matrix_tools, media_assert_tools,
 )

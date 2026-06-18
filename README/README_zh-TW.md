@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19)](#本次更新-2026-06-19)
 - [本次更新 (2026-06-18)](#本次更新-2026-06-18)
 - [本次更新 (2026-06-17)](#本次更新-2026-06-17)
 - [本次更新 (2026-06)](#本次更新-2026-06)
@@ -56,6 +57,14 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19)
+
+兩個早已存在、卻沒接上其餘各層的 headless 核心,現在成為一級功能。兩者都新增 facade re-export、`AC_*` 執行器指令、MCP 工具與 Script Builder 項目,並有 headless 測試。完整參考:
+[`docs/source/Zh/doc/new_features/v6_features_doc.rst`](../docs/source/Zh/doc/new_features/v6_features_doc.rst)。
+
+- **視覺回歸(黃金影像)** — `take_golden` / `compare_to_golden`(`AC_take_golden` / `AC_assert_visual`):擷取基準截圖,畫面偏離超過像素容差時判失敗,並輸出標示差異圖與遮罩區域。`AC_assert_visual` 首跑會自動建立基準。純 PIL。
+- **有限狀態機** — `run_state_machine`(`AC_run_state_machine`):把腳本當成宣告式 `{initial, states}` spec 驅動,`on_enter` 動作經執行器執行,transition 依 `after` / `if_var_eq` / predicate 觸發,並以 `max_steps` / `global_timeout_s` 限制。
 
 ## 本次更新 (2026-06-18)
 

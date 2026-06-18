@@ -2169,6 +2169,49 @@ def _assert_pdf_text(path: str, text: str, present: bool = True,
                            raise_on_fail=bool(raise_on_fail))
 
 
+def _take_golden(path: str, region: Optional[List[int]] = None) -> str:
+    """Adapter: capture and save a golden/baseline image."""
+    from je_auto_control.utils.visual_regression import take_golden
+    return str(take_golden(path, region=region))
+
+
+def _assert_visual(golden_path: str, region: Optional[List[int]] = None,
+                   tolerance: float = 0.0, per_pixel_threshold: int = 16,
+                   diff_path: Optional[str] = None,
+                   create_if_missing: bool = True,
+                   raise_on_fail: bool = True) -> Dict[str, Any]:
+    """Adapter: compare the screen to a golden image (first run creates it)."""
+    import os
+    from je_auto_control.utils.exception.exceptions import (
+        AutoControlAssertionException,
+    )
+    from je_auto_control.utils.visual_regression import (
+        compare_to_golden, take_golden,
+    )
+    if create_if_missing and not os.path.exists(
+            os.path.expanduser(str(golden_path))):
+        take_golden(golden_path, region=region)
+        return {"created": True, "matched": True, "golden": str(golden_path)}
+    result = compare_to_golden(
+        golden_path, region=region, tolerance=float(tolerance),
+        per_pixel_threshold=int(per_pixel_threshold))
+    if diff_path and result.diff_image is not None:
+        result.write_diff(diff_path)
+    data = {"matched": result.matched, "diff_pct": result.diff_pct,
+            "differing_pixels": result.differing_pixels,
+            "total_pixels": result.total_pixels,
+            "tolerance_pct": result.tolerance_pct}
+    if not result.matched and raise_on_fail:
+        raise AutoControlAssertionException(result.summary)
+    return data
+
+
+def _run_state_machine(spec: Any) -> Dict[str, Any]:
+    """Adapter: run a finite-state-machine spec through the executor."""
+    from je_auto_control.utils.state_machine import run_state_machine
+    return run_state_machine(spec)
+
+
 class Executor:
     """
     Executor
@@ -2234,6 +2277,9 @@ class Executor:
             "AC_generate_code": _generate_code,
             "AC_send_email": _send_email,
             "AC_assert_pdf_text": _assert_pdf_text,
+            "AC_take_golden": _take_golden,
+            "AC_assert_visual": _assert_visual,
+            "AC_run_state_machine": _run_state_machine,
             "AC_http_request": http_request,
 
             # Record 錄製
