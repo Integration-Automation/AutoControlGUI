@@ -298,6 +298,50 @@ def _default_file_size(path: str) -> Optional[int]:
         return None
 
 
+PortConnector = Callable[[str, int, float], bool]
+
+
+def wait_until_port(host: str, port: int, *,
+                    timeout_s: float = 30.0,
+                    poll_interval_s: float = 0.25,
+                    connect_timeout_s: float = 1.0,
+                    connector: Optional[PortConnector] = None,
+                    ) -> WaitOutcome:
+    """Return when a TCP connection to ``(host, port)`` succeeds, else timeout.
+
+    The closing companion to launching a server: poll until the port
+    accepts connections. ``connector(host, port, timeout) -> bool`` is
+    injectable so tests need no real listener.
+    """
+    if timeout_s <= 0:
+        raise ValueError("timeout_s must be positive")
+    if poll_interval_s <= 0:
+        raise ValueError("poll_interval_s must be positive")
+    if not 0 < int(port) <= 65535:
+        raise ValueError("port must be in 1..65535")
+    probe = connector or _default_port_connector
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    while time.monotonic() < deadline:
+        samples += 1
+        if probe(str(host), int(port), float(connect_timeout_s)):
+            return _finish(True, f"port {host}:{port} open", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, f"timeout waiting for {host}:{port}",
+                   started, samples)
+
+
+def _default_port_connector(host: str, port: int, timeout: float) -> bool:
+    """Return True if a TCP connection to ``(host, port)`` can be opened."""
+    import socket
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
 # --- internals -------------------------------------------------
 
 def _frame_diff(a: Frame, b: Frame) -> int:
@@ -334,8 +378,9 @@ def _finish(succeeded: bool, reason: str, started: float,
 
 
 __all__ = [
-    "ClipboardReader", "FileStatReader", "Frame", "ScreenSampler",
-    "WaitOutcome", "WindowFinder", "wait_until_clipboard_changes",
-    "wait_until_file", "wait_until_pixel_changes", "wait_until_region_idle",
+    "ClipboardReader", "FileStatReader", "Frame", "PortConnector",
+    "ScreenSampler", "WaitOutcome", "WindowFinder",
+    "wait_until_clipboard_changes", "wait_until_file",
+    "wait_until_pixel_changes", "wait_until_port", "wait_until_region_idle",
     "wait_until_screen_stable", "wait_until_window_closed",
 ]

@@ -400,6 +400,18 @@ def _wait_for_file(path: str, timeout_s: float = 30.0,
     ).to_dict()
 
 
+def _wait_for_port(host: str, port: int, timeout_s: float = 30.0,
+                   poll_interval_s: float = 0.25,
+                   connect_timeout_s: float = 1.0) -> Dict[str, Any]:
+    """Executor adapter: wait until a TCP port accepts connections."""
+    from je_auto_control.utils.smart_waits import wait_until_port
+    return wait_until_port(
+        host, int(port), timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        connect_timeout_s=float(connect_timeout_s),
+    ).to_dict()
+
+
 def _ocr_read_structure(region: Optional[List[int]] = None,
                         lang: str = "eng",
                         min_confidence: float = 60.0,
@@ -2362,6 +2374,7 @@ class Executor:
             "AC_wait_pixel_changes": _wait_pixel_changes,
             "AC_wait_region_idle": _wait_region_idle,
             "AC_wait_for_file": _wait_for_file,
+            "AC_wait_for_port": _wait_for_port,
             "AC_wait_clipboard_change": _wait_clipboard_change,
             "AC_wait_window_closed": _wait_window_closed,
 

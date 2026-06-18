@@ -1279,6 +1279,22 @@ def smart_wait_tools() -> List[MCPTool]:
             handler=h.wait_for_file,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_wait_for_port",
+            description=("Block until a TCP connection to host:port succeeds "
+                         "(e.g. wait for a server to come up after launching "
+                         "it). Returns a WaitOutcome (succeeded/reason/"
+                         "elapsed_s)."),
+            input_schema=schema({
+                "host": {"type": "string"},
+                "port": {"type": "integer"},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"},
+                "connect_timeout_s": {"type": "number"},
+            }, required=["host", "port"]),
+            handler=h.wait_for_port,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

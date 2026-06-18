@@ -341,6 +341,20 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Wait until a file appears and stops growing (download done).",
     ))
+    specs.append(CommandSpec(
+        "AC_wait_for_port", "Flow", "Wait for TCP Port",
+        fields=(
+            FieldSpec("host", FieldType.STRING, default="127.0.0.1"),
+            FieldSpec("port", FieldType.INT, min_value=1, max_value=65535),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True,
+                      default=30.0),
+            FieldSpec("connect_timeout_s", FieldType.FLOAT, optional=True,
+                      default=1.0, min_value=0.01),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.25, min_value=0.01),
+        ),
+        description="Wait until a TCP host:port accepts connections.",
+    ))
     specs.append(CommandSpec("AC_list_windows", "Window", "List Windows"))
     specs.append(CommandSpec(
         "AC_capture_window", "Window", "Capture Window",
