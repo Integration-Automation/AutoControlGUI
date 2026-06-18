@@ -857,6 +857,37 @@ def select_tests(flows, k=None, threshold=None, history_path=None, window=10):
         window=int(window))}
 
 
+def _element_repo(path):
+    from je_auto_control.utils.element_repository import ElementRepository
+    return ElementRepository(path)
+
+
+def element_save(path, key, name=None, role=None, app_name=None):
+    return {"locator": _element_repo(path).save(
+        key, name=name, role=role, app_name=app_name)}
+
+
+def element_find(path, key):
+    return _element_repo(path).find_info(key)
+
+
+def element_click(path, key):
+    return {"clicked": _element_repo(path).click(key)}
+
+
+def element_remove(path, key):
+    return {"removed": _element_repo(path).remove(key)}
+
+
+def element_list(path):
+    return {"keys": _element_repo(path).keys()}
+
+
+def debug_trace(actions, dry_run=False):
+    from je_auto_control.utils.flow_debugger import trace_actions
+    return {"trace": trace_actions(actions, dry_run=bool(dry_run))}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Authoring & Debugging](#whats-new-2026-06-19--authoring--debugging)
 - [What's new (2026-06-19) — Test & Tooling Batch](#whats-new-2026-06-19--test--tooling-batch)
 - [What's new (2026-06-19) — Transactional Queue](#whats-new-2026-06-19--transactional-queue)
 - [What's new (2026-06-19) — Unattended Reliability](#whats-new-2026-06-19--unattended-reliability)
@@ -63,6 +64,13 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Authoring & Debugging
+
+Two pure-stdlib authoring-time tools, full stack (facade, `AC_*`, MCP, Script Builder). Full reference: [`docs/source/Eng/doc/new_features/v12_features_doc.rst`](docs/source/Eng/doc/new_features/v12_features_doc.rst).
+
+- **Element repository** — `ElementRepository` (`AC_element_save` / `AC_element_find` / `AC_element_click` / `AC_element_remove` / `AC_element_list`, `ac_element_*`): save native-UI locators under friendly names (object repository) and reuse them — `repo.click("login.submit")` instead of repeating name/role everywhere; a UI change is fixed in one place.
+- **Step debugger / tracer** — `FlowDebugger` (breakpoints, `step`/`continue_`/`run_to_end`, live `variables()`) and `trace_actions` (`AC_debug_trace`, `ac_debug_trace`): step through an action list one command at a time with variables persisting across steps, or get a per-step `{index, command, result}` trace (with `dry_run` to plan without running).
 
 ## What's new (2026-06-19) — Test & Tooling Batch
 

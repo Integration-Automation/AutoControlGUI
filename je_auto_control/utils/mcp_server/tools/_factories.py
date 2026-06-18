@@ -1795,6 +1795,71 @@ def test_selection_tools() -> List[MCPTool]:
     ]
 
 
+def element_repository_tools() -> List[MCPTool]:
+    _R = {"path": {"type": "string"}, "key": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_element_save",
+            description=("Save a named native-UI locator (object repository): "
+                         "store name/role/app under a friendly 'key' for "
+                         "reuse. Needs at least one of name/role/app_name."),
+            input_schema=schema({
+                "name": {"type": "string"}, "role": {"type": "string"},
+                "app_name": {"type": "string"}, **_R},
+                required=["path", "key"]),
+            handler=h.element_save,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_element_find",
+            description=("Resolve a saved locator to a live element; returns "
+                         "{found, name, role, center}."),
+            input_schema=schema(dict(_R), required=["path", "key"]),
+            handler=h.element_find,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_element_click",
+            description="Click the element behind a saved locator.",
+            input_schema=schema(dict(_R), required=["path", "key"]),
+            handler=h.element_click,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_element_remove",
+            description="Delete a saved locator; returns {removed}.",
+            input_schema=schema(dict(_R), required=["path", "key"]),
+            handler=h.element_remove,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_element_list",
+            description="List saved locator names in a repository file.",
+            input_schema=schema({"path": {"type": "string"}},
+                                required=["path"]),
+            handler=h.element_list,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def flow_debugger_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_debug_trace",
+            description=("Run an action list and return a per-step trace "
+                         "({index, command, result}). With dry_run=true the "
+                         "actions are planned but not executed."),
+            input_schema=schema({
+                "actions": {"type": "array"},
+                "dry_run": {"type": "boolean"}},
+                required=["actions"]),
+            handler=h.debug_trace,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -2826,6 +2891,7 @@ ALL_FACTORIES = (
     scheduler_tools, trigger_tools, hotkey_tools, watchdog_tools,
     unattended_tools, work_queue_tools,
     synthetic_data_tools, mcp_registry_tools, test_selection_tools,
+    element_repository_tools, flow_debugger_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

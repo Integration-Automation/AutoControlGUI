@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 编写与调试](#本次更新-2026-06-19--编写与调试)
 - [本次更新 (2026-06-19) — 测试与工具三件套](#本次更新-2026-06-19--测试与工具三件套)
 - [本次更新 (2026-06-19) — 事务式工作队列](#本次更新-2026-06-19--事务式工作队列)
 - [本次更新 (2026-06-19) — 无人值守可靠性](#本次更新-2026-06-19--无人值守可靠性)
@@ -62,6 +63,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 编写与调试
+
+两项纯标准库的编写期工具,走完整五层(facade、`AC_*`、MCP、Script Builder)。完整参考:[`docs/source/Zh/doc/new_features/v12_features_doc.rst`](../docs/source/Zh/doc/new_features/v12_features_doc.rst)。
+
+- **元素库** — `ElementRepository`(`AC_element_save` / `AC_element_find` / `AC_element_click` / `AC_element_remove` / `AC_element_list`、`ac_element_*`):把原生 UI 定位器以友好名称存起来(object repository)重用——用 `repo.click("login.submit")` 取代到处重复 name/role;UI 变动只需改一处。
+- **步进调试器 / 追踪器** — `FlowDebugger`(断点、`step`/`continue_`/`run_to_end`、实时 `variables()`)与 `trace_actions`(`AC_debug_trace`、`ac_debug_trace`):把动作列表一次跑一个指令、变量跨步保留,或获取每步 `{index, command, result}` 追踪(用 `dry_run` 只规划不执行)。
 
 ## 本次更新 (2026-06-19) — 测试与工具三件套
 

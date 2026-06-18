@@ -2388,6 +2388,45 @@ def _select_tests(flows: List[str], k: Optional[int] = None,
         window=int(window))}
 
 
+def _element_repo(path: str):
+    from je_auto_control.utils.element_repository import ElementRepository
+    return ElementRepository(path)
+
+
+def _element_save(path: str, key: str, name: Optional[str] = None,
+                  role: Optional[str] = None,
+                  app_name: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: save a named native-UI locator (object repository)."""
+    return {"locator": _element_repo(path).save(
+        key, name=name, role=role, app_name=app_name)}
+
+
+def _element_find(path: str, key: str) -> Dict[str, Any]:
+    """Adapter: resolve a saved locator to a live element summary."""
+    return _element_repo(path).find_info(key)
+
+
+def _element_click(path: str, key: str) -> Dict[str, Any]:
+    """Adapter: click the element behind a saved locator."""
+    return {"clicked": _element_repo(path).click(key)}
+
+
+def _element_remove(path: str, key: str) -> Dict[str, Any]:
+    """Adapter: delete a saved locator."""
+    return {"removed": _element_repo(path).remove(key)}
+
+
+def _element_list(path: str) -> Dict[str, Any]:
+    """Adapter: list saved locator names."""
+    return {"keys": _element_repo(path).keys()}
+
+
+def _debug_trace(actions: List[Any], dry_run: bool = False) -> Dict[str, Any]:
+    """Adapter: run an action list and return a per-step trace."""
+    from je_auto_control.utils.flow_debugger import trace_actions
+    return {"trace": trace_actions(actions, dry_run=bool(dry_run))}
+
+
 class Executor:
     """
     Executor
@@ -2555,6 +2594,12 @@ class Executor:
             "AC_mcp_manifest": _mcp_manifest,
             "AC_rank_tests": _rank_tests,
             "AC_select_tests": _select_tests,
+            "AC_element_save": _element_save,
+            "AC_element_find": _element_find,
+            "AC_element_click": _element_click,
+            "AC_element_remove": _element_remove,
+            "AC_element_list": _element_list,
+            "AC_debug_trace": _debug_trace,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

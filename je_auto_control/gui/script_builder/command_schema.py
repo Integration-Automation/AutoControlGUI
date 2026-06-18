@@ -654,6 +654,46 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     ))
     _add_work_queue_specs(specs)
     _add_tooling_specs(specs)
+    _add_authoring_specs(specs)
+
+
+def _add_authoring_specs(specs: List[CommandSpec]) -> None:
+    path = FieldSpec("path", FieldType.FILE_PATH)
+    key = FieldSpec("key", FieldType.STRING)
+    specs.append(CommandSpec(
+        "AC_element_save", "Native UI", "Element: Save Locator",
+        fields=(path, key,
+                FieldSpec("name", FieldType.STRING, optional=True),
+                FieldSpec("role", FieldType.STRING, optional=True),
+                FieldSpec("app_name", FieldType.STRING, optional=True)),
+        description="Save a named native-UI locator (object repository).",
+    ))
+    specs.append(CommandSpec(
+        "AC_element_find", "Native UI", "Element: Find Saved",
+        fields=(path, key),
+        description="Resolve a saved locator to a live element summary.",
+    ))
+    specs.append(CommandSpec(
+        "AC_element_click", "Native UI", "Element: Click Saved",
+        fields=(path, key),
+        description="Click the element behind a saved locator.",
+    ))
+    specs.append(CommandSpec(
+        "AC_element_remove", "Native UI", "Element: Remove Saved",
+        fields=(path, key),
+        description="Delete a saved locator.",
+    ))
+    specs.append(CommandSpec(
+        "AC_element_list", "Native UI", "Element: List Saved",
+        fields=(path,),
+        description="List saved locator names in a repository file.",
+    ))
+    specs.append(CommandSpec(
+        "AC_debug_trace", "Flow", "Debug: Trace Actions",
+        fields=(FieldSpec("dry_run", FieldType.BOOL, optional=True,
+                          default=False),),
+        description="Run 'actions' (JSON view) and return a per-step trace.",
+    ))
 
 
 def _add_tooling_specs(specs: List[CommandSpec]) -> None:
