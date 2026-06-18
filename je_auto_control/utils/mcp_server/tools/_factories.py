@@ -2142,6 +2142,61 @@ def data_source_tools() -> List[MCPTool]:
     ]
 
 
+def pdf_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_extract_pdf_text",
+            description=("Extract text from a PDF file. 'pages' is null (all "
+                         "pages), a 1-based page number, or a list of them. "
+                         "Requires the optional pypdf package."),
+            input_schema=schema({
+                "path": {"type": "string"},
+                "pages": {"type": ["integer", "array", "null"]},
+            }, required=["path"]),
+            handler=h.extract_pdf_text,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assert_pdf_text",
+            description=("Assert that text is present (or absent when "
+                         "present=false) in a PDF, optionally restricted to a "
+                         "1-based 'page'. Set case_sensitive=false for a "
+                         "case-insensitive match. Raises on failure unless "
+                         "raise_on_fail is false."),
+            input_schema=schema({
+                "path": {"type": "string"},
+                "text": {"type": "string"},
+                "present": {"type": "boolean"},
+                "page": {"type": "integer"},
+                "case_sensitive": {"type": "boolean"},
+                "raise_on_fail": {"type": "boolean"},
+            }, required=["path", "text"]),
+            handler=h.assert_pdf_text,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def email_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_send_email",
+            description=("Send an email via SMTP. 'message' = {sender, to, "
+                         "subject, body, cc?, html?, attachments?} (to/cc may "
+                         "be a string or list; attachments are file paths). "
+                         "'smtp' = {host, port?, username?, password?, "
+                         "use_tls?, use_ssl?, timeout?}; TLS is on by default. "
+                         "Sends mail (irreversible side effect)."),
+            input_schema=schema({
+                "message": {"type": "object"},
+                "smtp": {"type": "object"},
+            }, required=["message", "smtp"]),
+            handler=h.send_email,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def sql_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -2429,7 +2484,7 @@ ALL_FACTORIES = (
     scheduler_tools, trigger_tools, hotkey_tools, screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
-    sql_tools, http_tools, codegen_tools, flakiness_tools, suite_tools,
-    quarantine_tools,
+    sql_tools, http_tools, email_tools, pdf_tools, codegen_tools,
+    flakiness_tools, suite_tools, quarantine_tools,
     a11y_audit_tools, device_matrix_tools, media_assert_tools,
 )

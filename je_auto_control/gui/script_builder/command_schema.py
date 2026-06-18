@@ -625,6 +625,33 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Request a URL; store the body or a JSON field in a variable.",
     ))
     specs.append(CommandSpec(
+        "AC_pdf_to_var", "Report", "PDF Text into Variable",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH),
+            FieldSpec("var", FieldType.STRING, default="pdf_text"),
+            FieldSpec("page", FieldType.INT, optional=True, min_value=1),
+        ),
+        description="Extract a PDF's text (all pages or one) into a variable.",
+    ))
+    specs.append(CommandSpec(
+        "AC_assert_pdf_text", "Report", "Assert PDF Text",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH),
+            FieldSpec("text", FieldType.STRING),
+            FieldSpec("present", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("page", FieldType.INT, optional=True, min_value=1),
+            FieldSpec("case_sensitive", FieldType.BOOL, optional=True,
+                      default=True),
+        ),
+        description="Assert text is present (or absent) in a PDF document.",
+    ))
+    specs.append(CommandSpec(
+        "AC_send_email", "Report", "Send Email",
+        description=("Send an email via SMTP. Configure the 'message' "
+                     "{sender,to,subject,body,attachments} and 'smtp' "
+                     "{host,port,username,password} dicts in the JSON view."),
+    ))
+    specs.append(CommandSpec(
         "AC_http_request", "Report", "HTTP Request",
         fields=(
             FieldSpec("url", FieldType.STRING, placeholder="https://..."),

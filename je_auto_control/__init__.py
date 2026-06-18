@@ -357,6 +357,12 @@ from je_auto_control.utils.codegen.codegen import (
 from je_auto_control.utils.http_client.http_client import http_request
 # Ad-hoc read-only SQL query against SQLite
 from je_auto_control.utils.sql.sql_query import query_sqlite
+# Send email via SMTP
+from je_auto_control.utils.email_send.email_sender import send_email
+# PDF document text extraction + assertion (optional pypdf backend)
+from je_auto_control.utils.pdf.pdf_reader import (
+    assert_pdf_text, extract_pdf_text, pdf_metadata, pdf_page_count,
+)
 # package manager
 from je_auto_control.utils.package_manager.package_manager_class import \
     package_manager
@@ -449,6 +455,8 @@ __all__ = [
     "execute_action", "execute_files", "executor",
     "execute_action_with_vars", "record_to_json",
     "generate_code", "generate_code_file", "http_request", "query_sqlite",
+    "send_email", "assert_pdf_text", "extract_pdf_text", "pdf_metadata",
+    "pdf_page_count",
     "add_command_to_executor", "test_record_instance", "pil_screenshot",
     # OCR
     "TextMatch", "find_text_matches", "locate_text_center", "wait_for_text",

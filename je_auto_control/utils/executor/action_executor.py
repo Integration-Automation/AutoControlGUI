@@ -2143,6 +2143,22 @@ def _generate_code(source: Any, output: Optional[str] = None,
     return generate_code(actions, target=target, name=name, style=style)
 
 
+def _send_email(message: Any, smtp: Any) -> Dict[str, Any]:
+    """Adapter: send an email via SMTP (message/smtp config dicts)."""
+    from je_auto_control.utils.email_send.email_sender import send_email
+    return send_email(message, smtp)
+
+
+def _assert_pdf_text(path: str, text: str, present: bool = True,
+                     page: Any = None, case_sensitive: bool = True,
+                     raise_on_fail: bool = True) -> Dict[str, Any]:
+    """Adapter: assert text is present/absent in a PDF document."""
+    from je_auto_control.utils.pdf.pdf_reader import assert_pdf_text
+    return assert_pdf_text(path, text, present=bool(present), page=page,
+                           case_sensitive=bool(case_sensitive),
+                           raise_on_fail=bool(raise_on_fail))
+
+
 class Executor:
     """
     Executor
@@ -2206,6 +2222,8 @@ class Executor:
             "AC_generate_json_report": generate_json_report,
             "AC_generate_xml_report": generate_xml_report,
             "AC_generate_code": _generate_code,
+            "AC_send_email": _send_email,
+            "AC_assert_pdf_text": _assert_pdf_text,
             "AC_http_request": http_request,
 
             # Record 錄製

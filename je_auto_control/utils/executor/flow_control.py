@@ -431,6 +431,15 @@ def exec_assert_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     ).to_dict()
 
 
+def exec_pdf_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Extract a PDF's text (all pages or one page) into a flow variable."""
+    from je_auto_control.utils.pdf.pdf_reader import extract_pdf_text
+    text = extract_pdf_text(args["path"], pages=args.get("page"))
+    var_name = args.get("var", "pdf_text")
+    executor.variables.set(var_name, text)
+    return {"var": var_name, "length": len(text)}
+
+
 def exec_sql_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     """Run a read-only SQLite query and store its result in a flow variable."""
     from je_auto_control.utils.sql.sql_query import query_sqlite
@@ -660,6 +669,7 @@ BLOCK_COMMANDS: Dict[str, Callable[[Any, Mapping[str, Any]], Any]] = {
     "AC_ocr_to_var": exec_ocr_to_var,
     "AC_shell_to_var": exec_shell_to_var,
     "AC_read_file_to_var": exec_read_file_to_var,
+    "AC_pdf_to_var": exec_pdf_to_var,
     "AC_sql_to_var": exec_sql_to_var,
     "AC_assert_db": exec_assert_db,
     "AC_http_to_var": exec_http_to_var,

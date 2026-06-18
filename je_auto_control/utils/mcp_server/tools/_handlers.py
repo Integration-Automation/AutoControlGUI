@@ -1789,6 +1789,36 @@ def assert_db(database: str, query: str, params: Any = None,
     ).to_dict()
 
 
+# --- PDF text + assertion --------------------------------------------------
+
+def extract_pdf_text(path: str, pages: Any = None) -> str:
+    from je_auto_control.utils.pdf.pdf_reader import (
+        extract_pdf_text as _extract,
+    )
+    return _extract(path, pages=pages)
+
+
+def assert_pdf_text(path: str, text: str, present: bool = True,
+                    page: Any = None, case_sensitive: bool = True,
+                    raise_on_fail: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.pdf.pdf_reader import (
+        assert_pdf_text as _assert,
+    )
+    return _assert(path, text, present=bool(present), page=page,
+                   case_sensitive=bool(case_sensitive),
+                   raise_on_fail=bool(raise_on_fail))
+
+
+# --- Send email (SMTP) -----------------------------------------------------
+
+def send_email(message: Dict[str, Any],
+               smtp: Dict[str, Any]) -> Dict[str, Any]:
+    from je_auto_control.utils.email_send.email_sender import (
+        send_email as _send,
+    )
+    return _send(message, smtp)
+
+
 # --- HTTP / API request ----------------------------------------------------
 
 def http_request(url: str, method: str = "GET",
