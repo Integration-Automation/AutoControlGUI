@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 原生 UI 控制](#本次更新-2026-06-19--原生-ui-控制)
 - [本次更新 (2026-06-19)](#本次更新-2026-06-19)
 - [本次更新 (2026-06-18)](#本次更新-2026-06-18)
 - [本次更新 (2026-06-17)](#本次更新-2026-06-17)
@@ -57,6 +58,14 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 原生 UI 控制
+
+对象级桌面自动化:通过 OS 无障碍 API(以 name / role / app / **AutomationId** 定位)读取与操作原生控件,而非点像素或 OCR——对原生 app 可靠得多。无障碍层先前只能 list/find/click,现在还能操作。走完整五层(facade、`AC_*`、MCP、Script Builder),提供 Windows UIAutomation 后端;不支持的后端会抛清楚错误。完整参考:[`docs/source/Eng/doc/new_features/v7_features_doc.rst`](../docs/source/Eng/doc/new_features/v7_features_doc.rst)。
+
+- **读取 / 设置值** — `control_get_value` / `control_set_value`(`AC_control_get_value` / `AC_control_set_value`):读 textbox/combo 值(不用 OCR),一次设置值(不必逐键输入)。
+- **调用 / 切换** — `control_invoke` / `control_toggle`(`AC_control_invoke` / `AC_control_toggle`):通过控件模式按按钮或切换复选框。
+- 以 `name` / `role` / `app_name` / `automation_id`(Windows 稳定标识符)定位,版面/本地化改变也不坏。
 
 ## 本次更新 (2026-06-19)
 

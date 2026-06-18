@@ -1045,6 +1045,53 @@ def webrunner_tools() -> List[MCPTool]:
     ]
 
 
+def a11y_control_tools() -> List[MCPTool]:
+    _M = {
+        "name": {"type": "string"},
+        "role": {"type": "string"},
+        "app_name": {"type": "string"},
+        "automation_id": {"type": "string"},
+    }
+    return [
+        MCPTool(
+            name="ac_control_get_value",
+            description=("Read a native control's value (textbox/combo/etc.) "
+                         "via the OS accessibility API, located by name/role/"
+                         "app_name/automation_id. Far more reliable than OCR. "
+                         "Returns the value string or null."),
+            input_schema=schema(dict(_M)),
+            handler=h.control_get_value,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_control_set_value",
+            description=("Set a native control's value directly (no per-key "
+                         "typing). Located by name/role/app_name/automation_id. "
+                         "Returns true on success."),
+            input_schema=schema({"value": {"type": "string"}, **_M},
+                                required=["value"]),
+            handler=h.control_set_value,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_control_invoke",
+            description=("Invoke a native control's default action (e.g. press "
+                         "a button) via the accessibility API."),
+            input_schema=schema(dict(_M)),
+            handler=h.control_invoke,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_control_toggle",
+            description=("Toggle a native control (e.g. a checkbox/switch) via "
+                         "the accessibility API."),
+            input_schema=schema(dict(_M)),
+            handler=h.control_toggle,
+            annotations=DESTRUCTIVE,
+        ),
+    ]
+
+
 def a11y_tree_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -2547,7 +2594,8 @@ ALL_FACTORIES = (
     mouse_tools, keyboard_tools, screen_tools, image_and_ocr_tools,
     window_tools, system_tools, recording_tools, drag_and_send_tools,
     semantic_locator_tools, self_healing_tools, anchor_locator_tools,
-    ab_locator_tools, a11y_tree_tools, ocr_structure_tools,
+    ab_locator_tools, a11y_tree_tools, a11y_control_tools,
+    ocr_structure_tools,
     smart_wait_tools, cost_telemetry_tools, failure_hook_tools,
     computer_use_tools, dag_tools, presence_tools, chatops_tools,
     redaction_tools, android_widget_tools, ios_tools, webrunner_tools,

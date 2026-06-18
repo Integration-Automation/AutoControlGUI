@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Native UI Control](#whats-new-2026-06-19--native-ui-control)
 - [What's new (2026-06-19)](#whats-new-2026-06-19)
 - [What's new (2026-06-18)](#whats-new-2026-06-18)
 - [What's new (2026-06-17)](#whats-new-2026-06-17)
@@ -58,6 +59,14 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Native UI Control
+
+Object-level desktop automation: read and drive native controls through the OS accessibility API (by name / role / app / **AutomationId**) instead of clicking pixels or OCR-ing text — far more reliable for native apps. The accessibility layer previously only listed/found/clicked; it now also acts. Ships through the full stack (facade, `AC_*`, MCP, Script Builder) with a Windows UIAutomation backend; unsupported backends raise a clear error. Full reference: [`docs/source/Eng/doc/new_features/v7_features_doc.rst`](docs/source/Eng/doc/new_features/v7_features_doc.rst).
+
+- **Read / set value** — `control_get_value` / `control_set_value` (`AC_control_get_value` / `AC_control_set_value`): read a textbox/combo value (no OCR) and set it in one call (no per-key typing).
+- **Invoke / toggle** — `control_invoke` / `control_toggle` (`AC_control_invoke` / `AC_control_toggle`): press a button or flip a checkbox via its control pattern.
+- Targets a control by `name` / `role` / `app_name` / `automation_id` (the stable Windows identifier), so it survives layout/localization changes.
 
 ## What's new (2026-06-19)
 

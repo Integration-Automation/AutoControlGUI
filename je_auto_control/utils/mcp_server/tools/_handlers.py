@@ -719,6 +719,32 @@ def a11y_click(name: Optional[str] = None,
                                              app_name=app_name))
 
 
+def control_get_value(name=None, role=None, app_name=None,
+                      automation_id=None):
+    from je_auto_control.utils.accessibility import control_get_value as _g
+    return _g(name=name, role=role, app_name=app_name,
+              automation_id=automation_id)
+
+
+def control_set_value(value, name=None, role=None, app_name=None,
+                      automation_id=None):
+    from je_auto_control.utils.accessibility import control_set_value as _s
+    return _s(value, name=name, role=role, app_name=app_name,
+              automation_id=automation_id)
+
+
+def control_invoke(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.accessibility import control_invoke as _i
+    return _i(name=name, role=role, app_name=app_name,
+              automation_id=automation_id)
+
+
+def control_toggle(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.accessibility import control_toggle as _t
+    return _t(name=name, role=role, app_name=app_name,
+              automation_id=automation_id)
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

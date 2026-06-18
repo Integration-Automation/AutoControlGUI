@@ -2212,6 +2212,42 @@ def _run_state_machine(spec: Any) -> Dict[str, Any]:
     return run_state_machine(spec)
 
 
+def _control_get_value(name: Optional[str] = None, role: Optional[str] = None,
+                       app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None) -> Optional[str]:
+    """Adapter: read a native control's value via the accessibility backend."""
+    from je_auto_control.utils.accessibility import control_get_value
+    return control_get_value(name=name, role=role, app_name=app_name,
+                             automation_id=automation_id)
+
+
+def _control_set_value(value: str, name: Optional[str] = None,
+                       role: Optional[str] = None, app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None) -> bool:
+    """Adapter: set a native control's value via the accessibility backend."""
+    from je_auto_control.utils.accessibility import control_set_value
+    return control_set_value(value, name=name, role=role, app_name=app_name,
+                             automation_id=automation_id)
+
+
+def _control_invoke(name: Optional[str] = None, role: Optional[str] = None,
+                    app_name: Optional[str] = None,
+                    automation_id: Optional[str] = None) -> bool:
+    """Adapter: invoke a native control (e.g. press a button)."""
+    from je_auto_control.utils.accessibility import control_invoke
+    return control_invoke(name=name, role=role, app_name=app_name,
+                          automation_id=automation_id)
+
+
+def _control_toggle(name: Optional[str] = None, role: Optional[str] = None,
+                    app_name: Optional[str] = None,
+                    automation_id: Optional[str] = None) -> bool:
+    """Adapter: toggle a native control (e.g. a checkbox)."""
+    from je_auto_control.utils.accessibility import control_toggle
+    return control_toggle(name=name, role=role, app_name=app_name,
+                          automation_id=automation_id)
+
+
 class Executor:
     """
     Executor
@@ -2359,6 +2395,10 @@ class Executor:
             "AC_a11y_find": _a11y_find_as_dict,
             "AC_a11y_click": click_accessibility_element,
             "AC_a11y_dump": _a11y_dump,
+            "AC_control_get_value": _control_get_value,
+            "AC_control_set_value": _control_set_value,
+            "AC_control_invoke": _control_invoke,
+            "AC_control_toggle": _control_toggle,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

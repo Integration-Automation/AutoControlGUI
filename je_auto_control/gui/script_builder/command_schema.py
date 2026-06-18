@@ -569,7 +569,37 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
     ))
 
 
+def _add_native_control_specs(specs: List[CommandSpec]) -> None:
+    fields = (
+        FieldSpec("name", FieldType.STRING, optional=True),
+        FieldSpec("role", FieldType.STRING, optional=True),
+        FieldSpec("app_name", FieldType.STRING, optional=True),
+        FieldSpec("automation_id", FieldType.STRING, optional=True),
+    )
+    specs.append(CommandSpec(
+        "AC_control_get_value", "Native UI", "Get Control Value",
+        fields=fields,
+        description="Read a native control's value via the accessibility API.",
+    ))
+    specs.append(CommandSpec(
+        "AC_control_set_value", "Native UI", "Set Control Value",
+        fields=(FieldSpec("value", FieldType.STRING),) + fields,
+        description="Set a native control's value directly (no per-key typing).",
+    ))
+    specs.append(CommandSpec(
+        "AC_control_invoke", "Native UI", "Invoke Control",
+        fields=fields,
+        description="Invoke a native control (e.g. press a button).",
+    ))
+    specs.append(CommandSpec(
+        "AC_control_toggle", "Native UI", "Toggle Control",
+        fields=fields,
+        description="Toggle a native control (e.g. a checkbox).",
+    ))
+
+
 def _add_misc_specs(specs: List[CommandSpec]) -> None:
+    _add_native_control_specs(specs)
     specs.append(CommandSpec(
         "AC_shell_command", "Shell", "Shell Command",
         fields=(FieldSpec("shell_command", FieldType.STRING),),
