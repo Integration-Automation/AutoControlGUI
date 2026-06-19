@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — Agent 工具组](#本次更新-2026-06-19--agent-工具组)
 - [本次更新 (2026-06-19) — 编写与调试](#本次更新-2026-06-19--编写与调试)
 - [本次更新 (2026-06-19) — 测试与工具三件套](#本次更新-2026-06-19--测试与工具三件套)
 - [本次更新 (2026-06-19) — 事务式工作队列](#本次更新-2026-06-19--事务式工作队列)
@@ -63,6 +64,14 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — Agent 工具组
+
+三项供 LLM / agent 驱动自动化使用的纯标准库工具,走完整五层(facade、`AC_*`、MCP、Script Builder)。完整参考:[`docs/source/Zh/doc/new_features/v13_features_doc.rst`](../docs/source/Zh/doc/new_features/v13_features_doc.rst)。
+
+- **技能 / playbook 库** — `SkillLibrary`(`AC_skill_save` / `AC_skill_run` / `AC_skill_list` / `AC_skill_remove` / `AC_skill_search`、`ac_skill_*`):把具名、可重用的动作序列存到磁盘,依名称/说明/标签搜索,并跨执行重播——内存内宏的持久化对应物。
+- **Prompt-injection 防御闸** — `assess_text` / `scan_text` / `redact_text`(`AC_guard_text`、`ac_guard_text`):在把不可信的屏幕/OCR 文本喂给 LLM 前,扫描注入样式(指令覆写、系统提示外泄、jailbreak/聊天模板标记…);返回 `{suspicious, score, findings, redacted}`。
+- **A2A agent card** — `build_agent_card` / `write_agent_card`(`AC_agent_card`、`ac_agent_card`):发布 A2A agent card,让其他 agent 把 AutoControl 当成 GUI 自动化伙伴发现并调用。
 
 ## 本次更新 (2026-06-19) — 编写与调试
 

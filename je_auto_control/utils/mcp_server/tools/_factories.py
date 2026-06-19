@@ -1860,6 +1860,87 @@ def flow_debugger_tools() -> List[MCPTool]:
     ]
 
 
+def skill_library_tools() -> List[MCPTool]:
+    _S = {"path": {"type": "string"}, "name": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_skill_save",
+            description=("Save a reusable action sequence (skill/playbook) "
+                         "under a name, with optional description and tags, "
+                         "for recall and replay across runs."),
+            input_schema=schema({
+                "actions": {"type": "array"},
+                "description": {"type": "string"},
+                "tags": {"type": "array", "items": {"type": "string"}}, **_S},
+                required=["path", "name", "actions"]),
+            handler=h.skill_save,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_skill_run",
+            description="Execute a stored skill's actions; returns the record.",
+            input_schema=schema(dict(_S), required=["path", "name"]),
+            handler=h.skill_run,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_skill_list",
+            description="List saved skill names in a library file.",
+            input_schema=schema({"path": {"type": "string"}},
+                                required=["path"]),
+            handler=h.skill_list,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_skill_remove",
+            description="Delete a saved skill; returns {removed}.",
+            input_schema=schema(dict(_S), required=["path", "name"]),
+            handler=h.skill_remove,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_skill_search",
+            description=("Search skills by name/description/tags; returns "
+                         "matching names."),
+            input_schema=schema({"path": {"type": "string"},
+                                 "query": {"type": "string"}},
+                                required=["path", "query"]),
+            handler=h.skill_search,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def guardrail_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_guard_text",
+            description=("Scan untrusted on-screen / OCR text for prompt-"
+                         "injection patterns before feeding it to an LLM. "
+                         "Returns {suspicious, score, findings, redacted}."),
+            input_schema=schema({"text": {"type": "string"},
+                                 "threshold": {"type": "integer"}},
+                                required=["text"]),
+            handler=h.guard_text,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def a2a_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_agent_card",
+            description=("Build an A2A (agent-to-agent) Agent Card describing "
+                         "AutoControl's skills. Writes to 'path' when given, "
+                         "else returns the card."),
+            input_schema=schema({"path": {"type": "string"}}),
+            handler=h.agent_card,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -2892,6 +2973,7 @@ ALL_FACTORIES = (
     unattended_tools, work_queue_tools,
     synthetic_data_tools, mcp_registry_tools, test_selection_tools,
     element_repository_tools, flow_debugger_tools,
+    skill_library_tools, guardrail_tools, a2a_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

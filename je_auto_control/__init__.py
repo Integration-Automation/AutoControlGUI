@@ -125,6 +125,14 @@ from je_auto_control.utils.mcp_registry import (
 from je_auto_control.utils.element_repository import ElementRepository
 # Step-through debugger / tracer for action lists
 from je_auto_control.utils.flow_debugger import FlowDebugger, trace_actions
+# Persistent library of reusable action sequences (skills/playbooks)
+from je_auto_control.utils.skill_library import Skill, SkillLibrary
+# Heuristic prompt-injection guardrail for untrusted on-screen text
+from je_auto_control.utils.guardrail import (
+    assess_text, redact_text, scan_text,
+)
+# A2A (agent-to-agent) agent card
+from je_auto_control.utils.a2a import build_agent_card, write_agent_card
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -531,6 +539,9 @@ __all__ = [
     "build_server_manifest", "write_server_manifest",
     "ElementRepository",
     "FlowDebugger", "trace_actions",
+    "Skill", "SkillLibrary",
+    "assess_text", "redact_text", "scan_text",
+    "build_agent_card", "write_agent_card",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
