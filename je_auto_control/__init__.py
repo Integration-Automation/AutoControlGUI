@@ -169,6 +169,11 @@ from je_auto_control.utils.checkpoint import (
 from je_auto_control.utils.set_of_marks import (
     mark_click, mark_elements, mark_screen, render_marks, resolve_mark,
 )
+# Semantic screen state (snapshot/diff + structured description)
+from je_auto_control.utils.screen_state import (
+    describe_screen, diff_snapshots, screen_changed, snapshot,
+    snapshot_screen,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -594,6 +599,8 @@ __all__ = [
     "Checkpoint", "CheckpointStore", "run_resumable",
     "mark_click", "mark_elements", "mark_screen", "render_marks",
     "resolve_mark",
+    "describe_screen", "diff_snapshots", "screen_changed", "snapshot",
+    "snapshot_screen",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

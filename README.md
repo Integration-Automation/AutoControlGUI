@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Semantic Screen State](#whats-new-2026-06-19--semantic-screen-state)
 - [What's new (2026-06-19) — Set-of-Marks Overlay](#whats-new-2026-06-19--set-of-marks-overlay)
 - [What's new (2026-06-19) — Checkpoint & Resume](#whats-new-2026-06-19--checkpoint--resume)
 - [What's new (2026-06-19) — i18n / l10n Testing](#whats-new-2026-06-19--i18n--l10n-testing)
@@ -74,6 +75,13 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Semantic Screen State
+
+The semantic companion to the pixel diff, full stack. Full reference: [`docs/source/Eng/doc/new_features/v23_features_doc.rst`](docs/source/Eng/doc/new_features/v23_features_doc.rst).
+
+- **Snapshot & diff** — `snapshot` / `diff_snapshots` / `snapshot_screen` / `screen_changed` (`AC_screen_snapshot` / `AC_screen_diff` / `AC_screen_changed`, `ac_*`): normalize the a11y tree to `{role, name, bbox}` and report what **appeared / vanished / moved** with a human-readable summary — the feedback signal an agent needs to verify a step ("Save dialog appeared").
+- **Describe the screen** — `describe_screen` (`AC_describe_screen`, `ac_describe_screen`): a compact "where am I" — role counts + interactive control labels.
 
 ## What's new (2026-06-19) — Set-of-Marks Overlay
 

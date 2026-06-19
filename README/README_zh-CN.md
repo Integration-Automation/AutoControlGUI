@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 语义屏幕状态](#本次更新-2026-06-19--语义屏幕状态)
 - [本次更新 (2026-06-19) — Set-of-Marks 叠图](#本次更新-2026-06-19--set-of-marks-叠图)
 - [本次更新 (2026-06-19) — 检查点与续跑](#本次更新-2026-06-19--检查点与续跑)
 - [本次更新 (2026-06-19) — i18n / l10n 测试](#本次更新-2026-06-19--i18n--l10n-测试)
@@ -73,6 +74,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 语义屏幕状态
+
+像素差异的语义对应物,走完整五层。完整参考:[`docs/source/Zh/doc/new_features/v23_features_doc.rst`](../docs/source/Zh/doc/new_features/v23_features_doc.rst)。
+
+- **快照与差异** — `snapshot` / `diff_snapshots` / `snapshot_screen` / `screen_changed`(`AC_screen_snapshot` / `AC_screen_diff` / `AC_screen_changed`、`ac_*`):把 a11y 树规范化为 `{role, name, bbox}`,报告**出现 / 消失 / 移动**并附人类可读摘要——agent 验证某步效果所需的反馈信号(「Save 对话框出现了」)。
+- **描述屏幕** — `describe_screen`(`AC_describe_screen`、`ac_describe_screen`):廉价的「我在哪」——各 role 计数 + 交互控件标签。
 
 ## 本次更新 (2026-06-19) — Set-of-Marks 叠图
 
