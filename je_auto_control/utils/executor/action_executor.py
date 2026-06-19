@@ -2863,6 +2863,15 @@ def _scan_secrets(data: Any) -> Dict[str, Any]:
     return {"findings": scan_secrets(data)}
 
 
+def _generate_sop(actions: List[Any], title: str = "Automation Procedure",
+                  path: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: build (or write) a step-by-step SOP from an action list."""
+    from je_auto_control.utils.process_doc import generate_sop, write_sop
+    if path:
+        return {"path": write_sop(actions, path, title=title)}
+    return generate_sop(actions, title=title)
+
+
 class Executor:
     """
     Executor
@@ -3090,6 +3099,7 @@ class Executor:
             "AC_clip_history_stop": _clip_history_stop,
             "AC_heal_stats": _heal_stats,
             "AC_scan_secrets": _scan_secrets,
+            "AC_generate_sop": _generate_sop,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

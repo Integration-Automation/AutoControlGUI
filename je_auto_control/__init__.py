@@ -191,6 +191,10 @@ from je_auto_control.utils.clipboard_history import (
 # Self-heal analytics + action-secrets scanning (audit/analysis)
 from je_auto_control.utils.heal_analytics import analyze_heal_log, heal_stats
 from je_auto_control.utils.secrets_scan import scan_secrets
+# Process-documentation (SOP) generator from an action list
+from je_auto_control.utils.process_doc import (
+    describe_step, generate_sop, write_sop,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -623,6 +627,7 @@ __all__ = [
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
+    "describe_step", "generate_sop", "write_sop",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

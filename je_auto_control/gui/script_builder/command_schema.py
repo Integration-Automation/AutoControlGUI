@@ -667,6 +667,16 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_resilience_specs(specs)
     _add_devex_specs(specs)
     _add_audit_specs(specs)
+    specs.append(CommandSpec(
+        "AC_generate_sop", "Report", "Generate SOP Document",
+        fields=(
+            FieldSpec("title", FieldType.STRING, optional=True,
+                      default="Automation Procedure"),
+            FieldSpec("path", FieldType.FILE_PATH, optional=True),
+        ),
+        description="Build a step-by-step SOP (HTML) from 'actions' (JSON "
+                    "view).",
+    ))
 
 
 def _add_audit_specs(specs: List[CommandSpec]) -> None:

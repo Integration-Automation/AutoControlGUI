@@ -2502,6 +2502,25 @@ def audit_analysis_tools() -> List[MCPTool]:
     ]
 
 
+def process_doc_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_generate_sop",
+            description=("Generate a step-by-step SOP document from an action "
+                         "list (numbered steps + HTML, the Task-Capture "
+                         "deliverable). Writes to 'path' when given, else "
+                         "returns the structured doc."),
+            input_schema=schema({
+                "actions": {"type": "array"},
+                "title": {"type": "string"},
+                "path": {"type": "string"}},
+                required=["actions"]),
+            handler=h.generate_sop,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3559,6 +3578,7 @@ ALL_FACTORIES = (
     checkpoint_tools, set_of_marks_tools, screen_state_tools,
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
+    process_doc_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

@@ -1221,6 +1221,14 @@ def scan_secrets(data):
     return {"findings": _scan(data)}
 
 
+def generate_sop(actions, title="Automation Procedure", path=None):
+    from je_auto_control.utils.process_doc import generate_sop as _gen
+    from je_auto_control.utils.process_doc import write_sop as _write
+    if path:
+        return {"path": _write(actions, path, title=title)}
+    return _gen(actions, title=title)
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:
