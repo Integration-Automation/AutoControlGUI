@@ -1054,6 +1054,26 @@ def observe_stop():
     return {"running": default_observer.running}
 
 
+def generate_sbom(path=None, root="je_auto_control"):
+    from je_auto_control.utils.sbom import build_sbom, write_sbom
+    root_arg = root or None
+    if path:
+        return {"path": write_sbom(path, root_arg)}
+    return {"sbom": build_sbom(root_arg)}
+
+
+def shard_suite(flows, shards=2, history_path=None, window=20):
+    from je_auto_control.utils.test_shard import shard_flows
+    return {"shards": shard_flows(flows, int(shards),
+                                  history_path=history_path,
+                                  window=int(window))}
+
+
+def merge_results(reports):
+    from je_auto_control.utils.test_shard import merge_results as _merge
+    return _merge(reports)
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

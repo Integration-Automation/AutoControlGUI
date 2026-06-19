@@ -149,6 +149,10 @@ from je_auto_control.utils.observer import (
     ScreenObserver, WatchRule, default_observer,
     image_predicate, pixel_predicate, text_predicate,
 )
+# CycloneDX SBOM generation (supply-chain compliance)
+from je_auto_control.utils.sbom import build_sbom, write_sbom
+# Duration-aware suite sharding + shard-result merge
+from je_auto_control.utils.test_shard import merge_results, shard_flows
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -566,6 +570,8 @@ __all__ = [
     "DeterministicRun", "seed_everything",
     "ScreenObserver", "WatchRule", "default_observer",
     "image_predicate", "pixel_predicate", "text_predicate",
+    "build_sbom", "write_sbom",
+    "merge_results", "shard_flows",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

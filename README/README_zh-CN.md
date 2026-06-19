@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — SBOM 与测试分片](#本次更新-2026-06-19--sbom-与测试分片)
 - [本次更新 (2026-06-19) — 反应式观察器](#本次更新-2026-06-19--反应式观察器)
 - [本次更新 (2026-06-19) — WCAG 2.2 审计](#本次更新-2026-06-19--wcag-22-审计)
 - [本次更新 (2026-06-19) — 记忆与确定性](#本次更新-2026-06-19--记忆与确定性)
@@ -68,6 +69,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — SBOM 与测试分片
+
+来自安全与规模研究角度的两项纯标准库运维工具,走完整五层。完整参考:[`docs/source/Zh/doc/new_features/v18_features_doc.rst`](../docs/source/Zh/doc/new_features/v18_features_doc.rst)。
+
+- **CycloneDX SBOM** — `build_sbom` / `write_sbom`(`AC_generate_sbom`、`ac_generate_sbom`):为供应链合规(欧盟 CRA / EO 14028)输出 CycloneDX 1.6 依赖 SBOM(name/version/purl/许可证);`root` 限定某包的闭包,`extra_components` 可纳入 action 文件。无第三方依赖。
+- **时长感知套件分片** — `shard_flows` / `merge_results`(`AC_shard_suite` / `AC_merge_results`):依每个流程历史时长把流程装箱成 N 片(让最慢的 worker 而非测试数量决定总时长),再把各分片报告合并为一份汇总。
 
 ## 本次更新 (2026-06-19) — 反应式观察器
 

@@ -2134,6 +2134,53 @@ def observer_tools() -> List[MCPTool]:
     ]
 
 
+def sbom_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_generate_sbom",
+            description=("Generate a CycloneDX 1.6 SBOM of the project's "
+                         "dependencies (supply-chain compliance). 'root' "
+                         "limits to a distribution's closure (empty = all "
+                         "installed). Writes to 'path' or returns the SBOM."),
+            input_schema=schema({"path": {"type": "string"},
+                                 "root": {"type": "string"}}),
+            handler=h.generate_sbom,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def sharding_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_shard_suite",
+            description=("Split 'flows' into 'shards' balanced lists using "
+                         "historical per-flow duration from run history "
+                         "(greedy bin-pack), so each worker takes ~equal "
+                         "time. Returns the shard lists."),
+            input_schema=schema({
+                "flows": {"type": "array", "items": {"type": "string"}},
+                "shards": {"type": "integer"},
+                "history_path": {"type": "string"},
+                "window": {"type": "integer"},
+            }, required=["flows"]),
+            handler=h.shard_suite,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_merge_results",
+            description=("Merge per-shard report dicts into one consolidated "
+                         "report (sums total/passed/failed/skipped/errors, "
+                         "concatenates results)."),
+            input_schema=schema({
+                "reports": {"type": "array", "items": {"type": "object"}},
+            }, required=["reports"]),
+            handler=h.merge_results,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3187,6 +3234,7 @@ ALL_FACTORIES = (
     element_repository_tools, flow_debugger_tools,
     skill_library_tools, guardrail_tools, a2a_tools, office_tools,
     agent_memory_tools, determinism_tools, observer_tools,
+    sbom_tools, sharding_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

@@ -670,6 +670,33 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="WCAG 2.2 audit: SC-tagged findings + Target Size 2.5.8.",
     ))
     _add_observer_specs(specs)
+    _add_ops_specs(specs)
+
+
+def _add_ops_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_generate_sbom", "Tools", "Generate SBOM (CycloneDX)",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH, optional=True,
+                      default="sbom.cdx.json"),
+            FieldSpec("root", FieldType.STRING, optional=True,
+                      default="je_auto_control"),
+        ),
+        description="Emit a CycloneDX 1.6 dependency SBOM for the project.",
+    ))
+    specs.append(CommandSpec(
+        "AC_shard_suite", "Testing", "Shard Suite (duration-aware)",
+        fields=(
+            FieldSpec("shards", FieldType.INT, default=2),
+            FieldSpec("history_path", FieldType.FILE_PATH, optional=True),
+            FieldSpec("window", FieldType.INT, optional=True, default=20),
+        ),
+        description="Balance 'flows' (JSON view) into N shards by duration.",
+    ))
+    specs.append(CommandSpec(
+        "AC_merge_results", "Testing", "Merge Shard Results",
+        description="Merge per-shard 'reports' (JSON view) into one report.",
+    ))
 
 
 def _add_observer_specs(specs: List[CommandSpec]) -> None:
