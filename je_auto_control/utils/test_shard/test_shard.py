@@ -47,8 +47,12 @@ def shard_flows(flows: List[str], shards: int, *,
     count = max(1, int(shards))
     means = _durations(flows, history_path, int(window))
     known = list(means.values())
-    fallback = (default_weight if default_weight is not None
-                else (sum(known) / len(known) if known else 1.0))
+    if default_weight is not None:
+        fallback = float(default_weight)
+    elif known:
+        fallback = sum(known) / len(known)
+    else:
+        fallback = 1.0
     ordered = sorted(flows, key=lambda f: means.get(f, fallback), reverse=True)
     buckets: List[List[str]] = [[] for _ in range(count)]
     loads = [0.0] * count
@@ -66,7 +70,7 @@ def merge_results(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
     ``results`` lists concatenated.
     """
     reports = list(reports)
-    merged: Dict[str, Any] = {key: 0 for key in _SUM_KEYS}
+    merged: Dict[str, Any] = dict.fromkeys(_SUM_KEYS, 0)
     results: List[Any] = []
     for report in reports:
         for key in _SUM_KEYS:

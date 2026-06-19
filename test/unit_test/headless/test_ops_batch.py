@@ -45,7 +45,8 @@ def test_shard_balances_by_duration(tmp_path):
     # the heavy flow is alone; the three light flows share the other shard
     heavy = [s for s in shards if "slow" in s][0]
     assert heavy == ["slow"]
-    assert sorted(s for s in shards if s != heavy)[0] == ["f1", "f2", "f3"]
+    other = [s for s in shards if s != heavy][0]
+    assert sorted(other) == ["f1", "f2", "f3"]
 
 
 def test_shard_unknown_flows_spread_evenly():

@@ -15,7 +15,7 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-_SCHEMA = "http://cyclonedx.org/schema/bom-1.6.schema.json"
+_SCHEMA = "https://cyclonedx.org/schema/bom-1.6.schema.json"
 _BOM_FORMAT = "CycloneDX"
 _SPEC_VERSION = "1.6"
 
