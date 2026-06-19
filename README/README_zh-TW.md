@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — Agent 可觀測性(GenAI OpenTelemetry Spans)](#本次更新-2026-06-19--agent-可觀測性genai-opentelemetry-spans)
 - [本次更新 (2026-06-19) — 合規控制報告(SOC2 / ISO 27001)](#本次更新-2026-06-19--合規控制報告soc2--iso-27001)
 - [本次更新 (2026-06-19) — Agent 軌跡評估](#本次更新-2026-06-19--agent-軌跡評估)
 - [本次更新 (2026-06-19) — 核准式測試(Golden-Master 基準)](#本次更新-2026-06-19--核准式測試golden-master-基準)
@@ -88,6 +89,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — Agent 可觀測性(GenAI OpenTelemetry Spans)
+
+LLM 執行的 OTel GenAI 慣例 spans。完整參考:[`docs/source/Zh/doc/new_features/v38_features_doc.rst`](../docs/source/Zh/doc/new_features/v38_features_doc.rst)。
+
+- **`AgentTrace`**(`AC_trace_record` / `AC_trace_summary` / `AC_trace_export` / `AC_trace_reset`、`ac_*`):記錄的 span 其屬性遵循 OpenTelemetry **GenAI 語意慣例**(`gen_ai.operation.name`、`gen_ai.system`、`gen_ai.request.model`、`gen_ai.usage.input_tokens`/`output_tokens`、`gen_ai.tool.name`)與 `"{operation} {model}"` span 名稱。`to_otel()` 可送入 OTLP exporter;`summary()` 彙整 token 成本與延遲;`operation()` 情境管理器為即時區塊計時並標記錯誤。純標準函式庫(無 `opentelemetry` 相依)、可注入時鐘;與軌跡評估互補(在此記錄、在那裡評分)。
 
 ## 本次更新 (2026-06-19) — 合規控制報告(SOC2 / ISO 27001)
 

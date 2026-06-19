@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Agent Observability (GenAI OpenTelemetry Spans)](#whats-new-2026-06-19--agent-observability-genai-opentelemetry-spans)
 - [What's new (2026-06-19) — Compliance Control Report (SOC2 / ISO 27001)](#whats-new-2026-06-19--compliance-control-report-soc2--iso-27001)
 - [What's new (2026-06-19) — Agent Trajectory Evaluation](#whats-new-2026-06-19--agent-trajectory-evaluation)
 - [What's new (2026-06-19) — Approval Testing (Golden-Master Baselines)](#whats-new-2026-06-19--approval-testing-golden-master-baselines)
@@ -89,6 +90,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Agent Observability (GenAI OpenTelemetry Spans)
+
+OTel GenAI-convention spans for LLM runs. Full reference: [`docs/source/Eng/doc/new_features/v38_features_doc.rst`](docs/source/Eng/doc/new_features/v38_features_doc.rst).
+
+- **`AgentTrace`** (`AC_trace_record` / `AC_trace_summary` / `AC_trace_export` / `AC_trace_reset`, `ac_*`): records spans whose attributes follow the OpenTelemetry **GenAI semantic conventions** (`gen_ai.operation.name`, `gen_ai.system`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`/`output_tokens`, `gen_ai.tool.name`) and the `"{operation} {model}"` span name. `to_otel()` drops into an OTLP exporter; `summary()` rolls up token cost and latency; an `operation()` context manager times live blocks and marks errors. Pure-stdlib (no `opentelemetry` dep), injectable clock; pairs with trajectory evaluation (record here, score there).
 
 ## What's new (2026-06-19) — Compliance Control Report (SOC2 / ISO 27001)
 

@@ -825,6 +825,37 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Map governance evidence to SOC2/ISO 27001 controls.",
     ))
     specs.append(CommandSpec(
+        "AC_trace_record", "Agent", "Trace: Record Span",
+        fields=(
+            FieldSpec("operation", FieldType.STRING, placeholder="chat"),
+            FieldSpec("model", FieldType.STRING, optional=True),
+            FieldSpec("system", FieldType.STRING, optional=True),
+            FieldSpec("input_tokens", FieldType.INT, optional=True),
+            FieldSpec("output_tokens", FieldType.INT, optional=True),
+            FieldSpec("tool_name", FieldType.STRING, optional=True),
+            FieldSpec("duration_s", FieldType.FLOAT, optional=True,
+                      default=0.0),
+            FieldSpec("status", FieldType.ENUM, optional=True, default="ok",
+                      choices=("ok", "error")),
+        ),
+        description="Record a GenAI-convention span on the default trace.",
+    ))
+    specs.append(CommandSpec(
+        "AC_trace_summary", "Agent", "Trace: Summary",
+        fields=(),
+        description="Roll up the default agent trace (count/tokens/duration).",
+    ))
+    specs.append(CommandSpec(
+        "AC_trace_export", "Agent", "Trace: Export (OTLP)",
+        fields=(),
+        description="Export the default agent trace as OTLP-friendly spans.",
+    ))
+    specs.append(CommandSpec(
+        "AC_trace_reset", "Agent", "Trace: Reset",
+        fields=(),
+        description="Clear the default agent trace.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,
