@@ -957,6 +957,45 @@ def write_presentation(path, slides):
     return {"path": _write(path, slides)}
 
 
+def _agent_memory(db):
+    from je_auto_control.utils.agent_memory import AgentMemory
+    return AgentMemory(db)
+
+
+def _episode_dict(episode):
+    return {"id": episode.id, "goal": episode.goal, "steps": episode.steps,
+            "outcome": episode.outcome, "tags": episode.tags,
+            "score": episode.score}
+
+
+def memory_remember(db, goal, steps=None, outcome="", tags=None):
+    return {"id": _agent_memory(db).remember(
+        goal, steps=steps, outcome=outcome, tags=tags)}
+
+
+def memory_recall(db, query, limit=5):
+    eps = _agent_memory(db).recall(query, limit=int(limit))
+    return {"episodes": [_episode_dict(ep) for ep in eps]}
+
+
+def memory_recent(db, limit=10):
+    eps = _agent_memory(db).recent(limit=int(limit))
+    return {"episodes": [_episode_dict(ep) for ep in eps]}
+
+
+def memory_forget(db, episode_id):
+    return {"removed": _agent_memory(db).forget(int(episode_id))}
+
+
+def memory_stats(db):
+    return _agent_memory(db).stats()
+
+
+def seed_everything(seed=0):
+    from je_auto_control.utils.deterministic import seed_everything as _seed
+    return {"seed": _seed(int(seed))}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

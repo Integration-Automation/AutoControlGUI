@@ -138,6 +138,12 @@ from je_auto_control.utils.office import (
     read_document, read_presentation, read_workbook,
     write_document, write_presentation, write_workbook,
 )
+# Persistent episodic memory for agents (goal -> trajectory -> outcome)
+from je_auto_control.utils.agent_memory import AgentMemory, Episode
+# Deterministic run controls (seeded RNG + frozen wall clock)
+from je_auto_control.utils.deterministic import (
+    DeterministicRun, seed_everything,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -550,6 +556,8 @@ __all__ = [
     "read_workbook", "write_workbook",
     "read_document", "write_document",
     "read_presentation", "write_presentation",
+    "AgentMemory", "Episode",
+    "DeterministicRun", "seed_everything",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
