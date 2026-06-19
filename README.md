@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — i18n / l10n Testing](#whats-new-2026-06-19--i18n--l10n-testing)
 - [What's new (2026-06-19) — Data Quality](#whats-new-2026-06-19--data-quality)
 - [What's new (2026-06-19) — SBOM & Suite Sharding](#whats-new-2026-06-19--sbom--suite-sharding)
 - [What's new (2026-06-19) — Reactive Observer](#whats-new-2026-06-19--reactive-observer)
@@ -71,6 +72,14 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — i18n / l10n Testing
+
+Three pure-stdlib internationalization/localization testing helpers that compound, full stack. Full reference: [`docs/source/Eng/doc/new_features/v20_features_doc.rst`](docs/source/Eng/doc/new_features/v20_features_doc.rst).
+
+- **Pseudo-localization** — `pseudo_localize` / `pseudo_localize_catalog` (`AC_pseudo_localize`, `ac_pseudo_localize`): accent + pad UI strings (placeholders preserved, `⟦…⟧` wrapped) to flush out hardcoded text and pre-stress layout before real translation.
+- **Text-overflow detection** — `check_overflow(elements)` (`AC_check_overflow`, `ac_check_overflow`): flag text whose estimated width exceeds its widget bounds (the #1 l10n bug), computed from the a11y bounds AutoControl already reads.
+- **Catalog completeness** — `check_catalog(base, target)` (`AC_check_catalog`, `ac_check_catalog`): diff a translation catalog for missing / orphaned / empty keys and placeholder mismatches — a CI gate against blank UI.
 
 ## What's new (2026-06-19) — Data Quality
 

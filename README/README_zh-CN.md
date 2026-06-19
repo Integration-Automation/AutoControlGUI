@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — i18n / l10n 测试](#本次更新-2026-06-19--i18n--l10n-测试)
 - [本次更新 (2026-06-19) — 数据质量](#本次更新-2026-06-19--数据质量)
 - [本次更新 (2026-06-19) — SBOM 与测试分片](#本次更新-2026-06-19--sbom-与测试分片)
 - [本次更新 (2026-06-19) — 反应式观察器](#本次更新-2026-06-19--反应式观察器)
@@ -70,6 +71,14 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — i18n / l10n 测试
+
+三项可互相搭配的纯标准库国际化/本地化测试辅助工具,走完整五层。完整参考:[`docs/source/Zh/doc/new_features/v20_features_doc.rst`](../docs/source/Zh/doc/new_features/v20_features_doc.rst)。
+
+- **伪本地化** — `pseudo_localize` / `pseudo_localize_catalog`(`AC_pseudo_localize`、`ac_pseudo_localize`):为 UI 字符串加重音与填充(保留占位符、以 `⟦…⟧` 包裹),在真正翻译前揪出硬编码文本并对版面施压。
+- **文本溢出检测** — `check_overflow(elements)`(`AC_check_overflow`、`ac_check_overflow`):标记估计宽度超过控件边界的文本(本地化头号 bug),由 AutoControl 既有读取的 a11y 边界计算。
+- **目录完整性** — `check_catalog(base, target)`(`AC_check_catalog`、`ac_check_catalog`):比对翻译目录的缺失/多余/空白键与占位符不一致——防止空白 UI 的 CI 闸。
 
 ## 本次更新 (2026-06-19) — 数据质量
 

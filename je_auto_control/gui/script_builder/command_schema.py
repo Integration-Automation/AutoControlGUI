@@ -659,6 +659,7 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_office_specs(specs)
     _add_memory_specs(specs)
     _add_data_quality_specs(specs)
+    _add_i18n_specs(specs)
     specs.append(CommandSpec(
         "AC_wcag_audit", "Accessibility", "WCAG 2.2 Conformance Audit",
         fields=(
@@ -737,6 +738,33 @@ def _add_observer_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_observe_stop", "Flow", "Observe: Stop",
         description="Stop the background observer thread."))
+
+
+def _add_i18n_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_pseudo_localize", "Data", "Pseudo-Localize",
+        fields=(
+            FieldSpec("text", FieldType.STRING, optional=True),
+            FieldSpec("expansion", FieldType.FLOAT, optional=True,
+                      default=0.4),
+        ),
+        description="Accent+pad a string (or 'mapping' via JSON view) for "
+                    "i18n stress testing.",
+    ))
+    specs.append(CommandSpec(
+        "AC_check_overflow", "Data", "Check Text Overflow",
+        fields=(
+            FieldSpec("app_name", FieldType.STRING, optional=True),
+            FieldSpec("avg_char_px", FieldType.FLOAT, optional=True,
+                      default=7.0),
+        ),
+        description="Flag text wider than its widget (translation overflow).",
+    ))
+    specs.append(CommandSpec(
+        "AC_check_catalog", "Data", "Check Translation Catalog",
+        description="Diff 'target' vs 'base' catalog (JSON view): missing / "
+                    "empty / placeholder mismatch.",
+    ))
 
 
 def _add_data_quality_specs(specs: List[CommandSpec]) -> None:

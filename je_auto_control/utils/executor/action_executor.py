@@ -2685,6 +2685,38 @@ def _mask_rows(rows: List[Dict[str, Any]],
     return {"rows": mask_rows(rows, rules)}
 
 
+def _pseudo_localize(text: Optional[str] = None,
+                     mapping: Optional[Dict[str, Any]] = None,
+                     expansion: float = 0.4) -> Dict[str, Any]:
+    """Adapter: pseudo-localize a string or a whole catalog mapping."""
+    from je_auto_control.utils.i18n_test import (
+        pseudo_localize, pseudo_localize_catalog)
+    if mapping is not None:
+        return {"catalog": pseudo_localize_catalog(
+            mapping, expansion=float(expansion))}
+    return {"text": pseudo_localize(text or "", expansion=float(expansion))}
+
+
+def _check_overflow(elements: Optional[List[Any]] = None,
+                    avg_char_px: float = 7.0,
+                    app_name: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: flag text wider than its widget (live a11y unless given)."""
+    from je_auto_control.utils.i18n_test import check_overflow
+    items = elements
+    if items is None:
+        from je_auto_control.utils.accessibility.accessibility_api import (
+            list_accessibility_elements)
+        items = list_accessibility_elements(app_name=app_name)
+    return {"issues": check_overflow(items, avg_char_px=float(avg_char_px))}
+
+
+def _check_catalog(base: Dict[str, Any],
+                   target: Dict[str, Any]) -> Dict[str, Any]:
+    """Adapter: diff a translation catalog against the base locale."""
+    from je_auto_control.utils.i18n_test import check_catalog
+    return check_catalog(base, target)
+
+
 class Executor:
     """
     Executor
@@ -2889,6 +2921,9 @@ class Executor:
             "AC_validate_rows": _validate_rows,
             "AC_extract_fields": _extract_fields,
             "AC_mask_rows": _mask_rows,
+            "AC_pseudo_localize": _pseudo_localize,
+            "AC_check_overflow": _check_overflow,
+            "AC_check_catalog": _check_catalog,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

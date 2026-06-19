@@ -157,6 +157,10 @@ from je_auto_control.utils.test_shard import merge_results, shard_flows
 from je_auto_control.utils.data_quality import (
     extract_fields, mask_rows, validate_rows,
 )
+# i18n / l10n testing: pseudo-localize, overflow + catalog checks
+from je_auto_control.utils.i18n_test import (
+    check_catalog, check_overflow, pseudo_localize, pseudo_localize_catalog,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -577,6 +581,8 @@ __all__ = [
     "build_sbom", "write_sbom",
     "merge_results", "shard_flows",
     "extract_fields", "mask_rows", "validate_rows",
+    "check_catalog", "check_overflow", "pseudo_localize",
+    "pseudo_localize_catalog",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
