@@ -195,6 +195,10 @@ from je_auto_control.utils.secrets_scan import scan_secrets
 from je_auto_control.utils.process_doc import (
     describe_step, generate_sop, write_sop,
 )
+# Eased / tweened interpolated drag
+from je_auto_control.utils.tween_drag import (
+    easing_names, tween_drag, tween_points,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -628,6 +632,7 @@ __all__ = [
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
     "describe_step", "generate_sop", "write_sop",
+    "easing_names", "tween_drag", "tween_points",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

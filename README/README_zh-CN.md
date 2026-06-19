@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 缓动拖拽](#本次更新-2026-06-19--缓动拖拽)
 - [本次更新 (2026-06-19) — 流程文档(SOP)生成器](#本次更新-2026-06-19--流程文档sop生成器)
 - [本次更新 (2026-06-19) — 修复分析与机密扫描](#本次更新-2026-06-19--修复分析与机密扫描)
 - [本次更新 (2026-06-19) — CI 注解与剪贴板历史](#本次更新-2026-06-19--ci-注解与剪贴板历史)
@@ -79,6 +80,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 缓动拖拽
+
+确定性的缓动拖拽。完整参考:[`docs/source/Zh/doc/new_features/v29_features_doc.rst`](../docs/source/Zh/doc/new_features/v29_features_doc.rst)。
+
+- **`tween_points` / `tween_drag` / `easing_names`**(`AC_tween_drag`、`ac_tween_drag`):沿缓动曲线从 `start` 拖到 `end`(linear / ease_in_out_quad / ease_out_cubic / ease_in_cubic)——确定性、纯数学路径、测试可注入 sink;补足人性化抖动。
 
 ## 本次更新 (2026-06-19) — 流程文档(SOP)生成器
 

@@ -2872,6 +2872,16 @@ def _generate_sop(actions: List[Any], title: str = "Automation Procedure",
     return generate_sop(actions, title=title)
 
 
+def _tween_drag(start: List[int], end: List[int], steps: int = 30,
+                easing: str = "ease_in_out_quad",
+                button: str = "mouse_left") -> Dict[str, Any]:
+    """Adapter: drag along an eased path from start to end."""
+    from je_auto_control.utils.tween_drag import tween_drag
+    result = tween_drag(tuple(start), tuple(end), steps=int(steps),
+                        easing=easing, button=button)
+    return {"points": result["points"]}
+
+
 class Executor:
     """
     Executor
@@ -3100,6 +3110,7 @@ class Executor:
             "AC_heal_stats": _heal_stats,
             "AC_scan_secrets": _scan_secrets,
             "AC_generate_sop": _generate_sop,
+            "AC_tween_drag": _tween_drag,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
