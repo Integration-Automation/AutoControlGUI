@@ -660,6 +660,28 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_memory_specs(specs)
     _add_data_quality_specs(specs)
     _add_i18n_specs(specs)
+    _add_checkpoint_specs(specs)
+
+
+def _add_checkpoint_specs(specs: List[CommandSpec]) -> None:
+    run_id = FieldSpec("run_id", FieldType.STRING)
+    db = FieldSpec("db", FieldType.FILE_PATH)
+    specs.append(CommandSpec(
+        "AC_run_resumable", "Flow", "Run Resumable (checkpoint)",
+        fields=(run_id, db),
+        description="Run 'actions' (JSON view) with checkpoint/resume keyed "
+                    "by run_id; resumes past completed steps after a crash.",
+    ))
+    specs.append(CommandSpec(
+        "AC_checkpoint_status", "Flow", "Checkpoint: Status",
+        fields=(run_id, db),
+        description="Return the saved checkpoint for a run (step + variables).",
+    ))
+    specs.append(CommandSpec(
+        "AC_checkpoint_clear", "Flow", "Checkpoint: Clear",
+        fields=(run_id, db),
+        description="Delete a run's checkpoint.",
+    ))
     specs.append(CommandSpec(
         "AC_wcag_audit", "Accessibility", "WCAG 2.2 Conformance Audit",
         fields=(

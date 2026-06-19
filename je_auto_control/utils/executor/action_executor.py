@@ -2717,6 +2717,32 @@ def _check_catalog(base: Dict[str, Any],
     return check_catalog(base, target)
 
 
+def _run_resumable(actions: List[Any], run_id: str, db: str,
+                   variables: Optional[Dict[str, Any]] = None
+                   ) -> Dict[str, Any]:
+    """Adapter: run actions with checkpoint/resume keyed by run_id."""
+    from je_auto_control.utils.checkpoint import CheckpointStore, run_resumable
+    return run_resumable(actions, run_id=run_id,
+                         store=CheckpointStore(db), variables=variables)
+
+
+def _checkpoint_status(run_id: str, db: str) -> Dict[str, Any]:
+    """Adapter: return the saved checkpoint for a run (or null)."""
+    from je_auto_control.utils.checkpoint import CheckpointStore
+    checkpoint = CheckpointStore(db).load(run_id)
+    if checkpoint is None:
+        return {"checkpoint": None}
+    return {"checkpoint": {"run_id": checkpoint.run_id,
+                           "step_index": checkpoint.step_index,
+                           "variables": checkpoint.variables}}
+
+
+def _checkpoint_clear(run_id: str, db: str) -> Dict[str, Any]:
+    """Adapter: delete a run's checkpoint."""
+    from je_auto_control.utils.checkpoint import CheckpointStore
+    return {"cleared": CheckpointStore(db).clear(run_id)}
+
+
 class Executor:
     """
     Executor
@@ -2924,6 +2950,9 @@ class Executor:
             "AC_pseudo_localize": _pseudo_localize,
             "AC_check_overflow": _check_overflow,
             "AC_check_catalog": _check_catalog,
+            "AC_run_resumable": _run_resumable,
+            "AC_checkpoint_status": _checkpoint_status,
+            "AC_checkpoint_clear": _checkpoint_clear,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

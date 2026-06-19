@@ -2269,6 +2269,40 @@ def i18n_tools() -> List[MCPTool]:
     ]
 
 
+def checkpoint_tools() -> List[MCPTool]:
+    _R = {"run_id": {"type": "string"}, "db": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_run_resumable",
+            description=("Run an action list with checkpoint/resume keyed by "
+                         "'run_id': persists step-index+variables after each "
+                         "step to 'db' and, on re-run, resumes past completed "
+                         "steps. Durable execution for long flows."),
+            input_schema=schema({
+                "actions": {"type": "array"},
+                "variables": {"type": "object"}, **_R},
+                required=["actions", "run_id", "db"]),
+            handler=h.run_resumable,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_checkpoint_status",
+            description=("Return the saved checkpoint for a run_id "
+                         "({step_index, variables}) or null."),
+            input_schema=schema(dict(_R), required=["run_id", "db"]),
+            handler=h.checkpoint_status,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_checkpoint_clear",
+            description="Delete a run's checkpoint; returns {cleared}.",
+            input_schema=schema(dict(_R), required=["run_id", "db"]),
+            handler=h.checkpoint_clear,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3323,6 +3357,7 @@ ALL_FACTORIES = (
     skill_library_tools, guardrail_tools, a2a_tools, office_tools,
     agent_memory_tools, determinism_tools, observer_tools,
     sbom_tools, sharding_tools, data_quality_tools, i18n_tools,
+    checkpoint_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
