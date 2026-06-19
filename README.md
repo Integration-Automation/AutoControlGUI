@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Reactive Observer](#whats-new-2026-06-19--reactive-observer)
 - [What's new (2026-06-19) — WCAG 2.2 Audit](#whats-new-2026-06-19--wcag-22-audit)
 - [What's new (2026-06-19) — Memory & Determinism](#whats-new-2026-06-19--memory--determinism)
 - [What's new (2026-06-19) — Office I/O](#whats-new-2026-06-19--office-io)
@@ -68,6 +69,13 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Reactive Observer
+
+A non-blocking screen observer (SikuliX `observe` model), full stack (facade, `AC_*`, MCP, Script Builder). Full reference: [`docs/source/Eng/doc/new_features/v17_features_doc.rst`](docs/source/Eng/doc/new_features/v17_features_doc.rst).
+
+- **`ScreenObserver`** (`AC_observe_add` / `AC_observe_remove` / `AC_observe_list` / `AC_observe_poll` / `AC_observe_start` / `AC_observe_stop`, `ac_observe_*`): register watches that fire on **appear** / **vanish** / **change** of an image/text/pixel and run a callback or action list — react to dialogs/progress/status while the main flow continues.
+- **Testable by design** — detection is an injectable `predicate`; transition logic is unit-tested via `poll_once()` with synthetic values. Built-in `image_predicate` / `text_predicate` / `pixel_predicate` wrap the existing locate/OCR/pixel helpers.
 
 ## What's new (2026-06-19) — WCAG 2.2 Audit
 

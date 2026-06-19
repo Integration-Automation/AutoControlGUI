@@ -669,6 +669,46 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         ),
         description="WCAG 2.2 audit: SC-tagged findings + Target Size 2.5.8.",
     ))
+    _add_observer_specs(specs)
+
+
+def _add_observer_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_observe_add", "Flow", "Observe: Add Watch",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("kind", FieldType.ENUM,
+                      choices=("image", "text", "pixel"), default="image"),
+            FieldSpec("event", FieldType.ENUM,
+                      choices=("appear", "vanish", "change"),
+                      default="appear"),
+            FieldSpec("image", FieldType.FILE_PATH, optional=True),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True,
+                      default=0.8),
+            FieldSpec("text", FieldType.STRING, optional=True),
+            FieldSpec("x", FieldType.INT, optional=True),
+            FieldSpec("y", FieldType.INT, optional=True),
+        ),
+        description="Run 'actions' (JSON view) on appear/vanish/change of an "
+                    "image/text/pixel.",
+    ))
+    specs.append(CommandSpec(
+        "AC_observe_remove", "Flow", "Observe: Remove Watch",
+        fields=(FieldSpec("name", FieldType.STRING),),
+        description="Remove a registered watch.",
+    ))
+    specs.append(CommandSpec(
+        "AC_observe_list", "Flow", "Observe: List Watches",
+        description="List registered watch names."))
+    specs.append(CommandSpec(
+        "AC_observe_poll", "Flow", "Observe: Poll Once",
+        description="Evaluate all watches once; return fired events."))
+    specs.append(CommandSpec(
+        "AC_observe_start", "Flow", "Observe: Start",
+        description="Start the background observer thread."))
+    specs.append(CommandSpec(
+        "AC_observe_stop", "Flow", "Observe: Stop",
+        description="Stop the background observer thread."))
 
 
 def _add_memory_specs(specs: List[CommandSpec]) -> None:

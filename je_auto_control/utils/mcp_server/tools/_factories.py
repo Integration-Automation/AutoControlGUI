@@ -2071,6 +2071,69 @@ def determinism_tools() -> List[MCPTool]:
     ]
 
 
+def observer_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_observe_add",
+            description=("Register a non-blocking watch that runs 'actions' "
+                         "when an image/text/pixel appears, vanishes, or "
+                         "changes. kind=image|text|pixel; event=appear|vanish|"
+                         "change. Provide image+threshold, text, or x+y."),
+            input_schema=schema({
+                "name": {"type": "string"},
+                "kind": {"type": "string",
+                         "enum": ["image", "text", "pixel"]},
+                "event": {"type": "string",
+                          "enum": ["appear", "vanish", "change"]},
+                "actions": {"type": "array"},
+                "image": {"type": "string"},
+                "threshold": {"type": "number"},
+                "text": {"type": "string"},
+                "x": {"type": "integer"}, "y": {"type": "integer"},
+            }, required=["name"]),
+            handler=h.observe_add,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_observe_remove",
+            description="Remove a registered watch by name; returns {removed}.",
+            input_schema=schema({"name": {"type": "string"}},
+                                required=["name"]),
+            handler=h.observe_remove,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_observe_list",
+            description="List registered watch names.",
+            input_schema=schema({}),
+            handler=h.observe_list,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_observe_poll",
+            description=("Evaluate all watches once and return fired events "
+                         "({rule, event, time}); useful without the thread."),
+            input_schema=schema({}),
+            handler=h.observe_poll,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_observe_start",
+            description="Start the background observer poll thread.",
+            input_schema=schema({}),
+            handler=h.observe_start,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_observe_stop",
+            description="Stop the background observer poll thread.",
+            input_schema=schema({}),
+            handler=h.observe_stop,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3123,7 +3186,7 @@ ALL_FACTORIES = (
     synthetic_data_tools, mcp_registry_tools, test_selection_tools,
     element_repository_tools, flow_debugger_tools,
     skill_library_tools, guardrail_tools, a2a_tools, office_tools,
-    agent_memory_tools, determinism_tools,
+    agent_memory_tools, determinism_tools, observer_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
