@@ -2521,6 +2521,26 @@ def process_doc_tools() -> List[MCPTool]:
     ]
 
 
+def tween_drag_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_tween_drag",
+            description=("Drag from 'start' [x,y] to 'end' [x,y] along an "
+                         "eased path (easing: linear / ease_in_out_quad / "
+                         "ease_out_cubic / ease_in_cubic). Returns {points}."),
+            input_schema=schema({
+                "start": {"type": "array", "items": {"type": "integer"}},
+                "end": {"type": "array", "items": {"type": "integer"}},
+                "steps": {"type": "integer"},
+                "easing": {"type": "string"},
+                "button": {"type": "string"}},
+                required=["start", "end"]),
+            handler=h.tween_drag,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3578,7 +3598,7 @@ ALL_FACTORIES = (
     checkpoint_tools, set_of_marks_tools, screen_state_tools,
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
-    process_doc_tools,
+    process_doc_tools, tween_drag_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

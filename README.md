@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Tweened Drag](#whats-new-2026-06-19--tweened-drag)
 - [What's new (2026-06-19) — Process-Doc (SOP) Generator](#whats-new-2026-06-19--process-doc-sop-generator)
 - [What's new (2026-06-19) — Heal Analytics & Secret Scan](#whats-new-2026-06-19--heal-analytics--secret-scan)
 - [What's new (2026-06-19) — CI Annotations & Clipboard History](#whats-new-2026-06-19--ci-annotations--clipboard-history)
@@ -80,6 +81,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Tweened Drag
+
+Deterministic eased drags. Full reference: [`docs/source/Eng/doc/new_features/v29_features_doc.rst`](docs/source/Eng/doc/new_features/v29_features_doc.rst).
+
+- **`tween_points` / `tween_drag` / `easing_names`** (`AC_tween_drag`, `ac_tween_drag`): drag from `start` to `end` along an eased curve (linear / ease_in_out_quad / ease_out_cubic / ease_in_cubic) — deterministic, pure-math path, injectable sink for tests; complements the humanized jitter.
 
 ## What's new (2026-06-19) — Process-Doc (SOP) Generator
 

@@ -1229,6 +1229,13 @@ def generate_sop(actions, title="Automation Procedure", path=None):
     return _gen(actions, title=title)
 
 
+def tween_drag(start, end, steps=30, easing="ease_in_out_quad",
+               button="mouse_left"):
+    from je_auto_control.utils.tween_drag import tween_drag as _td
+    return {"points": _td(tuple(start), tuple(end), steps=int(steps),
+                          easing=easing, button=button)["points"]}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

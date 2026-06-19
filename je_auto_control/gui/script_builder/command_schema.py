@@ -668,6 +668,20 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_devex_specs(specs)
     _add_audit_specs(specs)
     specs.append(CommandSpec(
+        "AC_tween_drag", "Mouse", "Tweened Drag",
+        fields=(
+            FieldSpec("steps", FieldType.INT, optional=True, default=30),
+            FieldSpec("easing", FieldType.ENUM,
+                      choices=("linear", "ease_in_out_quad", "ease_out_cubic",
+                               "ease_in_cubic"),
+                      optional=True, default="ease_in_out_quad"),
+            FieldSpec("button", FieldType.ENUM, choices=_MOUSE_BUTTONS,
+                      optional=True, default="mouse_left"),
+        ),
+        description="Drag along an eased path; 'start'/'end' [x,y] via JSON "
+                    "view.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

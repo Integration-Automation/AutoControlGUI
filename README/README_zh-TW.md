@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — 緩動拖曳](#本次更新-2026-06-19--緩動拖曳)
 - [本次更新 (2026-06-19) — 流程文件(SOP)產生器](#本次更新-2026-06-19--流程文件sop產生器)
 - [本次更新 (2026-06-19) — 修復分析與機密掃描](#本次更新-2026-06-19--修復分析與機密掃描)
 - [本次更新 (2026-06-19) — CI 註解與剪貼簿歷史](#本次更新-2026-06-19--ci-註解與剪貼簿歷史)
@@ -79,6 +80,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — 緩動拖曳
+
+決定性的緩動拖曳。完整參考:[`docs/source/Zh/doc/new_features/v29_features_doc.rst`](../docs/source/Zh/doc/new_features/v29_features_doc.rst)。
+
+- **`tween_points` / `tween_drag` / `easing_names`**(`AC_tween_drag`、`ac_tween_drag`):沿緩動曲線從 `start` 拖到 `end`(linear / ease_in_out_quad / ease_out_cubic / ease_in_cubic)——決定性、純數學路徑、測試可注入 sink;補足人性化抖動。
 
 ## 本次更新 (2026-06-19) — 流程文件(SOP)產生器
 
