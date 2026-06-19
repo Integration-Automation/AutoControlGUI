@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — 影片步驟疊加報告](#本次更新-2026-06-19--影片步驟疊加報告)
 - [本次更新 (2026-06-19) — Agent 可觀測性(GenAI OpenTelemetry Spans)](#本次更新-2026-06-19--agent-可觀測性genai-opentelemetry-spans)
 - [本次更新 (2026-06-19) — 合規控制報告(SOC2 / ISO 27001)](#本次更新-2026-06-19--合規控制報告soc2--iso-27001)
 - [本次更新 (2026-06-19) — Agent 軌跡評估](#本次更新-2026-06-19--agent-軌跡評估)
@@ -89,6 +90,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — 影片步驟疊加報告
+
+將螢幕截圖加上字幕製成走查影片。完整參考:[`docs/source/Zh/doc/new_features/v39_features_doc.rst`](../docs/source/Zh/doc/new_features/v39_features_doc.rst)。
+
+- **`write_step_video`**(`AC_write_step_video`、`ac_write_step_video`):將各步驟的螢幕截圖轉成可分享的影片,每個畫面停留數秒並燒入其字幕與通過/失敗色彩橫幅。組裝邏輯(`build_overlay_plan` / `render_overlay_frame`)透過可注入的 `loader`/`drawer`/`writer_factory` 掛鉤與 OpenCV 分離 —— 可用假物件單元測試、無 `cv2`/`numpy` 相依;真實路徑僅在缺少這些掛鉤時才延遲匯入 `cv2`。為 HTML/JSON 報告的視覺夥伴。
 
 ## 本次更新 (2026-06-19) — Agent 可觀測性(GenAI OpenTelemetry Spans)
 

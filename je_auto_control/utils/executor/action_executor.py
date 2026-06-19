@@ -3056,6 +3056,17 @@ def _trace_reset() -> Dict[str, Any]:
     return {"reset": True}
 
 
+def _write_step_video(steps: Any, output: str, fps: int = 10,
+                      seconds_per_step: float = 2.0) -> Dict[str, Any]:
+    """Adapter: render captioned screenshots into a walkthrough video."""
+    import json
+    from je_auto_control.utils.video_report import write_step_video
+    if isinstance(steps, str):
+        steps = json.loads(steps)
+    return write_step_video(steps, output, fps=fps,
+                            seconds_per_step=seconds_per_step)
+
+
 class Executor:
     """
     Executor
@@ -3307,6 +3318,7 @@ class Executor:
             "AC_trace_summary": _trace_summary,
             "AC_trace_export": _trace_export,
             "AC_trace_reset": _trace_reset,
+            "AC_write_step_video": _write_step_video,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

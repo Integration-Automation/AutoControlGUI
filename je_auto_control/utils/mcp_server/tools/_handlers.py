@@ -1366,6 +1366,12 @@ def trace_reset():
     return {"reset": True}
 
 
+def write_step_video(steps, output, fps=10, seconds_per_step=2.0):
+    from je_auto_control.utils.video_report import (
+        write_step_video as _write)
+    return _write(steps, output, fps=fps, seconds_per_step=seconds_per_step)
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

@@ -2822,6 +2822,28 @@ def agent_trace_tools() -> List[MCPTool]:
     ]
 
 
+def video_report_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_write_step_video",
+            description=("Render captioned screenshots into a walkthrough "
+                         "video. 'steps' is a list of {image (path), caption, "
+                         "status (ok/error)}; each frame is held for "
+                         "'seconds_per_step' at 'fps' with a caption banner "
+                         "burned in. Writes 'output' (mp4/avi). Returns "
+                         "{output, steps, fps, frame_count}."),
+            input_schema=schema(
+                {"steps": {"type": "array", "items": {"type": "object"}},
+                 "output": {"type": "string"},
+                 "fps": {"type": "integer"},
+                 "seconds_per_step": {"type": "number"}},
+                ["steps", "output"]),
+            handler=h.write_step_video,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3882,6 +3904,7 @@ ALL_FACTORIES = (
     process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
+    video_report_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

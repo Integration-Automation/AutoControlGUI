@@ -856,6 +856,18 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Clear the default agent trace.",
     ))
     specs.append(CommandSpec(
+        "AC_write_step_video", "Report", "Step-Overlay Video",
+        fields=(
+            FieldSpec("steps", FieldType.STRING,
+                      placeholder='[{"image": "s1.png", "caption": "Step 1"}]'),
+            FieldSpec("output", FieldType.STRING, default="walkthrough.mp4"),
+            FieldSpec("fps", FieldType.INT, optional=True, default=10),
+            FieldSpec("seconds_per_step", FieldType.FLOAT, optional=True,
+                      default=2.0),
+        ),
+        description="Render captioned screenshots into a walkthrough video.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,
