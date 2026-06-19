@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — Office 读写](#本次更新-2026-06-19--office-读写)
 - [本次更新 (2026-06-19) — Agent 工具组](#本次更新-2026-06-19--agent-工具组)
 - [本次更新 (2026-06-19) — 编写与调试](#本次更新-2026-06-19--编写与调试)
 - [本次更新 (2026-06-19) — 测试与工具三件套](#本次更新-2026-06-19--测试与工具三件套)
@@ -64,6 +65,16 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — Office 读写
+
+Excel/Word/PowerPoint 的 headless 读写,走完整五层(facade、`AC_*`、MCP、Script Builder)。可选 extra:`pip install je_auto_control[office]`。完整参考:[`docs/source/Zh/doc/new_features/v14_features_doc.rst`](../docs/source/Zh/doc/new_features/v14_features_doc.rst)。
+
+- **Excel** — `read_workbook` / `write_workbook`(`AC_read_workbook` / `AC_write_workbook`、`ac_read_workbook` / `ac_write_workbook`):把 `.xlsx` 工作表读成数据行字典(第一行为键)并写回,不需 GUI。
+- **Word** — `read_document` / `write_document`(`AC_read_document` / `AC_write_document`):读写 `.docx` 段落。
+- **PowerPoint** — `read_presentation` / `write_presentation`(`AC_read_presentation` / `AC_write_presentation`):读取每张幻灯片文本;以 `{title, body:[...]}` 写入幻灯片。
+
+背后函式库(`openpyxl`/`python-docx`/`python-pptx`)为可选——缺少时每个调用会抛出清楚错误,且 `import je_auto_control` 不会载入它们。
 
 ## 本次更新 (2026-06-19) — Agent 工具组
 

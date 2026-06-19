@@ -70,6 +70,7 @@ webrtc = ["aiortc>=1.14.0", "av>=14.0.0"]
 signaling = ["fastapi>=0.115", "uvicorn>=0.32"]
 discovery = ["zeroconf>=0.130"]
 pdf = ["pypdf>=4.0"]
+office = ["openpyxl>=3.1", "python-docx>=1.1", "python-pptx>=0.6"]
 
 [tool.bandit]
 exclude_dirs = [

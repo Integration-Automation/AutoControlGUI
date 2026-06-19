@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Office I/O](#whats-new-2026-06-19--office-io)
 - [What's new (2026-06-19) — Agent Toolkit](#whats-new-2026-06-19--agent-toolkit)
 - [What's new (2026-06-19) — Authoring & Debugging](#whats-new-2026-06-19--authoring--debugging)
 - [What's new (2026-06-19) — Test & Tooling Batch](#whats-new-2026-06-19--test--tooling-batch)
@@ -65,6 +66,16 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Office I/O
+
+Headless read/write for Excel/Word/PowerPoint, full stack (facade, `AC_*`, MCP, Script Builder). Optional extra: `pip install je_auto_control[office]`. Full reference: [`docs/source/Eng/doc/new_features/v14_features_doc.rst`](docs/source/Eng/doc/new_features/v14_features_doc.rst).
+
+- **Excel** — `read_workbook` / `write_workbook` (`AC_read_workbook` / `AC_write_workbook`, `ac_read_workbook` / `ac_write_workbook`): read an `.xlsx` worksheet into row dicts (first row = keys) and write rows back, no GUI.
+- **Word** — `read_document` / `write_document` (`AC_read_document` / `AC_write_document`): read/write `.docx` paragraphs.
+- **PowerPoint** — `read_presentation` / `write_presentation` (`AC_read_presentation` / `AC_write_presentation`): read per-slide text; write slides as `{title, body:[...]}`.
+
+The backing libraries (`openpyxl`/`python-docx`/`python-pptx`) are optional — each call raises a clear error if missing, and `import je_auto_control` pulls none of them.
 
 ## What's new (2026-06-19) — Agent Toolkit
 

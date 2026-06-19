@@ -656,6 +656,42 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_tooling_specs(specs)
     _add_authoring_specs(specs)
     _add_agent_specs(specs)
+    _add_office_specs(specs)
+
+
+def _add_office_specs(specs: List[CommandSpec]) -> None:
+    xlsx = FieldSpec("path", FieldType.FILE_PATH)
+    specs.append(CommandSpec(
+        "AC_read_workbook", "Office", "Excel: Read Workbook",
+        fields=(xlsx, FieldSpec("sheet", FieldType.STRING, optional=True)),
+        description="Read an .xlsx worksheet into rows (needs [office] extra).",
+    ))
+    specs.append(CommandSpec(
+        "AC_write_workbook", "Office", "Excel: Write Workbook",
+        fields=(xlsx, FieldSpec("sheet", FieldType.STRING, optional=True,
+                                default="Sheet1")),
+        description="Write 'rows' (JSON view) to an .xlsx file.",
+    ))
+    specs.append(CommandSpec(
+        "AC_read_document", "Office", "Word: Read Document",
+        fields=(xlsx,),
+        description="Read a .docx file's paragraphs (needs [office] extra).",
+    ))
+    specs.append(CommandSpec(
+        "AC_write_document", "Office", "Word: Write Document",
+        fields=(xlsx,),
+        description="Write 'paragraphs' (JSON view) to a .docx file.",
+    ))
+    specs.append(CommandSpec(
+        "AC_read_presentation", "Office", "PowerPoint: Read",
+        fields=(xlsx,),
+        description="Read a .pptx file's per-slide text (needs [office]).",
+    ))
+    specs.append(CommandSpec(
+        "AC_write_presentation", "Office", "PowerPoint: Write",
+        fields=(xlsx,),
+        description="Write 'slides' (JSON view) to a .pptx file.",
+    ))
 
 
 def _add_authoring_specs(specs: List[CommandSpec]) -> None:
