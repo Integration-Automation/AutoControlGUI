@@ -226,6 +226,10 @@ from je_auto_control.utils.compliance import (
 from je_auto_control.utils.agent_trace import (
     AgentTrace, default_trace, reset_trace,
 )
+# Video step-overlay report: caption screenshots into a walkthrough video
+from je_auto_control.utils.video_report import (
+    VideoStep, build_overlay_plan, render_overlay_frame, write_step_video,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -670,6 +674,8 @@ __all__ = [
     "build_compliance_report", "render_compliance_html",
     "write_compliance_report",
     "AgentTrace", "default_trace", "reset_trace",
+    "VideoStep", "build_overlay_plan", "render_overlay_frame",
+    "write_step_video",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
