@@ -240,7 +240,8 @@ from je_auto_control.utils.quarantine import (
 # Accessibility / i18n audit (missing labels, WCAG contrast, truncation)
 from je_auto_control.utils.a11y_audit import (
     AuditIssue, AuditReport, audit_contrast, audit_missing_labels,
-    contrast_ratio, detect_truncation, run_audit,
+    audit_target_size, contrast_ratio, detect_truncation, run_audit,
+    wcag_audit,
 )
 # Mobile device matrix (parallel script execution across devices)
 from je_auto_control.utils.device_matrix import (
@@ -676,7 +677,8 @@ __all__ = [
     "auto_quarantine_from_flakiness", "default_quarantine_store",
     # Accessibility / i18n audit
     "AuditIssue", "AuditReport", "audit_contrast", "audit_missing_labels",
-    "contrast_ratio", "detect_truncation", "run_audit",
+    "audit_target_size", "contrast_ratio", "detect_truncation", "run_audit",
+    "wcag_audit",
     # Mobile device matrix
     "DeviceResult", "MatrixReport", "run_on_devices",
     # Media assertions

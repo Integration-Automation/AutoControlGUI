@@ -2257,6 +2257,18 @@ def audit_contrast(foreground: List[int], background: List[int],
     }
 
 
+def wcag_audit(app_name: Optional[str] = None,
+               contrast_pairs: Optional[List[Dict[str, Any]]] = None,
+               texts: Optional[List[str]] = None, level: str = "AA",
+               min_target_px: int = 24,
+               max_results: int = 500) -> Dict[str, Any]:
+    from je_auto_control.utils.a11y_audit import wcag_audit as _wcag
+    return _wcag(
+        app_name=app_name, contrast_pairs=contrast_pairs, texts=texts,
+        level=str(level), min_target_px=int(min_target_px),
+        max_results=int(max_results))
+
+
 # --- Mobile device matrix --------------------------------------------------
 
 def run_device_matrix(actions: List[Any], devices: List[Dict[str, Any]],

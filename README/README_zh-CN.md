@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — WCAG 2.2 审计](#本次更新-2026-06-19--wcag-22-审计)
 - [本次更新 (2026-06-19) — 记忆与确定性](#本次更新-2026-06-19--记忆与确定性)
 - [本次更新 (2026-06-19) — Office 读写](#本次更新-2026-06-19--office-读写)
 - [本次更新 (2026-06-19) — Agent 工具组](#本次更新-2026-06-19--agent-工具组)
@@ -66,6 +67,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — WCAG 2.2 审计
+
+无障碍审计新增 WCAG 2.2 / EN 301 549 成功准则层,走完整五层(facade、`AC_*`、MCP、Script Builder)。完整参考:[`docs/source/Zh/doc/new_features/v16_features_doc.rst`](../docs/source/Zh/doc/new_features/v16_features_doc.rst)。
+
+- **WCAG 标注合规审计** — `wcag_audit(level="AA")`(`AC_wcag_audit`、`ac_wcag_audit`):为每个缺陷标注 WCAG 成功准则编号/等级/影响(4.1.2、1.4.3、1.4.10),返回含 `by_criterion`/`by_impact` 计数的合规报告,按 A/AA/AAA 过滤——可对应 EN 301 549 作为 EAA 合规证据。
+- **目标尺寸(SC 2.5.8)** — `audit_target_size(elements, min_px=24)`:WCAG 2.2 新规则,由元素 bounds 标记小于 24×24 px 的交互目标;`tag_issue` 可为任何既有审计问题加上 SC 标注。
 
 ## 本次更新 (2026-06-19) — 记忆与确定性
 

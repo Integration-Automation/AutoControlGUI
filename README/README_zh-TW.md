@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — WCAG 2.2 稽核](#本次更新-2026-06-19--wcag-22-稽核)
 - [本次更新 (2026-06-19) — 記憶與決定性](#本次更新-2026-06-19--記憶與決定性)
 - [本次更新 (2026-06-19) — Office 讀寫](#本次更新-2026-06-19--office-讀寫)
 - [本次更新 (2026-06-19) — Agent 工具組](#本次更新-2026-06-19--agent-工具組)
@@ -66,6 +67,13 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — WCAG 2.2 稽核
+
+無障礙稽核新增 WCAG 2.2 / EN 301 549 成功準則層,走完整五層(facade、`AC_*`、MCP、Script Builder)。完整參考:[`docs/source/Zh/doc/new_features/v16_features_doc.rst`](../docs/source/Zh/doc/new_features/v16_features_doc.rst)。
+
+- **WCAG 標註符合度稽核** — `wcag_audit(level="AA")`(`AC_wcag_audit`、`ac_wcag_audit`):為每個缺陷標註 WCAG 成功準則編號/等級/影響(4.1.2、1.4.3、1.4.10),回傳含 `by_criterion`/`by_impact` 計數的符合度報告,依 A/AA/AAA 過濾——可對應 EN 301 549 作為 EAA 合規證據。
+- **目標尺寸(SC 2.5.8)** — `audit_target_size(elements, min_px=24)`:WCAG 2.2 新規則,由元素 bounds 標記小於 24×24 px 的互動目標;`tag_issue` 可為任何既有稽核問題加上 SC 標註。
 
 ## 本次更新 (2026-06-19) — 記憶與決定性
 

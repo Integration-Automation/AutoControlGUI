@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — WCAG 2.2 Audit](#whats-new-2026-06-19--wcag-22-audit)
 - [What's new (2026-06-19) — Memory & Determinism](#whats-new-2026-06-19--memory--determinism)
 - [What's new (2026-06-19) — Office I/O](#whats-new-2026-06-19--office-io)
 - [What's new (2026-06-19) — Agent Toolkit](#whats-new-2026-06-19--agent-toolkit)
@@ -67,6 +68,13 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — WCAG 2.2 Audit
+
+The accessibility audit gains a WCAG 2.2 / EN 301 549 success-criterion layer, full stack (facade, `AC_*`, MCP, Script Builder). Full reference: [`docs/source/Eng/doc/new_features/v16_features_doc.rst`](docs/source/Eng/doc/new_features/v16_features_doc.rst).
+
+- **WCAG-tagged conformance audit** — `wcag_audit(level="AA")` (`AC_wcag_audit`, `ac_wcag_audit`): tags every defect with its WCAG success-criterion id/level/impact (4.1.2, 1.4.3, 1.4.10) and returns a conformance report with `by_criterion`/`by_impact` counts, filtered to A/AA/AAA — mappable to EN 301 549 for EAA compliance evidence.
+- **Target Size (SC 2.5.8)** — `audit_target_size(elements, min_px=24)`: new WCAG 2.2 rule flagging interactive targets smaller than 24×24 px, computed from element bounds; `tag_issue` adds SC tagging to any existing audit issue.
 
 ## What's new (2026-06-19) — Memory & Determinism
 
