@@ -2967,6 +2967,30 @@ def _egress_reset() -> Dict[str, Any]:
     return {"allow": None, "deny": []}
 
 
+def _verify_artifact(name: str, content: Any,
+                     approvals_dir: str = ".approvals",
+                     extension: str = "txt") -> Dict[str, Any]:
+    """Adapter: verify an artifact against its approved baseline."""
+    from je_auto_control.utils.approval import verify_artifact
+    result = verify_artifact(name, content, approvals_dir, extension)
+    return {"status": result.status, "match": result.match,
+            "approved_path": result.approved_path,
+            "received_path": result.received_path}
+
+
+def _approve_artifact(name: str, approvals_dir: str = ".approvals",
+                      extension: str = "txt") -> Dict[str, Any]:
+    """Adapter: promote a received artifact to the approved baseline."""
+    from je_auto_control.utils.approval import approve_artifact
+    return {"approved": approve_artifact(name, approvals_dir, extension)}
+
+
+def _pending_artifacts(approvals_dir: str = ".approvals") -> Dict[str, Any]:
+    """Adapter: list artifacts awaiting approval."""
+    from je_auto_control.utils.approval import pending_artifacts
+    return {"pending": pending_artifacts(approvals_dir)}
+
+
 class Executor:
     """
     Executor
@@ -3209,6 +3233,9 @@ class Executor:
             "AC_egress_allow": _egress_allow,
             "AC_egress_check": _egress_check,
             "AC_egress_reset": _egress_reset,
+            "AC_verify_artifact": _verify_artifact,
+            "AC_approve_artifact": _approve_artifact,
+            "AC_pending_artifacts": _pending_artifacts,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

@@ -773,6 +773,35 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Clear the egress policy back to allow-all.",
     ))
     specs.append(CommandSpec(
+        "AC_verify_artifact", "Testing", "Approval: Verify Artifact",
+        fields=(
+            FieldSpec("name", FieldType.STRING, placeholder="login_screen"),
+            FieldSpec("content", FieldType.STRING),
+            FieldSpec("approvals_dir", FieldType.STRING, optional=True,
+                      default=".approvals"),
+            FieldSpec("extension", FieldType.STRING, optional=True,
+                      default="txt"),
+        ),
+        description="Compare content to its approved baseline (snapshot test).",
+    ))
+    specs.append(CommandSpec(
+        "AC_approve_artifact", "Testing", "Approval: Promote Received",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("approvals_dir", FieldType.STRING, optional=True,
+                      default=".approvals"),
+            FieldSpec("extension", FieldType.STRING, optional=True,
+                      default="txt"),
+        ),
+        description="Promote a received artifact to the approved baseline.",
+    ))
+    specs.append(CommandSpec(
+        "AC_pending_artifacts", "Testing", "Approval: List Pending",
+        fields=(FieldSpec("approvals_dir", FieldType.STRING, optional=True,
+                          default=".approvals"),),
+        description="List artifacts awaiting approval.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

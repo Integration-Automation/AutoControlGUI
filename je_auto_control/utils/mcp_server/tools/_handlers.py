@@ -1305,6 +1305,26 @@ def egress_reset():
     return {"allow": None, "deny": []}
 
 
+def verify_artifact(name: str, content, approvals_dir: str = ".approvals",
+                    extension: str = "txt"):
+    from je_auto_control.utils.approval import verify_artifact as _verify
+    result = _verify(name, content, approvals_dir, extension)
+    return {"status": result.status, "match": result.match,
+            "approved_path": result.approved_path,
+            "received_path": result.received_path}
+
+
+def approve_artifact(name: str, approvals_dir: str = ".approvals",
+                     extension: str = "txt"):
+    from je_auto_control.utils.approval import approve_artifact as _approve
+    return {"approved": _approve(name, approvals_dir, extension)}
+
+
+def pending_artifacts(approvals_dir: str = ".approvals"):
+    from je_auto_control.utils.approval import pending_artifacts as _pending
+    return {"pending": _pending(approvals_dir)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

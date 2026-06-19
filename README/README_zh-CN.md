@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 核准式测试(Golden-Master 基准)](#本次更新-2026-06-19--核准式测试golden-master-基准)
 - [本次更新 (2026-06-19) — 网络出口允许清单守卫](#本次更新-2026-06-19--网络出口允许清单守卫)
 - [本次更新 (2026-06-19) — 即时凭证租约](#本次更新-2026-06-19--即时凭证租约)
 - [本次更新 (2026-06-19) — Maker-Checker 审批闸门](#本次更新-2026-06-19--maker-checker-审批闸门)
@@ -85,6 +86,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 核准式测试(Golden-Master 基准)
+
+将输出锁定到人工核准的基准。完整参考:[`docs/source/Zh/doc/new_features/v35_features_doc.rst`](../docs/source/Zh/doc/new_features/v35_features_doc.rst)。
+
+- **`verify_artifact` / `approve_artifact`**(`AC_verify_artifact` / `AC_approve_artifact` / `AC_pending_artifacts`、`ac_*`):对*任何*产物(文本、JSON、OCR 输出、屏幕截图字节)进行 golden-master / snapshot 测试。`verify_artifact` 将产出内容与 `<name>.approved.<ext>` 比对;不符或缺少基准会写入 `<name>.received.<ext>` 供审查并失败,`approve_artifact` 则将审查后的 received 文件晋升为基准。以与测试一起提交、受审查把关的基准补强逐像素比对;名称会经过路径穿越检查。
 
 ## 本次更新 (2026-06-19) — 网络出口允许清单守卫
 
