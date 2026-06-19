@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Process-Doc (SOP) Generator](#whats-new-2026-06-19--process-doc-sop-generator)
 - [What's new (2026-06-19) — Heal Analytics & Secret Scan](#whats-new-2026-06-19--heal-analytics--secret-scan)
 - [What's new (2026-06-19) — CI Annotations & Clipboard History](#whats-new-2026-06-19--ci-annotations--clipboard-history)
 - [What's new (2026-06-19) — Resilience Primitives](#whats-new-2026-06-19--resilience-primitives)
@@ -79,6 +80,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Process-Doc (SOP) Generator
+
+Turn an action list into a step-by-step SOP. Full reference: [`docs/source/Eng/doc/new_features/v28_features_doc.rst`](docs/source/Eng/doc/new_features/v28_features_doc.rst).
+
+- **`generate_sop` / `write_sop`** (`AC_generate_sop`, `ac_generate_sop`): map a recorded/authored action list to numbered, human-readable steps + an HTML document (UiPath Task-Capture deliverable); content HTML-escaped, unknown commands degrade gracefully.
 
 ## What's new (2026-06-19) — Heal Analytics & Secret Scan
 
