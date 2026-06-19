@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — MCP 結構化輸出](#本次更新-2026-06-19--mcp-結構化輸出)
 - [本次更新 (2026-06-19) — 緩動拖曳](#本次更新-2026-06-19--緩動拖曳)
 - [本次更新 (2026-06-19) — 流程文件(SOP)產生器](#本次更新-2026-06-19--流程文件sop產生器)
 - [本次更新 (2026-06-19) — 修復分析與機密掃描](#本次更新-2026-06-19--修復分析與機密掃描)
@@ -80,6 +81,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — MCP 結構化輸出
+
+MCP 2025-06-18 結構化工具輸出。完整參考:[`docs/source/Zh/doc/new_features/v30_features_doc.rst`](../docs/source/Zh/doc/new_features/v30_features_doc.rst)。
+
+- **`MCPTool(output_schema=...)`** — 工具可宣告 `outputSchema`;其 dict 結果會在 `tools/call` 回應以 `structuredContent` 回傳,讓用戶端/LLM 消費型別化、經 schema 驗證的物件而非重新解析文字。`to_descriptor()` 會在 `tools/list` 公告;非 dict 結果與未宣告 schema 的工具行為不變。`ac_validate_rows` 為首個採用。
 
 ## 本次更新 (2026-06-19) — 緩動拖曳
 

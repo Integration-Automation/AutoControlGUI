@@ -580,10 +580,15 @@ class MCPServer:
             tool=name, arguments=arguments, status="ok",
             duration_seconds=time.monotonic() - started_at,
         )
-        return {
+        response: Dict[str, Any] = {
             "content": _to_content_blocks(result),
             "isError": False,
         }
+        # 2025-06-18 spec: tools with an outputSchema return their dict result
+        # as structuredContent for typed, token-cheap client consumption.
+        if tool.output_schema is not None and isinstance(result, dict):
+            response["structuredContent"] = result
+        return response
 
     def request_elicitation(self, message: str,
                             requested_schema: Optional[Dict[str, Any]] = None,

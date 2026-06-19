@@ -86,15 +86,19 @@ class MCPTool:
     input_schema: Dict[str, Any]
     handler: Callable[..., Any]
     annotations: MCPToolAnnotations = MCPToolAnnotations()
+    output_schema: Optional[Dict[str, Any]] = None
 
     def to_descriptor(self) -> Dict[str, Any]:
         """Return the dict shape MCP clients expect from ``tools/list``."""
-        return {
+        descriptor: Dict[str, Any] = {
             "name": self.name,
             "description": self.description,
             "inputSchema": self.input_schema,
             "annotations": self.annotations.to_dict(),
         }
+        if self.output_schema is not None:
+            descriptor["outputSchema"] = self.output_schema
+        return descriptor
 
     def invoke(self, arguments: Dict[str, Any], ctx: Any = None) -> Any:
         """Call the underlying handler with keyword arguments.
