@@ -176,6 +176,10 @@ from je_auto_control.utils.screen_state import (
 )
 # Timed input replay + declarative input-sequence DSL
 from je_auto_control.utils.input_macro import replay_timeline, run_sequence
+# Resilience primitives (retry-with-backoff + circuit breaker)
+from je_auto_control.utils.resilience import (
+    CircuitBreaker, CircuitOpenError, RetryPolicy, retry_call,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -604,6 +608,7 @@ __all__ = [
     "describe_screen", "diff_snapshots", "screen_changed", "snapshot",
     "snapshot_screen",
     "replay_timeline", "run_sequence",
+    "CircuitBreaker", "CircuitOpenError", "RetryPolicy", "retry_call",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
