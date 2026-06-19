@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — CI 注解与剪贴板历史](#本次更新-2026-06-19--ci-注解与剪贴板历史)
 - [本次更新 (2026-06-19) — 韧性原语](#本次更新-2026-06-19--韧性原语)
 - [本次更新 (2026-06-19) — 计时输入宏](#本次更新-2026-06-19--计时输入宏)
 - [本次更新 (2026-06-19) — 语义屏幕状态](#本次更新-2026-06-19--语义屏幕状态)
@@ -76,6 +77,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — CI 注解与剪贴板历史
+
+两项纯标准库工具。完整参考:[`docs/source/Zh/doc/new_features/v26_features_doc.rst`](../docs/source/Zh/doc/new_features/v26_features_doc.rst)。
+
+- **CI 注解** — `emit_annotations(results)`(`AC_ci_annotations`、`ac_ci_annotations`):把结果 dict 转成 GitHub Actions 工作流命令(`::error file=...,line=...::msg`),让失败在 PR 行内显示,免 reporter action。
+- **剪贴板历史** — `ClipboardHistory` / `default_clipboard_history`(`AC_clip_history_capture`/`list`/`search`/`start`/`stop`、`ac_clip_history_*`):有上限、可搜索、最新在前的复制文本环形缓冲,含可选后台轮询器。
 
 ## 本次更新 (2026-06-19) — 韧性原语
 

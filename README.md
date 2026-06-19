@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — CI Annotations & Clipboard History](#whats-new-2026-06-19--ci-annotations--clipboard-history)
 - [What's new (2026-06-19) — Resilience Primitives](#whats-new-2026-06-19--resilience-primitives)
 - [What's new (2026-06-19) — Timed Input Macros](#whats-new-2026-06-19--timed-input-macros)
 - [What's new (2026-06-19) — Semantic Screen State](#whats-new-2026-06-19--semantic-screen-state)
@@ -77,6 +78,13 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — CI Annotations & Clipboard History
+
+Two pure-stdlib utilities. Full reference: [`docs/source/Eng/doc/new_features/v26_features_doc.rst`](docs/source/Eng/doc/new_features/v26_features_doc.rst).
+
+- **CI annotations** — `emit_annotations(results)` (`AC_ci_annotations`, `ac_ci_annotations`): turn result dicts into GitHub Actions workflow commands (`::error file=...,line=...::msg`) so failures show inline in a PR, no reporter action needed.
+- **Clipboard history** — `ClipboardHistory` / `default_clipboard_history` (`AC_clip_history_capture`/`list`/`search`/`start`/`stop`, `ac_clip_history_*`): a capped, searchable, newest-first ring buffer of copied text with an optional background poller.
 
 ## What's new (2026-06-19) — Resilience Primitives
 
