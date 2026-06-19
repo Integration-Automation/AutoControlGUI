@@ -2370,6 +2370,36 @@ def screen_state_tools() -> List[MCPTool]:
     ]
 
 
+def input_macro_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_replay_timeline",
+            description=("Replay a list of input events honoring each event's "
+                         "'delta_ms' gap, scaled by 'speed' (2.0 = twice as "
+                         "fast). Events are {op, ...} (op=move/click/press/"
+                         "release/key/scroll). Returns {played}."),
+            input_schema=schema({
+                "events": {"type": "array", "items": {"type": "object"}},
+                "speed": {"type": "number"}},
+                required=["events"]),
+            handler=h.replay_timeline,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_input_sequence",
+            description=("Run a declarative input sequence: 'steps' of {op: "
+                         "press|release|key|click|move|scroll} plus {op:wait,"
+                         "ms} and {op:repeat,times,steps:[...]}. Encodes "
+                         "press-hold-release chords. Returns the {log}."),
+            input_schema=schema({
+                "steps": {"type": "array", "items": {"type": "object"}}},
+                required=["steps"]),
+            handler=h.input_sequence,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3425,6 +3455,7 @@ ALL_FACTORIES = (
     agent_memory_tools, determinism_tools, observer_tools,
     sbom_tools, sharding_tools, data_quality_tools, i18n_tools,
     checkpoint_tools, set_of_marks_tools, screen_state_tools,
+    input_macro_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

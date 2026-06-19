@@ -663,6 +663,21 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_checkpoint_specs(specs)
     _add_set_of_marks_specs(specs)
     _add_screen_state_specs(specs)
+    _add_input_macro_specs(specs)
+
+
+def _add_input_macro_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_replay_timeline", "Flow", "Replay Timed Events",
+        fields=(FieldSpec("speed", FieldType.FLOAT, optional=True,
+                          default=1.0),),
+        description="Replay 'events' (JSON view) honoring delta_ms, scaled by "
+                    "speed.",
+    ))
+    specs.append(CommandSpec(
+        "AC_input_sequence", "Flow", "Run Input Sequence (DSL)",
+        description="Run 'steps' (JSON view): press/hold/release/repeat/wait.",
+    ))
 
 
 def _add_screen_state_specs(specs: List[CommandSpec]) -> None:

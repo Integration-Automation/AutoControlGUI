@@ -2781,6 +2781,19 @@ def _describe_screen(app_name: Optional[str] = None) -> Dict[str, Any]:
     return describe_screen(app_name=app_name)
 
 
+def _replay_timeline(events: List[Dict[str, Any]],
+                     speed: float = 1.0) -> Dict[str, Any]:
+    """Adapter: replay timed input events at a speed multiplier."""
+    from je_auto_control.utils.input_macro import replay_timeline
+    return {"played": replay_timeline(events, speed=float(speed))}
+
+
+def _input_sequence(steps: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Adapter: run a declarative input sequence (press/hold/repeat/...)."""
+    from je_auto_control.utils.input_macro import run_sequence
+    return {"log": run_sequence(steps)}
+
+
 class Executor:
     """
     Executor
@@ -2997,6 +3010,8 @@ class Executor:
             "AC_screen_diff": _screen_diff,
             "AC_screen_changed": _screen_changed,
             "AC_describe_screen": _describe_screen,
+            "AC_replay_timeline": _replay_timeline,
+            "AC_input_sequence": _input_sequence,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
