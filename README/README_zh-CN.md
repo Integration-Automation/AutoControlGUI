@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — Plugin SDK](#本次更新-2026-06-19--plugin-sdk)
 - [本次更新 (2026-06-19) — MCP 结构化输出](#本次更新-2026-06-19--mcp-结构化输出)
 - [本次更新 (2026-06-19) — 缓动拖拽](#本次更新-2026-06-19--缓动拖拽)
 - [本次更新 (2026-06-19) — 流程文档(SOP)生成器](#本次更新-2026-06-19--流程文档sop生成器)
@@ -81,6 +82,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — Plugin SDK
+
+通过 entry points 注册第三方 `AC_*` 指令。完整参考:[`docs/source/Zh/doc/new_features/v31_features_doc.rst`](../docs/source/Zh/doc/new_features/v31_features_doc.rst)。
+
+- **`discover_plugins` / `load_plugins`**(`AC_list_plugins` / `AC_load_plugins`、`ac_*`):pip 包以 `je_auto_control.commands` entry-point 组声明式注册新执行器指令;AutoControl 于运行期发现并注册(立即可用于 JSON 流程、socket server、调度器、MCP)。坏插件会跳过;为运行期路径加载器的声明式、带命名空间对应物。
 
 ## 本次更新 (2026-06-19) — MCP 结构化输出
 

@@ -1236,6 +1236,16 @@ def tween_drag(start, end, steps=30, easing="ease_in_out_quad",
                           easing=easing, button=button)["points"]}
 
 
+def list_plugins(group="je_auto_control.commands"):
+    from je_auto_control.utils.plugin_sdk import discover_plugins
+    return {"commands": sorted(discover_plugins(group))}
+
+
+def load_plugins(group="je_auto_control.commands"):
+    from je_auto_control.utils.plugin_sdk import load_plugins as _load
+    return {"loaded": _load(group)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

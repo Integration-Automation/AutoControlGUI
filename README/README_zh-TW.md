@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — Plugin SDK](#本次更新-2026-06-19--plugin-sdk)
 - [本次更新 (2026-06-19) — MCP 結構化輸出](#本次更新-2026-06-19--mcp-結構化輸出)
 - [本次更新 (2026-06-19) — 緩動拖曳](#本次更新-2026-06-19--緩動拖曳)
 - [本次更新 (2026-06-19) — 流程文件(SOP)產生器](#本次更新-2026-06-19--流程文件sop產生器)
@@ -81,6 +82,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — Plugin SDK
+
+透過 entry points 註冊第三方 `AC_*` 指令。完整參考:[`docs/source/Zh/doc/new_features/v31_features_doc.rst`](../docs/source/Zh/doc/new_features/v31_features_doc.rst)。
+
+- **`discover_plugins` / `load_plugins`**(`AC_list_plugins` / `AC_load_plugins`、`ac_*`):pip 套件以 `je_auto_control.commands` entry-point 群組宣告式註冊新執行器指令;AutoControl 於執行期探索並註冊(立即可用於 JSON 流程、socket server、排程器、MCP)。壞外掛會略過;為執行期路徑載入器的宣告式、具命名空間對應物。
 
 ## 本次更新 (2026-06-19) — MCP 結構化輸出
 
