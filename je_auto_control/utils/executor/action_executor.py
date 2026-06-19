@@ -2475,6 +2475,43 @@ def _agent_card(path: Optional[str] = None) -> Dict[str, Any]:
     return {"card": build_agent_card()}
 
 
+def _read_workbook(path: str, sheet: str = "") -> Dict[str, Any]:
+    """Adapter: read an .xlsx worksheet into rows."""
+    from je_auto_control.utils.office import read_workbook
+    return {"rows": read_workbook(path, sheet=sheet)}
+
+
+def _write_workbook(path: str, rows: List[Dict[str, Any]],
+                    sheet: str = "Sheet1") -> Dict[str, Any]:
+    """Adapter: write rows to an .xlsx file."""
+    from je_auto_control.utils.office import write_workbook
+    return {"path": write_workbook(path, rows, sheet=sheet)}
+
+
+def _read_document(path: str) -> Dict[str, Any]:
+    """Adapter: read a .docx file's paragraphs."""
+    from je_auto_control.utils.office import read_document
+    return read_document(path)
+
+
+def _write_document(path: str, paragraphs: List[str]) -> Dict[str, Any]:
+    """Adapter: write paragraphs to a .docx file."""
+    from je_auto_control.utils.office import write_document
+    return {"path": write_document(path, paragraphs)}
+
+
+def _read_presentation(path: str) -> Dict[str, Any]:
+    """Adapter: read a .pptx file's per-slide text."""
+    from je_auto_control.utils.office import read_presentation
+    return read_presentation(path)
+
+
+def _write_presentation(path: str, slides: List[Any]) -> Dict[str, Any]:
+    """Adapter: write slides to a .pptx file."""
+    from je_auto_control.utils.office import write_presentation
+    return {"path": write_presentation(path, slides)}
+
+
 class Executor:
     """
     Executor
@@ -2655,6 +2692,12 @@ class Executor:
             "AC_skill_search": _skill_search,
             "AC_guard_text": _guard_text,
             "AC_agent_card": _agent_card,
+            "AC_read_workbook": _read_workbook,
+            "AC_write_workbook": _write_workbook,
+            "AC_read_document": _read_document,
+            "AC_write_document": _write_document,
+            "AC_read_presentation": _read_presentation,
+            "AC_write_presentation": _write_presentation,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

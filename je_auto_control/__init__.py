@@ -133,6 +133,11 @@ from je_auto_control.utils.guardrail import (
 )
 # A2A (agent-to-agent) agent card
 from je_auto_control.utils.a2a import build_agent_card, write_agent_card
+# Headless Office I/O (optional [office] extra: openpyxl/python-docx/pptx)
+from je_auto_control.utils.office import (
+    read_document, read_presentation, read_workbook,
+    write_document, write_presentation, write_workbook,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -542,6 +547,9 @@ __all__ = [
     "Skill", "SkillLibrary",
     "assess_text", "redact_text", "scan_text",
     "build_agent_card", "write_agent_card",
+    "read_workbook", "write_workbook",
+    "read_document", "write_document",
+    "read_presentation", "write_presentation",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

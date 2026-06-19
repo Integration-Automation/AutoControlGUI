@@ -1941,6 +1941,69 @@ def a2a_tools() -> List[MCPTool]:
     ]
 
 
+def office_tools() -> List[MCPTool]:
+    _P = {"path": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_read_workbook",
+            description=("Read an Excel (.xlsx) worksheet into rows (first row "
+                         "= keys). 'sheet' defaults to the active sheet. "
+                         "Requires the [office] extra."),
+            input_schema=schema({"sheet": {"type": "string"}, **_P},
+                                required=["path"]),
+            handler=h.read_workbook,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_write_workbook",
+            description=("Write rows (list of objects) to an Excel (.xlsx) "
+                         "file. Requires the [office] extra."),
+            input_schema=schema({
+                "rows": {"type": "array", "items": {"type": "object"}},
+                "sheet": {"type": "string"}, **_P},
+                required=["path", "rows"]),
+            handler=h.write_workbook,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_read_document",
+            description=("Read a Word (.docx) file's paragraph texts. "
+                         "Requires the [office] extra."),
+            input_schema=schema(dict(_P), required=["path"]),
+            handler=h.read_document,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_write_document",
+            description=("Write paragraphs (list of strings) to a Word "
+                         "(.docx) file. Requires the [office] extra."),
+            input_schema=schema({
+                "paragraphs": {"type": "array", "items": {"type": "string"}},
+                **_P}, required=["path", "paragraphs"]),
+            handler=h.write_document,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_read_presentation",
+            description=("Read a PowerPoint (.pptx) file's per-slide text. "
+                         "Requires the [office] extra."),
+            input_schema=schema(dict(_P), required=["path"]),
+            handler=h.read_presentation,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_write_presentation",
+            description=("Write slides (each {title, body:[...]}) to a "
+                         "PowerPoint (.pptx) file. Requires the [office] "
+                         "extra."),
+            input_schema=schema({"slides": {"type": "array"}, **_P},
+                                required=["path", "slides"]),
+            handler=h.write_presentation,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -2973,7 +3036,7 @@ ALL_FACTORIES = (
     unattended_tools, work_queue_tools,
     synthetic_data_tools, mcp_registry_tools, test_selection_tools,
     element_repository_tools, flow_debugger_tools,
-    skill_library_tools, guardrail_tools, a2a_tools,
+    skill_library_tools, guardrail_tools, a2a_tools, office_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

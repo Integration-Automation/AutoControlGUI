@@ -927,6 +927,36 @@ def agent_card(path=None):
     return {"card": build_agent_card()}
 
 
+def read_workbook(path, sheet=""):
+    from je_auto_control.utils.office import read_workbook as _read
+    return {"rows": _read(path, sheet=sheet)}
+
+
+def write_workbook(path, rows, sheet="Sheet1"):
+    from je_auto_control.utils.office import write_workbook as _write
+    return {"path": _write(path, rows, sheet=sheet)}
+
+
+def read_document(path):
+    from je_auto_control.utils.office import read_document as _read
+    return _read(path)
+
+
+def write_document(path, paragraphs):
+    from je_auto_control.utils.office import write_document as _write
+    return {"path": _write(path, paragraphs)}
+
+
+def read_presentation(path):
+    from je_auto_control.utils.office import read_presentation as _read
+    return _read(path)
+
+
+def write_presentation(path, slides):
+    from je_auto_control.utils.office import write_presentation as _write
+    return {"path": _write(path, slides)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:
