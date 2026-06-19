@@ -1,6 +1,8 @@
 """Headless tests for agent trajectory evaluation. Pure stdlib, no Qt imports."""
 import json
 
+import pytest
+
 import je_auto_control as ac
 from je_auto_control.utils.trajectory_eval import evaluate_trajectory
 
@@ -14,7 +16,7 @@ TRAJ = [
 def test_empty_rubric_passes():
     result = evaluate_trajectory(TRAJ, {})
     assert result["passed"] is True
-    assert result["score"] == 1.0
+    assert result["score"] == pytest.approx(1.0)
     assert result["steps"] == 3
 
 
@@ -27,7 +29,7 @@ def test_required_actions_present():
 def test_required_actions_missing_fails():
     result = evaluate_trajectory(TRAJ, {"required_actions": ["AC_hotkey"]})
     assert result["passed"] is False
-    assert result["score"] == 0.0
+    assert result["score"] == pytest.approx(0.0)
 
 
 def test_ordered_requirement():
@@ -63,7 +65,7 @@ def test_partial_score():
               "forbidden_actions": ["AC_type_text"]}   # fail
     result = evaluate_trajectory(TRAJ, rubric)
     assert result["passed"] is False
-    assert result["score"] == 0.5
+    assert result["score"] == pytest.approx(0.5)
 
 
 # --- wiring ---------------------------------------------------------------
