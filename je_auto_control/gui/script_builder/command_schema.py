@@ -694,6 +694,41 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Discover + register third-party plugin commands.",
     ))
     specs.append(CommandSpec(
+        "AC_approval_request", "Tools", "Approval: Request",
+        fields=(
+            FieldSpec("action", FieldType.STRING),
+            FieldSpec("requester", FieldType.STRING, optional=True),
+            FieldSpec("db", FieldType.STRING, optional=True),
+        ),
+        description="Maker-checker: file a high-risk action for approval.",
+    ))
+    specs.append(CommandSpec(
+        "AC_approval_approve", "Tools", "Approval: Approve",
+        fields=(
+            FieldSpec("token", FieldType.STRING),
+            FieldSpec("approver", FieldType.STRING),
+            FieldSpec("db", FieldType.STRING, optional=True),
+        ),
+        description="Approve a request (approver must differ from requester).",
+    ))
+    specs.append(CommandSpec(
+        "AC_approval_reject", "Tools", "Approval: Reject",
+        fields=(
+            FieldSpec("token", FieldType.STRING),
+            FieldSpec("approver", FieldType.STRING),
+            FieldSpec("db", FieldType.STRING, optional=True),
+        ),
+        description="Reject a request (approver must differ from requester).",
+    ))
+    specs.append(CommandSpec(
+        "AC_approval_status", "Tools", "Approval: Status",
+        fields=(
+            FieldSpec("token", FieldType.STRING),
+            FieldSpec("db", FieldType.STRING, optional=True),
+        ),
+        description="Report a request's status and approved flag.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

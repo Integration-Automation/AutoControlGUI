@@ -1246,6 +1246,28 @@ def load_plugins(group="je_auto_control.commands"):
     return {"loaded": _load(group)}
 
 
+def approval_request(action: str, requester: str = "",
+                     db: Optional[str] = None):
+    from je_auto_control.utils.governance import ApprovalGate
+    return {"token": ApprovalGate(db).request(action, requester)}
+
+
+def approval_approve(token: str, approver: str, db: Optional[str] = None):
+    from je_auto_control.utils.governance import ApprovalGate
+    return {"approved": ApprovalGate(db).approve(token, approver)}
+
+
+def approval_reject(token: str, approver: str, db: Optional[str] = None):
+    from je_auto_control.utils.governance import ApprovalGate
+    return {"rejected": ApprovalGate(db).reject(token, approver)}
+
+
+def approval_status(token: str, db: Optional[str] = None):
+    from je_auto_control.utils.governance import ApprovalGate
+    gate = ApprovalGate(db)
+    return {"status": gate.status(token), "approved": gate.is_approved(token)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

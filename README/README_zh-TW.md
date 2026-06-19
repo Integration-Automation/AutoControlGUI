@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — Maker-Checker 審批閘門](#本次更新-2026-06-19--maker-checker-審批閘門)
 - [本次更新 (2026-06-19) — Plugin SDK](#本次更新-2026-06-19--plugin-sdk)
 - [本次更新 (2026-06-19) — MCP 結構化輸出](#本次更新-2026-06-19--mcp-結構化輸出)
 - [本次更新 (2026-06-19) — 緩動拖曳](#本次更新-2026-06-19--緩動拖曳)
@@ -82,6 +83,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — Maker-Checker 審批閘門
+
+高風險步驟的職責分離。完整參考:[`docs/source/Zh/doc/new_features/v32_features_doc.rst`](../docs/source/Zh/doc/new_features/v32_features_doc.rst)。
+
+- **`ApprovalGate`**(`AC_approval_request` / `AC_approval_approve` / `AC_approval_reject` / `AC_approval_status`、`ac_*`):由 *maker* 提出高風險動作並取得 token;*checker*(必須為**不同**主體)核准或駁回;只有在 `is_approved` 為真後動作才繼續。狀態為選用的共用 JSON 檔,讓派發器與人工審批者可分屬不同程序。純標準函式庫,SOC2 式四眼原則控制。
 
 ## 本次更新 (2026-06-19) — Plugin SDK
 

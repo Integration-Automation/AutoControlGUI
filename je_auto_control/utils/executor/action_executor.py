@@ -2894,6 +2894,34 @@ def _load_plugins(group: str = "je_auto_control.commands") -> Dict[str, Any]:
     return {"loaded": load_plugins(group)}
 
 
+def _approval_request(action: str, requester: str = "",
+                      db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: file a maker-checker approval request; return its token."""
+    from je_auto_control.utils.governance import ApprovalGate
+    return {"token": ApprovalGate(db).request(action, requester)}
+
+
+def _approval_approve(token: str, approver: str,
+                      db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: approve a request as ``approver`` (must differ from maker)."""
+    from je_auto_control.utils.governance import ApprovalGate
+    return {"approved": ApprovalGate(db).approve(token, approver)}
+
+
+def _approval_reject(token: str, approver: str,
+                     db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: reject a request as ``approver`` (must differ from maker)."""
+    from je_auto_control.utils.governance import ApprovalGate
+    return {"rejected": ApprovalGate(db).reject(token, approver)}
+
+
+def _approval_status(token: str, db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: report the status and approved flag of a request token."""
+    from je_auto_control.utils.governance import ApprovalGate
+    gate = ApprovalGate(db)
+    return {"status": gate.status(token), "approved": gate.is_approved(token)}
+
+
 class Executor:
     """
     Executor
@@ -3125,6 +3153,10 @@ class Executor:
             "AC_tween_drag": _tween_drag,
             "AC_list_plugins": _list_plugins,
             "AC_load_plugins": _load_plugins,
+            "AC_approval_request": _approval_request,
+            "AC_approval_approve": _approval_approve,
+            "AC_approval_reject": _approval_reject,
+            "AC_approval_status": _approval_status,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
