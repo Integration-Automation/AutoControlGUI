@@ -174,6 +174,8 @@ from je_auto_control.utils.screen_state import (
     describe_screen, diff_snapshots, screen_changed, snapshot,
     snapshot_screen,
 )
+# Timed input replay + declarative input-sequence DSL
+from je_auto_control.utils.input_macro import replay_timeline, run_sequence
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -601,6 +603,7 @@ __all__ = [
     "resolve_mark",
     "describe_screen", "diff_snapshots", "screen_changed", "snapshot",
     "snapshot_screen",
+    "replay_timeline", "run_sequence",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

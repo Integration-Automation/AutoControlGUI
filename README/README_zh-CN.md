@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 计时输入宏](#本次更新-2026-06-19--计时输入宏)
 - [本次更新 (2026-06-19) — 语义屏幕状态](#本次更新-2026-06-19--语义屏幕状态)
 - [本次更新 (2026-06-19) — Set-of-Marks 叠图](#本次更新-2026-06-19--set-of-marks-叠图)
 - [本次更新 (2026-06-19) — 检查点与续跑](#本次更新-2026-06-19--检查点与续跑)
@@ -74,6 +75,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 计时输入宏
+
+以时间保真度重播输入 + 按住-放开 DSL,走完整五层。完整参考:[`docs/source/Zh/doc/new_features/v24_features_doc.rst`](../docs/source/Zh/doc/new_features/v24_features_doc.rst)。
+
+- **计时时间轴重播** — `replay_timeline(events, speed=...)`(`AC_replay_timeline`、`ac_replay_timeline`):遵守每个 `delta_ms` 间隔、按 `speed` 缩放且可夹限;op = move/click/scroll/press/release/key。
+- **输入序列 DSL** — `run_sequence(steps)`(`AC_input_sequence`、`ac_input_sequence`):声明式按住-放开组合键 + `repeat`/`wait`。两者均可注入 sink+sleep 做确定性测试。
 
 ## 本次更新 (2026-06-19) — 语义屏幕状态
 

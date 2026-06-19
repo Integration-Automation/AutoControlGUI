@@ -1163,6 +1163,16 @@ def describe_screen(app_name=None):
     return _ds(app_name=app_name)
 
 
+def replay_timeline(events, speed=1.0):
+    from je_auto_control.utils.input_macro import replay_timeline as _rt
+    return {"played": _rt(events, speed=float(speed))}
+
+
+def input_sequence(steps):
+    from je_auto_control.utils.input_macro import run_sequence as _rs
+    return {"log": _rs(steps)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

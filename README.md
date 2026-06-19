@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Timed Input Macros](#whats-new-2026-06-19--timed-input-macros)
 - [What's new (2026-06-19) — Semantic Screen State](#whats-new-2026-06-19--semantic-screen-state)
 - [What's new (2026-06-19) — Set-of-Marks Overlay](#whats-new-2026-06-19--set-of-marks-overlay)
 - [What's new (2026-06-19) — Checkpoint & Resume](#whats-new-2026-06-19--checkpoint--resume)
@@ -75,6 +76,13 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Timed Input Macros
+
+Replay input with timing fidelity + a press-hold-release DSL, full stack. Full reference: [`docs/source/Eng/doc/new_features/v24_features_doc.rst`](docs/source/Eng/doc/new_features/v24_features_doc.rst).
+
+- **Timed timeline replay** — `replay_timeline(events, speed=...)` (`AC_replay_timeline`, `ac_replay_timeline`): replay events honoring each `delta_ms` gap, scaled by `speed` and clampable; ops = move/click/scroll/press/release/key.
+- **Input-sequence DSL** — `run_sequence(steps)` (`AC_input_sequence`, `ac_input_sequence`): declarative press/hold/release chords + `repeat`/`wait`. Both inject sink+sleep for deterministic tests.
 
 ## What's new (2026-06-19) — Semantic Screen State
 
