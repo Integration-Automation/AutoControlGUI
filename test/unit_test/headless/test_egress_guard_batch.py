@@ -54,9 +54,9 @@ def test_comma_string_is_accepted():
 def test_http_client_enforces_policy():
     from je_auto_control.utils.http_client.http_client import http_request
     set_egress_policy(allow=["allowed.test"])
-    # blocked before any connection is attempted
+    # blocked before any connection is attempted (scheme is irrelevant here)
     with pytest.raises(EgressBlocked):
-        http_request("http://blocked.test/")
+        http_request("https://blocked.test/")
 
 
 # --- wiring ---------------------------------------------------------------
