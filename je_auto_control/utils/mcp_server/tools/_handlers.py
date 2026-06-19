@@ -1288,6 +1288,23 @@ def lease_active():
     return {"leases": default_broker.active()}
 
 
+def egress_allow(allow=None, deny=None):
+    from je_auto_control.utils.egress import set_egress_policy
+    policy = set_egress_policy(allow, deny)
+    return {"allow": policy.allow, "deny": policy.deny}
+
+
+def egress_check(url: str):
+    from je_auto_control.utils.egress import get_egress_policy
+    return {"allowed": get_egress_policy().is_allowed(url)}
+
+
+def egress_reset():
+    from je_auto_control.utils.egress import set_egress_policy
+    set_egress_policy(None, None)
+    return {"allow": None, "deny": []}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

@@ -2946,6 +2946,27 @@ def _lease_active() -> Dict[str, Any]:
     return {"leases": default_broker.active()}
 
 
+def _egress_allow(allow: Optional[List[str]] = None,
+                  deny: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Adapter: lock the HTTP client to an egress allow/deny policy."""
+    from je_auto_control.utils.egress import set_egress_policy
+    policy = set_egress_policy(allow, deny)
+    return {"allow": policy.allow, "deny": policy.deny}
+
+
+def _egress_check(url: str) -> Dict[str, Any]:
+    """Adapter: report whether ``url`` is permitted by the egress policy."""
+    from je_auto_control.utils.egress import get_egress_policy
+    return {"allowed": get_egress_policy().is_allowed(url)}
+
+
+def _egress_reset() -> Dict[str, Any]:
+    """Adapter: clear the egress policy back to allow-all."""
+    from je_auto_control.utils.egress import set_egress_policy
+    set_egress_policy(None, None)
+    return {"allow": None, "deny": []}
+
+
 class Executor:
     """
     Executor
@@ -3185,6 +3206,9 @@ class Executor:
             "AC_lease_valid": _lease_valid,
             "AC_revoke_lease": _revoke_lease,
             "AC_lease_active": _lease_active,
+            "AC_egress_allow": _egress_allow,
+            "AC_egress_check": _egress_check,
+            "AC_egress_reset": _egress_reset,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

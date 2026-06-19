@@ -208,6 +208,10 @@ from je_auto_control.utils.governance import (
     ApprovalGate, CredentialBroker, CredentialBrokerError, default_broker,
     set_secret_resolver,
 )
+# Network egress allowlist guard for the headless HTTP client
+from je_auto_control.utils.egress import (
+    EgressBlocked, EgressPolicy, get_egress_policy, set_egress_policy,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -645,6 +649,7 @@ __all__ = [
     "COMMANDS_GROUP", "discover_plugins", "load_plugins",
     "ApprovalGate", "CredentialBroker", "CredentialBrokerError",
     "default_broker", "set_secret_resolver",
+    "EgressBlocked", "EgressPolicy", "get_egress_policy", "set_egress_policy",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

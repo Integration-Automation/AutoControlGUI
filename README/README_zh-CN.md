@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 网络出口允许清单守卫](#本次更新-2026-06-19--网络出口允许清单守卫)
 - [本次更新 (2026-06-19) — 即时凭证租约](#本次更新-2026-06-19--即时凭证租约)
 - [本次更新 (2026-06-19) — Maker-Checker 审批闸门](#本次更新-2026-06-19--maker-checker-审批闸门)
 - [本次更新 (2026-06-19) — Plugin SDK](#本次更新-2026-06-19--plugin-sdk)
@@ -84,6 +85,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 网络出口允许清单守卫
+
+钉选自动化可连线的主机。完整参考:[`docs/source/Zh/doc/new_features/v34_features_doc.rst`](../docs/source/Zh/doc/new_features/v34_features_doc.rst)。
+
+- **`EgressPolicy` / `set_egress_policy`**(`AC_egress_allow` / `AC_egress_check` / `AC_egress_reset`、`ac_*`):允许清单(默认拒绝)与/或拒绝清单,使用 `fnmatch` 主机通配符(`*.example.com`),由**每一次** `http_request` 咨询(因此 `AC_http` 与所有以其为基础的功能一次涵盖)。被封锁的主机会在 socket 打开**之前**抛出 `EgressBlocked`。以 allow-all 模式启动 —— 操作者锁定前不改变任何行为。封闭无人值守自动化的数据外泄面。
 
 ## 本次更新 (2026-06-19) — 即时凭证租约
 

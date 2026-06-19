@@ -752,6 +752,27 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="List active leases (token, name, ttl_remaining).",
     ))
     specs.append(CommandSpec(
+        "AC_egress_allow", "Tools", "Egress: Set Allowlist",
+        fields=(
+            FieldSpec("allow", FieldType.STRING, optional=True,
+                      placeholder="*.example.com, api.foo.com"),
+            FieldSpec("deny", FieldType.STRING, optional=True,
+                      placeholder="bad.example.com"),
+        ),
+        description="Lock the HTTP client to an egress allow/deny policy.",
+    ))
+    specs.append(CommandSpec(
+        "AC_egress_check", "Tools", "Egress: Check URL",
+        fields=(FieldSpec("url", FieldType.STRING,
+                          placeholder="https://api.example.com"),),
+        description="Report whether a URL is permitted by the egress policy.",
+    ))
+    specs.append(CommandSpec(
+        "AC_egress_reset", "Tools", "Egress: Reset (allow-all)",
+        fields=(),
+        description="Clear the egress policy back to allow-all.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,
