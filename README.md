@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Compliance Control Report (SOC2 / ISO 27001)](#whats-new-2026-06-19--compliance-control-report-soc2--iso-27001)
 - [What's new (2026-06-19) — Agent Trajectory Evaluation](#whats-new-2026-06-19--agent-trajectory-evaluation)
 - [What's new (2026-06-19) — Approval Testing (Golden-Master Baselines)](#whats-new-2026-06-19--approval-testing-golden-master-baselines)
 - [What's new (2026-06-19) — Network Egress Allowlist Guard](#whats-new-2026-06-19--network-egress-allowlist-guard)
@@ -88,6 +89,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Compliance Control Report (SOC2 / ISO 27001)
+
+Map governance evidence to named controls. Full reference: [`docs/source/Eng/doc/new_features/v37_features_doc.rst`](docs/source/Eng/doc/new_features/v37_features_doc.rst).
+
+- **`build_compliance_report`** (`AC_compliance_report`, `ac_compliance_report`): the framework already ships the controls an auditor cares about — egress allowlist, JIT credential leases, maker-checker approval, secrets scanner, audit logging, CycloneDX SBOM. This maps a flat `evidence` mapping to SOC2 (CC6.1/CC6.3/CC6.8/CC7.3/CC8.1) and ISO 27001 (A.5.23/A.8.16/A.8.30) controls, each marked `satisfied`/`gap`/`not_assessed`, and renders JSON or a standalone HTML table. The capstone of the governance set — a reporting aid, not a certification.
 
 ## What's new (2026-06-19) — Agent Trajectory Evaluation
 
