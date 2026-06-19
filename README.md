@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Checkpoint & Resume](#whats-new-2026-06-19--checkpoint--resume)
 - [What's new (2026-06-19) — i18n / l10n Testing](#whats-new-2026-06-19--i18n--l10n-testing)
 - [What's new (2026-06-19) — Data Quality](#whats-new-2026-06-19--data-quality)
 - [What's new (2026-06-19) — SBOM & Suite Sharding](#whats-new-2026-06-19--sbom--suite-sharding)
@@ -72,6 +73,13 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Checkpoint & Resume
+
+Durable execution for long flows + a `py.typed` marker, full stack. Full reference: [`docs/source/Eng/doc/new_features/v21_features_doc.rst`](docs/source/Eng/doc/new_features/v21_features_doc.rst).
+
+- **Flow checkpoint & resume** — `run_resumable(actions, run_id=..., store=...)` / `CheckpointStore` (`AC_run_resumable` / `AC_checkpoint_status` / `AC_checkpoint_clear`, `ac_*`): persist step-index + variables after each step; on re-run with the same `run_id`, fast-forward past completed steps and rehydrate variables — a flow that crashes at step 400 resumes at 400, not 0. Pluggable (SQLite default), cleared on completion.
+- **`py.typed` marker** — ships the PEP 561 marker so Mypy/Pyright/Pylance honor AutoControl's inline type hints in downstream code (the repo's typed API was previously invisible to type checkers).
 
 ## What's new (2026-06-19) — i18n / l10n Testing
 

@@ -56,6 +56,7 @@ content-type = "text/markdown"
 find = { namespaces = false }
 
 [tool.setuptools.package-data]
+"je_auto_control" = ["py.typed"]
 "je_auto_control.utils.remote_desktop" = [
     "web_viewer/*.html",
     "web_viewer/*.js",

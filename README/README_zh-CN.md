@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 检查点与续跑](#本次更新-2026-06-19--检查点与续跑)
 - [本次更新 (2026-06-19) — i18n / l10n 测试](#本次更新-2026-06-19--i18n--l10n-测试)
 - [本次更新 (2026-06-19) — 数据质量](#本次更新-2026-06-19--数据质量)
 - [本次更新 (2026-06-19) — SBOM 与测试分片](#本次更新-2026-06-19--sbom-与测试分片)
@@ -71,6 +72,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 检查点与续跑
+
+长流程的耐久执行 + `py.typed` 标记,走完整五层。完整参考:[`docs/source/Zh/doc/new_features/v21_features_doc.rst`](../docs/source/Zh/doc/new_features/v21_features_doc.rst)。
+
+- **流程检查点与续跑** — `run_resumable(actions, run_id=..., store=...)` / `CheckpointStore`(`AC_run_resumable` / `AC_checkpoint_status` / `AC_checkpoint_clear`、`ac_*`):每步后持久化 step-index + 变量;以相同 `run_id` 再执行时快进略过已完成步骤并还原变量——在第 400 步崩溃的流程会从 400 续跑,而非从 0。可抽换(默认 SQLite),完成后清除。
+- **`py.typed` 标记** — 附带 PEP 561 标记,让 Mypy/Pyright/Pylance 在下游代码采用 AutoControl 的内嵌类型注解(此前类型化 API 对类型检查器是隐形的)。
 
 ## 本次更新 (2026-06-19) — i18n / l10n 测试
 

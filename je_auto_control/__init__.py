@@ -161,6 +161,10 @@ from je_auto_control.utils.data_quality import (
 from je_auto_control.utils.i18n_test import (
     check_catalog, check_overflow, pseudo_localize, pseudo_localize_catalog,
 )
+# Flow checkpoint & resume (durable execution for long action lists)
+from je_auto_control.utils.checkpoint import (
+    Checkpoint, CheckpointStore, run_resumable,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -583,6 +587,7 @@ __all__ = [
     "extract_fields", "mask_rows", "validate_rows",
     "check_catalog", "check_overflow", "pseudo_localize",
     "pseudo_localize_catalog",
+    "Checkpoint", "CheckpointStore", "run_resumable",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

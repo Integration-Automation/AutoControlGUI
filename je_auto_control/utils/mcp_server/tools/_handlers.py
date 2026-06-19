@@ -1112,6 +1112,27 @@ def check_catalog(base, target):
     return _cc(base, target)
 
 
+def run_resumable(actions, run_id, db, variables=None):
+    from je_auto_control.utils.checkpoint import (
+        CheckpointStore, run_resumable as _run)
+    return _run(actions, run_id=run_id, store=CheckpointStore(db),
+                variables=variables)
+
+
+def checkpoint_status(run_id, db):
+    from je_auto_control.utils.checkpoint import CheckpointStore
+    cp = CheckpointStore(db).load(run_id)
+    if cp is None:
+        return {"checkpoint": None}
+    return {"checkpoint": {"run_id": cp.run_id, "step_index": cp.step_index,
+                           "variables": cp.variables}}
+
+
+def checkpoint_clear(run_id, db):
+    from je_auto_control.utils.checkpoint import CheckpointStore
+    return {"cleared": CheckpointStore(db).clear(run_id)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:
