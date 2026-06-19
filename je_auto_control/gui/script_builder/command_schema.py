@@ -662,6 +662,30 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_i18n_specs(specs)
     _add_checkpoint_specs(specs)
     _add_set_of_marks_specs(specs)
+    _add_screen_state_specs(specs)
+
+
+def _add_screen_state_specs(specs: List[CommandSpec]) -> None:
+    app = FieldSpec("app_name", FieldType.STRING, optional=True)
+    specs.append(CommandSpec(
+        "AC_screen_snapshot", "Native UI", "Screen: Snapshot Baseline",
+        fields=(app,),
+        description="Snapshot the a11y tree as a semantic-diff baseline.",
+    ))
+    specs.append(CommandSpec(
+        "AC_screen_diff", "Native UI", "Screen: Diff Snapshots",
+        description="Semantic diff of 'before'/'after' snapshots (JSON view).",
+    ))
+    specs.append(CommandSpec(
+        "AC_screen_changed", "Native UI", "Screen: What Changed",
+        fields=(app,),
+        description="Diff the live screen against the last snapshot baseline.",
+    ))
+    specs.append(CommandSpec(
+        "AC_describe_screen", "Native UI", "Screen: Describe",
+        fields=(app,),
+        description="Structured 'where am I' (role counts + control labels).",
+    ))
 
 
 def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:

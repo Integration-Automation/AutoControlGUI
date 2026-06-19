@@ -1143,6 +1143,26 @@ def mark_click(mark_id):
     return {"clicked": _mc(int(mark_id))}
 
 
+def screen_snapshot(app_name=None):
+    from je_auto_control.utils.screen_state import snapshot_screen
+    return {"snapshot": snapshot_screen(app_name=app_name)}
+
+
+def screen_diff(before, after):
+    from je_auto_control.utils.screen_state import diff_snapshots
+    return diff_snapshots(before, after)
+
+
+def screen_changed(app_name=None):
+    from je_auto_control.utils.screen_state import screen_changed as _sc
+    return _sc(app_name=app_name)
+
+
+def describe_screen(app_name=None):
+    from je_auto_control.utils.screen_state import describe_screen as _ds
+    return _ds(app_name=app_name)
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

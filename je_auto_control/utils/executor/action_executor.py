@@ -2756,6 +2756,31 @@ def _mark_click(mark_id: int) -> Dict[str, Any]:
     return {"clicked": mark_click(int(mark_id))}
 
 
+def _screen_snapshot(app_name: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: snapshot the live a11y tree as a diff baseline."""
+    from je_auto_control.utils.screen_state import snapshot_screen
+    return {"snapshot": snapshot_screen(app_name=app_name)}
+
+
+def _screen_diff(before: List[Dict[str, Any]],
+                 after: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Adapter: semantic diff between two snapshots."""
+    from je_auto_control.utils.screen_state import diff_snapshots
+    return diff_snapshots(before, after)
+
+
+def _screen_changed(app_name: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: diff the live screen against the last snapshot baseline."""
+    from je_auto_control.utils.screen_state import screen_changed
+    return screen_changed(app_name=app_name)
+
+
+def _describe_screen(app_name: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: structured 'where am I' description of the live screen."""
+    from je_auto_control.utils.screen_state import describe_screen
+    return describe_screen(app_name=app_name)
+
+
 class Executor:
     """
     Executor
@@ -2968,6 +2993,10 @@ class Executor:
             "AC_checkpoint_clear": _checkpoint_clear,
             "AC_mark_screen": _mark_screen,
             "AC_mark_click": _mark_click,
+            "AC_screen_snapshot": _screen_snapshot,
+            "AC_screen_diff": _screen_diff,
+            "AC_screen_changed": _screen_changed,
+            "AC_describe_screen": _describe_screen,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

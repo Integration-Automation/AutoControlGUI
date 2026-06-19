@@ -2329,6 +2329,47 @@ def set_of_marks_tools() -> List[MCPTool]:
     ]
 
 
+def screen_state_tools() -> List[MCPTool]:
+    _SNAP = {"type": "array", "items": {"type": "object"}}
+    return [
+        MCPTool(
+            name="ac_screen_snapshot",
+            description=("Snapshot the live accessibility tree to "
+                         "[{role, name, bbox}] and cache it as the diff "
+                         "baseline."),
+            input_schema=schema({"app_name": {"type": "string"}}),
+            handler=h.screen_snapshot,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_screen_diff",
+            description=("Semantic diff between two snapshots: what appeared / "
+                         "vanished / moved, with a human-readable summary."),
+            input_schema=schema({"before": _SNAP, "after": _SNAP},
+                                required=["before", "after"]),
+            handler=h.screen_diff,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_screen_changed",
+            description=("Diff the live screen against the last "
+                         "ac_screen_snapshot baseline (agent feedback signal: "
+                         "'Save dialog appeared')."),
+            input_schema=schema({"app_name": {"type": "string"}}),
+            handler=h.screen_changed,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_describe_screen",
+            description=("Compact 'where am I' description of the live screen: "
+                         "{app, element_count, by_role, controls}."),
+            input_schema=schema({"app_name": {"type": "string"}}),
+            handler=h.describe_screen,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3383,7 +3424,7 @@ ALL_FACTORIES = (
     skill_library_tools, guardrail_tools, a2a_tools, office_tools,
     agent_memory_tools, determinism_tools, observer_tools,
     sbom_tools, sharding_tools, data_quality_tools, i18n_tools,
-    checkpoint_tools, set_of_marks_tools,
+    checkpoint_tools, set_of_marks_tools, screen_state_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
