@@ -868,6 +868,41 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Render captioned screenshots into a walkthrough video.",
     ))
     specs.append(CommandSpec(
+        "AC_fuzzy_ratio", "Data", "Fuzzy: Similarity Ratio",
+        fields=(
+            FieldSpec("left", FieldType.STRING),
+            FieldSpec("right", FieldType.STRING),
+            FieldSpec("ignore_case", FieldType.BOOL, optional=True,
+                      default=True),
+        ),
+        description="Similarity score (0..1) between two strings.",
+    ))
+    specs.append(CommandSpec(
+        "AC_fuzzy_best_match", "Data", "Fuzzy: Best Match",
+        fields=(
+            FieldSpec("query", FieldType.STRING),
+            FieldSpec("choices", FieldType.STRING,
+                      placeholder='["Save", "Cancel", "Submit"]'),
+            FieldSpec("score_cutoff", FieldType.FLOAT, optional=True,
+                      default=0.0),
+            FieldSpec("ignore_case", FieldType.BOOL, optional=True,
+                      default=True),
+        ),
+        description="Best fuzzy match of query within choices (JSON list).",
+    ))
+    specs.append(CommandSpec(
+        "AC_fuzzy_dedupe", "Data", "Fuzzy: Dedupe",
+        fields=(
+            FieldSpec("items", FieldType.STRING,
+                      placeholder='["foo", "foo ", "bar"]'),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True,
+                      default=0.9),
+            FieldSpec("ignore_case", FieldType.BOOL, optional=True,
+                      default=True),
+        ),
+        description="Collapse near-duplicate strings (JSON list).",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,
