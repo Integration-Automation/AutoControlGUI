@@ -2550,6 +2550,29 @@ def tween_drag_tools() -> List[MCPTool]:
     ]
 
 
+def plugin_sdk_tools() -> List[MCPTool]:
+    _G = {"group": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_list_plugins",
+            description=("Discover third-party AC_* commands registered via "
+                         "the 'je_auto_control.commands' entry-point group "
+                         "(without registering them). Returns {commands}."),
+            input_schema=schema(dict(_G)),
+            handler=h.list_plugins,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_load_plugins",
+            description=("Discover and register third-party plugin commands "
+                         "into the executor. Returns {loaded} names."),
+            input_schema=schema(dict(_G)),
+            handler=h.load_plugins,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3607,7 +3630,7 @@ ALL_FACTORIES = (
     checkpoint_tools, set_of_marks_tools, screen_state_tools,
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
-    process_doc_tools, tween_drag_tools,
+    process_doc_tools, tween_drag_tools, plugin_sdk_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

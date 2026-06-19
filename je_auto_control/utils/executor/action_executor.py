@@ -2882,6 +2882,18 @@ def _tween_drag(start: List[int], end: List[int], steps: int = 30,
     return {"points": result["points"]}
 
 
+def _list_plugins(group: str = "je_auto_control.commands") -> Dict[str, Any]:
+    """Adapter: discover third-party plugin command names (no register)."""
+    from je_auto_control.utils.plugin_sdk import discover_plugins
+    return {"commands": sorted(discover_plugins(group))}
+
+
+def _load_plugins(group: str = "je_auto_control.commands") -> Dict[str, Any]:
+    """Adapter: discover + register third-party plugin commands."""
+    from je_auto_control.utils.plugin_sdk import load_plugins
+    return {"loaded": load_plugins(group)}
+
+
 class Executor:
     """
     Executor
@@ -3111,6 +3123,8 @@ class Executor:
             "AC_scan_secrets": _scan_secrets,
             "AC_generate_sop": _generate_sop,
             "AC_tween_drag": _tween_drag,
+            "AC_list_plugins": _list_plugins,
+            "AC_load_plugins": _load_plugins,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

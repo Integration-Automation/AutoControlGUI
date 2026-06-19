@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Plugin SDK](#whats-new-2026-06-19--plugin-sdk)
 - [What's new (2026-06-19) — MCP Structured Output](#whats-new-2026-06-19--mcp-structured-output)
 - [What's new (2026-06-19) — Tweened Drag](#whats-new-2026-06-19--tweened-drag)
 - [What's new (2026-06-19) — Process-Doc (SOP) Generator](#whats-new-2026-06-19--process-doc-sop-generator)
@@ -82,6 +83,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Plugin SDK
+
+Third-party `AC_*` commands via entry points. Full reference: [`docs/source/Eng/doc/new_features/v31_features_doc.rst`](docs/source/Eng/doc/new_features/v31_features_doc.rst).
+
+- **`discover_plugins` / `load_plugins`** (`AC_list_plugins` / `AC_load_plugins`, `ac_*`): a pip package registers new executor commands declaratively in the `je_auto_control.commands` entry-point group; AutoControl discovers and registers them at runtime (immediately usable from JSON flows, socket server, scheduler, MCP). Broken plugins are skipped; the declarative, namespaced complement to the runtime path loader.
 
 ## What's new (2026-06-19) — MCP Structured Output
 

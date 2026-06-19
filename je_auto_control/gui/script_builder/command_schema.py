@@ -682,6 +682,18 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
                     "view.",
     ))
     specs.append(CommandSpec(
+        "AC_list_plugins", "Tools", "List Plugin Commands",
+        fields=(FieldSpec("group", FieldType.STRING, optional=True,
+                          default="je_auto_control.commands"),),
+        description="Discover third-party AC_* commands from entry points.",
+    ))
+    specs.append(CommandSpec(
+        "AC_load_plugins", "Tools", "Load Plugin Commands",
+        fields=(FieldSpec("group", FieldType.STRING, optional=True,
+                          default="je_auto_control.commands"),),
+        description="Discover + register third-party plugin commands.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

@@ -199,6 +199,10 @@ from je_auto_control.utils.process_doc import (
 from je_auto_control.utils.tween_drag import (
     easing_names, tween_drag, tween_points,
 )
+# Plugin SDK: discover/load third-party AC_* commands via entry points
+from je_auto_control.utils.plugin_sdk import (
+    COMMANDS_GROUP, discover_plugins, load_plugins,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -633,6 +637,7 @@ __all__ = [
     "analyze_heal_log", "heal_stats", "scan_secrets",
     "describe_step", "generate_sop", "write_sop",
     "easing_names", "tween_drag", "tween_points",
+    "COMMANDS_GROUP", "discover_plugins", "load_plugins",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
