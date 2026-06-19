@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — 即時憑證租約](#本次更新-2026-06-19--即時憑證租約)
 - [本次更新 (2026-06-19) — Maker-Checker 審批閘門](#本次更新-2026-06-19--maker-checker-審批閘門)
 - [本次更新 (2026-06-19) — Plugin SDK](#本次更新-2026-06-19--plugin-sdk)
 - [本次更新 (2026-06-19) — MCP 結構化輸出](#本次更新-2026-06-19--mcp-結構化輸出)
@@ -83,6 +84,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — 即時憑證租約
+
+密鑰的零常駐權限。完整參考:[`docs/source/Zh/doc/new_features/v33_features_doc.rst`](../docs/source/Zh/doc/new_features/v33_features_doc.rst)。
+
+- **`CredentialBroker`**(`AC_lease_secret` / `AC_lease_valid` / `AC_revoke_lease` / `AC_lease_active`、`ac_*`):使用者取得短效*租約*(綁定密鑰名稱 + 到期時間的 token);真正的值僅在 `redeem` 時、且僅在有效期間,透過可插拔解析器(已解鎖的 `SecretManager`、環境變數、vault)取得。密鑰值永不進入 executor/MCP 紀錄 —— executor/MCP/Builder 介面僅管理租約生命週期;`redeem` 是刻意設計的僅限 Python API 逃生門。時鐘與解析器皆可注入。
 
 ## 本次更新 (2026-06-19) — Maker-Checker 審批閘門
 

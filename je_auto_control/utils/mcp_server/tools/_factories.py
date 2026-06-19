@@ -2619,6 +2619,46 @@ def governance_tools() -> List[MCPTool]:
     ]
 
 
+def credential_lease_tools() -> List[MCPTool]:
+    _T = {"token": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_lease_secret",
+            description=("Issue a just-in-time lease for secret 'name', valid "
+                         "for 'ttl' seconds (default 300). Returns {token, ttl} "
+                         "only — never the value. Redeeming the value is a "
+                         "Python-API-only operation, by design."),
+            input_schema=schema({"name": {"type": "string"},
+                                 "ttl": {"type": "number"}}, ["name"]),
+            handler=h.lease_secret,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_lease_valid",
+            description=("Report whether a lease token is still valid (exists "
+                         "and not expired). Returns {valid}."),
+            input_schema=schema(dict(_T), ["token"]),
+            handler=h.lease_valid,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_revoke_lease",
+            description="Revoke a lease token immediately. Returns {revoked}.",
+            input_schema=schema(dict(_T), ["token"]),
+            handler=h.revoke_lease,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_lease_active",
+            description=("List active (non-expired) leases as {token, name, "
+                         "ttl_remaining} — no secret values are returned."),
+            input_schema=schema({}),
+            handler=h.lease_active,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3677,6 +3717,7 @@ ALL_FACTORIES = (
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
     process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
+    credential_lease_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

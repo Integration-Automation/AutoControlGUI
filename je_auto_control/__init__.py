@@ -203,8 +203,11 @@ from je_auto_control.utils.tween_drag import (
 from je_auto_control.utils.plugin_sdk import (
     COMMANDS_GROUP, discover_plugins, load_plugins,
 )
-# Maker-checker approval gate (segregation of duties for high-risk actions)
-from je_auto_control.utils.governance import ApprovalGate
+# Maker-checker approval gate + just-in-time credential leases (PAM/governance)
+from je_auto_control.utils.governance import (
+    ApprovalGate, CredentialBroker, CredentialBrokerError, default_broker,
+    set_secret_resolver,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -640,7 +643,8 @@ __all__ = [
     "describe_step", "generate_sop", "write_sop",
     "easing_names", "tween_drag", "tween_points",
     "COMMANDS_GROUP", "discover_plugins", "load_plugins",
-    "ApprovalGate",
+    "ApprovalGate", "CredentialBroker", "CredentialBrokerError",
+    "default_broker", "set_secret_resolver",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

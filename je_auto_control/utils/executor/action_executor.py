@@ -2922,6 +2922,30 @@ def _approval_status(token: str, db: Optional[str] = None) -> Dict[str, Any]:
     return {"status": gate.status(token), "approved": gate.is_approved(token)}
 
 
+def _lease_secret(name: str, ttl: float = 300.0) -> Dict[str, Any]:
+    """Adapter: issue a JIT lease for a secret name (no value returned)."""
+    from je_auto_control.utils.governance import default_broker
+    return {"token": default_broker.lease(name, ttl), "ttl": float(ttl)}
+
+
+def _lease_valid(token: str) -> Dict[str, Any]:
+    """Adapter: report whether a lease token is still valid."""
+    from je_auto_control.utils.governance import default_broker
+    return {"valid": default_broker.is_valid(token)}
+
+
+def _revoke_lease(token: str) -> Dict[str, Any]:
+    """Adapter: revoke a lease token immediately."""
+    from je_auto_control.utils.governance import default_broker
+    return {"revoked": default_broker.revoke(token)}
+
+
+def _lease_active() -> Dict[str, Any]:
+    """Adapter: list active (non-expired) leases without any secret values."""
+    from je_auto_control.utils.governance import default_broker
+    return {"leases": default_broker.active()}
+
+
 class Executor:
     """
     Executor
@@ -3157,6 +3181,10 @@ class Executor:
             "AC_approval_approve": _approval_approve,
             "AC_approval_reject": _approval_reject,
             "AC_approval_status": _approval_status,
+            "AC_lease_secret": _lease_secret,
+            "AC_lease_valid": _lease_valid,
+            "AC_revoke_lease": _revoke_lease,
+            "AC_lease_active": _lease_active,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
