@@ -729,6 +729,29 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Report a request's status and approved flag.",
     ))
     specs.append(CommandSpec(
+        "AC_lease_secret", "Tools", "Lease: Issue",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("ttl", FieldType.FLOAT, optional=True, default=300.0),
+        ),
+        description="Issue a short-lived JIT lease for a secret (no value).",
+    ))
+    specs.append(CommandSpec(
+        "AC_lease_valid", "Tools", "Lease: Valid?",
+        fields=(FieldSpec("token", FieldType.STRING),),
+        description="Report whether a lease token is still valid.",
+    ))
+    specs.append(CommandSpec(
+        "AC_revoke_lease", "Tools", "Lease: Revoke",
+        fields=(FieldSpec("token", FieldType.STRING),),
+        description="Revoke a lease token immediately.",
+    ))
+    specs.append(CommandSpec(
+        "AC_lease_active", "Tools", "Lease: List Active",
+        fields=(),
+        description="List active leases (token, name, ttl_remaining).",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

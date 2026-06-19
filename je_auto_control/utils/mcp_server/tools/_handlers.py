@@ -1268,6 +1268,26 @@ def approval_status(token: str, db: Optional[str] = None):
     return {"status": gate.status(token), "approved": gate.is_approved(token)}
 
 
+def lease_secret(name: str, ttl: float = 300.0):
+    from je_auto_control.utils.governance import default_broker
+    return {"token": default_broker.lease(name, ttl), "ttl": float(ttl)}
+
+
+def lease_valid(token: str):
+    from je_auto_control.utils.governance import default_broker
+    return {"valid": default_broker.is_valid(token)}
+
+
+def revoke_lease(token: str):
+    from je_auto_control.utils.governance import default_broker
+    return {"revoked": default_broker.revoke(token)}
+
+
+def lease_active():
+    from je_auto_control.utils.governance import default_broker
+    return {"leases": default_broker.active()}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Just-In-Time Credential Leases](#whats-new-2026-06-19--just-in-time-credential-leases)
 - [What's new (2026-06-19) — Maker-Checker Approval Gate](#whats-new-2026-06-19--maker-checker-approval-gate)
 - [What's new (2026-06-19) — Plugin SDK](#whats-new-2026-06-19--plugin-sdk)
 - [What's new (2026-06-19) — MCP Structured Output](#whats-new-2026-06-19--mcp-structured-output)
@@ -84,6 +85,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Just-In-Time Credential Leases
+
+Zero standing privilege for secrets. Full reference: [`docs/source/Eng/doc/new_features/v33_features_doc.rst`](docs/source/Eng/doc/new_features/v33_features_doc.rst).
+
+- **`CredentialBroker`** (`AC_lease_secret` / `AC_lease_valid` / `AC_revoke_lease` / `AC_lease_active`, `ac_*`): a consumer takes a short-lived *lease* (token bound to a secret name + expiry); the real value is fetched only at `redeem` time, only while valid, through a pluggable resolver (an unlocked `SecretManager`, env, vault). Secret values never enter executor/MCP records — the executor/MCP/Builder surfaces manage the lease lifecycle only; `redeem` is a deliberate Python-API-only escape hatch. Clock and resolver injectable.
 
 ## What's new (2026-06-19) — Maker-Checker Approval Gate
 
