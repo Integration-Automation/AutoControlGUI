@@ -2637,6 +2637,32 @@ def _observe_stop() -> Dict[str, Any]:
     return {"running": default_observer.running}
 
 
+def _generate_sbom(path: Optional[str] = None,
+                   root: str = "je_auto_control") -> Dict[str, Any]:
+    """Adapter: build (or write) a CycloneDX SBOM for the project."""
+    from je_auto_control.utils.sbom import build_sbom, write_sbom
+    root_arg = root or None
+    if path:
+        return {"path": write_sbom(path, root_arg)}
+    return {"sbom": build_sbom(root_arg)}
+
+
+def _shard_suite(flows: List[str], shards: int = 2,
+                 history_path: Optional[str] = None,
+                 window: int = 20) -> Dict[str, Any]:
+    """Adapter: balance flows into duration-aware shards."""
+    from je_auto_control.utils.test_shard import shard_flows
+    return {"shards": shard_flows(flows, int(shards),
+                                  history_path=history_path,
+                                  window=int(window))}
+
+
+def _merge_results(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Adapter: merge per-shard report dicts into one report."""
+    from je_auto_control.utils.test_shard import merge_results
+    return merge_results(reports)
+
+
 class Executor:
     """
     Executor
@@ -2835,6 +2861,9 @@ class Executor:
             "AC_observe_poll": _observe_poll,
             "AC_observe_start": _observe_start,
             "AC_observe_stop": _observe_stop,
+            "AC_generate_sbom": _generate_sbom,
+            "AC_shard_suite": _shard_suite,
+            "AC_merge_results": _merge_results,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
