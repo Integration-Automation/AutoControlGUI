@@ -49,6 +49,7 @@ Comprehensive guides for all AutoControl features.
    doc/new_features/v24_features_doc
    doc/new_features/v25_features_doc
    doc/new_features/v26_features_doc
+   doc/new_features/v27_features_doc
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
    doc/operations_layer/operations_layer_doc

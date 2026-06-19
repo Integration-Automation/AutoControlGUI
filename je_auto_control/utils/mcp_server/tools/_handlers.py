@@ -1211,6 +1211,16 @@ def clip_history_stop():
     return {"running": default_clipboard_history.running}
 
 
+def heal_stats(limit=200):
+    from je_auto_control.utils.heal_analytics import analyze_heal_log
+    return analyze_heal_log(limit=int(limit))
+
+
+def scan_secrets(data):
+    from je_auto_control.utils.secrets_scan import scan_secrets as _scan
+    return {"findings": _scan(data)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

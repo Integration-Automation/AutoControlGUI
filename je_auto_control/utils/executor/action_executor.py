@@ -2851,6 +2851,18 @@ def _clip_history_stop() -> Dict[str, Any]:
     return {"running": default_clipboard_history.running}
 
 
+def _heal_stats(limit: int = 200) -> Dict[str, Any]:
+    """Adapter: aggregate the self-heal log into metrics."""
+    from je_auto_control.utils.heal_analytics import analyze_heal_log
+    return analyze_heal_log(limit=int(limit))
+
+
+def _scan_secrets(data: Any) -> Dict[str, Any]:
+    """Adapter: scan JSON/data for hardcoded secrets."""
+    from je_auto_control.utils.secrets_scan import scan_secrets
+    return {"findings": scan_secrets(data)}
+
+
 class Executor:
     """
     Executor
@@ -3076,6 +3088,8 @@ class Executor:
             "AC_clip_history_search": _clip_history_search,
             "AC_clip_history_start": _clip_history_start,
             "AC_clip_history_stop": _clip_history_stop,
+            "AC_heal_stats": _heal_stats,
+            "AC_scan_secrets": _scan_secrets,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
