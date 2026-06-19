@@ -2478,6 +2478,30 @@ def clipboard_history_tools() -> List[MCPTool]:
     ]
 
 
+def audit_analysis_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_heal_stats",
+            description=("Aggregate the self-healing event log into metrics: "
+                         "heal_rate, by_method, fallback_rate, avg latency, "
+                         "and the most-brittle locators."),
+            input_schema=schema({"limit": {"type": "integer"}}),
+            handler=h.heal_stats,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_scan_secrets",
+            description=("Scan a JSON/data structure for hardcoded secrets "
+                         "(by key name, value pattern — AWS/GitHub/private-key "
+                         "— or high entropy) that should use ${secrets.*}. "
+                         "Returns masked {findings}."),
+            input_schema=schema({"data": {}}, required=["data"]),
+            handler=h.scan_secrets,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3534,7 +3558,7 @@ ALL_FACTORIES = (
     sbom_tools, sharding_tools, data_quality_tools, i18n_tools,
     checkpoint_tools, set_of_marks_tools, screen_state_tools,
     input_macro_tools, resilience_tools,
-    ci_annotation_tools, clipboard_history_tools,
+    ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

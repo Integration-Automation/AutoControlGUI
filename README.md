@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Heal Analytics & Secret Scan](#whats-new-2026-06-19--heal-analytics--secret-scan)
 - [What's new (2026-06-19) — CI Annotations & Clipboard History](#whats-new-2026-06-19--ci-annotations--clipboard-history)
 - [What's new (2026-06-19) — Resilience Primitives](#whats-new-2026-06-19--resilience-primitives)
 - [What's new (2026-06-19) — Timed Input Macros](#whats-new-2026-06-19--timed-input-macros)
@@ -78,6 +79,13 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Heal Analytics & Secret Scan
+
+Two pure-stdlib audit/analysis tools. Full reference: [`docs/source/Eng/doc/new_features/v27_features_doc.rst`](docs/source/Eng/doc/new_features/v27_features_doc.rst).
+
+- **Self-heal analytics** — `analyze_heal_log` / `heal_stats` (`AC_heal_stats`, `ac_heal_stats`): aggregate the self-heal log into heal-rate, strategy mix, fallback-rate, avg latency and the most-brittle locators — catch decaying selectors before they fail.
+- **Secret scan** — `scan_secrets(data)` (`AC_scan_secrets`, `ac_scan_secrets`): flag hardcoded secrets in action JSON (by key name, value pattern, or high entropy) that should use `${secrets.*}`; vault refs ignored, previews masked.
 
 ## What's new (2026-06-19) — CI Annotations & Clipboard History
 

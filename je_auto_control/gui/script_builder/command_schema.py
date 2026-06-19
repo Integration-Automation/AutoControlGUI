@@ -666,6 +666,22 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_input_macro_specs(specs)
     _add_resilience_specs(specs)
     _add_devex_specs(specs)
+    _add_audit_specs(specs)
+
+
+def _add_audit_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_heal_stats", "Testing", "Self-Heal Analytics",
+        fields=(FieldSpec("limit", FieldType.INT, optional=True,
+                          default=200),),
+        description="Aggregate the self-heal log (heal rate, brittle "
+                    "locators).",
+    ))
+    specs.append(CommandSpec(
+        "AC_scan_secrets", "Tools", "Scan for Hardcoded Secrets",
+        description="Scan 'data' (JSON view) for hardcoded secrets that "
+                    "should use ${secrets.*}.",
+    ))
 
 
 def _add_devex_specs(specs: List[CommandSpec]) -> None:

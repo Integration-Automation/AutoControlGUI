@@ -188,6 +188,9 @@ from je_auto_control.utils.ci_annotations import (
 from je_auto_control.utils.clipboard_history import (
     ClipboardHistory, default_clipboard_history,
 )
+# Self-heal analytics + action-secrets scanning (audit/analysis)
+from je_auto_control.utils.heal_analytics import analyze_heal_log, heal_stats
+from je_auto_control.utils.secrets_scan import scan_secrets
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -619,6 +622,7 @@ __all__ = [
     "CircuitBreaker", "CircuitOpenError", "RetryPolicy", "retry_call",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
+    "analyze_heal_log", "heal_stats", "scan_secrets",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
