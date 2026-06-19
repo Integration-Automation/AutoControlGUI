@@ -2729,6 +2729,27 @@ def approval_testing_tools() -> List[MCPTool]:
     ]
 
 
+def trajectory_eval_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_evaluate_trajectory",
+            description=("Score an agent's recorded 'trajectory' (a list of "
+                         "{action, args, observation} steps) against a 'rubric' "
+                         "with optional keys required_actions (+ordered), "
+                         "forbidden_actions, max_steps, success_contains. "
+                         "Returns {passed, score, steps, checks} for agent "
+                         "regression testing."),
+            input_schema=schema(
+                {"trajectory": {"type": "array",
+                                "items": {"type": "object"}},
+                 "rubric": {"type": "object"}},
+                ["trajectory", "rubric"]),
+            handler=h.evaluate_trajectory,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3788,6 +3809,7 @@ ALL_FACTORIES = (
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
     process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
+    trajectory_eval_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

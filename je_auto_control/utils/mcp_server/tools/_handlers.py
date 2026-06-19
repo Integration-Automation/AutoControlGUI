@@ -1325,6 +1325,12 @@ def pending_artifacts(approvals_dir: str = ".approvals"):
     return {"pending": _pending(approvals_dir)}
 
 
+def evaluate_trajectory(trajectory, rubric):
+    from je_auto_control.utils.trajectory_eval import (
+        evaluate_trajectory as _evaluate)
+    return _evaluate(trajectory, rubric)
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

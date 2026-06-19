@@ -802,6 +802,16 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="List artifacts awaiting approval.",
     ))
     specs.append(CommandSpec(
+        "AC_evaluate_trajectory", "Agent", "Evaluate Trajectory",
+        fields=(
+            FieldSpec("trajectory", FieldType.STRING,
+                      placeholder='[{"action": "AC_click_mouse"}]'),
+            FieldSpec("rubric", FieldType.STRING,
+                      placeholder='{"required_actions": ["AC_type_text"]}'),
+        ),
+        description="Score an agent trajectory against a rubric (JSON).",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

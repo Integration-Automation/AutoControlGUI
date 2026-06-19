@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Agent Trajectory Evaluation](#whats-new-2026-06-19--agent-trajectory-evaluation)
 - [What's new (2026-06-19) — Approval Testing (Golden-Master Baselines)](#whats-new-2026-06-19--approval-testing-golden-master-baselines)
 - [What's new (2026-06-19) — Network Egress Allowlist Guard](#whats-new-2026-06-19--network-egress-allowlist-guard)
 - [What's new (2026-06-19) — Just-In-Time Credential Leases](#whats-new-2026-06-19--just-in-time-credential-leases)
@@ -87,6 +88,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Agent Trajectory Evaluation
+
+Score an agent run against a rubric. Full reference: [`docs/source/Eng/doc/new_features/v36_features_doc.rst`](docs/source/Eng/doc/new_features/v36_features_doc.rst).
+
+- **`evaluate_trajectory`** (`AC_evaluate_trajectory`, `ac_evaluate_trajectory`): scores a recorded trajectory (ordered `{action, args, observation}` steps) against a declarative rubric — `required_actions` (+`ordered`), `forbidden_actions`, `max_steps`, `success_contains`. Returns `{passed, score, steps, checks}` where `score` is the fraction of applicable checks passed and each `check` pinpoints a violated expectation. A deterministic, dependency-free signal for agent regression testing; the rubric is plain data so it lives in JSON action files and travels over MCP.
 
 ## What's new (2026-06-19) — Approval Testing (Golden-Master Baselines)
 
