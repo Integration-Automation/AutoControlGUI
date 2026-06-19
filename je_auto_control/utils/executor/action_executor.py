@@ -2743,6 +2743,19 @@ def _checkpoint_clear(run_id: str, db: str) -> Dict[str, Any]:
     return {"cleared": CheckpointStore(db).clear(run_id)}
 
 
+def _mark_screen(app_name: Optional[str] = None,
+                 render_path: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: number live UI elements (Set-of-Marks) for VLM grounding."""
+    from je_auto_control.utils.set_of_marks import mark_screen
+    return mark_screen(app_name=app_name, render_path=render_path)
+
+
+def _mark_click(mark_id: int) -> Dict[str, Any]:
+    """Adapter: click the element behind a numbered mark."""
+    from je_auto_control.utils.set_of_marks import mark_click
+    return {"clicked": mark_click(int(mark_id))}
+
+
 class Executor:
     """
     Executor
@@ -2953,6 +2966,8 @@ class Executor:
             "AC_run_resumable": _run_resumable,
             "AC_checkpoint_status": _checkpoint_status,
             "AC_checkpoint_clear": _checkpoint_clear,
+            "AC_mark_screen": _mark_screen,
+            "AC_mark_click": _mark_click,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

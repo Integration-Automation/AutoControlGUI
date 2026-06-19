@@ -2303,6 +2303,32 @@ def checkpoint_tools() -> List[MCPTool]:
     ]
 
 
+def set_of_marks_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_mark_screen",
+            description=("Set-of-Marks: number the live UI elements (a11y "
+                         "tree) and return an id->bbox/center/role/text "
+                         "legend for VLM grounding — the model picks a number "
+                         "instead of pixels. Optionally render a numbered-box "
+                         "overlay screenshot to 'render_path'."),
+            input_schema=schema({"app_name": {"type": "string"},
+                                 "render_path": {"type": "string"}}),
+            handler=h.mark_screen,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_mark_click",
+            description=("Click the element behind a numbered mark from the "
+                         "last ac_mark_screen. Returns {clicked}."),
+            input_schema=schema({"mark_id": {"type": "integer"}},
+                                required=["mark_id"]),
+            handler=h.mark_click,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3357,7 +3383,7 @@ ALL_FACTORIES = (
     skill_library_tools, guardrail_tools, a2a_tools, office_tools,
     agent_memory_tools, determinism_tools, observer_tools,
     sbom_tools, sharding_tools, data_quality_tools, i18n_tools,
-    checkpoint_tools,
+    checkpoint_tools, set_of_marks_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

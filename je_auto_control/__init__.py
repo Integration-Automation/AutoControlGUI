@@ -165,6 +165,10 @@ from je_auto_control.utils.i18n_test import (
 from je_auto_control.utils.checkpoint import (
     Checkpoint, CheckpointStore, run_resumable,
 )
+# Set-of-Marks overlay (number elements for VLM grounding)
+from je_auto_control.utils.set_of_marks import (
+    mark_click, mark_elements, mark_screen, render_marks, resolve_mark,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -588,6 +592,8 @@ __all__ = [
     "check_catalog", "check_overflow", "pseudo_localize",
     "pseudo_localize_catalog",
     "Checkpoint", "CheckpointStore", "run_resumable",
+    "mark_click", "mark_elements", "mark_screen", "render_marks",
+    "resolve_mark",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
