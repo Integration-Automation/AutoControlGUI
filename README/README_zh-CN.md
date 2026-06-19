@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-20) — S3 兼容成品存储](#本次更新-2026-06-20--s3-兼容成品存储)
 - [本次更新 (2026-06-20) — 模糊字符串匹配与去重](#本次更新-2026-06-20--模糊字符串匹配与去重)
 - [本次更新 (2026-06-19) — 视频步骤叠加报告](#本次更新-2026-06-19--视频步骤叠加报告)
 - [本次更新 (2026-06-19) — Agent 可观测性(GenAI OpenTelemetry Spans)](#本次更新-2026-06-19--agent-可观测性genai-opentelemetry-spans)
@@ -91,6 +92,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-20) — S3 兼容成品存储
+
+将运行成品推送到对象存储。完整参考:[`docs/source/Zh/doc/new_features/v41_features_doc.rst`](../docs/source/Zh/doc/new_features/v41_features_doc.rst)。
+
+- **`S3ArtifactStore`**(`AC_s3_upload` / `AC_s3_download` / `AC_s3_list` / `AC_s3_delete`、`ac_*`):对任何 S3 兼容存储桶(AWS S3、MinIO、R2)上传/下载/列出/删除报告、屏幕截图与录像。`boto3` 为**可选** `[s3]` extra,且 client **可注入**,因此存储体逻辑(含 executor 路径)以假 client 完整单元测试(无 boto3/网络);实际 AWS 路径诚实标注为 CI 无法验证。整个 API 相对于存储体 `prefix`。模块级的默认存储体支撑这些指令。
 
 ## 本次更新 (2026-06-20) — 模糊字符串匹配与去重
 

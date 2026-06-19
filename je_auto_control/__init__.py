@@ -234,6 +234,11 @@ from je_auto_control.utils.video_report import (
 from je_auto_control.utils.fuzzy import (
     fuzzy_best_match, fuzzy_dedupe, fuzzy_matches, fuzzy_ratio,
 )
+# S3-compatible artifact store (optional boto3, injectable client)
+from je_auto_control.utils.artifact_store import (
+    S3ArtifactStore, configure_default_store, get_default_store,
+    set_default_store,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -681,6 +686,8 @@ __all__ = [
     "VideoStep", "build_overlay_plan", "render_overlay_frame",
     "write_step_video",
     "fuzzy_best_match", "fuzzy_dedupe", "fuzzy_matches", "fuzzy_ratio",
+    "S3ArtifactStore", "configure_default_store", "get_default_store",
+    "set_default_store",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

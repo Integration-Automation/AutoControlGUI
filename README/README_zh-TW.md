@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-20) — S3 相容成品儲存](#本次更新-2026-06-20--s3-相容成品儲存)
 - [本次更新 (2026-06-20) — 模糊字串比對與去重](#本次更新-2026-06-20--模糊字串比對與去重)
 - [本次更新 (2026-06-19) — 影片步驟疊加報告](#本次更新-2026-06-19--影片步驟疊加報告)
 - [本次更新 (2026-06-19) — Agent 可觀測性(GenAI OpenTelemetry Spans)](#本次更新-2026-06-19--agent-可觀測性genai-opentelemetry-spans)
@@ -91,6 +92,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-20) — S3 相容成品儲存
+
+將執行成品推送到物件儲存。完整參考:[`docs/source/Zh/doc/new_features/v41_features_doc.rst`](../docs/source/Zh/doc/new_features/v41_features_doc.rst)。
+
+- **`S3ArtifactStore`**(`AC_s3_upload` / `AC_s3_download` / `AC_s3_list` / `AC_s3_delete`、`ac_*`):對任何 S3 相容儲存桶(AWS S3、MinIO、R2)上傳/下載/列出/刪除報告、螢幕截圖與錄影。`boto3` 為**選用** `[s3]` extra,且 client **可注入**,因此儲存體邏輯(含 executor 路徑)以假 client 完整單元測試(無 boto3/網路);實際 AWS 路徑誠實標註為 CI 無法驗證。整個 API 相對於儲存體 `prefix`。模組層級的預設儲存體支撐這些指令。
 
 ## 本次更新 (2026-06-20) — 模糊字串比對與去重
 

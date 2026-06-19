@@ -1392,6 +1392,26 @@ def fuzzy_dedupe(items, threshold=0.9, ignore_case=True):
                               ignore_case=ignore_case)}
 
 
+def s3_upload(local_path, key=None):
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"key": get_default_store().upload(local_path, key)}
+
+
+def s3_download(key, local_path):
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"path": get_default_store().download(key, local_path)}
+
+
+def s3_list(prefix=None):
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"keys": get_default_store().list(prefix)}
+
+
+def s3_delete(key):
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"deleted": get_default_store().delete(key)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

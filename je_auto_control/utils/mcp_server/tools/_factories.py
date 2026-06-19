@@ -2885,6 +2885,48 @@ def fuzzy_tools() -> List[MCPTool]:
     ]
 
 
+def artifact_store_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_s3_upload",
+            description=("Upload a local artifact to the configured default "
+                         "S3-compatible store. Optional 'key' (defaults to the "
+                         "file name). Returns {key}."),
+            input_schema=schema(
+                {"local_path": {"type": "string"}, "key": {"type": "string"}},
+                ["local_path"]),
+            handler=h.s3_upload,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_s3_download",
+            description=("Download object 'key' from the default S3 store to "
+                         "'local_path'. Returns {path}."),
+            input_schema=schema(
+                {"key": {"type": "string"},
+                 "local_path": {"type": "string"}}, ["key", "local_path"]),
+            handler=h.s3_download,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_s3_list",
+            description=("List object keys in the default S3 store, optionally "
+                         "under an extra 'prefix'. Returns {keys}."),
+            input_schema=schema({"prefix": {"type": "string"}}),
+            handler=h.s3_list,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_s3_delete",
+            description="Delete object 'key' from the default S3 store. "
+                        "Returns {deleted}.",
+            input_schema=schema({"key": {"type": "string"}}, ["key"]),
+            handler=h.s3_delete,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3945,7 +3987,7 @@ ALL_FACTORIES = (
     process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
-    video_report_tools, fuzzy_tools,
+    video_report_tools, fuzzy_tools, artifact_store_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
