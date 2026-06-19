@@ -658,6 +658,7 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_agent_specs(specs)
     _add_office_specs(specs)
     _add_memory_specs(specs)
+    _add_data_quality_specs(specs)
     specs.append(CommandSpec(
         "AC_wcag_audit", "Accessibility", "WCAG 2.2 Conformance Audit",
         fields=(
@@ -736,6 +737,24 @@ def _add_observer_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_observe_stop", "Flow", "Observe: Stop",
         description="Stop the background observer thread."))
+
+
+def _add_data_quality_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_validate_rows", "Data", "Validate Rows (schema)",
+        description="Validate 'rows' against a 'schema' (both via JSON view).",
+    ))
+    specs.append(CommandSpec(
+        "AC_extract_fields", "Data", "Extract Fields (regex)",
+        fields=(FieldSpec("text", FieldType.STRING),),
+        description="Pull email/url/phone/amount/... from text; 'fields' / "
+                    "'patterns' via JSON view.",
+    ))
+    specs.append(CommandSpec(
+        "AC_mask_rows", "Data", "Mask Rows",
+        description="Mask columns in 'rows' per 'rules' (redact/hash/partial),"
+                    " via JSON view.",
+    ))
 
 
 def _add_memory_specs(specs: List[CommandSpec]) -> None:

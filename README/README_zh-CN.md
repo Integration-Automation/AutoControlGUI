@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 数据质量](#本次更新-2026-06-19--数据质量)
 - [本次更新 (2026-06-19) — SBOM 与测试分片](#本次更新-2026-06-19--sbom-与测试分片)
 - [本次更新 (2026-06-19) — 反应式观察器](#本次更新-2026-06-19--反应式观察器)
 - [本次更新 (2026-06-19) — WCAG 2.2 审计](#本次更新-2026-06-19--wcag-22-审计)
@@ -69,6 +70,14 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 数据质量
+
+三项纯标准库的数据质量辅助工具(介于 `load_rows`/OCR 与下游输入之间的闸),走完整五层。完整参考:[`docs/source/Zh/doc/new_features/v19_features_doc.rst`](../docs/source/Zh/doc/new_features/v19_features_doc.rst)。
+
+- **数据行 schema 验证** — `validate_rows(rows, schema)`(`AC_validate_rows`、`ac_validate_rows`):声明式逐字段规则(type/required/regex/min/max/min_len/max_len/allowed/unique);返回 `{ok, valid, invalid, errors}`,在坏掉的抓取/OCR 数据污染 ERP/表单前拦下。
+- **字段提取** — `extract_fields(text, fields, patterns)`(`AC_extract_fields`、`ac_extract_fields`):具名 regex 预设(email/url/ipv4/phone/date_iso/amount/hashtag)+自定义 patterns,作用于自由文本 / OCR 文本块。
+- **数据行掩码** — `mask_rows(rows, rules)`(`AC_mask_rows`、`ac_mask_rows`):导出前掩码字段——`redact` / `hash`(SHA-256)/ `partial`(保留末 4 字);补足仅针对截图的脱敏。
 
 ## 本次更新 (2026-06-19) — SBOM 与测试分片
 

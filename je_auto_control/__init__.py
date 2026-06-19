@@ -153,6 +153,10 @@ from je_auto_control.utils.observer import (
 from je_auto_control.utils.sbom import build_sbom, write_sbom
 # Duration-aware suite sharding + shard-result merge
 from je_auto_control.utils.test_shard import merge_results, shard_flows
+# Data-quality: row schema validation, field extraction, masking
+from je_auto_control.utils.data_quality import (
+    extract_fields, mask_rows, validate_rows,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -572,6 +576,7 @@ __all__ = [
     "image_predicate", "pixel_predicate", "text_predicate",
     "build_sbom", "write_sbom",
     "merge_results", "shard_flows",
+    "extract_fields", "mask_rows", "validate_rows",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

@@ -2181,6 +2181,50 @@ def sharding_tools() -> List[MCPTool]:
     ]
 
 
+def data_quality_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_validate_rows",
+            description=("Validate rows against a declarative schema "
+                         "(type/required/regex/min/max/min_len/max_len/"
+                         "allowed/unique). Returns {ok, valid, invalid, "
+                         "errors} — the data-quality gate after load_rows."),
+            input_schema=schema({
+                "rows": {"type": "array", "items": {"type": "object"}},
+                "schema": {"type": "object"},
+            }, required=["rows", "schema"]),
+            handler=h.validate_rows,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_extract_fields",
+            description=("Extract structured values from free text using "
+                         "named presets (email/url/ipv4/phone/date_iso/"
+                         "amount/hashtag) and/or custom 'patterns'. Returns "
+                         "{fields: {name: [matches]}}."),
+            input_schema=schema({
+                "text": {"type": "string"},
+                "fields": {"type": "array", "items": {"type": "string"}},
+                "patterns": {"type": "object"},
+            }, required=["text"]),
+            handler=h.extract_fields,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_mask_rows",
+            description=("Mask sensitive columns in rows before export. "
+                         "'rules' maps a field to redact / hash / partial. "
+                         "Returns {rows}."),
+            input_schema=schema({
+                "rows": {"type": "array", "items": {"type": "object"}},
+                "rules": {"type": "object"},
+            }, required=["rows", "rules"]),
+            handler=h.mask_rows,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3234,7 +3278,7 @@ ALL_FACTORIES = (
     element_repository_tools, flow_debugger_tools,
     skill_library_tools, guardrail_tools, a2a_tools, office_tools,
     agent_memory_tools, determinism_tools, observer_tools,
-    sbom_tools, sharding_tools,
+    sbom_tools, sharding_tools, data_quality_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

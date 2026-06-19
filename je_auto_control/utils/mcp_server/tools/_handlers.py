@@ -1074,6 +1074,21 @@ def merge_results(reports):
     return _merge(reports)
 
 
+def validate_rows(rows, schema):
+    from je_auto_control.utils.data_quality import validate_rows as _validate
+    return _validate(rows, schema)
+
+
+def extract_fields(text, fields=None, patterns=None):
+    from je_auto_control.utils.data_quality import extract_fields as _extract
+    return {"fields": _extract(text, fields=fields, patterns=patterns)}
+
+
+def mask_rows(rows, rules):
+    from je_auto_control.utils.data_quality import mask_rows as _mask
+    return {"rows": _mask(rows, rules)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:
