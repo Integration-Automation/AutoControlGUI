@@ -2927,6 +2927,34 @@ def artifact_store_tools() -> List[MCPTool]:
     ]
 
 
+def image_dedup_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_image_hash",
+            description=("Perceptual hash of an image file for similarity "
+                         "comparison. 'algo' is 'average' (default) or "
+                         "'dhash'. Returns {hash} (hex)."),
+            input_schema=schema(
+                {"path": {"type": "string"},
+                 "algo": {"type": "string", "enum": ["average", "dhash"]}},
+                ["path"]),
+            handler=h.image_hash,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_dedupe_images",
+            description=("Collapse near-duplicate images by perceptual hash, "
+                         "keeping the first of each cluster (images within "
+                         "'max_distance' bits are dropped). Returns {unique}."),
+            input_schema=schema(
+                {"paths": {"type": "array", "items": {"type": "string"}},
+                 "max_distance": {"type": "integer"}}, ["paths"]),
+            handler=h.dedupe_images,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3987,7 +4015,7 @@ ALL_FACTORIES = (
     process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
-    video_report_tools, fuzzy_tools, artifact_store_tools,
+    video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

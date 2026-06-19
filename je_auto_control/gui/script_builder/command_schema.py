@@ -929,6 +929,24 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Delete an object from the default S3 store.",
     ))
     specs.append(CommandSpec(
+        "AC_image_hash", "Image", "Perceptual Hash",
+        fields=(
+            FieldSpec("path", FieldType.FILE_PATH),
+            FieldSpec("algo", FieldType.ENUM, optional=True, default="average",
+                      choices=("average", "dhash")),
+        ),
+        description="Perceptual hash of an image (average or dhash).",
+    ))
+    specs.append(CommandSpec(
+        "AC_dedupe_images", "Image", "Dedupe Near-Identical Images",
+        fields=(
+            FieldSpec("paths", FieldType.STRING,
+                      placeholder='["a.png", "b.png"]'),
+            FieldSpec("max_distance", FieldType.INT, optional=True, default=5),
+        ),
+        description="Collapse near-duplicate images by perceptual hash.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,
