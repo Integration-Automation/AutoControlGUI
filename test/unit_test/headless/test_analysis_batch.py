@@ -25,13 +25,13 @@ def test_heal_stats_metrics():
     assert stats["by_method"] == {"image": 1, "vlm": 2}
     assert stats["fallbacks"] == 2
     assert stats["fallback_rate"] == pytest.approx(round(2 / 3, 4))
-    assert stats["avg_duration_ms"] == 30.0
+    assert stats["avg_duration_ms"] == pytest.approx(30.0)
     assert stats["top_brittle"][0] == {"locator": "btn.png", "fallbacks": 2}
 
 
 def test_heal_stats_empty():
     stats = heal_stats([])
-    assert stats["total"] == 0 and stats["heal_rate"] == 0.0
+    assert stats["total"] == 0 and stats["heal_rate"] == pytest.approx(0.0)
 
 
 # --- secrets scan ---------------------------------------------------------
