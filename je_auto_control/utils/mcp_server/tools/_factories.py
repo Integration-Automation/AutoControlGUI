@@ -2750,6 +2750,31 @@ def trajectory_eval_tools() -> List[MCPTool]:
     ]
 
 
+def compliance_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_compliance_report",
+            description=("Map a flat 'evidence' object (e.g. "
+                         "{egress_allowlist_enforced: true, "
+                         "jit_credentials_used: true, secrets_scanned: true, "
+                         "audit_logging_enabled: true, "
+                         "change_approval_required: true, sbom_generated: "
+                         "true}) to SOC2/ISO 27001 controls. Each is satisfied/"
+                         "gap/not_assessed. Optional 'frameworks' filter, and "
+                         "'path'+'fmt' (json|html) to write. Returns the "
+                         "report {summary, controls}."),
+            input_schema=schema(
+                {"evidence": {"type": "object"},
+                 "frameworks": {"type": "array", "items": {"type": "string"}},
+                 "path": {"type": "string"},
+                 "fmt": {"type": "string", "enum": ["json", "html"]}},
+                ["evidence"]),
+            handler=h.compliance_report,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3809,7 +3834,7 @@ ALL_FACTORIES = (
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
     process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
-    trajectory_eval_tools,
+    trajectory_eval_tools, compliance_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

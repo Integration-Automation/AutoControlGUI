@@ -812,6 +812,19 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Score an agent trajectory against a rubric (JSON).",
     ))
     specs.append(CommandSpec(
+        "AC_compliance_report", "Report", "Compliance Control Report",
+        fields=(
+            FieldSpec("evidence", FieldType.STRING,
+                      placeholder='{"egress_allowlist_enforced": true}'),
+            FieldSpec("frameworks", FieldType.STRING, optional=True,
+                      placeholder="SOC2, ISO27001"),
+            FieldSpec("path", FieldType.STRING, optional=True),
+            FieldSpec("fmt", FieldType.ENUM, optional=True, default="json",
+                      choices=("json", "html")),
+        ),
+        description="Map governance evidence to SOC2/ISO 27001 controls.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

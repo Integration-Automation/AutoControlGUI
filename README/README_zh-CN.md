@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 合规控制报告(SOC2 / ISO 27001)](#本次更新-2026-06-19--合规控制报告soc2--iso-27001)
 - [本次更新 (2026-06-19) — Agent 轨迹评估](#本次更新-2026-06-19--agent-轨迹评估)
 - [本次更新 (2026-06-19) — 核准式测试(Golden-Master 基准)](#本次更新-2026-06-19--核准式测试golden-master-基准)
 - [本次更新 (2026-06-19) — 网络出口允许清单守卫](#本次更新-2026-06-19--网络出口允许清单守卫)
@@ -87,6 +88,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 合规控制报告(SOC2 / ISO 27001)
+
+将治理证据映射到具名控制项。完整参考:[`docs/source/Zh/doc/new_features/v37_features_doc.rst`](../docs/source/Zh/doc/new_features/v37_features_doc.rst)。
+
+- **`build_compliance_report`**(`AC_compliance_report`、`ac_compliance_report`):框架已内建审计员关注的控制项 —— 出口允许清单、JIT 凭证租约、maker-checker 审批、密钥扫描器、审计记录、CycloneDX SBOM。本功能将扁平的 `evidence` 映射表映射到 SOC2(CC6.1/CC6.3/CC6.8/CC7.3/CC8.1)与 ISO 27001(A.5.23/A.8.16/A.8.30)控制项,每项标记为 `satisfied`/`gap`/`not_assessed`,并输出 JSON 或独立 HTML 表格。治理套件的收尾 —— 为报告辅助,非认证。
 
 ## 本次更新 (2026-06-19) — Agent 轨迹评估
 

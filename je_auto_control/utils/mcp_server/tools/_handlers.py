@@ -1331,6 +1331,15 @@ def evaluate_trajectory(trajectory, rubric):
     return _evaluate(trajectory, rubric)
 
 
+def compliance_report(evidence, frameworks=None, path=None, fmt="json"):
+    from je_auto_control.utils.compliance import (
+        build_compliance_report, write_compliance_report)
+    report = build_compliance_report(evidence, frameworks)
+    if path:
+        report["path"] = write_compliance_report(report, path, fmt)
+    return report
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

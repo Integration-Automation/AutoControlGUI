@@ -218,6 +218,10 @@ from je_auto_control.utils.approval import (
 )
 # Agent trajectory evaluation: score a recorded run against a rubric
 from je_auto_control.utils.trajectory_eval import evaluate_trajectory
+# Compliance: map governance evidence to SOC2 / ISO 27001 controls
+from je_auto_control.utils.compliance import (
+    build_compliance_report, render_compliance_html, write_compliance_report,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -659,6 +663,8 @@ __all__ = [
     "ApprovalResult", "approve_artifact", "pending_artifacts",
     "verify_artifact",
     "evaluate_trajectory",
+    "build_compliance_report", "render_compliance_html",
+    "write_compliance_report",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

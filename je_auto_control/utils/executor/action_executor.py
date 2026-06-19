@@ -3006,6 +3006,23 @@ def _evaluate_trajectory(trajectory: Any, rubric: Any) -> Dict[str, Any]:
     return evaluate_trajectory(trajectory, rubric)
 
 
+def _compliance_report(evidence: Any, frameworks: Any = None,
+                       path: Optional[str] = None,
+                       fmt: str = "json") -> Dict[str, Any]:
+    """Adapter: map governance evidence to SOC2/ISO controls; optionally write."""
+    import json
+    from je_auto_control.utils.compliance import (
+        build_compliance_report, write_compliance_report)
+    if isinstance(evidence, str):
+        evidence = json.loads(evidence)
+    if isinstance(frameworks, str):
+        frameworks = [f.strip() for f in frameworks.split(",") if f.strip()]
+    report = build_compliance_report(evidence, frameworks)
+    if path:
+        report["path"] = write_compliance_report(report, path, fmt)
+    return report
+
+
 class Executor:
     """
     Executor
@@ -3252,6 +3269,7 @@ class Executor:
             "AC_approve_artifact": _approve_artifact,
             "AC_pending_artifacts": _pending_artifacts,
             "AC_evaluate_trajectory": _evaluate_trajectory,
+            "AC_compliance_report": _compliance_report,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
