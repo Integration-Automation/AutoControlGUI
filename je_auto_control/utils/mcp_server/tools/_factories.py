@@ -2659,6 +2659,39 @@ def credential_lease_tools() -> List[MCPTool]:
     ]
 
 
+def egress_tools() -> List[MCPTool]:
+    _LISTS = {"allow": {"type": "array", "items": {"type": "string"}},
+              "deny": {"type": "array", "items": {"type": "string"}}}
+    return [
+        MCPTool(
+            name="ac_egress_allow",
+            description=("Lock the headless HTTP client to an egress policy. "
+                         "'allow' is a default-deny host allowlist (fnmatch "
+                         "globs over the URL hostname, e.g. '*.example.com'); "
+                         "'deny' blocks hosts even if allowed. Omitting both "
+                         "is allow-all. Returns the effective {allow, deny}."),
+            input_schema=schema(dict(_LISTS)),
+            handler=h.egress_allow,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_egress_check",
+            description=("Report whether a URL's host is permitted by the "
+                         "current egress policy. Returns {allowed}."),
+            input_schema=schema({"url": {"type": "string"}}, ["url"]),
+            handler=h.egress_check,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_egress_reset",
+            description="Clear the egress policy back to allow-all.",
+            input_schema=schema({}),
+            handler=h.egress_reset,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3717,7 +3750,7 @@ ALL_FACTORIES = (
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
     process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
-    credential_lease_tools,
+    credential_lease_tools, egress_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Network Egress Allowlist Guard](#whats-new-2026-06-19--network-egress-allowlist-guard)
 - [What's new (2026-06-19) — Just-In-Time Credential Leases](#whats-new-2026-06-19--just-in-time-credential-leases)
 - [What's new (2026-06-19) — Maker-Checker Approval Gate](#whats-new-2026-06-19--maker-checker-approval-gate)
 - [What's new (2026-06-19) — Plugin SDK](#whats-new-2026-06-19--plugin-sdk)
@@ -85,6 +86,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Network Egress Allowlist Guard
+
+Pin which hosts automation may reach. Full reference: [`docs/source/Eng/doc/new_features/v34_features_doc.rst`](docs/source/Eng/doc/new_features/v34_features_doc.rst).
+
+- **`EgressPolicy` / `set_egress_policy`** (`AC_egress_allow` / `AC_egress_check` / `AC_egress_reset`, `ac_*`): an allow list (default-deny) and/or deny list of `fnmatch` host globs (`*.example.com`) consulted by **every** `http_request` (so `AC_http` and all features built on it are covered at once). Blocked hosts raise `EgressBlocked` *before* a socket opens. Starts in allow-all mode — no behavior change until an operator locks egress down. Closes the exfiltration surface for unattended automation.
 
 ## What's new (2026-06-19) — Just-In-Time Credential Leases
 

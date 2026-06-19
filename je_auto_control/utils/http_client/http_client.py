@@ -93,6 +93,8 @@ def http_request(url: str, method: str = "GET",
     can assert on status codes.
     """
     _validate_url(url)
+    from je_auto_control.utils.egress.egress_policy import get_egress_policy
+    get_egress_policy().check(url)  # allow-all unless an operator locked it down
     request = urllib.request.Request(
         url, data=_encode_body(json_body, data), method=str(method).upper(),
         headers=_build_headers(headers, json_body, auth))

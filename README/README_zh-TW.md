@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — 網路出口允許清單守衛](#本次更新-2026-06-19--網路出口允許清單守衛)
 - [本次更新 (2026-06-19) — 即時憑證租約](#本次更新-2026-06-19--即時憑證租約)
 - [本次更新 (2026-06-19) — Maker-Checker 審批閘門](#本次更新-2026-06-19--maker-checker-審批閘門)
 - [本次更新 (2026-06-19) — Plugin SDK](#本次更新-2026-06-19--plugin-sdk)
@@ -84,6 +85,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — 網路出口允許清單守衛
+
+釘選自動化可連線的主機。完整參考:[`docs/source/Zh/doc/new_features/v34_features_doc.rst`](../docs/source/Zh/doc/new_features/v34_features_doc.rst)。
+
+- **`EgressPolicy` / `set_egress_policy`**(`AC_egress_allow` / `AC_egress_check` / `AC_egress_reset`、`ac_*`):允許清單(預設拒絕)與/或拒絕清單,使用 `fnmatch` 主機萬用字元(`*.example.com`),由**每一次** `http_request` 諮詢(因此 `AC_http` 與所有以其為基礎的功能一次涵蓋)。被封鎖的主機會在 socket 開啟**之前**拋出 `EgressBlocked`。以 allow-all 模式啟動 —— 操作者鎖定前不改變任何行為。封閉無人值守自動化的資料外洩面。
 
 ## 本次更新 (2026-06-19) — 即時憑證租約
 
