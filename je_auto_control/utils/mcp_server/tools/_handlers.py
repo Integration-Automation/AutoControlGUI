@@ -1173,6 +1173,12 @@ def input_sequence(steps):
     return {"log": _rs(steps)}
 
 
+def circuit_call(name, actions, threshold=5, reset_s=30.0):
+    from je_auto_control.utils.executor.action_executor import _circuit_call
+    return _circuit_call(name, actions, threshold=int(threshold),
+                         reset_s=float(reset_s))
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

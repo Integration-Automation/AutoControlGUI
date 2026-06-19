@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 韧性原语](#本次更新-2026-06-19--韧性原语)
 - [本次更新 (2026-06-19) — 计时输入宏](#本次更新-2026-06-19--计时输入宏)
 - [本次更新 (2026-06-19) — 语义屏幕状态](#本次更新-2026-06-19--语义屏幕状态)
 - [本次更新 (2026-06-19) — Set-of-Marks 叠图](#本次更新-2026-06-19--set-of-marks-叠图)
@@ -75,6 +76,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 韧性原语
+
+可重用的 retry 与断路器原语。完整参考:[`docs/source/Zh/doc/new_features/v25_features_doc.rst`](../docs/source/Zh/doc/new_features/v25_features_doc.rst)。
+
+- **RetryPolicy** — `RetryPolicy(...).run(fn)` / `retry_call(fn)`:在配置的异常上以指数退避重试(可注入 sleep)。(既有 `AC_retry` 流程指令已能对动作 body 重试;这是可重用的可调用包装器。)
+- **CircuitBreaker** — `CircuitBreaker` / `CircuitOpenError`(`AC_circuit_call`、`ac_circuit_call`):连续失败 N 次后打开、短路至重置超时、再半开——避免重试风暴打垮已故障依赖。可注入 clock;`AC_circuit_call` 让动作列表通过具名断路器执行。
 
 ## 本次更新 (2026-06-19) — 计时输入宏
 

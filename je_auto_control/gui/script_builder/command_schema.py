@@ -664,6 +664,19 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_set_of_marks_specs(specs)
     _add_screen_state_specs(specs)
     _add_input_macro_specs(specs)
+    _add_resilience_specs(specs)
+
+
+def _add_resilience_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_circuit_call", "Flow", "Circuit Breaker Call",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("threshold", FieldType.INT, optional=True, default=5),
+            FieldSpec("reset_s", FieldType.FLOAT, optional=True, default=30.0),
+        ),
+        description="Run 'actions' (JSON view) via a named circuit breaker.",
+    ))
 
 
 def _add_input_macro_specs(specs: List[CommandSpec]) -> None:

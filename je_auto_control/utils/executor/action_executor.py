@@ -2794,6 +2794,20 @@ def _input_sequence(steps: List[Dict[str, Any]]) -> Dict[str, Any]:
     return {"log": run_sequence(steps)}
 
 
+_CIRCUIT_BREAKERS: Dict[str, Any] = {}
+
+
+def _circuit_call(name: str, actions: List[Any], threshold: int = 5,
+                  reset_s: float = 30.0) -> Dict[str, Any]:
+    """Adapter: run an action list through a named circuit breaker."""
+    from je_auto_control.utils.resilience import CircuitBreaker
+    breaker = _CIRCUIT_BREAKERS.setdefault(
+        name, CircuitBreaker(int(threshold), float(reset_s)))
+    record = breaker.call(
+        lambda: executor.execute_action(list(actions), raise_on_error=True))
+    return {"state": breaker.state, "record": record}
+
+
 class Executor:
     """
     Executor
@@ -3012,6 +3026,7 @@ class Executor:
             "AC_describe_screen": _describe_screen,
             "AC_replay_timeline": _replay_timeline,
             "AC_input_sequence": _input_sequence,
+            "AC_circuit_call": _circuit_call,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

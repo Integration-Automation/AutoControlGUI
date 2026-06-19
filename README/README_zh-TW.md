@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — 韌性原語](#本次更新-2026-06-19--韌性原語)
 - [本次更新 (2026-06-19) — 計時輸入巨集](#本次更新-2026-06-19--計時輸入巨集)
 - [本次更新 (2026-06-19) — 語意螢幕狀態](#本次更新-2026-06-19--語意螢幕狀態)
 - [本次更新 (2026-06-19) — Set-of-Marks 疊圖](#本次更新-2026-06-19--set-of-marks-疊圖)
@@ -75,6 +76,13 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — 韌性原語
+
+可重用的 retry 與斷路器原語。完整參考:[`docs/source/Zh/doc/new_features/v25_features_doc.rst`](../docs/source/Zh/doc/new_features/v25_features_doc.rst)。
+
+- **RetryPolicy** — `RetryPolicy(...).run(fn)` / `retry_call(fn)`:在設定的例外上以指數退避重試(可注入 sleep)。(既有 `AC_retry` 流程指令已能對動作 body 重試;這是可重用的可呼叫包裝器。)
+- **CircuitBreaker** — `CircuitBreaker` / `CircuitOpenError`(`AC_circuit_call`、`ac_circuit_call`):連續失敗 N 次後開啟、短路至重置逾時、再半開——避免重試風暴打掛已故障依賴。可注入 clock;`AC_circuit_call` 讓動作清單透過具名斷路器執行。
 
 ## 本次更新 (2026-06-19) — 計時輸入巨集
 

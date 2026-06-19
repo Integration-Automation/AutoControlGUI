@@ -2400,6 +2400,26 @@ def input_macro_tools() -> List[MCPTool]:
     ]
 
 
+def resilience_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_circuit_call",
+            description=("Run an action list through a named circuit breaker: "
+                         "after 'threshold' failures it opens and short-"
+                         "circuits for 'reset_s' seconds. Returns {state, "
+                         "record}."),
+            input_schema=schema({
+                "name": {"type": "string"},
+                "actions": {"type": "array"},
+                "threshold": {"type": "integer"},
+                "reset_s": {"type": "number"}},
+                required=["name", "actions"]),
+            handler=h.circuit_call,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3455,7 +3475,7 @@ ALL_FACTORIES = (
     agent_memory_tools, determinism_tools, observer_tools,
     sbom_tools, sharding_tools, data_quality_tools, i18n_tools,
     checkpoint_tools, set_of_marks_tools, screen_state_tools,
-    input_macro_tools,
+    input_macro_tools, resilience_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
