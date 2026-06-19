@@ -1340,6 +1340,32 @@ def compliance_report(evidence, frameworks=None, path=None, fmt="json"):
     return report
 
 
+def trace_record(operation, model=None, system=None, input_tokens=None,
+                 output_tokens=None, tool_name=None, duration_s=0.0,
+                 status="ok"):
+    from je_auto_control.utils.agent_trace import default_trace
+    return default_trace.record(
+        operation, model=model, system=system, input_tokens=input_tokens,
+        output_tokens=output_tokens, tool_name=tool_name,
+        duration_s=duration_s, status=status)
+
+
+def trace_summary():
+    from je_auto_control.utils.agent_trace import default_trace
+    return default_trace.summary()
+
+
+def trace_export():
+    from je_auto_control.utils.agent_trace import default_trace
+    return {"spans": default_trace.to_otel()}
+
+
+def trace_reset():
+    from je_auto_control.utils.agent_trace import reset_trace
+    reset_trace()
+    return {"reset": True}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

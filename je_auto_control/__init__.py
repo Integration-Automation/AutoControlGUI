@@ -222,6 +222,10 @@ from je_auto_control.utils.trajectory_eval import evaluate_trajectory
 from je_auto_control.utils.compliance import (
     build_compliance_report, render_compliance_html, write_compliance_report,
 )
+# Agent observability: OpenTelemetry GenAI-convention spans
+from je_auto_control.utils.agent_trace import (
+    AgentTrace, default_trace, reset_trace,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -665,6 +669,7 @@ __all__ = [
     "evaluate_trajectory",
     "build_compliance_report", "render_compliance_html",
     "write_compliance_report",
+    "AgentTrace", "default_trace", "reset_trace",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

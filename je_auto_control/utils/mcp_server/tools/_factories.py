@@ -2775,6 +2775,53 @@ def compliance_tools() -> List[MCPTool]:
     ]
 
 
+def agent_trace_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_trace_record",
+            description=("Record a GenAI-convention span on the default agent "
+                         "trace: 'operation' (e.g. chat/tool), optional model, "
+                         "system, input_tokens, output_tokens, tool_name, "
+                         "duration_s, status (ok/error). Returns the span."),
+            input_schema=schema(
+                {"operation": {"type": "string"},
+                 "model": {"type": "string"}, "system": {"type": "string"},
+                 "input_tokens": {"type": "integer"},
+                 "output_tokens": {"type": "integer"},
+                 "tool_name": {"type": "string"},
+                 "duration_s": {"type": "number"},
+                 "status": {"type": "string", "enum": ["ok", "error"]}},
+                ["operation"]),
+            handler=h.trace_record,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_trace_summary",
+            description=("Roll up the default agent trace: span_count, "
+                         "error_count, input_tokens, output_tokens, "
+                         "duration_s."),
+            input_schema=schema({}),
+            handler=h.trace_summary,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_trace_export",
+            description=("Export the default agent trace as OTLP-friendly "
+                         "spans (gen_ai.* attributes). Returns {spans}."),
+            input_schema=schema({}),
+            handler=h.trace_export,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_trace_reset",
+            description="Clear the default agent trace. Returns {reset}.",
+            input_schema=schema({}),
+            handler=h.trace_reset,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3834,7 +3881,7 @@ ALL_FACTORIES = (
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
     process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
-    trajectory_eval_tools, compliance_tools,
+    trajectory_eval_tools, compliance_tools, agent_trace_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

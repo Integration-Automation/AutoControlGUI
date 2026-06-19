@@ -3023,6 +3023,39 @@ def _compliance_report(evidence: Any, frameworks: Any = None,
     return report
 
 
+def _trace_record(operation: str, model: Optional[str] = None,
+                  system: Optional[str] = None,
+                  input_tokens: Optional[int] = None,
+                  output_tokens: Optional[int] = None,
+                  tool_name: Optional[str] = None, duration_s: float = 0.0,
+                  status: str = "ok") -> Dict[str, Any]:
+    """Adapter: record a GenAI-convention span on the default agent trace."""
+    from je_auto_control.utils.agent_trace import default_trace
+    return default_trace.record(
+        operation, model=model, system=system, input_tokens=input_tokens,
+        output_tokens=output_tokens, tool_name=tool_name,
+        duration_s=duration_s, status=status)
+
+
+def _trace_summary() -> Dict[str, Any]:
+    """Adapter: roll up the default agent trace (count/tokens/duration)."""
+    from je_auto_control.utils.agent_trace import default_trace
+    return default_trace.summary()
+
+
+def _trace_export() -> Dict[str, Any]:
+    """Adapter: export the default agent trace in OTLP-friendly shape."""
+    from je_auto_control.utils.agent_trace import default_trace
+    return {"spans": default_trace.to_otel()}
+
+
+def _trace_reset() -> Dict[str, Any]:
+    """Adapter: clear the default agent trace."""
+    from je_auto_control.utils.agent_trace import reset_trace
+    reset_trace()
+    return {"reset": True}
+
+
 class Executor:
     """
     Executor
@@ -3270,6 +3303,10 @@ class Executor:
             "AC_pending_artifacts": _pending_artifacts,
             "AC_evaluate_trajectory": _evaluate_trajectory,
             "AC_compliance_report": _compliance_report,
+            "AC_trace_record": _trace_record,
+            "AC_trace_summary": _trace_summary,
+            "AC_trace_export": _trace_export,
+            "AC_trace_reset": _trace_reset,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
