@@ -996,6 +996,64 @@ def seed_everything(seed=0):
     return {"seed": _seed(int(seed))}
 
 
+def _observe_predicate(kind, params):
+    from je_auto_control.utils.observer import (
+        image_predicate, pixel_predicate, text_predicate)
+    builders = {
+        "image": lambda: image_predicate(params.get("image", ""),
+                                         params.get("threshold", 0.8)),
+        "text": lambda: text_predicate(params.get("text", "")),
+        "pixel": lambda: pixel_predicate(int(params.get("x", 0)),
+                                         int(params.get("y", 0))),
+    }
+    if kind not in builders:
+        raise ValueError(f"unknown observe kind: {kind!r}")
+    return builders[kind]()
+
+
+def _observe_handler(actions):
+    from je_auto_control.utils.executor.action_executor import executor
+
+    def handler(_event, _value):
+        if actions:
+            executor.execute_action(list(actions))
+    return handler
+
+
+def observe_add(name, kind="image", event="appear", actions=None, **params):
+    from je_auto_control.utils.observer import default_observer
+    default_observer.add(name, _observe_predicate(kind, params),
+                         _observe_handler(actions or []), events=(event,))
+    return {"name": name, "kind": kind, "event": event}
+
+
+def observe_remove(name):
+    from je_auto_control.utils.observer import default_observer
+    return {"removed": default_observer.remove(name)}
+
+
+def observe_list():
+    from je_auto_control.utils.observer import default_observer
+    return {"names": default_observer.names()}
+
+
+def observe_poll():
+    from je_auto_control.utils.observer import default_observer
+    return {"fired": default_observer.poll_once()}
+
+
+def observe_start():
+    from je_auto_control.utils.observer import default_observer
+    default_observer.start()
+    return {"running": default_observer.running}
+
+
+def observe_stop():
+    from je_auto_control.utils.observer import default_observer
+    default_observer.stop()
+    return {"running": default_observer.running}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

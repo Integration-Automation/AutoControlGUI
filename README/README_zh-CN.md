@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 反应式观察器](#本次更新-2026-06-19--反应式观察器)
 - [本次更新 (2026-06-19) — WCAG 2.2 审计](#本次更新-2026-06-19--wcag-22-审计)
 - [本次更新 (2026-06-19) — 记忆与确定性](#本次更新-2026-06-19--记忆与确定性)
 - [本次更新 (2026-06-19) — Office 读写](#本次更新-2026-06-19--office-读写)
@@ -67,6 +68,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 反应式观察器
+
+非阻塞的屏幕观察器(SikuliX `observe` 模型),走完整五层(facade、`AC_*`、MCP、Script Builder)。完整参考:[`docs/source/Zh/doc/new_features/v17_features_doc.rst`](../docs/source/Zh/doc/new_features/v17_features_doc.rst)。
+
+- **`ScreenObserver`**(`AC_observe_add` / `AC_observe_remove` / `AC_observe_list` / `AC_observe_poll` / `AC_observe_start` / `AC_observe_stop`、`ac_observe_*`):注册监看,在图像/文本/像素的 **appear** / **vanish** / **change** 时触发回调或执行 action list——在主流程继续的同时对对话框/进度/状态做出反应。
+- **为可测试而设计**——检测是可注入的 `predicate`;转换逻辑用 `poll_once()` 以合成值做单元测试。内建 `image_predicate` / `text_predicate` / `pixel_predicate` 包装既有的 locate/OCR/pixel 辅助函数。
 
 ## 本次更新 (2026-06-19) — WCAG 2.2 审计
 

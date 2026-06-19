@@ -2572,6 +2572,71 @@ def _seed_everything(seed: int = 0) -> Dict[str, Any]:
     return {"seed": seed_everything(int(seed))}
 
 
+def _observe_handler(actions: List[Any]) -> Callable[[str, Any], None]:
+    """Build an observer callback that runs an action list on each event."""
+    def handler(_event: str, _value: Any) -> None:
+        if actions:
+            executor.execute_action(list(actions))
+    return handler
+
+
+def _observe_predicate(kind: str, params: Dict[str, Any]):
+    from je_auto_control.utils.observer import (
+        image_predicate, pixel_predicate, text_predicate)
+    builders = {
+        "image": lambda: image_predicate(params.get("image", ""),
+                                         params.get("threshold", 0.8)),
+        "text": lambda: text_predicate(params.get("text", "")),
+        "pixel": lambda: pixel_predicate(int(params.get("x", 0)),
+                                         int(params.get("y", 0))),
+    }
+    if kind not in builders:
+        raise AutoControlActionException(f"unknown observe kind: {kind!r}")
+    return builders[kind]()
+
+
+def _observe_add(name: str, kind: str = "image", event: str = "appear",
+                 actions: Optional[List[Any]] = None,
+                 **params: Any) -> Dict[str, Any]:
+    """Adapter: watch image/text/pixel; run ``actions`` on the event."""
+    from je_auto_control.utils.observer import default_observer
+    default_observer.add(name, _observe_predicate(kind, params),
+                         _observe_handler(actions or []), events=(event,))
+    return {"name": name, "kind": kind, "event": event}
+
+
+def _observe_remove(name: str) -> Dict[str, Any]:
+    """Adapter: remove a registered watch."""
+    from je_auto_control.utils.observer import default_observer
+    return {"removed": default_observer.remove(name)}
+
+
+def _observe_list() -> Dict[str, Any]:
+    """Adapter: list registered watch names."""
+    from je_auto_control.utils.observer import default_observer
+    return {"names": default_observer.names()}
+
+
+def _observe_poll() -> Dict[str, Any]:
+    """Adapter: evaluate all watches once; return fired events."""
+    from je_auto_control.utils.observer import default_observer
+    return {"fired": default_observer.poll_once()}
+
+
+def _observe_start() -> Dict[str, Any]:
+    """Adapter: start the background observer thread."""
+    from je_auto_control.utils.observer import default_observer
+    default_observer.start()
+    return {"running": default_observer.running}
+
+
+def _observe_stop() -> Dict[str, Any]:
+    """Adapter: stop the background observer thread."""
+    from je_auto_control.utils.observer import default_observer
+    default_observer.stop()
+    return {"running": default_observer.running}
+
+
 class Executor:
     """
     Executor
@@ -2764,6 +2829,12 @@ class Executor:
             "AC_memory_forget": _memory_forget,
             "AC_memory_stats": _memory_stats,
             "AC_seed_everything": _seed_everything,
+            "AC_observe_add": _observe_add,
+            "AC_observe_remove": _observe_remove,
+            "AC_observe_list": _observe_list,
+            "AC_observe_poll": _observe_poll,
+            "AC_observe_start": _observe_start,
+            "AC_observe_stop": _observe_stop,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

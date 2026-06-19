@@ -144,6 +144,11 @@ from je_auto_control.utils.agent_memory import AgentMemory, Episode
 from je_auto_control.utils.deterministic import (
     DeterministicRun, seed_everything,
 )
+# Reactive screen observer (appear / vanish / change -> callback)
+from je_auto_control.utils.observer import (
+    ScreenObserver, WatchRule, default_observer,
+    image_predicate, pixel_predicate, text_predicate,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -559,6 +564,8 @@ __all__ = [
     "read_presentation", "write_presentation",
     "AgentMemory", "Episode",
     "DeterministicRun", "seed_everything",
+    "ScreenObserver", "WatchRule", "default_observer",
+    "image_predicate", "pixel_predicate", "text_predicate",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
