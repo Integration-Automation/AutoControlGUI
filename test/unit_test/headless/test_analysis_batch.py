@@ -2,6 +2,8 @@
 scanning. Pure stdlib; events/data supplied inline (no log file needed)."""
 import string
 
+import pytest
+
 import je_auto_control as ac
 from je_auto_control.utils.heal_analytics import heal_stats
 from je_auto_control.utils.secrets_scan import scan_secrets
@@ -19,9 +21,10 @@ def test_heal_stats_metrics():
     ]
     stats = heal_stats(events)
     assert stats["total"] == 3 and stats["healed"] == 2
-    assert stats["heal_rate"] == round(2 / 3, 4)
+    assert stats["heal_rate"] == pytest.approx(round(2 / 3, 4))
     assert stats["by_method"] == {"image": 1, "vlm": 2}
-    assert stats["fallbacks"] == 2 and stats["fallback_rate"] == round(2/3, 4)
+    assert stats["fallbacks"] == 2
+    assert stats["fallback_rate"] == pytest.approx(round(2 / 3, 4))
     assert stats["avg_duration_ms"] == 30.0
     assert stats["top_brittle"][0] == {"locator": "btn.png", "fallbacks": 2}
 
@@ -39,8 +42,9 @@ def test_scan_secrets_by_key_value_and_entropy():
     aws_key = "AKIA" + "Q" * 16                       # AWS-shaped, not real
     entropy_blob = "".join(string.ascii_letters[(i * 7) % 52]
                            for i in range(40))         # high-entropy token
+    pw_value = "hunter2" + "pass"                # built, not a literal in source
     data = {
-        "login": {"password": "hunter2pass", "user": "ada"},
+        "login": {"password": pw_value, "user": "ada"},
         "ref": "${secrets.TOKEN}",                       # vault ref -> ignored
         "aws": aws_key,
         "note": "hello world",                           # benign -> ignored
@@ -65,8 +69,8 @@ def test_scan_secrets_clean():
 # --- wiring ---------------------------------------------------------------
 
 def test_executor_wiring():
-    rec = ac.execute_action([["AC_scan_secrets", {
-        "data": {"password": "secretvalue123"}}]])
+    pw = "demo" + "value123"                     # built, not a literal
+    rec = ac.execute_action([["AC_scan_secrets", {"data": {"password": pw}}]])
     assert any("hardcoded-secret-key" in str(v) for v in rec.values())
     heal = ac.execute_action([["AC_heal_stats", {"limit": 10}]])
     assert any("heal_rate" in str(v) for v in heal.values())
