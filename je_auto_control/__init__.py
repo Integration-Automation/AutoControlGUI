@@ -216,6 +216,8 @@ from je_auto_control.utils.egress import (
 from je_auto_control.utils.approval import (
     ApprovalResult, approve_artifact, pending_artifacts, verify_artifact,
 )
+# Agent trajectory evaluation: score a recorded run against a rubric
+from je_auto_control.utils.trajectory_eval import evaluate_trajectory
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -656,6 +658,7 @@ __all__ = [
     "EgressBlocked", "EgressPolicy", "get_egress_policy", "set_egress_policy",
     "ApprovalResult", "approve_artifact", "pending_artifacts",
     "verify_artifact",
+    "evaluate_trajectory",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

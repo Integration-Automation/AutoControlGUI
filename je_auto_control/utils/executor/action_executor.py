@@ -2991,6 +2991,21 @@ def _pending_artifacts(approvals_dir: str = ".approvals") -> Dict[str, Any]:
     return {"pending": pending_artifacts(approvals_dir)}
 
 
+def _evaluate_trajectory(trajectory: Any, rubric: Any) -> Dict[str, Any]:
+    """Adapter: score an agent trajectory against a declarative rubric.
+
+    ``trajectory`` / ``rubric`` may be JSON strings (from the visual builder)
+    or already-decoded list/dict (from JSON action files / MCP).
+    """
+    import json
+    from je_auto_control.utils.trajectory_eval import evaluate_trajectory
+    if isinstance(trajectory, str):
+        trajectory = json.loads(trajectory)
+    if isinstance(rubric, str):
+        rubric = json.loads(rubric)
+    return evaluate_trajectory(trajectory, rubric)
+
+
 class Executor:
     """
     Executor
@@ -3236,6 +3251,7 @@ class Executor:
             "AC_verify_artifact": _verify_artifact,
             "AC_approve_artifact": _approve_artifact,
             "AC_pending_artifacts": _pending_artifacts,
+            "AC_evaluate_trajectory": _evaluate_trajectory,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
