@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-20) — 模糊字符串匹配与去重](#本次更新-2026-06-20--模糊字符串匹配与去重)
 - [本次更新 (2026-06-19) — 视频步骤叠加报告](#本次更新-2026-06-19--视频步骤叠加报告)
 - [本次更新 (2026-06-19) — Agent 可观测性(GenAI OpenTelemetry Spans)](#本次更新-2026-06-19--agent-可观测性genai-opentelemetry-spans)
 - [本次更新 (2026-06-19) — 合规控制报告(SOC2 / ISO 27001)](#本次更新-2026-06-19--合规控制报告soc2--iso-27001)
@@ -90,6 +91,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-20) — 模糊字符串匹配与去重
+
+稳健匹配含噪声的 OCR/UI 文本。完整参考:[`docs/source/Zh/doc/new_features/v40_features_doc.rst`](../docs/source/Zh/doc/new_features/v40_features_doc.rst)。
+
+- **`fuzzy_ratio` / `fuzzy_best_match` / `fuzzy_matches` / `fuzzy_dedupe`**(`AC_fuzzy_ratio` / `AC_fuzzy_best_match` / `AC_fuzzy_dedupe`、`ac_*`):为相似度评分(0..1)、从列表挑最接近的候选,或收合近似重复 —— 让流程可针对「*看起来像* Submit 的按钮」动作,而非精确标签。默认后端为标准库 `difflib`(**无额外依赖**);可选的 `[fuzzy]` extra 加入 `rapidfuzz` 以加速,两者分数皆归一化。支持 `ignore_case` 与 `score_cutoff`。
 
 ## 本次更新 (2026-06-19) — 视频步骤叠加报告
 

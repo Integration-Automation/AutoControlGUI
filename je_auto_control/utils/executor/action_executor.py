@@ -3067,6 +3067,37 @@ def _write_step_video(steps: Any, output: str, fps: int = 10,
                             seconds_per_step=seconds_per_step)
 
 
+def _coerce_list(value: Any) -> List[Any]:
+    import json
+    return json.loads(value) if isinstance(value, str) else list(value)
+
+
+def _fuzzy_ratio(left: Any, right: Any,
+                 ignore_case: bool = True) -> Dict[str, Any]:
+    """Adapter: similarity score (0..1) between two values."""
+    from je_auto_control.utils.fuzzy import fuzzy_ratio
+    return {"score": fuzzy_ratio(left, right, ignore_case=ignore_case)}
+
+
+def _fuzzy_best_match(query: Any, choices: Any, score_cutoff: float = 0.0,
+                      ignore_case: bool = True) -> Dict[str, Any]:
+    """Adapter: best fuzzy match from choices, or a null match."""
+    from je_auto_control.utils.fuzzy import fuzzy_best_match
+    best = fuzzy_best_match(query, _coerce_list(choices),
+                            score_cutoff=score_cutoff, ignore_case=ignore_case)
+    if best is None:
+        return {"match": None, "score": 0.0, "index": -1}
+    return {"match": best[0], "score": best[1], "index": best[2]}
+
+
+def _fuzzy_dedupe(items: Any, threshold: float = 0.9,
+                  ignore_case: bool = True) -> Dict[str, Any]:
+    """Adapter: drop near-duplicate items, keeping the first of each cluster."""
+    from je_auto_control.utils.fuzzy import fuzzy_dedupe
+    return {"unique": fuzzy_dedupe(_coerce_list(items), threshold=threshold,
+                                   ignore_case=ignore_case)}
+
+
 class Executor:
     """
     Executor
@@ -3319,6 +3350,9 @@ class Executor:
             "AC_trace_export": _trace_export,
             "AC_trace_reset": _trace_reset,
             "AC_write_step_video": _write_step_video,
+            "AC_fuzzy_ratio": _fuzzy_ratio,
+            "AC_fuzzy_best_match": _fuzzy_best_match,
+            "AC_fuzzy_dedupe": _fuzzy_dedupe,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

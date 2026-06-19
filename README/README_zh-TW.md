@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-20) — 模糊字串比對與去重](#本次更新-2026-06-20--模糊字串比對與去重)
 - [本次更新 (2026-06-19) — 影片步驟疊加報告](#本次更新-2026-06-19--影片步驟疊加報告)
 - [本次更新 (2026-06-19) — Agent 可觀測性(GenAI OpenTelemetry Spans)](#本次更新-2026-06-19--agent-可觀測性genai-opentelemetry-spans)
 - [本次更新 (2026-06-19) — 合規控制報告(SOC2 / ISO 27001)](#本次更新-2026-06-19--合規控制報告soc2--iso-27001)
@@ -90,6 +91,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-20) — 模糊字串比對與去重
+
+穩健比對含雜訊的 OCR/UI 文字。完整參考:[`docs/source/Zh/doc/new_features/v40_features_doc.rst`](../docs/source/Zh/doc/new_features/v40_features_doc.rst)。
+
+- **`fuzzy_ratio` / `fuzzy_best_match` / `fuzzy_matches` / `fuzzy_dedupe`**(`AC_fuzzy_ratio` / `AC_fuzzy_best_match` / `AC_fuzzy_dedupe`、`ac_*`):為相似度評分(0..1)、從清單挑最接近的候選,或收合近似重複 —— 讓流程可針對「*看起來像* Submit 的按鈕」動作,而非精確標籤。預設後端為標準函式庫 `difflib`(**無額外相依**);選用的 `[fuzzy]` extra 加入 `rapidfuzz` 以加速,兩者分數皆正規化。支援 `ignore_case` 與 `score_cutoff`。
 
 ## 本次更新 (2026-06-19) — 影片步驟疊加報告
 

@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — Fuzzy String Matching & Dedupe](#whats-new-2026-06-20--fuzzy-string-matching--dedupe)
 - [What's new (2026-06-19) — Video Step-Overlay Report](#whats-new-2026-06-19--video-step-overlay-report)
 - [What's new (2026-06-19) — Agent Observability (GenAI OpenTelemetry Spans)](#whats-new-2026-06-19--agent-observability-genai-opentelemetry-spans)
 - [What's new (2026-06-19) — Compliance Control Report (SOC2 / ISO 27001)](#whats-new-2026-06-19--compliance-control-report-soc2--iso-27001)
@@ -91,6 +92,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — Fuzzy String Matching & Dedupe
+
+Match noisy OCR/UI text robustly. Full reference: [`docs/source/Eng/doc/new_features/v40_features_doc.rst`](docs/source/Eng/doc/new_features/v40_features_doc.rst).
+
+- **`fuzzy_ratio` / `fuzzy_best_match` / `fuzzy_matches` / `fuzzy_dedupe`** (`AC_fuzzy_ratio` / `AC_fuzzy_best_match` / `AC_fuzzy_dedupe`, `ac_*`): score similarity (0..1), pick the closest candidate from a list, or collapse near-duplicates — so a flow can act on "the button that *looks like* Submit" rather than an exact label. The default backend is stdlib `difflib` (**zero extra deps**); the optional `[fuzzy]` extra adds `rapidfuzz` for speed, with scores normalised either way. `ignore_case` and `score_cutoff` supported.
 
 ## What's new (2026-06-19) — Video Step-Overlay Report
 

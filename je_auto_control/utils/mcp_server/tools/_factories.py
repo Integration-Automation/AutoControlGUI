@@ -2844,6 +2844,47 @@ def video_report_tools() -> List[MCPTool]:
     ]
 
 
+def fuzzy_tools() -> List[MCPTool]:
+    _CHOICES = {"type": "array", "items": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_fuzzy_ratio",
+            description=("Similarity score (0..1) between two strings, robust "
+                         "to OCR/UI noise (difflib, or rapidfuzz if "
+                         "installed). 'ignore_case' defaults true. Returns "
+                         "{score}."),
+            input_schema=schema(
+                {"left": {"type": "string"}, "right": {"type": "string"},
+                 "ignore_case": {"type": "boolean"}}, ["left", "right"]),
+            handler=h.fuzzy_ratio,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_fuzzy_best_match",
+            description=("Best fuzzy match of 'query' within 'choices' scoring "
+                         ">= 'score_cutoff'. Returns {match, score, index} or "
+                         "{match: null} when nothing qualifies."),
+            input_schema=schema(
+                {"query": {"type": "string"}, "choices": _CHOICES,
+                 "score_cutoff": {"type": "number"},
+                 "ignore_case": {"type": "boolean"}}, ["query", "choices"]),
+            handler=h.fuzzy_best_match,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_fuzzy_dedupe",
+            description=("Collapse near-duplicate strings, keeping the first "
+                         "of each cluster (items >= 'threshold' similar are "
+                         "dropped). Returns {unique}."),
+            input_schema=schema(
+                {"items": _CHOICES, "threshold": {"type": "number"},
+                 "ignore_case": {"type": "boolean"}}, ["items"]),
+            handler=h.fuzzy_dedupe,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3904,7 +3945,7 @@ ALL_FACTORIES = (
     process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
-    video_report_tools,
+    video_report_tools, fuzzy_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

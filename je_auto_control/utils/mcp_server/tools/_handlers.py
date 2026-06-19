@@ -1372,6 +1372,26 @@ def write_step_video(steps, output, fps=10, seconds_per_step=2.0):
     return _write(steps, output, fps=fps, seconds_per_step=seconds_per_step)
 
 
+def fuzzy_ratio(left, right, ignore_case=True):
+    from je_auto_control.utils.fuzzy import fuzzy_ratio as _ratio
+    return {"score": _ratio(left, right, ignore_case=ignore_case)}
+
+
+def fuzzy_best_match(query, choices, score_cutoff=0.0, ignore_case=True):
+    from je_auto_control.utils.fuzzy import fuzzy_best_match as _best
+    best = _best(query, choices, score_cutoff=score_cutoff,
+                 ignore_case=ignore_case)
+    if best is None:
+        return {"match": None, "score": 0.0, "index": -1}
+    return {"match": best[0], "score": best[1], "index": best[2]}
+
+
+def fuzzy_dedupe(items, threshold=0.9, ignore_case=True):
+    from je_auto_control.utils.fuzzy import fuzzy_dedupe as _dedupe
+    return {"unique": _dedupe(items, threshold=threshold,
+                              ignore_case=ignore_case)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

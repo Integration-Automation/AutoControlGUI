@@ -230,6 +230,10 @@ from je_auto_control.utils.agent_trace import (
 from je_auto_control.utils.video_report import (
     VideoStep, build_overlay_plan, render_overlay_frame, write_step_video,
 )
+# Fuzzy string matching / dedupe (difflib default, optional rapidfuzz)
+from je_auto_control.utils.fuzzy import (
+    fuzzy_best_match, fuzzy_dedupe, fuzzy_matches, fuzzy_ratio,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -676,6 +680,7 @@ __all__ = [
     "AgentTrace", "default_trace", "reset_trace",
     "VideoStep", "build_overlay_plan", "render_overlay_frame",
     "write_step_video",
+    "fuzzy_best_match", "fuzzy_dedupe", "fuzzy_matches", "fuzzy_ratio",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
