@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Maker-Checker Approval Gate](#whats-new-2026-06-19--maker-checker-approval-gate)
 - [What's new (2026-06-19) — Plugin SDK](#whats-new-2026-06-19--plugin-sdk)
 - [What's new (2026-06-19) — MCP Structured Output](#whats-new-2026-06-19--mcp-structured-output)
 - [What's new (2026-06-19) — Tweened Drag](#whats-new-2026-06-19--tweened-drag)
@@ -83,6 +84,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Maker-Checker Approval Gate
+
+Segregation of duties for high-risk steps. Full reference: [`docs/source/Eng/doc/new_features/v32_features_doc.rst`](docs/source/Eng/doc/new_features/v32_features_doc.rst).
+
+- **`ApprovalGate`** (`AC_approval_request` / `AC_approval_approve` / `AC_approval_reject` / `AC_approval_status`, `ac_*`): a *maker* files a high-risk action and gets a token; a *checker* — required to be a **different** principal — approves or rejects it; the action proceeds only once `is_approved` is true. State is an optional shared JSON file so the dispatcher and the human approver can run as separate processes. Pure-stdlib, SOC2-style four-eyes control.
 
 ## What's new (2026-06-19) — Plugin SDK
 

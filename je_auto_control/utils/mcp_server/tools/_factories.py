@@ -2573,6 +2573,52 @@ def plugin_sdk_tools() -> List[MCPTool]:
     ]
 
 
+def governance_tools() -> List[MCPTool]:
+    _AD = {"action": {"type": "string"}, "requester": {"type": "string"},
+           "db": {"type": "string"}}
+    _TA = {"token": {"type": "string"}, "approver": {"type": "string"},
+           "db": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_approval_request",
+            description=("Maker-checker gate: file an approval request for a "
+                         "high-risk 'action' and get a token. The action must "
+                         "wait until a different principal approves. 'db' is an "
+                         "optional JSON file shared across processes."),
+            input_schema=schema(_AD, ["action"]),
+            handler=h.approval_request,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_approval_approve",
+            description=("Approve a pending request token as 'approver'. "
+                         "Rejected (returns approved=False) if the approver "
+                         "equals the requester (segregation of duties)."),
+            input_schema=schema(_TA, ["token", "approver"]),
+            handler=h.approval_approve,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_approval_reject",
+            description=("Reject a pending request token as 'approver' (must "
+                         "differ from the requester). Returns {rejected}."),
+            input_schema=schema(_TA, ["token", "approver"]),
+            handler=h.approval_reject,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_approval_status",
+            description=("Report a request token's status (pending/approved/"
+                         "rejected) and an 'approved' boolean to gate an "
+                         "action on."),
+            input_schema=schema({"token": {"type": "string"},
+                                 "db": {"type": "string"}}, ["token"]),
+            handler=h.approval_status,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3630,7 +3676,7 @@ ALL_FACTORIES = (
     checkpoint_tools, set_of_marks_tools, screen_state_tools,
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
-    process_doc_tools, tween_drag_tools, plugin_sdk_tools,
+    process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

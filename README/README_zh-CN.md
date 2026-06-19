@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — Maker-Checker 审批闸门](#本次更新-2026-06-19--maker-checker-审批闸门)
 - [本次更新 (2026-06-19) — Plugin SDK](#本次更新-2026-06-19--plugin-sdk)
 - [本次更新 (2026-06-19) — MCP 结构化输出](#本次更新-2026-06-19--mcp-结构化输出)
 - [本次更新 (2026-06-19) — 缓动拖拽](#本次更新-2026-06-19--缓动拖拽)
@@ -82,6 +83,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — Maker-Checker 审批闸门
+
+高风险步骤的职责分离。完整参考:[`docs/source/Zh/doc/new_features/v32_features_doc.rst`](../docs/source/Zh/doc/new_features/v32_features_doc.rst)。
+
+- **`ApprovalGate`**(`AC_approval_request` / `AC_approval_approve` / `AC_approval_reject` / `AC_approval_status`、`ac_*`):由 *maker* 提出高风险动作并取得 token;*checker*(必须为**不同**主体)核准或驳回;只有在 `is_approved` 为真后动作才继续。状态为选用的共享 JSON 文件,让派发器与人工审批者可分属不同进程。纯标准库,SOC2 式四眼原则控制。
 
 ## 本次更新 (2026-06-19) — Plugin SDK
 
