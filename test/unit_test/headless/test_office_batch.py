@@ -40,6 +40,7 @@ def test_powerpoint_roundtrip(tmp_path):
 
 
 def test_read_missing_file_raises():
+    pytest.importorskip("openpyxl")
     with pytest.raises(FileNotFoundError):
         read_workbook("does-not-exist-12345.xlsx")
 

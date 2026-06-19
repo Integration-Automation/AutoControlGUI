@@ -11,19 +11,39 @@ Those libraries are an **optional** dependency: install them with
 :class:`RuntimeError` when the backing library is missing, so the core
 package stays lean and import-time stays Qt-free / dependency-free.
 """
-import importlib
 from pathlib import Path
 from typing import Any, Dict, List
 
+_HINT = "pip install je_auto_control[office]"
 
-def _import(module_name: str, pip_name: str) -> Any:
-    """Import an optional Office backend or raise a helpful error."""
+
+def _openpyxl() -> Any:
+    """Import openpyxl (optional Excel backend) or raise a helpful error."""
     try:
-        return importlib.import_module(module_name)
+        import openpyxl
+    except ImportError as error:
+        raise RuntimeError(f"Excel I/O requires openpyxl ({_HINT}).") from error
+    return openpyxl
+
+
+def _docx() -> Any:
+    """Import python-docx (optional Word backend) or raise a helpful error."""
+    try:
+        import docx
     except ImportError as error:
         raise RuntimeError(
-            f"This feature requires {pip_name} "
-            f"(pip install je_auto_control[office]).") from error
+            f"Word I/O requires python-docx ({_HINT}).") from error
+    return docx
+
+
+def _pptx() -> Any:
+    """Import python-pptx (optional PPT backend) or raise a helpful error."""
+    try:
+        import pptx
+    except ImportError as error:
+        raise RuntimeError(
+            f"PowerPoint I/O requires python-pptx ({_HINT}).") from error
+    return pptx
 
 
 def _existing(path: str) -> Path:
@@ -40,7 +60,7 @@ def read_workbook(path: str, sheet: str = "") -> List[Dict[str, Any]]:
 
     ``sheet`` defaults to the active sheet.
     """
-    openpyxl = _import("openpyxl", "openpyxl")
+    openpyxl = _openpyxl()
     workbook = openpyxl.load_workbook(filename=str(_existing(path)),
                                       read_only=True, data_only=True)
     try:
@@ -58,7 +78,7 @@ def read_workbook(path: str, sheet: str = "") -> List[Dict[str, Any]]:
 def write_workbook(path: str, rows: List[Dict[str, Any]],
                    sheet: str = "Sheet1") -> str:
     """Write ``rows`` (list of dicts) to an ``.xlsx`` file; return the path."""
-    openpyxl = _import("openpyxl", "openpyxl")
+    openpyxl = _openpyxl()
     workbook = openpyxl.Workbook()
     worksheet = workbook.active
     worksheet.title = sheet
@@ -77,14 +97,14 @@ def write_workbook(path: str, rows: List[Dict[str, Any]],
 
 def read_document(path: str) -> Dict[str, List[str]]:
     """Read a ``.docx`` file's paragraph texts."""
-    docx = _import("docx", "python-docx")
+    docx = _docx()
     document = docx.Document(str(_existing(path)))
     return {"paragraphs": [para.text for para in document.paragraphs]}
 
 
 def write_document(path: str, paragraphs: List[str]) -> str:
     """Write ``paragraphs`` to a ``.docx`` file; return the path."""
-    docx = _import("docx", "python-docx")
+    docx = _docx()
     document = docx.Document()
     for paragraph in paragraphs:
         document.add_paragraph(str(paragraph))
@@ -97,7 +117,7 @@ def write_document(path: str, paragraphs: List[str]) -> str:
 
 def read_presentation(path: str) -> Dict[str, List[List[str]]]:
     """Read a ``.pptx`` file's per-slide text runs."""
-    pptx = _import("pptx", "python-pptx")
+    pptx = _pptx()
     presentation = pptx.Presentation(str(_existing(path)))
     slides = []
     for slide in presentation.slides:
@@ -121,7 +141,7 @@ def _add_slide(presentation: Any, layout: Any, spec: Any) -> None:
 
 def write_presentation(path: str, slides: List[Any]) -> str:
     """Write ``slides`` (each ``{title, body:[...]}``) to a ``.pptx`` file."""
-    pptx = _import("pptx", "python-pptx")
+    pptx = _pptx()
     presentation = pptx.Presentation()
     layout = presentation.slide_layouts[1]   # "Title and Content"
     for spec in slides:
