@@ -1,6 +1,8 @@
 """Headless tests for fuzzy matching/dedupe. The difflib backend is always
 present, so these run with no extra dependency; assertions check ordering and
 thresholds, not exact backend-specific float values. Pure stdlib, no Qt."""
+import pytest
+
 import je_auto_control as ac
 from je_auto_control.utils.fuzzy import (
     BACKEND, fuzzy_best_match, fuzzy_dedupe, fuzzy_matches, fuzzy_ratio)
@@ -11,13 +13,13 @@ def test_backend_is_known():
 
 
 def test_ratio_bounds_and_identity():
-    assert fuzzy_ratio("hello", "hello") == 1.0
+    assert fuzzy_ratio("hello", "hello") == pytest.approx(1.0)
     assert fuzzy_ratio("hello", "xxxxx") < 0.5
     assert 0.0 <= fuzzy_ratio("Save", "save", ignore_case=False) <= 1.0
 
 
 def test_ratio_ignore_case():
-    assert fuzzy_ratio("SAVE", "save", ignore_case=True) == 1.0
+    assert fuzzy_ratio("SAVE", "save", ignore_case=True) == pytest.approx(1.0)
     assert fuzzy_ratio("SAVE", "save", ignore_case=False) < 1.0
 
 
