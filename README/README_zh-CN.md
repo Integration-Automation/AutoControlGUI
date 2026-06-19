@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — MCP 结构化输出](#本次更新-2026-06-19--mcp-结构化输出)
 - [本次更新 (2026-06-19) — 缓动拖拽](#本次更新-2026-06-19--缓动拖拽)
 - [本次更新 (2026-06-19) — 流程文档(SOP)生成器](#本次更新-2026-06-19--流程文档sop生成器)
 - [本次更新 (2026-06-19) — 修复分析与机密扫描](#本次更新-2026-06-19--修复分析与机密扫描)
@@ -80,6 +81,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — MCP 结构化输出
+
+MCP 2025-06-18 结构化工具输出。完整参考:[`docs/source/Zh/doc/new_features/v30_features_doc.rst`](../docs/source/Zh/doc/new_features/v30_features_doc.rst)。
+
+- **`MCPTool(output_schema=...)`** — 工具可声明 `outputSchema`;其 dict 结果会在 `tools/call` 响应以 `structuredContent` 返回,让客户端/LLM 消费类型化、经 schema 验证的对象而非重新解析文本。`to_descriptor()` 会在 `tools/list` 公告;非 dict 结果与未声明 schema 的工具行为不变。`ac_validate_rows` 为首个采用。
 
 ## 本次更新 (2026-06-19) — 缓动拖拽
 
