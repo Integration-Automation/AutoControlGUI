@@ -2808,6 +2808,49 @@ def _circuit_call(name: str, actions: List[Any], threshold: int = 5,
     return {"state": breaker.state, "record": record}
 
 
+def _ci_annotations(annotations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Adapter: emit GitHub Actions annotations from result dicts."""
+    from je_auto_control.utils.ci_annotations import emit_annotations
+    return {"lines": emit_annotations(annotations)}
+
+
+def _clip_history_capture() -> Dict[str, Any]:
+    """Adapter: capture the live clipboard into history."""
+    from je_auto_control.utils.clipboard_history import (
+        default_clipboard_history)
+    return {"added": default_clipboard_history.capture_once()}
+
+
+def _clip_history_list() -> Dict[str, Any]:
+    """Adapter: list clipboard history (newest first)."""
+    from je_auto_control.utils.clipboard_history import (
+        default_clipboard_history)
+    return {"history": default_clipboard_history.snapshot()}
+
+
+def _clip_history_search(query: str) -> Dict[str, Any]:
+    """Adapter: search clipboard history."""
+    from je_auto_control.utils.clipboard_history import (
+        default_clipboard_history)
+    return {"matches": default_clipboard_history.search(query)}
+
+
+def _clip_history_start() -> Dict[str, Any]:
+    """Adapter: start the background clipboard-history poller."""
+    from je_auto_control.utils.clipboard_history import (
+        default_clipboard_history)
+    default_clipboard_history.start()
+    return {"running": default_clipboard_history.running}
+
+
+def _clip_history_stop() -> Dict[str, Any]:
+    """Adapter: stop the background clipboard-history poller."""
+    from je_auto_control.utils.clipboard_history import (
+        default_clipboard_history)
+    default_clipboard_history.stop()
+    return {"running": default_clipboard_history.running}
+
+
 class Executor:
     """
     Executor
@@ -3027,6 +3070,12 @@ class Executor:
             "AC_replay_timeline": _replay_timeline,
             "AC_input_sequence": _input_sequence,
             "AC_circuit_call": _circuit_call,
+            "AC_ci_annotations": _ci_annotations,
+            "AC_clip_history_capture": _clip_history_capture,
+            "AC_clip_history_list": _clip_history_list,
+            "AC_clip_history_search": _clip_history_search,
+            "AC_clip_history_start": _clip_history_start,
+            "AC_clip_history_stop": _clip_history_stop,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

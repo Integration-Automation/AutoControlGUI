@@ -665,6 +665,26 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_screen_state_specs(specs)
     _add_input_macro_specs(specs)
     _add_resilience_specs(specs)
+    _add_devex_specs(specs)
+
+
+def _add_devex_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_ci_annotations", "Tools", "Emit CI Annotations",
+        description="Emit GitHub Actions annotations from 'annotations' "
+                    "(JSON view).",
+    ))
+    specs.append(CommandSpec(
+        "AC_clip_history_capture", "Misc", "Clipboard History: Capture"))
+    specs.append(CommandSpec(
+        "AC_clip_history_list", "Misc", "Clipboard History: List"))
+    specs.append(CommandSpec(
+        "AC_clip_history_search", "Misc", "Clipboard History: Search",
+        fields=(FieldSpec("query", FieldType.STRING),)))
+    specs.append(CommandSpec(
+        "AC_clip_history_start", "Misc", "Clipboard History: Start"))
+    specs.append(CommandSpec(
+        "AC_clip_history_stop", "Misc", "Clipboard History: Stop"))
 
 
 def _add_resilience_specs(specs: List[CommandSpec]) -> None:

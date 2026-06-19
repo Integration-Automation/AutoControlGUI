@@ -2420,6 +2420,64 @@ def resilience_tools() -> List[MCPTool]:
     ]
 
 
+def ci_annotation_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_ci_annotations",
+            description=("Emit GitHub Actions workflow annotations from result "
+                         "dicts ({level, message, file?, line?, title?}) so "
+                         "failures show inline in a PR. Returns the {lines}."),
+            input_schema=schema({
+                "annotations": {"type": "array",
+                                "items": {"type": "object"}}},
+                required=["annotations"]),
+            handler=h.ci_annotations,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def clipboard_history_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_clip_history_capture",
+            description="Capture the live clipboard text into history.",
+            input_schema=schema({}),
+            handler=h.clip_history_capture,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_clip_history_list",
+            description="List the clipboard history (newest first).",
+            input_schema=schema({}),
+            handler=h.clip_history_list,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_clip_history_search",
+            description="Search clipboard history (case-insensitive).",
+            input_schema=schema({"query": {"type": "string"}},
+                                required=["query"]),
+            handler=h.clip_history_search,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_clip_history_start",
+            description="Start the background clipboard-history poller.",
+            input_schema=schema({}),
+            handler=h.clip_history_start,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_clip_history_stop",
+            description="Stop the background clipboard-history poller.",
+            input_schema=schema({}),
+            handler=h.clip_history_stop,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3476,6 +3534,7 @@ ALL_FACTORIES = (
     sbom_tools, sharding_tools, data_quality_tools, i18n_tools,
     checkpoint_tools, set_of_marks_tools, screen_state_tools,
     input_macro_tools, resilience_tools,
+    ci_annotation_tools, clipboard_history_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

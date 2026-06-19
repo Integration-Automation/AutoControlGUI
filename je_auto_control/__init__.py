@@ -180,6 +180,14 @@ from je_auto_control.utils.input_macro import replay_timeline, run_sequence
 from je_auto_control.utils.resilience import (
     CircuitBreaker, CircuitOpenError, RetryPolicy, retry_call,
 )
+# CI workflow annotations (GitHub Actions)
+from je_auto_control.utils.ci_annotations import (
+    emit_annotations, format_annotation,
+)
+# Clipboard history (ring buffer + background poller)
+from je_auto_control.utils.clipboard_history import (
+    ClipboardHistory, default_clipboard_history,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -609,6 +617,8 @@ __all__ = [
     "snapshot_screen",
     "replay_timeline", "run_sequence",
     "CircuitBreaker", "CircuitOpenError", "RetryPolicy", "retry_call",
+    "emit_annotations", "format_annotation",
+    "ClipboardHistory", "default_clipboard_history",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

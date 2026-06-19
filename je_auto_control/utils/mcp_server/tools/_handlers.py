@@ -1179,6 +1179,38 @@ def circuit_call(name, actions, threshold=5, reset_s=30.0):
                          reset_s=float(reset_s))
 
 
+def ci_annotations(annotations):
+    from je_auto_control.utils.ci_annotations import emit_annotations
+    return {"lines": emit_annotations(annotations)}
+
+
+def clip_history_capture():
+    from je_auto_control.utils.clipboard_history import default_clipboard_history
+    return {"added": default_clipboard_history.capture_once()}
+
+
+def clip_history_list():
+    from je_auto_control.utils.clipboard_history import default_clipboard_history
+    return {"history": default_clipboard_history.snapshot()}
+
+
+def clip_history_search(query):
+    from je_auto_control.utils.clipboard_history import default_clipboard_history
+    return {"matches": default_clipboard_history.search(query)}
+
+
+def clip_history_start():
+    from je_auto_control.utils.clipboard_history import default_clipboard_history
+    default_clipboard_history.start()
+    return {"running": default_clipboard_history.running}
+
+
+def clip_history_stop():
+    from je_auto_control.utils.clipboard_history import default_clipboard_history
+    default_clipboard_history.stop()
+    return {"running": default_clipboard_history.running}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:
