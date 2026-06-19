@@ -2225,6 +2225,50 @@ def data_quality_tools() -> List[MCPTool]:
     ]
 
 
+def i18n_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_pseudo_localize",
+            description=("Pseudo-localize a 'text' string or a 'mapping' "
+                         "catalog (accent + pad + bracket, placeholders "
+                         "preserved) to flush out hardcoded strings and "
+                         "pre-stress layout before real translation."),
+            input_schema=schema({
+                "text": {"type": "string"},
+                "mapping": {"type": "object"},
+                "expansion": {"type": "number"},
+            }),
+            handler=h.pseudo_localize,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_check_overflow",
+            description=("Flag text elements whose estimated width exceeds "
+                         "their widget bounds (translation overflow). Uses "
+                         "the live a11y tree unless 'elements' are supplied."),
+            input_schema=schema({
+                "elements": {"type": "array"},
+                "avg_char_px": {"type": "number"},
+                "app_name": {"type": "string"},
+            }),
+            handler=h.check_overflow,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_check_catalog",
+            description=("Diff a translation 'target' catalog against 'base': "
+                         "missing / orphaned / empty keys and placeholder "
+                         "mismatches. Returns {ok, ...}."),
+            input_schema=schema({
+                "base": {"type": "object"},
+                "target": {"type": "object"},
+            }, required=["base", "target"]),
+            handler=h.check_catalog,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3278,7 +3322,7 @@ ALL_FACTORIES = (
     element_repository_tools, flow_debugger_tools,
     skill_library_tools, guardrail_tools, a2a_tools, office_tools,
     agent_memory_tools, determinism_tools, observer_tools,
-    sbom_tools, sharding_tools, data_quality_tools,
+    sbom_tools, sharding_tools, data_quality_tools, i18n_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

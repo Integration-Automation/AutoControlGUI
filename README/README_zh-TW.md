@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — i18n / l10n 測試](#本次更新-2026-06-19--i18n--l10n-測試)
 - [本次更新 (2026-06-19) — 資料品質](#本次更新-2026-06-19--資料品質)
 - [本次更新 (2026-06-19) — SBOM 與測試分片](#本次更新-2026-06-19--sbom-與測試分片)
 - [本次更新 (2026-06-19) — 反應式觀察器](#本次更新-2026-06-19--反應式觀察器)
@@ -70,6 +71,14 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — i18n / l10n 測試
+
+三項可互相搭配的純標準庫國際化/在地化測試輔助工具,走完整五層。完整參考:[`docs/source/Zh/doc/new_features/v20_features_doc.rst`](../docs/source/Zh/doc/new_features/v20_features_doc.rst)。
+
+- **偽在地化** — `pseudo_localize` / `pseudo_localize_catalog`(`AC_pseudo_localize`、`ac_pseudo_localize`):為 UI 字串加重音與填充(保留佔位符、以 `⟦…⟧` 包覆),在真正翻譯前揪出寫死文字並對版面施壓。
+- **文字溢位偵測** — `check_overflow(elements)`(`AC_check_overflow`、`ac_check_overflow`):標記估計寬度超過元件邊界的文字(在地化頭號 bug),由 AutoControl 既有讀取的 a11y 邊界計算。
+- **目錄完整性** — `check_catalog(base, target)`(`AC_check_catalog`、`ac_check_catalog`):比對翻譯目錄的缺漏/多餘/空白鍵與佔位符不一致——防止空白 UI 的 CI 閘。
 
 ## 本次更新 (2026-06-19) — 資料品質
 

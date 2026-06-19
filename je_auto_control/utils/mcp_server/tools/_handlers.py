@@ -1089,6 +1089,29 @@ def mask_rows(rows, rules):
     return {"rows": _mask(rows, rules)}
 
 
+def pseudo_localize(text=None, mapping=None, expansion=0.4):
+    from je_auto_control.utils.i18n_test import (
+        pseudo_localize as _pl, pseudo_localize_catalog as _plc)
+    if mapping is not None:
+        return {"catalog": _plc(mapping, expansion=float(expansion))}
+    return {"text": _pl(text or "", expansion=float(expansion))}
+
+
+def check_overflow(elements=None, avg_char_px=7.0, app_name=None):
+    from je_auto_control.utils.i18n_test import check_overflow as _co
+    items = elements
+    if items is None:
+        from je_auto_control.utils.accessibility.accessibility_api import (
+            list_accessibility_elements)
+        items = list_accessibility_elements(app_name=app_name)
+    return {"issues": _co(items, avg_char_px=float(avg_char_px))}
+
+
+def check_catalog(base, target):
+    from je_auto_control.utils.i18n_test import check_catalog as _cc
+    return _cc(base, target)
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:
