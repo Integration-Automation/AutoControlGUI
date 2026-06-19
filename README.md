@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Set-of-Marks Overlay](#whats-new-2026-06-19--set-of-marks-overlay)
 - [What's new (2026-06-19) — Checkpoint & Resume](#whats-new-2026-06-19--checkpoint--resume)
 - [What's new (2026-06-19) — i18n / l10n Testing](#whats-new-2026-06-19--i18n--l10n-testing)
 - [What's new (2026-06-19) — Data Quality](#whats-new-2026-06-19--data-quality)
@@ -73,6 +74,13 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Set-of-Marks Overlay
+
+The standard VLM-grounding format, full stack. Full reference: [`docs/source/Eng/doc/new_features/v22_features_doc.rst`](docs/source/Eng/doc/new_features/v22_features_doc.rst).
+
+- **Number elements** — `mark_elements` / `render_marks` / `resolve_mark` (pure + Pillow): assign `1..N` to interactable elements (with centre/role/text), draw numbered red boxes on a screenshot, and map a chosen number back to its element — so a VLM picks a *number* instead of guessing pixels (directly strengthens the existing VLM locator).
+- **Mark-then-click loop** — `mark_screen(render_path=...)` / `mark_click(n)` (`AC_mark_screen` / `AC_mark_click`, `ac_*`): number the live a11y tree (+ optional overlay screenshot), feed marks+image to a model, then click mark `n`.
 
 ## What's new (2026-06-19) — Checkpoint & Resume
 

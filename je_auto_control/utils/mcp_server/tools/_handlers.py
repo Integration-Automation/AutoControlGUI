@@ -1133,6 +1133,16 @@ def checkpoint_clear(run_id, db):
     return {"cleared": CheckpointStore(db).clear(run_id)}
 
 
+def mark_screen(app_name=None, render_path=None):
+    from je_auto_control.utils.set_of_marks import mark_screen as _ms
+    return _ms(app_name=app_name, render_path=render_path)
+
+
+def mark_click(mark_id):
+    from je_auto_control.utils.set_of_marks import mark_click as _mc
+    return {"clicked": _mc(int(mark_id))}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

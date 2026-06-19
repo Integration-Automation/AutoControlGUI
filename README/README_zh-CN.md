@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — Set-of-Marks 叠图](#本次更新-2026-06-19--set-of-marks-叠图)
 - [本次更新 (2026-06-19) — 检查点与续跑](#本次更新-2026-06-19--检查点与续跑)
 - [本次更新 (2026-06-19) — i18n / l10n 测试](#本次更新-2026-06-19--i18n--l10n-测试)
 - [本次更新 (2026-06-19) — 数据质量](#本次更新-2026-06-19--数据质量)
@@ -72,6 +73,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — Set-of-Marks 叠图
+
+VLM 定位的标准格式,走完整五层。完整参考:[`docs/source/Zh/doc/new_features/v22_features_doc.rst`](../docs/source/Zh/doc/new_features/v22_features_doc.rst)。
+
+- **元素标号** — `mark_elements` / `render_marks` / `resolve_mark`(纯函数 + Pillow):为可交互元素指派 `1..N`(含中心/role/text),在截图上画编号红框,并把选到的编号对应回元素——让 VLM 挑*编号*而非猜像素(直接强化既有 VLM locator)。
+- **标号后点击循环** — `mark_screen(render_path=...)` / `mark_click(n)`(`AC_mark_screen` / `AC_mark_click`、`ac_*`):为实时 a11y 树标号(+可选叠图截图),把 marks+图像喂给模型,再点击第 `n` 号。
 
 ## 本次更新 (2026-06-19) — 检查点与续跑
 

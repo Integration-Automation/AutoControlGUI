@@ -661,6 +661,24 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_data_quality_specs(specs)
     _add_i18n_specs(specs)
     _add_checkpoint_specs(specs)
+    _add_set_of_marks_specs(specs)
+
+
+def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_mark_screen", "Native UI", "Set-of-Marks: Number Elements",
+        fields=(
+            FieldSpec("app_name", FieldType.STRING, optional=True),
+            FieldSpec("render_path", FieldType.FILE_PATH, optional=True),
+        ),
+        description="Number live UI elements (id->bbox legend) for VLM "
+                    "grounding; optional numbered-box overlay screenshot.",
+    ))
+    specs.append(CommandSpec(
+        "AC_mark_click", "Native UI", "Set-of-Marks: Click Number",
+        fields=(FieldSpec("mark_id", FieldType.INT),),
+        description="Click the element behind a numbered mark.",
+    ))
 
 
 def _add_checkpoint_specs(specs: List[CommandSpec]) -> None:
