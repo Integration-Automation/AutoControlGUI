@@ -2512,6 +2512,53 @@ def _write_presentation(path: str, slides: List[Any]) -> Dict[str, Any]:
     return {"path": write_presentation(path, slides)}
 
 
+def _memory(db: str):
+    from je_auto_control.utils.agent_memory import AgentMemory
+    return AgentMemory(db)
+
+
+def _memory_remember(db: str, goal: str, steps: Optional[List[Any]] = None,
+                     outcome: str = "",
+                     tags: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Adapter: store an agent episode (goal/trajectory/outcome)."""
+    return {"id": _memory(db).remember(goal, steps=steps, outcome=outcome,
+                                       tags=tags)}
+
+
+def _memory_recall(db: str, query: str, limit: int = 5) -> Dict[str, Any]:
+    """Adapter: recall episodes most relevant to a query."""
+    episodes = _memory(db).recall(query, limit=int(limit))
+    return {"episodes": [_episode_to_dict(ep) for ep in episodes]}
+
+
+def _memory_recent(db: str, limit: int = 10) -> Dict[str, Any]:
+    """Adapter: list the most recent episodes."""
+    episodes = _memory(db).recent(limit=int(limit))
+    return {"episodes": [_episode_to_dict(ep) for ep in episodes]}
+
+
+def _memory_forget(db: str, episode_id: int) -> Dict[str, Any]:
+    """Adapter: delete an episode."""
+    return {"removed": _memory(db).forget(int(episode_id))}
+
+
+def _memory_stats(db: str) -> Dict[str, int]:
+    """Adapter: episode count for a memory store."""
+    return _memory(db).stats()
+
+
+def _episode_to_dict(episode: Any) -> Dict[str, Any]:
+    return {"id": episode.id, "goal": episode.goal, "steps": episode.steps,
+            "outcome": episode.outcome, "tags": episode.tags,
+            "score": episode.score}
+
+
+def _seed_everything(seed: int = 0) -> Dict[str, Any]:
+    """Adapter: seed all RNG run-wide for reproducible runs."""
+    from je_auto_control.utils.deterministic import seed_everything
+    return {"seed": seed_everything(int(seed))}
+
+
 class Executor:
     """
     Executor
@@ -2698,6 +2745,12 @@ class Executor:
             "AC_write_document": _write_document,
             "AC_read_presentation": _read_presentation,
             "AC_write_presentation": _write_presentation,
+            "AC_memory_remember": _memory_remember,
+            "AC_memory_recall": _memory_recall,
+            "AC_memory_recent": _memory_recent,
+            "AC_memory_forget": _memory_forget,
+            "AC_memory_stats": _memory_stats,
+            "AC_seed_everything": _seed_everything,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

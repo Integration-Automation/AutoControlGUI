@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — 记忆与确定性](#本次更新-2026-06-19--记忆与确定性)
 - [本次更新 (2026-06-19) — Office 读写](#本次更新-2026-06-19--office-读写)
 - [本次更新 (2026-06-19) — Agent 工具组](#本次更新-2026-06-19--agent-工具组)
 - [本次更新 (2026-06-19) — 编写与调试](#本次更新-2026-06-19--编写与调试)
@@ -65,6 +66,13 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — 记忆与确定性
+
+由 agent/QA 研究轮找出的两项纯标准库工具,走完整五层(facade、`AC_*`、MCP、Script Builder)。完整参考:[`docs/source/Zh/doc/new_features/v15_features_doc.rst`](../docs/source/Zh/doc/new_features/v15_features_doc.rst)。
+
+- **Agent 情节记忆** — `AgentMemory`(`AC_memory_remember` / `AC_memory_recall` / `AC_memory_recent` / `AC_memory_forget` / `AC_memory_stats`、`ac_memory_*`):以 SQLite 存储 `(目标 → 轨迹 → 结果)` 情节,依关键字召回过往经验注入规划器上下文——跨执行学习,免向量依赖。
+- **确定性执行** — `DeterministicRun` / `seed_everything`(`AC_seed_everything`、`ac_seed_everything`):在 `with` 块内固定 RNG 种子并冻结 `time.time`(记录选择以便重现),消除时间/随机造成的不稳定;`time.monotonic` 保持不变,超时仍正常。
 
 ## 本次更新 (2026-06-19) — Office 读写
 

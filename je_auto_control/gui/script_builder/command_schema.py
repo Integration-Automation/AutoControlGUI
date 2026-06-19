@@ -657,6 +657,45 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_authoring_specs(specs)
     _add_agent_specs(specs)
     _add_office_specs(specs)
+    _add_memory_specs(specs)
+
+
+def _add_memory_specs(specs: List[CommandSpec]) -> None:
+    db = FieldSpec("db", FieldType.FILE_PATH)
+    specs.append(CommandSpec(
+        "AC_memory_remember", "Agent", "Memory: Remember Episode",
+        fields=(db, FieldSpec("goal", FieldType.STRING),
+                FieldSpec("outcome", FieldType.STRING, optional=True)),
+        description="Store an episode (goal -> 'steps' via JSON view -> "
+                    "outcome).",
+    ))
+    specs.append(CommandSpec(
+        "AC_memory_recall", "Agent", "Memory: Recall",
+        fields=(db, FieldSpec("query", FieldType.STRING),
+                FieldSpec("limit", FieldType.INT, optional=True, default=5)),
+        description="Recall episodes most relevant to a query.",
+    ))
+    specs.append(CommandSpec(
+        "AC_memory_recent", "Agent", "Memory: Recent",
+        fields=(db, FieldSpec("limit", FieldType.INT, optional=True,
+                              default=10)),
+        description="List the most recent episodes.",
+    ))
+    specs.append(CommandSpec(
+        "AC_memory_forget", "Agent", "Memory: Forget",
+        fields=(db, FieldSpec("episode_id", FieldType.INT)),
+        description="Delete an episode by id.",
+    ))
+    specs.append(CommandSpec(
+        "AC_memory_stats", "Agent", "Memory: Stats",
+        fields=(db,),
+        description="Episode count for a memory store.",
+    ))
+    specs.append(CommandSpec(
+        "AC_seed_everything", "Flow", "Seed RNG (deterministic)",
+        fields=(FieldSpec("seed", FieldType.INT, optional=True, default=0),),
+        description="Seed all RNG run-wide for reproducible runs.",
+    ))
 
 
 def _add_office_specs(specs: List[CommandSpec]) -> None:

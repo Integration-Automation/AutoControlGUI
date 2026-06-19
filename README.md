@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Memory & Determinism](#whats-new-2026-06-19--memory--determinism)
 - [What's new (2026-06-19) — Office I/O](#whats-new-2026-06-19--office-io)
 - [What's new (2026-06-19) — Agent Toolkit](#whats-new-2026-06-19--agent-toolkit)
 - [What's new (2026-06-19) — Authoring & Debugging](#whats-new-2026-06-19--authoring--debugging)
@@ -66,6 +67,13 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Memory & Determinism
+
+Two pure-stdlib tools from the agent/QA research round, full stack (facade, `AC_*`, MCP, Script Builder). Full reference: [`docs/source/Eng/doc/new_features/v15_features_doc.rst`](docs/source/Eng/doc/new_features/v15_features_doc.rst).
+
+- **Agent episodic memory** — `AgentMemory` (`AC_memory_remember` / `AC_memory_recall` / `AC_memory_recent` / `AC_memory_forget` / `AC_memory_stats`, `ac_memory_*`): SQLite store of `(goal → trajectory → outcome)` episodes with keyword recall to inject past experience into the planner's context — cross-run learning, no embedding dependency.
+- **Deterministic run** — `DeterministicRun` / `seed_everything` (`AC_seed_everything`, `ac_seed_everything`): pin the RNG seed and freeze `time.time` for a `with` block (recording the choices for replay) to kill time/randomness flakiness; `time.monotonic` left intact so timeouts still work.
 
 ## What's new (2026-06-19) — Office I/O
 

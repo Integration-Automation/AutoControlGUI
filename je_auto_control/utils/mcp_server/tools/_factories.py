@@ -2004,6 +2004,73 @@ def office_tools() -> List[MCPTool]:
     ]
 
 
+def agent_memory_tools() -> List[MCPTool]:
+    _D = {"db": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_memory_remember",
+            description=("Store an agent episode (goal -> trajectory -> "
+                         "outcome) for cross-run recall. 'steps' is the "
+                         "trajectory; optional 'tags'. Returns {id}."),
+            input_schema=schema({
+                "goal": {"type": "string"},
+                "steps": {"type": "array"},
+                "outcome": {"type": "string"},
+                "tags": {"type": "array", "items": {"type": "string"}}, **_D},
+                required=["db", "goal"]),
+            handler=h.memory_remember,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_memory_recall",
+            description=("Recall past episodes most relevant to 'query' "
+                         "(keyword score over goal/tags/outcome) to inject "
+                         "into the planner's context."),
+            input_schema=schema({"query": {"type": "string"},
+                                 "limit": {"type": "integer"}, **_D},
+                                required=["db", "query"]),
+            handler=h.memory_recall,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_memory_recent",
+            description="List the most recently stored episodes (newest first).",
+            input_schema=schema({"limit": {"type": "integer"}, **_D},
+                                required=["db"]),
+            handler=h.memory_recent,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_memory_forget",
+            description="Delete an episode by id; returns {removed}.",
+            input_schema=schema({"episode_id": {"type": "integer"}, **_D},
+                                required=["db", "episode_id"]),
+            handler=h.memory_forget,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_memory_stats",
+            description="Return the episode count for a memory store.",
+            input_schema=schema(dict(_D), required=["db"]),
+            handler=h.memory_stats,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def determinism_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_seed_everything",
+            description=("Seed all RNG (random, numpy if present) run-wide for "
+                         "reproducible runs. Returns {seed}."),
+            input_schema=schema({"seed": {"type": "integer"}}),
+            handler=h.seed_everything,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3037,6 +3104,7 @@ ALL_FACTORIES = (
     synthetic_data_tools, mcp_registry_tools, test_selection_tools,
     element_repository_tools, flow_debugger_tools,
     skill_library_tools, guardrail_tools, a2a_tools, office_tools,
+    agent_memory_tools, determinism_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
