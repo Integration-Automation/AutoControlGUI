@@ -2692,6 +2692,43 @@ def egress_tools() -> List[MCPTool]:
     ]
 
 
+def approval_testing_tools() -> List[MCPTool]:
+    _ND = {"name": {"type": "string"},
+           "approvals_dir": {"type": "string"},
+           "extension": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_verify_artifact",
+            description=("Approval testing: compare produced 'content' (text) "
+                         "to the approved baseline <name>.approved.<ext> under "
+                         "'approvals_dir'. On mismatch/new, the content is "
+                         "written to <name>.received.<ext> for review. Returns "
+                         "{status (verified/mismatch/new), match, "
+                         "approved_path, received_path}."),
+            input_schema=schema({**_ND, "content": {"type": "string"}},
+                                ["name", "content"]),
+            handler=h.verify_artifact,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_approve_artifact",
+            description=("Promote the received artifact for 'name' to be the "
+                         "approved baseline. Returns {approved} path."),
+            input_schema=schema(dict(_ND), ["name"]),
+            handler=h.approve_artifact,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_pending_artifacts",
+            description=("List artifact names with a received file awaiting "
+                         "approval under 'approvals_dir'. Returns {pending}."),
+            input_schema=schema({"approvals_dir": {"type": "string"}}),
+            handler=h.pending_artifacts,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3750,7 +3787,7 @@ ALL_FACTORIES = (
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
     process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
-    credential_lease_tools, egress_tools,
+    credential_lease_tools, egress_tools, approval_testing_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Approval Testing (Golden-Master Baselines)](#whats-new-2026-06-19--approval-testing-golden-master-baselines)
 - [What's new (2026-06-19) — Network Egress Allowlist Guard](#whats-new-2026-06-19--network-egress-allowlist-guard)
 - [What's new (2026-06-19) — Just-In-Time Credential Leases](#whats-new-2026-06-19--just-in-time-credential-leases)
 - [What's new (2026-06-19) — Maker-Checker Approval Gate](#whats-new-2026-06-19--maker-checker-approval-gate)
@@ -86,6 +87,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Approval Testing (Golden-Master Baselines)
+
+Lock outputs against a human-approved baseline. Full reference: [`docs/source/Eng/doc/new_features/v35_features_doc.rst`](docs/source/Eng/doc/new_features/v35_features_doc.rst).
+
+- **`verify_artifact` / `approve_artifact`** (`AC_verify_artifact` / `AC_approve_artifact` / `AC_pending_artifacts`, `ac_*`): golden-master / snapshot testing for *any* artifact (text, JSON, OCR output, screenshot bytes). `verify_artifact` compares produced content to `<name>.approved.<ext>`; a mismatch or missing baseline writes `<name>.received.<ext>` for review and fails, and `approve_artifact` promotes a reviewed received file to the baseline. Complements pixel diffing with a review-gated baseline you commit alongside the test; names are path-traversal-checked.
 
 ## What's new (2026-06-19) — Network Egress Allowlist Guard
 

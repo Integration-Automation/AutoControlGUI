@@ -212,6 +212,10 @@ from je_auto_control.utils.governance import (
 from je_auto_control.utils.egress import (
     EgressBlocked, EgressPolicy, get_egress_policy, set_egress_policy,
 )
+# Approval testing: verify artifacts against a human-approved baseline
+from je_auto_control.utils.approval import (
+    ApprovalResult, approve_artifact, pending_artifacts, verify_artifact,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -650,6 +654,8 @@ __all__ = [
     "ApprovalGate", "CredentialBroker", "CredentialBrokerError",
     "default_broker", "set_secret_resolver",
     "EgressBlocked", "EgressPolicy", "get_egress_policy", "set_egress_policy",
+    "ApprovalResult", "approve_artifact", "pending_artifacts",
+    "verify_artifact",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

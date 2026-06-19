@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-19) — 核准式測試(Golden-Master 基準)](#本次更新-2026-06-19--核准式測試golden-master-基準)
 - [本次更新 (2026-06-19) — 網路出口允許清單守衛](#本次更新-2026-06-19--網路出口允許清單守衛)
 - [本次更新 (2026-06-19) — 即時憑證租約](#本次更新-2026-06-19--即時憑證租約)
 - [本次更新 (2026-06-19) — Maker-Checker 審批閘門](#本次更新-2026-06-19--maker-checker-審批閘門)
@@ -85,6 +86,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-19) — 核准式測試(Golden-Master 基準)
+
+將輸出鎖定到人工核准的基準。完整參考:[`docs/source/Zh/doc/new_features/v35_features_doc.rst`](../docs/source/Zh/doc/new_features/v35_features_doc.rst)。
+
+- **`verify_artifact` / `approve_artifact`**(`AC_verify_artifact` / `AC_approve_artifact` / `AC_pending_artifacts`、`ac_*`):對*任何*產物(文字、JSON、OCR 輸出、螢幕截圖位元組)進行 golden-master / snapshot 測試。`verify_artifact` 將產出內容與 `<name>.approved.<ext>` 比對;不符或缺少基準會寫入 `<name>.received.<ext>` 供審查並失敗,`approve_artifact` 則將審查後的 received 檔晉升為基準。以與測試一起提交、受審查把關的基準補強逐像素比對;名稱會經過路徑穿越檢查。
 
 ## 本次更新 (2026-06-19) — 網路出口允許清單守衛
 
