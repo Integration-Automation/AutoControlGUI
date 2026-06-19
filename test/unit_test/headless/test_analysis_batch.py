@@ -1,5 +1,7 @@
 """Headless tests for the analysis batch: self-heal analytics + secrets
 scanning. Pure stdlib; events/data supplied inline (no log file needed)."""
+import string
+
 import je_auto_control as ac
 from je_auto_control.utils.heal_analytics import heal_stats
 from je_auto_control.utils.secrets_scan import scan_secrets
@@ -32,18 +34,24 @@ def test_heal_stats_empty():
 # --- secrets scan ---------------------------------------------------------
 
 def test_scan_secrets_by_key_value_and_entropy():
+    # Build secret-shaped values at runtime so no secret-like literal sits in
+    # the source (which would trip gitleaks / Sonar on this test file itself).
+    aws_key = "AKIA" + "Q" * 16                       # AWS-shaped, not real
+    entropy_blob = "".join(string.ascii_letters[(i * 7) % 52]
+                           for i in range(40))         # high-entropy token
     data = {
         "login": {"password": "hunter2pass", "user": "ada"},
         "ref": "${secrets.TOKEN}",                       # vault ref -> ignored
-        "aws": "AKIAIOSFODNN7EXAMPLE",
+        "aws": aws_key,
         "note": "hello world",                           # benign -> ignored
-        "blob": "aGVsbG9Xb3JsZFNlY3JldEtleTEyMzQ1Njc4OQ",  # high entropy
+        "blob": entropy_blob,
     }
     findings = scan_secrets(data)
     kinds = {f["kind"] for f in findings}
     paths = {f["path"] for f in findings}
     assert "hardcoded-secret-key" in kinds       # password
     assert "aws-access-key" in kinds
+    assert "high-entropy-string" in kinds
     assert "$.login.password" in paths
     assert all("hunter2" not in f["preview"] for f in findings)  # masked
     assert not any(f["path"] == "$.ref" for f in findings)       # vault ok
