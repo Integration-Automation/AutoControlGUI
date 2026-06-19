@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-19) — Agent 轨迹评估](#本次更新-2026-06-19--agent-轨迹评估)
 - [本次更新 (2026-06-19) — 核准式测试(Golden-Master 基准)](#本次更新-2026-06-19--核准式测试golden-master-基准)
 - [本次更新 (2026-06-19) — 网络出口允许清单守卫](#本次更新-2026-06-19--网络出口允许清单守卫)
 - [本次更新 (2026-06-19) — 即时凭证租约](#本次更新-2026-06-19--即时凭证租约)
@@ -86,6 +87,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-19) — Agent 轨迹评估
+
+依评分标准为 agent 运行评分。完整参考:[`docs/source/Zh/doc/new_features/v36_features_doc.rst`](../docs/source/Zh/doc/new_features/v36_features_doc.rst)。
+
+- **`evaluate_trajectory`**(`AC_evaluate_trajectory`、`ac_evaluate_trajectory`):依声明式评分标准 —— `required_actions`(+`ordered`)、`forbidden_actions`、`max_steps`、`success_contains` —— 为一次记录的轨迹(有序 `{action, args, observation}` 步骤)评分。返回 `{passed, score, steps, checks}`,其中 `score` 为通过的适用检查占比,每个 `check` 精准指出被违反的期望。为 agent 回归测试提供确定性、无依赖的信号;rubric 为纯数据,可存于 JSON action 文件并经 MCP 传递。
 
 ## 本次更新 (2026-06-19) — 核准式测试(Golden-Master 基准)
 
