@@ -3098,6 +3098,30 @@ def _fuzzy_dedupe(items: Any, threshold: float = 0.9,
                                    ignore_case=ignore_case)}
 
 
+def _s3_upload(local_path: str, key: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: upload an artifact to the default S3 store; return the key."""
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"key": get_default_store().upload(local_path, key)}
+
+
+def _s3_download(key: str, local_path: str) -> Dict[str, Any]:
+    """Adapter: download an artifact from the default S3 store."""
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"path": get_default_store().download(key, local_path)}
+
+
+def _s3_list(prefix: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: list artifact keys in the default S3 store."""
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"keys": get_default_store().list(prefix)}
+
+
+def _s3_delete(key: str) -> Dict[str, Any]:
+    """Adapter: delete an artifact from the default S3 store."""
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"deleted": get_default_store().delete(key)}
+
+
 class Executor:
     """
     Executor
@@ -3353,6 +3377,10 @@ class Executor:
             "AC_fuzzy_ratio": _fuzzy_ratio,
             "AC_fuzzy_best_match": _fuzzy_best_match,
             "AC_fuzzy_dedupe": _fuzzy_dedupe,
+            "AC_s3_upload": _s3_upload,
+            "AC_s3_download": _s3_download,
+            "AC_s3_list": _s3_list,
+            "AC_s3_delete": _s3_delete,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

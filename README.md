@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — S3-Compatible Artifact Store](#whats-new-2026-06-20--s3-compatible-artifact-store)
 - [What's new (2026-06-20) — Fuzzy String Matching & Dedupe](#whats-new-2026-06-20--fuzzy-string-matching--dedupe)
 - [What's new (2026-06-19) — Video Step-Overlay Report](#whats-new-2026-06-19--video-step-overlay-report)
 - [What's new (2026-06-19) — Agent Observability (GenAI OpenTelemetry Spans)](#whats-new-2026-06-19--agent-observability-genai-opentelemetry-spans)
@@ -92,6 +93,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — S3-Compatible Artifact Store
+
+Push run artifacts to object storage. Full reference: [`docs/source/Eng/doc/new_features/v41_features_doc.rst`](docs/source/Eng/doc/new_features/v41_features_doc.rst).
+
+- **`S3ArtifactStore`** (`AC_s3_upload` / `AC_s3_download` / `AC_s3_list` / `AC_s3_delete`, `ac_*`): upload/download/list/delete reports, screenshots, and recordings against any S3-compatible bucket (AWS S3, MinIO, R2). `boto3` is an **optional** `[s3]` extra and the client is **injectable**, so the store's logic — and the executor path — are fully unit-tested with a fake client (no boto3/network); the live AWS path is honestly noted as CI-unverifiable. The whole API is relative to the store `prefix`. A module-level default store backs the commands.
 
 ## What's new (2026-06-20) — Fuzzy String Matching & Dedupe
 

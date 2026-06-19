@@ -903,6 +903,32 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Collapse near-duplicate strings (JSON list).",
     ))
     specs.append(CommandSpec(
+        "AC_s3_upload", "Tools", "S3: Upload Artifact",
+        fields=(
+            FieldSpec("local_path", FieldType.FILE_PATH),
+            FieldSpec("key", FieldType.STRING, optional=True),
+        ),
+        description="Upload a file to the configured default S3 store.",
+    ))
+    specs.append(CommandSpec(
+        "AC_s3_download", "Tools", "S3: Download Artifact",
+        fields=(
+            FieldSpec("key", FieldType.STRING),
+            FieldSpec("local_path", FieldType.STRING),
+        ),
+        description="Download an object from the default S3 store.",
+    ))
+    specs.append(CommandSpec(
+        "AC_s3_list", "Tools", "S3: List Artifacts",
+        fields=(FieldSpec("prefix", FieldType.STRING, optional=True),),
+        description="List object keys in the default S3 store.",
+    ))
+    specs.append(CommandSpec(
+        "AC_s3_delete", "Tools", "S3: Delete Artifact",
+        fields=(FieldSpec("key", FieldType.STRING),),
+        description="Delete an object from the default S3 store.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,
