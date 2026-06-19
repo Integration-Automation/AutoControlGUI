@@ -3028,6 +3028,25 @@ def a11y_audit_tools() -> List[MCPTool]:
             handler=h.audit_contrast,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_wcag_audit",
+            description=("WCAG 2.2 conformance audit: tags each defect with its "
+                         "success-criterion id/level/impact and adds the 2.2 "
+                         "Target Size (2.5.8) rule from element bounds. Filters "
+                         "to 'level' (A/AA/AAA). Returns a conformance report "
+                         "with by_criterion / by_impact counts and findings."),
+            input_schema=schema({
+                "app_name": {"type": "string"},
+                "contrast_pairs": {"type": "array",
+                                   "items": {"type": "object"}},
+                "texts": {"type": "array", "items": {"type": "string"}},
+                "level": {"type": "string", "enum": ["A", "AA", "AAA"]},
+                "min_target_px": {"type": "integer"},
+                "max_results": {"type": "integer"},
+            }),
+            handler=h.wcag_audit,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

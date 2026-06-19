@@ -658,6 +658,17 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_agent_specs(specs)
     _add_office_specs(specs)
     _add_memory_specs(specs)
+    specs.append(CommandSpec(
+        "AC_wcag_audit", "Accessibility", "WCAG 2.2 Conformance Audit",
+        fields=(
+            FieldSpec("app_name", FieldType.STRING, optional=True),
+            FieldSpec("level", FieldType.ENUM, choices=("A", "AA", "AAA"),
+                      optional=True, default="AA"),
+            FieldSpec("min_target_px", FieldType.INT, optional=True,
+                      default=24),
+        ),
+        description="WCAG 2.2 audit: SC-tagged findings + Target Size 2.5.8.",
+    ))
 
 
 def _add_memory_specs(specs: List[CommandSpec]) -> None:

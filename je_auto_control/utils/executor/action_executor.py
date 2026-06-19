@@ -891,6 +891,19 @@ def _audit_contrast(foreground: List[int], background: List[int],
     }
 
 
+def _wcag_audit(app_name: Optional[str] = None,
+                contrast_pairs: Optional[List[Dict[str, Any]]] = None,
+                texts: Optional[List[str]] = None, level: str = "AA",
+                min_target_px: int = 24, max_results: int = 500
+                ) -> Dict[str, Any]:
+    """Executor adapter: WCAG-tagged conformance audit (SC ids + levels)."""
+    from je_auto_control.utils.a11y_audit import wcag_audit
+    return wcag_audit(
+        app_name=app_name, contrast_pairs=contrast_pairs, texts=texts,
+        level=str(level), min_target_px=int(min_target_px),
+        max_results=int(max_results))
+
+
 def _run_device_matrix(actions: List[Any], devices: List[Dict[str, Any]],
                        max_parallel: int = 4,
                        var_name: str = "device") -> Dict[str, Any]:
@@ -2804,6 +2817,7 @@ class Executor:
             # Accessibility / i18n audit (missing labels, contrast, truncation)
             "AC_audit_accessibility": _audit_accessibility,
             "AC_audit_contrast": _audit_contrast,
+            "AC_wcag_audit": _wcag_audit,
 
             # Mobile device matrix (parallel script across devices)
             "AC_run_device_matrix": _run_device_matrix,
