@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-19) — Data Quality](#whats-new-2026-06-19--data-quality)
 - [What's new (2026-06-19) — SBOM & Suite Sharding](#whats-new-2026-06-19--sbom--suite-sharding)
 - [What's new (2026-06-19) — Reactive Observer](#whats-new-2026-06-19--reactive-observer)
 - [What's new (2026-06-19) — WCAG 2.2 Audit](#whats-new-2026-06-19--wcag-22-audit)
@@ -70,6 +71,14 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-19) — Data Quality
+
+Three pure-stdlib data-quality helpers (the gate between `load_rows`/OCR and downstream entry), full stack. Full reference: [`docs/source/Eng/doc/new_features/v19_features_doc.rst`](docs/source/Eng/doc/new_features/v19_features_doc.rst).
+
+- **Row schema validation** — `validate_rows(rows, schema)` (`AC_validate_rows`, `ac_validate_rows`): declarative per-field rules (type/required/regex/min/max/min_len/max_len/allowed/unique); returns `{ok, valid, invalid, errors}` so bad scraped/OCR data is caught before it corrupts an ERP/form.
+- **Field extraction** — `extract_fields(text, fields, patterns)` (`AC_extract_fields`, `ac_extract_fields`): named regex presets (email/url/ipv4/phone/date_iso/amount/hashtag) + custom patterns over free text / OCR blobs.
+- **Row masking** — `mask_rows(rows, rules)` (`AC_mask_rows`, `ac_mask_rows`): mask columns before export — `redact` / `hash` (SHA-256) / `partial` (keep last 4); complements the screenshot-only redaction.
 
 ## What's new (2026-06-19) — SBOM & Suite Sharding
 

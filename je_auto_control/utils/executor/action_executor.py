@@ -2663,6 +2663,28 @@ def _merge_results(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
     return merge_results(reports)
 
 
+def _validate_rows(rows: List[Dict[str, Any]],
+                   schema: Dict[str, Any]) -> Dict[str, Any]:
+    """Adapter: validate rows against a declarative schema."""
+    from je_auto_control.utils.data_quality import validate_rows
+    return validate_rows(rows, schema)
+
+
+def _extract_fields(text: str, fields: Optional[List[str]] = None,
+                    patterns: Optional[Dict[str, str]] = None
+                    ) -> Dict[str, Any]:
+    """Adapter: extract structured fields from free text."""
+    from je_auto_control.utils.data_quality import extract_fields
+    return {"fields": extract_fields(text, fields=fields, patterns=patterns)}
+
+
+def _mask_rows(rows: List[Dict[str, Any]],
+               rules: Dict[str, str]) -> Dict[str, Any]:
+    """Adapter: mask sensitive columns in rows."""
+    from je_auto_control.utils.data_quality import mask_rows
+    return {"rows": mask_rows(rows, rules)}
+
+
 class Executor:
     """
     Executor
@@ -2864,6 +2886,9 @@ class Executor:
             "AC_generate_sbom": _generate_sbom,
             "AC_shard_suite": _shard_suite,
             "AC_merge_results": _merge_results,
+            "AC_validate_rows": _validate_rows,
+            "AC_extract_fields": _extract_fields,
+            "AC_mask_rows": _mask_rows,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
