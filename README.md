@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — JSON Schema Validation](#whats-new-2026-06-21--json-schema-validation)
 - [What's new (2026-06-20) — SARIF 2.1.0 Findings Export](#whats-new-2026-06-20--sarif-210-findings-export)
 - [What's new (2026-06-20) — Text PII Detection & Redaction](#whats-new-2026-06-20--text-pii-detection--redaction)
 - [What's new (2026-06-20) — Self-Healing Locator Write-Back](#whats-new-2026-06-20--self-healing-locator-write-back)
@@ -108,6 +109,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — JSON Schema Validation
+
+Validate nested JSON against a real schema. Full reference: [`docs/source/Eng/doc/new_features/v57_features_doc.rst`](docs/source/Eng/doc/new_features/v57_features_doc.rst).
+
+- **`validate_json` / `is_valid` / `assert_schema`** (`AC_validate_json`, `ac_validate_json`): the framework only *generated* JSON Schema and `data_quality` is a flat per-column checker — neither could validate a nested API request/response body. This adds the consumer: a JSON Schema (Draft 2020-12 subset) validator that reports **every** violation as `{path, keyword, message}` (e.g. `$.age maximum`). Covers `type` (incl. integral-float `integer`), `enum`/`const`, numeric/string bounds, array & object keywords, `allOf`/`anyOf`/`oneOf`/`not`, boolean schemas and local `$ref`. Pure-stdlib `re`; pairs with `json_query` and the `http_request` helper.
 
 ## What's new (2026-06-20) — SARIF 2.1.0 Findings Export
 

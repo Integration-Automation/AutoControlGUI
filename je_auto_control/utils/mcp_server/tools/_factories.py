@@ -3226,6 +3226,24 @@ def jsonpath_tools() -> List[MCPTool]:
     ]
 
 
+def json_schema_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_validate_json",
+            description=("Validate parsed JSON 'data' against a JSON Schema "
+                         "(Draft 2020-12 subset: type/enum/const, numeric & "
+                         "string bounds, array/object keywords, allOf/anyOf/"
+                         "oneOf/not, local $ref). Returns {ok, errors:[{path, "
+                         "keyword, message}]}."),
+            input_schema=schema(
+                {"data": {"type": "object"}, "schema": {"type": "object"}},
+                ["data", "schema"]),
+            handler=h.validate_json,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def saga_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4420,7 +4438,8 @@ ALL_FACTORIES = (
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
-    jsonpath_tools, saga_tools, decision_table_tools, locator_repair_tools,
+    jsonpath_tools, json_schema_tools, saga_tools, decision_table_tools,
+    locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,

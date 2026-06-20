@@ -3316,6 +3316,17 @@ def _json_extract(data: Any, mapping: Any) -> Dict[str, Any]:
     return {"result": json_extract(data, mapping)}
 
 
+def _validate_json(data: Any, schema: Any) -> Dict[str, Any]:
+    """Adapter: validate data against a JSON Schema (each JSON string or object)."""
+    import json
+    from je_auto_control.utils.json_schema import validate_json
+    if isinstance(data, str):
+        data = json.loads(data)
+    if isinstance(schema, str):
+        schema = json.loads(schema)
+    return validate_json(data, schema).to_dict()
+
+
 def _run_saga(steps: Any) -> Dict[str, Any]:
     """Adapter: run a saga (steps with compensating rollback) from a spec."""
     import json
@@ -3686,6 +3697,7 @@ class Executor:
             "AC_notify_webhook": _notify_webhook,
             "AC_json_query": _json_query,
             "AC_json_extract": _json_extract,
+            "AC_validate_json": _validate_json,
             "AC_run_saga": _run_saga,
             "AC_decision_table": _decision_table,
             "AC_repair_record": _repair_record,

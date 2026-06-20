@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — JSON Schema 驗證](#本次更新-2026-06-21--json-schema-驗證)
 - [本次更新 (2026-06-20) — SARIF 2.1.0 發現項目匯出](#本次更新-2026-06-20--sarif-210-發現項目匯出)
 - [本次更新 (2026-06-20) — 文字 PII 偵測與遮蔽](#本次更新-2026-06-20--文字-pii-偵測與遮蔽)
 - [本次更新 (2026-06-20) — 自我修復定位器回寫](#本次更新-2026-06-20--自我修復定位器回寫)
@@ -107,6 +108,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — JSON Schema 驗證
+
+以真正的 schema 驗證巢狀 JSON。完整參考:[`docs/source/Zh/doc/new_features/v57_features_doc.rst`](../docs/source/Zh/doc/new_features/v57_features_doc.rst)。
+
+- **`validate_json` / `is_valid` / `assert_schema`**(`AC_validate_json`、`ac_validate_json`):框架過去只會*產生* JSON Schema,而 `data_quality` 是扁平的逐欄檢查器 —— 兩者都無法驗證巢狀的 API 請求/回應內容。本功能補上消費端:一個 JSON Schema(Draft 2020-12 子集)驗證器,將**每一個**違規以 `{path, keyword, message}` 回報(例如 `$.age maximum`)。涵蓋 `type`(含整數值浮點數的 `integer`)、`enum`/`const`、數字/字串界限、陣列與物件關鍵字、`allOf`/`anyOf`/`oneOf`/`not`、布林 schema 與本地 `$ref`。純標準函式庫 `re`;與 `json_query` 及 `http_request` 輔助函式搭配。
 
 ## 本次更新 (2026-06-20) — SARIF 2.1.0 發現項目匯出
 
