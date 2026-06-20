@@ -2914,6 +2914,20 @@ def _check_licenses(components: Any, allow: Any = None,
     return {"violations": violations, "count": len(violations)}
 
 
+_RATE_LIMITERS: Dict[str, Any] = {}
+
+
+def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
+                n: float = 1.0) -> Dict[str, Any]:
+    """Adapter: try to take ``n`` tokens from a named token-bucket limiter."""
+    from je_auto_control.utils.rate_limit import TokenBucket
+    bucket = _RATE_LIMITERS.setdefault(
+        name, TokenBucket(float(rate), float(capacity)))
+    acquired = bucket.try_acquire(float(n))
+    return {"acquired": acquired, "tokens": round(bucket.tokens, 4),
+            "wait": round(bucket.time_until_available(float(n)), 4)}
+
+
 def _jwt_encode(claims: Any, key: str, alg: str = "HS256") -> Dict[str, Any]:
     """Adapter: sign a compact JWT from claims (a dict or JSON string)."""
     import json
@@ -3724,6 +3738,7 @@ class Executor:
             "AC_check_licenses": _check_licenses,
             "AC_jwt_encode": _jwt_encode,
             "AC_jwt_decode": _jwt_decode,
+            "AC_rate_limit": _rate_limit,
             "AC_generate_sop": _generate_sop,
             "AC_tween_drag": _tween_drag,
             "AC_list_plugins": _list_plugins,

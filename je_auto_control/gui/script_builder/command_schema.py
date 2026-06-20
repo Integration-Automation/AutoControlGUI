@@ -1363,6 +1363,16 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Run 'actions' (JSON view) via a named circuit breaker.",
     ))
+    specs.append(CommandSpec(
+        "AC_rate_limit", "Flow", "Rate Limit (Token Bucket)",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("rate", FieldType.FLOAT, optional=True, default=1.0),
+            FieldSpec("capacity", FieldType.FLOAT, optional=True, default=1.0),
+            FieldSpec("n", FieldType.FLOAT, optional=True, default=1.0),
+        ),
+        description="Try to take 'n' tokens from a named limiter; {acquired, wait}.",
+    ))
 
 
 def _add_input_macro_specs(specs: List[CommandSpec]) -> None:

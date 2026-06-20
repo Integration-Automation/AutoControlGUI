@@ -1599,6 +1599,18 @@ def jwt_decode(token, key, algorithms=None, audience=None, leeway=0.0):
     return {"ok": True, "claims": claims}
 
 
+_RATE_LIMITERS = {}
+
+
+def rate_limit(name, rate=1.0, capacity=1.0, n=1.0):
+    from je_auto_control.utils.rate_limit import TokenBucket
+    bucket = _RATE_LIMITERS.setdefault(
+        name, TokenBucket(float(rate), float(capacity)))
+    acquired = bucket.try_acquire(float(n))
+    return {"acquired": acquired, "tokens": round(bucket.tokens, 4),
+            "wait": round(bucket.time_until_available(float(n)), 4)}
+
+
 def run_saga(steps):
     from je_auto_control.utils.saga import run_saga as _run
     result = _run(steps)

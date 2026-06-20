@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Client-Side Rate Limiting](#whats-new-2026-06-21--client-side-rate-limiting)
 - [What's new (2026-06-21) — JSON Web Tokens (JWT)](#whats-new-2026-06-21--json-web-tokens-jwt)
 - [What's new (2026-06-21) — License Policy Gate](#whats-new-2026-06-21--license-policy-gate)
 - [What's new (2026-06-21) — OpenVEX Vulnerability Triage](#whats-new-2026-06-21--openvex-vulnerability-triage)
@@ -113,6 +114,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Client-Side Rate Limiting
+
+Stay under API quotas. Full reference: [`docs/source/Eng/doc/new_features/v62_features_doc.rst`](docs/source/Eng/doc/new_features/v62_features_doc.rst).
+
+- **`TokenBucket` / `SlidingWindowLimiter` / `throttle`** (`AC_rate_limit`, `ac_rate_limit`): `RetryPolicy`/`CircuitBreaker` recover from failures but nothing shaped the *rate* of calls. This adds a token bucket (smooth rate + burst), a sliding-window limiter (Cloudflare's O(1) weighted counter), and a leading-edge throttle decorator. Every limiter takes an injectable `clock` (and `acquire` a `sleep`) so it's fully deterministic in CI with no real delays. `AC_rate_limit` gates an action against a named bucket, returning `{acquired, tokens, wait}`.
 
 ## What's new (2026-06-21) — JSON Web Tokens (JWT)
 

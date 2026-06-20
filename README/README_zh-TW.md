@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — 用戶端速率限制](#本次更新-2026-06-21--用戶端速率限制)
 - [本次更新 (2026-06-21) — JSON Web Token(JWT)](#本次更新-2026-06-21--json-web-tokenjwt)
 - [本次更新 (2026-06-21) — 授權政策閘門](#本次更新-2026-06-21--授權政策閘門)
 - [本次更新 (2026-06-21) — OpenVEX 漏洞分級](#本次更新-2026-06-21--openvex-漏洞分級)
@@ -112,6 +113,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — 用戶端速率限制
+
+守在 API 配額之內。完整參考:[`docs/source/Zh/doc/new_features/v62_features_doc.rst`](../docs/source/Zh/doc/new_features/v62_features_doc.rst)。
+
+- **`TokenBucket` / `SlidingWindowLimiter` / `throttle`**(`AC_rate_limit`、`ac_rate_limit`):`RetryPolicy`/`CircuitBreaker` 從失敗中復原,但沒有任何東西塑形呼叫的*速率*。本功能補上 token bucket(平滑速率 + 突發)、sliding-window 限制器(Cloudflare 的 O(1) 加權計數)以及前緣 throttle 裝飾器。每個限制器都接受可注入的 `clock`(`acquire` 另接受 `sleep`),因此在 CI 完全具決定性、沒有真正延遲。`AC_rate_limit` 以具名 bucket 閘控動作,回傳 `{acquired, tokens, wait}`。
 
 ## 本次更新 (2026-06-21) — JSON Web Token(JWT)
 
