@@ -21,16 +21,21 @@ DEFAULT_COPYLEFT = frozenset({
     "LGPL-3.0-or-later", "MPL-2.0", "EPL-2.0", "CDDL-1.0",
 })
 
-_ALIASES = {
-    "mit license": "MIT", "the mit license": "MIT", "mit": "MIT",
-    "apache 2.0": "Apache-2.0", "apache-2": "Apache-2.0",
-    "apache 2": "Apache-2.0", "apache2": "Apache-2.0",
-    "apache software license": "Apache-2.0", "apache license 2.0": "Apache-2.0",
-    "bsd": "BSD-3-Clause", "bsd license": "BSD-3-Clause",
-    "new bsd license": "BSD-3-Clause", "gplv2": "GPL-2.0-only",
-    "gplv3": "GPL-3.0-only", "gnu gplv3": "GPL-3.0-only",
-    "lgplv3": "LGPL-3.0-only", "mpl 2.0": "MPL-2.0", "isc license": "ISC",
+# Canonical SPDX id -> the loose names that should normalize to it. Inverted
+# below so each SPDX id literal appears exactly once (no duplicated literals).
+_ALIAS_GROUPS = {
+    "MIT": ("mit license", "the mit license", "mit"),
+    "Apache-2.0": ("apache 2.0", "apache-2", "apache 2", "apache2",
+                   "apache software license", "apache license 2.0"),
+    "BSD-3-Clause": ("bsd", "bsd license", "new bsd license"),
+    "GPL-2.0-only": ("gplv2",),
+    "GPL-3.0-only": ("gplv3", "gnu gplv3"),
+    "LGPL-3.0-only": ("lgplv3",),
+    "MPL-2.0": ("mpl 2.0",),
+    "ISC": ("isc license",),
 }
+_ALIASES = {alias: spdx for spdx, names in _ALIAS_GROUPS.items()
+            for alias in names}
 
 _OPERATOR_RE = re.compile(r"\b(?:OR|AND|WITH)\b|[()]", re.IGNORECASE)
 
