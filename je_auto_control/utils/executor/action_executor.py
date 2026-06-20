@@ -2885,6 +2885,18 @@ def _scan_vulns(components: Any, advisories: Any = None,
     return result
 
 
+def _apply_vex(findings: Any, vex: Any) -> Dict[str, Any]:
+    """Adapter: suppress VEX'd vulnerability findings (each JSON string/obj)."""
+    import json
+    from je_auto_control.utils.vex import apply_vex
+    if isinstance(findings, str):
+        findings = json.loads(findings)
+    if isinstance(vex, str):
+        vex = json.loads(vex)
+    kept = apply_vex(findings, vex)
+    return {"findings": kept, "count": len(kept)}
+
+
 def _generate_sop(actions: List[Any], title: str = "Automation Procedure",
                   path: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: build (or write) a step-by-step SOP from an action list."""
@@ -3665,6 +3677,7 @@ class Executor:
             "AC_heal_stats": _heal_stats,
             "AC_scan_secrets": _scan_secrets,
             "AC_scan_vulns": _scan_vulns,
+            "AC_apply_vex": _apply_vex,
             "AC_generate_sop": _generate_sop,
             "AC_tween_drag": _tween_drag,
             "AC_list_plugins": _list_plugins,

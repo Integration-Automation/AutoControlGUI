@@ -306,6 +306,10 @@ from je_auto_control.utils.json_schema import (
 from je_auto_control.utils.vuln_scan import (
     findings_to_sarif, is_affected, match_package, scan_components, version_key,
 )
+# OpenVEX triage over vulnerability findings
+from je_auto_control.utils.vex import (
+    VEX_JUSTIFICATIONS, VEX_STATUSES, apply_vex, build_vex, vex_statement,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -778,6 +782,8 @@ __all__ = [
     "SchemaValidationResult", "assert_schema", "is_valid", "validate_json",
     "findings_to_sarif", "is_affected", "match_package", "scan_components",
     "version_key",
+    "VEX_JUSTIFICATIONS", "VEX_STATUSES", "apply_vex", "build_vex",
+    "vex_statement",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

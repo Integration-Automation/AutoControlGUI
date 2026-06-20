@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — OpenVEX Vulnerability Triage](#whats-new-2026-06-21--openvex-vulnerability-triage)
 - [What's new (2026-06-21) — Dependency Vulnerability Scanning (OSV)](#whats-new-2026-06-21--dependency-vulnerability-scanning-osv)
 - [What's new (2026-06-21) — JSON Schema Validation](#whats-new-2026-06-21--json-schema-validation)
 - [What's new (2026-06-20) — SARIF 2.1.0 Findings Export](#whats-new-2026-06-20--sarif-210-findings-export)
@@ -110,6 +111,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — OpenVEX Vulnerability Triage
+
+Suppress the vulns that don't affect you. Full reference: [`docs/source/Eng/doc/new_features/v59_features_doc.rst`](docs/source/Eng/doc/new_features/v59_features_doc.rst).
+
+- **`vex_statement` / `build_vex` / `apply_vex`** (`AC_apply_vex`, `ac_apply_vex`): the OSV scanner surfaces every known CVE forever — there was no way to record "we checked, this one doesn't affect us". This authors [OpenVEX](https://openvex.dev) 0.2.0 statements and applies them to the scanner's findings: `not_affected`/`fixed` **suppress** a finding, `affected`/`under_investigation` **annotate** it. Statements join on the vuln id *or* an alias, optionally product-scoped; `not_affected` requires a justification or impact statement. Pure-stdlib; chains directly after `AC_scan_vulns`.
 
 ## What's new (2026-06-21) — Dependency Vulnerability Scanning (OSV)
 

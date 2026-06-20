@@ -1169,6 +1169,17 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Match SBOM components against an OSV advisory database.",
     ))
     specs.append(CommandSpec(
+        "AC_apply_vex", "Security", "Apply VEX Triage to Findings",
+        fields=(
+            FieldSpec("findings", FieldType.STRING,
+                      placeholder='[{"id": "GHSA-...", "package": "foo"}]'),
+            FieldSpec("vex", FieldType.STRING,
+                      placeholder='{"statements": [{"vulnerability": '
+                                  '{"name": "CVE-..."}, "status": "not_affected"}]}'),
+        ),
+        description="Suppress not_affected/fixed vulns via an OpenVEX document.",
+    ))
+    specs.append(CommandSpec(
         "AC_run_saga", "Flow", "Run Saga (Compensating Rollback)",
         fields=(
             FieldSpec("steps", FieldType.STRING,
