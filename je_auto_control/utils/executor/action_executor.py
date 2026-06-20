@@ -3195,6 +3195,24 @@ def _voice_clear() -> Dict[str, Any]:
     return {"cleared": True}
 
 
+def _to_physical(x: float, y: float, physical_w: int, physical_h: int,
+                 model_w: int, model_h: int) -> Dict[str, Any]:
+    """Adapter: map a model-grid coordinate to physical pixels."""
+    from je_auto_control.utils.coordinate_space import CoordinateSpace
+    px, py = CoordinateSpace(physical_w, physical_h, model_w,
+                             model_h).to_physical(x, y)
+    return {"x": px, "y": py}
+
+
+def _to_model(x: int, y: int, physical_w: int, physical_h: int,
+              model_w: int, model_h: int) -> Dict[str, Any]:
+    """Adapter: map a physical-pixel coordinate to a model grid."""
+    from je_auto_control.utils.coordinate_space import CoordinateSpace
+    mx, my = CoordinateSpace(physical_w, physical_h, model_w,
+                             model_h).to_model(x, y)
+    return {"x": mx, "y": my}
+
+
 class Executor:
     """
     Executor
@@ -3465,6 +3483,8 @@ class Executor:
             "AC_voice_dispatch": _voice_dispatch,
             "AC_voice_list": _voice_list,
             "AC_voice_clear": _voice_clear,
+            "AC_to_physical": _to_physical,
+            "AC_to_model": _to_model,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

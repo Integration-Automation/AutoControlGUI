@@ -3049,6 +3049,33 @@ def voice_tools() -> List[MCPTool]:
     ]
 
 
+def coordinate_space_tools() -> List[MCPTool]:
+    _DIMS = {"x": {"type": "number"}, "y": {"type": "number"},
+             "physical_w": {"type": "integer"},
+             "physical_h": {"type": "integer"},
+             "model_w": {"type": "integer"}, "model_h": {"type": "integer"}}
+    _REQ = ["x", "y", "physical_w", "physical_h", "model_w", "model_h"]
+    return [
+        MCPTool(
+            name="ac_to_physical",
+            description=("Map a model-grid coordinate (e.g. a 1000x1000 or XGA "
+                         "click from a computer-use model) to physical screen "
+                         "pixels. Returns {x, y}."),
+            input_schema=schema(dict(_DIMS), list(_REQ)),
+            handler=h.to_physical,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_to_model",
+            description=("Map a physical-pixel coordinate to a model grid "
+                         "(inverse of ac_to_physical). Returns {x, y}."),
+            input_schema=schema(dict(_DIMS), list(_REQ)),
+            handler=h.to_model,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4110,7 +4137,7 @@ ALL_FACTORIES = (
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
-    locale_tools, voice_tools,
+    locale_tools, voice_tools, coordinate_space_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
