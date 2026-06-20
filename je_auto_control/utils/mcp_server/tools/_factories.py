@@ -3262,6 +3262,23 @@ def vuln_scan_tools() -> List[MCPTool]:
     ]
 
 
+def vex_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_apply_vex",
+            description=("Apply an OpenVEX document to vulnerability "
+                         "'findings': drop the ones marked not_affected/fixed "
+                         "and annotate the rest with their VEX status. Returns "
+                         "{findings, count}."),
+            input_schema=schema(
+                {"findings": {"type": "array"}, "vex": {"type": "object"}},
+                ["findings", "vex"]),
+            handler=h.apply_vex,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def saga_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4456,7 +4473,7 @@ ALL_FACTORIES = (
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
-    jsonpath_tools, json_schema_tools, vuln_scan_tools, saga_tools,
+    jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools, saga_tools,
     decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

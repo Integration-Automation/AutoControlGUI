@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — OpenVEX 漏洞分級](#本次更新-2026-06-21--openvex-漏洞分級)
 - [本次更新 (2026-06-21) — 相依套件漏洞掃描(OSV)](#本次更新-2026-06-21--相依套件漏洞掃描osv)
 - [本次更新 (2026-06-21) — JSON Schema 驗證](#本次更新-2026-06-21--json-schema-驗證)
 - [本次更新 (2026-06-20) — SARIF 2.1.0 發現項目匯出](#本次更新-2026-06-20--sarif-210-發現項目匯出)
@@ -109,6 +110,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — OpenVEX 漏洞分級
+
+抑制不影響你的漏洞。完整參考:[`docs/source/Zh/doc/new_features/v59_features_doc.rst`](../docs/source/Zh/doc/new_features/v59_features_doc.rst)。
+
+- **`vex_statement` / `build_vex` / `apply_vex`**(`AC_apply_vex`、`ac_apply_vex`):OSV 掃描器會讓每個已知 CVE 一直出現 —— 沒有辦法記錄「我們查過了,這個不影響我們」。本功能撰寫 [OpenVEX](https://openvex.dev) 0.2.0 陳述並套用到掃描器的發現項目:`not_affected`/`fixed` **抑制**一項發現,`affected`/`under_investigation` **標註**它。陳述以漏洞 id *或*別名配對,並可限定產品;`not_affected` 需附理由或衝擊說明。純標準函式庫;可直接接在 `AC_scan_vulns` 之後。
 
 ## 本次更新 (2026-06-21) — 相依套件漏洞掃描(OSV)
 

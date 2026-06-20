@@ -1569,6 +1569,12 @@ def scan_vulns(components, advisories=None):
     return {"findings": findings, "count": len(findings)}
 
 
+def apply_vex(findings, vex):
+    from je_auto_control.utils.vex import apply_vex as _apply
+    kept = _apply(findings, vex)
+    return {"findings": kept, "count": len(kept)}
+
+
 def run_saga(steps):
     from je_auto_control.utils.saga import run_saga as _run
     result = _run(steps)
