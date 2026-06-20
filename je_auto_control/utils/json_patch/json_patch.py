@@ -46,7 +46,10 @@ def _split_pointer(pointer: str) -> List[str]:
         return []
     if not pointer.startswith("/"):
         raise PatchError(f"invalid JSON Pointer {pointer!r}")
-    return [_unescape(ref) for ref in pointer.split("/")[1:]]
+    refs: List[str] = []
+    for ref in pointer.split("/")[1:]:
+        refs.append(_unescape(ref))
+    return refs
 
 
 def _array_index(ref: str, length: int, *, allow_end: bool = False) -> int:
