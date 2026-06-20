@@ -87,9 +87,12 @@ def _betacf(a: float, b: float, x: float) -> float:
 
 
 def _betai(a: float, b: float, x: float) -> float:
-    if x <= 0:
+    # x is a domain ratio in [0, 1]; both boundaries are reachable (e.g. x == 1
+    # when the t-statistic is 0). NOSONAR: the analyzer mis-models these as
+    # constant, but they are genuine, exercised guards.
+    if x <= 0:  # NOSONAR python:S2583 reason: reachable beta-domain lower bound
         return 0.0
-    if x >= 1:
+    if x >= 1:  # NOSONAR python:S2583 reason: reachable beta-domain upper bound
         return 1.0
     front = math.exp(math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
                      + a * math.log(x) + b * math.log(1 - x))
