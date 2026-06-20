@@ -3244,6 +3244,24 @@ def json_schema_tools() -> List[MCPTool]:
     ]
 
 
+def vuln_scan_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_scan_vulns",
+            description=("Match SBOM 'components' (or a full SBOM dict) against "
+                         "an OSV 'advisories' database. Returns {findings:"
+                         "[{id, package, version, severity, fixed, aliases}], "
+                         "count}. Advisories are supplied as data (offline)."),
+            input_schema=schema(
+                {"components": {"type": "object"},
+                 "advisories": {"type": "array"}},
+                ["components"]),
+            handler=h.scan_vulns,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def saga_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4438,8 +4456,8 @@ ALL_FACTORIES = (
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
-    jsonpath_tools, json_schema_tools, saga_tools, decision_table_tools,
-    locator_repair_tools,
+    jsonpath_tools, json_schema_tools, vuln_scan_tools, saga_tools,
+    decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,

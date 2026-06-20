@@ -1156,6 +1156,19 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Validate JSON against a JSON Schema; returns {ok, errors}.",
     ))
     specs.append(CommandSpec(
+        "AC_scan_vulns", "Security", "Scan Dependencies for Vulnerabilities",
+        fields=(
+            FieldSpec("components", FieldType.STRING,
+                      placeholder='{"components": [{"name": "foo", '
+                                  '"version": "1.0", "purl": "pkg:pypi/foo@1.0"}]}'),
+            FieldSpec("advisories", FieldType.STRING,
+                      placeholder='[{"id": "GHSA-...", "affected": [...]}]'),
+            FieldSpec("sarif_path", FieldType.STRING, optional=True,
+                      placeholder="vulns.sarif"),
+        ),
+        description="Match SBOM components against an OSV advisory database.",
+    ))
+    specs.append(CommandSpec(
         "AC_run_saga", "Flow", "Run Saga (Compensating Rollback)",
         fields=(
             FieldSpec("steps", FieldType.STRING,

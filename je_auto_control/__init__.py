@@ -302,6 +302,10 @@ from je_auto_control.utils.sarif import (
 from je_auto_control.utils.json_schema import (
     SchemaValidationResult, assert_schema, is_valid, validate_json,
 )
+# OSV vulnerability matching for SBOM components
+from je_auto_control.utils.vuln_scan import (
+    findings_to_sarif, is_affected, match_package, scan_components, version_key,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -772,6 +776,8 @@ __all__ = [
     "from_audit_findings", "from_lint_issues", "make_finding", "to_sarif",
     "write_sarif",
     "SchemaValidationResult", "assert_schema", "is_valid", "validate_json",
+    "findings_to_sarif", "is_affected", "match_package", "scan_components",
+    "version_key",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Dependency Vulnerability Scanning (OSV)](#whats-new-2026-06-21--dependency-vulnerability-scanning-osv)
 - [What's new (2026-06-21) — JSON Schema Validation](#whats-new-2026-06-21--json-schema-validation)
 - [What's new (2026-06-20) — SARIF 2.1.0 Findings Export](#whats-new-2026-06-20--sarif-210-findings-export)
 - [What's new (2026-06-20) — Text PII Detection & Redaction](#whats-new-2026-06-20--text-pii-detection--redaction)
@@ -109,6 +110,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Dependency Vulnerability Scanning (OSV)
+
+Match the SBOM against known CVEs. Full reference: [`docs/source/Eng/doc/new_features/v58_features_doc.rst`](docs/source/Eng/doc/new_features/v58_features_doc.rst).
+
+- **`scan_components` / `match_package` / `is_affected` / `findings_to_sarif`** (`AC_scan_vulns`, `ac_scan_vulns`): `build_sbom` only *inventoried* dependencies and `to_sarif` only *exported* findings — nothing ever **produced** a vulnerability finding. This matches the SBOM's `(ecosystem, name, version)` components against an [OSV](https://osv.dev) advisory database (sweeping `introduced`/`fixed`/`last_affected` ranges, PEP-503 name normalization, severity→SARIF level) and bridges results into the existing SARIF exporter for GitHub/Azure DevOps code scanning. The advisory DB is **injected as data** (offline, deterministic); the live `osv.dev` query is an optional `fetcher` seam. Pure-stdlib `re`.
 
 ## What's new (2026-06-21) — JSON Schema Validation
 
