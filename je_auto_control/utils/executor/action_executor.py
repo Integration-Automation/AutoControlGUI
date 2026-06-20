@@ -3122,6 +3122,20 @@ def _s3_delete(key: str) -> Dict[str, Any]:
     return {"deleted": get_default_store().delete(key)}
 
 
+def _image_hash(path: str, algo: str = "average") -> Dict[str, Any]:
+    """Adapter: perceptual hash of an image (average or dhash)."""
+    from je_auto_control.utils.image_dedup import average_hash, dhash
+    hasher = dhash if algo == "dhash" else average_hash
+    return {"hash": hasher(path)}
+
+
+def _dedupe_images(paths: Any, max_distance: int = 5) -> Dict[str, Any]:
+    """Adapter: drop near-duplicate images, keeping the first of each cluster."""
+    from je_auto_control.utils.image_dedup import dedupe_images
+    return {"unique": dedupe_images(_coerce_list(paths),
+                                    max_distance=max_distance)}
+
+
 class Executor:
     """
     Executor
@@ -3381,6 +3395,8 @@ class Executor:
             "AC_s3_download": _s3_download,
             "AC_s3_list": _s3_list,
             "AC_s3_delete": _s3_delete,
+            "AC_image_hash": _image_hash,
+            "AC_dedupe_images": _dedupe_images,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

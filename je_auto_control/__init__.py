@@ -239,6 +239,10 @@ from je_auto_control.utils.artifact_store import (
     S3ArtifactStore, configure_default_store, get_default_store,
     set_default_store,
 )
+# Perceptual-hash image dedupe (Pillow aHash/dHash)
+from je_auto_control.utils.image_dedup import (
+    average_hash, dedupe_images, dhash, hamming_distance, images_similar,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -688,6 +692,8 @@ __all__ = [
     "fuzzy_best_match", "fuzzy_dedupe", "fuzzy_matches", "fuzzy_ratio",
     "S3ArtifactStore", "configure_default_store", "get_default_store",
     "set_default_store",
+    "average_hash", "dedupe_images", "dhash", "hamming_distance",
+    "images_similar",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

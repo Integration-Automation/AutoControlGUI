@@ -1412,6 +1412,17 @@ def s3_delete(key):
     return {"deleted": get_default_store().delete(key)}
 
 
+def image_hash(path, algo="average"):
+    from je_auto_control.utils.image_dedup import average_hash, dhash
+    hasher = dhash if algo == "dhash" else average_hash
+    return {"hash": hasher(path)}
+
+
+def dedupe_images(paths, max_distance=5):
+    from je_auto_control.utils.image_dedup import dedupe_images as _dedupe
+    return {"unique": _dedupe(paths, max_distance=max_distance)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

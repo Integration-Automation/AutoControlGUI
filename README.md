@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — Perceptual-Hash Image Dedupe](#whats-new-2026-06-20--perceptual-hash-image-dedupe)
 - [What's new (2026-06-20) — S3-Compatible Artifact Store](#whats-new-2026-06-20--s3-compatible-artifact-store)
 - [What's new (2026-06-20) — Fuzzy String Matching & Dedupe](#whats-new-2026-06-20--fuzzy-string-matching--dedupe)
 - [What's new (2026-06-19) — Video Step-Overlay Report](#whats-new-2026-06-19--video-step-overlay-report)
@@ -93,6 +94,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — Perceptual-Hash Image Dedupe
+
+Collapse near-identical screenshots. Full reference: [`docs/source/Eng/doc/new_features/v42_features_doc.rst`](docs/source/Eng/doc/new_features/v42_features_doc.rst).
+
+- **`average_hash` / `dhash` / `hamming_distance` / `images_similar` / `dedupe_images`** (`AC_image_hash` / `AC_dedupe_images`, `ac_*`): perceptual hashing maps visually similar images to close fingerprints, so near-duplicate frames in a recording or step report cluster by Hamming distance and collapse to one representative. Uses **Pillow** (already core — no extra dep); the dedupe/compare logic is pure Python with an injectable `hasher`, so clustering is unit-tested without any image and the real Pillow path under `importorskip`.
 
 ## What's new (2026-06-20) — S3-Compatible Artifact Store
 
