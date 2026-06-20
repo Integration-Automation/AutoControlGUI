@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-20) — Saga / 補償回溯](#本次更新-2026-06-20--saga--補償回溯)
 - [本次更新 (2026-06-20) — JSONPath 查詢](#本次更新-2026-06-20--jsonpath-查詢)
 - [本次更新 (2026-06-20) — 多通道 Webhook 通知](#本次更新-2026-06-20--多通道-webhook-通知)
 - [本次更新 (2026-06-20) — 對外 CloudEvents 發送器](#本次更新-2026-06-20--對外-cloudevents-發送器)
@@ -102,6 +103,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-20) — Saga / 補償回溯
+
+後續步驟失敗時復原已完成步驟。完整參考:[`docs/source/Zh/doc/new_features/v52_features_doc.rst`](../docs/source/Zh/doc/new_features/v52_features_doc.rst)。
+
+- **`Saga` / `run_saga`**(`AC_run_saga`、`ac_run_saga`):為每個步驟記錄補償動作;任何失敗時以 **LIFO** 順序對已完成步驟執行補償 —— 單一區塊的 `AC_try` 無法提供的持久性交易原語。前向動作/補償為可呼叫物件(或 JSON 動作清單),因此可在無副作用下完整單元測試;補償為盡力而為(失敗的復原會記錄,回溯繼續)。回傳 `{ok, completed, compensated, failed_step, error}`。
 
 ## 本次更新 (2026-06-20) — JSONPath 查詢
 

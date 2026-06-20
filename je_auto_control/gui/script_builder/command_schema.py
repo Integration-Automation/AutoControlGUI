@@ -1146,6 +1146,15 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Extract a {key: jsonpath} mapping into a flat object.",
     ))
     specs.append(CommandSpec(
+        "AC_run_saga", "Flow", "Run Saga (Compensating Rollback)",
+        fields=(
+            FieldSpec("steps", FieldType.STRING,
+                      placeholder='[{"name": "s1", "action": [...], '
+                                  '"compensation": [...]}]'),
+        ),
+        description="Run steps; on failure undo completed steps LIFO.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

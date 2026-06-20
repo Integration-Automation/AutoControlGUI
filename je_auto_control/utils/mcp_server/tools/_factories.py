@@ -3226,6 +3226,24 @@ def jsonpath_tools() -> List[MCPTool]:
     ]
 
 
+def saga_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_run_saga",
+            description=("Run a saga: a list of steps {name, action:[AC...], "
+                         "compensation:[AC...]}. On any step failure, the "
+                         "compensations of completed steps run in LIFO order. "
+                         "Returns {ok, completed, compensated, failed_step, "
+                         "error}."),
+            input_schema=schema(
+                {"steps": {"type": "array", "items": {"type": "object"}}},
+                ["steps"]),
+            handler=h.run_saga,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4289,7 +4307,7 @@ ALL_FACTORIES = (
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
-    jsonpath_tools,
+    jsonpath_tools, saga_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

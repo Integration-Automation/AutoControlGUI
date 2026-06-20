@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-20) — Saga / 补偿回滚](#本次更新-2026-06-20--saga--补偿回滚)
 - [本次更新 (2026-06-20) — JSONPath 查询](#本次更新-2026-06-20--jsonpath-查询)
 - [本次更新 (2026-06-20) — 多通道 Webhook 通知](#本次更新-2026-06-20--多通道-webhook-通知)
 - [本次更新 (2026-06-20) — 对外 CloudEvents 发送器](#本次更新-2026-06-20--对外-cloudevents-发送器)
@@ -102,6 +103,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-20) — Saga / 补偿回滚
+
+后续步骤失败时回滚已完成步骤。完整参考:[`docs/source/Zh/doc/new_features/v52_features_doc.rst`](../docs/source/Zh/doc/new_features/v52_features_doc.rst)。
+
+- **`Saga` / `run_saga`**(`AC_run_saga`、`ac_run_saga`):为每个步骤记录补偿动作;任何失败时以 **LIFO** 顺序对已完成步骤执行补偿 —— 单一区块的 `AC_try` 无法提供的持久性事务原语。前向动作/补偿为可调用对象(或 JSON 动作列表),因此可在无副作用下完整单元测试;补偿为尽力而为(失败的回滚会记录,回滚继续)。返回 `{ok, completed, compensated, failed_step, error}`。
 
 ## 本次更新 (2026-06-20) — JSONPath 查询
 

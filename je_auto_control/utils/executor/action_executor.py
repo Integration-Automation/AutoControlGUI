@@ -3316,6 +3316,18 @@ def _json_extract(data: Any, mapping: Any) -> Dict[str, Any]:
     return {"result": json_extract(data, mapping)}
 
 
+def _run_saga(steps: Any) -> Dict[str, Any]:
+    """Adapter: run a saga (steps with compensating rollback) from a spec."""
+    import json
+    from je_auto_control.utils.saga import run_saga
+    if isinstance(steps, str):
+        steps = json.loads(steps)
+    result = run_saga(steps)
+    return {"ok": result.ok, "completed": result.completed,
+            "compensated": result.compensated,
+            "failed_step": result.failed_step, "error": result.error}
+
+
 class Executor:
     """
     Executor
@@ -3598,6 +3610,7 @@ class Executor:
             "AC_notify_webhook": _notify_webhook,
             "AC_json_query": _json_query,
             "AC_json_extract": _json_extract,
+            "AC_run_saga": _run_saga,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

@@ -1556,6 +1556,14 @@ def json_extract(data, mapping):
     return {"result": _x(data, mapping)}
 
 
+def run_saga(steps):
+    from je_auto_control.utils.saga import run_saga as _run
+    result = _run(steps)
+    return {"ok": result.ok, "completed": result.completed,
+            "compensated": result.compensated,
+            "failed_step": result.failed_step, "error": result.error}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

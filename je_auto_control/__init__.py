@@ -280,6 +280,8 @@ from je_auto_control.utils.notify_channels import (
 from je_auto_control.utils.jsonpath import (
     json_extract, json_query, json_query_one,
 )
+# Saga orchestrator: multi-step flow with compensating rollback
+from je_auto_control.utils.saga import Saga, SagaResult, run_saga
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -743,6 +745,7 @@ __all__ = [
     "EventEmitter", "post_cloudevent", "to_cloudevent",
     "WebhookChannel", "WebhookResult", "notify_webhook", "set_default_poster",
     "json_extract", "json_query", "json_query_one",
+    "Saga", "SagaResult", "run_saga",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
