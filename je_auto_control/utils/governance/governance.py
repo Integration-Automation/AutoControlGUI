@@ -9,11 +9,11 @@ can run as separate processes (CI dispatcher and a human approver).
 
 Pure standard library; imports no ``PySide6``. Tokens use :mod:`secrets`.
 """
-import json
 import secrets
 import time
-from pathlib import Path
 from typing import Dict, List, Optional
+
+from je_auto_control.utils.json_store import read_json_dict, write_json_dict
 
 STATUS_PENDING = "pending"
 STATUS_APPROVED = "approved"
@@ -25,25 +25,12 @@ class ApprovalGate:
 
     def __init__(self, db_path: Optional[str] = None) -> None:
         """Open the gate; ``db_path`` persists state across processes."""
-        self._path = Path(db_path) if db_path else None
-        self._items: Dict[str, Dict[str, object]] = self._load()
-
-    def _load(self) -> Dict[str, Dict[str, object]]:
-        if self._path is None or not self._path.is_file():
-            return {}
-        try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return {}
-        return data if isinstance(data, dict) else {}
+        self._path = db_path
+        self._items: Dict[str, Dict[str, object]] = read_json_dict(db_path)
 
     def _flush(self) -> None:
-        if self._path is None:
-            return
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(
-            json.dumps(self._items, ensure_ascii=False, indent=2),
-            encoding="utf-8")
+        if self._path is not None:
+            write_json_dict(self._path, self._items)
 
     def request(self, action: str, requester: str = "") -> str:
         """File an approval request for ``action``; return its token."""

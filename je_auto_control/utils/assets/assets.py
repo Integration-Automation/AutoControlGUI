@@ -11,11 +11,11 @@ value through an injected resolver — so the secret never lands in a plain
 
 JSON-backed (or in-memory); pure standard library; imports no ``PySide6``.
 """
-import json
 import os
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
+
+from je_auto_control.utils.json_store import read_json_dict, write_json_dict
 
 ENV_VAR = "JE_AUTOCONTROL_ENV"
 DEFAULT_ENV = "default"
@@ -66,26 +66,14 @@ class AssetStore:
                  secret_resolver: Optional[Callable[[str], Any]] = None
                  ) -> None:
         """``secret_resolver(name)`` resolves ``credential`` references lazily."""
-        self._path = Path(db_path) if db_path else None
+        self._path = db_path
         self._resolver = secret_resolver
-        self._data: Dict[str, Dict[str, Dict[str, Any]]] = self._load()
-
-    def _load(self) -> Dict[str, Dict[str, Dict[str, Any]]]:
-        if self._path is None or not self._path.is_file():
-            return {}
-        try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return {}
-        return data if isinstance(data, dict) else {}
+        self._data: Dict[str, Dict[str, Dict[str, Any]]] = read_json_dict(
+            db_path)
 
     def _flush(self) -> None:
-        if self._path is None:
-            return
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(
-            json.dumps(self._data, ensure_ascii=False, indent=2),
-            encoding="utf-8")
+        if self._path is not None:
+            write_json_dict(self._path, self._data)
 
     def set(self, name: str, value: Any, *, type: str = TYPE_TEXT,
             environment: str = DEFAULT_ENV) -> None:
