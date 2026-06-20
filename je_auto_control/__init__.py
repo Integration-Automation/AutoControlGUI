@@ -329,6 +329,10 @@ from je_auto_control.utils.json_patch import (
     PatchError, PatchTestFailed, apply_patch, make_merge_patch, make_patch,
     merge_patch, remove_pointer, resolve_pointer, set_pointer,
 )
+# In-memory BM25 / TF-IDF full-text search
+from je_auto_control.utils.search_index import (
+    SearchHit, SearchIndex, search_documents, tokenize,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -811,6 +815,7 @@ __all__ = [
     "PatchError", "PatchTestFailed", "apply_patch", "make_merge_patch",
     "make_patch", "merge_patch", "remove_pointer", "resolve_pointer",
     "set_pointer",
+    "SearchHit", "SearchIndex", "search_documents", "tokenize",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

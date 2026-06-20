@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 全文搜索(BM25)](#本次更新-2026-06-21--全文搜索bm25)
 - [本次更新 (2026-06-21) — JSON Pointer、Patch 与 Merge Patch](#本次更新-2026-06-21--json-pointerpatch-与-merge-patch)
 - [本次更新 (2026-06-21) — 客户端速率限制](#本次更新-2026-06-21--客户端速率限制)
 - [本次更新 (2026-06-21) — JSON Web Token(JWT)](#本次更新-2026-06-21--json-web-tokenjwt)
@@ -114,6 +115,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 全文搜索(BM25)
+
+依相关性对文档语料排名。完整参考:[`docs/source/Zh/doc/new_features/v64_features_doc.rst`](../docs/source/Zh/doc/new_features/v64_features_doc.rst)。
+
+- **`SearchIndex` / `search_documents` / `tokenize`**(`AC_search_documents`、`ac_search_documents`):`fuzzy` 是成对的,`skill_library` 以字母序匹配子字符串 —— 两者都不会依相关性对语料排名。本功能补上以倒排索引、用 Okapi BM25(`k1=1.5`、`b=0.75`、`IDF = ln(1+(N−df+0.5)/(df+0.5))`)或 TF-IDF 排名的搜索,因此罕见词胜过常见词、词频会饱和、长文档被规范化下调。增量 `add`/`remove`、可选停用词、结果确定。纯标准库 `math`+`collections`+`re` —— 无需数据库。
 
 ## 本次更新 (2026-06-21) — JSON Pointer、Patch 与 Merge Patch
 
