@@ -1564,6 +1564,11 @@ def run_saga(steps):
             "failed_step": result.failed_step, "error": result.error}
 
 
+def decision_table(spec, context):
+    from je_auto_control.utils.decision_table import evaluate_table
+    return {"result": evaluate_table(spec, context)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

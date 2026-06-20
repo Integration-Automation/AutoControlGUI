@@ -3244,6 +3244,24 @@ def saga_tools() -> List[MCPTool]:
     ]
 
 
+def decision_table_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_decision_table",
+            description=("Evaluate a DMN-style decision table 'spec' "
+                         "({inputs, hit_policy: UNIQUE/FIRST/PRIORITY/COLLECT, "
+                         "rules:[{conditions, outputs}]}) against a 'context'. "
+                         "Conditions are wildcard/literal/{op,value}. Returns "
+                         "{result} (outputs dict, or list for COLLECT)."),
+            input_schema=schema(
+                {"spec": {"type": "object"}, "context": {"type": "object"}},
+                ["spec", "context"]),
+            handler=h.decision_table,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4307,7 +4325,7 @@ ALL_FACTORIES = (
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
-    jsonpath_tools, saga_tools,
+    jsonpath_tools, saga_tools, decision_table_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

@@ -3328,6 +3328,17 @@ def _run_saga(steps: Any) -> Dict[str, Any]:
             "failed_step": result.failed_step, "error": result.error}
 
 
+def _decision_table(spec: Any, context: Any) -> Dict[str, Any]:
+    """Adapter: evaluate a DMN-style decision table against a context."""
+    import json
+    from je_auto_control.utils.decision_table import evaluate_table
+    if isinstance(spec, str):
+        spec = json.loads(spec)
+    if isinstance(context, str):
+        context = json.loads(context)
+    return {"result": evaluate_table(spec, context)}
+
+
 class Executor:
     """
     Executor
@@ -3611,6 +3622,7 @@ class Executor:
             "AC_json_query": _json_query,
             "AC_json_extract": _json_extract,
             "AC_run_saga": _run_saga,
+            "AC_decision_table": _decision_table,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

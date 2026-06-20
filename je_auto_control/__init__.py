@@ -282,6 +282,10 @@ from je_auto_control.utils.jsonpath import (
 )
 # Saga orchestrator: multi-step flow with compensating rollback
 from je_auto_control.utils.saga import Saga, SagaResult, run_saga
+# DMN-style decision tables (rules + hit policy)
+from je_auto_control.utils.decision_table import (
+    DecisionTable, Rule, evaluate_table,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -746,6 +750,7 @@ __all__ = [
     "WebhookChannel", "WebhookResult", "notify_webhook", "set_default_poster",
     "json_extract", "json_query", "json_query_one",
     "Saga", "SagaResult", "run_saga",
+    "DecisionTable", "Rule", "evaluate_table",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
