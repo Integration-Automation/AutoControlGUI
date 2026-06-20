@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Calendar Recurrence Rules (RRULE)](#whats-new-2026-06-21--calendar-recurrence-rules-rrule)
 - [What's new (2026-06-21) — Statistics & A/B Significance](#whats-new-2026-06-21--statistics--ab-significance)
 - [What's new (2026-06-21) — Full-Text Search (BM25)](#whats-new-2026-06-21--full-text-search-bm25)
 - [What's new (2026-06-21) — JSON Pointer, Patch & Merge Patch](#whats-new-2026-06-21--json-pointer-patch--merge-patch)
@@ -117,6 +118,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Calendar Recurrence Rules (RRULE)
+
+Schedule "every 2nd Tuesday". Full reference: [`docs/source/Eng/doc/new_features/v66_features_doc.rst`](docs/source/Eng/doc/new_features/v66_features_doc.rst).
+
+- **`parse_rrule` / `occurrences` / `next_occurrence`** (`AC_rrule_occurrences`, `AC_rrule_next`): the scheduler's cron is 5-field interval-only — it can't express "every 2nd Tuesday", "the last weekday of the month", or "every weekday for 10 occurrences". This adds an RFC 5545 (iCalendar) RRULE parser + occurrence expander supporting `FREQ`/`INTERVAL`/`COUNT`/`UNTIL`/`BYDAY` (with ordinals like `2MO`/`-1FR`)/`BYMONTHDAY`/`BYMONTH`/`BYSETPOS`/`WKST`. Pure-stdlib `datetime`+`calendar`, injectable clock for deterministic `next_occurrence`.
 
 ## What's new (2026-06-21) — Statistics & A/B Significance
 

@@ -2928,6 +2928,27 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+def _rrule_occurrences(rule: str, dtstart: str,
+                       count: int = 10) -> Dict[str, Any]:
+    """Adapter: expand an RRULE from an ISO dtstart into ISO datetimes."""
+    import datetime as _dt
+    from je_auto_control.utils.recurrence import occurrences, parse_rrule
+    start = _dt.datetime.fromisoformat(dtstart)
+    moments = occurrences(parse_rrule(rule), start, count=int(count))
+    return {"occurrences": [moment.isoformat() for moment in moments]}
+
+
+def _rrule_next(rule: str, dtstart: str,
+                now: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: next RRULE occurrence at/after now (ISO in, ISO out)."""
+    import datetime as _dt
+    from je_auto_control.utils.recurrence import next_occurrence, parse_rrule
+    start = _dt.datetime.fromisoformat(dtstart)
+    when = _dt.datetime.fromisoformat(now) if now else None
+    moment = next_occurrence(parse_rrule(rule), start, now=when)
+    return {"next": moment.isoformat() if moment else None}
+
+
 def _describe_stats(values: Any) -> Dict[str, Any]:
     """Adapter: summary statistics + percentiles of a numeric list (or JSON)."""
     import json
@@ -3811,6 +3832,8 @@ class Executor:
             "AC_search_documents": _search_documents,
             "AC_describe_stats": _describe_stats,
             "AC_ab_significance": _ab_significance,
+            "AC_rrule_occurrences": _rrule_occurrences,
+            "AC_rrule_next": _rrule_next,
             "AC_resolve_pointer": _resolve_pointer,
             "AC_apply_json_patch": _apply_json_patch,
             "AC_make_json_patch": _make_json_patch,

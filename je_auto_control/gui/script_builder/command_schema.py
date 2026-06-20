@@ -1156,6 +1156,29 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Validate JSON against a JSON Schema; returns {ok, errors}.",
     ))
     specs.append(CommandSpec(
+        "AC_rrule_occurrences", "Flow", "Recurrence: Expand (RRULE)",
+        fields=(
+            FieldSpec("rule", FieldType.STRING,
+                      placeholder="FREQ=MONTHLY;BYDAY=2TU"),
+            FieldSpec("dtstart", FieldType.STRING,
+                      placeholder="2026-01-01T09:00:00"),
+            FieldSpec("count", FieldType.INT, optional=True, default=10),
+        ),
+        description="Expand an RFC 5545 RRULE into ISO datetimes.",
+    ))
+    specs.append(CommandSpec(
+        "AC_rrule_next", "Flow", "Recurrence: Next Occurrence",
+        fields=(
+            FieldSpec("rule", FieldType.STRING,
+                      placeholder="FREQ=WEEKLY;BYDAY=MO,WE,FR"),
+            FieldSpec("dtstart", FieldType.STRING,
+                      placeholder="2026-01-01T09:00:00"),
+            FieldSpec("now", FieldType.STRING, optional=True,
+                      placeholder="2026-03-15T00:00:00"),
+        ),
+        description="Next RRULE occurrence at/after now; returns {next}.",
+    ))
+    specs.append(CommandSpec(
         "AC_describe_stats", "Data", "Describe Statistics",
         fields=(
             FieldSpec("values", FieldType.STRING,

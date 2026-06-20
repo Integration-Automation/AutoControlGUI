@@ -1647,6 +1647,23 @@ def ab_significance(a_conv, a_n, b_conv, b_n):
     return two_proportion_z_test(int(a_conv), int(a_n), int(b_conv), int(b_n))
 
 
+def rrule_occurrences(rule, dtstart, count=10):
+    import datetime as _dt
+    from je_auto_control.utils.recurrence import occurrences, parse_rrule
+    start = _dt.datetime.fromisoformat(dtstart)
+    moments = occurrences(parse_rrule(rule), start, count=int(count))
+    return {"occurrences": [moment.isoformat() for moment in moments]}
+
+
+def rrule_next(rule, dtstart, now=None):
+    import datetime as _dt
+    from je_auto_control.utils.recurrence import next_occurrence, parse_rrule
+    start = _dt.datetime.fromisoformat(dtstart)
+    when = _dt.datetime.fromisoformat(now) if now else None
+    moment = next_occurrence(parse_rrule(rule), start, now=when)
+    return {"next": moment.isoformat() if moment else None}
+
+
 def run_saga(steps):
     from je_auto_control.utils.saga import run_saga as _run
     result = _run(steps)
