@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 日历周期规则(RRULE)](#本次更新-2026-06-21--日历周期规则rrule)
 - [本次更新 (2026-06-21) — 统计与 A/B 显著性](#本次更新-2026-06-21--统计与-ab-显著性)
 - [本次更新 (2026-06-21) — 全文搜索(BM25)](#本次更新-2026-06-21--全文搜索bm25)
 - [本次更新 (2026-06-21) — JSON Pointer、Patch 与 Merge Patch](#本次更新-2026-06-21--json-pointerpatch-与-merge-patch)
@@ -116,6 +117,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 日历周期规则(RRULE)
+
+排程「每月第 2 个星期二」。完整参考:[`docs/source/Zh/doc/new_features/v66_features_doc.rst`](../docs/source/Zh/doc/new_features/v66_features_doc.rst)。
+
+- **`parse_rrule` / `occurrences` / `next_occurrence`**(`AC_rrule_occurrences`、`AC_rrule_next`):排程器的 cron 只是 5 字段间隔式 —— 无法表达「每月第 2 个星期二」、「每月最后一个工作日」或「连续 10 次的每个工作日」。本功能补上 RFC 5545(iCalendar)RRULE 解析器 + 发生时刻展开器,支持 `FREQ`/`INTERVAL`/`COUNT`/`UNTIL`/`BYDAY`(含序数如 `2MO`/`-1FR`)/`BYMONTHDAY`/`BYMONTH`/`BYSETPOS`/`WKST`。纯标准库 `datetime`+`calendar`,时钟可注入使 `next_occurrence` 确定。
 
 ## 本次更新 (2026-06-21) — 统计与 A/B 显著性
 

@@ -338,6 +338,10 @@ from je_auto_control.utils.stats import (
     chi_square_2x2, cohens_d, describe, normal_cdf, percentile,
     two_proportion_z_test, welch_t_test,
 )
+# RFC 5545 recurrence-rule expansion (calendar scheduling above cron)
+from je_auto_control.utils.recurrence import (
+    Recurrence, next_occurrence, occurrences, parse_rrule,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -823,6 +827,7 @@ __all__ = [
     "SearchHit", "SearchIndex", "search_documents", "tokenize",
     "chi_square_2x2", "cohens_d", "describe", "normal_cdf", "percentile",
     "two_proportion_z_test", "welch_t_test",
+    "Recurrence", "next_occurrence", "occurrences", "parse_rrule",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

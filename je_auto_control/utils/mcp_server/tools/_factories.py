@@ -3343,6 +3343,35 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def recurrence_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_rrule_occurrences",
+            description=("Expand an RFC 5545 'rule' (RRULE) from an ISO "
+                         "'dtstart' into the next 'count' ISO datetimes. "
+                         "Returns {occurrences}."),
+            input_schema=schema(
+                {"rule": {"type": "string"}, "dtstart": {"type": "string"},
+                 "count": {"type": "integer"}},
+                ["rule", "dtstart"]),
+            handler=h.rrule_occurrences,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_rrule_next",
+            description=("Next occurrence of an RRULE 'rule' at/after 'now' "
+                         "(ISO; defaults to current time), anchored at ISO "
+                         "'dtstart'. Returns {next}."),
+            input_schema=schema(
+                {"rule": {"type": "string"}, "dtstart": {"type": "string"},
+                 "now": {"type": "string"}},
+                ["rule", "dtstart"]),
+            handler=h.rrule_next,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def stats_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4627,7 +4656,7 @@ ALL_FACTORIES = (
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
     jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools,
     license_policy_tools, jwt_tools, rate_limit_tools, json_patch_tools,
-    search_index_tools, stats_tools,
+    search_index_tools, stats_tools, recurrence_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,
