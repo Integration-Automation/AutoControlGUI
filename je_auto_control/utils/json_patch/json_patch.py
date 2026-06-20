@@ -93,9 +93,9 @@ def resolve_pointer(doc: Any, pointer: str, default: Any = _MISSING) -> Any:
 
 def set_pointer(doc: Any, pointer: str, value: Any) -> Any:
     """Return a copy of ``doc`` with ``pointer`` set to ``value``."""
-    refs = _split_pointer(pointer)
-    if not refs:
+    if pointer == "":
         return copy.deepcopy(value)
+    refs = _split_pointer(pointer)
     result = copy.deepcopy(doc)
     parent = _walk(result, refs[:-1])
     _assign(parent, refs[-1], value, insert=False)
@@ -104,9 +104,9 @@ def set_pointer(doc: Any, pointer: str, value: Any) -> Any:
 
 def remove_pointer(doc: Any, pointer: str) -> Any:
     """Return a copy of ``doc`` with the value at ``pointer`` removed."""
-    refs = _split_pointer(pointer)
-    if not refs:
+    if pointer == "":
         raise PatchError("cannot remove the whole document")
+    refs = _split_pointer(pointer)
     result = copy.deepcopy(doc)
     _delete(_walk(result, refs[:-1]), refs[-1])
     return result
