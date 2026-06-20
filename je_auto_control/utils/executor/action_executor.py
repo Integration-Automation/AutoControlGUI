@@ -3168,6 +3168,33 @@ def _format_date(value: str, locale: str = "en_US",
     return {"text": format_date(value, locale, fmt)}
 
 
+def _voice_register(phrase: str, actions: Any) -> Dict[str, Any]:
+    """Adapter: register a voice command on the default router."""
+    from je_auto_control.utils.voice import default_voice_router
+    default_voice_router.register(phrase, _coerce_list(actions))
+    return {"phrases": default_voice_router.phrases()}
+
+
+def _voice_dispatch(text: str) -> Dict[str, Any]:
+    """Adapter: run the command best matching recognized ``text``."""
+    from je_auto_control.utils.voice import default_voice_router
+    outcome = default_voice_router.dispatch(text)
+    return {"matched": outcome["matched"], "phrase": outcome["phrase"]}
+
+
+def _voice_list() -> Dict[str, Any]:
+    """Adapter: list registered voice-command phrases."""
+    from je_auto_control.utils.voice import default_voice_router
+    return {"phrases": default_voice_router.phrases()}
+
+
+def _voice_clear() -> Dict[str, Any]:
+    """Adapter: clear all registered voice commands."""
+    from je_auto_control.utils.voice import default_voice_router
+    default_voice_router.clear()
+    return {"cleared": True}
+
+
 class Executor:
     """
     Executor
@@ -3434,6 +3461,10 @@ class Executor:
             "AC_format_decimal": _format_decimal,
             "AC_format_currency": _format_currency,
             "AC_format_date": _format_date,
+            "AC_voice_register": _voice_register,
+            "AC_voice_dispatch": _voice_dispatch,
+            "AC_voice_list": _voice_list,
+            "AC_voice_clear": _voice_clear,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
