@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 依赖项漏洞扫描(OSV)](#本次更新-2026-06-21--依赖项漏洞扫描osv)
 - [本次更新 (2026-06-21) — JSON Schema 验证](#本次更新-2026-06-21--json-schema-验证)
 - [本次更新 (2026-06-20) — SARIF 2.1.0 发现项目导出](#本次更新-2026-06-20--sarif-210-发现项目导出)
 - [本次更新 (2026-06-20) — 文本 PII 检测与遮蔽](#本次更新-2026-06-20--文本-pii-检测与遮蔽)
@@ -108,6 +109,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 依赖项漏洞扫描(OSV)
+
+以 SBOM 比对已知 CVE。完整参考:[`docs/source/Zh/doc/new_features/v58_features_doc.rst`](../docs/source/Zh/doc/new_features/v58_features_doc.rst)。
+
+- **`scan_components` / `match_package` / `is_affected` / `findings_to_sarif`**(`AC_scan_vulns`、`ac_scan_vulns`):`build_sbom` 只会*盘点*依赖项,`to_sarif` 只会*导出*发现项目 —— 从未真正**产生**漏洞发现项目。本功能以 SBOM 的 `(ecosystem, name, version)` 组件比对 [OSV](https://osv.dev) 咨询数据库(扫描 `introduced`/`fixed`/`last_affected` 范围、PEP-503 名称规范化、严重度对应 SARIF 等级),并把结果桥接到既有 SARIF 导出器供 GitHub/Azure DevOps 代码扫描。咨询数据库以**数据注入**(离线、确定性);线上 `osv.dev` 查询为可选的 `fetcher` 接缝。纯标准库 `re`。
 
 ## 本次更新 (2026-06-21) — JSON Schema 验证
 

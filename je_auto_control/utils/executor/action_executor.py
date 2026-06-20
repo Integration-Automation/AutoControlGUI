@@ -2863,6 +2863,28 @@ def _scan_secrets(data: Any) -> Dict[str, Any]:
     return {"findings": scan_secrets(data)}
 
 
+def _scan_vulns(components: Any, advisories: Any = None,
+                sarif_path: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: match SBOM components against an OSV advisory database."""
+    import json
+    from je_auto_control.utils.vuln_scan import (
+        findings_to_sarif, scan_components)
+    if isinstance(components, str):
+        components = json.loads(components)
+    if isinstance(components, dict):
+        components = components.get("components", [])
+    if isinstance(advisories, str):
+        advisories = json.loads(advisories)
+    findings = scan_components(components, advisories or [])
+    result: Dict[str, Any] = {"findings": findings, "count": len(findings)}
+    if sarif_path:
+        from je_auto_control.utils.sarif import write_sarif
+        result["sarif_path"] = write_sarif(
+            findings_to_sarif(findings), sarif_path,
+            tool_name="AutoControl-VulnScan")
+    return result
+
+
 def _generate_sop(actions: List[Any], title: str = "Automation Procedure",
                   path: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: build (or write) a step-by-step SOP from an action list."""
@@ -3642,6 +3664,7 @@ class Executor:
             "AC_clip_history_stop": _clip_history_stop,
             "AC_heal_stats": _heal_stats,
             "AC_scan_secrets": _scan_secrets,
+            "AC_scan_vulns": _scan_vulns,
             "AC_generate_sop": _generate_sop,
             "AC_tween_drag": _tween_drag,
             "AC_list_plugins": _list_plugins,

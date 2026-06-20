@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — 相依套件漏洞掃描(OSV)](#本次更新-2026-06-21--相依套件漏洞掃描osv)
 - [本次更新 (2026-06-21) — JSON Schema 驗證](#本次更新-2026-06-21--json-schema-驗證)
 - [本次更新 (2026-06-20) — SARIF 2.1.0 發現項目匯出](#本次更新-2026-06-20--sarif-210-發現項目匯出)
 - [本次更新 (2026-06-20) — 文字 PII 偵測與遮蔽](#本次更新-2026-06-20--文字-pii-偵測與遮蔽)
@@ -108,6 +109,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — 相依套件漏洞掃描(OSV)
+
+以 SBOM 比對已知 CVE。完整參考:[`docs/source/Zh/doc/new_features/v58_features_doc.rst`](../docs/source/Zh/doc/new_features/v58_features_doc.rst)。
+
+- **`scan_components` / `match_package` / `is_affected` / `findings_to_sarif`**(`AC_scan_vulns`、`ac_scan_vulns`):`build_sbom` 只會*盤點*相依套件,`to_sarif` 只會*匯出*發現項目 —— 從未真正**產生**漏洞發現項目。本功能以 SBOM 的 `(ecosystem, name, version)` 元件比對 [OSV](https://osv.dev) 諮詢資料庫(掃描 `introduced`/`fixed`/`last_affected` 範圍、PEP-503 名稱正規化、嚴重度對應 SARIF 等級),並把結果橋接到既有 SARIF 匯出器供 GitHub/Azure DevOps 程式碼掃描。諮詢資料庫以**資料注入**(離線、具決定性);線上 `osv.dev` 查詢為選用的 `fetcher` 接縫。純標準函式庫 `re`。
 
 ## 本次更新 (2026-06-21) — JSON Schema 驗證
 

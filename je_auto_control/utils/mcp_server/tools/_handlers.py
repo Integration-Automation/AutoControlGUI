@@ -1561,6 +1561,14 @@ def validate_json(data, schema):
     return _v(data, schema).to_dict()
 
 
+def scan_vulns(components, advisories=None):
+    from je_auto_control.utils.vuln_scan import scan_components
+    if isinstance(components, dict):
+        components = components.get("components", [])
+    findings = scan_components(components, advisories or [])
+    return {"findings": findings, "count": len(findings)}
+
+
 def run_saga(steps):
     from je_auto_control.utils.saga import run_saga as _run
     result = _run(steps)
