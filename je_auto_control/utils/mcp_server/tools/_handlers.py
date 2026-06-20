@@ -1423,6 +1423,31 @@ def dedupe_images(paths, max_distance=5):
     return {"unique": _dedupe(paths, max_distance=max_distance)}
 
 
+def parse_decimal(text, locale="en_US"):
+    from je_auto_control.utils.locale_parse import parse_decimal as _parse
+    return {"value": _parse(text, locale)}
+
+
+def parse_number(text, locale="en_US"):
+    from je_auto_control.utils.locale_parse import parse_number as _parse
+    return {"value": _parse(text, locale)}
+
+
+def format_decimal(value, locale="en_US"):
+    from je_auto_control.utils.locale_parse import format_decimal as _fmt
+    return {"text": _fmt(value, locale)}
+
+
+def format_currency(value, currency, locale="en_US"):
+    from je_auto_control.utils.locale_parse import format_currency as _fmt
+    return {"text": _fmt(value, currency, locale)}
+
+
+def format_date(value, locale="en_US", fmt="medium"):
+    from je_auto_control.utils.locale_parse import format_date as _fmt
+    return {"text": _fmt(value, locale, fmt)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

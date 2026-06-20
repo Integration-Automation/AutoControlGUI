@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-20) — 區域設定感知的數字、貨幣與日期解析](#本次更新-2026-06-20--區域設定感知的數字貨幣與日期解析)
 - [本次更新 (2026-06-20) — 感知雜湊影像去重](#本次更新-2026-06-20--感知雜湊影像去重)
 - [本次更新 (2026-06-20) — S3 相容成品儲存](#本次更新-2026-06-20--s3-相容成品儲存)
 - [本次更新 (2026-06-20) — 模糊字串比對與去重](#本次更新-2026-06-20--模糊字串比對與去重)
@@ -93,6 +94,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-20) — 區域設定感知的數字、貨幣與日期解析
+
+解析在地化的數字/貨幣/日期。完整參考:[`docs/source/Zh/doc/new_features/v43_features_doc.rst`](../docs/source/Zh/doc/new_features/v43_features_doc.rst)。
+
+- **`parse_decimal` / `parse_number` / `format_decimal` / `format_currency` / `format_date`**(`AC_parse_decimal` / `AC_parse_number` / `AC_format_decimal` / `AC_format_currency` / `AC_format_date`、`ac_*`):像 `"1.234,56"`(de_DE)這樣的 OCR/UI 文字會透過 **Babel** 的 CLDR 資料正確解析為 `1234.56`,值也能依區域設定格式化回去。`babel` 為選用 `[locale]` extra,採延遲匯入;功能測試以 `importorskip` 執行(wiring/facade 一律驗證)。
 
 ## 本次更新 (2026-06-20) — 感知雜湊影像去重
 

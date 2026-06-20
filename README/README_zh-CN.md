@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-20) — 区域设置感知的数字、货币与日期解析](#本次更新-2026-06-20--区域设置感知的数字货币与日期解析)
 - [本次更新 (2026-06-20) — 感知哈希图像去重](#本次更新-2026-06-20--感知哈希图像去重)
 - [本次更新 (2026-06-20) — S3 兼容成品存储](#本次更新-2026-06-20--s3-兼容成品存储)
 - [本次更新 (2026-06-20) — 模糊字符串匹配与去重](#本次更新-2026-06-20--模糊字符串匹配与去重)
@@ -93,6 +94,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-20) — 区域设置感知的数字、货币与日期解析
+
+解析本地化的数字/货币/日期。完整参考:[`docs/source/Zh/doc/new_features/v43_features_doc.rst`](../docs/source/Zh/doc/new_features/v43_features_doc.rst)。
+
+- **`parse_decimal` / `parse_number` / `format_decimal` / `format_currency` / `format_date`**(`AC_parse_decimal` / `AC_parse_number` / `AC_format_decimal` / `AC_format_currency` / `AC_format_date`、`ac_*`):像 `"1.234,56"`(de_DE)这样的 OCR/UI 文本会通过 **Babel** 的 CLDR 数据正确解析为 `1234.56`,值也能依区域设置格式化回去。`babel` 为可选 `[locale]` extra,采延迟导入;功能测试以 `importorskip` 运行(wiring/facade 一律验证)。
 
 ## 本次更新 (2026-06-20) — 感知哈希图像去重
 
