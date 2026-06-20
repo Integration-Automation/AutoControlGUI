@@ -3343,6 +3343,32 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def stats_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_describe_stats",
+            description=("Summary statistics + percentiles (n/min/max/mean/"
+                         "stdev/variance/p50/p90/p95/p99) of a numeric "
+                         "'values' list."),
+            input_schema=schema({"values": {"type": "array"}}, ["values"]),
+            handler=h.describe_stats,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_ab_significance",
+            description=("Two-proportion z-test on A/B conversion counts. "
+                         "Returns {z, p_value, significant, diff, ci_low, "
+                         "ci_high}."),
+            input_schema=schema(
+                {"a_conv": {"type": "integer"}, "a_n": {"type": "integer"},
+                 "b_conv": {"type": "integer"}, "b_n": {"type": "integer"}},
+                ["a_conv", "a_n", "b_conv", "b_n"]),
+            handler=h.ab_significance,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def search_index_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4601,7 +4627,7 @@ ALL_FACTORIES = (
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
     jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools,
     license_policy_tools, jwt_tools, rate_limit_tools, json_patch_tools,
-    search_index_tools,
+    search_index_tools, stats_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,
