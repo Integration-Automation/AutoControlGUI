@@ -1606,6 +1606,14 @@ def redact_pii(text, kinds=None, mode="label", mask_char="*"):
                                     mask_char=mask_char)}
 
 
+def export_sarif(findings, path=None, tool_name="AutoControl"):
+    from je_auto_control.utils.sarif import to_sarif, write_sarif
+    result = {"sarif": to_sarif(findings, tool_name=tool_name)}
+    if path:
+        result["path"] = write_sarif(findings, path, tool_name=tool_name)
+    return result
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

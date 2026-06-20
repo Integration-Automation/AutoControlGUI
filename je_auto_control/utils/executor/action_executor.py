@@ -3390,6 +3390,20 @@ def _redact_pii(text: str, kinds: Any = None, mode: str = "label",
         mask_char=mask_char)}
 
 
+def _export_sarif(findings: Any, path: Optional[str] = None,
+                  tool_name: str = "AutoControl") -> Dict[str, Any]:
+    """Adapter: build (and optionally write) a SARIF 2.1.0 document."""
+    import json
+    from je_auto_control.utils.sarif import to_sarif, write_sarif
+    if isinstance(findings, str):
+        findings = json.loads(findings)
+    document = to_sarif(findings, tool_name=tool_name)
+    result: Dict[str, Any] = {"sarif": document}
+    if path:
+        result["path"] = write_sarif(findings, path, tool_name=tool_name)
+    return result
+
+
 class Executor:
     """
     Executor
@@ -3680,6 +3694,7 @@ class Executor:
             "AC_repair_approve": _repair_approve,
             "AC_detect_pii": _detect_pii,
             "AC_redact_pii": _redact_pii,
+            "AC_export_sarif": _export_sarif,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

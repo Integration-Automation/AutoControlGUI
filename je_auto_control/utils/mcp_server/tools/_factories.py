@@ -3338,6 +3338,25 @@ def pii_text_tools() -> List[MCPTool]:
     ]
 
 
+def sarif_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_export_sarif",
+            description=("Build a SARIF 2.1.0 document from normalized "
+                         "'findings' ([{rule_id, level, message, file?, "
+                         "line?}]) for GitHub/Azure code-scanning. Optional "
+                         "'path' writes it; 'tool_name' labels the driver. "
+                         "Returns {sarif, path?}."),
+            input_schema=schema(
+                {"findings": {"type": "array", "items": {"type": "object"}},
+                 "path": {"type": "string"},
+                 "tool_name": {"type": "string"}}, ["findings"]),
+            handler=h.export_sarif,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4402,7 +4421,7 @@ ALL_FACTORIES = (
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
     jsonpath_tools, saga_tools, decision_table_tools, locator_repair_tools,
-    pii_text_tools,
+    pii_text_tools, sarif_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

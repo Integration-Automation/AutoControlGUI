@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-20) — SARIF 2.1.0 发现项目导出](#本次更新-2026-06-20--sarif-210-发现项目导出)
 - [本次更新 (2026-06-20) — 文本 PII 检测与遮蔽](#本次更新-2026-06-20--文本-pii-检测与遮蔽)
 - [本次更新 (2026-06-20) — 自我修复定位器回写](#本次更新-2026-06-20--自我修复定位器回写)
 - [本次更新 (2026-06-20) — DMN 式决策表](#本次更新-2026-06-20--dmn-式决策表)
@@ -106,6 +107,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-20) — SARIF 2.1.0 发现项目导出
+
+统一扫描结果供 GitHub 代码扫描。完整参考:[`docs/source/Zh/doc/new_features/v56_features_doc.rst`](../docs/source/Zh/doc/new_features/v56_features_doc.rst)。
+
+- **`to_sarif` / `write_sarif` / `make_finding` / `from_lint_issues` / `from_audit_findings`**(`AC_export_sarif`、`ac_export_sarif`):框架的发现项目产生器(action-lint、密钥扫描、WCAG 审计、guardrail)缺乏共通导出。本功能建立 SARIF 2.1.0 文件(自动规则目录 + 稳定 `partialFingerprints` 跨运行去重),供 GitHub/Azure DevOps 代码扫描以定位到行的警示导入。纯标准库 `json`+`hashlib`;转接器规范化既有 lint/audit 形状。
 
 ## 本次更新 (2026-06-20) — 文本 PII 检测与遮蔽
 
