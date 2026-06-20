@@ -2928,6 +2928,48 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+def _resolve_pointer(doc: Any, pointer: str) -> Dict[str, Any]:
+    """Adapter: resolve a JSON Pointer in doc (a dict/list or JSON string)."""
+    import json
+    from je_auto_control.utils.json_patch import resolve_pointer
+    if isinstance(doc, str):
+        doc = json.loads(doc)
+    return {"value": resolve_pointer(doc, pointer)}
+
+
+def _apply_json_patch(doc: Any, patch: Any) -> Dict[str, Any]:
+    """Adapter: apply an RFC 6902 JSON Patch (each a list/object or JSON str)."""
+    import json
+    from je_auto_control.utils.json_patch import apply_patch
+    if isinstance(doc, str):
+        doc = json.loads(doc)
+    if isinstance(patch, str):
+        patch = json.loads(patch)
+    return {"result": apply_patch(doc, patch)}
+
+
+def _make_json_patch(old: Any, new: Any) -> Dict[str, Any]:
+    """Adapter: compute an RFC 6902 patch turning old into new."""
+    import json
+    from je_auto_control.utils.json_patch import make_patch
+    if isinstance(old, str):
+        old = json.loads(old)
+    if isinstance(new, str):
+        new = json.loads(new)
+    return {"patch": make_patch(old, new)}
+
+
+def _merge_patch(doc: Any, patch: Any) -> Dict[str, Any]:
+    """Adapter: apply an RFC 7386 JSON Merge Patch (null deletes)."""
+    import json
+    from je_auto_control.utils.json_patch import merge_patch
+    if isinstance(doc, str):
+        doc = json.loads(doc)
+    if isinstance(patch, str):
+        patch = json.loads(patch)
+    return {"result": merge_patch(doc, patch)}
+
+
 def _jwt_encode(claims: Any, key: str, alg: str = "HS256") -> Dict[str, Any]:
     """Adapter: sign a compact JWT from claims (a dict or JSON string)."""
     import json
@@ -3739,6 +3781,10 @@ class Executor:
             "AC_jwt_encode": _jwt_encode,
             "AC_jwt_decode": _jwt_decode,
             "AC_rate_limit": _rate_limit,
+            "AC_resolve_pointer": _resolve_pointer,
+            "AC_apply_json_patch": _apply_json_patch,
+            "AC_make_json_patch": _make_json_patch,
+            "AC_merge_patch": _merge_patch,
             "AC_generate_sop": _generate_sop,
             "AC_tween_drag": _tween_drag,
             "AC_list_plugins": _list_plugins,

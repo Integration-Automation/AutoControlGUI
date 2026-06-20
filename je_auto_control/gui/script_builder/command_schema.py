@@ -1156,6 +1156,40 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Validate JSON against a JSON Schema; returns {ok, errors}.",
     ))
     specs.append(CommandSpec(
+        "AC_resolve_pointer", "Data", "JSON Pointer: Resolve",
+        fields=(
+            FieldSpec("doc", FieldType.STRING, placeholder='{"a": {"b": [1, 2]}}'),
+            FieldSpec("pointer", FieldType.STRING, placeholder="/a/b/0"),
+        ),
+        description="Resolve an RFC 6901 JSON Pointer; returns {value}.",
+    ))
+    specs.append(CommandSpec(
+        "AC_apply_json_patch", "Data", "JSON Patch: Apply",
+        fields=(
+            FieldSpec("doc", FieldType.STRING, placeholder='{"a": 1}'),
+            FieldSpec("patch", FieldType.STRING,
+                      placeholder='[{"op": "add", "path": "/b", "value": 2}]'),
+        ),
+        description="Apply an RFC 6902 JSON Patch; returns {result}.",
+    ))
+    specs.append(CommandSpec(
+        "AC_make_json_patch", "Data", "JSON Patch: Diff",
+        fields=(
+            FieldSpec("old", FieldType.STRING, placeholder='{"a": 1}'),
+            FieldSpec("new", FieldType.STRING, placeholder='{"a": 2}'),
+        ),
+        description="Compute an RFC 6902 patch from old to new; returns {patch}.",
+    ))
+    specs.append(CommandSpec(
+        "AC_merge_patch", "Data", "JSON Merge Patch: Apply",
+        fields=(
+            FieldSpec("doc", FieldType.STRING, placeholder='{"a": 1, "b": 2}'),
+            FieldSpec("patch", FieldType.STRING,
+                      placeholder='{"b": null, "c": 3}'),
+        ),
+        description="Apply an RFC 7386 merge patch (null deletes); returns {result}.",
+    ))
+    specs.append(CommandSpec(
         "AC_scan_vulns", "Security", "Scan Dependencies for Vulnerabilities",
         fields=(
             FieldSpec("components", FieldType.STRING,
