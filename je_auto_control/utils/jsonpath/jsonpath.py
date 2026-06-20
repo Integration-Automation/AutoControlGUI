@@ -22,20 +22,8 @@ _COMPARATORS = {
     ">": lambda a, b: a > b, ">=": lambda a, b: a >= b,
 }
 
-_TOKEN_RE = re.compile(
-    r"""\.\.                                   # recursive descent
-        |\.?\*                                 # wildcard (* or .*)
-        |\[\*\]                                # [*]
-        |\[\?\(?@\.(?P<f>\w+)\s*               # filter field
-            (?P<op>==|!=|<=|>=|<|>)\s*
-            (?P<v>'[^']*'|"[^"]*"|[^)\]]+)\)?\]
-        |\[(?P<idx>-?\d+)\]                     # index
-        |\['(?P<q>[^']*)'\]                     # ['quoted key']
-        |\.(?P<k>\w+)                           # .key
-        |(?P<kb>\w+)                            # bare key (leading or after ..)
-    """,
-    re.VERBOSE,
-)
+# A small, linear filter pattern (no nested quantifiers -> no backtracking).
+_FILTER_RE = re.compile(r"@\.(\w+)\s*(==|!=|<=|>=|<|>)\s*(.+)")
 
 
 def _parse_value(raw: str) -> Any:
@@ -50,25 +38,62 @@ def _parse_value(raw: str) -> Any:
     return {"true": True, "false": False, "null": None}.get(raw, raw)
 
 
+def _parse_bracket(inner: str) -> Tuple[str, Any]:
+    """Turn the text inside ``[...]`` into a token."""
+    inner = inner.strip()
+    if inner == "*":
+        return ("wild", None)
+    if inner.startswith("?"):
+        body = inner[1:].strip().lstrip("(").rstrip(")").strip()
+        match = _FILTER_RE.match(body)
+        if match:
+            return ("filter", (match.group(1), match.group(2),
+                               _parse_value(match.group(3))))
+        return ("wild", None)
+    if inner[:1] in "'\"" and inner[-1:] in "'\"":
+        return ("key", inner[1:-1])
+    try:
+        return ("index", int(inner))
+    except ValueError:
+        return ("key", inner)
+
+
+def _read_bare_key(path: str, start: int) -> Tuple[str, int]:
+    end = start
+    while end < len(path) and (path[end].isalnum() or path[end] == "_"):
+        end += 1
+    return path[start:end], end
+
+
 def _tokenize(path: str) -> List[Tuple[str, Any]]:
+    """Tokenize a JSONPath with a linear scan (no backtracking regex)."""
     path = path.strip()
     if path.startswith("$"):
         path = path[1:]
     tokens: List[Tuple[str, Any]] = []
-    for match in _TOKEN_RE.finditer(path):
-        text = match.group(0)
-        if text == "..":
+    index, length = 0, len(path)
+    while index < length:
+        char = path[index]
+        if path.startswith("..", index):
             tokens.append(("recurse", None))
-        elif text in ("*", ".*", "[*]"):
+            index += 2
+        elif char == ".":
+            index += 1                       # skip dot; key/* read next pass
+        elif char == "*":
             tokens.append(("wild", None))
-        elif match.group("idx") is not None:
-            tokens.append(("index", int(match.group("idx"))))
-        elif match.group("f") is not None:
-            tokens.append(("filter", (match.group("f"), match.group("op"),
-                                      _parse_value(match.group("v")))))
+            index += 1
+        elif char == "[":
+            close = path.find("]", index)
+            if close == -1:
+                break
+            tokens.append(_parse_bracket(path[index + 1:close]))
+            index = close + 1
         else:
-            tokens.append(("key", match.group("q") or match.group("k")
-                           or match.group("kb")))
+            name, index = _read_bare_key(path, index)
+            if name:
+                tokens.append(("key", name))
+            else:
+                index += 1                   # skip an unrecognized char
     return tokens
 
 
