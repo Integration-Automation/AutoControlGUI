@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — Outbound CloudEvents Emitter](#whats-new-2026-06-20--outbound-cloudevents-emitter)
 - [What's new (2026-06-20) — Environment-Scoped Typed Asset Store](#whats-new-2026-06-20--environment-scoped-typed-asset-store)
 - [What's new (2026-06-20) — Task / Process Mining (Automation-Candidate Discovery)](#whats-new-2026-06-20--task--process-mining-automation-candidate-discovery)
 - [What's new (2026-06-20) — Stuck-Loop Guard (Agent Loop Progress Detection)](#whats-new-2026-06-20--stuck-loop-guard-agent-loop-progress-detection)
@@ -100,6 +101,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — Outbound CloudEvents Emitter
+
+Emit run/automation events as CloudEvents. Full reference: [`docs/source/Eng/doc/new_features/v49_features_doc.rst`](docs/source/Eng/doc/new_features/v49_features_doc.rst).
+
+- **`to_cloudevent` / `EventEmitter` / `post_cloudevent`** (`AC_emit_event`, `ac_emit_event`): the repo could receive webhooks but not **emit** events — this wraps run-lifecycle/assertion/failure data in a CloudEvents 1.0 (CNCF) envelope and optionally POSTs it over the egress-guarded HTTP client (interop with Knative, Azure Event Grid, iPaaS, generic webhooks). The `sink`/`poster` transport is injectable, so emission is unit-tested with no network.
 
 ## What's new (2026-06-20) — Environment-Scoped Typed Asset Store
 

@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-20) — 對外 CloudEvents 發送器](#本次更新-2026-06-20--對外-cloudevents-發送器)
 - [本次更新 (2026-06-20) — 環境範圍的具型別資產儲存](#本次更新-2026-06-20--環境範圍的具型別資產儲存)
 - [本次更新 (2026-06-20) — 任務 / 流程探勘(自動化候選發現)](#本次更新-2026-06-20--任務--流程探勘自動化候選發現)
 - [本次更新 (2026-06-20) — 卡迴圈守衛(Agent Loop 進度偵測)](#本次更新-2026-06-20--卡迴圈守衛agent-loop-進度偵測)
@@ -99,6 +100,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-20) — 對外 CloudEvents 發送器
+
+將執行/自動化事件以 CloudEvents 發送。完整參考:[`docs/source/Zh/doc/new_features/v49_features_doc.rst`](../docs/source/Zh/doc/new_features/v49_features_doc.rst)。
+
+- **`to_cloudevent` / `EventEmitter` / `post_cloudevent`**(`AC_emit_event`、`ac_emit_event`):本專案能接收 webhook 卻無法**發送**事件 —— 本功能將執行生命週期/斷言/失敗資料包進 CloudEvents 1.0(CNCF)信封,並可透過受出口守衛保護的 HTTP 用戶端 POST 出去(與 Knative、Azure Event Grid、iPaaS、一般 webhook 互通)。`sink`/`poster` 傳輸可注入,因此發送在無網路下即可單元測試。
 
 ## 本次更新 (2026-06-20) — 環境範圍的具型別資產儲存
 

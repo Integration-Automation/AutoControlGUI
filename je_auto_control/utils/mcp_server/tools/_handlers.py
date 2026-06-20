@@ -1528,6 +1528,16 @@ def list_assets(environment=None, db=None):
     return store_list(environment=environment, db=db)
 
 
+def emit_event(event_type, data=None, source="je_auto_control",
+               subject=None, url=None):
+    from je_auto_control.utils.events import post_cloudevent, to_cloudevent
+    event = to_cloudevent(event_type, source, data, subject=subject)
+    result = {"event": event}
+    if url:
+        result["status"] = post_cloudevent(url, event)
+    return result
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-20) — 对外 CloudEvents 发送器](#本次更新-2026-06-20--对外-cloudevents-发送器)
 - [本次更新 (2026-06-20) — 环境范围的带类型资产存储](#本次更新-2026-06-20--环境范围的带类型资产存储)
 - [本次更新 (2026-06-20) — 任务 / 流程挖掘(自动化候选发现)](#本次更新-2026-06-20--任务--流程挖掘自动化候选发现)
 - [本次更新 (2026-06-20) — 卡循环守卫(Agent Loop 进度检测)](#本次更新-2026-06-20--卡循环守卫agent-loop-进度检测)
@@ -99,6 +100,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-20) — 对外 CloudEvents 发送器
+
+将运行/自动化事件以 CloudEvents 发送。完整参考:[`docs/source/Zh/doc/new_features/v49_features_doc.rst`](../docs/source/Zh/doc/new_features/v49_features_doc.rst)。
+
+- **`to_cloudevent` / `EventEmitter` / `post_cloudevent`**(`AC_emit_event`、`ac_emit_event`):本项目能接收 webhook 却无法**发送**事件 —— 本功能将运行生命周期/断言/失败数据包进 CloudEvents 1.0(CNCF)信封,并可通过受出口守卫保护的 HTTP 客户端 POST 出去(与 Knative、Azure Event Grid、iPaaS、一般 webhook 互通)。`sink`/`poster` 传输可注入,因此发送在无网络下即可单元测试。
 
 ## 本次更新 (2026-06-20) — 环境范围的带类型资产存储
 
