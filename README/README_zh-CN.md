@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-20) — JSONPath 查询](#本次更新-2026-06-20--jsonpath-查询)
 - [本次更新 (2026-06-20) — 多通道 Webhook 通知](#本次更新-2026-06-20--多通道-webhook-通知)
 - [本次更新 (2026-06-20) — 对外 CloudEvents 发送器](#本次更新-2026-06-20--对外-cloudevents-发送器)
 - [本次更新 (2026-06-20) — 环境范围的带类型资产存储](#本次更新-2026-06-20--环境范围的带类型资产存储)
@@ -101,6 +102,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-20) — JSONPath 查询
+
+以通配符、递归、过滤查询 API/DB JSON。完整参考:[`docs/source/Zh/doc/new_features/v51_features_doc.rst`](../docs/source/Zh/doc/new_features/v51_features_doc.rst)。
+
+- **`json_query` / `json_query_one` / `json_extract`**(`AC_json_query` / `AC_json_extract`、`ac_*`):执行器的路径遍历只会以 `.` 切分并索引 —— 本功能在已解析 JSON 上加入 JSONPath 子集(`$`、`.key`、`[n]`/`[-n]`、`*`/`[*]`、`..` 递归下降、`[?(@.k op v)]` 过滤),让含数组的 API/DB 响应易于提取。`json_extract` 以 `{key: path}` 映射提取成扁平 dict。纯标准库 `re`;这是 `AC_http_to_var` 与 DB-row 流程所缺的路径引擎。
 
 ## 本次更新 (2026-06-20) — 多通道 Webhook 通知
 

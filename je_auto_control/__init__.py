@@ -276,6 +276,10 @@ from je_auto_control.utils.events import (
 from je_auto_control.utils.notify_channels import (
     WebhookChannel, WebhookResult, notify_webhook, set_default_poster,
 )
+# JSONPath-style querying over parsed JSON
+from je_auto_control.utils.jsonpath import (
+    json_extract, json_query, json_query_one,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -738,6 +742,7 @@ __all__ = [
     "Asset", "AssetStore", "AssetValue", "active_environment",
     "EventEmitter", "post_cloudevent", "to_cloudevent",
     "WebhookChannel", "WebhookResult", "notify_webhook", "set_default_poster",
+    "json_extract", "json_query", "json_query_one",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

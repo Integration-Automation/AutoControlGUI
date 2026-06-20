@@ -3296,6 +3296,26 @@ def _notify_webhook(url: str, text: str, transport: str = "raw",
             "transport": outcome.transport}
 
 
+def _json_query(data: Any, path: str) -> Dict[str, Any]:
+    """Adapter: return all JSONPath matches in data (JSON string or object)."""
+    import json
+    from je_auto_control.utils.jsonpath import json_query
+    if isinstance(data, str):
+        data = json.loads(data)
+    return {"matches": json_query(data, path)}
+
+
+def _json_extract(data: Any, mapping: Any) -> Dict[str, Any]:
+    """Adapter: extract a {key: path} mapping from data into a flat dict."""
+    import json
+    from je_auto_control.utils.jsonpath import json_extract
+    if isinstance(data, str):
+        data = json.loads(data)
+    if isinstance(mapping, str):
+        mapping = json.loads(mapping)
+    return {"result": json_extract(data, mapping)}
+
+
 class Executor:
     """
     Executor
@@ -3576,6 +3596,8 @@ class Executor:
             "AC_list_assets": _list_assets,
             "AC_emit_event": _emit_event,
             "AC_notify_webhook": _notify_webhook,
+            "AC_json_query": _json_query,
+            "AC_json_extract": _json_extract,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

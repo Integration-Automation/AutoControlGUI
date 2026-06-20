@@ -3200,6 +3200,32 @@ def notify_channel_tools() -> List[MCPTool]:
     ]
 
 
+def jsonpath_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_json_query",
+            description=("Query parsed JSON with a JSONPath subset ($, .key, "
+                         "[n]/[-n], * / [*], .. recursive, [?(@.k op v)] "
+                         "filter). Returns {matches} (all matches)."),
+            input_schema=schema(
+                {"data": {"type": "object"}, "path": {"type": "string"}},
+                ["data", "path"]),
+            handler=h.json_query,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_json_extract",
+            description=("Extract a {key: jsonpath} 'mapping' from 'data' into a "
+                         "flat object (first match per path). Returns {result}."),
+            input_schema=schema(
+                {"data": {"type": "object"}, "mapping": {"type": "object"}},
+                ["data", "mapping"]),
+            handler=h.json_extract,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4263,6 +4289,7 @@ ALL_FACTORIES = (
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
+    jsonpath_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

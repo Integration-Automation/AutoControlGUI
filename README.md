@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — JSONPath Querying](#whats-new-2026-06-20--jsonpath-querying)
 - [What's new (2026-06-20) — Multi-Channel Webhook Notifications](#whats-new-2026-06-20--multi-channel-webhook-notifications)
 - [What's new (2026-06-20) — Outbound CloudEvents Emitter](#whats-new-2026-06-20--outbound-cloudevents-emitter)
 - [What's new (2026-06-20) — Environment-Scoped Typed Asset Store](#whats-new-2026-06-20--environment-scoped-typed-asset-store)
@@ -102,6 +103,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — JSONPath Querying
+
+Query API/DB JSON with wildcards, recursion, filters. Full reference: [`docs/source/Eng/doc/new_features/v51_features_doc.rst`](docs/source/Eng/doc/new_features/v51_features_doc.rst).
+
+- **`json_query` / `json_query_one` / `json_extract`** (`AC_json_query` / `AC_json_extract`, `ac_*`): the executor's path walker only split on `.` and indexed — this adds a JSONPath subset (`$`, `.key`, `[n]`/`[-n]`, `*`/`[*]`, `..` recursive descent, `[?(@.k op v)]` filters) over parsed JSON, so array-bearing API/DB responses are easy to extract from. `json_extract` runs a `{key: path}` mapping into a flat dict. Pure-stdlib `re`; the path engine `AC_http_to_var` and DB-row flows were missing.
 
 ## What's new (2026-06-20) — Multi-Channel Webhook Notifications
 

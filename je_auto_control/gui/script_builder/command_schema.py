@@ -1128,6 +1128,24 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Send a Slack/Discord/Teams/raw webhook notification.",
     ))
     specs.append(CommandSpec(
+        "AC_json_query", "Data", "JSONPath: Query",
+        fields=(
+            FieldSpec("data", FieldType.STRING,
+                      placeholder='{"a": [1, 2]}'),
+            FieldSpec("path", FieldType.STRING, placeholder="$.a[*]"),
+        ),
+        description="Query parsed JSON with a JSONPath subset (all matches).",
+    ))
+    specs.append(CommandSpec(
+        "AC_json_extract", "Data", "JSONPath: Extract Mapping",
+        fields=(
+            FieldSpec("data", FieldType.STRING),
+            FieldSpec("mapping", FieldType.STRING,
+                      placeholder='{"name": "$.user.name"}'),
+        ),
+        description="Extract a {key: jsonpath} mapping into a flat object.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

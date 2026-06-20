@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-20) — JSONPath 查詢](#本次更新-2026-06-20--jsonpath-查詢)
 - [本次更新 (2026-06-20) — 多通道 Webhook 通知](#本次更新-2026-06-20--多通道-webhook-通知)
 - [本次更新 (2026-06-20) — 對外 CloudEvents 發送器](#本次更新-2026-06-20--對外-cloudevents-發送器)
 - [本次更新 (2026-06-20) — 環境範圍的具型別資產儲存](#本次更新-2026-06-20--環境範圍的具型別資產儲存)
@@ -101,6 +102,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-20) — JSONPath 查詢
+
+以萬用字元、遞迴、過濾查詢 API/DB JSON。完整參考:[`docs/source/Zh/doc/new_features/v51_features_doc.rst`](../docs/source/Zh/doc/new_features/v51_features_doc.rst)。
+
+- **`json_query` / `json_query_one` / `json_extract`**(`AC_json_query` / `AC_json_extract`、`ac_*`):執行器的路徑走訪只會以 `.` 切分並索引 —— 本功能在已解析 JSON 上加入 JSONPath 子集(`$`、`.key`、`[n]`/`[-n]`、`*`/`[*]`、`..` 遞迴下降、`[?(@.k op v)]` 過濾),讓含陣列的 API/DB 回應易於擷取。`json_extract` 以 `{key: path}` 對應擷取成扁平 dict。純標準函式庫 `re`;這是 `AC_http_to_var` 與 DB-row 流程所缺的路徑引擎。
 
 ## 本次更新 (2026-06-20) — 多通道 Webhook 通知
 
