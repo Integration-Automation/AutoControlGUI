@@ -1155,6 +1155,17 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Run steps; on failure undo completed steps LIFO.",
     ))
     specs.append(CommandSpec(
+        "AC_decision_table", "Flow", "Decision Table (DMN)",
+        fields=(
+            FieldSpec("spec", FieldType.STRING,
+                      placeholder='{"inputs": ["age"], "hit_policy": "FIRST", '
+                                  '"rules": [...]}'),
+            FieldSpec("context", FieldType.STRING,
+                      placeholder='{"age": 30}'),
+        ),
+        description="Evaluate inputs against a rule table (hit policy).",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

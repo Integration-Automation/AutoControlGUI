@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — DMN-Style Decision Tables](#whats-new-2026-06-20--dmn-style-decision-tables)
 - [What's new (2026-06-20) — Saga / Compensating Rollback](#whats-new-2026-06-20--saga--compensating-rollback)
 - [What's new (2026-06-20) — JSONPath Querying](#whats-new-2026-06-20--jsonpath-querying)
 - [What's new (2026-06-20) — Multi-Channel Webhook Notifications](#whats-new-2026-06-20--multi-channel-webhook-notifications)
@@ -104,6 +105,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — DMN-Style Decision Tables
+
+Externalize branching into reviewable rule tables. Full reference: [`docs/source/Eng/doc/new_features/v53_features_doc.rst`](docs/source/Eng/doc/new_features/v53_features_doc.rst).
+
+- **`evaluate_table` / `DecisionTable`** (`AC_decision_table`, `ac_decision_table`): replaces nested `AC_if_var` chains with rows of `conditions -> outputs` and a hit policy (`UNIQUE`/`FIRST`/`PRIORITY`/`COLLECT`). Cell conditions are wildcard / literal / `{op, value}` using the executor's standard comparators (reused, not duplicated). Pure-stdlib, fully testable; the DMN way to keep business rules data-driven.
 
 ## What's new (2026-06-20) — Saga / Compensating Rollback
 

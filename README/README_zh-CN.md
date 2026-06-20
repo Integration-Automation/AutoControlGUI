@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-20) — DMN 式决策表](#本次更新-2026-06-20--dmn-式决策表)
 - [本次更新 (2026-06-20) — Saga / 补偿回滚](#本次更新-2026-06-20--saga--补偿回滚)
 - [本次更新 (2026-06-20) — JSONPath 查询](#本次更新-2026-06-20--jsonpath-查询)
 - [本次更新 (2026-06-20) — 多通道 Webhook 通知](#本次更新-2026-06-20--多通道-webhook-通知)
@@ -103,6 +104,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-20) — DMN 式决策表
+
+将分支外部化为可审查的规则表。完整参考:[`docs/source/Zh/doc/new_features/v53_features_doc.rst`](../docs/source/Zh/doc/new_features/v53_features_doc.rst)。
+
+- **`evaluate_table` / `DecisionTable`**(`AC_decision_table`、`ac_decision_table`):以一列列的 `conditions -> outputs` 加命中政策(`UNIQUE`/`FIRST`/`PRIORITY`/`COLLECT`)取代嵌套 `AC_if_var` 链。单元格条件为通配符 / 字面值 / `{op, value}`,使用执行器标准比较子(重用,不重复)。纯标准库、可完整测试;DMN 让业务规则数据驱动的方式。
 
 ## 本次更新 (2026-06-20) — Saga / 补偿回滚
 

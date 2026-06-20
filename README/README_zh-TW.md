@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-20) — DMN 式決策表](#本次更新-2026-06-20--dmn-式決策表)
 - [本次更新 (2026-06-20) — Saga / 補償回溯](#本次更新-2026-06-20--saga--補償回溯)
 - [本次更新 (2026-06-20) — JSONPath 查詢](#本次更新-2026-06-20--jsonpath-查詢)
 - [本次更新 (2026-06-20) — 多通道 Webhook 通知](#本次更新-2026-06-20--多通道-webhook-通知)
@@ -103,6 +104,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-20) — DMN 式決策表
+
+將分支外部化為可審查的規則表。完整參考:[`docs/source/Zh/doc/new_features/v53_features_doc.rst`](../docs/source/Zh/doc/new_features/v53_features_doc.rst)。
+
+- **`evaluate_table` / `DecisionTable`**(`AC_decision_table`、`ac_decision_table`):以一列列的 `conditions -> outputs` 加命中政策(`UNIQUE`/`FIRST`/`PRIORITY`/`COLLECT`)取代巢狀 `AC_if_var` 鏈。儲存格條件為萬用字元 / 字面值 / `{op, value}`,使用執行器標準比較子(重用,不重複)。純標準函式庫、可完整測試;DMN 讓商業規則資料驅動的方式。
 
 ## 本次更新 (2026-06-20) — Saga / 補償回溯
 
