@@ -48,7 +48,11 @@ def normalize_spdx(raw: str) -> str:
     alias = _ALIASES.get(text.lower())
     if alias:
         return alias
-    return re.sub(r"\s+licen[sc]e$", "", text, flags=re.IGNORECASE).strip()
+    lowered = text.lower()
+    for suffix in (" license", " licence"):
+        if lowered.endswith(suffix):
+            return text[:-len(suffix)].strip()
+    return text
 
 
 def _extract_ids(license_str: str) -> List[str]:
