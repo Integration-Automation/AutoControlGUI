@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-20) — 多通道 Webhook 通知](#本次更新-2026-06-20--多通道-webhook-通知)
 - [本次更新 (2026-06-20) — 对外 CloudEvents 发送器](#本次更新-2026-06-20--对外-cloudevents-发送器)
 - [本次更新 (2026-06-20) — 环境范围的带类型资产存储](#本次更新-2026-06-20--环境范围的带类型资产存储)
 - [本次更新 (2026-06-20) — 任务 / 流程挖掘(自动化候选发现)](#本次更新-2026-06-20--任务--流程挖掘自动化候选发现)
@@ -100,6 +101,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-20) — 多通道 Webhook 通知
+
+通知 Teams/Discord/Slack/webhook。完整参考:[`docs/source/Zh/doc/new_features/v50_features_doc.rst`](../docs/source/Zh/doc/new_features/v50_features_doc.rst)。
+
+- **`notify_webhook` / `WebhookChannel`**(`AC_notify_webhook`、`ac_notify_webhook`):`notify` 仅限桌面弹窗、ChatOps 只内建 Slack —— 本功能可发送到 **Slack / Discord / Microsoft Teams / raw** webhook,组出对应传输的载荷(Slack 与 Teams MessageCard 用 `text`,Discord 用 `content`)并通过受出口守卫保护的 HTTP 客户端 POST。`poster` 传输可注入(或 `set_default_poster`),因此发送在无网络下即可单元测试。
 
 ## 本次更新 (2026-06-20) — 对外 CloudEvents 发送器
 

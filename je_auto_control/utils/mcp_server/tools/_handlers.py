@@ -1538,6 +1538,14 @@ def emit_event(event_type, data=None, source="je_auto_control",
     return result
 
 
+def notify_webhook(url, text, transport="raw", title=None):
+    from je_auto_control.utils.notify_channels import (
+        notify_webhook as _notify)
+    outcome = _notify(url, text, transport=transport, title=title)
+    return {"ok": outcome.ok, "status": outcome.status,
+            "transport": outcome.transport}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:
