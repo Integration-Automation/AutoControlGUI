@@ -3343,6 +3343,23 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def search_index_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_search_documents",
+            description=("Rank a 'docs' corpus ({doc_id: text}) for a text "
+                         "'query' using BM25 (or mode='tfidf'). Returns "
+                         "{hits:[{doc_id, score}]} top 'top_k'."),
+            input_schema=schema(
+                {"docs": {"type": "object"}, "query": {"type": "string"},
+                 "top_k": {"type": "integer"}, "mode": {"type": "string"}},
+                ["docs", "query"]),
+            handler=h.search_documents,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def json_patch_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4584,6 +4601,7 @@ ALL_FACTORIES = (
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
     jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools,
     license_policy_tools, jwt_tools, rate_limit_tools, json_patch_tools,
+    search_index_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

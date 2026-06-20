@@ -1631,6 +1631,12 @@ def merge_patch(doc, patch):
     return {"result": _merge(doc, patch)}
 
 
+def search_documents(docs, query, top_k=10, mode="bm25"):
+    from je_auto_control.utils.search_index import search_documents as _search
+    hits = _search(docs, query, top_k=int(top_k), mode=mode)
+    return {"hits": [{"doc_id": h.doc_id, "score": h.score} for h in hits]}
+
+
 def run_saga(steps):
     from je_auto_control.utils.saga import run_saga as _run
     result = _run(steps)

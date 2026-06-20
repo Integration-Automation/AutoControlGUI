@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Full-Text Search (BM25)](#whats-new-2026-06-21--full-text-search-bm25)
 - [What's new (2026-06-21) — JSON Pointer, Patch & Merge Patch](#whats-new-2026-06-21--json-pointer-patch--merge-patch)
 - [What's new (2026-06-21) — Client-Side Rate Limiting](#whats-new-2026-06-21--client-side-rate-limiting)
 - [What's new (2026-06-21) — JSON Web Tokens (JWT)](#whats-new-2026-06-21--json-web-tokens-jwt)
@@ -115,6 +116,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Full-Text Search (BM25)
+
+Rank a document corpus by relevance. Full reference: [`docs/source/Eng/doc/new_features/v64_features_doc.rst`](docs/source/Eng/doc/new_features/v64_features_doc.rst).
+
+- **`SearchIndex` / `search_documents` / `tokenize`** (`AC_search_documents`, `ac_search_documents`): `fuzzy` is pairwise and `skill_library` matches substrings alphabetically — neither ranks a corpus by relevance. This adds an inverted-index search ranked with Okapi BM25 (`k1=1.5`, `b=0.75`, `IDF = ln(1+(N−df+0.5)/(df+0.5))`) or TF-IDF, so a rare term out-ranks a common one, term frequency saturates, and long docs are normalized down. Incremental `add`/`remove`, optional stop-words, deterministic ranking. Pure-stdlib `math`+`collections`+`re` — no database.
 
 ## What's new (2026-06-21) — JSON Pointer, Patch & Merge Patch
 

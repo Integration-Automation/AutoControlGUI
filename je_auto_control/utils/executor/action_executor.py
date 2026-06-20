@@ -2928,6 +2928,17 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+def _search_documents(docs: Any, query: str, top_k: int = 10,
+                      mode: str = "bm25") -> Dict[str, Any]:
+    """Adapter: BM25/TF-IDF search a {doc_id: text} corpus (dict or JSON str)."""
+    import json
+    from je_auto_control.utils.search_index import search_documents
+    if isinstance(docs, str):
+        docs = json.loads(docs)
+    hits = search_documents(docs, query, top_k=int(top_k), mode=mode)
+    return {"hits": [{"doc_id": h.doc_id, "score": h.score} for h in hits]}
+
+
 def _resolve_pointer(doc: Any, pointer: str) -> Dict[str, Any]:
     """Adapter: resolve a JSON Pointer in doc (a dict/list or JSON string)."""
     import json
@@ -3781,6 +3792,7 @@ class Executor:
             "AC_jwt_encode": _jwt_encode,
             "AC_jwt_decode": _jwt_decode,
             "AC_rate_limit": _rate_limit,
+            "AC_search_documents": _search_documents,
             "AC_resolve_pointer": _resolve_pointer,
             "AC_apply_json_patch": _apply_json_patch,
             "AC_make_json_patch": _make_json_patch,

@@ -1156,6 +1156,18 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Validate JSON against a JSON Schema; returns {ok, errors}.",
     ))
     specs.append(CommandSpec(
+        "AC_search_documents", "Data", "Full-Text Search (BM25)",
+        fields=(
+            FieldSpec("docs", FieldType.STRING,
+                      placeholder='{"d1": "quick brown fox", "d2": "lazy dog"}'),
+            FieldSpec("query", FieldType.STRING, placeholder="quick fox"),
+            FieldSpec("top_k", FieldType.INT, optional=True, default=10),
+            FieldSpec("mode", FieldType.STRING, optional=True,
+                      placeholder="bm25", choices=("bm25", "tfidf")),
+        ),
+        description="Rank a {id: text} corpus for a query; returns {hits}.",
+    ))
+    specs.append(CommandSpec(
         "AC_resolve_pointer", "Data", "JSON Pointer: Resolve",
         fields=(
             FieldSpec("doc", FieldType.STRING, placeholder='{"a": {"b": [1, 2]}}'),
