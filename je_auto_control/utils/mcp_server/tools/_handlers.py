@@ -1546,6 +1546,16 @@ def notify_webhook(url, text, transport="raw", title=None):
             "transport": outcome.transport}
 
 
+def json_query(data, path):
+    from je_auto_control.utils.jsonpath import json_query as _q
+    return {"matches": _q(data, path)}
+
+
+def json_extract(data, mapping):
+    from je_auto_control.utils.jsonpath import json_extract as _x
+    return {"result": _x(data, mapping)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:
