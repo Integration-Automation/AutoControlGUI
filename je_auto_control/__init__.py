@@ -320,6 +320,10 @@ from je_auto_control.utils.jwt import (
     ClaimsPolicy, ExpiredTokenError, InvalidSignatureError, JwtError,
     decode_jwt, encode_jwt,
 )
+# Client-side rate limiting (token bucket / sliding window / throttle)
+from je_auto_control.utils.rate_limit import (
+    SlidingWindowLimiter, TokenBucket, throttle,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -798,6 +802,7 @@ __all__ = [
     "license_findings_to_sarif", "normalize_spdx",
     "ClaimsPolicy", "ExpiredTokenError", "InvalidSignatureError", "JwtError",
     "decode_jwt", "encode_jwt",
+    "SlidingWindowLimiter", "TokenBucket", "throttle",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

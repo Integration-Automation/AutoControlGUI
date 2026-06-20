@@ -3326,6 +3326,23 @@ def jwt_tools() -> List[MCPTool]:
     ]
 
 
+def rate_limit_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_rate_limit",
+            description=("Try to take 'n' tokens from a named token-bucket "
+                         "limiter ('rate' tokens/sec, 'capacity' burst). "
+                         "Returns {acquired, tokens, wait}."),
+            input_schema=schema(
+                {"name": {"type": "string"}, "rate": {"type": "number"},
+                 "capacity": {"type": "number"}, "n": {"type": "number"}},
+                ["name"]),
+            handler=h.rate_limit,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def saga_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4521,7 +4538,7 @@ ALL_FACTORIES = (
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
     jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools,
-    license_policy_tools, jwt_tools, saga_tools,
+    license_policy_tools, jwt_tools, rate_limit_tools, saga_tools,
     decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,
