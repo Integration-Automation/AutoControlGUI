@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-20) — 任務 / 流程探勘(自動化候選發現)](#本次更新-2026-06-20--任務--流程探勘自動化候選發現)
 - [本次更新 (2026-06-20) — 卡迴圈守衛(Agent Loop 進度偵測)](#本次更新-2026-06-20--卡迴圈守衛agent-loop-進度偵測)
 - [本次更新 (2026-06-20) — 座標空間對映(模型網格 ⇄ 實體像素)](#本次更新-2026-06-20--座標空間對映模型網格--實體像素)
 - [本次更新 (2026-06-20) — 語音指令路由器](#本次更新-2026-06-20--語音指令路由器)
@@ -97,6 +98,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-20) — 任務 / 流程探勘(自動化候選發現)
+
+從錄製的動作日誌發現該自動化什麼。完整參考:[`docs/source/Zh/doc/new_features/v47_features_doc.rst`](../docs/source/Zh/doc/new_features/v47_features_doc.rst)。
+
+- **`mine_action_log` / `find_repeated_sequences` / `directly_follows` / `rank_automation_candidates`**(`AC_mine_actions`、`ac_mine_actions`):探勘錄製的動作日誌中頻繁、可重複的指令 n-gram,建立 directly-follows 圖,並依 `count × length` 為自動化候選排名 —— 這是 AutoControl 一直在錄資料卻從未分析的 RPA「任務探勘」支柱。純標準函式庫;作用於既有動作清單結構;一個經常重現且橫跨多步的候選,是「抽成 skill」的強烈訊號。
 
 ## 本次更新 (2026-06-20) — 卡迴圈守衛(Agent Loop 進度偵測)
 
