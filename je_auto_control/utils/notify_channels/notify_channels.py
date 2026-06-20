@@ -41,11 +41,11 @@ def _payload(transport: str, text: str, title: Optional[str]) -> Dict[str, Any]:
         body = f"**{title}**\n{text}" if title else text
         return {"content": body}
     if transport == TRANSPORT_TEAMS:
+        # The @context below is Microsoft Teams' fixed MessageCard schema
+        # identifier (required verbatim), not a URL that is ever fetched.
         card: Dict[str, Any] = {
             "@type": "MessageCard",
-            # NOSONAR python:S5332 reason: fixed MessageCard schema identifier
-            # required verbatim by Microsoft Teams, not a fetched URL.
-            "@context": "http://schema.org/extensions",
+            "@context": "http://schema.org/extensions",  # NOSONAR python:S5332
             "text": text,
         }
         if title:
