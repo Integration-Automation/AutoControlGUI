@@ -1042,6 +1042,21 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Map a physical-pixel coordinate to a model grid.",
     ))
     specs.append(CommandSpec(
+        "AC_loop_guard_observe", "Agent", "Loop Guard: Observe Step",
+        fields=(
+            FieldSpec("tool", FieldType.STRING, placeholder="AC_click_mouse"),
+            FieldSpec("args", FieldType.STRING, optional=True,
+                      placeholder='{"x": 10, "y": 20}'),
+            FieldSpec("result_digest", FieldType.STRING, optional=True),
+        ),
+        description="Detect repeat/ping-pong/no-op stuck-loop patterns.",
+    ))
+    specs.append(CommandSpec(
+        "AC_loop_guard_reset", "Agent", "Loop Guard: Reset",
+        fields=(),
+        description="Clear the default loop guard's history.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

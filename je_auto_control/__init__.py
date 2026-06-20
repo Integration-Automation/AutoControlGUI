@@ -255,6 +255,10 @@ from je_auto_control.utils.voice import (
 from je_auto_control.utils.coordinate_space import (
     CoordinateSpace, downscale_png, normalized_space, xga_space,
 )
+# Mechanical stuck-loop detection for agent loops
+from je_auto_control.utils.loop_guard import (
+    LoopGuard, LoopVerdict, default_loop_guard, digest_result,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -710,6 +714,7 @@ __all__ = [
     "parse_number",
     "VoiceCommand", "VoiceRouter", "default_voice_router",
     "CoordinateSpace", "downscale_png", "normalized_space", "xga_space",
+    "LoopGuard", "LoopVerdict", "default_loop_guard", "digest_result",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
