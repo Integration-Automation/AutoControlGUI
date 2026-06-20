@@ -1471,6 +1471,20 @@ def voice_clear():
     return {"cleared": True}
 
 
+def to_physical(x, y, physical_w, physical_h, model_w, model_h):
+    from je_auto_control.utils.coordinate_space import CoordinateSpace
+    px, py = CoordinateSpace(physical_w, physical_h, model_w,
+                             model_h).to_physical(x, y)
+    return {"x": px, "y": py}
+
+
+def to_model(x, y, physical_w, physical_h, model_w, model_h):
+    from je_auto_control.utils.coordinate_space import CoordinateSpace
+    mx, my = CoordinateSpace(physical_w, physical_h, model_w,
+                             model_h).to_model(x, y)
+    return {"x": mx, "y": my}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

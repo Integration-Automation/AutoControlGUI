@@ -251,6 +251,10 @@ from je_auto_control.utils.locale_parse import (
 from je_auto_control.utils.voice import (
     VoiceCommand, VoiceRouter, default_voice_router,
 )
+# Coordinate-space mapping (model grid <-> physical pixels)
+from je_auto_control.utils.coordinate_space import (
+    CoordinateSpace, downscale_png, normalized_space, xga_space,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -705,6 +709,7 @@ __all__ = [
     "format_currency", "format_date", "format_decimal", "parse_decimal",
     "parse_number",
     "VoiceCommand", "VoiceRouter", "default_voice_router",
+    "CoordinateSpace", "downscale_png", "normalized_space", "xga_space",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

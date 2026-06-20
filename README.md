@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — Coordinate-Space Mapping (Model Grid ⇄ Physical Pixels)](#whats-new-2026-06-20--coordinate-space-mapping-model-grid--physical-pixels)
 - [What's new (2026-06-20) — Voice-Command Router](#whats-new-2026-06-20--voice-command-router)
 - [What's new (2026-06-20) — Locale-Aware Number, Currency & Date Parsing](#whats-new-2026-06-20--locale-aware-number-currency--date-parsing)
 - [What's new (2026-06-20) — Perceptual-Hash Image Dedupe](#whats-new-2026-06-20--perceptual-hash-image-dedupe)
@@ -96,6 +97,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — Coordinate-Space Mapping (Model Grid ⇄ Physical Pixels)
+
+Translate computer-use model clicks to real pixels. Full reference: [`docs/source/Eng/doc/new_features/v45_features_doc.rst`](docs/source/Eng/doc/new_features/v45_features_doc.rst).
+
+- **`CoordinateSpace` / `xga_space` / `normalized_space` / `downscale_png`** (`AC_to_physical` / `AC_to_model`, `ac_*`): computer-use/VLA models click in a fixed grid (Anthropic downscales to XGA; Gemini returns a 1000×1000 grid), not physical pixels. This maps both ways (round + clamp), `xga_space` aspect-preserves without upscaling, and `downscale_png` resizes a screenshot to the model's input size (Pillow, already core). Pure-arithmetic mapping — unit-tested without a model/GPU.
 
 ## What's new (2026-06-20) — Voice-Command Router
 

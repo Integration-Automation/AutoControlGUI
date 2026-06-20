@@ -1020,6 +1020,28 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Remove all registered voice commands.",
     ))
     specs.append(CommandSpec(
+        "AC_to_physical", "Agent", "Coords: Model -> Physical",
+        fields=(
+            FieldSpec("x", FieldType.FLOAT), FieldSpec("y", FieldType.FLOAT),
+            FieldSpec("physical_w", FieldType.INT),
+            FieldSpec("physical_h", FieldType.INT),
+            FieldSpec("model_w", FieldType.INT),
+            FieldSpec("model_h", FieldType.INT),
+        ),
+        description="Map a model-grid coordinate to physical pixels.",
+    ))
+    specs.append(CommandSpec(
+        "AC_to_model", "Agent", "Coords: Physical -> Model",
+        fields=(
+            FieldSpec("x", FieldType.INT), FieldSpec("y", FieldType.INT),
+            FieldSpec("physical_w", FieldType.INT),
+            FieldSpec("physical_h", FieldType.INT),
+            FieldSpec("model_w", FieldType.INT),
+            FieldSpec("model_h", FieldType.INT),
+        ),
+        description="Map a physical-pixel coordinate to a model grid.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,
