@@ -995,6 +995,31 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Format an ISO date string for a locale.",
     ))
     specs.append(CommandSpec(
+        "AC_voice_register", "Agent", "Voice: Register Command",
+        fields=(
+            FieldSpec("phrase", FieldType.STRING, placeholder="save file"),
+            FieldSpec("actions", FieldType.STRING,
+                      placeholder='[["AC_hotkey", {"keys": ["ctrl", "s"]}]]'),
+        ),
+        description="Map a spoken phrase to an action list (JSON).",
+    ))
+    specs.append(CommandSpec(
+        "AC_voice_dispatch", "Agent", "Voice: Dispatch Text",
+        fields=(FieldSpec("text", FieldType.STRING,
+                          placeholder="save the file"),),
+        description="Run the command best matching recognized text.",
+    ))
+    specs.append(CommandSpec(
+        "AC_voice_list", "Agent", "Voice: List Commands",
+        fields=(),
+        description="List registered voice-command phrases.",
+    ))
+    specs.append(CommandSpec(
+        "AC_voice_clear", "Agent", "Voice: Clear Commands",
+        fields=(),
+        description="Remove all registered voice commands.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

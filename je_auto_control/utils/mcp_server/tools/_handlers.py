@@ -1448,6 +1448,29 @@ def format_date(value, locale="en_US", fmt="medium"):
     return {"text": _fmt(value, locale, fmt)}
 
 
+def voice_register(phrase, actions):
+    from je_auto_control.utils.voice import default_voice_router
+    default_voice_router.register(phrase, actions)
+    return {"phrases": default_voice_router.phrases()}
+
+
+def voice_dispatch(text):
+    from je_auto_control.utils.voice import default_voice_router
+    outcome = default_voice_router.dispatch(text)
+    return {"matched": outcome["matched"], "phrase": outcome["phrase"]}
+
+
+def voice_list():
+    from je_auto_control.utils.voice import default_voice_router
+    return {"phrases": default_voice_router.phrases()}
+
+
+def voice_clear():
+    from je_auto_control.utils.voice import default_voice_router
+    default_voice_router.clear()
+    return {"cleared": True}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

@@ -3008,6 +3008,47 @@ def locale_tools() -> List[MCPTool]:
     ]
 
 
+def voice_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_voice_register",
+            description=("Register a voice command: a trigger 'phrase' and an "
+                         "'actions' list (AC_* steps) to run when recognized "
+                         "speech best-matches it. Returns {phrases}."),
+            input_schema=schema(
+                {"phrase": {"type": "string"},
+                 "actions": {"type": "array", "items": {"type": "object"}}},
+                ["phrase", "actions"]),
+            handler=h.voice_register,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_voice_dispatch",
+            description=("Run the command whose phrase best matches recognized "
+                         "'text' (fuzzy). Returns {matched, phrase}."),
+            input_schema=schema({"text": {"type": "string"}}, ["text"]),
+            handler=h.voice_dispatch,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_voice_list",
+            description="List registered voice-command phrases. Returns "
+                        "{phrases}.",
+            input_schema=schema({}),
+            handler=h.voice_list,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_voice_clear",
+            description="Remove all registered voice commands. Returns "
+                        "{cleared}.",
+            input_schema=schema({}),
+            handler=h.voice_clear,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4069,7 +4110,7 @@ ALL_FACTORIES = (
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
-    locale_tools,
+    locale_tools, voice_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

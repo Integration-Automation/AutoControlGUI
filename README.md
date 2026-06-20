@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — Voice-Command Router](#whats-new-2026-06-20--voice-command-router)
 - [What's new (2026-06-20) — Locale-Aware Number, Currency & Date Parsing](#whats-new-2026-06-20--locale-aware-number-currency--date-parsing)
 - [What's new (2026-06-20) — Perceptual-Hash Image Dedupe](#whats-new-2026-06-20--perceptual-hash-image-dedupe)
 - [What's new (2026-06-20) — S3-Compatible Artifact Store](#whats-new-2026-06-20--s3-compatible-artifact-store)
@@ -95,6 +96,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — Voice-Command Router
+
+Trigger flows hands-free from recognized speech. Full reference: [`docs/source/Eng/doc/new_features/v44_features_doc.rst`](docs/source/Eng/doc/new_features/v44_features_doc.rst).
+
+- **`VoiceRouter`** (`AC_voice_register` / `AC_voice_dispatch` / `AC_voice_list` / `AC_voice_clear`, `ac_*`): map spoken trigger phrases to `AC_*` action lists; feed it recognized text and it runs the closest registered command (phrase matching reuses the fuzzy matcher, so "save the file" fires "save file"). **Speech-to-text is out of scope and injectable** — the router takes text and a `recognizer`/`runner` callable, so routing is fully unit-tested without audio or any speech dependency (a real Vosk/mic recogniser plugs into `listen_once`).
 
 ## What's new (2026-06-20) — Locale-Aware Number, Currency & Date Parsing
 

@@ -247,6 +247,10 @@ from je_auto_control.utils.image_dedup import (
 from je_auto_control.utils.locale_parse import (
     format_currency, format_date, format_decimal, parse_decimal, parse_number,
 )
+# Voice-command router (injectable speech-to-text)
+from je_auto_control.utils.voice import (
+    VoiceCommand, VoiceRouter, default_voice_router,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -700,6 +704,7 @@ __all__ = [
     "images_similar",
     "format_currency", "format_date", "format_decimal", "parse_decimal",
     "parse_number",
+    "VoiceCommand", "VoiceRouter", "default_voice_router",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
