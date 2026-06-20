@@ -298,6 +298,10 @@ from je_auto_control.utils.pii_text import (
 from je_auto_control.utils.sarif import (
     from_audit_findings, from_lint_issues, make_finding, to_sarif, write_sarif,
 )
+# JSON Schema (Draft 2020-12 subset) validation of parsed JSON
+from je_auto_control.utils.json_schema import (
+    SchemaValidationResult, assert_schema, is_valid, validate_json,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -767,6 +771,7 @@ __all__ = [
     "PIIFinding", "detect_pii", "redact_pii_text",
     "from_audit_findings", "from_lint_issues", "make_finding", "to_sarif",
     "write_sarif",
+    "SchemaValidationResult", "assert_schema", "is_valid", "validate_json",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

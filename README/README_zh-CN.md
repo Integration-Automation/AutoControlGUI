@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — JSON Schema 验证](#本次更新-2026-06-21--json-schema-验证)
 - [本次更新 (2026-06-20) — SARIF 2.1.0 发现项目导出](#本次更新-2026-06-20--sarif-210-发现项目导出)
 - [本次更新 (2026-06-20) — 文本 PII 检测与遮蔽](#本次更新-2026-06-20--文本-pii-检测与遮蔽)
 - [本次更新 (2026-06-20) — 自我修复定位器回写](#本次更新-2026-06-20--自我修复定位器回写)
@@ -107,6 +108,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — JSON Schema 验证
+
+以真正的 schema 验证嵌套 JSON。完整参考:[`docs/source/Zh/doc/new_features/v57_features_doc.rst`](../docs/source/Zh/doc/new_features/v57_features_doc.rst)。
+
+- **`validate_json` / `is_valid` / `assert_schema`**(`AC_validate_json`、`ac_validate_json`):框架过去只会*产生* JSON Schema,而 `data_quality` 是扁平的逐列检查器 —— 两者都无法验证嵌套的 API 请求/响应内容。本功能补上消费端:一个 JSON Schema(Draft 2020-12 子集)验证器,将**每一个**违规以 `{path, keyword, message}` 报告(例如 `$.age maximum`)。涵盖 `type`(含整数值浮点数的 `integer`)、`enum`/`const`、数字/字符串界限、数组与对象关键字、`allOf`/`anyOf`/`oneOf`/`not`、布尔 schema 与本地 `$ref`。纯标准库 `re`;与 `json_query` 及 `http_request` 辅助函数搭配。
 
 ## 本次更新 (2026-06-20) — SARIF 2.1.0 发现项目导出
 

@@ -1556,6 +1556,11 @@ def json_extract(data, mapping):
     return {"result": _x(data, mapping)}
 
 
+def validate_json(data, schema):
+    from je_auto_control.utils.json_schema import validate_json as _v
+    return _v(data, schema).to_dict()
+
+
 def run_saga(steps):
     from je_auto_control.utils.saga import run_saga as _run
     result = _run(steps)

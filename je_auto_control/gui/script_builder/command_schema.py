@@ -1146,6 +1146,16 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Extract a {key: jsonpath} mapping into a flat object.",
     ))
     specs.append(CommandSpec(
+        "AC_validate_json", "Data", "JSON Schema: Validate",
+        fields=(
+            FieldSpec("data", FieldType.STRING,
+                      placeholder='{"name": "Jo", "age": 30}'),
+            FieldSpec("schema", FieldType.STRING,
+                      placeholder='{"type": "object", "required": ["name"]}'),
+        ),
+        description="Validate JSON against a JSON Schema; returns {ok, errors}.",
+    ))
+    specs.append(CommandSpec(
         "AC_run_saga", "Flow", "Run Saga (Compensating Rollback)",
         fields=(
             FieldSpec("steps", FieldType.STRING,
