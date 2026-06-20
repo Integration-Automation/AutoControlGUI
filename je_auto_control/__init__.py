@@ -290,6 +290,10 @@ from je_auto_control.utils.decision_table import (
 from je_auto_control.utils.locator_repair import (
     RepairStore, RepairSuggestion, repair_from_heal,
 )
+# Text PII detection / redaction (free-text emails, phones, SSNs, cards, …)
+from je_auto_control.utils.pii_text import (
+    PIIFinding, detect_pii, redact_pii_text,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -756,6 +760,7 @@ __all__ = [
     "Saga", "SagaResult", "run_saga",
     "DecisionTable", "Rule", "evaluate_table",
     "RepairStore", "RepairSuggestion", "repair_from_heal",
+    "PIIFinding", "detect_pii", "redact_pii_text",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

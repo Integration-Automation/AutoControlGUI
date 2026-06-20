@@ -3309,6 +3309,35 @@ def locator_repair_tools() -> List[MCPTool]:
     ]
 
 
+def pii_text_tools() -> List[MCPTool]:
+    _KINDS = {"type": "array", "items": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_detect_pii",
+            description=("Detect PII spans (email/phone/ssn/credit_card/ipv4/"
+                         "iban) in free text. Optional 'kinds' filter. Returns "
+                         "{findings:[{kind, value, start, end}]}."),
+            input_schema=schema(
+                {"text": {"type": "string"}, "kinds": _KINDS}, ["text"]),
+            handler=h.detect_pii,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_redact_pii",
+            description=("Redact PII in text. 'mode' is label ([email]) / mask "
+                         "(****) / partial (keep last 4) / hash. Returns "
+                         "{text}."),
+            input_schema=schema(
+                {"text": {"type": "string"}, "kinds": _KINDS,
+                 "mode": {"type": "string",
+                          "enum": ["label", "mask", "partial", "hash"]},
+                 "mask_char": {"type": "string"}}, ["text"]),
+            handler=h.redact_pii,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4373,6 +4402,7 @@ ALL_FACTORIES = (
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
     jsonpath_tools, saga_tools, decision_table_tools, locator_repair_tools,
+    pii_text_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

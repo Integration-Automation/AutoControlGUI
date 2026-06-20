@@ -3373,6 +3373,23 @@ def _repair_approve(suggestion_id: str,
     return {"approved": RepairStore(db).approve(suggestion_id)}
 
 
+def _detect_pii(text: str, kinds: Any = None) -> Dict[str, Any]:
+    """Adapter: detect PII spans in text."""
+    from je_auto_control.utils.pii_text import detect_pii
+    findings = detect_pii(text, kinds=_coerce_list(kinds) if kinds else None)
+    return {"findings": [{"kind": f.kind, "value": f.value,
+                          "start": f.start, "end": f.end} for f in findings]}
+
+
+def _redact_pii(text: str, kinds: Any = None, mode: str = "label",
+                mask_char: str = "*") -> Dict[str, Any]:
+    """Adapter: redact PII in text (label/mask/partial/hash)."""
+    from je_auto_control.utils.pii_text import redact_pii_text
+    return {"text": redact_pii_text(
+        text, kinds=_coerce_list(kinds) if kinds else None, mode=mode,
+        mask_char=mask_char)}
+
+
 class Executor:
     """
     Executor
@@ -3661,6 +3678,8 @@ class Executor:
             "AC_repair_resolved": _repair_resolved,
             "AC_repair_pending": _repair_pending,
             "AC_repair_approve": _repair_approve,
+            "AC_detect_pii": _detect_pii,
+            "AC_redact_pii": _redact_pii,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
