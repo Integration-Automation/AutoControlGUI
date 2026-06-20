@@ -3076,6 +3076,31 @@ def coordinate_space_tools() -> List[MCPTool]:
     ]
 
 
+def loop_guard_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_loop_guard_observe",
+            description=("Feed an agent step (tool, args, optional "
+                         "result_digest) to the default stuck-loop guard. "
+                         "Detects repeat / ping_pong / no_op patterns. Returns "
+                         "{pattern, level (ok/warn/critical), count}."),
+            input_schema=schema(
+                {"tool": {"type": "string"}, "args": {"type": "object"},
+                 "result_digest": {"type": "string"}}, ["tool"]),
+            handler=h.loop_guard_observe,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_loop_guard_reset",
+            description="Clear the default loop guard's history. Returns "
+                        "{reset}.",
+            input_schema=schema({}),
+            handler=h.loop_guard_reset,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4137,7 +4162,7 @@ ALL_FACTORIES = (
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
-    locale_tools, voice_tools, coordinate_space_tools,
+    locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

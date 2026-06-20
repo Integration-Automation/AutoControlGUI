@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — Stuck-Loop Guard (Agent Loop Progress Detection)](#whats-new-2026-06-20--stuck-loop-guard-agent-loop-progress-detection)
 - [What's new (2026-06-20) — Coordinate-Space Mapping (Model Grid ⇄ Physical Pixels)](#whats-new-2026-06-20--coordinate-space-mapping-model-grid--physical-pixels)
 - [What's new (2026-06-20) — Voice-Command Router](#whats-new-2026-06-20--voice-command-router)
 - [What's new (2026-06-20) — Locale-Aware Number, Currency & Date Parsing](#whats-new-2026-06-20--locale-aware-number-currency--date-parsing)
@@ -97,6 +98,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — Stuck-Loop Guard (Agent Loop Progress Detection)
+
+Catch agents stuck in no-progress loops. Full reference: [`docs/source/Eng/doc/new_features/v46_features_doc.rst`](docs/source/Eng/doc/new_features/v46_features_doc.rst).
+
+- **`LoopGuard` / `digest_result`** (`AC_loop_guard_observe` / `AC_loop_guard_reset`, `ac_*`): the top computer-use failure mode is an agent repeating an action with no effect — and the model can't see its own loop. `LoopGuard` watches the `(tool, args, result)` stream and flags `repeat` (same call N times), `ping_pong` (A-B-A-B), and `no_op` (observation digest unchanged), escalating `ok`→`warn`→`critical` by run length. Complements the step/time budget and offline trajectory eval; pure-stdlib, deterministic.
 
 ## What's new (2026-06-20) — Coordinate-Space Mapping (Model Grid ⇄ Physical Pixels)
 

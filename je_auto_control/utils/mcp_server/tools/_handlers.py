@@ -1485,6 +1485,19 @@ def to_model(x, y, physical_w, physical_h, model_w, model_h):
     return {"x": mx, "y": my}
 
 
+def loop_guard_observe(tool, args=None, result_digest=""):
+    from je_auto_control.utils.loop_guard import default_loop_guard
+    verdict = default_loop_guard.observe(tool, args, result_digest)
+    return {"pattern": verdict.pattern, "level": verdict.level,
+            "count": verdict.count}
+
+
+def loop_guard_reset():
+    from je_auto_control.utils.loop_guard import default_loop_guard
+    default_loop_guard.reset()
+    return {"reset": True}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

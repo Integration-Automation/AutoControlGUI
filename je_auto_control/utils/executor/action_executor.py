@@ -3213,6 +3213,22 @@ def _to_model(x: int, y: int, physical_w: int, physical_h: int,
     return {"x": mx, "y": my}
 
 
+def _loop_guard_observe(tool: str, args: Any = None,
+                        result_digest: str = "") -> Dict[str, Any]:
+    """Adapter: feed a step to the default loop guard; report the verdict."""
+    from je_auto_control.utils.loop_guard import default_loop_guard
+    verdict = default_loop_guard.observe(tool, args, result_digest)
+    return {"pattern": verdict.pattern, "level": verdict.level,
+            "count": verdict.count}
+
+
+def _loop_guard_reset() -> Dict[str, Any]:
+    """Adapter: clear the default loop guard's history."""
+    from je_auto_control.utils.loop_guard import default_loop_guard
+    default_loop_guard.reset()
+    return {"reset": True}
+
+
 class Executor:
     """
     Executor
@@ -3485,6 +3501,8 @@ class Executor:
             "AC_voice_clear": _voice_clear,
             "AC_to_physical": _to_physical,
             "AC_to_model": _to_model,
+            "AC_loop_guard_observe": _loop_guard_observe,
+            "AC_loop_guard_reset": _loop_guard_reset,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
