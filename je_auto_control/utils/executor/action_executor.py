@@ -2914,6 +2914,32 @@ def _check_licenses(components: Any, allow: Any = None,
     return {"violations": violations, "count": len(violations)}
 
 
+def _jwt_encode(claims: Any, key: str, alg: str = "HS256") -> Dict[str, Any]:
+    """Adapter: sign a compact JWT from claims (a dict or JSON string)."""
+    import json
+    from je_auto_control.utils.jwt import encode_jwt
+    if isinstance(claims, str):
+        claims = json.loads(claims)
+    return {"token": encode_jwt(claims, key, alg=alg)}
+
+
+def _jwt_decode(token: str, key: str, algorithms: Any = None,
+                audience: Optional[str] = None,
+                leeway: float = 0.0) -> Dict[str, Any]:
+    """Adapter: verify a JWT and return {ok, claims} or {ok: False, error}."""
+    import json
+    from je_auto_control.utils.jwt import ClaimsPolicy, JwtError, decode_jwt
+    if isinstance(algorithms, str):
+        algorithms = json.loads(algorithms)
+    policy = ClaimsPolicy(algorithms=tuple(algorithms) if algorithms
+                          else ("HS256",), audience=audience, leeway=leeway)
+    try:
+        claims = decode_jwt(token, key, policy)
+    except JwtError as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "claims": claims}
+
+
 def _generate_sop(actions: List[Any], title: str = "Automation Procedure",
                   path: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: build (or write) a step-by-step SOP from an action list."""
@@ -3696,6 +3722,8 @@ class Executor:
             "AC_scan_vulns": _scan_vulns,
             "AC_apply_vex": _apply_vex,
             "AC_check_licenses": _check_licenses,
+            "AC_jwt_encode": _jwt_encode,
+            "AC_jwt_decode": _jwt_decode,
             "AC_generate_sop": _generate_sop,
             "AC_tween_drag": _tween_drag,
             "AC_list_plugins": _list_plugins,

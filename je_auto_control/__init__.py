@@ -315,6 +315,11 @@ from je_auto_control.utils.license_policy import (
     DEFAULT_COPYLEFT, evaluate_license, evaluate_sbom,
     license_findings_to_sarif, normalize_spdx,
 )
+# JSON Web Token (HMAC family) encode/decode + claim validation
+from je_auto_control.utils.jwt import (
+    ClaimsPolicy, ExpiredTokenError, InvalidSignatureError, JwtError,
+    decode_jwt, encode_jwt,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -791,6 +796,8 @@ __all__ = [
     "vex_statement",
     "DEFAULT_COPYLEFT", "evaluate_license", "evaluate_sbom",
     "license_findings_to_sarif", "normalize_spdx",
+    "ClaimsPolicy", "ExpiredTokenError", "InvalidSignatureError", "JwtError",
+    "decode_jwt", "encode_jwt",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

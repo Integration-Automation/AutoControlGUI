@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — JSON Web Token(JWT)](#本次更新-2026-06-21--json-web-tokenjwt)
 - [本次更新 (2026-06-21) — 许可证策略闸门](#本次更新-2026-06-21--许可证策略闸门)
 - [本次更新 (2026-06-21) — OpenVEX 漏洞分级](#本次更新-2026-06-21--openvex-漏洞分级)
 - [本次更新 (2026-06-21) — 依赖项漏洞扫描(OSV)](#本次更新-2026-06-21--依赖项漏洞扫描osv)
@@ -111,6 +112,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — JSON Web Token(JWT)
+
+为你自动化的 API 签发与验证 bearer token。完整参考:[`docs/source/Zh/doc/new_features/v61_features_doc.rst`](../docs/source/Zh/doc/new_features/v61_features_doc.rst)。
+
+- **`encode_jwt` / `decode_jwt` / `ClaimsPolicy`**(`AC_jwt_encode`、`AC_jwt_decode`):框架过去有 HMAC *文件*签名与绑定 ACME 的 RS256 JWS,却没有可签发/验证精简 bearer JWT 的工具。本功能补上纯标准库的 HS256/384/512 编解码器,含完整声明验证(`exp`/`nbf`/`aud`/`iss`、可注入时钟),可直接接上 `http_request` 的 bearer 验证。默认即安全:拒绝 `alg:none`、强制算法允许列表(防混淆),并以 `hmac.compare_digest` 比对签名。`AC_jwt_decode` 返回 `{ok, claims}`,让流程不必抛异常即可分支。
 
 ## 本次更新 (2026-06-21) — 许可证策略闸门
 

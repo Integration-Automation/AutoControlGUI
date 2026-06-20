@@ -3297,6 +3297,35 @@ def license_policy_tools() -> List[MCPTool]:
     ]
 
 
+def jwt_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_jwt_encode",
+            description=("Sign a compact JWT from 'claims' with 'key' (HMAC "
+                         "alg HS256/384/512). Returns {token}."),
+            input_schema=schema(
+                {"claims": {"type": "object"}, "key": {"type": "string"},
+                 "alg": {"type": "string"}},
+                ["claims", "key"]),
+            handler=h.jwt_encode,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_jwt_decode",
+            description=("Verify a JWT 'token' with 'key' and an 'algorithms' "
+                         "allowlist (rejects alg=none/confusion), checking exp/"
+                         "nbf/aud. Returns {ok, claims} or {ok:false, error}."),
+            input_schema=schema(
+                {"token": {"type": "string"}, "key": {"type": "string"},
+                 "algorithms": {"type": "array"},
+                 "audience": {"type": "string"}},
+                ["token", "key"]),
+            handler=h.jwt_decode,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def saga_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4492,7 +4521,7 @@ ALL_FACTORIES = (
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
     jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools,
-    license_policy_tools, saga_tools,
+    license_policy_tools, jwt_tools, saga_tools,
     decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

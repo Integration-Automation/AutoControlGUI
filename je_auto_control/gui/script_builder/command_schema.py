@@ -1193,6 +1193,29 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Evaluate SBOM licenses against allow/deny SPDX lists.",
     ))
     specs.append(CommandSpec(
+        "AC_jwt_encode", "Security", "JWT: Sign Token",
+        fields=(
+            FieldSpec("claims", FieldType.STRING,
+                      placeholder='{"sub": "user1", "exp": 1893456000}'),
+            FieldSpec("key", FieldType.STRING, placeholder="shared secret"),
+            FieldSpec("alg", FieldType.STRING, optional=True,
+                      placeholder="HS256",
+                      choices=("HS256", "HS384", "HS512")),
+        ),
+        description="Sign a compact JWT (HMAC) from claims; returns {token}.",
+    ))
+    specs.append(CommandSpec(
+        "AC_jwt_decode", "Security", "JWT: Verify Token",
+        fields=(
+            FieldSpec("token", FieldType.STRING, placeholder="eyJhbGci..."),
+            FieldSpec("key", FieldType.STRING, placeholder="shared secret"),
+            FieldSpec("algorithms", FieldType.STRING, optional=True,
+                      placeholder='["HS256"]'),
+            FieldSpec("audience", FieldType.STRING, optional=True),
+        ),
+        description="Verify a JWT (alg allowlist + exp/nbf/aud); returns {ok, claims}.",
+    ))
+    specs.append(CommandSpec(
         "AC_run_saga", "Flow", "Run Saga (Compensating Rollback)",
         fields=(
             FieldSpec("steps", FieldType.STRING,

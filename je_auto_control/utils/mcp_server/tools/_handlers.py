@@ -1583,6 +1583,22 @@ def check_licenses(components, allow=None, deny=None):
     return {"violations": violations, "count": len(violations)}
 
 
+def jwt_encode(claims, key, alg="HS256"):
+    from je_auto_control.utils.jwt import encode_jwt
+    return {"token": encode_jwt(claims, key, alg=alg)}
+
+
+def jwt_decode(token, key, algorithms=None, audience=None, leeway=0.0):
+    from je_auto_control.utils.jwt import ClaimsPolicy, JwtError, decode_jwt
+    policy = ClaimsPolicy(algorithms=tuple(algorithms) if algorithms
+                          else ("HS256",), audience=audience, leeway=leeway)
+    try:
+        claims = decode_jwt(token, key, policy)
+    except JwtError as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "claims": claims}
+
+
 def run_saga(steps):
     from je_auto_control.utils.saga import run_saga as _run
     result = _run(steps)

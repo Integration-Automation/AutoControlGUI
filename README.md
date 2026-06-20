@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — JSON Web Tokens (JWT)](#whats-new-2026-06-21--json-web-tokens-jwt)
 - [What's new (2026-06-21) — License Policy Gate](#whats-new-2026-06-21--license-policy-gate)
 - [What's new (2026-06-21) — OpenVEX Vulnerability Triage](#whats-new-2026-06-21--openvex-vulnerability-triage)
 - [What's new (2026-06-21) — Dependency Vulnerability Scanning (OSV)](#whats-new-2026-06-21--dependency-vulnerability-scanning-osv)
@@ -112,6 +113,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — JSON Web Tokens (JWT)
+
+Mint and verify bearer tokens for the APIs you automate. Full reference: [`docs/source/Eng/doc/new_features/v61_features_doc.rst`](docs/source/Eng/doc/new_features/v61_features_doc.rst).
+
+- **`encode_jwt` / `decode_jwt` / `ClaimsPolicy`** (`AC_jwt_encode`, `AC_jwt_decode`): the framework had HMAC *file* signing and an ACME-bound RS256 JWS, but nothing to mint/verify a compact bearer JWT. This adds a pure-stdlib HS256/384/512 codec with full claim validation (`exp`/`nbf`/`aud`/`iss`, injectable clock) that drops straight into `http_request`'s bearer auth. Safe by default: rejects `alg:none`, enforces an algorithm allowlist (anti-confusion), and compares signatures with `hmac.compare_digest`. `AC_jwt_decode` returns `{ok, claims}` so flows can branch without raising.
 
 ## What's new (2026-06-21) — License Policy Gate
 
