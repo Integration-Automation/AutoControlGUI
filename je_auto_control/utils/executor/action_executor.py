@@ -3249,26 +3249,22 @@ def _set_asset(name: str, value: Any, type: str = "text",
                environment: str = "default",
                db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: store a typed, environment-scoped asset."""
-    from je_auto_control.utils.assets import AssetStore
-    AssetStore(db).set(name, value, type=type, environment=environment)
-    return {"ok": True, "name": name, "environment": environment}
+    from je_auto_control.utils.assets.assets import store_set
+    return store_set(name, value, type=type, environment=environment, db=db)
 
 
 def _get_asset(name: str, environment: str = "default",
                db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: read a typed asset (credential stays a reference)."""
-    from je_auto_control.utils.assets import AssetStore
-    asset = AssetStore(db).get(name, environment=environment)
-    return {"name": asset.name, "type": asset.type, "value": asset.value}
+    from je_auto_control.utils.assets.assets import store_get
+    return store_get(name, environment=environment, db=db)
 
 
 def _list_assets(environment: Optional[str] = None,
                  db: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: list assets, optionally restricted to one environment."""
-    from je_auto_control.utils.assets import AssetStore
-    assets = AssetStore(db).list(environment=environment)
-    return {"assets": [{"name": a.name, "type": a.type,
-                        "environment": a.environment} for a in assets]}
+    from je_auto_control.utils.assets.assets import store_list
+    return store_list(environment=environment, db=db)
 
 
 class Executor:

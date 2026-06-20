@@ -135,3 +135,26 @@ class AssetStore:
             for env in envs
             for name, rec in self._data.get(env, {}).items()
         ]
+
+
+def store_set(name: str, value: Any, *, type: str = TYPE_TEXT,
+              environment: str = DEFAULT_ENV,
+              db: Optional[str] = None) -> Dict[str, Any]:
+    """Set an asset and return a result dict (shared by executor/MCP layers)."""
+    AssetStore(db).set(name, value, type=type, environment=environment)
+    return {"ok": True, "name": name, "environment": environment}
+
+
+def store_get(name: str, *, environment: str = DEFAULT_ENV,
+              db: Optional[str] = None) -> Dict[str, Any]:
+    """Get an asset as a result dict (credential value stays a reference)."""
+    asset = AssetStore(db).get(name, environment=environment)
+    return {"name": asset.name, "type": asset.type, "value": asset.value}
+
+
+def store_list(*, environment: Optional[str] = None,
+               db: Optional[str] = None) -> Dict[str, Any]:
+    """List assets as a result dict of ``{name, type, environment}`` (no values)."""
+    assets = AssetStore(db).list(environment=environment)
+    return {"assets": [{"name": a.name, "type": a.type,
+                        "environment": a.environment} for a in assets]}

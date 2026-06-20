@@ -31,15 +31,15 @@ def test_environment_override_and_fallback():
 
 def test_credential_get_returns_reference_not_secret():
     store = AssetStore()
-    store.set("db_pw", "vault_db_password", type="credential")
+    store.set("db_pw", "vault_db_ref", type="credential")
     asset = store.get("db_pw")
     assert asset.type == "credential"
-    assert asset.value == "vault_db_password"     # the reference, not a secret
+    assert asset.value == "vault_db_ref"     # the reference, not a secret
 
 
 def test_credential_resolve_uses_injected_resolver():
-    store = AssetStore(secret_resolver={"vault_db_password": "s3cr3t"}.get)
-    store.set("db_pw", "vault_db_password", type="credential")
+    store = AssetStore(secret_resolver={"vault_db_ref": "s3cr3t"}.get)
+    store.set("db_pw", "vault_db_ref", type="credential")
     assert store.resolve("db_pw") == "s3cr3t"
     store.set("plain", "visible", type="text")
     assert store.resolve("plain") == "visible"    # non-credential returns value
