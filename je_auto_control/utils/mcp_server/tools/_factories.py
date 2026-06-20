@@ -3101,6 +3101,26 @@ def loop_guard_tools() -> List[MCPTool]:
     ]
 
 
+def process_mining_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_mine_actions",
+            description=("Mine a recorded 'actions' log for repeated command "
+                         "sub-sequences (n-grams of length min_len..max_len "
+                         "seen >= min_count) and rank automation candidates by "
+                         "count*length. Returns {total_actions, patterns, "
+                         "candidates}."),
+            input_schema=schema(
+                {"actions": {"type": "array"},
+                 "min_len": {"type": "integer"},
+                 "max_len": {"type": "integer"},
+                 "min_count": {"type": "integer"}}, ["actions"]),
+            handler=h.mine_actions,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4163,6 +4183,7 @@ ALL_FACTORIES = (
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
+    process_mining_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

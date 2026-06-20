@@ -259,6 +259,11 @@ from je_auto_control.utils.coordinate_space import (
 from je_auto_control.utils.loop_guard import (
     LoopGuard, LoopVerdict, default_loop_guard, digest_result,
 )
+# Task/process mining: automation-candidate discovery from action logs
+from je_auto_control.utils.process_mining import (
+    Candidate, MiningReport, SequencePattern, directly_follows,
+    find_repeated_sequences, mine_action_log, rank_automation_candidates,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -715,6 +720,9 @@ __all__ = [
     "VoiceCommand", "VoiceRouter", "default_voice_router",
     "CoordinateSpace", "downscale_png", "normalized_space", "xga_space",
     "LoopGuard", "LoopVerdict", "default_loop_guard", "digest_result",
+    "Candidate", "MiningReport", "SequencePattern", "directly_follows",
+    "find_repeated_sequences", "mine_action_log",
+    "rank_automation_candidates",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-20) — 任务 / 流程挖掘(自动化候选发现)](#本次更新-2026-06-20--任务--流程挖掘自动化候选发现)
 - [本次更新 (2026-06-20) — 卡循环守卫(Agent Loop 进度检测)](#本次更新-2026-06-20--卡循环守卫agent-loop-进度检测)
 - [本次更新 (2026-06-20) — 坐标空间映射(模型网格 ⇄ 物理像素)](#本次更新-2026-06-20--坐标空间映射模型网格--物理像素)
 - [本次更新 (2026-06-20) — 语音指令路由器](#本次更新-2026-06-20--语音指令路由器)
@@ -97,6 +98,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-20) — 任务 / 流程挖掘(自动化候选发现)
+
+从录制的动作日志发现该自动化什么。完整参考:[`docs/source/Zh/doc/new_features/v47_features_doc.rst`](../docs/source/Zh/doc/new_features/v47_features_doc.rst)。
+
+- **`mine_action_log` / `find_repeated_sequences` / `directly_follows` / `rank_automation_candidates`**(`AC_mine_actions`、`ac_mine_actions`):挖掘录制的动作日志中频繁、可重复的指令 n-gram,建立 directly-follows 图,并依 `count × length` 为自动化候选排名 —— 这是 AutoControl 一直在录数据却从未分析的 RPA「任务挖掘」支柱。纯标准库;作用于既有动作列表结构;一个经常重现且横跨多步的候选,是「抽成 skill」的强烈信号。
 
 ## 本次更新 (2026-06-20) — 卡循环守卫(Agent Loop 进度检测)
 

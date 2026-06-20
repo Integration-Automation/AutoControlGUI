@@ -3229,6 +3229,22 @@ def _loop_guard_reset() -> Dict[str, Any]:
     return {"reset": True}
 
 
+def _mine_actions(actions: Any, min_len: int = 2, max_len: int = 5,
+                  min_count: int = 3) -> Dict[str, Any]:
+    """Adapter: mine an action log for repeated, automatable sequences."""
+    from je_auto_control.utils.process_mining import mine_action_log
+    report = mine_action_log(_coerce_list(actions), min_len=min_len,
+                             max_len=max_len, min_count=min_count)
+    return {
+        "total_actions": report.total_actions,
+        "patterns": [{"actions": list(p.actions), "count": p.count}
+                     for p in report.patterns],
+        "candidates": [{"actions": list(c.pattern.actions),
+                        "count": c.pattern.count, "score": c.score}
+                       for c in report.candidates],
+    }
+
+
 class Executor:
     """
     Executor
@@ -3503,6 +3519,7 @@ class Executor:
             "AC_to_model": _to_model,
             "AC_loop_guard_observe": _loop_guard_observe,
             "AC_loop_guard_reset": _loop_guard_reset,
+            "AC_mine_actions": _mine_actions,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

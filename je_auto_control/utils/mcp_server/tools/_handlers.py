@@ -1498,6 +1498,20 @@ def loop_guard_reset():
     return {"reset": True}
 
 
+def mine_actions(actions, min_len=2, max_len=5, min_count=3):
+    from je_auto_control.utils.process_mining import mine_action_log
+    report = mine_action_log(actions, min_len=min_len, max_len=max_len,
+                             min_count=min_count)
+    return {
+        "total_actions": report.total_actions,
+        "patterns": [{"actions": list(p.actions), "count": p.count}
+                     for p in report.patterns],
+        "candidates": [{"actions": list(c.pattern.actions),
+                        "count": c.pattern.count, "score": c.score}
+                       for c in report.candidates],
+    }
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

@@ -1057,6 +1057,17 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Clear the default loop guard's history.",
     ))
     specs.append(CommandSpec(
+        "AC_mine_actions", "Report", "Mine Action Log",
+        fields=(
+            FieldSpec("actions", FieldType.STRING,
+                      placeholder='[["AC_click_mouse", {}], ...]'),
+            FieldSpec("min_len", FieldType.INT, optional=True, default=2),
+            FieldSpec("max_len", FieldType.INT, optional=True, default=5),
+            FieldSpec("min_count", FieldType.INT, optional=True, default=3),
+        ),
+        description="Find repeated sequences + rank automation candidates.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,
