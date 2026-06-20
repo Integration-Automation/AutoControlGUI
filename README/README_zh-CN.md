@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-20) — 自我修复定位器回写](#本次更新-2026-06-20--自我修复定位器回写)
 - [本次更新 (2026-06-20) — DMN 式决策表](#本次更新-2026-06-20--dmn-式决策表)
 - [本次更新 (2026-06-20) — Saga / 补偿回滚](#本次更新-2026-06-20--saga--补偿回滚)
 - [本次更新 (2026-06-20) — JSONPath 查询](#本次更新-2026-06-20--jsonpath-查询)
@@ -104,6 +105,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-20) — 自我修复定位器回写
+
+保存修正定位器,使修复不被遗忘。完整参考:[`docs/source/Zh/doc/new_features/v54_features_doc.rst`](../docs/source/Zh/doc/new_features/v54_features_doc.rst)。
+
+- **`RepairStore` / `repair_from_heal`**(`AC_repair_record` / `AC_repair_resolved` / `AC_repair_pending` / `AC_repair_approve`、`ac_*`):运行期自我修复过去会**丢弃**修正后的位置,因此每次都重新修复。本功能记录该次修复的修正定位器(坐标/VLM 描述/方法),在 `confidence >= auto_threshold`(默认 0.9)时**自动套用**或排入可审查建议,`resolved(key)` 返回已学到的修正供重用。封闭「修复→持久修正」循环;纯标准库、可完整测试。
 
 ## 本次更新 (2026-06-20) — DMN 式决策表
 

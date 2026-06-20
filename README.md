@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — Self-Healing Locator Write-Back](#whats-new-2026-06-20--self-healing-locator-write-back)
 - [What's new (2026-06-20) — DMN-Style Decision Tables](#whats-new-2026-06-20--dmn-style-decision-tables)
 - [What's new (2026-06-20) — Saga / Compensating Rollback](#whats-new-2026-06-20--saga--compensating-rollback)
 - [What's new (2026-06-20) — JSONPath Querying](#whats-new-2026-06-20--jsonpath-querying)
@@ -105,6 +106,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — Self-Healing Locator Write-Back
+
+Persist corrected locators so heals aren't forgotten. Full reference: [`docs/source/Eng/doc/new_features/v54_features_doc.rst`](docs/source/Eng/doc/new_features/v54_features_doc.rst).
+
+- **`RepairStore` / `repair_from_heal`** (`AC_repair_record` / `AC_repair_resolved` / `AC_repair_pending` / `AC_repair_approve`, `ac_*`): runtime self-healing previously **threw away** the corrected location, so every run re-healed. This records the corrected locator (coords/VLM description/method) from a heal, **auto-applies** it when `confidence >= auto_threshold` (default 0.9) or queues a reviewable suggestion, and `resolved(key)` returns the learned fix for reuse. Closes the heal→durable-fix loop; pure-stdlib, fully testable.
 
 ## What's new (2026-06-20) — DMN-Style Decision Tables
 

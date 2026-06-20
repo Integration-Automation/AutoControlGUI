@@ -3339,6 +3339,40 @@ def _decision_table(spec: Any, context: Any) -> Dict[str, Any]:
     return {"result": evaluate_table(spec, context)}
 
 
+def _repair_record(key: str, method: str, coordinates: Any = None,
+                   description: Optional[str] = None, confidence: float = 1.0,
+                   auto_threshold: float = 0.9,
+                   db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: record a corrected locator from a heal (auto-apply or queue)."""
+    import json
+    from je_auto_control.utils.locator_repair import RepairStore
+    if isinstance(coordinates, str):
+        coordinates = json.loads(coordinates)
+    sug = RepairStore(db).record(
+        key, method=method, coordinates=coordinates, description=description,
+        confidence=confidence, auto_threshold=auto_threshold)
+    return {"id": sug.id, "status": sug.status}
+
+
+def _repair_resolved(key: str, db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: return the learned corrected locator for a key (or null)."""
+    from je_auto_control.utils.locator_repair import RepairStore
+    return {"locator": RepairStore(db).resolved(key)}
+
+
+def _repair_pending(db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: list locator-repair suggestions awaiting review."""
+    from je_auto_control.utils.locator_repair import RepairStore
+    return {"pending": RepairStore(db).pending()}
+
+
+def _repair_approve(suggestion_id: str,
+                    db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: approve a pending locator-repair suggestion."""
+    from je_auto_control.utils.locator_repair import RepairStore
+    return {"approved": RepairStore(db).approve(suggestion_id)}
+
+
 class Executor:
     """
     Executor
@@ -3623,6 +3657,10 @@ class Executor:
             "AC_json_extract": _json_extract,
             "AC_run_saga": _run_saga,
             "AC_decision_table": _decision_table,
+            "AC_repair_record": _repair_record,
+            "AC_repair_resolved": _repair_resolved,
+            "AC_repair_pending": _repair_pending,
+            "AC_repair_approve": _repair_approve,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
