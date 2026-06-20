@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — 授權政策閘門](#本次更新-2026-06-21--授權政策閘門)
 - [本次更新 (2026-06-21) — OpenVEX 漏洞分級](#本次更新-2026-06-21--openvex-漏洞分級)
 - [本次更新 (2026-06-21) — 相依套件漏洞掃描(OSV)](#本次更新-2026-06-21--相依套件漏洞掃描osv)
 - [本次更新 (2026-06-21) — JSON Schema 驗證](#本次更新-2026-06-21--json-schema-驗證)
@@ -110,6 +111,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — 授權政策閘門
+
+標記不被允許的相依套件授權。完整參考:[`docs/source/Zh/doc/new_features/v60_features_doc.rst`](../docs/source/Zh/doc/new_features/v60_features_doc.rst)。
+
+- **`evaluate_sbom` / `evaluate_license` / `normalize_spdx` / `license_findings_to_sarif`**(`AC_check_licenses`、`ac_check_licenses`):SBOM 記錄了每個相依套件的授權名稱卻從未*判斷*它。本功能把授權字串正規化為 SPDX id,以允許清單/拒絕清單(內建 `DEFAULT_COPYLEFT` 集合)評估,理解 SPDX 運算式(`OR` = 擇一、`AND` = 全部),再把違規橋接到 SARIF(`denied`→error、`unknown`→warning)。純標準函式庫、完全離線 —— 與 OSV 漏洞通道並列的授權合規通道。
 
 ## 本次更新 (2026-06-21) — OpenVEX 漏洞分級
 

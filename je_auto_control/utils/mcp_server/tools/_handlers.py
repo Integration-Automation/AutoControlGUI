@@ -1575,6 +1575,14 @@ def apply_vex(findings, vex):
     return {"findings": kept, "count": len(kept)}
 
 
+def check_licenses(components, allow=None, deny=None):
+    from je_auto_control.utils.license_policy import evaluate_sbom
+    if isinstance(components, dict):
+        components = components.get("components", [])
+    violations = evaluate_sbom(components, allow=allow, deny=deny)
+    return {"violations": violations, "count": len(violations)}
+
+
 def run_saga(steps):
     from je_auto_control.utils.saga import run_saga as _run
     result = _run(steps)

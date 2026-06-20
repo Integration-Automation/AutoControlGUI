@@ -3279,6 +3279,24 @@ def vex_tools() -> List[MCPTool]:
     ]
 
 
+def license_policy_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_check_licenses",
+            description=("Evaluate SBOM 'components' (or a full SBOM dict) "
+                         "licenses against 'allow'/'deny' SPDX lists. Returns "
+                         "{violations:[{name, version, license, status}], "
+                         "count} where status is denied/unknown."),
+            input_schema=schema(
+                {"components": {"type": "object"},
+                 "allow": {"type": "array"}, "deny": {"type": "array"}},
+                ["components"]),
+            handler=h.check_licenses,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def saga_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4473,7 +4491,8 @@ ALL_FACTORIES = (
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
-    jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools, saga_tools,
+    jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools,
+    license_policy_tools, saga_tools,
     decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

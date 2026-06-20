@@ -2897,6 +2897,23 @@ def _apply_vex(findings: Any, vex: Any) -> Dict[str, Any]:
     return {"findings": kept, "count": len(kept)}
 
 
+def _check_licenses(components: Any, allow: Any = None,
+                    deny: Any = None) -> Dict[str, Any]:
+    """Adapter: evaluate SBOM component licenses against allow/deny lists."""
+    import json
+    from je_auto_control.utils.license_policy import evaluate_sbom
+    if isinstance(components, str):
+        components = json.loads(components)
+    if isinstance(components, dict):
+        components = components.get("components", [])
+    if isinstance(allow, str):
+        allow = json.loads(allow)
+    if isinstance(deny, str):
+        deny = json.loads(deny)
+    violations = evaluate_sbom(components, allow=allow, deny=deny)
+    return {"violations": violations, "count": len(violations)}
+
+
 def _generate_sop(actions: List[Any], title: str = "Automation Procedure",
                   path: Optional[str] = None) -> Dict[str, Any]:
     """Adapter: build (or write) a step-by-step SOP from an action list."""
@@ -3678,6 +3695,7 @@ class Executor:
             "AC_scan_secrets": _scan_secrets,
             "AC_scan_vulns": _scan_vulns,
             "AC_apply_vex": _apply_vex,
+            "AC_check_licenses": _check_licenses,
             "AC_generate_sop": _generate_sop,
             "AC_tween_drag": _tween_drag,
             "AC_list_plugins": _list_plugins,
