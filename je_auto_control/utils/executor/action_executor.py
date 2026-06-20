@@ -3268,6 +3268,25 @@ def _list_assets(environment: Optional[str] = None,
     return store_list(environment=environment, db=db)
 
 
+def _emit_event(event_type: str, data: Any = None,
+                source: str = "je_auto_control",
+                subject: Optional[str] = None,
+                url: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: build a CloudEvent; optionally POST it (egress-guarded)."""
+    from je_auto_control.utils.events import post_cloudevent, to_cloudevent
+    if isinstance(data, str):
+        import json
+        try:
+            data = json.loads(data)
+        except ValueError:
+            pass
+    event = to_cloudevent(event_type, source, data, subject=subject)
+    result: Dict[str, Any] = {"event": event}
+    if url:
+        result["status"] = post_cloudevent(url, event)
+    return result
+
+
 class Executor:
     """
     Executor
@@ -3546,6 +3565,7 @@ class Executor:
             "AC_set_asset": _set_asset,
             "AC_get_asset": _get_asset,
             "AC_list_assets": _list_assets,
+            "AC_emit_event": _emit_event,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

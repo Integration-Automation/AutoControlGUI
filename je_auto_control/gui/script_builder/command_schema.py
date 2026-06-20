@@ -1100,6 +1100,21 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="List assets (name/type/environment, no values).",
     ))
     specs.append(CommandSpec(
+        "AC_emit_event", "Tools", "Emit CloudEvent",
+        fields=(
+            FieldSpec("event_type", FieldType.STRING,
+                      placeholder="com.example.run.finished"),
+            FieldSpec("data", FieldType.STRING, optional=True,
+                      placeholder='{"run_id": "42"}'),
+            FieldSpec("source", FieldType.STRING, optional=True,
+                      default="je_auto_control"),
+            FieldSpec("subject", FieldType.STRING, optional=True),
+            FieldSpec("url", FieldType.STRING, optional=True,
+                      placeholder="https://hooks.example.com/ce"),
+        ),
+        description="Wrap data in a CloudEvents envelope; optionally POST it.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

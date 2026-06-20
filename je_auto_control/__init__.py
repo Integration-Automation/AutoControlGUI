@@ -268,6 +268,10 @@ from je_auto_control.utils.process_mining import (
 from je_auto_control.utils.assets import (
     Asset, AssetStore, AssetValue, active_environment,
 )
+# Outbound CloudEvents emitter
+from je_auto_control.utils.events import (
+    EventEmitter, post_cloudevent, to_cloudevent,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -728,6 +732,7 @@ __all__ = [
     "find_repeated_sequences", "mine_action_log",
     "rank_automation_candidates",
     "Asset", "AssetStore", "AssetValue", "active_environment",
+    "EventEmitter", "post_cloudevent", "to_cloudevent",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

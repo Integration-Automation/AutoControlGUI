@@ -3161,6 +3161,25 @@ def asset_tools() -> List[MCPTool]:
     ]
 
 
+def events_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_emit_event",
+            description=("Wrap 'data' in a CloudEvents 1.0 envelope "
+                         "('event_type', 'source', optional 'subject') and "
+                         "optionally POST it to 'url' over the egress-guarded "
+                         "HTTP client. Returns {event, status?}."),
+            input_schema=schema(
+                {"event_type": {"type": "string"}, "data": {},
+                 "source": {"type": "string"},
+                 "subject": {"type": "string"}, "url": {"type": "string"}},
+                ["event_type"]),
+            handler=h.emit_event,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4223,7 +4242,7 @@ ALL_FACTORIES = (
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
-    process_mining_tools, asset_tools,
+    process_mining_tools, asset_tools, events_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
