@@ -272,6 +272,10 @@ from je_auto_control.utils.assets import (
 from je_auto_control.utils.events import (
     EventEmitter, post_cloudevent, to_cloudevent,
 )
+# Outbound chat/webhook notifications (Slack/Discord/Teams/raw)
+from je_auto_control.utils.notify_channels import (
+    WebhookChannel, WebhookResult, notify_webhook, set_default_poster,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -733,6 +737,7 @@ __all__ = [
     "rank_automation_candidates",
     "Asset", "AssetStore", "AssetValue", "active_environment",
     "EventEmitter", "post_cloudevent", "to_cloudevent",
+    "WebhookChannel", "WebhookResult", "notify_webhook", "set_default_poster",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

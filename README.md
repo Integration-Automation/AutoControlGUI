@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — Multi-Channel Webhook Notifications](#whats-new-2026-06-20--multi-channel-webhook-notifications)
 - [What's new (2026-06-20) — Outbound CloudEvents Emitter](#whats-new-2026-06-20--outbound-cloudevents-emitter)
 - [What's new (2026-06-20) — Environment-Scoped Typed Asset Store](#whats-new-2026-06-20--environment-scoped-typed-asset-store)
 - [What's new (2026-06-20) — Task / Process Mining (Automation-Candidate Discovery)](#whats-new-2026-06-20--task--process-mining-automation-candidate-discovery)
@@ -101,6 +102,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — Multi-Channel Webhook Notifications
+
+Alert Teams/Discord/Slack/webhook. Full reference: [`docs/source/Eng/doc/new_features/v50_features_doc.rst`](docs/source/Eng/doc/new_features/v50_features_doc.rst).
+
+- **`notify_webhook` / `WebhookChannel`** (`AC_notify_webhook`, `ac_notify_webhook`): `notify` was desktop-toast only and ChatOps shipped Slack only — this sends to **Slack / Discord / Microsoft Teams / raw** webhooks, building the transport-shaped payload (Slack & Teams MessageCard use `text`, Discord uses `content`) and POSTing via the egress-guarded HTTP client. The `poster` transport is injectable (or `set_default_poster`), so sending is unit-tested with no network.
 
 ## What's new (2026-06-20) — Outbound CloudEvents Emitter
 

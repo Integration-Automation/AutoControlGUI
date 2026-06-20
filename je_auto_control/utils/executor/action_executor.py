@@ -3287,6 +3287,15 @@ def _emit_event(event_type: str, data: Any = None,
     return result
 
 
+def _notify_webhook(url: str, text: str, transport: str = "raw",
+                    title: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: send a chat/webhook notification (slack/discord/teams/raw)."""
+    from je_auto_control.utils.notify_channels import notify_webhook
+    outcome = notify_webhook(url, text, transport=transport, title=title)
+    return {"ok": outcome.ok, "status": outcome.status,
+            "transport": outcome.transport}
+
+
 class Executor:
     """
     Executor
@@ -3566,6 +3575,7 @@ class Executor:
             "AC_get_asset": _get_asset,
             "AC_list_assets": _list_assets,
             "AC_emit_event": _emit_event,
+            "AC_notify_webhook": _notify_webhook,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

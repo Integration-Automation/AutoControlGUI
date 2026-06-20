@@ -1115,6 +1115,19 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Wrap data in a CloudEvents envelope; optionally POST it.",
     ))
     specs.append(CommandSpec(
+        "AC_notify_webhook", "Tools", "Notify: Webhook/Chat",
+        fields=(
+            FieldSpec("url", FieldType.STRING,
+                      placeholder="https://hooks.example.com/..."),
+            FieldSpec("text", FieldType.STRING),
+            FieldSpec("transport", FieldType.ENUM, optional=True,
+                      default="raw",
+                      choices=("raw", "slack", "discord", "teams")),
+            FieldSpec("title", FieldType.STRING, optional=True),
+        ),
+        description="Send a Slack/Discord/Teams/raw webhook notification.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

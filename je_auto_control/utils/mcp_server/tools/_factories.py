@@ -3180,6 +3180,26 @@ def events_tools() -> List[MCPTool]:
     ]
 
 
+def notify_channel_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_notify_webhook",
+            description=("Send a chat/webhook notification. 'transport' shapes "
+                         "the payload: slack/discord/teams/raw (Slack & Teams "
+                         "MessageCard use text, Discord uses content). POSTs via "
+                         "the egress-guarded HTTP client. Returns {ok, status, "
+                         "transport}."),
+            input_schema=schema(
+                {"url": {"type": "string"}, "text": {"type": "string"},
+                 "transport": {"type": "string",
+                               "enum": ["raw", "slack", "discord", "teams"]},
+                 "title": {"type": "string"}}, ["url", "text"]),
+            handler=h.notify_webhook,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4242,7 +4262,7 @@ ALL_FACTORIES = (
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
-    process_mining_tools, asset_tools, events_tools,
+    process_mining_tools, asset_tools, events_tools, notify_channel_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,
