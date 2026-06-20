@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 许可证策略闸门](#本次更新-2026-06-21--许可证策略闸门)
 - [本次更新 (2026-06-21) — OpenVEX 漏洞分级](#本次更新-2026-06-21--openvex-漏洞分级)
 - [本次更新 (2026-06-21) — 依赖项漏洞扫描(OSV)](#本次更新-2026-06-21--依赖项漏洞扫描osv)
 - [本次更新 (2026-06-21) — JSON Schema 验证](#本次更新-2026-06-21--json-schema-验证)
@@ -110,6 +111,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 许可证策略闸门
+
+标记不被允许的依赖项许可证。完整参考:[`docs/source/Zh/doc/new_features/v60_features_doc.rst`](../docs/source/Zh/doc/new_features/v60_features_doc.rst)。
+
+- **`evaluate_sbom` / `evaluate_license` / `normalize_spdx` / `license_findings_to_sarif`**(`AC_check_licenses`、`ac_check_licenses`):SBOM 记录了每个依赖项的许可证名称却从未*判断*它。本功能把许可证字符串规范化为 SPDX id,以允许列表/拒绝列表(内建 `DEFAULT_COPYLEFT` 集合)评估,理解 SPDX 表达式(`OR` = 择一、`AND` = 全部),再把违规桥接到 SARIF(`denied`→error、`unknown`→warning)。纯标准库、完全离线 —— 与 OSV 漏洞通道并列的许可证合规通道。
 
 ## 本次更新 (2026-06-21) — OpenVEX 漏洞分级
 

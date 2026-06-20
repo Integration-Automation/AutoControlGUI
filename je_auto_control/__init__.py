@@ -310,6 +310,11 @@ from je_auto_control.utils.vuln_scan import (
 from je_auto_control.utils.vex import (
     VEX_JUSTIFICATIONS, VEX_STATUSES, apply_vex, build_vex, vex_statement,
 )
+# SPDX license allow/deny policy over SBOM components
+from je_auto_control.utils.license_policy import (
+    DEFAULT_COPYLEFT, evaluate_license, evaluate_sbom,
+    license_findings_to_sarif, normalize_spdx,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -784,6 +789,8 @@ __all__ = [
     "version_key",
     "VEX_JUSTIFICATIONS", "VEX_STATUSES", "apply_vex", "build_vex",
     "vex_statement",
+    "DEFAULT_COPYLEFT", "evaluate_license", "evaluate_sbom",
+    "license_findings_to_sarif", "normalize_spdx",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

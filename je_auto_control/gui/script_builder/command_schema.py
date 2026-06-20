@@ -1180,6 +1180,19 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Suppress not_affected/fixed vulns via an OpenVEX document.",
     ))
     specs.append(CommandSpec(
+        "AC_check_licenses", "Security", "Check Dependency Licenses",
+        fields=(
+            FieldSpec("components", FieldType.STRING,
+                      placeholder='{"components": [{"name": "x", '
+                                  '"licenses": [{"license": {"name": "MIT"}}]}]}'),
+            FieldSpec("allow", FieldType.STRING, optional=True,
+                      placeholder='["MIT", "Apache-2.0", "BSD-3-Clause"]'),
+            FieldSpec("deny", FieldType.STRING, optional=True,
+                      placeholder='["GPL-3.0-only", "AGPL-3.0-only"]'),
+        ),
+        description="Evaluate SBOM licenses against allow/deny SPDX lists.",
+    ))
+    specs.append(CommandSpec(
         "AC_run_saga", "Flow", "Run Saga (Compensating Rollback)",
         fields=(
             FieldSpec("steps", FieldType.STRING,
