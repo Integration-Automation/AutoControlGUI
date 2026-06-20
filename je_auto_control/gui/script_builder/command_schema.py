@@ -947,6 +947,54 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Collapse near-duplicate images by perceptual hash.",
     ))
     specs.append(CommandSpec(
+        "AC_parse_decimal", "Data", "Locale: Parse Decimal",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="1.234,56"),
+            FieldSpec("locale", FieldType.STRING, optional=True,
+                      default="en_US"),
+        ),
+        description="Parse a locale-formatted decimal string to a float.",
+    ))
+    specs.append(CommandSpec(
+        "AC_parse_number", "Data", "Locale: Parse Number",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="1,234"),
+            FieldSpec("locale", FieldType.STRING, optional=True,
+                      default="en_US"),
+        ),
+        description="Parse a locale-formatted integer string to an int.",
+    ))
+    specs.append(CommandSpec(
+        "AC_format_decimal", "Data", "Locale: Format Decimal",
+        fields=(
+            FieldSpec("value", FieldType.FLOAT),
+            FieldSpec("locale", FieldType.STRING, optional=True,
+                      default="en_US"),
+        ),
+        description="Format a number for a locale.",
+    ))
+    specs.append(CommandSpec(
+        "AC_format_currency", "Data", "Locale: Format Currency",
+        fields=(
+            FieldSpec("value", FieldType.FLOAT),
+            FieldSpec("currency", FieldType.STRING, placeholder="USD"),
+            FieldSpec("locale", FieldType.STRING, optional=True,
+                      default="en_US"),
+        ),
+        description="Format a value as currency (ISO 4217) for a locale.",
+    ))
+    specs.append(CommandSpec(
+        "AC_format_date", "Data", "Locale: Format Date",
+        fields=(
+            FieldSpec("value", FieldType.STRING, placeholder="2026-06-20"),
+            FieldSpec("locale", FieldType.STRING, optional=True,
+                      default="en_US"),
+            FieldSpec("fmt", FieldType.ENUM, optional=True, default="medium",
+                      choices=("short", "medium", "long", "full")),
+        ),
+        description="Format an ISO date string for a locale.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

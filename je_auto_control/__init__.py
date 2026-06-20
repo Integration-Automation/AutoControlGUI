@@ -243,6 +243,10 @@ from je_auto_control.utils.artifact_store import (
 from je_auto_control.utils.image_dedup import (
     average_hash, dedupe_images, dhash, hamming_distance, images_similar,
 )
+# Locale-aware number/currency/date parsing & formatting (optional babel)
+from je_auto_control.utils.locale_parse import (
+    format_currency, format_date, format_decimal, parse_decimal, parse_number,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -694,6 +698,8 @@ __all__ = [
     "set_default_store",
     "average_hash", "dedupe_images", "dhash", "hamming_distance",
     "images_similar",
+    "format_currency", "format_date", "format_decimal", "parse_decimal",
+    "parse_number",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

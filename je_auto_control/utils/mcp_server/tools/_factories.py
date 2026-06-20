@@ -2955,6 +2955,59 @@ def image_dedup_tools() -> List[MCPTool]:
     ]
 
 
+def locale_tools() -> List[MCPTool]:
+    _LOC = {"type": "string"}
+    return [
+        MCPTool(
+            name="ac_parse_decimal",
+            description=("Parse a locale-formatted decimal string (e.g. "
+                         "'1.234,56' in de_DE) to a float. Returns {value}."),
+            input_schema=schema(
+                {"text": {"type": "string"}, "locale": _LOC}, ["text"]),
+            handler=h.parse_decimal,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_parse_number",
+            description=("Parse a locale-formatted integer string to an int. "
+                         "Returns {value}."),
+            input_schema=schema(
+                {"text": {"type": "string"}, "locale": _LOC}, ["text"]),
+            handler=h.parse_number,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_format_decimal",
+            description="Format a number the way a locale writes decimals. "
+                        "Returns {text}.",
+            input_schema=schema(
+                {"value": {"type": "number"}, "locale": _LOC}, ["value"]),
+            handler=h.format_decimal,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_format_currency",
+            description=("Format a value as a currency (ISO 4217) for a "
+                         "locale. Returns {text}."),
+            input_schema=schema(
+                {"value": {"type": "number"}, "currency": {"type": "string"},
+                 "locale": _LOC}, ["value", "currency"]),
+            handler=h.format_currency,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_format_date",
+            description=("Format an ISO (YYYY-MM-DD) date for a locale. 'fmt' "
+                         "is short/medium/long/full. Returns {text}."),
+            input_schema=schema(
+                {"value": {"type": "string"}, "locale": _LOC,
+                 "fmt": {"type": "string"}}, ["value"]),
+            handler=h.format_date,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4016,6 +4069,7 @@ ALL_FACTORIES = (
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
+    locale_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

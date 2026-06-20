@@ -3136,6 +3136,38 @@ def _dedupe_images(paths: Any, max_distance: int = 5) -> Dict[str, Any]:
                                     max_distance=max_distance)}
 
 
+def _parse_decimal(text: str, locale: str = "en_US") -> Dict[str, Any]:
+    """Adapter: parse a locale-formatted decimal string to a float."""
+    from je_auto_control.utils.locale_parse import parse_decimal
+    return {"value": parse_decimal(text, locale)}
+
+
+def _parse_number(text: str, locale: str = "en_US") -> Dict[str, Any]:
+    """Adapter: parse a locale-formatted integer string to an int."""
+    from je_auto_control.utils.locale_parse import parse_number
+    return {"value": parse_number(text, locale)}
+
+
+def _format_decimal(value: float, locale: str = "en_US") -> Dict[str, Any]:
+    """Adapter: format a number for a locale."""
+    from je_auto_control.utils.locale_parse import format_decimal
+    return {"text": format_decimal(value, locale)}
+
+
+def _format_currency(value: float, currency: str,
+                     locale: str = "en_US") -> Dict[str, Any]:
+    """Adapter: format a value as currency for a locale."""
+    from je_auto_control.utils.locale_parse import format_currency
+    return {"text": format_currency(value, currency, locale)}
+
+
+def _format_date(value: str, locale: str = "en_US",
+                 fmt: str = "medium") -> Dict[str, Any]:
+    """Adapter: format an ISO date string for a locale."""
+    from je_auto_control.utils.locale_parse import format_date
+    return {"text": format_date(value, locale, fmt)}
+
+
 class Executor:
     """
     Executor
@@ -3397,6 +3429,11 @@ class Executor:
             "AC_s3_delete": _s3_delete,
             "AC_image_hash": _image_hash,
             "AC_dedupe_images": _dedupe_images,
+            "AC_parse_decimal": _parse_decimal,
+            "AC_parse_number": _parse_number,
+            "AC_format_decimal": _format_decimal,
+            "AC_format_currency": _format_currency,
+            "AC_format_date": _format_date,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
