@@ -9,9 +9,9 @@ from je_auto_control.utils.assets.assets import ENV_VAR
 
 def test_typed_coercion():
     store = AssetStore()
-    store.set("retries", "3", type="int")
-    store.set("enabled", "yes", type="bool")
-    store.set("title", "Hi", type="text")
+    store.set("retries", "3", asset_type="int")
+    store.set("enabled", "yes", asset_type="bool")
+    store.set("title", "Hi", asset_type="text")
     assert store.get("retries").value == 3
     assert store.get("enabled").value is True
     assert store.get("title").value == "Hi"
@@ -31,7 +31,7 @@ def test_environment_override_and_fallback():
 
 def test_credential_get_returns_reference_not_secret():
     store = AssetStore()
-    store.set("db_pw", "vault_db_ref", type="credential")
+    store.set("db_pw", "vault_db_ref", asset_type="credential")
     asset = store.get("db_pw")
     assert asset.type == "credential"
     assert asset.value == "vault_db_ref"     # the reference, not a secret
@@ -39,15 +39,15 @@ def test_credential_get_returns_reference_not_secret():
 
 def test_credential_resolve_uses_injected_resolver():
     store = AssetStore(secret_resolver={"vault_db_ref": "s3cr3t"}.get)
-    store.set("db_pw", "vault_db_ref", type="credential")
+    store.set("db_pw", "vault_db_ref", asset_type="credential")
     assert store.resolve("db_pw") == "s3cr3t"
-    store.set("plain", "visible", type="text")
+    store.set("plain", "visible", asset_type="text")
     assert store.resolve("plain") == "visible"    # non-credential returns value
 
 
 def test_resolve_without_resolver_raises():
     store = AssetStore()
-    store.set("db_pw", "ref", type="credential")
+    store.set("db_pw", "ref", asset_type="credential")
     with pytest.raises(RuntimeError):
         store.resolve("db_pw")
 
@@ -64,7 +64,7 @@ def test_list_and_delete():
 
 def test_persists_across_instances(tmp_path):
     db = str(tmp_path / "assets.json")
-    AssetStore(db).set("token", "42", type="int", environment="prod")
+    AssetStore(db).set("token", "42", asset_type="int", environment="prod")
     assert AssetStore(db).get("token", environment="prod").value == 42
 
 
@@ -80,7 +80,7 @@ def test_active_environment(monkeypatch):
 def test_executor_round_trip(tmp_path):
     db = str(tmp_path / "a.json")
     ac.execute_action([["AC_set_asset",
-                        {"name": "n", "value": "5", "type": "int",
+                        {"name": "n", "value": "5", "asset_type": "int",
                          "environment": "prod", "db": db}]])
     rec = ac.execute_action([["AC_get_asset",
                               {"name": "n", "environment": "prod", "db": db}]])

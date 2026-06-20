@@ -20,9 +20,9 @@ Headless API
     from je_auto_control import AssetStore, active_environment
 
     store = AssetStore("assets.json")
-    store.set("max_retries", 3, type="int", environment="prod")
+    store.set("max_retries", 3, asset_type="int", environment="prod")
     store.set("api_base", "https://prod.example.com", environment="prod")
-    store.set("db_password", "vault_db_pw", type="credential")  # value = a ref
+    store.set("db_password", "vault_db_pw", asset_type="credential")  # value = a ref
 
     store.get("max_retries", environment="prod").value     # -> 3 (typed)
     store.get("api_base", environment="staging").value     # -> falls back to default

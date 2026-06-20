@@ -75,11 +75,11 @@ class AssetStore:
         if self._path is not None:
             write_json_dict(self._path, self._data)
 
-    def set(self, name: str, value: Any, *, type: str = TYPE_TEXT,
+    def set(self, name: str, value: Any, *, asset_type: str = TYPE_TEXT,
             environment: str = DEFAULT_ENV) -> None:
         """Store ``value`` for ``name`` under ``environment`` with a type tag."""
         self._data.setdefault(environment, {})[name] = {
-            "type": type, "value": value}
+            "type": asset_type, "value": value}
         self._flush()
 
     def _lookup(self, name: str, environment: str,
@@ -125,11 +125,12 @@ class AssetStore:
         ]
 
 
-def store_set(name: str, value: Any, *, type: str = TYPE_TEXT,
+def store_set(name: str, value: Any, *, asset_type: str = TYPE_TEXT,
               environment: str = DEFAULT_ENV,
               db: Optional[str] = None) -> Dict[str, Any]:
     """Set an asset and return a result dict (shared by executor/MCP layers)."""
-    AssetStore(db).set(name, value, type=type, environment=environment)
+    AssetStore(db).set(name, value, asset_type=asset_type,
+                       environment=environment)
     return {"ok": True, "name": name, "environment": environment}
 
 

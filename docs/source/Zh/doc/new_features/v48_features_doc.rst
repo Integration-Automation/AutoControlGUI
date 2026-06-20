@@ -17,9 +17,9 @@ JSON 後端(或記憶體內);純標準函式庫;不匯入 ``PySide6``。
     from je_auto_control import AssetStore, active_environment
 
     store = AssetStore("assets.json")
-    store.set("max_retries", 3, type="int", environment="prod")
+    store.set("max_retries", 3, asset_type="int", environment="prod")
     store.set("api_base", "https://prod.example.com", environment="prod")
-    store.set("db_password", "vault_db_pw", type="credential")  # value = 參照
+    store.set("db_password", "vault_db_pw", asset_type="credential")  # value = 參照
 
     store.get("max_retries", environment="prod").value     # -> 3(具型別)
     store.get("api_base", environment="staging").value     # -> 退回 default

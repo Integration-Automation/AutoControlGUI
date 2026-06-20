@@ -1512,9 +1512,10 @@ def mine_actions(actions, min_len=2, max_len=5, min_count=3):
     }
 
 
-def set_asset(name, value, type="text", environment="default", db=None):
+def set_asset(name, value, asset_type="text", environment="default", db=None):
     from je_auto_control.utils.assets.assets import store_set
-    return store_set(name, value, type=type, environment=environment, db=db)
+    return store_set(name, value, asset_type=asset_type,
+                     environment=environment, db=db)
 
 
 def get_asset(name, environment="default", db=None):

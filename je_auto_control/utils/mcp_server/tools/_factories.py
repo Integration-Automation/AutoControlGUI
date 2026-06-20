@@ -3126,13 +3126,14 @@ def asset_tools() -> List[MCPTool]:
     return [
         MCPTool(
             name="ac_set_asset",
-            description=("Store a typed, environment-scoped asset. 'type' is "
-                         "text/int/bool/credential (credential 'value' is a "
+            description=("Store a typed, environment-scoped asset. 'asset_type' "
+                         "is text/int/bool/credential (credential 'value' is a "
                          "secret name, not the secret). Returns {ok}."),
             input_schema=schema(
                 {"name": {"type": "string"}, "value": {},
-                 "type": {"type": "string",
-                          "enum": ["text", "int", "bool", "credential"]},
+                 "asset_type": {"type": "string",
+                                "enum": ["text", "int", "bool",
+                                         "credential"]},
                  **_ENV}, ["name", "value"]),
             handler=h.set_asset,
             annotations=SIDE_EFFECT_ONLY,

@@ -1072,7 +1072,8 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("name", FieldType.STRING),
             FieldSpec("value", FieldType.STRING),
-            FieldSpec("type", FieldType.ENUM, optional=True, default="text",
+            FieldSpec("asset_type", FieldType.ENUM, optional=True,
+                      default="text",
                       choices=("text", "int", "bool", "credential")),
             FieldSpec("environment", FieldType.STRING, optional=True,
                       default="default"),
