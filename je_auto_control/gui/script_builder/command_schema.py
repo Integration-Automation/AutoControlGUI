@@ -1166,6 +1166,43 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Evaluate inputs against a rule table (hit policy).",
     ))
     specs.append(CommandSpec(
+        "AC_repair_record", "Tools", "Locator Repair: Record",
+        fields=(
+            FieldSpec("key", FieldType.STRING),
+            FieldSpec("method", FieldType.STRING, placeholder="vlm/image"),
+            FieldSpec("coordinates", FieldType.STRING, optional=True,
+                      placeholder="[10, 20]"),
+            FieldSpec("description", FieldType.STRING, optional=True),
+            FieldSpec("confidence", FieldType.FLOAT, optional=True,
+                      default=1.0),
+            FieldSpec("auto_threshold", FieldType.FLOAT, optional=True,
+                      default=0.9),
+            FieldSpec("db", FieldType.STRING, optional=True),
+        ),
+        description="Persist a corrected locator from a heal (auto/queue).",
+    ))
+    specs.append(CommandSpec(
+        "AC_repair_resolved", "Tools", "Locator Repair: Resolved",
+        fields=(
+            FieldSpec("key", FieldType.STRING),
+            FieldSpec("db", FieldType.STRING, optional=True),
+        ),
+        description="Get the learned corrected locator for a key.",
+    ))
+    specs.append(CommandSpec(
+        "AC_repair_pending", "Tools", "Locator Repair: Pending",
+        fields=(FieldSpec("db", FieldType.STRING, optional=True),),
+        description="List locator-repair suggestions awaiting review.",
+    ))
+    specs.append(CommandSpec(
+        "AC_repair_approve", "Tools", "Locator Repair: Approve",
+        fields=(
+            FieldSpec("suggestion_id", FieldType.STRING),
+            FieldSpec("db", FieldType.STRING, optional=True),
+        ),
+        description="Approve a pending locator-repair suggestion.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

@@ -3262,6 +3262,53 @@ def decision_table_tools() -> List[MCPTool]:
     ]
 
 
+def locator_repair_tools() -> List[MCPTool]:
+    _DB = {"db": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_repair_record",
+            description=("Record a corrected locator from a successful heal "
+                         "(method + coordinates/description). Auto-applies when "
+                         "'confidence' >= 'auto_threshold' (default 0.9), else "
+                         "queues a pending suggestion. Returns {id, status}."),
+            input_schema=schema(
+                {"key": {"type": "string"}, "method": {"type": "string"},
+                 "coordinates": {"type": "array", "items": {"type": "integer"}},
+                 "description": {"type": "string"},
+                 "confidence": {"type": "number"},
+                 "auto_threshold": {"type": "number"}, **_DB},
+                ["key", "method"]),
+            handler=h.repair_record,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_repair_resolved",
+            description=("Return the latest applied/approved corrected locator "
+                         "for 'key' (or null) — the learned fix for reuse."),
+            input_schema=schema({"key": {"type": "string"}, **_DB}, ["key"]),
+            handler=h.repair_resolved,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_repair_pending",
+            description="List locator-repair suggestions awaiting review. "
+                        "Returns {pending}.",
+            input_schema=schema(dict(_DB)),
+            handler=h.repair_pending,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_repair_approve",
+            description="Approve a pending locator-repair suggestion by id. "
+                        "Returns {approved}.",
+            input_schema=schema({"suggestion_id": {"type": "string"}, **_DB},
+                                ["suggestion_id"]),
+            handler=h.repair_approve,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4325,7 +4372,7 @@ ALL_FACTORIES = (
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
-    jsonpath_tools, saga_tools, decision_table_tools,
+    jsonpath_tools, saga_tools, decision_table_tools, locator_repair_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

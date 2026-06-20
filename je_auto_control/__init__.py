@@ -286,6 +286,10 @@ from je_auto_control.utils.saga import Saga, SagaResult, run_saga
 from je_auto_control.utils.decision_table import (
     DecisionTable, Rule, evaluate_table,
 )
+# Self-healing write-back: persist corrected locators from heal events
+from je_auto_control.utils.locator_repair import (
+    RepairStore, RepairSuggestion, repair_from_heal,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -751,6 +755,7 @@ __all__ = [
     "json_extract", "json_query", "json_query_one",
     "Saga", "SagaResult", "run_saga",
     "DecisionTable", "Rule", "evaluate_table",
+    "RepairStore", "RepairSuggestion", "repair_from_heal",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
