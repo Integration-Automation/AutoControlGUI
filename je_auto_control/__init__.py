@@ -264,6 +264,10 @@ from je_auto_control.utils.process_mining import (
     Candidate, MiningReport, SequencePattern, directly_follows,
     find_repeated_sequences, mine_action_log, rank_automation_candidates,
 )
+# Environment-scoped typed asset/config store
+from je_auto_control.utils.assets import (
+    Asset, AssetStore, AssetValue, active_environment,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -723,6 +727,7 @@ __all__ = [
     "Candidate", "MiningReport", "SequencePattern", "directly_follows",
     "find_repeated_sequences", "mine_action_log",
     "rank_automation_candidates",
+    "Asset", "AssetStore", "AssetValue", "active_environment",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

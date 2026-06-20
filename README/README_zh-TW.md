@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-20) — 環境範圍的具型別資產儲存](#本次更新-2026-06-20--環境範圍的具型別資產儲存)
 - [本次更新 (2026-06-20) — 任務 / 流程探勘(自動化候選發現)](#本次更新-2026-06-20--任務--流程探勘自動化候選發現)
 - [本次更新 (2026-06-20) — 卡迴圈守衛(Agent Loop 進度偵測)](#本次更新-2026-06-20--卡迴圈守衛agent-loop-進度偵測)
 - [本次更新 (2026-06-20) — 座標空間對映(模型網格 ⇄ 實體像素)](#本次更新-2026-06-20--座標空間對映模型網格--實體像素)
@@ -98,6 +99,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-20) — 環境範圍的具型別資產儲存
+
+依環境的具型別設定 + credential 參照。完整參考:[`docs/source/Zh/doc/new_features/v48_features_doc.rst`](../docs/source/Zh/doc/new_features/v48_features_doc.rst)。
+
+- **`AssetStore` / `active_environment`**(`AC_set_asset` / `AC_get_asset` / `AC_list_assets`、`ac_*`):orchestrator 的「Assets/lockers」支柱 —— 集中管理、依環境(dev/staging/prod)而異且帶型別(`text`/`int`/`bool`/`credential`)的設定值。`get` 轉成宣告型別並退回 default 環境;`credential` 資產持有密鑰*參照*,由 `resolve` 透過注入解析器轉成真實值(僅限 Python,因此密鑰永不進入 `get`/executor 紀錄)。補足密鑰保險庫(僅密鑰)與 config-sync(整塊)的缺口。
 
 ## 本次更新 (2026-06-20) — 任務 / 流程探勘(自動化候選發現)
 

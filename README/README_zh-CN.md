@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-20) — 环境范围的带类型资产存储](#本次更新-2026-06-20--环境范围的带类型资产存储)
 - [本次更新 (2026-06-20) — 任务 / 流程挖掘(自动化候选发现)](#本次更新-2026-06-20--任务--流程挖掘自动化候选发现)
 - [本次更新 (2026-06-20) — 卡循环守卫(Agent Loop 进度检测)](#本次更新-2026-06-20--卡循环守卫agent-loop-进度检测)
 - [本次更新 (2026-06-20) — 坐标空间映射(模型网格 ⇄ 物理像素)](#本次更新-2026-06-20--坐标空间映射模型网格--物理像素)
@@ -98,6 +99,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-20) — 环境范围的带类型资产存储
+
+依环境的带类型配置 + credential 引用。完整参考:[`docs/source/Zh/doc/new_features/v48_features_doc.rst`](../docs/source/Zh/doc/new_features/v48_features_doc.rst)。
+
+- **`AssetStore` / `active_environment`**(`AC_set_asset` / `AC_get_asset` / `AC_list_assets`、`ac_*`):orchestrator 的「Assets/lockers」支柱 —— 集中管理、依环境(dev/staging/prod)而异且带类型(`text`/`int`/`bool`/`credential`)的配置值。`get` 转成声明类型并退回 default 环境;`credential` 资产持有密钥*引用*,由 `resolve` 通过注入解析器转成真实值(仅限 Python,因此密钥永不进入 `get`/executor 记录)。补足密钥保险库(仅密钥)与 config-sync(整块)的缺口。
 
 ## 本次更新 (2026-06-20) — 任务 / 流程挖掘(自动化候选发现)
 
