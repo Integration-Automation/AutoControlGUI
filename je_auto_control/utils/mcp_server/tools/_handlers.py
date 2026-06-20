@@ -1512,6 +1512,22 @@ def mine_actions(actions, min_len=2, max_len=5, min_count=3):
     }
 
 
+def set_asset(name, value, asset_type="text", environment="default", db=None):
+    from je_auto_control.utils.assets.assets import store_set
+    return store_set(name, value, asset_type=asset_type,
+                     environment=environment, db=db)
+
+
+def get_asset(name, environment="default", db=None):
+    from je_auto_control.utils.assets.assets import store_get
+    return store_get(name, environment=environment, db=db)
+
+
+def list_assets(environment=None, db=None):
+    from je_auto_control.utils.assets.assets import store_list
+    return store_list(environment=environment, db=db)
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:

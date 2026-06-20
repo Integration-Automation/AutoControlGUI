@@ -3245,6 +3245,29 @@ def _mine_actions(actions: Any, min_len: int = 2, max_len: int = 5,
     }
 
 
+def _set_asset(name: str, value: Any, asset_type: str = "text",
+               environment: str = "default",
+               db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: store a typed, environment-scoped asset."""
+    from je_auto_control.utils.assets.assets import store_set
+    return store_set(name, value, asset_type=asset_type,
+                     environment=environment, db=db)
+
+
+def _get_asset(name: str, environment: str = "default",
+               db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read a typed asset (credential stays a reference)."""
+    from je_auto_control.utils.assets.assets import store_get
+    return store_get(name, environment=environment, db=db)
+
+
+def _list_assets(environment: Optional[str] = None,
+                 db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: list assets, optionally restricted to one environment."""
+    from je_auto_control.utils.assets.assets import store_list
+    return store_list(environment=environment, db=db)
+
+
 class Executor:
     """
     Executor
@@ -3520,6 +3543,9 @@ class Executor:
             "AC_loop_guard_observe": _loop_guard_observe,
             "AC_loop_guard_reset": _loop_guard_reset,
             "AC_mine_actions": _mine_actions,
+            "AC_set_asset": _set_asset,
+            "AC_get_asset": _get_asset,
+            "AC_list_assets": _list_assets,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,

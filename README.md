@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — Environment-Scoped Typed Asset Store](#whats-new-2026-06-20--environment-scoped-typed-asset-store)
 - [What's new (2026-06-20) — Task / Process Mining (Automation-Candidate Discovery)](#whats-new-2026-06-20--task--process-mining-automation-candidate-discovery)
 - [What's new (2026-06-20) — Stuck-Loop Guard (Agent Loop Progress Detection)](#whats-new-2026-06-20--stuck-loop-guard-agent-loop-progress-detection)
 - [What's new (2026-06-20) — Coordinate-Space Mapping (Model Grid ⇄ Physical Pixels)](#whats-new-2026-06-20--coordinate-space-mapping-model-grid--physical-pixels)
@@ -99,6 +100,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — Environment-Scoped Typed Asset Store
+
+Per-environment typed config + credential refs. Full reference: [`docs/source/Eng/doc/new_features/v48_features_doc.rst`](docs/source/Eng/doc/new_features/v48_features_doc.rst).
+
+- **`AssetStore` / `active_environment`** (`AC_set_asset` / `AC_get_asset` / `AC_list_assets`, `ac_*`): the orchestrator "Assets/lockers" pillar — centrally-managed config values that differ by environment (dev/staging/prod) and carry a type (`text`/`int`/`bool`/`credential`). `get` coerces to the declared type and falls back to the default env; `credential` assets hold a secret *reference* that `resolve` turns into the real value via an injected resolver (Python-only, so secrets never enter `get`/executor records). Fills the gap the secret vault (secret-only) and config-sync (whole-blob) left.
 
 ## What's new (2026-06-20) — Task / Process Mining (Automation-Candidate Discovery)
 

@@ -3121,6 +3121,46 @@ def process_mining_tools() -> List[MCPTool]:
     ]
 
 
+def asset_tools() -> List[MCPTool]:
+    _ENV = {"environment": {"type": "string"}, "db": {"type": "string"}}
+    return [
+        MCPTool(
+            name="ac_set_asset",
+            description=("Store a typed, environment-scoped asset. 'asset_type' "
+                         "is text/int/bool/credential (credential 'value' is a "
+                         "secret name, not the secret). Returns {ok}."),
+            input_schema=schema(
+                {"name": {"type": "string"}, "value": {},
+                 "asset_type": {"type": "string",
+                                "enum": ["text", "int", "bool",
+                                         "credential"]},
+                 **_ENV}, ["name", "value"]),
+            handler=h.set_asset,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_asset",
+            description=("Read a typed asset for an environment (falls back to "
+                         "the default env). Credential values are returned as a "
+                         "reference, never the secret. Returns {name, type, "
+                         "value}."),
+            input_schema=schema({"name": {"type": "string"}, **_ENV},
+                                ["name"]),
+            handler=h.get_asset,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_list_assets",
+            description=("List assets (optionally for one environment) as "
+                         "{name, type, environment} — no values. Returns "
+                         "{assets}."),
+            input_schema=schema(dict(_ENV)),
+            handler=h.list_assets,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def unattended_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4183,7 +4223,7 @@ ALL_FACTORIES = (
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
-    process_mining_tools,
+    process_mining_tools, asset_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,
     usb_passthrough_tools, assertion_tools, data_source_tools,

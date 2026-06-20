@@ -1068,6 +1068,38 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Find repeated sequences + rank automation candidates.",
     ))
     specs.append(CommandSpec(
+        "AC_set_asset", "Data", "Asset: Set",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("value", FieldType.STRING),
+            FieldSpec("asset_type", FieldType.ENUM, optional=True,
+                      default="text",
+                      choices=("text", "int", "bool", "credential")),
+            FieldSpec("environment", FieldType.STRING, optional=True,
+                      default="default"),
+            FieldSpec("db", FieldType.STRING, optional=True),
+        ),
+        description="Store a typed, environment-scoped asset.",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_asset", "Data", "Asset: Get",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("environment", FieldType.STRING, optional=True,
+                      default="default"),
+            FieldSpec("db", FieldType.STRING, optional=True),
+        ),
+        description="Read a typed asset (credential stays a reference).",
+    ))
+    specs.append(CommandSpec(
+        "AC_list_assets", "Data", "Asset: List",
+        fields=(
+            FieldSpec("environment", FieldType.STRING, optional=True),
+            FieldSpec("db", FieldType.STRING, optional=True),
+        ),
+        description="List assets (name/type/environment, no values).",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,
