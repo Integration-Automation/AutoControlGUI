@@ -1611,6 +1611,26 @@ def rate_limit(name, rate=1.0, capacity=1.0, n=1.0):
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+def resolve_pointer(doc, pointer):
+    from je_auto_control.utils.json_patch import resolve_pointer as _resolve
+    return {"value": _resolve(doc, pointer)}
+
+
+def apply_json_patch(doc, patch):
+    from je_auto_control.utils.json_patch import apply_patch
+    return {"result": apply_patch(doc, patch)}
+
+
+def make_json_patch(old, new):
+    from je_auto_control.utils.json_patch import make_patch
+    return {"patch": make_patch(old, new)}
+
+
+def merge_patch(doc, patch):
+    from je_auto_control.utils.json_patch import merge_patch as _merge
+    return {"result": _merge(doc, patch)}
+
+
 def run_saga(steps):
     from je_auto_control.utils.saga import run_saga as _run
     result = _run(steps)

@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — JSON Pointer、Patch 與 Merge Patch](#本次更新-2026-06-21--json-pointerpatch-與-merge-patch)
 - [本次更新 (2026-06-21) — 用戶端速率限制](#本次更新-2026-06-21--用戶端速率限制)
 - [本次更新 (2026-06-21) — JSON Web Token(JWT)](#本次更新-2026-06-21--json-web-tokenjwt)
 - [本次更新 (2026-06-21) — 授權政策閘門](#本次更新-2026-06-21--授權政策閘門)
@@ -113,6 +114,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — JSON Pointer、Patch 與 Merge Patch
+
+定址、取差異並修補 JSON。完整參考:[`docs/source/Zh/doc/new_features/v63_features_doc.rst`](../docs/source/Zh/doc/new_features/v63_features_doc.rst)。
+
+- **`resolve_pointer` / `make_patch` / `apply_patch` / `merge_patch` / `make_merge_patch`**(`AC_resolve_pointer`、`AC_apply_json_patch`、`AC_make_json_patch`、`AC_merge_patch`):`jsonpath` 是唯讀的,`approval` 比較整份產物 —— 沒有任何東西能定址單一位置、計算結構化差異或套用部分更新。本功能補上三個 IETF 原語 —— JSON Pointer(RFC 6901)、JSON Patch(RFC 6902,全六種操作,**原子**套用)、JSON Merge Patch(RFC 7386,`null` 刪除)—— 適用於設定漂移偵測、部分更新、HTTP PATCH 內容與 golden-master 差異。純標準函式庫 `json`+`copy`,以 RFC 測試向量驗證。
 
 ## 本次更新 (2026-06-21) — 用戶端速率限制
 

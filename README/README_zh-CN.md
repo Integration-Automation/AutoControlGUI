@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — JSON Pointer、Patch 与 Merge Patch](#本次更新-2026-06-21--json-pointerpatch-与-merge-patch)
 - [本次更新 (2026-06-21) — 客户端速率限制](#本次更新-2026-06-21--客户端速率限制)
 - [本次更新 (2026-06-21) — JSON Web Token(JWT)](#本次更新-2026-06-21--json-web-tokenjwt)
 - [本次更新 (2026-06-21) — 许可证策略闸门](#本次更新-2026-06-21--许可证策略闸门)
@@ -113,6 +114,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — JSON Pointer、Patch 与 Merge Patch
+
+定址、取差异并修补 JSON。完整参考:[`docs/source/Zh/doc/new_features/v63_features_doc.rst`](../docs/source/Zh/doc/new_features/v63_features_doc.rst)。
+
+- **`resolve_pointer` / `make_patch` / `apply_patch` / `merge_patch` / `make_merge_patch`**(`AC_resolve_pointer`、`AC_apply_json_patch`、`AC_make_json_patch`、`AC_merge_patch`):`jsonpath` 是只读的,`approval` 比较整份产物 —— 没有任何东西能定址单一位置、计算结构化差异或套用部分更新。本功能补上三个 IETF 原语 —— JSON Pointer(RFC 6901)、JSON Patch(RFC 6902,全六种操作,**原子**套用)、JSON Merge Patch(RFC 7386,`null` 删除)—— 适用于配置漂移检测、部分更新、HTTP PATCH 内容与 golden-master 差异。纯标准库 `json`+`copy`,以 RFC 测试向量验证。
 
 ## 本次更新 (2026-06-21) — 客户端速率限制
 

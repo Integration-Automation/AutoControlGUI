@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — JSON Pointer, Patch & Merge Patch](#whats-new-2026-06-21--json-pointer-patch--merge-patch)
 - [What's new (2026-06-21) — Client-Side Rate Limiting](#whats-new-2026-06-21--client-side-rate-limiting)
 - [What's new (2026-06-21) — JSON Web Tokens (JWT)](#whats-new-2026-06-21--json-web-tokens-jwt)
 - [What's new (2026-06-21) — License Policy Gate](#whats-new-2026-06-21--license-policy-gate)
@@ -114,6 +115,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — JSON Pointer, Patch & Merge Patch
+
+Address, diff and patch JSON. Full reference: [`docs/source/Eng/doc/new_features/v63_features_doc.rst`](docs/source/Eng/doc/new_features/v63_features_doc.rst).
+
+- **`resolve_pointer` / `make_patch` / `apply_patch` / `merge_patch` / `make_merge_patch`** (`AC_resolve_pointer`, `AC_apply_json_patch`, `AC_make_json_patch`, `AC_merge_patch`): `jsonpath` is read-only and `approval` compares whole artifacts — nothing could address one location, compute a structured delta, or apply a partial update. This adds the three IETF primitives — JSON Pointer (RFC 6901), JSON Patch (RFC 6902, all six ops, **atomic** apply), and JSON Merge Patch (RFC 7386, `null` deletes) — for config-drift detection, partial updates, HTTP PATCH bodies, and golden-master deltas. Pure-stdlib `json`+`copy`, validated against the RFC test vectors.
 
 ## What's new (2026-06-21) — Client-Side Rate Limiting
 

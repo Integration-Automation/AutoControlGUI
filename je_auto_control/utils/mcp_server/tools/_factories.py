@@ -3343,6 +3343,51 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def json_patch_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_resolve_pointer",
+            description=("Resolve an RFC 6901 JSON Pointer ('pointer' like "
+                         "'/a/b/0') in 'doc'. Returns {value}."),
+            input_schema=schema(
+                {"doc": {"type": "object"}, "pointer": {"type": "string"}},
+                ["doc", "pointer"]),
+            handler=h.resolve_pointer,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_apply_json_patch",
+            description=("Apply an RFC 6902 JSON Patch 'patch' (add/remove/"
+                         "replace/move/copy/test) to 'doc'. Returns {result}."),
+            input_schema=schema(
+                {"doc": {"type": "object"}, "patch": {"type": "array"}},
+                ["doc", "patch"]),
+            handler=h.apply_json_patch,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_make_json_patch",
+            description=("Compute an RFC 6902 JSON Patch turning 'old' into "
+                         "'new'. Returns {patch}."),
+            input_schema=schema(
+                {"old": {"type": "object"}, "new": {"type": "object"}},
+                ["old", "new"]),
+            handler=h.make_json_patch,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_merge_patch",
+            description=("Apply an RFC 7386 JSON Merge Patch 'patch' to 'doc' "
+                         "(null deletes a key). Returns {result}."),
+            input_schema=schema(
+                {"doc": {"type": "object"}, "patch": {"type": "object"}},
+                ["doc", "patch"]),
+            handler=h.merge_patch,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def saga_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4538,8 +4583,8 @@ ALL_FACTORIES = (
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
     jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools,
-    license_policy_tools, jwt_tools, rate_limit_tools, saga_tools,
-    decision_table_tools, locator_repair_tools,
+    license_policy_tools, jwt_tools, rate_limit_tools, json_patch_tools,
+    saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,
     process_and_shell_tools, remote_desktop_tools, gamepad_tools,

@@ -324,6 +324,11 @@ from je_auto_control.utils.jwt import (
 from je_auto_control.utils.rate_limit import (
     SlidingWindowLimiter, TokenBucket, throttle,
 )
+# JSON Pointer / Patch / Merge Patch (RFC 6901 / 6902 / 7386)
+from je_auto_control.utils.json_patch import (
+    PatchError, PatchTestFailed, apply_patch, make_merge_patch, make_patch,
+    merge_patch, remove_pointer, resolve_pointer, set_pointer,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -803,6 +808,9 @@ __all__ = [
     "ClaimsPolicy", "ExpiredTokenError", "InvalidSignatureError", "JwtError",
     "decode_jwt", "encode_jwt",
     "SlidingWindowLimiter", "TokenBucket", "throttle",
+    "PatchError", "PatchTestFailed", "apply_patch", "make_merge_patch",
+    "make_patch", "merge_patch", "remove_pointer", "resolve_pointer",
+    "set_pointer",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
