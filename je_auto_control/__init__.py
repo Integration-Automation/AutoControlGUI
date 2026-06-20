@@ -294,6 +294,10 @@ from je_auto_control.utils.locator_repair import (
 from je_auto_control.utils.pii_text import (
     PIIFinding, detect_pii, redact_pii_text,
 )
+# SARIF 2.1.0 export (unify findings for code-scanning)
+from je_auto_control.utils.sarif import (
+    from_audit_findings, from_lint_issues, make_finding, to_sarif, write_sarif,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -761,6 +765,8 @@ __all__ = [
     "DecisionTable", "Rule", "evaluate_table",
     "RepairStore", "RepairSuggestion", "repair_from_heal",
     "PIIFinding", "detect_pii", "redact_pii_text",
+    "from_audit_findings", "from_lint_issues", "make_finding", "to_sarif",
+    "write_sarif",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

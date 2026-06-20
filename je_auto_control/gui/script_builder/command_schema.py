@@ -1225,6 +1225,19 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Redact PII in text (label/mask/partial/hash).",
     ))
     specs.append(CommandSpec(
+        "AC_export_sarif", "Report", "Export SARIF (Code Scanning)",
+        fields=(
+            FieldSpec("findings", FieldType.STRING,
+                      placeholder='[{"rule_id": "AC1", "message": "...", '
+                                  '"level": "error"}]'),
+            FieldSpec("path", FieldType.STRING, optional=True,
+                      placeholder="results.sarif"),
+            FieldSpec("tool_name", FieldType.STRING, optional=True,
+                      default="AutoControl"),
+        ),
+        description="Unify findings into a SARIF 2.1.0 document.",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

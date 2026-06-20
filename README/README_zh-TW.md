@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-20) — SARIF 2.1.0 發現項目匯出](#本次更新-2026-06-20--sarif-210-發現項目匯出)
 - [本次更新 (2026-06-20) — 文字 PII 偵測與遮蔽](#本次更新-2026-06-20--文字-pii-偵測與遮蔽)
 - [本次更新 (2026-06-20) — 自我修復定位器回寫](#本次更新-2026-06-20--自我修復定位器回寫)
 - [本次更新 (2026-06-20) — DMN 式決策表](#本次更新-2026-06-20--dmn-式決策表)
@@ -106,6 +107,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-20) — SARIF 2.1.0 發現項目匯出
+
+統一掃描結果供 GitHub 程式碼掃描。完整參考:[`docs/source/Zh/doc/new_features/v56_features_doc.rst`](../docs/source/Zh/doc/new_features/v56_features_doc.rst)。
+
+- **`to_sarif` / `write_sarif` / `make_finding` / `from_lint_issues` / `from_audit_findings`**(`AC_export_sarif`、`ac_export_sarif`):框架的發現項目產生器(action-lint、密鑰掃描、WCAG 稽核、guardrail)缺乏共通匯出。本功能建立 SARIF 2.1.0 文件(自動規則目錄 + 穩定 `partialFingerprints` 跨執行去重),供 GitHub/Azure DevOps 程式碼掃描以定位到行的警示匯入。純標準函式庫 `json`+`hashlib`;轉接器正規化既有 lint/audit 形狀。
 
 ## 本次更新 (2026-06-20) — 文字 PII 偵測與遮蔽
 
