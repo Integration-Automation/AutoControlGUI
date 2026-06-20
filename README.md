@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-20) — Text PII Detection & Redaction](#whats-new-2026-06-20--text-pii-detection--redaction)
 - [What's new (2026-06-20) — Self-Healing Locator Write-Back](#whats-new-2026-06-20--self-healing-locator-write-back)
 - [What's new (2026-06-20) — DMN-Style Decision Tables](#whats-new-2026-06-20--dmn-style-decision-tables)
 - [What's new (2026-06-20) — Saga / Compensating Rollback](#whats-new-2026-06-20--saga--compensating-rollback)
@@ -106,6 +107,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-20) — Text PII Detection & Redaction
+
+Mask PII in text before it leaks. Full reference: [`docs/source/Eng/doc/new_features/v55_features_doc.rst`](docs/source/Eng/doc/new_features/v55_features_doc.rst).
+
+- **`detect_pii` / `redact_pii_text`** (`AC_detect_pii` / `AC_redact_pii`, `ac_*`): image redaction existed but text (OCR, clipboard, LLM I/O, logs) had no string-level PII handling. This detects emails / phones / SSNs / credit cards / IPv4 / IBANs over plain text and redacts with `label` / `mask` / `partial` / `hash`. Overlapping spans dedupe (a card isn't also a phone); patterns are backtracking-safe. Pure-stdlib `re`+`hashlib`.
 
 ## What's new (2026-06-20) — Self-Healing Locator Write-Back
 

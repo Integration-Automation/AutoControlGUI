@@ -1203,6 +1203,28 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Approve a pending locator-repair suggestion.",
     ))
     specs.append(CommandSpec(
+        "AC_detect_pii", "Data", "PII: Detect",
+        fields=(
+            FieldSpec("text", FieldType.STRING),
+            FieldSpec("kinds", FieldType.STRING, optional=True,
+                      placeholder='["email", "phone"]'),
+        ),
+        description="Detect PII spans (email/phone/ssn/card/ip/iban) in text.",
+    ))
+    specs.append(CommandSpec(
+        "AC_redact_pii", "Data", "PII: Redact",
+        fields=(
+            FieldSpec("text", FieldType.STRING),
+            FieldSpec("kinds", FieldType.STRING, optional=True,
+                      placeholder='["email"]'),
+            FieldSpec("mode", FieldType.ENUM, optional=True, default="label",
+                      choices=("label", "mask", "partial", "hash")),
+            FieldSpec("mask_char", FieldType.STRING, optional=True,
+                      default="*"),
+        ),
+        description="Redact PII in text (label/mask/partial/hash).",
+    ))
+    specs.append(CommandSpec(
         "AC_generate_sop", "Report", "Generate SOP Document",
         fields=(
             FieldSpec("title", FieldType.STRING, optional=True,

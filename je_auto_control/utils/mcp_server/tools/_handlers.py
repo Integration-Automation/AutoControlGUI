@@ -1593,6 +1593,19 @@ def repair_approve(suggestion_id, db=None):
     return {"approved": RepairStore(db).approve(suggestion_id)}
 
 
+def detect_pii(text, kinds=None):
+    from je_auto_control.utils.pii_text import detect_pii as _detect
+    findings = _detect(text, kinds=kinds)
+    return {"findings": [{"kind": f.kind, "value": f.value,
+                          "start": f.start, "end": f.end} for f in findings]}
+
+
+def redact_pii(text, kinds=None, mode="label", mask_char="*"):
+    from je_auto_control.utils.pii_text import redact_pii_text
+    return {"text": redact_pii_text(text, kinds=kinds, mode=mode,
+                                    mask_char=mask_char)}
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:
