@@ -1156,6 +1156,24 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Validate JSON against a JSON Schema; returns {ok, errors}.",
     ))
     specs.append(CommandSpec(
+        "AC_describe_stats", "Data", "Describe Statistics",
+        fields=(
+            FieldSpec("values", FieldType.STRING,
+                      placeholder="[12.0, 9.5, 14.2, 11.1]"),
+        ),
+        description="Summary stats + percentiles of a numeric list.",
+    ))
+    specs.append(CommandSpec(
+        "AC_ab_significance", "Data", "A/B Significance (z-test)",
+        fields=(
+            FieldSpec("a_conv", FieldType.INT, placeholder="90"),
+            FieldSpec("a_n", FieldType.INT, placeholder="200"),
+            FieldSpec("b_conv", FieldType.INT, placeholder="110"),
+            FieldSpec("b_n", FieldType.INT, placeholder="200"),
+        ),
+        description="Two-proportion z-test; returns {z, p_value, significant, ci}.",
+    ))
+    specs.append(CommandSpec(
         "AC_search_documents", "Data", "Full-Text Search (BM25)",
         fields=(
             FieldSpec("docs", FieldType.STRING,

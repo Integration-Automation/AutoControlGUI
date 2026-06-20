@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 统计与 A/B 显著性](#本次更新-2026-06-21--统计与-ab-显著性)
 - [本次更新 (2026-06-21) — 全文搜索(BM25)](#本次更新-2026-06-21--全文搜索bm25)
 - [本次更新 (2026-06-21) — JSON Pointer、Patch 与 Merge Patch](#本次更新-2026-06-21--json-pointerpatch-与-merge-patch)
 - [本次更新 (2026-06-21) — 客户端速率限制](#本次更新-2026-06-21--客户端速率限制)
@@ -115,6 +116,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 统计与 A/B 显著性
+
+判断差异是否为真。完整参考:[`docs/source/Zh/doc/new_features/v65_features_doc.rst`](../docs/source/Zh/doc/new_features/v65_features_doc.rst)。
+
+- **`describe` / `percentile` / `two_proportion_z_test` / `welch_t_test` / `cohens_d` / `chi_square_2x2`**(`AC_describe_stats`、`AC_ab_significance`):`ab_locator` 以原始成功率排名,`run_history` 存储时长,但没有任何东西计算百分位或显著性。本功能补上分析层 —— 摘要统计 + p50/p90/p95/p99、双比例 z 检验(含置信区间)、Welch t 检验(以不完全 beta 取得精确 t 分布 p 值,免 SciPy)、Cohen's d,以及 2×2 卡方。正态 CDF 以 `math.erf` 精确计算;已对齐教科书数值(含 chi²=z² 恒等式)。纯标准库 `math`+`statistics`。
 
 ## 本次更新 (2026-06-21) — 全文搜索(BM25)
 

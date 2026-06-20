@@ -2928,6 +2928,22 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+def _describe_stats(values: Any) -> Dict[str, Any]:
+    """Adapter: summary statistics + percentiles of a numeric list (or JSON)."""
+    import json
+    from je_auto_control.utils.stats import describe
+    if isinstance(values, str):
+        values = json.loads(values)
+    return describe(values)
+
+
+def _ab_significance(a_conv: int, a_n: int, b_conv: int,
+                     b_n: int) -> Dict[str, Any]:
+    """Adapter: two-proportion z-test on A/B conversion counts."""
+    from je_auto_control.utils.stats import two_proportion_z_test
+    return two_proportion_z_test(int(a_conv), int(a_n), int(b_conv), int(b_n))
+
+
 def _search_documents(docs: Any, query: str, top_k: int = 10,
                       mode: str = "bm25") -> Dict[str, Any]:
     """Adapter: BM25/TF-IDF search a {doc_id: text} corpus (dict or JSON str)."""
@@ -3793,6 +3809,8 @@ class Executor:
             "AC_jwt_decode": _jwt_decode,
             "AC_rate_limit": _rate_limit,
             "AC_search_documents": _search_documents,
+            "AC_describe_stats": _describe_stats,
+            "AC_ab_significance": _ab_significance,
             "AC_resolve_pointer": _resolve_pointer,
             "AC_apply_json_patch": _apply_json_patch,
             "AC_make_json_patch": _make_json_patch,

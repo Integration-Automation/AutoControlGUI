@@ -333,6 +333,11 @@ from je_auto_control.utils.json_patch import (
 from je_auto_control.utils.search_index import (
     SearchHit, SearchIndex, search_documents, tokenize,
 )
+# Descriptive statistics and A/B significance testing
+from je_auto_control.utils.stats import (
+    chi_square_2x2, cohens_d, describe, normal_cdf, percentile,
+    two_proportion_z_test, welch_t_test,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -816,6 +821,8 @@ __all__ = [
     "make_patch", "merge_patch", "remove_pointer", "resolve_pointer",
     "set_pointer",
     "SearchHit", "SearchIndex", "search_documents", "tokenize",
+    "chi_square_2x2", "cohens_d", "describe", "normal_cdf", "percentile",
+    "two_proportion_z_test", "welch_t_test",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

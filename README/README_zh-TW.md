@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — 統計與 A/B 顯著性](#本次更新-2026-06-21--統計與-ab-顯著性)
 - [本次更新 (2026-06-21) — 全文搜尋(BM25)](#本次更新-2026-06-21--全文搜尋bm25)
 - [本次更新 (2026-06-21) — JSON Pointer、Patch 與 Merge Patch](#本次更新-2026-06-21--json-pointerpatch-與-merge-patch)
 - [本次更新 (2026-06-21) — 用戶端速率限制](#本次更新-2026-06-21--用戶端速率限制)
@@ -115,6 +116,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — 統計與 A/B 顯著性
+
+判斷差異是否為真。完整參考:[`docs/source/Zh/doc/new_features/v65_features_doc.rst`](../docs/source/Zh/doc/new_features/v65_features_doc.rst)。
+
+- **`describe` / `percentile` / `two_proportion_z_test` / `welch_t_test` / `cohens_d` / `chi_square_2x2`**(`AC_describe_stats`、`AC_ab_significance`):`ab_locator` 以原始成功率排名,`run_history` 儲存時長,但沒有任何東西計算百分位或顯著性。本功能補上分析層 —— 摘要統計 + p50/p90/p95/p99、雙比例 z 檢定(含信賴區間)、Welch t 檢定(以不完全 beta 取得精確 t 分布 p 值,免 SciPy)、Cohen's d,以及 2×2 卡方。常態 CDF 以 `math.erf` 精確計算;已對齊教科書數值(含 chi²=z² 恆等式)。純標準函式庫 `math`+`statistics`。
 
 ## 本次更新 (2026-06-21) — 全文搜尋(BM25)
 

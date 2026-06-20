@@ -1637,6 +1637,16 @@ def search_documents(docs, query, top_k=10, mode="bm25"):
     return {"hits": [{"doc_id": h.doc_id, "score": h.score} for h in hits]}
 
 
+def describe_stats(values):
+    from je_auto_control.utils.stats import describe
+    return describe(values)
+
+
+def ab_significance(a_conv, a_n, b_conv, b_n):
+    from je_auto_control.utils.stats import two_proportion_z_test
+    return two_proportion_z_test(int(a_conv), int(a_n), int(b_conv), int(b_n))
+
+
 def run_saga(steps):
     from je_auto_control.utils.saga import run_saga as _run
     result = _run(steps)
