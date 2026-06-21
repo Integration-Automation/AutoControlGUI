@@ -3343,6 +3343,28 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def link_header_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_parse_link_header",
+            description=("Parse an RFC 8288 Link header 'value' into {links} "
+                         "(each {uri, rel, params}), handling quoted params and "
+                         "multiple links."),
+            input_schema=schema({"value": {"type": "string"}}, ["value"]),
+            handler=h.parse_link_header,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_next_url",
+            description=("Return the rel=next URL from a Link header 'value' as "
+                         "{url} (null when absent)."),
+            input_schema=schema({"value": {"type": "string"}}, ["value"]),
+            handler=h.next_url,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def referential_tools() -> List[MCPTool]:
     rows = {"type": "array", "items": {"type": "object"}}
     return [
@@ -5166,7 +5188,7 @@ ALL_FACTORIES = (
     trace_context_tools, baggage_tools, secret_ref_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,
-    dataset_diff_tools, referential_tools,
+    dataset_diff_tools, referential_tools, link_header_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

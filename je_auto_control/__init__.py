@@ -412,6 +412,10 @@ from je_auto_control.utils.http_problem import (
 from je_auto_control.utils.sse_client import (
     SSEEvent, SSEParser, parse_event_stream,
 )
+# RFC 8288 Link header parsing + rel="next" pagination
+from je_auto_control.utils.link_header import (
+    Link, links_by_rel, next_url, paginate, parse_link_header,
+)
 # W3C Trace Context propagation (traceparent / tracestate)
 from je_auto_control.utils.trace_context import (
     SpanContext, TraceContextError, child_context, extract_context,
@@ -933,6 +937,7 @@ __all__ = [
     "HttpProblemError", "ProblemDetails", "is_problem", "parse_problem",
     "raise_for_problem",
     "SSEEvent", "SSEParser", "parse_event_stream",
+    "Link", "links_by_rel", "next_url", "paginate", "parse_link_header",
     "SpanContext", "TraceContextError", "child_context", "extract_context",
     "format_traceparent", "format_tracestate", "inject_context",
     "new_root_context", "new_span_id", "new_trace_id", "parse_traceparent",

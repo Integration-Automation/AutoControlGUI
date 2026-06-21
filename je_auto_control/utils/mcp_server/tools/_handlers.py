@@ -1746,6 +1746,16 @@ def resolve_refs(obj):
     return _resolve_refs(obj)
 
 
+def parse_link_header(value):
+    from je_auto_control.utils.executor.action_executor import _parse_link_header
+    return _parse_link_header(value)
+
+
+def next_url(value):
+    from je_auto_control.utils.executor.action_executor import _next_url
+    return _next_url(value)
+
+
 def profile_rows(rows, columns=None):
     from je_auto_control.utils.executor.action_executor import _profile_rows
     return _profile_rows(rows, columns)

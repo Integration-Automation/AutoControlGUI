@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — RFC 8288 Link Header & Pagination](#whats-new-2026-06-22--rfc-8288-link-header--pagination)
 - [What's new (2026-06-22) — Referential Integrity Checks](#whats-new-2026-06-22--referential-integrity-checks)
 - [What's new (2026-06-22) — URI-Scheme Value References](#whats-new-2026-06-22--uri-scheme-value-references)
 - [What's new (2026-06-21) — W3C Baggage Propagation](#whats-new-2026-06-21--w3c-baggage-propagation)
@@ -138,6 +139,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — RFC 8288 Link Header & Pagination
+
+Parse `Link` headers and follow `rel="next"`. Full reference: [`docs/source/Eng/doc/new_features/v87_features_doc.rst`](docs/source/Eng/doc/new_features/v87_features_doc.rst).
+
+- **`parse_link_header` / `next_url` / `links_by_rel` / `paginate`** (`AC_parse_link_header`, `AC_next_url`): paginated REST APIs return `Link: <...>; rel="next"` but nothing parsed it. This parses the header (quoted values with commas, multiple links), indexes by relation, and `paginate` walks `rel="next"` over an injected `fetch` (transport/cassette) up to `max_pages`. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Referential Integrity Checks
 
