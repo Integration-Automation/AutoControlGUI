@@ -1389,6 +1389,16 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Verify a JWT (alg allowlist + exp/nbf/aud); returns {ok, claims}.",
     ))
     specs.append(CommandSpec(
+        "AC_percentiles", "Report", "Percentiles",
+        fields=(
+            FieldSpec("samples", FieldType.STRING,
+                      placeholder="[12.0, 9.5, 14.2, 11.1]"),
+            FieldSpec("qs", FieldType.STRING, optional=True,
+                      placeholder="[50, 90, 99]"),
+        ),
+        description="Exact percentiles of a numeric sample list.",
+    ))
+    specs.append(CommandSpec(
         "AC_evaluate_slo", "Report", "SLO: Evaluate (SLI + Error Budget)",
         fields=(
             FieldSpec("records", FieldType.STRING,

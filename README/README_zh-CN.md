@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 流式延迟百分位](#本次更新-2026-06-21--流式延迟百分位)
 - [本次更新 (2026-06-21) — 服务等级目标(SLO)](#本次更新-2026-06-21--服务等级目标slo)
 - [本次更新 (2026-06-21) — 混沌实验](#本次更新-2026-06-21--混沌实验)
 - [本次更新 (2026-06-21) — JSON 合约与快照比对](#本次更新-2026-06-21--json-合约与快照比对)
@@ -123,6 +124,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 流式延迟百分位
+
+load/soak 测试的可合并 p99。完整参考:[`docs/source/Zh/doc/new_features/v73_features_doc.rst`](../docs/source/Zh/doc/new_features/v73_features_doc.rst)。
+
+- **`LatencyDigest` / `exact_percentiles`**(`AC_percentiles`):`stats.percentile` 需要完整已排序列表;本功能补上 HdrHistogram 风格的 digest,具 O(1) `record`、内存有界(有效位数分桶)以及跨分片汇聚的 `merge` —— 这正是从各 worker 结果计算正确汇聚 p99 所需的特性。`exact_percentiles` 涵盖小样本集情况(任意分位)。纯标准库 `math`。
 
 ## 本次更新 (2026-06-21) — 服务等级目标(SLO)
 

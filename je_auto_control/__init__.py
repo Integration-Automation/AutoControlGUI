@@ -369,6 +369,8 @@ from je_auto_control.utils.chaos import (
 from je_auto_control.utils.slo import (
     BurnRule, burn_alerts, burn_rate, default_burn_rules, evaluate_slo,
 )
+# Mergeable streaming latency digest + exact percentiles
+from je_auto_control.utils.percentiles import LatencyDigest, exact_percentiles
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -865,6 +867,7 @@ __all__ = [
     "ChaosExperiment", "Fault", "Probe", "exception_fault", "latency_fault",
     "run_experiment",
     "BurnRule", "burn_alerts", "burn_rate", "default_burn_rules", "evaluate_slo",
+    "LatencyDigest", "exact_percentiles",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

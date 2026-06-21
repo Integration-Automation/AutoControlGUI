@@ -3343,6 +3343,22 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def percentiles_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_percentiles",
+            description=("Exact percentiles of a numeric 'samples' list at the "
+                         "requested 'qs' quantiles (default 50/90/95/99). "
+                         "Returns {percentiles}."),
+            input_schema=schema(
+                {"samples": {"type": "array"}, "qs": {"type": "array"}},
+                ["samples"]),
+            handler=h.percentiles,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def slo_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4817,7 +4833,7 @@ ALL_FACTORIES = (
     license_policy_tools, jwt_tools, rate_limit_tools, json_patch_tools,
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
-    slo_tools,
+    slo_tools, percentiles_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Streaming Latency Percentiles](#whats-new-2026-06-21--streaming-latency-percentiles)
 - [What's new (2026-06-21) — Service-Level Objectives (SLO)](#whats-new-2026-06-21--service-level-objectives-slo)
 - [What's new (2026-06-21) — Chaos Experiments](#whats-new-2026-06-21--chaos-experiments)
 - [What's new (2026-06-21) — JSON Contract & Snapshot Matching](#whats-new-2026-06-21--json-contract--snapshot-matching)
@@ -124,6 +125,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Streaming Latency Percentiles
+
+Mergeable p99 for load/soak runs. Full reference: [`docs/source/Eng/doc/new_features/v73_features_doc.rst`](docs/source/Eng/doc/new_features/v73_features_doc.rst).
+
+- **`LatencyDigest` / `exact_percentiles`** (`AC_percentiles`): `stats.percentile` needs the full sorted list; this adds a HdrHistogram-style digest with O(1) `record`, bounded memory (significant-figure buckets), and `merge` for cross-shard aggregation — the property you need for a correct aggregate p99 from per-worker results. `exact_percentiles` covers the small-set case (arbitrary quantiles). Pure-stdlib `math`.
 
 ## What's new (2026-06-21) — Service-Level Objectives (SLO)
 
