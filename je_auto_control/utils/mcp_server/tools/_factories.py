@@ -3343,6 +3343,28 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def http_conditional_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_parse_cache_control",
+            description=("Parse the 'headers' Cache-Control into {directives} "
+                         "(max-age as int, flags as true)."),
+            input_schema=schema({"headers": {"type": "object"}}, ["headers"]),
+            handler=h.parse_cache_control,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_store_validators",
+            description=("Extract cache validators (etag, last_modified, date, "
+                         "cache_control) from an HTTP 'response'. Returns "
+                         "{validators}."),
+            input_schema=schema({"response": {"type": "object"}}, ["response"]),
+            handler=h.store_validators,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def cookie_jar_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5296,7 +5318,7 @@ ALL_FACTORIES = (
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
-    http_content_tools, cookie_jar_tools,
+    http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

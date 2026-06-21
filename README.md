@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Conditional HTTP Requests & Cache Validators](#whats-new-2026-06-22--conditional-http-requests--cache-validators)
 - [What's new (2026-06-22) — Cookie Jar (HTTP Session Carry)](#whats-new-2026-06-22--cookie-jar-http-session-carry)
 - [What's new (2026-06-22) — HTTP Content Negotiation & Decompression](#whats-new-2026-06-22--http-content-negotiation--decompression)
 - [What's new (2026-06-22) — multipart/form-data Build & Parse](#whats-new-2026-06-22--multipartform-data-build--parse)
@@ -143,6 +144,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Conditional HTTP Requests & Cache Validators
+
+Skip re-downloading unchanged resources (ETag / 304). Full reference: [`docs/source/Eng/doc/new_features/v92_features_doc.rst`](docs/source/Eng/doc/new_features/v92_features_doc.rst).
+
+- **`store_validators` / `conditioned_call` / `is_fresh` / `parse_cache_control` / `is_not_modified`** (`AC_parse_cache_control`, `AC_store_validators`): `http_request` never sent `If-None-Match`/`If-Modified-Since` nor read `Cache-Control`, so every poll re-downloaded. This extracts validators, parses `Cache-Control` (max-age/no-store/…), decides freshness by an explicit age, conditions the next request, and detects `304 Not Modified`. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Cookie Jar (HTTP Session Carry)
 

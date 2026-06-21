@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 条件式 HTTP 请求与缓存验证子](#本次更新-2026-06-22--条件式-http-请求与缓存验证子)
 - [本次更新 (2026-06-22) — Cookie Jar(HTTP 会话携带)](#本次更新-2026-06-22--cookie-jarhttp-会话携带)
 - [本次更新 (2026-06-22) — HTTP 内容协商与解压](#本次更新-2026-06-22--http-内容协商与解压)
 - [本次更新 (2026-06-22) — multipart/form-data 构建与解析](#本次更新-2026-06-22--multipartform-data-构建与解析)
@@ -142,6 +143,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-22) — 条件式 HTTP 请求与缓存验证子
+
+跳过重新下载未变更的资源(ETag / 304)。完整参考:[`docs/source/Zh/doc/new_features/v92_features_doc.rst`](../docs/source/Zh/doc/new_features/v92_features_doc.rst)。
+
+- **`store_validators` / `conditioned_call` / `is_fresh` / `parse_cache_control` / `is_not_modified`**(`AC_parse_cache_control`、`AC_store_validators`):`http_request` 从不发 `If-None-Match`/`If-Modified-Since` 也不读 `Cache-Control`,因此每次轮询都重新下载。本功能提取验证子、解析 `Cache-Control`(max-age/no-store/…)、以明确 age 判定新鲜度、为下一个请求加上条件标头,并检测 `304 Not Modified`。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — Cookie Jar(HTTP 会话携带)
 

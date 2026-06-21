@@ -431,6 +431,11 @@ from je_auto_control.utils.http_content import (
 )
 # RFC 6265 cookie jar (carry a session across HTTP calls)
 from je_auto_control.utils.cookie_jar import CookieJar, parse_set_cookie
+# Conditional HTTP requests + RFC 9111 cache validators (ETag / 304)
+from je_auto_control.utils.http_conditional import (
+    conditioned_call, is_fresh, is_not_modified, parse_cache_control,
+    store_validators,
+)
 # W3C Trace Context propagation (traceparent / tracestate)
 from je_auto_control.utils.trace_context import (
     SpanContext, TraceContextError, child_context, extract_context,
@@ -958,6 +963,8 @@ __all__ = [
     "build_accept", "build_accept_encoding", "decode_body", "negotiated_call",
     "parse_quality_values",
     "CookieJar", "parse_set_cookie",
+    "conditioned_call", "is_fresh", "is_not_modified", "parse_cache_control",
+    "store_validators",
     "SpanContext", "TraceContextError", "child_context", "extract_context",
     "format_traceparent", "format_tracestate", "inject_context",
     "new_root_context", "new_span_id", "new_trace_id", "parse_traceparent",

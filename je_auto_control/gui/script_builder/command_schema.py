@@ -1801,6 +1801,22 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Parse one Set-Cookie header into name/value/attributes.",
     ))
     specs.append(CommandSpec(
+        "AC_parse_cache_control", "Data", "HTTP Conditional: Cache-Control",
+        fields=(
+            FieldSpec("headers", FieldType.STRING,
+                      placeholder='{"Cache-Control": "max-age=60, public"}'),
+        ),
+        description="Parse a Cache-Control header into directives.",
+    ))
+    specs.append(CommandSpec(
+        "AC_store_validators", "Data", "HTTP Conditional: Store Validators",
+        fields=(
+            FieldSpec("response", FieldType.STRING,
+                      placeholder='{"headers": {"ETag": "\\"abc\\""}}'),
+        ),
+        description="Extract ETag / Last-Modified / Cache-Control validators.",
+    ))
+    specs.append(CommandSpec(
         "AC_resolve_config", "Data", "Layered Config: Resolve",
         fields=(
             FieldSpec("layers", FieldType.STRING,

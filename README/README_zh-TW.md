@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 條件式 HTTP 請求與快取驗證子](#本次更新-2026-06-22--條件式-http-請求與快取驗證子)
 - [本次更新 (2026-06-22) — Cookie Jar(HTTP 工作階段攜帶)](#本次更新-2026-06-22--cookie-jarhttp-工作階段攜帶)
 - [本次更新 (2026-06-22) — HTTP 內容協商與解壓縮](#本次更新-2026-06-22--http-內容協商與解壓縮)
 - [本次更新 (2026-06-22) — multipart/form-data 建立與解析](#本次更新-2026-06-22--multipartform-data-建立與解析)
@@ -142,6 +143,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — 條件式 HTTP 請求與快取驗證子
+
+略過重新下載未變更的資源(ETag / 304)。完整參考:[`docs/source/Zh/doc/new_features/v92_features_doc.rst`](../docs/source/Zh/doc/new_features/v92_features_doc.rst)。
+
+- **`store_validators` / `conditioned_call` / `is_fresh` / `parse_cache_control` / `is_not_modified`**(`AC_parse_cache_control`、`AC_store_validators`):`http_request` 從不送 `If-None-Match`/`If-Modified-Since` 也不讀 `Cache-Control`,因此每次輪詢都重新下載。本功能擷取驗證子、解析 `Cache-Control`(max-age/no-store/…)、以明確 age 判定新鮮度、為下一個請求加上條件標頭,並偵測 `304 Not Modified`。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — Cookie Jar(HTTP 工作階段攜帶)
 
