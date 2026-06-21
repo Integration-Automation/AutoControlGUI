@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — W3C Baggage Propagation](#whats-new-2026-06-21--w3c-baggage-propagation)
 - [What's new (2026-06-21) — Dataset Diff (Row-Set Change Report)](#whats-new-2026-06-21--dataset-diff-row-set-change-report)
 - [What's new (2026-06-21) — Distribution Drift Detection](#whats-new-2026-06-21--distribution-drift-detection)
 - [What's new (2026-06-21) — Layered Configuration Resolver](#whats-new-2026-06-21--layered-configuration-resolver)
@@ -135,6 +136,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — W3C Baggage Propagation
+
+Carry cross-cutting key-value context across HTTP. Full reference: [`docs/source/Eng/doc/new_features/v84_features_doc.rst`](docs/source/Eng/doc/new_features/v84_features_doc.rst).
+
+- **`Baggage` / `parse_baggage` / `format_baggage` / `inject_baggage` / `extract_baggage`** (`AC_baggage_parse`, `AC_baggage_format`): `trace_context` carried trace/span identity but nothing propagated cross-cutting context (`run_id`/`tenant`/`experiment`). This implements the W3C Baggage header — a percent-encoded `key=value` list — with an immutable `Baggage` (set/remove return new instances) and case-insensitive inject/extract over a headers dict. Pairs with `trace_context`. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-21) — Dataset Diff (Row-Set Change Report)
 

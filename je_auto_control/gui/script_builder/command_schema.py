@@ -1625,6 +1625,22 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Extract the W3C trace context from request headers.",
     ))
     specs.append(CommandSpec(
+        "AC_baggage_parse", "Data", "Baggage: Parse Header",
+        fields=(
+            FieldSpec("header", FieldType.STRING,
+                      placeholder="tenant=acme,run=42"),
+        ),
+        description="Parse a W3C baggage header into key-value items.",
+    ))
+    specs.append(CommandSpec(
+        "AC_baggage_format", "Data", "Baggage: Format Header",
+        fields=(
+            FieldSpec("items", FieldType.STRING,
+                      placeholder='{"tenant": "acme", "run": "42"}'),
+        ),
+        description="Serialise items into a percent-encoded baggage header.",
+    ))
+    specs.append(CommandSpec(
         "AC_profile_rows", "Data", "Data Profile: Profile Rows",
         fields=(
             FieldSpec("rows", FieldType.STRING,
