@@ -1,6 +1,8 @@
 """Headless tests for near-duplicate text detection. Pure stdlib, no Qt."""
 import json
 
+import pytest
+
 import je_auto_control as ac
 from je_auto_control.utils.near_dup import (
     hamming_distance, minhash_signature, minhash_similarity, near_duplicates,
@@ -38,10 +40,10 @@ def test_near_duplicates_clusters():
 def test_minhash_similarity():
     sig_a = minhash_signature("the quick brown fox")
     sig_b = minhash_signature("the quick brown fox")
-    assert minhash_similarity(sig_a, sig_b) == 1.0
+    assert minhash_similarity(sig_a, sig_b) == pytest.approx(1.0)
     sig_c = minhash_signature("entirely different words here now")
     assert minhash_similarity(sig_a, sig_c) < 1.0
-    assert minhash_similarity([], [1]) == 0.0
+    assert minhash_similarity([], [1]) == pytest.approx(0.0)
 
 
 def test_hamming_distance():
