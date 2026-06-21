@@ -2928,6 +2928,31 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+def _build_provenance(paths: Any, builder_id: str = "je_auto_control",
+                      build_type: str = "https://je-auto-control/buildtype/v1"
+                      ) -> Dict[str, Any]:
+    """Adapter: build a SLSA provenance statement over a list of file paths."""
+    import json
+    from je_auto_control.utils.provenance import build_provenance, subject_for
+    if isinstance(paths, str):
+        paths = json.loads(paths)
+    subjects = [subject_for(path) for path in paths]
+    return {"statement": build_provenance(
+        subjects, builder_id=builder_id, build_type=build_type)}
+
+
+def _verify_provenance(statement: Any, files: Any) -> Dict[str, Any]:
+    """Adapter: re-hash files (name->path) against a provenance statement."""
+    import json
+    from je_auto_control.utils.provenance import verify_provenance
+    if isinstance(statement, str):
+        statement = json.loads(statement)
+    if isinstance(files, str):
+        files = json.loads(files)
+    mismatches = verify_provenance(statement, files)
+    return {"ok": not mismatches, "mismatches": mismatches}
+
+
 def _evaluate_flag(flags: Any, key: str, context: Any = None) -> Dict[str, Any]:
     """Adapter: evaluate a feature flag (flags/context dict or JSON string)."""
     import json
@@ -3880,6 +3905,8 @@ class Executor:
             "AC_rrule_next": _rrule_next,
             "AC_evaluate_flag": _evaluate_flag,
             "AC_flag_enabled": _flag_enabled,
+            "AC_build_provenance": _build_provenance,
+            "AC_verify_provenance": _verify_provenance,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,
