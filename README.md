@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — String-Distance Similarity Metrics](#whats-new-2026-06-22--string-distance-similarity-metrics)
 - [What's new (2026-06-22) — Time-Series Transforms](#whats-new-2026-06-22--time-series-transforms)
 - [What's new (2026-06-22) — Unicode Text Normalisation & Slugify](#whats-new-2026-06-22--unicode-text-normalisation--slugify)
 - [What's new (2026-06-22) — JSON-Schema Compatibility Checking](#whats-new-2026-06-22--json-schema-compatibility-checking)
@@ -150,6 +151,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — String-Distance Similarity Metrics
+
+Match typos and reordered tokens. Full reference: [`docs/source/Eng/doc/new_features/v99_features_doc.rst`](docs/source/Eng/doc/new_features/v99_features_doc.rst).
+
+- **`levenshtein` / `damerau_levenshtein` / `jaro` / `jaro_winkler` / `jaccard` / `dice` / `similarity`** (`AC_text_similarity`): `fuzzy` exposed only difflib's gestalt ratio. This adds the edit-distance and token-set metrics it lacks — Jaro-Winkler (standard for short labels), Damerau (transposition-aware), and char-n-gram Jaccard/Dice — plus a unified `similarity()` that normalizes every metric to `[0, 1]`. Pairs with `normalize_text`. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Time-Series Transforms
 

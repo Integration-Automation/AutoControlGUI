@@ -257,6 +257,11 @@ from je_auto_control.utils.fuzzy import (
 from je_auto_control.utils.text_normalize import (
     deaccent, fold_whitespace, normalize_quotes, normalize_text, slugify,
 )
+# String-distance metrics (Levenshtein / Jaro-Winkler / Jaccard / Dice)
+from je_auto_control.utils.text_similarity import (
+    damerau_levenshtein, dice, jaccard, jaro, jaro_winkler, levenshtein,
+    similarity,
+)
 # S3-compatible artifact store (optional boto3, injectable client)
 from je_auto_control.utils.artifact_store import (
     S3ArtifactStore, configure_default_store, get_default_store,
@@ -928,6 +933,8 @@ __all__ = [
     "fuzzy_best_match", "fuzzy_dedupe", "fuzzy_matches", "fuzzy_ratio",
     "deaccent", "fold_whitespace", "normalize_quotes", "normalize_text",
     "slugify",
+    "damerau_levenshtein", "dice", "jaccard", "jaro", "jaro_winkler",
+    "levenshtein", "similarity",
     "S3ArtifactStore", "configure_default_store", "get_default_store",
     "set_default_store",
     "average_hash", "dedupe_images", "dhash", "hamming_distance",

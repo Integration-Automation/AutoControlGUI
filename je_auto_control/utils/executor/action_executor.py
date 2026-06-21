@@ -3152,6 +3152,13 @@ def _slugify(text: str, sep: str = "-") -> Dict[str, Any]:
     return {"slug": slugify(text, sep=sep)}
 
 
+def _text_similarity(a: str, b: str,
+                     metric: str = "jaro_winkler") -> Dict[str, Any]:
+    """Adapter: normalised string similarity for the chosen metric."""
+    from je_auto_control.utils.text_similarity import similarity
+    return {"score": similarity(a, b, metric=metric)}
+
+
 def _canonical_log(fields: Any) -> Dict[str, Any]:
     """Adapter: build a canonical log line from a fields dict."""
     import json
@@ -4461,6 +4468,7 @@ class Executor:
             "AC_spans_to_otlp": _spans_to_otlp,
             "AC_normalize_text": _normalize_text,
             "AC_slugify": _slugify,
+            "AC_text_similarity": _text_similarity,
             "AC_validate_config": _validate_config,
             "AC_resolve_ref": _resolve_ref,
             "AC_resolve_refs": _resolve_refs,
