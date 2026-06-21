@@ -3022,6 +3022,16 @@ def _infer_schema(rows: Any, columns: Any = None) -> Dict[str, Any]:
     return {"schema": infer_schema(rows, columns)}
 
 
+def _parse_problem(response: Any) -> Dict[str, Any]:
+    """Adapter: parse an RFC 9457 problem+json HTTP response."""
+    import json
+    from je_auto_control.utils.http_problem import parse_problem
+    if isinstance(response, str):
+        response = json.loads(response)
+    problem = parse_problem(response)
+    return {"problem": problem.to_dict() if problem is not None else None}
+
+
 def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
     """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
     import json
@@ -4102,6 +4112,7 @@ class Executor:
             "AC_trace_extract": _trace_extract,
             "AC_profile_rows": _profile_rows,
             "AC_infer_schema": _infer_schema,
+            "AC_parse_problem": _parse_problem,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,

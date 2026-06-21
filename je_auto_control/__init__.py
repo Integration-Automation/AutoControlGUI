@@ -379,6 +379,11 @@ from je_auto_control.utils.bulkhead import (
 )
 # HTTP record/replay cassette (deterministic offline API tests)
 from je_auto_control.utils.http_cassette import Cassette, CassetteMissError
+# RFC 9457 problem+json error parsing
+from je_auto_control.utils.http_problem import (
+    HttpProblemError, ProblemDetails, is_problem, parse_problem,
+    raise_for_problem,
+)
 # W3C Trace Context propagation (traceparent / tracestate)
 from je_auto_control.utils.trace_context import (
     SpanContext, TraceContextError, child_context, extract_context,
@@ -886,6 +891,8 @@ __all__ = [
     "Bulkhead", "BulkheadFullError", "next_delay", "parse_ratelimit",
     "parse_retry_after",
     "Cassette", "CassetteMissError",
+    "HttpProblemError", "ProblemDetails", "is_problem", "parse_problem",
+    "raise_for_problem",
     "SpanContext", "TraceContextError", "child_context", "extract_context",
     "format_traceparent", "format_tracestate", "inject_context",
     "new_root_context", "new_span_id", "new_trace_id", "parse_traceparent",
