@@ -1,6 +1,8 @@
 """Headless tests for data profiling + schema inference. Pure stdlib, no Qt."""
 import json
 
+import pytest
+
 import je_auto_control as ac
 from je_auto_control.utils.data_profile import infer_schema, profile_rows
 from je_auto_control.utils.data_quality import validate_rows
@@ -21,8 +23,9 @@ def test_profile_basic_columns():
     assert name["null_count"] == 0
     age = profile["columns"]["age"]
     assert age["null_count"] == 1
-    assert age["null_fraction"] == 1 / 3
-    assert age["min"] == 25.0 and age["max"] == 30.0
+    assert age["null_fraction"] == pytest.approx(1 / 3)
+    assert age["min"] == pytest.approx(25.0)
+    assert age["max"] == pytest.approx(30.0)
 
 
 def test_profile_unique_and_top_values():
@@ -40,8 +43,11 @@ def test_profile_column_subset():
 
 def test_infer_schema_shape():
     schema = infer_schema(_ROWS)
-    assert schema["id"] == {"type": "int", "required": True, "unique": True,
-                            "min": 1.0, "max": 3.0}
+    ident = schema["id"]
+    assert ident["type"] == "int" and ident["required"] is True
+    assert ident["unique"] is True
+    assert ident["min"] == pytest.approx(1.0)
+    assert ident["max"] == pytest.approx(3.0)
     assert schema["name"]["required"] is True
     assert "required" not in schema["age"]      # has a null → not required
 
