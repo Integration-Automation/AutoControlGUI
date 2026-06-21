@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — 資料集差異(資料列變更報告)](#本次更新-2026-06-21--資料集差異資料列變更報告)
 - [本次更新 (2026-06-21) — 分布漂移偵測](#本次更新-2026-06-21--分布漂移偵測)
 - [本次更新 (2026-06-21) — 分層設定解析器](#本次更新-2026-06-21--分層設定解析器)
 - [本次更新 (2026-06-21) — Server-Sent Events (SSE) 用戶端解析器](#本次更新-2026-06-21--server-sent-events-sse-用戶端解析器)
@@ -133,6 +134,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — 資料集差異(資料列變更報告)
+
+依鍵比對兩份表格式萃取。完整參考:[`docs/source/Zh/doc/new_features/v83_features_doc.rst`](../docs/source/Zh/doc/new_features/v83_features_doc.rst)。
+
+- **`diff_rows` / `cell_changes` / `summarize_diff`**(`AC_diff_rows`、`AC_cell_changes`):框架能比對畫面/快照,但沒有任何東西能依鍵比對兩個**表格式**資料列集合。本功能為兩側建鍵索引並回報 `{added, removed, changed, unchanged}`(changed 帶 `{key, old, new}`),展開逐欄 `{key, column, old, new}` 變更,並統計每個分類。支援複合鍵;重複鍵以最後一列為準。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-21) — 分布漂移偵測
 

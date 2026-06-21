@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Dataset Diff (Row-Set Change Report)](#whats-new-2026-06-21--dataset-diff-row-set-change-report)
 - [What's new (2026-06-21) — Distribution Drift Detection](#whats-new-2026-06-21--distribution-drift-detection)
 - [What's new (2026-06-21) — Layered Configuration Resolver](#whats-new-2026-06-21--layered-configuration-resolver)
 - [What's new (2026-06-21) — Server-Sent Events (SSE) Client Parser](#whats-new-2026-06-21--server-sent-events-sse-client-parser)
@@ -134,6 +135,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Dataset Diff (Row-Set Change Report)
+
+Diff two tabular extracts by key. Full reference: [`docs/source/Eng/doc/new_features/v83_features_doc.rst`](docs/source/Eng/doc/new_features/v83_features_doc.rst).
+
+- **`diff_rows` / `cell_changes` / `summarize_diff`** (`AC_diff_rows`, `AC_cell_changes`): the framework diffed screens/snapshots but had nothing to diff two **tabular** row-sets by key. This keys both sides and reports `{added, removed, changed, unchanged}` (changed carries `{key, old, new}`), expands per-cell `{key, column, old, new}` changes, and counts each bucket. Supports composite keys; last-write-wins on duplicates. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-21) — Distribution Drift Detection
 

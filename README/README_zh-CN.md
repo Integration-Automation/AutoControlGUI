@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 数据集差异(数据行变更报告)](#本次更新-2026-06-21--数据集差异数据行变更报告)
 - [本次更新 (2026-06-21) — 分布漂移检测](#本次更新-2026-06-21--分布漂移检测)
 - [本次更新 (2026-06-21) — 分层配置解析器](#本次更新-2026-06-21--分层配置解析器)
 - [本次更新 (2026-06-21) — Server-Sent Events (SSE) 客户端解析器](#本次更新-2026-06-21--server-sent-events-sse-客户端解析器)
@@ -133,6 +134,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 数据集差异(数据行变更报告)
+
+按键比对两份表格式提取。完整参考:[`docs/source/Zh/doc/new_features/v83_features_doc.rst`](../docs/source/Zh/doc/new_features/v83_features_doc.rst)。
+
+- **`diff_rows` / `cell_changes` / `summarize_diff`**(`AC_diff_rows`、`AC_cell_changes`):框架能比对画面/快照,但没有任何东西能按键比对两个**表格式**数据行集合。本功能为两侧建键索引并报告 `{added, removed, changed, unchanged}`(changed 带 `{key, old, new}`),展开逐列 `{key, column, old, new}` 变更,并统计每个分类。支持复合键;重复键以最后一行为准。纯标准库、确定。
 
 ## 本次更新 (2026-06-21) — 分布漂移检测
 
