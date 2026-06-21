@@ -1756,6 +1756,16 @@ def parse_sse(text):
     return _parse_sse(text)
 
 
+def resolve_config(layers):
+    from je_auto_control.utils.executor.action_executor import _resolve_config
+    return _resolve_config(layers)
+
+
+def explain_config(layers, key):
+    from je_auto_control.utils.executor.action_executor import _explain_config
+    return _explain_config(layers, key)
+
+
 def build_provenance(paths, builder_id="je_auto_control"):
     from je_auto_control.utils.provenance import build_provenance, subject_for
     subjects = [subject_for(path) for path in paths]

@@ -3343,6 +3343,31 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def layered_config_tools() -> List[MCPTool]:
+    layer_schema = {"type": "array", "items": {"type": "object"}}
+    return [
+        MCPTool(
+            name="ac_resolve_config",
+            description=("Deep-merge ordered config 'layers' (each {name, "
+                         "mapping, priority?}; higher priority wins) into a "
+                         "single {config}."),
+            input_schema=schema({"layers": layer_schema}, ["layers"]),
+            handler=h.resolve_config,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_explain_config",
+            description=("Report the value and winning layer name for a dotted "
+                         "'key' across config 'layers'. Returns {trace}."),
+            input_schema=schema(
+                {"layers": layer_schema, "key": {"type": "string"}},
+                ["layers", "key"]),
+            handler=h.explain_config,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def sse_client_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4985,7 +5010,7 @@ ALL_FACTORIES = (
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
     trace_context_tools, data_profile_tools, http_problem_tools, dotenv_tools,
-    sse_client_tools,
+    sse_client_tools, layered_config_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

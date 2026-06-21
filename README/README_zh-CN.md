@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 分层配置解析器](#本次更新-2026-06-21--分层配置解析器)
 - [本次更新 (2026-06-21) — Server-Sent Events (SSE) 客户端解析器](#本次更新-2026-06-21--server-sent-events-sse-客户端解析器)
 - [本次更新 (2026-06-21) — Dotenv (.env) 解析](#本次更新-2026-06-21--dotenv-env-解析)
 - [本次更新 (2026-06-21) — RFC 9457 Problem Details 解析](#本次更新-2026-06-21--rfc-9457-problem-details-解析)
@@ -131,6 +132,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 分层配置解析器
+
+以 `defaults < file < env < CLI` 优先级组合配置。完整参考:[`docs/source/Zh/doc/new_features/v81_features_doc.rst`](../docs/source/Zh/doc/new_features/v81_features_doc.rst)。
+
+- **`LayeredConfig` / `deep_merge` / `SourceTrace`**(`AC_resolve_config`、`AC_explain_config`):`json_patch.merge_patch` 只合并两份文档,`config_sync` 是 last-write-wins,`AssetStore` 是每环境扁平 —— 都无法组成有序优先级堆叠并深度合并,也无法报告每个键由哪层胜出。`add_layer(name, mapping, priority)` 后 `resolve()` 深度合并(嵌套 dict 递归、标量/list 替换);`explain("db.host")` 标明胜出层。各层由调用端提供(env 由外部传入,绝不隐含 `os.environ`)。纯标准库、确定。
 
 ## 本次更新 (2026-06-21) — Server-Sent Events (SSE) 客户端解析器
 

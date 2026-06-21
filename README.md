@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Layered Configuration Resolver](#whats-new-2026-06-21--layered-configuration-resolver)
 - [What's new (2026-06-21) — Server-Sent Events (SSE) Client Parser](#whats-new-2026-06-21--server-sent-events-sse-client-parser)
 - [What's new (2026-06-21) — Dotenv (.env) Parsing](#whats-new-2026-06-21--dotenv-env-parsing)
 - [What's new (2026-06-21) — RFC 9457 Problem Details Parsing](#whats-new-2026-06-21--rfc-9457-problem-details-parsing)
@@ -132,6 +133,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Layered Configuration Resolver
+
+Compose config with `defaults < file < env < CLI` precedence. Full reference: [`docs/source/Eng/doc/new_features/v81_features_doc.rst`](docs/source/Eng/doc/new_features/v81_features_doc.rst).
+
+- **`LayeredConfig` / `deep_merge` / `SourceTrace`** (`AC_resolve_config`, `AC_explain_config`): `json_patch.merge_patch` merges two docs, `config_sync` is last-write-wins, `AssetStore` is flat-per-env — none compose an ordered precedence stack with deep merge or report which layer won each key. `add_layer(name, mapping, priority)` then `resolve()` deep-merges (nested dicts recursively, scalars/lists replaced); `explain("db.host")` names the winning layer. Layers are caller-supplied (env passed in, never `os.environ` implicitly). Pure-stdlib, deterministic.
 
 ## What's new (2026-06-21) — Server-Sent Events (SSE) Client Parser
 
