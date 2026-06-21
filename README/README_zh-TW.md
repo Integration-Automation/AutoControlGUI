@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — Cookie Jar(HTTP 工作階段攜帶)](#本次更新-2026-06-22--cookie-jarhttp-工作階段攜帶)
 - [本次更新 (2026-06-22) — HTTP 內容協商與解壓縮](#本次更新-2026-06-22--http-內容協商與解壓縮)
 - [本次更新 (2026-06-22) — multipart/form-data 建立與解析](#本次更新-2026-06-22--multipartform-data-建立與解析)
 - [本次更新 (2026-06-22) — 設定與日誌的機密遮蔽](#本次更新-2026-06-22--設定與日誌的機密遮蔽)
@@ -141,6 +142,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — Cookie Jar(HTTP 工作階段攜帶)
+
+跨 HTTP 呼叫攜帶工作階段。完整參考:[`docs/source/Zh/doc/new_features/v91_features_doc.rst`](../docs/source/Zh/doc/new_features/v91_features_doc.rst)。
+
+- **`CookieJar` / `parse_set_cookie`**(`AC_cookie_header`、`AC_parse_set_cookie`):`http_request` 無狀態 —— 沒有工作階段 cookie 在呼叫間延續,login-then-call 流程無法在無頭情況下攜帶工作階段。本功能把 `Set-Cookie` 標頭解析進 jar、建立 `Cookie` 請求標頭,並以 JSON 存/讀 jar(`Max-Age<=0`/空值時清除)。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — HTTP 內容協商與解壓縮
 

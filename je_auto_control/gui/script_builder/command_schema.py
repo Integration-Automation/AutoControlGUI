@@ -1785,6 +1785,22 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Parse an Accept/Accept-Encoding header by q-value.",
     ))
     specs.append(CommandSpec(
+        "AC_cookie_header", "Data", "Cookie Jar: Build Cookie Header",
+        fields=(
+            FieldSpec("set_cookies", FieldType.STRING,
+                      placeholder='sid=abc; Path=/   (or ["a=1", "b=2"])'),
+        ),
+        description="Build a Cookie request header from Set-Cookie value(s).",
+    ))
+    specs.append(CommandSpec(
+        "AC_parse_set_cookie", "Data", "Cookie Jar: Parse Set-Cookie",
+        fields=(
+            FieldSpec("header", FieldType.STRING,
+                      placeholder="sid=abc; Path=/; Max-Age=3600"),
+        ),
+        description="Parse one Set-Cookie header into name/value/attributes.",
+    ))
+    specs.append(CommandSpec(
         "AC_resolve_config", "Data", "Layered Config: Resolve",
         fields=(
             FieldSpec("layers", FieldType.STRING,

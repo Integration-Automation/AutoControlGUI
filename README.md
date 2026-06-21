@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Cookie Jar (HTTP Session Carry)](#whats-new-2026-06-22--cookie-jar-http-session-carry)
 - [What's new (2026-06-22) — HTTP Content Negotiation & Decompression](#whats-new-2026-06-22--http-content-negotiation--decompression)
 - [What's new (2026-06-22) — multipart/form-data Build & Parse](#whats-new-2026-06-22--multipartform-data-build--parse)
 - [What's new (2026-06-22) — Secret Redaction for Config & Logs](#whats-new-2026-06-22--secret-redaction-for-config--logs)
@@ -142,6 +143,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Cookie Jar (HTTP Session Carry)
+
+Carry a session across HTTP calls. Full reference: [`docs/source/Eng/doc/new_features/v91_features_doc.rst`](docs/source/Eng/doc/new_features/v91_features_doc.rst).
+
+- **`CookieJar` / `parse_set_cookie`** (`AC_cookie_header`, `AC_parse_set_cookie`): `http_request` is stateless — no session cookies persisted across calls, so a login-then-call flow couldn't carry a session headlessly. This parses `Set-Cookie` headers into a jar, builds the `Cookie` request header, and saves/loads the jar as JSON (cookies cleared on `Max-Age<=0`/empty). Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — HTTP Content Negotiation & Decompression
 

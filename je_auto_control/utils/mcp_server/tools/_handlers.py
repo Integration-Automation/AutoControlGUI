@@ -1777,6 +1777,16 @@ def parse_quality_values(header):
     return _parse_quality_values(header)
 
 
+def cookie_header(set_cookies):
+    from je_auto_control.utils.executor.action_executor import _cookie_header
+    return _cookie_header(set_cookies)
+
+
+def parse_set_cookie(header):
+    from je_auto_control.utils.executor.action_executor import _parse_set_cookie
+    return _parse_set_cookie(header)
+
+
 def redact_config(obj, mask="***"):
     from je_auto_control.utils.executor.action_executor import _redact_config
     return _redact_config(obj, mask)

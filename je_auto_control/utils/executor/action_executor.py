@@ -3030,6 +3030,22 @@ def _redact_secret_text(text: str, mask: str = "***") -> Dict[str, Any]:
     return {"text": redact_secret_text(text, mask=mask)}
 
 
+def _cookie_header(set_cookies: Any) -> Dict[str, Any]:
+    """Adapter: build a Cookie header from one/many Set-Cookie strings."""
+    import json
+    from je_auto_control.utils.cookie_jar import CookieJar
+    if isinstance(set_cookies, str) and set_cookies.strip().startswith("["):
+        set_cookies = json.loads(set_cookies)
+    jar = CookieJar().update(set_cookies)
+    return {"cookie_header": jar.cookie_header(), "cookies": jar.to_dict()}
+
+
+def _parse_set_cookie(header: str) -> Dict[str, Any]:
+    """Adapter: parse one Set-Cookie header into its components."""
+    from je_auto_control.utils.cookie_jar import parse_set_cookie
+    return {"cookie": parse_set_cookie(header)}
+
+
 def _decode_body(headers: Any, body_base64: str) -> Dict[str, Any]:
     """Adapter: decode a Content-Encoding (gzip/deflate) base64 body."""
     import base64
@@ -4354,6 +4370,8 @@ class Executor:
             "AC_parse_multipart": _parse_multipart,
             "AC_decode_body": _decode_body,
             "AC_parse_quality_values": _parse_quality_values,
+            "AC_cookie_header": _cookie_header,
+            "AC_parse_set_cookie": _parse_set_cookie,
             "AC_profile_rows": _profile_rows,
             "AC_infer_schema": _infer_schema,
             "AC_parse_problem": _parse_problem,

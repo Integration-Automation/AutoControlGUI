@@ -3343,6 +3343,30 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def cookie_jar_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_cookie_header",
+            description=("Build a Cookie request header from one or many "
+                         "'set_cookies' (Set-Cookie strings or a JSON list). "
+                         "Returns {cookie_header, cookies}."),
+            input_schema=schema(
+                {"set_cookies": {"type": ["string", "array"]}},
+                ["set_cookies"]),
+            handler=h.cookie_header,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_parse_set_cookie",
+            description=("Parse one Set-Cookie 'header' into {cookie: {name, "
+                         "value, attributes}} (or null)."),
+            input_schema=schema({"header": {"type": "string"}}, ["header"]),
+            handler=h.parse_set_cookie,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def http_content_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5272,7 +5296,7 @@ ALL_FACTORIES = (
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
-    http_content_tools,
+    http_content_tools, cookie_jar_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — Cookie Jar(HTTP 会话携带)](#本次更新-2026-06-22--cookie-jarhttp-会话携带)
 - [本次更新 (2026-06-22) — HTTP 内容协商与解压](#本次更新-2026-06-22--http-内容协商与解压)
 - [本次更新 (2026-06-22) — multipart/form-data 构建与解析](#本次更新-2026-06-22--multipartform-data-构建与解析)
 - [本次更新 (2026-06-22) — 配置与日志的机密脱敏](#本次更新-2026-06-22--配置与日志的机密脱敏)
@@ -141,6 +142,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-22) — Cookie Jar(HTTP 会话携带)
+
+跨 HTTP 调用携带会话。完整参考:[`docs/source/Zh/doc/new_features/v91_features_doc.rst`](../docs/source/Zh/doc/new_features/v91_features_doc.rst)。
+
+- **`CookieJar` / `parse_set_cookie`**(`AC_cookie_header`、`AC_parse_set_cookie`):`http_request` 无状态 —— 没有会话 cookie 在调用间延续,login-then-call 流程无法在无头情况下携带会话。本功能把 `Set-Cookie` 标头解析进 jar、构建 `Cookie` 请求标头,并以 JSON 存/读 jar(`Max-Age<=0`/空值时清除)。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — HTTP 内容协商与解压
 
