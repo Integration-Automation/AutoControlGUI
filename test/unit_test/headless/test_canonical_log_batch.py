@@ -2,6 +2,8 @@
 import json
 import logging
 
+import pytest
+
 import je_auto_control as ac
 from je_auto_control.utils.canonical_log import (
     CanonicalLogLine, JSONLogFormatter, bind_trace_context,
@@ -19,7 +21,7 @@ def test_timer_uses_injected_clock():
     line = CanonicalLogLine(clock=lambda: next(ticks))
     with line.timer("step"):
         pass
-    assert line.to_dict()["step_ms"] == 500.0
+    assert line.to_dict()["step_ms"] == pytest.approx(500.0)
 
 
 def test_emit_to_sink():
