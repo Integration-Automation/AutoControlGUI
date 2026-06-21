@@ -450,6 +450,10 @@ from je_auto_control.utils.baggage import (
 from je_auto_control.utils.canonical_log import (
     CanonicalLogLine, JSONLogFormatter, bind_trace_context,
 )
+# OTLP/JSON span export (resourceSpans envelope)
+from je_auto_control.utils.otlp_export import (
+    attributes_to_otlp, spans_to_otlp, write_otlp,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -976,6 +980,7 @@ __all__ = [
     "Baggage", "extract_baggage", "format_baggage", "inject_baggage",
     "parse_baggage",
     "CanonicalLogLine", "JSONLogFormatter", "bind_trace_context",
+    "attributes_to_otlp", "spans_to_otlp", "write_otlp",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

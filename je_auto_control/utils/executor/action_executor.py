@@ -3137,6 +3137,17 @@ def _canonical_log(fields: Any) -> Dict[str, Any]:
     return {"line": line.to_dict(), "json": line.render()}
 
 
+def _spans_to_otlp(spans: Any, resource_attrs: Any = None) -> Dict[str, Any]:
+    """Adapter: wrap spans in an OTLP/JSON resourceSpans envelope."""
+    import json
+    from je_auto_control.utils.otlp_export import spans_to_otlp
+    if isinstance(spans, str):
+        spans = json.loads(spans)
+    if isinstance(resource_attrs, str):
+        resource_attrs = json.loads(resource_attrs)
+    return {"payload": spans_to_otlp(spans, resource_attrs=resource_attrs)}
+
+
 def _baggage_format(items: Any) -> Dict[str, Any]:
     """Adapter: serialise an items dict into a W3C baggage {header}."""
     import json
@@ -4389,6 +4400,7 @@ class Executor:
             "AC_baggage_parse": _baggage_parse,
             "AC_baggage_format": _baggage_format,
             "AC_canonical_log": _canonical_log,
+            "AC_spans_to_otlp": _spans_to_otlp,
             "AC_resolve_ref": _resolve_ref,
             "AC_resolve_refs": _resolve_refs,
             "AC_redact_config": _redact_config,
