@@ -3343,6 +3343,23 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def http_cassette_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_http_replay",
+            description=("Replay a recorded HTTP response from a 'cassette' "
+                         "(interactions list or {interactions}) for a 'url' / "
+                         "'method' — no network. Returns {response}."),
+            input_schema=schema(
+                {"cassette": {"type": "object"}, "url": {"type": "string"},
+                 "method": {"type": "string"}},
+                ["cassette", "url"]),
+            handler=h.http_replay,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def bulkhead_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4860,7 +4877,7 @@ ALL_FACTORIES = (
     license_policy_tools, jwt_tools, rate_limit_tools, json_patch_tools,
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
-    slo_tools, percentiles_tools, bulkhead_tools,
+    slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

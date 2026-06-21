@@ -78,6 +78,34 @@ def _read_response(response: Any) -> Dict[str, Any]:
     }
 
 
+def build_call(url: str, method: str = "GET",
+               headers: Optional[Mapping[str, Any]] = None,
+               json_body: Any = None, data: Any = None,
+               auth: Optional[Mapping[str, Any]] = None,
+               timeout: float = _DEFAULT_TIMEOUT) -> Dict[str, Any]:
+    """Build a transport ``call`` dict (url/method/headers/body/timeout)."""
+    _validate_url(url)
+    return {
+        "url": url, "method": str(method).upper(),
+        "headers": _build_headers(headers, json_body, auth),
+        "body": _encode_body(json_body, data), "timeout": float(timeout),
+    }
+
+
+def urllib_transport(call: Mapping[str, Any]) -> Dict[str, Any]:
+    """The default live transport: perform a ``call`` with ``urllib``."""
+    request = urllib.request.Request(
+        call["url"], data=call.get("body"), method=call["method"],
+        headers=dict(call.get("headers") or {}))
+    try:
+        with urllib.request.urlopen(  # nosec B310 — scheme allow-listed
+                request, timeout=float(call.get("timeout", _DEFAULT_TIMEOUT))) \
+                as response:
+            return _read_response(response)
+    except urllib.error.HTTPError as error:
+        return _read_response(error)
+
+
 def http_request(url: str, method: str = "GET",
                  headers: Optional[Mapping[str, Any]] = None,
                  json_body: Any = None, data: Any = None,
@@ -92,15 +120,7 @@ def http_request(url: str, method: str = "GET",
     responses are returned (with their body) rather than raised, so callers
     can assert on status codes.
     """
-    _validate_url(url)
+    call = build_call(url, method, headers, json_body, data, auth, timeout)
     from je_auto_control.utils.egress.egress_policy import get_egress_policy
     get_egress_policy().check(url)  # allow-all unless an operator locked it down
-    request = urllib.request.Request(
-        url, data=_encode_body(json_body, data), method=str(method).upper(),
-        headers=_build_headers(headers, json_body, auth))
-    try:
-        with urllib.request.urlopen(  # nosec B310 — scheme allow-listed
-                request, timeout=float(timeout)) as response:
-            return _read_response(response)
-    except urllib.error.HTTPError as error:
-        return _read_response(error)
+    return urllib_transport(call)

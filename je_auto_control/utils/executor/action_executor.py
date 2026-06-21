@@ -2957,6 +2957,20 @@ def _retry_after(response: Any) -> Dict[str, Any]:
     return {"delay": next_delay(response)}
 
 
+def _http_replay(cassette: Any, url: str,
+                 method: str = "GET") -> Dict[str, Any]:
+    """Adapter: replay a recorded HTTP response from a cassette (no network)."""
+    import json
+    from je_auto_control.utils.http_cassette import Cassette
+    if isinstance(cassette, str):
+        cassette = json.loads(cassette)
+    interactions = (cassette.get("interactions", [])
+                    if isinstance(cassette, dict) else cassette)
+    response = Cassette(interactions).replay(
+        {"method": str(method).upper(), "url": url})
+    return {"response": response}
+
+
 def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
     """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
     import json
@@ -4032,6 +4046,7 @@ class Executor:
             "AC_percentiles": _percentiles,
             "AC_bulkhead_run": _bulkhead_run,
             "AC_retry_after": _retry_after,
+            "AC_http_replay": _http_replay,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,

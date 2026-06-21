@@ -1594,6 +1594,19 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Server-advised wait (seconds) from an HTTP response; {delay}.",
     ))
     specs.append(CommandSpec(
+        "AC_http_replay", "Data", "HTTP Cassette: Replay",
+        fields=(
+            FieldSpec("cassette", FieldType.STRING,
+                      placeholder='{"interactions": [{"request": {...}, '
+                                  '"response": {...}}]}'),
+            FieldSpec("url", FieldType.STRING,
+                      placeholder="https://api.example.com/users/1"),
+            FieldSpec("method", FieldType.STRING, optional=True,
+                      placeholder="GET"),
+        ),
+        description="Replay a recorded HTTP response from a cassette (no network).",
+    ))
+    specs.append(CommandSpec(
         "AC_rate_limit", "Flow", "Rate Limit (Token Bucket)",
         fields=(
             FieldSpec("name", FieldType.STRING),
