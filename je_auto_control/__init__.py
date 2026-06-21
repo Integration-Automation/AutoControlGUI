@@ -371,6 +371,10 @@ from je_auto_control.utils.slo import (
 )
 # Mergeable streaming latency digest + exact percentiles
 from je_auto_control.utils.percentiles import LatencyDigest, exact_percentiles
+# Bulkhead concurrency isolation + rate-limit header parsing
+from je_auto_control.utils.bulkhead import (
+    Bulkhead, BulkheadFullError, next_delay, parse_ratelimit, parse_retry_after,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -868,6 +872,8 @@ __all__ = [
     "run_experiment",
     "BurnRule", "burn_alerts", "burn_rate", "default_burn_rules", "evaluate_slo",
     "LatencyDigest", "exact_percentiles",
+    "Bulkhead", "BulkheadFullError", "next_delay", "parse_ratelimit",
+    "parse_retry_after",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

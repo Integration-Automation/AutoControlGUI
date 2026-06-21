@@ -2928,6 +2928,35 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+_BULKHEADS: Dict[str, Any] = {}
+
+
+def _bulkhead_run(name: str, max_concurrent: int,
+                  actions: Any) -> Dict[str, Any]:
+    """Adapter: run an action list under a named bulkhead permit."""
+    import json
+    from je_auto_control.utils.bulkhead import Bulkhead, BulkheadFullError
+    if isinstance(actions, str):
+        actions = json.loads(actions)
+    bulkhead = _BULKHEADS.setdefault(
+        name, Bulkhead(int(max_concurrent), name=name))
+    try:
+        with bulkhead:
+            record = executor.execute_action(list(actions), raise_on_error=True)
+    except BulkheadFullError:
+        return {"entered": False, "in_flight": bulkhead.in_flight}
+    return {"entered": True, "in_flight": bulkhead.in_flight, "record": record}
+
+
+def _retry_after(response: Any) -> Dict[str, Any]:
+    """Adapter: server-advised wait from a response (dict or JSON string)."""
+    import json
+    from je_auto_control.utils.bulkhead import next_delay
+    if isinstance(response, str):
+        response = json.loads(response)
+    return {"delay": next_delay(response)}
+
+
 def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
     """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
     import json
@@ -4001,6 +4030,8 @@ class Executor:
             "AC_evaluate_slo": _evaluate_slo,
             "AC_burn_alerts": _burn_alerts,
             "AC_percentiles": _percentiles,
+            "AC_bulkhead_run": _bulkhead_run,
+            "AC_retry_after": _retry_after,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,
