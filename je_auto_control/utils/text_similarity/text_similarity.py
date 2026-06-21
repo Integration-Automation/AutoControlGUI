@@ -134,16 +134,22 @@ def dice(a: str, b: str, *, n: int = 2) -> float:
     return 2 * len(set_a & set_b) / total if total else 1.0
 
 
+_SIMILARITY_METRICS = {"jaro": jaro, "jaro_winkler": jaro_winkler,
+                       "jaccard": jaccard, "dice": dice}
+_DISTANCE_METRICS = {"levenshtein": levenshtein,
+                     "damerau_levenshtein": damerau_levenshtein}
+
+
 def similarity(a: str, b: str, *, metric: str = "jaro_winkler") -> float:
     """Return a normalised ``[0, 1]`` similarity for ``metric``.
 
     Edit-distance metrics are converted to ``1 - distance / max_len``.
     """
-    if metric in ("jaro", "jaro_winkler", "jaccard", "dice"):
-        return globals()[metric](a, b)
-    if metric in ("levenshtein", "damerau_levenshtein"):
+    if metric in _SIMILARITY_METRICS:
+        return _SIMILARITY_METRICS[metric](a, b)
+    if metric in _DISTANCE_METRICS:
         longest = max(len(a), len(b))
         if longest == 0:
             return 1.0
-        return 1 - globals()[metric](a, b) / longest
+        return 1 - _DISTANCE_METRICS[metric](a, b) / longest
     raise ValueError(f"unknown metric: {metric!r}; choose from {_METRICS}")
