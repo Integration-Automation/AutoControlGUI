@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — Server-Sent Events (SSE) 客户端解析器](#本次更新-2026-06-21--server-sent-events-sse-客户端解析器)
 - [本次更新 (2026-06-21) — Dotenv (.env) 解析](#本次更新-2026-06-21--dotenv-env-解析)
 - [本次更新 (2026-06-21) — RFC 9457 Problem Details 解析](#本次更新-2026-06-21--rfc-9457-problem-details-解析)
 - [本次更新 (2026-06-21) — 数据剖析与结构推断](#本次更新-2026-06-21--数据剖析与结构推断)
@@ -130,6 +131,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — Server-Sent Events (SSE) 客户端解析器
+
+消费 `text/event-stream` 响应。完整参考:[`docs/source/Zh/doc/new_features/v80_features_doc.rst`](../docs/source/Zh/doc/new_features/v80_features_doc.rst)。
+
+- **`parse_event_stream` / `SSEParser` / `SSEEvent`**(`AC_parse_sse`):MCP 的 HTTP 传输会发出 SSE,但没有任何东西消费它 —— 一个流式的 LLM/agent/chatops 端点会让 `http_request` 拿到原始 blob。本功能实现 WHATWG event-stream 解析算法(`event`/`data`/`id`/`retry`、注释、前导空格规则、空行派发),并提供逐块的增量 `feed` 与一次性的 `parse_event_stream`。纯标准库、完全确定。
 
 ## 本次更新 (2026-06-21) — Dotenv (.env) 解析
 

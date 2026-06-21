@@ -3343,6 +3343,20 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def sse_client_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_parse_sse",
+            description=("Parse a Server-Sent Events ('text/event-stream') "
+                         "'text' blob into {events} (event/data/id/retry), "
+                         "flushing a trailing event without a final blank line."),
+            input_schema=schema({"text": {"type": "string"}}, ["text"]),
+            handler=h.parse_sse,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def dotenv_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4971,6 +4985,7 @@ ALL_FACTORIES = (
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
     trace_context_tools, data_profile_tools, http_problem_tools, dotenv_tools,
+    sse_client_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,
