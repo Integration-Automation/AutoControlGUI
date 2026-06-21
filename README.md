@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Server-Sent Events (SSE) Client Parser](#whats-new-2026-06-21--server-sent-events-sse-client-parser)
 - [What's new (2026-06-21) — Dotenv (.env) Parsing](#whats-new-2026-06-21--dotenv-env-parsing)
 - [What's new (2026-06-21) — RFC 9457 Problem Details Parsing](#whats-new-2026-06-21--rfc-9457-problem-details-parsing)
 - [What's new (2026-06-21) — Data Profiling & Schema Inference](#whats-new-2026-06-21--data-profiling--schema-inference)
@@ -131,6 +132,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Server-Sent Events (SSE) Client Parser
+
+Consume `text/event-stream` responses. Full reference: [`docs/source/Eng/doc/new_features/v80_features_doc.rst`](docs/source/Eng/doc/new_features/v80_features_doc.rst).
+
+- **`parse_event_stream` / `SSEParser` / `SSEEvent`** (`AC_parse_sse`): the MCP HTTP transport emits SSE, but nothing consumed it — a streaming LLM/agent/chatops endpoint left `http_request` with a raw blob. This implements the WHATWG event-stream parsing algorithm (`event`/`data`/`id`/`retry`, comments, the leading-space rule, blank-line dispatch) with an incremental `feed` for chunks and a one-shot `parse_event_stream`. Pure-stdlib, fully deterministic.
 
 ## What's new (2026-06-21) — Dotenv (.env) Parsing
 

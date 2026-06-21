@@ -3044,6 +3044,12 @@ def _load_dotenv(path: str, override: Any = False) -> Dict[str, Any]:
     return {"values": load_dotenv(path, {}, override=bool(override))}
 
 
+def _parse_sse(text: str) -> Dict[str, Any]:
+    """Adapter: parse a text/event-stream blob into {events}."""
+    from je_auto_control.utils.sse_client import parse_event_stream
+    return {"events": [event.to_dict() for event in parse_event_stream(text)]}
+
+
 def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
     """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
     import json
@@ -4127,6 +4133,7 @@ class Executor:
             "AC_parse_problem": _parse_problem,
             "AC_parse_dotenv": _parse_dotenv,
             "AC_load_dotenv": _load_dotenv,
+            "AC_parse_sse": _parse_sse,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,

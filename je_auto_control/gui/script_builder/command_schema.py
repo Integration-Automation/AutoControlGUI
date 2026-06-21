@@ -1671,6 +1671,14 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Load a .env file into a values dict.",
     ))
     specs.append(CommandSpec(
+        "AC_parse_sse", "Data", "SSE: Parse Event Stream",
+        fields=(
+            FieldSpec("text", FieldType.STRING,
+                      placeholder='event: ping\ndata: {"x": 1}\n\n'),
+        ),
+        description="Parse a text/event-stream blob into events.",
+    ))
+    specs.append(CommandSpec(
         "AC_rate_limit", "Flow", "Rate Limit (Token Bucket)",
         fields=(
             FieldSpec("name", FieldType.STRING),

@@ -388,6 +388,10 @@ from je_auto_control.utils.http_problem import (
     HttpProblemError, ProblemDetails, is_problem, parse_problem,
     raise_for_problem,
 )
+# Server-Sent Events (text/event-stream) client parser
+from je_auto_control.utils.sse_client import (
+    SSEEvent, SSEParser, parse_event_stream,
+)
 # W3C Trace Context propagation (traceparent / tracestate)
 from je_auto_control.utils.trace_context import (
     SpanContext, TraceContextError, child_context, extract_context,
@@ -898,6 +902,7 @@ __all__ = [
     "Cassette", "CassetteMissError",
     "HttpProblemError", "ProblemDetails", "is_problem", "parse_problem",
     "raise_for_problem",
+    "SSEEvent", "SSEParser", "parse_event_stream",
     "SpanContext", "TraceContextError", "child_context", "extract_context",
     "format_traceparent", "format_tracestate", "inject_context",
     "new_root_context", "new_span_id", "new_trace_id", "parse_traceparent",
