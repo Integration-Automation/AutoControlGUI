@@ -12,9 +12,10 @@ from je_auto_control.utils.trace_context import (
 
 
 def _seeded_rng():
-    import random
-    state = random.Random(1234)
-    return lambda n: bytes(state.getrandbits(8) for _ in range(n))
+    # deterministic byte source for reproducible IDs (no `random` module)
+    import itertools
+    counter = itertools.count(1)
+    return lambda n: bytes(next(counter) % 256 for _ in range(n))
 
 
 def test_roundtrip_parse_format():
