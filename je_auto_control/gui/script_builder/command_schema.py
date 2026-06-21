@@ -1389,6 +1389,16 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Verify a JWT (alg allowlist + exp/nbf/aud); returns {ok, claims}.",
     ))
     specs.append(CommandSpec(
+        "AC_run_chaos", "Flow", "Run Chaos Experiment",
+        fields=(
+            FieldSpec("spec", FieldType.STRING,
+                      placeholder='{"title": "...", "probes": [{"name": "p", '
+                                  '"action": [...]}], "method": [{"name": "f", '
+                                  '"action": [...]}], "rollbacks": [[...]]}'),
+        ),
+        description="Verify steady state, inject faults, re-verify, roll back.",
+    ))
+    specs.append(CommandSpec(
         "AC_run_saga", "Flow", "Run Saga (Compensating Rollback)",
         fields=(
             FieldSpec("steps", FieldType.STRING,

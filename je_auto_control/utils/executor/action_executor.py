@@ -2928,6 +2928,37 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+def _chaos_probe_call(actions: List[Any]) -> Any:
+    def call() -> bool:
+        executor.execute_action(list(actions), raise_on_error=True)
+        return True
+    return call
+
+
+def _chaos_fault_apply(actions: List[Any]) -> Any:
+    def apply() -> Dict[str, Any]:
+        return executor.execute_action(list(actions), raise_on_error=True)
+    return apply
+
+
+def _run_chaos(spec: Any) -> Dict[str, Any]:
+    """Adapter: run a chaos experiment whose probes/method/rollbacks are actions."""
+    import json
+    from je_auto_control.utils.chaos import (
+        ChaosExperiment, Fault, Probe, run_experiment)
+    if isinstance(spec, str):
+        spec = json.loads(spec)
+    probes = [Probe(p.get("name", "probe"), _chaos_probe_call(p["action"]), True)
+              for p in spec.get("probes", [])]
+    method = [Fault(f.get("name", "fault"), _chaos_fault_apply(f["action"]))
+              for f in spec.get("method", [])]
+    rollbacks = [_chaos_fault_apply(actions)
+                 for actions in spec.get("rollbacks", [])]
+    experiment = ChaosExperiment(spec.get("title", "chaos"), probes, method,
+                                 rollbacks)
+    return run_experiment(experiment)
+
+
 def _match_json(actual: Any, expected: Any, partial: bool = False,
                 match_type: bool = False) -> Dict[str, Any]:
     """Adapter: match a JSON payload against an expected one (relaxed rules)."""
@@ -3933,6 +3964,7 @@ class Executor:
             "AC_verify_provenance": _verify_provenance,
             "AC_match_json": _match_json,
             "AC_diff_json": _diff_json,
+            "AC_run_chaos": _run_chaos,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,

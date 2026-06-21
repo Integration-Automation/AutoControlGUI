@@ -1675,6 +1675,11 @@ def diff_json(actual, expected):
     return {"diffs": _diff(actual, expected)}
 
 
+def run_chaos(spec):
+    from je_auto_control.utils.executor.action_executor import _run_chaos
+    return _run_chaos(spec)
+
+
 def build_provenance(paths, builder_id="je_auto_control"):
     from je_auto_control.utils.provenance import build_provenance, subject_for
     subjects = [subject_for(path) for path in paths]

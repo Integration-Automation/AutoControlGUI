@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — 混沌實驗](#本次更新-2026-06-21--混沌實驗)
 - [本次更新 (2026-06-21) — JSON 合約與快照比對](#本次更新-2026-06-21--json-合約與快照比對)
 - [本次更新 (2026-06-21) — SLSA 建置來源證明](#本次更新-2026-06-21--slsa-建置來源證明)
 - [本次更新 (2026-06-21) — 功能旗標](#本次更新-2026-06-21--功能旗標)
@@ -121,6 +122,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — 混沌實驗
+
+注入故障、驗證系統仍成立。完整參考:[`docs/source/Zh/doc/new_features/v71_features_doc.rst`](../docs/source/Zh/doc/new_features/v71_features_doc.rst)。
+
+- **`ChaosExperiment` / `run_experiment` / `Probe` / `latency_fault` / `exception_fault`**(`AC_run_chaos`):`resilience` 從失敗中*復原*;這則*製造*失敗並檢查穩態假設是否仍成立(Chaos Toolkit 生命週期 —— 之前驗證、注入故障、之後驗證、LIFO 回滾)。探針/故障/回滾皆為 callable;時鐘/RNG/sleep 可注入,因此實驗在測試中**具決定性**地執行,無真正失敗或睡眠。`AC_run_chaos` 以動作清單 spec 驅動。純標準函式庫。
 
 ## 本次更新 (2026-06-21) — JSON 合約與快照比對
 

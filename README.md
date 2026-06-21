@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Chaos Experiments](#whats-new-2026-06-21--chaos-experiments)
 - [What's new (2026-06-21) — JSON Contract & Snapshot Matching](#whats-new-2026-06-21--json-contract--snapshot-matching)
 - [What's new (2026-06-21) — SLSA Build Provenance](#whats-new-2026-06-21--slsa-build-provenance)
 - [What's new (2026-06-21) — Feature Flags](#whats-new-2026-06-21--feature-flags)
@@ -122,6 +123,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Chaos Experiments
+
+Inject faults, verify the system holds. Full reference: [`docs/source/Eng/doc/new_features/v71_features_doc.rst`](docs/source/Eng/doc/new_features/v71_features_doc.rst).
+
+- **`ChaosExperiment` / `run_experiment` / `Probe` / `latency_fault` / `exception_fault`** (`AC_run_chaos`): `resilience` *recovers* from failures; this *causes* them and checks a steady-state hypothesis still holds (Chaos Toolkit lifecycle — verify before, inject faults, verify after, roll back LIFO). Probes/faults/rollbacks are callables; the clock/RNG/sleep are injectable so experiments run **deterministically** in tests with no real failures or sleeping. `AC_run_chaos` drives an action-list spec. Pure-stdlib.
 
 ## What's new (2026-06-21) — JSON Contract & Snapshot Matching
 
