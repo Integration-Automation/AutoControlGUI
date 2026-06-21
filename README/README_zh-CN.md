@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — HTTP 录制与重播卡带](#本次更新-2026-06-21--http-录制与重播卡带)
 - [本次更新 (2026-06-21) — 隔舱与速率限制标头](#本次更新-2026-06-21--隔舱与速率限制标头)
 - [本次更新 (2026-06-21) — 流式延迟百分位](#本次更新-2026-06-21--流式延迟百分位)
 - [本次更新 (2026-06-21) — 服务等级目标(SLO)](#本次更新-2026-06-21--服务等级目标slo)
@@ -125,6 +126,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — HTTP 录制与重播卡带
+
+在 CI 中重跑 API 流程,无需在线服务器。完整参考:[`docs/source/Zh/doc/new_features/v75_features_doc.rst`](../docs/source/Zh/doc/new_features/v75_features_doc.rst)。
+
+- **`Cassette` / `CassetteMissError`**(`AC_http_replay`):HTTP 客户端把 `urllib` 传输写死,因此驱动真实 API 的流程无法离线重跑。客户端现在开放 `build_call` / `urllib_transport` 接缝,本功能加入 VCR 风格卡带 —— `replay` 为相符请求返回已录制响应(纯粹、不联网,对 CI 最有价值的一半),`recording_transport` 则是在实际传输之上的薄薄转送。可按 `method`/`url`(可加 `body`)匹配;以 JSON `save`/`load` 卡带。纯标准库。
 
 ## 本次更新 (2026-06-21) — 隔舱与速率限制标头
 

@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — HTTP Record & Replay Cassette](#whats-new-2026-06-21--http-record--replay-cassette)
 - [What's new (2026-06-21) — Bulkhead & Rate-Limit Headers](#whats-new-2026-06-21--bulkhead--rate-limit-headers)
 - [What's new (2026-06-21) — Streaming Latency Percentiles](#whats-new-2026-06-21--streaming-latency-percentiles)
 - [What's new (2026-06-21) — Service-Level Objectives (SLO)](#whats-new-2026-06-21--service-level-objectives-slo)
@@ -126,6 +127,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — HTTP Record & Replay Cassette
+
+Re-run API flows in CI with no live server. Full reference: [`docs/source/Eng/doc/new_features/v75_features_doc.rst`](docs/source/Eng/doc/new_features/v75_features_doc.rst).
+
+- **`Cassette` / `CassetteMissError`** (`AC_http_replay`): the HTTP client hardcoded its `urllib` transport, so a flow driving a real API couldn't be re-run offline. The client now exposes a `build_call` / `urllib_transport` seam, and this adds a VCR-style cassette — `replay` returns a recorded response for a matching request (pure, no network — the CI-valuable half), `recording_transport` is a thin pass-through over the live transport. Match on `method`/`url` (optionally `body`); `save`/`load` JSON cassettes. Pure-stdlib.
 
 ## What's new (2026-06-21) — Bulkhead & Rate-Limit Headers
 

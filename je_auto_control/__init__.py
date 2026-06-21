@@ -375,6 +375,8 @@ from je_auto_control.utils.percentiles import LatencyDigest, exact_percentiles
 from je_auto_control.utils.bulkhead import (
     Bulkhead, BulkheadFullError, next_delay, parse_ratelimit, parse_retry_after,
 )
+# HTTP record/replay cassette (deterministic offline API tests)
+from je_auto_control.utils.http_cassette import Cassette, CassetteMissError
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -874,6 +876,7 @@ __all__ = [
     "LatencyDigest", "exact_percentiles",
     "Bulkhead", "BulkheadFullError", "next_delay", "parse_ratelimit",
     "parse_retry_after",
+    "Cassette", "CassetteMissError",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

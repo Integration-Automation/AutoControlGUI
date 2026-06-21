@@ -1707,6 +1707,15 @@ def retry_after(response):
     return {"delay": next_delay(response)}
 
 
+def http_replay(cassette, url, method="GET"):
+    from je_auto_control.utils.http_cassette import Cassette
+    interactions = (cassette.get("interactions", [])
+                    if isinstance(cassette, dict) else cassette)
+    response = Cassette(interactions).replay(
+        {"method": str(method).upper(), "url": url})
+    return {"response": response}
+
+
 def build_provenance(paths, builder_id="je_auto_control"):
     from je_auto_control.utils.provenance import build_provenance, subject_for
     subjects = [subject_for(path) for path in paths]
