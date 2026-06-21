@@ -14,7 +14,7 @@ Headless API
 
 .. code-block:: python
 
-    from je_auto_control import match_json, diff_json, snapshot
+    from je_auto_control import match_json, diff_json, snapshot_json
 
     report = match_json(actual, {"id": 1, "name": "Ada"})
     if not report.ok:
@@ -29,7 +29,7 @@ Headless API
     match_json(response, template, ignore=["$.created_at", "$.id"])
 
     diff_json(actual, expected)              # [{path, kind, ...}]
-    snapshot(actual, "golden/checkout.json")  # write-if-absent, else compare
+    snapshot_json(actual, "golden/checkout.json")  # write-if-absent, else compare
 
 ``match_json`` returns a ``MatchReport(ok, mismatches)`` where each mismatch is
 ``{path, kind}`` with ``kind`` one of ``missing`` (in expected, absent from
@@ -38,7 +38,7 @@ actual), ``extra`` (in actual, absent from expected), or ``changed``. Options:
 ``changed`` leaf whose types match (Pact ``like``), and ``ignore`` skips listed
 paths. ``diff_json`` is the raw path-tagged diff; ``normalize_json`` returns a
 canonical copy (sorted keys, ``drop`` keys removed) for stable comparison;
-``snapshot`` is golden-master testing (writes the file on first run, then
+``snapshot_json`` is golden-master testing (writes the file on first run, then
 matches against it). ``true`` stays distinct from ``1``.
 
 Executor commands

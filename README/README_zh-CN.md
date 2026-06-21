@@ -126,7 +126,7 @@
 
 比对、取差异与快照 JSON 内容。完整参考:[`docs/source/Zh/doc/new_features/v70_features_doc.rst`](../docs/source/Zh/doc/new_features/v70_features_doc.rst)。
 
-- **`match_json` / `diff_json` / `normalize_json` / `snapshot`**(`AC_match_json`、`AC_diff_json`):`json_schema` 以撰写的 schema 验证、`jsonpath` 提取,但没有任何东西能以宽松规则比对两份内容或逐路径取差异。本功能补上合约/快照比对 —— `partial`(子集)、`match_type`(Pact 风格 `like`)、`ignore` 易变路径 —— 返回 `{path, kind}` 不符(`missing`/`extra`/`changed`),外加 golden-master `snapshot`。与 `json_schema` + `json_patch` 互补;纯标准库。
+- **`match_json` / `diff_json` / `normalize_json` / `snapshot_json`**(`AC_match_json`、`AC_diff_json`):`json_schema` 以撰写的 schema 验证、`jsonpath` 提取,但没有任何东西能以宽松规则比对两份内容或逐路径取差异。本功能补上合约/快照比对 —— `partial`(子集)、`match_type`(Pact 风格 `like`)、`ignore` 易变路径 —— 返回 `{path, kind}` 不符(`missing`/`extra`/`changed`),外加 golden-master `snapshot_json`。与 `json_schema` + `json_patch` 互补;纯标准库。
 
 ## 本次更新 (2026-06-21) — SLSA 构建来源证明
 

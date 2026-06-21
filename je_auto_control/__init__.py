@@ -358,7 +358,7 @@ from je_auto_control.utils.provenance import (
 )
 # JSON contract / snapshot matching
 from je_auto_control.utils.json_contract import (
-    MatchReport, diff_json, match_json, normalize_json, snapshot,
+    MatchReport, diff_json, match_json, normalize_json, snapshot_json,
 )
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
@@ -852,7 +852,7 @@ __all__ = [
     "percentage_bucket",
     "build_provenance", "subject_for", "subject_for_bytes",
     "verify_provenance", "write_provenance",
-    "MatchReport", "diff_json", "match_json", "normalize_json", "snapshot",
+    "MatchReport", "diff_json", "match_json", "normalize_json", "snapshot_json",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

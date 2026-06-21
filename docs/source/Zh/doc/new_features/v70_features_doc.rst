@@ -12,7 +12,7 @@ JSON 合約與快照比對
 
 .. code-block:: python
 
-    from je_auto_control import match_json, diff_json, snapshot
+    from je_auto_control import match_json, diff_json, snapshot_json
 
     report = match_json(actual, {"id": 1, "name": "Ada"})
     if not report.ok:
@@ -27,13 +27,13 @@ JSON 合約與快照比對
     match_json(response, template, ignore=["$.created_at", "$.id"])
 
     diff_json(actual, expected)              # [{path, kind, ...}]
-    snapshot(actual, "golden/checkout.json")  # 不存在則寫入,否則比對
+    snapshot_json(actual, "golden/checkout.json")  # 不存在則寫入,否則比對
 
 ``match_json`` 回傳 ``MatchReport(ok, mismatches)``,每個不符為 ``{path, kind}``,``kind`` 為
 ``missing``(在 expected、actual 沒有)、``extra``(在 actual、expected 沒有)或 ``changed`` 之一。
 選項:``partial`` 捨棄 ``extra`` 不符(子集比對),``match_type`` 接受型別相符的 ``changed`` 葉
 (Pact ``like``),``ignore`` 略過列出的路徑。``diff_json`` 是原始的路徑標記差異;``normalize_json``
-回傳正規化副本(鍵排序、移除 ``drop`` 鍵)以利穩定比對;``snapshot`` 是 golden-master 測試
+回傳正規化副本(鍵排序、移除 ``drop`` 鍵)以利穩定比對;``snapshot_json`` 是 golden-master 測試
 (首次執行寫檔,之後比對)。``true`` 與 ``1`` 保持相異。
 
 執行器命令

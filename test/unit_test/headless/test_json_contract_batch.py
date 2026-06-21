@@ -3,7 +3,7 @@ import json
 
 import je_auto_control as ac
 from je_auto_control.utils.json_contract import (
-    MatchReport, diff_json, match_json, normalize_json, snapshot)
+    MatchReport, diff_json, match_json, normalize_json, snapshot_json)
 
 
 def test_exact_match():
@@ -63,9 +63,9 @@ def test_normalize_sorts_and_drops():
 
 def test_snapshot_create_then_compare(tmp_path):
     path = str(tmp_path / "snap.json")
-    assert snapshot({"x": 1}, path) is True     # created
-    assert snapshot({"x": 1}, path) is True      # matches
-    assert snapshot({"x": 2}, path) is False     # differs
+    assert snapshot_json({"x": 1}, path) is True     # created
+    assert snapshot_json({"x": 1}, path) is True      # matches
+    assert snapshot_json({"x": 2}, path) is False     # differs
 
 
 # --- wiring ---------------------------------------------------------------
@@ -98,7 +98,7 @@ def test_wiring():
 
 
 def test_facade_exports():
-    for attr in ("match_json", "diff_json", "normalize_json", "snapshot",
+    for attr in ("match_json", "diff_json", "normalize_json", "snapshot_json",
                  "MatchReport"):
         assert hasattr(ac, attr)
         assert attr in ac.__all__

@@ -115,7 +115,7 @@ def normalize_json(value: Any, *, drop: Iterable[str] = ()) -> Any:
     return _normalize(value, set(drop))
 
 
-def snapshot(actual: Any, path: str) -> bool:
+def snapshot_json(actual: Any, path: str) -> bool:
     """Golden-master: write ``actual`` if absent, else match the saved copy."""
     target = Path(os.path.realpath(path))
     if not target.exists():

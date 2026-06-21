@@ -1158,8 +1158,10 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_match_json", "Data", "JSON Contract: Match",
         fields=(
-            FieldSpec("actual", FieldType.STRING, placeholder='{"a": 1}'),
-            FieldSpec("expected", FieldType.STRING, placeholder='{"a": 1}'),
+            FieldSpec("actual", FieldType.STRING,
+                      placeholder='{"id": 1, "name": "Ada"}'),
+            FieldSpec("expected", FieldType.STRING,
+                      placeholder='{"id": 1, "name": "Ada"}'),
             FieldSpec("partial", FieldType.BOOL, optional=True, default=False),
             FieldSpec("match_type", FieldType.BOOL, optional=True,
                       default=False),
@@ -1169,8 +1171,8 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_diff_json", "Data", "JSON Contract: Diff",
         fields=(
-            FieldSpec("actual", FieldType.STRING, placeholder='{"a": 1}'),
-            FieldSpec("expected", FieldType.STRING, placeholder='{"a": 2}'),
+            FieldSpec("actual", FieldType.STRING, placeholder='[1, 2, 3]'),
+            FieldSpec("expected", FieldType.STRING, placeholder='[1, 2]'),
         ),
         description="Path-tagged diff between two JSON payloads; {diffs}.",
     ))
