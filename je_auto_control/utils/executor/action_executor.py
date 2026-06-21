@@ -2928,6 +2928,26 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+def _unified_diff(a: str, b: str) -> Dict[str, Any]:
+    """Adapter: unified diff transforming text a into b."""
+    from je_auto_control.utils.text_diff import unified_diff
+    return {"diff": unified_diff(a, b)}
+
+
+def _apply_unified(text: str, diff: str) -> Dict[str, Any]:
+    """Adapter: apply a unified diff to text."""
+    from je_auto_control.utils.text_diff import apply_unified
+    return {"result": apply_unified(text, diff)}
+
+
+def _three_way_merge(base: str, ours: str, theirs: str) -> Dict[str, Any]:
+    """Adapter: three-way merge ours/theirs against base."""
+    from je_auto_control.utils.text_diff import three_way_merge
+    outcome = three_way_merge(base, ours, theirs)
+    return {"text": outcome.text, "clean": outcome.clean,
+            "conflicts": outcome.conflicts}
+
+
 def _rrule_occurrences(rule: str, dtstart: str,
                        count: int = 10) -> Dict[str, Any]:
     """Adapter: expand an RRULE from an ISO dtstart into ISO datetimes."""
@@ -3834,6 +3854,9 @@ class Executor:
             "AC_ab_significance": _ab_significance,
             "AC_rrule_occurrences": _rrule_occurrences,
             "AC_rrule_next": _rrule_next,
+            "AC_unified_diff": _unified_diff,
+            "AC_apply_unified": _apply_unified,
+            "AC_three_way_merge": _three_way_merge,
             "AC_resolve_pointer": _resolve_pointer,
             "AC_apply_json_patch": _apply_json_patch,
             "AC_make_json_patch": _make_json_patch,

@@ -1156,6 +1156,31 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Validate JSON against a JSON Schema; returns {ok, errors}.",
     ))
     specs.append(CommandSpec(
+        "AC_unified_diff", "Data", "Text: Unified Diff",
+        fields=(
+            FieldSpec("a", FieldType.STRING, placeholder="original text"),
+            FieldSpec("b", FieldType.STRING, placeholder="changed text"),
+        ),
+        description="Unified diff transforming a into b; returns {diff}.",
+    ))
+    specs.append(CommandSpec(
+        "AC_apply_unified", "Data", "Text: Apply Diff",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="original text"),
+            FieldSpec("diff", FieldType.STRING, placeholder="@@ -1 +1 @@ ..."),
+        ),
+        description="Apply a unified diff to text; returns {result}.",
+    ))
+    specs.append(CommandSpec(
+        "AC_three_way_merge", "Data", "Text: Three-Way Merge",
+        fields=(
+            FieldSpec("base", FieldType.STRING, placeholder="base text"),
+            FieldSpec("ours", FieldType.STRING, placeholder="our text"),
+            FieldSpec("theirs", FieldType.STRING, placeholder="their text"),
+        ),
+        description="Merge ours/theirs against base; returns {text, clean, conflicts}.",
+    ))
+    specs.append(CommandSpec(
         "AC_rrule_occurrences", "Flow", "Recurrence: Expand (RRULE)",
         fields=(
             FieldSpec("rule", FieldType.STRING,

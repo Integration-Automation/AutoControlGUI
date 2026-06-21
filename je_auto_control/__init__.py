@@ -342,6 +342,10 @@ from je_auto_control.utils.stats import (
 from je_auto_control.utils.recurrence import (
     Recurrence, next_occurrence, occurrences, parse_rrule,
 )
+# Unified-diff generate/apply + three-way text merge
+from je_auto_control.utils.text_diff import (
+    MergeResult, PatchApplyError, apply_unified, three_way_merge, unified_diff,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -828,6 +832,8 @@ __all__ = [
     "chi_square_2x2", "cohens_d", "describe", "normal_cdf", "percentile",
     "two_proportion_z_test", "welch_t_test",
     "Recurrence", "next_occurrence", "occurrences", "parse_rrule",
+    "MergeResult", "PatchApplyError", "apply_unified", "three_way_merge",
+    "unified_diff",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

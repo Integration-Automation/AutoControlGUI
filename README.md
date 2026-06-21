@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Text Diff, Patch & Three-Way Merge](#whats-new-2026-06-21--text-diff-patch--three-way-merge)
 - [What's new (2026-06-21) — Calendar Recurrence Rules (RRULE)](#whats-new-2026-06-21--calendar-recurrence-rules-rrule)
 - [What's new (2026-06-21) — Statistics & A/B Significance](#whats-new-2026-06-21--statistics--ab-significance)
 - [What's new (2026-06-21) — Full-Text Search (BM25)](#whats-new-2026-06-21--full-text-search-bm25)
@@ -118,6 +119,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Text Diff, Patch & Three-Way Merge
+
+Apply and merge text diffs. Full reference: [`docs/source/Eng/doc/new_features/v67_features_doc.rst`](docs/source/Eng/doc/new_features/v67_features_doc.rst).
+
+- **`unified_diff` / `apply_unified` / `three_way_merge`** (`AC_unified_diff`, `AC_apply_unified`, `AC_three_way_merge`): `difflib` *generates* a unified diff but the stdlib can't *apply* one, and there was no three-way merge. This adds the missing applier (walks `@@` hunks, verifies context, raises on mismatch) and a line-based three-way merge (non-overlapping edits combine cleanly; overlapping ones emit `<<<<<<<` conflict markers). Complements `json_patch` (structured JSON); pure-stdlib `difflib`.
 
 ## What's new (2026-06-21) — Calendar Recurrence Rules (RRULE)
 
