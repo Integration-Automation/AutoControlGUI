@@ -1736,6 +1736,16 @@ def baggage_format(items):
     return _baggage_format(items)
 
 
+def normalize_text(text, form="NFKC", casefold=True, collapse_ws=True):
+    from je_auto_control.utils.executor.action_executor import _normalize_text
+    return _normalize_text(text, form, casefold, collapse_ws)
+
+
+def slugify(text, sep="-"):
+    from je_auto_control.utils.executor.action_executor import _slugify
+    return _slugify(text, sep)
+
+
 def canonical_log(fields):
     from je_auto_control.utils.executor.action_executor import _canonical_log
     return _canonical_log(fields)

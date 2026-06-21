@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — Unicode 文字正規化與 Slug](#本次更新-2026-06-22--unicode-文字正規化與-slug)
 - [本次更新 (2026-06-22) — JSON-Schema 相容性檢查](#本次更新-2026-06-22--json-schema-相容性檢查)
 - [本次更新 (2026-06-22) — 具型別的設定結構](#本次更新-2026-06-22--具型別的設定結構)
 - [本次更新 (2026-06-22) — OTLP/JSON Span 匯出](#本次更新-2026-06-22--otlpjson-span-匯出)
@@ -147,6 +148,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — Unicode 文字正規化與 Slug
+
+在 fuzzy/search/OCR 比對前正規化文字。完整參考:[`docs/source/Zh/doc/new_features/v97_features_doc.rst`](../docs/source/Zh/doc/new_features/v97_features_doc.rst)。
+
+- **`normalize_text` / `deaccent` / `slugify` / `normalize_quotes` / `fold_whitespace`**(`AC_normalize_text`、`AC_slugify`):`fuzzy` 與 `search_index.tokenize` 只做小寫,OCR 比對只做 `.lower()`+子字串,因此 `"Café"`(NFC)、`"Café"`(NFD)、`"cafe"` 會比對不相等。本功能補上缺少的正規化層(NFKC + casefold + 空白折疊、去重音、智慧引號對應、ASCII slug)。純標準函式庫(`unicodedata`)、具決定性。
 
 ## 本次更新 (2026-06-22) — JSON-Schema 相容性檢查
 

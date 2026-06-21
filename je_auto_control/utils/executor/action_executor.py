@@ -3138,6 +3138,20 @@ def _baggage_parse(header: str) -> Dict[str, Any]:
     return {"items": parse_baggage(header).to_dict()}
 
 
+def _normalize_text(text: str, form: str = "NFKC", casefold: Any = True,
+                    collapse_ws: Any = True) -> Dict[str, Any]:
+    """Adapter: Unicode-normalise text into {text}."""
+    from je_auto_control.utils.text_normalize import normalize_text
+    return {"text": normalize_text(text, form=form, casefold=bool(casefold),
+                                   collapse_ws=bool(collapse_ws))}
+
+
+def _slugify(text: str, sep: str = "-") -> Dict[str, Any]:
+    """Adapter: produce an ASCII slug from text."""
+    from je_auto_control.utils.text_normalize import slugify
+    return {"slug": slugify(text, sep=sep)}
+
+
 def _canonical_log(fields: Any) -> Dict[str, Any]:
     """Adapter: build a canonical log line from a fields dict."""
     import json
@@ -4424,6 +4438,8 @@ class Executor:
             "AC_baggage_format": _baggage_format,
             "AC_canonical_log": _canonical_log,
             "AC_spans_to_otlp": _spans_to_otlp,
+            "AC_normalize_text": _normalize_text,
+            "AC_slugify": _slugify,
             "AC_validate_config": _validate_config,
             "AC_resolve_ref": _resolve_ref,
             "AC_resolve_refs": _resolve_refs,
