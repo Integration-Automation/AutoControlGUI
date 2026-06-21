@@ -360,6 +360,11 @@ from je_auto_control.utils.provenance import (
 from je_auto_control.utils.json_contract import (
     MatchReport, diff_json, match_json, normalize_json, snapshot_json,
 )
+# Deterministic chaos experiments (steady-state hypothesis + fault injection)
+from je_auto_control.utils.chaos import (
+    ChaosExperiment, Fault, Probe, exception_fault, latency_fault,
+    run_experiment,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -853,6 +858,8 @@ __all__ = [
     "build_provenance", "subject_for", "subject_for_bytes",
     "verify_provenance", "write_provenance",
     "MatchReport", "diff_json", "match_json", "normalize_json", "snapshot_json",
+    "ChaosExperiment", "Fault", "Probe", "exception_fault", "latency_fault",
+    "run_experiment",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
