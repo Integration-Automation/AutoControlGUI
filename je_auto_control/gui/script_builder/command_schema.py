@@ -1922,6 +1922,26 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Classify JSON-Schema changes as backward/forward/full.",
     ))
     specs.append(CommandSpec(
+        "AC_ts_rate", "Data", "Time-Series: Counter Rate",
+        fields=(
+            FieldSpec("series", FieldType.STRING,
+                      placeholder="[[0, 0], [10, 50], [20, 120]]"),
+            FieldSpec("window_s", FieldType.FLOAT, optional=True),
+        ),
+        description="Per-second counter rate (reset-aware) over a series.",
+    ))
+    specs.append(CommandSpec(
+        "AC_ts_downsample", "Data", "Time-Series: Downsample",
+        fields=(
+            FieldSpec("series", FieldType.STRING,
+                      placeholder="[[0, 1], [5, 3], [12, 9]]"),
+            FieldSpec("bucket_s", FieldType.FLOAT, placeholder="10"),
+            FieldSpec("agg", FieldType.STRING, optional=True,
+                      placeholder="avg|sum|min|max|first|last|count"),
+        ),
+        description="Roll a series into tumbling buckets by aggregate.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

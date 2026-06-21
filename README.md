@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Time-Series Transforms](#whats-new-2026-06-22--time-series-transforms)
 - [What's new (2026-06-22) — Unicode Text Normalisation & Slugify](#whats-new-2026-06-22--unicode-text-normalisation--slugify)
 - [What's new (2026-06-22) — JSON-Schema Compatibility Checking](#whats-new-2026-06-22--json-schema-compatibility-checking)
 - [What's new (2026-06-22) — Typed Configuration Schema](#whats-new-2026-06-22--typed-configuration-schema)
@@ -149,6 +150,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Time-Series Transforms
+
+Turn counters into rates; downsample and resample. Full reference: [`docs/source/Eng/doc/new_features/v98_features_doc.rst`](docs/source/Eng/doc/new_features/v98_features_doc.rst).
+
+- **`ts_rate` / `ts_irate` / `ts_increase` / `ts_delta` / `ts_downsample` / `ts_resample`** (`AC_ts_rate`, `AC_ts_downsample`): `observability` counters store only the current value (no counter→rate anywhere) and `cost_telemetry` only buckets by day. This adds Prometheus-style reset-aware rate/increase/delta over `(timestamp, value)` series, tumbling-bucket downsampling (avg/sum/min/max/first/last/count), and grid resampling (last/linear/none). No wall clock — deterministic. Pure-stdlib.
 
 ## What's new (2026-06-22) — Unicode Text Normalisation & Slugify
 

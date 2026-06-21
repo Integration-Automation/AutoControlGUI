@@ -414,6 +414,11 @@ from je_auto_control.utils.slo import (
 )
 # Mergeable streaming latency digest + exact percentiles
 from je_auto_control.utils.percentiles import LatencyDigest, exact_percentiles
+# Time-series transforms: rate / irate / delta / downsample / resample
+from je_auto_control.utils.timeseries import (
+    ts_delta, ts_downsample, ts_idelta, ts_increase, ts_irate, ts_rate,
+    ts_resample,
+)
 # Bulkhead concurrency isolation + rate-limit header parsing
 from je_auto_control.utils.bulkhead import (
     Bulkhead, BulkheadFullError, next_delay, parse_ratelimit, parse_retry_after,
@@ -978,6 +983,8 @@ __all__ = [
     "run_experiment",
     "BurnRule", "burn_alerts", "burn_rate", "default_burn_rules", "evaluate_slo",
     "LatencyDigest", "exact_percentiles",
+    "ts_delta", "ts_downsample", "ts_idelta", "ts_increase", "ts_irate",
+    "ts_rate", "ts_resample",
     "Bulkhead", "BulkheadFullError", "next_delay", "parse_ratelimit",
     "parse_retry_after",
     "Cassette", "CassetteMissError",
