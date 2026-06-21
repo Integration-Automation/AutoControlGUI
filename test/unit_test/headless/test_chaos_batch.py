@@ -2,6 +2,8 @@
 import json
 import random
 
+import pytest
+
 import je_auto_control as ac
 from je_auto_control.utils.chaos import (
     ChaosExperiment, Fault, Probe, exception_fault, latency_fault,
@@ -72,7 +74,7 @@ def test_injectable_clock():
     journal = run_experiment(
         ChaosExperiment("c", probes=[Probe("p", lambda: True, True)]),
         clock=lambda: 5.0)
-    assert journal["duration"] == 0.0
+    assert journal["duration"] == pytest.approx(0.0)
 
 
 # --- wiring ---------------------------------------------------------------
