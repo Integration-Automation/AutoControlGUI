@@ -3509,6 +3509,27 @@ def data_profile_tools() -> List[MCPTool]:
     ]
 
 
+def baggage_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_baggage_parse",
+            description=("Parse a W3C 'baggage' header (percent-encoded "
+                         "key=value list, optional ;metadata) into {items}."),
+            input_schema=schema({"header": {"type": "string"}}, ["header"]),
+            handler=h.baggage_parse,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_baggage_format",
+            description=("Serialise an 'items' object into a percent-encoded "
+                         "W3C baggage {header}."),
+            input_schema=schema({"items": {"type": "object"}}, ["items"]),
+            handler=h.baggage_format,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def trace_context_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5070,7 +5091,8 @@ ALL_FACTORIES = (
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
-    trace_context_tools, data_profile_tools, http_problem_tools, dotenv_tools,
+    trace_context_tools, baggage_tools,
+    data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,
     dataset_diff_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

@@ -1726,6 +1726,16 @@ def trace_extract(headers):
     return _trace_extract(headers)
 
 
+def baggage_parse(header):
+    from je_auto_control.utils.executor.action_executor import _baggage_parse
+    return _baggage_parse(header)
+
+
+def baggage_format(items):
+    from je_auto_control.utils.executor.action_executor import _baggage_format
+    return _baggage_format(items)
+
+
 def profile_rows(rows, columns=None):
     from je_auto_control.utils.executor.action_executor import _profile_rows
     return _profile_rows(rows, columns)

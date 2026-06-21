@@ -410,6 +410,10 @@ from je_auto_control.utils.trace_context import (
     format_traceparent, format_tracestate, inject_context, new_root_context,
     new_span_id, new_trace_id, parse_traceparent, parse_tracestate,
 )
+# W3C Baggage propagation (cross-cutting key-value context)
+from je_auto_control.utils.baggage import (
+    Baggage, extract_baggage, format_baggage, inject_baggage, parse_baggage,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -922,6 +926,8 @@ __all__ = [
     "format_traceparent", "format_tracestate", "inject_context",
     "new_root_context", "new_span_id", "new_trace_id", "parse_traceparent",
     "parse_tracestate",
+    "Baggage", "extract_baggage", "format_baggage", "inject_baggage",
+    "parse_baggage",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — W3C Baggage 傳播](#本次更新-2026-06-21--w3c-baggage-傳播)
 - [本次更新 (2026-06-21) — 資料集差異(資料列變更報告)](#本次更新-2026-06-21--資料集差異資料列變更報告)
 - [本次更新 (2026-06-21) — 分布漂移偵測](#本次更新-2026-06-21--分布漂移偵測)
 - [本次更新 (2026-06-21) — 分層設定解析器](#本次更新-2026-06-21--分層設定解析器)
@@ -134,6 +135,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — W3C Baggage 傳播
+
+跨 HTTP 攜帶橫切鍵值脈絡。完整參考:[`docs/source/Zh/doc/new_features/v84_features_doc.rst`](../docs/source/Zh/doc/new_features/v84_features_doc.rst)。
+
+- **`Baggage` / `parse_baggage` / `format_baggage` / `inject_baggage` / `extract_baggage`**(`AC_baggage_parse`、`AC_baggage_format`):`trace_context` 攜帶 trace/span 身分,但沒有東西傳播橫切脈絡(`run_id`/`tenant`/`experiment`)。本功能實作 W3C Baggage 標頭 —— percent-encoded 的 `key=value` 清單 —— 以不可變的 `Baggage`(set/remove 回傳新實例)與不分大小寫的 inject/extract。與 `trace_context` 搭配。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-21) — 資料集差異(資料列變更報告)
 

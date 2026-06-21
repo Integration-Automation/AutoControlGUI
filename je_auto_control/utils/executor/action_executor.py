@@ -3000,6 +3000,21 @@ def _trace_extract(headers: Any) -> Dict[str, Any]:
     return {"context": ctx.to_dict() if ctx is not None else None}
 
 
+def _baggage_parse(header: str) -> Dict[str, Any]:
+    """Adapter: parse a W3C baggage header into {items}."""
+    from je_auto_control.utils.baggage import parse_baggage
+    return {"items": parse_baggage(header).to_dict()}
+
+
+def _baggage_format(items: Any) -> Dict[str, Any]:
+    """Adapter: serialise an items dict into a W3C baggage {header}."""
+    import json
+    from je_auto_control.utils.baggage import Baggage, format_baggage
+    if isinstance(items, str):
+        items = json.loads(items)
+    return {"header": format_baggage(Baggage(items))}
+
+
 def _profile_rows(rows: Any, columns: Any = None) -> Dict[str, Any]:
     """Adapter: profile a row-set into per-column statistics."""
     import json
@@ -4203,6 +4218,8 @@ class Executor:
             "AC_http_replay": _http_replay,
             "AC_trace_inject": _trace_inject,
             "AC_trace_extract": _trace_extract,
+            "AC_baggage_parse": _baggage_parse,
+            "AC_baggage_format": _baggage_format,
             "AC_profile_rows": _profile_rows,
             "AC_infer_schema": _infer_schema,
             "AC_parse_problem": _parse_problem,

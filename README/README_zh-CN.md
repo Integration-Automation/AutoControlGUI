@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — W3C Baggage 传播](#本次更新-2026-06-21--w3c-baggage-传播)
 - [本次更新 (2026-06-21) — 数据集差异(数据行变更报告)](#本次更新-2026-06-21--数据集差异数据行变更报告)
 - [本次更新 (2026-06-21) — 分布漂移检测](#本次更新-2026-06-21--分布漂移检测)
 - [本次更新 (2026-06-21) — 分层配置解析器](#本次更新-2026-06-21--分层配置解析器)
@@ -134,6 +135,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — W3C Baggage 传播
+
+跨 HTTP 携带横切键值上下文。完整参考:[`docs/source/Zh/doc/new_features/v84_features_doc.rst`](../docs/source/Zh/doc/new_features/v84_features_doc.rst)。
+
+- **`Baggage` / `parse_baggage` / `format_baggage` / `inject_baggage` / `extract_baggage`**(`AC_baggage_parse`、`AC_baggage_format`):`trace_context` 携带 trace/span 身份,但没有东西传播横切上下文(`run_id`/`tenant`/`experiment`)。本功能实现 W3C Baggage 标头 —— percent-encoded 的 `key=value` 列表 —— 以不可变的 `Baggage`(set/remove 返回新实例)与不分大小写的 inject/extract。与 `trace_context` 搭配。纯标准库、确定。
 
 ## 本次更新 (2026-06-21) — 数据集差异(数据行变更报告)
 
