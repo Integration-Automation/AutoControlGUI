@@ -346,6 +346,11 @@ from je_auto_control.utils.recurrence import (
 from je_auto_control.utils.text_diff import (
     MergeResult, PatchApplyError, apply_unified, three_way_merge, unified_diff,
 )
+# Feature flags with targeting rules + deterministic rollout
+from je_auto_control.utils.feature_flags import (
+    Flag, FlagStore, assign_variant, evaluate_flag, is_enabled,
+    percentage_bucket,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -834,6 +839,8 @@ __all__ = [
     "Recurrence", "next_occurrence", "occurrences", "parse_rrule",
     "MergeResult", "PatchApplyError", "apply_unified", "three_way_merge",
     "unified_diff",
+    "Flag", "FlagStore", "assign_variant", "evaluate_flag", "is_enabled",
+    "percentage_bucket",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

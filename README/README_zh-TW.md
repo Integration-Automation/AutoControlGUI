@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — 功能旗標](#本次更新-2026-06-21--功能旗標)
 - [本次更新 (2026-06-21) — 文字 Diff、套用與三方合併](#本次更新-2026-06-21--文字-diff套用與三方合併)
 - [本次更新 (2026-06-21) — 行事曆週期規則(RRULE)](#本次更新-2026-06-21--行事曆週期規則rrule)
 - [本次更新 (2026-06-21) — 統計與 A/B 顯著性](#本次更新-2026-06-21--統計與-ab-顯著性)
@@ -118,6 +119,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — 功能旗標
+
+以目標規則與推出切換行為。完整參考:[`docs/source/Zh/doc/new_features/v68_features_doc.rst`](../docs/source/Zh/doc/new_features/v68_features_doc.rst)。
+
+- **`FlagStore` / `evaluate_flag` / `is_enabled` / `assign_variant`**(`AC_evaluate_flag`、`AC_flag_enabled`):`decision_table` 是一次性 DMN,`ab_locator` 是定位器 A/B —— 兩者都不是帶黏性 % 推出的產品旗標儲存庫。本功能補上 OpenFeature 形狀引擎:目標規則(`eq`/`in`/`semver_*`…)、加權變體、kill switch,以及一致雜湊分桶(`sha256(key.salt.context_key)`)使主體具**黏性**。回傳 `{value, variant, reason}`(`TARGETING_MATCH`/`SPLIT`/`DISABLED`/`ERROR`)。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-21) — 文字 Diff、套用與三方合併
 

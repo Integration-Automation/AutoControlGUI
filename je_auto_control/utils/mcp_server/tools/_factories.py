@@ -3343,6 +3343,34 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def feature_flag_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_evaluate_flag",
+            description=("Evaluate a feature 'flags' store for 'key' under an "
+                         "evaluation 'context'. Returns {value, variant, "
+                         "reason}."),
+            input_schema=schema(
+                {"flags": {"type": "object"}, "key": {"type": "string"},
+                 "context": {"type": "object"}},
+                ["flags", "key"]),
+            handler=h.evaluate_flag,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_flag_enabled",
+            description=("Boolean feature-flag check for 'key' in 'flags' under "
+                         "'context'. Returns {enabled}."),
+            input_schema=schema(
+                {"flags": {"type": "object"}, "key": {"type": "string"},
+                 "context": {"type": "object"}, "default": {"type": "boolean"}},
+                ["flags", "key"]),
+            handler=h.flag_enabled,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def text_diff_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4691,6 +4719,7 @@ ALL_FACTORIES = (
     jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools,
     license_policy_tools, jwt_tools, rate_limit_tools, json_patch_tools,
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
+    feature_flag_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,
