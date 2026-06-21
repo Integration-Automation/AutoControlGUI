@@ -1680,6 +1680,17 @@ def run_chaos(spec):
     return _run_chaos(spec)
 
 
+def evaluate_slo(records, target, window_s=None):
+    from je_auto_control.utils.slo import evaluate_slo as _slo
+    return _slo(records, float(target), window_s=window_s)
+
+
+def burn_alerts(records, target):
+    from je_auto_control.utils.slo import burn_alerts as _alerts
+    alerts = _alerts(records, float(target))
+    return {"alerts": alerts, "firing": bool(alerts)}
+
+
 def build_provenance(paths, builder_id="je_auto_control"):
     from je_auto_control.utils.provenance import build_provenance, subject_for
     subjects = [subject_for(path) for path in paths]

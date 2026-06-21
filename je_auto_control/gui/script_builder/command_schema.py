@@ -1389,6 +1389,25 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Verify a JWT (alg allowlist + exp/nbf/aud); returns {ok, claims}.",
     ))
     specs.append(CommandSpec(
+        "AC_evaluate_slo", "Report", "SLO: Evaluate (SLI + Error Budget)",
+        fields=(
+            FieldSpec("records", FieldType.STRING,
+                      placeholder='[{"timestamp": 1700000000, "ok": true}]'),
+            FieldSpec("target", FieldType.FLOAT, placeholder="0.99"),
+            FieldSpec("window_s", FieldType.FLOAT, optional=True),
+        ),
+        description="SLI + error budget for outcome records vs a target.",
+    ))
+    specs.append(CommandSpec(
+        "AC_burn_alerts", "Report", "SLO: Burn-Rate Alerts",
+        fields=(
+            FieldSpec("records", FieldType.STRING,
+                      placeholder='[{"timestamp": 1700000000, "ok": false}]'),
+            FieldSpec("target", FieldType.FLOAT, placeholder="0.99"),
+        ),
+        description="Multi-window burn-rate alerts (Google SRE tiers).",
+    ))
+    specs.append(CommandSpec(
         "AC_run_chaos", "Flow", "Run Chaos Experiment",
         fields=(
             FieldSpec("spec", FieldType.STRING,
