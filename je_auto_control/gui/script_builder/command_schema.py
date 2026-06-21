@@ -1645,6 +1645,16 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Infer a validate_rows-compatible schema from observed rows.",
     ))
     specs.append(CommandSpec(
+        "AC_parse_problem", "Data", "HTTP Problem (RFC 9457): Parse",
+        fields=(
+            FieldSpec("response", FieldType.STRING,
+                      placeholder='{"status": 400, "headers": '
+                                  '{"Content-Type": "application/problem+json"}, '
+                                  '"json": {"title": "Bad Request"}}'),
+        ),
+        description="Parse an application/problem+json error response.",
+    ))
+    specs.append(CommandSpec(
         "AC_rate_limit", "Flow", "Rate Limit (Token Bucket)",
         fields=(
             FieldSpec("name", FieldType.STRING),

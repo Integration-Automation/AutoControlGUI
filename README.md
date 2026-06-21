@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — RFC 9457 Problem Details Parsing](#whats-new-2026-06-21--rfc-9457-problem-details-parsing)
 - [What's new (2026-06-21) — Data Profiling & Schema Inference](#whats-new-2026-06-21--data-profiling--schema-inference)
 - [What's new (2026-06-21) — W3C Trace Context Propagation](#whats-new-2026-06-21--w3c-trace-context-propagation)
 - [What's new (2026-06-21) — HTTP Record & Replay Cassette](#whats-new-2026-06-21--http-record--replay-cassette)
@@ -129,6 +130,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — RFC 9457 Problem Details Parsing
+
+Read standardized API errors out of HTTP responses. Full reference: [`docs/source/Eng/doc/new_features/v78_features_doc.rst`](docs/source/Eng/doc/new_features/v78_features_doc.rst).
+
+- **`parse_problem` / `is_problem` / `raise_for_problem` / `ProblemDetails`** (`AC_parse_problem`): `http_request` returned a non-2xx body unparsed, so flows and `assert_http` had no structured way to read a standardized API error. This parses the RFC 9457 `application/problem+json` document — registered `type`/`title`/`status`/`detail`/`instance` members plus vendor extensions — returning `None` for non-problem responses or raising `HttpProblemError`. Pure-stdlib, fully deterministic.
 
 ## What's new (2026-06-21) — Data Profiling & Schema Inference
 

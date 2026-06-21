@@ -3343,6 +3343,21 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def http_problem_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_parse_problem",
+            description=("Parse an RFC 9457 application/problem+json HTTP "
+                         "'response' ({status, headers, json}). Returns "
+                         "{problem} (type/title/status/detail/instance + "
+                         "extensions) or null when not a problem document."),
+            input_schema=schema({"response": {"type": "object"}}, ["response"]),
+            handler=h.parse_problem,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def data_profile_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4932,7 +4947,7 @@ ALL_FACTORIES = (
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
-    trace_context_tools, data_profile_tools,
+    trace_context_tools, data_profile_tools, http_problem_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

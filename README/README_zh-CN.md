@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — RFC 9457 Problem Details 解析](#本次更新-2026-06-21--rfc-9457-problem-details-解析)
 - [本次更新 (2026-06-21) — 数据剖析与结构推断](#本次更新-2026-06-21--数据剖析与结构推断)
 - [本次更新 (2026-06-21) — W3C Trace Context 传播](#本次更新-2026-06-21--w3c-trace-context-传播)
 - [本次更新 (2026-06-21) — HTTP 录制与重播卡带](#本次更新-2026-06-21--http-录制与重播卡带)
@@ -128,6 +129,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — RFC 9457 Problem Details 解析
+
+从 HTTP 响应读取标准化的 API 错误。完整参考:[`docs/source/Zh/doc/new_features/v78_features_doc.rst`](../docs/source/Zh/doc/new_features/v78_features_doc.rst)。
+
+- **`parse_problem` / `is_problem` / `raise_for_problem` / `ProblemDetails`**(`AC_parse_problem`):`http_request` 返回的非 2xx 内文未经解析,因此流程与 `assert_http` 无法以结构化方式读取标准化的 API 错误。本功能解析 RFC 9457 `application/problem+json` 文档 —— 已注册的 `type`/`title`/`status`/`detail`/`instance` 成员加上 vendor 扩展字段 —— 对非 problem 响应返回 `None`,或抛出 `HttpProblemError`。纯标准库、完全确定。
 
 ## 本次更新 (2026-06-21) — 数据剖析与结构推断
 
