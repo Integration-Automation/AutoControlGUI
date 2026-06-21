@@ -1576,6 +1576,24 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Run 'actions' (JSON view) via a named circuit breaker.",
     ))
     specs.append(CommandSpec(
+        "AC_bulkhead_run", "Flow", "Bulkhead (Bounded Concurrency)",
+        fields=(
+            FieldSpec("name", FieldType.STRING),
+            FieldSpec("max_concurrent", FieldType.INT, default=4),
+            FieldSpec("actions", FieldType.STRING,
+                      placeholder="[[\"AC_click_mouse\", {...}]]"),
+        ),
+        description="Run 'actions' (JSON view) under a named bulkhead permit.",
+    ))
+    specs.append(CommandSpec(
+        "AC_retry_after", "Flow", "Parse Retry-After / RateLimit",
+        fields=(
+            FieldSpec("response", FieldType.STRING,
+                      placeholder='{"status": 429, "headers": {"Retry-After": "30"}}'),
+        ),
+        description="Server-advised wait (seconds) from an HTTP response; {delay}.",
+    ))
+    specs.append(CommandSpec(
         "AC_rate_limit", "Flow", "Rate Limit (Token Bucket)",
         fields=(
             FieldSpec("name", FieldType.STRING),

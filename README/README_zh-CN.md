@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 隔舱与速率限制标头](#本次更新-2026-06-21--隔舱与速率限制标头)
 - [本次更新 (2026-06-21) — 流式延迟百分位](#本次更新-2026-06-21--流式延迟百分位)
 - [本次更新 (2026-06-21) — 服务等级目标(SLO)](#本次更新-2026-06-21--服务等级目标slo)
 - [本次更新 (2026-06-21) — 混沌实验](#本次更新-2026-06-21--混沌实验)
@@ -124,6 +125,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 隔舱与速率限制标头
+
+限制并发、遵守服务器退避。完整参考:[`docs/source/Zh/doc/new_features/v74_features_doc.rst`](../docs/source/Zh/doc/new_features/v74_features_doc.rst)。
+
+- **`Bulkhead` / `next_delay` / `parse_retry_after` / `parse_ratelimit`**(`AC_bulkhead_run`、`AC_retry_after`):`resilience` 恢复、`rate_limit` 调速,但没有任何东西限制*同时*进行的调用(缓慢依赖会耗尽所有 worker),且 HTTP 客户端忽略 `Retry-After`/`RateLimit-*`。本功能补上隔舱(满载时以 `BulkheadFullError` 卸除负载的 bounded-concurrency 许可)以及服务器建议延迟(delta 秒或 HTTP-date)的解析器。非阻塞许可计数 → 确定、测试免线程。纯标准库。
 
 ## 本次更新 (2026-06-21) — 流式延迟百分位
 

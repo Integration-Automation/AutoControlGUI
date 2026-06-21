@@ -3343,6 +3343,33 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def bulkhead_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_bulkhead_run",
+            description=("Run an 'actions' list under a named bulkhead permit "
+                         "(max 'max_concurrent' in-flight; rejects when full). "
+                         "Returns {entered, in_flight, record?}."),
+            input_schema=schema(
+                {"name": {"type": "string"},
+                 "max_concurrent": {"type": "integer"},
+                 "actions": {"type": "array"}},
+                ["name", "max_concurrent", "actions"]),
+            handler=h.bulkhead_run,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_retry_after",
+            description=("Server-advised wait (seconds) from an HTTP 'response' "
+                         "{status, headers} via Retry-After / RateLimit-*. "
+                         "Returns {delay}."),
+            input_schema=schema({"response": {"type": "object"}}, ["response"]),
+            handler=h.retry_after,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def percentiles_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4833,7 +4860,7 @@ ALL_FACTORIES = (
     license_policy_tools, jwt_tools, rate_limit_tools, json_patch_tools,
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
-    slo_tools, percentiles_tools,
+    slo_tools, percentiles_tools, bulkhead_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

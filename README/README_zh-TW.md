@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — 隔艙與速率限制標頭](#本次更新-2026-06-21--隔艙與速率限制標頭)
 - [本次更新 (2026-06-21) — 串流延遲百分位](#本次更新-2026-06-21--串流延遲百分位)
 - [本次更新 (2026-06-21) — 服務等級目標(SLO)](#本次更新-2026-06-21--服務等級目標slo)
 - [本次更新 (2026-06-21) — 混沌實驗](#本次更新-2026-06-21--混沌實驗)
@@ -124,6 +125,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — 隔艙與速率限制標頭
+
+限制並行、遵守伺服器退避。完整參考:[`docs/source/Zh/doc/new_features/v74_features_doc.rst`](../docs/source/Zh/doc/new_features/v74_features_doc.rst)。
+
+- **`Bulkhead` / `next_delay` / `parse_retry_after` / `parse_ratelimit`**(`AC_bulkhead_run`、`AC_retry_after`):`resilience` 復原、`rate_limit` 調速,但沒有任何東西限制*同時*進行的呼叫(緩慢相依會耗盡所有 worker),且 HTTP 用戶端忽略 `Retry-After`/`RateLimit-*`。本功能補上隔艙(滿載時以 `BulkheadFullError` 卸除負載的 bounded-concurrency 許可)以及伺服器建議延遲(delta 秒或 HTTP-date)的剖析器。非阻塞許可計數 → 具決定性、測試免執行緒。純標準函式庫。
 
 ## 本次更新 (2026-06-21) — 串流延遲百分位
 

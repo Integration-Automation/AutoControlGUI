@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Bulkhead & Rate-Limit Headers](#whats-new-2026-06-21--bulkhead--rate-limit-headers)
 - [What's new (2026-06-21) — Streaming Latency Percentiles](#whats-new-2026-06-21--streaming-latency-percentiles)
 - [What's new (2026-06-21) — Service-Level Objectives (SLO)](#whats-new-2026-06-21--service-level-objectives-slo)
 - [What's new (2026-06-21) — Chaos Experiments](#whats-new-2026-06-21--chaos-experiments)
@@ -125,6 +126,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Bulkhead & Rate-Limit Headers
+
+Cap concurrency, honor server back-off. Full reference: [`docs/source/Eng/doc/new_features/v74_features_doc.rst`](docs/source/Eng/doc/new_features/v74_features_doc.rst).
+
+- **`Bulkhead` / `next_delay` / `parse_retry_after` / `parse_ratelimit`** (`AC_bulkhead_run`, `AC_retry_after`): `resilience` recovers and `rate_limit` paces, but nothing capped *simultaneous* in-flight calls (a slow dependency could exhaust every worker) and the HTTP client ignored `Retry-After`/`RateLimit-*`. This adds a bulkhead (bounded-concurrency permit that sheds load with `BulkheadFullError` when full) and parsers for the server's advised delay (delta-seconds or HTTP-date). Non-blocking permit counting → deterministic, no threads in tests. Pure-stdlib.
 
 ## What's new (2026-06-21) — Streaming Latency Percentiles
 
