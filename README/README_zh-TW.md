@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — 資料剖析與結構推斷](#本次更新-2026-06-21--資料剖析與結構推斷)
 - [本次更新 (2026-06-21) — W3C Trace Context 傳播](#本次更新-2026-06-21--w3c-trace-context-傳播)
 - [本次更新 (2026-06-21) — HTTP 錄製與重播卡帶](#本次更新-2026-06-21--http-錄製與重播卡帶)
 - [本次更新 (2026-06-21) — 隔艙與速率限制標頭](#本次更新-2026-06-21--隔艙與速率限制標頭)
@@ -127,6 +128,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — 資料剖析與結構推斷
+
+掃描資料列集合並提出驗證結構。完整參考:[`docs/source/Zh/doc/new_features/v77_features_doc.rst`](../docs/source/Zh/doc/new_features/v77_features_doc.rst)。
+
+- **`profile_rows` / `infer_schema`**(`AC_profile_rows`、`AC_infer_schema`):`validate_rows` 消費手寫結構,`stats.describe` 只彙總單一數值清單 —— 沒有任何東西掃描整個資料列集合。本功能剖析每欄(空值比例、基數、推斷型別、最常見值、數值 min/max/mean)並推斷出 `validate_rows` 相容結構(無空值即 required、相異即 unique、數值邊界)—— 餵給既有驗證器的剖析步驟。純標準函式庫、完全具決定性。
 
 ## 本次更新 (2026-06-21) — W3C Trace Context 傳播
 

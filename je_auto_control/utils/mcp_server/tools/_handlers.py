@@ -1726,6 +1726,16 @@ def trace_extract(headers):
     return _trace_extract(headers)
 
 
+def profile_rows(rows, columns=None):
+    from je_auto_control.utils.executor.action_executor import _profile_rows
+    return _profile_rows(rows, columns)
+
+
+def infer_schema(rows, columns=None):
+    from je_auto_control.utils.executor.action_executor import _infer_schema
+    return _infer_schema(rows, columns)
+
+
 def build_provenance(paths, builder_id="je_auto_control"):
     from je_auto_control.utils.provenance import build_provenance, subject_for
     subjects = [subject_for(path) for path in paths]
