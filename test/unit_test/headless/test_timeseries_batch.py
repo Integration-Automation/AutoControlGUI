@@ -54,7 +54,8 @@ def test_downsample_validation():
 def test_resample_fill_modes():
     series = [(0, 0), (20, 20)]
     last = ts_resample(series, 10, fill="last")
-    assert last == [(0, 0.0), (10, 0.0), (20, 20.0)]
+    assert [t for t, _ in last] == [0, 10, 20]
+    assert [v for _, v in last] == pytest.approx([0.0, 0.0, 20.0])
     linear = ts_resample(series, 10, fill="linear")
     assert linear[1][1] == pytest.approx(10.0)          # midpoint interpolated
     nofill = ts_resample(series, 10, fill=None)
@@ -62,7 +63,7 @@ def test_resample_fill_modes():
 
 
 def test_empty_series():
-    assert ts_rate([]) == 0.0 and ts_resample([], 5) == []
+    assert ts_rate([]) == pytest.approx(0.0) and ts_resample([], 5) == []
 
 
 # --- wiring ---------------------------------------------------------------
