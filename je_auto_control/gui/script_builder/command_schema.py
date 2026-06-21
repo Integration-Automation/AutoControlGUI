@@ -1767,6 +1767,24 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Parse a base64 multipart body into fields and files.",
     ))
     specs.append(CommandSpec(
+        "AC_decode_body", "Data", "HTTP Content: Decode Body",
+        fields=(
+            FieldSpec("headers", FieldType.STRING,
+                      placeholder='{"Content-Encoding": "gzip"}'),
+            FieldSpec("body_base64", FieldType.STRING,
+                      placeholder="<base64 compressed body>"),
+        ),
+        description="Decode a gzip/deflate response body by Content-Encoding.",
+    ))
+    specs.append(CommandSpec(
+        "AC_parse_quality_values", "Data", "HTTP Content: Quality Values",
+        fields=(
+            FieldSpec("header", FieldType.STRING,
+                      placeholder="text/html;q=0.8, application/json"),
+        ),
+        description="Parse an Accept/Accept-Encoding header by q-value.",
+    ))
+    specs.append(CommandSpec(
         "AC_resolve_config", "Data", "Layered Config: Resolve",
         fields=(
             FieldSpec("layers", FieldType.STRING,

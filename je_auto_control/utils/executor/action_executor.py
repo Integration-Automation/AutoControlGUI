@@ -3030,6 +3030,28 @@ def _redact_secret_text(text: str, mask: str = "***") -> Dict[str, Any]:
     return {"text": redact_secret_text(text, mask=mask)}
 
 
+def _decode_body(headers: Any, body_base64: str) -> Dict[str, Any]:
+    """Adapter: decode a Content-Encoding (gzip/deflate) base64 body."""
+    import base64
+    import json
+    from je_auto_control.utils.http_content import decode_body
+    if isinstance(headers, str):
+        headers = json.loads(headers)
+    decoded = decode_body(headers, base64.b64decode(body_base64))
+    try:
+        text: Any = decoded.decode("utf-8")
+    except UnicodeDecodeError:
+        text = None
+    return {"body_base64": base64.b64encode(decoded).decode("ascii"),
+            "text": text}
+
+
+def _parse_quality_values(header: str) -> Dict[str, Any]:
+    """Adapter: parse a quality-value header into {values}."""
+    from je_auto_control.utils.http_content import parse_quality_values
+    return {"values": [list(item) for item in parse_quality_values(header)]}
+
+
 def _build_multipart(fields: Any = None, files: Any = None,
                      boundary: Any = None) -> Dict[str, Any]:
     """Adapter: build a multipart/form-data body (base64-encoded)."""
@@ -4330,6 +4352,8 @@ class Executor:
             "AC_next_url": _next_url,
             "AC_build_multipart": _build_multipart,
             "AC_parse_multipart": _parse_multipart,
+            "AC_decode_body": _decode_body,
+            "AC_parse_quality_values": _parse_quality_values,
             "AC_profile_rows": _profile_rows,
             "AC_infer_schema": _infer_schema,
             "AC_parse_problem": _parse_problem,

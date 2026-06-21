@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — HTTP Content Negotiation & Decompression](#whats-new-2026-06-22--http-content-negotiation--decompression)
 - [What's new (2026-06-22) — multipart/form-data Build & Parse](#whats-new-2026-06-22--multipartform-data-build--parse)
 - [What's new (2026-06-22) — Secret Redaction for Config & Logs](#whats-new-2026-06-22--secret-redaction-for-config--logs)
 - [What's new (2026-06-22) — RFC 8288 Link Header & Pagination](#whats-new-2026-06-22--rfc-8288-link-header--pagination)
@@ -141,6 +142,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — HTTP Content Negotiation & Decompression
+
+Build `Accept` headers and decode gzip/deflate. Full reference: [`docs/source/Eng/doc/new_features/v90_features_doc.rst`](docs/source/Eng/doc/new_features/v90_features_doc.rst).
+
+- **`build_accept` / `build_accept_encoding` / `parse_quality_values` / `decode_body` / `negotiated_call`** (`AC_decode_body`, `AC_parse_quality_values`): `urllib`/`http_request` never set `Accept-Encoding` nor decoded `Content-Encoding`, so compressed bodies arrived raw. This adds `Accept`/`Accept-Encoding` builders, a q-value parser (sorted by quality), and gzip/deflate (incl. raw deflate) decoding. Brotli excluded (not stdlib). Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — multipart/form-data Build & Parse
 

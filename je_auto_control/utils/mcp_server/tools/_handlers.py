@@ -1766,6 +1766,17 @@ def parse_multipart(content_type, body_base64):
     return _parse_multipart(content_type, body_base64)
 
 
+def decode_body(headers, body_base64):
+    from je_auto_control.utils.executor.action_executor import _decode_body
+    return _decode_body(headers, body_base64)
+
+
+def parse_quality_values(header):
+    from je_auto_control.utils.executor.action_executor import (
+        _parse_quality_values)
+    return _parse_quality_values(header)
+
+
 def redact_config(obj, mask="***"):
     from je_auto_control.utils.executor.action_executor import _redact_config
     return _redact_config(obj, mask)
