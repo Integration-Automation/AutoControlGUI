@@ -2928,6 +2928,26 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+def _evaluate_slo(records: Any, target: float,
+                  window_s: Optional[float] = None) -> Dict[str, Any]:
+    """Adapter: SLI + error budget for outcome records (list or JSON string)."""
+    import json
+    from je_auto_control.utils.slo import evaluate_slo
+    if isinstance(records, str):
+        records = json.loads(records)
+    return evaluate_slo(records, float(target), window_s=window_s)
+
+
+def _burn_alerts(records: Any, target: float) -> Dict[str, Any]:
+    """Adapter: multi-window burn-rate alerts for outcome records."""
+    import json
+    from je_auto_control.utils.slo import burn_alerts
+    if isinstance(records, str):
+        records = json.loads(records)
+    alerts = burn_alerts(records, float(target))
+    return {"alerts": alerts, "firing": bool(alerts)}
+
+
 def _chaos_probe_call(actions: List[Any]) -> Any:
     def call() -> bool:
         executor.execute_action(list(actions), raise_on_error=True)
@@ -3965,6 +3985,8 @@ class Executor:
             "AC_match_json": _match_json,
             "AC_diff_json": _diff_json,
             "AC_run_chaos": _run_chaos,
+            "AC_evaluate_slo": _evaluate_slo,
+            "AC_burn_alerts": _burn_alerts,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,

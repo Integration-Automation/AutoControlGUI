@@ -3343,6 +3343,34 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def slo_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_evaluate_slo",
+            description=("Compute the SLI and error budget for outcome "
+                         "'records' [{timestamp, ok}] against 'target' "
+                         "(0-1). Returns {sli, budget_remaining, burn_rate, ...}."),
+            input_schema=schema(
+                {"records": {"type": "array"}, "target": {"type": "number"},
+                 "window_s": {"type": "number"}},
+                ["records", "target"]),
+            handler=h.evaluate_slo,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_burn_alerts",
+            description=("Multi-window burn-rate alerts (Google SRE tiers) for "
+                         "outcome 'records' against 'target'. Returns "
+                         "{alerts, firing}."),
+            input_schema=schema(
+                {"records": {"type": "array"}, "target": {"type": "number"}},
+                ["records", "target"]),
+            handler=h.burn_alerts,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def chaos_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4789,6 +4817,7 @@ ALL_FACTORIES = (
     license_policy_tools, jwt_tools, rate_limit_tools, json_patch_tools,
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
+    slo_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

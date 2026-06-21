@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Service-Level Objectives (SLO)](#whats-new-2026-06-21--service-level-objectives-slo)
 - [What's new (2026-06-21) — Chaos Experiments](#whats-new-2026-06-21--chaos-experiments)
 - [What's new (2026-06-21) — JSON Contract & Snapshot Matching](#whats-new-2026-06-21--json-contract--snapshot-matching)
 - [What's new (2026-06-21) — SLSA Build Provenance](#whats-new-2026-06-21--slsa-build-provenance)
@@ -123,6 +124,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Service-Level Objectives (SLO)
+
+SLI, error budget and burn-rate alerts. Full reference: [`docs/source/Eng/doc/new_features/v72_features_doc.rst`](docs/source/Eng/doc/new_features/v72_features_doc.rst).
+
+- **`evaluate_slo` / `burn_rate` / `burn_alerts` / `default_burn_rules`** (`AC_evaluate_slo`, `AC_burn_alerts`): the framework emitted raw signals but had no SLO layer. This computes the SLI over outcome records (`[{timestamp, ok}]`), the error budget against a target, and the **multi-window multi-burn-rate** alerts from the Google SRE workbook (page 14.4×@1h, 6×@6h; ticket 1×@3d — firing only when both windows exceed the threshold). Records are plain data, clock injectable, fully deterministic. Pure-stdlib.
 
 ## What's new (2026-06-21) — Chaos Experiments
 

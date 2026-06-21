@@ -365,6 +365,10 @@ from je_auto_control.utils.chaos import (
     ChaosExperiment, Fault, Probe, exception_fault, latency_fault,
     run_experiment,
 )
+# SLO: SLI, error budget and multi-window burn-rate alerts
+from je_auto_control.utils.slo import (
+    BurnRule, burn_alerts, burn_rate, default_burn_rules, evaluate_slo,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -860,6 +864,7 @@ __all__ = [
     "MatchReport", "diff_json", "match_json", "normalize_json", "snapshot_json",
     "ChaosExperiment", "Fault", "Probe", "exception_fault", "latency_fault",
     "run_experiment",
+    "BurnRule", "burn_alerts", "burn_rate", "default_burn_rules", "evaluate_slo",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
