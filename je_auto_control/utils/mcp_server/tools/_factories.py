@@ -3548,6 +3548,23 @@ def dataset_diff_tools() -> List[MCPTool]:
     ]
 
 
+def anomaly_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_detect_anomalies",
+            description=("Flag anomalies in a numeric 'values' series by 'method' "
+                         "(mad / zscore) with optional 'threshold'. Returns "
+                         "{results: [{index, value, score, is_anomaly}]}."),
+            input_schema=schema(
+                {"values": {"type": "array"}, "method": {"type": "string"},
+                 "threshold": {"type": "number"}},
+                ["values"]),
+            handler=h.detect_anomalies,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def timeseries_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5482,7 +5499,7 @@ ALL_FACTORIES = (
     secret_ref_tools, config_schema_tools, config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
-    timeseries_tools,
+    timeseries_tools, anomaly_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

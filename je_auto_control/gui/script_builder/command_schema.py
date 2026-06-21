@@ -1969,6 +1969,17 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Roll a series into tumbling buckets by aggregate.",
     ))
     specs.append(CommandSpec(
+        "AC_detect_anomalies", "Data", "Anomaly: Detect in Series",
+        fields=(
+            FieldSpec("values", FieldType.STRING,
+                      placeholder="[10, 11, 9, 10, 95, 10]"),
+            FieldSpec("method", FieldType.STRING, optional=True,
+                      placeholder="mad | zscore"),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True),
+        ),
+        description="Flag outliers in a numeric series (MAD / z-score).",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

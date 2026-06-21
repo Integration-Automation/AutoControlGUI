@@ -1905,6 +1905,11 @@ def ts_downsample(series, bucket_s, agg="avg"):
     return _ts_downsample(series, bucket_s, agg)
 
 
+def detect_anomalies(values, method="mad", threshold=None):
+    from je_auto_control.utils.executor.action_executor import _detect_anomalies
+    return _detect_anomalies(values, method, threshold)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

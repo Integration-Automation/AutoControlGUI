@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 單序列異常偵測](#本次更新-2026-06-22--單序列異常偵測)
 - [本次更新 (2026-06-22) — 近似重複文字偵測(SimHash / MinHash)](#本次更新-2026-06-22--近似重複文字偵測simhash--minhash)
 - [本次更新 (2026-06-22) — 字串距離相似度量](#本次更新-2026-06-22--字串距離相似度量)
 - [本次更新 (2026-06-22) — 時間序列轉換](#本次更新-2026-06-22--時間序列轉換)
@@ -151,6 +152,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — 單序列異常偵測
+
+標記單一即時度量序列中的尖峰。完整參考:[`docs/source/Zh/doc/new_features/v101_features_doc.rst`](../docs/source/Zh/doc/new_features/v101_features_doc.rst)。
+
+- **`detect_anomalies` / `mad_anomalies` / `zscore_anomalies` / `ewma_control`**(`AC_detect_anomalies`):`data_drift` 是兩批次分布偏移,`slo.burn_alerts` 只對預算燃燒設門檻 —— 都無法指出單一序列中*哪個*值異常。本功能以穩健 MAD(modified z-score)、純 z-score 與 EWMA 控制圖(可選 in-control 基準)標記離群值 —— `{index, value, score, is_anomaly}` 記錄。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — 近似重複文字偵測(SimHash / MinHash)
 
