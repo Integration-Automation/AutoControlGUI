@@ -3343,6 +3343,36 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def data_drift_tools() -> List[MCPTool]:
+    seq_schema = {"type": "array"}
+    return [
+        MCPTool(
+            name="ac_detect_drift",
+            description=("Numeric distribution drift of 'current' vs "
+                         "'reference': Population Stability Index (with verdict "
+                         "at 'threshold') plus the KS two-sample test. Returns "
+                         "{psi, drifted, ks}."),
+            input_schema=schema(
+                {"reference": seq_schema, "current": seq_schema,
+                 "threshold": {"type": "number"}, "bins": {"type": "integer"}},
+                ["reference", "current"]),
+            handler=h.detect_drift,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_categorical_drift",
+            description=("Categorical drift of 'current' vs 'reference': "
+                         "chi-square statistic and total-variation distance. "
+                         "Returns {chi_square, total_variation, categories}."),
+            input_schema=schema(
+                {"reference": seq_schema, "current": seq_schema},
+                ["reference", "current"]),
+            handler=h.categorical_drift,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def layered_config_tools() -> List[MCPTool]:
     layer_schema = {"type": "array", "items": {"type": "object"}}
     return [
@@ -5010,7 +5040,7 @@ ALL_FACTORIES = (
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
     trace_context_tools, data_profile_tools, http_problem_tools, dotenv_tools,
-    sse_client_tools, layered_config_tools,
+    sse_client_tools, layered_config_tools, data_drift_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

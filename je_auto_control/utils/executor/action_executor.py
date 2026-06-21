@@ -3075,6 +3075,30 @@ def _explain_config(layers: Any, key: str) -> Dict[str, Any]:
                       "layer": trace.layer}}
 
 
+def _detect_drift(reference: Any, current: Any,
+                  threshold: Any = 0.25, bins: Any = 10) -> Dict[str, Any]:
+    """Adapter: numeric distribution drift report (PSI + KS)."""
+    import json
+    from je_auto_control.utils.data_drift import detect_drift
+    if isinstance(reference, str):
+        reference = json.loads(reference)
+    if isinstance(current, str):
+        current = json.loads(current)
+    return detect_drift(reference, current,
+                        threshold=float(threshold), bins=int(bins))
+
+
+def _categorical_drift(reference: Any, current: Any) -> Dict[str, Any]:
+    """Adapter: categorical distribution drift summary."""
+    import json
+    from je_auto_control.utils.data_drift import categorical_drift
+    if isinstance(reference, str):
+        reference = json.loads(reference)
+    if isinstance(current, str):
+        current = json.loads(current)
+    return categorical_drift(reference, current)
+
+
 def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
     """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
     import json
@@ -4161,6 +4185,8 @@ class Executor:
             "AC_parse_sse": _parse_sse,
             "AC_resolve_config": _resolve_config,
             "AC_explain_config": _explain_config,
+            "AC_detect_drift": _detect_drift,
+            "AC_categorical_drift": _categorical_drift,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,

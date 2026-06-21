@@ -159,6 +159,10 @@ from je_auto_control.utils.data_quality import (
 )
 # Data profiling: per-column stats + schema inference from observed rows
 from je_auto_control.utils.data_profile import infer_schema, profile_rows
+# Distribution drift: PSI, KS two-sample, categorical drift
+from je_auto_control.utils.data_drift import (
+    categorical_drift, detect_drift, ks_two_sample, psi,
+)
 # i18n / l10n testing: pseudo-localize, overflow + catalog checks
 from je_auto_control.utils.i18n_test import (
     check_catalog, check_overflow, pseudo_localize, pseudo_localize_catalog,
@@ -823,6 +827,7 @@ __all__ = [
     "merge_results", "shard_flows",
     "extract_fields", "mask_rows", "validate_rows",
     "infer_schema", "profile_rows",
+    "categorical_drift", "detect_drift", "ks_two_sample", "psi",
     "check_catalog", "check_overflow", "pseudo_localize",
     "pseudo_localize_catalog",
     "Checkpoint", "CheckpointStore", "run_resumable",

@@ -1698,6 +1698,29 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Show the value and winning layer for a dotted config key.",
     ))
     specs.append(CommandSpec(
+        "AC_detect_drift", "Data", "Data Drift: Detect (PSI + KS)",
+        fields=(
+            FieldSpec("reference", FieldType.STRING,
+                      placeholder="[1.0, 2.0, 3.0, ...]"),
+            FieldSpec("current", FieldType.STRING,
+                      placeholder="[1.1, 2.2, 9.9, ...]"),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True,
+                      default=0.25),
+            FieldSpec("bins", FieldType.INT, optional=True, default=10),
+        ),
+        description="Numeric drift: Population Stability Index + KS two-sample.",
+    ))
+    specs.append(CommandSpec(
+        "AC_categorical_drift", "Data", "Data Drift: Categorical",
+        fields=(
+            FieldSpec("reference", FieldType.STRING,
+                      placeholder='["a", "b", "a", ...]'),
+            FieldSpec("current", FieldType.STRING,
+                      placeholder='["a", "c", "c", ...]'),
+        ),
+        description="Categorical drift: chi-square + total-variation distance.",
+    ))
+    specs.append(CommandSpec(
         "AC_rate_limit", "Flow", "Rate Limit (Token Bucket)",
         fields=(
             FieldSpec("name", FieldType.STRING),

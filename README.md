@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Distribution Drift Detection](#whats-new-2026-06-21--distribution-drift-detection)
 - [What's new (2026-06-21) — Layered Configuration Resolver](#whats-new-2026-06-21--layered-configuration-resolver)
 - [What's new (2026-06-21) — Server-Sent Events (SSE) Client Parser](#whats-new-2026-06-21--server-sent-events-sse-client-parser)
 - [What's new (2026-06-21) — Dotenv (.env) Parsing](#whats-new-2026-06-21--dotenv-env-parsing)
@@ -133,6 +134,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Distribution Drift Detection
+
+Check whether today's data is shaped like the baseline. Full reference: [`docs/source/Eng/doc/new_features/v82_features_doc.rst`](docs/source/Eng/doc/new_features/v82_features_doc.rst).
+
+- **`psi` / `ks_two_sample` / `categorical_drift` / `detect_drift`** (`AC_detect_drift`, `AC_categorical_drift`): `stats` had A/B experiment tests but no Population Stability Index and no KS two-sample test for reference-vs-current distributions. This adds PSI (quantile-binned log-ratio), the KS statistic with a Kolmogorov p-value, and a categorical chi-square + total-variation summary — pairing with `data_profile`. `detect_drift` gives a one-call `{psi, drifted, ks}` verdict. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-21) — Layered Configuration Resolver
 

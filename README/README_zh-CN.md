@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 分布漂移检测](#本次更新-2026-06-21--分布漂移检测)
 - [本次更新 (2026-06-21) — 分层配置解析器](#本次更新-2026-06-21--分层配置解析器)
 - [本次更新 (2026-06-21) — Server-Sent Events (SSE) 客户端解析器](#本次更新-2026-06-21--server-sent-events-sse-客户端解析器)
 - [本次更新 (2026-06-21) — Dotenv (.env) 解析](#本次更新-2026-06-21--dotenv-env-解析)
@@ -132,6 +133,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 分布漂移检测
+
+检查今天的数据形状是否与基准一致。完整参考:[`docs/source/Zh/doc/new_features/v82_features_doc.rst`](../docs/source/Zh/doc/new_features/v82_features_doc.rst)。
+
+- **`psi` / `ks_two_sample` / `categorical_drift` / `detect_drift`**(`AC_detect_drift`、`AC_categorical_drift`):`stats` 有 A/B 实验检定,但没有 Population Stability Index,也没有针对 reference-vs-current 分布的 KS 双样本检定。本功能加入 PSI(分位分箱的 log-ratio)、KS 统计量与 Kolmogorov p 值,以及类别卡方 + total-variation 摘要 —— 与 `data_profile` 搭配。`detect_drift` 给出一次性的 `{psi, drifted, ks}` 判定。纯标准库、确定。
 
 ## 本次更新 (2026-06-21) — 分层配置解析器
 
