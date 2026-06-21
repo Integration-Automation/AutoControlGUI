@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — RFC 8288 Link 标头与分页](#本次更新-2026-06-22--rfc-8288-link-标头与分页)
 - [本次更新 (2026-06-22) — 参照完整性检查](#本次更新-2026-06-22--参照完整性检查)
 - [本次更新 (2026-06-22) — URI-Scheme 值引用](#本次更新-2026-06-22--uri-scheme-值引用)
 - [本次更新 (2026-06-21) — W3C Baggage 传播](#本次更新-2026-06-21--w3c-baggage-传播)
@@ -137,6 +138,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-22) — RFC 8288 Link 标头与分页
+
+解析 `Link` 标头并跟随 `rel="next"`。完整参考:[`docs/source/Zh/doc/new_features/v87_features_doc.rst`](../docs/source/Zh/doc/new_features/v87_features_doc.rst)。
+
+- **`parse_link_header` / `next_url` / `links_by_rel` / `paginate`**(`AC_parse_link_header`、`AC_next_url`):分页的 REST API 返回 `Link: <...>; rel="next"`,但没有东西解析它。本功能解析该标头(含逗号的引号值、多个链接)、按关系索引,`paginate` 通过注入的 `fetch`(传输/卡带)跟随 `rel="next"`,上限为 `max_pages`。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — 参照完整性检查
 

@@ -1711,6 +1711,22 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Parse a text/event-stream blob into events.",
     ))
     specs.append(CommandSpec(
+        "AC_parse_link_header", "Data", "Link Header: Parse",
+        fields=(
+            FieldSpec("value", FieldType.STRING,
+                      placeholder='<https://api/x?page=2>; rel="next"'),
+        ),
+        description="Parse an RFC 8288 Link header into links.",
+    ))
+    specs.append(CommandSpec(
+        "AC_next_url", "Data", "Link Header: Next URL",
+        fields=(
+            FieldSpec("value", FieldType.STRING,
+                      placeholder='<https://api/x?page=2>; rel="next"'),
+        ),
+        description="Return the rel=next URL from a Link header.",
+    ))
+    specs.append(CommandSpec(
         "AC_resolve_config", "Data", "Layered Config: Resolve",
         fields=(
             FieldSpec("layers", FieldType.STRING,

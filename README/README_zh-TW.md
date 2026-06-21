@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — RFC 8288 Link 標頭與分頁](#本次更新-2026-06-22--rfc-8288-link-標頭與分頁)
 - [本次更新 (2026-06-22) — 參照完整性檢查](#本次更新-2026-06-22--參照完整性檢查)
 - [本次更新 (2026-06-22) — URI-Scheme 值參照](#本次更新-2026-06-22--uri-scheme-值參照)
 - [本次更新 (2026-06-21) — W3C Baggage 傳播](#本次更新-2026-06-21--w3c-baggage-傳播)
@@ -137,6 +138,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — RFC 8288 Link 標頭與分頁
+
+解析 `Link` 標頭並跟隨 `rel="next"`。完整參考:[`docs/source/Zh/doc/new_features/v87_features_doc.rst`](../docs/source/Zh/doc/new_features/v87_features_doc.rst)。
+
+- **`parse_link_header` / `next_url` / `links_by_rel` / `paginate`**(`AC_parse_link_header`、`AC_next_url`):分頁的 REST API 回傳 `Link: <...>; rel="next"`,但沒有東西解析它。本功能解析該標頭(含逗號的引號值、多個連結)、依關係索引,`paginate` 透過注入的 `fetch`(傳輸/卡帶)跟隨 `rel="next"`,上限為 `max_pages`。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — 參照完整性檢查
 

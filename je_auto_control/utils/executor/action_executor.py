@@ -3015,6 +3015,18 @@ def _resolve_refs(obj: Any) -> Dict[str, Any]:
     return {"resolved": resolve_refs_in(obj)}
 
 
+def _parse_link_header(value: str) -> Dict[str, Any]:
+    """Adapter: parse an RFC 8288 Link header into {links}."""
+    from je_auto_control.utils.link_header import parse_link_header
+    return {"links": [link.to_dict() for link in parse_link_header(value)]}
+
+
+def _next_url(value: str) -> Dict[str, Any]:
+    """Adapter: return the rel=next URL from a Link header."""
+    from je_auto_control.utils.link_header import next_url
+    return {"url": next_url(value)}
+
+
 def _baggage_parse(header: str) -> Dict[str, Any]:
     """Adapter: parse a W3C baggage header into {items}."""
     from je_auto_control.utils.baggage import parse_baggage
@@ -4274,6 +4286,8 @@ class Executor:
             "AC_baggage_format": _baggage_format,
             "AC_resolve_ref": _resolve_ref,
             "AC_resolve_refs": _resolve_refs,
+            "AC_parse_link_header": _parse_link_header,
+            "AC_next_url": _next_url,
             "AC_profile_rows": _profile_rows,
             "AC_infer_schema": _infer_schema,
             "AC_parse_problem": _parse_problem,
