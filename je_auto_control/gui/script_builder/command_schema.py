@@ -1669,6 +1669,16 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Produce an ASCII slug (de-accent, lowercase, join).",
     ))
     specs.append(CommandSpec(
+        "AC_text_similarity", "Data", "Text: Similarity",
+        fields=(
+            FieldSpec("a", FieldType.STRING, placeholder="login"),
+            FieldSpec("b", FieldType.STRING, placeholder="lgoin"),
+            FieldSpec("metric", FieldType.STRING, optional=True,
+                      placeholder="jaro_winkler | levenshtein | jaccard | dice"),
+        ),
+        description="Normalised string similarity (Jaro-Winkler / edit / Jaccard).",
+    ))
+    specs.append(CommandSpec(
         "AC_spans_to_otlp", "Report", "OTLP: Export Spans",
         fields=(
             FieldSpec("spans", FieldType.STRING,

@@ -3810,6 +3810,23 @@ def otlp_export_tools() -> List[MCPTool]:
     ]
 
 
+def text_similarity_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_text_similarity",
+            description=("Normalised [0,1] string similarity between 'a' and 'b' "
+                         "for 'metric' (levenshtein / damerau_levenshtein / jaro "
+                         "/ jaro_winkler / jaccard / dice). Returns {score}."),
+            input_schema=schema(
+                {"a": {"type": "string"}, "b": {"type": "string"},
+                 "metric": {"type": "string"}},
+                ["a", "b"]),
+            handler=h.text_similarity,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def text_normalize_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5435,7 +5452,7 @@ ALL_FACTORIES = (
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
     trace_context_tools, baggage_tools, canonical_log_tools, otlp_export_tools,
-    text_normalize_tools,
+    text_normalize_tools, text_similarity_tools,
     secret_ref_tools, config_schema_tools, config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,

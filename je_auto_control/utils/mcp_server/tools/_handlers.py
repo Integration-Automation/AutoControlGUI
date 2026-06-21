@@ -1746,6 +1746,11 @@ def slugify(text, sep="-"):
     return _slugify(text, sep)
 
 
+def text_similarity(a, b, metric="jaro_winkler"):
+    from je_auto_control.utils.executor.action_executor import _text_similarity
+    return _text_similarity(a, b, metric)
+
+
 def canonical_log(fields):
     from je_auto_control.utils.executor.action_executor import _canonical_log
     return _canonical_log(fields)

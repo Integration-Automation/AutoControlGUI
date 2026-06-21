@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 字串距離相似度量](#本次更新-2026-06-22--字串距離相似度量)
 - [本次更新 (2026-06-22) — 時間序列轉換](#本次更新-2026-06-22--時間序列轉換)
 - [本次更新 (2026-06-22) — Unicode 文字正規化與 Slug](#本次更新-2026-06-22--unicode-文字正規化與-slug)
 - [本次更新 (2026-06-22) — JSON-Schema 相容性檢查](#本次更新-2026-06-22--json-schema-相容性檢查)
@@ -149,6 +150,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — 字串距離相似度量
+
+比對打字錯誤與重排 token。完整參考:[`docs/source/Zh/doc/new_features/v99_features_doc.rst`](../docs/source/Zh/doc/new_features/v99_features_doc.rst)。
+
+- **`levenshtein` / `damerau_levenshtein` / `jaro` / `jaro_winkler` / `jaccard` / `dice` / `similarity`**(`AC_text_similarity`):`fuzzy` 只提供 difflib 的 gestalt ratio。本功能補上它缺少的編輯距離與 token 集合度量 —— Jaro-Winkler(短標籤標準)、Damerau(轉置感知)、字元 n-gram Jaccard/Dice —— 並提供統一的 `similarity()` 把每個度量正規化到 `[0, 1]`。可搭配 `normalize_text`。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — 時間序列轉換
 
