@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 時間序列轉換](#本次更新-2026-06-22--時間序列轉換)
 - [本次更新 (2026-06-22) — Unicode 文字正規化與 Slug](#本次更新-2026-06-22--unicode-文字正規化與-slug)
 - [本次更新 (2026-06-22) — JSON-Schema 相容性檢查](#本次更新-2026-06-22--json-schema-相容性檢查)
 - [本次更新 (2026-06-22) — 具型別的設定結構](#本次更新-2026-06-22--具型別的設定結構)
@@ -148,6 +149,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — 時間序列轉換
+
+把計數器轉成速率;降採樣與重採樣。完整參考:[`docs/source/Zh/doc/new_features/v98_features_doc.rst`](../docs/source/Zh/doc/new_features/v98_features_doc.rst)。
+
+- **`ts_rate` / `ts_irate` / `ts_increase` / `ts_delta` / `ts_downsample` / `ts_resample`**(`AC_ts_rate`、`AC_ts_downsample`):`observability` 計數器只存當前值(無處可把計數器轉速率),`cost_telemetry` 只以天分桶。本功能在 `(timestamp, value)` 序列上加入 Prometheus 風格、具重置感知的 rate/increase/delta、tumbling-bucket 降採樣(avg/sum/min/max/first/last/count)與網格重採樣(last/linear/none)。不讀 wall clock、具決定性。純標準函式庫。
 
 ## 本次更新 (2026-06-22) — Unicode 文字正規化與 Slug
 

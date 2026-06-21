@@ -3548,6 +3548,34 @@ def dataset_diff_tools() -> List[MCPTool]:
     ]
 
 
+def timeseries_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_ts_rate",
+            description=("Per-second counter rate (reset-aware) over a 'series' "
+                         "of [timestamp, value] pairs, optional 'window_s'. "
+                         "Returns {rate}."),
+            input_schema=schema(
+                {"series": {"type": "array"}, "window_s": {"type": "number"}},
+                ["series"]),
+            handler=h.ts_rate,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_ts_downsample",
+            description=("Roll a 'series' of [timestamp, value] pairs into "
+                         "'bucket_s' tumbling buckets aggregated by 'agg' "
+                         "(avg/sum/min/max/first/last/count). Returns {buckets}."),
+            input_schema=schema(
+                {"series": {"type": "array"}, "bucket_s": {"type": "number"},
+                 "agg": {"type": "string"}},
+                ["series", "bucket_s"]),
+            handler=h.ts_downsample,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def schema_compat_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5411,6 +5439,7 @@ ALL_FACTORIES = (
     secret_ref_tools, config_schema_tools, config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
+    timeseries_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

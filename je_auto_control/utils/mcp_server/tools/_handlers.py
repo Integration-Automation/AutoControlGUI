@@ -1880,6 +1880,16 @@ def check_compatibility(old, new, mode="backward"):
     return _check_compatibility(old, new, mode)
 
 
+def ts_rate(series, window_s=None):
+    from je_auto_control.utils.executor.action_executor import _ts_rate
+    return _ts_rate(series, window_s)
+
+
+def ts_downsample(series, bucket_s, agg="avg"):
+    from je_auto_control.utils.executor.action_executor import _ts_downsample
+    return _ts_downsample(series, bucket_s, agg)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

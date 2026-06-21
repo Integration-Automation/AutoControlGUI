@@ -3369,6 +3369,27 @@ def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
     return {"percentiles": {str(q): value for q, value in result.items()}}
 
 
+def _ts_rate(series: Any, window_s: Any = None) -> Dict[str, Any]:
+    """Adapter: per-second counter rate over a (ts, value) series."""
+    import json
+    from je_auto_control.utils.timeseries import ts_rate
+    if isinstance(series, str):
+        series = json.loads(series)
+    window = float(window_s) if window_s is not None else None
+    return {"rate": ts_rate(series, window_s=window)}
+
+
+def _ts_downsample(series: Any, bucket_s: Any,
+                   agg: str = "avg") -> Dict[str, Any]:
+    """Adapter: downsample a (ts, value) series into tumbling buckets."""
+    import json
+    from je_auto_control.utils.timeseries import ts_downsample
+    if isinstance(series, str):
+        series = json.loads(series)
+    buckets = ts_downsample(series, float(bucket_s), agg)
+    return {"buckets": [list(point) for point in buckets]}
+
+
 def _evaluate_slo(records: Any, target: float,
                   window_s: Optional[float] = None) -> Dict[str, Any]:
     """Adapter: SLI + error budget for outcome records (list or JSON string)."""
@@ -4464,6 +4485,8 @@ class Executor:
             "AC_resolve_config": _resolve_config,
             "AC_explain_config": _explain_config,
             "AC_check_compatibility": _check_compatibility,
+            "AC_ts_rate": _ts_rate,
+            "AC_ts_downsample": _ts_downsample,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,
