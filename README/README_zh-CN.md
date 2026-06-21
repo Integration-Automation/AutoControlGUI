@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 功能旗标](#本次更新-2026-06-21--功能旗标)
 - [本次更新 (2026-06-21) — 文本 Diff、应用与三方合并](#本次更新-2026-06-21--文本-diff应用与三方合并)
 - [本次更新 (2026-06-21) — 日历周期规则(RRULE)](#本次更新-2026-06-21--日历周期规则rrule)
 - [本次更新 (2026-06-21) — 统计与 A/B 显著性](#本次更新-2026-06-21--统计与-ab-显著性)
@@ -118,6 +119,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 功能旗标
+
+以目标规则与推出切换行为。完整参考:[`docs/source/Zh/doc/new_features/v68_features_doc.rst`](../docs/source/Zh/doc/new_features/v68_features_doc.rst)。
+
+- **`FlagStore` / `evaluate_flag` / `is_enabled` / `assign_variant`**(`AC_evaluate_flag`、`AC_flag_enabled`):`decision_table` 是一次性 DMN,`ab_locator` 是定位器 A/B —— 两者都不是带黏性 % 推出的产品旗标存储库。本功能补上 OpenFeature 形状引擎:目标规则(`eq`/`in`/`semver_*`…)、加权变体、kill switch,以及一致哈希分桶(`sha256(key.salt.context_key)`)使主体具**黏性**。返回 `{value, variant, reason}`(`TARGETING_MATCH`/`SPLIT`/`DISABLED`/`ERROR`)。纯标准库、确定。
 
 ## 本次更新 (2026-06-21) — 文本 Diff、应用与三方合并
 

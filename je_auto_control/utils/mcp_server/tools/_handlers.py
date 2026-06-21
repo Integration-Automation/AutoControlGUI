@@ -1664,6 +1664,19 @@ def rrule_next(rule, dtstart, now=None):
     return {"next": moment.isoformat() if moment else None}
 
 
+def evaluate_flag(flags, key, context=None):
+    from je_auto_control.utils.feature_flags import (
+        FlagStore, evaluate_flag as _ev)
+    store = FlagStore.from_dict(flags) if isinstance(flags, dict) else flags
+    return _ev(store, key, context or {})
+
+
+def flag_enabled(flags, key, context=None, default=False):
+    from je_auto_control.utils.feature_flags import FlagStore, is_enabled
+    store = FlagStore.from_dict(flags) if isinstance(flags, dict) else flags
+    return {"enabled": is_enabled(store, key, context or {}, bool(default))}
+
+
 def unified_diff(a, b):
     from je_auto_control.utils.text_diff import unified_diff as _diff
     return {"diff": _diff(a, b)}

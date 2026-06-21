@@ -1156,6 +1156,26 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Validate JSON against a JSON Schema; returns {ok, errors}.",
     ))
     specs.append(CommandSpec(
+        "AC_evaluate_flag", "Flow", "Feature Flag: Evaluate",
+        fields=(
+            FieldSpec("flags", FieldType.STRING,
+                      placeholder='{"flags": {"f": {"variants": {...}}}}'),
+            FieldSpec("key", FieldType.STRING, placeholder="new-checkout"),
+            FieldSpec("context", FieldType.STRING, optional=True,
+                      placeholder='{"targeting_key": "user1", "country": "US"}'),
+        ),
+        description="Evaluate a feature flag; returns {value, variant, reason}.",
+    ))
+    specs.append(CommandSpec(
+        "AC_flag_enabled", "Flow", "Feature Flag: Enabled?",
+        fields=(
+            FieldSpec("flags", FieldType.STRING),
+            FieldSpec("key", FieldType.STRING, placeholder="new-checkout"),
+            FieldSpec("context", FieldType.STRING, optional=True),
+        ),
+        description="Boolean feature-flag check; returns {enabled}.",
+    ))
+    specs.append(CommandSpec(
         "AC_unified_diff", "Data", "Text: Unified Diff",
         fields=(
             FieldSpec("a", FieldType.STRING, placeholder="original text"),

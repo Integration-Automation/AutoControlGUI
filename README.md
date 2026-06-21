@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Feature Flags](#whats-new-2026-06-21--feature-flags)
 - [What's new (2026-06-21) — Text Diff, Patch & Three-Way Merge](#whats-new-2026-06-21--text-diff-patch--three-way-merge)
 - [What's new (2026-06-21) — Calendar Recurrence Rules (RRULE)](#whats-new-2026-06-21--calendar-recurrence-rules-rrule)
 - [What's new (2026-06-21) — Statistics & A/B Significance](#whats-new-2026-06-21--statistics--ab-significance)
@@ -119,6 +120,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Feature Flags
+
+Toggle behavior with targeting & rollout. Full reference: [`docs/source/Eng/doc/new_features/v68_features_doc.rst`](docs/source/Eng/doc/new_features/v68_features_doc.rst).
+
+- **`FlagStore` / `evaluate_flag` / `is_enabled` / `assign_variant`** (`AC_evaluate_flag`, `AC_flag_enabled`): `decision_table` is one-shot DMN and `ab_locator` is locator A/B — neither is a product flag store with sticky % rollout. This adds an OpenFeature-shaped engine: targeting rules (`eq`/`in`/`semver_*`…), weighted variants, kill switch, and consistent-hash bucketing (`sha256(key.salt.context_key)`) so a subject is **sticky**. Returns `{value, variant, reason}` (`TARGETING_MATCH`/`SPLIT`/`DISABLED`/`ERROR`). Pure-stdlib, deterministic.
 
 ## What's new (2026-06-21) — Text Diff, Patch & Three-Way Merge
 

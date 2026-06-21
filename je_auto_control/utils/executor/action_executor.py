@@ -2928,6 +2928,30 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+def _evaluate_flag(flags: Any, key: str, context: Any = None) -> Dict[str, Any]:
+    """Adapter: evaluate a feature flag (flags/context dict or JSON string)."""
+    import json
+    from je_auto_control.utils.feature_flags import FlagStore, evaluate_flag
+    if isinstance(flags, str):
+        flags = json.loads(flags)
+    if isinstance(context, str):
+        context = json.loads(context)
+    return evaluate_flag(FlagStore.from_dict(flags), key, context or {})
+
+
+def _flag_enabled(flags: Any, key: str, context: Any = None,
+                  default: bool = False) -> Dict[str, Any]:
+    """Adapter: boolean feature-flag check."""
+    import json
+    from je_auto_control.utils.feature_flags import FlagStore, is_enabled
+    if isinstance(flags, str):
+        flags = json.loads(flags)
+    if isinstance(context, str):
+        context = json.loads(context)
+    store = FlagStore.from_dict(flags)
+    return {"enabled": is_enabled(store, key, context or {}, bool(default))}
+
+
 def _unified_diff(a: str, b: str) -> Dict[str, Any]:
     """Adapter: unified diff transforming text a into b."""
     from je_auto_control.utils.text_diff import unified_diff
@@ -3854,6 +3878,8 @@ class Executor:
             "AC_ab_significance": _ab_significance,
             "AC_rrule_occurrences": _rrule_occurrences,
             "AC_rrule_next": _rrule_next,
+            "AC_evaluate_flag": _evaluate_flag,
+            "AC_flag_enabled": _flag_enabled,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,
