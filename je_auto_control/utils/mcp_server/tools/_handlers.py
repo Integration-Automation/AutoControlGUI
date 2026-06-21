@@ -1716,6 +1716,16 @@ def http_replay(cassette, url, method="GET"):
     return {"response": response}
 
 
+def trace_inject(headers=None, traceparent=None):
+    from je_auto_control.utils.executor.action_executor import _trace_inject
+    return _trace_inject(headers, traceparent)
+
+
+def trace_extract(headers):
+    from je_auto_control.utils.executor.action_executor import _trace_extract
+    return _trace_extract(headers)
+
+
 def build_provenance(paths, builder_id="je_auto_control"):
     from je_auto_control.utils.provenance import build_provenance, subject_for
     subjects = [subject_for(path) for path in paths]

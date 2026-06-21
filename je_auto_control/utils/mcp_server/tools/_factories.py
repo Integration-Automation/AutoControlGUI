@@ -3343,6 +3343,32 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def trace_context_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_trace_inject",
+            description=("Propagate a W3C trace context into outgoing 'headers'. "
+                         "With 'traceparent' set, derive a child span of that "
+                         "parent; else start a fresh root. Returns updated "
+                         "{headers, traceparent, trace_id, span_id}."),
+            input_schema=schema(
+                {"headers": {"type": "object"},
+                 "traceparent": {"type": "string"}},
+                []),
+            handler=h.trace_inject,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_trace_extract",
+            description=("Extract a W3C trace context from request 'headers'. "
+                         "Returns {context} (or null when no traceparent)."),
+            input_schema=schema({"headers": {"type": "object"}}, ["headers"]),
+            handler=h.trace_extract,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def http_cassette_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4878,6 +4904,7 @@ ALL_FACTORIES = (
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
+    trace_context_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — W3C Trace Context 传播](#本次更新-2026-06-21--w3c-trace-context-传播)
 - [本次更新 (2026-06-21) — HTTP 录制与重播卡带](#本次更新-2026-06-21--http-录制与重播卡带)
 - [本次更新 (2026-06-21) — 隔舱与速率限制标头](#本次更新-2026-06-21--隔舱与速率限制标头)
 - [本次更新 (2026-06-21) — 流式延迟百分位](#本次更新-2026-06-21--流式延迟百分位)
@@ -126,6 +127,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — W3C Trace Context 传播
+
+跨 HTTP 边界关联 span 与日志。完整参考:[`docs/source/Zh/doc/new_features/v76_features_doc.rst`](../docs/source/Zh/doc/new_features/v76_features_doc.rst)。
+
+- **`SpanContext` / `new_root_context` / `child_context` / `inject_context` / `extract_context`**(`AC_trace_inject`、`AC_trace_extract`):既有追踪器与 `agent_trace` 的 span 不带 ID,因此一次 HTTP 调用一端的 span 无法与它在另一端触发的工作关联。本功能实现 W3C Trace Context 标准 —— 生成/解析/传播 `traceparent` + `tracestate` 标头(version-`00`,拒绝格式不符/全零 ID),并以可注入 RNG 让测试中的 ID 确定。纯标准库。
 
 ## 本次更新 (2026-06-21) — HTTP 录制与重播卡带
 

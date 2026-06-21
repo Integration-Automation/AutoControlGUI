@@ -1607,6 +1607,24 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Replay a recorded HTTP response from a cassette (no network).",
     ))
     specs.append(CommandSpec(
+        "AC_trace_inject", "Data", "Trace Context: Inject",
+        fields=(
+            FieldSpec("headers", FieldType.STRING, optional=True,
+                      placeholder='{"accept": "application/json"}'),
+            FieldSpec("traceparent", FieldType.STRING, optional=True,
+                      placeholder="00-<32 hex>-<16 hex>-01 (parent; omit for root)"),
+        ),
+        description="Set a W3C traceparent on outgoing headers (root or child).",
+    ))
+    specs.append(CommandSpec(
+        "AC_trace_extract", "Data", "Trace Context: Extract",
+        fields=(
+            FieldSpec("headers", FieldType.STRING,
+                      placeholder='{"traceparent": "00-...-...-01"}'),
+        ),
+        description="Extract the W3C trace context from request headers.",
+    ))
+    specs.append(CommandSpec(
         "AC_rate_limit", "Flow", "Rate Limit (Token Bucket)",
         fields=(
             FieldSpec("name", FieldType.STRING),

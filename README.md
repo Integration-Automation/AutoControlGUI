@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — W3C Trace Context Propagation](#whats-new-2026-06-21--w3c-trace-context-propagation)
 - [What's new (2026-06-21) — HTTP Record & Replay Cassette](#whats-new-2026-06-21--http-record--replay-cassette)
 - [What's new (2026-06-21) — Bulkhead & Rate-Limit Headers](#whats-new-2026-06-21--bulkhead--rate-limit-headers)
 - [What's new (2026-06-21) — Streaming Latency Percentiles](#whats-new-2026-06-21--streaming-latency-percentiles)
@@ -127,6 +128,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — W3C Trace Context Propagation
+
+Correlate spans and logs across HTTP boundaries. Full reference: [`docs/source/Eng/doc/new_features/v76_features_doc.rst`](docs/source/Eng/doc/new_features/v76_features_doc.rst).
+
+- **`SpanContext` / `new_root_context` / `child_context` / `inject_context` / `extract_context`** (`AC_trace_inject`, `AC_trace_extract`): the existing tracer and `agent_trace` spans carried no IDs, so a span on one side of an HTTP call couldn't be correlated with the work it triggered on the other. This implements the W3C Trace Context standard — generate/parse/propagate `traceparent` + `tracestate` headers (version-`00`, rejects malformed/all-zero IDs), with an injectable RNG for deterministic IDs in tests. Pure-stdlib.
 
 ## What's new (2026-06-21) — HTTP Record & Replay Cassette
 
