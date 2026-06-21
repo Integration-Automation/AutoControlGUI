@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 配置与日志的机密脱敏](#本次更新-2026-06-22--配置与日志的机密脱敏)
 - [本次更新 (2026-06-22) — RFC 8288 Link 标头与分页](#本次更新-2026-06-22--rfc-8288-link-标头与分页)
 - [本次更新 (2026-06-22) — 参照完整性检查](#本次更新-2026-06-22--参照完整性检查)
 - [本次更新 (2026-06-22) — URI-Scheme 值引用](#本次更新-2026-06-22--uri-scheme-值引用)
@@ -138,6 +139,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-22) — 配置与日志的机密脱敏
+
+在记录或导出前脱敏机密。完整参考:[`docs/source/Zh/doc/new_features/v88_features_doc.rst`](../docs/source/Zh/doc/new_features/v88_features_doc.rst)。
+
+- **`redact_config` / `redact_secret_text`**(`AC_redact_config`、`AC_redact_secret_text`):`utils/redaction` 只模糊截图,`secrets_scan` 只*检测* —— 两者都不返回脱敏后的副本。本功能重用 `secrets_scan` 检测器(键名模式、AWS/bearer 格式、高熵)返回配置结构的脱敏深层副本,并脱敏自由文本日志行中看似机密的 token(保留周围文本)。vault 引用(`${secrets.*}`)保持不变。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — RFC 8288 Link 标头与分页
 

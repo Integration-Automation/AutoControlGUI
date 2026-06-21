@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 設定與日誌的機密遮蔽](#本次更新-2026-06-22--設定與日誌的機密遮蔽)
 - [本次更新 (2026-06-22) — RFC 8288 Link 標頭與分頁](#本次更新-2026-06-22--rfc-8288-link-標頭與分頁)
 - [本次更新 (2026-06-22) — 參照完整性檢查](#本次更新-2026-06-22--參照完整性檢查)
 - [本次更新 (2026-06-22) — URI-Scheme 值參照](#本次更新-2026-06-22--uri-scheme-值參照)
@@ -138,6 +139,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — 設定與日誌的機密遮蔽
+
+在記錄或匯出前遮蔽機密。完整參考:[`docs/source/Zh/doc/new_features/v88_features_doc.rst`](../docs/source/Zh/doc/new_features/v88_features_doc.rst)。
+
+- **`redact_config` / `redact_secret_text`**(`AC_redact_config`、`AC_redact_secret_text`):`utils/redaction` 只模糊截圖,`secrets_scan` 只*偵測* —— 兩者都不回傳遮蔽後的副本。本功能重用 `secrets_scan` 偵測器(鍵名模式、AWS/bearer 格式、高熵)回傳設定結構的遮蔽深層副本,並遮蔽自由文字日誌行中看似機密的 token(保留周圍文字)。vault 參照(`${secrets.*}`)保持不變。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — RFC 8288 Link 標頭與分頁
 

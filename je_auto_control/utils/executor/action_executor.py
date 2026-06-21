@@ -3015,6 +3015,21 @@ def _resolve_refs(obj: Any) -> Dict[str, Any]:
     return {"resolved": resolve_refs_in(obj)}
 
 
+def _redact_config(obj: Any, mask: str = "***") -> Dict[str, Any]:
+    """Adapter: redact secret-looking values from a config structure."""
+    import json
+    from je_auto_control.utils.config_redaction import redact_config
+    if isinstance(obj, str):
+        obj = json.loads(obj)
+    return {"redacted": redact_config(obj, mask=mask)}
+
+
+def _redact_secret_text(text: str, mask: str = "***") -> Dict[str, Any]:
+    """Adapter: mask secret-looking tokens within a free-text string."""
+    from je_auto_control.utils.config_redaction import redact_secret_text
+    return {"text": redact_secret_text(text, mask=mask)}
+
+
 def _parse_link_header(value: str) -> Dict[str, Any]:
     """Adapter: parse an RFC 8288 Link header into {links}."""
     from je_auto_control.utils.link_header import parse_link_header
@@ -4286,6 +4301,8 @@ class Executor:
             "AC_baggage_format": _baggage_format,
             "AC_resolve_ref": _resolve_ref,
             "AC_resolve_refs": _resolve_refs,
+            "AC_redact_config": _redact_config,
+            "AC_redact_secret_text": _redact_secret_text,
             "AC_parse_link_header": _parse_link_header,
             "AC_next_url": _next_url,
             "AC_profile_rows": _profile_rows,

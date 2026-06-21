@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Secret Redaction for Config & Logs](#whats-new-2026-06-22--secret-redaction-for-config--logs)
 - [What's new (2026-06-22) — RFC 8288 Link Header & Pagination](#whats-new-2026-06-22--rfc-8288-link-header--pagination)
 - [What's new (2026-06-22) — Referential Integrity Checks](#whats-new-2026-06-22--referential-integrity-checks)
 - [What's new (2026-06-22) — URI-Scheme Value References](#whats-new-2026-06-22--uri-scheme-value-references)
@@ -139,6 +140,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Secret Redaction for Config & Logs
+
+Mask secrets before logging or exporting. Full reference: [`docs/source/Eng/doc/new_features/v88_features_doc.rst`](docs/source/Eng/doc/new_features/v88_features_doc.rst).
+
+- **`redact_config` / `redact_secret_text`** (`AC_redact_config`, `AC_redact_secret_text`): `utils/redaction` only blurs screenshots and `secrets_scan` only *detects* — neither returned a masked copy. This reuses the `secrets_scan` detector (key-name patterns, AWS/bearer formats, high-entropy) to return a redacted deep copy of a config structure, and to mask secret-looking tokens in a free-text log line (preserving surrounding words). Vault refs (`${secrets.*}`) are left intact. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — RFC 8288 Link Header & Pagination
 

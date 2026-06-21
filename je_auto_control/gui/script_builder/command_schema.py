@@ -1657,6 +1657,24 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Recursively resolve references inside a JSON structure.",
     ))
     specs.append(CommandSpec(
+        "AC_redact_config", "Security", "Redaction: Redact Config",
+        fields=(
+            FieldSpec("obj", FieldType.STRING,
+                      placeholder='{"db": {"password": "hunter2longvalue"}}'),
+            FieldSpec("mask", FieldType.STRING, optional=True, default="***"),
+        ),
+        description="Mask secret-looking values in a JSON config structure.",
+    ))
+    specs.append(CommandSpec(
+        "AC_redact_secret_text", "Security", "Redaction: Redact Secret Text",
+        fields=(
+            FieldSpec("text", FieldType.STRING,
+                      placeholder="log line with AKIA... or a bearer token"),
+            FieldSpec("mask", FieldType.STRING, optional=True, default="***"),
+        ),
+        description="Mask secret-looking tokens within a free-text string.",
+    ))
+    specs.append(CommandSpec(
         "AC_profile_rows", "Data", "Data Profile: Profile Rows",
         fields=(
             FieldSpec("rows", FieldType.STRING,

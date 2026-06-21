@@ -294,6 +294,10 @@ from je_auto_control.utils.layered_config import (
 from je_auto_control.utils.secret_ref import (
     RefResolver, SecretRefError, is_ref, resolve_ref, resolve_refs_in,
 )
+# Secret redaction for config structures and log strings
+from je_auto_control.utils.config_redaction import (
+    redact_config, redact_secret_text,
+)
 # Outbound CloudEvents emitter
 from je_auto_control.utils.events import (
     EventEmitter, post_cloudevent, to_cloudevent,
@@ -894,6 +898,7 @@ __all__ = [
     "dotenv_values", "dump_dotenv", "load_dotenv", "parse_dotenv",
     "LayeredConfig", "SourceTrace", "deep_merge",
     "RefResolver", "SecretRefError", "is_ref", "resolve_ref", "resolve_refs_in",
+    "redact_config", "redact_secret_text",
     "EventEmitter", "post_cloudevent", "to_cloudevent",
     "WebhookChannel", "WebhookResult", "notify_webhook", "set_default_poster",
     "json_extract", "json_query", "json_query_one",
