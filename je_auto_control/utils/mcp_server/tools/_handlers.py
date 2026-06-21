@@ -1664,6 +1664,17 @@ def rrule_next(rule, dtstart, now=None):
     return {"next": moment.isoformat() if moment else None}
 
 
+def match_json(actual, expected, partial=False, match_type=False):
+    from je_auto_control.utils.json_contract import match_json as _match
+    return _match(actual, expected, partial=bool(partial),
+                  match_type=bool(match_type)).to_dict()
+
+
+def diff_json(actual, expected):
+    from je_auto_control.utils.json_contract import diff_json as _diff
+    return {"diffs": _diff(actual, expected)}
+
+
 def build_provenance(paths, builder_id="je_auto_control"):
     from je_auto_control.utils.provenance import build_provenance, subject_for
     subjects = [subject_for(path) for path in paths]

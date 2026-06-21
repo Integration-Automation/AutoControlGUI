@@ -3343,6 +3343,34 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def json_contract_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_match_json",
+            description=("Match 'actual' JSON against 'expected' with optional "
+                         "'partial' (ignore extra keys) and 'match_type' "
+                         "(type-only). Returns {ok, mismatches}."),
+            input_schema=schema(
+                {"actual": {"type": "object"}, "expected": {"type": "object"},
+                 "partial": {"type": "boolean"},
+                 "match_type": {"type": "boolean"}},
+                ["actual", "expected"]),
+            handler=h.match_json,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_diff_json",
+            description=("Path-tagged diff between 'actual' and 'expected' JSON "
+                         "(missing/extra/changed). Returns {diffs}."),
+            input_schema=schema(
+                {"actual": {"type": "object"}, "expected": {"type": "object"}},
+                ["actual", "expected"]),
+            handler=h.diff_json,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def provenance_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4745,7 +4773,7 @@ ALL_FACTORIES = (
     jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools,
     license_policy_tools, jwt_tools, rate_limit_tools, json_patch_tools,
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
-    feature_flag_tools, provenance_tools,
+    feature_flag_tools, provenance_tools, json_contract_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,
