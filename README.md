@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Single-Series Anomaly Detection](#whats-new-2026-06-22--single-series-anomaly-detection)
 - [What's new (2026-06-22) — Near-Duplicate Text Detection (SimHash / MinHash)](#whats-new-2026-06-22--near-duplicate-text-detection-simhash--minhash)
 - [What's new (2026-06-22) — String-Distance Similarity Metrics](#whats-new-2026-06-22--string-distance-similarity-metrics)
 - [What's new (2026-06-22) — Time-Series Transforms](#whats-new-2026-06-22--time-series-transforms)
@@ -152,6 +153,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Single-Series Anomaly Detection
+
+Flag the spike in one live metric series. Full reference: [`docs/source/Eng/doc/new_features/v101_features_doc.rst`](docs/source/Eng/doc/new_features/v101_features_doc.rst).
+
+- **`detect_anomalies` / `mad_anomalies` / `zscore_anomalies` / `ewma_control`** (`AC_detect_anomalies`): `data_drift` is two-batch distribution shift and `slo.burn_alerts` only thresholds budget burn — neither points at *which* value in one series is anomalous. This flags outliers via robust MAD (modified z-score), plain z-score, and an EWMA control chart (with an optional in-control baseline) — `{index, value, score, is_anomaly}` records. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Near-Duplicate Text Detection (SimHash / MinHash)
 

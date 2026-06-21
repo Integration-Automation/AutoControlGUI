@@ -3412,6 +3412,17 @@ def _ts_downsample(series: Any, bucket_s: Any,
     return {"buckets": [list(point) for point in buckets]}
 
 
+def _detect_anomalies(values: Any, method: str = "mad",
+                      threshold: Any = None) -> Dict[str, Any]:
+    """Adapter: flag anomalies in a numeric series (mad/zscore)."""
+    import json
+    from je_auto_control.utils.anomaly import detect_anomalies
+    if isinstance(values, str):
+        values = json.loads(values)
+    return {"results": detect_anomalies(values, method=method,
+                                        threshold=threshold)}
+
+
 def _evaluate_slo(records: Any, target: float,
                   window_s: Optional[float] = None) -> Dict[str, Any]:
     """Adapter: SLI + error budget for outcome records (list or JSON string)."""
@@ -4512,6 +4523,7 @@ class Executor:
             "AC_check_compatibility": _check_compatibility,
             "AC_ts_rate": _ts_rate,
             "AC_ts_downsample": _ts_downsample,
+            "AC_detect_anomalies": _detect_anomalies,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

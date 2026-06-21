@@ -429,6 +429,11 @@ from je_auto_control.utils.timeseries import (
     ts_delta, ts_downsample, ts_idelta, ts_increase, ts_irate, ts_rate,
     ts_resample,
 )
+# Single-series anomaly detection (z-score / MAD / EWMA control)
+from je_auto_control.utils.anomaly import (
+    detect_anomalies, ewma_control, mad_anomalies, mad_scores,
+    zscore_anomalies, zscore_scores,
+)
 # Bulkhead concurrency isolation + rate-limit header parsing
 from je_auto_control.utils.bulkhead import (
     Bulkhead, BulkheadFullError, next_delay, parse_ratelimit, parse_retry_after,
@@ -998,6 +1003,8 @@ __all__ = [
     "LatencyDigest", "exact_percentiles",
     "ts_delta", "ts_downsample", "ts_idelta", "ts_increase", "ts_irate",
     "ts_rate", "ts_resample",
+    "detect_anomalies", "ewma_control", "mad_anomalies", "mad_scores",
+    "zscore_anomalies", "zscore_scores",
     "Bulkhead", "BulkheadFullError", "next_delay", "parse_ratelimit",
     "parse_retry_after",
     "Cassette", "CassetteMissError",
