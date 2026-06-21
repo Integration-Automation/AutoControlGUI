@@ -1751,6 +1751,16 @@ def text_similarity(a, b, metric="jaro_winkler"):
     return _text_similarity(a, b, metric)
 
 
+def simhash(text, bits=64):
+    from je_auto_control.utils.executor.action_executor import _simhash
+    return _simhash(text, bits)
+
+
+def near_duplicates(texts, max_distance=3):
+    from je_auto_control.utils.executor.action_executor import _near_duplicates
+    return _near_duplicates(texts, max_distance)
+
+
 def canonical_log(fields):
     from je_auto_control.utils.executor.action_executor import _canonical_log
     return _canonical_log(fields)

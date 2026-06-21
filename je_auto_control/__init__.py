@@ -262,6 +262,11 @@ from je_auto_control.utils.text_similarity import (
     damerau_levenshtein, dice, jaccard, jaro, jaro_winkler, levenshtein,
     similarity,
 )
+# Near-duplicate text detection (SimHash / MinHash fingerprints)
+# (hamming_distance is already exported by image_dedup with identical semantics)
+from je_auto_control.utils.near_dup import (
+    minhash_signature, minhash_similarity, near_duplicates, simhash,
+)
 # S3-compatible artifact store (optional boto3, injectable client)
 from je_auto_control.utils.artifact_store import (
     S3ArtifactStore, configure_default_store, get_default_store,
@@ -935,6 +940,7 @@ __all__ = [
     "slugify",
     "damerau_levenshtein", "dice", "jaccard", "jaro", "jaro_winkler",
     "levenshtein", "similarity",
+    "minhash_signature", "minhash_similarity", "near_duplicates", "simhash",
     "S3ArtifactStore", "configure_default_store", "get_default_store",
     "set_default_store",
     "average_hash", "dedupe_images", "dhash", "hamming_distance",

@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 近似重複文字偵測(SimHash / MinHash)](#本次更新-2026-06-22--近似重複文字偵測simhash--minhash)
 - [本次更新 (2026-06-22) — 字串距離相似度量](#本次更新-2026-06-22--字串距離相似度量)
 - [本次更新 (2026-06-22) — 時間序列轉換](#本次更新-2026-06-22--時間序列轉換)
 - [本次更新 (2026-06-22) — Unicode 文字正規化與 Slug](#本次更新-2026-06-22--unicode-文字正規化與-slug)
@@ -150,6 +151,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — 近似重複文字偵測(SimHash / MinHash)
+
+為文字產生指紋以大規模找近似重複。完整參考:[`docs/source/Zh/doc/new_features/v100_features_doc.rst`](../docs/source/Zh/doc/new_features/v100_features_doc.rst)。
+
+- **`simhash` / `near_duplicates` / `minhash_signature` / `minhash_similarity`**(`AC_simhash`、`AC_near_duplicates`):`fuzzy_dedupe` 是 O(n²) 成對且無穩定指紋,`image_dedup` 只雜湊像素。本功能加入文字對應 —— SimHash(Hamming 距離近似重複分群)與 MinHash(估計 Jaccard),使用固定 `blake2b` 雜湊取得具決定性的指紋。可搭配 `normalize_text`。純標準函式庫。
 
 ## 本次更新 (2026-06-22) — 字串距離相似度量
 
