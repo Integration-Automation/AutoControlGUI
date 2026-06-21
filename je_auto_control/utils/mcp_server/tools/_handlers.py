@@ -1766,6 +1766,16 @@ def explain_config(layers, key):
     return _explain_config(layers, key)
 
 
+def detect_drift(reference, current, threshold=0.25, bins=10):
+    from je_auto_control.utils.executor.action_executor import _detect_drift
+    return _detect_drift(reference, current, threshold, bins)
+
+
+def categorical_drift(reference, current):
+    from je_auto_control.utils.executor.action_executor import _categorical_drift
+    return _categorical_drift(reference, current)
+
+
 def build_provenance(paths, builder_id="je_auto_control"):
     from je_auto_control.utils.provenance import build_provenance, subject_for
     subjects = [subject_for(path) for path in paths]
