@@ -14,7 +14,6 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 Fields = Union[Mapping[str, str], Sequence[Tuple[str, str]], None]
-_DISP_RE = re.compile(r'(\w+)="([^"]*)"')
 
 
 @dataclass
@@ -93,10 +92,19 @@ def _disp_params(header_block: bytes) -> Dict[str, str]:
     return headers
 
 
+def _disposition_params(disposition: str) -> Dict[str, str]:
+    params: Dict[str, str] = {}
+    for segment in disposition.split(";"):
+        key, sep, value = segment.partition("=")
+        value = value.strip()
+        if sep and len(value) >= 2 and value[0] == '"' and value[-1] == '"':
+            params[key.strip()] = value[1:-1]
+    return params
+
+
 def _assign_part(headers: Mapping[str, str], content: bytes,
                  fields: Dict[str, str], files: List[Dict[str, Any]]) -> None:
-    disposition = headers.get("content-disposition", "")
-    params = dict(_DISP_RE.findall(disposition))
+    params = _disposition_params(headers.get("content-disposition", ""))
     name = params.get("name", "")
     if "filename" in params:
         files.append({"name": name, "filename": params["filename"],
