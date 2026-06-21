@@ -3030,6 +3030,24 @@ def _redact_secret_text(text: str, mask: str = "***") -> Dict[str, Any]:
     return {"text": redact_secret_text(text, mask=mask)}
 
 
+def _parse_cache_control(headers: Any) -> Dict[str, Any]:
+    """Adapter: parse a Cache-Control header into {directives}."""
+    import json
+    from je_auto_control.utils.http_conditional import parse_cache_control
+    if isinstance(headers, str):
+        headers = json.loads(headers)
+    return {"directives": parse_cache_control(headers)}
+
+
+def _store_validators(response: Any) -> Dict[str, Any]:
+    """Adapter: extract cache validators from an HTTP response."""
+    import json
+    from je_auto_control.utils.http_conditional import store_validators
+    if isinstance(response, str):
+        response = json.loads(response)
+    return {"validators": store_validators(response)}
+
+
 def _cookie_header(set_cookies: Any) -> Dict[str, Any]:
     """Adapter: build a Cookie header from one/many Set-Cookie strings."""
     import json
@@ -4372,6 +4390,8 @@ class Executor:
             "AC_parse_quality_values": _parse_quality_values,
             "AC_cookie_header": _cookie_header,
             "AC_parse_set_cookie": _parse_set_cookie,
+            "AC_parse_cache_control": _parse_cache_control,
+            "AC_store_validators": _store_validators,
             "AC_profile_rows": _profile_rows,
             "AC_infer_schema": _infer_schema,
             "AC_parse_problem": _parse_problem,

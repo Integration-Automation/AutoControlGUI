@@ -1787,6 +1787,17 @@ def parse_set_cookie(header):
     return _parse_set_cookie(header)
 
 
+def parse_cache_control(headers):
+    from je_auto_control.utils.executor.action_executor import (
+        _parse_cache_control)
+    return _parse_cache_control(headers)
+
+
+def store_validators(response):
+    from je_auto_control.utils.executor.action_executor import _store_validators
+    return _store_validators(response)
+
+
 def redact_config(obj, mask="***"):
     from je_auto_control.utils.executor.action_executor import _redact_config
     return _redact_config(obj, mask)
