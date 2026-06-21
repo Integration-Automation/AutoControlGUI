@@ -1756,6 +1756,17 @@ def next_url(value):
     return _next_url(value)
 
 
+def redact_config(obj, mask="***"):
+    from je_auto_control.utils.executor.action_executor import _redact_config
+    return _redact_config(obj, mask)
+
+
+def redact_secret_text(text, mask="***"):
+    from je_auto_control.utils.executor.action_executor import (
+        _redact_secret_text)
+    return _redact_secret_text(text, mask)
+
+
 def profile_rows(rows, columns=None):
     from je_auto_control.utils.executor.action_executor import _profile_rows
     return _profile_rows(rows, columns)

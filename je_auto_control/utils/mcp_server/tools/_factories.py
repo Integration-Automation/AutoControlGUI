@@ -3582,6 +3582,33 @@ def data_profile_tools() -> List[MCPTool]:
     ]
 
 
+def config_redaction_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_redact_config",
+            description=("Return a deep copy of 'obj' with secret-looking values "
+                         "masked (key-name / value-format / high-entropy "
+                         "detection). Optional 'mask'. Returns {redacted}."),
+            input_schema=schema(
+                {"obj": {"type": "object"}, "mask": {"type": "string"}},
+                ["obj"]),
+            handler=h.redact_config,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_redact_secret_text",
+            description=("Mask secret-looking tokens within a free-text 'text' "
+                         "string (e.g. a log line). Optional 'mask'. Returns "
+                         "{text}."),
+            input_schema=schema(
+                {"text": {"type": "string"}, "mask": {"type": "string"}},
+                ["text"]),
+            handler=h.redact_secret_text,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def secret_ref_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5186,6 +5213,7 @@ ALL_FACTORIES = (
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
     trace_context_tools, baggage_tools, secret_ref_tools,
+    config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,
     dataset_diff_tools, referential_tools, link_header_tools,
