@@ -163,6 +163,11 @@ from je_auto_control.utils.data_profile import infer_schema, profile_rows
 from je_auto_control.utils.data_drift import (
     categorical_drift, detect_drift, ks_two_sample, psi,
 )
+# JSON-Schema compatibility (backward / forward / full classification)
+from je_auto_control.utils.schema_compat import (
+    SchemaChange, check_compatibility, diff_schemas, is_backward_compatible,
+    is_forward_compatible, is_full_compatible,
+)
 # Tabular row-set diff (CDC-style added/removed/changed by key)
 from je_auto_control.utils.dataset_diff import (
     cell_changes, diff_rows, summarize_diff,
@@ -880,6 +885,8 @@ __all__ = [
     "extract_fields", "mask_rows", "validate_rows",
     "infer_schema", "profile_rows",
     "categorical_drift", "detect_drift", "ks_two_sample", "psi",
+    "SchemaChange", "check_compatibility", "diff_schemas",
+    "is_backward_compatible", "is_forward_compatible", "is_full_compatible",
     "cell_changes", "diff_rows", "summarize_diff",
     "check_accepted_values", "check_foreign_key", "check_row_count",
     "check_unique_key",

@@ -1864,6 +1864,12 @@ def explain_config(layers, key):
     return _explain_config(layers, key)
 
 
+def check_compatibility(old, new, mode="backward"):
+    from je_auto_control.utils.executor.action_executor import (
+        _check_compatibility)
+    return _check_compatibility(old, new, mode)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

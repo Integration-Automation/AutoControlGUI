@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — JSON-Schema Compatibility Checking](#whats-new-2026-06-22--json-schema-compatibility-checking)
 - [What's new (2026-06-22) — Typed Configuration Schema](#whats-new-2026-06-22--typed-configuration-schema)
 - [What's new (2026-06-22) — OTLP/JSON Span Export](#whats-new-2026-06-22--otlpjson-span-export)
 - [What's new (2026-06-22) — Canonical Log Lines & Structured Logging](#whats-new-2026-06-22--canonical-log-lines--structured-logging)
@@ -147,6 +148,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — JSON-Schema Compatibility Checking
+
+Classify schema changes as backward/forward/full. Full reference: [`docs/source/Eng/doc/new_features/v96_features_doc.rst`](docs/source/Eng/doc/new_features/v96_features_doc.rst).
+
+- **`check_compatibility` / `diff_schemas` / `is_backward_compatible` / `is_forward_compatible` / `is_full_compatible`** (`AC_check_compatibility`): we could validate against and generate JSON Schemas but couldn't answer "will an old consumer still read new data?". This classifies changes (added-required field, removed field, narrowed/widened type, enum add/remove) under Confluent/Avro backward/forward/full rules over the object subset. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Typed Configuration Schema
 
