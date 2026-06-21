@@ -351,6 +351,11 @@ from je_auto_control.utils.feature_flags import (
     Flag, FlagStore, assign_variant, evaluate_flag, is_enabled,
     percentage_bucket,
 )
+# SLSA build provenance (in-toto v1 statements over file digests)
+from je_auto_control.utils.provenance import (
+    build_provenance, subject_for, subject_for_bytes, verify_provenance,
+    write_provenance,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -841,6 +846,8 @@ __all__ = [
     "unified_diff",
     "Flag", "FlagStore", "assign_variant", "evaluate_flag", "is_enabled",
     "percentage_bucket",
+    "build_provenance", "subject_for", "subject_for_bytes",
+    "verify_provenance", "write_provenance",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

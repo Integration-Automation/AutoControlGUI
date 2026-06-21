@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — SLSA 构建来源证明](#本次更新-2026-06-21--slsa-构建来源证明)
 - [本次更新 (2026-06-21) — 功能旗标](#本次更新-2026-06-21--功能旗标)
 - [本次更新 (2026-06-21) — 文本 Diff、应用与三方合并](#本次更新-2026-06-21--文本-diff应用与三方合并)
 - [本次更新 (2026-06-21) — 日历周期规则(RRULE)](#本次更新-2026-06-21--日历周期规则rrule)
@@ -119,6 +120,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — SLSA 构建来源证明
+
+证明构建产生了什么。完整参考:[`docs/source/Zh/doc/new_features/v69_features_doc.rst`](../docs/source/Zh/doc/new_features/v69_features_doc.rst)。
+
+- **`build_provenance` / `subject_for` / `verify_provenance` / `write_provenance`**(`AC_build_provenance`、`AC_verify_provenance`):框架能签署动作文件并盘点依赖项(SBOM),却无法证明*哪个构建产生了什么*。本功能补上 in-toto v1 Statement,携带覆盖文件 `sha256` 摘要的 SLSA v1 provenance predicate,并附上会重新哈希产物的验证器(篡改 → 不符)。与 `action_signing` + `sbom` 互补;纯标准库 `hashlib`+`json`,完全离线。
 
 ## 本次更新 (2026-06-21) — 功能旗标
 

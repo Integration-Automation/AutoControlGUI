@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — SLSA 建置來源證明](#本次更新-2026-06-21--slsa-建置來源證明)
 - [本次更新 (2026-06-21) — 功能旗標](#本次更新-2026-06-21--功能旗標)
 - [本次更新 (2026-06-21) — 文字 Diff、套用與三方合併](#本次更新-2026-06-21--文字-diff套用與三方合併)
 - [本次更新 (2026-06-21) — 行事曆週期規則(RRULE)](#本次更新-2026-06-21--行事曆週期規則rrule)
@@ -119,6 +120,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — SLSA 建置來源證明
+
+證明建置產生了什麼。完整參考:[`docs/source/Zh/doc/new_features/v69_features_doc.rst`](../docs/source/Zh/doc/new_features/v69_features_doc.rst)。
+
+- **`build_provenance` / `subject_for` / `verify_provenance` / `write_provenance`**(`AC_build_provenance`、`AC_verify_provenance`):框架能簽署動作檔並盤點相依套件(SBOM),卻無法證明*哪個建置產生了什麼*。本功能補上 in-toto v1 Statement,攜帶覆蓋檔案 `sha256` 摘要的 SLSA v1 provenance predicate,並附上會重新雜湊產物的驗證器(竄改 → 不符)。與 `action_signing` + `sbom` 互補;純標準函式庫 `hashlib`+`json`,完全離線。
 
 ## 本次更新 (2026-06-21) — 功能旗標
 

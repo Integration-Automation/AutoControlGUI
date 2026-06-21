@@ -1325,6 +1325,26 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Evaluate SBOM licenses against allow/deny SPDX lists.",
     ))
     specs.append(CommandSpec(
+        "AC_build_provenance", "Security", "Provenance: Build (SLSA)",
+        fields=(
+            FieldSpec("paths", FieldType.STRING,
+                      placeholder='["dist/app.whl", "sbom.cdx.json"]'),
+            FieldSpec("builder_id", FieldType.STRING, optional=True,
+                      placeholder="je_auto_control"),
+        ),
+        description="Build a SLSA in-toto provenance statement over files.",
+    ))
+    specs.append(CommandSpec(
+        "AC_verify_provenance", "Security", "Provenance: Verify",
+        fields=(
+            FieldSpec("statement", FieldType.STRING,
+                      placeholder='{"subject": [...], "predicate": {...}}'),
+            FieldSpec("files", FieldType.STRING,
+                      placeholder='{"app.whl": "dist/app.whl"}'),
+        ),
+        description="Re-hash files against a provenance statement; {ok, mismatches}.",
+    ))
+    specs.append(CommandSpec(
         "AC_jwt_encode", "Security", "JWT: Sign Token",
         fields=(
             FieldSpec("claims", FieldType.STRING,

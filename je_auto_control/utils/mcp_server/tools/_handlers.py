@@ -1664,6 +1664,18 @@ def rrule_next(rule, dtstart, now=None):
     return {"next": moment.isoformat() if moment else None}
 
 
+def build_provenance(paths, builder_id="je_auto_control"):
+    from je_auto_control.utils.provenance import build_provenance, subject_for
+    subjects = [subject_for(path) for path in paths]
+    return {"statement": build_provenance(subjects, builder_id=builder_id)}
+
+
+def verify_provenance(statement, files):
+    from je_auto_control.utils.provenance import verify_provenance as _verify
+    mismatches = _verify(statement, files)
+    return {"ok": not mismatches, "mismatches": mismatches}
+
+
 def evaluate_flag(flags, key, context=None):
     from je_auto_control.utils.feature_flags import (
         FlagStore, evaluate_flag as _ev)

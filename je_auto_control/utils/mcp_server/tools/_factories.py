@@ -3343,6 +3343,32 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def provenance_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_build_provenance",
+            description=("Build a SLSA in-toto v1 provenance statement over a "
+                         "list of file 'paths' (sha256 subjects). Returns "
+                         "{statement}."),
+            input_schema=schema(
+                {"paths": {"type": "array"}, "builder_id": {"type": "string"}},
+                ["paths"]),
+            handler=h.build_provenance,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_verify_provenance",
+            description=("Re-hash 'files' (name->path) against a provenance "
+                         "'statement'. Returns {ok, mismatches}."),
+            input_schema=schema(
+                {"statement": {"type": "object"}, "files": {"type": "object"}},
+                ["statement", "files"]),
+            handler=h.verify_provenance,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def feature_flag_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4719,7 +4745,7 @@ ALL_FACTORIES = (
     jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools,
     license_policy_tools, jwt_tools, rate_limit_tools, json_patch_tools,
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
-    feature_flag_tools,
+    feature_flag_tools, provenance_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

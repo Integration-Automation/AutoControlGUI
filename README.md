@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — SLSA Build Provenance](#whats-new-2026-06-21--slsa-build-provenance)
 - [What's new (2026-06-21) — Feature Flags](#whats-new-2026-06-21--feature-flags)
 - [What's new (2026-06-21) — Text Diff, Patch & Three-Way Merge](#whats-new-2026-06-21--text-diff-patch--three-way-merge)
 - [What's new (2026-06-21) — Calendar Recurrence Rules (RRULE)](#whats-new-2026-06-21--calendar-recurrence-rules-rrule)
@@ -120,6 +121,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — SLSA Build Provenance
+
+Attest what was built. Full reference: [`docs/source/Eng/doc/new_features/v69_features_doc.rst`](docs/source/Eng/doc/new_features/v69_features_doc.rst).
+
+- **`build_provenance` / `subject_for` / `verify_provenance` / `write_provenance`** (`AC_build_provenance`, `AC_verify_provenance`): the framework signs action files and inventories deps (SBOM) but couldn't attest *what was produced by which build*. This adds an in-toto v1 Statement with a SLSA v1 provenance predicate over file `sha256` digests, and a verifier that re-hashes the artifacts (tamper → mismatch). Complements `action_signing` + `sbom`; pure-stdlib `hashlib`+`json`, fully offline.
 
 ## What's new (2026-06-21) — Feature Flags
 
