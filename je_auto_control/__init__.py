@@ -270,6 +270,10 @@ from je_auto_control.utils.process_mining import (
 from je_auto_control.utils.assets import (
     Asset, AssetStore, AssetValue, active_environment,
 )
+# .env file parsing / serialisation (12-factor config ingestion)
+from je_auto_control.utils.dotenv import (
+    dotenv_values, dump_dotenv, load_dotenv, parse_dotenv,
+)
 # Outbound CloudEvents emitter
 from je_auto_control.utils.events import (
     EventEmitter, post_cloudevent, to_cloudevent,
@@ -851,6 +855,7 @@ __all__ = [
     "find_repeated_sequences", "mine_action_log",
     "rank_automation_candidates",
     "Asset", "AssetStore", "AssetValue", "active_environment",
+    "dotenv_values", "dump_dotenv", "load_dotenv", "parse_dotenv",
     "EventEmitter", "post_cloudevent", "to_cloudevent",
     "WebhookChannel", "WebhookResult", "notify_webhook", "set_default_poster",
     "json_extract", "json_query", "json_query_one",

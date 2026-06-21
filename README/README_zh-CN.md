@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — Dotenv (.env) 解析](#本次更新-2026-06-21--dotenv-env-解析)
 - [本次更新 (2026-06-21) — RFC 9457 Problem Details 解析](#本次更新-2026-06-21--rfc-9457-problem-details-解析)
 - [本次更新 (2026-06-21) — 数据剖析与结构推断](#本次更新-2026-06-21--数据剖析与结构推断)
 - [本次更新 (2026-06-21) — W3C Trace Context 传播](#本次更新-2026-06-21--w3c-trace-context-传播)
@@ -129,6 +130,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — Dotenv (.env) 解析
+
+把 12-factor `.env` 文件读进配置。完整参考:[`docs/source/Zh/doc/new_features/v79_features_doc.rst`](../docs/source/Zh/doc/new_features/v79_features_doc.rst)。
+
+- **`parse_dotenv` / `load_dotenv` / `dotenv_values` / `dump_dotenv`**(`AC_parse_dotenv`、`AC_load_dotenv`):`load_vars_from_json` 载入扁平 JSON,但没有任何东西读取 de-facto 的 `.env` 文件。本功能把 `KEY=VALUE` 行(`export` 前缀、单/双引号、`\n`/`\t` 转义、行内注释)解析成纯 dict —— 不依赖 `python-dotenv`。载入器合并进调用端提供的 mapping 而非变动 `os.environ`,因此安全且确定。纯标准库。
 
 ## 本次更新 (2026-06-21) — RFC 9457 Problem Details 解析
 

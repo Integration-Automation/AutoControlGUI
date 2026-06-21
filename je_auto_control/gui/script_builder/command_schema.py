@@ -1655,6 +1655,22 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Parse an application/problem+json error response.",
     ))
     specs.append(CommandSpec(
+        "AC_parse_dotenv", "Data", "Dotenv: Parse Text",
+        fields=(
+            FieldSpec("text", FieldType.STRING,
+                      placeholder='KEY=value\nexport TOKEN="abc"  # comment'),
+        ),
+        description="Parse .env text (KEY=VALUE, quotes, escapes) into values.",
+    ))
+    specs.append(CommandSpec(
+        "AC_load_dotenv", "Data", "Dotenv: Load File",
+        fields=(
+            FieldSpec("path", FieldType.STRING, placeholder=".env"),
+            FieldSpec("override", FieldType.BOOL, optional=True, default=False),
+        ),
+        description="Load a .env file into a values dict.",
+    ))
+    specs.append(CommandSpec(
         "AC_rate_limit", "Flow", "Rate Limit (Token Bucket)",
         fields=(
             FieldSpec("name", FieldType.STRING),

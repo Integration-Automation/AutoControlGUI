@@ -3343,6 +3343,29 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def dotenv_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_parse_dotenv",
+            description=("Parse .env 'text' (KEY=VALUE lines, export prefixes, "
+                         "quoting, escapes, inline comments) into {values}."),
+            input_schema=schema({"text": {"type": "string"}}, ["text"]),
+            handler=h.parse_dotenv,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_load_dotenv",
+            description=("Load a .env file at 'path' into a fresh {values} dict. "
+                         "'override' is accepted for symmetry (fresh dict)."),
+            input_schema=schema(
+                {"path": {"type": "string"}, "override": {"type": "boolean"}},
+                ["path"]),
+            handler=h.load_dotenv,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def http_problem_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4947,7 +4970,7 @@ ALL_FACTORIES = (
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
-    trace_context_tools, data_profile_tools, http_problem_tools,
+    trace_context_tools, data_profile_tools, http_problem_tools, dotenv_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

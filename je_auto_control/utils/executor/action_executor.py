@@ -3032,6 +3032,18 @@ def _parse_problem(response: Any) -> Dict[str, Any]:
     return {"problem": problem.to_dict() if problem is not None else None}
 
 
+def _parse_dotenv(text: str) -> Dict[str, Any]:
+    """Adapter: parse .env text into a {values} dict."""
+    from je_auto_control.utils.dotenv import parse_dotenv
+    return {"values": parse_dotenv(text)}
+
+
+def _load_dotenv(path: str, override: Any = False) -> Dict[str, Any]:
+    """Adapter: load a .env file into a fresh {values} dict."""
+    from je_auto_control.utils.dotenv import load_dotenv
+    return {"values": load_dotenv(path, {}, override=bool(override))}
+
+
 def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
     """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
     import json
@@ -4113,6 +4125,8 @@ class Executor:
             "AC_profile_rows": _profile_rows,
             "AC_infer_schema": _infer_schema,
             "AC_parse_problem": _parse_problem,
+            "AC_parse_dotenv": _parse_dotenv,
+            "AC_load_dotenv": _load_dotenv,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,

@@ -1741,6 +1741,16 @@ def parse_problem(response):
     return _parse_problem(response)
 
 
+def parse_dotenv(text):
+    from je_auto_control.utils.executor.action_executor import _parse_dotenv
+    return _parse_dotenv(text)
+
+
+def load_dotenv(path, override=False):
+    from je_auto_control.utils.executor.action_executor import _load_dotenv
+    return _load_dotenv(path, override)
+
+
 def build_provenance(paths, builder_id="je_auto_control"):
     from je_auto_control.utils.provenance import build_provenance, subject_for
     subjects = [subject_for(path) for path in paths]
