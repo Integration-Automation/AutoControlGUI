@@ -3343,6 +3343,34 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def data_profile_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_profile_rows",
+            description=("Profile 'rows' into per-column stats (count, null "
+                         "fraction, distinct, inferred type, top values, numeric "
+                         "min/max/mean). Optional 'columns' subset. Returns "
+                         "{profile}."),
+            input_schema=schema(
+                {"rows": {"type": "array"}, "columns": {"type": "array"}},
+                ["rows"]),
+            handler=h.profile_rows,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_infer_schema",
+            description=("Infer a validate_rows-compatible schema from observed "
+                         "'rows' (type, required, unique, numeric bounds). "
+                         "Optional 'columns' subset. Returns {schema}."),
+            input_schema=schema(
+                {"rows": {"type": "array"}, "columns": {"type": "array"}},
+                ["rows"]),
+            handler=h.infer_schema,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def trace_context_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4904,7 +4932,7 @@ ALL_FACTORIES = (
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
-    trace_context_tools,
+    trace_context_tools, data_profile_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

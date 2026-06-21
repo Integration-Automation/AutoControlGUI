@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 数据剖析与结构推断](#本次更新-2026-06-21--数据剖析与结构推断)
 - [本次更新 (2026-06-21) — W3C Trace Context 传播](#本次更新-2026-06-21--w3c-trace-context-传播)
 - [本次更新 (2026-06-21) — HTTP 录制与重播卡带](#本次更新-2026-06-21--http-录制与重播卡带)
 - [本次更新 (2026-06-21) — 隔舱与速率限制标头](#本次更新-2026-06-21--隔舱与速率限制标头)
@@ -127,6 +128,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 数据剖析与结构推断
+
+扫描数据行集合并提出验证结构。完整参考:[`docs/source/Zh/doc/new_features/v77_features_doc.rst`](../docs/source/Zh/doc/new_features/v77_features_doc.rst)。
+
+- **`profile_rows` / `infer_schema`**(`AC_profile_rows`、`AC_infer_schema`):`validate_rows` 消费手写结构,`stats.describe` 只汇总单一数值列表 —— 没有任何东西扫描整个数据行集合。本功能剖析每列(空值比例、基数、推断类型、最常见值、数值 min/max/mean)并推断出 `validate_rows` 兼容结构(无空值即 required、相异即 unique、数值边界)—— 馈入既有验证器的剖析步骤。纯标准库、完全确定。
 
 ## 本次更新 (2026-06-21) — W3C Trace Context 传播
 

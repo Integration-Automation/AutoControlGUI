@@ -1625,6 +1625,26 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Extract the W3C trace context from request headers.",
     ))
     specs.append(CommandSpec(
+        "AC_profile_rows", "Data", "Data Profile: Profile Rows",
+        fields=(
+            FieldSpec("rows", FieldType.STRING,
+                      placeholder='[{"id": 1, "name": "a"}, {"id": 2}]'),
+            FieldSpec("columns", FieldType.STRING, optional=True,
+                      placeholder='["id", "name"] (omit for all)'),
+        ),
+        description="Per-column stats: null fraction, cardinality, type, ranges.",
+    ))
+    specs.append(CommandSpec(
+        "AC_infer_schema", "Data", "Data Profile: Infer Schema",
+        fields=(
+            FieldSpec("rows", FieldType.STRING,
+                      placeholder='[{"id": 1, "name": "a"}, {"id": 2}]'),
+            FieldSpec("columns", FieldType.STRING, optional=True,
+                      placeholder='["id", "name"] (omit for all)'),
+        ),
+        description="Infer a validate_rows-compatible schema from observed rows.",
+    ))
+    specs.append(CommandSpec(
         "AC_rate_limit", "Flow", "Rate Limit (Token Bucket)",
         fields=(
             FieldSpec("name", FieldType.STRING),

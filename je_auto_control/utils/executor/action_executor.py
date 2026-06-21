@@ -3000,6 +3000,28 @@ def _trace_extract(headers: Any) -> Dict[str, Any]:
     return {"context": ctx.to_dict() if ctx is not None else None}
 
 
+def _profile_rows(rows: Any, columns: Any = None) -> Dict[str, Any]:
+    """Adapter: profile a row-set into per-column statistics."""
+    import json
+    from je_auto_control.utils.data_profile import profile_rows
+    if isinstance(rows, str):
+        rows = json.loads(rows)
+    if isinstance(columns, str):
+        columns = json.loads(columns)
+    return {"profile": profile_rows(rows, columns)}
+
+
+def _infer_schema(rows: Any, columns: Any = None) -> Dict[str, Any]:
+    """Adapter: infer a validate_rows-compatible schema from rows."""
+    import json
+    from je_auto_control.utils.data_profile import infer_schema
+    if isinstance(rows, str):
+        rows = json.loads(rows)
+    if isinstance(columns, str):
+        columns = json.loads(columns)
+    return {"schema": infer_schema(rows, columns)}
+
+
 def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
     """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
     import json
@@ -4078,6 +4100,8 @@ class Executor:
             "AC_http_replay": _http_replay,
             "AC_trace_inject": _trace_inject,
             "AC_trace_extract": _trace_extract,
+            "AC_profile_rows": _profile_rows,
+            "AC_infer_schema": _infer_schema,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,

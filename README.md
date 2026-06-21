@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-21) — Data Profiling & Schema Inference](#whats-new-2026-06-21--data-profiling--schema-inference)
 - [What's new (2026-06-21) — W3C Trace Context Propagation](#whats-new-2026-06-21--w3c-trace-context-propagation)
 - [What's new (2026-06-21) — HTTP Record & Replay Cassette](#whats-new-2026-06-21--http-record--replay-cassette)
 - [What's new (2026-06-21) — Bulkhead & Rate-Limit Headers](#whats-new-2026-06-21--bulkhead--rate-limit-headers)
@@ -128,6 +129,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-21) — Data Profiling & Schema Inference
+
+Survey a row-set and propose a validation schema. Full reference: [`docs/source/Eng/doc/new_features/v77_features_doc.rst`](docs/source/Eng/doc/new_features/v77_features_doc.rst).
+
+- **`profile_rows` / `infer_schema`** (`AC_profile_rows`, `AC_infer_schema`): `validate_rows` consumes a hand-written schema and `stats.describe` summarizes one numeric list — nothing surveyed a whole row-set. This profiles each column (null fraction, cardinality, inferred type, top values, numeric min/max/mean) and infers a `validate_rows`-compatible schema (required where non-null, unique where distinct, numeric bounds) — the profiler step that feeds the existing validator. Pure-stdlib, fully deterministic.
 
 ## What's new (2026-06-21) — W3C Trace Context Propagation
 
