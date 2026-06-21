@@ -1736,6 +1736,16 @@ def baggage_format(items):
     return _baggage_format(items)
 
 
+def resolve_ref(ref):
+    from je_auto_control.utils.executor.action_executor import _resolve_ref
+    return _resolve_ref(ref)
+
+
+def resolve_refs(obj):
+    from je_auto_control.utils.executor.action_executor import _resolve_refs
+    return _resolve_refs(obj)
+
+
 def profile_rows(rows, columns=None):
     from je_auto_control.utils.executor.action_executor import _profile_rows
     return _profile_rows(rows, columns)

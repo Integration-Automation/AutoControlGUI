@@ -3000,6 +3000,21 @@ def _trace_extract(headers: Any) -> Dict[str, Any]:
     return {"context": ctx.to_dict() if ctx is not None else None}
 
 
+def _resolve_ref(ref: str) -> Dict[str, Any]:
+    """Adapter: resolve an env:// / file:// / secret:// reference."""
+    from je_auto_control.utils.secret_ref import resolve_ref
+    return {"value": resolve_ref(ref)}
+
+
+def _resolve_refs(obj: Any) -> Dict[str, Any]:
+    """Adapter: recursively resolve references in a structure (or JSON str)."""
+    import json
+    from je_auto_control.utils.secret_ref import resolve_refs_in
+    if isinstance(obj, str):
+        obj = json.loads(obj)
+    return {"resolved": resolve_refs_in(obj)}
+
+
 def _baggage_parse(header: str) -> Dict[str, Any]:
     """Adapter: parse a W3C baggage header into {items}."""
     from je_auto_control.utils.baggage import parse_baggage
@@ -4220,6 +4235,8 @@ class Executor:
             "AC_trace_extract": _trace_extract,
             "AC_baggage_parse": _baggage_parse,
             "AC_baggage_format": _baggage_format,
+            "AC_resolve_ref": _resolve_ref,
+            "AC_resolve_refs": _resolve_refs,
             "AC_profile_rows": _profile_rows,
             "AC_infer_schema": _infer_schema,
             "AC_parse_problem": _parse_problem,
