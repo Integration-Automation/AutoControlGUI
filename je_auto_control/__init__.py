@@ -377,6 +377,12 @@ from je_auto_control.utils.bulkhead import (
 )
 # HTTP record/replay cassette (deterministic offline API tests)
 from je_auto_control.utils.http_cassette import Cassette, CassetteMissError
+# W3C Trace Context propagation (traceparent / tracestate)
+from je_auto_control.utils.trace_context import (
+    SpanContext, TraceContextError, child_context, extract_context,
+    format_traceparent, format_tracestate, inject_context, new_root_context,
+    new_span_id, new_trace_id, parse_traceparent, parse_tracestate,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -877,6 +883,10 @@ __all__ = [
     "Bulkhead", "BulkheadFullError", "next_delay", "parse_ratelimit",
     "parse_retry_after",
     "Cassette", "CassetteMissError",
+    "SpanContext", "TraceContextError", "child_context", "extract_context",
+    "format_traceparent", "format_tracestate", "inject_context",
+    "new_root_context", "new_span_id", "new_trace_id", "parse_traceparent",
+    "parse_tracestate",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

@@ -2971,6 +2971,35 @@ def _http_replay(cassette: Any, url: str,
     return {"response": response}
 
 
+def _trace_inject(headers: Any = None,
+                  traceparent: Any = None) -> Dict[str, Any]:
+    """Adapter: propagate a trace context into outgoing headers.
+
+    With ``traceparent`` set, derive a child span of that parent; otherwise
+    start a fresh root. Returns the updated ``headers`` plus the new ids.
+    """
+    import json
+    from je_auto_control.utils.trace_context import (
+        child_context, inject_context, new_root_context, parse_traceparent)
+    if isinstance(headers, str):
+        headers = json.loads(headers)
+    ctx = (child_context(parse_traceparent(traceparent))
+           if traceparent else new_root_context())
+    return {"headers": inject_context(headers, ctx),
+            "traceparent": inject_context({}, ctx)["traceparent"],
+            "trace_id": ctx.trace_id, "span_id": ctx.span_id}
+
+
+def _trace_extract(headers: Any) -> Dict[str, Any]:
+    """Adapter: extract a trace context from request headers."""
+    import json
+    from je_auto_control.utils.trace_context import extract_context
+    if isinstance(headers, str):
+        headers = json.loads(headers)
+    ctx = extract_context(headers)
+    return {"context": ctx.to_dict() if ctx is not None else None}
+
+
 def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
     """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
     import json
@@ -4047,6 +4076,8 @@ class Executor:
             "AC_bulkhead_run": _bulkhead_run,
             "AC_retry_after": _retry_after,
             "AC_http_replay": _http_replay,
+            "AC_trace_inject": _trace_inject,
+            "AC_trace_extract": _trace_extract,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,
