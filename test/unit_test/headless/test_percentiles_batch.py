@@ -47,7 +47,7 @@ def test_digest_merge_is_associative():
 
 def test_empty_digest():
     digest = LatencyDigest()
-    assert digest.percentile(50) == 0.0
+    assert digest.percentile(50) == pytest.approx(0.0)
     assert digest.count == 0
 
 
