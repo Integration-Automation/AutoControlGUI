@@ -1691,6 +1691,12 @@ def burn_alerts(records, target):
     return {"alerts": alerts, "firing": bool(alerts)}
 
 
+def percentiles(samples, qs=None):
+    from je_auto_control.utils.percentiles import exact_percentiles
+    result = exact_percentiles(samples, qs=tuple(qs) if qs else (50, 90, 95, 99))
+    return {"percentiles": {str(q): value for q, value in result.items()}}
+
+
 def build_provenance(paths, builder_id="je_auto_control"):
     from je_auto_control.utils.provenance import build_provenance, subject_for
     subjects = [subject_for(path) for path in paths]

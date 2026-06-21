@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — 串流延遲百分位](#本次更新-2026-06-21--串流延遲百分位)
 - [本次更新 (2026-06-21) — 服務等級目標(SLO)](#本次更新-2026-06-21--服務等級目標slo)
 - [本次更新 (2026-06-21) — 混沌實驗](#本次更新-2026-06-21--混沌實驗)
 - [本次更新 (2026-06-21) — JSON 合約與快照比對](#本次更新-2026-06-21--json-合約與快照比對)
@@ -123,6 +124,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — 串流延遲百分位
+
+load/soak 測試的可合併 p99。完整參考:[`docs/source/Zh/doc/new_features/v73_features_doc.rst`](../docs/source/Zh/doc/new_features/v73_features_doc.rst)。
+
+- **`LatencyDigest` / `exact_percentiles`**(`AC_percentiles`):`stats.percentile` 需要完整已排序清單;本功能補上 HdrHistogram 風格的 digest,具 O(1) `record`、記憶體有界(有效位數分桶)以及跨分片彙整的 `merge` —— 這正是從各 worker 結果計算正確彙整 p99 所需的特性。`exact_percentiles` 涵蓋小樣本集情況(任意分位)。純標準函式庫 `math`。
 
 ## 本次更新 (2026-06-21) — 服務等級目標(SLO)
 

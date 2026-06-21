@@ -2928,6 +2928,19 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
+    """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
+    import json
+    from je_auto_control.utils.percentiles import exact_percentiles
+    if isinstance(samples, str):
+        samples = json.loads(samples)
+    if isinstance(qs, str):
+        qs = json.loads(qs)
+    quantiles = tuple(qs) if qs else (50, 90, 95, 99)
+    result = exact_percentiles(samples, qs=quantiles)
+    return {"percentiles": {str(q): value for q, value in result.items()}}
+
+
 def _evaluate_slo(records: Any, target: float,
                   window_s: Optional[float] = None) -> Dict[str, Any]:
     """Adapter: SLI + error budget for outcome records (list or JSON string)."""
@@ -3987,6 +4000,7 @@ class Executor:
             "AC_run_chaos": _run_chaos,
             "AC_evaluate_slo": _evaluate_slo,
             "AC_burn_alerts": _burn_alerts,
+            "AC_percentiles": _percentiles,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,
