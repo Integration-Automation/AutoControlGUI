@@ -3050,6 +3050,31 @@ def _parse_sse(text: str) -> Dict[str, Any]:
     return {"events": [event.to_dict() for event in parse_event_stream(text)]}
 
 
+def _build_layered_config(layers: Any):
+    """Build a LayeredConfig from a list of {name, mapping, priority?} dicts."""
+    import json
+    from je_auto_control.utils.layered_config import LayeredConfig
+    if isinstance(layers, str):
+        layers = json.loads(layers)
+    config = LayeredConfig()
+    for layer in layers:
+        config.add_layer(layer["name"], layer.get("mapping", {}),
+                         layer.get("priority"))
+    return config
+
+
+def _resolve_config(layers: Any) -> Dict[str, Any]:
+    """Adapter: deep-merge config layers into a resolved {config}."""
+    return {"config": _build_layered_config(layers).resolve()}
+
+
+def _explain_config(layers: Any, key: str) -> Dict[str, Any]:
+    """Adapter: report the value and winning layer for a dotted config key."""
+    trace = _build_layered_config(layers).explain(key)
+    return {"trace": {"key": trace.key, "value": trace.value,
+                      "layer": trace.layer}}
+
+
 def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
     """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
     import json
@@ -4134,6 +4159,8 @@ class Executor:
             "AC_parse_dotenv": _parse_dotenv,
             "AC_load_dotenv": _load_dotenv,
             "AC_parse_sse": _parse_sse,
+            "AC_resolve_config": _resolve_config,
+            "AC_explain_config": _explain_config,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,

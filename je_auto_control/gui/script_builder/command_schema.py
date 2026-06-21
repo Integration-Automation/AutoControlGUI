@@ -1679,6 +1679,25 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Parse a text/event-stream blob into events.",
     ))
     specs.append(CommandSpec(
+        "AC_resolve_config", "Data", "Layered Config: Resolve",
+        fields=(
+            FieldSpec("layers", FieldType.STRING,
+                      placeholder='[{"name": "defaults", "mapping": {}}, '
+                                  '{"name": "env", "mapping": {}, '
+                                  '"priority": 10}]'),
+        ),
+        description="Deep-merge ordered config layers into one config.",
+    ))
+    specs.append(CommandSpec(
+        "AC_explain_config", "Data", "Layered Config: Explain Key",
+        fields=(
+            FieldSpec("layers", FieldType.STRING,
+                      placeholder='[{"name": "defaults", "mapping": {}}]'),
+            FieldSpec("key", FieldType.STRING, placeholder="db.host"),
+        ),
+        description="Show the value and winning layer for a dotted config key.",
+    ))
+    specs.append(CommandSpec(
         "AC_rate_limit", "Flow", "Rate Limit (Token Bucket)",
         fields=(
             FieldSpec("name", FieldType.STRING),
