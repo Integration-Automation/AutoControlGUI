@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — 文字 Diff、套用與三方合併](#本次更新-2026-06-21--文字-diff套用與三方合併)
 - [本次更新 (2026-06-21) — 行事曆週期規則(RRULE)](#本次更新-2026-06-21--行事曆週期規則rrule)
 - [本次更新 (2026-06-21) — 統計與 A/B 顯著性](#本次更新-2026-06-21--統計與-ab-顯著性)
 - [本次更新 (2026-06-21) — 全文搜尋(BM25)](#本次更新-2026-06-21--全文搜尋bm25)
@@ -117,6 +118,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — 文字 Diff、套用與三方合併
+
+套用並合併文字 diff。完整參考:[`docs/source/Zh/doc/new_features/v67_features_doc.rst`](../docs/source/Zh/doc/new_features/v67_features_doc.rst)。
+
+- **`unified_diff` / `apply_unified` / `three_way_merge`**(`AC_unified_diff`、`AC_apply_unified`、`AC_three_way_merge`):`difflib` 會*產生* unified diff,但標準函式庫無法*套用*,也沒有三方合併。本功能補上缺少的套用器(走訪 `@@` 區塊、驗證 context、不符即拋出)與以行為單位的三方合併(不重疊編輯乾淨合併;重疊則產生 `<<<<<<<` 衝突標記)。與 `json_patch`(結構化 JSON)互補;純標準函式庫 `difflib`。
 
 ## 本次更新 (2026-06-21) — 行事曆週期規則(RRULE)
 

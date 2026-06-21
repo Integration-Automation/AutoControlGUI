@@ -3343,6 +3343,40 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def text_diff_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_unified_diff",
+            description="Unified diff transforming text 'a' into 'b'. "
+                        "Returns {diff}.",
+            input_schema=schema(
+                {"a": {"type": "string"}, "b": {"type": "string"}}, ["a", "b"]),
+            handler=h.unified_diff,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_apply_unified",
+            description="Apply a unified 'diff' to 'text' (raises on context "
+                        "mismatch). Returns {result}.",
+            input_schema=schema(
+                {"text": {"type": "string"}, "diff": {"type": "string"}},
+                ["text", "diff"]),
+            handler=h.apply_unified,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_three_way_merge",
+            description="Three-way merge 'ours' and 'theirs' against 'base' "
+                        "(line-based). Returns {text, clean, conflicts}.",
+            input_schema=schema(
+                {"base": {"type": "string"}, "ours": {"type": "string"},
+                 "theirs": {"type": "string"}}, ["base", "ours", "theirs"]),
+            handler=h.three_way_merge,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def recurrence_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -4656,7 +4690,7 @@ ALL_FACTORIES = (
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
     jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools,
     license_policy_tools, jwt_tools, rate_limit_tools, json_patch_tools,
-    search_index_tools, stats_tools, recurrence_tools,
+    search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

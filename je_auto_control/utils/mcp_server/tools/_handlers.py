@@ -1664,6 +1664,23 @@ def rrule_next(rule, dtstart, now=None):
     return {"next": moment.isoformat() if moment else None}
 
 
+def unified_diff(a, b):
+    from je_auto_control.utils.text_diff import unified_diff as _diff
+    return {"diff": _diff(a, b)}
+
+
+def apply_unified(text, diff):
+    from je_auto_control.utils.text_diff import apply_unified as _apply
+    return {"result": _apply(text, diff)}
+
+
+def three_way_merge(base, ours, theirs):
+    from je_auto_control.utils.text_diff import three_way_merge as _merge
+    outcome = _merge(base, ours, theirs)
+    return {"text": outcome.text, "clean": outcome.clean,
+            "conflicts": outcome.conflicts}
+
+
 def run_saga(steps):
     from je_auto_control.utils.saga import run_saga as _run
     result = _run(steps)

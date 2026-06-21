@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-21) — 文本 Diff、应用与三方合并](#本次更新-2026-06-21--文本-diff应用与三方合并)
 - [本次更新 (2026-06-21) — 日历周期规则(RRULE)](#本次更新-2026-06-21--日历周期规则rrule)
 - [本次更新 (2026-06-21) — 统计与 A/B 显著性](#本次更新-2026-06-21--统计与-ab-显著性)
 - [本次更新 (2026-06-21) — 全文搜索(BM25)](#本次更新-2026-06-21--全文搜索bm25)
@@ -117,6 +118,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-21) — 文本 Diff、应用与三方合并
+
+应用并合并文本 diff。完整参考:[`docs/source/Zh/doc/new_features/v67_features_doc.rst`](../docs/source/Zh/doc/new_features/v67_features_doc.rst)。
+
+- **`unified_diff` / `apply_unified` / `three_way_merge`**(`AC_unified_diff`、`AC_apply_unified`、`AC_three_way_merge`):`difflib` 会*生成* unified diff,但标准库无法*应用*,也没有三方合并。本功能补上缺少的应用器(走访 `@@` 块、验证 context、不符即抛出)与以行为单位的三方合并(不重叠编辑干净合并;重叠则产生 `<<<<<<<` 冲突标记)。与 `json_patch`(结构化 JSON)互补;纯标准库 `difflib`。
 
 ## 本次更新 (2026-06-21) — 日历周期规则(RRULE)
 
