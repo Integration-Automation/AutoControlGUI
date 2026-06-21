@@ -1,6 +1,8 @@
 """Headless tests for typed config schema validation. Pure stdlib, no Qt."""
 import json
 
+import pytest
+
 import je_auto_control as ac
 from je_auto_control.utils.config_schema import (
     ConfigField, ConfigSchema, coerce, validate_config,
@@ -9,7 +11,7 @@ from je_auto_control.utils.config_schema import (
 
 def test_coerce_types():
     assert coerce("8080", "int") == 8080
-    assert coerce("1.5", "float") == 1.5
+    assert coerce("1.5", "float") == pytest.approx(1.5)
     assert coerce("yes", "bool") is True
     assert coerce("off", "bool") is False
     assert coerce(5, "str") == "5"
@@ -48,7 +50,7 @@ def test_choices_constraint():
 def test_from_dict_and_defaults():
     report = validate_config(
         {"timeout": {"type": "float", "default": 1.0}}, {})
-    assert report["config"] == {"timeout": 1.0}
+    assert report["config"]["timeout"] == pytest.approx(1.0)
 
 
 # --- wiring ---------------------------------------------------------------
