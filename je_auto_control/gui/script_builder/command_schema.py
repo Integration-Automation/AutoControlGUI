@@ -1677,6 +1677,16 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Recursively resolve references inside a JSON structure.",
     ))
     specs.append(CommandSpec(
+        "AC_validate_config", "Data", "Config Schema: Validate",
+        fields=(
+            FieldSpec("schema", FieldType.STRING,
+                      placeholder='{"port": {"type": "int", "required": true}}'),
+            FieldSpec("config", FieldType.STRING,
+                      placeholder='{"port": "8080"}'),
+        ),
+        description="Validate a config mapping against a typed schema spec.",
+    ))
+    specs.append(CommandSpec(
         "AC_redact_config", "Security", "Redaction: Redact Config",
         fields=(
             FieldSpec("obj", FieldType.STRING,

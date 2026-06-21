@@ -290,6 +290,10 @@ from je_auto_control.utils.dotenv import (
 from je_auto_control.utils.layered_config import (
     LayeredConfig, SourceTrace, deep_merge,
 )
+# Typed config schema validation (coerce + required + choices)
+from je_auto_control.utils.config_schema import (
+    ConfigField, ConfigSchema, coerce, validate_config,
+)
 # URI-scheme secret/value reference resolver (env:// / file:// / secret://)
 from je_auto_control.utils.secret_ref import (
     RefResolver, SecretRefError, is_ref, resolve_ref, resolve_refs_in,
@@ -921,6 +925,7 @@ __all__ = [
     "Asset", "AssetStore", "AssetValue", "active_environment",
     "dotenv_values", "dump_dotenv", "load_dotenv", "parse_dotenv",
     "LayeredConfig", "SourceTrace", "deep_merge",
+    "ConfigField", "ConfigSchema", "coerce", "validate_config",
     "RefResolver", "SecretRefError", "is_ref", "resolve_ref", "resolve_refs_in",
     "redact_config", "redact_secret_text",
     "EventEmitter", "post_cloudevent", "to_cloudevent",

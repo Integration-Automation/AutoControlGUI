@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 具类型的配置结构](#本次更新-2026-06-22--具类型的配置结构)
 - [本次更新 (2026-06-22) — OTLP/JSON Span 导出](#本次更新-2026-06-22--otlpjson-span-导出)
 - [本次更新 (2026-06-22) — 标准日志行与结构化日志](#本次更新-2026-06-22--标准日志行与结构化日志)
 - [本次更新 (2026-06-22) — 条件式 HTTP 请求与缓存验证子](#本次更新-2026-06-22--条件式-http-请求与缓存验证子)
@@ -145,6 +146,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-22) — 具类型的配置结构
+
+把配置验证成具类型的对象。完整参考:[`docs/source/Zh/doc/new_features/v95_features_doc.rst`](../docs/source/Zh/doc/new_features/v95_features_doc.rst)。
+
+- **`ConfigSchema` / `ConfigField` / `validate_config` / `coerce`**(`AC_validate_config`):`assets._coerce` 只转换单一值,`json_schema` 只验证结构,但没有东西把已解析配置 dict 绑定成具类型对象并做必填强制与选项约束。本功能转换类型(`str`/`int`/`float`/`bool`)、应用默认、强制必填/选项,返回 `{ok, config, errors}` —— 标准库版 pydantic-settings。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — OTLP/JSON Span 导出
 
