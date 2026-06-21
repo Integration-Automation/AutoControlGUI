@@ -1756,6 +1756,16 @@ def next_url(value):
     return _next_url(value)
 
 
+def build_multipart(fields=None, files=None, boundary=None):
+    from je_auto_control.utils.executor.action_executor import _build_multipart
+    return _build_multipart(fields, files, boundary)
+
+
+def parse_multipart(content_type, body_base64):
+    from je_auto_control.utils.executor.action_executor import _parse_multipart
+    return _parse_multipart(content_type, body_base64)
+
+
 def redact_config(obj, mask="***"):
     from je_auto_control.utils.executor.action_executor import _redact_config
     return _redact_config(obj, mask)

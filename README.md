@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — multipart/form-data Build & Parse](#whats-new-2026-06-22--multipartform-data-build--parse)
 - [What's new (2026-06-22) — Secret Redaction for Config & Logs](#whats-new-2026-06-22--secret-redaction-for-config--logs)
 - [What's new (2026-06-22) — RFC 8288 Link Header & Pagination](#whats-new-2026-06-22--rfc-8288-link-header--pagination)
 - [What's new (2026-06-22) — Referential Integrity Checks](#whats-new-2026-06-22--referential-integrity-checks)
@@ -140,6 +141,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — multipart/form-data Build & Parse
+
+Build file-upload bodies. Full reference: [`docs/source/Eng/doc/new_features/v89_features_doc.rst`](docs/source/Eng/doc/new_features/v89_features_doc.rst).
+
+- **`build_multipart` / `parse_multipart` / `MultipartFile`** (`AC_build_multipart`, `AC_parse_multipart`): `http_request` sent only JSON/raw — there was no file upload, and stdlib `cgi` (which parsed multipart) was removed in 3.13. This assembles a `multipart/form-data` body from text fields and files with an injectable boundary (byte-stable), and parses one back into `{fields, files}`. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Secret Redaction for Config & Logs
 

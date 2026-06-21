@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — multipart/form-data 建立與解析](#本次更新-2026-06-22--multipartform-data-建立與解析)
 - [本次更新 (2026-06-22) — 設定與日誌的機密遮蔽](#本次更新-2026-06-22--設定與日誌的機密遮蔽)
 - [本次更新 (2026-06-22) — RFC 8288 Link 標頭與分頁](#本次更新-2026-06-22--rfc-8288-link-標頭與分頁)
 - [本次更新 (2026-06-22) — 參照完整性檢查](#本次更新-2026-06-22--參照完整性檢查)
@@ -139,6 +140,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — multipart/form-data 建立與解析
+
+建立檔案上傳內文。完整參考:[`docs/source/Zh/doc/new_features/v89_features_doc.rst`](../docs/source/Zh/doc/new_features/v89_features_doc.rst)。
+
+- **`build_multipart` / `parse_multipart` / `MultipartFile`**(`AC_build_multipart`、`AC_parse_multipart`):`http_request` 只送 JSON/原始 —— 沒有檔案上傳,且解析 multipart 的標準函式庫 `cgi` 已在 3.13 移除。本功能以可注入的 boundary(位元組穩定)從文字欄位與檔案組裝 `multipart/form-data` 內文,並能解析回 `{fields, files}`。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — 設定與日誌的機密遮蔽
 
