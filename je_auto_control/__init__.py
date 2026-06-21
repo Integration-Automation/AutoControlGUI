@@ -420,6 +420,10 @@ from je_auto_control.utils.sse_client import (
 from je_auto_control.utils.link_header import (
     Link, links_by_rel, next_url, paginate, parse_link_header,
 )
+# multipart/form-data building + parsing (file upload bodies)
+from je_auto_control.utils.multipart import (
+    MultipartFile, build_multipart, new_boundary, parse_multipart,
+)
 # W3C Trace Context propagation (traceparent / tracestate)
 from je_auto_control.utils.trace_context import (
     SpanContext, TraceContextError, child_context, extract_context,
@@ -943,6 +947,7 @@ __all__ = [
     "raise_for_problem",
     "SSEEvent", "SSEParser", "parse_event_stream",
     "Link", "links_by_rel", "next_url", "paginate", "parse_link_header",
+    "MultipartFile", "build_multipart", "new_boundary", "parse_multipart",
     "SpanContext", "TraceContextError", "child_context", "extract_context",
     "format_traceparent", "format_tracestate", "inject_context",
     "new_root_context", "new_span_id", "new_trace_id", "parse_traceparent",

@@ -3030,6 +3030,29 @@ def _redact_secret_text(text: str, mask: str = "***") -> Dict[str, Any]:
     return {"text": redact_secret_text(text, mask=mask)}
 
 
+def _build_multipart(fields: Any = None, files: Any = None,
+                     boundary: Any = None) -> Dict[str, Any]:
+    """Adapter: build a multipart/form-data body (base64-encoded)."""
+    import base64
+    import json
+    from je_auto_control.utils.multipart import build_multipart
+    if isinstance(fields, str):
+        fields = json.loads(fields)
+    if isinstance(files, str):
+        files = json.loads(files)
+    content_type, body = build_multipart(fields, files, boundary=boundary)
+    return {"content_type": content_type,
+            "body_base64": base64.b64encode(body).decode("ascii")}
+
+
+def _parse_multipart(content_type: str, body_base64: str) -> Dict[str, Any]:
+    """Adapter: parse a base64-encoded multipart body into {fields, files}."""
+    import base64
+    from je_auto_control.utils.multipart import parse_multipart
+    body = base64.b64decode(body_base64)
+    return parse_multipart(content_type, body)
+
+
 def _parse_link_header(value: str) -> Dict[str, Any]:
     """Adapter: parse an RFC 8288 Link header into {links}."""
     from je_auto_control.utils.link_header import parse_link_header
@@ -4305,6 +4328,8 @@ class Executor:
             "AC_redact_secret_text": _redact_secret_text,
             "AC_parse_link_header": _parse_link_header,
             "AC_next_url": _next_url,
+            "AC_build_multipart": _build_multipart,
+            "AC_parse_multipart": _parse_multipart,
             "AC_profile_rows": _profile_rows,
             "AC_infer_schema": _infer_schema,
             "AC_parse_problem": _parse_problem,

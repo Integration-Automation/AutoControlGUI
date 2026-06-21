@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — multipart/form-data 构建与解析](#本次更新-2026-06-22--multipartform-data-构建与解析)
 - [本次更新 (2026-06-22) — 配置与日志的机密脱敏](#本次更新-2026-06-22--配置与日志的机密脱敏)
 - [本次更新 (2026-06-22) — RFC 8288 Link 标头与分页](#本次更新-2026-06-22--rfc-8288-link-标头与分页)
 - [本次更新 (2026-06-22) — 参照完整性检查](#本次更新-2026-06-22--参照完整性检查)
@@ -139,6 +140,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-22) — multipart/form-data 构建与解析
+
+构建文件上传内文。完整参考:[`docs/source/Zh/doc/new_features/v89_features_doc.rst`](../docs/source/Zh/doc/new_features/v89_features_doc.rst)。
+
+- **`build_multipart` / `parse_multipart` / `MultipartFile`**(`AC_build_multipart`、`AC_parse_multipart`):`http_request` 只发 JSON/原始 —— 没有文件上传,且解析 multipart 的标准库 `cgi` 已在 3.13 移除。本功能以可注入的 boundary(字节稳定)从文本字段与文件组装 `multipart/form-data` 内文,并能解析回 `{fields, files}`。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — 配置与日志的机密脱敏
 

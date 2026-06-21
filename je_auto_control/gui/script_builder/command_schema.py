@@ -1745,6 +1745,28 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Return the rel=next URL from a Link header.",
     ))
     specs.append(CommandSpec(
+        "AC_build_multipart", "Data", "Multipart: Build Body",
+        fields=(
+            FieldSpec("fields", FieldType.STRING, optional=True,
+                      placeholder='{"name": "report", "tag": "v1"}'),
+            FieldSpec("files", FieldType.STRING, optional=True,
+                      placeholder='[{"name": "f", "filename": "a.txt", '
+                                  '"content": "hi"}]'),
+            FieldSpec("boundary", FieldType.STRING, optional=True),
+        ),
+        description="Build a multipart/form-data body (base64) for upload.",
+    ))
+    specs.append(CommandSpec(
+        "AC_parse_multipart", "Data", "Multipart: Parse Body",
+        fields=(
+            FieldSpec("content_type", FieldType.STRING,
+                      placeholder="multipart/form-data; boundary=..."),
+            FieldSpec("body_base64", FieldType.STRING,
+                      placeholder="<base64 body>"),
+        ),
+        description="Parse a base64 multipart body into fields and files.",
+    ))
+    specs.append(CommandSpec(
         "AC_resolve_config", "Data", "Layered Config: Resolve",
         fields=(
             FieldSpec("layers", FieldType.STRING,

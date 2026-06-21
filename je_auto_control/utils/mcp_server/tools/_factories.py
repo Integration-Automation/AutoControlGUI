@@ -3343,6 +3343,35 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def multipart_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_build_multipart",
+            description=("Build a multipart/form-data body from 'fields' "
+                         "(object/list) and 'files' (each {name, filename, "
+                         "content, content_type?}); optional 'boundary'. Returns "
+                         "{content_type, body_base64}."),
+            input_schema=schema(
+                {"fields": {"type": "object"}, "files": {"type": "array"},
+                 "boundary": {"type": "string"}},
+                []),
+            handler=h.build_multipart,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_parse_multipart",
+            description=("Parse a base64 multipart body ('body_base64') with its "
+                         "'content_type' into {fields, files}."),
+            input_schema=schema(
+                {"content_type": {"type": "string"},
+                 "body_base64": {"type": "string"}},
+                ["content_type", "body_base64"]),
+            handler=h.parse_multipart,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def link_header_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5216,7 +5245,7 @@ ALL_FACTORIES = (
     config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,
-    dataset_diff_tools, referential_tools, link_header_tools,
+    dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,
