@@ -22,10 +22,10 @@ def test_bulkhead_permits_then_rejects():
 def test_bulkhead_context_manager_rejects_when_full():
     bulkhead = Bulkhead(1)
     with bulkhead:
+        assert bulkhead.try_enter() is False           # full
         with pytest.raises(BulkheadFullError):
-            with bulkhead:
-                pass
-    assert bulkhead.in_flight == 0           # released after context
+            bulkhead.run(lambda: "unreached")          # rejects on enter
+    assert bulkhead.in_flight == 0                      # released after context
 
 
 def test_bulkhead_run_and_bad_max():
