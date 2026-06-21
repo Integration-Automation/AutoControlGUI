@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 標準日誌行與結構化日誌](#本次更新-2026-06-22--標準日誌行與結構化日誌)
 - [本次更新 (2026-06-22) — 條件式 HTTP 請求與快取驗證子](#本次更新-2026-06-22--條件式-http-請求與快取驗證子)
 - [本次更新 (2026-06-22) — Cookie Jar(HTTP 工作階段攜帶)](#本次更新-2026-06-22--cookie-jarhttp-工作階段攜帶)
 - [本次更新 (2026-06-22) — HTTP 內容協商與解壓縮](#本次更新-2026-06-22--http-內容協商與解壓縮)
@@ -143,6 +144,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — 標準日誌行與結構化日誌
+
+每次執行一行寬事件,並帶 trace 關聯。完整參考:[`docs/source/Zh/doc/new_features/v93_features_doc.rst`](../docs/source/Zh/doc/new_features/v93_features_doc.rst)。
+
+- **`CanonicalLogLine` / `JSONLogFormatter` / `bind_trace_context`**(`AC_canonical_log`):`logging_instance` 輸出固定的管線分隔字串,沒有 JSON 也沒有 trace/span 欄位。本功能加入 Stripe 風格的標準日誌行(欄位累積器 + 可注入時鐘的 `timer`)以及攜帶 `trace_id`/`span_id` 的 JSON `logging.Formatter` —— 與 `trace_context` 對應的 log-trace 關聯。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — 條件式 HTTP 請求與快取驗證子
 

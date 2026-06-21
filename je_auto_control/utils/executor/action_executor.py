@@ -3127,6 +3127,16 @@ def _baggage_parse(header: str) -> Dict[str, Any]:
     return {"items": parse_baggage(header).to_dict()}
 
 
+def _canonical_log(fields: Any) -> Dict[str, Any]:
+    """Adapter: build a canonical log line from a fields dict."""
+    import json
+    from je_auto_control.utils.canonical_log import CanonicalLogLine
+    if isinstance(fields, str):
+        fields = json.loads(fields)
+    line = CanonicalLogLine(fields)
+    return {"line": line.to_dict(), "json": line.render()}
+
+
 def _baggage_format(items: Any) -> Dict[str, Any]:
     """Adapter: serialise an items dict into a W3C baggage {header}."""
     import json
@@ -4378,6 +4388,7 @@ class Executor:
             "AC_trace_extract": _trace_extract,
             "AC_baggage_parse": _baggage_parse,
             "AC_baggage_format": _baggage_format,
+            "AC_canonical_log": _canonical_log,
             "AC_resolve_ref": _resolve_ref,
             "AC_resolve_refs": _resolve_refs,
             "AC_redact_config": _redact_config,
