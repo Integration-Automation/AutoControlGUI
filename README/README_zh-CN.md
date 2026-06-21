@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — HTTP 内容协商与解压](#本次更新-2026-06-22--http-内容协商与解压)
 - [本次更新 (2026-06-22) — multipart/form-data 构建与解析](#本次更新-2026-06-22--multipartform-data-构建与解析)
 - [本次更新 (2026-06-22) — 配置与日志的机密脱敏](#本次更新-2026-06-22--配置与日志的机密脱敏)
 - [本次更新 (2026-06-22) — RFC 8288 Link 标头与分页](#本次更新-2026-06-22--rfc-8288-link-标头与分页)
@@ -140,6 +141,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-22) — HTTP 内容协商与解压
+
+构建 `Accept` 标头并解码 gzip/deflate。完整参考:[`docs/source/Zh/doc/new_features/v90_features_doc.rst`](../docs/source/Zh/doc/new_features/v90_features_doc.rst)。
+
+- **`build_accept` / `build_accept_encoding` / `parse_quality_values` / `decode_body` / `negotiated_call`**(`AC_decode_body`、`AC_parse_quality_values`):`urllib`/`http_request` 从不设置 `Accept-Encoding` 也不解码 `Content-Encoding`,压缩内文以原始形式抵达。本功能加入 `Accept`/`Accept-Encoding` 构建器、q-value 解析器(按品质排序),以及 gzip/deflate(含 raw deflate)解码。排除 Brotli(非标准库)。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — multipart/form-data 构建与解析
 

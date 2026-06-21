@@ -3343,6 +3343,32 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def http_content_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_decode_body",
+            description=("Decode a base64 'body_base64' per its 'headers' "
+                         "Content-Encoding (gzip / deflate / identity). Returns "
+                         "{body_base64, text}."),
+            input_schema=schema(
+                {"headers": {"type": "object"},
+                 "body_base64": {"type": "string"}},
+                ["headers", "body_base64"]),
+            handler=h.decode_body,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_parse_quality_values",
+            description=("Parse a quality-value 'header' (Accept / "
+                         "Accept-Encoding) into {values}: [token, q] sorted by q "
+                         "descending."),
+            input_schema=schema({"header": {"type": "string"}}, ["header"]),
+            handler=h.parse_quality_values,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def multipart_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5246,6 +5272,7 @@ ALL_FACTORIES = (
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
+    http_content_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

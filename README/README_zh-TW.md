@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — HTTP 內容協商與解壓縮](#本次更新-2026-06-22--http-內容協商與解壓縮)
 - [本次更新 (2026-06-22) — multipart/form-data 建立與解析](#本次更新-2026-06-22--multipartform-data-建立與解析)
 - [本次更新 (2026-06-22) — 設定與日誌的機密遮蔽](#本次更新-2026-06-22--設定與日誌的機密遮蔽)
 - [本次更新 (2026-06-22) — RFC 8288 Link 標頭與分頁](#本次更新-2026-06-22--rfc-8288-link-標頭與分頁)
@@ -140,6 +141,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — HTTP 內容協商與解壓縮
+
+建立 `Accept` 標頭並解碼 gzip/deflate。完整參考:[`docs/source/Zh/doc/new_features/v90_features_doc.rst`](../docs/source/Zh/doc/new_features/v90_features_doc.rst)。
+
+- **`build_accept` / `build_accept_encoding` / `parse_quality_values` / `decode_body` / `negotiated_call`**(`AC_decode_body`、`AC_parse_quality_values`):`urllib`/`http_request` 從不設定 `Accept-Encoding` 也不解碼 `Content-Encoding`,壓縮內文以原始形式抵達。本功能加入 `Accept`/`Accept-Encoding` 建構器、q-value 解析器(依品質排序),以及 gzip/deflate(含 raw deflate)解碼。排除 Brotli(非標準函式庫)。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — multipart/form-data 建立與解析
 

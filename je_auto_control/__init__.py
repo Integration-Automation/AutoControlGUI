@@ -424,6 +424,11 @@ from je_auto_control.utils.link_header import (
 from je_auto_control.utils.multipart import (
     MultipartFile, build_multipart, new_boundary, parse_multipart,
 )
+# HTTP content negotiation + gzip/deflate response decoding
+from je_auto_control.utils.http_content import (
+    build_accept, build_accept_encoding, decode_body, negotiated_call,
+    parse_quality_values,
+)
 # W3C Trace Context propagation (traceparent / tracestate)
 from je_auto_control.utils.trace_context import (
     SpanContext, TraceContextError, child_context, extract_context,
@@ -948,6 +953,8 @@ __all__ = [
     "SSEEvent", "SSEParser", "parse_event_stream",
     "Link", "links_by_rel", "next_url", "paginate", "parse_link_header",
     "MultipartFile", "build_multipart", "new_boundary", "parse_multipart",
+    "build_accept", "build_accept_encoding", "decode_body", "negotiated_call",
+    "parse_quality_values",
     "SpanContext", "TraceContextError", "child_context", "extract_context",
     "format_traceparent", "format_tracestate", "inject_context",
     "new_root_context", "new_span_id", "new_trace_id", "parse_traceparent",
