@@ -3731,6 +3731,19 @@ def secret_ref_tools() -> List[MCPTool]:
     ]
 
 
+def canonical_log_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_canonical_log",
+            description=("Build a canonical (wide-event) log line from a "
+                         "'fields' object. Returns {line, json}."),
+            input_schema=schema({"fields": {"type": "object"}}, ["fields"]),
+            handler=h.canonical_log,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def baggage_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5313,7 +5326,7 @@ ALL_FACTORIES = (
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
-    trace_context_tools, baggage_tools, secret_ref_tools,
+    trace_context_tools, baggage_tools, canonical_log_tools, secret_ref_tools,
     config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,

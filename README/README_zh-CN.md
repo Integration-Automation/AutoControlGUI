@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 标准日志行与结构化日志](#本次更新-2026-06-22--标准日志行与结构化日志)
 - [本次更新 (2026-06-22) — 条件式 HTTP 请求与缓存验证子](#本次更新-2026-06-22--条件式-http-请求与缓存验证子)
 - [本次更新 (2026-06-22) — Cookie Jar(HTTP 会话携带)](#本次更新-2026-06-22--cookie-jarhttp-会话携带)
 - [本次更新 (2026-06-22) — HTTP 内容协商与解压](#本次更新-2026-06-22--http-内容协商与解压)
@@ -143,6 +144,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-22) — 标准日志行与结构化日志
+
+每次执行一行宽事件,并带 trace 关联。完整参考:[`docs/source/Zh/doc/new_features/v93_features_doc.rst`](../docs/source/Zh/doc/new_features/v93_features_doc.rst)。
+
+- **`CanonicalLogLine` / `JSONLogFormatter` / `bind_trace_context`**(`AC_canonical_log`):`logging_instance` 输出固定的管线分隔字符串,没有 JSON 也没有 trace/span 字段。本功能加入 Stripe 风格的标准日志行(字段累积器 + 可注入时钟的 `timer`)以及携带 `trace_id`/`span_id` 的 JSON `logging.Formatter` —— 与 `trace_context` 对应的 log-trace 关联。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — 条件式 HTTP 请求与缓存验证子
 

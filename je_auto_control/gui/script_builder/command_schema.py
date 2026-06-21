@@ -1641,6 +1641,14 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Serialise items into a percent-encoded baggage header.",
     ))
     specs.append(CommandSpec(
+        "AC_canonical_log", "Report", "Canonical Log: Build Line",
+        fields=(
+            FieldSpec("fields", FieldType.STRING,
+                      placeholder='{"event": "run", "ok": true, "ms": 42}'),
+        ),
+        description="Build a canonical wide-event log line (rendered as JSON).",
+    ))
+    specs.append(CommandSpec(
         "AC_resolve_ref", "Security", "Secret Ref: Resolve",
         fields=(
             FieldSpec("ref", FieldType.STRING,

@@ -446,6 +446,10 @@ from je_auto_control.utils.trace_context import (
 from je_auto_control.utils.baggage import (
     Baggage, extract_baggage, format_baggage, inject_baggage, parse_baggage,
 )
+# Canonical (wide-event) log lines + structured JSON logging
+from je_auto_control.utils.canonical_log import (
+    CanonicalLogLine, JSONLogFormatter, bind_trace_context,
+)
 # Background popup/interrupt watchdog (unattended automation)
 from je_auto_control.utils.watchdog import (
     PopupWatchdog, WatchdogRule, default_popup_watchdog,
@@ -971,6 +975,7 @@ __all__ = [
     "parse_tracestate",
     "Baggage", "extract_baggage", "format_baggage", "inject_baggage",
     "parse_baggage",
+    "CanonicalLogLine", "JSONLogFormatter", "bind_trace_context",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",

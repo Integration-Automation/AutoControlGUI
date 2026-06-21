@@ -1736,6 +1736,11 @@ def baggage_format(items):
     return _baggage_format(items)
 
 
+def canonical_log(fields):
+    from je_auto_control.utils.executor.action_executor import _canonical_log
+    return _canonical_log(fields)
+
+
 def resolve_ref(ref):
     from je_auto_control.utils.executor.action_executor import _resolve_ref
     return _resolve_ref(ref)

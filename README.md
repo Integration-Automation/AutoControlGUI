@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Canonical Log Lines & Structured Logging](#whats-new-2026-06-22--canonical-log-lines--structured-logging)
 - [What's new (2026-06-22) — Conditional HTTP Requests & Cache Validators](#whats-new-2026-06-22--conditional-http-requests--cache-validators)
 - [What's new (2026-06-22) — Cookie Jar (HTTP Session Carry)](#whats-new-2026-06-22--cookie-jar-http-session-carry)
 - [What's new (2026-06-22) — HTTP Content Negotiation & Decompression](#whats-new-2026-06-22--http-content-negotiation--decompression)
@@ -144,6 +145,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Canonical Log Lines & Structured Logging
+
+One wide event per run, with trace correlation. Full reference: [`docs/source/Eng/doc/new_features/v93_features_doc.rst`](docs/source/Eng/doc/new_features/v93_features_doc.rst).
+
+- **`CanonicalLogLine` / `JSONLogFormatter` / `bind_trace_context`** (`AC_canonical_log`): `logging_instance` emits a fixed pipe-delimited string with no JSON and no trace/span fields. This adds a Stripe-style canonical log line (field accumulator + `timer` with injectable clock) and a JSON `logging.Formatter` that carries `trace_id`/`span_id` — the log-trace correlation counterpart to `trace_context`. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Conditional HTTP Requests & Cache Validators
 
