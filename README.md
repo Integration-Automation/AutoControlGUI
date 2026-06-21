@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Near-Duplicate Text Detection (SimHash / MinHash)](#whats-new-2026-06-22--near-duplicate-text-detection-simhash--minhash)
 - [What's new (2026-06-22) — String-Distance Similarity Metrics](#whats-new-2026-06-22--string-distance-similarity-metrics)
 - [What's new (2026-06-22) — Time-Series Transforms](#whats-new-2026-06-22--time-series-transforms)
 - [What's new (2026-06-22) — Unicode Text Normalisation & Slugify](#whats-new-2026-06-22--unicode-text-normalisation--slugify)
@@ -151,6 +152,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Near-Duplicate Text Detection (SimHash / MinHash)
+
+Fingerprint text to find near-dups at scale. Full reference: [`docs/source/Eng/doc/new_features/v100_features_doc.rst`](docs/source/Eng/doc/new_features/v100_features_doc.rst).
+
+- **`simhash` / `near_duplicates` / `minhash_signature` / `minhash_similarity`** (`AC_simhash`, `AC_near_duplicates`): `fuzzy_dedupe` is O(n²) pairwise with no stable fingerprint and `image_dedup` only hashes pixels. This adds the text analog — SimHash (Hamming-distance near-dup clustering) and MinHash (estimated Jaccard) using a fixed `blake2b` hash for deterministic fingerprints. Pairs with `normalize_text`. Pure-stdlib.
 
 ## What's new (2026-06-22) — String-Distance Similarity Metrics
 

@@ -3159,6 +3159,21 @@ def _text_similarity(a: str, b: str,
     return {"score": similarity(a, b, metric=metric)}
 
 
+def _simhash(text: str, bits: Any = 64) -> Dict[str, Any]:
+    """Adapter: SimHash fingerprint of text (as int)."""
+    from je_auto_control.utils.near_dup import simhash
+    return {"simhash": simhash(text, bits=int(bits))}
+
+
+def _near_duplicates(texts: Any, max_distance: Any = 3) -> Dict[str, Any]:
+    """Adapter: cluster near-duplicate texts by SimHash distance."""
+    import json
+    from je_auto_control.utils.near_dup import near_duplicates
+    if isinstance(texts, str):
+        texts = json.loads(texts)
+    return {"clusters": near_duplicates(texts, max_distance=int(max_distance))}
+
+
 def _canonical_log(fields: Any) -> Dict[str, Any]:
     """Adapter: build a canonical log line from a fields dict."""
     import json
@@ -4469,6 +4484,8 @@ class Executor:
             "AC_normalize_text": _normalize_text,
             "AC_slugify": _slugify,
             "AC_text_similarity": _text_similarity,
+            "AC_simhash": _simhash,
+            "AC_near_duplicates": _near_duplicates,
             "AC_validate_config": _validate_config,
             "AC_resolve_ref": _resolve_ref,
             "AC_resolve_refs": _resolve_refs,

@@ -1679,6 +1679,23 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Normalised string similarity (Jaro-Winkler / edit / Jaccard).",
     ))
     specs.append(CommandSpec(
+        "AC_simhash", "Data", "Near-Dup: SimHash",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="some text"),
+            FieldSpec("bits", FieldType.INT, optional=True, default=64),
+        ),
+        description="SimHash fingerprint (int) of text.",
+    ))
+    specs.append(CommandSpec(
+        "AC_near_duplicates", "Data", "Near-Dup: Cluster Texts",
+        fields=(
+            FieldSpec("texts", FieldType.STRING,
+                      placeholder='["the cat sat", "the cat sat down", "dog"]'),
+            FieldSpec("max_distance", FieldType.INT, optional=True, default=3),
+        ),
+        description="Cluster near-duplicate texts by SimHash distance.",
+    ))
+    specs.append(CommandSpec(
         "AC_spans_to_otlp", "Report", "OTLP: Export Spans",
         fields=(
             FieldSpec("spans", FieldType.STRING,

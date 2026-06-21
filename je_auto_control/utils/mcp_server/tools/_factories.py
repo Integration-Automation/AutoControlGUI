@@ -3810,6 +3810,32 @@ def otlp_export_tools() -> List[MCPTool]:
     ]
 
 
+def near_dup_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_simhash",
+            description=("SimHash fingerprint (int) of 'text' (optional 'bits'). "
+                         "Returns {simhash}."),
+            input_schema=schema(
+                {"text": {"type": "string"}, "bits": {"type": "integer"}},
+                ["text"]),
+            handler=h.simhash,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_near_duplicates",
+            description=("Cluster near-duplicate 'texts' within 'max_distance' "
+                         "SimHash bits. Returns {clusters} of index lists."),
+            input_schema=schema(
+                {"texts": {"type": "array"},
+                 "max_distance": {"type": "integer"}},
+                ["texts"]),
+            handler=h.near_duplicates,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def text_similarity_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5452,7 +5478,7 @@ ALL_FACTORIES = (
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
     trace_context_tools, baggage_tools, canonical_log_tools, otlp_export_tools,
-    text_normalize_tools, text_similarity_tools,
+    text_normalize_tools, text_similarity_tools, near_dup_tools,
     secret_ref_tools, config_schema_tools, config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
