@@ -3343,6 +3343,57 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def referential_tools() -> List[MCPTool]:
+    rows = {"type": "array", "items": {"type": "object"}}
+    return [
+        MCPTool(
+            name="ac_check_foreign_key",
+            description=("Every non-null 'child_col' value in 'child_rows' must "
+                         "exist in 'parent_col' of 'parent_rows'. Returns {ok, "
+                         "violations, missing}."),
+            input_schema=schema(
+                {"child_rows": rows, "child_col": {"type": "string"},
+                 "parent_rows": rows, "parent_col": {"type": "string"}},
+                ["child_rows", "child_col", "parent_rows", "parent_col"]),
+            handler=h.check_foreign_key,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_check_unique_key",
+            description=("A single or composite key ('cols': column name or "
+                         "list) must be unique across 'rows'. Returns {ok, "
+                         "duplicates}."),
+            input_schema=schema(
+                {"rows": rows, "cols": {"type": ["string", "array"]}},
+                ["rows", "cols"]),
+            handler=h.check_unique_key,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_check_accepted_values",
+            description=("Every non-null 'col' value in 'rows' must be within "
+                         "'allowed'. Returns {ok, violations, unexpected}."),
+            input_schema=schema(
+                {"rows": rows, "col": {"type": "string"},
+                 "allowed": {"type": "array"}},
+                ["rows", "col", "allowed"]),
+            handler=h.check_accepted_values,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_check_row_count",
+            description=("The 'rows' count must fall within optional 'minimum' / "
+                         "'maximum'. Returns {ok, count}."),
+            input_schema=schema(
+                {"rows": rows, "minimum": {"type": "integer"},
+                 "maximum": {"type": "integer"}},
+                ["rows"]),
+            handler=h.check_row_count,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def dataset_diff_tools() -> List[MCPTool]:
     rows_schema = {"type": "array", "items": {"type": "object"}}
     key_schema = {"type": ["string", "array"]}
@@ -5115,7 +5166,7 @@ ALL_FACTORIES = (
     trace_context_tools, baggage_tools, secret_ref_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,
-    dataset_diff_tools,
+    dataset_diff_tools, referential_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

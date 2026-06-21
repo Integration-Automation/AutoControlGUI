@@ -1806,6 +1806,27 @@ def cell_changes(old_rows, new_rows, key):
     return _cell_changes(old_rows, new_rows, key)
 
 
+def check_foreign_key(child_rows, child_col, parent_rows, parent_col):
+    from je_auto_control.utils.executor.action_executor import _check_foreign_key
+    return _check_foreign_key(child_rows, child_col, parent_rows, parent_col)
+
+
+def check_unique_key(rows, cols):
+    from je_auto_control.utils.executor.action_executor import _check_unique_key
+    return _check_unique_key(rows, cols)
+
+
+def check_accepted_values(rows, col, allowed):
+    from je_auto_control.utils.executor.action_executor import (
+        _check_accepted_values)
+    return _check_accepted_values(rows, col, allowed)
+
+
+def check_row_count(rows, minimum=None, maximum=None):
+    from je_auto_control.utils.executor.action_executor import _check_row_count
+    return _check_row_count(rows, minimum, maximum)
+
+
 def build_provenance(paths, builder_id="je_auto_control"):
     from je_auto_control.utils.provenance import build_provenance, subject_for
     subjects = [subject_for(path) for path in paths]
