@@ -28,8 +28,8 @@ def test_all_good_zero_burn():
 
 def test_empty_is_full_budget():
     report = evaluate_slo([], 0.99, now=1)
-    assert report["sli"] == 1.0
-    assert report["budget_remaining_fraction"] == 1.0
+    assert report["sli"] == pytest.approx(1.0)
+    assert report["budget_remaining_fraction"] == pytest.approx(1.0)
 
 
 def test_bad_target_raises():
