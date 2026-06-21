@@ -3000,6 +3000,17 @@ def _trace_extract(headers: Any) -> Dict[str, Any]:
     return {"context": ctx.to_dict() if ctx is not None else None}
 
 
+def _validate_config(schema: Any, config: Any) -> Dict[str, Any]:
+    """Adapter: validate a config mapping against a schema spec."""
+    import json
+    from je_auto_control.utils.config_schema import validate_config
+    if isinstance(schema, str):
+        schema = json.loads(schema)
+    if isinstance(config, str):
+        config = json.loads(config)
+    return validate_config(schema, config)
+
+
 def _resolve_ref(ref: str) -> Dict[str, Any]:
     """Adapter: resolve an env:// / file:// / secret:// reference."""
     from je_auto_control.utils.secret_ref import resolve_ref
@@ -4401,6 +4412,7 @@ class Executor:
             "AC_baggage_format": _baggage_format,
             "AC_canonical_log": _canonical_log,
             "AC_spans_to_otlp": _spans_to_otlp,
+            "AC_validate_config": _validate_config,
             "AC_resolve_ref": _resolve_ref,
             "AC_resolve_refs": _resolve_refs,
             "AC_redact_config": _redact_config,

@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 具型別的設定結構](#本次更新-2026-06-22--具型別的設定結構)
 - [本次更新 (2026-06-22) — OTLP/JSON Span 匯出](#本次更新-2026-06-22--otlpjson-span-匯出)
 - [本次更新 (2026-06-22) — 標準日誌行與結構化日誌](#本次更新-2026-06-22--標準日誌行與結構化日誌)
 - [本次更新 (2026-06-22) — 條件式 HTTP 請求與快取驗證子](#本次更新-2026-06-22--條件式-http-請求與快取驗證子)
@@ -145,6 +146,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — 具型別的設定結構
+
+把設定驗證成具型別的物件。完整參考:[`docs/source/Zh/doc/new_features/v95_features_doc.rst`](../docs/source/Zh/doc/new_features/v95_features_doc.rst)。
+
+- **`ConfigSchema` / `ConfigField` / `validate_config` / `coerce`**(`AC_validate_config`):`assets._coerce` 只轉換單一值,`json_schema` 只驗證結構,但沒有東西把已解析設定 dict 綁定成具型別物件並做必填強制與選項約束。本功能轉換型別(`str`/`int`/`float`/`bool`)、套用預設、強制必填/選項,回傳 `{ok, config, errors}` —— 標準函式庫版 pydantic-settings。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — OTLP/JSON Span 匯出
 

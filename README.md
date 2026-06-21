@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Typed Configuration Schema](#whats-new-2026-06-22--typed-configuration-schema)
 - [What's new (2026-06-22) — OTLP/JSON Span Export](#whats-new-2026-06-22--otlpjson-span-export)
 - [What's new (2026-06-22) — Canonical Log Lines & Structured Logging](#whats-new-2026-06-22--canonical-log-lines--structured-logging)
 - [What's new (2026-06-22) — Conditional HTTP Requests & Cache Validators](#whats-new-2026-06-22--conditional-http-requests--cache-validators)
@@ -146,6 +147,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Typed Configuration Schema
+
+Validate config into a typed object. Full reference: [`docs/source/Eng/doc/new_features/v95_features_doc.rst`](docs/source/Eng/doc/new_features/v95_features_doc.rst).
+
+- **`ConfigSchema` / `ConfigField` / `validate_config` / `coerce`** (`AC_validate_config`): `assets._coerce` coerces one value and `json_schema` validates structure, but nothing bound a resolved config dict into a typed object with required-field enforcement and choice constraints. This coerces types (`str`/`int`/`float`/`bool`), applies defaults, enforces required/choices, and returns `{ok, config, errors}` — a stdlib pydantic-settings analog. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — OTLP/JSON Span Export
 

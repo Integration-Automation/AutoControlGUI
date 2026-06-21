@@ -3710,6 +3710,22 @@ def config_redaction_tools() -> List[MCPTool]:
     ]
 
 
+def config_schema_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_validate_config",
+            description=("Validate a 'config' mapping against a 'schema' spec "
+                         "({name: {type, default, required, choices}}); coerces "
+                         "types. Returns {ok, config, errors}."),
+            input_schema=schema(
+                {"schema": {"type": "object"}, "config": {"type": "object"}},
+                ["schema", "config"]),
+            handler=h.validate_config,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def secret_ref_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5345,7 +5361,7 @@ ALL_FACTORIES = (
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
     trace_context_tools, baggage_tools, canonical_log_tools, otlp_export_tools,
-    secret_ref_tools, config_redaction_tools,
+    secret_ref_tools, config_schema_tools, config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,

@@ -1746,6 +1746,11 @@ def spans_to_otlp(spans, resource_attrs=None):
     return _spans_to_otlp(spans, resource_attrs)
 
 
+def validate_config(schema, config):
+    from je_auto_control.utils.executor.action_executor import _validate_config
+    return _validate_config(schema, config)
+
+
 def resolve_ref(ref):
     from je_auto_control.utils.executor.action_executor import _resolve_ref
     return _resolve_ref(ref)
