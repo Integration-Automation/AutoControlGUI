@@ -11,7 +11,7 @@ from je_auto_control.utils.secret_ref import (
 
 def test_is_ref():
     assert is_ref("env://TOKEN") and is_ref("file://./x") and is_ref("secret://k")
-    assert not is_ref("plain") and not is_ref(42) and not is_ref("http://x")
+    assert not is_ref("plain") and not is_ref(42) and not is_ref("https://x")
 
 
 def test_resolve_env_from_injected_reader():
