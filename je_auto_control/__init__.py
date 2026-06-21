@@ -429,6 +429,8 @@ from je_auto_control.utils.http_content import (
     build_accept, build_accept_encoding, decode_body, negotiated_call,
     parse_quality_values,
 )
+# RFC 6265 cookie jar (carry a session across HTTP calls)
+from je_auto_control.utils.cookie_jar import CookieJar, parse_set_cookie
 # W3C Trace Context propagation (traceparent / tracestate)
 from je_auto_control.utils.trace_context import (
     SpanContext, TraceContextError, child_context, extract_context,
@@ -955,6 +957,7 @@ __all__ = [
     "MultipartFile", "build_multipart", "new_boundary", "parse_multipart",
     "build_accept", "build_accept_encoding", "decode_body", "negotiated_call",
     "parse_quality_values",
+    "CookieJar", "parse_set_cookie",
     "SpanContext", "TraceContextError", "child_context", "extract_context",
     "format_traceparent", "format_tracestate", "inject_context",
     "new_root_context", "new_span_id", "new_trace_id", "parse_traceparent",
