@@ -1649,6 +1649,18 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Build a canonical wide-event log line (rendered as JSON).",
     ))
     specs.append(CommandSpec(
+        "AC_spans_to_otlp", "Report", "OTLP: Export Spans",
+        fields=(
+            FieldSpec("spans", FieldType.STRING,
+                      placeholder='[{"trace_id": "...", "span_id": "...", '
+                                  '"name": "step", "start_unix_nano": 1, '
+                                  '"end_unix_nano": 2}]'),
+            FieldSpec("resource_attrs", FieldType.STRING, optional=True,
+                      placeholder='{"service.name": "autocontrol"}'),
+        ),
+        description="Wrap spans in an OTLP/JSON resourceSpans envelope.",
+    ))
+    specs.append(CommandSpec(
         "AC_resolve_ref", "Security", "Secret Ref: Resolve",
         fields=(
             FieldSpec("ref", FieldType.STRING,

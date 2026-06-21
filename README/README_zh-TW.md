@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — OTLP/JSON Span 匯出](#本次更新-2026-06-22--otlpjson-span-匯出)
 - [本次更新 (2026-06-22) — 標準日誌行與結構化日誌](#本次更新-2026-06-22--標準日誌行與結構化日誌)
 - [本次更新 (2026-06-22) — 條件式 HTTP 請求與快取驗證子](#本次更新-2026-06-22--條件式-http-請求與快取驗證子)
 - [本次更新 (2026-06-22) — Cookie Jar(HTTP 工作階段攜帶)](#本次更新-2026-06-22--cookie-jarhttp-工作階段攜帶)
@@ -144,6 +145,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — OTLP/JSON Span 匯出
+
+以 collector 攝取的格式匯出 span。完整參考:[`docs/source/Zh/doc/new_features/v94_features_doc.rst`](../docs/source/Zh/doc/new_features/v94_features_doc.rst)。
+
+- **`spans_to_otlp` / `attributes_to_otlp` / `write_otlp`**(`AC_spans_to_otlp`):`agent_trace.to_otel` 回傳扁平 dict,並非有效 OTLP/JSON(沒有 resourceSpans/scopeSpans 巢狀、時間不是 uint64 字串)。本功能把 span 包進正確封套,含 hex ID、uint64 字串時間,以及 OTLP `KeyValue` 屬性編碼 —— OpenTelemetry collector file exporter 讀取的格式。與 `trace_context` 搭配。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — 標準日誌行與結構化日誌
 

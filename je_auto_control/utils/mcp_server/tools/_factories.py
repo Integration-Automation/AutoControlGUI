@@ -3731,6 +3731,24 @@ def secret_ref_tools() -> List[MCPTool]:
     ]
 
 
+def otlp_export_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_spans_to_otlp",
+            description=("Wrap 'spans' (each {trace_id, span_id, name, "
+                         "start_unix_nano, end_unix_nano, attributes?}) in an "
+                         "OTLP/JSON resourceSpans envelope; optional "
+                         "'resource_attrs'. Returns {payload}."),
+            input_schema=schema(
+                {"spans": {"type": "array"},
+                 "resource_attrs": {"type": "object"}},
+                ["spans"]),
+            handler=h.spans_to_otlp,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def canonical_log_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5326,8 +5344,8 @@ ALL_FACTORIES = (
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
-    trace_context_tools, baggage_tools, canonical_log_tools, secret_ref_tools,
-    config_redaction_tools,
+    trace_context_tools, baggage_tools, canonical_log_tools, otlp_export_tools,
+    secret_ref_tools, config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,

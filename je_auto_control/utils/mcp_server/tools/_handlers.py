@@ -1741,6 +1741,11 @@ def canonical_log(fields):
     return _canonical_log(fields)
 
 
+def spans_to_otlp(spans, resource_attrs=None):
+    from je_auto_control.utils.executor.action_executor import _spans_to_otlp
+    return _spans_to_otlp(spans, resource_attrs)
+
+
 def resolve_ref(ref):
     from je_auto_control.utils.executor.action_executor import _resolve_ref
     return _resolve_ref(ref)

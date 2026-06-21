@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — OTLP/JSON Span Export](#whats-new-2026-06-22--otlpjson-span-export)
 - [What's new (2026-06-22) — Canonical Log Lines & Structured Logging](#whats-new-2026-06-22--canonical-log-lines--structured-logging)
 - [What's new (2026-06-22) — Conditional HTTP Requests & Cache Validators](#whats-new-2026-06-22--conditional-http-requests--cache-validators)
 - [What's new (2026-06-22) — Cookie Jar (HTTP Session Carry)](#whats-new-2026-06-22--cookie-jar-http-session-carry)
@@ -145,6 +146,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — OTLP/JSON Span Export
+
+Export spans the way a collector ingests them. Full reference: [`docs/source/Eng/doc/new_features/v94_features_doc.rst`](docs/source/Eng/doc/new_features/v94_features_doc.rst).
+
+- **`spans_to_otlp` / `attributes_to_otlp` / `write_otlp`** (`AC_spans_to_otlp`): `agent_trace.to_otel` returned flat dicts that aren't valid OTLP/JSON (no resourceSpans/scopeSpans nesting, times not as uint64 strings). This wraps spans in the proper envelope with hex IDs, uint64-string times, and OTLP `KeyValue` attribute encoding — what an OpenTelemetry collector's file exporter reads. Pairs with `trace_context`. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Canonical Log Lines & Structured Logging
 
