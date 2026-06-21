@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — URI-Scheme 值引用](#本次更新-2026-06-22--uri-scheme-值引用)
 - [本次更新 (2026-06-21) — W3C Baggage 传播](#本次更新-2026-06-21--w3c-baggage-传播)
 - [本次更新 (2026-06-21) — 数据集差异(数据行变更报告)](#本次更新-2026-06-21--数据集差异数据行变更报告)
 - [本次更新 (2026-06-21) — 分布漂移检测](#本次更新-2026-06-21--分布漂移检测)
@@ -135,6 +136,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-22) — URI-Scheme 值引用
+
+在配置中存储指针而非机密。完整参考:[`docs/source/Zh/doc/new_features/v85_features_doc.rst`](../docs/source/Zh/doc/new_features/v85_features_doc.rst)。
+
+- **`resolve_ref` / `resolve_refs_in` / `is_ref` / `RefResolver`**(`AC_resolve_ref`、`AC_resolve_refs`):`interpolate` 只写死 `${secrets.NAME}`,`AssetStore` 引用仅限 vault 名称 —— 没有通用的读取时间接。本功能解析 `env://VAR`、`file://path`(可选 `base_dir` 防穿越保护)与 `secret://name`(可注入解析器或 governance broker),并遍历嵌套结构解析每个引用。env 读取器 / secret 解析器 / 基目录均可注入。纯标准库、确定。
 
 ## 本次更新 (2026-06-21) — W3C Baggage 传播
 

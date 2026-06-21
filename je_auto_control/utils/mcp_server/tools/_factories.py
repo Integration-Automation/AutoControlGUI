@@ -3509,6 +3509,27 @@ def data_profile_tools() -> List[MCPTool]:
     ]
 
 
+def secret_ref_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_resolve_ref",
+            description=("Resolve a value reference 'ref' (env://VAR, "
+                         "file://path, or secret://name) to {value}."),
+            input_schema=schema({"ref": {"type": "string"}}, ["ref"]),
+            handler=h.resolve_ref,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_resolve_refs",
+            description=("Recursively resolve every env:// / file:// / secret:// "
+                         "reference inside 'obj'. Returns {resolved}."),
+            input_schema=schema({"obj": {"type": "object"}}, ["obj"]),
+            handler=h.resolve_refs,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def baggage_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5091,7 +5112,7 @@ ALL_FACTORIES = (
     search_index_tools, stats_tools, recurrence_tools, text_diff_tools,
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
-    trace_context_tools, baggage_tools,
+    trace_context_tools, baggage_tools, secret_ref_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,
     dataset_diff_tools,

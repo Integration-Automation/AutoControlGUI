@@ -1641,6 +1641,22 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Serialise items into a percent-encoded baggage header.",
     ))
     specs.append(CommandSpec(
+        "AC_resolve_ref", "Security", "Secret Ref: Resolve",
+        fields=(
+            FieldSpec("ref", FieldType.STRING,
+                      placeholder="env://TOKEN  |  file://./token  |  secret://api-key"),
+        ),
+        description="Resolve an env:// / file:// / secret:// value reference.",
+    ))
+    specs.append(CommandSpec(
+        "AC_resolve_refs", "Security", "Secret Ref: Resolve In Structure",
+        fields=(
+            FieldSpec("obj", FieldType.STRING,
+                      placeholder='{"token": "env://TOKEN", "url": "..."}'),
+        ),
+        description="Recursively resolve references inside a JSON structure.",
+    ))
+    specs.append(CommandSpec(
         "AC_profile_rows", "Data", "Data Profile: Profile Rows",
         fields=(
             FieldSpec("rows", FieldType.STRING,

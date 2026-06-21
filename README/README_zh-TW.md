@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — URI-Scheme 值參照](#本次更新-2026-06-22--uri-scheme-值參照)
 - [本次更新 (2026-06-21) — W3C Baggage 傳播](#本次更新-2026-06-21--w3c-baggage-傳播)
 - [本次更新 (2026-06-21) — 資料集差異(資料列變更報告)](#本次更新-2026-06-21--資料集差異資料列變更報告)
 - [本次更新 (2026-06-21) — 分布漂移偵測](#本次更新-2026-06-21--分布漂移偵測)
@@ -135,6 +136,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — URI-Scheme 值參照
+
+在設定中儲存指標而非機密。完整參考:[`docs/source/Zh/doc/new_features/v85_features_doc.rst`](../docs/source/Zh/doc/new_features/v85_features_doc.rst)。
+
+- **`resolve_ref` / `resolve_refs_in` / `is_ref` / `RefResolver`**(`AC_resolve_ref`、`AC_resolve_refs`):`interpolate` 只寫死 `${secrets.NAME}`,`AssetStore` 參照僅限 vault 名稱 —— 沒有通用的讀取時間接。本功能解析 `env://VAR`、`file://path`(可選 `base_dir` 防穿越保護)與 `secret://name`(可注入解析器或 governance broker),並走訪巢狀結構解析每個參照。env 讀取器 / secret 解析器 / 基底目錄皆可注入。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-21) — W3C Baggage 傳播
 

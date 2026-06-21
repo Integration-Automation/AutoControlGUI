@@ -286,6 +286,10 @@ from je_auto_control.utils.dotenv import (
 from je_auto_control.utils.layered_config import (
     LayeredConfig, SourceTrace, deep_merge,
 )
+# URI-scheme secret/value reference resolver (env:// / file:// / secret://)
+from je_auto_control.utils.secret_ref import (
+    RefResolver, SecretRefError, is_ref, resolve_ref, resolve_refs_in,
+)
 # Outbound CloudEvents emitter
 from je_auto_control.utils.events import (
     EventEmitter, post_cloudevent, to_cloudevent,
@@ -879,6 +883,7 @@ __all__ = [
     "Asset", "AssetStore", "AssetValue", "active_environment",
     "dotenv_values", "dump_dotenv", "load_dotenv", "parse_dotenv",
     "LayeredConfig", "SourceTrace", "deep_merge",
+    "RefResolver", "SecretRefError", "is_ref", "resolve_ref", "resolve_refs_in",
     "EventEmitter", "post_cloudevent", "to_cloudevent",
     "WebhookChannel", "WebhookResult", "notify_webhook", "set_default_poster",
     "json_extract", "json_query", "json_query_one",
