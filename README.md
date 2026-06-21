@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Unicode Text Normalisation & Slugify](#whats-new-2026-06-22--unicode-text-normalisation--slugify)
 - [What's new (2026-06-22) — JSON-Schema Compatibility Checking](#whats-new-2026-06-22--json-schema-compatibility-checking)
 - [What's new (2026-06-22) — Typed Configuration Schema](#whats-new-2026-06-22--typed-configuration-schema)
 - [What's new (2026-06-22) — OTLP/JSON Span Export](#whats-new-2026-06-22--otlpjson-span-export)
@@ -148,6 +149,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Unicode Text Normalisation & Slugify
+
+Canonicalize text before fuzzy/search/OCR matching. Full reference: [`docs/source/Eng/doc/new_features/v97_features_doc.rst`](docs/source/Eng/doc/new_features/v97_features_doc.rst).
+
+- **`normalize_text` / `deaccent` / `slugify` / `normalize_quotes` / `fold_whitespace`** (`AC_normalize_text`, `AC_slugify`): `fuzzy` and `search_index.tokenize` only lowercase and OCR matching only `.lower()`+substring, so `"Café"` (NFC) vs `"Café"` (NFD) vs `"cafe"` compare unequal. This adds the missing canonicalization layer (NFKC + casefold + whitespace fold, accent stripping, smart-quote mapping, ASCII slugs). Pure-stdlib (`unicodedata`), deterministic.
 
 ## What's new (2026-06-22) — JSON-Schema Compatibility Checking
 

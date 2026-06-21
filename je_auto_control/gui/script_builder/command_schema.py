@@ -1649,6 +1649,26 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Build a canonical wide-event log line (rendered as JSON).",
     ))
     specs.append(CommandSpec(
+        "AC_normalize_text", "Data", "Text: Normalize (Unicode)",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="Café  Menu"),
+            FieldSpec("form", FieldType.STRING, optional=True,
+                      placeholder="NFKC"),
+            FieldSpec("casefold", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("collapse_ws", FieldType.BOOL, optional=True,
+                      default=True),
+        ),
+        description="Unicode-normalise text (form + casefold + ws fold).",
+    ))
+    specs.append(CommandSpec(
+        "AC_slugify", "Data", "Text: Slugify",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="Café Menu!"),
+            FieldSpec("sep", FieldType.STRING, optional=True, placeholder="-"),
+        ),
+        description="Produce an ASCII slug (de-accent, lowercase, join).",
+    ))
+    specs.append(CommandSpec(
         "AC_spans_to_otlp", "Report", "OTLP: Export Spans",
         fields=(
             FieldSpec("spans", FieldType.STRING,

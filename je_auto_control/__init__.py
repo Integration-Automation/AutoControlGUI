@@ -253,6 +253,10 @@ from je_auto_control.utils.video_report import (
 from je_auto_control.utils.fuzzy import (
     fuzzy_best_match, fuzzy_dedupe, fuzzy_matches, fuzzy_ratio,
 )
+# Unicode text normalisation + slugify (canonicalise before matching)
+from je_auto_control.utils.text_normalize import (
+    deaccent, fold_whitespace, normalize_quotes, normalize_text, slugify,
+)
 # S3-compatible artifact store (optional boto3, injectable client)
 from je_auto_control.utils.artifact_store import (
     S3ArtifactStore, configure_default_store, get_default_store,
@@ -917,6 +921,8 @@ __all__ = [
     "VideoStep", "build_overlay_plan", "render_overlay_frame",
     "write_step_video",
     "fuzzy_best_match", "fuzzy_dedupe", "fuzzy_matches", "fuzzy_ratio",
+    "deaccent", "fold_whitespace", "normalize_quotes", "normalize_text",
+    "slugify",
     "S3ArtifactStore", "configure_default_store", "get_default_store",
     "set_default_store",
     "average_hash", "dedupe_images", "dhash", "hamming_distance",

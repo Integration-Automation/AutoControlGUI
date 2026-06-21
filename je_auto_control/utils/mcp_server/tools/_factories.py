@@ -3782,6 +3782,35 @@ def otlp_export_tools() -> List[MCPTool]:
     ]
 
 
+def text_normalize_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_normalize_text",
+            description=("Unicode-normalise 'text' (form NFKC/NFC/..., casefold, "
+                         "collapse whitespace) for robust matching. Returns "
+                         "{text}."),
+            input_schema=schema(
+                {"text": {"type": "string"}, "form": {"type": "string"},
+                 "casefold": {"type": "boolean"},
+                 "collapse_ws": {"type": "boolean"}},
+                ["text"]),
+            handler=h.normalize_text,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_slugify",
+            description=("Produce an ASCII slug from 'text' (de-accent, "
+                         "lowercase, join alnum runs with 'sep'). Returns "
+                         "{slug}."),
+            input_schema=schema(
+                {"text": {"type": "string"}, "sep": {"type": "string"}},
+                ["text"]),
+            handler=h.slugify,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def canonical_log_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5378,6 +5407,7 @@ ALL_FACTORIES = (
     feature_flag_tools, provenance_tools, json_contract_tools, chaos_tools,
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
     trace_context_tools, baggage_tools, canonical_log_tools, otlp_export_tools,
+    text_normalize_tools,
     secret_ref_tools, config_schema_tools, config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
