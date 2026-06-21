@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-21) — JSON 合約與快照比對](#本次更新-2026-06-21--json-合約與快照比對)
 - [本次更新 (2026-06-21) — SLSA 建置來源證明](#本次更新-2026-06-21--slsa-建置來源證明)
 - [本次更新 (2026-06-21) — 功能旗標](#本次更新-2026-06-21--功能旗標)
 - [本次更新 (2026-06-21) — 文字 Diff、套用與三方合併](#本次更新-2026-06-21--文字-diff套用與三方合併)
@@ -120,6 +121,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-21) — JSON 合約與快照比對
+
+比對、取差異與快照 JSON 內容。完整參考:[`docs/source/Zh/doc/new_features/v70_features_doc.rst`](../docs/source/Zh/doc/new_features/v70_features_doc.rst)。
+
+- **`match_json` / `diff_json` / `normalize_json` / `snapshot_json`**(`AC_match_json`、`AC_diff_json`):`json_schema` 以撰寫的 schema 驗證、`jsonpath` 擷取,但沒有任何東西能以寬鬆規則比對兩份內容或逐路徑取差異。本功能補上合約/快照比對 —— `partial`(子集)、`match_type`(Pact 風格 `like`)、`ignore` 易變路徑 —— 回傳 `{path, kind}` 不符(`missing`/`extra`/`changed`),外加 golden-master `snapshot_json`。與 `json_schema` + `json_patch` 互補;純標準函式庫。
 
 ## 本次更新 (2026-06-21) — SLSA 建置來源證明
 

@@ -2928,6 +2928,30 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
             "wait": round(bucket.time_until_available(float(n)), 4)}
 
 
+def _match_json(actual: Any, expected: Any, partial: bool = False,
+                match_type: bool = False) -> Dict[str, Any]:
+    """Adapter: match a JSON payload against an expected one (relaxed rules)."""
+    import json
+    from je_auto_control.utils.json_contract import match_json
+    if isinstance(actual, str):
+        actual = json.loads(actual)
+    if isinstance(expected, str):
+        expected = json.loads(expected)
+    return match_json(actual, expected, partial=bool(partial),
+                      match_type=bool(match_type)).to_dict()
+
+
+def _diff_json(actual: Any, expected: Any) -> Dict[str, Any]:
+    """Adapter: path-tagged diff between two JSON payloads."""
+    import json
+    from je_auto_control.utils.json_contract import diff_json
+    if isinstance(actual, str):
+        actual = json.loads(actual)
+    if isinstance(expected, str):
+        expected = json.loads(expected)
+    return {"diffs": diff_json(actual, expected)}
+
+
 def _build_provenance(paths: Any, builder_id: str = "je_auto_control",
                       build_type: str = "https://je-auto-control/buildtype/v1"
                       ) -> Dict[str, Any]:
@@ -3907,6 +3931,8 @@ class Executor:
             "AC_flag_enabled": _flag_enabled,
             "AC_build_provenance": _build_provenance,
             "AC_verify_provenance": _verify_provenance,
+            "AC_match_json": _match_json,
+            "AC_diff_json": _diff_json,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,

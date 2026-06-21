@@ -1156,6 +1156,27 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Validate JSON against a JSON Schema; returns {ok, errors}.",
     ))
     specs.append(CommandSpec(
+        "AC_match_json", "Data", "JSON Contract: Match",
+        fields=(
+            FieldSpec("actual", FieldType.STRING,
+                      placeholder='{"id": 1, "name": "Ada"}'),
+            FieldSpec("expected", FieldType.STRING,
+                      placeholder='{"id": 1, "name": "Ada"}'),
+            FieldSpec("partial", FieldType.BOOL, optional=True, default=False),
+            FieldSpec("match_type", FieldType.BOOL, optional=True,
+                      default=False),
+        ),
+        description="Match JSON against expected (partial/type); {ok, mismatches}.",
+    ))
+    specs.append(CommandSpec(
+        "AC_diff_json", "Data", "JSON Contract: Diff",
+        fields=(
+            FieldSpec("actual", FieldType.STRING, placeholder='[1, 2, 3]'),
+            FieldSpec("expected", FieldType.STRING, placeholder='[1, 2]'),
+        ),
+        description="Path-tagged diff between two JSON payloads; {diffs}.",
+    ))
+    specs.append(CommandSpec(
         "AC_evaluate_flag", "Flow", "Feature Flag: Evaluate",
         fields=(
             FieldSpec("flags", FieldType.STRING,
