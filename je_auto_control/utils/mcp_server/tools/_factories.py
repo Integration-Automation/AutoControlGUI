@@ -3343,6 +3343,37 @@ def rate_limit_tools() -> List[MCPTool]:
     ]
 
 
+def dataset_diff_tools() -> List[MCPTool]:
+    rows_schema = {"type": "array", "items": {"type": "object"}}
+    key_schema = {"type": ["string", "array"]}
+    return [
+        MCPTool(
+            name="ac_diff_rows",
+            description=("Diff 'old_rows' against 'new_rows' keyed by 'key' "
+                         "(column name or list). Returns {diff: {added, removed, "
+                         "changed, unchanged}, summary}."),
+            input_schema=schema(
+                {"old_rows": rows_schema, "new_rows": rows_schema,
+                 "key": key_schema},
+                ["old_rows", "new_rows", "key"]),
+            handler=h.diff_rows,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_cell_changes",
+            description=("Per-cell changes between 'old_rows' and 'new_rows' "
+                         "keyed by 'key'. Returns {changes: [{key, column, old, "
+                         "new}]}."),
+            input_schema=schema(
+                {"old_rows": rows_schema, "new_rows": rows_schema,
+                 "key": key_schema},
+                ["old_rows", "new_rows", "key"]),
+            handler=h.cell_changes,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def data_drift_tools() -> List[MCPTool]:
     seq_schema = {"type": "array"}
     return [
@@ -5041,6 +5072,7 @@ ALL_FACTORIES = (
     slo_tools, percentiles_tools, bulkhead_tools, http_cassette_tools,
     trace_context_tools, data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools,
+    dataset_diff_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
     pii_text_tools, sarif_tools,
     screen_record_tools,

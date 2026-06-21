@@ -3099,6 +3099,32 @@ def _categorical_drift(reference: Any, current: Any) -> Dict[str, Any]:
     return categorical_drift(reference, current)
 
 
+def _coerce_diff_inputs(old_rows: Any, new_rows: Any, key: Any):
+    import json
+    if isinstance(old_rows, str):
+        old_rows = json.loads(old_rows)
+    if isinstance(new_rows, str):
+        new_rows = json.loads(new_rows)
+    if isinstance(key, str) and key.strip().startswith("["):
+        key = json.loads(key)
+    return old_rows, new_rows, key
+
+
+def _diff_rows(old_rows: Any, new_rows: Any, key: Any) -> Dict[str, Any]:
+    """Adapter: diff two row-sets by key into {diff, summary}."""
+    from je_auto_control.utils.dataset_diff import diff_rows, summarize_diff
+    old_rows, new_rows, key = _coerce_diff_inputs(old_rows, new_rows, key)
+    diff = diff_rows(old_rows, new_rows, key)
+    return {"diff": diff, "summary": summarize_diff(diff)}
+
+
+def _cell_changes(old_rows: Any, new_rows: Any, key: Any) -> Dict[str, Any]:
+    """Adapter: per-cell changes between two row-sets keyed by key."""
+    from je_auto_control.utils.dataset_diff import cell_changes
+    old_rows, new_rows, key = _coerce_diff_inputs(old_rows, new_rows, key)
+    return {"changes": cell_changes(old_rows, new_rows, key)}
+
+
 def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
     """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
     import json
@@ -4187,6 +4213,8 @@ class Executor:
             "AC_explain_config": _explain_config,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
+            "AC_diff_rows": _diff_rows,
+            "AC_cell_changes": _cell_changes,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,

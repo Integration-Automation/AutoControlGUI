@@ -1776,6 +1776,16 @@ def categorical_drift(reference, current):
     return _categorical_drift(reference, current)
 
 
+def diff_rows(old_rows, new_rows, key):
+    from je_auto_control.utils.executor.action_executor import _diff_rows
+    return _diff_rows(old_rows, new_rows, key)
+
+
+def cell_changes(old_rows, new_rows, key):
+    from je_auto_control.utils.executor.action_executor import _cell_changes
+    return _cell_changes(old_rows, new_rows, key)
+
+
 def build_provenance(paths, builder_id="je_auto_control"):
     from je_auto_control.utils.provenance import build_provenance, subject_for
     subjects = [subject_for(path) for path in paths]

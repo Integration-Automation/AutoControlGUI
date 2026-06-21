@@ -1721,6 +1721,29 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Categorical drift: chi-square + total-variation distance.",
     ))
     specs.append(CommandSpec(
+        "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
+        fields=(
+            FieldSpec("old_rows", FieldType.STRING,
+                      placeholder='[{"id": 1, "name": "a"}]'),
+            FieldSpec("new_rows", FieldType.STRING,
+                      placeholder='[{"id": 1, "name": "b"}]'),
+            FieldSpec("key", FieldType.STRING,
+                      placeholder='id  (or ["id", "region"])'),
+        ),
+        description="Diff two row-sets by key: added/removed/changed/unchanged.",
+    ))
+    specs.append(CommandSpec(
+        "AC_cell_changes", "Data", "Dataset Diff: Cell Changes",
+        fields=(
+            FieldSpec("old_rows", FieldType.STRING,
+                      placeholder='[{"id": 1, "name": "a"}]'),
+            FieldSpec("new_rows", FieldType.STRING,
+                      placeholder='[{"id": 1, "name": "b"}]'),
+            FieldSpec("key", FieldType.STRING, placeholder="id"),
+        ),
+        description="Per-cell {key, column, old, new} changes between row-sets.",
+    ))
+    specs.append(CommandSpec(
         "AC_rate_limit", "Flow", "Rate Limit (Token Bucket)",
         fields=(
             FieldSpec("name", FieldType.STRING),
