@@ -1889,6 +1889,19 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Categorical drift: chi-square + total-variation distance.",
     ))
     specs.append(CommandSpec(
+        "AC_check_compatibility", "Data", "Schema Compat: Check",
+        fields=(
+            FieldSpec("old", FieldType.STRING,
+                      placeholder='{"properties": {"id": {"type": "integer"}}}'),
+            FieldSpec("new", FieldType.STRING,
+                      placeholder='{"properties": {"id": {"type": "integer"}}, '
+                                  '"required": ["id"]}'),
+            FieldSpec("mode", FieldType.STRING, optional=True,
+                      placeholder="backward | forward | full"),
+        ),
+        description="Classify JSON-Schema changes as backward/forward/full.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

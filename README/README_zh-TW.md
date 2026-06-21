@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — JSON-Schema 相容性檢查](#本次更新-2026-06-22--json-schema-相容性檢查)
 - [本次更新 (2026-06-22) — 具型別的設定結構](#本次更新-2026-06-22--具型別的設定結構)
 - [本次更新 (2026-06-22) — OTLP/JSON Span 匯出](#本次更新-2026-06-22--otlpjson-span-匯出)
 - [本次更新 (2026-06-22) — 標準日誌行與結構化日誌](#本次更新-2026-06-22--標準日誌行與結構化日誌)
@@ -146,6 +147,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — JSON-Schema 相容性檢查
+
+把結構變更分類為 backward/forward/full。完整參考:[`docs/source/Zh/doc/new_features/v96_features_doc.rst`](../docs/source/Zh/doc/new_features/v96_features_doc.rst)。
+
+- **`check_compatibility` / `diff_schemas` / `is_backward_compatible` / `is_forward_compatible` / `is_full_compatible`**(`AC_check_compatibility`):我們能依結構驗證並產生結構,但無法回答「舊消費者是否仍能讀新資料?」。本功能依 Confluent/Avro backward/forward/full 規則,在物件子集上分類變更(新增必填欄位、移除欄位、收窄/放寬型別、enum 增減)。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — 具型別的設定結構
 

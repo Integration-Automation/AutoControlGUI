@@ -3243,6 +3243,18 @@ def _explain_config(layers: Any, key: str) -> Dict[str, Any]:
                       "layer": trace.layer}}
 
 
+def _check_compatibility(old: Any, new: Any,
+                         mode: str = "backward") -> Dict[str, Any]:
+    """Adapter: classify JSON-Schema compatibility (backward/forward/full)."""
+    import json
+    from je_auto_control.utils.schema_compat import check_compatibility
+    if isinstance(old, str):
+        old = json.loads(old)
+    if isinstance(new, str):
+        new = json.loads(new)
+    return check_compatibility(old, new, mode)
+
+
 def _detect_drift(reference: Any, current: Any,
                   threshold: Any = 0.25, bins: Any = 10) -> Dict[str, Any]:
     """Adapter: numeric distribution drift report (PSI + KS)."""
@@ -4435,6 +4447,7 @@ class Executor:
             "AC_parse_sse": _parse_sse,
             "AC_resolve_config": _resolve_config,
             "AC_explain_config": _explain_config,
+            "AC_check_compatibility": _check_compatibility,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

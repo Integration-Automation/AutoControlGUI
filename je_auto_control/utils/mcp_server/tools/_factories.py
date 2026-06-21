@@ -3548,6 +3548,23 @@ def dataset_diff_tools() -> List[MCPTool]:
     ]
 
 
+def schema_compat_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_check_compatibility",
+            description=("Classify JSON-Schema changes from 'old' to 'new' under "
+                         "'mode' (backward / forward / full). Returns "
+                         "{compatible, mode, changes, breaking}."),
+            input_schema=schema(
+                {"old": {"type": "object"}, "new": {"type": "object"},
+                 "mode": {"type": "string"}},
+                ["old", "new"]),
+            handler=h.check_compatibility,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def data_drift_tools() -> List[MCPTool]:
     seq_schema = {"type": "array"}
     return [
@@ -5363,7 +5380,7 @@ ALL_FACTORIES = (
     trace_context_tools, baggage_tools, canonical_log_tools, otlp_export_tools,
     secret_ref_tools, config_schema_tools, config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
-    sse_client_tools, layered_config_tools, data_drift_tools,
+    sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

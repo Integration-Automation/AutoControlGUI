@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — JSON-Schema 兼容性检查](#本次更新-2026-06-22--json-schema-兼容性检查)
 - [本次更新 (2026-06-22) — 具类型的配置结构](#本次更新-2026-06-22--具类型的配置结构)
 - [本次更新 (2026-06-22) — OTLP/JSON Span 导出](#本次更新-2026-06-22--otlpjson-span-导出)
 - [本次更新 (2026-06-22) — 标准日志行与结构化日志](#本次更新-2026-06-22--标准日志行与结构化日志)
@@ -146,6 +147,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-22) — JSON-Schema 兼容性检查
+
+把结构变更分类为 backward/forward/full。完整参考:[`docs/source/Zh/doc/new_features/v96_features_doc.rst`](../docs/source/Zh/doc/new_features/v96_features_doc.rst)。
+
+- **`check_compatibility` / `diff_schemas` / `is_backward_compatible` / `is_forward_compatible` / `is_full_compatible`**(`AC_check_compatibility`):我们能依结构验证并生成结构,但无法回答「旧消费者是否仍能读新数据?」。本功能依 Confluent/Avro backward/forward/full 规则,在对象子集上分类变更(新增必填字段、移除字段、收窄/放宽类型、enum 增减)。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — 具类型的配置结构
 
