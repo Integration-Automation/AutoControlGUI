@@ -3129,6 +3129,43 @@ def _categorical_drift(reference: Any, current: Any) -> Dict[str, Any]:
     return categorical_drift(reference, current)
 
 
+def _json_rows(rows: Any) -> Any:
+    import json
+    return json.loads(rows) if isinstance(rows, str) else rows
+
+
+def _check_foreign_key(child_rows: Any, child_col: str, parent_rows: Any,
+                       parent_col: str) -> Dict[str, Any]:
+    """Adapter: foreign-key referential check across two row-sets."""
+    from je_auto_control.utils.referential import check_foreign_key
+    return check_foreign_key(_json_rows(child_rows), child_col,
+                             _json_rows(parent_rows), parent_col)
+
+
+def _check_unique_key(rows: Any, cols: Any) -> Dict[str, Any]:
+    """Adapter: single/composite key uniqueness check."""
+    import json
+    from je_auto_control.utils.referential import check_unique_key
+    if isinstance(cols, str) and cols.strip().startswith("["):
+        cols = json.loads(cols)
+    return check_unique_key(_json_rows(rows), cols)
+
+
+def _check_accepted_values(rows: Any, col: str, allowed: Any) -> Dict[str, Any]:
+    """Adapter: accepted-values check for a column."""
+    from je_auto_control.utils.referential import check_accepted_values
+    return check_accepted_values(_json_rows(rows), col, _json_rows(allowed))
+
+
+def _check_row_count(rows: Any, minimum: Any = None,
+                     maximum: Any = None) -> Dict[str, Any]:
+    """Adapter: row-count bounds check."""
+    from je_auto_control.utils.referential import check_row_count
+    low = int(minimum) if minimum is not None else None
+    high = int(maximum) if maximum is not None else None
+    return check_row_count(_json_rows(rows), low, high)
+
+
 def _coerce_diff_inputs(old_rows: Any, new_rows: Any, key: Any):
     import json
     if isinstance(old_rows, str):
@@ -4249,6 +4286,10 @@ class Executor:
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,
             "AC_cell_changes": _cell_changes,
+            "AC_check_foreign_key": _check_foreign_key,
+            "AC_check_unique_key": _check_unique_key,
+            "AC_check_accepted_values": _check_accepted_values,
+            "AC_check_row_count": _check_row_count,
             "AC_unified_diff": _unified_diff,
             "AC_apply_unified": _apply_unified,
             "AC_three_way_merge": _three_way_merge,

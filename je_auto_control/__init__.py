@@ -167,6 +167,10 @@ from je_auto_control.utils.data_drift import (
 from je_auto_control.utils.dataset_diff import (
     cell_changes, diff_rows, summarize_diff,
 )
+# Cross-dataset referential integrity (foreign-key / unique / accepted values)
+from je_auto_control.utils.referential import (
+    check_accepted_values, check_foreign_key, check_row_count, check_unique_key,
+)
 # i18n / l10n testing: pseudo-localize, overflow + catalog checks
 from je_auto_control.utils.i18n_test import (
     check_catalog, check_overflow, pseudo_localize, pseudo_localize_catalog,
@@ -841,6 +845,8 @@ __all__ = [
     "infer_schema", "profile_rows",
     "categorical_drift", "detect_drift", "ks_two_sample", "psi",
     "cell_changes", "diff_rows", "summarize_diff",
+    "check_accepted_values", "check_foreign_key", "check_row_count",
+    "check_unique_key",
     "check_catalog", "check_overflow", "pseudo_localize",
     "pseudo_localize_catalog",
     "Checkpoint", "CheckpointStore", "run_resumable",

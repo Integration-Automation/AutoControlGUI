@@ -1776,6 +1776,48 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Per-cell {key, column, old, new} changes between row-sets.",
     ))
     specs.append(CommandSpec(
+        "AC_check_foreign_key", "Data", "Referential: Foreign Key",
+        fields=(
+            FieldSpec("child_rows", FieldType.STRING,
+                      placeholder='[{"user_id": 1}]'),
+            FieldSpec("child_col", FieldType.STRING, placeholder="user_id"),
+            FieldSpec("parent_rows", FieldType.STRING,
+                      placeholder='[{"id": 1}]'),
+            FieldSpec("parent_col", FieldType.STRING, placeholder="id"),
+        ),
+        description="Every child value must exist in the parent column.",
+    ))
+    specs.append(CommandSpec(
+        "AC_check_unique_key", "Data", "Referential: Unique Key",
+        fields=(
+            FieldSpec("rows", FieldType.STRING,
+                      placeholder='[{"id": 1}, {"id": 1}]'),
+            FieldSpec("cols", FieldType.STRING,
+                      placeholder='id  (or ["region", "id"])'),
+        ),
+        description="A single or composite key must be unique across rows.",
+    ))
+    specs.append(CommandSpec(
+        "AC_check_accepted_values", "Data", "Referential: Accepted Values",
+        fields=(
+            FieldSpec("rows", FieldType.STRING,
+                      placeholder='[{"status": "open"}]'),
+            FieldSpec("col", FieldType.STRING, placeholder="status"),
+            FieldSpec("allowed", FieldType.STRING,
+                      placeholder='["open", "closed"]'),
+        ),
+        description="Every non-null column value must be in the allowed set.",
+    ))
+    specs.append(CommandSpec(
+        "AC_check_row_count", "Data", "Referential: Row Count",
+        fields=(
+            FieldSpec("rows", FieldType.STRING, placeholder='[{"id": 1}]'),
+            FieldSpec("minimum", FieldType.INT, optional=True),
+            FieldSpec("maximum", FieldType.INT, optional=True),
+        ),
+        description="The row count must fall within the given bounds.",
+    ))
+    specs.append(CommandSpec(
         "AC_rate_limit", "Flow", "Rate Limit (Token Bucket)",
         fields=(
             FieldSpec("name", FieldType.STRING),

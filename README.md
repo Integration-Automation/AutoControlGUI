@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Referential Integrity Checks](#whats-new-2026-06-22--referential-integrity-checks)
 - [What's new (2026-06-22) — URI-Scheme Value References](#whats-new-2026-06-22--uri-scheme-value-references)
 - [What's new (2026-06-21) — W3C Baggage Propagation](#whats-new-2026-06-21--w3c-baggage-propagation)
 - [What's new (2026-06-21) — Dataset Diff (Row-Set Change Report)](#whats-new-2026-06-21--dataset-diff-row-set-change-report)
@@ -137,6 +138,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Referential Integrity Checks
+
+Foreign-key, unique, accepted-values and row-count checks across tables. Full reference: [`docs/source/Eng/doc/new_features/v86_features_doc.rst`](docs/source/Eng/doc/new_features/v86_features_doc.rst).
+
+- **`check_foreign_key` / `check_unique_key` / `check_accepted_values` / `check_row_count`** (`AC_check_foreign_key`, `AC_check_unique_key`, `AC_check_accepted_values`, `AC_check_row_count`): `validate_rows` is intra-row, single-table (its `unique` only dedupes within one batch). This adds dbt-style generic checks — parent/child foreign keys across two tables, single/composite key uniqueness, accepted-values, and row-count bounds — over rows from `load_rows`/`query_sqlite`. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — URI-Scheme Value References
 

@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 參照完整性檢查](#本次更新-2026-06-22--參照完整性檢查)
 - [本次更新 (2026-06-22) — URI-Scheme 值參照](#本次更新-2026-06-22--uri-scheme-值參照)
 - [本次更新 (2026-06-21) — W3C Baggage 傳播](#本次更新-2026-06-21--w3c-baggage-傳播)
 - [本次更新 (2026-06-21) — 資料集差異(資料列變更報告)](#本次更新-2026-06-21--資料集差異資料列變更報告)
@@ -136,6 +137,12 @@
 - [授權條款](#授權條款)
 
 ---
+
+## 本次更新 (2026-06-22) — 參照完整性檢查
+
+跨資料表的外鍵、唯一鍵、accepted-values 與筆數檢查。完整參考:[`docs/source/Zh/doc/new_features/v86_features_doc.rst`](../docs/source/Zh/doc/new_features/v86_features_doc.rst)。
+
+- **`check_foreign_key` / `check_unique_key` / `check_accepted_values` / `check_row_count`**(`AC_check_foreign_key`、`AC_check_unique_key`、`AC_check_accepted_values`、`AC_check_row_count`):`validate_rows` 是單列、單表(其 `unique` 只在單批次內去重)。本功能補上 dbt 風格通用檢查 —— 跨兩表的父子外鍵、單一/複合鍵唯一性、accepted-values、筆數範圍 —— 作用於 `load_rows`/`query_sqlite` 的資料列。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — URI-Scheme 值參照
 

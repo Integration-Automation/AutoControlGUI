@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 参照完整性检查](#本次更新-2026-06-22--参照完整性检查)
 - [本次更新 (2026-06-22) — URI-Scheme 值引用](#本次更新-2026-06-22--uri-scheme-值引用)
 - [本次更新 (2026-06-21) — W3C Baggage 传播](#本次更新-2026-06-21--w3c-baggage-传播)
 - [本次更新 (2026-06-21) — 数据集差异(数据行变更报告)](#本次更新-2026-06-21--数据集差异数据行变更报告)
@@ -136,6 +137,12 @@
 - [许可证](#许可证)
 
 ---
+
+## 本次更新 (2026-06-22) — 参照完整性检查
+
+跨数据表的外键、唯一键、accepted-values 与行数检查。完整参考:[`docs/source/Zh/doc/new_features/v86_features_doc.rst`](../docs/source/Zh/doc/new_features/v86_features_doc.rst)。
+
+- **`check_foreign_key` / `check_unique_key` / `check_accepted_values` / `check_row_count`**(`AC_check_foreign_key`、`AC_check_unique_key`、`AC_check_accepted_values`、`AC_check_row_count`):`validate_rows` 是单行、单表(其 `unique` 只在单批次内去重)。本功能补上 dbt 风格通用检查 —— 跨两表的父子外键、单一/复合键唯一性、accepted-values、行数范围 —— 作用于 `load_rows`/`query_sqlite` 的数据行。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — URI-Scheme 值引用
 
