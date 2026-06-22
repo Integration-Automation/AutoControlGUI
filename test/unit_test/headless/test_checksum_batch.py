@@ -13,6 +13,8 @@ def test_luhn():
     assert luhn_check_digit("7992739871") == "3"          # 79927398713 is valid
     assert luhn_validate("79927398713") is True
     assert luhn_validate("") is False                     # no digits
+    assert luhn_validate("49015420323751") is True        # a valid IMEI
+    assert luhn_validate("3566 0020 2036 0505") is True   # spaced input ignored
 
 
 def test_verhoeff():
