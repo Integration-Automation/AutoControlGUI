@@ -2027,6 +2027,17 @@ def checksum_digit(scheme, partial):
     return _checksum_digit(scheme, partial)
 
 
+def move_along_path(waypoints, easing="linear", per_segment_steps=20):
+    from je_auto_control.utils.executor.action_executor import _move_along_path
+    return _move_along_path(waypoints, easing, per_segment_steps)
+
+
+def drag_path(waypoints, button="mouse_left", easing="linear",
+              per_segment_steps=20):
+    from je_auto_control.utils.executor.action_executor import _drag_path
+    return _drag_path(waypoints, button, easing, per_segment_steps)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

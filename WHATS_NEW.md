@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-22) — Multi-Waypoint Mouse Gestures
+
+Move or drag the pointer through a polyline of waypoints. Full reference: [`docs/source/Eng/doc/new_features/v116_features_doc.rst`](docs/source/Eng/doc/new_features/v116_features_doc.rst).
+
+- **`plan_path` / `move_along_path` / `drag_path` / `path_easings`** (`AC_move_along_path`, `AC_drag_path`): `humanize` and `tween_drag` only interpolate a single start→end hop — there was no way to drive an arbitrary chain of waypoints (signatures, marquee selects, multi-stop drags) with the button held across the whole path. `plan_path` is pure eased point math (reusing `tween_drag`'s easings, junctions de-duplicated); the move/drag dispatch through an injectable sink for headless testing. Pure-stdlib, deterministic.
+
 ## What's new (2026-06-22) — Check-Digit Algorithms
 
 Compute / verify Luhn, Verhoeff, Damm and ISO 7064 MOD 97-10 check digits. Full reference: [`docs/source/Eng/doc/new_features/v115_features_doc.rst`](docs/source/Eng/doc/new_features/v115_features_doc.rst).

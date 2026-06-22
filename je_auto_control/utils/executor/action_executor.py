@@ -3069,6 +3069,29 @@ def _checksum_digit(scheme: str, partial: str) -> Dict[str, Any]:
     return {"check_digit": func(partial)}
 
 
+def _waypoints(value: Any) -> Any:
+    """Coerce a JSON string of waypoints into a list."""
+    import json
+    return json.loads(value) if isinstance(value, str) else value
+
+
+def _move_along_path(waypoints: Any, easing: str = "linear",
+                     per_segment_steps: Any = 20) -> Dict[str, Any]:
+    """Adapter: move the pointer through a polyline of waypoints."""
+    from je_auto_control.utils.mouse_path import move_along_path
+    return move_along_path(_waypoints(waypoints), easing=easing,
+                           per_segment_steps=int(per_segment_steps))
+
+
+def _drag_path(waypoints: Any, button: str = "mouse_left",
+               easing: str = "linear",
+               per_segment_steps: Any = 20) -> Dict[str, Any]:
+    """Adapter: press, drag through a polyline of waypoints, release."""
+    from je_auto_control.utils.mouse_path import drag_path
+    return drag_path(_waypoints(waypoints), button=button, easing=easing,
+                     per_segment_steps=int(per_segment_steps))
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4764,6 +4787,8 @@ class Executor:
             "AC_gettext_ngettext": _gettext_ngettext,
             "AC_checksum_validate": _checksum_validate,
             "AC_checksum_digit": _checksum_digit,
+            "AC_move_along_path": _move_along_path,
+            "AC_drag_path": _drag_path,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

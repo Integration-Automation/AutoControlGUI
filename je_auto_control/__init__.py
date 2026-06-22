@@ -251,6 +251,10 @@ from je_auto_control.utils.checksum import (
     mod97_10_check_digits, mod97_10_validate, verhoeff_check_digit,
     verhoeff_validate,
 )
+# Multi-waypoint mouse gestures (move / drag through a polyline of points)
+from je_auto_control.utils.mouse_path import (
+    drag_path, move_along_path, path_easings, plan_path,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1021,6 +1025,10 @@ __all__ = [
     "damm_check_digit",
     "mod97_10_validate",
     "mod97_10_check_digits",
+    "plan_path",
+    "move_along_path",
+    "drag_path",
+    "path_easings",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
