@@ -392,6 +392,30 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Clean up an image for OCR / matching (grayscale/binarize/…).",
     ))
     specs.append(CommandSpec(
+        "AC_segment_hsv", "Image", "Segment by HSV",
+        fields=(
+            FieldSpec("lower_hsv", FieldType.STRING, placeholder="[40, 80, 80]"),
+            FieldSpec("upper_hsv", FieldType.STRING, placeholder="[80, 255, 255]"),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=50),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+        ),
+        description="Locate regions inside an HSV band (lighting-robust).",
+    ))
+    specs.append(CommandSpec(
+        "AC_dominant_hue_regions", "Image", "Find Hue Regions",
+        fields=(
+            FieldSpec("hue", FieldType.INT, placeholder="0=red, 60=green, 120=blue"),
+            FieldSpec("hue_tol", FieldType.INT, optional=True, default=10),
+            FieldSpec("sat_min", FieldType.INT, optional=True, default=80),
+            FieldSpec("val_min", FieldType.INT, optional=True, default=80),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=50),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+        ),
+        description="Locate any shade of a hue, any brightness (handles red wrap).",
+    ))
+    specs.append(CommandSpec(
         "AC_fuse_elements", "Image", "Fuse Element Boxes",
         fields=(
             FieldSpec("ocr", FieldType.STRING, optional=True,

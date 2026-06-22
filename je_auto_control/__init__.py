@@ -316,6 +316,10 @@ from je_auto_control.utils.actionability import (
 from je_auto_control.utils.element_parse import (
     fuse_elements, iou, merge_boxes, reading_order,
 )
+# HSV colour-space segmentation (lighting-robust colour masking + blob boxes)
+from je_auto_control.utils.hsv_segment import (
+    color_mask, dominant_hue_regions, segment_hsv,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1149,6 +1153,9 @@ __all__ = [
     "merge_boxes",
     "fuse_elements",
     "reading_order",
+    "segment_hsv",
+    "color_mask",
+    "dominant_hue_regions",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

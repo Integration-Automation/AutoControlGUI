@@ -3505,6 +3505,38 @@ def _reading_order(elements: Any, row_tol: Any = 12) -> Dict[str, Any]:
     return {"count": len(ordered), "elements": ordered}
 
 
+def _segment_hsv(lower_hsv: Any, upper_hsv: Any, min_area: Any = 50,
+                 region: Any = None) -> Dict[str, Any]:
+    """Adapter: locate blobs inside an explicit HSV band on the screen."""
+    import json
+    from je_auto_control.utils.hsv_segment import segment_hsv
+    if isinstance(lower_hsv, str):
+        lower_hsv = json.loads(lower_hsv)
+    if isinstance(upper_hsv, str):
+        upper_hsv = json.loads(upper_hsv)
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    boxes = segment_hsv(region=region, lower_hsv=list(lower_hsv),
+                        upper_hsv=list(upper_hsv), min_area=int(min_area))
+    return {"count": len(boxes), "regions": boxes,
+            "best": boxes[0] if boxes else None}
+
+
+def _dominant_hue_regions(hue: Any, hue_tol: Any = 10, sat_min: Any = 80,
+                          val_min: Any = 80, min_area: Any = 50,
+                          region: Any = None) -> Dict[str, Any]:
+    """Adapter: locate any-brightness regions near a hue on the screen."""
+    import json
+    from je_auto_control.utils.hsv_segment import dominant_hue_regions
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    boxes = dominant_hue_regions(region=region, hue=int(hue), hue_tol=int(hue_tol),
+                                 sat_min=int(sat_min), val_min=int(val_min),
+                                 min_area=int(min_area))
+    return {"count": len(boxes), "regions": boxes,
+            "best": boxes[0] if boxes else None}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5237,6 +5269,8 @@ class Executor:
             "AC_wait_actionable": _wait_actionable,
             "AC_fuse_elements": _fuse_elements,
             "AC_reading_order": _reading_order,
+            "AC_segment_hsv": _segment_hsv,
+            "AC_dominant_hue_regions": _dominant_hue_regions,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

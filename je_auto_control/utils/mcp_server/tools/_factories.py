@@ -2899,6 +2899,43 @@ def element_parse_tools() -> List[MCPTool]:
     ]
 
 
+def hsv_segment_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_segment_hsv",
+            description=("Locate on-screen blobs inside an explicit HSV band "
+                         "(H 0-179, S/V 0-255): 'lower_hsv' [h,s,v] .. 'upper_hsv' "
+                         "[h,s,v], blobs >= 'min_area'. Returns {count, regions, "
+                         "best}. HSV is lighting-robust where RGB tolerance is not."),
+            input_schema=schema({
+                "lower_hsv": {"type": "array", "items": {"type": "integer"}},
+                "upper_hsv": {"type": "array", "items": {"type": "integer"}},
+                "min_area": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["lower_hsv", "upper_hsv"]),
+            handler=h.segment_hsv,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_dominant_hue_regions",
+            description=("Locate regions of ANY shade of a colour near 'hue' "
+                         "(0-179, ± 'hue_tol'), any brightness, with a 'sat_min' / "
+                         "'val_min' floor. Red's 0/180 wrap is handled. Returns "
+                         "{count, regions, best}."),
+            input_schema=schema({
+                "hue": {"type": "integer"},
+                "hue_tol": {"type": "integer"},
+                "sat_min": {"type": "integer"},
+                "val_min": {"type": "integer"},
+                "min_area": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["hue"]),
+            handler=h.dominant_hue_regions,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6403,7 +6440,7 @@ ALL_FACTORIES = (
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
     window_layout_tools, window_arrange_tools, preprocess_tools,
     monitor_layout_tools, actionability_tools, element_parse_tools,
-    plugin_sdk_tools, governance_tools,
+    hsv_segment_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

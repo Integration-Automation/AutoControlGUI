@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — HSV 色彩空間分割
+
+不論光照都能找出「任一色階的紅色」。完整參考:[`docs/source/Zh/doc/new_features/v139_features_doc.rst`](../docs/source/Zh/doc/new_features/v139_features_doc.rst)。
+
+- **`dominant_hue_regions` / `segment_hsv` / `color_mask`**(`AC_dominant_hue_regions`、`AC_segment_hsv`):`find_color_region` 在 RGB 以各通道 ± 框遮罩——無法比對「同一顏色但不同亮度」(狀態燈、強調色、主題色調)。HSV 把色相與亮度分離,因此「色相帶 + 飽和度 / 明度下限」可在不同光照下捕捉所有色階。`dominant_hue_regions(hue=…)` 自動處理紅色 0/180 環繞;`segment_hsv` 接受明確帶;兩者皆回傳 `{x,y,width,height,area,center}` 區塊並沿用共用連通元件輔助函式。可注入 haystack → 無頭可測。
+
 ## 本次更新 (2026-06-23) — 融合並排序螢幕元素框
 
 把原始的 OCR + 圖示 + a11y 框轉成一份乾淨、已編號的元素清單。完整參考:[`docs/source/Zh/doc/new_features/v138_features_doc.rst`](../docs/source/Zh/doc/new_features/v138_features_doc.rst)。
