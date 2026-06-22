@@ -2053,6 +2053,11 @@ def move_mouse_relative(dx, dy):
     return _move_mouse_relative(dx, dy)
 
 
+def type_unicode(text, modifier="ctrl"):
+    from je_auto_control.utils.executor.action_executor import _type_unicode
+    return _type_unicode(text, modifier)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

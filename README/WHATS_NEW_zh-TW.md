@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — Unicode 文字輸入(emoji / CJK)
+
+輸入 `write` 無法處理的任何 Unicode(emoji / CJK / 重音)。完整參考:[`docs/source/Zh/doc/new_features/v122_features_doc.rst`](../docs/source/Zh/doc/new_features/v122_features_doc.rst)。
+
+- **`type_unicode` / `plan_paste` / `unicode_code_units`**(`AC_type_unicode`):`write` 透過虛擬鍵表輸入,對 emoji/CJK/許多重音字會*拋例外*。`type_unicode` 以設定剪貼簿再貼上(`modifier` ctrl/command)可靠地輸入任何文字。`unicode_code_units` 將文字拆成 UTF-16 碼元(代理對)供 KEYEVENTF_UNICODE 後端使用。純計畫 + 可注入 sink、具決定性。
+
 ## 本次更新 (2026-06-23) — 等待區域顏色
 
 阻塞直到某顏色填滿(或離開)螢幕區域。完整參考:[`docs/source/Zh/doc/new_features/v121_features_doc.rst`](../docs/source/Zh/doc/new_features/v121_features_doc.rst)。

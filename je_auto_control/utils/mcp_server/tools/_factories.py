@@ -2596,6 +2596,23 @@ def tween_drag_tools() -> List[MCPTool]:
     ]
 
 
+def text_unicode_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_type_unicode",
+            description=("Enter arbitrary Unicode 'text' (emoji / CJK / accented "
+                         "that the normal type cannot) via clipboard paste. "
+                         "'modifier' is the paste key (ctrl / command). "
+                         "Returns {ops, plan, code_units}."),
+            input_schema=schema(
+                {"text": {"type": "string"}, "modifier": {"type": "string"}},
+                required=["text"]),
+            handler=h.type_unicode,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def mouse_relative_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5929,7 +5946,8 @@ ALL_FACTORIES = (
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
     process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
-    key_hold_tools, mouse_relative_tools, plugin_sdk_tools, governance_tools,
+    key_hold_tools, mouse_relative_tools, text_unicode_tools, plugin_sdk_tools,
+    governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
