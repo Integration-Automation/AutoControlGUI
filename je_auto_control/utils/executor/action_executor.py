@@ -3131,6 +3131,12 @@ def _hold_key(key: str, duration_s: Any = 1.0,
     return hold_key(key, float(duration_s), rate_hz=rate)
 
 
+def _move_mouse_relative(dx: Any, dy: Any) -> Dict[str, Any]:
+    """Adapter: move the pointer by a delta from its current position."""
+    from je_auto_control.utils.mouse_relative import move_mouse_relative
+    return move_mouse_relative(int(dx), int(dy))
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4830,6 +4836,7 @@ class Executor:
             "AC_drag_path": _drag_path,
             "AC_set_field_text": _set_field_text,
             "AC_hold_key": _hold_key,
+            "AC_move_mouse_relative": _move_mouse_relative,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

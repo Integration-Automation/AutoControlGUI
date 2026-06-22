@@ -2048,6 +2048,11 @@ def hold_key(key, duration_s=1.0, rate_hz=None):
     return _hold_key(key, duration_s, rate_hz)
 
 
+def move_mouse_relative(dx, dy):
+    from je_auto_control.utils.executor.action_executor import _move_mouse_relative
+    return _move_mouse_relative(dx, dy)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

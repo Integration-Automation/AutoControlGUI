@@ -259,6 +259,10 @@ from je_auto_control.utils.mouse_path import (
 from je_auto_control.utils.field_entry import plan_field_set, set_field_text
 # Hold a key for a duration / auto-repeat at a fixed rate
 from je_auto_control.utils.key_hold import hold_key, plan_key_hold
+# Relative mouse movement (move by a delta from the current position)
+from je_auto_control.utils.mouse_relative import (
+    move_mouse_relative, relative_target,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1038,6 +1042,8 @@ __all__ = [
     "set_field_text",
     "plan_key_hold",
     "hold_key",
+    "move_mouse_relative",
+    "relative_target",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

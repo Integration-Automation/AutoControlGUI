@@ -2578,6 +2578,21 @@ def tween_drag_tools() -> List[MCPTool]:
     ]
 
 
+def mouse_relative_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_move_mouse_relative",
+            description=("Move the pointer by ('dx', 'dy') relative to its "
+                         "current position. Returns {from, to, delta}."),
+            input_schema=schema(
+                {"dx": {"type": "integer"}, "dy": {"type": "integer"}},
+                required=["dx", "dy"]),
+            handler=h.move_mouse_relative,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def key_hold_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5896,7 +5911,7 @@ ALL_FACTORIES = (
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
     process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
-    key_hold_tools, plugin_sdk_tools, governance_tools,
+    key_hold_tools, mouse_relative_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
