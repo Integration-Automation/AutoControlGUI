@@ -3409,6 +3409,28 @@ def _cascade_rects(count: Any, screen: Any = None, offset: Any = 30,
     return {"count": len(rects), "rects": [rect.to_dict() for rect in rects]}
 
 
+def _preprocess_image(output_path: str, source: Any = None, steps: Any = None,
+                      scale: Any = 2.0, region: Any = None, block_size: Any = 31,
+                      c: Any = 11) -> Dict[str, Any]:
+    """Adapter: run the preprocessing pipeline and write the result to a file."""
+    import json
+    import cv2
+    from je_auto_control.utils.preprocess import preprocess_image
+    if isinstance(steps, str):
+        steps = (json.loads(steps) if steps.strip().startswith("[")
+                 else [part.strip() for part in steps.split(",") if part.strip()])
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    result = preprocess_image(
+        source, region=region,
+        steps=tuple(steps) if steps else ("grayscale", "upscale", "binarize"),
+        scale=float(scale), block_size=int(block_size), c=int(c))
+    if not cv2.imwrite(str(output_path), result):
+        raise AutoControlActionException(f"could not write image: {output_path!r}")
+    return {"path": str(output_path), "width": int(result.shape[1]),
+            "height": int(result.shape[0])}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5135,6 +5157,7 @@ class Executor:
             "AC_feature_match": _feature_match,
             "AC_find_shapes": _find_shapes,
             "AC_find_rectangles": _find_rectangles,
+            "AC_preprocess_image": _preprocess_image,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

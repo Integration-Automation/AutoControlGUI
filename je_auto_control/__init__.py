@@ -298,6 +298,11 @@ from je_auto_control.utils.shape_locator import (
 from je_auto_control.utils.window_layout import (
     WindowRect, available_slots, cascade_rects, grid_rects, tile_rect,
 )
+# Image pre-processing for OCR / template matching (grayscale, binarize, deskew, …)
+from je_auto_control.utils.preprocess import (
+    binarize, denoise, deskew, detect_skew_angle, enhance_contrast,
+    preprocess_image, to_grayscale, upscale,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1106,6 +1111,14 @@ __all__ = [
     "tile_rect",
     "grid_rects",
     "cascade_rects",
+    "preprocess_image",
+    "to_grayscale",
+    "binarize",
+    "upscale",
+    "denoise",
+    "deskew",
+    "detect_skew_angle",
+    "enhance_contrast",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 影像前處理(供 OCR / 模板比對)
+
+在辨識或比對前先清理畫面。完整參考:[`docs/source/Zh/doc/new_features/v135_features_doc.rst`](../docs/source/Zh/doc/new_features/v135_features_doc.rst)。
+
+- **`preprocess_image` + `to_grayscale` / `binarize` / `upscale` / `denoise` / `deskew` / `enhance_contrast`**(`AC_preprocess_image`):`locate_text` 與 `match_template` 把*原始*擷取直接餵給 OCR / 比對器——小字、暗色主題、低對比與歪斜會嚴重影響兩者,而框架毫無前處理接縫。本功能加入標準流程(灰階 → 放大 → 二值化 → 去歪斜 → 去噪 → CLAHE),倍增其準確度。可注入 haystack → ndarray;`detect_skew_angle` 量測文字旋轉;`binarize` 提供 otsu / adaptive。執行器命令把清理後影像寫入路徑。可對合成陣列無頭測試。
+
 ## 本次更新 (2026-06-23) — 排列多個視窗(網格 / 層疊)
 
 一次呼叫排好一整組視窗。完整參考:[`docs/source/Zh/doc/new_features/v134_features_doc.rst`](../docs/source/Zh/doc/new_features/v134_features_doc.rst)。

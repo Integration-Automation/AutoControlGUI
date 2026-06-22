@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 图像预处理(供 OCR / 模板匹配)
+
+在识别或匹配前先清理画面。完整参考:[`docs/source/Zh/doc/new_features/v135_features_doc.rst`](../docs/source/Zh/doc/new_features/v135_features_doc.rst)。
+
+- **`preprocess_image` + `to_grayscale` / `binarize` / `upscale` / `denoise` / `deskew` / `enhance_contrast`**(`AC_preprocess_image`):`locate_text` 与 `match_template` 把*原始*截取直接喂给 OCR / 匹配器——小字、暗色主题、低对比与歪斜会严重影响两者,而框架毫无预处理接缝。本功能加入标准流程(灰阶 → 放大 → 二值化 → 去歪斜 → 去噪 → CLAHE),倍增其准确度。可注入 haystack → ndarray;`detect_skew_angle` 测量文字旋转;`binarize` 提供 otsu / adaptive。执行器命令把清理后图像写入路径。可对合成数组无头测试。
+
 ## 本次更新 (2026-06-23) — 排列多个窗口(网格 / 层叠)
 
 一次调用排好一整组窗口。完整参考:[`docs/source/Zh/doc/new_features/v134_features_doc.rst`](../docs/source/Zh/doc/new_features/v134_features_doc.rst)。
