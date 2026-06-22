@@ -21,7 +21,7 @@ from __future__ import annotations
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlAssertionException,
@@ -464,4 +464,120 @@ def assert_window(title: str,
         expected={"title": title, "exists": exists},
         actual=titles, raise_on_fail=raise_on_fail,
         capture_on_fail=capture_on_fail,
+    )
+
+
+def assert_by_description(description: str,
+                          present: bool = True,
+                          screen_region: Optional[Sequence[int]] = None,
+                          model: Optional[str] = None,
+                          backend: Any = None,
+                          raise_on_fail: bool = True,
+                          capture_on_fail: bool = False) -> AssertionResult:
+    """Assert the screen does (or does not) match a natural-language description.
+
+    The semantic complement to :func:`assert_text` / :func:`assert_image`:
+    rather than exact OCR text or a pixel template, ask a vision-language
+    model "is ``description`` true of the current screen?". Requires a
+    configured VLM backend (``ANTHROPIC_API_KEY`` / ``OPENAI_API_KEY``);
+    raises :class:`VLMNotAvailableError` otherwise.
+    """
+    from je_auto_control.utils.vision.vlm_api import verify_description
+    region = list(screen_region) if screen_region is not None else None
+    matched = verify_description(
+        description, screen_region=region, model=model, backend=backend,
+    )
+    passed = (matched == present)
+    state = "shows" if present else "does not show"
+    message = (
+        f"assert_by_description passed: screen {state} {description!r}"
+        if passed else
+        f"assert_by_description failed: expected screen to {state} "
+        f"{description!r} (VLM verdict: {'match' if matched else 'no match'})"
+    )
+    return _finalize(
+        "vlm", passed, message,
+        expected={"description": description, "present": present},
+        actual={"matched": matched},
+        raise_on_fail=raise_on_fail, capture_on_fail=capture_on_fail,
+    )
+
+
+def _variable_satisfies(value: Any, op: str, expected: Any) -> bool:
+    """Return True when ``value op expected`` holds (eq/ne/contains/...)."""
+    import re
+    comparators = {
+        "eq": lambda a, b: a == b,
+        "ne": lambda a, b: a != b,
+        "lt": lambda a, b: a < b,
+        "le": lambda a, b: a <= b,
+        "gt": lambda a, b: a > b,
+        "ge": lambda a, b: a >= b,
+        "contains": lambda a, b: b in a,
+        "startswith": lambda a, b: isinstance(a, str) and a.startswith(b),
+        "endswith": lambda a, b: isinstance(a, str) and a.endswith(b),
+        "regex": lambda a, b: re.search(str(b), str(a)) is not None,
+    }
+    comparator = comparators.get(op)
+    if comparator is None:
+        raise AutoControlAssertionException(
+            f"assert_var: unknown op {op!r}; expected one of "
+            f"{sorted(comparators)}"
+        )
+    try:
+        return bool(comparator(value, expected))
+    except TypeError:
+        return False
+
+
+def assert_variable(value: Any, op: str = "eq", expected: Any = None,
+                    name: str = "variable",
+                    raise_on_fail: bool = True) -> AssertionResult:
+    """Assert that ``value`` satisfies ``op expected`` (eq/ne/contains/regex/…).
+
+    The assertion-DSL companion to the flow ``if_var`` / ``while_var``
+    conditions: instead of branching, fail loudly when a variable doesn't
+    hold the expected value — handy after ``ocr_to_var`` / ``shell_to_var``.
+    """
+    passed = _variable_satisfies(value, op, expected)
+    message = (
+        f"assert_var passed: {name}={value!r} {op} {expected!r}"
+        if passed else
+        f"assert_var failed: expected {name}={value!r} to satisfy "
+        f"{op} {expected!r}"
+    )
+    return _finalize(
+        "variable", passed, message,
+        expected={"op": op, "value": expected}, actual=value,
+        raise_on_fail=raise_on_fail, capture_on_fail=False,
+    )
+
+
+def assert_duration(action: Callable[[], Any], max_ms: float,
+                    min_ms: float = 0.0,
+                    raise_on_fail: bool = True,
+                    capture_on_fail: bool = False) -> AssertionResult:
+    """Assert that calling ``action`` completes within a time budget.
+
+    Times ``action()`` and checks the elapsed wall-clock against
+    ``[min_ms, max_ms]`` — a performance-budget check that catches latency
+    regressions in an automation flow. ``action`` always runs to
+    completion; only its duration is judged.
+    """
+    start = time.perf_counter()
+    action()
+    elapsed_ms = (time.perf_counter() - start) * 1000.0
+    passed = float(min_ms) <= elapsed_ms <= float(max_ms)
+    message = (
+        f"assert_duration passed: {elapsed_ms:.1f}ms within "
+        f"[{min_ms}, {max_ms}]ms"
+        if passed else
+        f"assert_duration failed: {elapsed_ms:.1f}ms outside "
+        f"[{min_ms}, {max_ms}]ms"
+    )
+    return _finalize(
+        "duration", passed, message,
+        expected={"min_ms": min_ms, "max_ms": max_ms},
+        actual={"elapsed_ms": round(elapsed_ms, 3)},
+        raise_on_fail=raise_on_fail, capture_on_fail=capture_on_fail,
     )

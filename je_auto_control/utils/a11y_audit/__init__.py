@@ -18,6 +18,11 @@ from je_auto_control.utils.a11y_audit.audit import (
     relative_luminance,
     run_audit,
 )
+from je_auto_control.utils.a11y_audit.wcag import (
+    audit_target_size,
+    tag_issue,
+    wcag_audit,
+)
 
 
 __all__ = [
@@ -25,9 +30,12 @@ __all__ = [
     "AuditReport",
     "audit_contrast",
     "audit_missing_labels",
+    "audit_target_size",
     "contrast_ratio",
     "detect_truncation",
     "is_interactive",
     "relative_luminance",
     "run_audit",
+    "tag_issue",
+    "wcag_audit",
 ]

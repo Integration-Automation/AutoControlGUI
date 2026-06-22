@@ -55,6 +55,7 @@ from je_auto_control.utils.script_vars.interpolate import (
     interpolate_actions, interpolate_value,
 )
 from je_auto_control.utils.script_vars.scope import VariableScope
+from je_auto_control.utils.http_client.http_client import http_request
 from je_auto_control.utils.generate_report.generate_html_report import generate_html, generate_html_report
 from je_auto_control.utils.generate_report.generate_json_report import generate_json, generate_json_report
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml, generate_xml_report
@@ -347,6 +348,30 @@ def _wait_pixel_changes(x: int, y: int,
     ).to_dict()
 
 
+def _wait_clipboard_change(baseline: Optional[str] = None,
+                           target: Optional[str] = None,
+                           contains: bool = False,
+                           timeout_s: float = 10.0,
+                           poll_interval_s: float = 0.2) -> Dict[str, Any]:
+    """Executor adapter: wait until the clipboard changes (or matches target)."""
+    from je_auto_control.utils.smart_waits import wait_until_clipboard_changes
+    return wait_until_clipboard_changes(
+        baseline=baseline, target=target, contains=bool(contains),
+        timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
+    ).to_dict()
+
+
+def _wait_window_closed(title: str, case_sensitive: bool = False,
+                        timeout_s: float = 10.0,
+                        poll_interval_s: float = 0.2) -> Dict[str, Any]:
+    """Executor adapter: wait until a window matching ``title`` disappears."""
+    from je_auto_control.utils.smart_waits import wait_until_window_closed
+    return wait_until_window_closed(
+        title, case_sensitive=bool(case_sensitive),
+        timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
+    ).to_dict()
+
+
 def _wait_region_idle(region: List[int],
                       timeout_s: float = 10.0,
                       poll_interval_s: float = 0.2,
@@ -359,6 +384,41 @@ def _wait_region_idle(region: List[int],
         poll_interval_s=float(poll_interval_s),
         stable_for_s=float(stable_for_s),
         max_pixel_diff=int(max_pixel_diff),
+    ).to_dict()
+
+
+def _wait_for_file(path: str, timeout_s: float = 30.0,
+                   poll_interval_s: float = 0.25,
+                   stable_for_s: float = 1.0,
+                   min_size: int = 1) -> Dict[str, Any]:
+    """Executor adapter: wait until a file exists and finishes being written."""
+    from je_auto_control.utils.smart_waits import wait_until_file
+    return wait_until_file(
+        path, timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        stable_for_s=float(stable_for_s), min_size=int(min_size),
+    ).to_dict()
+
+
+def _wait_for_port(host: str, port: int, timeout_s: float = 30.0,
+                   poll_interval_s: float = 0.25,
+                   connect_timeout_s: float = 1.0) -> Dict[str, Any]:
+    """Executor adapter: wait until a TCP port accepts connections."""
+    from je_auto_control.utils.smart_waits import wait_until_port
+    return wait_until_port(
+        host, int(port), timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        connect_timeout_s=float(connect_timeout_s),
+    ).to_dict()
+
+
+def _wait_for_process(name: str, present: bool = True, timeout_s: float = 30.0,
+                      poll_interval_s: float = 0.25) -> Dict[str, Any]:
+    """Executor adapter: wait until a process appears or exits."""
+    from je_auto_control.utils.smart_waits import wait_until_process
+    return wait_until_process(
+        name, present=bool(present), timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
     ).to_dict()
 
 
@@ -635,6 +695,21 @@ def _assert_window(title: str,
     ).to_dict()
 
 
+def _assert_vlm(description: str,
+                present: bool = True,
+                screen_region: Optional[List[int]] = None,
+                model: Optional[str] = None,
+                raise_on_fail: bool = True,
+                capture_on_fail: bool = False) -> Dict[str, Any]:
+    """Executor adapter: assert the screen matches a description (VLM judged)."""
+    from je_auto_control.utils.assertion import assert_by_description
+    return assert_by_description(
+        description, present=bool(present), screen_region=screen_region,
+        model=model, raise_on_fail=bool(raise_on_fail),
+        capture_on_fail=bool(capture_on_fail),
+    ).to_dict()
+
+
 def _assert_clipboard(text: str,
                       mode: str = "equals",
                       ignore_case: bool = False,
@@ -814,6 +889,19 @@ def _audit_contrast(foreground: List[int], background: List[int],
         "passes_aa": ratio >= float(min_ratio),
         "foreground": list(foreground), "background": list(background),
     }
+
+
+def _wcag_audit(app_name: Optional[str] = None,
+                contrast_pairs: Optional[List[Dict[str, Any]]] = None,
+                texts: Optional[List[str]] = None, level: str = "AA",
+                min_target_px: int = 24, max_results: int = 500
+                ) -> Dict[str, Any]:
+    """Executor adapter: WCAG-tagged conformance audit (SC ids + levels)."""
+    from je_auto_control.utils.a11y_audit import wcag_audit
+    return wcag_audit(
+        app_name=app_name, contrast_pairs=contrast_pairs, texts=texts,
+        level=str(level), min_target_px=int(min_target_px),
+        max_results=int(max_results))
 
 
 def _run_device_matrix(actions: List[Any], devices: List[Dict[str, Any]],
@@ -1894,6 +1982,2454 @@ def _observe_executor_metrics(action: str, started_at: float,
         pass
 
 
+def _human_move(x: int, y: int, duration_s: float = 0.4, curve: float = 0.2,
+                overshoot: float = 0.0, jitter: float = 1.0,
+                seed: Optional[int] = None) -> Dict[str, Any]:
+    """Executor adapter: move the mouse to (x, y) along a human-like path."""
+    from je_auto_control.utils.humanize.motion import (
+        HumanizedMotion, move_mouse_humanized,
+    )
+    motion = HumanizedMotion(curve=float(curve), overshoot=float(overshoot),
+                             jitter=float(jitter), seed=seed)
+    path = move_mouse_humanized(int(x), int(y),
+                                duration_s=float(duration_s), motion=motion)
+    return {"x": int(x), "y": int(y), "waypoints": len(path)}
+
+
+def _human_type(text: str, base_delay: float = 0.05, jitter: float = 0.04,
+                pause_chance: float = 0.0,
+                seed: Optional[int] = None) -> Dict[str, Any]:
+    """Executor adapter: type text with humanized inter-key delays."""
+    from je_auto_control.utils.humanize.typing import type_text_humanized
+    delays = type_text_humanized(
+        str(text), base_delay=float(base_delay), jitter=float(jitter),
+        pause_chance=float(pause_chance), seed=seed,
+    )
+    return {"chars": len(str(text)), "total_delay_s": round(sum(delays), 3)}
+
+
+def _sign_action_file(path: str, key: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: write an HMAC-SHA256 signature sidecar for a file."""
+    from je_auto_control.utils.action_signing import sign_action_file
+    return {"signature_path": sign_action_file(path, key)}
+
+
+def _verify_action_file(path: str, key: Optional[str] = None,
+                        raise_on_fail: bool = False) -> Dict[str, Any]:
+    """Executor adapter: verify an action file against its signature sidecar."""
+    from je_auto_control.utils.action_signing import verify_action_file
+    return verify_action_file(
+        path, key, raise_on_fail=bool(raise_on_fail),
+    ).to_dict()
+
+
+def _encrypt_action_file(path: str, key: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: Fernet-encrypt an action file to <path>.enc."""
+    from je_auto_control.utils.action_signing import encrypt_action_file
+    return {"encrypted_path": encrypt_action_file(path, key)}
+
+
+def _decrypt_action_file(enc_path: str, key: Optional[str] = None,
+                         output_path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: decrypt a Fernet-encrypted action file."""
+    from je_auto_control.utils.action_signing import decrypt_action_file
+    return {"output_path": decrypt_action_file(enc_path, key, output_path)}
+
+
+def _annotate_screenshot(source: str,
+                         annotations: Union[List[Dict[str, Any]], str],
+                         output_path: str) -> Dict[str, Any]:
+    """Executor adapter: draw annotations onto a screenshot and save it.
+
+    ``annotations`` may be a list of annotation dicts, or a JSON string of
+    the same (so the visual builder can pass it through a text field).
+    """
+    import json
+    from je_auto_control.utils.annotate import annotate_screenshot
+    if isinstance(annotations, str):
+        annotations = json.loads(annotations) if annotations.strip() else []
+    return {"output_path": annotate_screenshot(
+        source, annotations, output_path)}
+
+
+def _notify(title: str, message: str = "") -> Dict[str, Any]:
+    """Executor adapter: show a cross-platform desktop notification."""
+    from je_auto_control.utils.notify import notify
+    return notify(str(title), str(message)).to_dict()
+
+
+def _move_to_trash(path: str) -> Dict[str, Any]:
+    """Executor adapter: move a file to the OS recycle bin (recoverable)."""
+    from je_auto_control.utils.trash import move_to_trash
+    return {"trashed": move_to_trash(path)}
+
+
+def _read_qr(region: Optional[Union[List[int], str]] = None) -> Dict[str, Any]:
+    """Executor adapter: decode QR codes in a screen region.
+
+    ``region`` is ``[x1, y1, x2, y2]`` (or a JSON string for the builder);
+    omit it to scan the whole screen.
+    """
+    import json
+    import os
+    import tempfile
+    from je_auto_control.utils.qr import read_qr_codes
+    from je_auto_control.wrapper.auto_control_screen import screenshot
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    handle, tmp = tempfile.mkstemp(prefix="qr_", suffix=".png")
+    os.close(handle)
+    try:
+        screenshot(tmp, screen_region=region)
+        return {"codes": read_qr_codes(tmp)}
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
+def _scroll_to_find(target: str, kind: str = "image", direction: str = "down",
+                    max_scrolls: int = 10,
+                    scroll_amount: int = 3) -> Dict[str, Any]:
+    """Executor adapter: scroll until a target image / text is visible."""
+    from je_auto_control.utils.scroll_find import scroll_until_visible
+    return scroll_until_visible(
+        target, kind=kind, direction=direction,
+        max_scrolls=int(max_scrolls), scroll_amount=int(scroll_amount),
+    )
+
+
+def _capture_window(title: str, output_path: str) -> Dict[str, Any]:
+    """Executor adapter: screenshot the window matching ``title``."""
+    from je_auto_control.utils.window_capture import capture_window
+    return {"output_path": capture_window(title, output_path)}
+
+
+def _snap_window(title: str, position: str = "left") -> Dict[str, Any]:
+    """Executor adapter: snap a window to a screen region."""
+    from je_auto_control.utils.window_capture import snap_window
+    return {"moved": snap_window(title, position)}
+
+
+def _save_window_layout(path: Optional[str] = None) -> Dict[str, Any]:
+    """Executor adapter: snapshot every window's geometry (optionally to file)."""
+    from je_auto_control.utils.window_capture import save_window_layout
+    layout = save_window_layout(path)
+    return {"count": len(layout), "path": path, "layout": layout}
+
+
+def _restore_window_layout(layout: Union[List[Dict[str, Any]], str]
+                           ) -> Dict[str, Any]:
+    """Executor adapter: move windows back to a saved layout (list or path)."""
+    from je_auto_control.utils.window_capture import restore_window_layout
+    return {"restored": restore_window_layout(layout)}
+
+
+def _region_color_stats(region: Optional[Union[List[int], str]] = None,
+                        buckets: int = 8) -> Dict[str, Any]:
+    """Executor adapter: average + dominant colour of a screen region.
+
+    ``region`` is ``[x1, y1, x2, y2]`` (or a JSON string of it for the
+    visual builder); omit it to analyse the whole screen.
+    """
+    import json
+    import os
+    import tempfile
+    from je_auto_control.utils.color_stats import region_color_stats
+    from je_auto_control.wrapper.auto_control_screen import screenshot
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    handle, tmp = tempfile.mkstemp(prefix="colorstats_", suffix=".png")
+    os.close(handle)
+    try:
+        screenshot(tmp, screen_region=region)
+        return region_color_stats(tmp, buckets=int(buckets)).to_dict()
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
+def _generate_code(source: Any, output: Optional[str] = None,
+                   target: str = "pytest", name: str = "recorded_flow",
+                   style: str = "calls") -> str:
+    """Render an action list/file as code, optionally writing a file."""
+    from je_auto_control.utils.codegen.codegen import (
+        generate_code, generate_code_file,
+    )
+    if output:
+        return generate_code_file(source, output, target=target,
+                                  name=name, style=style)
+    actions = source if isinstance(source, list) else read_action_json(source)
+    return generate_code(actions, target=target, name=name, style=style)
+
+
+def _send_email(message: Any, smtp: Any) -> Dict[str, Any]:
+    """Adapter: send an email via SMTP (message/smtp config dicts)."""
+    from je_auto_control.utils.email_send.email_sender import send_email
+    return send_email(message, smtp)
+
+
+def _assert_pdf_text(path: str, text: str, present: bool = True,
+                     page: Any = None, case_sensitive: bool = True,
+                     raise_on_fail: bool = True) -> Dict[str, Any]:
+    """Adapter: assert text is present/absent in a PDF document."""
+    from je_auto_control.utils.pdf.pdf_reader import assert_pdf_text
+    return assert_pdf_text(path, text, present=bool(present), page=page,
+                           case_sensitive=bool(case_sensitive),
+                           raise_on_fail=bool(raise_on_fail))
+
+
+def _take_golden(path: str, region: Optional[List[int]] = None) -> str:
+    """Adapter: capture and save a golden/baseline image."""
+    from je_auto_control.utils.visual_regression import take_golden
+    return str(take_golden(path, region=region))
+
+
+def _assert_visual(golden_path: str, region: Optional[List[int]] = None,
+                   tolerance: float = 0.0, per_pixel_threshold: int = 16,
+                   diff_path: Optional[str] = None,
+                   create_if_missing: bool = True,
+                   raise_on_fail: bool = True) -> Dict[str, Any]:
+    """Adapter: compare the screen to a golden image (first run creates it)."""
+    import os
+    from je_auto_control.utils.exception.exceptions import (
+        AutoControlAssertionException,
+    )
+    from je_auto_control.utils.visual_regression import (
+        compare_to_golden, take_golden,
+    )
+    if create_if_missing and not os.path.exists(
+            os.path.expanduser(str(golden_path))):
+        take_golden(golden_path, region=region)
+        return {"created": True, "matched": True, "golden": str(golden_path)}
+    result = compare_to_golden(
+        golden_path, region=region, tolerance=float(tolerance),
+        per_pixel_threshold=int(per_pixel_threshold))
+    if diff_path and result.diff_image is not None:
+        result.write_diff(diff_path)
+    data = {"matched": result.matched, "diff_pct": result.diff_pct,
+            "differing_pixels": result.differing_pixels,
+            "total_pixels": result.total_pixels,
+            "tolerance_pct": result.tolerance_pct}
+    if not result.matched and raise_on_fail:
+        raise AutoControlAssertionException(result.summary)
+    return data
+
+
+def _run_state_machine(spec: Any) -> Dict[str, Any]:
+    """Adapter: run a finite-state-machine spec through the executor."""
+    from je_auto_control.utils.state_machine import run_state_machine
+    return run_state_machine(spec)
+
+
+def _control_get_value(name: Optional[str] = None, role: Optional[str] = None,
+                       app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None) -> Optional[str]:
+    """Adapter: read a native control's value via the accessibility backend."""
+    from je_auto_control.utils.accessibility import control_get_value
+    return control_get_value(name=name, role=role, app_name=app_name,
+                             automation_id=automation_id)
+
+
+def _control_set_value(value: str, name: Optional[str] = None,
+                       role: Optional[str] = None, app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None) -> bool:
+    """Adapter: set a native control's value via the accessibility backend."""
+    from je_auto_control.utils.accessibility import control_set_value
+    return control_set_value(value, name=name, role=role, app_name=app_name,
+                             automation_id=automation_id)
+
+
+def _control_invoke(name: Optional[str] = None, role: Optional[str] = None,
+                    app_name: Optional[str] = None,
+                    automation_id: Optional[str] = None) -> bool:
+    """Adapter: invoke a native control (e.g. press a button)."""
+    from je_auto_control.utils.accessibility import control_invoke
+    return control_invoke(name=name, role=role, app_name=app_name,
+                          automation_id=automation_id)
+
+
+def _control_toggle(name: Optional[str] = None, role: Optional[str] = None,
+                    app_name: Optional[str] = None,
+                    automation_id: Optional[str] = None) -> bool:
+    """Adapter: toggle a native control (e.g. a checkbox)."""
+    from je_auto_control.utils.accessibility import control_toggle
+    return control_toggle(name=name, role=role, app_name=app_name,
+                          automation_id=automation_id)
+
+
+def _read_table(name: Optional[str] = None, role: Optional[str] = None,
+                app_name: Optional[str] = None,
+                automation_id: Optional[str] = None) -> List[List[str]]:
+    """Adapter: read a grid/table/list control as rows of cell strings."""
+    from je_auto_control.utils.accessibility import read_control_table
+    return read_control_table(name=name, role=role, app_name=app_name,
+                              automation_id=automation_id)
+
+
+def _watchdog_add(title: str, action: str = "close",
+                  case_sensitive: bool = False,
+                  name: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: register a popup-dismissal rule on the default watchdog."""
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    default_popup_watchdog.add_window_rule(
+        title, action=str(action), case_sensitive=bool(case_sensitive),
+        name=name)
+    return {"rules": default_popup_watchdog.rule_names()}
+
+
+def _watchdog_start() -> Dict[str, Any]:
+    """Adapter: start the background popup watchdog."""
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    default_popup_watchdog.start()
+    return {"running": True}
+
+
+def _watchdog_stop() -> Dict[str, Any]:
+    """Adapter: stop the background popup watchdog."""
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    default_popup_watchdog.stop()
+    return {"running": False}
+
+
+def _watchdog_list() -> Dict[str, Any]:
+    """Adapter: report the watchdog's rules, run state and dismissals."""
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    w = default_popup_watchdog
+    return {"running": w.running, "rules": w.rule_names(), "hits": w.hits}
+
+
+def _handle_file_dialog(path: str, action: str = "open",
+                        window_title: Optional[str] = None,
+                        timeout_s: float = 10.0,
+                        confirm_key: str = "enter") -> Dict[str, Any]:
+    """Adapter: wait for a native file dialog, type the path, confirm."""
+    from je_auto_control.utils.file_dialog import handle_file_dialog
+    return handle_file_dialog(path, action=action, window_title=window_title,
+                              timeout_s=float(timeout_s),
+                              confirm_key=confirm_key)
+
+
+def _assert_session_active() -> Dict[str, Any]:
+    """Adapter: raise unless the session is interactive (not locked)."""
+    from je_auto_control.utils.session_guard import ensure_interactive_session
+    return {"interactive": ensure_interactive_session()}
+
+
+def _queue(db: str, name: str):
+    from je_auto_control.utils.work_queue import WorkQueue
+    return WorkQueue(db, name)
+
+
+def _queue_add(db: str, data: Any, reference: Optional[str] = None,
+               name: str = "default") -> Dict[str, Any]:
+    """Adapter: enqueue a work item (skips live duplicate references)."""
+    return {"id": _queue(db, name).add(data, reference=reference)}
+
+
+def _queue_next(db: str, name: str = "default") -> Optional[Dict[str, Any]]:
+    """Adapter: atomically claim the next work item (or None)."""
+    item = _queue(db, name).get_next()
+    return None if item is None else {
+        "id": item.id, "reference": item.reference, "data": item.data,
+        "status": item.status, "retries": item.retries}
+
+
+def _queue_complete(db: str, item_id: int, output: Any = None,
+                    name: str = "default") -> Dict[str, Any]:
+    """Adapter: mark a work item successful."""
+    _queue(db, name).complete(int(item_id), output=output)
+    return {"id": int(item_id), "status": "success"}
+
+
+def _queue_fail(db: str, item_id: int, error: str,
+                kind: str = "application", max_retries: int = 3,
+                name: str = "default") -> Dict[str, Any]:
+    """Adapter: fail a work item (application errors retry, business don't)."""
+    status = _queue(db, name).fail(int(item_id), str(error), kind=str(kind),
+                                   max_retries=int(max_retries))
+    return {"id": int(item_id), "status": status}
+
+
+def _queue_stats(db: str, name: str = "default") -> Dict[str, int]:
+    """Adapter: return per-status counts for a work queue."""
+    return _queue(db, name).stats()
+
+
+def _generate_data(schema: Dict[str, Any], count: int = 10,
+                   path: Optional[str] = None, fmt: Optional[str] = None,
+                   seed: Optional[int] = None) -> Dict[str, Any]:
+    """Adapter: generate synthetic rows; write to ``path`` when given."""
+    from je_auto_control.utils.test_data import generate_rows, write_dataset
+    rows = generate_rows(schema, int(count), seed=seed)
+    if path:
+        return {"path": write_dataset(rows, path, fmt), "count": len(rows)}
+    return {"rows": rows, "count": len(rows)}
+
+
+def _mcp_manifest(path: Optional[str] = None,
+                  include_tools: bool = False) -> Dict[str, Any]:
+    """Adapter: build (or write) the MCP registry server.json manifest."""
+    from je_auto_control.utils.mcp_registry import (
+        build_server_manifest, write_server_manifest)
+    if path:
+        return {"path": write_server_manifest(
+            path, include_tools=bool(include_tools))}
+    return {"manifest": build_server_manifest(
+        include_tools=bool(include_tools))}
+
+
+def _rank_tests(flows: List[str], history_path: Optional[str] = None,
+                window: int = 10) -> Dict[str, Any]:
+    """Adapter: score flows by risk (riskiest first)."""
+    from je_auto_control.utils.test_select import rank_flows
+    return {"ranked": rank_flows(flows, history_path=history_path,
+                                 window=int(window))}
+
+
+def _select_tests(flows: List[str], k: Optional[int] = None,
+                  threshold: Optional[float] = None,
+                  history_path: Optional[str] = None,
+                  window: int = 10) -> Dict[str, Any]:
+    """Adapter: pick the riskiest flows to run (top-k / threshold)."""
+    from je_auto_control.utils.test_select import select_flows
+    return {"selected": select_flows(
+        flows, k=k, threshold=threshold, history_path=history_path,
+        window=int(window))}
+
+
+def _element_repo(path: str):
+    from je_auto_control.utils.element_repository import ElementRepository
+    return ElementRepository(path)
+
+
+def _element_save(path: str, key: str, name: Optional[str] = None,
+                  role: Optional[str] = None,
+                  app_name: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: save a named native-UI locator (object repository)."""
+    return {"locator": _element_repo(path).save(
+        key, name=name, role=role, app_name=app_name)}
+
+
+def _element_find(path: str, key: str) -> Dict[str, Any]:
+    """Adapter: resolve a saved locator to a live element summary."""
+    return _element_repo(path).find_info(key)
+
+
+def _element_click(path: str, key: str) -> Dict[str, Any]:
+    """Adapter: click the element behind a saved locator."""
+    return {"clicked": _element_repo(path).click(key)}
+
+
+def _element_remove(path: str, key: str) -> Dict[str, Any]:
+    """Adapter: delete a saved locator."""
+    return {"removed": _element_repo(path).remove(key)}
+
+
+def _element_list(path: str) -> Dict[str, Any]:
+    """Adapter: list saved locator names."""
+    return {"keys": _element_repo(path).keys()}
+
+
+def _debug_trace(actions: List[Any], dry_run: bool = False) -> Dict[str, Any]:
+    """Adapter: run an action list and return a per-step trace."""
+    from je_auto_control.utils.flow_debugger import trace_actions
+    return {"trace": trace_actions(actions, dry_run=bool(dry_run))}
+
+
+def _skill_lib(path: str):
+    from je_auto_control.utils.skill_library import SkillLibrary
+    return SkillLibrary(path)
+
+
+def _skill_save(path: str, name: str, actions: List[Any],
+                description: str = "",
+                tags: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Adapter: save a reusable action sequence (skill)."""
+    skill = _skill_lib(path).save(name, actions, description=description,
+                                  tags=tags)
+    return {"name": skill.name, "tags": skill.tags}
+
+
+def _skill_run(path: str, name: str) -> Dict[str, Any]:
+    """Adapter: execute a stored skill's actions."""
+    return {"record": _skill_lib(path).run(name)}
+
+
+def _skill_list(path: str) -> Dict[str, Any]:
+    """Adapter: list saved skill names."""
+    return {"names": _skill_lib(path).names()}
+
+
+def _skill_remove(path: str, name: str) -> Dict[str, Any]:
+    """Adapter: delete a saved skill."""
+    return {"removed": _skill_lib(path).remove(name)}
+
+
+def _skill_search(path: str, query: str) -> Dict[str, Any]:
+    """Adapter: search skills by name/description/tags."""
+    return {"names": [s.name for s in _skill_lib(path).search(query)]}
+
+
+def _guard_text(text: str, threshold: int = 2) -> Dict[str, Any]:
+    """Adapter: assess text for prompt-injection patterns."""
+    from je_auto_control.utils.guardrail import assess_text
+    return assess_text(text, threshold=int(threshold))
+
+
+def _agent_card(path: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: build (or write) the A2A agent card."""
+    from je_auto_control.utils.a2a import build_agent_card, write_agent_card
+    if path:
+        return {"path": write_agent_card(path)}
+    return {"card": build_agent_card()}
+
+
+def _read_workbook(path: str, sheet: str = "") -> Dict[str, Any]:
+    """Adapter: read an .xlsx worksheet into rows."""
+    from je_auto_control.utils.office import read_workbook
+    return {"rows": read_workbook(path, sheet=sheet)}
+
+
+def _write_workbook(path: str, rows: List[Dict[str, Any]],
+                    sheet: str = "Sheet1") -> Dict[str, Any]:
+    """Adapter: write rows to an .xlsx file."""
+    from je_auto_control.utils.office import write_workbook
+    return {"path": write_workbook(path, rows, sheet=sheet)}
+
+
+def _read_document(path: str) -> Dict[str, Any]:
+    """Adapter: read a .docx file's paragraphs."""
+    from je_auto_control.utils.office import read_document
+    return read_document(path)
+
+
+def _write_document(path: str, paragraphs: List[str]) -> Dict[str, Any]:
+    """Adapter: write paragraphs to a .docx file."""
+    from je_auto_control.utils.office import write_document
+    return {"path": write_document(path, paragraphs)}
+
+
+def _read_presentation(path: str) -> Dict[str, Any]:
+    """Adapter: read a .pptx file's per-slide text."""
+    from je_auto_control.utils.office import read_presentation
+    return read_presentation(path)
+
+
+def _write_presentation(path: str, slides: List[Any]) -> Dict[str, Any]:
+    """Adapter: write slides to a .pptx file."""
+    from je_auto_control.utils.office import write_presentation
+    return {"path": write_presentation(path, slides)}
+
+
+def _memory(db: str):
+    from je_auto_control.utils.agent_memory import AgentMemory
+    return AgentMemory(db)
+
+
+def _memory_remember(db: str, goal: str, steps: Optional[List[Any]] = None,
+                     outcome: str = "",
+                     tags: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Adapter: store an agent episode (goal/trajectory/outcome)."""
+    return {"id": _memory(db).remember(goal, steps=steps, outcome=outcome,
+                                       tags=tags)}
+
+
+def _memory_recall(db: str, query: str, limit: int = 5) -> Dict[str, Any]:
+    """Adapter: recall episodes most relevant to a query."""
+    episodes = _memory(db).recall(query, limit=int(limit))
+    return {"episodes": [_episode_to_dict(ep) for ep in episodes]}
+
+
+def _memory_recent(db: str, limit: int = 10) -> Dict[str, Any]:
+    """Adapter: list the most recent episodes."""
+    episodes = _memory(db).recent(limit=int(limit))
+    return {"episodes": [_episode_to_dict(ep) for ep in episodes]}
+
+
+def _memory_forget(db: str, episode_id: int) -> Dict[str, Any]:
+    """Adapter: delete an episode."""
+    return {"removed": _memory(db).forget(int(episode_id))}
+
+
+def _memory_stats(db: str) -> Dict[str, int]:
+    """Adapter: episode count for a memory store."""
+    return _memory(db).stats()
+
+
+def _episode_to_dict(episode: Any) -> Dict[str, Any]:
+    return {"id": episode.id, "goal": episode.goal, "steps": episode.steps,
+            "outcome": episode.outcome, "tags": episode.tags,
+            "score": episode.score}
+
+
+def _seed_everything(seed: int = 0) -> Dict[str, Any]:
+    """Adapter: seed all RNG run-wide for reproducible runs."""
+    from je_auto_control.utils.deterministic import seed_everything
+    return {"seed": seed_everything(int(seed))}
+
+
+def _observe_handler(actions: List[Any]) -> Callable[[str, Any], None]:
+    """Build an observer callback that runs an action list on each event."""
+    def handler(_event: str, _value: Any) -> None:
+        if actions:
+            executor.execute_action(list(actions))
+    return handler
+
+
+def _observe_predicate(kind: str, params: Dict[str, Any]):
+    from je_auto_control.utils.observer import (
+        image_predicate, pixel_predicate, text_predicate)
+    builders = {
+        "image": lambda: image_predicate(params.get("image", ""),
+                                         params.get("threshold", 0.8)),
+        "text": lambda: text_predicate(params.get("text", "")),
+        "pixel": lambda: pixel_predicate(int(params.get("x", 0)),
+                                         int(params.get("y", 0))),
+    }
+    if kind not in builders:
+        raise AutoControlActionException(f"unknown observe kind: {kind!r}")
+    return builders[kind]()
+
+
+def _observe_add(name: str, kind: str = "image", event: str = "appear",
+                 actions: Optional[List[Any]] = None,
+                 **params: Any) -> Dict[str, Any]:
+    """Adapter: watch image/text/pixel; run ``actions`` on the event."""
+    from je_auto_control.utils.observer import default_observer
+    default_observer.add(name, _observe_predicate(kind, params),
+                         _observe_handler(actions or []), events=(event,))
+    return {"name": name, "kind": kind, "event": event}
+
+
+def _observe_remove(name: str) -> Dict[str, Any]:
+    """Adapter: remove a registered watch."""
+    from je_auto_control.utils.observer import default_observer
+    return {"removed": default_observer.remove(name)}
+
+
+def _observe_list() -> Dict[str, Any]:
+    """Adapter: list registered watch names."""
+    from je_auto_control.utils.observer import default_observer
+    return {"names": default_observer.names()}
+
+
+def _observe_poll() -> Dict[str, Any]:
+    """Adapter: evaluate all watches once; return fired events."""
+    from je_auto_control.utils.observer import default_observer
+    return {"fired": default_observer.poll_once()}
+
+
+def _observe_start() -> Dict[str, Any]:
+    """Adapter: start the background observer thread."""
+    from je_auto_control.utils.observer import default_observer
+    default_observer.start()
+    return {"running": default_observer.running}
+
+
+def _observe_stop() -> Dict[str, Any]:
+    """Adapter: stop the background observer thread."""
+    from je_auto_control.utils.observer import default_observer
+    default_observer.stop()
+    return {"running": default_observer.running}
+
+
+def _generate_sbom(path: Optional[str] = None,
+                   root: str = "je_auto_control") -> Dict[str, Any]:
+    """Adapter: build (or write) a CycloneDX SBOM for the project."""
+    from je_auto_control.utils.sbom import build_sbom, write_sbom
+    root_arg = root or None
+    if path:
+        return {"path": write_sbom(path, root_arg)}
+    return {"sbom": build_sbom(root_arg)}
+
+
+def _shard_suite(flows: List[str], shards: int = 2,
+                 history_path: Optional[str] = None,
+                 window: int = 20) -> Dict[str, Any]:
+    """Adapter: balance flows into duration-aware shards."""
+    from je_auto_control.utils.test_shard import shard_flows
+    return {"shards": shard_flows(flows, int(shards),
+                                  history_path=history_path,
+                                  window=int(window))}
+
+
+def _merge_results(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Adapter: merge per-shard report dicts into one report."""
+    from je_auto_control.utils.test_shard import merge_results
+    return merge_results(reports)
+
+
+def _validate_rows(rows: List[Dict[str, Any]],
+                   schema: Dict[str, Any]) -> Dict[str, Any]:
+    """Adapter: validate rows against a declarative schema."""
+    from je_auto_control.utils.data_quality import validate_rows
+    return validate_rows(rows, schema)
+
+
+def _extract_fields(text: str, fields: Optional[List[str]] = None,
+                    patterns: Optional[Dict[str, str]] = None
+                    ) -> Dict[str, Any]:
+    """Adapter: extract structured fields from free text."""
+    from je_auto_control.utils.data_quality import extract_fields
+    return {"fields": extract_fields(text, fields=fields, patterns=patterns)}
+
+
+def _mask_rows(rows: List[Dict[str, Any]],
+               rules: Dict[str, str]) -> Dict[str, Any]:
+    """Adapter: mask sensitive columns in rows."""
+    from je_auto_control.utils.data_quality import mask_rows
+    return {"rows": mask_rows(rows, rules)}
+
+
+def _pseudo_localize(text: Optional[str] = None,
+                     mapping: Optional[Dict[str, Any]] = None,
+                     expansion: float = 0.4) -> Dict[str, Any]:
+    """Adapter: pseudo-localize a string or a whole catalog mapping."""
+    from je_auto_control.utils.i18n_test import (
+        pseudo_localize, pseudo_localize_catalog)
+    if mapping is not None:
+        return {"catalog": pseudo_localize_catalog(
+            mapping, expansion=float(expansion))}
+    return {"text": pseudo_localize(text or "", expansion=float(expansion))}
+
+
+def _check_overflow(elements: Optional[List[Any]] = None,
+                    avg_char_px: float = 7.0,
+                    app_name: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: flag text wider than its widget (live a11y unless given)."""
+    from je_auto_control.utils.i18n_test import check_overflow
+    items = elements
+    if items is None:
+        from je_auto_control.utils.accessibility.accessibility_api import (
+            list_accessibility_elements)
+        items = list_accessibility_elements(app_name=app_name)
+    return {"issues": check_overflow(items, avg_char_px=float(avg_char_px))}
+
+
+def _check_catalog(base: Dict[str, Any],
+                   target: Dict[str, Any]) -> Dict[str, Any]:
+    """Adapter: diff a translation catalog against the base locale."""
+    from je_auto_control.utils.i18n_test import check_catalog
+    return check_catalog(base, target)
+
+
+def _run_resumable(actions: List[Any], run_id: str, db: str,
+                   variables: Optional[Dict[str, Any]] = None
+                   ) -> Dict[str, Any]:
+    """Adapter: run actions with checkpoint/resume keyed by run_id."""
+    from je_auto_control.utils.checkpoint import CheckpointStore, run_resumable
+    return run_resumable(actions, run_id=run_id,
+                         store=CheckpointStore(db), variables=variables)
+
+
+def _checkpoint_status(run_id: str, db: str) -> Dict[str, Any]:
+    """Adapter: return the saved checkpoint for a run (or null)."""
+    from je_auto_control.utils.checkpoint import CheckpointStore
+    checkpoint = CheckpointStore(db).load(run_id)
+    if checkpoint is None:
+        return {"checkpoint": None}
+    return {"checkpoint": {"run_id": checkpoint.run_id,
+                           "step_index": checkpoint.step_index,
+                           "variables": checkpoint.variables}}
+
+
+def _checkpoint_clear(run_id: str, db: str) -> Dict[str, Any]:
+    """Adapter: delete a run's checkpoint."""
+    from je_auto_control.utils.checkpoint import CheckpointStore
+    return {"cleared": CheckpointStore(db).clear(run_id)}
+
+
+def _mark_screen(app_name: Optional[str] = None,
+                 render_path: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: number live UI elements (Set-of-Marks) for VLM grounding."""
+    from je_auto_control.utils.set_of_marks import mark_screen
+    return mark_screen(app_name=app_name, render_path=render_path)
+
+
+def _mark_click(mark_id: int) -> Dict[str, Any]:
+    """Adapter: click the element behind a numbered mark."""
+    from je_auto_control.utils.set_of_marks import mark_click
+    return {"clicked": mark_click(int(mark_id))}
+
+
+def _screen_snapshot(app_name: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: snapshot the live a11y tree as a diff baseline."""
+    from je_auto_control.utils.screen_state import snapshot_screen
+    return {"snapshot": snapshot_screen(app_name=app_name)}
+
+
+def _screen_diff(before: List[Dict[str, Any]],
+                 after: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Adapter: semantic diff between two snapshots."""
+    from je_auto_control.utils.screen_state import diff_snapshots
+    return diff_snapshots(before, after)
+
+
+def _screen_changed(app_name: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: diff the live screen against the last snapshot baseline."""
+    from je_auto_control.utils.screen_state import screen_changed
+    return screen_changed(app_name=app_name)
+
+
+def _describe_screen(app_name: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: structured 'where am I' description of the live screen."""
+    from je_auto_control.utils.screen_state import describe_screen
+    return describe_screen(app_name=app_name)
+
+
+def _replay_timeline(events: List[Dict[str, Any]],
+                     speed: float = 1.0) -> Dict[str, Any]:
+    """Adapter: replay timed input events at a speed multiplier."""
+    from je_auto_control.utils.input_macro import replay_timeline
+    return {"played": replay_timeline(events, speed=float(speed))}
+
+
+def _input_sequence(steps: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Adapter: run a declarative input sequence (press/hold/repeat/...)."""
+    from je_auto_control.utils.input_macro import run_sequence
+    return {"log": run_sequence(steps)}
+
+
+_CIRCUIT_BREAKERS: Dict[str, Any] = {}
+
+
+def _circuit_call(name: str, actions: List[Any], threshold: int = 5,
+                  reset_s: float = 30.0) -> Dict[str, Any]:
+    """Adapter: run an action list through a named circuit breaker."""
+    from je_auto_control.utils.resilience import CircuitBreaker
+    breaker = _CIRCUIT_BREAKERS.setdefault(
+        name, CircuitBreaker(int(threshold), float(reset_s)))
+    record = breaker.call(
+        lambda: executor.execute_action(list(actions), raise_on_error=True))
+    return {"state": breaker.state, "record": record}
+
+
+def _ci_annotations(annotations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Adapter: emit GitHub Actions annotations from result dicts."""
+    from je_auto_control.utils.ci_annotations import emit_annotations
+    return {"lines": emit_annotations(annotations)}
+
+
+def _clip_history_capture() -> Dict[str, Any]:
+    """Adapter: capture the live clipboard into history."""
+    from je_auto_control.utils.clipboard_history import (
+        default_clipboard_history)
+    return {"added": default_clipboard_history.capture_once()}
+
+
+def _clip_history_list() -> Dict[str, Any]:
+    """Adapter: list clipboard history (newest first)."""
+    from je_auto_control.utils.clipboard_history import (
+        default_clipboard_history)
+    return {"history": default_clipboard_history.snapshot()}
+
+
+def _clip_history_search(query: str) -> Dict[str, Any]:
+    """Adapter: search clipboard history."""
+    from je_auto_control.utils.clipboard_history import (
+        default_clipboard_history)
+    return {"matches": default_clipboard_history.search(query)}
+
+
+def _clip_history_start() -> Dict[str, Any]:
+    """Adapter: start the background clipboard-history poller."""
+    from je_auto_control.utils.clipboard_history import (
+        default_clipboard_history)
+    default_clipboard_history.start()
+    return {"running": default_clipboard_history.running}
+
+
+def _clip_history_stop() -> Dict[str, Any]:
+    """Adapter: stop the background clipboard-history poller."""
+    from je_auto_control.utils.clipboard_history import (
+        default_clipboard_history)
+    default_clipboard_history.stop()
+    return {"running": default_clipboard_history.running}
+
+
+def _heal_stats(limit: int = 200) -> Dict[str, Any]:
+    """Adapter: aggregate the self-heal log into metrics."""
+    from je_auto_control.utils.heal_analytics import analyze_heal_log
+    return analyze_heal_log(limit=int(limit))
+
+
+def _scan_secrets(data: Any) -> Dict[str, Any]:
+    """Adapter: scan JSON/data for hardcoded secrets."""
+    from je_auto_control.utils.secrets_scan import scan_secrets
+    return {"findings": scan_secrets(data)}
+
+
+def _scan_vulns(components: Any, advisories: Any = None,
+                sarif_path: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: match SBOM components against an OSV advisory database."""
+    import json
+    from je_auto_control.utils.vuln_scan import (
+        findings_to_sarif, scan_components)
+    if isinstance(components, str):
+        components = json.loads(components)
+    if isinstance(components, dict):
+        components = components.get("components", [])
+    if isinstance(advisories, str):
+        advisories = json.loads(advisories)
+    findings = scan_components(components, advisories or [])
+    result: Dict[str, Any] = {"findings": findings, "count": len(findings)}
+    if sarif_path:
+        from je_auto_control.utils.sarif import write_sarif
+        result["sarif_path"] = write_sarif(
+            findings_to_sarif(findings), sarif_path,
+            tool_name="AutoControl-VulnScan")
+    return result
+
+
+def _apply_vex(findings: Any, vex: Any) -> Dict[str, Any]:
+    """Adapter: suppress VEX'd vulnerability findings (each JSON string/obj)."""
+    import json
+    from je_auto_control.utils.vex import apply_vex
+    if isinstance(findings, str):
+        findings = json.loads(findings)
+    if isinstance(vex, str):
+        vex = json.loads(vex)
+    kept = apply_vex(findings, vex)
+    return {"findings": kept, "count": len(kept)}
+
+
+def _check_licenses(components: Any, allow: Any = None,
+                    deny: Any = None) -> Dict[str, Any]:
+    """Adapter: evaluate SBOM component licenses against allow/deny lists."""
+    import json
+    from je_auto_control.utils.license_policy import evaluate_sbom
+    if isinstance(components, str):
+        components = json.loads(components)
+    if isinstance(components, dict):
+        components = components.get("components", [])
+    if isinstance(allow, str):
+        allow = json.loads(allow)
+    if isinstance(deny, str):
+        deny = json.loads(deny)
+    violations = evaluate_sbom(components, allow=allow, deny=deny)
+    return {"violations": violations, "count": len(violations)}
+
+
+_RATE_LIMITERS: Dict[str, Any] = {}
+
+
+def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
+                n: float = 1.0) -> Dict[str, Any]:
+    """Adapter: try to take ``n`` tokens from a named token-bucket limiter."""
+    from je_auto_control.utils.rate_limit import TokenBucket
+    bucket = _RATE_LIMITERS.setdefault(
+        name, TokenBucket(float(rate), float(capacity)))
+    acquired = bucket.try_acquire(float(n))
+    return {"acquired": acquired, "tokens": round(bucket.tokens, 4),
+            "wait": round(bucket.time_until_available(float(n)), 4)}
+
+
+_BULKHEADS: Dict[str, Any] = {}
+_IDEMPOTENCY_STORES: Dict[str, Any] = {}
+_DEDUP_WINDOWS: Dict[str, Any] = {}
+_SEQUENCE_TRACKERS: Dict[str, Any] = {}
+_VERSIONED_STORES: Dict[str, Any] = {}
+_OUTBOXES: Dict[str, Any] = {}
+
+
+def _outbox_enqueue(name: str, event: Any) -> Dict[str, Any]:
+    """Adapter: enqueue an event into a named outbox."""
+    import json
+    from je_auto_control.utils.outbox import Outbox
+    if isinstance(event, str):
+        try:
+            event = json.loads(event)
+        except ValueError:
+            pass
+    outbox = _OUTBOXES.setdefault(name, Outbox())
+    return {"id": outbox.enqueue(event), "pending": len(outbox.pending())}
+
+
+def _outbox_pending(name: str) -> Dict[str, Any]:
+    """Adapter: list pending entries of a named outbox."""
+    from je_auto_control.utils.outbox import Outbox
+    outbox = _OUTBOXES.setdefault(name, Outbox())
+    return {"pending": outbox.pending()}
+
+
+def _collation_sort(items: Any, strength: str = "tertiary",
+                    tailoring: Any = None, reverse: Any = False) -> Dict[str, Any]:
+    """Adapter: locale-aware sort of a list of strings."""
+    import json
+    from je_auto_control.utils.locale_collation import sort_strings
+    if isinstance(items, str):
+        items = json.loads(items)
+    ordered = sort_strings(list(items), strength=strength,
+                           tailoring=tailoring or None, reverse=bool(reverse))
+    return {"sorted": ordered}
+
+
+def _collation_compare(first: str, second: str, strength: str = "tertiary",
+                       tailoring: Any = None) -> Dict[str, Any]:
+    """Adapter: locale-aware comparison of two strings."""
+    from je_auto_control.utils.locale_collation import compare
+    return {"order": compare(first, second, strength=strength,
+                             tailoring=tailoring or None)}
+
+
+def _confusable_scan(text: str) -> Dict[str, Any]:
+    """Adapter: homoglyph / mixed-script spoofing report for a string."""
+    from je_auto_control.utils.confusables import (
+        detect_homoglyphs, is_mixed_script, scripts_of, skeleton,
+    )
+    return {"skeleton": skeleton(text),
+            "homoglyphs": detect_homoglyphs(text),
+            "mixed_script": is_mixed_script(text),
+            "scripts": sorted(scripts_of(text))}
+
+
+def _confusable_compare(first: str, second: str) -> Dict[str, Any]:
+    """Adapter: whether two strings render to the same skeleton."""
+    from je_auto_control.utils.confusables import is_confusable
+    return {"confusable": is_confusable(first, second)}
+
+
+def _readability_report(text: str) -> Dict[str, Any]:
+    """Adapter: full readability report (all metrics + counts) for a string."""
+    from je_auto_control.utils.readability import readability_report
+    return readability_report(text)
+
+
+def _bidi_check(text: str) -> Dict[str, Any]:
+    """Adapter: bidirectional-text QA report (controls/balance/Trojan-source)."""
+    from je_auto_control.utils.bidi_check import detect_bidi_issues
+    return detect_bidi_issues(text)
+
+
+def _bidi_strip(text: str) -> Dict[str, Any]:
+    """Adapter: remove all bidi control characters from a string."""
+    from je_auto_control.utils.bidi_check import strip_bidi_controls
+    return {"text": strip_bidi_controls(text)}
+
+
+def _format_list(items: Any, style: str = "and",
+                 locale: str = "en") -> Dict[str, Any]:
+    """Adapter: join items into a localised list string."""
+    import json
+    from je_auto_control.utils.list_format import format_list
+    if isinstance(items, str):
+        items = json.loads(items)
+    return {"text": format_list(list(items), style=style, locale=locale)}
+
+
+def _format_message(pattern: str, args: Any = None,
+                    locale: str = "en") -> Dict[str, Any]:
+    """Adapter: render an ICU-lite MessageFormat pattern."""
+    import json
+    from je_auto_control.utils.message_format import format_message
+    if isinstance(args, str):
+        args = json.loads(args)
+    return {"text": format_message(pattern, args or {}, locale=locale)}
+
+
+def _gettext_translate(po: str, msgid: str,
+                       context: Any = None) -> Dict[str, Any]:
+    """Adapter: parse a .po string and look up a singular translation."""
+    from je_auto_control.utils.gettext_catalog import parse_po
+    catalog = parse_po(po)
+    return {"text": catalog.gettext(msgid, context=context or None)}
+
+
+def _gettext_ngettext(po: str, msgid: str, msgid_plural: str,
+                      n: Any) -> Dict[str, Any]:
+    """Adapter: parse a .po string and look up a plural translation."""
+    from je_auto_control.utils.gettext_catalog import parse_po
+    catalog = parse_po(po)
+    return {"text": catalog.ngettext(msgid, msgid_plural, int(n))}
+
+
+def _cas_put(name: str, key: str, value: Any,
+             expected_version: Any = None) -> Dict[str, Any]:
+    """Adapter: optimistic put into a named versioned store."""
+    import json
+    from je_auto_control.utils.optimistic import VersionConflict, VersionedStore
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            pass
+    store = _VERSIONED_STORES.setdefault(name, VersionedStore())
+    expected = int(expected_version) if expected_version is not None else None
+    try:
+        version = store.put(key, value, expected_version=expected)
+    except VersionConflict as error:
+        return {"ok": False, "error": str(error)}
+    return {"ok": True, "version": version}
+
+
+def _cas_get(name: str, key: str) -> Dict[str, Any]:
+    """Adapter: read a record from a named versioned store."""
+    from je_auto_control.utils.optimistic import VersionedStore
+    store = _VERSIONED_STORES.setdefault(name, VersionedStore())
+    return {"record": store.get(key)}
+
+
+def _sequence_observe(name: str, stream_id: str, seq: Any) -> Dict[str, Any]:
+    """Adapter: observe a sequence number in a named tracker."""
+    from je_auto_control.utils.sequence_gap import SequenceTracker
+    tracker = _SEQUENCE_TRACKERS.setdefault(name, SequenceTracker())
+    return tracker.observe(stream_id, int(seq))
+
+
+def _dedup_check(name: str, message_id: str,
+                 ttl_s: Any = 3600) -> Dict[str, Any]:
+    """Adapter: check-and-mark a message id in a named dedup window."""
+    from je_auto_control.utils.dedup_window import DedupWindow
+    window = _DEDUP_WINDOWS.setdefault(name, DedupWindow(float(ttl_s)))
+    return {"first_seen": window.check_and_mark(message_id),
+            "size": window.size()}
+
+
+def _idempotency_begin(name: str, key: str,
+                       request: Any = None) -> Dict[str, Any]:
+    """Adapter: register/look up an idempotency key in a named store."""
+    from je_auto_control.utils.idempotency import (
+        IdempotencyStore, request_fingerprint)
+    store = _IDEMPOTENCY_STORES.setdefault(name, IdempotencyStore())
+    fingerprint = request_fingerprint(request) if request is not None else None
+    return store.begin(key, fingerprint)
+
+
+def _idempotency_complete(name: str, key: str,
+                          response: Any) -> Dict[str, Any]:
+    """Adapter: store the completed response for an idempotency key."""
+    from je_auto_control.utils.idempotency import IdempotencyStore
+    store = _IDEMPOTENCY_STORES.setdefault(name, IdempotencyStore())
+    store.complete(key, response)
+    return {"status": "completed"}
+
+
+def _bulkhead_run(name: str, max_concurrent: int,
+                  actions: Any) -> Dict[str, Any]:
+    """Adapter: run an action list under a named bulkhead permit."""
+    import json
+    from je_auto_control.utils.bulkhead import Bulkhead, BulkheadFullError
+    if isinstance(actions, str):
+        actions = json.loads(actions)
+    bulkhead = _BULKHEADS.setdefault(
+        name, Bulkhead(int(max_concurrent), name=name))
+    try:
+        with bulkhead:
+            record = executor.execute_action(list(actions), raise_on_error=True)
+    except BulkheadFullError:
+        return {"entered": False, "in_flight": bulkhead.in_flight}
+    return {"entered": True, "in_flight": bulkhead.in_flight, "record": record}
+
+
+def _retry_after(response: Any) -> Dict[str, Any]:
+    """Adapter: server-advised wait from a response (dict or JSON string)."""
+    import json
+    from je_auto_control.utils.bulkhead import next_delay
+    if isinstance(response, str):
+        response = json.loads(response)
+    return {"delay": next_delay(response)}
+
+
+def _http_replay(cassette: Any, url: str,
+                 method: str = "GET") -> Dict[str, Any]:
+    """Adapter: replay a recorded HTTP response from a cassette (no network)."""
+    import json
+    from je_auto_control.utils.http_cassette import Cassette
+    if isinstance(cassette, str):
+        cassette = json.loads(cassette)
+    interactions = (cassette.get("interactions", [])
+                    if isinstance(cassette, dict) else cassette)
+    response = Cassette(interactions).replay(
+        {"method": str(method).upper(), "url": url})
+    return {"response": response}
+
+
+def _trace_inject(headers: Any = None,
+                  traceparent: Any = None) -> Dict[str, Any]:
+    """Adapter: propagate a trace context into outgoing headers.
+
+    With ``traceparent`` set, derive a child span of that parent; otherwise
+    start a fresh root. Returns the updated ``headers`` plus the new ids.
+    """
+    import json
+    from je_auto_control.utils.trace_context import (
+        child_context, inject_context, new_root_context, parse_traceparent)
+    if isinstance(headers, str):
+        headers = json.loads(headers)
+    ctx = (child_context(parse_traceparent(traceparent))
+           if traceparent else new_root_context())
+    return {"headers": inject_context(headers, ctx),
+            "traceparent": inject_context({}, ctx)["traceparent"],
+            "trace_id": ctx.trace_id, "span_id": ctx.span_id}
+
+
+def _trace_extract(headers: Any) -> Dict[str, Any]:
+    """Adapter: extract a trace context from request headers."""
+    import json
+    from je_auto_control.utils.trace_context import extract_context
+    if isinstance(headers, str):
+        headers = json.loads(headers)
+    ctx = extract_context(headers)
+    return {"context": ctx.to_dict() if ctx is not None else None}
+
+
+def _validate_config(schema: Any, config: Any) -> Dict[str, Any]:
+    """Adapter: validate a config mapping against a schema spec."""
+    import json
+    from je_auto_control.utils.config_schema import validate_config
+    if isinstance(schema, str):
+        schema = json.loads(schema)
+    if isinstance(config, str):
+        config = json.loads(config)
+    return validate_config(schema, config)
+
+
+def _resolve_ref(ref: str) -> Dict[str, Any]:
+    """Adapter: resolve an env:// / file:// / secret:// reference."""
+    from je_auto_control.utils.secret_ref import resolve_ref
+    return {"value": resolve_ref(ref)}
+
+
+def _resolve_refs(obj: Any) -> Dict[str, Any]:
+    """Adapter: recursively resolve references in a structure (or JSON str)."""
+    import json
+    from je_auto_control.utils.secret_ref import resolve_refs_in
+    if isinstance(obj, str):
+        obj = json.loads(obj)
+    return {"resolved": resolve_refs_in(obj)}
+
+
+def _redact_config(obj: Any, mask: str = "***") -> Dict[str, Any]:
+    """Adapter: redact secret-looking values from a config structure."""
+    import json
+    from je_auto_control.utils.config_redaction import redact_config
+    if isinstance(obj, str):
+        obj = json.loads(obj)
+    return {"redacted": redact_config(obj, mask=mask)}
+
+
+def _redact_secret_text(text: str, mask: str = "***") -> Dict[str, Any]:
+    """Adapter: mask secret-looking tokens within a free-text string."""
+    from je_auto_control.utils.config_redaction import redact_secret_text
+    return {"text": redact_secret_text(text, mask=mask)}
+
+
+def _parse_cache_control(headers: Any) -> Dict[str, Any]:
+    """Adapter: parse a Cache-Control header into {directives}."""
+    import json
+    from je_auto_control.utils.http_conditional import parse_cache_control
+    if isinstance(headers, str):
+        headers = json.loads(headers)
+    return {"directives": parse_cache_control(headers)}
+
+
+def _store_validators(response: Any) -> Dict[str, Any]:
+    """Adapter: extract cache validators from an HTTP response."""
+    import json
+    from je_auto_control.utils.http_conditional import store_validators
+    if isinstance(response, str):
+        response = json.loads(response)
+    return {"validators": store_validators(response)}
+
+
+def _cookie_header(set_cookies: Any) -> Dict[str, Any]:
+    """Adapter: build a Cookie header from one/many Set-Cookie strings."""
+    import json
+    from je_auto_control.utils.cookie_jar import CookieJar
+    if isinstance(set_cookies, str) and set_cookies.strip().startswith("["):
+        set_cookies = json.loads(set_cookies)
+    jar = CookieJar().update(set_cookies)
+    return {"cookie_header": jar.cookie_header(), "cookies": jar.to_dict()}
+
+
+def _parse_set_cookie(header: str) -> Dict[str, Any]:
+    """Adapter: parse one Set-Cookie header into its components."""
+    from je_auto_control.utils.cookie_jar import parse_set_cookie
+    return {"cookie": parse_set_cookie(header)}
+
+
+def _decode_body(headers: Any, body_base64: str) -> Dict[str, Any]:
+    """Adapter: decode a Content-Encoding (gzip/deflate) base64 body."""
+    import base64
+    import json
+    from je_auto_control.utils.http_content import decode_body
+    if isinstance(headers, str):
+        headers = json.loads(headers)
+    decoded = decode_body(headers, base64.b64decode(body_base64))
+    try:
+        text: Any = decoded.decode("utf-8")
+    except UnicodeDecodeError:
+        text = None
+    return {"body_base64": base64.b64encode(decoded).decode("ascii"),
+            "text": text}
+
+
+def _parse_quality_values(header: str) -> Dict[str, Any]:
+    """Adapter: parse a quality-value header into {values}."""
+    from je_auto_control.utils.http_content import parse_quality_values
+    return {"values": [list(item) for item in parse_quality_values(header)]}
+
+
+def _build_multipart(fields: Any = None, files: Any = None,
+                     boundary: Any = None) -> Dict[str, Any]:
+    """Adapter: build a multipart/form-data body (base64-encoded)."""
+    import base64
+    import json
+    from je_auto_control.utils.multipart import build_multipart
+    if isinstance(fields, str):
+        fields = json.loads(fields)
+    if isinstance(files, str):
+        files = json.loads(files)
+    content_type, body = build_multipart(fields, files, boundary=boundary)
+    return {"content_type": content_type,
+            "body_base64": base64.b64encode(body).decode("ascii")}
+
+
+def _parse_multipart(content_type: str, body_base64: str) -> Dict[str, Any]:
+    """Adapter: parse a base64-encoded multipart body into {fields, files}."""
+    import base64
+    from je_auto_control.utils.multipart import parse_multipart
+    body = base64.b64decode(body_base64)
+    return parse_multipart(content_type, body)
+
+
+def _parse_link_header(value: str) -> Dict[str, Any]:
+    """Adapter: parse an RFC 8288 Link header into {links}."""
+    from je_auto_control.utils.link_header import parse_link_header
+    return {"links": [link.to_dict() for link in parse_link_header(value)]}
+
+
+def _next_url(value: str) -> Dict[str, Any]:
+    """Adapter: return the rel=next URL from a Link header."""
+    from je_auto_control.utils.link_header import next_url
+    return {"url": next_url(value)}
+
+
+def _baggage_parse(header: str) -> Dict[str, Any]:
+    """Adapter: parse a W3C baggage header into {items}."""
+    from je_auto_control.utils.baggage import parse_baggage
+    return {"items": parse_baggage(header).to_dict()}
+
+
+def _normalize_text(text: str, form: str = "NFKC", casefold: Any = True,
+                    collapse_ws: Any = True) -> Dict[str, Any]:
+    """Adapter: Unicode-normalise text into {text}."""
+    from je_auto_control.utils.text_normalize import normalize_text
+    return {"text": normalize_text(text, form=form, casefold=bool(casefold),
+                                   collapse_ws=bool(collapse_ws))}
+
+
+def _slugify(text: str, sep: str = "-") -> Dict[str, Any]:
+    """Adapter: produce an ASCII slug from text."""
+    from je_auto_control.utils.text_normalize import slugify
+    return {"slug": slugify(text, sep=sep)}
+
+
+def _text_similarity(a: str, b: str,
+                     metric: str = "jaro_winkler") -> Dict[str, Any]:
+    """Adapter: normalised string similarity for the chosen metric."""
+    from je_auto_control.utils.text_similarity import similarity
+    return {"score": similarity(a, b, metric=metric)}
+
+
+def _simhash(text: str, bits: Any = 64) -> Dict[str, Any]:
+    """Adapter: SimHash fingerprint of text (as int)."""
+    from je_auto_control.utils.near_dup import simhash
+    return {"simhash": simhash(text, bits=int(bits))}
+
+
+def _near_duplicates(texts: Any, max_distance: Any = 3) -> Dict[str, Any]:
+    """Adapter: cluster near-duplicate texts by SimHash distance."""
+    import json
+    from je_auto_control.utils.near_dup import near_duplicates
+    if isinstance(texts, str):
+        texts = json.loads(texts)
+    return {"clusters": near_duplicates(texts, max_distance=int(max_distance))}
+
+
+def _canonical_log(fields: Any) -> Dict[str, Any]:
+    """Adapter: build a canonical log line from a fields dict."""
+    import json
+    from je_auto_control.utils.canonical_log import CanonicalLogLine
+    if isinstance(fields, str):
+        fields = json.loads(fields)
+    line = CanonicalLogLine(fields)
+    return {"line": line.to_dict(), "json": line.render()}
+
+
+def _spans_to_otlp(spans: Any, resource_attrs: Any = None) -> Dict[str, Any]:
+    """Adapter: wrap spans in an OTLP/JSON resourceSpans envelope."""
+    import json
+    from je_auto_control.utils.otlp_export import spans_to_otlp
+    if isinstance(spans, str):
+        spans = json.loads(spans)
+    if isinstance(resource_attrs, str):
+        resource_attrs = json.loads(resource_attrs)
+    return {"payload": spans_to_otlp(spans, resource_attrs=resource_attrs)}
+
+
+def _baggage_format(items: Any) -> Dict[str, Any]:
+    """Adapter: serialise an items dict into a W3C baggage {header}."""
+    import json
+    from je_auto_control.utils.baggage import Baggage, format_baggage
+    if isinstance(items, str):
+        items = json.loads(items)
+    return {"header": format_baggage(Baggage(items))}
+
+
+def _profile_rows(rows: Any, columns: Any = None) -> Dict[str, Any]:
+    """Adapter: profile a row-set into per-column statistics."""
+    import json
+    from je_auto_control.utils.data_profile import profile_rows
+    if isinstance(rows, str):
+        rows = json.loads(rows)
+    if isinstance(columns, str):
+        columns = json.loads(columns)
+    return {"profile": profile_rows(rows, columns)}
+
+
+def _infer_schema(rows: Any, columns: Any = None) -> Dict[str, Any]:
+    """Adapter: infer a validate_rows-compatible schema from rows."""
+    import json
+    from je_auto_control.utils.data_profile import infer_schema
+    if isinstance(rows, str):
+        rows = json.loads(rows)
+    if isinstance(columns, str):
+        columns = json.loads(columns)
+    return {"schema": infer_schema(rows, columns)}
+
+
+def _parse_problem(response: Any) -> Dict[str, Any]:
+    """Adapter: parse an RFC 9457 problem+json HTTP response."""
+    import json
+    from je_auto_control.utils.http_problem import parse_problem
+    if isinstance(response, str):
+        response = json.loads(response)
+    problem = parse_problem(response)
+    return {"problem": problem.to_dict() if problem is not None else None}
+
+
+def _parse_dotenv(text: str) -> Dict[str, Any]:
+    """Adapter: parse .env text into a {values} dict."""
+    from je_auto_control.utils.dotenv import parse_dotenv
+    return {"values": parse_dotenv(text)}
+
+
+def _load_dotenv(path: str, override: Any = False) -> Dict[str, Any]:
+    """Adapter: load a .env file into a fresh {values} dict."""
+    from je_auto_control.utils.dotenv import load_dotenv
+    return {"values": load_dotenv(path, {}, override=bool(override))}
+
+
+def _parse_sse(text: str) -> Dict[str, Any]:
+    """Adapter: parse a text/event-stream blob into {events}."""
+    from je_auto_control.utils.sse_client import parse_event_stream
+    return {"events": [event.to_dict() for event in parse_event_stream(text)]}
+
+
+def _build_layered_config(layers: Any):
+    """Build a LayeredConfig from a list of {name, mapping, priority?} dicts."""
+    import json
+    from je_auto_control.utils.layered_config import LayeredConfig
+    if isinstance(layers, str):
+        layers = json.loads(layers)
+    config = LayeredConfig()
+    for layer in layers:
+        config.add_layer(layer["name"], layer.get("mapping", {}),
+                         layer.get("priority"))
+    return config
+
+
+def _resolve_config(layers: Any) -> Dict[str, Any]:
+    """Adapter: deep-merge config layers into a resolved {config}."""
+    return {"config": _build_layered_config(layers).resolve()}
+
+
+def _explain_config(layers: Any, key: str) -> Dict[str, Any]:
+    """Adapter: report the value and winning layer for a dotted config key."""
+    trace = _build_layered_config(layers).explain(key)
+    return {"trace": {"key": trace.key, "value": trace.value,
+                      "layer": trace.layer}}
+
+
+def _check_compatibility(old: Any, new: Any,
+                         mode: str = "backward") -> Dict[str, Any]:
+    """Adapter: classify JSON-Schema compatibility (backward/forward/full)."""
+    import json
+    from je_auto_control.utils.schema_compat import check_compatibility
+    if isinstance(old, str):
+        old = json.loads(old)
+    if isinstance(new, str):
+        new = json.loads(new)
+    return check_compatibility(old, new, mode)
+
+
+def _detect_drift(reference: Any, current: Any,
+                  threshold: Any = 0.25, bins: Any = 10) -> Dict[str, Any]:
+    """Adapter: numeric distribution drift report (PSI + KS)."""
+    import json
+    from je_auto_control.utils.data_drift import detect_drift
+    if isinstance(reference, str):
+        reference = json.loads(reference)
+    if isinstance(current, str):
+        current = json.loads(current)
+    return detect_drift(reference, current,
+                        threshold=float(threshold), bins=int(bins))
+
+
+def _categorical_drift(reference: Any, current: Any) -> Dict[str, Any]:
+    """Adapter: categorical distribution drift summary."""
+    import json
+    from je_auto_control.utils.data_drift import categorical_drift
+    if isinstance(reference, str):
+        reference = json.loads(reference)
+    if isinstance(current, str):
+        current = json.loads(current)
+    return categorical_drift(reference, current)
+
+
+def _json_rows(rows: Any) -> Any:
+    import json
+    return json.loads(rows) if isinstance(rows, str) else rows
+
+
+def _check_foreign_key(child_rows: Any, child_col: str, parent_rows: Any,
+                       parent_col: str) -> Dict[str, Any]:
+    """Adapter: foreign-key referential check across two row-sets."""
+    from je_auto_control.utils.referential import check_foreign_key
+    return check_foreign_key(_json_rows(child_rows), child_col,
+                             _json_rows(parent_rows), parent_col)
+
+
+def _check_unique_key(rows: Any, cols: Any) -> Dict[str, Any]:
+    """Adapter: single/composite key uniqueness check."""
+    import json
+    from je_auto_control.utils.referential import check_unique_key
+    if isinstance(cols, str) and cols.strip().startswith("["):
+        cols = json.loads(cols)
+    return check_unique_key(_json_rows(rows), cols)
+
+
+def _check_accepted_values(rows: Any, col: str, allowed: Any) -> Dict[str, Any]:
+    """Adapter: accepted-values check for a column."""
+    from je_auto_control.utils.referential import check_accepted_values
+    return check_accepted_values(_json_rows(rows), col, _json_rows(allowed))
+
+
+def _check_row_count(rows: Any, minimum: Any = None,
+                     maximum: Any = None) -> Dict[str, Any]:
+    """Adapter: row-count bounds check."""
+    from je_auto_control.utils.referential import check_row_count
+    low = int(minimum) if minimum is not None else None
+    high = int(maximum) if maximum is not None else None
+    return check_row_count(_json_rows(rows), low, high)
+
+
+def _coerce_diff_inputs(old_rows: Any, new_rows: Any, key: Any):
+    import json
+    if isinstance(old_rows, str):
+        old_rows = json.loads(old_rows)
+    if isinstance(new_rows, str):
+        new_rows = json.loads(new_rows)
+    if isinstance(key, str) and key.strip().startswith("["):
+        key = json.loads(key)
+    return old_rows, new_rows, key
+
+
+def _diff_rows(old_rows: Any, new_rows: Any, key: Any) -> Dict[str, Any]:
+    """Adapter: diff two row-sets by key into {diff, summary}."""
+    from je_auto_control.utils.dataset_diff import diff_rows, summarize_diff
+    old_rows, new_rows, key = _coerce_diff_inputs(old_rows, new_rows, key)
+    diff = diff_rows(old_rows, new_rows, key)
+    return {"diff": diff, "summary": summarize_diff(diff)}
+
+
+def _cell_changes(old_rows: Any, new_rows: Any, key: Any) -> Dict[str, Any]:
+    """Adapter: per-cell changes between two row-sets keyed by key."""
+    from je_auto_control.utils.dataset_diff import cell_changes
+    old_rows, new_rows, key = _coerce_diff_inputs(old_rows, new_rows, key)
+    return {"changes": cell_changes(old_rows, new_rows, key)}
+
+
+def _percentiles(samples: Any, qs: Any = None) -> Dict[str, Any]:
+    """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
+    import json
+    from je_auto_control.utils.percentiles import exact_percentiles
+    if isinstance(samples, str):
+        samples = json.loads(samples)
+    if isinstance(qs, str):
+        qs = json.loads(qs)
+    quantiles = tuple(qs) if qs else (50, 90, 95, 99)
+    result = exact_percentiles(samples, qs=quantiles)
+    return {"percentiles": {str(q): value for q, value in result.items()}}
+
+
+def _ts_rate(series: Any, window_s: Any = None) -> Dict[str, Any]:
+    """Adapter: per-second counter rate over a (ts, value) series."""
+    import json
+    from je_auto_control.utils.timeseries import ts_rate
+    if isinstance(series, str):
+        series = json.loads(series)
+    window = float(window_s) if window_s is not None else None
+    return {"rate": ts_rate(series, window_s=window)}
+
+
+def _ts_downsample(series: Any, bucket_s: Any,
+                   agg: str = "avg") -> Dict[str, Any]:
+    """Adapter: downsample a (ts, value) series into tumbling buckets."""
+    import json
+    from je_auto_control.utils.timeseries import ts_downsample
+    if isinstance(series, str):
+        series = json.loads(series)
+    buckets = ts_downsample(series, float(bucket_s), agg)
+    return {"buckets": [list(point) for point in buckets]}
+
+
+def _detect_anomalies(values: Any, method: str = "mad",
+                      threshold: Any = None) -> Dict[str, Any]:
+    """Adapter: flag anomalies in a numeric series (mad/zscore)."""
+    import json
+    from je_auto_control.utils.anomaly import detect_anomalies
+    if isinstance(values, str):
+        values = json.loads(values)
+    return {"results": detect_anomalies(values, method=method,
+                                        threshold=threshold)}
+
+
+def _sma(values: Any, window: Any) -> Dict[str, Any]:
+    """Adapter: trailing simple moving average."""
+    import json
+    from je_auto_control.utils.smoothing import sma
+    if isinstance(values, str):
+        values = json.loads(values)
+    return {"series": sma(values, int(window))}
+
+
+def _ewma(values: Any, alpha: Any = 0.3) -> Dict[str, Any]:
+    """Adapter: exponentially-weighted moving average."""
+    import json
+    from je_auto_control.utils.smoothing import ewma
+    if isinstance(values, str):
+        values = json.loads(values)
+    return {"series": ewma(values, alpha=float(alpha))}
+
+
+def _evaluate_slo(records: Any, target: float,
+                  window_s: Optional[float] = None) -> Dict[str, Any]:
+    """Adapter: SLI + error budget for outcome records (list or JSON string)."""
+    import json
+    from je_auto_control.utils.slo import evaluate_slo
+    if isinstance(records, str):
+        records = json.loads(records)
+    return evaluate_slo(records, float(target), window_s=window_s)
+
+
+def _burn_alerts(records: Any, target: float) -> Dict[str, Any]:
+    """Adapter: multi-window burn-rate alerts for outcome records."""
+    import json
+    from je_auto_control.utils.slo import burn_alerts
+    if isinstance(records, str):
+        records = json.loads(records)
+    alerts = burn_alerts(records, float(target))
+    return {"alerts": alerts, "firing": bool(alerts)}
+
+
+def _chaos_probe_call(actions: List[Any]) -> Any:
+    def call() -> bool:
+        executor.execute_action(list(actions), raise_on_error=True)
+        return True
+    return call
+
+
+def _chaos_fault_apply(actions: List[Any]) -> Any:
+    def apply() -> Dict[str, Any]:
+        return executor.execute_action(list(actions), raise_on_error=True)
+    return apply
+
+
+def _run_chaos(spec: Any) -> Dict[str, Any]:
+    """Adapter: run a chaos experiment whose probes/method/rollbacks are actions."""
+    import json
+    from je_auto_control.utils.chaos import (
+        ChaosExperiment, Fault, Probe, run_experiment)
+    if isinstance(spec, str):
+        spec = json.loads(spec)
+    probes = [Probe(p.get("name", "probe"), _chaos_probe_call(p["action"]), True)
+              for p in spec.get("probes", [])]
+    method = [Fault(f.get("name", "fault"), _chaos_fault_apply(f["action"]))
+              for f in spec.get("method", [])]
+    rollbacks = [_chaos_fault_apply(actions)
+                 for actions in spec.get("rollbacks", [])]
+    experiment = ChaosExperiment(spec.get("title", "chaos"), probes, method,
+                                 rollbacks)
+    return run_experiment(experiment)
+
+
+def _match_json(actual: Any, expected: Any, partial: bool = False,
+                match_type: bool = False) -> Dict[str, Any]:
+    """Adapter: match a JSON payload against an expected one (relaxed rules)."""
+    import json
+    from je_auto_control.utils.json_contract import match_json
+    if isinstance(actual, str):
+        actual = json.loads(actual)
+    if isinstance(expected, str):
+        expected = json.loads(expected)
+    return match_json(actual, expected, partial=bool(partial),
+                      match_type=bool(match_type)).to_dict()
+
+
+def _diff_json(actual: Any, expected: Any) -> Dict[str, Any]:
+    """Adapter: path-tagged diff between two JSON payloads."""
+    import json
+    from je_auto_control.utils.json_contract import diff_json
+    if isinstance(actual, str):
+        actual = json.loads(actual)
+    if isinstance(expected, str):
+        expected = json.loads(expected)
+    return {"diffs": diff_json(actual, expected)}
+
+
+def _build_provenance(paths: Any, builder_id: str = "je_auto_control",
+                      build_type: str = "https://je-auto-control/buildtype/v1"
+                      ) -> Dict[str, Any]:
+    """Adapter: build a SLSA provenance statement over a list of file paths."""
+    import json
+    from je_auto_control.utils.provenance import build_provenance, subject_for
+    if isinstance(paths, str):
+        paths = json.loads(paths)
+    subjects = [subject_for(path) for path in paths]
+    return {"statement": build_provenance(
+        subjects, builder_id=builder_id, build_type=build_type)}
+
+
+def _verify_provenance(statement: Any, files: Any) -> Dict[str, Any]:
+    """Adapter: re-hash files (name->path) against a provenance statement."""
+    import json
+    from je_auto_control.utils.provenance import verify_provenance
+    if isinstance(statement, str):
+        statement = json.loads(statement)
+    if isinstance(files, str):
+        files = json.loads(files)
+    mismatches = verify_provenance(statement, files)
+    return {"ok": not mismatches, "mismatches": mismatches}
+
+
+def _evaluate_flag(flags: Any, key: str, context: Any = None) -> Dict[str, Any]:
+    """Adapter: evaluate a feature flag (flags/context dict or JSON string)."""
+    import json
+    from je_auto_control.utils.feature_flags import FlagStore, evaluate_flag
+    if isinstance(flags, str):
+        flags = json.loads(flags)
+    if isinstance(context, str):
+        context = json.loads(context)
+    return evaluate_flag(FlagStore.from_dict(flags), key, context or {})
+
+
+def _flag_enabled(flags: Any, key: str, context: Any = None,
+                  default: bool = False) -> Dict[str, Any]:
+    """Adapter: boolean feature-flag check."""
+    import json
+    from je_auto_control.utils.feature_flags import FlagStore, is_enabled
+    if isinstance(flags, str):
+        flags = json.loads(flags)
+    if isinstance(context, str):
+        context = json.loads(context)
+    store = FlagStore.from_dict(flags)
+    return {"enabled": is_enabled(store, key, context or {}, bool(default))}
+
+
+def _unified_diff(a: str, b: str) -> Dict[str, Any]:
+    """Adapter: unified diff transforming text a into b."""
+    from je_auto_control.utils.text_diff import unified_diff
+    return {"diff": unified_diff(a, b)}
+
+
+def _apply_unified(text: str, diff: str) -> Dict[str, Any]:
+    """Adapter: apply a unified diff to text."""
+    from je_auto_control.utils.text_diff import apply_unified
+    return {"result": apply_unified(text, diff)}
+
+
+def _three_way_merge(base: str, ours: str, theirs: str) -> Dict[str, Any]:
+    """Adapter: three-way merge ours/theirs against base."""
+    from je_auto_control.utils.text_diff import three_way_merge
+    outcome = three_way_merge(base, ours, theirs)
+    return {"text": outcome.text, "clean": outcome.clean,
+            "conflicts": outcome.conflicts}
+
+
+def _rrule_occurrences(rule: str, dtstart: str,
+                       count: int = 10) -> Dict[str, Any]:
+    """Adapter: expand an RRULE from an ISO dtstart into ISO datetimes."""
+    import datetime as _dt
+    from je_auto_control.utils.recurrence import occurrences, parse_rrule
+    start = _dt.datetime.fromisoformat(dtstart)
+    moments = occurrences(parse_rrule(rule), start, count=int(count))
+    return {"occurrences": [moment.isoformat() for moment in moments]}
+
+
+def _rrule_next(rule: str, dtstart: str,
+                now: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: next RRULE occurrence at/after now (ISO in, ISO out)."""
+    import datetime as _dt
+    from je_auto_control.utils.recurrence import next_occurrence, parse_rrule
+    start = _dt.datetime.fromisoformat(dtstart)
+    when = _dt.datetime.fromisoformat(now) if now else None
+    moment = next_occurrence(parse_rrule(rule), start, now=when)
+    return {"next": moment.isoformat() if moment else None}
+
+
+def _describe_stats(values: Any) -> Dict[str, Any]:
+    """Adapter: summary statistics + percentiles of a numeric list (or JSON)."""
+    import json
+    from je_auto_control.utils.stats import describe
+    if isinstance(values, str):
+        values = json.loads(values)
+    return describe(values)
+
+
+def _ab_significance(a_conv: int, a_n: int, b_conv: int,
+                     b_n: int) -> Dict[str, Any]:
+    """Adapter: two-proportion z-test on A/B conversion counts."""
+    from je_auto_control.utils.stats import two_proportion_z_test
+    return two_proportion_z_test(int(a_conv), int(a_n), int(b_conv), int(b_n))
+
+
+def _search_documents(docs: Any, query: str, top_k: int = 10,
+                      mode: str = "bm25") -> Dict[str, Any]:
+    """Adapter: BM25/TF-IDF search a {doc_id: text} corpus (dict or JSON str)."""
+    import json
+    from je_auto_control.utils.search_index import search_documents
+    if isinstance(docs, str):
+        docs = json.loads(docs)
+    hits = search_documents(docs, query, top_k=int(top_k), mode=mode)
+    return {"hits": [{"doc_id": h.doc_id, "score": h.score} for h in hits]}
+
+
+def _resolve_pointer(doc: Any, pointer: str) -> Dict[str, Any]:
+    """Adapter: resolve a JSON Pointer in doc (a dict/list or JSON string)."""
+    import json
+    from je_auto_control.utils.json_patch import resolve_pointer
+    if isinstance(doc, str):
+        doc = json.loads(doc)
+    return {"value": resolve_pointer(doc, pointer)}
+
+
+def _apply_json_patch(doc: Any, patch: Any) -> Dict[str, Any]:
+    """Adapter: apply an RFC 6902 JSON Patch (each a list/object or JSON str)."""
+    import json
+    from je_auto_control.utils.json_patch import apply_patch
+    if isinstance(doc, str):
+        doc = json.loads(doc)
+    if isinstance(patch, str):
+        patch = json.loads(patch)
+    return {"result": apply_patch(doc, patch)}
+
+
+def _make_json_patch(old: Any, new: Any) -> Dict[str, Any]:
+    """Adapter: compute an RFC 6902 patch turning old into new."""
+    import json
+    from je_auto_control.utils.json_patch import make_patch
+    if isinstance(old, str):
+        old = json.loads(old)
+    if isinstance(new, str):
+        new = json.loads(new)
+    return {"patch": make_patch(old, new)}
+
+
+def _merge_patch(doc: Any, patch: Any) -> Dict[str, Any]:
+    """Adapter: apply an RFC 7386 JSON Merge Patch (null deletes)."""
+    import json
+    from je_auto_control.utils.json_patch import merge_patch
+    if isinstance(doc, str):
+        doc = json.loads(doc)
+    if isinstance(patch, str):
+        patch = json.loads(patch)
+    return {"result": merge_patch(doc, patch)}
+
+
+def _jwt_encode(claims: Any, key: str, alg: str = "HS256") -> Dict[str, Any]:
+    """Adapter: sign a compact JWT from claims (a dict or JSON string)."""
+    import json
+    from je_auto_control.utils.jwt import encode_jwt
+    if isinstance(claims, str):
+        claims = json.loads(claims)
+    return {"token": encode_jwt(claims, key, alg=alg)}
+
+
+def _jwt_decode(token: str, key: str, algorithms: Any = None,
+                audience: Optional[str] = None,
+                leeway: float = 0.0) -> Dict[str, Any]:
+    """Adapter: verify a JWT and return {ok, claims} or {ok: False, error}."""
+    import json
+    from je_auto_control.utils.jwt import ClaimsPolicy, JwtError, decode_jwt
+    if isinstance(algorithms, str):
+        algorithms = json.loads(algorithms)
+    policy = ClaimsPolicy(algorithms=tuple(algorithms) if algorithms
+                          else ("HS256",), audience=audience, leeway=leeway)
+    try:
+        claims = decode_jwt(token, key, policy)
+    except JwtError as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "claims": claims}
+
+
+def _generate_sop(actions: List[Any], title: str = "Automation Procedure",
+                  path: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: build (or write) a step-by-step SOP from an action list."""
+    from je_auto_control.utils.process_doc import generate_sop, write_sop
+    if path:
+        return {"path": write_sop(actions, path, title=title)}
+    return generate_sop(actions, title=title)
+
+
+def _tween_drag(start: List[int], end: List[int], steps: int = 30,
+                easing: str = "ease_in_out_quad",
+                button: str = "mouse_left") -> Dict[str, Any]:
+    """Adapter: drag along an eased path from start to end."""
+    from je_auto_control.utils.tween_drag import tween_drag
+    result = tween_drag(tuple(start), tuple(end), steps=int(steps),
+                        easing=easing, button=button)
+    return {"points": result["points"]}
+
+
+def _list_plugins(group: str = "je_auto_control.commands") -> Dict[str, Any]:
+    """Adapter: discover third-party plugin command names (no register)."""
+    from je_auto_control.utils.plugin_sdk import discover_plugins
+    return {"commands": sorted(discover_plugins(group))}
+
+
+def _load_plugins(group: str = "je_auto_control.commands") -> Dict[str, Any]:
+    """Adapter: discover + register third-party plugin commands."""
+    from je_auto_control.utils.plugin_sdk import load_plugins
+    return {"loaded": load_plugins(group)}
+
+
+def _approval_request(action: str, requester: str = "",
+                      db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: file a maker-checker approval request; return its token."""
+    from je_auto_control.utils.governance import ApprovalGate
+    return {"token": ApprovalGate(db).request(action, requester)}
+
+
+def _approval_approve(token: str, approver: str,
+                      db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: approve a request as ``approver`` (must differ from maker)."""
+    from je_auto_control.utils.governance import ApprovalGate
+    return {"approved": ApprovalGate(db).approve(token, approver)}
+
+
+def _approval_reject(token: str, approver: str,
+                     db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: reject a request as ``approver`` (must differ from maker)."""
+    from je_auto_control.utils.governance import ApprovalGate
+    return {"rejected": ApprovalGate(db).reject(token, approver)}
+
+
+def _approval_status(token: str, db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: report the status and approved flag of a request token."""
+    from je_auto_control.utils.governance import ApprovalGate
+    gate = ApprovalGate(db)
+    return {"status": gate.status(token), "approved": gate.is_approved(token)}
+
+
+def _lease_secret(name: str, ttl: float = 300.0) -> Dict[str, Any]:
+    """Adapter: issue a JIT lease for a secret name (no value returned)."""
+    from je_auto_control.utils.governance import default_broker
+    return {"token": default_broker.lease(name, ttl), "ttl": float(ttl)}
+
+
+def _lease_valid(token: str) -> Dict[str, Any]:
+    """Adapter: report whether a lease token is still valid."""
+    from je_auto_control.utils.governance import default_broker
+    return {"valid": default_broker.is_valid(token)}
+
+
+def _revoke_lease(token: str) -> Dict[str, Any]:
+    """Adapter: revoke a lease token immediately."""
+    from je_auto_control.utils.governance import default_broker
+    return {"revoked": default_broker.revoke(token)}
+
+
+def _lease_active() -> Dict[str, Any]:
+    """Adapter: list active (non-expired) leases without any secret values."""
+    from je_auto_control.utils.governance import default_broker
+    return {"leases": default_broker.active()}
+
+
+def _egress_allow(allow: Optional[List[str]] = None,
+                  deny: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Adapter: lock the HTTP client to an egress allow/deny policy."""
+    from je_auto_control.utils.egress import set_egress_policy
+    policy = set_egress_policy(allow, deny)
+    return {"allow": policy.allow, "deny": policy.deny}
+
+
+def _egress_check(url: str) -> Dict[str, Any]:
+    """Adapter: report whether ``url`` is permitted by the egress policy."""
+    from je_auto_control.utils.egress import get_egress_policy
+    return {"allowed": get_egress_policy().is_allowed(url)}
+
+
+def _egress_reset() -> Dict[str, Any]:
+    """Adapter: clear the egress policy back to allow-all."""
+    from je_auto_control.utils.egress import set_egress_policy
+    set_egress_policy(None, None)
+    return {"allow": None, "deny": []}
+
+
+def _verify_artifact(name: str, content: Any,
+                     approvals_dir: str = ".approvals",
+                     extension: str = "txt") -> Dict[str, Any]:
+    """Adapter: verify an artifact against its approved baseline."""
+    from je_auto_control.utils.approval import verify_artifact
+    result = verify_artifact(name, content, approvals_dir, extension)
+    return {"status": result.status, "match": result.match,
+            "approved_path": result.approved_path,
+            "received_path": result.received_path}
+
+
+def _approve_artifact(name: str, approvals_dir: str = ".approvals",
+                      extension: str = "txt") -> Dict[str, Any]:
+    """Adapter: promote a received artifact to the approved baseline."""
+    from je_auto_control.utils.approval import approve_artifact
+    return {"approved": approve_artifact(name, approvals_dir, extension)}
+
+
+def _pending_artifacts(approvals_dir: str = ".approvals") -> Dict[str, Any]:
+    """Adapter: list artifacts awaiting approval."""
+    from je_auto_control.utils.approval import pending_artifacts
+    return {"pending": pending_artifacts(approvals_dir)}
+
+
+def _evaluate_trajectory(trajectory: Any, rubric: Any) -> Dict[str, Any]:
+    """Adapter: score an agent trajectory against a declarative rubric.
+
+    ``trajectory`` / ``rubric`` may be JSON strings (from the visual builder)
+    or already-decoded list/dict (from JSON action files / MCP).
+    """
+    import json
+    from je_auto_control.utils.trajectory_eval import evaluate_trajectory
+    if isinstance(trajectory, str):
+        trajectory = json.loads(trajectory)
+    if isinstance(rubric, str):
+        rubric = json.loads(rubric)
+    return evaluate_trajectory(trajectory, rubric)
+
+
+def _compliance_report(evidence: Any, frameworks: Any = None,
+                       path: Optional[str] = None,
+                       fmt: str = "json") -> Dict[str, Any]:
+    """Adapter: map governance evidence to SOC2/ISO controls; optionally write."""
+    import json
+    from je_auto_control.utils.compliance import (
+        build_compliance_report, write_compliance_report)
+    if isinstance(evidence, str):
+        evidence = json.loads(evidence)
+    if isinstance(frameworks, str):
+        frameworks = [f.strip() for f in frameworks.split(",") if f.strip()]
+    report = build_compliance_report(evidence, frameworks)
+    if path:
+        report["path"] = write_compliance_report(report, path, fmt)
+    return report
+
+
+def _trace_record(operation: str, model: Optional[str] = None,
+                  system: Optional[str] = None,
+                  input_tokens: Optional[int] = None,
+                  output_tokens: Optional[int] = None,
+                  tool_name: Optional[str] = None, duration_s: float = 0.0,
+                  status: str = "ok") -> Dict[str, Any]:
+    """Adapter: record a GenAI-convention span on the default agent trace."""
+    from je_auto_control.utils.agent_trace import default_trace
+    return default_trace.record(
+        operation, model=model, system=system, input_tokens=input_tokens,
+        output_tokens=output_tokens, tool_name=tool_name,
+        duration_s=duration_s, status=status)
+
+
+def _trace_summary() -> Dict[str, Any]:
+    """Adapter: roll up the default agent trace (count/tokens/duration)."""
+    from je_auto_control.utils.agent_trace import default_trace
+    return default_trace.summary()
+
+
+def _trace_export() -> Dict[str, Any]:
+    """Adapter: export the default agent trace in OTLP-friendly shape."""
+    from je_auto_control.utils.agent_trace import default_trace
+    return {"spans": default_trace.to_otel()}
+
+
+def _trace_reset() -> Dict[str, Any]:
+    """Adapter: clear the default agent trace."""
+    from je_auto_control.utils.agent_trace import reset_trace
+    reset_trace()
+    return {"reset": True}
+
+
+def _write_step_video(steps: Any, output: str, fps: int = 10,
+                      seconds_per_step: float = 2.0) -> Dict[str, Any]:
+    """Adapter: render captioned screenshots into a walkthrough video."""
+    import json
+    from je_auto_control.utils.video_report import write_step_video
+    if isinstance(steps, str):
+        steps = json.loads(steps)
+    return write_step_video(steps, output, fps=fps,
+                            seconds_per_step=seconds_per_step)
+
+
+def _coerce_list(value: Any) -> List[Any]:
+    import json
+    return json.loads(value) if isinstance(value, str) else list(value)
+
+
+def _fuzzy_ratio(left: Any, right: Any,
+                 ignore_case: bool = True) -> Dict[str, Any]:
+    """Adapter: similarity score (0..1) between two values."""
+    from je_auto_control.utils.fuzzy import fuzzy_ratio
+    return {"score": fuzzy_ratio(left, right, ignore_case=ignore_case)}
+
+
+def _fuzzy_best_match(query: Any, choices: Any, score_cutoff: float = 0.0,
+                      ignore_case: bool = True) -> Dict[str, Any]:
+    """Adapter: best fuzzy match from choices, or a null match."""
+    from je_auto_control.utils.fuzzy import fuzzy_best_match
+    best = fuzzy_best_match(query, _coerce_list(choices),
+                            score_cutoff=score_cutoff, ignore_case=ignore_case)
+    if best is None:
+        return {"match": None, "score": 0.0, "index": -1}
+    return {"match": best[0], "score": best[1], "index": best[2]}
+
+
+def _fuzzy_dedupe(items: Any, threshold: float = 0.9,
+                  ignore_case: bool = True) -> Dict[str, Any]:
+    """Adapter: drop near-duplicate items, keeping the first of each cluster."""
+    from je_auto_control.utils.fuzzy import fuzzy_dedupe
+    return {"unique": fuzzy_dedupe(_coerce_list(items), threshold=threshold,
+                                   ignore_case=ignore_case)}
+
+
+def _s3_upload(local_path: str, key: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: upload an artifact to the default S3 store; return the key."""
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"key": get_default_store().upload(local_path, key)}
+
+
+def _s3_download(key: str, local_path: str) -> Dict[str, Any]:
+    """Adapter: download an artifact from the default S3 store."""
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"path": get_default_store().download(key, local_path)}
+
+
+def _s3_list(prefix: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: list artifact keys in the default S3 store."""
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"keys": get_default_store().list(prefix)}
+
+
+def _s3_delete(key: str) -> Dict[str, Any]:
+    """Adapter: delete an artifact from the default S3 store."""
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"deleted": get_default_store().delete(key)}
+
+
+def _image_hash(path: str, algo: str = "average") -> Dict[str, Any]:
+    """Adapter: perceptual hash of an image (average or dhash)."""
+    from je_auto_control.utils.image_dedup import average_hash, dhash
+    hasher = dhash if algo == "dhash" else average_hash
+    return {"hash": hasher(path)}
+
+
+def _dedupe_images(paths: Any, max_distance: int = 5) -> Dict[str, Any]:
+    """Adapter: drop near-duplicate images, keeping the first of each cluster."""
+    from je_auto_control.utils.image_dedup import dedupe_images
+    return {"unique": dedupe_images(_coerce_list(paths),
+                                    max_distance=max_distance)}
+
+
+def _parse_decimal(text: str, locale: str = "en_US") -> Dict[str, Any]:
+    """Adapter: parse a locale-formatted decimal string to a float."""
+    from je_auto_control.utils.locale_parse import parse_decimal
+    return {"value": parse_decimal(text, locale)}
+
+
+def _parse_number(text: str, locale: str = "en_US") -> Dict[str, Any]:
+    """Adapter: parse a locale-formatted integer string to an int."""
+    from je_auto_control.utils.locale_parse import parse_number
+    return {"value": parse_number(text, locale)}
+
+
+def _format_decimal(value: float, locale: str = "en_US") -> Dict[str, Any]:
+    """Adapter: format a number for a locale."""
+    from je_auto_control.utils.locale_parse import format_decimal
+    return {"text": format_decimal(value, locale)}
+
+
+def _format_currency(value: float, currency: str,
+                     locale: str = "en_US") -> Dict[str, Any]:
+    """Adapter: format a value as currency for a locale."""
+    from je_auto_control.utils.locale_parse import format_currency
+    return {"text": format_currency(value, currency, locale)}
+
+
+def _format_date(value: str, locale: str = "en_US",
+                 fmt: str = "medium") -> Dict[str, Any]:
+    """Adapter: format an ISO date string for a locale."""
+    from je_auto_control.utils.locale_parse import format_date
+    return {"text": format_date(value, locale, fmt)}
+
+
+def _voice_register(phrase: str, actions: Any) -> Dict[str, Any]:
+    """Adapter: register a voice command on the default router."""
+    from je_auto_control.utils.voice import default_voice_router
+    default_voice_router.register(phrase, _coerce_list(actions))
+    return {"phrases": default_voice_router.phrases()}
+
+
+def _voice_dispatch(text: str) -> Dict[str, Any]:
+    """Adapter: run the command best matching recognized ``text``."""
+    from je_auto_control.utils.voice import default_voice_router
+    outcome = default_voice_router.dispatch(text)
+    return {"matched": outcome["matched"], "phrase": outcome["phrase"]}
+
+
+def _voice_list() -> Dict[str, Any]:
+    """Adapter: list registered voice-command phrases."""
+    from je_auto_control.utils.voice import default_voice_router
+    return {"phrases": default_voice_router.phrases()}
+
+
+def _voice_clear() -> Dict[str, Any]:
+    """Adapter: clear all registered voice commands."""
+    from je_auto_control.utils.voice import default_voice_router
+    default_voice_router.clear()
+    return {"cleared": True}
+
+
+def _to_physical(x: float, y: float, physical_w: int, physical_h: int,
+                 model_w: int, model_h: int) -> Dict[str, Any]:
+    """Adapter: map a model-grid coordinate to physical pixels."""
+    from je_auto_control.utils.coordinate_space import CoordinateSpace
+    px, py = CoordinateSpace(physical_w, physical_h, model_w,
+                             model_h).to_physical(x, y)
+    return {"x": px, "y": py}
+
+
+def _to_model(x: int, y: int, physical_w: int, physical_h: int,
+              model_w: int, model_h: int) -> Dict[str, Any]:
+    """Adapter: map a physical-pixel coordinate to a model grid."""
+    from je_auto_control.utils.coordinate_space import CoordinateSpace
+    mx, my = CoordinateSpace(physical_w, physical_h, model_w,
+                             model_h).to_model(x, y)
+    return {"x": mx, "y": my}
+
+
+def _loop_guard_observe(tool: str, args: Any = None,
+                        result_digest: str = "") -> Dict[str, Any]:
+    """Adapter: feed a step to the default loop guard; report the verdict."""
+    from je_auto_control.utils.loop_guard import default_loop_guard
+    verdict = default_loop_guard.observe(tool, args, result_digest)
+    return {"pattern": verdict.pattern, "level": verdict.level,
+            "count": verdict.count}
+
+
+def _loop_guard_reset() -> Dict[str, Any]:
+    """Adapter: clear the default loop guard's history."""
+    from je_auto_control.utils.loop_guard import default_loop_guard
+    default_loop_guard.reset()
+    return {"reset": True}
+
+
+def _mine_actions(actions: Any, min_len: int = 2, max_len: int = 5,
+                  min_count: int = 3) -> Dict[str, Any]:
+    """Adapter: mine an action log for repeated, automatable sequences."""
+    from je_auto_control.utils.process_mining import mine_action_log
+    report = mine_action_log(_coerce_list(actions), min_len=min_len,
+                             max_len=max_len, min_count=min_count)
+    return {
+        "total_actions": report.total_actions,
+        "patterns": [{"actions": list(p.actions), "count": p.count}
+                     for p in report.patterns],
+        "candidates": [{"actions": list(c.pattern.actions),
+                        "count": c.pattern.count, "score": c.score}
+                       for c in report.candidates],
+    }
+
+
+def _set_asset(name: str, value: Any, asset_type: str = "text",
+               environment: str = "default",
+               db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: store a typed, environment-scoped asset."""
+    from je_auto_control.utils.assets.assets import store_set
+    return store_set(name, value, asset_type=asset_type,
+                     environment=environment, db=db)
+
+
+def _get_asset(name: str, environment: str = "default",
+               db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read a typed asset (credential stays a reference)."""
+    from je_auto_control.utils.assets.assets import store_get
+    return store_get(name, environment=environment, db=db)
+
+
+def _list_assets(environment: Optional[str] = None,
+                 db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: list assets, optionally restricted to one environment."""
+    from je_auto_control.utils.assets.assets import store_list
+    return store_list(environment=environment, db=db)
+
+
+def _emit_event(event_type: str, data: Any = None,
+                source: str = "je_auto_control",
+                subject: Optional[str] = None,
+                url: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: build a CloudEvent; optionally POST it (egress-guarded)."""
+    from je_auto_control.utils.events import post_cloudevent, to_cloudevent
+    if isinstance(data, str):
+        import json
+        try:
+            data = json.loads(data)
+        except ValueError:
+            pass
+    event = to_cloudevent(event_type, source, data, subject=subject)
+    result: Dict[str, Any] = {"event": event}
+    if url:
+        result["status"] = post_cloudevent(url, event)
+    return result
+
+
+def _notify_webhook(url: str, text: str, transport: str = "raw",
+                    title: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: send a chat/webhook notification (slack/discord/teams/raw)."""
+    from je_auto_control.utils.notify_channels import notify_webhook
+    outcome = notify_webhook(url, text, transport=transport, title=title)
+    return {"ok": outcome.ok, "status": outcome.status,
+            "transport": outcome.transport}
+
+
+def _json_query(data: Any, path: str) -> Dict[str, Any]:
+    """Adapter: return all JSONPath matches in data (JSON string or object)."""
+    import json
+    from je_auto_control.utils.jsonpath import json_query
+    if isinstance(data, str):
+        data = json.loads(data)
+    return {"matches": json_query(data, path)}
+
+
+def _json_extract(data: Any, mapping: Any) -> Dict[str, Any]:
+    """Adapter: extract a {key: path} mapping from data into a flat dict."""
+    import json
+    from je_auto_control.utils.jsonpath import json_extract
+    if isinstance(data, str):
+        data = json.loads(data)
+    if isinstance(mapping, str):
+        mapping = json.loads(mapping)
+    return {"result": json_extract(data, mapping)}
+
+
+def _validate_json(data: Any, schema: Any) -> Dict[str, Any]:
+    """Adapter: validate data against a JSON Schema (each JSON string or object)."""
+    import json
+    from je_auto_control.utils.json_schema import validate_json
+    if isinstance(data, str):
+        data = json.loads(data)
+    if isinstance(schema, str):
+        schema = json.loads(schema)
+    return validate_json(data, schema).to_dict()
+
+
+def _run_saga(steps: Any) -> Dict[str, Any]:
+    """Adapter: run a saga (steps with compensating rollback) from a spec."""
+    import json
+    from je_auto_control.utils.saga import run_saga
+    if isinstance(steps, str):
+        steps = json.loads(steps)
+    result = run_saga(steps)
+    return {"ok": result.ok, "completed": result.completed,
+            "compensated": result.compensated,
+            "failed_step": result.failed_step, "error": result.error}
+
+
+def _decision_table(spec: Any, context: Any) -> Dict[str, Any]:
+    """Adapter: evaluate a DMN-style decision table against a context."""
+    import json
+    from je_auto_control.utils.decision_table import evaluate_table
+    if isinstance(spec, str):
+        spec = json.loads(spec)
+    if isinstance(context, str):
+        context = json.loads(context)
+    return {"result": evaluate_table(spec, context)}
+
+
+def _repair_record(key: str, method: str, coordinates: Any = None,
+                   description: Optional[str] = None, confidence: float = 1.0,
+                   auto_threshold: float = 0.9,
+                   db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: record a corrected locator from a heal (auto-apply or queue)."""
+    import json
+    from je_auto_control.utils.locator_repair import RepairStore
+    if isinstance(coordinates, str):
+        coordinates = json.loads(coordinates)
+    sug = RepairStore(db).record(
+        key, method=method, coordinates=coordinates, description=description,
+        confidence=confidence, auto_threshold=auto_threshold)
+    return {"id": sug.id, "status": sug.status}
+
+
+def _repair_resolved(key: str, db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: return the learned corrected locator for a key (or null)."""
+    from je_auto_control.utils.locator_repair import RepairStore
+    return {"locator": RepairStore(db).resolved(key)}
+
+
+def _repair_pending(db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: list locator-repair suggestions awaiting review."""
+    from je_auto_control.utils.locator_repair import RepairStore
+    return {"pending": RepairStore(db).pending()}
+
+
+def _repair_approve(suggestion_id: str,
+                    db: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: approve a pending locator-repair suggestion."""
+    from je_auto_control.utils.locator_repair import RepairStore
+    return {"approved": RepairStore(db).approve(suggestion_id)}
+
+
+def _detect_pii(text: str, kinds: Any = None) -> Dict[str, Any]:
+    """Adapter: detect PII spans in text."""
+    from je_auto_control.utils.pii_text import detect_pii
+    findings = detect_pii(text, kinds=_coerce_list(kinds) if kinds else None)
+    return {"findings": [{"kind": f.kind, "value": f.value,
+                          "start": f.start, "end": f.end} for f in findings]}
+
+
+def _redact_pii(text: str, kinds: Any = None, mode: str = "label",
+                mask_char: str = "*") -> Dict[str, Any]:
+    """Adapter: redact PII in text (label/mask/partial/hash)."""
+    from je_auto_control.utils.pii_text import redact_pii_text
+    return {"text": redact_pii_text(
+        text, kinds=_coerce_list(kinds) if kinds else None, mode=mode,
+        mask_char=mask_char)}
+
+
+def _export_sarif(findings: Any, path: Optional[str] = None,
+                  tool_name: str = "AutoControl") -> Dict[str, Any]:
+    """Adapter: build (and optionally write) a SARIF 2.1.0 document."""
+    import json
+    from je_auto_control.utils.sarif import to_sarif, write_sarif
+    if isinstance(findings, str):
+        findings = json.loads(findings)
+    document = to_sarif(findings, tool_name=tool_name)
+    result: Dict[str, Any] = {"sarif": document}
+    if path:
+        result["path"] = write_sarif(findings, path, tool_name=tool_name)
+    return result
+
+
 class Executor:
     """
     Executor
@@ -1906,11 +4442,14 @@ class Executor:
 
     # Args keys that hold nested action lists; runtime interpolation must
     # leave them untouched so each iteration re-reads current variable state.
-    _DEFERRED_ARG_KEYS: frozenset = frozenset({"body", "then", "else"})
+    _DEFERRED_ARG_KEYS: frozenset = frozenset(
+        {"body", "then", "else", "branches"})
 
     def __init__(self):
         self._block_commands = BLOCK_COMMANDS
         self.variables = VariableScope()
+        # Named, parameterised macros registered via AC_define_macro.
+        self.macros: Dict[str, Any] = {}
         # 事件字典，對應字串名稱到函式
         self.event_dict: dict = {
             # Mouse 滑鼠相關
@@ -1922,6 +4461,8 @@ class Executor:
             "AC_release_mouse": release_mouse,
             "AC_mouse_scroll": mouse_scroll,
             "AC_set_mouse_position": set_mouse_position,
+            "AC_human_move": _human_move,
+            "AC_human_type": _human_type,
 
             # Keyboard 鍵盤相關
             "AC_get_keyboard_keys_table": get_keyboard_keys_table,
@@ -1951,6 +4492,13 @@ class Executor:
             "AC_generate_html_report": generate_html_report,
             "AC_generate_json_report": generate_json_report,
             "AC_generate_xml_report": generate_xml_report,
+            "AC_generate_code": _generate_code,
+            "AC_send_email": _send_email,
+            "AC_assert_pdf_text": _assert_pdf_text,
+            "AC_take_golden": _take_golden,
+            "AC_assert_visual": _assert_visual,
+            "AC_run_state_machine": _run_state_machine,
+            "AC_http_request": http_request,
 
             # Record 錄製
             "AC_record": record,
@@ -2029,6 +4577,249 @@ class Executor:
             "AC_a11y_find": _a11y_find_as_dict,
             "AC_a11y_click": click_accessibility_element,
             "AC_a11y_dump": _a11y_dump,
+            "AC_control_get_value": _control_get_value,
+            "AC_control_set_value": _control_set_value,
+            "AC_control_invoke": _control_invoke,
+            "AC_control_toggle": _control_toggle,
+            "AC_read_table": _read_table,
+            "AC_watchdog_add": _watchdog_add,
+            "AC_watchdog_start": _watchdog_start,
+            "AC_watchdog_stop": _watchdog_stop,
+            "AC_watchdog_list": _watchdog_list,
+            "AC_handle_file_dialog": _handle_file_dialog,
+            "AC_assert_session_active": _assert_session_active,
+            "AC_queue_add": _queue_add,
+            "AC_queue_next": _queue_next,
+            "AC_queue_complete": _queue_complete,
+            "AC_queue_fail": _queue_fail,
+            "AC_queue_stats": _queue_stats,
+            "AC_generate_data": _generate_data,
+            "AC_mcp_manifest": _mcp_manifest,
+            "AC_rank_tests": _rank_tests,
+            "AC_select_tests": _select_tests,
+            "AC_element_save": _element_save,
+            "AC_element_find": _element_find,
+            "AC_element_click": _element_click,
+            "AC_element_remove": _element_remove,
+            "AC_element_list": _element_list,
+            "AC_debug_trace": _debug_trace,
+            "AC_skill_save": _skill_save,
+            "AC_skill_run": _skill_run,
+            "AC_skill_list": _skill_list,
+            "AC_skill_remove": _skill_remove,
+            "AC_skill_search": _skill_search,
+            "AC_guard_text": _guard_text,
+            "AC_agent_card": _agent_card,
+            "AC_read_workbook": _read_workbook,
+            "AC_write_workbook": _write_workbook,
+            "AC_read_document": _read_document,
+            "AC_write_document": _write_document,
+            "AC_read_presentation": _read_presentation,
+            "AC_write_presentation": _write_presentation,
+            "AC_memory_remember": _memory_remember,
+            "AC_memory_recall": _memory_recall,
+            "AC_memory_recent": _memory_recent,
+            "AC_memory_forget": _memory_forget,
+            "AC_memory_stats": _memory_stats,
+            "AC_seed_everything": _seed_everything,
+            "AC_observe_add": _observe_add,
+            "AC_observe_remove": _observe_remove,
+            "AC_observe_list": _observe_list,
+            "AC_observe_poll": _observe_poll,
+            "AC_observe_start": _observe_start,
+            "AC_observe_stop": _observe_stop,
+            "AC_generate_sbom": _generate_sbom,
+            "AC_shard_suite": _shard_suite,
+            "AC_merge_results": _merge_results,
+            "AC_validate_rows": _validate_rows,
+            "AC_extract_fields": _extract_fields,
+            "AC_mask_rows": _mask_rows,
+            "AC_pseudo_localize": _pseudo_localize,
+            "AC_check_overflow": _check_overflow,
+            "AC_check_catalog": _check_catalog,
+            "AC_run_resumable": _run_resumable,
+            "AC_checkpoint_status": _checkpoint_status,
+            "AC_checkpoint_clear": _checkpoint_clear,
+            "AC_mark_screen": _mark_screen,
+            "AC_mark_click": _mark_click,
+            "AC_screen_snapshot": _screen_snapshot,
+            "AC_screen_diff": _screen_diff,
+            "AC_screen_changed": _screen_changed,
+            "AC_describe_screen": _describe_screen,
+            "AC_replay_timeline": _replay_timeline,
+            "AC_input_sequence": _input_sequence,
+            "AC_circuit_call": _circuit_call,
+            "AC_ci_annotations": _ci_annotations,
+            "AC_clip_history_capture": _clip_history_capture,
+            "AC_clip_history_list": _clip_history_list,
+            "AC_clip_history_search": _clip_history_search,
+            "AC_clip_history_start": _clip_history_start,
+            "AC_clip_history_stop": _clip_history_stop,
+            "AC_heal_stats": _heal_stats,
+            "AC_scan_secrets": _scan_secrets,
+            "AC_scan_vulns": _scan_vulns,
+            "AC_apply_vex": _apply_vex,
+            "AC_check_licenses": _check_licenses,
+            "AC_jwt_encode": _jwt_encode,
+            "AC_jwt_decode": _jwt_decode,
+            "AC_rate_limit": _rate_limit,
+            "AC_search_documents": _search_documents,
+            "AC_describe_stats": _describe_stats,
+            "AC_ab_significance": _ab_significance,
+            "AC_rrule_occurrences": _rrule_occurrences,
+            "AC_rrule_next": _rrule_next,
+            "AC_evaluate_flag": _evaluate_flag,
+            "AC_flag_enabled": _flag_enabled,
+            "AC_build_provenance": _build_provenance,
+            "AC_verify_provenance": _verify_provenance,
+            "AC_match_json": _match_json,
+            "AC_diff_json": _diff_json,
+            "AC_run_chaos": _run_chaos,
+            "AC_evaluate_slo": _evaluate_slo,
+            "AC_burn_alerts": _burn_alerts,
+            "AC_percentiles": _percentiles,
+            "AC_bulkhead_run": _bulkhead_run,
+            "AC_retry_after": _retry_after,
+            "AC_http_replay": _http_replay,
+            "AC_trace_inject": _trace_inject,
+            "AC_trace_extract": _trace_extract,
+            "AC_baggage_parse": _baggage_parse,
+            "AC_baggage_format": _baggage_format,
+            "AC_canonical_log": _canonical_log,
+            "AC_spans_to_otlp": _spans_to_otlp,
+            "AC_normalize_text": _normalize_text,
+            "AC_slugify": _slugify,
+            "AC_text_similarity": _text_similarity,
+            "AC_simhash": _simhash,
+            "AC_near_duplicates": _near_duplicates,
+            "AC_validate_config": _validate_config,
+            "AC_resolve_ref": _resolve_ref,
+            "AC_resolve_refs": _resolve_refs,
+            "AC_redact_config": _redact_config,
+            "AC_redact_secret_text": _redact_secret_text,
+            "AC_parse_link_header": _parse_link_header,
+            "AC_next_url": _next_url,
+            "AC_build_multipart": _build_multipart,
+            "AC_parse_multipart": _parse_multipart,
+            "AC_decode_body": _decode_body,
+            "AC_parse_quality_values": _parse_quality_values,
+            "AC_cookie_header": _cookie_header,
+            "AC_parse_set_cookie": _parse_set_cookie,
+            "AC_parse_cache_control": _parse_cache_control,
+            "AC_store_validators": _store_validators,
+            "AC_profile_rows": _profile_rows,
+            "AC_infer_schema": _infer_schema,
+            "AC_parse_problem": _parse_problem,
+            "AC_parse_dotenv": _parse_dotenv,
+            "AC_load_dotenv": _load_dotenv,
+            "AC_parse_sse": _parse_sse,
+            "AC_resolve_config": _resolve_config,
+            "AC_explain_config": _explain_config,
+            "AC_check_compatibility": _check_compatibility,
+            "AC_ts_rate": _ts_rate,
+            "AC_ts_downsample": _ts_downsample,
+            "AC_detect_anomalies": _detect_anomalies,
+            "AC_sma": _sma,
+            "AC_ewma": _ewma,
+            "AC_idempotency_begin": _idempotency_begin,
+            "AC_idempotency_complete": _idempotency_complete,
+            "AC_dedup_check": _dedup_check,
+            "AC_sequence_observe": _sequence_observe,
+            "AC_cas_put": _cas_put,
+            "AC_cas_get": _cas_get,
+            "AC_outbox_enqueue": _outbox_enqueue,
+            "AC_outbox_pending": _outbox_pending,
+            "AC_collation_sort": _collation_sort,
+            "AC_collation_compare": _collation_compare,
+            "AC_confusable_scan": _confusable_scan,
+            "AC_confusable_compare": _confusable_compare,
+            "AC_readability_report": _readability_report,
+            "AC_bidi_check": _bidi_check,
+            "AC_bidi_strip": _bidi_strip,
+            "AC_format_list": _format_list,
+            "AC_format_message": _format_message,
+            "AC_gettext_translate": _gettext_translate,
+            "AC_gettext_ngettext": _gettext_ngettext,
+            "AC_detect_drift": _detect_drift,
+            "AC_categorical_drift": _categorical_drift,
+            "AC_diff_rows": _diff_rows,
+            "AC_cell_changes": _cell_changes,
+            "AC_check_foreign_key": _check_foreign_key,
+            "AC_check_unique_key": _check_unique_key,
+            "AC_check_accepted_values": _check_accepted_values,
+            "AC_check_row_count": _check_row_count,
+            "AC_unified_diff": _unified_diff,
+            "AC_apply_unified": _apply_unified,
+            "AC_three_way_merge": _three_way_merge,
+            "AC_resolve_pointer": _resolve_pointer,
+            "AC_apply_json_patch": _apply_json_patch,
+            "AC_make_json_patch": _make_json_patch,
+            "AC_merge_patch": _merge_patch,
+            "AC_generate_sop": _generate_sop,
+            "AC_tween_drag": _tween_drag,
+            "AC_list_plugins": _list_plugins,
+            "AC_load_plugins": _load_plugins,
+            "AC_approval_request": _approval_request,
+            "AC_approval_approve": _approval_approve,
+            "AC_approval_reject": _approval_reject,
+            "AC_approval_status": _approval_status,
+            "AC_lease_secret": _lease_secret,
+            "AC_lease_valid": _lease_valid,
+            "AC_revoke_lease": _revoke_lease,
+            "AC_lease_active": _lease_active,
+            "AC_egress_allow": _egress_allow,
+            "AC_egress_check": _egress_check,
+            "AC_egress_reset": _egress_reset,
+            "AC_verify_artifact": _verify_artifact,
+            "AC_approve_artifact": _approve_artifact,
+            "AC_pending_artifacts": _pending_artifacts,
+            "AC_evaluate_trajectory": _evaluate_trajectory,
+            "AC_compliance_report": _compliance_report,
+            "AC_trace_record": _trace_record,
+            "AC_trace_summary": _trace_summary,
+            "AC_trace_export": _trace_export,
+            "AC_trace_reset": _trace_reset,
+            "AC_write_step_video": _write_step_video,
+            "AC_fuzzy_ratio": _fuzzy_ratio,
+            "AC_fuzzy_best_match": _fuzzy_best_match,
+            "AC_fuzzy_dedupe": _fuzzy_dedupe,
+            "AC_s3_upload": _s3_upload,
+            "AC_s3_download": _s3_download,
+            "AC_s3_list": _s3_list,
+            "AC_s3_delete": _s3_delete,
+            "AC_image_hash": _image_hash,
+            "AC_dedupe_images": _dedupe_images,
+            "AC_parse_decimal": _parse_decimal,
+            "AC_parse_number": _parse_number,
+            "AC_format_decimal": _format_decimal,
+            "AC_format_currency": _format_currency,
+            "AC_format_date": _format_date,
+            "AC_voice_register": _voice_register,
+            "AC_voice_dispatch": _voice_dispatch,
+            "AC_voice_list": _voice_list,
+            "AC_voice_clear": _voice_clear,
+            "AC_to_physical": _to_physical,
+            "AC_to_model": _to_model,
+            "AC_loop_guard_observe": _loop_guard_observe,
+            "AC_loop_guard_reset": _loop_guard_reset,
+            "AC_mine_actions": _mine_actions,
+            "AC_set_asset": _set_asset,
+            "AC_get_asset": _get_asset,
+            "AC_list_assets": _list_assets,
+            "AC_emit_event": _emit_event,
+            "AC_notify_webhook": _notify_webhook,
+            "AC_json_query": _json_query,
+            "AC_json_extract": _json_extract,
+            "AC_validate_json": _validate_json,
+            "AC_run_saga": _run_saga,
+            "AC_decision_table": _decision_table,
+            "AC_repair_record": _repair_record,
+            "AC_repair_resolved": _repair_resolved,
+            "AC_repair_pending": _repair_pending,
+            "AC_repair_approve": _repair_approve,
+            "AC_detect_pii": _detect_pii,
+            "AC_redact_pii": _redact_pii,
+            "AC_export_sarif": _export_sarif,
             "AC_a11y_record_start": _a11y_record_start,
             "AC_a11y_record_stop": _a11y_record_stop,
             "AC_a11y_record_events": _a11y_record_events,
@@ -2048,6 +4839,7 @@ class Executor:
             "AC_assert_image": _assert_image,
             "AC_assert_pixel": _assert_pixel,
             "AC_assert_window": _assert_window,
+            "AC_assert_vlm": _assert_vlm,
             "AC_assert_clipboard": _assert_clipboard,
             "AC_assert_process": _assert_process,
             "AC_assert_file": _assert_file,
@@ -2055,6 +4847,12 @@ class Executor:
             "AC_assert_all": _assert_all,
             "AC_assert_any": _assert_any,
             "AC_assert_eventually": _assert_eventually,
+
+            # Action-file integrity (HMAC-SHA256 sign / verify)
+            "AC_sign_action_file": _sign_action_file,
+            "AC_verify_action_file": _verify_action_file,
+            "AC_encrypt_action_file": _encrypt_action_file,
+            "AC_decrypt_action_file": _decrypt_action_file,
 
             # Data-driven execution (load rows from CSV / JSON / SQLite / ...)
             "AC_load_data": _load_data,
@@ -2075,6 +4873,7 @@ class Executor:
             # Accessibility / i18n audit (missing labels, contrast, truncation)
             "AC_audit_accessibility": _audit_accessibility,
             "AC_audit_contrast": _audit_contrast,
+            "AC_wcag_audit": _wcag_audit,
 
             # Mobile device matrix (parallel script across devices)
             "AC_run_device_matrix": _run_device_matrix,
@@ -2110,6 +4909,11 @@ class Executor:
             "AC_wait_screen_stable": _wait_screen_stable,
             "AC_wait_pixel_changes": _wait_pixel_changes,
             "AC_wait_region_idle": _wait_region_idle,
+            "AC_wait_for_file": _wait_for_file,
+            "AC_wait_for_port": _wait_for_port,
+            "AC_wait_for_process": _wait_for_process,
+            "AC_wait_clipboard_change": _wait_clipboard_change,
+            "AC_wait_window_closed": _wait_window_closed,
 
             # Cost telemetry (LLM token + USD tracking)
             "AC_costs_record": _costs_record,
@@ -2273,6 +5077,30 @@ class Executor:
             # Config bundle export / import
             "AC_config_export": _config_export,
             "AC_config_import": _config_import,
+
+            # Screenshot annotation (boxes / highlights / arrows / labels)
+            "AC_annotate_screenshot": _annotate_screenshot,
+
+            # Desktop notification
+            "AC_notify": _notify,
+
+            # Region colour statistics (dominant / average colour)
+            "AC_region_color_stats": _region_color_stats,
+
+            # Recoverable deletion (move a file to the OS recycle bin)
+            "AC_move_to_trash": _move_to_trash,
+
+            # QR code decoding from a screen region
+            "AC_read_qr": _read_qr,
+
+            # Scroll until a target image / text is visible
+            "AC_scroll_to_find": _scroll_to_find,
+
+            # Per-window capture + window-layout save / restore + snap
+            "AC_capture_window": _capture_window,
+            "AC_save_window_layout": _save_window_layout,
+            "AC_restore_window_layout": _restore_window_layout,
+            "AC_snap_window": _snap_window,
         }
 
     def known_commands(self) -> set:
@@ -2407,8 +5235,10 @@ class Executor:
         :return: 每個檔案的執行結果
         """
         autocontrol_logger.info(f"execute_files, execute_files_list: {execute_files_list}")
+        from je_auto_control.utils.action_signing import require_signed_actions
         execute_detail_list = []
         for file in execute_files_list:
+            require_signed_actions(file)
             execute_detail_list.append(self.execute_action(read_action_json(file)))
         return execute_detail_list
 

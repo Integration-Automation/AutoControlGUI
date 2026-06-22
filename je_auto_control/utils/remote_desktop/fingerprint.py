@@ -88,16 +88,22 @@ class KnownHosts:
         for host_id, value in data.items():
             if not isinstance(host_id, str):
                 continue
-            if isinstance(value, str):
-                self._entries[host_id] = {
-                    "app_fp": value, "dtls_fp": None, "last_seen": None,
-                }
-            elif isinstance(value, dict):
-                self._entries[host_id] = {
-                    "app_fp": value.get("app_fp") or None,
-                    "dtls_fp": value.get("dtls_fp") or None,
-                    "last_seen": value.get("last_seen") or None,
-                }
+            entry = self._normalise_entry(value)
+            if entry is not None:
+                self._entries[host_id] = entry
+
+    @staticmethod
+    def _normalise_entry(value) -> Optional[dict]:
+        """Coerce a stored known-hosts value into an entry, or ``None``."""
+        if isinstance(value, str):
+            return {"app_fp": value, "dtls_fp": None, "last_seen": None}
+        if isinstance(value, dict):
+            return {
+                "app_fp": value.get("app_fp") or None,
+                "dtls_fp": value.get("dtls_fp") or None,
+                "last_seen": value.get("last_seen") or None,
+            }
+        return None
 
     def _save(self) -> None:
         try:

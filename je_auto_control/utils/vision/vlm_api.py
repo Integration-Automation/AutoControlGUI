@@ -73,6 +73,28 @@ def click_by_description(description: str,
     return True
 
 
+def verify_description(description: str,
+                       screen_region: Optional[List[int]] = None,
+                       model: Optional[str] = None,
+                       backend: Optional[VLMBackend] = None) -> bool:
+    """Ask a VLM whether ``description`` is true of the current screen.
+
+    A yes/no companion to :func:`locate_by_description` — useful for
+    semantic assertions ("the cart shows three items"). Raises
+    :class:`VLMNotAvailableError` if no backend is configured.
+    """
+    if not description or not description.strip():
+        raise ValueError("description must be a non-empty string")
+    bound = backend if backend is not None else get_backend()
+    if not bound.available:
+        raise VLMNotAvailableError(
+            "no VLM backend configured; set ANTHROPIC_API_KEY or "
+            "OPENAI_API_KEY and install the matching SDK",
+        )
+    image_bytes = _capture_screenshot_bytes(screen_region)
+    return bool(bound.verify(image_bytes, description, model=model))
+
+
 def _capture_screenshot_bytes(
         screen_region: Optional[List[int]] = None) -> bytes:
     """Take a screenshot (optionally cropped) and return PNG bytes."""
@@ -92,4 +114,5 @@ def _capture_screenshot_bytes(
 
 __all__ = [
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
+    "verify_description",
 ]

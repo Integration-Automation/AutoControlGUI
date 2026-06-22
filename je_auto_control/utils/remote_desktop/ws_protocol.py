@@ -12,7 +12,7 @@ import hashlib
 import os
 import socket
 import struct
-from typing import Tuple
+from typing import Optional, Tuple
 
 WS_GUID = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
@@ -253,12 +253,16 @@ def _read_frame(sock: socket.socket) -> Tuple[int, bytes]:
         )
     masking_key = _read_exact(sock, 4) if masked else None
     payload = _read_exact(sock, length) if length > 0 else b""
-    if masking_key is not None and payload:
-        unmasked = bytes(
-            payload[i] ^ masking_key[i % 4] for i in range(len(payload))
-        )
-        return opcode, unmasked
-    return opcode, payload
+    return opcode, _unmask(payload, masking_key)
+
+
+def _unmask(payload: bytes, masking_key: Optional[bytes]) -> bytes:
+    """Apply the WebSocket masking key to ``payload`` when present."""
+    if masking_key is None or not payload:
+        return payload
+    return bytes(
+        payload[i] ^ masking_key[i % 4] for i in range(len(payload))
+    )
 
 
 def _read_exact(sock: socket.socket, n: int) -> bytes:

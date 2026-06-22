@@ -43,12 +43,15 @@ from je_auto_control.utils.executor.action_executor import executor
 from je_auto_control.utils.accessibility import (
     AccessibilityElement, AccessibilityNotAvailableError,
     AccessibilityRecorder, AXRecorderEvent, AXTreeNode,
-    click_accessibility_element, dump_accessibility_tree,
+    click_accessibility_element, control_get_value, control_invoke,
+    control_set_value, control_toggle, dump_accessibility_tree,
     find_accessibility_element, list_accessibility_elements,
+    read_control_table,
 )
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
+    verify_description,
 )
 # Self-healing locator (image template first, VLM fallback, audit log)
 from je_auto_control.utils.self_healing import (
@@ -63,6 +66,23 @@ from je_auto_control.utils.redaction import (
     policy_from_name as redaction_policy_from_name,
     redact_png_bytes,
 )
+# Screenshot annotation (draw boxes / highlights / arrows / labels).
+from je_auto_control.utils.annotate import annotate_screenshot
+# Cross-platform desktop notifications.
+from je_auto_control.utils.notify import NotifyResult, notify
+# Region colour statistics (dominant / average colour).
+from je_auto_control.utils.color_stats import ColorStats, region_color_stats
+# Per-window capture, window-layout save / restore, snap/tile.
+from je_auto_control.utils.window_capture import (
+    capture_window, get_window_geometry, restore_window_layout,
+    save_window_layout, snap_window,
+)
+# Scroll until a target image / text is visible.
+from je_auto_control.utils.scroll_find import scroll_until_visible
+# Recoverable deletion (move files to the OS recycle bin).
+from je_auto_control.utils.trash import move_to_trash
+# QR code decoding from a screen region / image.
+from je_auto_control.utils.qr import read_qr_codes
 # WebRunner bridge (headless: optional je_web_runner dependency)
 from je_auto_control.utils.webrunner_bridge import (
     WebRunnerBridgeError, is_webrunner_available, list_webrunner_commands,
@@ -76,6 +96,448 @@ from je_auto_control.utils.clipboard.clipboard import (
 # Hotkey daemon (headless)
 from je_auto_control.utils.hotkey.hotkey_daemon import (
     HotkeyBinding, HotkeyDaemon, default_hotkey_daemon,
+)
+# OTP/TOTP for automated 2FA logins
+from je_auto_control.utils.otp import (
+    TOTPError, generate_secret, generate_totp, verify_totp,
+)
+# Native file Open/Save/folder dialog helper
+from je_auto_control.utils.file_dialog import (
+    FileDialogDriver, handle_file_dialog,
+)
+# Locked / non-interactive session guard
+from je_auto_control.utils.session_guard import (
+    ensure_interactive_session, is_session_locked,
+)
+# Transactional work queue (dispatcher/performer)
+from je_auto_control.utils.work_queue import (
+    BusinessError, WorkItem, WorkQueue,
+)
+# Seeded synthetic test-data generation
+from je_auto_control.utils.test_data import generate_rows, write_dataset
+# Risk-based test selection from run history
+from je_auto_control.utils.test_select import rank_flows, select_flows
+# MCP registry server.json manifest
+from je_auto_control.utils.mcp_registry import (
+    build_server_manifest, write_server_manifest,
+)
+# Named locator repository (object repository) for native UI
+from je_auto_control.utils.element_repository import ElementRepository
+# Step-through debugger / tracer for action lists
+from je_auto_control.utils.flow_debugger import FlowDebugger, trace_actions
+# Persistent library of reusable action sequences (skills/playbooks)
+from je_auto_control.utils.skill_library import Skill, SkillLibrary
+# Heuristic prompt-injection guardrail for untrusted on-screen text
+from je_auto_control.utils.guardrail import (
+    assess_text, redact_text, scan_text,
+)
+# A2A (agent-to-agent) agent card
+from je_auto_control.utils.a2a import build_agent_card, write_agent_card
+# Headless Office I/O (optional [office] extra: openpyxl/python-docx/pptx)
+from je_auto_control.utils.office import (
+    read_document, read_presentation, read_workbook,
+    write_document, write_presentation, write_workbook,
+)
+# Persistent episodic memory for agents (goal -> trajectory -> outcome)
+from je_auto_control.utils.agent_memory import AgentMemory, Episode
+# Deterministic run controls (seeded RNG + frozen wall clock)
+from je_auto_control.utils.deterministic import (
+    DeterministicRun, seed_everything,
+)
+# Reactive screen observer (appear / vanish / change -> callback)
+from je_auto_control.utils.observer import (
+    ScreenObserver, WatchRule, default_observer,
+    image_predicate, pixel_predicate, text_predicate,
+)
+# CycloneDX SBOM generation (supply-chain compliance)
+from je_auto_control.utils.sbom import build_sbom, write_sbom
+# Duration-aware suite sharding + shard-result merge
+from je_auto_control.utils.test_shard import merge_results, shard_flows
+# Data-quality: row schema validation, field extraction, masking
+from je_auto_control.utils.data_quality import (
+    extract_fields, mask_rows, validate_rows,
+)
+# Data profiling: per-column stats + schema inference from observed rows
+from je_auto_control.utils.data_profile import infer_schema, profile_rows
+# Distribution drift: PSI, KS two-sample, categorical drift
+from je_auto_control.utils.data_drift import (
+    categorical_drift, detect_drift, ks_two_sample, psi,
+)
+# JSON-Schema compatibility (backward / forward / full classification)
+from je_auto_control.utils.schema_compat import (
+    SchemaChange, check_compatibility, diff_schemas, is_backward_compatible,
+    is_forward_compatible, is_full_compatible,
+)
+# Tabular row-set diff (CDC-style added/removed/changed by key)
+from je_auto_control.utils.dataset_diff import (
+    cell_changes, diff_rows, summarize_diff,
+)
+# Cross-dataset referential integrity (foreign-key / unique / accepted values)
+from je_auto_control.utils.referential import (
+    check_accepted_values, check_foreign_key, check_row_count, check_unique_key,
+)
+# i18n / l10n testing: pseudo-localize, overflow + catalog checks
+from je_auto_control.utils.i18n_test import (
+    check_catalog, check_overflow, pseudo_localize, pseudo_localize_catalog,
+)
+# Flow checkpoint & resume (durable execution for long action lists)
+from je_auto_control.utils.checkpoint import (
+    Checkpoint, CheckpointStore, run_resumable,
+)
+# Set-of-Marks overlay (number elements for VLM grounding)
+from je_auto_control.utils.set_of_marks import (
+    mark_click, mark_elements, mark_screen, render_marks, resolve_mark,
+)
+# Semantic screen state (snapshot/diff + structured description)
+from je_auto_control.utils.screen_state import (
+    describe_screen, diff_snapshots, screen_changed, snapshot,
+    snapshot_screen,
+)
+# Timed input replay + declarative input-sequence DSL
+from je_auto_control.utils.input_macro import replay_timeline, run_sequence
+# Resilience primitives (retry-with-backoff + circuit breaker)
+from je_auto_control.utils.resilience import (
+    CircuitBreaker, CircuitOpenError, RetryPolicy, retry_call,
+)
+# Idempotency-key store with stored responses (Stripe-style request dedup)
+from je_auto_control.utils.idempotency import (
+    IdempotencyConflict, IdempotencyStore, request_fingerprint,
+)
+# Time-windowed message deduplication (exactly-once inbox)
+from je_auto_control.utils.dedup_window import DedupWindow
+# Per-stream sequence-gap / ordering detection
+from je_auto_control.utils.sequence_gap import SequenceTracker
+# Optimistic-concurrency versioned store (compare-and-swap / If-Match)
+from je_auto_control.utils.optimistic import (
+    VersionConflict, VersionedStore, check_if_match, if_match_header,
+)
+# Transactional outbox (durable at-least-once event delivery)
+from je_auto_control.utils.outbox import Outbox
+# Locale-aware string collation (deterministic multi-level sort keys)
+from je_auto_control.utils.locale_collation import (
+    collation_key, sort_strings,
+)
+from je_auto_control.utils.locale_collation import compare as collation_compare
+# Confusable / homoglyph detection (Unicode-spoofing skeletons)
+from je_auto_control.utils.confusables import (
+    detect_homoglyphs, is_confusable, is_mixed_script, scripts_of,
+)
+from je_auto_control.utils.confusables import skeleton as confusable_skeleton
+# Readability scoring (Flesch / Flesch-Kincaid / Gunning Fog / SMOG / ARI)
+from je_auto_control.utils.readability import (
+    automated_readability_index, count_syllables, flesch_kincaid_grade,
+    flesch_reading_ease, gunning_fog, readability_report, readability_stats,
+    smog_index,
+)
+# Bidirectional-text QA (bidi controls, nesting balance, Trojan-source scan)
+from je_auto_control.utils.bidi_check import (
+    base_direction, bidi_controls, detect_bidi_issues, has_bidi_controls,
+    is_trojan_source, strip_bidi_controls,
+)
+from je_auto_control.utils.bidi_check import is_balanced as is_bidi_balanced
+# Locale-aware list formatting ("A, B, and C") in the style of CLDR
+from je_auto_control.utils.list_format import format_list
+# ICU-lite MessageFormat (plural / select / selectordinal rendering)
+from je_auto_control.utils.message_format import (
+    format_message, ordinal_category, plural_category,
+)
+# GNU gettext catalog I/O (parse .po, compile/read .mo, message lookup)
+from je_auto_control.utils.gettext_catalog import (
+    GettextCatalog, parse_po, parse_po_file, read_mo, read_mo_file,
+)
+# CI workflow annotations (GitHub Actions)
+from je_auto_control.utils.ci_annotations import (
+    emit_annotations, format_annotation,
+)
+# Clipboard history (ring buffer + background poller)
+from je_auto_control.utils.clipboard_history import (
+    ClipboardHistory, default_clipboard_history,
+)
+# Self-heal analytics + action-secrets scanning (audit/analysis)
+from je_auto_control.utils.heal_analytics import analyze_heal_log, heal_stats
+from je_auto_control.utils.secrets_scan import scan_secrets
+# Process-documentation (SOP) generator from an action list
+from je_auto_control.utils.process_doc import (
+    describe_step, generate_sop, write_sop,
+)
+# Eased / tweened interpolated drag
+from je_auto_control.utils.tween_drag import (
+    easing_names, tween_drag, tween_points,
+)
+# Plugin SDK: discover/load third-party AC_* commands via entry points
+from je_auto_control.utils.plugin_sdk import (
+    COMMANDS_GROUP, discover_plugins, load_plugins,
+)
+# Maker-checker approval gate + just-in-time credential leases (PAM/governance)
+from je_auto_control.utils.governance import (
+    ApprovalGate, CredentialBroker, CredentialBrokerError, default_broker,
+    set_secret_resolver,
+)
+# Network egress allowlist guard for the headless HTTP client
+from je_auto_control.utils.egress import (
+    EgressBlocked, EgressPolicy, get_egress_policy, set_egress_policy,
+)
+# Approval testing: verify artifacts against a human-approved baseline
+from je_auto_control.utils.approval import (
+    ApprovalResult, approve_artifact, pending_artifacts, verify_artifact,
+)
+# Agent trajectory evaluation: score a recorded run against a rubric
+from je_auto_control.utils.trajectory_eval import evaluate_trajectory
+# Compliance: map governance evidence to SOC2 / ISO 27001 controls
+from je_auto_control.utils.compliance import (
+    build_compliance_report, render_compliance_html, write_compliance_report,
+)
+# Agent observability: OpenTelemetry GenAI-convention spans
+from je_auto_control.utils.agent_trace import (
+    AgentTrace, default_trace, reset_trace,
+)
+# Video step-overlay report: caption screenshots into a walkthrough video
+from je_auto_control.utils.video_report import (
+    VideoStep, build_overlay_plan, render_overlay_frame, write_step_video,
+)
+# Fuzzy string matching / dedupe (difflib default, optional rapidfuzz)
+from je_auto_control.utils.fuzzy import (
+    fuzzy_best_match, fuzzy_dedupe, fuzzy_matches, fuzzy_ratio,
+)
+# Unicode text normalisation + slugify (canonicalise before matching)
+from je_auto_control.utils.text_normalize import (
+    deaccent, fold_whitespace, normalize_quotes, normalize_text, slugify,
+)
+# String-distance metrics (Levenshtein / Jaro-Winkler / Jaccard / Dice)
+from je_auto_control.utils.text_similarity import (
+    damerau_levenshtein, dice, jaccard, jaro, jaro_winkler, levenshtein,
+    similarity,
+)
+# Near-duplicate text detection (SimHash / MinHash fingerprints)
+# (hamming_distance is already exported by image_dedup with identical semantics)
+from je_auto_control.utils.near_dup import (
+    minhash_signature, minhash_similarity, near_duplicates, simhash,
+)
+# S3-compatible artifact store (optional boto3, injectable client)
+from je_auto_control.utils.artifact_store import (
+    S3ArtifactStore, configure_default_store, get_default_store,
+    set_default_store,
+)
+# Perceptual-hash image dedupe (Pillow aHash/dHash)
+from je_auto_control.utils.image_dedup import (
+    average_hash, dedupe_images, dhash, hamming_distance, images_similar,
+)
+# Locale-aware number/currency/date parsing & formatting (optional babel)
+from je_auto_control.utils.locale_parse import (
+    format_currency, format_date, format_decimal, parse_decimal, parse_number,
+)
+# Voice-command router (injectable speech-to-text)
+from je_auto_control.utils.voice import (
+    VoiceCommand, VoiceRouter, default_voice_router,
+)
+# Coordinate-space mapping (model grid <-> physical pixels)
+from je_auto_control.utils.coordinate_space import (
+    CoordinateSpace, downscale_png, normalized_space, xga_space,
+)
+# Mechanical stuck-loop detection for agent loops
+from je_auto_control.utils.loop_guard import (
+    LoopGuard, LoopVerdict, default_loop_guard, digest_result,
+)
+# Task/process mining: automation-candidate discovery from action logs
+from je_auto_control.utils.process_mining import (
+    Candidate, MiningReport, SequencePattern, directly_follows,
+    find_repeated_sequences, mine_action_log, rank_automation_candidates,
+)
+# Environment-scoped typed asset/config store
+from je_auto_control.utils.assets import (
+    Asset, AssetStore, AssetValue, active_environment,
+)
+# .env file parsing / serialisation (12-factor config ingestion)
+from je_auto_control.utils.dotenv import (
+    dotenv_values, dump_dotenv, load_dotenv, parse_dotenv,
+)
+# Layered config resolver (defaults < file < env < CLI, with provenance)
+from je_auto_control.utils.layered_config import (
+    LayeredConfig, SourceTrace, deep_merge,
+)
+# Typed config schema validation (coerce + required + choices)
+from je_auto_control.utils.config_schema import (
+    ConfigField, ConfigSchema, coerce, validate_config,
+)
+# URI-scheme secret/value reference resolver (env:// / file:// / secret://)
+from je_auto_control.utils.secret_ref import (
+    RefResolver, SecretRefError, is_ref, resolve_ref, resolve_refs_in,
+)
+# Secret redaction for config structures and log strings
+from je_auto_control.utils.config_redaction import (
+    redact_config, redact_secret_text,
+)
+# Outbound CloudEvents emitter
+from je_auto_control.utils.events import (
+    EventEmitter, post_cloudevent, to_cloudevent,
+)
+# Outbound chat/webhook notifications (Slack/Discord/Teams/raw)
+from je_auto_control.utils.notify_channels import (
+    WebhookChannel, WebhookResult, notify_webhook, set_default_poster,
+)
+# JSONPath-style querying over parsed JSON
+from je_auto_control.utils.jsonpath import (
+    json_extract, json_query, json_query_one,
+)
+# Saga orchestrator: multi-step flow with compensating rollback
+from je_auto_control.utils.saga import Saga, SagaResult, run_saga
+# DMN-style decision tables (rules + hit policy)
+from je_auto_control.utils.decision_table import (
+    DecisionTable, Rule, evaluate_table,
+)
+# Self-healing write-back: persist corrected locators from heal events
+from je_auto_control.utils.locator_repair import (
+    RepairStore, RepairSuggestion, repair_from_heal,
+)
+# Text PII detection / redaction (free-text emails, phones, SSNs, cards, …)
+from je_auto_control.utils.pii_text import (
+    PIIFinding, detect_pii, redact_pii_text,
+)
+# SARIF 2.1.0 export (unify findings for code-scanning)
+from je_auto_control.utils.sarif import (
+    from_audit_findings, from_lint_issues, make_finding, to_sarif, write_sarif,
+)
+# JSON Schema (Draft 2020-12 subset) validation of parsed JSON
+from je_auto_control.utils.json_schema import (
+    SchemaValidationResult, assert_schema, is_valid, validate_json,
+)
+# OSV vulnerability matching for SBOM components
+from je_auto_control.utils.vuln_scan import (
+    findings_to_sarif, is_affected, match_package, scan_components, version_key,
+)
+# OpenVEX triage over vulnerability findings
+from je_auto_control.utils.vex import (
+    VEX_JUSTIFICATIONS, VEX_STATUSES, apply_vex, build_vex, vex_statement,
+)
+# SPDX license allow/deny policy over SBOM components
+from je_auto_control.utils.license_policy import (
+    DEFAULT_COPYLEFT, evaluate_license, evaluate_sbom,
+    license_findings_to_sarif, normalize_spdx,
+)
+# JSON Web Token (HMAC family) encode/decode + claim validation
+from je_auto_control.utils.jwt import (
+    ClaimsPolicy, ExpiredTokenError, InvalidSignatureError, JwtError,
+    decode_jwt, encode_jwt,
+)
+# Client-side rate limiting (token bucket / sliding window / throttle)
+from je_auto_control.utils.rate_limit import (
+    SlidingWindowLimiter, TokenBucket, throttle,
+)
+# JSON Pointer / Patch / Merge Patch (RFC 6901 / 6902 / 7386)
+from je_auto_control.utils.json_patch import (
+    PatchError, PatchTestFailed, apply_patch, make_merge_patch, make_patch,
+    merge_patch, remove_pointer, resolve_pointer, set_pointer,
+)
+# In-memory BM25 / TF-IDF full-text search
+from je_auto_control.utils.search_index import (
+    SearchHit, SearchIndex, search_documents, tokenize,
+)
+# Descriptive statistics and A/B significance testing
+from je_auto_control.utils.stats import (
+    chi_square_2x2, cohens_d, describe, normal_cdf, percentile,
+    two_proportion_z_test, welch_t_test,
+)
+# RFC 5545 recurrence-rule expansion (calendar scheduling above cron)
+from je_auto_control.utils.recurrence import (
+    Recurrence, next_occurrence, occurrences, parse_rrule,
+)
+# Unified-diff generate/apply + three-way text merge
+from je_auto_control.utils.text_diff import (
+    MergeResult, PatchApplyError, apply_unified, three_way_merge, unified_diff,
+)
+# Feature flags with targeting rules + deterministic rollout
+from je_auto_control.utils.feature_flags import (
+    Flag, FlagStore, assign_variant, evaluate_flag, is_enabled,
+    percentage_bucket,
+)
+# SLSA build provenance (in-toto v1 statements over file digests)
+from je_auto_control.utils.provenance import (
+    build_provenance, subject_for, subject_for_bytes, verify_provenance,
+    write_provenance,
+)
+# JSON contract / snapshot matching
+from je_auto_control.utils.json_contract import (
+    MatchReport, diff_json, match_json, normalize_json, snapshot_json,
+)
+# Deterministic chaos experiments (steady-state hypothesis + fault injection)
+from je_auto_control.utils.chaos import (
+    ChaosExperiment, Fault, Probe, exception_fault, latency_fault,
+    run_experiment,
+)
+# SLO: SLI, error budget and multi-window burn-rate alerts
+from je_auto_control.utils.slo import (
+    BurnRule, burn_alerts, burn_rate, default_burn_rules, evaluate_slo,
+)
+# Mergeable streaming latency digest + exact percentiles
+from je_auto_control.utils.percentiles import LatencyDigest, exact_percentiles
+# Time-series transforms: rate / irate / delta / downsample / resample
+from je_auto_control.utils.timeseries import (
+    ts_delta, ts_downsample, ts_idelta, ts_increase, ts_irate, ts_rate,
+    ts_resample,
+)
+# Single-series anomaly detection (z-score / MAD / EWMA control)
+from je_auto_control.utils.anomaly import (
+    detect_anomalies, ewma_control, mad_anomalies, mad_scores,
+    zscore_anomalies, zscore_scores,
+)
+# Moving-average smoothing (SMA / WMA / EWMA / rolling)
+from je_auto_control.utils.smoothing import ewma, rolling, sma, wma
+# Bulkhead concurrency isolation + rate-limit header parsing
+from je_auto_control.utils.bulkhead import (
+    Bulkhead, BulkheadFullError, next_delay, parse_ratelimit, parse_retry_after,
+)
+# HTTP record/replay cassette (deterministic offline API tests)
+from je_auto_control.utils.http_cassette import Cassette, CassetteMissError
+# RFC 9457 problem+json error parsing
+from je_auto_control.utils.http_problem import (
+    HttpProblemError, ProblemDetails, is_problem, parse_problem,
+    raise_for_problem,
+)
+# Server-Sent Events (text/event-stream) client parser
+from je_auto_control.utils.sse_client import (
+    SSEEvent, SSEParser, parse_event_stream,
+)
+# RFC 8288 Link header parsing + rel="next" pagination
+from je_auto_control.utils.link_header import (
+    Link, links_by_rel, next_url, paginate, parse_link_header,
+)
+# multipart/form-data building + parsing (file upload bodies)
+from je_auto_control.utils.multipart import (
+    MultipartFile, build_multipart, new_boundary, parse_multipart,
+)
+# HTTP content negotiation + gzip/deflate response decoding
+from je_auto_control.utils.http_content import (
+    build_accept, build_accept_encoding, decode_body, negotiated_call,
+    parse_quality_values,
+)
+# RFC 6265 cookie jar (carry a session across HTTP calls)
+from je_auto_control.utils.cookie_jar import CookieJar, parse_set_cookie
+# Conditional HTTP requests + RFC 9111 cache validators (ETag / 304)
+from je_auto_control.utils.http_conditional import (
+    conditioned_call, is_fresh, is_not_modified, parse_cache_control,
+    store_validators,
+)
+# W3C Trace Context propagation (traceparent / tracestate)
+from je_auto_control.utils.trace_context import (
+    SpanContext, TraceContextError, child_context, extract_context,
+    format_traceparent, format_tracestate, inject_context, new_root_context,
+    new_span_id, new_trace_id, parse_traceparent, parse_tracestate,
+)
+# W3C Baggage propagation (cross-cutting key-value context)
+from je_auto_control.utils.baggage import (
+    Baggage, extract_baggage, format_baggage, inject_baggage, parse_baggage,
+)
+# Canonical (wide-event) log lines + structured JSON logging
+from je_auto_control.utils.canonical_log import (
+    CanonicalLogLine, JSONLogFormatter, bind_trace_context,
+)
+# OTLP/JSON span export (resourceSpans envelope)
+from je_auto_control.utils.otlp_export import (
+    attributes_to_otlp, spans_to_otlp, write_otlp,
+)
+# Background popup/interrupt watchdog (unattended automation)
+from je_auto_control.utils.watchdog import (
+    PopupWatchdog, WatchdogRule, default_popup_watchdog,
 )
 # OCR (headless)
 from je_auto_control.utils.ocr.ocr_engine import (
@@ -130,14 +592,24 @@ from je_auto_control.utils.ocr.structure import (
 )
 # Smart waits (frame-diff replacements for time.sleep)
 from je_auto_control.utils.smart_waits import (
-    WaitOutcome, wait_until_pixel_changes, wait_until_region_idle,
-    wait_until_screen_stable,
+    WaitOutcome, wait_until_clipboard_changes, wait_until_file,
+    wait_until_pixel_changes, wait_until_port, wait_until_process,
+    wait_until_region_idle, wait_until_screen_stable, wait_until_window_closed,
+)
+# Visual regression (golden-image comparison)
+from je_auto_control.utils.visual_regression import (
+    DiffResult, MaskRegion, compare_to_golden, image_difference, take_golden,
+)
+# Declarative finite-state-machine engine for action JSON
+from je_auto_control.utils.state_machine import (
+    StateMachine, StateMachineError, run_state_machine,
 )
 # Assertion DSL (verify screen state; raise on mismatch)
 from je_auto_control.utils.assertion import (
     AssertionResult, GroupAssertionResult, assert_all, assert_any,
-    assert_clipboard, assert_eventually, assert_file, assert_http,
-    assert_image, assert_pixel, assert_process, assert_text, assert_window,
+    assert_by_description, assert_clipboard, assert_duration,
+    assert_eventually, assert_file, assert_http, assert_image, assert_pixel,
+    assert_process, assert_text, assert_variable, assert_window,
     run_assertion_spec,
 )
 # Data-driven execution (load rows from CSV / JSON / SQLite / Excel)
@@ -159,7 +631,8 @@ from je_auto_control.utils.quarantine import (
 # Accessibility / i18n audit (missing labels, WCAG contrast, truncation)
 from je_auto_control.utils.a11y_audit import (
     AuditIssue, AuditReport, audit_contrast, audit_missing_labels,
-    contrast_ratio, detect_truncation, run_audit,
+    audit_target_size, contrast_ratio, detect_truncation, run_audit,
+    wcag_audit,
 )
 # Mobile device matrix (parallel script execution across devices)
 from je_auto_control.utils.device_matrix import (
@@ -258,6 +731,11 @@ from je_auto_control.utils.secrets import (
     SecretManager, SecretStoreError, SecretStoreLocked,
     default_secret_manager, default_secret_store_path,
 )
+# Action-file security (HMAC-SHA256 sign/verify + Fernet encrypt, headless)
+from je_auto_control.utils.action_signing import (
+    VerifyResult, decrypt_action_file, encrypt_action_file,
+    require_signed_actions, sign_action_file, verify_action_file,
+)
 # Observability (Prometheus metrics + OpenTelemetry traces, headless)
 from je_auto_control.utils.observability import (
     Counter as MetricCounter,
@@ -274,7 +752,8 @@ from je_auto_control.utils.run_history.history_store import (
 )
 # Triggers (headless)
 from je_auto_control.utils.triggers.trigger_engine import (
-    FilePathTrigger, ImageAppearsTrigger, PixelColorTrigger, TriggerEngine,
+    AllOfTrigger, AnyOfTrigger, CronTrigger, FilePathTrigger,
+    ImageAppearsTrigger, PixelColorTrigger, SequenceTrigger, TriggerEngine,
     WindowAppearsTrigger, default_trigger_engine,
 )
 from je_auto_control.utils.triggers.webhook_server import (
@@ -321,6 +800,22 @@ from je_auto_control.utils.generate_report.generate_xml_report import \
 # json
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.json.json_file import write_action_json
+from je_auto_control.utils.json.json_file import format_action_json
+# codegen: action list -> pytest / python / robot source
+from je_auto_control.utils.codegen.codegen import (
+    generate_code,
+    generate_code_file,
+)
+# HTTP/API request action (dependency-free, stdlib urllib)
+from je_auto_control.utils.http_client.http_client import http_request
+# Ad-hoc read-only SQL query against SQLite
+from je_auto_control.utils.sql.sql_query import query_sqlite
+# Send email via SMTP
+from je_auto_control.utils.email_send.email_sender import send_email
+# PDF document text extraction + assertion (optional pypdf backend)
+from je_auto_control.utils.pdf.pdf_reader import (
+    assert_pdf_text, extract_pdf_text, pdf_metadata, pdf_page_count,
+)
 # package manager
 from je_auto_control.utils.package_manager.package_manager_class import \
     package_manager
@@ -361,9 +856,17 @@ from je_auto_control.wrapper.auto_control_mouse import release_mouse
 from je_auto_control.wrapper.auto_control_mouse import send_mouse_event_to_window
 from je_auto_control.wrapper.auto_control_mouse import set_mouse_position
 from je_auto_control.wrapper.auto_control_mouse import special_mouse_keys_table
+# Human-like input: motion + typing (headless)
+from je_auto_control.utils.humanize.motion import (
+    HumanizedMotion, humanized_path, move_mouse_humanized,
+)
+from je_auto_control.utils.humanize.typing import (
+    humanized_key_delays, type_text_humanized,
+)
 # record
 from je_auto_control.wrapper.auto_control_record import record
 from je_auto_control.wrapper.auto_control_record import stop_record
+from je_auto_control.wrapper.auto_control_record import record_to_json
 # Screen wrappers
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.auto_control_screen import screenshot
@@ -392,6 +895,8 @@ def start_autocontrol_gui(*args, **kwargs):
 __all__ = [
     "click_mouse", "mouse_keys_table", "get_mouse_position", "press_mouse", "release_mouse",
     "mouse_scroll", "mouse_scroll_error_message", "set_mouse_position", "special_mouse_keys_table",
+    "HumanizedMotion", "humanized_path", "move_mouse_humanized",
+    "humanized_key_delays", "type_text_humanized",
     "keyboard_keys_table", "press_keyboard_key", "release_keyboard_key", "type_keyboard", "check_key_is_press",
     "write", "hotkey", "start_exe", "get_keyboard_keys_table",
     "screen_size", "screenshot", "locate_all_image", "locate_image_center", "locate_and_click",
@@ -399,8 +904,12 @@ __all__ = [
     "AutoControlMouseException", "AutoControlCantFindKeyException",
     "AutoControlScreenException", "ImageNotFoundException", "AutoControlJsonActionException",
     "AutoControlRecordException", "AutoControlActionNullException", "AutoControlActionException", "record",
-    "stop_record", "read_action_json", "write_action_json", "execute_action", "execute_files", "executor",
-    "execute_action_with_vars",
+    "stop_record", "read_action_json", "write_action_json", "format_action_json",
+    "execute_action", "execute_files", "executor",
+    "execute_action_with_vars", "record_to_json",
+    "generate_code", "generate_code_file", "http_request", "query_sqlite",
+    "send_email", "assert_pdf_text", "extract_pdf_text", "pdf_metadata",
+    "pdf_page_count",
     "add_command_to_executor", "test_record_instance", "pil_screenshot",
     # OCR
     "TextMatch", "find_text_matches", "locate_text_center", "wait_for_text",
@@ -423,6 +932,185 @@ __all__ = [
     "get_clipboard", "set_clipboard",
     # Hotkey daemon
     "HotkeyDaemon", "HotkeyBinding", "default_hotkey_daemon",
+    "PopupWatchdog", "WatchdogRule", "default_popup_watchdog",
+    "generate_totp", "verify_totp", "generate_secret", "TOTPError",
+    "handle_file_dialog", "FileDialogDriver",
+    "ensure_interactive_session", "is_session_locked",
+    "WorkQueue", "WorkItem", "BusinessError",
+    "generate_rows", "write_dataset",
+    "rank_flows", "select_flows",
+    "build_server_manifest", "write_server_manifest",
+    "ElementRepository",
+    "FlowDebugger", "trace_actions",
+    "Skill", "SkillLibrary",
+    "assess_text", "redact_text", "scan_text",
+    "build_agent_card", "write_agent_card",
+    "read_workbook", "write_workbook",
+    "read_document", "write_document",
+    "read_presentation", "write_presentation",
+    "AgentMemory", "Episode",
+    "DeterministicRun", "seed_everything",
+    "ScreenObserver", "WatchRule", "default_observer",
+    "image_predicate", "pixel_predicate", "text_predicate",
+    "build_sbom", "write_sbom",
+    "merge_results", "shard_flows",
+    "extract_fields", "mask_rows", "validate_rows",
+    "infer_schema", "profile_rows",
+    "categorical_drift", "detect_drift", "ks_two_sample", "psi",
+    "SchemaChange", "check_compatibility", "diff_schemas",
+    "is_backward_compatible", "is_forward_compatible", "is_full_compatible",
+    "cell_changes", "diff_rows", "summarize_diff",
+    "check_accepted_values", "check_foreign_key", "check_row_count",
+    "check_unique_key",
+    "check_catalog", "check_overflow", "pseudo_localize",
+    "pseudo_localize_catalog",
+    "Checkpoint", "CheckpointStore", "run_resumable",
+    "mark_click", "mark_elements", "mark_screen", "render_marks",
+    "resolve_mark",
+    "describe_screen", "diff_snapshots", "screen_changed", "snapshot",
+    "snapshot_screen",
+    "replay_timeline", "run_sequence",
+    "CircuitBreaker", "CircuitOpenError", "RetryPolicy", "retry_call",
+    "IdempotencyConflict", "IdempotencyStore", "request_fingerprint",
+    "DedupWindow", "SequenceTracker",
+    "VersionConflict", "VersionedStore", "check_if_match", "if_match_header",
+    "Outbox",
+    "collation_key",
+    "collation_compare",
+    "sort_strings",
+    "confusable_skeleton",
+    "detect_homoglyphs",
+    "is_confusable",
+    "is_mixed_script",
+    "scripts_of",
+    "automated_readability_index",
+    "count_syllables",
+    "flesch_kincaid_grade",
+    "flesch_reading_ease",
+    "gunning_fog",
+    "readability_report",
+    "readability_stats",
+    "smog_index",
+    "base_direction",
+    "bidi_controls",
+    "detect_bidi_issues",
+    "has_bidi_controls",
+    "is_bidi_balanced",
+    "is_trojan_source",
+    "strip_bidi_controls",
+    "format_list",
+    "format_message",
+    "ordinal_category",
+    "plural_category",
+    "GettextCatalog",
+    "parse_po",
+    "parse_po_file",
+    "read_mo",
+    "read_mo_file",
+    "emit_annotations", "format_annotation",
+    "ClipboardHistory", "default_clipboard_history",
+    "analyze_heal_log", "heal_stats", "scan_secrets",
+    "describe_step", "generate_sop", "write_sop",
+    "easing_names", "tween_drag", "tween_points",
+    "COMMANDS_GROUP", "discover_plugins", "load_plugins",
+    "ApprovalGate", "CredentialBroker", "CredentialBrokerError",
+    "default_broker", "set_secret_resolver",
+    "EgressBlocked", "EgressPolicy", "get_egress_policy", "set_egress_policy",
+    "ApprovalResult", "approve_artifact", "pending_artifacts",
+    "verify_artifact",
+    "evaluate_trajectory",
+    "build_compliance_report", "render_compliance_html",
+    "write_compliance_report",
+    "AgentTrace", "default_trace", "reset_trace",
+    "VideoStep", "build_overlay_plan", "render_overlay_frame",
+    "write_step_video",
+    "fuzzy_best_match", "fuzzy_dedupe", "fuzzy_matches", "fuzzy_ratio",
+    "deaccent", "fold_whitespace", "normalize_quotes", "normalize_text",
+    "slugify",
+    "damerau_levenshtein", "dice", "jaccard", "jaro", "jaro_winkler",
+    "levenshtein", "similarity",
+    "minhash_signature", "minhash_similarity", "near_duplicates", "simhash",
+    "S3ArtifactStore", "configure_default_store", "get_default_store",
+    "set_default_store",
+    "average_hash", "dedupe_images", "dhash", "hamming_distance",
+    "images_similar",
+    "format_currency", "format_date", "format_decimal", "parse_decimal",
+    "parse_number",
+    "VoiceCommand", "VoiceRouter", "default_voice_router",
+    "CoordinateSpace", "downscale_png", "normalized_space", "xga_space",
+    "LoopGuard", "LoopVerdict", "default_loop_guard", "digest_result",
+    "Candidate", "MiningReport", "SequencePattern", "directly_follows",
+    "find_repeated_sequences", "mine_action_log",
+    "rank_automation_candidates",
+    "Asset", "AssetStore", "AssetValue", "active_environment",
+    "dotenv_values", "dump_dotenv", "load_dotenv", "parse_dotenv",
+    "LayeredConfig", "SourceTrace", "deep_merge",
+    "ConfigField", "ConfigSchema", "coerce", "validate_config",
+    "RefResolver", "SecretRefError", "is_ref", "resolve_ref", "resolve_refs_in",
+    "redact_config", "redact_secret_text",
+    "EventEmitter", "post_cloudevent", "to_cloudevent",
+    "WebhookChannel", "WebhookResult", "notify_webhook", "set_default_poster",
+    "json_extract", "json_query", "json_query_one",
+    "Saga", "SagaResult", "run_saga",
+    "DecisionTable", "Rule", "evaluate_table",
+    "RepairStore", "RepairSuggestion", "repair_from_heal",
+    "PIIFinding", "detect_pii", "redact_pii_text",
+    "from_audit_findings", "from_lint_issues", "make_finding", "to_sarif",
+    "write_sarif",
+    "SchemaValidationResult", "assert_schema", "is_valid", "validate_json",
+    "findings_to_sarif", "is_affected", "match_package", "scan_components",
+    "version_key",
+    "VEX_JUSTIFICATIONS", "VEX_STATUSES", "apply_vex", "build_vex",
+    "vex_statement",
+    "DEFAULT_COPYLEFT", "evaluate_license", "evaluate_sbom",
+    "license_findings_to_sarif", "normalize_spdx",
+    "ClaimsPolicy", "ExpiredTokenError", "InvalidSignatureError", "JwtError",
+    "decode_jwt", "encode_jwt",
+    "SlidingWindowLimiter", "TokenBucket", "throttle",
+    "PatchError", "PatchTestFailed", "apply_patch", "make_merge_patch",
+    "make_patch", "merge_patch", "remove_pointer", "resolve_pointer",
+    "set_pointer",
+    "SearchHit", "SearchIndex", "search_documents", "tokenize",
+    "chi_square_2x2", "cohens_d", "describe", "normal_cdf", "percentile",
+    "two_proportion_z_test", "welch_t_test",
+    "Recurrence", "next_occurrence", "occurrences", "parse_rrule",
+    "MergeResult", "PatchApplyError", "apply_unified", "three_way_merge",
+    "unified_diff",
+    "Flag", "FlagStore", "assign_variant", "evaluate_flag", "is_enabled",
+    "percentage_bucket",
+    "build_provenance", "subject_for", "subject_for_bytes",
+    "verify_provenance", "write_provenance",
+    "MatchReport", "diff_json", "match_json", "normalize_json", "snapshot_json",
+    "ChaosExperiment", "Fault", "Probe", "exception_fault", "latency_fault",
+    "run_experiment",
+    "BurnRule", "burn_alerts", "burn_rate", "default_burn_rules", "evaluate_slo",
+    "LatencyDigest", "exact_percentiles",
+    "ts_delta", "ts_downsample", "ts_idelta", "ts_increase", "ts_irate",
+    "ts_rate", "ts_resample",
+    "detect_anomalies", "ewma_control", "mad_anomalies", "mad_scores",
+    "zscore_anomalies", "zscore_scores",
+    "ewma", "rolling", "sma", "wma",
+    "Bulkhead", "BulkheadFullError", "next_delay", "parse_ratelimit",
+    "parse_retry_after",
+    "Cassette", "CassetteMissError",
+    "HttpProblemError", "ProblemDetails", "is_problem", "parse_problem",
+    "raise_for_problem",
+    "SSEEvent", "SSEParser", "parse_event_stream",
+    "Link", "links_by_rel", "next_url", "paginate", "parse_link_header",
+    "MultipartFile", "build_multipart", "new_boundary", "parse_multipart",
+    "build_accept", "build_accept_encoding", "decode_body", "negotiated_call",
+    "parse_quality_values",
+    "CookieJar", "parse_set_cookie",
+    "conditioned_call", "is_fresh", "is_not_modified", "parse_cache_control",
+    "store_validators",
+    "SpanContext", "TraceContextError", "child_context", "extract_context",
+    "format_traceparent", "format_tracestate", "inject_context",
+    "new_root_context", "new_span_id", "new_trace_id", "parse_traceparent",
+    "parse_tracestate",
+    "Baggage", "extract_baggage", "format_baggage", "inject_baggage",
+    "parse_baggage",
+    "CanonicalLogLine", "JSONLogFormatter", "bind_trace_context",
+    "attributes_to_otlp", "spans_to_otlp", "write_otlp",
     # MCP server
     "AuditLogger", "HttpMCPServer", "MCPContent", "MCPPrompt",
     "MCPPromptArgument", "MCPResource", "MCPServer", "MCPTool",
@@ -456,6 +1144,7 @@ __all__ = [
     "TriggerEngine", "default_trigger_engine",
     "ImageAppearsTrigger", "WindowAppearsTrigger",
     "PixelColorTrigger", "FilePathTrigger",
+    "AllOfTrigger", "AnyOfTrigger", "SequenceTrigger", "CronTrigger",
     "WebhookTrigger", "WebhookTriggerServer", "default_webhook_server",
     "EmailTrigger", "EmailTriggerWatcher",
     "default_email_trigger_watcher",
@@ -464,6 +1153,9 @@ __all__ = [
     # Secret manager
     "SecretManager", "SecretStoreError", "SecretStoreLocked",
     "default_secret_manager", "default_secret_store_path",
+    # Action-file security (sign + encrypt)
+    "VerifyResult", "sign_action_file", "verify_action_file",
+    "require_signed_actions", "encrypt_action_file", "decrypt_action_file",
     # Observability (Prometheus + OpenTelemetry)
     "MetricCounter", "MetricGauge", "MetricHistogram",
     "MetricRegistry", "default_metric_registry",
@@ -476,8 +1168,11 @@ __all__ = [
     "AccessibilityRecorder", "AXRecorderEvent", "AXTreeNode",
     "click_accessibility_element", "dump_accessibility_tree",
     "find_accessibility_element", "list_accessibility_elements",
+    "control_get_value", "control_set_value", "control_invoke",
+    "control_toggle", "read_control_table",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
+    "verify_description",
     # LLM action planner
     "LLMBackend", "LLMNotAvailableError", "LLMPlanError",
     "plan_actions", "run_from_description",
@@ -507,10 +1202,17 @@ __all__ = [
     # Smart waits
     "WaitOutcome", "wait_until_pixel_changes",
     "wait_until_region_idle", "wait_until_screen_stable",
+    "wait_until_clipboard_changes", "wait_until_window_closed",
+    "wait_until_file", "wait_until_port", "wait_until_process",
+    # Visual regression + state machine
+    "take_golden", "compare_to_golden", "image_difference",
+    "DiffResult", "MaskRegion",
+    "run_state_machine", "StateMachine", "StateMachineError",
     # Assertion DSL
     "AssertionResult", "assert_image", "assert_pixel",
     "assert_text", "assert_window", "assert_clipboard", "assert_process",
-    "assert_file", "assert_http",
+    "assert_file", "assert_http", "assert_by_description", "assert_duration",
+    "assert_variable",
     # Assertion combinators (soft groups + eventual polling)
     "GroupAssertionResult", "assert_all", "assert_any", "assert_eventually",
     "run_assertion_spec",
@@ -527,7 +1229,8 @@ __all__ = [
     "auto_quarantine_from_flakiness", "default_quarantine_store",
     # Accessibility / i18n audit
     "AuditIssue", "AuditReport", "audit_contrast", "audit_missing_labels",
-    "contrast_ratio", "detect_truncation", "run_audit",
+    "audit_target_size", "contrast_ratio", "detect_truncation", "run_audit",
+    "wcag_audit",
     # Mobile device matrix
     "DeviceResult", "MatrixReport", "run_on_devices",
     # Media assertions
@@ -551,6 +1254,21 @@ __all__ = [
     "RedactionEngine", "RedactionPolicy", "RedactionResult",
     "default_redaction_policy", "redaction_policy_from_name",
     "redact_png_bytes",
+    # Screenshot annotation
+    "annotate_screenshot",
+    # Desktop notifications
+    "NotifyResult", "notify",
+    # Region colour statistics
+    "ColorStats", "region_color_stats",
+    # Per-window capture + window-layout save / restore + snap
+    "capture_window", "get_window_geometry",
+    "save_window_layout", "restore_window_layout", "snap_window",
+    # Scroll-to-find
+    "scroll_until_visible",
+    # Recoverable deletion (recycle bin)
+    "move_to_trash",
+    # QR code decoding
+    "read_qr_codes",
     # WebRunner bridge (browser automation via je_web_runner)
     "WebRunnerBridgeError", "is_webrunner_available",
     "list_webrunner_commands", "run_webrunner_action",

@@ -10,13 +10,16 @@ Public surface::
 """
 from je_auto_control.utils.assertion.assertions import (
     AssertionResult,
+    assert_by_description,
     assert_clipboard,
+    assert_duration,
     assert_file,
     assert_http,
     assert_image,
     assert_pixel,
     assert_process,
     assert_text,
+    assert_variable,
     assert_window,
 )
 from je_auto_control.utils.assertion.combinators import (
@@ -33,7 +36,9 @@ __all__ = [
     "GroupAssertionResult",
     "assert_all",
     "assert_any",
+    "assert_by_description",
     "assert_clipboard",
+    "assert_duration",
     "assert_eventually",
     "assert_file",
     "assert_http",
@@ -41,6 +46,7 @@ __all__ = [
     "assert_pixel",
     "assert_process",
     "assert_text",
+    "assert_variable",
     "assert_window",
     "run_assertion_spec",
 ]

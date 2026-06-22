@@ -2,15 +2,17 @@
 import json
 from typing import Optional
 
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QFileDialog, QHBoxLayout, QLabel, QLineEdit, QListWidget, QMessageBox,
-    QPushButton, QTextEdit, QVBoxLayout, QWidget,
+    QFileDialog, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
+    QMessageBox, QPushButton, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
+from je_auto_control.utils.codegen.codegen import generate_code_file
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 from je_auto_control.utils.recording_edit.editor import (
     adjust_delays, filter_actions, remove_action, scale_coordinates, trim_actions,
@@ -28,6 +30,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         super().__init__(parent)
         self._tr_init()
         self._actions: list = []
+        self._undo_stack: list = []
         self._path_input = QLineEdit()
         self._list = QListWidget()
         self._preview = QTextEdit()
@@ -40,9 +43,26 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         self._scale_x = QLineEdit("1.0")
         self._scale_y = QLineEdit("1.0")
         self._build_layout()
+        # Ctrl+Z restores the action list to before the last edit.
+        self._undo_shortcut = QShortcut(
+            QKeySequence.StandardKey.Undo, self, self._undo,
+        )
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
+
+    def _mutate(self, new_actions: list) -> None:
+        """Apply an edit, snapshotting the prior state for undo (Ctrl+Z)."""
+        self._undo_stack.append(list(self._actions))
+        self._actions = new_actions
+        self._refresh()
+
+    def _undo(self) -> None:
+        """Restore the action list to before the last edit."""
+        if not self._undo_stack:
+            return
+        self._actions = self._undo_stack.pop()
+        self._refresh()
 
     def _build_layout(self) -> None:
         root = QVBoxLayout(self)
@@ -53,6 +73,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
             ("re_browse", self._browse),
             ("re_load", self._load),
             ("re_save_as", self._save_as),
+            ("re_export_code", self._export_code),
         ):
             btn = self._tr(QPushButton(), key)
             btn.clicked.connect(handler)
@@ -72,6 +93,9 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         remove_btn = self._tr(QPushButton(), "re_remove_selected")
         remove_btn.clicked.connect(self._remove_selected)
         ops1.addWidget(remove_btn)
+        undo_btn = self._tr(QPushButton(), "re_undo")
+        undo_btn.clicked.connect(self._undo)
+        ops1.addWidget(undo_btn)
         ops1.addStretch()
         root.addLayout(ops1)
 
@@ -126,6 +150,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         except (OSError, ValueError) as error:
             QMessageBox.warning(self, "Error", str(error))
             return
+        self._undo_stack.clear()  # a freshly loaded recording starts clean
         self._refresh()
 
     def _save_as(self) -> None:
@@ -143,6 +168,34 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
             return
         self._status.setText(f"Saved to {path}")
 
+    _TARGET_FILTERS = {
+        "pytest": "Python (*.py)",
+        "python": "Python (*.py)",
+        "robot": "Robot (*.robot)",
+    }
+
+    def _export_code(self) -> None:
+        """Generate pytest/python/robot source from the loaded actions."""
+        if not self._actions:
+            return
+        target, ok = QInputDialog.getItem(
+            self, _t("re_export_target"), "target",
+            list(self._TARGET_FILTERS), 0, False,
+        )
+        if not ok:
+            return
+        path, _filter = QFileDialog.getSaveFileName(
+            self, _t("re_export_code"), "", self._TARGET_FILTERS[target],
+        )
+        if not path:
+            return
+        try:
+            generate_code_file(self._actions, path, target=target)
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, "Error", str(error))
+            return
+        self._status.setText(f"Exported {target} code to {path}")
+
     def _refresh(self) -> None:
         self._list.clear()
         for idx, action in enumerate(self._actions):
@@ -158,19 +211,18 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         except ValueError:
             QMessageBox.warning(self, "Error", "Trim indices must be integers")
             return
-        self._actions = trim_actions(self._actions, start, end)
-        self._refresh()
+        self._mutate(trim_actions(self._actions, start, end))
 
     def _remove_selected(self) -> None:
         row = self._list.currentRow()
         if row < 0:
             return
         try:
-            self._actions = remove_action(self._actions, row)
+            new_actions = remove_action(self._actions, row)
         except IndexError as error:
             QMessageBox.warning(self, "Error", str(error))
             return
-        self._refresh()
+        self._mutate(new_actions)
 
     def _apply_delays(self) -> None:
         try:
@@ -179,8 +231,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         except ValueError:
             QMessageBox.warning(self, "Error", "Factor/clamp must be numeric")
             return
-        self._actions = adjust_delays(self._actions, factor=factor, clamp_ms=clamp)
-        self._refresh()
+        self._mutate(adjust_delays(self._actions, factor=factor, clamp_ms=clamp))
 
     def _apply_scale(self) -> None:
         try:
@@ -189,8 +240,7 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         except ValueError:
             QMessageBox.warning(self, "Error", "Scale factors must be numeric")
             return
-        self._actions = scale_coordinates(self._actions, fx, fy)
-        self._refresh()
+        self._mutate(scale_coordinates(self._actions, fx, fy))
 
     def _filter_prefix(self, prefix) -> None:
         def keep(action: list) -> bool:
@@ -200,5 +250,4 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
             if isinstance(prefix, str):
                 return name.startswith(prefix)
             return name in prefix
-        self._actions = filter_actions(self._actions, keep)
-        self._refresh()
+        self._mutate(filter_actions(self._actions, keep))

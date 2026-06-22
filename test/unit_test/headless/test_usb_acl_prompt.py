@@ -1,6 +1,7 @@
 """Tests for the USB passthrough ACL prompt dialog (round 44)."""
 import os
 import threading
+import time
 
 import pytest
 
@@ -90,35 +91,61 @@ def _drive_dialog_when_visible(action: str) -> None:
     QTimer.singleShot(50, attempt)
 
 
+def _close_dialog_after(ms: int) -> None:
+    """Reject the prompt once it is up — used by the timeout case so the
+    GUI thread's modal loop unwinds after ``decide`` has already given up.
+    """
+    def shut():
+        for widget in QApplication.topLevelWidgets():
+            if (isinstance(widget, UsbPassthroughPromptDialog)
+                    and widget.isVisible()):
+                widget.reject()
+                return
+        QTimer.singleShot(20, shut)
+    QTimer.singleShot(ms, shut)
+
+
+def _decide_on_worker(qapp, bridge, *, wait_timeout_s: float = 3.0):
+    """Run ``bridge.decide`` on a worker thread — its documented context —
+    while the main thread pumps Qt events so the queued prompt can show and
+    be driven. Returns decide()'s verdict.
+    """
+    holder: dict = {}
+
+    def work():
+        holder["verdict"] = bridge.decide(
+            vendor_id="1050", product_id="0407", serial=None,
+            viewer_id="vw", wait_timeout_s=wait_timeout_s,
+        )
+
+    worker = threading.Thread(target=work, daemon=True)
+    worker.start()
+    deadline = time.monotonic() + wait_timeout_s + 2.0
+    while worker.is_alive() and time.monotonic() < deadline:
+        qapp.processEvents()
+        worker.join(0.02)
+    worker.join(1.0)
+    qapp.processEvents()
+    return holder.get("verdict")
+
+
 def test_bridge_returns_true_on_allow(qapp):
     bridge = PromptBridge()
     _drive_dialog_when_visible("allow")
-    result = bridge.decide(
-        vendor_id="1050", product_id="0407", serial=None,
-        viewer_id="vw", wait_timeout_s=3.0,
-    )
-    assert result is True
+    assert _decide_on_worker(qapp, bridge) is True
 
 
 def test_bridge_returns_false_on_deny(qapp):
     bridge = PromptBridge()
     _drive_dialog_when_visible("deny")
-    result = bridge.decide(
-        vendor_id="1050", product_id="0407", serial=None,
-        viewer_id="vw", wait_timeout_s=3.0,
-    )
-    assert result is False
+    assert _decide_on_worker(qapp, bridge) is False
 
 
 def test_bridge_remember_persists_acl_rule(qapp, tmp_path):
     acl = UsbAcl(path=tmp_path / "acl.json")
     bridge = PromptBridge(acl=acl)
     _drive_dialog_when_visible("remember-allow")
-    result = bridge.decide(
-        vendor_id="1050", product_id="0407", serial=None,
-        viewer_id="vw", wait_timeout_s=3.0,
-    )
-    assert result is True
+    assert _decide_on_worker(qapp, bridge) is True
     rules = acl.list_rules()
     assert len(rules) == 1
     assert rules[0].vendor_id == "1050"
@@ -130,25 +157,17 @@ def test_bridge_remember_no_acl_does_not_crash(qapp):
     """``acl=None`` is allowed — remember just becomes a no-op write."""
     bridge = PromptBridge()  # no acl
     _drive_dialog_when_visible("remember-allow")
-    result = bridge.decide(
-        vendor_id="1050", product_id="0407", serial=None,
-        viewer_id="vw", wait_timeout_s=3.0,
-    )
-    assert result is True
+    assert _decide_on_worker(qapp, bridge) is True
 
 
 def test_bridge_timeout_returns_false(qapp):
     """If the operator never responds within the timeout, decide() must
     fail closed (deny)."""
     bridge = PromptBridge()
-    # Don't schedule any timer — the dialog will sit there until timeout.
-    result = bridge.decide(
-        vendor_id="1050", product_id="0407", serial=None,
-        viewer_id="vw", wait_timeout_s=0.3,
-    )
-    assert result is False
-    # Drain Qt events so the abandoned dialog doesn't leak into the next test.
-    qapp.processEvents()
+    # No one clicks; decide() must give up after wait_timeout_s. Close the
+    # abandoned prompt afterwards so the GUI modal loop unwinds.
+    _close_dialog_after(700)
+    assert _decide_on_worker(qapp, bridge, wait_timeout_s=0.3) is False
 
 
 # ---------------------------------------------------------------------------
@@ -169,7 +188,9 @@ def test_attach_prompt_wires_callback_into_session(qapp, tmp_path):
     bridge = attach_prompt_to_session(session, acl=acl)
     assert isinstance(bridge, PromptBridge)
     # The session's callback should now point at the bridge's decide.
-    assert session._prompt_callback is bridge.decide
+    # (``==`` not ``is``: each ``bridge.decide`` access makes a fresh bound
+    # method, so identity never holds even though they're equal.)
+    assert session._prompt_callback == bridge.decide
 
     # End-to-end: pre-arm an "allow" click, drive the OPEN frame from a
     # background thread (so the prompt is truly cross-thread), and check

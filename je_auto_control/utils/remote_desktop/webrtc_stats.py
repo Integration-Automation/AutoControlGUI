@@ -117,30 +117,47 @@ class StatsPoller:
         if jitter is not None:
             snap.jitter_ms = float(jitter) * 1000.0
 
+    @staticmethod
+    def _int_attr(entry, name: str) -> int:
+        """Read a numeric WebRTC stat attribute as an int (missing -> 0)."""
+        return int(getattr(entry, name, 0) or 0)
+
     def _update_inbound(self, entry, delta_t, snap: StatsSnapshot) -> None:
-        bytes_received = int(getattr(entry, "bytesReceived", 0) or 0)
-        frames_decoded = int(getattr(entry, "framesDecoded", 0) or 0)
-        packets_received = int(getattr(entry, "packetsReceived", 0) or 0)
-        packets_lost = int(getattr(entry, "packetsLost", 0) or 0)
-        if delta_t and delta_t > 0:
-            byte_delta = bytes_received - self._prev_bytes_received
-            if byte_delta >= 0:
-                snap.bitrate_kbps = (byte_delta * 8 / 1000.0) / delta_t
-            frame_delta = frames_decoded - self._prev_frames_decoded
-            if frame_delta >= 0:
-                snap.fps = frame_delta / delta_t
-        total = packets_received + packets_lost
-        if total > 0:
-            recent_lost = packets_lost - self._prev_packets_lost
-            recent_total = (packets_received + packets_lost
-                            - self._prev_packets_received
-                            - self._prev_packets_lost)
-            if recent_total > 0:
-                snap.packet_loss_pct = (recent_lost / recent_total) * 100.0
+        bytes_received = self._int_attr(entry, "bytesReceived")
+        frames_decoded = self._int_attr(entry, "framesDecoded")
+        packets_received = self._int_attr(entry, "packetsReceived")
+        packets_lost = self._int_attr(entry, "packetsLost")
+        self._update_rates(bytes_received, frames_decoded, delta_t, snap)
+        self._update_packet_loss(packets_received, packets_lost, snap)
         self._prev_bytes_received = bytes_received
         self._prev_frames_decoded = frames_decoded
         self._prev_packets_received = packets_received
         self._prev_packets_lost = packets_lost
+
+    def _update_rates(self, bytes_received: int, frames_decoded: int,
+                      delta_t, snap: StatsSnapshot) -> None:
+        """Derive bitrate + fps from inter-sample deltas."""
+        if not delta_t or delta_t <= 0:
+            return
+        byte_delta = bytes_received - self._prev_bytes_received
+        if byte_delta >= 0:
+            snap.bitrate_kbps = (byte_delta * 8 / 1000.0) / delta_t
+        frame_delta = frames_decoded - self._prev_frames_decoded
+        if frame_delta >= 0:
+            snap.fps = frame_delta / delta_t
+
+    def _update_packet_loss(self, packets_received: int, packets_lost: int,
+                            snap: StatsSnapshot) -> None:
+        """Derive recent packet-loss percentage from inter-sample deltas."""
+        total = packets_received + packets_lost
+        if total <= 0:
+            return
+        recent_lost = packets_lost - self._prev_packets_lost
+        recent_total = (packets_received + packets_lost
+                        - self._prev_packets_received
+                        - self._prev_packets_lost)
+        if recent_total > 0:
+            snap.packet_loss_pct = (recent_lost / recent_total) * 100.0
 
 
 __all__ = ["StatsSnapshot", "StatsPoller"]

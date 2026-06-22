@@ -9,8 +9,14 @@ qt-material==2.17
 mss==10.2.0
 defusedxml==0.7.1
 
+# Office I/O ([office] extra) — exercised by the headless Office tests.
+openpyxl==3.1.5
+python-docx==1.2.0
+python-pptx==1.0.2
+
 # Quality tooling — used by .github/workflows/quality.yml and locally.
 ruff==0.15.14
 bandit==1.9.4
 pytest==9.0.3
 pytest-timeout==2.4.0
+pytest-rerunfailures==15.1

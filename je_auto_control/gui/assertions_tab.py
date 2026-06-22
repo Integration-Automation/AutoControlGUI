@@ -17,7 +17,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
 )
 import je_auto_control as ac
 
-_KINDS = ("text", "image", "pixel", "window")
+_KINDS = ("text", "image", "pixel", "window", "vlm")
 
 
 def _t(key: str) -> str:
@@ -106,8 +106,12 @@ class AssertionsTab(TranslatableMixin, QWidget):
                 *_parse_ints(self._xy.text())[:2], _parse_ints(self._rgb.text()),
                 match=present, raise_on_fail=False,
             ).to_dict()
-        return ac.assert_window(
-            self._target.text(), exists=present, raise_on_fail=False,
+        if kind == "window":
+            return ac.assert_window(
+                self._target.text(), exists=present, raise_on_fail=False,
+            ).to_dict()
+        return ac.assert_by_description(
+            self._target.text(), present=present, raise_on_fail=False,
         ).to_dict()
 
     def _on_run(self) -> None:

@@ -159,17 +159,21 @@ class AddressBookList(QListWidget):
         )
         self.clear()
         for entry in sorted_entries:
-            label = entry.get("label", "") or "(unnamed)"
-            host_id = entry.get("host_id", "")
-            star = "★ " if entry.get("favorite") else ""
-            last_used = _format_short_time(entry.get("last_used"))
-            tags = entry.get("tags", []) or []
-            tag_str = (" [" + ", ".join(tags) + "]") if tags else ""
-            suffix = f"  ({last_used})" if last_used else ""
-            display = f"{star}{label} - {host_id}{tag_str}{suffix}"
-            item = QListWidgetItem(display)
+            item = QListWidgetItem(self._format_entry(entry))
             item.setData(Qt.ItemDataRole.UserRole, entry)
             self.addItem(item)
+
+    @staticmethod
+    def _format_entry(entry: dict) -> str:
+        """Build the one-line display label for an address-book entry."""
+        label = entry.get("label", "") or "(unnamed)"
+        host_id = entry.get("host_id", "")
+        star = "★ " if entry.get("favorite") else ""
+        last_used = _format_short_time(entry.get("last_used"))
+        tags = entry.get("tags", []) or []
+        tag_str = (" [" + ", ".join(tags) + "]") if tags else ""
+        suffix = f"  ({last_used})" if last_used else ""
+        return f"{star}{label} - {host_id}{tag_str}{suffix}"
 
     def selected_entry(self) -> Optional[dict]:
         item = self.currentItem()

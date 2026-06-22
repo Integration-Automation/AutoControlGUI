@@ -84,10 +84,13 @@ def test_viewer_panel_renders_frame_from_host(qapp):
         panel._port.setValue(host.port)  # noqa: SLF001
         panel._token.setText("t")  # noqa: SLF001
         panel._connect()  # noqa: SLF001
-        assert _process_until(qapp, panel._display.has_image)  # noqa: SLF001
+        assert _process_until(
+            qapp, panel._screen_window.display.has_image,  # noqa: SLF001
+        )
         # Display image must match the encoded frame size.
-        assert panel._display._image.width() == 64  # noqa: SLF001
-        assert panel._display._image.height() == 48  # noqa: SLF001
+        display = panel._screen_window.display  # noqa: SLF001
+        assert display._image.width() == 64  # noqa: SLF001
+        assert display._image.height() == 48  # noqa: SLF001
     finally:
         registry.disconnect_viewer()
         host.stop(timeout=1.0)
@@ -136,7 +139,9 @@ def test_viewer_input_round_trips_to_dispatcher(qapp):
         panel._port.setValue(host.port)  # noqa: SLF001
         panel._token.setText("t")  # noqa: SLF001
         panel._connect()  # noqa: SLF001
-        assert _process_until(qapp, panel._display.has_image)  # noqa: SLF001
+        assert _process_until(
+            qapp, panel._screen_window.display.has_image,  # noqa: SLF001
+        )
 
         panel._send_mouse_move(11, 13)  # noqa: SLF001
         panel._send_mouse_press(11, 13, "mouse_left")  # noqa: SLF001

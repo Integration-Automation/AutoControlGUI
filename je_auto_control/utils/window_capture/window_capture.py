@@ -1,0 +1,170 @@
+"""Capture a specific window, and snapshot / restore window layouts.
+
+``screenshot`` only grabs the whole screen or a coordinate region; here
+we resolve a window's geometry by title and screenshot exactly its
+bounds, plus save every window's position and move them all back later
+(handy for test setup / teardown).
+
+Window geometry is read per-platform — on Windows via the Win32
+``GetWindowRect`` API; other platforms return ``None`` for now. The
+geometry / capture / list / move operations are all injectable so the
+logic is fully unit-testable without real windows. GUI-free.
+"""
+import json
+import sys
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
+Rect = Tuple[int, int, int, int]
+GeometryProvider = Callable[[str], Optional[Rect]]
+WindowLister = Callable[[], List[Tuple[int, str]]]
+WindowMover = Callable[[str, int, int, int, int], bool]
+SizeProvider = Callable[[], Tuple[int, int]]
+
+
+def get_window_geometry(title: str,
+                        case_sensitive: bool = False) -> Optional[Rect]:
+    """Return ``(x, y, width, height)`` of the first window matching ``title``.
+
+    Windows-only for now (Win32 ``GetWindowRect``); returns ``None`` on
+    other platforms or when no window matches.
+    """
+    from je_auto_control.wrapper.auto_control_window import find_window
+    hit = find_window(title, case_sensitive=case_sensitive)
+    if hit is None or sys.platform != "win32":
+        return None
+    return _win32_geometry(int(hit[0]))
+
+
+def _win32_geometry(hwnd: int) -> Optional[Rect]:
+    import ctypes
+    from ctypes import wintypes
+    rect = wintypes.RECT()
+    if not ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+        return None
+    return (rect.left, rect.top,
+            rect.right - rect.left, rect.bottom - rect.top)
+
+
+def _default_capture(output_path: str, rect: Rect) -> None:
+    from je_auto_control.wrapper.auto_control_screen import screenshot
+    x, y, width, height = rect
+    screenshot(str(output_path), screen_region=[x, y, x + width, y + height])
+
+
+def capture_window(title: str, output_path: Union[str, Path], *,
+                   geometry: Optional[GeometryProvider] = None,
+                   capture: Optional[Callable[[str, Rect], None]] = None
+                   ) -> Optional[str]:
+    """Screenshot the window matching ``title`` to ``output_path``.
+
+    Returns the output path, or ``None`` when the window has no readable
+    geometry. ``geometry`` / ``capture`` are injectable for tests.
+    """
+    provider = geometry or get_window_geometry
+    rect = provider(title)
+    if rect is None:
+        return None
+    (capture or _default_capture)(str(output_path), rect)
+    return str(output_path)
+
+
+def _default_lister() -> List[Tuple[int, str]]:
+    from je_auto_control.wrapper.auto_control_window import list_windows
+    return list_windows()
+
+
+def save_window_layout(path: Optional[Union[str, Path]] = None, *,
+                       lister: Optional[WindowLister] = None,
+                       geometry: Optional[GeometryProvider] = None
+                       ) -> List[Dict[str, Any]]:
+    """Snapshot the geometry of every titled window.
+
+    Returns a list of ``{title, x, y, width, height}`` and, when ``path``
+    is given, also writes it as JSON for a later
+    :func:`restore_window_layout`. Windows with no readable geometry are
+    skipped.
+    """
+    provider = geometry or get_window_geometry
+    layout: List[Dict[str, Any]] = []
+    for _hwnd, title in (lister or _default_lister)():
+        rect = provider(title)
+        if rect is None:
+            continue
+        layout.append({"title": title, "x": rect[0], "y": rect[1],
+                       "width": rect[2], "height": rect[3]})
+    if path is not None:
+        Path(path).write_text(json.dumps(layout, indent=2), encoding="utf-8")
+    return layout
+
+
+def _default_mover(title: str, x: int, y: int,
+                   width: int, height: int) -> bool:
+    from je_auto_control.wrapper.auto_control_window import find_window
+    hit = find_window(title)
+    if hit is None or sys.platform != "win32":
+        return False
+    from je_auto_control.windows.window import windows_window_manage as wm
+    return bool(wm.move_window(int(hit[0]), x, y, width, height))
+
+
+def restore_window_layout(layout: Union[List[Dict[str, Any]], str, Path], *,
+                          mover: Optional[WindowMover] = None) -> int:
+    """Move each window back to its saved geometry; return the count moved.
+
+    ``layout`` is a list from :func:`save_window_layout`, or a path to the
+    JSON it wrote. ``mover`` is injectable for tests.
+    """
+    if isinstance(layout, (str, Path)):
+        layout = json.loads(Path(layout).read_text(encoding="utf-8"))
+    move = mover or _default_mover
+    restored = 0
+    for entry in layout:
+        title = entry.get("title")
+        if title and move(title, int(entry["x"]), int(entry["y"]),
+                          int(entry["width"]), int(entry["height"])):
+            restored += 1
+    return restored
+
+
+def _snap_rect(position: str, width: int, height: int) -> Rect:
+    half_w = width // 2
+    half_h = height // 2
+    regions = {
+        "left": (0, 0, half_w, height),
+        "right": (half_w, 0, width - half_w, height),
+        "top": (0, 0, width, half_h),
+        "bottom": (0, half_h, width, height - half_h),
+        "top-left": (0, 0, half_w, half_h),
+        "top-right": (half_w, 0, width - half_w, half_h),
+        "bottom-left": (0, half_h, half_w, height - half_h),
+        "bottom-right": (half_w, half_h, width - half_w, height - half_h),
+        "max": (0, 0, width, height),
+    }
+    rect = regions.get(str(position).lower())
+    if rect is None:
+        raise ValueError(
+            f"unknown snap position {position!r}; "
+            f"expected one of {sorted(regions)}",
+        )
+    return rect
+
+
+def _default_screen_size() -> Tuple[int, int]:
+    from je_auto_control.wrapper.auto_control_screen import screen_size
+    size = screen_size()
+    return (int(size[0]), int(size[1]))
+
+
+def snap_window(title: str, position: str = "left", *,
+                mover: Optional[WindowMover] = None,
+                screen_size: Optional[SizeProvider] = None) -> bool:
+    """Move/resize the window matching ``title`` to a screen region.
+
+    ``position`` is one of left / right / top / bottom / top-left /
+    top-right / bottom-left / bottom-right / max. Returns ``True`` when the
+    window moved. The size provider and mover are injectable for tests.
+    """
+    width, height = (screen_size or _default_screen_size)()
+    x, y, w, h = _snap_rect(position, int(width), int(height))
+    return (mover or _default_mover)(title, x, y, w, h)

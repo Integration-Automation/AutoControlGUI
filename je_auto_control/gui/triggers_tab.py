@@ -13,7 +13,8 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 from je_auto_control.utils.triggers.trigger_engine import (
-    FilePathTrigger, ImageAppearsTrigger, PixelColorTrigger,
+    AllOfTrigger, AnyOfTrigger, CronTrigger, FilePathTrigger,
+    ImageAppearsTrigger, PixelColorTrigger, SequenceTrigger,
     WindowAppearsTrigger, default_trigger_engine,
 )
 
@@ -24,6 +25,7 @@ def _t(key: str) -> str:
 
 _TYPE_KEYS = (
     "tr_type_image", "tr_type_window", "tr_type_pixel", "tr_type_file",
+    "tr_type_cron",
 )
 
 
@@ -43,10 +45,15 @@ class TriggersTab(TranslatableMixin, QWidget):
         self._window_widgets = self._build_window_form()
         self._pixel_widgets = self._build_pixel_form()
         self._file_widgets = self._build_file_form()
+        self._cron_widgets = self._build_cron_form()
         self._running = False
         self._status = QLabel()
         self._apply_status()
         self._table = QTableWidget(0, 5)
+        self._table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows)
+        self._table.setSelectionMode(
+            QTableWidget.SelectionMode.ExtendedSelection)
         self._apply_table_headers()
         self._timer = QTimer(self)
         self._timer.setInterval(1000)
@@ -101,6 +108,9 @@ class TriggersTab(TranslatableMixin, QWidget):
         ctl = QHBoxLayout()
         for key, handler in (
             ("tr_remove_selected", self._on_remove),
+            ("tr_combine_all", lambda: self._on_combine("all")),
+            ("tr_combine_any", lambda: self._on_combine("any")),
+            ("tr_combine_seq", lambda: self._on_combine("sequence")),
             ("tr_start_engine", self._on_start),
             ("tr_stop_engine", self._on_stop),
         ):
@@ -213,17 +223,34 @@ class TriggersTab(TranslatableMixin, QWidget):
                 **common,
             )
         if idx == 2:
-            w = self._pixel_widgets
-            return PixelColorTrigger(
-                x=int(w["x"].text() or "0"), y=int(w["y"].text() or "0"),
-                target_rgb=(int(w["r"].text() or "0"),
-                            int(w["g"].text() or "0"),
-                            int(w["b"].text() or "0")),
-                tolerance=int(w["tol"].text() or "8"),
+            return self._build_pixel_trigger(common)
+        if idx == 3:
+            return FilePathTrigger(
+                watch_path=self._file_widgets["path"].text().strip(),
                 **common,
             )
-        return FilePathTrigger(
-            watch_path=self._file_widgets["path"].text().strip(),
+        return CronTrigger(
+            cron=self._cron_widgets["cron"].text().strip() or "* * * * *",
+            **common,
+        )
+
+    def _build_cron_form(self) -> dict:
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        cron_input = QLineEdit("* * * * *")
+        layout.addWidget(self._tr(QLabel(), "tr_cron_label"))
+        layout.addWidget(cron_input, stretch=1)
+        self._stack.addWidget(widget)
+        return {"cron": cron_input}
+
+    def _build_pixel_trigger(self, common: dict):
+        w = self._pixel_widgets
+        return PixelColorTrigger(
+            x=int(w["x"].text() or "0"), y=int(w["y"].text() or "0"),
+            target_rgb=(int(w["r"].text() or "0"),
+                        int(w["g"].text() or "0"),
+                        int(w["b"].text() or "0")),
+            tolerance=int(w["tol"].text() or "8"),
             **common,
         )
 
@@ -233,6 +260,32 @@ class TriggersTab(TranslatableMixin, QWidget):
             return
         tid = self._table.item(row, 0).text()
         default_trigger_engine.remove(tid)
+        self._refresh()
+
+    def _on_combine(self, mode: str) -> None:
+        rows = sorted({idx.row() for idx in self._table.selectedIndexes()})
+        ids = [self._table.item(row, 0).text() for row in rows
+               if self._table.item(row, 0) is not None]
+        if len(ids) < 2:
+            QMessageBox.warning(self, "Error", _t("tr_combine_need_two"))
+            return
+        script = self._script_input.text().strip()
+        if not script:
+            QMessageBox.warning(self, "Error", "Script path is required")
+            return
+        by_id = {t.trigger_id: t
+                 for t in default_trigger_engine.list_triggers()}
+        children = [by_id[tid] for tid in ids if tid in by_id]
+        if len(children) < 2:
+            return
+        for tid in ids:
+            default_trigger_engine.remove(tid)
+        composite_cls = {"all": AllOfTrigger, "any": AnyOfTrigger,
+                         "sequence": SequenceTrigger}[mode]
+        default_trigger_engine.add(composite_cls(
+            trigger_id="", script_path=script,
+            repeat=self._repeat_check.isChecked(), children=children,
+        ))
         self._refresh()
 
     def _on_start(self) -> None:

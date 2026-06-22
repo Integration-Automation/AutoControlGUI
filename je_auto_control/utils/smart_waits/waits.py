@@ -22,6 +22,9 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
+_TIMEOUT_POSITIVE = "timeout_s must be positive"
+_POLL_POSITIVE = "poll_interval_s must be positive"
+
 
 @dataclass(frozen=True)
 class WaitOutcome:
@@ -78,9 +81,9 @@ def wait_until_screen_stable(*,
     samples; ``timeout_s`` is the absolute cap.
     """
     if timeout_s <= 0:
-        raise ValueError("timeout_s must be positive")
+        raise ValueError(_TIMEOUT_POSITIVE)
     if poll_interval_s <= 0:
-        raise ValueError("poll_interval_s must be positive")
+        raise ValueError(_POLL_POSITIVE)
     if stable_for_s < 0:
         raise ValueError("stable_for_s must be >= 0")
     grab = sampler or _default_sampler
@@ -114,7 +117,7 @@ def wait_until_pixel_changes(*, x: int, y: int,
                               ) -> WaitOutcome:
     """Return when the pixel at ``(x, y)`` changes beyond ``rgb_tolerance``."""
     if timeout_s <= 0:
-        raise ValueError("timeout_s must be positive")
+        raise ValueError(_TIMEOUT_POSITIVE)
     grab = sampler or _default_sampler
     started = time.monotonic()
     deadline = started + float(timeout_s)
@@ -147,6 +150,238 @@ def wait_until_region_idle(*, region: Sequence[int],
         stable_for_s=stable_for_s,
         max_pixel_diff=max_pixel_diff, sampler=sampler,
     )
+
+
+ClipboardReader = Callable[[], Optional[str]]
+
+
+def wait_until_clipboard_changes(*,
+                                 baseline: Optional[str] = None,
+                                 target: Optional[str] = None,
+                                 contains: bool = False,
+                                 timeout_s: float = 10.0,
+                                 poll_interval_s: float = 0.2,
+                                 reader: Optional[ClipboardReader] = None,
+                                 ) -> WaitOutcome:
+    """Return when the clipboard text changes (or matches ``target``).
+
+    Without ``target`` the wait succeeds as soon as the clipboard differs
+    from ``baseline`` (captured at the start when ``baseline`` is None).
+    With ``target`` it succeeds when the clipboard equals ``target`` — or
+    *contains* it when ``contains`` is True. ``reader`` is injectable so
+    tests need no real clipboard.
+    """
+    if timeout_s <= 0:
+        raise ValueError(_TIMEOUT_POSITIVE)
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
+    read = reader or _default_clipboard_reader
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    initial = baseline if baseline is not None else (read() or "")
+    samples = 1
+    while time.monotonic() < deadline:
+        current = read() or ""
+        samples += 1
+        if _clipboard_satisfied(current, initial, target, contains):
+            return _finish(True, "clipboard changed", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, "timeout while waiting for clipboard change",
+                   started, samples)
+
+
+def _clipboard_satisfied(current: str, initial: str,
+                         target: Optional[str], contains: bool) -> bool:
+    if target is not None:
+        return target in current if contains else current == target
+    return current != initial
+
+
+def _default_clipboard_reader() -> Optional[str]:
+    from je_auto_control.utils.clipboard.clipboard import get_clipboard
+    return get_clipboard()
+
+
+WindowFinder = Callable[[str, bool], bool]
+
+
+def wait_until_window_closed(title: str, *, case_sensitive: bool = False,
+                             timeout_s: float = 10.0,
+                             poll_interval_s: float = 0.2,
+                             finder: Optional[WindowFinder] = None
+                             ) -> WaitOutcome:
+    """Return when no window matching ``title`` exists (or timeout).
+
+    The closing companion to ``wait_for_window`` (which waits for a window
+    to *appear*). ``finder(title, case_sensitive) -> bool`` reports whether
+    a matching window still exists; it is injectable for tests.
+    """
+    if timeout_s <= 0:
+        raise ValueError(_TIMEOUT_POSITIVE)
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
+    exists = finder or _default_window_finder
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    while time.monotonic() < deadline:
+        samples += 1
+        if not exists(title, case_sensitive):
+            return _finish(True, "window closed", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, "timeout while waiting for window to close",
+                   started, samples)
+
+
+def _default_window_finder(title: str, case_sensitive: bool) -> bool:
+    from je_auto_control.wrapper.auto_control_window import find_window
+    return find_window(title, case_sensitive=case_sensitive) is not None
+
+
+FileStatReader = Callable[[str], Optional[int]]
+
+
+def wait_until_file(path: str, *,
+                    timeout_s: float = 30.0,
+                    poll_interval_s: float = 0.25,
+                    stable_for_s: float = 1.0,
+                    min_size: int = 1,
+                    stat_reader: Optional[FileStatReader] = None,
+                    ) -> WaitOutcome:
+    """Return when ``path`` exists, is >= ``min_size`` bytes, and its size has
+    held steady for ``stable_for_s`` (i.e. a download has finished writing).
+
+    ``stat_reader(path) -> size or None`` is injectable so tests need no real
+    growing file; the default reports the on-disk size (``None`` when absent).
+    """
+    if timeout_s <= 0:
+        raise ValueError(_TIMEOUT_POSITIVE)
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
+    if stable_for_s < 0:
+        raise ValueError("stable_for_s must be >= 0")
+    read = stat_reader or _default_file_size
+    tracker = _StableSize(float(stable_for_s), int(min_size))
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    while time.monotonic() < deadline:
+        samples += 1
+        if tracker.ready(read(str(path))):
+            return _finish(True, "file ready", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, "timeout while waiting for file", started, samples)
+
+
+class _StableSize:
+    """Track whether a file's size has stayed >= min for long enough."""
+
+    def __init__(self, stable_for_s: float, min_size: int) -> None:
+        self._stable_for_s = stable_for_s
+        self._min_size = min_size
+        self._last: Optional[int] = None
+        self._since: Optional[float] = None
+
+    def ready(self, size: Optional[int]) -> bool:
+        if size is None or size < self._min_size:
+            self._last, self._since = size, None
+            return False
+        now = time.monotonic()
+        if size != self._last:
+            self._last, self._since = size, now
+        return self._since is not None and now - self._since >= self._stable_for_s
+
+
+def _default_file_size(path: str) -> Optional[int]:
+    """Return the on-disk byte size of ``path``, or None if it is absent."""
+    import os
+    try:
+        return os.path.getsize(path)
+    except OSError:
+        return None
+
+
+PortConnector = Callable[[str, int, float], bool]
+
+
+def wait_until_port(host: str, port: int, *,
+                    timeout_s: float = 30.0,
+                    poll_interval_s: float = 0.25,
+                    connect_timeout_s: float = 1.0,
+                    connector: Optional[PortConnector] = None,
+                    ) -> WaitOutcome:
+    """Return when a TCP connection to ``(host, port)`` succeeds, else timeout.
+
+    The closing companion to launching a server: poll until the port
+    accepts connections. ``connector(host, port, timeout) -> bool`` is
+    injectable so tests need no real listener.
+    """
+    if timeout_s <= 0:
+        raise ValueError(_TIMEOUT_POSITIVE)
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
+    if not 0 < int(port) <= 65535:
+        raise ValueError("port must be in 1..65535")
+    probe = connector or _default_port_connector
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    while time.monotonic() < deadline:
+        samples += 1
+        if probe(str(host), int(port), float(connect_timeout_s)):
+            return _finish(True, f"port {host}:{port} open", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, f"timeout waiting for {host}:{port}",
+                   started, samples)
+
+
+def _default_port_connector(host: str, port: int, timeout: float) -> bool:
+    """Return True if a TCP connection to ``(host, port)`` can be opened."""
+    import socket
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+ProcessLister = Callable[[str], List[str]]
+
+
+def wait_until_process(name: str, *, present: bool = True,
+                       timeout_s: float = 30.0,
+                       poll_interval_s: float = 0.25,
+                       lister: Optional[ProcessLister] = None,
+                       ) -> WaitOutcome:
+    """Return when a process whose name contains ``name`` appears, or exits.
+
+    The companion to launching / killing a process: poll until a matching
+    process exists (``present=True``) or is gone (``present=False``).
+    ``lister(name) -> [matching names]`` is injectable so tests need no
+    real processes; the default uses psutil.
+    """
+    if timeout_s <= 0:
+        raise ValueError(_TIMEOUT_POSITIVE)
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
+    find = lister or _default_process_lister
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    verb = "appeared" if present else "exited"
+    while time.monotonic() < deadline:
+        samples += 1
+        if bool(find(name)) == bool(present):
+            return _finish(True, f"process {name!r} {verb}", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, f"timeout waiting for process {name!r} to {verb}",
+                   started, samples)
+
+
+def _default_process_lister(name: str) -> List[str]:
+    """List running process names matching ``name`` (requires psutil)."""
+    from je_auto_control.utils.assertion.assertions import _running_process_names
+    return _running_process_names(name)
 
 
 # --- internals -------------------------------------------------
@@ -185,7 +420,10 @@ def _finish(succeeded: bool, reason: str, started: float,
 
 
 __all__ = [
-    "Frame", "ScreenSampler", "WaitOutcome",
-    "wait_until_pixel_changes", "wait_until_region_idle",
-    "wait_until_screen_stable",
+    "ClipboardReader", "FileStatReader", "Frame", "PortConnector",
+    "ProcessLister", "ScreenSampler", "WaitOutcome", "WindowFinder",
+    "wait_until_clipboard_changes", "wait_until_file",
+    "wait_until_pixel_changes", "wait_until_port", "wait_until_process",
+    "wait_until_region_idle", "wait_until_screen_stable",
+    "wait_until_window_closed",
 ]

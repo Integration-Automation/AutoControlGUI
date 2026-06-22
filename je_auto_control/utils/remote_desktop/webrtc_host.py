@@ -208,28 +208,26 @@ class WebRTCDesktopHost:
             _AUTH_GRACE_S, self._enforce_auth_deadline,
         )
 
+    @staticmethod
+    def _stop_quietly(obj, label: str) -> None:
+        """Call ``obj.stop()``, swallowing teardown errors with a debug log."""
+        if obj is None:
+            return
+        try:
+            obj.stop()
+        except (RuntimeError, OSError) as error:
+            autocontrol_logger.debug("%s stop: %r", label, error)
+
     async def _async_stop(self) -> None:
-        if self._host_voice_track is not None:
-            try:
-                self._host_voice_track.stop()
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("host voice stop: %r", error)
-            self._host_voice_track = None
-        if self._opus_audio_receiver is not None:
-            try:
-                self._opus_audio_receiver.stop()
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("opus receiver stop: %r", error)
-            self._opus_audio_receiver = None
+        self._stop_quietly(self._host_voice_track, "host voice")
+        self._host_voice_track = None
+        self._stop_quietly(self._opus_audio_receiver, "opus receiver")
+        self._opus_audio_receiver = None
         if self._viewer_video_task is not None:
             self._viewer_video_task.cancel()
             self._viewer_video_task = None
-        if self._mic_receiver is not None:
-            try:
-                self._mic_receiver.stop()
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("mic receiver stop: %r", error)
-            self._mic_receiver = None
+        self._stop_quietly(self._mic_receiver, "mic receiver")
+        self._mic_receiver = None
         if self._video_track is not None and self._external_video_track is None:
             # Only stop tracks we created; relayed/external tracks belong to the owner.
             self._video_track.stop()

@@ -215,9 +215,7 @@ class MCPServer:
         msg_id = message.get("id")
         params = message.get("params") or {}
 
-        if method is None and msg_id is not None and (
-            "result" in message or "error" in message
-        ):
+        if self._is_outbound_response(method, msg_id, message):
             self._dispatch_outbound_response(msg_id, message)
             return None
         if msg_id is None:
@@ -227,6 +225,16 @@ class MCPServer:
             self._dispatch_tools_call_async(msg_id, params)
             return None
         return self._build_response(msg_id, method, params)
+
+    @staticmethod
+    def _is_outbound_response(method: Optional[str], msg_id: Any,
+                             message: Dict[str, Any]) -> bool:
+        """True when ``message`` is a reply to a server-initiated request."""
+        return (
+            method is None
+            and msg_id is not None
+            and ("result" in message or "error" in message)
+        )
 
     def _dispatch_outbound_response(self, msg_id: Any,
                                     message: Dict[str, Any]) -> None:
@@ -366,32 +374,46 @@ class MCPServer:
 
     def _dispatch(self, msg_id: Any, method: Optional[str],
                   params: Dict[str, Any]) -> Any:
-        if method == "initialize":
-            return self._handle_initialize(params)
-        if method == "ping":
-            return {}
-        if method == "tools/list":
-            return {"tools": [tool.to_descriptor()
-                              for tool in self._tools.values()]}
         if method == _TOOLS_CALL_METHOD:
             return self._handle_tools_call(msg_id, params)
-        if method == "resources/list":
-            return {"resources": [resource.to_descriptor()
-                                   for resource in self._resources.list()]}
-        if method == "resources/read":
-            return self._handle_resources_read(params)
-        if method == "resources/subscribe":
-            return self._handle_resources_subscribe(params)
-        if method == "resources/unsubscribe":
-            return self._handle_resources_unsubscribe(params)
-        if method == "prompts/list":
-            return {"prompts": [prompt.to_descriptor()
-                                 for prompt in self._prompts.list()]}
-        if method == "prompts/get":
-            return self._handle_prompts_get(params)
-        if method == "logging/setLevel":
-            return self._handle_logging_set_level(params)
-        raise _MCPError(-32601, f"Method not found: {method}")
+        nullary = {
+            "ping": self._handle_ping,
+            "tools/list": self._handle_tools_list,
+            "resources/list": self._handle_resources_list,
+            "prompts/list": self._handle_prompts_list,
+        }.get(method)
+        if nullary is not None:
+            return nullary()
+        handler = {
+            "initialize": self._handle_initialize,
+            "resources/read": self._handle_resources_read,
+            "resources/subscribe": self._handle_resources_subscribe,
+            "resources/unsubscribe": self._handle_resources_unsubscribe,
+            "prompts/get": self._handle_prompts_get,
+            "logging/setLevel": self._handle_logging_set_level,
+        }.get(method)
+        if handler is None:
+            raise _MCPError(-32601, f"Method not found: {method}")
+        return handler(params)
+
+    def _handle_ping(self) -> Dict[str, Any]:
+        """Liveness probe; returns an empty result per the MCP spec."""
+        return {}
+
+    def _handle_tools_list(self) -> Dict[str, Any]:
+        """List descriptors for every registered tool."""
+        return {"tools": [tool.to_descriptor()
+                          for tool in self._tools.values()]}
+
+    def _handle_resources_list(self) -> Dict[str, Any]:
+        """List descriptors for every registered resource."""
+        return {"resources": [resource.to_descriptor()
+                              for resource in self._resources.list()]}
+
+    def _handle_prompts_list(self) -> Dict[str, Any]:
+        """List descriptors for every registered prompt."""
+        return {"prompts": [prompt.to_descriptor()
+                            for prompt in self._prompts.list()]}
 
     def _handle_logging_set_level(self,
                                   params: Dict[str, Any]) -> Dict[str, Any]:
@@ -493,8 +515,14 @@ class MCPServer:
             raise _MCPError(-32602, f"Unknown prompt: {name}")
         return payload
 
-    def _handle_tools_call(self, msg_id: Any,
-                           params: Dict[str, Any]) -> Dict[str, Any]:
+    def _prepare_tool_call(
+        self, params: Dict[str, Any],
+    ) -> tuple[str, Any, Dict[str, Any]]:
+        """Validate a tools/call request; return ``(name, tool, arguments)``.
+
+        Raises :class:`_MCPError` when the request is malformed, the tool is
+        unknown, arguments fail schema validation, or the rate limit is hit.
+        """
         name = params.get("name")
         arguments = params.get("arguments") or {}
         if not isinstance(name, str):
@@ -510,6 +538,11 @@ class MCPServer:
         if self._rate_limiter is not None and not self._rate_limiter.try_acquire():
             raise _MCPError(-32000, f"Rate limit exceeded for tool {name!r}")
         self._maybe_confirm_destructive(name, tool, arguments)
+        return name, tool, arguments
+
+    def _handle_tools_call(self, msg_id: Any,
+                           params: Dict[str, Any]) -> Dict[str, Any]:
+        name, tool, arguments = self._prepare_tool_call(params)
         ctx = self._build_call_context(msg_id, params)
         with self._calls_lock:
             self._active_calls[msg_id] = ctx
@@ -547,10 +580,15 @@ class MCPServer:
             tool=name, arguments=arguments, status="ok",
             duration_seconds=time.monotonic() - started_at,
         )
-        return {
+        response: Dict[str, Any] = {
             "content": _to_content_blocks(result),
             "isError": False,
         }
+        # 2025-06-18 spec: tools with an outputSchema return their dict result
+        # as structuredContent for typed, token-cheap client consumption.
+        if tool.output_schema is not None and isinstance(result, dict):
+            response["structuredContent"] = result
+        return response
 
     def request_elicitation(self, message: str,
                             requested_schema: Optional[Dict[str, Any]] = None,
@@ -645,8 +683,9 @@ class MCPServer:
                 "MCP elicitation for %s failed (%r) — refusing call",
                 name, error,
             )
-            raise _MCPError(-32000,
-                             f"User confirmation unavailable for {name}")
+            raise _MCPError(
+                -32000, f"User confirmation unavailable for {name}",
+            ) from error
         action = response.get("action") if isinstance(response, dict) else None
         if action != "accept":
             raise _MCPError(-32000, f"User declined to run {name}: action={action!r}")

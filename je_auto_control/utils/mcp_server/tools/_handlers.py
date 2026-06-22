@@ -350,14 +350,8 @@ def _flood_fill_box(mask: Any, visited: Any,
         if visited[y, x] or mask[y, x] == 0:
             continue
         visited[y, x] = True
-        if x < min_x:
-            min_x = x
-        if x > max_x:
-            max_x = x
-        if y < min_y:
-            min_y = y
-        if y > max_y:
-            max_y = y
+        min_x, max_x = min(min_x, x), max(max_x, x)
+        min_y, max_y = min(min_y, y), max(max_y, y)
         stack.extend(((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)))
     return [int(min_x), int(min_y),
             int(max_x - min_x + 1), int(max_y - min_y + 1)]
@@ -725,6 +719,1445 @@ def a11y_click(name: Optional[str] = None,
                                              app_name=app_name))
 
 
+def control_get_value(name=None, role=None, app_name=None,
+                      automation_id=None):
+    from je_auto_control.utils.accessibility import control_get_value as _g
+    return _g(name=name, role=role, app_name=app_name,
+              automation_id=automation_id)
+
+
+def control_set_value(value, name=None, role=None, app_name=None,
+                      automation_id=None):
+    from je_auto_control.utils.accessibility import control_set_value as _s
+    return _s(value, name=name, role=role, app_name=app_name,
+              automation_id=automation_id)
+
+
+def control_invoke(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.accessibility import control_invoke as _i
+    return _i(name=name, role=role, app_name=app_name,
+              automation_id=automation_id)
+
+
+def control_toggle(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.accessibility import control_toggle as _t
+    return _t(name=name, role=role, app_name=app_name,
+              automation_id=automation_id)
+
+
+def read_table(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.accessibility import read_control_table as _r
+    return _r(name=name, role=role, app_name=app_name,
+              automation_id=automation_id)
+
+
+def watchdog_add(title, action="close", case_sensitive=False, name=None):
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    default_popup_watchdog.add_window_rule(
+        title, action=action, case_sensitive=bool(case_sensitive), name=name)
+    return {"rules": default_popup_watchdog.rule_names()}
+
+
+def watchdog_start():
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    default_popup_watchdog.start()
+    return {"running": True}
+
+
+def watchdog_stop():
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    default_popup_watchdog.stop()
+    return {"running": False}
+
+
+def watchdog_list():
+    from je_auto_control.utils.watchdog import default_popup_watchdog
+    w = default_popup_watchdog
+    return {"running": w.running, "rules": w.rule_names(), "hits": w.hits}
+
+
+def generate_otp(secret, step=30, digits=6):
+    from je_auto_control.utils.otp import generate_totp
+    return generate_totp(secret, step=int(step), digits=int(digits))
+
+
+def handle_file_dialog(path, action="open", window_title=None,
+                       timeout_s=10.0, confirm_key="enter"):
+    from je_auto_control.utils.file_dialog import handle_file_dialog as _h
+    return _h(path, action=action, window_title=window_title,
+              timeout_s=float(timeout_s), confirm_key=confirm_key)
+
+
+def assert_session_active():
+    from je_auto_control.utils.session_guard import ensure_interactive_session
+    return {"interactive": ensure_interactive_session()}
+
+
+def _work_queue(db, name):
+    from je_auto_control.utils.work_queue import WorkQueue
+    return WorkQueue(db, name)
+
+
+def queue_add(db, data, reference=None, name="default"):
+    return {"id": _work_queue(db, name).add(data, reference=reference)}
+
+
+def queue_next(db, name="default"):
+    item = _work_queue(db, name).get_next()
+    return None if item is None else {
+        "id": item.id, "reference": item.reference, "data": item.data,
+        "status": item.status, "retries": item.retries}
+
+
+def queue_complete(db, item_id, output=None, name="default"):
+    _work_queue(db, name).complete(int(item_id), output=output)
+    return {"id": int(item_id), "status": "success"}
+
+
+def queue_fail(db, item_id, error, kind="application", max_retries=3,
+               name="default"):
+    status = _work_queue(db, name).fail(int(item_id), str(error),
+                                        kind=str(kind),
+                                        max_retries=int(max_retries))
+    return {"id": int(item_id), "status": status}
+
+
+def queue_stats(db, name="default"):
+    return _work_queue(db, name).stats()
+
+
+def generate_data(schema, count=10, path=None, fmt=None, seed=None):
+    from je_auto_control.utils.test_data import generate_rows, write_dataset
+    rows = generate_rows(schema, int(count), seed=seed)
+    if path:
+        return {"path": write_dataset(rows, path, fmt), "count": len(rows)}
+    return {"rows": rows, "count": len(rows)}
+
+
+def mcp_manifest(path=None, include_tools=False):
+    from je_auto_control.utils.mcp_registry import (
+        build_server_manifest, write_server_manifest)
+    if path:
+        return {"path": write_server_manifest(
+            path, include_tools=bool(include_tools))}
+    return {"manifest": build_server_manifest(
+        include_tools=bool(include_tools))}
+
+
+def rank_tests(flows, history_path=None, window=10):
+    from je_auto_control.utils.test_select import rank_flows
+    return {"ranked": rank_flows(flows, history_path=history_path,
+                                 window=int(window))}
+
+
+def select_tests(flows, k=None, threshold=None, history_path=None, window=10):
+    from je_auto_control.utils.test_select import select_flows
+    return {"selected": select_flows(
+        flows, k=k, threshold=threshold, history_path=history_path,
+        window=int(window))}
+
+
+def _element_repo(path):
+    from je_auto_control.utils.element_repository import ElementRepository
+    return ElementRepository(path)
+
+
+def element_save(path, key, name=None, role=None, app_name=None):
+    return {"locator": _element_repo(path).save(
+        key, name=name, role=role, app_name=app_name)}
+
+
+def element_find(path, key):
+    return _element_repo(path).find_info(key)
+
+
+def element_click(path, key):
+    return {"clicked": _element_repo(path).click(key)}
+
+
+def element_remove(path, key):
+    return {"removed": _element_repo(path).remove(key)}
+
+
+def element_list(path):
+    return {"keys": _element_repo(path).keys()}
+
+
+def debug_trace(actions, dry_run=False):
+    from je_auto_control.utils.flow_debugger import trace_actions
+    return {"trace": trace_actions(actions, dry_run=bool(dry_run))}
+
+
+def _skill_lib(path):
+    from je_auto_control.utils.skill_library import SkillLibrary
+    return SkillLibrary(path)
+
+
+def skill_save(path, name, actions, description="", tags=None):
+    skill = _skill_lib(path).save(name, actions, description=description,
+                                  tags=tags)
+    return {"name": skill.name, "tags": skill.tags}
+
+
+def skill_run(path, name):
+    return {"record": _skill_lib(path).run(name)}
+
+
+def skill_list(path):
+    return {"names": _skill_lib(path).names()}
+
+
+def skill_remove(path, name):
+    return {"removed": _skill_lib(path).remove(name)}
+
+
+def skill_search(path, query):
+    return {"names": [s.name for s in _skill_lib(path).search(query)]}
+
+
+def guard_text(text, threshold=2):
+    from je_auto_control.utils.guardrail import assess_text
+    return assess_text(text, threshold=int(threshold))
+
+
+def agent_card(path=None):
+    from je_auto_control.utils.a2a import build_agent_card, write_agent_card
+    if path:
+        return {"path": write_agent_card(path)}
+    return {"card": build_agent_card()}
+
+
+def read_workbook(path, sheet=""):
+    from je_auto_control.utils.office import read_workbook as _read
+    return {"rows": _read(path, sheet=sheet)}
+
+
+def write_workbook(path, rows, sheet="Sheet1"):
+    from je_auto_control.utils.office import write_workbook as _write
+    return {"path": _write(path, rows, sheet=sheet)}
+
+
+def read_document(path):
+    from je_auto_control.utils.office import read_document as _read
+    return _read(path)
+
+
+def write_document(path, paragraphs):
+    from je_auto_control.utils.office import write_document as _write
+    return {"path": _write(path, paragraphs)}
+
+
+def read_presentation(path):
+    from je_auto_control.utils.office import read_presentation as _read
+    return _read(path)
+
+
+def write_presentation(path, slides):
+    from je_auto_control.utils.office import write_presentation as _write
+    return {"path": _write(path, slides)}
+
+
+def _agent_memory(db):
+    from je_auto_control.utils.agent_memory import AgentMemory
+    return AgentMemory(db)
+
+
+def _episode_dict(episode):
+    return {"id": episode.id, "goal": episode.goal, "steps": episode.steps,
+            "outcome": episode.outcome, "tags": episode.tags,
+            "score": episode.score}
+
+
+def memory_remember(db, goal, steps=None, outcome="", tags=None):
+    return {"id": _agent_memory(db).remember(
+        goal, steps=steps, outcome=outcome, tags=tags)}
+
+
+def memory_recall(db, query, limit=5):
+    eps = _agent_memory(db).recall(query, limit=int(limit))
+    return {"episodes": [_episode_dict(ep) for ep in eps]}
+
+
+def memory_recent(db, limit=10):
+    eps = _agent_memory(db).recent(limit=int(limit))
+    return {"episodes": [_episode_dict(ep) for ep in eps]}
+
+
+def memory_forget(db, episode_id):
+    return {"removed": _agent_memory(db).forget(int(episode_id))}
+
+
+def memory_stats(db):
+    return _agent_memory(db).stats()
+
+
+def seed_everything(seed=0):
+    from je_auto_control.utils.deterministic import seed_everything as _seed
+    return {"seed": _seed(int(seed))}
+
+
+def _observe_predicate(kind, params):
+    from je_auto_control.utils.observer import (
+        image_predicate, pixel_predicate, text_predicate)
+    builders = {
+        "image": lambda: image_predicate(params.get("image", ""),
+                                         params.get("threshold", 0.8)),
+        "text": lambda: text_predicate(params.get("text", "")),
+        "pixel": lambda: pixel_predicate(int(params.get("x", 0)),
+                                         int(params.get("y", 0))),
+    }
+    if kind not in builders:
+        raise ValueError(f"unknown observe kind: {kind!r}")
+    return builders[kind]()
+
+
+def _observe_handler(actions):
+    from je_auto_control.utils.executor.action_executor import executor
+
+    def handler(_event, _value):
+        if actions:
+            executor.execute_action(list(actions))
+    return handler
+
+
+def observe_add(name, kind="image", event="appear", actions=None, **params):
+    from je_auto_control.utils.observer import default_observer
+    default_observer.add(name, _observe_predicate(kind, params),
+                         _observe_handler(actions or []), events=(event,))
+    return {"name": name, "kind": kind, "event": event}
+
+
+def observe_remove(name):
+    from je_auto_control.utils.observer import default_observer
+    return {"removed": default_observer.remove(name)}
+
+
+def observe_list():
+    from je_auto_control.utils.observer import default_observer
+    return {"names": default_observer.names()}
+
+
+def observe_poll():
+    from je_auto_control.utils.observer import default_observer
+    return {"fired": default_observer.poll_once()}
+
+
+def observe_start():
+    from je_auto_control.utils.observer import default_observer
+    default_observer.start()
+    return {"running": default_observer.running}
+
+
+def observe_stop():
+    from je_auto_control.utils.observer import default_observer
+    default_observer.stop()
+    return {"running": default_observer.running}
+
+
+def generate_sbom(path=None, root="je_auto_control"):
+    from je_auto_control.utils.sbom import build_sbom, write_sbom
+    root_arg = root or None
+    if path:
+        return {"path": write_sbom(path, root_arg)}
+    return {"sbom": build_sbom(root_arg)}
+
+
+def shard_suite(flows, shards=2, history_path=None, window=20):
+    from je_auto_control.utils.test_shard import shard_flows
+    return {"shards": shard_flows(flows, int(shards),
+                                  history_path=history_path,
+                                  window=int(window))}
+
+
+def merge_results(reports):
+    from je_auto_control.utils.test_shard import merge_results as _merge
+    return _merge(reports)
+
+
+def validate_rows(rows, schema):
+    from je_auto_control.utils.data_quality import validate_rows as _validate
+    return _validate(rows, schema)
+
+
+def extract_fields(text, fields=None, patterns=None):
+    from je_auto_control.utils.data_quality import extract_fields as _extract
+    return {"fields": _extract(text, fields=fields, patterns=patterns)}
+
+
+def mask_rows(rows, rules):
+    from je_auto_control.utils.data_quality import mask_rows as _mask
+    return {"rows": _mask(rows, rules)}
+
+
+def pseudo_localize(text=None, mapping=None, expansion=0.4):
+    from je_auto_control.utils.i18n_test import (
+        pseudo_localize as _pl, pseudo_localize_catalog as _plc)
+    if mapping is not None:
+        return {"catalog": _plc(mapping, expansion=float(expansion))}
+    return {"text": _pl(text or "", expansion=float(expansion))}
+
+
+def check_overflow(elements=None, avg_char_px=7.0, app_name=None):
+    from je_auto_control.utils.i18n_test import check_overflow as _co
+    items = elements
+    if items is None:
+        from je_auto_control.utils.accessibility.accessibility_api import (
+            list_accessibility_elements)
+        items = list_accessibility_elements(app_name=app_name)
+    return {"issues": _co(items, avg_char_px=float(avg_char_px))}
+
+
+def check_catalog(base, target):
+    from je_auto_control.utils.i18n_test import check_catalog as _cc
+    return _cc(base, target)
+
+
+def run_resumable(actions, run_id, db, variables=None):
+    from je_auto_control.utils.checkpoint import (
+        CheckpointStore, run_resumable as _run)
+    return _run(actions, run_id=run_id, store=CheckpointStore(db),
+                variables=variables)
+
+
+def checkpoint_status(run_id, db):
+    from je_auto_control.utils.checkpoint import CheckpointStore
+    cp = CheckpointStore(db).load(run_id)
+    if cp is None:
+        return {"checkpoint": None}
+    return {"checkpoint": {"run_id": cp.run_id, "step_index": cp.step_index,
+                           "variables": cp.variables}}
+
+
+def checkpoint_clear(run_id, db):
+    from je_auto_control.utils.checkpoint import CheckpointStore
+    return {"cleared": CheckpointStore(db).clear(run_id)}
+
+
+def mark_screen(app_name=None, render_path=None):
+    from je_auto_control.utils.set_of_marks import mark_screen as _ms
+    return _ms(app_name=app_name, render_path=render_path)
+
+
+def mark_click(mark_id):
+    from je_auto_control.utils.set_of_marks import mark_click as _mc
+    return {"clicked": _mc(int(mark_id))}
+
+
+def screen_snapshot(app_name=None):
+    from je_auto_control.utils.screen_state import snapshot_screen
+    return {"snapshot": snapshot_screen(app_name=app_name)}
+
+
+def screen_diff(before, after):
+    from je_auto_control.utils.screen_state import diff_snapshots
+    return diff_snapshots(before, after)
+
+
+def screen_changed(app_name=None):
+    from je_auto_control.utils.screen_state import screen_changed as _sc
+    return _sc(app_name=app_name)
+
+
+def describe_screen(app_name=None):
+    from je_auto_control.utils.screen_state import describe_screen as _ds
+    return _ds(app_name=app_name)
+
+
+def replay_timeline(events, speed=1.0):
+    from je_auto_control.utils.input_macro import replay_timeline as _rt
+    return {"played": _rt(events, speed=float(speed))}
+
+
+def input_sequence(steps):
+    from je_auto_control.utils.input_macro import run_sequence as _rs
+    return {"log": _rs(steps)}
+
+
+def circuit_call(name, actions, threshold=5, reset_s=30.0):
+    from je_auto_control.utils.executor.action_executor import _circuit_call
+    return _circuit_call(name, actions, threshold=int(threshold),
+                         reset_s=float(reset_s))
+
+
+def ci_annotations(annotations):
+    from je_auto_control.utils.ci_annotations import emit_annotations
+    return {"lines": emit_annotations(annotations)}
+
+
+def clip_history_capture():
+    from je_auto_control.utils.clipboard_history import default_clipboard_history
+    return {"added": default_clipboard_history.capture_once()}
+
+
+def clip_history_list():
+    from je_auto_control.utils.clipboard_history import default_clipboard_history
+    return {"history": default_clipboard_history.snapshot()}
+
+
+def clip_history_search(query):
+    from je_auto_control.utils.clipboard_history import default_clipboard_history
+    return {"matches": default_clipboard_history.search(query)}
+
+
+def clip_history_start():
+    from je_auto_control.utils.clipboard_history import default_clipboard_history
+    default_clipboard_history.start()
+    return {"running": default_clipboard_history.running}
+
+
+def clip_history_stop():
+    from je_auto_control.utils.clipboard_history import default_clipboard_history
+    default_clipboard_history.stop()
+    return {"running": default_clipboard_history.running}
+
+
+def heal_stats(limit=200):
+    from je_auto_control.utils.heal_analytics import analyze_heal_log
+    return analyze_heal_log(limit=int(limit))
+
+
+def scan_secrets(data):
+    from je_auto_control.utils.secrets_scan import scan_secrets as _scan
+    return {"findings": _scan(data)}
+
+
+def generate_sop(actions, title="Automation Procedure", path=None):
+    from je_auto_control.utils.process_doc import generate_sop as _gen
+    from je_auto_control.utils.process_doc import write_sop as _write
+    if path:
+        return {"path": _write(actions, path, title=title)}
+    return _gen(actions, title=title)
+
+
+def tween_drag(start, end, steps=30, easing="ease_in_out_quad",
+               button="mouse_left"):
+    from je_auto_control.utils.tween_drag import tween_drag as _td
+    return {"points": _td(tuple(start), tuple(end), steps=int(steps),
+                          easing=easing, button=button)["points"]}
+
+
+def list_plugins(group="je_auto_control.commands"):
+    from je_auto_control.utils.plugin_sdk import discover_plugins
+    return {"commands": sorted(discover_plugins(group))}
+
+
+def load_plugins(group="je_auto_control.commands"):
+    from je_auto_control.utils.plugin_sdk import load_plugins as _load
+    return {"loaded": _load(group)}
+
+
+def approval_request(action: str, requester: str = "",
+                     db: Optional[str] = None):
+    from je_auto_control.utils.governance import ApprovalGate
+    return {"token": ApprovalGate(db).request(action, requester)}
+
+
+def approval_approve(token: str, approver: str, db: Optional[str] = None):
+    from je_auto_control.utils.governance import ApprovalGate
+    return {"approved": ApprovalGate(db).approve(token, approver)}
+
+
+def approval_reject(token: str, approver: str, db: Optional[str] = None):
+    from je_auto_control.utils.governance import ApprovalGate
+    return {"rejected": ApprovalGate(db).reject(token, approver)}
+
+
+def approval_status(token: str, db: Optional[str] = None):
+    from je_auto_control.utils.governance import ApprovalGate
+    gate = ApprovalGate(db)
+    return {"status": gate.status(token), "approved": gate.is_approved(token)}
+
+
+def lease_secret(name: str, ttl: float = 300.0):
+    from je_auto_control.utils.governance import default_broker
+    return {"token": default_broker.lease(name, ttl), "ttl": float(ttl)}
+
+
+def lease_valid(token: str):
+    from je_auto_control.utils.governance import default_broker
+    return {"valid": default_broker.is_valid(token)}
+
+
+def revoke_lease(token: str):
+    from je_auto_control.utils.governance import default_broker
+    return {"revoked": default_broker.revoke(token)}
+
+
+def lease_active():
+    from je_auto_control.utils.governance import default_broker
+    return {"leases": default_broker.active()}
+
+
+def egress_allow(allow=None, deny=None):
+    from je_auto_control.utils.egress import set_egress_policy
+    policy = set_egress_policy(allow, deny)
+    return {"allow": policy.allow, "deny": policy.deny}
+
+
+def egress_check(url: str):
+    from je_auto_control.utils.egress import get_egress_policy
+    return {"allowed": get_egress_policy().is_allowed(url)}
+
+
+def egress_reset():
+    from je_auto_control.utils.egress import set_egress_policy
+    set_egress_policy(None, None)
+    return {"allow": None, "deny": []}
+
+
+def verify_artifact(name: str, content, approvals_dir: str = ".approvals",
+                    extension: str = "txt"):
+    from je_auto_control.utils.approval import verify_artifact as _verify
+    result = _verify(name, content, approvals_dir, extension)
+    return {"status": result.status, "match": result.match,
+            "approved_path": result.approved_path,
+            "received_path": result.received_path}
+
+
+def approve_artifact(name: str, approvals_dir: str = ".approvals",
+                     extension: str = "txt"):
+    from je_auto_control.utils.approval import approve_artifact as _approve
+    return {"approved": _approve(name, approvals_dir, extension)}
+
+
+def pending_artifacts(approvals_dir: str = ".approvals"):
+    from je_auto_control.utils.approval import pending_artifacts as _pending
+    return {"pending": _pending(approvals_dir)}
+
+
+def evaluate_trajectory(trajectory, rubric):
+    from je_auto_control.utils.trajectory_eval import (
+        evaluate_trajectory as _evaluate)
+    return _evaluate(trajectory, rubric)
+
+
+def compliance_report(evidence, frameworks=None, path=None, fmt="json"):
+    from je_auto_control.utils.compliance import (
+        build_compliance_report, write_compliance_report)
+    report = build_compliance_report(evidence, frameworks)
+    if path:
+        report["path"] = write_compliance_report(report, path, fmt)
+    return report
+
+
+def trace_record(operation, model=None, system=None, input_tokens=None,
+                 output_tokens=None, tool_name=None, duration_s=0.0,
+                 status="ok"):
+    from je_auto_control.utils.agent_trace import default_trace
+    return default_trace.record(
+        operation, model=model, system=system, input_tokens=input_tokens,
+        output_tokens=output_tokens, tool_name=tool_name,
+        duration_s=duration_s, status=status)
+
+
+def trace_summary():
+    from je_auto_control.utils.agent_trace import default_trace
+    return default_trace.summary()
+
+
+def trace_export():
+    from je_auto_control.utils.agent_trace import default_trace
+    return {"spans": default_trace.to_otel()}
+
+
+def trace_reset():
+    from je_auto_control.utils.agent_trace import reset_trace
+    reset_trace()
+    return {"reset": True}
+
+
+def write_step_video(steps, output, fps=10, seconds_per_step=2.0):
+    from je_auto_control.utils.video_report import (
+        write_step_video as _write)
+    return _write(steps, output, fps=fps, seconds_per_step=seconds_per_step)
+
+
+def fuzzy_ratio(left, right, ignore_case=True):
+    from je_auto_control.utils.fuzzy import fuzzy_ratio as _ratio
+    return {"score": _ratio(left, right, ignore_case=ignore_case)}
+
+
+def fuzzy_best_match(query, choices, score_cutoff=0.0, ignore_case=True):
+    from je_auto_control.utils.fuzzy import fuzzy_best_match as _best
+    best = _best(query, choices, score_cutoff=score_cutoff,
+                 ignore_case=ignore_case)
+    if best is None:
+        return {"match": None, "score": 0.0, "index": -1}
+    return {"match": best[0], "score": best[1], "index": best[2]}
+
+
+def fuzzy_dedupe(items, threshold=0.9, ignore_case=True):
+    from je_auto_control.utils.fuzzy import fuzzy_dedupe as _dedupe
+    return {"unique": _dedupe(items, threshold=threshold,
+                              ignore_case=ignore_case)}
+
+
+def s3_upload(local_path, key=None):
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"key": get_default_store().upload(local_path, key)}
+
+
+def s3_download(key, local_path):
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"path": get_default_store().download(key, local_path)}
+
+
+def s3_list(prefix=None):
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"keys": get_default_store().list(prefix)}
+
+
+def s3_delete(key):
+    from je_auto_control.utils.artifact_store import get_default_store
+    return {"deleted": get_default_store().delete(key)}
+
+
+def image_hash(path, algo="average"):
+    from je_auto_control.utils.image_dedup import average_hash, dhash
+    hasher = dhash if algo == "dhash" else average_hash
+    return {"hash": hasher(path)}
+
+
+def dedupe_images(paths, max_distance=5):
+    from je_auto_control.utils.image_dedup import dedupe_images as _dedupe
+    return {"unique": _dedupe(paths, max_distance=max_distance)}
+
+
+def parse_decimal(text, locale="en_US"):
+    from je_auto_control.utils.locale_parse import parse_decimal as _parse
+    return {"value": _parse(text, locale)}
+
+
+def parse_number(text, locale="en_US"):
+    from je_auto_control.utils.locale_parse import parse_number as _parse
+    return {"value": _parse(text, locale)}
+
+
+def format_decimal(value, locale="en_US"):
+    from je_auto_control.utils.locale_parse import format_decimal as _fmt
+    return {"text": _fmt(value, locale)}
+
+
+def format_currency(value, currency, locale="en_US"):
+    from je_auto_control.utils.locale_parse import format_currency as _fmt
+    return {"text": _fmt(value, currency, locale)}
+
+
+def format_date(value, locale="en_US", fmt="medium"):
+    from je_auto_control.utils.locale_parse import format_date as _fmt
+    return {"text": _fmt(value, locale, fmt)}
+
+
+def voice_register(phrase, actions):
+    from je_auto_control.utils.voice import default_voice_router
+    default_voice_router.register(phrase, actions)
+    return {"phrases": default_voice_router.phrases()}
+
+
+def voice_dispatch(text):
+    from je_auto_control.utils.voice import default_voice_router
+    outcome = default_voice_router.dispatch(text)
+    return {"matched": outcome["matched"], "phrase": outcome["phrase"]}
+
+
+def voice_list():
+    from je_auto_control.utils.voice import default_voice_router
+    return {"phrases": default_voice_router.phrases()}
+
+
+def voice_clear():
+    from je_auto_control.utils.voice import default_voice_router
+    default_voice_router.clear()
+    return {"cleared": True}
+
+
+def to_physical(x, y, physical_w, physical_h, model_w, model_h):
+    from je_auto_control.utils.coordinate_space import CoordinateSpace
+    px, py = CoordinateSpace(physical_w, physical_h, model_w,
+                             model_h).to_physical(x, y)
+    return {"x": px, "y": py}
+
+
+def to_model(x, y, physical_w, physical_h, model_w, model_h):
+    from je_auto_control.utils.coordinate_space import CoordinateSpace
+    mx, my = CoordinateSpace(physical_w, physical_h, model_w,
+                             model_h).to_model(x, y)
+    return {"x": mx, "y": my}
+
+
+def loop_guard_observe(tool, args=None, result_digest=""):
+    from je_auto_control.utils.loop_guard import default_loop_guard
+    verdict = default_loop_guard.observe(tool, args, result_digest)
+    return {"pattern": verdict.pattern, "level": verdict.level,
+            "count": verdict.count}
+
+
+def loop_guard_reset():
+    from je_auto_control.utils.loop_guard import default_loop_guard
+    default_loop_guard.reset()
+    return {"reset": True}
+
+
+def mine_actions(actions, min_len=2, max_len=5, min_count=3):
+    from je_auto_control.utils.process_mining import mine_action_log
+    report = mine_action_log(actions, min_len=min_len, max_len=max_len,
+                             min_count=min_count)
+    return {
+        "total_actions": report.total_actions,
+        "patterns": [{"actions": list(p.actions), "count": p.count}
+                     for p in report.patterns],
+        "candidates": [{"actions": list(c.pattern.actions),
+                        "count": c.pattern.count, "score": c.score}
+                       for c in report.candidates],
+    }
+
+
+def set_asset(name, value, asset_type="text", environment="default", db=None):
+    from je_auto_control.utils.assets.assets import store_set
+    return store_set(name, value, asset_type=asset_type,
+                     environment=environment, db=db)
+
+
+def get_asset(name, environment="default", db=None):
+    from je_auto_control.utils.assets.assets import store_get
+    return store_get(name, environment=environment, db=db)
+
+
+def list_assets(environment=None, db=None):
+    from je_auto_control.utils.assets.assets import store_list
+    return store_list(environment=environment, db=db)
+
+
+def emit_event(event_type, data=None, source="je_auto_control",
+               subject=None, url=None):
+    from je_auto_control.utils.events import post_cloudevent, to_cloudevent
+    event = to_cloudevent(event_type, source, data, subject=subject)
+    result = {"event": event}
+    if url:
+        result["status"] = post_cloudevent(url, event)
+    return result
+
+
+def notify_webhook(url, text, transport="raw", title=None):
+    from je_auto_control.utils.notify_channels import (
+        notify_webhook as _notify)
+    outcome = _notify(url, text, transport=transport, title=title)
+    return {"ok": outcome.ok, "status": outcome.status,
+            "transport": outcome.transport}
+
+
+def json_query(data, path):
+    from je_auto_control.utils.jsonpath import json_query as _q
+    return {"matches": _q(data, path)}
+
+
+def json_extract(data, mapping):
+    from je_auto_control.utils.jsonpath import json_extract as _x
+    return {"result": _x(data, mapping)}
+
+
+def validate_json(data, schema):
+    from je_auto_control.utils.json_schema import validate_json as _v
+    return _v(data, schema).to_dict()
+
+
+def scan_vulns(components, advisories=None):
+    from je_auto_control.utils.vuln_scan import scan_components
+    if isinstance(components, dict):
+        components = components.get("components", [])
+    findings = scan_components(components, advisories or [])
+    return {"findings": findings, "count": len(findings)}
+
+
+def apply_vex(findings, vex):
+    from je_auto_control.utils.vex import apply_vex as _apply
+    kept = _apply(findings, vex)
+    return {"findings": kept, "count": len(kept)}
+
+
+def check_licenses(components, allow=None, deny=None):
+    from je_auto_control.utils.license_policy import evaluate_sbom
+    if isinstance(components, dict):
+        components = components.get("components", [])
+    violations = evaluate_sbom(components, allow=allow, deny=deny)
+    return {"violations": violations, "count": len(violations)}
+
+
+def jwt_encode(claims, key, alg="HS256"):
+    from je_auto_control.utils.jwt import encode_jwt
+    return {"token": encode_jwt(claims, key, alg=alg)}
+
+
+def jwt_decode(token, key, algorithms=None, audience=None, leeway=0.0):
+    from je_auto_control.utils.jwt import ClaimsPolicy, JwtError, decode_jwt
+    policy = ClaimsPolicy(algorithms=tuple(algorithms) if algorithms
+                          else ("HS256",), audience=audience, leeway=leeway)
+    try:
+        claims = decode_jwt(token, key, policy)
+    except JwtError as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "claims": claims}
+
+
+_RATE_LIMITERS = {}
+
+
+def rate_limit(name, rate=1.0, capacity=1.0, n=1.0):
+    from je_auto_control.utils.rate_limit import TokenBucket
+    bucket = _RATE_LIMITERS.setdefault(
+        name, TokenBucket(float(rate), float(capacity)))
+    acquired = bucket.try_acquire(float(n))
+    return {"acquired": acquired, "tokens": round(bucket.tokens, 4),
+            "wait": round(bucket.time_until_available(float(n)), 4)}
+
+
+def resolve_pointer(doc, pointer):
+    from je_auto_control.utils.json_patch import resolve_pointer as _resolve
+    return {"value": _resolve(doc, pointer)}
+
+
+def apply_json_patch(doc, patch):
+    from je_auto_control.utils.json_patch import apply_patch
+    return {"result": apply_patch(doc, patch)}
+
+
+def make_json_patch(old, new):
+    from je_auto_control.utils.json_patch import make_patch
+    return {"patch": make_patch(old, new)}
+
+
+def merge_patch(doc, patch):
+    from je_auto_control.utils.json_patch import merge_patch as _merge
+    return {"result": _merge(doc, patch)}
+
+
+def search_documents(docs, query, top_k=10, mode="bm25"):
+    from je_auto_control.utils.search_index import search_documents as _search
+    hits = _search(docs, query, top_k=int(top_k), mode=mode)
+    return {"hits": [{"doc_id": h.doc_id, "score": h.score} for h in hits]}
+
+
+def describe_stats(values):
+    from je_auto_control.utils.stats import describe
+    return describe(values)
+
+
+def ab_significance(a_conv, a_n, b_conv, b_n):
+    from je_auto_control.utils.stats import two_proportion_z_test
+    return two_proportion_z_test(int(a_conv), int(a_n), int(b_conv), int(b_n))
+
+
+def rrule_occurrences(rule, dtstart, count=10):
+    import datetime as _dt
+    from je_auto_control.utils.recurrence import occurrences, parse_rrule
+    start = _dt.datetime.fromisoformat(dtstart)
+    moments = occurrences(parse_rrule(rule), start, count=int(count))
+    return {"occurrences": [moment.isoformat() for moment in moments]}
+
+
+def rrule_next(rule, dtstart, now=None):
+    import datetime as _dt
+    from je_auto_control.utils.recurrence import next_occurrence, parse_rrule
+    start = _dt.datetime.fromisoformat(dtstart)
+    when = _dt.datetime.fromisoformat(now) if now else None
+    moment = next_occurrence(parse_rrule(rule), start, now=when)
+    return {"next": moment.isoformat() if moment else None}
+
+
+def match_json(actual, expected, partial=False, match_type=False):
+    from je_auto_control.utils.json_contract import match_json as _match
+    return _match(actual, expected, partial=bool(partial),
+                  match_type=bool(match_type)).to_dict()
+
+
+def diff_json(actual, expected):
+    from je_auto_control.utils.json_contract import diff_json as _diff
+    return {"diffs": _diff(actual, expected)}
+
+
+def run_chaos(spec):
+    from je_auto_control.utils.executor.action_executor import _run_chaos
+    return _run_chaos(spec)
+
+
+def evaluate_slo(records, target, window_s=None):
+    from je_auto_control.utils.slo import evaluate_slo as _slo
+    return _slo(records, float(target), window_s=window_s)
+
+
+def burn_alerts(records, target):
+    from je_auto_control.utils.slo import burn_alerts as _alerts
+    alerts = _alerts(records, float(target))
+    return {"alerts": alerts, "firing": bool(alerts)}
+
+
+def percentiles(samples, qs=None):
+    from je_auto_control.utils.percentiles import exact_percentiles
+    result = exact_percentiles(samples, qs=tuple(qs) if qs else (50, 90, 95, 99))
+    return {"percentiles": {str(q): value for q, value in result.items()}}
+
+
+def bulkhead_run(name, max_concurrent, actions):
+    from je_auto_control.utils.executor.action_executor import _bulkhead_run
+    return _bulkhead_run(name, max_concurrent, actions)
+
+
+def retry_after(response):
+    from je_auto_control.utils.bulkhead import next_delay
+    return {"delay": next_delay(response)}
+
+
+def http_replay(cassette, url, method="GET"):
+    from je_auto_control.utils.http_cassette import Cassette
+    interactions = (cassette.get("interactions", [])
+                    if isinstance(cassette, dict) else cassette)
+    response = Cassette(interactions).replay(
+        {"method": str(method).upper(), "url": url})
+    return {"response": response}
+
+
+def trace_inject(headers=None, traceparent=None):
+    from je_auto_control.utils.executor.action_executor import _trace_inject
+    return _trace_inject(headers, traceparent)
+
+
+def trace_extract(headers):
+    from je_auto_control.utils.executor.action_executor import _trace_extract
+    return _trace_extract(headers)
+
+
+def baggage_parse(header):
+    from je_auto_control.utils.executor.action_executor import _baggage_parse
+    return _baggage_parse(header)
+
+
+def baggage_format(items):
+    from je_auto_control.utils.executor.action_executor import _baggage_format
+    return _baggage_format(items)
+
+
+def normalize_text(text, form="NFKC", casefold=True, collapse_ws=True):
+    from je_auto_control.utils.executor.action_executor import _normalize_text
+    return _normalize_text(text, form, casefold, collapse_ws)
+
+
+def slugify(text, sep="-"):
+    from je_auto_control.utils.executor.action_executor import _slugify
+    return _slugify(text, sep)
+
+
+def text_similarity(a, b, metric="jaro_winkler"):
+    from je_auto_control.utils.executor.action_executor import _text_similarity
+    return _text_similarity(a, b, metric)
+
+
+def simhash(text, bits=64):
+    from je_auto_control.utils.executor.action_executor import _simhash
+    return _simhash(text, bits)
+
+
+def near_duplicates(texts, max_distance=3):
+    from je_auto_control.utils.executor.action_executor import _near_duplicates
+    return _near_duplicates(texts, max_distance)
+
+
+def canonical_log(fields):
+    from je_auto_control.utils.executor.action_executor import _canonical_log
+    return _canonical_log(fields)
+
+
+def spans_to_otlp(spans, resource_attrs=None):
+    from je_auto_control.utils.executor.action_executor import _spans_to_otlp
+    return _spans_to_otlp(spans, resource_attrs)
+
+
+def validate_config(schema, config):
+    from je_auto_control.utils.executor.action_executor import _validate_config
+    return _validate_config(schema, config)
+
+
+def resolve_ref(ref):
+    from je_auto_control.utils.executor.action_executor import _resolve_ref
+    return _resolve_ref(ref)
+
+
+def resolve_refs(obj):
+    from je_auto_control.utils.executor.action_executor import _resolve_refs
+    return _resolve_refs(obj)
+
+
+def parse_link_header(value):
+    from je_auto_control.utils.executor.action_executor import _parse_link_header
+    return _parse_link_header(value)
+
+
+def next_url(value):
+    from je_auto_control.utils.executor.action_executor import _next_url
+    return _next_url(value)
+
+
+def build_multipart(fields=None, files=None, boundary=None):
+    from je_auto_control.utils.executor.action_executor import _build_multipart
+    return _build_multipart(fields, files, boundary)
+
+
+def parse_multipart(content_type, body_base64):
+    from je_auto_control.utils.executor.action_executor import _parse_multipart
+    return _parse_multipart(content_type, body_base64)
+
+
+def decode_body(headers, body_base64):
+    from je_auto_control.utils.executor.action_executor import _decode_body
+    return _decode_body(headers, body_base64)
+
+
+def parse_quality_values(header):
+    from je_auto_control.utils.executor.action_executor import (
+        _parse_quality_values)
+    return _parse_quality_values(header)
+
+
+def cookie_header(set_cookies):
+    from je_auto_control.utils.executor.action_executor import _cookie_header
+    return _cookie_header(set_cookies)
+
+
+def parse_set_cookie(header):
+    from je_auto_control.utils.executor.action_executor import _parse_set_cookie
+    return _parse_set_cookie(header)
+
+
+def parse_cache_control(headers):
+    from je_auto_control.utils.executor.action_executor import (
+        _parse_cache_control)
+    return _parse_cache_control(headers)
+
+
+def store_validators(response):
+    from je_auto_control.utils.executor.action_executor import _store_validators
+    return _store_validators(response)
+
+
+def redact_config(obj, mask="***"):
+    from je_auto_control.utils.executor.action_executor import _redact_config
+    return _redact_config(obj, mask)
+
+
+def redact_secret_text(text, mask="***"):
+    from je_auto_control.utils.executor.action_executor import (
+        _redact_secret_text)
+    return _redact_secret_text(text, mask)
+
+
+def profile_rows(rows, columns=None):
+    from je_auto_control.utils.executor.action_executor import _profile_rows
+    return _profile_rows(rows, columns)
+
+
+def infer_schema(rows, columns=None):
+    from je_auto_control.utils.executor.action_executor import _infer_schema
+    return _infer_schema(rows, columns)
+
+
+def parse_problem(response):
+    from je_auto_control.utils.executor.action_executor import _parse_problem
+    return _parse_problem(response)
+
+
+def parse_dotenv(text):
+    from je_auto_control.utils.executor.action_executor import _parse_dotenv
+    return _parse_dotenv(text)
+
+
+def load_dotenv(path, override=False):
+    from je_auto_control.utils.executor.action_executor import _load_dotenv
+    return _load_dotenv(path, override)
+
+
+def parse_sse(text):
+    from je_auto_control.utils.executor.action_executor import _parse_sse
+    return _parse_sse(text)
+
+
+def resolve_config(layers):
+    from je_auto_control.utils.executor.action_executor import _resolve_config
+    return _resolve_config(layers)
+
+
+def explain_config(layers, key):
+    from je_auto_control.utils.executor.action_executor import _explain_config
+    return _explain_config(layers, key)
+
+
+def check_compatibility(old, new, mode="backward"):
+    from je_auto_control.utils.executor.action_executor import (
+        _check_compatibility)
+    return _check_compatibility(old, new, mode)
+
+
+def ts_rate(series, window_s=None):
+    from je_auto_control.utils.executor.action_executor import _ts_rate
+    return _ts_rate(series, window_s)
+
+
+def ts_downsample(series, bucket_s, agg="avg"):
+    from je_auto_control.utils.executor.action_executor import _ts_downsample
+    return _ts_downsample(series, bucket_s, agg)
+
+
+def detect_anomalies(values, method="mad", threshold=None):
+    from je_auto_control.utils.executor.action_executor import _detect_anomalies
+    return _detect_anomalies(values, method, threshold)
+
+
+def sma(values, window):
+    from je_auto_control.utils.executor.action_executor import _sma
+    return _sma(values, window)
+
+
+def ewma(values, alpha=0.3):
+    from je_auto_control.utils.executor.action_executor import _ewma
+    return _ewma(values, alpha)
+
+
+def idempotency_begin(name, key, request=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _idempotency_begin)
+    return _idempotency_begin(name, key, request)
+
+
+def idempotency_complete(name, key, response):
+    from je_auto_control.utils.executor.action_executor import (
+        _idempotency_complete)
+    return _idempotency_complete(name, key, response)
+
+
+def dedup_check(name, message_id, ttl_s=3600):
+    from je_auto_control.utils.executor.action_executor import _dedup_check
+    return _dedup_check(name, message_id, ttl_s)
+
+
+def sequence_observe(name, stream_id, seq):
+    from je_auto_control.utils.executor.action_executor import _sequence_observe
+    return _sequence_observe(name, stream_id, seq)
+
+
+def cas_put(name, key, value, expected_version=None):
+    from je_auto_control.utils.executor.action_executor import _cas_put
+    return _cas_put(name, key, value, expected_version)
+
+
+def cas_get(name, key):
+    from je_auto_control.utils.executor.action_executor import _cas_get
+    return _cas_get(name, key)
+
+
+def outbox_enqueue(name, event):
+    from je_auto_control.utils.executor.action_executor import _outbox_enqueue
+    return _outbox_enqueue(name, event)
+
+
+def outbox_pending(name):
+    from je_auto_control.utils.executor.action_executor import _outbox_pending
+    return _outbox_pending(name)
+
+
+def collation_sort(items, strength="tertiary", tailoring=None, reverse=False):
+    from je_auto_control.utils.executor.action_executor import _collation_sort
+    return _collation_sort(items, strength, tailoring, reverse)
+
+
+def collation_compare(first, second, strength="tertiary", tailoring=None):
+    from je_auto_control.utils.executor.action_executor import _collation_compare
+    return _collation_compare(first, second, strength, tailoring)
+
+
+def confusable_scan(text):
+    from je_auto_control.utils.executor.action_executor import _confusable_scan
+    return _confusable_scan(text)
+
+
+def confusable_compare(first, second):
+    from je_auto_control.utils.executor.action_executor import _confusable_compare
+    return _confusable_compare(first, second)
+
+
+def readability_report(text):
+    from je_auto_control.utils.executor.action_executor import _readability_report
+    return _readability_report(text)
+
+
+def bidi_check(text):
+    from je_auto_control.utils.executor.action_executor import _bidi_check
+    return _bidi_check(text)
+
+
+def bidi_strip(text):
+    from je_auto_control.utils.executor.action_executor import _bidi_strip
+    return _bidi_strip(text)
+
+
+def format_list(items, style="and", locale="en"):
+    from je_auto_control.utils.executor.action_executor import _format_list
+    return _format_list(items, style, locale)
+
+
+def format_message(pattern, args=None, locale="en"):
+    from je_auto_control.utils.executor.action_executor import _format_message
+    return _format_message(pattern, args, locale)
+
+
+def gettext_translate(po, msgid, context=None):
+    from je_auto_control.utils.executor.action_executor import _gettext_translate
+    return _gettext_translate(po, msgid, context)
+
+
+def gettext_ngettext(po, msgid, msgid_plural, n):
+    from je_auto_control.utils.executor.action_executor import _gettext_ngettext
+    return _gettext_ngettext(po, msgid, msgid_plural, n)
+
+
+def detect_drift(reference, current, threshold=0.25, bins=10):
+    from je_auto_control.utils.executor.action_executor import _detect_drift
+    return _detect_drift(reference, current, threshold, bins)
+
+
+def categorical_drift(reference, current):
+    from je_auto_control.utils.executor.action_executor import _categorical_drift
+    return _categorical_drift(reference, current)
+
+
+def diff_rows(old_rows, new_rows, key):
+    from je_auto_control.utils.executor.action_executor import _diff_rows
+    return _diff_rows(old_rows, new_rows, key)
+
+
+def cell_changes(old_rows, new_rows, key):
+    from je_auto_control.utils.executor.action_executor import _cell_changes
+    return _cell_changes(old_rows, new_rows, key)
+
+
+def check_foreign_key(child_rows, child_col, parent_rows, parent_col):
+    from je_auto_control.utils.executor.action_executor import _check_foreign_key
+    return _check_foreign_key(child_rows, child_col, parent_rows, parent_col)
+
+
+def check_unique_key(rows, cols):
+    from je_auto_control.utils.executor.action_executor import _check_unique_key
+    return _check_unique_key(rows, cols)
+
+
+def check_accepted_values(rows, col, allowed):
+    from je_auto_control.utils.executor.action_executor import (
+        _check_accepted_values)
+    return _check_accepted_values(rows, col, allowed)
+
+
+def check_row_count(rows, minimum=None, maximum=None):
+    from je_auto_control.utils.executor.action_executor import _check_row_count
+    return _check_row_count(rows, minimum, maximum)
+
+
+def build_provenance(paths, builder_id="je_auto_control"):
+    from je_auto_control.utils.provenance import build_provenance, subject_for
+    subjects = [subject_for(path) for path in paths]
+    return {"statement": build_provenance(subjects, builder_id=builder_id)}
+
+
+def verify_provenance(statement, files):
+    from je_auto_control.utils.provenance import verify_provenance as _verify
+    mismatches = _verify(statement, files)
+    return {"ok": not mismatches, "mismatches": mismatches}
+
+
+def evaluate_flag(flags, key, context=None):
+    from je_auto_control.utils.feature_flags import (
+        FlagStore, evaluate_flag as _ev)
+    store = FlagStore.from_dict(flags) if isinstance(flags, dict) else flags
+    return _ev(store, key, context or {})
+
+
+def flag_enabled(flags, key, context=None, default=False):
+    from je_auto_control.utils.feature_flags import FlagStore, is_enabled
+    store = FlagStore.from_dict(flags) if isinstance(flags, dict) else flags
+    return {"enabled": is_enabled(store, key, context or {}, bool(default))}
+
+
+def unified_diff(a, b):
+    from je_auto_control.utils.text_diff import unified_diff as _diff
+    return {"diff": _diff(a, b)}
+
+
+def apply_unified(text, diff):
+    from je_auto_control.utils.text_diff import apply_unified as _apply
+    return {"result": _apply(text, diff)}
+
+
+def three_way_merge(base, ours, theirs):
+    from je_auto_control.utils.text_diff import three_way_merge as _merge
+    outcome = _merge(base, ours, theirs)
+    return {"text": outcome.text, "clean": outcome.clean,
+            "conflicts": outcome.conflicts}
+
+
+def run_saga(steps):
+    from je_auto_control.utils.saga import run_saga as _run
+    result = _run(steps)
+    return {"ok": result.ok, "completed": result.completed,
+            "compensated": result.compensated,
+            "failed_step": result.failed_step, "error": result.error}
+
+
+def decision_table(spec, context):
+    from je_auto_control.utils.decision_table import evaluate_table
+    return {"result": evaluate_table(spec, context)}
+
+
+def repair_record(key, method, coordinates=None, description=None,
+                  confidence=1.0, auto_threshold=0.9, db=None):
+    from je_auto_control.utils.locator_repair import RepairStore
+    sug = RepairStore(db).record(
+        key, method=method, coordinates=coordinates, description=description,
+        confidence=confidence, auto_threshold=auto_threshold)
+    return {"id": sug.id, "status": sug.status}
+
+
+def repair_resolved(key, db=None):
+    from je_auto_control.utils.locator_repair import RepairStore
+    return {"locator": RepairStore(db).resolved(key)}
+
+
+def repair_pending(db=None):
+    from je_auto_control.utils.locator_repair import RepairStore
+    return {"pending": RepairStore(db).pending()}
+
+
+def repair_approve(suggestion_id, db=None):
+    from je_auto_control.utils.locator_repair import RepairStore
+    return {"approved": RepairStore(db).approve(suggestion_id)}
+
+
+def detect_pii(text, kinds=None):
+    from je_auto_control.utils.pii_text import detect_pii as _detect
+    findings = _detect(text, kinds=kinds)
+    return {"findings": [{"kind": f.kind, "value": f.value,
+                          "start": f.start, "end": f.end} for f in findings]}
+
+
+def redact_pii(text, kinds=None, mode="label", mask_char="*"):
+    from je_auto_control.utils.pii_text import redact_pii_text
+    return {"text": redact_pii_text(text, kinds=kinds, mode=mode,
+                                    mask_char=mask_char)}
+
+
+def export_sarif(findings, path=None, tool_name="AutoControl"):
+    from je_auto_control.utils.sarif import to_sarif, write_sarif
+    result = {"sarif": to_sarif(findings, tool_name=tool_name)}
+    if path:
+        result["path"] = write_sarif(findings, path, tool_name=tool_name)
+    return result
+
+
 def vlm_locate(description: str,
                screen_region: Optional[List[int]] = None,
                model: Optional[str] = None) -> Optional[List[int]]:
@@ -956,6 +2389,38 @@ def wait_screen_stable(region: Optional[List[int]] = None,
         poll_interval_s=float(poll_interval_s),
         stable_for_s=float(stable_for_s),
         max_pixel_diff=int(max_pixel_diff),
+    ).to_dict()
+
+
+def wait_for_file(path: str, timeout_s: float = 30.0,
+                  poll_interval_s: float = 0.25,
+                  stable_for_s: float = 1.0,
+                  min_size: int = 1) -> Dict[str, Any]:
+    from je_auto_control.utils.smart_waits import wait_until_file
+    return wait_until_file(
+        path, timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        stable_for_s=float(stable_for_s), min_size=int(min_size),
+    ).to_dict()
+
+
+def wait_for_port(host: str, port: int, timeout_s: float = 30.0,
+                  poll_interval_s: float = 0.25,
+                  connect_timeout_s: float = 1.0) -> Dict[str, Any]:
+    from je_auto_control.utils.smart_waits import wait_until_port
+    return wait_until_port(
+        host, int(port), timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
+        connect_timeout_s=float(connect_timeout_s),
+    ).to_dict()
+
+
+def wait_for_process(name: str, present: bool = True, timeout_s: float = 30.0,
+                     poll_interval_s: float = 0.25) -> Dict[str, Any]:
+    from je_auto_control.utils.smart_waits import wait_until_process
+    return wait_until_process(
+        name, present=bool(present), timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s),
     ).to_dict()
 
 
@@ -1752,6 +3217,115 @@ def load_data(source: Dict[str, Any],
     return load_rows(source, limit=limit if limit is None else int(limit))
 
 
+# --- Ad-hoc SQL query + assertion ------------------------------------------
+
+def sql_query(database: str, query: str,
+              params: Any = None, fetch: str = "all") -> Any:
+    from je_auto_control.utils.sql.sql_query import query_sqlite
+    return query_sqlite(database, query, params=params, fetch=fetch)
+
+
+def assert_db(database: str, query: str, params: Any = None,
+              op: str = "eq", expected: Any = None,
+              raise_on_fail: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.assertion import assert_variable
+    from je_auto_control.utils.sql.sql_query import query_sqlite
+    value = query_sqlite(database, query, params=params, fetch="scalar")
+    return assert_variable(
+        value, op=op, expected=expected, name="ac_assert_db",
+        raise_on_fail=bool(raise_on_fail),
+    ).to_dict()
+
+
+# --- PDF text + assertion --------------------------------------------------
+
+def extract_pdf_text(path: str, pages: Any = None) -> str:
+    from je_auto_control.utils.pdf.pdf_reader import (
+        extract_pdf_text as _extract,
+    )
+    return _extract(path, pages=pages)
+
+
+def assert_pdf_text(path: str, text: str, present: bool = True,
+                    page: Any = None, case_sensitive: bool = True,
+                    raise_on_fail: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.pdf.pdf_reader import (
+        assert_pdf_text as _assert,
+    )
+    return _assert(path, text, present=bool(present), page=page,
+                   case_sensitive=bool(case_sensitive),
+                   raise_on_fail=bool(raise_on_fail))
+
+
+# --- Send email (SMTP) -----------------------------------------------------
+
+def send_email(message: Dict[str, Any],
+               smtp: Dict[str, Any]) -> Dict[str, Any]:
+    from je_auto_control.utils.email_send.email_sender import (
+        send_email as _send,
+    )
+    return _send(message, smtp)
+
+
+# --- HTTP / API request ----------------------------------------------------
+
+def http_request(url: str, method: str = "GET",
+                 headers: Optional[Dict[str, Any]] = None,
+                 json_body: Any = None, data: Any = None,
+                 auth: Optional[Dict[str, Any]] = None,
+                 timeout: float = 30.0) -> Dict[str, Any]:
+    from je_auto_control.utils.http_client.http_client import (
+        http_request as _request,
+    )
+    return _request(url, method=method, headers=headers, json_body=json_body,
+                    data=data, auth=auth, timeout=float(timeout))
+
+
+# --- Codegen: action list -> source code -----------------------------------
+
+def generate_code(source: Any, target: str = "pytest",
+                  name: str = "recorded_flow", style: str = "calls",
+                  output: Optional[str] = None) -> Dict[str, Any]:
+    from je_auto_control.utils.codegen.codegen import (
+        generate_code as _gen, generate_code_file,
+    )
+    from je_auto_control.utils.json.json_file import read_action_json
+    if output:
+        code = generate_code_file(source, output, target=target,
+                                  name=name, style=style)
+        return {"output": output, "code": code}
+    actions = source if isinstance(source, list) else read_action_json(source)
+    return {"code": _gen(actions, target=target, name=name, style=style)}
+
+
+# --- Visual regression + state machine -------------------------------------
+
+def take_golden(path: str, region: Optional[List[int]] = None) -> str:
+    from je_auto_control.utils.visual_regression import (
+        take_golden as _take,
+    )
+    return str(_take(path, region=region))
+
+
+def assert_visual(golden_path: str, region: Optional[List[int]] = None,
+                  tolerance: float = 0.0, per_pixel_threshold: int = 16,
+                  diff_path: Optional[str] = None,
+                  create_if_missing: bool = True,
+                  raise_on_fail: bool = True) -> Dict[str, Any]:
+    from je_auto_control.utils.executor.action_executor import _assert_visual
+    return _assert_visual(
+        golden_path, region=region, tolerance=tolerance,
+        per_pixel_threshold=per_pixel_threshold, diff_path=diff_path,
+        create_if_missing=create_if_missing, raise_on_fail=raise_on_fail)
+
+
+def run_state_machine(spec: Dict[str, Any]) -> Dict[str, Any]:
+    from je_auto_control.utils.state_machine import (
+        run_state_machine as _run,
+    )
+    return _run(spec)
+
+
 # --- Flaky-test detection --------------------------------------------------
 
 def flaky_report(limit: int = 500,
@@ -1843,6 +3417,18 @@ def audit_contrast(foreground: List[int], background: List[int],
         "passes_aa": ratio >= float(min_ratio),
         "foreground": list(foreground), "background": list(background),
     }
+
+
+def wcag_audit(app_name: Optional[str] = None,
+               contrast_pairs: Optional[List[Dict[str, Any]]] = None,
+               texts: Optional[List[str]] = None, level: str = "AA",
+               min_target_px: int = 24,
+               max_results: int = 500) -> Dict[str, Any]:
+    from je_auto_control.utils.a11y_audit import wcag_audit as _wcag
+    return _wcag(
+        app_name=app_name, contrast_pairs=contrast_pairs, texts=texts,
+        level=str(level), min_target_px=int(min_target_px),
+        max_results=int(max_results))
 
 
 # --- Mobile device matrix --------------------------------------------------

@@ -19,7 +19,7 @@ from __future__ import annotations
 import threading
 from typing import Optional
 
-from PySide6.QtCore import QMetaObject, QObject, Q_ARG, Qt, Slot
+from PySide6.QtCore import QObject, Qt, Signal, Slot
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QDialog, QDialogButtonBox, QFormLayout,
     QLabel, QVBoxLayout, QWidget,
@@ -97,11 +97,21 @@ class PromptBridge(QObject):
     signals the worker via a ``threading.Event``.
     """
 
+    # Carries (vendor_id, product_id, serial, viewer_id, result, done) onto
+    # the GUI thread. A signal sidesteps PySide6's "no QMetaType for object"
+    # rejection of ``Q_ARG(object, ...)``. The connection is forced Queued so
+    # ``_show_dialog`` always runs on the GUI thread while the worker thread
+    # (the documented caller) blocks on ``done`` with its own timeout.
+    _request = Signal(str, str, str, str, object, object)
+
     def __init__(self, *, acl: Optional[UsbAcl] = None,
                  dialog_parent: Optional[QWidget] = None) -> None:
         super().__init__(dialog_parent)
         self._acl = acl
         self._dialog_parent = dialog_parent
+        self._request.connect(
+            self._show_dialog, Qt.ConnectionType.QueuedConnection,
+        )
 
     def decide(self, vendor_id: str, product_id: str,
                serial: Optional[str],
@@ -110,15 +120,9 @@ class PromptBridge(QObject):
         """Worker-thread entry point. Blocks on the operator's choice."""
         result: dict = {"allow": False, "remember": False}
         done = threading.Event()
-        QMetaObject.invokeMethod(
-            self, "_show_dialog",
-            Qt.ConnectionType.QueuedConnection,
-            Q_ARG(str, vendor_id),
-            Q_ARG(str, product_id),
-            Q_ARG(str, serial or ""),
-            Q_ARG(str, viewer_id or ""),
-            Q_ARG(object, result),
-            Q_ARG(object, done),
+        self._request.emit(
+            vendor_id, product_id, serial or "", viewer_id or "",
+            result, done,
         )
         if not done.wait(timeout=wait_timeout_s):
             return False
