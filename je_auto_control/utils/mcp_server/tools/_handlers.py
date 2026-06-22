@@ -2418,6 +2418,21 @@ def wait_screen_stable(region: Optional[List[int]] = None,
     ).to_dict()
 
 
+def wait_image_gone(image, detect_threshold: float = 1.0,
+                    timeout_s: float = 10.0, poll_interval_s: float = 0.2,
+                    gone_for_s: float = 0.0) -> Dict[str, Any]:
+    from je_auto_control.utils.executor.action_executor import _wait_image_gone
+    return _wait_image_gone(image, detect_threshold, timeout_s,
+                            poll_interval_s, gone_for_s)
+
+
+def wait_text_gone(text: str, timeout_s: float = 10.0,
+                   poll_interval_s: float = 0.2,
+                   gone_for_s: float = 0.0) -> Dict[str, Any]:
+    from je_auto_control.utils.executor.action_executor import _wait_text_gone
+    return _wait_text_gone(text, timeout_s, poll_interval_s, gone_for_s)
+
+
 def wait_for_file(path: str, timeout_s: float = 30.0,
                   poll_interval_s: float = 0.25,
                   stable_for_s: float = 1.0,

@@ -361,6 +361,29 @@ def _wait_clipboard_change(baseline: Optional[str] = None,
     ).to_dict()
 
 
+def _wait_image_gone(image: Any, detect_threshold: float = 1.0,
+                     timeout_s: float = 10.0, poll_interval_s: float = 0.2,
+                     gone_for_s: float = 0.0) -> Dict[str, Any]:
+    """Executor adapter: wait until an image is no longer on screen."""
+    from je_auto_control.utils.smart_waits import wait_until_image_gone
+    return wait_until_image_gone(
+        image, detect_threshold=float(detect_threshold),
+        timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
+        gone_for_s=float(gone_for_s),
+    ).to_dict()
+
+
+def _wait_text_gone(text: str, timeout_s: float = 10.0,
+                    poll_interval_s: float = 0.2,
+                    gone_for_s: float = 0.0) -> Dict[str, Any]:
+    """Executor adapter: wait until text is no longer on screen (OCR)."""
+    from je_auto_control.utils.smart_waits import wait_until_text_gone
+    return wait_until_text_gone(
+        text, timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s), gone_for_s=float(gone_for_s),
+    ).to_dict()
+
+
 def _wait_window_closed(title: str, case_sensitive: bool = False,
                         timeout_s: float = 10.0,
                         poll_interval_s: float = 0.2) -> Dict[str, Any]:
@@ -4971,6 +4994,8 @@ class Executor:
             "AC_wait_for_port": _wait_for_port,
             "AC_wait_for_process": _wait_for_process,
             "AC_wait_clipboard_change": _wait_clipboard_change,
+            "AC_wait_image_gone": _wait_image_gone,
+            "AC_wait_text_gone": _wait_text_gone,
             "AC_wait_window_closed": _wait_window_closed,
 
             # Cost telemetry (LLM token + USD tracking)

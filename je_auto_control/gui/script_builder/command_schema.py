@@ -444,6 +444,30 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
         description="Wait until the clipboard changes or matches target.",
     ))
     specs.append(CommandSpec(
+        "AC_wait_image_gone", "Flow", "Wait for Image to Vanish",
+        fields=(
+            FieldSpec("image", FieldType.STRING, placeholder="path/to/spinner.png"),
+            FieldSpec("detect_threshold", FieldType.FLOAT, optional=True,
+                      default=1.0),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True, default=10.0),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.2, min_value=0.01),
+            FieldSpec("gone_for_s", FieldType.FLOAT, optional=True, default=0.0),
+        ),
+        description="Block until an image (spinner/toast) leaves the screen.",
+    ))
+    specs.append(CommandSpec(
+        "AC_wait_text_gone", "Flow", "Wait for Text to Vanish",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="Loading..."),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True, default=10.0),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.2, min_value=0.01),
+            FieldSpec("gone_for_s", FieldType.FLOAT, optional=True, default=0.0),
+        ),
+        description="Block until on-screen text (OCR) disappears.",
+    ))
+    specs.append(CommandSpec(
         "AC_loop", "Flow", "Loop (N times)",
         fields=(
             FieldSpec("times", FieldType.INT, default=3, min_value=1),

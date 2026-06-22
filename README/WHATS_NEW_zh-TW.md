@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 等待消失(阻塞式 vanish 等待)
+
+阻塞直到轉圈圈 / toast / 對話框消失。完整參考:[`docs/source/Zh/doc/new_features/v118_features_doc.rst`](../docs/source/Zh/doc/new_features/v118_features_doc.rst)。
+
+- **`wait_until_gone` / `wait_until_image_gone` / `wait_until_text_gone`**(`AC_wait_image_gone`、`AC_wait_text_gone`):`wait_for_image`/`wait_for_text` 只阻塞到某物*出現*,`observer` 則以非同步回呼在消失時觸發——先前沒有*阻塞式*的「等到此影像/文字消失再繼續」。通用的 `wait_until_gone` 接受任意述詞(可無頭測試);影像/文字輔助函式從定位函式建立。`gone_for_s` 可消抖。回傳 `WaitOutcome`。純標準函式庫。
+
 ## 本次更新 (2026-06-23) — 清空再輸入欄位
 
 可靠地設定文字欄位的值(Playwright 的 `fill` 慣用法)。完整參考:[`docs/source/Zh/doc/new_features/v117_features_doc.rst`](../docs/source/Zh/doc/new_features/v117_features_doc.rst)。
