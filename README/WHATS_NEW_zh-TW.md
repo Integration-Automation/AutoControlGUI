@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 排列多個視窗(網格 / 層疊)
+
+一次呼叫排好一整組視窗。完整參考:[`docs/source/Zh/doc/new_features/v134_features_doc.rst`](../docs/source/Zh/doc/new_features/v134_features_doc.rst)。
+
+- **`arrange_grid` / `arrange_cascade`**(`AC_arrange_grid`、`AC_arrange_cascade`):`snap_window` 移動*一個*視窗、版面規劃器只*計算*矩形——這兩個把迴圈補完,接受一組視窗標題並實際把每個符合的視窗移入網格(自動近正方形,或明確 `rows`/`cols` + `gap`)或對角線層疊。以版面規劃器為基礎並沿用 `snap_window` 的可注入 `mover`/`screen_size` 接縫,因此完全無頭可測;回傳移動的視窗數。
+
 ## 本次更新 (2026-06-23) — 視窗鋪排 / 版面幾何規劃器
 
 計算應用程式視窗該放在哪裡——半邊、網格、層疊。完整參考:[`docs/source/Zh/doc/new_features/v133_features_doc.rst`](../docs/source/Zh/doc/new_features/v133_features_doc.rst)。

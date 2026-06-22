@@ -74,8 +74,8 @@ from je_auto_control.utils.notify import NotifyResult, notify
 from je_auto_control.utils.color_stats import ColorStats, region_color_stats
 # Per-window capture, window-layout save / restore, snap/tile.
 from je_auto_control.utils.window_capture import (
-    capture_window, get_window_geometry, restore_window_layout,
-    save_window_layout, snap_window,
+    arrange_cascade, arrange_grid, capture_window, get_window_geometry,
+    restore_window_layout, save_window_layout, snap_window,
 )
 # Scroll until a target image / text is visible.
 from je_auto_control.utils.scroll_find import scroll_until_visible
@@ -1365,6 +1365,7 @@ __all__ = [
     # Per-window capture + window-layout save / restore + snap
     "capture_window", "get_window_geometry",
     "save_window_layout", "restore_window_layout", "snap_window",
+    "arrange_grid", "arrange_cascade",
     # Scroll-to-find
     "scroll_until_visible",
     # Recoverable deletion (recycle bin)

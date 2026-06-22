@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Arrange Multiple Windows (Grid / Cascade)
+
+Lay out a whole set of windows in one call. Full reference: [`docs/source/Eng/doc/new_features/v134_features_doc.rst`](docs/source/Eng/doc/new_features/v134_features_doc.rst).
+
+- **`arrange_grid` / `arrange_cascade`** (`AC_arrange_grid`, `AC_arrange_cascade`): `snap_window` moves *one* window and the layout planner only *computes* rectangles — these close the loop, taking a list of window titles and actually moving every match into a grid (auto near-square shape, or explicit `rows`/`cols` + `gap`) or a diagonal cascade. Build on the layout planner and reuse `snap_window`'s injectable `mover`/`screen_size` seams, so they are fully headless-testable; return the count moved.
+
 ## What's new (2026-06-23) — Window Tiling / Layout Geometry Planner
 
 Compute where to place application windows — halves, grids, cascades. Full reference: [`docs/source/Eng/doc/new_features/v133_features_doc.rst`](docs/source/Eng/doc/new_features/v133_features_doc.rst).

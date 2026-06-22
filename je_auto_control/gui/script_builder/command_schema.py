@@ -482,6 +482,26 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         description="Move a window to a screen half / quarter / maximize.",
     ))
     specs.append(CommandSpec(
+        "AC_arrange_grid", "Window", "Arrange Windows in Grid",
+        fields=(
+            FieldSpec("titles", FieldType.STRING,
+                      placeholder='["Editor", "Browser", "Terminal"]'),
+            FieldSpec("rows", FieldType.INT, optional=True),
+            FieldSpec("cols", FieldType.INT, optional=True),
+            FieldSpec("gap", FieldType.INT, optional=True, default=0),
+        ),
+        description="Tile a list of windows into a grid (auto-shape if unset).",
+    ))
+    specs.append(CommandSpec(
+        "AC_arrange_cascade", "Window", "Arrange Windows in Cascade",
+        fields=(
+            FieldSpec("titles", FieldType.STRING,
+                      placeholder='["Editor", "Browser", "Terminal"]'),
+            FieldSpec("offset", FieldType.INT, optional=True, default=30),
+        ),
+        description="Cascade a list of windows diagonally.",
+    ))
+    specs.append(CommandSpec(
         "AC_wait_window_closed", "Window", "Wait for Window to Close",
         fields=(
             FieldSpec("title", FieldType.STRING),

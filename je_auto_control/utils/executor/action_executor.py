@@ -2178,6 +2178,31 @@ def _snap_window(title: str, position: str = "left") -> Dict[str, Any]:
     return {"moved": snap_window(title, position)}
 
 
+def _arrange_grid(titles: Any, rows: Any = None, cols: Any = None,
+                  gap: Any = 0) -> Dict[str, Any]:
+    """Executor adapter: tile a list of window titles into a grid."""
+    import json
+    from je_auto_control.utils.window_capture import arrange_grid
+    if isinstance(titles, str):
+        titles = json.loads(titles)
+    moved = arrange_grid(list(titles),
+                         rows=int(rows) if rows is not None else None,
+                         cols=int(cols) if cols is not None else None,
+                         gap=int(gap))
+    return {"moved": moved, "count": len(list(titles))}
+
+
+def _arrange_cascade(titles: Any, offset: Any = 30) -> Dict[str, Any]:
+    """Executor adapter: cascade a list of window titles diagonally."""
+    import json
+    from je_auto_control.utils.window_capture import arrange_cascade
+    if isinstance(titles, str):
+        titles = json.loads(titles)
+    titles = list(titles)
+    return {"moved": arrange_cascade(titles, offset=int(offset)),
+            "count": len(titles)}
+
+
 def _save_window_layout(path: Optional[str] = None) -> Dict[str, Any]:
     """Executor adapter: snapshot every window's geometry (optionally to file)."""
     from je_auto_control.utils.window_capture import save_window_layout
@@ -5480,6 +5505,8 @@ class Executor:
             "AC_save_window_layout": _save_window_layout,
             "AC_restore_window_layout": _restore_window_layout,
             "AC_snap_window": _snap_window,
+            "AC_arrange_grid": _arrange_grid,
+            "AC_arrange_cascade": _arrange_cascade,
         }
 
     def known_commands(self) -> set:
