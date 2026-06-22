@@ -384,6 +384,17 @@ def _wait_text_gone(text: str, timeout_s: float = 10.0,
     ).to_dict()
 
 
+def _wait_window_title(pattern: str, present: bool = True, regex: bool = True,
+                       timeout_s: float = 10.0,
+                       poll_interval_s: float = 0.2) -> Dict[str, Any]:
+    """Executor adapter: wait for a window title (regex) to appear / vanish."""
+    from je_auto_control.utils.smart_waits import wait_until_window_title
+    return wait_until_window_title(
+        pattern, present=bool(present), regex=bool(regex),
+        timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
+    ).to_dict()
+
+
 def _wait_color(target_rgb: Any, region: Any = None,
                 tolerance: int = 10, min_fraction: float = 0.5,
                 present: bool = True, timeout_s: float = 10.0,
@@ -5080,6 +5091,7 @@ class Executor:
             "AC_wait_image_gone": _wait_image_gone,
             "AC_wait_text_gone": _wait_text_gone,
             "AC_wait_color": _wait_color,
+            "AC_wait_window_title": _wait_window_title,
             "AC_wait_window_closed": _wait_window_closed,
 
             # Cost telemetry (LLM token + USD tracking)

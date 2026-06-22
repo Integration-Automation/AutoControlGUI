@@ -1324,6 +1324,21 @@ def smart_wait_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_wait_window_title",
+            description=("Block until a window title matches 'pattern' (a regex "
+                         "by default; regex=False for substring) — or vanishes "
+                         "with present=False. e.g. r'.*— Checkout$'."),
+            input_schema=schema({
+                "pattern": {"type": "string"},
+                "present": {"type": "boolean"},
+                "regex": {"type": "boolean"},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"}},
+                required=["pattern"]),
+            handler=h.wait_window_title,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_wait_screen_stable",
             description=("Block until the screen stops moving (consecutive "
                          "frames differ by <= max_pixel_diff bytes for "
