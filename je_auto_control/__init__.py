@@ -207,6 +207,10 @@ from je_auto_control.utils.idempotency import (
 from je_auto_control.utils.dedup_window import DedupWindow
 # Per-stream sequence-gap / ordering detection
 from je_auto_control.utils.sequence_gap import SequenceTracker
+# Optimistic-concurrency versioned store (compare-and-swap / If-Match)
+from je_auto_control.utils.optimistic import (
+    VersionConflict, VersionedStore, check_if_match, if_match_header,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -935,6 +939,7 @@ __all__ = [
     "CircuitBreaker", "CircuitOpenError", "RetryPolicy", "retry_call",
     "IdempotencyConflict", "IdempotencyStore", "request_fingerprint",
     "DedupWindow", "SequenceTracker",
+    "VersionConflict", "VersionedStore", "check_if_match", "if_match_header",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

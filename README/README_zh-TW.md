@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 樂觀並行版本儲存](#本次更新-2026-06-22--樂觀並行版本儲存)
 - [本次更新 (2026-06-22) — 逐串流序號間隙偵測](#本次更新-2026-06-22--逐串流序號間隙偵測)
 - [本次更新 (2026-06-22) — 時間視窗去重](#本次更新-2026-06-22--時間視窗去重)
 - [本次更新 (2026-06-22) — 冪等鍵儲存](#本次更新-2026-06-22--冪等鍵儲存)
@@ -160,6 +161,12 @@
 ## 本次更新 (2026-06-22) — 移動平均平滑
 
 平滑雜訊值序列。完整參考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 樂觀並行版本儲存
+
+只在版本未變時更新(compare-and-swap / If-Match)。完整參考:[`docs/source/Zh/doc/new_features/v106_features_doc.rst`](../docs/source/Zh/doc/new_features/v106_features_doc.rst)。
+
+- **`VersionedStore` / `VersionConflict` / `if_match_header` / `check_if_match`**(`AC_cas_put`、`AC_cas_get`):`http_conditional` 以 ETag 做讀取快取,但從不用於寫入並行。本地 compare-and-swap 儲存僅在 `expected_version` 相符時 `put`(過時寫入拋出 `VersionConflict`)、遞增單調版本,並橋接到 HTTP `If-Match` —— ETag 故事的寫入面。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — 逐串流序號間隙偵測
 

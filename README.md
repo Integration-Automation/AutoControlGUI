@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Optimistic-Concurrency Versioned Store](#whats-new-2026-06-22--optimistic-concurrency-versioned-store)
 - [What's new (2026-06-22) — Per-Stream Sequence-Gap Detection](#whats-new-2026-06-22--per-stream-sequence-gap-detection)
 - [What's new (2026-06-22) — Time-Windowed Deduplication](#whats-new-2026-06-22--time-windowed-deduplication)
 - [What's new (2026-06-22) — Idempotency-Key Store](#whats-new-2026-06-22--idempotency-key-store)
@@ -157,6 +158,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Optimistic-Concurrency Versioned Store
+
+Update only if the version is unchanged (compare-and-swap / If-Match). Full reference: [`docs/source/Eng/doc/new_features/v106_features_doc.rst`](docs/source/Eng/doc/new_features/v106_features_doc.rst).
+
+- **`VersionedStore` / `VersionConflict` / `if_match_header` / `check_if_match`** (`AC_cas_put`, `AC_cas_get`): `http_conditional` used ETag for read caching but never for write concurrency. This local compare-and-swap store `put`s only when `expected_version` matches (raising `VersionConflict` on a stale write), bumps a monotonic version, and bridges to HTTP `If-Match` — the write side of the ETag story. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Per-Stream Sequence-Gap Detection
 

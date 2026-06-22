@@ -1942,6 +1942,16 @@ def sequence_observe(name, stream_id, seq):
     return _sequence_observe(name, stream_id, seq)
 
 
+def cas_put(name, key, value, expected_version=None):
+    from je_auto_control.utils.executor.action_executor import _cas_put
+    return _cas_put(name, key, value, expected_version)
+
+
+def cas_get(name, key):
+    from je_auto_control.utils.executor.action_executor import _cas_get
+    return _cas_get(name, key)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

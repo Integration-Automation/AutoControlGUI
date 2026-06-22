@@ -2932,6 +2932,33 @@ _BULKHEADS: Dict[str, Any] = {}
 _IDEMPOTENCY_STORES: Dict[str, Any] = {}
 _DEDUP_WINDOWS: Dict[str, Any] = {}
 _SEQUENCE_TRACKERS: Dict[str, Any] = {}
+_VERSIONED_STORES: Dict[str, Any] = {}
+
+
+def _cas_put(name: str, key: str, value: Any,
+             expected_version: Any = None) -> Dict[str, Any]:
+    """Adapter: optimistic put into a named versioned store."""
+    import json
+    from je_auto_control.utils.optimistic import VersionConflict, VersionedStore
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            pass
+    store = _VERSIONED_STORES.setdefault(name, VersionedStore())
+    expected = int(expected_version) if expected_version is not None else None
+    try:
+        version = store.put(key, value, expected_version=expected)
+    except VersionConflict as error:
+        return {"ok": False, "error": str(error)}
+    return {"ok": True, "version": version}
+
+
+def _cas_get(name: str, key: str) -> Dict[str, Any]:
+    """Adapter: read a record from a named versioned store."""
+    from je_auto_control.utils.optimistic import VersionedStore
+    store = _VERSIONED_STORES.setdefault(name, VersionedStore())
+    return {"record": store.get(key)}
 
 
 def _sequence_observe(name: str, stream_id: str, seq: Any) -> Dict[str, Any]:
@@ -4586,6 +4613,8 @@ class Executor:
             "AC_idempotency_complete": _idempotency_complete,
             "AC_dedup_check": _dedup_check,
             "AC_sequence_observe": _sequence_observe,
+            "AC_cas_put": _cas_put,
+            "AC_cas_get": _cas_get,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,
