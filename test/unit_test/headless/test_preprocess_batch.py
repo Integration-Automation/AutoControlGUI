@@ -63,7 +63,7 @@ def test_detect_skew_recovers_angle_magnitude():
 
 
 def test_detect_skew_clamps_to_zero_beyond_max():
-    assert detect_skew_angle(_skewed(10), max_angle=3.0) == 0.0
+    assert detect_skew_angle(_skewed(10), max_angle=3.0) == pytest.approx(0.0, abs=1e-9)
 
 
 def test_deskew_reduces_skew():

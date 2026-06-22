@@ -129,7 +129,7 @@ def deskew(haystack: Optional[ImageSource] = None, *,
     import cv2
     array = _resolve(haystack, region)
     angle = detect_skew_angle(array, max_angle=max_angle)
-    if angle == 0.0:
+    if abs(angle) < 1e-9:
         return array
     height, width = array.shape[:2]
     matrix = cv2.getRotationMatrix2D((width / 2.0, height / 2.0), angle, 1.0)
