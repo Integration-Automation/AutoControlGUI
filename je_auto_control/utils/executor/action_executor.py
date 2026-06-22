@@ -3161,6 +3161,20 @@ def _type_unicode(text: str, modifier: str = "ctrl") -> Dict[str, Any]:
     return type_unicode(text, modifier=modifier)
 
 
+def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
+    """Adapter: run nested actions while modifier keys are held down."""
+    import json
+    from je_auto_control.utils.modifier_state import hold_modifiers
+    if isinstance(modifiers, str):
+        modifiers = (json.loads(modifiers) if modifiers.strip().startswith("[")
+                     else [part.strip() for part in modifiers.split("+")])
+    if isinstance(actions, str):
+        actions = json.loads(actions)
+    with hold_modifiers(list(modifiers)):
+        record = executor.execute_action(list(actions), raise_on_error=True)
+    return {"modifiers": list(modifiers), "record": record}
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4862,6 +4876,7 @@ class Executor:
             "AC_hold_key": _hold_key,
             "AC_move_mouse_relative": _move_mouse_relative,
             "AC_type_unicode": _type_unicode,
+            "AC_with_modifiers": _with_modifiers,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

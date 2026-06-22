@@ -195,6 +195,15 @@ def _add_keyboard_specs(specs: List[CommandSpec]) -> None:
         description="Enter any Unicode text via clipboard paste (write can't).",
     ))
     specs.append(CommandSpec(
+        "AC_with_modifiers", "Keyboard", "With Modifiers Held",
+        fields=(
+            FieldSpec("modifiers", FieldType.STRING, placeholder="ctrl+shift"),
+            FieldSpec("actions", FieldType.STRING,
+                      placeholder='[["AC_click_mouse", {...}], ...]'),
+        ),
+        description="Run nested actions while modifiers are held (release-safe).",
+    ))
+    specs.append(CommandSpec(
         "AC_hotkey", "Keyboard", "Hotkey",
         fields=(
             FieldSpec("key_code_list", FieldType.STRING,

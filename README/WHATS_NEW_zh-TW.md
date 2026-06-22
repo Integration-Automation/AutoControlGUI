@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 在動作群組中持續按住修飾鍵
+
+在多個動作之間持續按住 ctrl/shift,即使出錯也會放開。完整參考:[`docs/source/Zh/doc/new_features/v123_features_doc.rst`](../docs/source/Zh/doc/new_features/v123_features_doc.rst)。
+
+- **`hold_modifiers` / `plan_with_modifiers`**(`AC_with_modifiers`):`hotkey` 會立即放開按鍵——先前無法在多個獨立動作之間持續按住修飾鍵(shift 連點範圍選取、ctrl 連點多選)並保證放開。`hold_modifiers` 是 context manager,進入時按下、離開時(在 `finally`)以反向放開,因此不會外洩;`plan_with_modifiers` 為純計畫。可注入 sink、具決定性。
+
 ## 本次更新 (2026-06-23) — Unicode 文字輸入(emoji / CJK)
 
 輸入 `write` 無法處理的任何 Unicode(emoji / CJK / 重音)。完整參考:[`docs/source/Zh/doc/new_features/v122_features_doc.rst`](../docs/source/Zh/doc/new_features/v122_features_doc.rst)。

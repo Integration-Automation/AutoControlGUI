@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Held Modifiers Across an Action Group
+
+Hold ctrl/shift down across several actions, released even on error. Full reference: [`docs/source/Eng/doc/new_features/v123_features_doc.rst`](docs/source/Eng/doc/new_features/v123_features_doc.rst).
+
+- **`hold_modifiers` / `plan_with_modifiers`** (`AC_with_modifiers`): `hotkey` releases its keys immediately — there was no way to hold a modifier down across several independent actions (shift-click range select, ctrl-click multi-select) with a guaranteed release. `hold_modifiers` is a context manager that presses on enter and releases in reverse on exit (in a `finally`, so nothing leaks); `plan_with_modifiers` is the pure plan. Injectable sink, deterministic.
+
 ## What's new (2026-06-23) — Unicode Text Entry (Emoji / CJK)
 
 Type any Unicode (emoji / CJK / accented) that `write` can't. Full reference: [`docs/source/Eng/doc/new_features/v122_features_doc.rst`](docs/source/Eng/doc/new_features/v122_features_doc.rst).
