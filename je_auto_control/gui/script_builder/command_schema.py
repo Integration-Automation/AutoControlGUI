@@ -479,6 +479,22 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
         description="Block until on-screen text (OCR) disappears.",
     ))
     specs.append(CommandSpec(
+        "AC_wait_color", "Flow", "Wait for Region Colour",
+        fields=(
+            FieldSpec("target_rgb", FieldType.STRING, placeholder="[0, 200, 0]"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+            FieldSpec("tolerance", FieldType.INT, optional=True, default=10),
+            FieldSpec("min_fraction", FieldType.FLOAT, optional=True,
+                      default=0.5, min_value=0.0, max_value=1.0),
+            FieldSpec("present", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True, default=10.0),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.2, min_value=0.01),
+        ),
+        description="Block until a colour fills (or leaves) a screen region.",
+    ))
+    specs.append(CommandSpec(
         "AC_loop", "Flow", "Loop (N times)",
         fields=(
             FieldSpec("times", FieldType.INT, default=3, min_value=1),

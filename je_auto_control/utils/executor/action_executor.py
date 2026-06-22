@@ -384,6 +384,24 @@ def _wait_text_gone(text: str, timeout_s: float = 10.0,
     ).to_dict()
 
 
+def _wait_color(target_rgb: Any, region: Any = None,
+                tolerance: int = 10, min_fraction: float = 0.5,
+                present: bool = True, timeout_s: float = 10.0,
+                poll_interval_s: float = 0.2) -> Dict[str, Any]:
+    """Executor adapter: wait until a colour fills/leaves a region."""
+    import json
+    from je_auto_control.utils.smart_waits import wait_until_color
+    if isinstance(target_rgb, str):
+        target_rgb = json.loads(target_rgb)
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    return wait_until_color(
+        region=region, target_rgb=target_rgb, tolerance=int(tolerance),
+        min_fraction=float(min_fraction), present=bool(present),
+        timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
+    ).to_dict()
+
+
 def _wait_window_closed(title: str, case_sensitive: bool = False,
                         timeout_s: float = 10.0,
                         poll_interval_s: float = 0.2) -> Dict[str, Any]:
@@ -5012,6 +5030,7 @@ class Executor:
             "AC_wait_clipboard_change": _wait_clipboard_change,
             "AC_wait_image_gone": _wait_image_gone,
             "AC_wait_text_gone": _wait_text_gone,
+            "AC_wait_color": _wait_color,
             "AC_wait_window_closed": _wait_window_closed,
 
             # Cost telemetry (LLM token + USD tracking)
