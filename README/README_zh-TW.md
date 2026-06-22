@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 地區感知字串排序](#本次更新-2026-06-22--地區感知字串排序)
 - [本次更新 (2026-06-22) — 交易型 Outbox](#本次更新-2026-06-22--交易型-outbox)
 - [本次更新 (2026-06-22) — 樂觀並行版本儲存](#本次更新-2026-06-22--樂觀並行版本儲存)
 - [本次更新 (2026-06-22) — 逐串流序號間隙偵測](#本次更新-2026-06-22--逐串流序號間隙偵測)
@@ -162,6 +163,12 @@
 ## 本次更新 (2026-06-22) — 移動平均平滑
 
 平滑雜訊值序列。完整參考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 地區感知字串排序
+
+依某語言讀者的期望排序字串。完整參考:[`docs/source/Zh/doc/new_features/v108_features_doc.rst`](../docs/source/Zh/doc/new_features/v108_features_doc.rst)。
+
+- **`sort_strings` / `collation_compare` / `collation_key`**(`AC_collation_sort`、`AC_collation_compare`):Python 預設的 `sorted` 是碼位順序,因此 `"Z" < "a"`,而 `"ä"` 離 `"a"` 很遠。本 Unicode-Collation-lite 鍵先依基底字母、再依變音符號(次層)、再依大小寫(三層)排序,並可用 `tailoring` 字母表讓瑞典文將 `å ä ö` 排在 `z` 之後。純標準函式庫(`unicodedata`)、跨平台具決定性——不像 `locale.strxfrm`。
 
 ## 本次更新 (2026-06-22) — 交易型 Outbox
 

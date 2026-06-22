@@ -1962,6 +1962,16 @@ def outbox_pending(name):
     return _outbox_pending(name)
 
 
+def collation_sort(items, strength="tertiary", tailoring=None, reverse=False):
+    from je_auto_control.utils.executor.action_executor import _collation_sort
+    return _collation_sort(items, strength, tailoring, reverse)
+
+
+def collation_compare(first, second, strength="tertiary", tailoring=None):
+    from je_auto_control.utils.executor.action_executor import _collation_compare
+    return _collation_compare(first, second, strength, tailoring)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

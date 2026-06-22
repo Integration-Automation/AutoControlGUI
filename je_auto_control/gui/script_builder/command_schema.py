@@ -2067,6 +2067,30 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="List events still awaiting successful delivery.",
     ))
     specs.append(CommandSpec(
+        "AC_collation_sort", "Data", "Text: Collation Sort",
+        fields=(
+            FieldSpec("items", FieldType.STRING,
+                      placeholder='["zebra", "apple", "Äpple"]'),
+            FieldSpec("strength", FieldType.STRING, optional=True,
+                      placeholder="tertiary"),
+            FieldSpec("tailoring", FieldType.STRING, optional=True,
+                      placeholder="abc...xyzåäö"),
+            FieldSpec("reverse", FieldType.BOOL, optional=True),
+        ),
+        description="Locale-aware sort (base letter, then accent, then case).",
+    ))
+    specs.append(CommandSpec(
+        "AC_collation_compare", "Data", "Text: Collation Compare",
+        fields=(
+            FieldSpec("first", FieldType.STRING, placeholder="apple"),
+            FieldSpec("second", FieldType.STRING, placeholder="Äpple"),
+            FieldSpec("strength", FieldType.STRING, optional=True,
+                      placeholder="tertiary"),
+            FieldSpec("tailoring", FieldType.STRING, optional=True),
+        ),
+        description="Locale-aware compare; returns order -1/0/1.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

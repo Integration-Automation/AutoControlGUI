@@ -213,6 +213,11 @@ from je_auto_control.utils.optimistic import (
 )
 # Transactional outbox (durable at-least-once event delivery)
 from je_auto_control.utils.outbox import Outbox
+# Locale-aware string collation (deterministic multi-level sort keys)
+from je_auto_control.utils.locale_collation import (
+    collation_key, sort_strings,
+)
+from je_auto_control.utils.locale_collation import compare as collation_compare
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -943,6 +948,9 @@ __all__ = [
     "DedupWindow", "SequenceTracker",
     "VersionConflict", "VersionedStore", "check_if_match", "if_match_header",
     "Outbox",
+    "collation_key",
+    "collation_compare",
+    "sort_strings",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
