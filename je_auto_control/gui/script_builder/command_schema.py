@@ -2171,6 +2171,24 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Pick the plural-correct translation for count n.",
     ))
     specs.append(CommandSpec(
+        "AC_checksum_validate", "Data", "Checksum: Validate",
+        fields=(
+            FieldSpec("scheme", FieldType.STRING,
+                      placeholder="luhn | verhoeff | damm | mod97"),
+            FieldSpec("number", FieldType.STRING, placeholder="4111111111111111"),
+        ),
+        description="Validate a number's check digit (Luhn/Verhoeff/Damm/mod97).",
+    ))
+    specs.append(CommandSpec(
+        "AC_checksum_digit", "Data", "Checksum: Check Digit",
+        fields=(
+            FieldSpec("scheme", FieldType.STRING,
+                      placeholder="luhn | verhoeff | damm | mod97"),
+            FieldSpec("partial", FieldType.STRING, placeholder="799273987"),
+        ),
+        description="Compute the check digit(s) to append to a value.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-22) — 校验位算法
+
+计算/验证 Luhn、Verhoeff、Damm 与 ISO 7064 MOD 97-10 校验位。完整参考:[`docs/source/Zh/doc/new_features/v115_features_doc.rst`](../docs/source/Zh/doc/new_features/v115_features_doc.rst)。
+
+- **`luhn_validate` / `luhn_check_digit` / `verhoeff_*` / `damm_*` / `mod97_10_*`**(`AC_checksum_validate`、`AC_checksum_digit`):`pii_text` 以正则检测卡号/IBAN 形状、`data_quality` 做正则验证,但没有任何功能计算或验证*校验位*。本功能加入多数标识符背后的四种方案(卡号/IMEI、身份证号、IBAN)——`identifier_validate` 所依据的共用引擎。纯标准库、确定。
+
 ## 本次更新 (2026-06-22) — 移动平均平滑
 
 平滑噪声值序列。完整参考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
