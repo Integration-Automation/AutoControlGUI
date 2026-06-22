@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 地區感知清單格式化](#本次更新-2026-06-22--地區感知清單格式化)
 - [本次更新 (2026-06-22) — 雙向文字 QA(Trojan-Source 掃描)](#本次更新-2026-06-22--雙向文字-qatrojan-source-掃描)
 - [本次更新 (2026-06-22) — 可讀性評分](#本次更新-2026-06-22--可讀性評分)
 - [本次更新 (2026-06-22) — 易混淆字元 / 同形異義字偵測](#本次更新-2026-06-22--易混淆字元--同形異義字偵測)
@@ -166,6 +167,12 @@
 ## 本次更新 (2026-06-22) — 移動平均平滑
 
 平滑雜訊值序列。完整參考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 地區感知清單格式化
+
+依某語言的期望串接項目(「A、B and C」)。完整參考:[`docs/source/Zh/doc/new_features/v112_features_doc.rst`](../docs/source/Zh/doc/new_features/v112_features_doc.rst)。
+
+- **`format_list`**(`AC_format_list`):直接 `", ".join` 只會得到「A, B, C」,沒有「and/or」也沒有在地化。本功能實作 CLDR 清單樣式組合,支援連接(and)/選擇(or)/單位(unit)樣式,並依地區提供連接詞與序列逗號規則(`en`/`es`/`fr`/`de`/`pt`)——`format_list(["a","b","c"])` → 「a, b, and c」,`locale="es"` → 「a, b y c」。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — 雙向文字 QA(Trojan-Source 掃描)
 

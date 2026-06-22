@@ -235,6 +235,8 @@ from je_auto_control.utils.bidi_check import (
     is_trojan_source, strip_bidi_controls,
 )
 from je_auto_control.utils.bidi_check import is_balanced as is_bidi_balanced
+# Locale-aware list formatting ("A, B, and C") in the style of CLDR
+from je_auto_control.utils.list_format import format_list
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -988,6 +990,7 @@ __all__ = [
     "is_bidi_balanced",
     "is_trojan_source",
     "strip_bidi_controls",
+    "format_list",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
