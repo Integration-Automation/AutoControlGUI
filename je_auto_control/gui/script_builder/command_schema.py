@@ -2114,6 +2114,20 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Flesch / Flesch-Kincaid / Fog / SMOG / ARI scores + counts.",
     ))
     specs.append(CommandSpec(
+        "AC_bidi_check", "Data", "Text: Bidi / Trojan-Source Check",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="value = admin"),
+        ),
+        description="Bidi controls, nesting balance, base dir, Trojan-source flag.",
+    ))
+    specs.append(CommandSpec(
+        "AC_bidi_strip", "Data", "Text: Strip Bidi Controls",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="value = admin"),
+        ),
+        description="Remove all bidirectional control characters from a string.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

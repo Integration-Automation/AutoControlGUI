@@ -1987,6 +1987,16 @@ def readability_report(text):
     return _readability_report(text)
 
 
+def bidi_check(text):
+    from je_auto_control.utils.executor.action_executor import _bidi_check
+    return _bidi_check(text)
+
+
+def bidi_strip(text):
+    from je_auto_control.utils.executor.action_executor import _bidi_strip
+    return _bidi_strip(text)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

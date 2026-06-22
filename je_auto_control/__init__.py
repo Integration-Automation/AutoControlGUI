@@ -229,6 +229,12 @@ from je_auto_control.utils.readability import (
     flesch_reading_ease, gunning_fog, readability_report, readability_stats,
     smog_index,
 )
+# Bidirectional-text QA (bidi controls, nesting balance, Trojan-source scan)
+from je_auto_control.utils.bidi_check import (
+    base_direction, bidi_controls, detect_bidi_issues, has_bidi_controls,
+    is_trojan_source, strip_bidi_controls,
+)
+from je_auto_control.utils.bidi_check import is_balanced as is_bidi_balanced
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -975,6 +981,13 @@ __all__ = [
     "readability_report",
     "readability_stats",
     "smog_index",
+    "base_direction",
+    "bidi_controls",
+    "detect_bidi_issues",
+    "has_bidi_controls",
+    "is_bidi_balanced",
+    "is_trojan_source",
+    "strip_bidi_controls",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

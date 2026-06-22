@@ -2999,6 +2999,18 @@ def _readability_report(text: str) -> Dict[str, Any]:
     return readability_report(text)
 
 
+def _bidi_check(text: str) -> Dict[str, Any]:
+    """Adapter: bidirectional-text QA report (controls/balance/Trojan-source)."""
+    from je_auto_control.utils.bidi_check import detect_bidi_issues
+    return detect_bidi_issues(text)
+
+
+def _bidi_strip(text: str) -> Dict[str, Any]:
+    """Adapter: remove all bidi control characters from a string."""
+    from je_auto_control.utils.bidi_check import strip_bidi_controls
+    return {"text": strip_bidi_controls(text)}
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4686,6 +4698,8 @@ class Executor:
             "AC_confusable_scan": _confusable_scan,
             "AC_confusable_compare": _confusable_compare,
             "AC_readability_report": _readability_report,
+            "AC_bidi_check": _bidi_check,
+            "AC_bidi_strip": _bidi_strip,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

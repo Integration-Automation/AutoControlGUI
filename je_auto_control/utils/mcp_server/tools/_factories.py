@@ -3666,6 +3666,27 @@ def readability_tools() -> List[MCPTool]:
     ]
 
 
+def bidi_check_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_bidi_check",
+            description=("Bidirectional-text QA for 'text': bidi controls, "
+                         "nesting balance, base direction, Trojan-source flag."),
+            input_schema=schema({"text": {"type": "string"}}, ["text"]),
+            handler=h.bidi_check,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_bidi_strip",
+            description=("Remove every bidi control character from 'text'. "
+                         "Returns {text}."),
+            input_schema=schema({"text": {"type": "string"}}, ["text"]),
+            handler=h.bidi_strip,
+            annotations=NON_DESTRUCTIVE,
+        ),
+    ]
+
+
 def sequence_gap_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5707,6 +5728,7 @@ ALL_FACTORIES = (
     timeseries_tools, anomaly_tools, smoothing_tools, idempotency_tools,
     dedup_window_tools, sequence_gap_tools, optimistic_tools, outbox_tools,
     locale_collation_tools, confusables_tools, readability_tools,
+    bidi_check_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
