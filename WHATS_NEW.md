@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Model-Free Text-Region Detection (MSER)
+
+Find where text is on screen without running OCR. Full reference: [`docs/source/Eng/doc/new_features/v140_features_doc.rst`](docs/source/Eng/doc/new_features/v140_features_doc.rst).
+
+- **`find_text_regions` / `find_text_lines`** (`AC_find_text_regions`, `AC_find_text_lines`): `shape_locator` finds rectangles (not text) and `locate_text` needs an OCR engine *and* the exact string — neither answers "where is *any* text?". MSER finds the glyph/word/line blobs, so a script can crop candidate boxes to feed OCR (faster + more accurate than full-frame) or detect a label appeared with no OCR dependency. `merge` unions MSER's nested per-glyph regions; `find_text_lines` groups glyphs into per-line boxes; a blank screen returns `[]`. Base OpenCV (`cv2.MSER_create`), injectable haystack → headless-testable.
+
 ## What's new (2026-06-23) — HSV Colour-Space Segmentation
 
 Find "any shade of red" regardless of lighting. Full reference: [`docs/source/Eng/doc/new_features/v139_features_doc.rst`](docs/source/Eng/doc/new_features/v139_features_doc.rst).

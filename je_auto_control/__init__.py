@@ -320,6 +320,10 @@ from je_auto_control.utils.element_parse import (
 from je_auto_control.utils.hsv_segment import (
     color_mask, dominant_hue_regions, segment_hsv,
 )
+# Model-free on-screen text-region detection (MSER): regions and lines
+from je_auto_control.utils.text_regions import (
+    find_text_lines, find_text_regions,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1156,6 +1160,8 @@ __all__ = [
     "segment_hsv",
     "color_mask",
     "dominant_hue_regions",
+    "find_text_regions",
+    "find_text_lines",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

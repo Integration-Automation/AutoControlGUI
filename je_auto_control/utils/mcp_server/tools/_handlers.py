@@ -2200,6 +2200,17 @@ def dominant_hue_regions(hue, hue_tol=10, sat_min=80, val_min=80, min_area=50,
     return _dominant_hue_regions(hue, hue_tol, sat_min, val_min, min_area, region)
 
 
+def find_text_regions(min_area=60, max_area=None, merge=True, max_aspect=12.0,
+                      region=None):
+    from je_auto_control.utils.executor.action_executor import _find_text_regions
+    return _find_text_regions(min_area, max_area, merge, max_aspect, region)
+
+
+def find_text_lines(y_tolerance=8, region=None):
+    from je_auto_control.utils.executor.action_executor import _find_text_lines
+    return _find_text_lines(y_tolerance, region)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
