@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 排列多个窗口(网格 / 层叠)
+
+一次调用排好一整组窗口。完整参考:[`docs/source/Zh/doc/new_features/v134_features_doc.rst`](../docs/source/Zh/doc/new_features/v134_features_doc.rst)。
+
+- **`arrange_grid` / `arrange_cascade`**(`AC_arrange_grid`、`AC_arrange_cascade`):`snap_window` 移动*一个*窗口、版面规划器只*计算*矩形——这两个把循环补完,接受一组窗口标题并实际把每个匹配的窗口移入网格(自动近正方形,或明确 `rows`/`cols` + `gap`)或对角线层叠。以版面规划器为基础并沿用 `snap_window` 的可注入 `mover`/`screen_size` 接缝,因此完全无头可测;返回移动的窗口数。
+
 ## 本次更新 (2026-06-23) — 窗口铺排 / 版面几何规划器
 
 计算应用程序窗口该放在哪里——半边、网格、层叠。完整参考:[`docs/source/Zh/doc/new_features/v133_features_doc.rst`](../docs/source/Zh/doc/new_features/v133_features_doc.rst)。

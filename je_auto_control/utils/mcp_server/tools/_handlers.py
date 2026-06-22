@@ -2145,6 +2145,16 @@ def cascade_rects(count, screen=None, offset=30, size=None):
     return _cascade_rects(count, screen, offset, size)
 
 
+def arrange_grid(titles, rows=None, cols=None, gap=0):
+    from je_auto_control.utils.executor.action_executor import _arrange_grid
+    return _arrange_grid(titles, rows, cols, gap)
+
+
+def arrange_cascade(titles, offset=30):
+    from je_auto_control.utils.executor.action_executor import _arrange_cascade
+    return _arrange_cascade(titles, offset)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

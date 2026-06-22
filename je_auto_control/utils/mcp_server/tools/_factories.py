@@ -2760,6 +2760,37 @@ def window_layout_tools() -> List[MCPTool]:
     ]
 
 
+def window_arrange_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_arrange_grid",
+            description=("Tile the given window 'titles' into a grid and MOVE "
+                         "them. 'rows'/'cols' default to a near-square auto-shape; "
+                         "'gap' spaces cells. Returns {moved, count}."),
+            input_schema=schema({
+                "titles": {"type": "array", "items": {"type": "string"}},
+                "rows": {"type": "integer"},
+                "cols": {"type": "integer"},
+                "gap": {"type": "integer"}},
+                required=["titles"]),
+            handler=h.arrange_grid,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_arrange_cascade",
+            description=("Cascade the given window 'titles' diagonally and MOVE "
+                         "them, each 'offset' px down-right of the previous. "
+                         "Returns {moved, count}."),
+            input_schema=schema({
+                "titles": {"type": "array", "items": {"type": "string"}},
+                "offset": {"type": "integer"}},
+                required=["titles"]),
+            handler=h.arrange_cascade,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6262,7 +6293,7 @@ ALL_FACTORIES = (
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
     modifier_state_tools, grid_locator_tools, visual_match_tools,
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
-    window_layout_tools, plugin_sdk_tools, governance_tools,
+    window_layout_tools, window_arrange_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
