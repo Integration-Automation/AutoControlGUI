@@ -682,6 +682,36 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
                     "view.",
     ))
     specs.append(CommandSpec(
+        "AC_move_along_path", "Mouse", "Move Along Path",
+        fields=(
+            FieldSpec("waypoints", FieldType.STRING,
+                      placeholder="[[100,100],[400,150],[400,500]]"),
+            FieldSpec("easing", FieldType.ENUM,
+                      choices=("linear", "ease_in_out_quad", "ease_out_cubic",
+                               "ease_in_cubic"),
+                      optional=True, default="linear"),
+            FieldSpec("per_segment_steps", FieldType.INT, optional=True,
+                      default=20),
+        ),
+        description="Move the pointer through a polyline of waypoints.",
+    ))
+    specs.append(CommandSpec(
+        "AC_drag_path", "Mouse", "Drag Along Path",
+        fields=(
+            FieldSpec("waypoints", FieldType.STRING,
+                      placeholder="[[50,50],[300,50],[300,300]]"),
+            FieldSpec("button", FieldType.ENUM, choices=_MOUSE_BUTTONS,
+                      optional=True, default="mouse_left"),
+            FieldSpec("easing", FieldType.ENUM,
+                      choices=("linear", "ease_in_out_quad", "ease_out_cubic",
+                               "ease_in_cubic"),
+                      optional=True, default="linear"),
+            FieldSpec("per_segment_steps", FieldType.INT, optional=True,
+                      default=20),
+        ),
+        description="Press, drag through a polyline of waypoints, release.",
+    ))
+    specs.append(CommandSpec(
         "AC_list_plugins", "Tools", "List Plugin Commands",
         fields=(FieldSpec("group", FieldType.STRING, optional=True,
                           default="je_auto_control.commands"),),

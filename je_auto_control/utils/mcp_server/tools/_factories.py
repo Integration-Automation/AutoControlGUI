@@ -2550,6 +2550,42 @@ def tween_drag_tools() -> List[MCPTool]:
     ]
 
 
+def mouse_path_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_move_along_path",
+            description=("Move the pointer through 'waypoints' ([[x,y],...]) as "
+                         "an eased polyline. 'per_segment_steps' + 'easing' "
+                         "(linear / ease_*). Returns {points, path}."),
+            input_schema=schema({
+                "waypoints": {"type": "array",
+                              "items": {"type": "array",
+                                        "items": {"type": "integer"}}},
+                "easing": {"type": "string"},
+                "per_segment_steps": {"type": "integer"}},
+                required=["waypoints"]),
+            handler=h.move_along_path,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_drag_path",
+            description=("Press at the first of 'waypoints' ([[x,y],...]), drag "
+                         "through them, release at the last. 'button', 'easing', "
+                         "'per_segment_steps'. Returns {points, path}."),
+            input_schema=schema({
+                "waypoints": {"type": "array",
+                              "items": {"type": "array",
+                                        "items": {"type": "integer"}}},
+                "button": {"type": "string"},
+                "easing": {"type": "string"},
+                "per_segment_steps": {"type": "integer"}},
+                required=["waypoints"]),
+            handler=h.drag_path,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def plugin_sdk_tools() -> List[MCPTool]:
     _G = {"group": {"type": "string"}}
     return [
@@ -5795,7 +5831,8 @@ ALL_FACTORIES = (
     checkpoint_tools, set_of_marks_tools, screen_state_tools,
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
-    process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
+    process_doc_tools, tween_drag_tools, mouse_path_tools, plugin_sdk_tools,
+    governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

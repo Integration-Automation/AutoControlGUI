@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-22) — 多路径点鼠标手势
+
+让指针沿着路径点折线移动或拖曳。完整参考:[`docs/source/Zh/doc/new_features/v116_features_doc.rst`](../docs/source/Zh/doc/new_features/v116_features_doc.rst)。
+
+- **`plan_path` / `move_along_path` / `drag_path` / `path_easings`**(`AC_move_along_path`、`AC_drag_path`):`humanize` 与 `tween_drag` 只在单一起点→终点之间插值——先前无法驱动任意的路径点链(签名、框选、多停靠点拖曳)并在整段路径中按住按键。`plan_path` 为纯缓动点运算(重用 `tween_drag` 的缓动、交接点去重);移动/拖曳通过可注入的 sink 派发以供无头测试。纯标准库、确定。
+
 ## 本次更新 (2026-06-22) — 校验位算法
 
 计算/验证 Luhn、Verhoeff、Damm 与 ISO 7064 MOD 97-10 校验位。完整参考:[`docs/source/Zh/doc/new_features/v115_features_doc.rst`](../docs/source/Zh/doc/new_features/v115_features_doc.rst)。
