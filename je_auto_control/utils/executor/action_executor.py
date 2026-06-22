@@ -478,8 +478,9 @@ def _ocr_read_structure(region: Optional[List[int]] = None,
 
 def _anchor_locate(anchor: Dict[str, Any], target: Dict[str, Any],
                    relation: str = "near",
-                   max_distance_px: float = 200.0) -> Dict[str, Any]:
-    """Executor adapter: anchor-based spatial locator."""
+                   max_distance_px: float = 200.0,
+                   ordinal: Any = 1) -> Dict[str, Any]:
+    """Executor adapter: anchor-based spatial locator (Nth match via ordinal)."""
     from je_auto_control.utils.anchor_locator import (
         Locator, anchor_locate,
     )
@@ -488,8 +489,21 @@ def _anchor_locate(anchor: Dict[str, Any], target: Dict[str, Any],
     outcome = anchor_locate(
         anchor=anchor_loc, target=target_loc,
         relation=relation, max_distance_px=float(max_distance_px),
+        ordinal=int(ordinal),
     )
     return outcome.to_dict()
+
+
+def _anchor_locate_all(anchor: Dict[str, Any], target: Dict[str, Any],
+                       relation: str = "near",
+                       max_distance_px: float = 200.0) -> Dict[str, Any]:
+    """Executor adapter: every anchor-relative match, nearest-first."""
+    from je_auto_control.utils.anchor_locator import Locator, anchor_locate_all
+    outcomes = anchor_locate_all(
+        anchor=Locator(**anchor), target=Locator(**target),
+        relation=relation, max_distance_px=float(max_distance_px),
+    )
+    return {"count": len(outcomes), "matches": [o.to_dict() for o in outcomes]}
 
 
 def _anchor_click(anchor: Dict[str, Any], target: Dict[str, Any],
@@ -5037,6 +5051,7 @@ class Executor:
 
             # Anchor-based locator (spatial composition of locator backends)
             "AC_anchor_locate": _anchor_locate,
+            "AC_anchor_locate_all": _anchor_locate_all,
             "AC_anchor_click": _anchor_click,
 
             # Structured OCR (rows / tables / form fields)

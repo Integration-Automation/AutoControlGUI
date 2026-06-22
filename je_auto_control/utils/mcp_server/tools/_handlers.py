@@ -2532,14 +2532,17 @@ def ocr_read_structure(region: Optional[List[int]] = None,
 
 def anchor_locate(anchor: Dict[str, Any], target: Dict[str, Any],
                   relation: str = "near",
-                  max_distance_px: float = 200.0) -> Dict[str, Any]:
-    from je_auto_control.utils.anchor_locator import (
-        Locator, anchor_locate as _impl,
-    )
-    return _impl(
-        anchor=Locator(**anchor), target=Locator(**target),
-        relation=relation, max_distance_px=float(max_distance_px),
-    ).to_dict()
+                  max_distance_px: float = 200.0,
+                  ordinal: int = 1) -> Dict[str, Any]:
+    from je_auto_control.utils.executor.action_executor import _anchor_locate
+    return _anchor_locate(anchor, target, relation, max_distance_px, ordinal)
+
+
+def anchor_locate_all(anchor: Dict[str, Any], target: Dict[str, Any],
+                      relation: str = "near",
+                      max_distance_px: float = 200.0) -> Dict[str, Any]:
+    from je_auto_control.utils.executor.action_executor import _anchor_locate_all
+    return _anchor_locate_all(anchor, target, relation, max_distance_px)
 
 
 def anchor_click(anchor: Dict[str, Any], target: Dict[str, Any],
