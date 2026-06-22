@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 以边缘 / 轮廓定位 UI 元素(免模板)
+
+在从未见过的画面上找出可点击的方框。完整参考:[`docs/source/Zh/doc/new_features/v132_features_doc.rst`](../docs/source/Zh/doc/new_features/v132_features_doc.rst)。
+
+- **`find_shapes` / `find_rectangles`**(`AC_find_shapes`、`AC_find_rectangles`):其他定位器都需要一个寻找对象——模板、颜色或文字。这两个什么都不需要:Canny 边缘检测 + 轮廓提取返回各个形状的边界框(`{x,y,width,height,area,center,aspect}`,由大到小),让脚本能结构性地列举卡片 / 按钮 / 输入框并点击第 N 个。`find_rectangles` 只保留凸四边形,并加上 `aspect_range=(min,max)` 宽高比过滤(`(1.5,8)` 取宽按钮)。可注入 haystack → 无头可测。
+
 ## 本次更新 (2026-06-23) — ORB 特征匹配(对旋转 / 缩放 / 主题稳健)
 
 即使目标旋转、缩放或换主题也能找到。完整参考:[`docs/source/Zh/doc/new_features/v131_features_doc.rst`](../docs/source/Zh/doc/new_features/v131_features_doc.rst)。

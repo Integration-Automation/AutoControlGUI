@@ -354,6 +354,30 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Locate a template under rotation / scale / theme change.",
     ))
+    specs.append(CommandSpec(
+        "AC_find_shapes", "Image", "Find Shapes",
+        fields=(
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=400),
+            FieldSpec("max_area", FieldType.INT, optional=True),
+        ),
+        description="Locate distinct shapes by edge/contour detection (no template).",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_rectangles", "Image", "Find Rectangles",
+        fields=(
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=400),
+            FieldSpec("max_area", FieldType.INT, optional=True),
+            FieldSpec("aspect_range", FieldType.STRING, optional=True,
+                      placeholder="[1.5, 8.0]"),
+            FieldSpec("epsilon", FieldType.FLOAT, optional=True, default=0.04,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Locate rectangular regions (buttons / cards / input fields).",
+    ))
 
 
 def _add_ocr_specs(specs: List[CommandSpec]) -> None:
