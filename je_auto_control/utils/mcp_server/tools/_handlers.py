@@ -2068,6 +2068,19 @@ def grid_cell(boxes, row, col, row_tolerance=10):
     return _grid_cell(boxes, row, col, row_tolerance)
 
 
+def match_template(template, min_score=0.8, scales=None, region=None,
+                   method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _match_template
+    return _match_template(template, min_score, scales, region, method)
+
+
+def match_template_all(template, min_score=0.8, max_results=20, nms_iou=0.3,
+                       region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _match_template_all)
+    return _match_template_all(template, min_score, max_results, nms_iou, region)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

@@ -3197,6 +3197,38 @@ def _grid_cell(boxes: Any, row: Any, col: Any,
                        row_tolerance=int(row_tolerance))
 
 
+def _match_template(template: str, min_score: Any = 0.8, scales: Any = None,
+                    region: Any = None,
+                    method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: best confidence-scored template match on the screen."""
+    import json
+    from je_auto_control.utils.visual_match import match_template
+    if isinstance(scales, str):
+        scales = json.loads(scales) if scales.strip() else None
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = match_template(template, region=region,
+                           scales=tuple(scales) if scales else (1.0,),
+                           min_score=float(min_score), method=method)
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
+def _match_template_all(template: str, min_score: Any = 0.8,
+                        max_results: Any = 20, nms_iou: Any = 0.3,
+                        region: Any = None) -> Dict[str, Any]:
+    """Adapter: every confidence-scored template match on the screen (NMS)."""
+    import json
+    from je_auto_control.utils.visual_match import match_template_all
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    matches = match_template_all(template, region=region,
+                                 min_score=float(min_score),
+                                 max_results=int(max_results),
+                                 nms_iou=float(nms_iou))
+    return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -4914,6 +4946,8 @@ class Executor:
             "AC_type_unicode": _type_unicode,
             "AC_with_modifiers": _with_modifiers,
             "AC_grid_cell": _grid_cell,
+            "AC_match_template": _match_template,
+            "AC_match_template_all": _match_template_all,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

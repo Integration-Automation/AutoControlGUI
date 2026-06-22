@@ -2628,6 +2628,42 @@ def tween_drag_tools() -> List[MCPTool]:
     ]
 
 
+def visual_match_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_match_template",
+            description=("Find 'template' (image path) on screen and return the "
+                         "match WITH its score: {found, match:{x,y,width,height,"
+                         "score,scale,center}}. 'scales' [..] for DPI/zoom, "
+                         "'min_score', 'region', 'method'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.match_template,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_template_all",
+            description=("Find EVERY occurrence of 'template' on screen "
+                         ">= 'min_score', overlaps removed by NMS. "
+                         "Returns {count, matches}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "max_results": {"type": "integer"},
+                "nms_iou": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.match_template_all,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def grid_locator_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6018,8 +6054,8 @@ ALL_FACTORIES = (
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
     process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
-    modifier_state_tools, grid_locator_tools, plugin_sdk_tools,
-    governance_tools,
+    modifier_state_tools, grid_locator_tools, visual_match_tools,
+    plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

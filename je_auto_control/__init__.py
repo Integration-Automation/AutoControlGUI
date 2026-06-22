@@ -273,6 +273,11 @@ from je_auto_control.utils.modifier_state import (
 )
 # Address a table / grid cell by (row, column) from bounding boxes
 from je_auto_control.utils.grid_locator import cluster_grid, locate_cell
+# Confidence-returning template matching (score / multi-scale / find-all + NMS)
+from je_auto_control.utils.visual_match import (
+    best_matches, match_template, match_template_all,
+)
+from je_auto_control.utils.visual_match import Match as TemplateMatch
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1062,6 +1067,10 @@ __all__ = [
     "plan_with_modifiers",
     "cluster_grid",
     "locate_cell",
+    "TemplateMatch",
+    "match_template",
+    "match_template_all",
+    "best_matches",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

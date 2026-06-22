@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 具信心分數的模板比對
+
+回傳分數、搜尋多尺度、找出所有出現處的模板比對。完整參考:[`docs/source/Zh/doc/new_features/v127_features_doc.rst`](../docs/source/Zh/doc/new_features/v127_features_doc.rst)。
+
+- **`match_template` / `match_template_all` / `best_matches` / `TemplateMatch`**(`AC_match_template`、`AC_match_template_all`):既有比對器(`find_object`)為單一尺度且*丟棄分數*。本功能回傳帶 `score`/`scale`/`center` 的 `Match`、搜尋 `scales` 容忍 DPI/縮放,並以非極大值抑制列舉每個出現處。可注入 `haystack`(ndarray/路徑/PIL)→ 無頭可測;OpenCV/NumPy 透過 `je_open_cv` 相依。
+
 ## 本次更新 (2026-06-23) — 等待視窗標題(正則)
 
 阻塞直到視窗標題符合正則(或消失)。完整參考:[`docs/source/Zh/doc/new_features/v126_features_doc.rst`](../docs/source/Zh/doc/new_features/v126_features_doc.rst)。

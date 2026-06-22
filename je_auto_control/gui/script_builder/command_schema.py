@@ -253,6 +253,31 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
                       default=0.8, min_value=0.0, max_value=1.0),
         ),
     ))
+    specs.append(CommandSpec(
+        "AC_match_template", "Image", "Match Template (scored)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[0.9, 1.0, 1.1]"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+        ),
+        description="Locate a template and return its confidence score + scale.",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_template_all", "Image", "Match Template All (scored)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("max_results", FieldType.INT, optional=True, default=20),
+            FieldSpec("nms_iou", FieldType.FLOAT, optional=True, default=0.3,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Find every occurrence of a template (scored, NMS-deduped).",
+    ))
 
 
 def _add_ocr_specs(specs: List[CommandSpec]) -> None:
