@@ -933,8 +933,8 @@ je_auto_control_mcp --list-prompts
 | 安全 | 工具註記 · `JE_AUTOCONTROL_MCP_READONLY` · `JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE` · 稽核 log · token-bucket rate limiter · 工具失敗自動截圖 |
 | 部署 | Bearer token 驗證 · 透過 `ssl_context` 啟用 TLS · `PluginWatcher` 熱重載 · `JE_AUTOCONTROL_FAKE_BACKEND=1` 給 CI |
 
-完整參考請見 [docs/source/Zh/doc/mcp_server/mcp_server_doc.rst](docs/source/Zh/doc/mcp_server/mcp_server_doc.rst)
-(英文版本在 [docs/source/Eng/doc/mcp_server/mcp_server_doc.rst](docs/source/Eng/doc/mcp_server/mcp_server_doc.rst))。
+完整參考請見 [docs/source/Zh/doc/mcp_server/mcp_server_doc.rst](../docs/source/Zh/doc/mcp_server/mcp_server_doc.rst)
+(英文版本在 [docs/source/Eng/doc/mcp_server/mcp_server_doc.rst](../docs/source/Eng/doc/mcp_server/mcp_server_doc.rst))。
 
 > ⚠️ MCP 伺服器可以移動滑鼠、送鍵盤事件、截圖、執行任意 `AC_*` 動
 > 作。請只註冊給可信任的 client。HTTP 預設綁 `127.0.0.1`,要對外

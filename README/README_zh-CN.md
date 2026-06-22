@@ -933,8 +933,8 @@ je_auto_control_mcp --list-prompts
 | 安全 | 工具注解 · `JE_AUTOCONTROL_MCP_READONLY` · `JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE` · 审计 log · token-bucket rate limiter · 工具失败自动截图 |
 | 部署 | Bearer token 验证 · 通过 `ssl_context` 启用 TLS · `PluginWatcher` 热加载 · `JE_AUTOCONTROL_FAKE_BACKEND=1` 给 CI |
 
-完整参考请见 [docs/source/Zh/doc/mcp_server/mcp_server_doc.rst](docs/source/Zh/doc/mcp_server/mcp_server_doc.rst)
-(英文版本在 [docs/source/Eng/doc/mcp_server/mcp_server_doc.rst](docs/source/Eng/doc/mcp_server/mcp_server_doc.rst))。
+完整参考请见 [docs/source/Zh/doc/mcp_server/mcp_server_doc.rst](../docs/source/Zh/doc/mcp_server/mcp_server_doc.rst)
+(英文版本在 [docs/source/Eng/doc/mcp_server/mcp_server_doc.rst](../docs/source/Eng/doc/mcp_server/mcp_server_doc.rst))。
 
 > ⚠️ MCP 服务器可以移动鼠标、发送键盘事件、截图、执行任意 `AC_*`
 > 动作。请只注册给可信任的 client。HTTP 默认绑 `127.0.0.1`,要对外
