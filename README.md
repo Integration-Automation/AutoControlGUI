@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Idempotency-Key Store](#whats-new-2026-06-22--idempotency-key-store)
 - [What's new (2026-06-22) — Moving-Average Smoothing](#whats-new-2026-06-22--moving-average-smoothing)
 - [What's new (2026-06-22) — Single-Series Anomaly Detection](#whats-new-2026-06-22--single-series-anomaly-detection)
 - [What's new (2026-06-22) — Near-Duplicate Text Detection (SimHash / MinHash)](#whats-new-2026-06-22--near-duplicate-text-detection-simhash--minhash)
@@ -154,6 +155,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Idempotency-Key Store
+
+Run a side effect once, replay its response on retries. Full reference: [`docs/source/Eng/doc/new_features/v103_features_doc.rst`](docs/source/Eng/doc/new_features/v103_features_doc.rst).
+
+- **`IdempotencyStore` / `request_fingerprint` / `IdempotencyConflict`** (`AC_idempotency_begin`, `AC_idempotency_complete`): `RetryPolicy` re-executes and `work_queue` dedups only in-flight refs — nothing cached the first result. This Stripe-style store returns `new`/`in_progress`/`completed` for a key, replays the stored response, raises on a fingerprint conflict, and supports injectable-clock TTL + JSON persistence. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Moving-Average Smoothing
 

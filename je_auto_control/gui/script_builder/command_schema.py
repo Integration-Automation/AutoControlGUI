@@ -1996,6 +1996,25 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Exponentially-weighted moving average of a series.",
     ))
     specs.append(CommandSpec(
+        "AC_idempotency_begin", "Flow", "Idempotency: Begin",
+        fields=(
+            FieldSpec("name", FieldType.STRING, placeholder="payments"),
+            FieldSpec("key", FieldType.STRING, placeholder="order-42"),
+            FieldSpec("request", FieldType.STRING, optional=True,
+                      placeholder='{"amount": 100}'),
+        ),
+        description="Register/look up an idempotency key (new/in_progress/done).",
+    ))
+    specs.append(CommandSpec(
+        "AC_idempotency_complete", "Flow", "Idempotency: Complete",
+        fields=(
+            FieldSpec("name", FieldType.STRING, placeholder="payments"),
+            FieldSpec("key", FieldType.STRING, placeholder="order-42"),
+            FieldSpec("response", FieldType.STRING, placeholder='{"ok": true}'),
+        ),
+        description="Store the completed response for an idempotency key.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

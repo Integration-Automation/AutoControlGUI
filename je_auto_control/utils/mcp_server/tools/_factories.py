@@ -3548,6 +3548,34 @@ def dataset_diff_tools() -> List[MCPTool]:
     ]
 
 
+def idempotency_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_idempotency_begin",
+            description=("Register/look up idempotency 'key' in a named store "
+                         "'name' (optional 'request' for conflict detection). "
+                         "Returns {status: new|in_progress|completed, response}."),
+            input_schema=schema(
+                {"name": {"type": "string"}, "key": {"type": "string"},
+                 "request": {"type": "object"}},
+                ["name", "key"]),
+            handler=h.idempotency_begin,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_idempotency_complete",
+            description=("Store the completed 'response' for idempotency 'key' "
+                         "in named store 'name'. Returns {status}."),
+            input_schema=schema(
+                {"name": {"type": "string"}, "key": {"type": "string"},
+                 "response": {"type": "object"}},
+                ["name", "key", "response"]),
+            handler=h.idempotency_complete,
+            annotations=NON_DESTRUCTIVE,
+        ),
+    ]
+
+
 def smoothing_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5524,7 +5552,7 @@ ALL_FACTORIES = (
     secret_ref_tools, config_schema_tools, config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
-    timeseries_tools, anomaly_tools, smoothing_tools,
+    timeseries_tools, anomaly_tools, smoothing_tools, idempotency_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

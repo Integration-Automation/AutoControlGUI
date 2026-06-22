@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 冪等鍵儲存](#本次更新-2026-06-22--冪等鍵儲存)
 - [本次更新 (2026-06-22) — 移動平均平滑](#本次更新-2026-06-22--移動平均平滑)
 - [本次更新 (2026-06-22) — 單序列異常偵測](#本次更新-2026-06-22--單序列異常偵測)
 - [本次更新 (2026-06-22) — 近似重複文字偵測(SimHash / MinHash)](#本次更新-2026-06-22--近似重複文字偵測simhash--minhash)
@@ -157,6 +158,12 @@
 ## 本次更新 (2026-06-22) — 移動平均平滑
 
 平滑雜訊值序列。完整參考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 冪等鍵儲存
+
+副作用只執行一次,重試時重播其回應。完整參考:[`docs/source/Zh/doc/new_features/v103_features_doc.rst`](../docs/source/Zh/doc/new_features/v103_features_doc.rst)。
+
+- **`IdempotencyStore` / `request_fingerprint` / `IdempotencyConflict`**(`AC_idempotency_begin`、`AC_idempotency_complete`):`RetryPolicy` 重試會重跑,`work_queue` 只對進行中參照去重 —— 沒有東西快取第一次結果。本 Stripe 風格儲存為某鍵回傳 `new`/`in_progress`/`completed`、重播已儲存回應、指紋衝突時拋出例外,並支援可注入時鐘 TTL + JSON 持久化。純標準函式庫、具決定性。
 
 - **`sma` / `wma` / `ewma` / `rolling`**(`AC_sma`、`AC_ewma`):`stats.describe` 彙總整個樣本,`timeseries` 把計數器滾成速率,但沒有東西能平滑雜訊訊號。本功能加入尾端簡單/加權/指數加權移動平均與通用滾動歸約器,全部回傳與輸入時間線對齊的等長 list。純標準函式庫、具決定性。
 
