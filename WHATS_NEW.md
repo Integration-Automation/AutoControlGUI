@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Confidence-Returning Template Matching
+
+Template matching that returns the score, searches multiple scales, and finds all occurrences. Full reference: [`docs/source/Eng/doc/new_features/v127_features_doc.rst`](docs/source/Eng/doc/new_features/v127_features_doc.rst).
+
+- **`match_template` / `match_template_all` / `best_matches` / `TemplateMatch`** (`AC_match_template`, `AC_match_template_all`): the existing matcher (`find_object`) is single-scale and *discards the score*. This returns a `Match` with `score`/`scale`/`center`, searches `scales` for DPI/zoom tolerance, and enumerates every occurrence with non-maximum suppression. Injectable `haystack` (ndarray/path/PIL) → headless-testable on synthetic arrays; OpenCV/NumPy via the `je_open_cv` dependency.
+
 ## What's new (2026-06-23) — Wait for Window Title (Regex)
 
 Block until a window title matches a regex (or vanishes). Full reference: [`docs/source/Eng/doc/new_features/v126_features_doc.rst`](docs/source/Eng/doc/new_features/v126_features_doc.rst).

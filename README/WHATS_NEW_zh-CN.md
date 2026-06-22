@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 具信心分数的模板匹配
+
+返回分数、搜索多尺度、找出所有出现处的模板匹配。完整参考:[`docs/source/Zh/doc/new_features/v127_features_doc.rst`](../docs/source/Zh/doc/new_features/v127_features_doc.rst)。
+
+- **`match_template` / `match_template_all` / `best_matches` / `TemplateMatch`**(`AC_match_template`、`AC_match_template_all`):既有匹配器(`find_object`)为单一尺度且*丢弃分数*。本功能返回带 `score`/`scale`/`center` 的 `Match`、搜索 `scales` 容忍 DPI/缩放,并以非极大值抑制列举每个出现处。可注入 `haystack`(ndarray/路径/PIL)→ 无头可测;OpenCV/NumPy 透过 `je_open_cv` 依赖。
+
 ## 本次更新 (2026-06-23) — 等待窗口标题(正则)
 
 阻塞直到窗口标题符合正则(或消失)。完整参考:[`docs/source/Zh/doc/new_features/v126_features_doc.rst`](../docs/source/Zh/doc/new_features/v126_features_doc.rst)。
