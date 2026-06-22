@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Multi-Monitor / Virtual-Desktop Geometry
+
+Place windows and points correctly across several displays. Full reference: [`docs/source/Eng/doc/new_features/v136_features_doc.rst`](docs/source/Eng/doc/new_features/v136_features_doc.rst).
+
+- **`enumerate_monitors` + `Monitor` / `virtual_bounds` / `monitor_at_point` / `monitor_for_window` / `to_local` / `to_virtual` / `remap_point`** (`AC_enumerate_monitors`, `AC_monitor_at_point`): `snap_window` / `arrange_grid` / the layout planner all assumed a single primary `(width, height)` — monitor-blind, unable to tile on a second display or handle a negative-origin virtual desktop. This adds the physical layer: union virtual bounds, which-monitor-owns-this-point/window, virtual↔monitor-local conversion, and equivalent-spot remapping across resolutions/DPI. Pure geometry over `Monitor` dataclasses → fully headless-testable; `enumerate_monitors` has an injectable provider (default `mss`).
+
 ## What's new (2026-06-23) — Image Pre-processing for OCR / Template Matching
 
 Clean up the screen before reading or matching it. Full reference: [`docs/source/Eng/doc/new_features/v135_features_doc.rst`](docs/source/Eng/doc/new_features/v135_features_doc.rst).

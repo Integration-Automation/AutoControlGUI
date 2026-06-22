@@ -3431,6 +3431,26 @@ def _preprocess_image(output_path: str, source: Any = None, steps: Any = None,
             "height": int(result.shape[0])}
 
 
+def _enumerate_monitors() -> Dict[str, Any]:
+    """Adapter: list connected monitors with virtual-desktop geometry."""
+    from je_auto_control.utils.monitor_layout import (
+        enumerate_monitors, virtual_bounds)
+    monitors = enumerate_monitors()
+    bounds = virtual_bounds(monitors) if monitors else (0, 0, 0, 0)
+    return {"count": len(monitors),
+            "monitors": [monitor.to_dict() for monitor in monitors],
+            "virtual_bounds": list(bounds)}
+
+
+def _monitor_at_point(x: Any, y: Any) -> Dict[str, Any]:
+    """Adapter: report which monitor contains a virtual point."""
+    from je_auto_control.utils.monitor_layout import (
+        enumerate_monitors, monitor_at_point)
+    monitor = monitor_at_point(enumerate_monitors(), int(x), int(y))
+    return {"found": monitor is not None,
+            "monitor": monitor.to_dict() if monitor else None}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5158,6 +5178,8 @@ class Executor:
             "AC_find_shapes": _find_shapes,
             "AC_find_rectangles": _find_rectangles,
             "AC_preprocess_image": _preprocess_image,
+            "AC_enumerate_monitors": _enumerate_monitors,
+            "AC_monitor_at_point": _monitor_at_point,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

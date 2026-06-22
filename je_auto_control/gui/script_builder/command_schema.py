@@ -622,6 +622,18 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Compute staggered, overlapping window rectangles.",
     ))
+    specs.append(CommandSpec(
+        "AC_enumerate_monitors", "Window", "Enumerate Monitors",
+        description="List monitors + virtual bounds (multi-display geometry).",
+    ))
+    specs.append(CommandSpec(
+        "AC_monitor_at_point", "Window", "Monitor at Point",
+        fields=(
+            FieldSpec("x", FieldType.INT),
+            FieldSpec("y", FieldType.INT),
+        ),
+        description="Report which monitor contains a virtual point.",
+    ))
 
 
 def _add_flow_specs(specs: List[CommandSpec]) -> None:
