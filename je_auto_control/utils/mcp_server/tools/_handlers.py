@@ -2119,6 +2119,17 @@ def feature_match(template, region=None, max_features=500, ratio=0.75,
     return _feature_match(template, region, max_features, ratio, min_inliers)
 
 
+def find_shapes(region=None, min_area=400, max_area=None):
+    from je_auto_control.utils.executor.action_executor import _find_shapes
+    return _find_shapes(region, min_area, max_area)
+
+
+def find_rectangles(region=None, min_area=400, max_area=None, aspect_range=None,
+                    epsilon=0.04):
+    from je_auto_control.utils.executor.action_executor import _find_rectangles
+    return _find_rectangles(region, min_area, max_area, aspect_range, epsilon)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

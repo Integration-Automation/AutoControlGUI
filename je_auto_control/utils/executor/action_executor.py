@@ -3315,6 +3315,36 @@ def _feature_match(template: str, region: Any = None, max_features: Any = 500,
             "match": match.to_dict() if match else None}
 
 
+def _find_shapes(region: Any = None, min_area: Any = 400,
+                 max_area: Any = None) -> Dict[str, Any]:
+    """Adapter: bounding boxes of all distinct on-screen shapes, largest first."""
+    import json
+    from je_auto_control.utils.shape_locator import find_shapes
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    shapes = find_shapes(region=region, min_area=int(min_area),
+                         max_area=int(max_area) if max_area is not None else None)
+    return {"count": len(shapes), "shapes": shapes}
+
+
+def _find_rectangles(region: Any = None, min_area: Any = 400, max_area: Any = None,
+                     aspect_range: Any = None, epsilon: Any = 0.04
+                     ) -> Dict[str, Any]:
+    """Adapter: boxes of the ~rectangular shapes (buttons / cards), largest first."""
+    import json
+    from je_auto_control.utils.shape_locator import find_rectangles
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    if isinstance(aspect_range, str):
+        aspect_range = json.loads(aspect_range) if aspect_range.strip() else None
+    rects = find_rectangles(
+        region=region, min_area=int(min_area),
+        max_area=int(max_area) if max_area is not None else None,
+        aspect_range=tuple(aspect_range) if aspect_range else None,
+        epsilon=float(epsilon))
+    return {"count": len(rects), "rectangles": rects}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5039,6 +5069,8 @@ class Executor:
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,
+            "AC_find_shapes": _find_shapes,
+            "AC_find_rectangles": _find_rectangles,
             "AC_find_color_region": _find_color_region,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,

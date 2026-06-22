@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Locate UI Elements by Edge / Contour (No Template)
+
+Find the clickable boxes on a screen you have never seen. Full reference: [`docs/source/Eng/doc/new_features/v132_features_doc.rst`](docs/source/Eng/doc/new_features/v132_features_doc.rst).
+
+- **`find_shapes` / `find_rectangles`** (`AC_find_shapes`, `AC_find_rectangles`): every other locator needs something to look *for* — a template, a colour, some text. These need nothing: Canny edge detection + contour extraction returns the bounding boxes (`{x,y,width,height,area,center,aspect}`, largest first) of the distinct shapes, so a script can enumerate cards / buttons / input fields structurally and click the Nth one. `find_rectangles` keeps only convex quads and adds an `aspect_range=(min,max)` w/h filter (`(1.5,8)` wide buttons). Injectable haystack → headless-testable.
+
 ## What's new (2026-06-23) — ORB Feature Matching (Rotation / Scale / Theme Robust)
 
 Find a target even when it is rotated, rescaled or re-themed. Full reference: [`docs/source/Eng/doc/new_features/v131_features_doc.rst`](docs/source/Eng/doc/new_features/v131_features_doc.rst).

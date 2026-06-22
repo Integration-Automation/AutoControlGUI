@@ -2671,6 +2671,44 @@ def feature_match_tools() -> List[MCPTool]:
     ]
 
 
+def shape_locator_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_find_shapes",
+            description=("Locate distinct on-screen shapes by edge/contour "
+                         "detection — NO template/colour/text needed. Returns "
+                         "{count, shapes:[{x,y,width,height,area,center,aspect}]} "
+                         "(largest first). 'min_area'/'max_area' filter by "
+                         "bounding-box area."),
+            input_schema=schema({
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "min_area": {"type": "integer"},
+                "max_area": {"type": "integer"}},
+                required=[]),
+            handler=h.find_shapes,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_find_rectangles",
+            description=("Locate ~rectangular regions (buttons / cards / input "
+                         "fields) by contour approximation. Returns {count, "
+                         "rectangles:[{x,y,width,height,area,center,aspect}]} "
+                         "(largest first). 'aspect_range' [min,max] filters w/h "
+                         "(e.g. [1.5,8] wide buttons); 'epsilon' the approx "
+                         "tolerance."),
+            input_schema=schema({
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "min_area": {"type": "integer"},
+                "max_area": {"type": "integer"},
+                "aspect_range": {"type": "array", "items": {"type": "number"}},
+                "epsilon": {"type": "number"}},
+                required=[]),
+            handler=h.find_rectangles,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6172,8 +6210,8 @@ ALL_FACTORIES = (
     process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
     modifier_state_tools, grid_locator_tools, visual_match_tools,
-    color_region_tools, ssim_tools, feature_match_tools, plugin_sdk_tools,
-    governance_tools,
+    color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
+    plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
