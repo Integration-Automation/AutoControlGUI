@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-22) — Check-Digit Algorithms
+
+Compute / verify Luhn, Verhoeff, Damm and ISO 7064 MOD 97-10 check digits. Full reference: [`docs/source/Eng/doc/new_features/v115_features_doc.rst`](docs/source/Eng/doc/new_features/v115_features_doc.rst).
+
+- **`luhn_validate` / `luhn_check_digit` / `verhoeff_*` / `damm_*` / `mod97_10_*`** (`AC_checksum_validate`, `AC_checksum_digit`): `pii_text` detects card/IBAN shapes by regex and `data_quality` does regex validation, but nothing computed or verified a *check digit*. This adds the four schemes behind most identifiers (cards/IMEI, national IDs, IBAN) — the shared engine `identifier_validate` builds on. Pure-stdlib, deterministic.
+
 ## What's new (2026-06-22) — GNU gettext Catalog I/O (.po / .mo)
 
 Read/compile the de-facto translation format. Full reference: [`docs/source/Eng/doc/new_features/v114_features_doc.rst`](docs/source/Eng/doc/new_features/v114_features_doc.rst).

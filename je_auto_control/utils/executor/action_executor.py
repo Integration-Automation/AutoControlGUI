@@ -3047,6 +3047,28 @@ def _gettext_ngettext(po: str, msgid: str, msgid_plural: str,
     return {"text": catalog.ngettext(msgid, msgid_plural, int(n))}
 
 
+def _checksum_validate(scheme: str, number: str) -> Dict[str, Any]:
+    """Adapter: validate a number's check digit under a named scheme."""
+    from je_auto_control.utils import checksum as cs
+    validators = {"luhn": cs.luhn_validate, "verhoeff": cs.verhoeff_validate,
+                  "damm": cs.damm_validate, "mod97": cs.mod97_10_validate}
+    func = validators.get(scheme)
+    if func is None:
+        raise AutoControlActionException(f"unknown checksum scheme: {scheme!r}")
+    return {"valid": func(number)}
+
+
+def _checksum_digit(scheme: str, partial: str) -> Dict[str, Any]:
+    """Adapter: compute the check digit(s) for a value under a named scheme."""
+    from je_auto_control.utils import checksum as cs
+    digits = {"luhn": cs.luhn_check_digit, "verhoeff": cs.verhoeff_check_digit,
+              "damm": cs.damm_check_digit, "mod97": cs.mod97_10_check_digits}
+    func = digits.get(scheme)
+    if func is None:
+        raise AutoControlActionException(f"unknown checksum scheme: {scheme!r}")
+    return {"check_digit": func(partial)}
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4740,6 +4762,8 @@ class Executor:
             "AC_format_message": _format_message,
             "AC_gettext_translate": _gettext_translate,
             "AC_gettext_ngettext": _gettext_ngettext,
+            "AC_checksum_validate": _checksum_validate,
+            "AC_checksum_digit": _checksum_digit,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

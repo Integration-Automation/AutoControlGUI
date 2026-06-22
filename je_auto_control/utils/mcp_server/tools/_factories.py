@@ -3709,6 +3709,32 @@ def gettext_catalog_tools() -> List[MCPTool]:
     ]
 
 
+def checksum_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_checksum_validate",
+            description=("Validate a number's check digit. 'scheme' is "
+                         "luhn|verhoeff|damm|mod97. Returns {valid}."),
+            input_schema=schema(
+                {"scheme": {"type": "string"}, "number": {"type": "string"}},
+                ["scheme", "number"]),
+            handler=h.checksum_validate,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_checksum_digit",
+            description=("Compute the check digit(s) to append to 'partial'. "
+                         "'scheme' is luhn|verhoeff|damm|mod97. "
+                         "Returns {check_digit}."),
+            input_schema=schema(
+                {"scheme": {"type": "string"}, "partial": {"type": "string"}},
+                ["scheme", "partial"]),
+            handler=h.checksum_digit,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def message_format_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5789,7 +5815,7 @@ ALL_FACTORIES = (
     dedup_window_tools, sequence_gap_tools, optimistic_tools, outbox_tools,
     locale_collation_tools, confusables_tools, readability_tools,
     bidi_check_tools, list_format_tools, message_format_tools,
-    gettext_catalog_tools,
+    gettext_catalog_tools, checksum_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

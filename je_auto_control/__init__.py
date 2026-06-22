@@ -245,6 +245,12 @@ from je_auto_control.utils.message_format import (
 from je_auto_control.utils.gettext_catalog import (
     GettextCatalog, parse_po, parse_po_file, read_mo, read_mo_file,
 )
+# Check-digit algorithms (Luhn / Verhoeff / Damm / ISO 7064 MOD 97-10)
+from je_auto_control.utils.checksum import (
+    damm_check_digit, damm_validate, luhn_check_digit, luhn_validate,
+    mod97_10_check_digits, mod97_10_validate, verhoeff_check_digit,
+    verhoeff_validate,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1007,6 +1013,14 @@ __all__ = [
     "parse_po_file",
     "read_mo",
     "read_mo_file",
+    "luhn_validate",
+    "luhn_check_digit",
+    "verhoeff_validate",
+    "verhoeff_check_digit",
+    "damm_validate",
+    "damm_check_digit",
+    "mod97_10_validate",
+    "mod97_10_check_digits",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

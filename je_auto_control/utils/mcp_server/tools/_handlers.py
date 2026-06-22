@@ -2017,6 +2017,16 @@ def gettext_ngettext(po, msgid, msgid_plural, n):
     return _gettext_ngettext(po, msgid, msgid_plural, n)
 
 
+def checksum_validate(scheme, number):
+    from je_auto_control.utils.executor.action_executor import _checksum_validate
+    return _checksum_validate(scheme, number)
+
+
+def checksum_digit(scheme, partial):
+    from je_auto_control.utils.executor.action_executor import _checksum_digit
+    return _checksum_digit(scheme, partial)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

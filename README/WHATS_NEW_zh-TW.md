@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-22) — 檢查碼演算法
+
+計算/驗證 Luhn、Verhoeff、Damm 與 ISO 7064 MOD 97-10 檢查碼。完整參考:[`docs/source/Zh/doc/new_features/v115_features_doc.rst`](../docs/source/Zh/doc/new_features/v115_features_doc.rst)。
+
+- **`luhn_validate` / `luhn_check_digit` / `verhoeff_*` / `damm_*` / `mod97_10_*`**(`AC_checksum_validate`、`AC_checksum_digit`):`pii_text` 以正則偵測卡號/IBAN 形狀、`data_quality` 做正則驗證,但沒有任何功能計算或驗證*檢查碼*。本功能加入多數識別碼背後的四種方案(卡號/IMEI、國民身分碼、IBAN)——`identifier_validate` 所依據的共用引擎。純標準函式庫、具決定性。
+
 ## 本次更新 (2026-06-22) — 移動平均平滑
 
 平滑雜訊值序列。完整參考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
