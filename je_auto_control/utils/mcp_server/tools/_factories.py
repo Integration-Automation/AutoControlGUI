@@ -2709,6 +2709,57 @@ def shape_locator_tools() -> List[MCPTool]:
     ]
 
 
+def window_layout_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_tile_rect",
+            description=("Compute the rectangle for a named tiling 'slot' of the "
+                         "screen work area: full/left/right/top/bottom/top_left/"
+                         "top_right/bottom_left/bottom_right/center/left_third/"
+                         "center_third/right_third. 'screen' [x,y,w,h] defaults to "
+                         "the live primary screen; 'gap' insets all sides. Returns "
+                         "{rect:{x,y,width,height}} — feed to a window-move."),
+            input_schema=schema({
+                "slot": {"type": "string"},
+                "screen": {"type": "array", "items": {"type": "integer"}},
+                "gap": {"type": "integer"}},
+                required=["slot"]),
+            handler=h.tile_rect,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_grid_rects",
+            description=("Split the screen work area into an 'rows' x 'cols' grid; "
+                         "return {count, rects:[{x,y,width,height}]} row-major. "
+                         "'screen' [x,y,w,h] defaults to the live screen; 'gap' "
+                         "insets each cell."),
+            input_schema=schema({
+                "rows": {"type": "integer"},
+                "cols": {"type": "integer"},
+                "screen": {"type": "array", "items": {"type": "integer"}},
+                "gap": {"type": "integer"}},
+                required=["rows", "cols"]),
+            handler=h.grid_rects,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_cascade_rects",
+            description=("Compute 'count' staggered, overlapping window rectangles "
+                         "(a cascade), each 'offset' px down-right of the previous, "
+                         "clamped to the screen. 'size' [w,h] defaults to 60% of "
+                         "the work area. Returns {count, rects}."),
+            input_schema=schema({
+                "count": {"type": "integer"},
+                "screen": {"type": "array", "items": {"type": "integer"}},
+                "offset": {"type": "integer"},
+                "size": {"type": "array", "items": {"type": "integer"}}},
+                required=["count"]),
+            handler=h.cascade_rects,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6211,7 +6262,7 @@ ALL_FACTORIES = (
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
     modifier_state_tools, grid_locator_tools, visual_match_tools,
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
-    plugin_sdk_tools, governance_tools,
+    window_layout_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

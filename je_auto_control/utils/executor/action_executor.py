@@ -3345,6 +3345,45 @@ def _find_rectangles(region: Any = None, min_area: Any = 400, max_area: Any = No
     return {"count": len(rects), "rectangles": rects}
 
 
+def _resolve_screen(screen: Any) -> list:
+    """Parse a JSON screen rect, or default to the live primary screen work area."""
+    import json
+    if isinstance(screen, str):
+        screen = json.loads(screen) if screen.strip() else None
+    if screen:
+        return list(screen)
+    from je_auto_control.wrapper.auto_control_screen import screen_size
+    width, height = screen_size()
+    return [0, 0, int(width), int(height)]
+
+
+def _tile_rect(slot: str, screen: Any = None, gap: Any = 0) -> Dict[str, Any]:
+    """Adapter: rectangle for a named tiling slot of the screen work area."""
+    from je_auto_control.utils.window_layout import tile_rect
+    rect = tile_rect(_resolve_screen(screen), str(slot), gap=int(gap))
+    return {"rect": rect.to_dict()}
+
+
+def _grid_rects(rows: Any, cols: Any, screen: Any = None,
+                gap: Any = 0) -> Dict[str, Any]:
+    """Adapter: one rectangle per cell of an rows x cols grid over the screen."""
+    from je_auto_control.utils.window_layout import grid_rects
+    rects = grid_rects(_resolve_screen(screen), int(rows), int(cols), gap=int(gap))
+    return {"count": len(rects), "rects": [rect.to_dict() for rect in rects]}
+
+
+def _cascade_rects(count: Any, screen: Any = None, offset: Any = 30,
+                   size: Any = None) -> Dict[str, Any]:
+    """Adapter: count staggered, overlapping window rectangles (a cascade)."""
+    import json
+    from je_auto_control.utils.window_layout import cascade_rects
+    if isinstance(size, str):
+        size = json.loads(size) if size.strip() else None
+    rects = cascade_rects(_resolve_screen(screen), int(count), offset=int(offset),
+                          size=tuple(size) if size else None)
+    return {"count": len(rects), "rects": [rect.to_dict() for rect in rects]}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5071,6 +5110,9 @@ class Executor:
             "AC_feature_match": _feature_match,
             "AC_find_shapes": _find_shapes,
             "AC_find_rectangles": _find_rectangles,
+            "AC_tile_rect": _tile_rect,
+            "AC_grid_rects": _grid_rects,
+            "AC_cascade_rects": _cascade_rects,
             "AC_find_color_region": _find_color_region,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,

@@ -552,6 +552,43 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("layout", FieldType.FILE_PATH),),
         description="Move windows back to a saved layout file.",
     ))
+    specs.append(CommandSpec(
+        "AC_tile_rect", "Window", "Tile Rect (compute)",
+        fields=(
+            FieldSpec("slot", FieldType.ENUM,
+                      choices=("full", "left", "right", "top", "bottom",
+                               "top_left", "top_right", "bottom_left",
+                               "bottom_right", "center", "left_third",
+                               "center_third", "right_third"), default="left"),
+            FieldSpec("screen", FieldType.STRING, optional=True,
+                      placeholder="[x, y, width, height]"),
+            FieldSpec("gap", FieldType.INT, optional=True, default=0),
+        ),
+        description="Compute the rectangle for a tiling slot of the screen.",
+    ))
+    specs.append(CommandSpec(
+        "AC_grid_rects", "Window", "Grid Rects (compute)",
+        fields=(
+            FieldSpec("rows", FieldType.INT, default=2),
+            FieldSpec("cols", FieldType.INT, default=2),
+            FieldSpec("screen", FieldType.STRING, optional=True,
+                      placeholder="[x, y, width, height]"),
+            FieldSpec("gap", FieldType.INT, optional=True, default=0),
+        ),
+        description="Compute the cell rectangles of an R×C screen grid.",
+    ))
+    specs.append(CommandSpec(
+        "AC_cascade_rects", "Window", "Cascade Rects (compute)",
+        fields=(
+            FieldSpec("count", FieldType.INT, default=3),
+            FieldSpec("screen", FieldType.STRING, optional=True,
+                      placeholder="[x, y, width, height]"),
+            FieldSpec("offset", FieldType.INT, optional=True, default=30),
+            FieldSpec("size", FieldType.STRING, optional=True,
+                      placeholder="[width, height]"),
+        ),
+        description="Compute staggered, overlapping window rectangles.",
+    ))
 
 
 def _add_flow_specs(specs: List[CommandSpec]) -> None:

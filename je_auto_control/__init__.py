@@ -294,6 +294,10 @@ from je_auto_control.utils.feature_match import FeatureMatch
 from je_auto_control.utils.shape_locator import (
     find_rectangles, find_shapes,
 )
+# Window tiling/layout geometry planner (halves, quadrants, grids, cascade)
+from je_auto_control.utils.window_layout import (
+    WindowRect, available_slots, cascade_rects, grid_rects, tile_rect,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1097,6 +1101,11 @@ __all__ = [
     "FeatureMatch",
     "find_shapes",
     "find_rectangles",
+    "WindowRect",
+    "available_slots",
+    "tile_rect",
+    "grid_rects",
+    "cascade_rects",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

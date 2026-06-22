@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 窗口铺排 / 版面几何规划器
+
+计算应用程序窗口该放在哪里——半边、网格、层叠。完整参考:[`docs/source/Zh/doc/new_features/v133_features_doc.rst`](../docs/source/Zh/doc/new_features/v133_features_doc.rst)。
+
+- **`tile_rect` / `grid_rects` / `cascade_rects`**(`AC_tile_rect`、`AC_grid_rects`、`AC_cascade_rects`):`save/restore_window_layout` 重播*精确*的已存位置、`snap_window` 移动*一个*窗口——没有任何功能能*计算*出全新的多窗口版面。此纯几何规划器在给定屏幕工作区下,返回半边、四分之一、三分之一、R×C 网格与错位层叠的目标矩形,让脚本能以确定性方式排列窗口。返回 `WindowRect`(`.as_tuple()` / `.to_dict()`);`gap` 内缩铺排间距;跨平台且完全无头可测;可与任何窗口移动后端组合。
+
 ## 本次更新 (2026-06-23) — 以边缘 / 轮廓定位 UI 元素(免模板)
 
 在从未见过的画面上找出可点击的方框。完整参考:[`docs/source/Zh/doc/new_features/v132_features_doc.rst`](../docs/source/Zh/doc/new_features/v132_features_doc.rst)。
