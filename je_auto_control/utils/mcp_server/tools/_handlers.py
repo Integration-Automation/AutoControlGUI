@@ -1997,6 +1997,11 @@ def bidi_strip(text):
     return _bidi_strip(text)
 
 
+def format_list(items, style="and", locale="en"):
+    from je_auto_control.utils.executor.action_executor import _format_list
+    return _format_list(items, style, locale)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

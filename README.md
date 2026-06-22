@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Locale-Aware List Formatting](#whats-new-2026-06-22--locale-aware-list-formatting)
 - [What's new (2026-06-22) — Bidirectional-Text QA (Trojan-Source Scan)](#whats-new-2026-06-22--bidirectional-text-qa-trojan-source-scan)
 - [What's new (2026-06-22) — Readability Scoring](#whats-new-2026-06-22--readability-scoring)
 - [What's new (2026-06-22) — Confusable / Homoglyph Detection](#whats-new-2026-06-22--confusable--homoglyph-detection)
@@ -163,6 +164,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Locale-Aware List Formatting
+
+Join items the way a language expects ("A, B, and C"). Full reference: [`docs/source/Eng/doc/new_features/v112_features_doc.rst`](docs/source/Eng/doc/new_features/v112_features_doc.rst).
+
+- **`format_list`** (`AC_format_list`): a naive `", ".join` gives "A, B, C" with no "and"/"or" and no localisation. This implements the CLDR list-pattern composition with conjunction / disjunction / unit styles and per-locale conjunction words + serial-comma rule (`en`/`es`/`fr`/`de`/`pt`) — `format_list(["a","b","c"])` → "a, b, and c", `locale="es"` → "a, b y c". Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Bidirectional-Text QA (Trojan-Source Scan)
 

@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 区域感知列表格式化](#本次更新-2026-06-22--区域感知列表格式化)
 - [本次更新 (2026-06-22) — 双向文字 QA(Trojan-Source 扫描)](#本次更新-2026-06-22--双向文字-qatrojan-source-扫描)
 - [本次更新 (2026-06-22) — 可读性评分](#本次更新-2026-06-22--可读性评分)
 - [本次更新 (2026-06-22) — 易混淆字符 / 同形异义字检测](#本次更新-2026-06-22--易混淆字符--同形异义字检测)
@@ -166,6 +167,12 @@
 ## 本次更新 (2026-06-22) — 移动平均平滑
 
 平滑噪声值序列。完整参考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 区域感知列表格式化
+
+依某语言的期望串接项目(「A、B and C」)。完整参考:[`docs/source/Zh/doc/new_features/v112_features_doc.rst`](../docs/source/Zh/doc/new_features/v112_features_doc.rst)。
+
+- **`format_list`**(`AC_format_list`):直接 `", ".join` 只会得到「A, B, C」,没有「and/or」也没有在地化。本功能实作 CLDR 列表样式组合,支援连接(and)/选择(or)/单位(unit)样式,并依区域提供连接词与序列逗号规则(`en`/`es`/`fr`/`de`/`pt`)——`format_list(["a","b","c"])` → 「a, b, and c」,`locale="es"` → 「a, b y c」。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — 双向文字 QA(Trojan-Source 扫描)
 

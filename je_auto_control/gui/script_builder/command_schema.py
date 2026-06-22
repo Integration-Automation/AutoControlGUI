@@ -2128,6 +2128,18 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Remove all bidirectional control characters from a string.",
     ))
     specs.append(CommandSpec(
+        "AC_format_list", "Data", "Text: Format List",
+        fields=(
+            FieldSpec("items", FieldType.STRING,
+                      placeholder='["apple", "pear", "grape"]'),
+            FieldSpec("style", FieldType.STRING, optional=True,
+                      placeholder="and | or | unit"),
+            FieldSpec("locale", FieldType.STRING, optional=True,
+                      placeholder="en | es | fr | de | pt"),
+        ),
+        description="Join items into a localised list ('A, B, and C').",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,
