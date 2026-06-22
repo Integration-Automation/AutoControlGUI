@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — ORB Feature Matching (Rotation / Scale / Theme Robust)
+
+Find a target even when it is rotated, rescaled or re-themed. Full reference: [`docs/source/Eng/doc/new_features/v131_features_doc.rst`](docs/source/Eng/doc/new_features/v131_features_doc.rst).
+
+- **`feature_match`** (`AC_feature_match`): pixel template matching (`match_template` / `match_masked`) correlates pixels, so it breaks the moment the target is rotated, scaled by an unlisted factor, or re-coloured (light/dark theme, hover). This matches ORB *keypoints* and fits a RANSAC homography, returning the four projected `corners`, the `center`, the `inliers` count and an inlier-fraction `score`. ORB border/patch sizes auto-scale down for icon-sized templates (OpenCV's defaults reject them). Core OpenCV only (no contrib); injectable haystack → headless-testable.
+
 ## What's new (2026-06-23) — Structural-Similarity (SSIM) Comparison
 
 Perceptual screen comparison that tells you *what* changed. Full reference: [`docs/source/Eng/doc/new_features/v130_features_doc.rst`](docs/source/Eng/doc/new_features/v130_features_doc.rst).

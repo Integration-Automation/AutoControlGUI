@@ -2113,6 +2113,12 @@ def ssim_changed_regions(reference, current=None, ignore=None, threshold=0.35,
                                  region)
 
 
+def feature_match(template, region=None, max_features=500, ratio=0.75,
+                  min_inliers=10):
+    from je_auto_control.utils.executor.action_executor import _feature_match
+    return _feature_match(template, region, max_features, ratio, min_inliers)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

@@ -2648,6 +2648,29 @@ def color_region_tools() -> List[MCPTool]:
     ]
 
 
+def feature_match_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_feature_match",
+            description=("Locate 'template' (image path) on screen by ORB "
+                         "keypoints + a RANSAC homography — robust to ROTATION, "
+                         "SCALE and theme/colour change, where pixel template "
+                         "matching fails. Returns {found, match:{corners (4 "
+                         "points), center, inliers, matches, score}}. 'min_inliers' "
+                         "is the confidence floor; 'ratio' the match cutoff."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "max_features": {"type": "integer"},
+                "ratio": {"type": "number"},
+                "min_inliers": {"type": "integer"}},
+                required=["template"]),
+            handler=h.feature_match,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6149,7 +6172,8 @@ ALL_FACTORIES = (
     process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
     modifier_state_tools, grid_locator_tools, visual_match_tools,
-    color_region_tools, ssim_tools, plugin_sdk_tools, governance_tools,
+    color_region_tools, ssim_tools, feature_match_tools, plugin_sdk_tools,
+    governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
