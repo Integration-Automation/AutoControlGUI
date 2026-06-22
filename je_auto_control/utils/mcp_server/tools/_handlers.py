@@ -1910,6 +1910,16 @@ def detect_anomalies(values, method="mad", threshold=None):
     return _detect_anomalies(values, method, threshold)
 
 
+def sma(values, window):
+    from je_auto_control.utils.executor.action_executor import _sma
+    return _sma(values, window)
+
+
+def ewma(values, alpha=0.3):
+    from je_auto_control.utils.executor.action_executor import _ewma
+    return _ewma(values, alpha)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

@@ -3423,6 +3423,24 @@ def _detect_anomalies(values: Any, method: str = "mad",
                                         threshold=threshold)}
 
 
+def _sma(values: Any, window: Any) -> Dict[str, Any]:
+    """Adapter: trailing simple moving average."""
+    import json
+    from je_auto_control.utils.smoothing import sma
+    if isinstance(values, str):
+        values = json.loads(values)
+    return {"series": sma(values, int(window))}
+
+
+def _ewma(values: Any, alpha: Any = 0.3) -> Dict[str, Any]:
+    """Adapter: exponentially-weighted moving average."""
+    import json
+    from je_auto_control.utils.smoothing import ewma
+    if isinstance(values, str):
+        values = json.loads(values)
+    return {"series": ewma(values, alpha=float(alpha))}
+
+
 def _evaluate_slo(records: Any, target: float,
                   window_s: Optional[float] = None) -> Dict[str, Any]:
     """Adapter: SLI + error budget for outcome records (list or JSON string)."""
@@ -4524,6 +4542,8 @@ class Executor:
             "AC_ts_rate": _ts_rate,
             "AC_ts_downsample": _ts_downsample,
             "AC_detect_anomalies": _detect_anomalies,
+            "AC_sma": _sma,
+            "AC_ewma": _ewma,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,
