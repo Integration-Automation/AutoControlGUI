@@ -211,6 +211,8 @@ from je_auto_control.utils.sequence_gap import SequenceTracker
 from je_auto_control.utils.optimistic import (
     VersionConflict, VersionedStore, check_if_match, if_match_header,
 )
+# Transactional outbox (durable at-least-once event delivery)
+from je_auto_control.utils.outbox import Outbox
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -940,6 +942,7 @@ __all__ = [
     "IdempotencyConflict", "IdempotencyStore", "request_fingerprint",
     "DedupWindow", "SequenceTracker",
     "VersionConflict", "VersionedStore", "check_if_match", "if_match_header",
+    "Outbox",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

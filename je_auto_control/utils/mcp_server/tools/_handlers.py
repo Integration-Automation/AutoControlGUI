@@ -1952,6 +1952,16 @@ def cas_get(name, key):
     return _cas_get(name, key)
 
 
+def outbox_enqueue(name, event):
+    from je_auto_control.utils.executor.action_executor import _outbox_enqueue
+    return _outbox_enqueue(name, event)
+
+
+def outbox_pending(name):
+    from je_auto_control.utils.executor.action_executor import _outbox_pending
+    return _outbox_pending(name)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

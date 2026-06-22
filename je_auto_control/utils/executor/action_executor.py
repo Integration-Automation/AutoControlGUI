@@ -2933,6 +2933,27 @@ _IDEMPOTENCY_STORES: Dict[str, Any] = {}
 _DEDUP_WINDOWS: Dict[str, Any] = {}
 _SEQUENCE_TRACKERS: Dict[str, Any] = {}
 _VERSIONED_STORES: Dict[str, Any] = {}
+_OUTBOXES: Dict[str, Any] = {}
+
+
+def _outbox_enqueue(name: str, event: Any) -> Dict[str, Any]:
+    """Adapter: enqueue an event into a named outbox."""
+    import json
+    from je_auto_control.utils.outbox import Outbox
+    if isinstance(event, str):
+        try:
+            event = json.loads(event)
+        except ValueError:
+            pass
+    outbox = _OUTBOXES.setdefault(name, Outbox())
+    return {"id": outbox.enqueue(event), "pending": len(outbox.pending())}
+
+
+def _outbox_pending(name: str) -> Dict[str, Any]:
+    """Adapter: list pending entries of a named outbox."""
+    from je_auto_control.utils.outbox import Outbox
+    outbox = _OUTBOXES.setdefault(name, Outbox())
+    return {"pending": outbox.pending()}
 
 
 def _cas_put(name: str, key: str, value: Any,
@@ -4615,6 +4636,8 @@ class Executor:
             "AC_sequence_observe": _sequence_observe,
             "AC_cas_put": _cas_put,
             "AC_cas_get": _cas_get,
+            "AC_outbox_enqueue": _outbox_enqueue,
+            "AC_outbox_pending": _outbox_pending,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,
