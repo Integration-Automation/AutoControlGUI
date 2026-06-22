@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Window Tiling / Layout Geometry Planner
+
+Compute where to place application windows — halves, grids, cascades. Full reference: [`docs/source/Eng/doc/new_features/v133_features_doc.rst`](docs/source/Eng/doc/new_features/v133_features_doc.rst).
+
+- **`tile_rect` / `grid_rects` / `cascade_rects`** (`AC_tile_rect`, `AC_grid_rects`, `AC_cascade_rects`): `save/restore_window_layout` replay *exact* saved positions and `snap_window` moves *one* window — nothing *computes* a fresh multi-window layout. This pure-geometry planner returns the target rectangles for halves, quadrants, thirds, an R×C grid and a staggered cascade given a screen work area, so a script can lay out windows deterministically. Returns `WindowRect` (`.as_tuple()` / `.to_dict()`); `gap` insets tiles; cross-platform and fully headless-testable; composes with any window-move backend.
+
 ## What's new (2026-06-23) — Locate UI Elements by Edge / Contour (No Template)
 
 Find the clickable boxes on a screen you have never seen. Full reference: [`docs/source/Eng/doc/new_features/v132_features_doc.rst`](docs/source/Eng/doc/new_features/v132_features_doc.rst).

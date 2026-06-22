@@ -2130,6 +2130,21 @@ def find_rectangles(region=None, min_area=400, max_area=None, aspect_range=None,
     return _find_rectangles(region, min_area, max_area, aspect_range, epsilon)
 
 
+def tile_rect(slot, screen=None, gap=0):
+    from je_auto_control.utils.executor.action_executor import _tile_rect
+    return _tile_rect(slot, screen, gap)
+
+
+def grid_rects(rows, cols, screen=None, gap=0):
+    from je_auto_control.utils.executor.action_executor import _grid_rects
+    return _grid_rects(rows, cols, screen, gap)
+
+
+def cascade_rects(count, screen=None, offset=30, size=None):
+    from je_auto_control.utils.executor.action_executor import _cascade_rects
+    return _cascade_rects(count, screen, offset, size)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

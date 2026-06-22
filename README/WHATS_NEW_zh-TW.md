@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 視窗鋪排 / 版面幾何規劃器
+
+計算應用程式視窗該放在哪裡——半邊、網格、層疊。完整參考:[`docs/source/Zh/doc/new_features/v133_features_doc.rst`](../docs/source/Zh/doc/new_features/v133_features_doc.rst)。
+
+- **`tile_rect` / `grid_rects` / `cascade_rects`**(`AC_tile_rect`、`AC_grid_rects`、`AC_cascade_rects`):`save/restore_window_layout` 重播*精確*的已存位置、`snap_window` 移動*一個*視窗——沒有任何功能能*計算*出全新的多視窗版面。此純幾何規劃器在給定螢幕工作區下,回傳半邊、四分之一、三分之一、R×C 網格與錯位層疊的目標矩形,讓腳本能以決定性方式排列視窗。回傳 `WindowRect`(`.as_tuple()` / `.to_dict()`);`gap` 內縮鋪排間距;跨平台且完全無頭可測;可與任何視窗移動後端組合。
+
 ## 本次更新 (2026-06-23) — 以邊緣 / 輪廓定位 UI 元素(免模板)
 
 在從未見過的畫面上找出可點擊的方框。完整參考:[`docs/source/Zh/doc/new_features/v132_features_doc.rst`](../docs/source/Zh/doc/new_features/v132_features_doc.rst)。
