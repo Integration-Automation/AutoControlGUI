@@ -2596,6 +2596,24 @@ def tween_drag_tools() -> List[MCPTool]:
     ]
 
 
+def modifier_state_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_with_modifiers",
+            description=("Run 'actions' (a JSON action list) while 'modifiers' "
+                         "(e.g. ['ctrl'] or 'ctrl+shift') are held down; the "
+                         "modifiers are released even if an action fails. "
+                         "For shift-click range / ctrl-click multi-select."),
+            input_schema=schema({
+                "modifiers": {"type": "array", "items": {"type": "string"}},
+                "actions": {"type": "array"}},
+                required=["modifiers", "actions"]),
+            handler=h.with_modifiers,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def text_unicode_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5946,8 +5964,8 @@ ALL_FACTORIES = (
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
     process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
-    key_hold_tools, mouse_relative_tools, text_unicode_tools, plugin_sdk_tools,
-    governance_tools,
+    key_hold_tools, mouse_relative_tools, text_unicode_tools,
+    modifier_state_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

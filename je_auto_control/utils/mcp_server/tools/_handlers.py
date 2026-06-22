@@ -2058,6 +2058,11 @@ def type_unicode(text, modifier="ctrl"):
     return _type_unicode(text, modifier)
 
 
+def with_modifiers(modifiers, actions):
+    from je_auto_control.utils.executor.action_executor import _with_modifiers
+    return _with_modifiers(modifiers, actions)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

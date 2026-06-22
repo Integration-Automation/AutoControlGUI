@@ -267,6 +267,10 @@ from je_auto_control.utils.mouse_relative import (
 from je_auto_control.utils.text_unicode import (
     plan_paste, type_unicode, unicode_code_units,
 )
+# Hold modifier keys across a group of actions (release-on-error)
+from je_auto_control.utils.modifier_state import (
+    hold_modifiers, plan_with_modifiers,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1052,6 +1056,8 @@ __all__ = [
     "type_unicode",
     "plan_paste",
     "unicode_code_units",
+    "hold_modifiers",
+    "plan_with_modifiers",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
