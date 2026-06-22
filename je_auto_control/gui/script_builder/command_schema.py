@@ -2015,6 +2015,15 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Store the completed response for an idempotency key.",
     ))
     specs.append(CommandSpec(
+        "AC_dedup_check", "Flow", "Dedup Window: Check",
+        fields=(
+            FieldSpec("name", FieldType.STRING, placeholder="webhooks"),
+            FieldSpec("message_id", FieldType.STRING, placeholder="evt-123"),
+            FieldSpec("ttl_s", FieldType.FLOAT, optional=True, default=3600),
+        ),
+        description="Check-and-mark a message id; first_seen false on duplicate.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

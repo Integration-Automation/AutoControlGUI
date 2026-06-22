@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Time-Windowed Deduplication](#whats-new-2026-06-22--time-windowed-deduplication)
 - [What's new (2026-06-22) — Idempotency-Key Store](#whats-new-2026-06-22--idempotency-key-store)
 - [What's new (2026-06-22) — Moving-Average Smoothing](#whats-new-2026-06-22--moving-average-smoothing)
 - [What's new (2026-06-22) — Single-Series Anomaly Detection](#whats-new-2026-06-22--single-series-anomaly-detection)
@@ -155,6 +156,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Time-Windowed Deduplication
+
+Drop duplicate/redelivered messages within a TTL window. Full reference: [`docs/source/Eng/doc/new_features/v104_features_doc.rst`](docs/source/Eng/doc/new_features/v104_features_doc.rst).
+
+- **`DedupWindow`** (`AC_dedup_check`): `work_queue` dedups only in-flight references, so a completed reference re-enqueues and redelivered webhooks reprocess. This sliding-window inbox `check_and_mark`s a message id — `True` the first time, `False` for a duplicate within `ttl_s` — converting at-least-once delivery to exactly-once-in-window. Injectable clock, bounded size. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Idempotency-Key Store
 
