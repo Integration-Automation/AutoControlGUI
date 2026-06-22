@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 雙向文字 QA(Trojan-Source 掃描)](#本次更新-2026-06-22--雙向文字-qatrojan-source-掃描)
 - [本次更新 (2026-06-22) — 可讀性評分](#本次更新-2026-06-22--可讀性評分)
 - [本次更新 (2026-06-22) — 易混淆字元 / 同形異義字偵測](#本次更新-2026-06-22--易混淆字元--同形異義字偵測)
 - [本次更新 (2026-06-22) — 地區感知字串排序](#本次更新-2026-06-22--地區感知字串排序)
@@ -165,6 +166,12 @@
 ## 本次更新 (2026-06-22) — 移動平均平滑
 
 平滑雜訊值序列。完整參考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 雙向文字 QA(Trojan-Source 掃描)
+
+抓出隱形的 Unicode 方向格式控制(RTL QA + Trojan-source)。完整參考:[`docs/source/Zh/doc/new_features/v111_features_doc.rst`](../docs/source/Zh/doc/new_features/v111_features_doc.rst)。
+
+- **`detect_bidi_issues` / `bidi_controls` / `is_bidi_balanced` / `base_direction` / `is_trojan_source` / `strip_bidi_controls` / `has_bidi_controls`**(`AC_bidi_check`、`AC_bidi_strip`):`confusables` 抓相似字元,但雙向控制(LRO/RLO/PDF、隔離、標記)可悄悄改變呈現順序——既是 RTL QA 缺口,也是「Trojan Source」攻擊(CVE-2021-42574)。本功能列出控制字元、檢查巢狀平衡、推斷基底方向,並標記重排格式。純標準函式庫(`unicodedata`)、具決定性。
 
 ## 本次更新 (2026-06-22) — 可讀性評分
 

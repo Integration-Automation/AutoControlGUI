@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Bidirectional-Text QA (Trojan-Source Scan)](#whats-new-2026-06-22--bidirectional-text-qa-trojan-source-scan)
 - [What's new (2026-06-22) — Readability Scoring](#whats-new-2026-06-22--readability-scoring)
 - [What's new (2026-06-22) — Confusable / Homoglyph Detection](#whats-new-2026-06-22--confusable--homoglyph-detection)
 - [What's new (2026-06-22) — Locale-Aware String Collation](#whats-new-2026-06-22--locale-aware-string-collation)
@@ -162,6 +163,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Bidirectional-Text QA (Trojan-Source Scan)
+
+Catch invisible Unicode directional formatting (RTL QA + Trojan-source). Full reference: [`docs/source/Eng/doc/new_features/v111_features_doc.rst`](docs/source/Eng/doc/new_features/v111_features_doc.rst).
+
+- **`detect_bidi_issues` / `bidi_controls` / `is_bidi_balanced` / `base_direction` / `is_trojan_source` / `strip_bidi_controls` / `has_bidi_controls`** (`AC_bidi_check`, `AC_bidi_strip`): `confusables` catches lookalike characters, but bidi controls (LRO/RLO/PDF, isolates, marks) can silently reorder rendered text — an RTL-QA gap and the "Trojan Source" attack (CVE-2021-42574). This lists the controls, checks nesting balance, infers base direction, and flags reordering formatting. Pure-stdlib (`unicodedata`), deterministic.
 
 ## What's new (2026-06-22) — Readability Scoring
 
