@@ -2007,6 +2007,16 @@ def format_message(pattern, args=None, locale="en"):
     return _format_message(pattern, args, locale)
 
 
+def gettext_translate(po, msgid, context=None):
+    from je_auto_control.utils.executor.action_executor import _gettext_translate
+    return _gettext_translate(po, msgid, context)
+
+
+def gettext_ngettext(po, msgid, msgid_plural, n):
+    from je_auto_control.utils.executor.action_executor import _gettext_ngettext
+    return _gettext_ngettext(po, msgid, msgid_plural, n)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

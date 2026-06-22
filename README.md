@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — GNU gettext Catalog I/O (.po / .mo)](#whats-new-2026-06-22--gnu-gettext-catalog-io-po--mo)
 - [What's new (2026-06-22) — ICU-lite MessageFormat (Plural / Select)](#whats-new-2026-06-22--icu-lite-messageformat-plural--select)
 - [What's new (2026-06-22) — Locale-Aware List Formatting](#whats-new-2026-06-22--locale-aware-list-formatting)
 - [What's new (2026-06-22) — Bidirectional-Text QA (Trojan-Source Scan)](#whats-new-2026-06-22--bidirectional-text-qa-trojan-source-scan)
@@ -165,6 +166,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — GNU gettext Catalog I/O (.po / .mo)
+
+Read/compile the de-facto translation format. Full reference: [`docs/source/Eng/doc/new_features/v114_features_doc.rst`](docs/source/Eng/doc/new_features/v114_features_doc.rst).
+
+- **`parse_po` / `read_mo` / `GettextCatalog` / `parse_po_file` / `read_mo_file`** (`AC_gettext_translate`, `AC_gettext_ngettext`): the repo pseudo-localises and renders ICU messages but couldn't read GNU gettext `.po`/`.mo`. This parses `.po` (contexts, plurals, the `Plural-Forms` header via `gettext.c2py`), compiles a standards-compliant `.mo` that Python's own `gettext.GNUTranslations` loads, and exposes `gettext`/`ngettext`/`pgettext`. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — ICU-lite MessageFormat (Plural / Select)
 

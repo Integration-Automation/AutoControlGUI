@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — GNU gettext 目录 I/O(.po / .mo)](#本次更新-2026-06-22--gnu-gettext-目录-iopo--mo)
 - [本次更新 (2026-06-22) — ICU-lite MessageFormat(复数 / 选择)](#本次更新-2026-06-22--icu-lite-messageformat复数--选择)
 - [本次更新 (2026-06-22) — 区域感知列表格式化](#本次更新-2026-06-22--区域感知列表格式化)
 - [本次更新 (2026-06-22) — 双向文字 QA(Trojan-Source 扫描)](#本次更新-2026-06-22--双向文字-qatrojan-source-扫描)
@@ -168,6 +169,12 @@
 ## 本次更新 (2026-06-22) — 移动平均平滑
 
 平滑噪声值序列。完整参考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — GNU gettext 目录 I/O(.po / .mo)
+
+读取/编译事实标准翻译格式。完整参考:[`docs/source/Zh/doc/new_features/v114_features_doc.rst`](../docs/source/Zh/doc/new_features/v114_features_doc.rst)。
+
+- **`parse_po` / `read_mo` / `GettextCatalog` / `parse_po_file` / `read_mo_file`**(`AC_gettext_translate`、`AC_gettext_ngettext`):本项目能伪在地化并渲染 ICU 消息,却无法读取 GNU gettext `.po`/`.mo`。本功能解析 `.po`(上下文、复数、以 `gettext.c2py` 处理 `Plural-Forms` 标头)、编译可被 Python 内建 `gettext.GNUTranslations` 载入的标准 `.mo`,并提供 `gettext`/`ngettext`/`pgettext`。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — ICU-lite MessageFormat(复数 / 选择)
 

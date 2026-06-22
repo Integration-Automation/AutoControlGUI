@@ -241,6 +241,10 @@ from je_auto_control.utils.list_format import format_list
 from je_auto_control.utils.message_format import (
     format_message, ordinal_category, plural_category,
 )
+# GNU gettext catalog I/O (parse .po, compile/read .mo, message lookup)
+from je_auto_control.utils.gettext_catalog import (
+    GettextCatalog, parse_po, parse_po_file, read_mo, read_mo_file,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -998,6 +1002,11 @@ __all__ = [
     "format_message",
     "ordinal_category",
     "plural_category",
+    "GettextCatalog",
+    "parse_po",
+    "parse_po_file",
+    "read_mo",
+    "read_mo_file",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
