@@ -152,6 +152,7 @@ AutoControl 所有功能的完整使用指南。
    doc/new_features/v127_features_doc
    doc/new_features/v128_features_doc
    doc/new_features/v129_features_doc
+   doc/new_features/v130_features_doc
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
    doc/operations_layer/operations_layer_doc

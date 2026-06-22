@@ -314,6 +314,33 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Locate regions by colour (status light / banner / fill).",
     ))
+    specs.append(CommandSpec(
+        "AC_ssim_compare", "Image", "SSIM Compare",
+        fields=(
+            FieldSpec("reference", FieldType.FILE_PATH),
+            FieldSpec("current", FieldType.FILE_PATH, optional=True),
+            FieldSpec("ignore", FieldType.STRING, optional=True,
+                      placeholder="[[x, y, w, h], ...]"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+        ),
+        description="Structural-similarity score (0..1) vs reference / screen.",
+    ))
+    specs.append(CommandSpec(
+        "AC_ssim_changed_regions", "Image", "SSIM Changed Regions",
+        fields=(
+            FieldSpec("reference", FieldType.FILE_PATH),
+            FieldSpec("current", FieldType.FILE_PATH, optional=True),
+            FieldSpec("ignore", FieldType.STRING, optional=True,
+                      placeholder="[[x, y, w, h], ...]"),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True, default=0.35,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=50),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+        ),
+        description="Boxes of the regions that structurally changed.",
+    ))
 
 
 def _add_ocr_specs(specs: List[CommandSpec]) -> None:

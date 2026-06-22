@@ -2100,6 +2100,19 @@ def find_color_region(rgb, tolerance=20, min_area=50, region=None):
     return _find_color_region(rgb, tolerance, min_area, region)
 
 
+def ssim_compare(reference, current=None, ignore=None, region=None):
+    from je_auto_control.utils.executor.action_executor import _ssim_compare
+    return _ssim_compare(reference, current, ignore, region)
+
+
+def ssim_changed_regions(reference, current=None, ignore=None, threshold=0.35,
+                         min_area=50, region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _ssim_changed_regions)
+    return _ssim_changed_regions(reference, current, ignore, threshold, min_area,
+                                 region)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
