@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — ICU-lite MessageFormat (Plural / Select)](#whats-new-2026-06-22--icu-lite-messageformat-plural--select)
 - [What's new (2026-06-22) — Locale-Aware List Formatting](#whats-new-2026-06-22--locale-aware-list-formatting)
 - [What's new (2026-06-22) — Bidirectional-Text QA (Trojan-Source Scan)](#whats-new-2026-06-22--bidirectional-text-qa-trojan-source-scan)
 - [What's new (2026-06-22) — Readability Scoring](#whats-new-2026-06-22--readability-scoring)
@@ -164,6 +165,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — ICU-lite MessageFormat (Plural / Select)
+
+Render count-aware localised messages. Full reference: [`docs/source/Eng/doc/new_features/v113_features_doc.rst`](docs/source/Eng/doc/new_features/v113_features_doc.rst).
+
+- **`format_message` / `plural_category` / `ordinal_category`** (`AC_format_message`): `i18n_test.check_catalog` only compares placeholder sets and `interpolate` is flat `${var}` — neither renders `"{count, plural, one {# item} other {# items}}"`. This implements the ICU MessageFormat subset most apps use: `select`, `plural`, `selectordinal` with CLDR categories, exact `=N` selectors, the `#` count, `offset:`, nesting and apostrophe quoting. Injectable plural rules. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Locale-Aware List Formatting
 

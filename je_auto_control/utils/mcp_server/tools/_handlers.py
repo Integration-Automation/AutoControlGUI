@@ -2002,6 +2002,11 @@ def format_list(items, style="and", locale="en"):
     return _format_list(items, style, locale)
 
 
+def format_message(pattern, args=None, locale="en"):
+    from je_auto_control.utils.executor.action_executor import _format_message
+    return _format_message(pattern, args, locale)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

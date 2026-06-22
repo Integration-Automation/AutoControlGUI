@@ -3682,6 +3682,23 @@ def list_format_tools() -> List[MCPTool]:
     ]
 
 
+def message_format_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_format_message",
+            description=("Render an ICU-lite MessageFormat 'pattern' against "
+                         "'args' (plural/select/selectordinal, =N, #). "
+                         "'locale' picks plural rules. Returns {text}."),
+            input_schema=schema(
+                {"pattern": {"type": "string"}, "args": {"type": "object"},
+                 "locale": {"type": "string"}},
+                ["pattern"]),
+            handler=h.format_message,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def bidi_check_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5744,7 +5761,7 @@ ALL_FACTORIES = (
     timeseries_tools, anomaly_tools, smoothing_tools, idempotency_tools,
     dedup_window_tools, sequence_gap_tools, optimistic_tools, outbox_tools,
     locale_collation_tools, confusables_tools, readability_tools,
-    bidi_check_tools, list_format_tools,
+    bidi_check_tools, list_format_tools, message_format_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

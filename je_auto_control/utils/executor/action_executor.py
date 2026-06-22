@@ -3021,6 +3021,16 @@ def _format_list(items: Any, style: str = "and",
     return {"text": format_list(list(items), style=style, locale=locale)}
 
 
+def _format_message(pattern: str, args: Any = None,
+                    locale: str = "en") -> Dict[str, Any]:
+    """Adapter: render an ICU-lite MessageFormat pattern."""
+    import json
+    from je_auto_control.utils.message_format import format_message
+    if isinstance(args, str):
+        args = json.loads(args)
+    return {"text": format_message(pattern, args or {}, locale=locale)}
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4711,6 +4721,7 @@ class Executor:
             "AC_bidi_check": _bidi_check,
             "AC_bidi_strip": _bidi_strip,
             "AC_format_list": _format_list,
+            "AC_format_message": _format_message,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,
