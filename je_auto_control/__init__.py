@@ -257,6 +257,8 @@ from je_auto_control.utils.mouse_path import (
 )
 # Clear-then-type a text field (Playwright `fill` idiom; paste for Unicode)
 from je_auto_control.utils.field_entry import plan_field_set, set_field_text
+# Hold a key for a duration / auto-repeat at a fixed rate
+from je_auto_control.utils.key_hold import hold_key, plan_key_hold
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1034,6 +1036,8 @@ __all__ = [
     "path_easings",
     "plan_field_set",
     "set_field_text",
+    "plan_key_hold",
+    "hold_key",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

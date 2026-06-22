@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Hold Key / Auto-Repeat
+
+Hold a key for a duration, or auto-repeat it at a fixed rate. Full reference: [`docs/source/Eng/doc/new_features/v119_features_doc.rst`](docs/source/Eng/doc/new_features/v119_features_doc.rst).
+
+- **`hold_key` / `plan_key_hold`** (`AC_hold_key`): `type_keyboard` is an instant down+up — there was no "hold this key for N seconds" (game movement, hold-to-scroll) or "send it at R presses/second" (auto-repeat). `plan_key_hold` builds the deterministic op-plan (press/wait/release, or N spaced key events for `rate_hz`); `hold_key` routes waits to an injectable `sleep` and keys to an injectable `sink`. Pure-planning, deterministic.
+
 ## What's new (2026-06-23) — Wait Until Gone (Blocking Vanish Waits)
 
 Block until a spinner / toast / dialog disappears. Full reference: [`docs/source/Eng/doc/new_features/v118_features_doc.rst`](docs/source/Eng/doc/new_features/v118_features_doc.rst).

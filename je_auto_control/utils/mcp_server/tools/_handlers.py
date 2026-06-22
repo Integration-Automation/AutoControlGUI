@@ -2043,6 +2043,11 @@ def set_field_text(text, clear="select_all", paste=False, modifier="ctrl"):
     return _set_field_text(text, clear, paste, modifier)
 
 
+def hold_key(key, duration_s=1.0, rate_hz=None):
+    from je_auto_control.utils.executor.action_executor import _hold_key
+    return _hold_key(key, duration_s, rate_hz)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
