@@ -203,6 +203,8 @@ from je_auto_control.utils.resilience import (
 from je_auto_control.utils.idempotency import (
     IdempotencyConflict, IdempotencyStore, request_fingerprint,
 )
+# Time-windowed message deduplication (exactly-once inbox)
+from je_auto_control.utils.dedup_window import DedupWindow
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -930,6 +932,7 @@ __all__ = [
     "replay_timeline", "run_sequence",
     "CircuitBreaker", "CircuitOpenError", "RetryPolicy", "retry_call",
     "IdempotencyConflict", "IdempotencyStore", "request_fingerprint",
+    "DedupWindow",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

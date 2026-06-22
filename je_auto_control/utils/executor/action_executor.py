@@ -2930,6 +2930,16 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
 
 _BULKHEADS: Dict[str, Any] = {}
 _IDEMPOTENCY_STORES: Dict[str, Any] = {}
+_DEDUP_WINDOWS: Dict[str, Any] = {}
+
+
+def _dedup_check(name: str, message_id: str,
+                 ttl_s: Any = 3600) -> Dict[str, Any]:
+    """Adapter: check-and-mark a message id in a named dedup window."""
+    from je_auto_control.utils.dedup_window import DedupWindow
+    window = _DEDUP_WINDOWS.setdefault(name, DedupWindow(float(ttl_s)))
+    return {"first_seen": window.check_and_mark(message_id),
+            "size": window.size()}
 
 
 def _idempotency_begin(name: str, key: str,
@@ -4566,6 +4576,7 @@ class Executor:
             "AC_ewma": _ewma,
             "AC_idempotency_begin": _idempotency_begin,
             "AC_idempotency_complete": _idempotency_complete,
+            "AC_dedup_check": _dedup_check,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

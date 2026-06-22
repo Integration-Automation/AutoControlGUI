@@ -3548,6 +3548,23 @@ def dataset_diff_tools() -> List[MCPTool]:
     ]
 
 
+def dedup_window_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_dedup_check",
+            description=("Check-and-mark a 'message_id' in a named dedup window "
+                         "'name' (TTL 'ttl_s'). Returns {first_seen, size} — "
+                         "first_seen is false for a duplicate within the window."),
+            input_schema=schema(
+                {"name": {"type": "string"},
+                 "message_id": {"type": "string"}, "ttl_s": {"type": "number"}},
+                ["name", "message_id"]),
+            handler=h.dedup_check,
+            annotations=NON_DESTRUCTIVE,
+        ),
+    ]
+
+
 def idempotency_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5553,6 +5570,7 @@ ALL_FACTORIES = (
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
     timeseries_tools, anomaly_tools, smoothing_tools, idempotency_tools,
+    dedup_window_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

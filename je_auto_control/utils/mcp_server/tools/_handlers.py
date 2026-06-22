@@ -1932,6 +1932,11 @@ def idempotency_complete(name, key, response):
     return _idempotency_complete(name, key, response)
 
 
+def dedup_check(name, message_id, ttl_s=3600):
+    from je_auto_control.utils.executor.action_executor import _dedup_check
+    return _dedup_check(name, message_id, ttl_s)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
