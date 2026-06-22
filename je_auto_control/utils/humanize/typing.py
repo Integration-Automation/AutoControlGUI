@@ -24,7 +24,7 @@ def humanized_key_delays(text: str, *, base_delay: float = 0.05,
     delays: List[float] = []
     for _ in text:
         delay = max(0.0, base_delay + rng.uniform(-jitter, jitter))
-        if pause_chance and rng.random() < pause_chance:
+        if pause_chance and rng.random() < pause_chance:  # NOSONAR S2245 non-crypto
             delay += pause_delay
         delays.append(delay)
     return delays

@@ -53,5 +53,5 @@ def test_move_mouse_humanized_walks_the_path(monkeypatch):
         sleep=slept.append,
     )
     assert calls == path
-    assert calls[-1] == (80, 40)
+    assert calls and calls[-1] == (80, 40)
     assert slept  # the injected sleep was invoked per waypoint

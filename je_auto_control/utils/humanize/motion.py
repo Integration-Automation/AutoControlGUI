@@ -65,7 +65,7 @@ def humanized_path(start: Point, end: Point,
     ex, ey = float(end[0]), float(end[1])
     dx, dy = ex - sx, ey - sy
     dist = math.hypot(dx, dy)
-    if dist == 0.0:
+    if dist < 1e-9:                       # start == end: a single point
         return [(_round(ex), _round(ey))]
     perp_x, perp_y = -dy / dist, dx / dist
     bow = motion.curve * dist * rng.uniform(-1.0, 1.0)

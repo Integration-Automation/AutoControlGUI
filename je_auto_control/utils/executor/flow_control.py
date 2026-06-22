@@ -409,12 +409,12 @@ def exec_random_to_var(executor: Any,
     rng = random.Random(args.get("seed"))  # nosec B311  # reason: non-crypto test data
     kind = str(args.get("kind", "int"))
     if kind == "choice":
-        value: Any = rng.choice(list(args.get("choices") or [None]))
+        value: Any = rng.choice(list(args.get("choices") or [None]))  # NOSONAR S2245 non-crypto seeded
     elif kind == "float":
         value = rng.uniform(float(args.get("min", 0.0)),
                             float(args.get("max", 1.0)))
     else:
-        value = rng.randint(int(args.get("min", 0)), int(args.get("max", 100)))
+        value = rng.randint(int(args.get("min", 0)), int(args.get("max", 100)))  # NOSONAR S2245 non-crypto
     var_name = args.get("var", "random")
     executor.variables.set(var_name, value)
     return {"var": var_name, "value": value}

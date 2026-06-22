@@ -1,6 +1,7 @@
 """Tests for region colour statistics (pure-Pillow analysis)."""
 import io
 
+import pytest
 from PIL import Image
 
 from je_auto_control.utils.color_stats import region_color_stats
@@ -16,7 +17,7 @@ def test_solid_color_average_and_dominant(tmp_path):
     stats = region_color_stats(str(_solid(tmp_path, (200, 50, 50))))
     assert stats.average_rgb == (200, 50, 50)
     assert stats.dominant_rgb == (200, 50, 50)
-    assert stats.dominant_fraction == 1.0
+    assert stats.dominant_fraction == pytest.approx(1.0)
     assert stats.pixel_count > 0
 
 
