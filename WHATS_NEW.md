@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Wait for Region Colour
+
+Block until a colour fills (or leaves) a screen region. Full reference: [`docs/source/Eng/doc/new_features/v121_features_doc.rst`](docs/source/Eng/doc/new_features/v121_features_doc.rst).
+
+- **`wait_until_color`** (`AC_wait_color`): `wait_for_pixel` matches one point exactly and `wait_until_pixel_changes` detects any change at one point — neither waits for "the status light turns green" / "the progress bar fills" / "the red banner is gone". This counts pixels within `tolerance` of `target_rgb` over a region and succeeds when that fraction crosses `min_fraction` (or drops below it, `present=False`). Injectable sampler, headless-testable. Pure-stdlib.
+
 ## What's new (2026-06-23) — Relative Mouse Movement
 
 Nudge the pointer by a delta from where it is. Full reference: [`docs/source/Eng/doc/new_features/v120_features_doc.rst`](docs/source/Eng/doc/new_features/v120_features_doc.rst).

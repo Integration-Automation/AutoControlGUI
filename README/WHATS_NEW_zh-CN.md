@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 等待区域颜色
+
+阻塞直到某颜色填满(或离开)屏幕区域。完整参考:[`docs/source/Zh/doc/new_features/v121_features_doc.rst`](../docs/source/Zh/doc/new_features/v121_features_doc.rst)。
+
+- **`wait_until_color`**(`AC_wait_color`):`wait_for_pixel` 精确比对单点、`wait_until_pixel_changes` 检测单点任何变化——两者都无法等「状态灯变绿」/「进度条填满」/「红色横幅消失」。本功能计数区域中接近 `target_rgb`(在 `tolerance` 内)的像素,当比例越过 `min_fraction`(或 `present=False` 时低于)即成功。可注入 sampler、无头可测。纯标准库。
+
 ## 本次更新 (2026-06-23) — 相对鼠标移动
 
 从当前位置将指针位移一个增量。完整参考:[`docs/source/Zh/doc/new_features/v120_features_doc.rst`](../docs/source/Zh/doc/new_features/v120_features_doc.rst)。

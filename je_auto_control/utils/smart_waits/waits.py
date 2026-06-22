@@ -446,6 +446,55 @@ def wait_until_text_gone(text: str, *, timeout_s: float = 10.0,
                            poll_interval_s=poll_interval_s, gone_for_s=gone_for_s)
 
 
+def _color_fraction(frame: "Frame", target: Sequence[int],
+                    tolerance: int) -> float:
+    """Fraction of the frame's pixels within ``tolerance`` of ``target`` RGB."""
+    pixels = frame.pixels
+    total = len(pixels) // 3
+    if total == 0:
+        return 0.0
+    red, green, blue = int(target[0]), int(target[1]), int(target[2])
+    tol = int(tolerance)
+    matched = 0
+    for offset in range(0, total * 3, 3):
+        if (abs(pixels[offset] - red) <= tol
+                and abs(pixels[offset + 1] - green) <= tol
+                and abs(pixels[offset + 2] - blue) <= tol):
+            matched += 1
+    return matched / total
+
+
+def wait_until_color(*, region: Optional[Sequence[int]] = None,
+                     target_rgb: Sequence[int], tolerance: int = 10,
+                     min_fraction: float = 0.5, present: bool = True,
+                     timeout_s: float = 10.0, poll_interval_s: float = 0.2,
+                     sampler: Optional[ScreenSampler] = None) -> WaitOutcome:
+    """Wait until ``target_rgb`` covers (or stops covering) a fraction of ``region``.
+
+    Counts pixels within ``tolerance`` (per channel) of ``target_rgb``. With
+    ``present=True`` the wait succeeds once that fraction reaches
+    ``min_fraction`` (a status light turns green, a progress bar fills); with
+    ``present=False`` it succeeds once the fraction drops below it (the colour
+    disappears). ``sampler`` is injectable for headless tests.
+    """
+    if timeout_s <= 0:
+        raise ValueError(_TIMEOUT_POSITIVE)
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
+    grab = sampler or _default_sampler
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    while time.monotonic() < deadline:
+        samples += 1
+        fraction = _color_fraction(grab(region), target_rgb, tolerance)
+        reached = fraction >= float(min_fraction)
+        if reached == bool(present):
+            return _finish(True, "colour condition met", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, "timeout while waiting for colour", started, samples)
+
+
 def _default_process_lister(name: str) -> List[str]:
     """List running process names matching ``name`` (requires psutil)."""
     from je_auto_control.utils.assertion.assertions import _running_process_names

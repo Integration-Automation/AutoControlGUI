@@ -1306,6 +1306,24 @@ def smart_wait_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_wait_color",
+            description=("Block until 'target_rgb' [r,g,b] covers >= "
+                         "'min_fraction' of 'region' [l,t,r,b] within "
+                         "'tolerance' (present=True), or drops below it "
+                         "(present=False). A status-light / progress-bar wait."),
+            input_schema=schema({
+                "target_rgb": {"type": "array", "items": {"type": "integer"}},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "tolerance": {"type": "integer"},
+                "min_fraction": {"type": "number"},
+                "present": {"type": "boolean"},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"}},
+                required=["target_rgb"]),
+            handler=h.wait_color,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_wait_screen_stable",
             description=("Block until the screen stops moving (consecutive "
                          "frames differ by <= max_pixel_diff bytes for "
