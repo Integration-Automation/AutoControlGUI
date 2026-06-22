@@ -2140,6 +2140,17 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Join items into a localised list ('A, B, and C').",
     ))
     specs.append(CommandSpec(
+        "AC_format_message", "Data", "Text: Format Message (ICU)",
+        fields=(
+            FieldSpec("pattern", FieldType.STRING,
+                      placeholder="{count, plural, one {# item} other {# items}}"),
+            FieldSpec("args", FieldType.STRING, placeholder='{"count": 3}'),
+            FieldSpec("locale", FieldType.STRING, optional=True,
+                      placeholder="en | fr"),
+        ),
+        description="Render ICU plural/select/selectordinal message.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

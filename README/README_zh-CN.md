@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — ICU-lite MessageFormat(复数 / 选择)](#本次更新-2026-06-22--icu-lite-messageformat复数--选择)
 - [本次更新 (2026-06-22) — 区域感知列表格式化](#本次更新-2026-06-22--区域感知列表格式化)
 - [本次更新 (2026-06-22) — 双向文字 QA(Trojan-Source 扫描)](#本次更新-2026-06-22--双向文字-qatrojan-source-扫描)
 - [本次更新 (2026-06-22) — 可读性评分](#本次更新-2026-06-22--可读性评分)
@@ -167,6 +168,12 @@
 ## 本次更新 (2026-06-22) — 移动平均平滑
 
 平滑噪声值序列。完整参考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — ICU-lite MessageFormat(复数 / 选择)
+
+渲染依数量变化的在地化消息。完整参考:[`docs/source/Zh/doc/new_features/v113_features_doc.rst`](../docs/source/Zh/doc/new_features/v113_features_doc.rst)。
+
+- **`format_message` / `plural_category` / `ordinal_category`**(`AC_format_message`):`i18n_test.check_catalog` 只比较占位符集合、`interpolate` 只做扁平 `${var}`——两者都无法渲染 `"{count, plural, one {# item} other {# items}}"`。本功能实作多数应用会用到的 ICU MessageFormat 子集:`select`、`plural`、`selectordinal` 搭配 CLDR 类别、优先于类别的精确 `=N` 选择器、`#` 数量、`offset:`、嵌套与单引号转义。复数规则可注入。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — 区域感知列表格式化
 
