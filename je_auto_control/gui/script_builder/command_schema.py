@@ -2033,6 +2033,24 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Classify a sequence number (ok/duplicate/gap/reorder).",
     ))
     specs.append(CommandSpec(
+        "AC_cas_put", "Flow", "Optimistic: Put (CAS)",
+        fields=(
+            FieldSpec("name", FieldType.STRING, placeholder="config"),
+            FieldSpec("key", FieldType.STRING, placeholder="db.host"),
+            FieldSpec("value", FieldType.STRING, placeholder='"prod-1"'),
+            FieldSpec("expected_version", FieldType.INT, optional=True),
+        ),
+        description="Put only if expected_version matches (returns new version).",
+    ))
+    specs.append(CommandSpec(
+        "AC_cas_get", "Flow", "Optimistic: Get",
+        fields=(
+            FieldSpec("name", FieldType.STRING, placeholder="config"),
+            FieldSpec("key", FieldType.STRING, placeholder="db.host"),
+        ),
+        description="Read a versioned record {value, version}.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 乐观并发版本存储](#本次更新-2026-06-22--乐观并发版本存储)
 - [本次更新 (2026-06-22) — 逐流序号间隙检测](#本次更新-2026-06-22--逐流序号间隙检测)
 - [本次更新 (2026-06-22) — 时间窗口去重](#本次更新-2026-06-22--时间窗口去重)
 - [本次更新 (2026-06-22) — 幂等键存储](#本次更新-2026-06-22--幂等键存储)
@@ -160,6 +161,12 @@
 ## 本次更新 (2026-06-22) — 移动平均平滑
 
 平滑噪声值序列。完整参考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 乐观并发版本存储
+
+只在版本未变时更新(compare-and-swap / If-Match)。完整参考:[`docs/source/Zh/doc/new_features/v106_features_doc.rst`](../docs/source/Zh/doc/new_features/v106_features_doc.rst)。
+
+- **`VersionedStore` / `VersionConflict` / `if_match_header` / `check_if_match`**(`AC_cas_put`、`AC_cas_get`):`http_conditional` 以 ETag 做读取缓存,但从不用于写入并发。本地 compare-and-swap 存储仅在 `expected_version` 相符时 `put`(过时写入抛出 `VersionConflict`)、递增单调版本,并桥接到 HTTP `If-Match` —— ETag 故事的写入面。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — 逐流序号间隙检测
 

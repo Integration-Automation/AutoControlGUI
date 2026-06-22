@@ -3548,6 +3548,34 @@ def dataset_diff_tools() -> List[MCPTool]:
     ]
 
 
+def optimistic_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_cas_put",
+            description=("Optimistic put 'value' at 'key' in named store 'name' "
+                         "if 'expected_version' matches (0=absent, omit=blind). "
+                         "Returns {ok, version} or {ok: false, error}."),
+            input_schema=schema(
+                {"name": {"type": "string"}, "key": {"type": "string"},
+                 "value": {"type": "object"},
+                 "expected_version": {"type": "integer"}},
+                ["name", "key", "value"]),
+            handler=h.cas_put,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_cas_get",
+            description=("Read {record: {value, version}} (or null) for 'key' in "
+                         "named versioned store 'name'."),
+            input_schema=schema(
+                {"name": {"type": "string"}, "key": {"type": "string"}},
+                ["name", "key"]),
+            handler=h.cas_get,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def sequence_gap_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5587,7 +5615,7 @@ ALL_FACTORIES = (
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
     timeseries_tools, anomaly_tools, smoothing_tools, idempotency_tools,
-    dedup_window_tools, sequence_gap_tools,
+    dedup_window_tools, sequence_gap_tools, optimistic_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
