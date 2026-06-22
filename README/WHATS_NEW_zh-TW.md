@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 依顏色定位螢幕區域
+
+依顏色找出綠色狀態藥丸 / 紅色橫幅。完整參考:[`docs/source/Zh/doc/new_features/v128_features_doc.rst`](../docs/source/Zh/doc/new_features/v128_features_doc.rst)。
+
+- **`find_color_region` / `find_color_regions`**(`AC_find_color_region`):`color_stats` 只描述區域顏色、`assert_pixel` 檢查單點——兩者都不*定位*彩色區域。本功能將接近目標 RGB(在 `tolerance` 內)的像素遮罩起來,回傳相連區塊的框(`{x,y,width,height,area,center}`,由大到小)——用於模板脆弱的狀態燈、進度填充、錯誤橫幅。可注入 haystack → 無頭可測;OpenCV/NumPy 透過 `je_open_cv`。
+
 ## 本次更新 (2026-06-23) — 具信心分數的模板比對
 
 回傳分數、搜尋多尺度、找出所有出現處的模板比對。完整參考:[`docs/source/Zh/doc/new_features/v127_features_doc.rst`](../docs/source/Zh/doc/new_features/v127_features_doc.rst)。

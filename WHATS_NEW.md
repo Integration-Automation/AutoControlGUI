@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Locate On-Screen Regions by Colour
+
+Find the green status pill / red banner by colour. Full reference: [`docs/source/Eng/doc/new_features/v128_features_doc.rst`](docs/source/Eng/doc/new_features/v128_features_doc.rst).
+
+- **`find_color_region` / `find_color_regions`** (`AC_find_color_region`): `color_stats` only describes a region's colour and `assert_pixel` checks one point — neither *locates* a coloured region. This masks pixels within `tolerance` of a target RGB and returns the connected blobs' boxes (`{x,y,width,height,area,center}`, largest first) — for status lights, progress fills, error banners where a template is brittle. Injectable haystack → headless-testable; OpenCV/NumPy via `je_open_cv`.
+
 ## What's new (2026-06-23) — Confidence-Returning Template Matching
 
 Template matching that returns the score, searches multiple scales, and finds all occurrences. Full reference: [`docs/source/Eng/doc/new_features/v127_features_doc.rst`](docs/source/Eng/doc/new_features/v127_features_doc.rst).

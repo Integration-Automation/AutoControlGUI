@@ -278,6 +278,17 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Find every occurrence of a template (scored, NMS-deduped).",
     ))
+    specs.append(CommandSpec(
+        "AC_find_color_region", "Image", "Find Colour Region",
+        fields=(
+            FieldSpec("rgb", FieldType.STRING, placeholder="[0, 200, 0]"),
+            FieldSpec("tolerance", FieldType.INT, optional=True, default=20),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=50),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+        ),
+        description="Locate regions by colour (status light / banner / fill).",
+    ))
 
 
 def _add_ocr_specs(specs: List[CommandSpec]) -> None:

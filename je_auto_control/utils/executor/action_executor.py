@@ -3229,6 +3229,22 @@ def _match_template_all(template: str, min_score: Any = 0.8,
     return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
 
 
+def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
+                       region: Any = None) -> Dict[str, Any]:
+    """Adapter: locate coloured regions on the screen, largest first."""
+    import json
+    from je_auto_control.utils.color_region import find_color_regions
+    if isinstance(rgb, str):
+        rgb = json.loads(rgb)
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    regions = find_color_regions(list(rgb), region=region,
+                                 tolerance=int(tolerance),
+                                 min_area=int(min_area))
+    return {"count": len(regions), "regions": regions,
+            "best": regions[0] if regions else None}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -4948,6 +4964,7 @@ class Executor:
             "AC_grid_cell": _grid_cell,
             "AC_match_template": _match_template,
             "AC_match_template_all": _match_template_all,
+            "AC_find_color_region": _find_color_region,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,
