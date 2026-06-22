@@ -2613,6 +2613,27 @@ def tween_drag_tools() -> List[MCPTool]:
     ]
 
 
+def grid_locator_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_grid_cell",
+            description=("Address a table cell: cluster 'boxes' ([[x,y,w,h],...] "
+                         "from an image/OCR enumeration) into a grid and return "
+                         "the centre of cell ('row','col') (0-based). "
+                         "Returns {found, center, row, col, rows, cols}."),
+            input_schema=schema({
+                "boxes": {"type": "array",
+                          "items": {"type": "array",
+                                    "items": {"type": "integer"}}},
+                "row": {"type": "integer"}, "col": {"type": "integer"},
+                "row_tolerance": {"type": "integer"}},
+                required=["boxes", "row", "col"]),
+            handler=h.grid_cell,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def modifier_state_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5982,7 +6003,8 @@ ALL_FACTORIES = (
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
     process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
-    modifier_state_tools, plugin_sdk_tools, governance_tools,
+    modifier_state_tools, grid_locator_tools, plugin_sdk_tools,
+    governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

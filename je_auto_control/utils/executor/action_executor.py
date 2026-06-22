@@ -3175,6 +3175,17 @@ def _type_unicode(text: str, modifier: str = "ctrl") -> Dict[str, Any]:
     return type_unicode(text, modifier=modifier)
 
 
+def _grid_cell(boxes: Any, row: Any, col: Any,
+               row_tolerance: Any = 10) -> Dict[str, Any]:
+    """Adapter: address a grid cell by (row, col) from a JSON list of boxes."""
+    import json
+    from je_auto_control.utils.grid_locator import locate_cell
+    if isinstance(boxes, str):
+        boxes = json.loads(boxes)
+    return locate_cell(list(boxes), int(row), int(col),
+                       row_tolerance=int(row_tolerance))
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -4891,6 +4902,7 @@ class Executor:
             "AC_move_mouse_relative": _move_mouse_relative,
             "AC_type_unicode": _type_unicode,
             "AC_with_modifiers": _with_modifiers,
+            "AC_grid_cell": _grid_cell,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

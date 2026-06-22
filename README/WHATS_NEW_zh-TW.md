@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 表格 / 格線儲存格定位
+
+依(列、欄)從儲存格邊界框定位表格儲存格。完整參考:[`docs/source/Zh/doc/new_features/v125_features_doc.rst`](../docs/source/Zh/doc/new_features/v125_features_doc.rst)。
+
+- **`cluster_grid` / `locate_cell`**(`AC_grid_cell`):`anchor_locator` 處理成對關係,但無法定位二維格線。給定儲存格邊界框(來自 `locate_all_image` / `find_text_matches`),本功能將其分群為列(依中心 y 在 `row_tolerance` 內)與欄(依中心 x),並回傳 0 起算 `(row, col)` 儲存格的中心——可直接點擊。純分群、完全無頭可測。
+
 ## 本次更新 (2026-06-23) — 錨點序數與全部定位
 
 挑選第 N 個錨點相對比對,或列舉全部。完整參考:[`docs/source/Zh/doc/new_features/v124_features_doc.rst`](../docs/source/Zh/doc/new_features/v124_features_doc.rst)。

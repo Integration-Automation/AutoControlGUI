@@ -801,6 +801,17 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Move the pointer by (dx, dy) from its current position.",
     ))
     specs.append(CommandSpec(
+        "AC_grid_cell", "Mouse", "Grid Cell (row / col)",
+        fields=(
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder="[[10,100,20,10],[110,100,20,10], ...]"),
+            FieldSpec("row", FieldType.INT, placeholder="0"),
+            FieldSpec("col", FieldType.INT, placeholder="0"),
+            FieldSpec("row_tolerance", FieldType.INT, optional=True, default=10),
+        ),
+        description="Resolve a table cell centre by row/col from cell boxes.",
+    ))
+    specs.append(CommandSpec(
         "AC_list_plugins", "Tools", "List Plugin Commands",
         fields=(FieldSpec("group", FieldType.STRING, optional=True,
                           default="je_auto_control.commands"),),

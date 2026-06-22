@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Grid / Table Cell Addressing
+
+Address a table cell by (row, column) from cell bounding boxes. Full reference: [`docs/source/Eng/doc/new_features/v125_features_doc.rst`](docs/source/Eng/doc/new_features/v125_features_doc.rst).
+
+- **`cluster_grid` / `locate_cell`** (`AC_grid_cell`): `anchor_locator` does pairwise relations but nothing addresses a 2-D grid. Given the cell bounding boxes (from `locate_all_image` / `find_text_matches`), this clusters them into rows (by centre-y within `row_tolerance`) and columns (by centre-x) and returns the centre of the 0-based `(row, col)` cell — ready to click. Pure clustering, fully headless-testable.
+
 ## What's new (2026-06-23) — Anchor Ordinal & Locate-All
 
 Pick the Nth anchor-relative match, or enumerate them all. Full reference: [`docs/source/Eng/doc/new_features/v124_features_doc.rst`](docs/source/Eng/doc/new_features/v124_features_doc.rst).
