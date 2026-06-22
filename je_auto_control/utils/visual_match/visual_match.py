@@ -85,7 +85,7 @@ def _haystack_gray(haystack: Optional[ImageSource],
 
 def _resize(template, scale: float):
     import cv2
-    if scale == 1.0:
+    if abs(scale - 1.0) < 1e-9:
         return template
     height, width = template.shape[:2]
     new_size = (max(1, round(width * scale)), max(1, round(height * scale)))
@@ -156,7 +156,7 @@ def match_template_all(template: ImageSource, *,
     hay = _haystack_gray(haystack, region)
     height, width = tmpl.shape[:2]
     result = cv2.matchTemplate(hay, tmpl, cv2.TM_CCOEFF_NORMED)
-    ys, xs = np.where(result >= float(min_score))
+    ys, xs = np.nonzero(result >= float(min_score))
     candidates = [Match(int(x), int(y), width, height,
                         round(float(result[y, x]), 4), 1.0)
                   for y, x in zip(ys, xs)]
