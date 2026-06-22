@@ -3031,6 +3031,22 @@ def _format_message(pattern: str, args: Any = None,
     return {"text": format_message(pattern, args or {}, locale=locale)}
 
 
+def _gettext_translate(po: str, msgid: str,
+                       context: Any = None) -> Dict[str, Any]:
+    """Adapter: parse a .po string and look up a singular translation."""
+    from je_auto_control.utils.gettext_catalog import parse_po
+    catalog = parse_po(po)
+    return {"text": catalog.gettext(msgid, context=context or None)}
+
+
+def _gettext_ngettext(po: str, msgid: str, msgid_plural: str,
+                      n: Any) -> Dict[str, Any]:
+    """Adapter: parse a .po string and look up a plural translation."""
+    from je_auto_control.utils.gettext_catalog import parse_po
+    catalog = parse_po(po)
+    return {"text": catalog.ngettext(msgid, msgid_plural, int(n))}
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4722,6 +4738,8 @@ class Executor:
             "AC_bidi_strip": _bidi_strip,
             "AC_format_list": _format_list,
             "AC_format_message": _format_message,
+            "AC_gettext_translate": _gettext_translate,
+            "AC_gettext_ngettext": _gettext_ngettext,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

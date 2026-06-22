@@ -3682,6 +3682,33 @@ def list_format_tools() -> List[MCPTool]:
     ]
 
 
+def gettext_catalog_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_gettext_translate",
+            description=("Parse a gettext '.po' string 'po' and translate "
+                         "'msgid' (optional 'context'). Returns {text}."),
+            input_schema=schema(
+                {"po": {"type": "string"}, "msgid": {"type": "string"},
+                 "context": {"type": "string"}},
+                ["po", "msgid"]),
+            handler=h.gettext_translate,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_gettext_ngettext",
+            description=("Parse a '.po' string 'po' and pick the plural-correct "
+                         "translation of 'msgid'/'msgid_plural' for count 'n'."),
+            input_schema=schema(
+                {"po": {"type": "string"}, "msgid": {"type": "string"},
+                 "msgid_plural": {"type": "string"}, "n": {"type": "integer"}},
+                ["po", "msgid", "msgid_plural", "n"]),
+            handler=h.gettext_ngettext,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def message_format_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5762,6 +5789,7 @@ ALL_FACTORIES = (
     dedup_window_tools, sequence_gap_tools, optimistic_tools, outbox_tools,
     locale_collation_tools, confusables_tools, readability_tools,
     bidi_check_tools, list_format_tools, message_format_tools,
+    gettext_catalog_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

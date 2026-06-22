@@ -2151,6 +2151,26 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Render ICU plural/select/selectordinal message.",
     ))
     specs.append(CommandSpec(
+        "AC_gettext_translate", "Data", "Text: gettext Translate (.po)",
+        fields=(
+            FieldSpec("po", FieldType.STRING,
+                      placeholder='msgid "Hello"\\nmsgstr "Hola"'),
+            FieldSpec("msgid", FieldType.STRING, placeholder="Hello"),
+            FieldSpec("context", FieldType.STRING, optional=True),
+        ),
+        description="Look up a singular translation in a gettext .po catalog.",
+    ))
+    specs.append(CommandSpec(
+        "AC_gettext_ngettext", "Data", "Text: gettext Plural (.po)",
+        fields=(
+            FieldSpec("po", FieldType.STRING, placeholder="(.po source)"),
+            FieldSpec("msgid", FieldType.STRING, placeholder="file"),
+            FieldSpec("msgid_plural", FieldType.STRING, placeholder="files"),
+            FieldSpec("n", FieldType.INT, placeholder="3"),
+        ),
+        description="Pick the plural-correct translation for count n.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,
