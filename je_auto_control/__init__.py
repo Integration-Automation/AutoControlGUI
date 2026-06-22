@@ -278,6 +278,10 @@ from je_auto_control.utils.visual_match import (
     best_matches, match_template, match_template_all,
 )
 from je_auto_control.utils.visual_match import Match as TemplateMatch
+# Locate on-screen regions by colour (mask + connected components)
+from je_auto_control.utils.color_region import (
+    find_color_region, find_color_regions,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1071,6 +1075,8 @@ __all__ = [
     "match_template",
     "match_template_all",
     "best_matches",
+    "find_color_region",
+    "find_color_regions",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

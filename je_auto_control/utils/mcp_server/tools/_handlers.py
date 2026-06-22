@@ -2081,6 +2081,12 @@ def match_template_all(template, min_score=0.8, max_results=20, nms_iou=0.3,
     return _match_template_all(template, min_score, max_results, nms_iou, region)
 
 
+def find_color_region(rgb, tolerance=20, min_area=50, region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _find_color_region)
+    return _find_color_region(rgb, tolerance, min_area, region)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

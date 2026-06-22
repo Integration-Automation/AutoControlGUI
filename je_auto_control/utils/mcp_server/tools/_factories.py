@@ -2628,6 +2628,26 @@ def tween_drag_tools() -> List[MCPTool]:
     ]
 
 
+def color_region_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_find_color_region",
+            description=("Locate on-screen regions matching 'rgb' [r,g,b] within "
+                         "'tolerance' (per channel), blobs >= 'min_area'. "
+                         "Returns {count, regions, best} (largest first). "
+                         "For status lights / progress bars / coloured banners."),
+            input_schema=schema({
+                "rgb": {"type": "array", "items": {"type": "integer"}},
+                "tolerance": {"type": "integer"},
+                "min_area": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["rgb"]),
+            handler=h.find_color_region,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def visual_match_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6055,7 +6075,7 @@ ALL_FACTORIES = (
     process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
     modifier_state_tools, grid_locator_tools, visual_match_tools,
-    plugin_sdk_tools, governance_tools,
+    color_region_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
