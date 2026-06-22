@@ -175,6 +175,17 @@ def _add_keyboard_specs(specs: List[CommandSpec]) -> None:
         description="Clear the focused field then enter text (paste for Unicode).",
     ))
     specs.append(CommandSpec(
+        "AC_hold_key", "Keyboard", "Hold Key",
+        fields=(
+            FieldSpec("key", FieldType.STRING, placeholder="e.g. key_d, space"),
+            FieldSpec("duration_s", FieldType.FLOAT, default=1.0,
+                      min_value=0.01),
+            FieldSpec("rate_hz", FieldType.FLOAT, optional=True,
+                      placeholder="auto-repeat presses/sec (blank = hold)"),
+        ),
+        description="Hold a key for a duration, or auto-repeat it at rate_hz.",
+    ))
+    specs.append(CommandSpec(
         "AC_hotkey", "Keyboard", "Hotkey",
         fields=(
             FieldSpec("key_code_list", FieldType.STRING,

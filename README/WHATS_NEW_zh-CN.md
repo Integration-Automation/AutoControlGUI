@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 按住按键 / 自动重复
+
+按住一个键一段时间,或以固定频率自动重复。完整参考:[`docs/source/Zh/doc/new_features/v119_features_doc.rst`](../docs/source/Zh/doc/new_features/v119_features_doc.rst)。
+
+- **`hold_key` / `plan_key_hold`**(`AC_hold_key`):`type_keyboard` 是瞬间按下+放开——先前没有「按住此键 N 秒」(游戏移动、按住滚动)或「每秒送 R 次」(自动重复)。`plan_key_hold` 建立确定性操作计划(按下/等待/放开,或为 `rate_hz` 产生 N 个间隔按键事件);`hold_key` 将等待导向可注入的 `sleep`、按键导向可注入的 `sink`。纯计划、确定。
+
 ## 本次更新 (2026-06-23) — 等待消失(阻塞式 vanish 等待)
 
 阻塞直到转圈圈 / toast / 对话框消失。完整参考:[`docs/source/Zh/doc/new_features/v118_features_doc.rst`](../docs/source/Zh/doc/new_features/v118_features_doc.rst)。

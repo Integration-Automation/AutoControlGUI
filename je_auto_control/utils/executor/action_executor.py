@@ -3123,6 +3123,14 @@ def _set_field_text(text: str, clear: str = "select_all", paste: Any = False,
                           modifier=modifier)
 
 
+def _hold_key(key: str, duration_s: Any = 1.0,
+              rate_hz: Any = None) -> Dict[str, Any]:
+    """Adapter: hold a key for a duration (or auto-repeat at rate_hz)."""
+    from je_auto_control.utils.key_hold import hold_key
+    rate = float(rate_hz) if rate_hz not in (None, "") else None
+    return hold_key(key, float(duration_s), rate_hz=rate)
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4821,6 +4829,7 @@ class Executor:
             "AC_move_along_path": _move_along_path,
             "AC_drag_path": _drag_path,
             "AC_set_field_text": _set_field_text,
+            "AC_hold_key": _hold_key,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,
