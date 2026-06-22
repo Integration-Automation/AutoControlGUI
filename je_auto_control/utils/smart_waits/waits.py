@@ -18,6 +18,7 @@ indefinitely. All capture is injectable for unit tests.
 """
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import asdict, dataclass
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
@@ -236,6 +237,52 @@ def wait_until_window_closed(title: str, *, case_sensitive: bool = False,
 def _default_window_finder(title: str, case_sensitive: bool) -> bool:
     from je_auto_control.wrapper.auto_control_window import find_window
     return find_window(title, case_sensitive=case_sensitive) is not None
+
+
+WindowTitleLister = Callable[[], List[str]]
+
+
+def _title_matches(titles: List[str], pattern: str,
+                   compiled: Optional["re.Pattern"]) -> bool:
+    if compiled is not None:
+        return any(compiled.search(title) for title in titles)
+    return any(pattern in title for title in titles)
+
+
+def wait_until_window_title(pattern: str, *, present: bool = True,
+                            regex: bool = True, timeout_s: float = 10.0,
+                            poll_interval_s: float = 0.2,
+                            title_lister: Optional[WindowTitleLister] = None
+                            ) -> WaitOutcome:
+    """Wait until a window whose title matches ``pattern`` appears (or vanishes).
+
+    Unlike ``wait_for_window`` (substring, appear only) this matches a regular
+    expression by default (``regex=False`` falls back to a substring test) and
+    can wait for the title to *vanish* with ``present=False`` — e.g. wait for a
+    browser tab to navigate to ``r".*— Checkout$"``. ``title_lister() -> [titles]``
+    is injectable for tests.
+    """
+    if timeout_s <= 0:
+        raise ValueError(_TIMEOUT_POSITIVE)
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
+    titles_of = title_lister or _default_title_lister
+    compiled = re.compile(pattern) if regex else None
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    while time.monotonic() < deadline:
+        samples += 1
+        if _title_matches(titles_of(), pattern, compiled) == bool(present):
+            return _finish(True, "window title condition met", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, "timeout while waiting for window title",
+                   started, samples)
+
+
+def _default_title_lister() -> List[str]:
+    from je_auto_control.wrapper.auto_control_window import list_windows
+    return [title for _id, title in list_windows()]
 
 
 FileStatReader = Callable[[str], Optional[int]]

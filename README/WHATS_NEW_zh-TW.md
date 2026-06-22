@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 等待視窗標題(正則)
+
+阻塞直到視窗標題符合正則(或消失)。完整參考:[`docs/source/Zh/doc/new_features/v126_features_doc.rst`](../docs/source/Zh/doc/new_features/v126_features_doc.rst)。
+
+- **`wait_until_window_title`**(`AC_wait_window_title`):`wait_for_window` 以子字串比對且僅等*出現*;`wait_until_window_closed` 為子字串消失。本功能預設以正則表達式比對(`regex=False` 改子字串),並可等待標題消失(`present=False`)——例如等分頁導覽至 `r".*— Checkout$"`。標題來源可注入、無頭可測。
+
 ## 本次更新 (2026-06-23) — 表格 / 格線儲存格定位
 
 依(列、欄)從儲存格邊界框定位表格儲存格。完整參考:[`docs/source/Zh/doc/new_features/v125_features_doc.rst`](../docs/source/Zh/doc/new_features/v125_features_doc.rst)。

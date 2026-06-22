@@ -513,6 +513,18 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
         description="Block until a colour fills (or leaves) a screen region.",
     ))
     specs.append(CommandSpec(
+        "AC_wait_window_title", "Flow", "Wait for Window Title",
+        fields=(
+            FieldSpec("pattern", FieldType.STRING, placeholder="Checkout$"),
+            FieldSpec("present", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("regex", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True, default=10.0),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.2, min_value=0.01),
+        ),
+        description="Block until a window title matches a regex (or vanishes).",
+    ))
+    specs.append(CommandSpec(
         "AC_loop", "Flow", "Loop (N times)",
         fields=(
             FieldSpec("times", FieldType.INT, default=3, min_value=1),

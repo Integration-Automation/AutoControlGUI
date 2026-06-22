@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 等待窗口标题(正则)
+
+阻塞直到窗口标题符合正则(或消失)。完整参考:[`docs/source/Zh/doc/new_features/v126_features_doc.rst`](../docs/source/Zh/doc/new_features/v126_features_doc.rst)。
+
+- **`wait_until_window_title`**(`AC_wait_window_title`):`wait_for_window` 以子字符串比对且仅等*出现*;`wait_until_window_closed` 为子字符串消失。本功能默认以正则表达式比对(`regex=False` 改子字符串),并可等待标题消失(`present=False`)——例如等标签页导览至 `r".*— Checkout$"`。标题来源可注入、无头可测。
+
 ## 本次更新 (2026-06-23) — 表格 / 网格单元格定位
 
 依(行、列)从单元格边界框定位表格单元格。完整参考:[`docs/source/Zh/doc/new_features/v125_features_doc.rst`](../docs/source/Zh/doc/new_features/v125_features_doc.rst)。

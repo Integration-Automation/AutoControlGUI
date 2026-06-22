@@ -2465,6 +2465,13 @@ def wait_color(target_rgb, region=None, tolerance=10, min_fraction=0.5,
                        present, timeout_s, poll_interval_s)
 
 
+def wait_window_title(pattern, present=True, regex=True, timeout_s=10.0,
+                      poll_interval_s=0.2):
+    from je_auto_control.utils.executor.action_executor import _wait_window_title
+    return _wait_window_title(pattern, present, regex, timeout_s,
+                              poll_interval_s)
+
+
 def wait_for_file(path: str, timeout_s: float = 30.0,
                   poll_interval_s: float = 0.25,
                   stable_for_s: float = 1.0,

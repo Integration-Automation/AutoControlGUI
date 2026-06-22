@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Wait for Window Title (Regex)
+
+Block until a window title matches a regex (or vanishes). Full reference: [`docs/source/Eng/doc/new_features/v126_features_doc.rst`](docs/source/Eng/doc/new_features/v126_features_doc.rst).
+
+- **`wait_until_window_title`** (`AC_wait_window_title`): `wait_for_window` matches a title substring and only waits for *appear*; `wait_until_window_closed` is substring vanish. This matches a regular expression by default (`regex=False` for substring) and can wait for the title to vanish (`present=False`) — e.g. wait for a tab to navigate to `r".*— Checkout$"`. Injectable title source, headless-testable.
+
 ## What's new (2026-06-23) — Grid / Table Cell Addressing
 
 Address a table cell by (row, column) from cell bounding boxes. Full reference: [`docs/source/Eng/doc/new_features/v125_features_doc.rst`](docs/source/Eng/doc/new_features/v125_features_doc.rst).
