@@ -3548,6 +3548,31 @@ def dataset_diff_tools() -> List[MCPTool]:
     ]
 
 
+def smoothing_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_sma",
+            description=("Trailing simple moving average of a numeric 'values' "
+                         "series over the last 'window' points. Returns {series}."),
+            input_schema=schema(
+                {"values": {"type": "array"}, "window": {"type": "integer"}},
+                ["values", "window"]),
+            handler=h.sma,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_ewma",
+            description=("Exponentially-weighted moving average of 'values' with "
+                         "smoothing factor 'alpha'. Returns {series}."),
+            input_schema=schema(
+                {"values": {"type": "array"}, "alpha": {"type": "number"}},
+                ["values"]),
+            handler=h.ewma,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def anomaly_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5499,7 +5524,7 @@ ALL_FACTORIES = (
     secret_ref_tools, config_schema_tools, config_redaction_tools,
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
-    timeseries_tools, anomaly_tools,
+    timeseries_tools, anomaly_tools, smoothing_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

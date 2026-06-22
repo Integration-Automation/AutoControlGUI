@@ -434,6 +434,8 @@ from je_auto_control.utils.anomaly import (
     detect_anomalies, ewma_control, mad_anomalies, mad_scores,
     zscore_anomalies, zscore_scores,
 )
+# Moving-average smoothing (SMA / WMA / EWMA / rolling)
+from je_auto_control.utils.smoothing import ewma, rolling, sma, wma
 # Bulkhead concurrency isolation + rate-limit header parsing
 from je_auto_control.utils.bulkhead import (
     Bulkhead, BulkheadFullError, next_delay, parse_ratelimit, parse_retry_after,
@@ -1005,6 +1007,7 @@ __all__ = [
     "ts_rate", "ts_resample",
     "detect_anomalies", "ewma_control", "mad_anomalies", "mad_scores",
     "zscore_anomalies", "zscore_scores",
+    "ewma", "rolling", "sma", "wma",
     "Bulkhead", "BulkheadFullError", "next_delay", "parse_ratelimit",
     "parse_retry_after",
     "Cassette", "CassetteMissError",

@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Moving-Average Smoothing](#whats-new-2026-06-22--moving-average-smoothing)
 - [What's new (2026-06-22) — Single-Series Anomaly Detection](#whats-new-2026-06-22--single-series-anomaly-detection)
 - [What's new (2026-06-22) — Near-Duplicate Text Detection (SimHash / MinHash)](#whats-new-2026-06-22--near-duplicate-text-detection-simhash--minhash)
 - [What's new (2026-06-22) — String-Distance Similarity Metrics](#whats-new-2026-06-22--string-distance-similarity-metrics)
@@ -153,6 +154,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Moving-Average Smoothing
+
+Smooth a noisy value series. Full reference: [`docs/source/Eng/doc/new_features/v102_features_doc.rst`](docs/source/Eng/doc/new_features/v102_features_doc.rst).
+
+- **`sma` / `wma` / `ewma` / `rolling`** (`AC_sma`, `AC_ewma`): `stats.describe` summarizes a whole sample and `timeseries` rolls counters into rates, but nothing smoothed a noisy signal. This adds trailing simple/weighted/exponentially-weighted moving averages and a generic rolling reducer, all returning a same-length list aligned to the input timeline. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Single-Series Anomaly Detection
 

@@ -1980,6 +1980,22 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Flag outliers in a numeric series (MAD / z-score).",
     ))
     specs.append(CommandSpec(
+        "AC_sma", "Data", "Smoothing: Simple Moving Average",
+        fields=(
+            FieldSpec("values", FieldType.STRING, placeholder="[1, 2, 3, 4, 5]"),
+            FieldSpec("window", FieldType.INT, placeholder="3"),
+        ),
+        description="Trailing simple moving average over a window.",
+    ))
+    specs.append(CommandSpec(
+        "AC_ewma", "Data", "Smoothing: EWMA",
+        fields=(
+            FieldSpec("values", FieldType.STRING, placeholder="[1, 2, 3, 4, 5]"),
+            FieldSpec("alpha", FieldType.FLOAT, optional=True, default=0.3),
+        ),
+        description="Exponentially-weighted moving average of a series.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,
