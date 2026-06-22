@@ -2648,6 +2648,49 @@ def color_region_tools() -> List[MCPTool]:
     ]
 
 
+def ssim_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_ssim_compare",
+            description=("Structural-similarity (SSIM) score 0..1 between "
+                         "'reference' (image path) and 'current' (path; default: "
+                         "screen grab of 'region'). 1.0 = identical. 'ignore' is "
+                         "a list of [x,y,w,h] boxes to exclude (clocks/cursors). "
+                         "Returns {score}. Perceptual, unlike pixel diff."),
+            input_schema=schema({
+                "reference": {"type": "string"},
+                "current": {"type": "string"},
+                "ignore": {"type": "array",
+                           "items": {"type": "array",
+                                     "items": {"type": "integer"}}},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["reference"]),
+            handler=h.ssim_compare,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_ssim_changed_regions",
+            description=("Boxes of the regions that STRUCTURALLY changed between "
+                         "'reference' and 'current' (default: screen). A pixel "
+                         "changed where 1-SSIM > 'threshold'; blobs >= 'min_area'. "
+                         "'ignore' [x,y,w,h] boxes suppressed. Returns "
+                         "{count, regions} (largest first)."),
+            input_schema=schema({
+                "reference": {"type": "string"},
+                "current": {"type": "string"},
+                "ignore": {"type": "array",
+                           "items": {"type": "array",
+                                     "items": {"type": "integer"}}},
+                "threshold": {"type": "number"},
+                "min_area": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["reference"]),
+            handler=h.ssim_changed_regions,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def visual_match_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6106,7 +6149,7 @@ ALL_FACTORIES = (
     process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
     modifier_state_tools, grid_locator_tools, visual_match_tools,
-    color_region_tools, plugin_sdk_tools, governance_tools,
+    color_region_tools, ssim_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

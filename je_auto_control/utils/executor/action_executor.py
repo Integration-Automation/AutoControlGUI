@@ -3273,6 +3273,35 @@ def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
             "best": regions[0] if regions else None}
 
 
+def _ssim_compare(reference: str, current: Any = None, ignore: Any = None,
+                  region: Any = None) -> Dict[str, Any]:
+    """Adapter: structural-similarity score between reference and current/screen."""
+    import json
+    from je_auto_control.utils.ssim import ssim_compare
+    if isinstance(ignore, str):
+        ignore = json.loads(ignore) if ignore.strip() else None
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    score = ssim_compare(reference, current, ignore=ignore, region=region)
+    return {"score": score}
+
+
+def _ssim_changed_regions(reference: str, current: Any = None, ignore: Any = None,
+                          threshold: Any = 0.35, min_area: Any = 50,
+                          region: Any = None) -> Dict[str, Any]:
+    """Adapter: boxes of the regions that structurally changed, largest first."""
+    import json
+    from je_auto_control.utils.ssim import ssim_changed_regions
+    if isinstance(ignore, str):
+        ignore = json.loads(ignore) if ignore.strip() else None
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    regions = ssim_changed_regions(reference, current, ignore=ignore,
+                                   threshold=float(threshold),
+                                   min_area=int(min_area), region=region)
+    return {"count": len(regions), "regions": regions}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -4994,6 +5023,8 @@ class Executor:
             "AC_match_template_all": _match_template_all,
             "AC_match_masked": _match_masked,
             "AC_match_masked_all": _match_masked_all,
+            "AC_ssim_compare": _ssim_compare,
+            "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_find_color_region": _find_color_region,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,

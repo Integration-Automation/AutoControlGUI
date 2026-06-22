@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Structural-Similarity (SSIM) Comparison
+
+Perceptual screen comparison that tells you *what* changed. Full reference: [`docs/source/Eng/doc/new_features/v130_features_doc.rst`](docs/source/Eng/doc/new_features/v130_features_doc.rst).
+
+- **`ssim_compare` / `ssim_changed_regions`** (`AC_ssim_compare`, `AC_ssim_changed_regions`): pixel diff (`diff_screenshots`) fires on a one-pixel shift; a histogram (`detect_drift`) is blind to layout. SSIM is the standard visual-regression metric — tolerant of small illumination changes, sensitive to structural change. `ssim_compare` returns a 0..1 score (1.0 = identical); `ssim_changed_regions` returns boxes of what moved. `ignore=[[x,y,w,h]]` masks live clocks / cursors. Pure NumPy + OpenCV (no scikit-image); injectable image pair → headless-testable.
+
 ## What's new (2026-06-23) — Masked Template Matching
 
 Match icons regardless of their background. Full reference: [`docs/source/Eng/doc/new_features/v129_features_doc.rst`](docs/source/Eng/doc/new_features/v129_features_doc.rst).

@@ -283,6 +283,10 @@ from je_auto_control.utils.visual_match import Match as TemplateMatch
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
 )
+# Structural-similarity comparison (perceptual score + changed regions)
+from je_auto_control.utils.ssim import (
+    ssim_changed_regions, ssim_compare,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1080,6 +1084,8 @@ __all__ = [
     "best_matches",
     "find_color_region",
     "find_color_regions",
+    "ssim_compare",
+    "ssim_changed_regions",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

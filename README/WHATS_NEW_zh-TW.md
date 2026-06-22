@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 結構相似度(SSIM)比較
+
+會告訴你*哪裡*變了的感知式畫面比較。完整參考:[`docs/source/Zh/doc/new_features/v130_features_doc.rst`](../docs/source/Zh/doc/new_features/v130_features_doc.rst)。
+
+- **`ssim_compare` / `ssim_changed_regions`**(`AC_ssim_compare`、`AC_ssim_changed_regions`):像素差(`diff_screenshots`)會因一像素位移而誤報;直方圖(`detect_drift`)對版面無感。SSIM 是標準視覺回歸度量——容忍輕微光照變化、對結構變化敏感。`ssim_compare` 回傳 0..1 分數(1.0 = 完全相同);`ssim_changed_regions` 回傳哪裡移動了的方框。`ignore=[[x,y,w,h]]` 可遮罩即時時鐘 / 游標。純 NumPy + OpenCV(不需 scikit-image);可注入影像配對 → 無頭可測。
+
 ## 本次更新 (2026-06-23) — 遮罩模板比對
 
 不論背景如何都能比對圖示。完整參考:[`docs/source/Zh/doc/new_features/v129_features_doc.rst`](../docs/source/Zh/doc/new_features/v129_features_doc.rst)。

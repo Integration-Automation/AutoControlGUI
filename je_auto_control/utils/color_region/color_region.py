@@ -50,6 +50,7 @@ def find_color_regions(rgb: Sequence[int], *,
     """
     import cv2
     import numpy as np
+    from je_auto_control.utils.cv2_utils.blobs import connected_boxes
     image = _to_rgb(haystack) if haystack is not None else _grab_rgb(region)
     red, green, blue = (int(channel) for channel in rgb[:3])
     tol = int(tolerance)
@@ -58,17 +59,7 @@ def find_color_regions(rgb: Sequence[int], *,
     upper = np.array([min(255, red + tol), min(255, green + tol),
                       min(255, blue + tol)], dtype=np.uint8)
     mask = cv2.inRange(image, lower, upper)
-    count, _labels, stats, centroids = cv2.connectedComponentsWithStats(
-        mask, connectivity=8)
-    regions: List[Dict[str, Any]] = []
-    for index in range(1, count):                     # 0 is the background
-        x, y, width, height, area = (int(v) for v in stats[index])
-        if area >= int(min_area):
-            cx, cy = centroids[index]
-            regions.append({"x": x, "y": y, "width": width, "height": height,
-                            "area": area, "center": [int(cx), int(cy)]})
-    regions.sort(key=lambda item: item["area"], reverse=True)
-    return regions
+    return connected_boxes(mask, int(min_area))
 
 
 def find_color_region(rgb: Sequence[int], *,
