@@ -1920,6 +1920,18 @@ def ewma(values, alpha=0.3):
     return _ewma(values, alpha)
 
 
+def idempotency_begin(name, key, request=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _idempotency_begin)
+    return _idempotency_begin(name, key, request)
+
+
+def idempotency_complete(name, key, response):
+    from je_auto_control.utils.executor.action_executor import (
+        _idempotency_complete)
+    return _idempotency_complete(name, key, response)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 幂等键存储](#本次更新-2026-06-22--幂等键存储)
 - [本次更新 (2026-06-22) — 移动平均平滑](#本次更新-2026-06-22--移动平均平滑)
 - [本次更新 (2026-06-22) — 单序列异常检测](#本次更新-2026-06-22--单序列异常检测)
 - [本次更新 (2026-06-22) — 近似重复文本检测(SimHash / MinHash)](#本次更新-2026-06-22--近似重复文本检测simhash--minhash)
@@ -157,6 +158,12 @@
 ## 本次更新 (2026-06-22) — 移动平均平滑
 
 平滑噪声值序列。完整参考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 幂等键存储
+
+副作用只执行一次,重试时重播其响应。完整参考:[`docs/source/Zh/doc/new_features/v103_features_doc.rst`](../docs/source/Zh/doc/new_features/v103_features_doc.rst)。
+
+- **`IdempotencyStore` / `request_fingerprint` / `IdempotencyConflict`**(`AC_idempotency_begin`、`AC_idempotency_complete`):`RetryPolicy` 重试会重跑,`work_queue` 只对进行中引用去重 —— 没有东西缓存第一次结果。本 Stripe 风格存储为某键返回 `new`/`in_progress`/`completed`、重播已存储响应、指纹冲突时抛出异常,并支持可注入时钟 TTL + JSON 持久化。纯标准库、确定。
 
 - **`sma` / `wma` / `ewma` / `rolling`**(`AC_sma`、`AC_ewma`):`stats.describe` 汇总整个样本,`timeseries` 把计数器滚成速率,但没有东西能平滑噪声信号。本功能加入尾端简单/加权/指数加权移动平均与通用滚动归约器,全部返回与输入时间线对齐的等长 list。纯标准库、确定。
 

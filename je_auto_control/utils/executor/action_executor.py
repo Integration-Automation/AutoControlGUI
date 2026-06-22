@@ -2929,6 +2929,26 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
 
 
 _BULKHEADS: Dict[str, Any] = {}
+_IDEMPOTENCY_STORES: Dict[str, Any] = {}
+
+
+def _idempotency_begin(name: str, key: str,
+                       request: Any = None) -> Dict[str, Any]:
+    """Adapter: register/look up an idempotency key in a named store."""
+    from je_auto_control.utils.idempotency import (
+        IdempotencyStore, request_fingerprint)
+    store = _IDEMPOTENCY_STORES.setdefault(name, IdempotencyStore())
+    fingerprint = request_fingerprint(request) if request is not None else None
+    return store.begin(key, fingerprint)
+
+
+def _idempotency_complete(name: str, key: str,
+                          response: Any) -> Dict[str, Any]:
+    """Adapter: store the completed response for an idempotency key."""
+    from je_auto_control.utils.idempotency import IdempotencyStore
+    store = _IDEMPOTENCY_STORES.setdefault(name, IdempotencyStore())
+    store.complete(key, response)
+    return {"status": "completed"}
 
 
 def _bulkhead_run(name: str, max_concurrent: int,
@@ -4544,6 +4564,8 @@ class Executor:
             "AC_detect_anomalies": _detect_anomalies,
             "AC_sma": _sma,
             "AC_ewma": _ewma,
+            "AC_idempotency_begin": _idempotency_begin,
+            "AC_idempotency_complete": _idempotency_complete,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,
