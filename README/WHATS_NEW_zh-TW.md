@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 免模型文字區偵測(MSER)
+
+不跑 OCR 也能找出畫面上文字的位置。完整參考:[`docs/source/Zh/doc/new_features/v140_features_doc.rst`](../docs/source/Zh/doc/new_features/v140_features_doc.rst)。
+
+- **`find_text_regions` / `find_text_lines`**(`AC_find_text_regions`、`AC_find_text_lines`):`shape_locator` 找矩形(不是文字)、`locate_text` 需要 OCR 引擎*以及*確切字串——兩者都無法回答「哪裡有*任何*文字?」。MSER 找出字元 / 詞 / 行區塊,讓腳本能裁切候選框餵給 OCR(比全畫面更快更準),或在未安裝 OCR 相依時偵測標籤出現。`merge` 聯集 MSER 逐字元的巢狀區域;`find_text_lines` 將字元歸為逐行框;空白畫面回傳 `[]`。OpenCV 核心(`cv2.MSER_create`)、可注入 haystack → 無頭可測。
+
 ## 本次更新 (2026-06-23) — HSV 色彩空間分割
 
 不論光照都能找出「任一色階的紅色」。完整參考:[`docs/source/Zh/doc/new_features/v139_features_doc.rst`](../docs/source/Zh/doc/new_features/v139_features_doc.rst)。

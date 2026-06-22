@@ -417,6 +417,27 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Locate any shade of a hue, any brightness (handles red wrap).",
     ))
     specs.append(CommandSpec(
+        "AC_find_text_regions", "Image", "Find Text Regions (MSER)",
+        fields=(
+            FieldSpec("min_area", FieldType.INT, optional=True, default=60),
+            FieldSpec("max_area", FieldType.INT, optional=True),
+            FieldSpec("merge", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("max_aspect", FieldType.FLOAT, optional=True, default=12.0),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Locate text regions without OCR (crop to feed an OCR engine).",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_text_lines", "Image", "Find Text Lines (MSER)",
+        fields=(
+            FieldSpec("y_tolerance", FieldType.INT, optional=True, default=8),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Locate horizontal text lines without OCR.",
+    ))
+    specs.append(CommandSpec(
         "AC_fuse_elements", "Image", "Fuse Element Boxes",
         fields=(
             FieldSpec("ocr", FieldType.STRING, optional=True,

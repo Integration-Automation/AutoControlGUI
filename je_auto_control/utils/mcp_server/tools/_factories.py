@@ -2936,6 +2936,40 @@ def hsv_segment_tools() -> List[MCPTool]:
     ]
 
 
+def text_regions_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_find_text_regions",
+            description=("Locate text/glyph regions on screen via MSER — NO OCR "
+                         "engine or known string needed. Returns {count, regions:"
+                         "[{x,y,width,height,area,center}]} (largest first). "
+                         "'merge' unions nested glyph boxes; 'min_area'/'max_area'/"
+                         "'max_aspect' filter. Crop these to feed OCR."),
+            input_schema=schema({
+                "min_area": {"type": "integer"},
+                "max_area": {"type": "integer"},
+                "merge": {"type": "boolean"},
+                "max_aspect": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.find_text_regions,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_find_text_lines",
+            description=("Locate horizontal lines of text on screen via MSER: one "
+                         "box per line (glyphs within 'y_tolerance' px grouped). "
+                         "Returns {count, lines}. No OCR needed."),
+            input_schema=schema({
+                "y_tolerance": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.find_text_lines,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6440,7 +6474,7 @@ ALL_FACTORIES = (
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
     window_layout_tools, window_arrange_tools, preprocess_tools,
     monitor_layout_tools, actionability_tools, element_parse_tools,
-    hsv_segment_tools, plugin_sdk_tools, governance_tools,
+    hsv_segment_tools, text_regions_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

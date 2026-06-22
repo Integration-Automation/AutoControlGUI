@@ -3537,6 +3537,30 @@ def _dominant_hue_regions(hue: Any, hue_tol: Any = 10, sat_min: Any = 80,
             "best": boxes[0] if boxes else None}
 
 
+def _find_text_regions(min_area: Any = 60, max_area: Any = None, merge: Any = True,
+                       max_aspect: Any = 12.0, region: Any = None) -> Dict[str, Any]:
+    """Adapter: locate text/glyph regions on screen via MSER (no OCR)."""
+    import json
+    from je_auto_control.utils.text_regions import find_text_regions
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    regions = find_text_regions(
+        region=region, min_area=int(min_area),
+        max_area=int(max_area) if max_area is not None else None,
+        merge=bool(merge), max_aspect=float(max_aspect))
+    return {"count": len(regions), "regions": regions}
+
+
+def _find_text_lines(y_tolerance: Any = 8, region: Any = None) -> Dict[str, Any]:
+    """Adapter: locate horizontal text lines on screen via MSER (no OCR)."""
+    import json
+    from je_auto_control.utils.text_regions import find_text_lines
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    lines = find_text_lines(region=region, y_tolerance=int(y_tolerance))
+    return {"count": len(lines), "lines": lines}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5271,6 +5295,8 @@ class Executor:
             "AC_reading_order": _reading_order,
             "AC_segment_hsv": _segment_hsv,
             "AC_dominant_hue_regions": _dominant_hue_regions,
+            "AC_find_text_regions": _find_text_regions,
+            "AC_find_text_lines": _find_text_lines,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,
