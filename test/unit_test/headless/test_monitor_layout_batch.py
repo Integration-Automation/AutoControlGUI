@@ -64,7 +64,7 @@ def test_enumerate_monitors_with_injected_provider():
             {"x": 1920, "y": 0, "width": 1280, "height": 1024, "scale": 1.5}]
     mons = enumerate_monitors(provider=lambda: rows)
     assert [m.index for m in mons] == [0, 1]
-    assert mons[0].primary is True and mons[1].scale == 1.5
+    assert mons[0].primary is True and abs(mons[1].scale - 1.5) < 1e-9
     assert mons[1].x == 1920
 
 
