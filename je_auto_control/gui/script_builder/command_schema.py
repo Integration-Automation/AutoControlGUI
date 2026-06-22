@@ -341,6 +341,19 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Boxes of the regions that structurally changed.",
     ))
+    specs.append(CommandSpec(
+        "AC_feature_match", "Image", "Feature Match (ORB)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+            FieldSpec("max_features", FieldType.INT, optional=True, default=500),
+            FieldSpec("ratio", FieldType.FLOAT, optional=True, default=0.75,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("min_inliers", FieldType.INT, optional=True, default=10),
+        ),
+        description="Locate a template under rotation / scale / theme change.",
+    ))
 
 
 def _add_ocr_specs(specs: List[CommandSpec]) -> None:

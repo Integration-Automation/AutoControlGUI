@@ -3302,6 +3302,19 @@ def _ssim_changed_regions(reference: str, current: Any = None, ignore: Any = Non
     return {"count": len(regions), "regions": regions}
 
 
+def _feature_match(template: str, region: Any = None, max_features: Any = 500,
+                   ratio: Any = 0.75, min_inliers: Any = 10) -> Dict[str, Any]:
+    """Adapter: locate a template by ORB keypoints (rotation/scale/theme robust)."""
+    import json
+    from je_auto_control.utils.feature_match import feature_match
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = feature_match(template, region=region, max_features=int(max_features),
+                          ratio=float(ratio), min_inliers=int(min_inliers))
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5025,6 +5038,7 @@ class Executor:
             "AC_match_masked_all": _match_masked_all,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
+            "AC_feature_match": _feature_match,
             "AC_find_color_region": _find_color_region,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,

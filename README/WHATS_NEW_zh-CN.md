@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — ORB 特征匹配(对旋转 / 缩放 / 主题稳健)
+
+即使目标旋转、缩放或换主题也能找到。完整参考:[`docs/source/Zh/doc/new_features/v131_features_doc.rst`](../docs/source/Zh/doc/new_features/v131_features_doc.rst)。
+
+- **`feature_match`**(`AC_feature_match`):像素模板匹配(`match_template` / `match_masked`)是做像素相关运算,因此目标一旦旋转、以未列出的倍率缩放或重新上色(亮 / 暗主题、hover)就会失效。本功能匹配 ORB *关键点*并拟合 RANSAC 单应矩阵,返回四个投影 `corners`、`center`、`inliers` 内点数与内点比例 `score`。ORB 边界 / patch 尺寸会针对图标大小的模板自动缩小(OpenCV 预设会将其舍弃)。仅用 OpenCV 核心(不需 contrib);可注入 haystack → 无头可测。
+
 ## 本次更新 (2026-06-23) — 结构相似度(SSIM)比较
 
 会告诉你*哪里*变了的感知式画面比较。完整参考:[`docs/source/Zh/doc/new_features/v130_features_doc.rst`](../docs/source/Zh/doc/new_features/v130_features_doc.rst)。
