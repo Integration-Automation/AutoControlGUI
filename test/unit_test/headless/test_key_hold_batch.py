@@ -1,4 +1,6 @@
 """Headless tests for key hold / auto-repeat. No Qt."""
+import pytest
+
 import je_auto_control as ac
 from je_auto_control.utils.key_hold import hold_key, plan_key_hold
 
@@ -18,7 +20,7 @@ def test_repeat_plan_emits_n_key_events():
     waits = [event for event in plan if event["op"] == "wait"]
     assert len(keys) == 20
     assert len(waits) == 19                 # one fewer gap than events
-    assert waits[0]["seconds"] == 0.05      # 1 / 20 Hz
+    assert waits[0]["seconds"] == pytest.approx(0.05)   # 1 / 20 Hz
 
 
 def test_repeat_rounds_count_min_one():
@@ -56,7 +58,7 @@ def test_executor_adapter_planning():
     events, slept = [], []
     from je_auto_control.utils.key_hold import hold_key as _hk
     _hk("space", 0.2, sink=events.append, sleep=slept.append)
-    assert events[0]["op"] == "press" and events[-1]["op"] == "release"
+    assert events and events[0]["op"] == "press" and events[-1]["op"] == "release"
 
 
 def test_wiring():
