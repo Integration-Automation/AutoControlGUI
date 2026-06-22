@@ -43,7 +43,7 @@ def test_empty_text_is_zero():
     report = readability_report("")
     for key in ("flesch_reading_ease", "flesch_kincaid_grade", "gunning_fog",
                 "smog_index", "automated_readability_index"):
-        assert report[key] == 0.0
+        assert report[key] == pytest.approx(0.0)
     assert report["stats"]["words"] == 0
 
 
