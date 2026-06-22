@@ -3229,6 +3229,34 @@ def _match_template_all(template: str, min_score: Any = 0.8,
     return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
 
 
+def _match_masked(template: str, mask: Any = None, min_score: Any = 0.9,
+                  region: Any = None) -> Dict[str, Any]:
+    """Adapter: best masked template match (alpha / mask ignores background)."""
+    import json
+    from je_auto_control.utils.visual_match import match_masked
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = match_masked(template, mask=mask, region=region,
+                         min_score=float(min_score))
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
+def _match_masked_all(template: str, mask: Any = None, min_score: Any = 0.9,
+                      max_results: Any = 20, nms_iou: Any = 0.3,
+                      region: Any = None) -> Dict[str, Any]:
+    """Adapter: every masked template match on the screen (NMS)."""
+    import json
+    from je_auto_control.utils.visual_match import match_masked_all
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    matches = match_masked_all(template, mask=mask, region=region,
+                               min_score=float(min_score),
+                               max_results=int(max_results),
+                               nms_iou=float(nms_iou))
+    return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
+
+
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
                        region: Any = None) -> Dict[str, Any]:
     """Adapter: locate coloured regions on the screen, largest first."""
@@ -4964,6 +4992,8 @@ class Executor:
             "AC_grid_cell": _grid_cell,
             "AC_match_template": _match_template,
             "AC_match_template_all": _match_template_all,
+            "AC_match_masked": _match_masked,
+            "AC_match_masked_all": _match_masked_all,
             "AC_find_color_region": _find_color_region,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,

@@ -2081,6 +2081,19 @@ def match_template_all(template, min_score=0.8, max_results=20, nms_iou=0.3,
     return _match_template_all(template, min_score, max_results, nms_iou, region)
 
 
+def match_masked(template, mask=None, min_score=0.9, region=None):
+    from je_auto_control.utils.executor.action_executor import _match_masked
+    return _match_masked(template, mask, min_score, region)
+
+
+def match_masked_all(template, mask=None, min_score=0.9, max_results=20,
+                     nms_iou=0.3, region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _match_masked_all)
+    return _match_masked_all(template, mask, min_score, max_results, nms_iou,
+                             region)
+
+
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
     from je_auto_control.utils.executor.action_executor import (
         _find_color_region)

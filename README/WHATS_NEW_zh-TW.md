@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 遮罩模板比對
+
+不論背景如何都能比對圖示。完整參考:[`docs/source/Zh/doc/new_features/v129_features_doc.rst`](../docs/source/Zh/doc/new_features/v129_features_doc.rst)。
+
+- **`match_masked` / `match_masked_all`**(`AC_match_masked`、`AC_match_masked_all`):一般模板比對會計分*每個*像素,因此從某背景裁切出的圖示在不同背景上會比對失敗。本功能只計算你標記為相關的像素——明確的灰階 `mask`,或 RGBA 模板的 alpha 通道——讓透明 /「不在乎」的像素不再拉低分數。回傳與計分模板比對相同的 `Match`(score/center);使用 OpenCV 遮罩 `TM_CCORR_NORMED`,NaN 歸零。可注入 haystack → 無頭可測。
+
 ## 本次更新 (2026-06-23) — 依顏色定位螢幕區域
 
 依顏色找出綠色狀態藥丸 / 紅色橫幅。完整參考:[`docs/source/Zh/doc/new_features/v128_features_doc.rst`](../docs/source/Zh/doc/new_features/v128_features_doc.rst)。

@@ -2681,6 +2681,37 @@ def visual_match_tools() -> List[MCPTool]:
             handler=h.match_template_all,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_match_masked",
+            description=("Find 'template' on screen counting only masked/opaque "
+                         "pixels: a grayscale 'mask' (non-zero = use) or, if "
+                         "omitted, the template's RGBA alpha. For glyphs/icons "
+                         "over a transparent or varying background. Returns "
+                         "{found, match}. 'min_score', 'region'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "mask": {"type": "string"},
+                "min_score": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.match_masked,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_masked_all",
+            description=("Find EVERY masked match of 'template' >= 'min_score', "
+                         "overlaps removed by NMS. Returns {count, matches}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "mask": {"type": "string"},
+                "min_score": {"type": "number"},
+                "max_results": {"type": "integer"},
+                "nms_iou": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.match_masked_all,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

@@ -279,6 +279,31 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Find every occurrence of a template (scored, NMS-deduped).",
     ))
     specs.append(CommandSpec(
+        "AC_match_masked", "Image", "Match Masked Template",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("mask", FieldType.FILE_PATH, optional=True),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.9,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+        ),
+        description="Match counting only opaque/masked pixels (alpha or mask).",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_masked_all", "Image", "Match Masked Template All",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("mask", FieldType.FILE_PATH, optional=True),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.9,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("max_results", FieldType.INT, optional=True, default=20),
+            FieldSpec("nms_iou", FieldType.FLOAT, optional=True, default=0.3,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Find every masked match of a template (NMS-deduped).",
+    ))
+    specs.append(CommandSpec(
         "AC_find_color_region", "Image", "Find Colour Region",
         fields=(
             FieldSpec("rgb", FieldType.STRING, placeholder="[0, 200, 0]"),

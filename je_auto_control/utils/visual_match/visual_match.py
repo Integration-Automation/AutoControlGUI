@@ -170,3 +170,92 @@ def best_matches(template: ImageSource, *,
     """Return the top ``top_n`` matches by score (any score), nearest-best first."""
     return match_template_all(template, haystack=haystack, region=region,
                               min_score=-1.0, max_results=int(top_n))
+
+
+def _load_unchanged(source: ImageSource):
+    """Load a path / ndarray / PIL image keeping an alpha channel if present."""
+    import cv2
+    import numpy as np
+    if hasattr(source, "shape"):
+        return np.asarray(source)
+    if isinstance(source, (str, bytes)) or hasattr(source, "__fspath__"):
+        array = cv2.imread(str(source), cv2.IMREAD_UNCHANGED)
+        if array is None:
+            raise ValueError(f"could not read image: {source!r}")
+        return array
+    return np.asarray(source)
+
+
+def _template_and_mask(template: ImageSource, mask: Optional[ImageSource]):
+    """Return (gray_template, uint8_mask_or_None); alpha is the implicit mask."""
+    import cv2
+    import numpy as np
+    array = _load_unchanged(template)
+    if array.ndim == 3 and array.shape[2] == 4:
+        gray = cv2.cvtColor(array, cv2.COLOR_BGRA2GRAY)
+        implicit = array[:, :, 3]
+    else:
+        gray = _to_gray(array)
+        implicit = None
+    chosen = _to_gray(mask) if mask is not None else implicit
+    if chosen is None:
+        return gray, None
+    chosen = np.ascontiguousarray(chosen, dtype=np.uint8)
+    if chosen.shape[:2] != gray.shape[:2]:
+        raise ValueError("mask shape must match template shape")
+    return gray, chosen
+
+
+def _masked_scores(template: ImageSource, mask: Optional[ImageSource],
+                   haystack: Optional[ImageSource],
+                   region: Optional[Sequence[int]]):
+    """Return (score_map, gray_template) for masked correlation, NaNs zeroed."""
+    import cv2
+    import numpy as np
+    tmpl, msk = _template_and_mask(template, mask)
+    hay = _haystack_gray(haystack, region)
+    if tmpl.shape[0] > hay.shape[0] or tmpl.shape[1] > hay.shape[1]:
+        return None, tmpl
+    result = cv2.matchTemplate(hay, tmpl, cv2.TM_CCORR_NORMED, mask=msk)
+    return np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0), tmpl
+
+
+def match_masked(template: ImageSource, *, mask: Optional[ImageSource] = None,
+                 haystack: Optional[ImageSource] = None,
+                 region: Optional[Sequence[int]] = None,
+                 min_score: float = 0.9) -> Optional[Match]:
+    """Return the best match counting only masked (opaque) template pixels.
+
+    ``mask`` is a grayscale image where non-zero pixels participate; if omitted
+    and ``template`` is RGBA, its alpha channel is the mask. This finds icons /
+    buttons whose background is transparent or varies (a glyph over any colour)
+    where a plain template would be dragged down by the irrelevant pixels.
+    Returns ``None`` when nothing clears ``min_score``.
+    """
+    import cv2
+    scores, tmpl = _masked_scores(template, mask, haystack, region)
+    if scores is None:
+        return None
+    _, max_val, _, max_loc = cv2.minMaxLoc(scores)
+    if max_val < min_score:
+        return None
+    return Match(int(max_loc[0]), int(max_loc[1]), tmpl.shape[1], tmpl.shape[0],
+                 round(float(max_val), 4), 1.0)
+
+
+def match_masked_all(template: ImageSource, *, mask: Optional[ImageSource] = None,
+                     haystack: Optional[ImageSource] = None,
+                     region: Optional[Sequence[int]] = None,
+                     min_score: float = 0.9, max_results: int = 20,
+                     nms_iou: float = 0.3) -> List[Match]:
+    """Return every masked match >= ``min_score`` with overlaps removed (NMS)."""
+    import numpy as np
+    scores, tmpl = _masked_scores(template, mask, haystack, region)
+    if scores is None:
+        return []
+    height, width = tmpl.shape[:2]
+    ys, xs = np.nonzero(scores >= float(min_score))
+    candidates = [Match(int(x), int(y), width, height,
+                        round(float(scores[y, x]), 4), 1.0)
+                  for y, x in zip(ys, xs)]
+    return _nms(candidates, float(nms_iou))[:int(max_results)]

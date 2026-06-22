@@ -151,6 +151,7 @@ Comprehensive guides for all AutoControl features.
    doc/new_features/v126_features_doc
    doc/new_features/v127_features_doc
    doc/new_features/v128_features_doc
+   doc/new_features/v129_features_doc
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
    doc/operations_layer/operations_layer_doc
