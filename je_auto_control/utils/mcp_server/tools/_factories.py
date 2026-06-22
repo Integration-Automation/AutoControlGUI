@@ -2791,6 +2791,31 @@ def window_arrange_tools() -> List[MCPTool]:
     ]
 
 
+def preprocess_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_preprocess_image",
+            description=("Pre-process an image for OCR / template matching and "
+                         "WRITE the result to 'output_path'. 'source' is an image "
+                         "path (default: screen grab of 'region'). 'steps' is an "
+                         "ordered list from grayscale/upscale/binarize/denoise/"
+                         "deskew/contrast (default grayscale,upscale,binarize); "
+                         "'scale' for upscale. Returns {path, width, height}."),
+            input_schema=schema({
+                "output_path": {"type": "string"},
+                "source": {"type": "string"},
+                "steps": {"type": "array", "items": {"type": "string"}},
+                "scale": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "block_size": {"type": "integer"},
+                "c": {"type": "integer"}},
+                required=["output_path"]),
+            handler=h.preprocess_image,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6293,7 +6318,8 @@ ALL_FACTORIES = (
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
     modifier_state_tools, grid_locator_tools, visual_match_tools,
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
-    window_layout_tools, window_arrange_tools, plugin_sdk_tools, governance_tools,
+    window_layout_tools, window_arrange_tools, preprocess_tools, plugin_sdk_tools,
+    governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

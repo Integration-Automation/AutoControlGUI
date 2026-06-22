@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Image Pre-processing for OCR / Template Matching
+
+Clean up the screen before reading or matching it. Full reference: [`docs/source/Eng/doc/new_features/v135_features_doc.rst`](docs/source/Eng/doc/new_features/v135_features_doc.rst).
+
+- **`preprocess_image` + `to_grayscale` / `binarize` / `upscale` / `denoise` / `deskew` / `enhance_contrast`** (`AC_preprocess_image`): `locate_text` and `match_template` fed the *raw* capture to OCR / the matcher — small text, dark themes, low contrast and skew wrecked both, with no preprocessing seam anywhere. This adds the standard pipeline (grayscale → upscale → binarize → deskew → denoise → CLAHE) that multiplies their accuracy. Injectable haystack → ndarray; `detect_skew_angle` measures text rotation; `binarize` does otsu / adaptive. The executor command writes the cleaned image to a path. Headless-testable on synthetic arrays.
+
 ## What's new (2026-06-23) — Arrange Multiple Windows (Grid / Cascade)
 
 Lay out a whole set of windows in one call. Full reference: [`docs/source/Eng/doc/new_features/v134_features_doc.rst`](docs/source/Eng/doc/new_features/v134_features_doc.rst).

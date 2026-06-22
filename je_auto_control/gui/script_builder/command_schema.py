@@ -378,6 +378,19 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Locate rectangular regions (buttons / cards / input fields).",
     ))
+    specs.append(CommandSpec(
+        "AC_preprocess_image", "Image", "Preprocess Image (OCR/match)",
+        fields=(
+            FieldSpec("output_path", FieldType.FILE_PATH),
+            FieldSpec("source", FieldType.FILE_PATH, optional=True),
+            FieldSpec("steps", FieldType.STRING, optional=True,
+                      placeholder="grayscale,upscale,binarize"),
+            FieldSpec("scale", FieldType.FLOAT, optional=True, default=2.0),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+        ),
+        description="Clean up an image for OCR / matching (grayscale/binarize/…).",
+    ))
 
 
 def _add_ocr_specs(specs: List[CommandSpec]) -> None:

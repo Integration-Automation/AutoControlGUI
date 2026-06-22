@@ -2155,6 +2155,13 @@ def arrange_cascade(titles, offset=30):
     return _arrange_cascade(titles, offset)
 
 
+def preprocess_image(output_path, source=None, steps=None, scale=2.0, region=None,
+                     block_size=31, c=11):
+    from je_auto_control.utils.executor.action_executor import _preprocess_image
+    return _preprocess_image(output_path, source, steps, scale, region,
+                             block_size, c)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
