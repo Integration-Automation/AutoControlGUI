@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Relative Mouse Movement
+
+Nudge the pointer by a delta from where it is. Full reference: [`docs/source/Eng/doc/new_features/v120_features_doc.rst`](docs/source/Eng/doc/new_features/v120_features_doc.rst).
+
+- **`move_mouse_relative` / `relative_target`** (`AC_move_mouse_relative`): the mouse wrapper only had absolute `set_mouse_position` — no `moveRel(dx, dy)` for relative-pointer / canvas / FPS apps and incremental drags. Reads the live position and moves by the delta; `relative_target` is the pure arithmetic, and the getter/setter are injectable for headless tests. Pure-stdlib, deterministic.
+
 ## What's new (2026-06-23) — Hold Key / Auto-Repeat
 
 Hold a key for a duration, or auto-repeat it at a fixed rate. Full reference: [`docs/source/Eng/doc/new_features/v119_features_doc.rst`](docs/source/Eng/doc/new_features/v119_features_doc.rst).

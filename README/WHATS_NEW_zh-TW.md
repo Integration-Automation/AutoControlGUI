@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 相對滑鼠移動
+
+從目前位置將指標位移一個增量。完整參考:[`docs/source/Zh/doc/new_features/v120_features_doc.rst`](../docs/source/Zh/doc/new_features/v120_features_doc.rst)。
+
+- **`move_mouse_relative` / `relative_target`**(`AC_move_mouse_relative`):滑鼠 wrapper 只有絕對的 `set_mouse_position`——沒有給相對指標 / 畫布 / FPS 應用與漸進式拖曳用的 `moveRel(dx, dy)`。本功能讀取即時位置並依增量移動;`relative_target` 為純算術,getter/setter 可注入以供無頭測試。純標準函式庫、具決定性。
+
 ## 本次更新 (2026-06-23) — 按住按鍵 / 自動重複
 
 按住一個鍵一段時間,或以固定頻率自動重複。完整參考:[`docs/source/Zh/doc/new_features/v119_features_doc.rst`](../docs/source/Zh/doc/new_features/v119_features_doc.rst)。

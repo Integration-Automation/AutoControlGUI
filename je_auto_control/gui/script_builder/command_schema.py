@@ -759,6 +759,14 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Press, drag through a polyline of waypoints, release.",
     ))
     specs.append(CommandSpec(
+        "AC_move_mouse_relative", "Mouse", "Move Relative",
+        fields=(
+            FieldSpec("dx", FieldType.INT, placeholder="-40"),
+            FieldSpec("dy", FieldType.INT, placeholder="12"),
+        ),
+        description="Move the pointer by (dx, dy) from its current position.",
+    ))
+    specs.append(CommandSpec(
         "AC_list_plugins", "Tools", "List Plugin Commands",
         fields=(FieldSpec("group", FieldType.STRING, optional=True,
                           default="je_auto_control.commands"),),
