@@ -2178,6 +2178,16 @@ def wait_actionable(template, timeout_s=5.0, stable_for_s=0.3, min_score=0.8,
     return _wait_actionable(template, timeout_s, stable_for_s, min_score, region)
 
 
+def fuse_elements(ocr=None, icon=None, a11y=None, iou_threshold=0.9):
+    from je_auto_control.utils.executor.action_executor import _fuse_elements
+    return _fuse_elements(ocr, icon, a11y, iou_threshold)
+
+
+def reading_order(elements, row_tol=12):
+    from je_auto_control.utils.executor.action_executor import _reading_order
+    return _reading_order(elements, row_tol)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

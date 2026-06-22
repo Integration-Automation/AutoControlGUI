@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 融合并排序屏幕元素框
+
+把原始的 OCR + 图标 + a11y 框转成一份干净、已编号的元素列表。完整参考:[`docs/source/Zh/doc/new_features/v138_features_doc.rst`](../docs/source/Zh/doc/new_features/v138_features_doc.rst)。
+
+- **`iou` / `merge_boxes` / `fuse_elements` / `reading_order`**(`AC_fuse_elements`、`AC_reading_order`):`set_of_marks` 为干净的元素列表编号,但没有任何功能*产生*它——真实画面解析会产出三个彼此重叠、有重复且无顺序的来源。本功能补上这一步:依 IoU 去除近重复框、并集 OCR/icon/a11y 并在重叠时保留最可信来源(`source_priority` a11y > ocr > icon)、再由上到下 / 由左到右排序并给予稳定 `index`。纯 `dict` 框 → 纯标准库、完全无头可测;直接与 `set_of_marks` 搭配。
+
 ## 本次更新 (2026-06-23) — 可操作性闸门(操作前先等待就绪)
 
 目标真正就绪前不要点击。完整参考:[`docs/source/Zh/doc/new_features/v137_features_doc.rst`](../docs/source/Zh/doc/new_features/v137_features_doc.rst)。

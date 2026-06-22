@@ -391,6 +391,27 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Clean up an image for OCR / matching (grayscale/binarize/…).",
     ))
+    specs.append(CommandSpec(
+        "AC_fuse_elements", "Image", "Fuse Element Boxes",
+        fields=(
+            FieldSpec("ocr", FieldType.STRING, optional=True,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+            FieldSpec("icon", FieldType.STRING, optional=True),
+            FieldSpec("a11y", FieldType.STRING, optional=True),
+            FieldSpec("iou_threshold", FieldType.FLOAT, optional=True, default=0.9,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Union OCR/icon/a11y boxes, dropping cross-source duplicates.",
+    ))
+    specs.append(CommandSpec(
+        "AC_reading_order", "Image", "Reading Order",
+        fields=(
+            FieldSpec("elements", FieldType.STRING,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+            FieldSpec("row_tol", FieldType.INT, optional=True, default=12),
+        ),
+        description="Order element boxes top-to-bottom, left-to-right (+ index).",
+    ))
 
 
 def _add_ocr_specs(specs: List[CommandSpec]) -> None:
