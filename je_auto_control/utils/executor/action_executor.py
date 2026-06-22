@@ -3155,6 +3155,12 @@ def _move_mouse_relative(dx: Any, dy: Any) -> Dict[str, Any]:
     return move_mouse_relative(int(dx), int(dy))
 
 
+def _type_unicode(text: str, modifier: str = "ctrl") -> Dict[str, Any]:
+    """Adapter: enter arbitrary Unicode text via clipboard paste."""
+    from je_auto_control.utils.text_unicode import type_unicode
+    return type_unicode(text, modifier=modifier)
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4855,6 +4861,7 @@ class Executor:
             "AC_set_field_text": _set_field_text,
             "AC_hold_key": _hold_key,
             "AC_move_mouse_relative": _move_mouse_relative,
+            "AC_type_unicode": _type_unicode,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

@@ -186,6 +186,15 @@ def _add_keyboard_specs(specs: List[CommandSpec]) -> None:
         description="Hold a key for a duration, or auto-repeat it at rate_hz.",
     ))
     specs.append(CommandSpec(
+        "AC_type_unicode", "Keyboard", "Type Unicode (emoji / CJK)",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="café 🚀 値"),
+            FieldSpec("modifier", FieldType.STRING, optional=True,
+                      default="ctrl", placeholder="ctrl | command"),
+        ),
+        description="Enter any Unicode text via clipboard paste (write can't).",
+    ))
+    specs.append(CommandSpec(
         "AC_hotkey", "Keyboard", "Hotkey",
         fields=(
             FieldSpec("key_code_list", FieldType.STRING,

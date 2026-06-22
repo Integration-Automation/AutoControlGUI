@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Unicode Text Entry (Emoji / CJK)
+
+Type any Unicode (emoji / CJK / accented) that `write` can't. Full reference: [`docs/source/Eng/doc/new_features/v122_features_doc.rst`](docs/source/Eng/doc/new_features/v122_features_doc.rst).
+
+- **`type_unicode` / `plan_paste` / `unicode_code_units`** (`AC_type_unicode`): `write` types through the virtual-key table and *raises* on emoji/CJK/many accented chars. `type_unicode` enters any text reliably by setting the clipboard and pasting (`modifier` ctrl/command). `unicode_code_units` splits text into UTF-16 code units (surrogate pairs) for KEYEVENTF_UNICODE backends. Pure-planning + injectable sink, deterministic.
+
 ## What's new (2026-06-23) — Wait for Region Colour
 
 Block until a colour fills (or leaves) a screen region. Full reference: [`docs/source/Eng/doc/new_features/v121_features_doc.rst`](docs/source/Eng/doc/new_features/v121_features_doc.rst).
