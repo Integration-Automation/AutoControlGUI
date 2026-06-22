@@ -2867,6 +2867,38 @@ def actionability_tools() -> List[MCPTool]:
     ]
 
 
+def element_parse_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_fuse_elements",
+            description=("Union OCR + icon + accessibility element boxes into one "
+                         "de-duplicated list (drop cross-source overlaps > "
+                         "'iou_threshold'; higher-priority source wins). Each box "
+                         "is {x,y,width,height,...}. Returns {count, elements}."),
+            input_schema=schema({
+                "ocr": {"type": "array", "items": {"type": "object"}},
+                "icon": {"type": "array", "items": {"type": "object"}},
+                "a11y": {"type": "array", "items": {"type": "object"}},
+                "iou_threshold": {"type": "number"}},
+                required=[]),
+            handler=h.fuse_elements,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_reading_order",
+            description=("Sort element boxes top-to-bottom, left-to-right and add a "
+                         "stable 'index' to each (elements within 'row_tol' px of "
+                         "each other count as one row). Returns {count, elements}."),
+            input_schema=schema({
+                "elements": {"type": "array", "items": {"type": "object"}},
+                "row_tol": {"type": "integer"}},
+                required=["elements"]),
+            handler=h.reading_order,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6370,7 +6402,8 @@ ALL_FACTORIES = (
     modifier_state_tools, grid_locator_tools, visual_match_tools,
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
     window_layout_tools, window_arrange_tools, preprocess_tools,
-    monitor_layout_tools, actionability_tools, plugin_sdk_tools, governance_tools,
+    monitor_layout_tools, actionability_tools, element_parse_tools,
+    plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

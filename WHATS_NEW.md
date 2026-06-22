@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Fuse & Order On-Screen Element Boxes
+
+Turn raw OCR + icon + a11y boxes into one clean, numbered element list. Full reference: [`docs/source/Eng/doc/new_features/v138_features_doc.rst`](docs/source/Eng/doc/new_features/v138_features_doc.rst).
+
+- **`iou` / `merge_boxes` / `fuse_elements` / `reading_order`** (`AC_fuse_elements`, `AC_reading_order`): `set_of_marks` numbers a clean element list but nothing *produced* it — a real screen parse yields three overlapping sources with duplicates and no order. These supply the missing step: drop near-duplicate boxes by IoU, union OCR/icon/a11y keeping the most trustworthy source on overlap (`source_priority` a11y > ocr > icon), and sort top-to-bottom/left-to-right with a stable `index`. Plain `dict` boxes → pure-stdlib, fully headless-testable; pairs directly with `set_of_marks`.
+
 ## What's new (2026-06-23) — Actionability Gate (Wait Until Ready Before Acting)
 
 Don't click until the target is genuinely ready. Full reference: [`docs/source/Eng/doc/new_features/v137_features_doc.rst`](docs/source/Eng/doc/new_features/v137_features_doc.rst).

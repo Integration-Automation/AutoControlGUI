@@ -312,6 +312,10 @@ from je_auto_control.utils.monitor_layout import (
 from je_auto_control.utils.actionability import (
     ActionabilityReport, GateConfig, act_when_ready, wait_actionable,
 )
+# Fuse and order on-screen element boxes (IoU, merge, fuse sources, reading order)
+from je_auto_control.utils.element_parse import (
+    fuse_elements, iou, merge_boxes, reading_order,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1141,6 +1145,10 @@ __all__ = [
     "act_when_ready",
     "ActionabilityReport",
     "GateConfig",
+    "iou",
+    "merge_boxes",
+    "fuse_elements",
+    "reading_order",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

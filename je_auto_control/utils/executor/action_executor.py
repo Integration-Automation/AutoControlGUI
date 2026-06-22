@@ -3479,6 +3479,32 @@ def _wait_actionable(template: str, timeout_s: Any = 5.0, stable_for_s: Any = 0.
     return report.to_dict()
 
 
+def _fuse_elements(ocr: Any = None, icon: Any = None, a11y: Any = None,
+                   iou_threshold: Any = 0.9) -> Dict[str, Any]:
+    """Adapter: union OCR / icon / a11y element boxes, dropping duplicates."""
+    import json
+    from je_auto_control.utils.element_parse import fuse_elements
+
+    def parse(value: Any) -> list:
+        if isinstance(value, str):
+            return json.loads(value) if value.strip() else []
+        return list(value) if value else []
+
+    elements = fuse_elements(parse(ocr), parse(icon), parse(a11y),
+                             iou_threshold=float(iou_threshold))
+    return {"count": len(elements), "elements": elements}
+
+
+def _reading_order(elements: Any, row_tol: Any = 12) -> Dict[str, Any]:
+    """Adapter: order element boxes top-to-bottom, left-to-right, with an index."""
+    import json
+    from je_auto_control.utils.element_parse import reading_order
+    if isinstance(elements, str):
+        elements = json.loads(elements)
+    ordered = reading_order(list(elements), row_tol=int(row_tol))
+    return {"count": len(ordered), "elements": ordered}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5209,6 +5235,8 @@ class Executor:
             "AC_enumerate_monitors": _enumerate_monitors,
             "AC_monitor_at_point": _monitor_at_point,
             "AC_wait_actionable": _wait_actionable,
+            "AC_fuse_elements": _fuse_elements,
+            "AC_reading_order": _reading_order,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,
