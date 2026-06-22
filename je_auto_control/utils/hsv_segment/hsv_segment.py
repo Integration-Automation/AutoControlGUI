@@ -13,27 +13,10 @@ testable on synthetic arrays. OpenCV + NumPy come in via ``je_open_cv``. Imports
 """
 from typing import Any, Dict, List, Optional, Sequence
 
+# Reuse the RGB loader / screen grab from color_region (single source of truth).
+from je_auto_control.utils.color_region.color_region import _grab_rgb, _to_rgb
+
 ImageSource = Any
-
-
-def _to_rgb(source: ImageSource):
-    import cv2
-    import numpy as np
-    if hasattr(source, "shape"):
-        return np.asarray(source)
-    if isinstance(source, (str, bytes)) or hasattr(source, "__fspath__"):
-        bgr = cv2.imread(str(source), cv2.IMREAD_COLOR)
-        if bgr is None:
-            raise ValueError(f"could not read image: {source!r}")
-        return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-    return np.asarray(source)
-
-
-def _grab_rgb(region: Optional[Sequence[int]]):
-    import numpy as np
-    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-    image = pil_screenshot(screen_region=list(region) if region else None)
-    return np.asarray(image.convert("RGB"))
 
 
 def _hsv(haystack: Optional[ImageSource], region: Optional[Sequence[int]]):

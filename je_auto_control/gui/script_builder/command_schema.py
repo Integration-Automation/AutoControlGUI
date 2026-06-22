@@ -44,6 +44,7 @@ class CommandSpec:
 
 
 _MOUSE_BUTTONS = ("mouse_left", "mouse_right", "mouse_middle")
+_REGION_PLACEHOLDER = "[left, top, right, bottom]"
 
 
 def _build_specs() -> List[CommandSpec]:
@@ -262,7 +263,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("scales", FieldType.STRING, optional=True,
                       placeholder="[0.9, 1.0, 1.1]"),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
         ),
         description="Locate a template and return its confidence score + scale.",
     ))
@@ -286,7 +287,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.9,
                       min_value=0.0, max_value=1.0),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
         ),
         description="Match counting only opaque/masked pixels (alpha or mask).",
     ))
@@ -310,7 +311,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("tolerance", FieldType.INT, optional=True, default=20),
             FieldSpec("min_area", FieldType.INT, optional=True, default=50),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
         ),
         description="Locate regions by colour (status light / banner / fill).",
     ))
@@ -322,7 +323,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("ignore", FieldType.STRING, optional=True,
                       placeholder="[[x, y, w, h], ...]"),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
         ),
         description="Structural-similarity score (0..1) vs reference / screen.",
     ))
@@ -337,7 +338,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
                       min_value=0.0, max_value=1.0),
             FieldSpec("min_area", FieldType.INT, optional=True, default=50),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
         ),
         description="Boxes of the regions that structurally changed.",
     ))
@@ -346,7 +347,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("template", FieldType.FILE_PATH),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
             FieldSpec("max_features", FieldType.INT, optional=True, default=500),
             FieldSpec("ratio", FieldType.FLOAT, optional=True, default=0.75,
                       min_value=0.0, max_value=1.0),
@@ -358,7 +359,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         "AC_find_shapes", "Image", "Find Shapes",
         fields=(
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
             FieldSpec("min_area", FieldType.INT, optional=True, default=400),
             FieldSpec("max_area", FieldType.INT, optional=True),
         ),
@@ -368,7 +369,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         "AC_find_rectangles", "Image", "Find Rectangles",
         fields=(
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
             FieldSpec("min_area", FieldType.INT, optional=True, default=400),
             FieldSpec("max_area", FieldType.INT, optional=True),
             FieldSpec("aspect_range", FieldType.STRING, optional=True,
@@ -387,7 +388,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
                       placeholder="grayscale,upscale,binarize"),
             FieldSpec("scale", FieldType.FLOAT, optional=True, default=2.0),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
         ),
         description="Clean up an image for OCR / matching (grayscale/binarize/…).",
     ))
@@ -398,7 +399,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("upper_hsv", FieldType.STRING, placeholder="[80, 255, 255]"),
             FieldSpec("min_area", FieldType.INT, optional=True, default=50),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
         ),
         description="Locate regions inside an HSV band (lighting-robust).",
     ))
@@ -411,7 +412,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("val_min", FieldType.INT, optional=True, default=80),
             FieldSpec("min_area", FieldType.INT, optional=True, default=50),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
         ),
         description="Locate any shade of a hue, any brightness (handles red wrap).",
     ))
@@ -708,7 +709,7 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
                       min_value=0.0, max_value=1.0),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
         ),
         description="Wait until a target is visible + stable before acting.",
     ))
@@ -766,7 +767,7 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("target_rgb", FieldType.STRING, placeholder="[0, 200, 0]"),
             FieldSpec("region", FieldType.STRING, optional=True,
-                      placeholder="[left, top, right, bottom]"),
+                      placeholder=_REGION_PLACEHOLDER),
             FieldSpec("tolerance", FieldType.INT, optional=True, default=10),
             FieldSpec("min_fraction", FieldType.FLOAT, optional=True,
                       default=0.5, min_value=0.0, max_value=1.0),
