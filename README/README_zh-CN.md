@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 逐流序号间隙检测](#本次更新-2026-06-22--逐流序号间隙检测)
 - [本次更新 (2026-06-22) — 时间窗口去重](#本次更新-2026-06-22--时间窗口去重)
 - [本次更新 (2026-06-22) — 幂等键存储](#本次更新-2026-06-22--幂等键存储)
 - [本次更新 (2026-06-22) — 移动平均平滑](#本次更新-2026-06-22--移动平均平滑)
@@ -159,6 +160,12 @@
 ## 本次更新 (2026-06-22) — 移动平均平滑
 
 平滑噪声值序列。完整参考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 逐流序号间隙检测
+
+按序号检测遗漏/乱序/重复的消息。完整参考:[`docs/source/Zh/doc/new_features/v105_features_doc.rst`](../docs/source/Zh/doc/new_features/v105_features_doc.rst)。
+
+- **`SequenceTracker`**(`AC_sequence_observe`):没有东西追踪每个流的单调序号。`observe(stream, seq)` 将每个分类为 `ok` / `duplicate` / `gap`(附 `missing` 序号)/ `reorder`(迟到填补间隙),并提供 `gaps` 与 `high_water`。与 `dedup_window` 互补。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — 时间窗口去重
 

@@ -2931,6 +2931,14 @@ def _rate_limit(name: str, rate: float = 1.0, capacity: float = 1.0,
 _BULKHEADS: Dict[str, Any] = {}
 _IDEMPOTENCY_STORES: Dict[str, Any] = {}
 _DEDUP_WINDOWS: Dict[str, Any] = {}
+_SEQUENCE_TRACKERS: Dict[str, Any] = {}
+
+
+def _sequence_observe(name: str, stream_id: str, seq: Any) -> Dict[str, Any]:
+    """Adapter: observe a sequence number in a named tracker."""
+    from je_auto_control.utils.sequence_gap import SequenceTracker
+    tracker = _SEQUENCE_TRACKERS.setdefault(name, SequenceTracker())
+    return tracker.observe(stream_id, int(seq))
 
 
 def _dedup_check(name: str, message_id: str,
@@ -4577,6 +4585,7 @@ class Executor:
             "AC_idempotency_begin": _idempotency_begin,
             "AC_idempotency_complete": _idempotency_complete,
             "AC_dedup_check": _dedup_check,
+            "AC_sequence_observe": _sequence_observe,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

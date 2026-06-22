@@ -3548,6 +3548,23 @@ def dataset_diff_tools() -> List[MCPTool]:
     ]
 
 
+def sequence_gap_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_sequence_observe",
+            description=("Observe sequence number 'seq' on 'stream_id' in named "
+                         "tracker 'name'. Returns {status: ok|duplicate|gap|"
+                         "reorder, seq, missing}."),
+            input_schema=schema(
+                {"name": {"type": "string"}, "stream_id": {"type": "string"},
+                 "seq": {"type": "integer"}},
+                ["name", "stream_id", "seq"]),
+            handler=h.sequence_observe,
+            annotations=NON_DESTRUCTIVE,
+        ),
+    ]
+
+
 def dedup_window_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5570,7 +5587,7 @@ ALL_FACTORIES = (
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
     timeseries_tools, anomaly_tools, smoothing_tools, idempotency_tools,
-    dedup_window_tools,
+    dedup_window_tools, sequence_gap_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

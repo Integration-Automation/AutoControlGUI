@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Per-Stream Sequence-Gap Detection](#whats-new-2026-06-22--per-stream-sequence-gap-detection)
 - [What's new (2026-06-22) — Time-Windowed Deduplication](#whats-new-2026-06-22--time-windowed-deduplication)
 - [What's new (2026-06-22) — Idempotency-Key Store](#whats-new-2026-06-22--idempotency-key-store)
 - [What's new (2026-06-22) — Moving-Average Smoothing](#whats-new-2026-06-22--moving-average-smoothing)
@@ -156,6 +157,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Per-Stream Sequence-Gap Detection
+
+Detect missing / out-of-order / duplicate messages by sequence number. Full reference: [`docs/source/Eng/doc/new_features/v105_features_doc.rst`](docs/source/Eng/doc/new_features/v105_features_doc.rst).
+
+- **`SequenceTracker`** (`AC_sequence_observe`): nothing tracked per-stream monotonic sequence numbers. `observe(stream, seq)` classifies each as `ok` / `duplicate` / `gap` (with the `missing` numbers) / `reorder` (late arrivals fill gaps), and exposes `gaps` and `high_water`. Complements `dedup_window`. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Time-Windowed Deduplication
 

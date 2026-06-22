@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 逐串流序號間隙偵測](#本次更新-2026-06-22--逐串流序號間隙偵測)
 - [本次更新 (2026-06-22) — 時間視窗去重](#本次更新-2026-06-22--時間視窗去重)
 - [本次更新 (2026-06-22) — 冪等鍵儲存](#本次更新-2026-06-22--冪等鍵儲存)
 - [本次更新 (2026-06-22) — 移動平均平滑](#本次更新-2026-06-22--移動平均平滑)
@@ -159,6 +160,12 @@
 ## 本次更新 (2026-06-22) — 移動平均平滑
 
 平滑雜訊值序列。完整參考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 逐串流序號間隙偵測
+
+依序號偵測遺漏/亂序/重複的訊息。完整參考:[`docs/source/Zh/doc/new_features/v105_features_doc.rst`](../docs/source/Zh/doc/new_features/v105_features_doc.rst)。
+
+- **`SequenceTracker`**(`AC_sequence_observe`):沒有東西追蹤每個串流的單調序號。`observe(stream, seq)` 將每個分類為 `ok` / `duplicate` / `gap`(附 `missing` 序號)/ `reorder`(遲到填補間隙),並提供 `gaps` 與 `high_water`。與 `dedup_window` 互補。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — 時間視窗去重
 
