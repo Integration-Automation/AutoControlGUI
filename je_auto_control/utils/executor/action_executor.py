@@ -2976,6 +2976,23 @@ def _collation_compare(first: str, second: str, strength: str = "tertiary",
                              tailoring=tailoring or None)}
 
 
+def _confusable_scan(text: str) -> Dict[str, Any]:
+    """Adapter: homoglyph / mixed-script spoofing report for a string."""
+    from je_auto_control.utils.confusables import (
+        detect_homoglyphs, is_mixed_script, scripts_of, skeleton,
+    )
+    return {"skeleton": skeleton(text),
+            "homoglyphs": detect_homoglyphs(text),
+            "mixed_script": is_mixed_script(text),
+            "scripts": sorted(scripts_of(text))}
+
+
+def _confusable_compare(first: str, second: str) -> Dict[str, Any]:
+    """Adapter: whether two strings render to the same skeleton."""
+    from je_auto_control.utils.confusables import is_confusable
+    return {"confusable": is_confusable(first, second)}
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4660,6 +4677,8 @@ class Executor:
             "AC_outbox_pending": _outbox_pending,
             "AC_collation_sort": _collation_sort,
             "AC_collation_compare": _collation_compare,
+            "AC_confusable_scan": _confusable_scan,
+            "AC_confusable_compare": _confusable_compare,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

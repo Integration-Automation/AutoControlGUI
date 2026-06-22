@@ -218,6 +218,11 @@ from je_auto_control.utils.locale_collation import (
     collation_key, sort_strings,
 )
 from je_auto_control.utils.locale_collation import compare as collation_compare
+# Confusable / homoglyph detection (Unicode-spoofing skeletons)
+from je_auto_control.utils.confusables import (
+    detect_homoglyphs, is_confusable, is_mixed_script, scripts_of,
+)
+from je_auto_control.utils.confusables import skeleton as confusable_skeleton
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -951,6 +956,11 @@ __all__ = [
     "collation_key",
     "collation_compare",
     "sort_strings",
+    "confusable_skeleton",
+    "detect_homoglyphs",
+    "is_confusable",
+    "is_mixed_script",
+    "scripts_of",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

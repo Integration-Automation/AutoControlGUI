@@ -1972,6 +1972,16 @@ def collation_compare(first, second, strength="tertiary", tailoring=None):
     return _collation_compare(first, second, strength, tailoring)
 
 
+def confusable_scan(text):
+    from je_auto_control.utils.executor.action_executor import _confusable_scan
+    return _confusable_scan(text)
+
+
+def confusable_compare(first, second):
+    from je_auto_control.utils.executor.action_executor import _confusable_compare
+    return _confusable_compare(first, second)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

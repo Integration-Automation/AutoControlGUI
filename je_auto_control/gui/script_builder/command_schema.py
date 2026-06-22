@@ -2091,6 +2091,21 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Locale-aware compare; returns order -1/0/1.",
     ))
     specs.append(CommandSpec(
+        "AC_confusable_scan", "Data", "Text: Confusable Scan",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="pаypal.com"),
+        ),
+        description="Homoglyph / mixed-script spoofing report for a string.",
+    ))
+    specs.append(CommandSpec(
+        "AC_confusable_compare", "Data", "Text: Confusable Compare",
+        fields=(
+            FieldSpec("first", FieldType.STRING, placeholder="paypal"),
+            FieldSpec("second", FieldType.STRING, placeholder="pаypal"),
+        ),
+        description="Whether two strings share the same confusable skeleton.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,
