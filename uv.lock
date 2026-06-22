@@ -442,7 +442,7 @@ wheels = [
 
 [[package]]
 name = "je-auto-control"
-version = "0.0.194"
+version = "0.0.195"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
