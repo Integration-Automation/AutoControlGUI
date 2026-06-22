@@ -2172,6 +2172,12 @@ def monitor_at_point(x, y):
     return _monitor_at_point(x, y)
 
 
+def wait_actionable(template, timeout_s=5.0, stable_for_s=0.3, min_score=0.8,
+                    region=None):
+    from je_auto_control.utils.executor.action_executor import _wait_actionable
+    return _wait_actionable(template, timeout_s, stable_for_s, min_score, region)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

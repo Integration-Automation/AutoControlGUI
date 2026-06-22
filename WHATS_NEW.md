@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Actionability Gate (Wait Until Ready Before Acting)
+
+Don't click until the target is genuinely ready. Full reference: [`docs/source/Eng/doc/new_features/v137_features_doc.rst`](docs/source/Eng/doc/new_features/v137_features_doc.rst).
+
+- **`wait_actionable` / `act_when_ready`** (`AC_wait_actionable`): Playwright/Cypress run an actionability check before every click — present + stopped moving + enabled + not covered — but AutoControl had none (`self_heal_click` clicks immediately; `wait_until_screen_stable` watches the whole frame). This composes the four checks into one gate and returns an `ActionabilityReport` (per-check booleans, target `point`, `reason` = first failing check). Every signal is an injectable callable (`bbox_provider` / `region_sampler` / `enabled_probe` / `hit_tester`) plus an injectable `clock`/`sleep`, so it's fully deterministic and headless-testable. The executor command gates on a template image.
+
 ## What's new (2026-06-23) — Multi-Monitor / Virtual-Desktop Geometry
 
 Place windows and points correctly across several displays. Full reference: [`docs/source/Eng/doc/new_features/v136_features_doc.rst`](docs/source/Eng/doc/new_features/v136_features_doc.rst).

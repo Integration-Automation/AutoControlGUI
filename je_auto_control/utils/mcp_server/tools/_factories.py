@@ -2844,6 +2844,29 @@ def monitor_layout_tools() -> List[MCPTool]:
     ]
 
 
+def actionability_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_wait_actionable",
+            description=("Wait until 'template' (image path) is VISIBLE and STABLE "
+                         "(stopped moving / animating) on screen before you act — "
+                         "the Playwright-style actionability gate. Returns {actionable, "
+                         "visible, stable, enabled, receives_events, point, reason, "
+                         "waited_s}. 'timeout_s', 'stable_for_s', 'min_score', "
+                         "'region'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "timeout_s": {"type": "number"},
+                "stable_for_s": {"type": "number"},
+                "min_score": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.wait_actionable,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6347,7 +6370,7 @@ ALL_FACTORIES = (
     modifier_state_tools, grid_locator_tools, visual_match_tools,
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
     window_layout_tools, window_arrange_tools, preprocess_tools,
-    monitor_layout_tools, plugin_sdk_tools, governance_tools,
+    monitor_layout_tools, actionability_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
