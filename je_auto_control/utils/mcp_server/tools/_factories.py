@@ -2550,6 +2550,24 @@ def tween_drag_tools() -> List[MCPTool]:
     ]
 
 
+def field_entry_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_set_field_text",
+            description=("Clear the focused field and enter 'text' (Playwright "
+                         "fill). 'clear' select_all|none; 'paste' True for "
+                         "Unicode/emoji via clipboard; 'modifier' ctrl|command. "
+                         "Returns {ops, plan}."),
+            input_schema=schema({
+                "text": {"type": "string"}, "clear": {"type": "string"},
+                "paste": {"type": "boolean"}, "modifier": {"type": "string"}},
+                required=["text"]),
+            handler=h.set_field_text,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def mouse_path_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5831,8 +5849,8 @@ ALL_FACTORIES = (
     checkpoint_tools, set_of_marks_tools, screen_state_tools,
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
-    process_doc_tools, tween_drag_tools, mouse_path_tools, plugin_sdk_tools,
-    governance_tools,
+    process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
+    plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

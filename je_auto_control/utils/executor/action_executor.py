@@ -3092,6 +3092,14 @@ def _drag_path(waypoints: Any, button: str = "mouse_left",
                      per_segment_steps=int(per_segment_steps))
 
 
+def _set_field_text(text: str, clear: str = "select_all", paste: Any = False,
+                    modifier: str = "ctrl") -> Dict[str, Any]:
+    """Adapter: clear the focused field and enter text."""
+    from je_auto_control.utils.field_entry import set_field_text
+    return set_field_text(text, clear=clear, paste=bool(paste),
+                          modifier=modifier)
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4789,6 +4797,7 @@ class Executor:
             "AC_checksum_digit": _checksum_digit,
             "AC_move_along_path": _move_along_path,
             "AC_drag_path": _drag_path,
+            "AC_set_field_text": _set_field_text,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

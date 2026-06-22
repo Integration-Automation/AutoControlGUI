@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Clear-Then-Type Field Entry
+
+Reliably set a text field's value (the Playwright `fill` idiom). Full reference: [`docs/source/Eng/doc/new_features/v117_features_doc.rst`](docs/source/Eng/doc/new_features/v117_features_doc.rst).
+
+- **`set_field_text` / `plan_field_set`** (`AC_set_field_text`): there was no single "focus → clear → set value" primitive, and `write` raises on emoji/CJK. This clears the field (select-all + delete) then enters the text — optionally via the clipboard (`paste=True`) which is the Unicode-safe path `write` can't do. `modifier` is the platform command key (`ctrl`/`command`). Pure-planning + injectable sink, deterministic.
+
 ## What's new (2026-06-22) — Multi-Waypoint Mouse Gestures
 
 Move or drag the pointer through a polyline of waypoints. Full reference: [`docs/source/Eng/doc/new_features/v116_features_doc.rst`](docs/source/Eng/doc/new_features/v116_features_doc.rst).
