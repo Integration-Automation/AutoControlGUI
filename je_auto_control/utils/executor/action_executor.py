@@ -3451,6 +3451,34 @@ def _monitor_at_point(x: Any, y: Any) -> Dict[str, Any]:
             "monitor": monitor.to_dict() if monitor else None}
 
 
+def _region_pixel_token(bbox):
+    """Stability token: a hash of the bbox region's pixels (changes on movement)."""
+    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
+    left, top, width, height = bbox
+    image = pil_screenshot(screen_region=[left, top, left + width, top + height])
+    return hash(image.tobytes())
+
+
+def _wait_actionable(template: str, timeout_s: Any = 5.0, stable_for_s: Any = 0.3,
+                     min_score: Any = 0.8, region: Any = None) -> Dict[str, Any]:
+    """Adapter: wait until a template is visible + stable before acting."""
+    import json
+    from je_auto_control.utils.actionability import GateConfig, wait_actionable
+    from je_auto_control.utils.visual_match import match_template
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+
+    def locate():
+        match = match_template(template, region=region, min_score=float(min_score))
+        return (match.x, match.y, match.width, match.height) if match else None
+
+    report = wait_actionable(
+        locate, region_sampler=_region_pixel_token,
+        config=GateConfig(timeout_s=float(timeout_s),
+                          stable_for_s=float(stable_for_s)))
+    return report.to_dict()
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5180,6 +5208,7 @@ class Executor:
             "AC_preprocess_image": _preprocess_image,
             "AC_enumerate_monitors": _enumerate_monitors,
             "AC_monitor_at_point": _monitor_at_point,
+            "AC_wait_actionable": _wait_actionable,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

@@ -655,6 +655,19 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
         ),
     ))
     specs.append(CommandSpec(
+        "AC_wait_actionable", "Flow", "Wait Until Actionable",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True, default=5.0),
+            FieldSpec("stable_for_s", FieldType.FLOAT, optional=True, default=0.3),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[left, top, right, bottom]"),
+        ),
+        description="Wait until a target is visible + stable before acting.",
+    ))
+    specs.append(CommandSpec(
         "AC_wait_pixel", "Flow", "Wait for Pixel",
         fields=(
             FieldSpec("x", FieldType.INT),

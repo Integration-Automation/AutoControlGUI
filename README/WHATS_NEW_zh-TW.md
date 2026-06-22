@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 可操作性閘門(操作前先等待就緒)
+
+目標真正就緒前不要點擊。完整參考:[`docs/source/Zh/doc/new_features/v137_features_doc.rst`](../docs/source/Zh/doc/new_features/v137_features_doc.rst)。
+
+- **`wait_actionable` / `act_when_ready`**(`AC_wait_actionable`):Playwright/Cypress 在每次點擊前都會做可操作性檢查——存在 + 已停止移動 + 啟用 + 未被遮蓋——但 AutoControl 先前沒有(`self_heal_click` 立即點擊;`wait_until_screen_stable` 觀察整個畫面)。本功能把這四項合成單一閘門,回傳 `ActionabilityReport`(各項檢查布林值、目標 `point`、`reason` = 第一個失敗的檢查)。每個訊號都是可注入 callable(`bbox_provider` / `region_sampler` / `enabled_probe` / `hit_tester`)再加可注入 `clock`/`sleep`,因此完全決定性且可無頭測試。執行器命令以模板影像把關。
+
 ## 本次更新 (2026-06-23) — 多螢幕 / 虛擬桌面幾何
 
 在多台顯示器間正確擺放視窗與座標。完整參考:[`docs/source/Zh/doc/new_features/v136_features_doc.rst`](../docs/source/Zh/doc/new_features/v136_features_doc.rst)。

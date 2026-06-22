@@ -308,6 +308,10 @@ from je_auto_control.utils.monitor_layout import (
     Monitor, enumerate_monitors, monitor_at_point, monitor_for_window,
     primary_monitor, remap_point, to_local, to_virtual, virtual_bounds,
 )
+# Pre-action readiness gate (visible + stable + enabled + not-occluded)
+from je_auto_control.utils.actionability import (
+    ActionabilityReport, GateConfig, act_when_ready, wait_actionable,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1133,6 +1137,10 @@ __all__ = [
     "to_local",
     "to_virtual",
     "virtual_bounds",
+    "wait_actionable",
+    "act_when_ready",
+    "ActionabilityReport",
+    "GateConfig",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
