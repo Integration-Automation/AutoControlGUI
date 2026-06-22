@@ -17,6 +17,6 @@ python-pptx==1.0.2
 # Quality tooling — used by .github/workflows/quality.yml and locally.
 ruff==0.15.14
 bandit==1.9.4
-pytest==9.0.3
+pytest==9.1.1
 pytest-timeout==2.4.0
 pytest-rerunfailures==15.1
