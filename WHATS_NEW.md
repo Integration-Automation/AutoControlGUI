@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Wait Until Gone (Blocking Vanish Waits)
+
+Block until a spinner / toast / dialog disappears. Full reference: [`docs/source/Eng/doc/new_features/v118_features_doc.rst`](docs/source/Eng/doc/new_features/v118_features_doc.rst).
+
+- **`wait_until_gone` / `wait_until_image_gone` / `wait_until_text_gone`** (`AC_wait_image_gone`, `AC_wait_text_gone`): `wait_for_image`/`wait_for_text` only block until something *appears*, and `observer` fires async callbacks on vanish — there was no *blocking* "wait until this image/text disappears then continue" call. The generic `wait_until_gone` takes any predicate (headless-testable); the image/text helpers build it from the locate functions. `gone_for_s` debounces flicker. Returns a `WaitOutcome`. Pure-stdlib.
+
 ## What's new (2026-06-23) — Clear-Then-Type Field Entry
 
 Reliably set a text field's value (the Playwright `fill` idiom). Full reference: [`docs/source/Eng/doc/new_features/v117_features_doc.rst`](docs/source/Eng/doc/new_features/v117_features_doc.rst).

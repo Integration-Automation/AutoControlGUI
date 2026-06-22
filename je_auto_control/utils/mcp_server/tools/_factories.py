@@ -1278,6 +1278,34 @@ def cost_telemetry_tools() -> List[MCPTool]:
 def smart_wait_tools() -> List[MCPTool]:
     return [
         MCPTool(
+            name="ac_wait_image_gone",
+            description=("Block until 'image' is no longer found on screen "
+                         "(spinner/toast/dialog vanished). 'detect_threshold', "
+                         "'timeout_s', 'poll_interval_s', 'gone_for_s'."),
+            input_schema=schema({
+                "image": {"type": "string"},
+                "detect_threshold": {"type": "number"},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"},
+                "gone_for_s": {"type": "number"}},
+                required=["image"]),
+            handler=h.wait_image_gone,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_wait_text_gone",
+            description=("Block until 'text' is no longer found on screen (OCR). "
+                         "'timeout_s', 'poll_interval_s', 'gone_for_s'."),
+            input_schema=schema({
+                "text": {"type": "string"},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"},
+                "gone_for_s": {"type": "number"}},
+                required=["text"]),
+            handler=h.wait_text_gone,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_wait_screen_stable",
             description=("Block until the screen stops moving (consecutive "
                          "frames differ by <= max_pixel_diff bytes for "

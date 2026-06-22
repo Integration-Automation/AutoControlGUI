@@ -378,6 +378,74 @@ def wait_until_process(name: str, *, present: bool = True,
                    started, samples)
 
 
+def wait_until_gone(present: Callable[[], bool], *,
+                    timeout_s: float = 10.0, poll_interval_s: float = 0.2,
+                    gone_for_s: float = 0.0) -> WaitOutcome:
+    """Return once ``present()`` has been falsey for ``gone_for_s`` seconds.
+
+    The blocking complement of ``wait_for_image`` / ``wait_for_text``: wait for a
+    spinner / toast / dialog to *disappear*. ``present`` is any predicate (e.g.
+    "is this image still on screen"); it is polled every ``poll_interval_s`` up to
+    ``timeout_s``. Injecting ``present`` keeps the loop headless-testable.
+    """
+    if timeout_s <= 0:
+        raise ValueError(_TIMEOUT_POSITIVE)
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
+    if gone_for_s < 0:
+        raise ValueError("gone_for_s must be >= 0")
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    gone_since: Optional[float] = None
+    while time.monotonic() < deadline:
+        samples += 1
+        if present():
+            gone_since = None
+        else:
+            if gone_since is None:
+                gone_since = time.monotonic()
+            if time.monotonic() - gone_since >= float(gone_for_s):
+                return _finish(True, "target gone", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, "timeout while waiting for target to vanish",
+                   started, samples)
+
+
+def _image_present(image: Any, detect_threshold: float) -> bool:
+    """Whether ``image`` is currently locatable on screen."""
+    from je_auto_control.utils.exception.exceptions import ImageNotFoundException
+    from je_auto_control.wrapper.auto_control_image import locate_image_center
+    try:
+        locate_image_center(image, detect_threshold=detect_threshold)
+        return True
+    except ImageNotFoundException:
+        return False
+
+
+def wait_until_image_gone(image: Any, *, detect_threshold: float = 1.0,
+                          timeout_s: float = 10.0, poll_interval_s: float = 0.2,
+                          gone_for_s: float = 0.0) -> WaitOutcome:
+    """Wait until ``image`` is no longer found on screen."""
+    return wait_until_gone(lambda: _image_present(image, detect_threshold),
+                           timeout_s=timeout_s, poll_interval_s=poll_interval_s,
+                           gone_for_s=gone_for_s)
+
+
+def _text_present(text: str) -> bool:
+    """Whether ``text`` is currently found on screen via OCR."""
+    from je_auto_control.utils.ocr.ocr_engine import find_text_matches
+    return bool(find_text_matches(text))
+
+
+def wait_until_text_gone(text: str, *, timeout_s: float = 10.0,
+                         poll_interval_s: float = 0.2,
+                         gone_for_s: float = 0.0) -> WaitOutcome:
+    """Wait until ``text`` is no longer found on screen (OCR)."""
+    return wait_until_gone(lambda: _text_present(text), timeout_s=timeout_s,
+                           poll_interval_s=poll_interval_s, gone_for_s=gone_for_s)
+
+
 def _default_process_lister(name: str) -> List[str]:
     """List running process names matching ``name`` (requires psutil)."""
     from je_auto_control.utils.assertion.assertions import _running_process_names

@@ -605,8 +605,9 @@ from je_auto_control.utils.ocr.structure import (
 # Smart waits (frame-diff replacements for time.sleep)
 from je_auto_control.utils.smart_waits import (
     WaitOutcome, wait_until_clipboard_changes, wait_until_file,
-    wait_until_pixel_changes, wait_until_port, wait_until_process,
-    wait_until_region_idle, wait_until_screen_stable, wait_until_window_closed,
+    wait_until_gone, wait_until_image_gone, wait_until_pixel_changes,
+    wait_until_port, wait_until_process, wait_until_region_idle,
+    wait_until_screen_stable, wait_until_text_gone, wait_until_window_closed,
 )
 # Visual regression (golden-image comparison)
 from je_auto_control.utils.visual_regression import (
@@ -1230,6 +1231,7 @@ __all__ = [
     "wait_until_region_idle", "wait_until_screen_stable",
     "wait_until_clipboard_changes", "wait_until_window_closed",
     "wait_until_file", "wait_until_port", "wait_until_process",
+    "wait_until_gone", "wait_until_image_gone", "wait_until_text_gone",
     # Visual regression + state machine
     "take_golden", "compare_to_golden", "image_difference",
     "DiffResult", "MaskRegion",
