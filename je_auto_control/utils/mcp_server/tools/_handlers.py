@@ -2038,6 +2038,11 @@ def drag_path(waypoints, button="mouse_left", easing="linear",
     return _drag_path(waypoints, button, easing, per_segment_steps)
 
 
+def set_field_text(text, clear="select_all", paste=False, modifier="ctrl"):
+    from je_auto_control.utils.executor.action_executor import _set_field_text
+    return _set_field_text(text, clear, paste, modifier)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

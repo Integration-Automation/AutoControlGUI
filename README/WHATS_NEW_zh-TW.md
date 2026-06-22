@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 清空再輸入欄位
+
+可靠地設定文字欄位的值(Playwright 的 `fill` 慣用法)。完整參考:[`docs/source/Zh/doc/new_features/v117_features_doc.rst`](../docs/source/Zh/doc/new_features/v117_features_doc.rst)。
+
+- **`set_field_text` / `plan_field_set`**(`AC_set_field_text`):先前沒有單一的「聚焦 → 清空 → 設值」基本元件,且 `write` 對 emoji/CJK 會拋例外。本功能清空欄位(全選 + 刪除)後再輸入文字——可選擇透過剪貼簿(`paste=True`),這是 `write` 無法處理之 Unicode 的安全途徑。`modifier` 為平台指令鍵(`ctrl`/`command`)。純計畫 + 可注入 sink、具決定性。
+
 ## 本次更新 (2026-06-22) — 多路徑點滑鼠手勢
 
 讓指標沿著路徑點折線移動或拖曳。完整參考:[`docs/source/Zh/doc/new_features/v116_features_doc.rst`](../docs/source/Zh/doc/new_features/v116_features_doc.rst)。

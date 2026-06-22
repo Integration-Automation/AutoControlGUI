@@ -163,6 +163,18 @@ def _add_keyboard_specs(specs: List[CommandSpec]) -> None:
         description="Type text with randomized per-key delays.",
     ))
     specs.append(CommandSpec(
+        "AC_set_field_text", "Keyboard", "Set Field Text",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="new value"),
+            FieldSpec("clear", FieldType.ENUM, choices=("select_all", "none"),
+                      optional=True, default="select_all"),
+            FieldSpec("paste", FieldType.BOOL, optional=True, default=False),
+            FieldSpec("modifier", FieldType.STRING, optional=True,
+                      default="ctrl", placeholder="ctrl | command"),
+        ),
+        description="Clear the focused field then enter text (paste for Unicode).",
+    ))
+    specs.append(CommandSpec(
         "AC_hotkey", "Keyboard", "Hotkey",
         fields=(
             FieldSpec("key_code_list", FieldType.STRING,
