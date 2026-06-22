@@ -223,6 +223,12 @@ from je_auto_control.utils.confusables import (
     detect_homoglyphs, is_confusable, is_mixed_script, scripts_of,
 )
 from je_auto_control.utils.confusables import skeleton as confusable_skeleton
+# Readability scoring (Flesch / Flesch-Kincaid / Gunning Fog / SMOG / ARI)
+from je_auto_control.utils.readability import (
+    automated_readability_index, count_syllables, flesch_kincaid_grade,
+    flesch_reading_ease, gunning_fog, readability_report, readability_stats,
+    smog_index,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -961,6 +967,14 @@ __all__ = [
     "is_confusable",
     "is_mixed_script",
     "scripts_of",
+    "automated_readability_index",
+    "count_syllables",
+    "flesch_kincaid_grade",
+    "flesch_reading_ease",
+    "gunning_fog",
+    "readability_report",
+    "readability_stats",
+    "smog_index",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

@@ -2993,6 +2993,12 @@ def _confusable_compare(first: str, second: str) -> Dict[str, Any]:
     return {"confusable": is_confusable(first, second)}
 
 
+def _readability_report(text: str) -> Dict[str, Any]:
+    """Adapter: full readability report (all metrics + counts) for a string."""
+    from je_auto_control.utils.readability import readability_report
+    return readability_report(text)
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4679,6 +4685,7 @@ class Executor:
             "AC_collation_compare": _collation_compare,
             "AC_confusable_scan": _confusable_scan,
             "AC_confusable_compare": _confusable_compare,
+            "AC_readability_report": _readability_report,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

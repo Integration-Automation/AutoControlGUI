@@ -2106,6 +2106,14 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Whether two strings share the same confusable skeleton.",
     ))
     specs.append(CommandSpec(
+        "AC_readability_report", "Data", "Text: Readability Report",
+        fields=(
+            FieldSpec("text", FieldType.STRING,
+                      placeholder="The cat sat on the mat."),
+        ),
+        description="Flesch / Flesch-Kincaid / Fog / SMOG / ARI scores + counts.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

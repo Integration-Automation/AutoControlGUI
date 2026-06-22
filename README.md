@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Readability Scoring](#whats-new-2026-06-22--readability-scoring)
 - [What's new (2026-06-22) — Confusable / Homoglyph Detection](#whats-new-2026-06-22--confusable--homoglyph-detection)
 - [What's new (2026-06-22) — Locale-Aware String Collation](#whats-new-2026-06-22--locale-aware-string-collation)
 - [What's new (2026-06-22) — Transactional Outbox](#whats-new-2026-06-22--transactional-outbox)
@@ -161,6 +162,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Readability Scoring
+
+Score how hard text is to read; gate generated copy on a reading grade. Full reference: [`docs/source/Eng/doc/new_features/v110_features_doc.rst`](docs/source/Eng/doc/new_features/v110_features_doc.rst).
+
+- **`flesch_reading_ease` / `flesch_kincaid_grade` / `gunning_fog` / `smog_index` / `automated_readability_index` / `readability_report` / `readability_stats` / `count_syllables`** (`AC_readability_report`): the text utilities canonicalise, match and rank text but never scored *difficulty*. This adds the classic English readability formulae over a deterministic tokeniser and syllable heuristic, so a test can assert an on-screen message or label stays within a target reading grade. Pure-stdlib (`re`/`math`), deterministic.
 
 ## What's new (2026-06-22) — Confusable / Homoglyph Detection
 
