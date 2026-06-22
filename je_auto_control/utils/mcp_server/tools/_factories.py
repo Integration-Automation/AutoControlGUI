@@ -2816,6 +2816,34 @@ def preprocess_tools() -> List[MCPTool]:
     ]
 
 
+def monitor_layout_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_enumerate_monitors",
+            description=("List connected monitors with virtual-desktop geometry: "
+                         "{count, monitors:[{index,x,y,width,height,scale,primary,"
+                         "work}], virtual_bounds:[x,y,w,h]}. Unlike a single "
+                         "screen_size, this exposes per-monitor origins (which may "
+                         "be negative) for multi-display placement."),
+            input_schema=schema({}, required=[]),
+            handler=h.enumerate_monitors,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_monitor_at_point",
+            description=("Report which monitor contains virtual point (x, y): "
+                         "{found, monitor}. Returns found=false when the point is "
+                         "off every display."),
+            input_schema=schema({
+                "x": {"type": "integer"},
+                "y": {"type": "integer"}},
+                required=["x", "y"]),
+            handler=h.monitor_at_point,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6318,8 +6346,8 @@ ALL_FACTORIES = (
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
     modifier_state_tools, grid_locator_tools, visual_match_tools,
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
-    window_layout_tools, window_arrange_tools, preprocess_tools, plugin_sdk_tools,
-    governance_tools,
+    window_layout_tools, window_arrange_tools, preprocess_tools,
+    monitor_layout_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

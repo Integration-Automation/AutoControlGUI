@@ -2162,6 +2162,16 @@ def preprocess_image(output_path, source=None, steps=None, scale=2.0, region=Non
                              block_size, c)
 
 
+def enumerate_monitors():
+    from je_auto_control.utils.executor.action_executor import _enumerate_monitors
+    return _enumerate_monitors()
+
+
+def monitor_at_point(x, y):
+    from je_auto_control.utils.executor.action_executor import _monitor_at_point
+    return _monitor_at_point(x, y)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

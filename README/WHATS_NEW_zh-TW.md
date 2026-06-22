@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 多螢幕 / 虛擬桌面幾何
+
+在多台顯示器間正確擺放視窗與座標。完整參考:[`docs/source/Zh/doc/new_features/v136_features_doc.rst`](../docs/source/Zh/doc/new_features/v136_features_doc.rst)。
+
+- **`enumerate_monitors` + `Monitor` / `virtual_bounds` / `monitor_at_point` / `monitor_for_window` / `to_local` / `to_virtual` / `remap_point`**(`AC_enumerate_monitors`、`AC_monitor_at_point`):`snap_window` / `arrange_grid` / 版面規劃器都假設單一主螢幕 `(width, height)`——對多螢幕無感,無法在第二台顯示器鋪排或處理負原點虛擬桌面。本功能補上實體層:聯集虛擬邊界、某點 / 某視窗屬於哪台螢幕、虛擬↔螢幕區域座標轉換,以及跨解析度 / DPI 的等效位置重映射。對 `Monitor` dataclass 的純幾何 → 完全無頭可測;`enumerate_monitors` 具可注入 provider(預設 `mss`)。
+
 ## 本次更新 (2026-06-23) — 影像前處理(供 OCR / 模板比對)
 
 在辨識或比對前先清理畫面。完整參考:[`docs/source/Zh/doc/new_features/v135_features_doc.rst`](../docs/source/Zh/doc/new_features/v135_features_doc.rst)。

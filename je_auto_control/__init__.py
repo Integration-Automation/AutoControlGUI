@@ -303,6 +303,11 @@ from je_auto_control.utils.preprocess import (
     binarize, denoise, deskew, detect_skew_angle, enhance_contrast,
     preprocess_image, to_grayscale, upscale,
 )
+# Multi-monitor / virtual-desktop geometry (which monitor, where, remapping)
+from je_auto_control.utils.monitor_layout import (
+    Monitor, enumerate_monitors, monitor_at_point, monitor_for_window,
+    primary_monitor, remap_point, to_local, to_virtual, virtual_bounds,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1119,6 +1124,15 @@ __all__ = [
     "deskew",
     "detect_skew_angle",
     "enhance_contrast",
+    "Monitor",
+    "enumerate_monitors",
+    "monitor_at_point",
+    "monitor_for_window",
+    "primary_monitor",
+    "remap_point",
+    "to_local",
+    "to_virtual",
+    "virtual_bounds",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
