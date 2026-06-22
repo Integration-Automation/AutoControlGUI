@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 事务型 Outbox](#本次更新-2026-06-22--事务型-outbox)
 - [本次更新 (2026-06-22) — 乐观并发版本存储](#本次更新-2026-06-22--乐观并发版本存储)
 - [本次更新 (2026-06-22) — 逐流序号间隙检测](#本次更新-2026-06-22--逐流序号间隙检测)
 - [本次更新 (2026-06-22) — 时间窗口去重](#本次更新-2026-06-22--时间窗口去重)
@@ -161,6 +162,12 @@
 ## 本次更新 (2026-06-22) — 移动平均平滑
 
 平滑噪声值序列。完整参考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 事务型 Outbox
+
+持久化缓冲事件并以至少一次传递排空。完整参考:[`docs/source/Zh/doc/new_features/v107_features_doc.rst`](../docs/source/Zh/doc/new_features/v107_features_doc.rst)。
+
+- **`Outbox`**(`AC_outbox_enqueue`、`AC_outbox_pending`):`events.cloud_events` 同步发送且无持久化——当机或网络抖动就会丢失事件。Outbox 先持久化每个事件,再通过注入的 sink 以至少一次传递 `drain` 待传递项目:sink 失败时项目维持待传递以供重试,直到 `max_attempts`,之后列为死信。`save` / `load` 让事件能跨重启存活。纯标准库、确定。
 
 ## 本次更新 (2026-06-22) — 乐观并发版本存储
 

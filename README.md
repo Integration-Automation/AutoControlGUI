@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Transactional Outbox](#whats-new-2026-06-22--transactional-outbox)
 - [What's new (2026-06-22) — Optimistic-Concurrency Versioned Store](#whats-new-2026-06-22--optimistic-concurrency-versioned-store)
 - [What's new (2026-06-22) — Per-Stream Sequence-Gap Detection](#whats-new-2026-06-22--per-stream-sequence-gap-detection)
 - [What's new (2026-06-22) — Time-Windowed Deduplication](#whats-new-2026-06-22--time-windowed-deduplication)
@@ -158,6 +159,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Transactional Outbox
+
+Durably buffer events and drain them at-least-once. Full reference: [`docs/source/Eng/doc/new_features/v107_features_doc.rst`](docs/source/Eng/doc/new_features/v107_features_doc.rst).
+
+- **`Outbox`** (`AC_outbox_enqueue`, `AC_outbox_pending`): `events.cloud_events` posts synchronously with no durability — a crash or network blip loses the event. The outbox persists each event first, then `drain`s pending entries through an injected sink with at-least-once delivery: a sink failure leaves the entry pending for retry until `max_attempts`, after which it is dead-lettered. `save` / `load` keep events across restarts. Pure-stdlib, deterministic.
 
 ## What's new (2026-06-22) — Optimistic-Concurrency Versioned Store
 

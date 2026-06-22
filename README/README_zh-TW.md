@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 交易型 Outbox](#本次更新-2026-06-22--交易型-outbox)
 - [本次更新 (2026-06-22) — 樂觀並行版本儲存](#本次更新-2026-06-22--樂觀並行版本儲存)
 - [本次更新 (2026-06-22) — 逐串流序號間隙偵測](#本次更新-2026-06-22--逐串流序號間隙偵測)
 - [本次更新 (2026-06-22) — 時間視窗去重](#本次更新-2026-06-22--時間視窗去重)
@@ -161,6 +162,12 @@
 ## 本次更新 (2026-06-22) — 移動平均平滑
 
 平滑雜訊值序列。完整參考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 交易型 Outbox
+
+持久化緩衝事件並以至少一次傳遞排空。完整參考:[`docs/source/Zh/doc/new_features/v107_features_doc.rst`](../docs/source/Zh/doc/new_features/v107_features_doc.rst)。
+
+- **`Outbox`**(`AC_outbox_enqueue`、`AC_outbox_pending`):`events.cloud_events` 同步發送且無持久化——當機或網路抖動就會丟失事件。Outbox 先持久化每個事件,再透過注入的 sink 以至少一次傳遞 `drain` 待傳遞項目:sink 失敗時項目維持待傳遞以供重試,直到 `max_attempts`,之後列為死信。`save` / `load` 讓事件能跨重啟存活。純標準函式庫、具決定性。
 
 ## 本次更新 (2026-06-22) — 樂觀並行版本儲存
 

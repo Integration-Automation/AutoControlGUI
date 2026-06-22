@@ -2051,6 +2051,22 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Read a versioned record {value, version}.",
     ))
     specs.append(CommandSpec(
+        "AC_outbox_enqueue", "Flow", "Outbox: Enqueue",
+        fields=(
+            FieldSpec("name", FieldType.STRING, placeholder="orders"),
+            FieldSpec("event", FieldType.STRING,
+                      placeholder='{"type": "order.created", "id": 7}'),
+        ),
+        description="Durably buffer an event for at-least-once delivery.",
+    ))
+    specs.append(CommandSpec(
+        "AC_outbox_pending", "Flow", "Outbox: Pending",
+        fields=(
+            FieldSpec("name", FieldType.STRING, placeholder="orders"),
+        ),
+        description="List events still awaiting successful delivery.",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

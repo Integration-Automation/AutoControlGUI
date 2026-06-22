@@ -3576,6 +3576,29 @@ def optimistic_tools() -> List[MCPTool]:
     ]
 
 
+def outbox_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_outbox_enqueue",
+            description=("Enqueue 'event' into named outbox 'name' for durable "
+                         "at-least-once delivery. Returns {id, pending}."),
+            input_schema=schema(
+                {"name": {"type": "string"}, "event": {"type": "object"}},
+                ["name", "event"]),
+            handler=h.outbox_enqueue,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_outbox_pending",
+            description=("List the pending entries of named outbox 'name'. "
+                         "Returns {pending}."),
+            input_schema=schema({"name": {"type": "string"}}, ["name"]),
+            handler=h.outbox_pending,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def sequence_gap_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5615,7 +5638,7 @@ ALL_FACTORIES = (
     data_profile_tools, http_problem_tools, dotenv_tools,
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
     timeseries_tools, anomaly_tools, smoothing_tools, idempotency_tools,
-    dedup_window_tools, sequence_gap_tools, optimistic_tools,
+    dedup_window_tools, sequence_gap_tools, optimistic_tools, outbox_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
