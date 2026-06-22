@@ -275,7 +275,8 @@ from je_auto_control.utils.modifier_state import (
 from je_auto_control.utils.grid_locator import cluster_grid, locate_cell
 # Confidence-returning template matching (score / multi-scale / find-all + NMS)
 from je_auto_control.utils.visual_match import (
-    best_matches, match_template, match_template_all,
+    best_matches, match_masked, match_masked_all, match_template,
+    match_template_all,
 )
 from je_auto_control.utils.visual_match import Match as TemplateMatch
 # Locate on-screen regions by colour (mask + connected components)
@@ -1074,6 +1075,8 @@ __all__ = [
     "TemplateMatch",
     "match_template",
     "match_template_all",
+    "match_masked",
+    "match_masked_all",
     "best_matches",
     "find_color_region",
     "find_color_regions",

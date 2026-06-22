@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Masked Template Matching
+
+Match icons regardless of their background. Full reference: [`docs/source/Eng/doc/new_features/v129_features_doc.rst`](docs/source/Eng/doc/new_features/v129_features_doc.rst).
+
+- **`match_masked` / `match_masked_all`** (`AC_match_masked`, `AC_match_masked_all`): plain template matching scores *every* pixel, so an icon clipped from one background fails over a different one. These count only the pixels you mark relevant — an explicit grayscale `mask`, or an RGBA template's alpha channel — so transparent / "don't care" pixels stop dragging the score down. Returns the same `Match` (score/center) as scored template matching; OpenCV masked `TM_CCORR_NORMED`, NaNs zeroed. Injectable haystack → headless-testable.
+
 ## What's new (2026-06-23) — Locate On-Screen Regions by Colour
 
 Find the green status pill / red banner by colour. Full reference: [`docs/source/Eng/doc/new_features/v128_features_doc.rst`](docs/source/Eng/doc/new_features/v128_features_doc.rst).

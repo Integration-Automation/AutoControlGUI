@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 遮罩模板匹配
+
+不论背景如何都能匹配图标。完整参考:[`docs/source/Zh/doc/new_features/v129_features_doc.rst`](../docs/source/Zh/doc/new_features/v129_features_doc.rst)。
+
+- **`match_masked` / `match_masked_all`**(`AC_match_masked`、`AC_match_masked_all`):一般模板匹配会计分*每个*像素,因此从某背景裁切出的图标在不同背景上会匹配失败。本功能只计算你标记为相关的像素——明确的灰阶 `mask`,或 RGBA 模板的 alpha 通道——让透明 /「不在乎」的像素不再拉低分数。返回与计分模板匹配相同的 `Match`(score/center);使用 OpenCV 遮罩 `TM_CCORR_NORMED`,NaN 归零。可注入 haystack → 无头可测。
+
 ## 本次更新 (2026-06-23) — 依颜色定位屏幕区域
 
 依颜色找出绿色状态药丸 / 红色横幅。完整参考:[`docs/source/Zh/doc/new_features/v128_features_doc.rst`](../docs/source/Zh/doc/new_features/v128_features_doc.rst)。
