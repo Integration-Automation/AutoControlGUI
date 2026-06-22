@@ -2024,6 +2024,15 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         description="Check-and-mark a message id; first_seen false on duplicate.",
     ))
     specs.append(CommandSpec(
+        "AC_sequence_observe", "Flow", "Sequence: Observe",
+        fields=(
+            FieldSpec("name", FieldType.STRING, placeholder="ingest"),
+            FieldSpec("stream_id", FieldType.STRING, placeholder="orders"),
+            FieldSpec("seq", FieldType.INT, placeholder="14"),
+        ),
+        description="Classify a sequence number (ok/duplicate/gap/reorder).",
+    ))
+    specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",
         fields=(
             FieldSpec("old_rows", FieldType.STRING,

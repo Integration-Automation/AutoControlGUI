@@ -1937,6 +1937,11 @@ def dedup_check(name, message_id, ttl_s=3600):
     return _dedup_check(name, message_id, ttl_s)
 
 
+def sequence_observe(name, stream_id, seq):
+    from je_auto_control.utils.executor.action_executor import _sequence_observe
+    return _sequence_observe(name, stream_id, seq)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
