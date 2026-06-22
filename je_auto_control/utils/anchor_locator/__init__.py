@@ -22,8 +22,8 @@ from je_auto_control.utils.anchor_locator.locator import (
     AnchorLocatorError, AnchorOutcome, KIND_A11Y, KIND_IMAGE,
     KIND_OCR, KIND_VLM, Locator, REL_ABOVE, REL_BELOW,
     REL_LEFT_OF, REL_NEAR, REL_RIGHT_OF,
-    a11y_locator, anchor_locate, image_locator, ocr_locator,
-    vlm_locator,
+    a11y_locator, anchor_locate, anchor_locate_all, image_locator,
+    ocr_locator, vlm_locator,
 )
 
 
@@ -31,6 +31,6 @@ __all__ = [
     "AnchorLocatorError", "AnchorOutcome", "KIND_A11Y", "KIND_IMAGE",
     "KIND_OCR", "KIND_VLM", "Locator", "REL_ABOVE", "REL_BELOW",
     "REL_LEFT_OF", "REL_NEAR", "REL_RIGHT_OF",
-    "a11y_locator", "anchor_locate", "image_locator", "ocr_locator",
-    "vlm_locator",
+    "a11y_locator", "anchor_locate", "anchor_locate_all", "image_locator",
+    "ocr_locator", "vlm_locator",
 ]

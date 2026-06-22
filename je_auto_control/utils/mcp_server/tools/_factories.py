@@ -1472,8 +1472,25 @@ def anchor_locator_tools() -> List[MCPTool]:
                               "enum": ["above", "below", "left_of",
                                        "right_of", "near"]},
                 "max_distance_px": {"type": "number"},
+                "ordinal": {"type": "integer"},
             }, required=["anchor", "target"]),
             handler=h.anchor_locate,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_anchor_locate_all",
+            description=("Every target matching the spatial relation to the "
+                         "anchor, nearest-first (for table / list-row "
+                         "selection). Returns {count, matches}."),
+            input_schema=schema({
+                "anchor": locator_schema,
+                "target": locator_schema,
+                "relation": {"type": "string",
+                              "enum": ["above", "below", "left_of",
+                                       "right_of", "near"]},
+                "max_distance_px": {"type": "number"},
+            }, required=["anchor", "target"]),
+            handler=h.anchor_locate_all,
             annotations=READ_ONLY,
         ),
         MCPTool(

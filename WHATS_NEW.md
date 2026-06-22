@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Anchor Ordinal & Locate-All
+
+Pick the Nth anchor-relative match, or enumerate them all. Full reference: [`docs/source/Eng/doc/new_features/v124_features_doc.rst`](docs/source/Eng/doc/new_features/v124_features_doc.rst).
+
+- **`anchor_locate(..., ordinal=N)` / `anchor_locate_all`** (`AC_anchor_locate` ordinal, `AC_anchor_locate_all`): `anchor_locate` always returned the single nearest match — no way to grab "the 2nd row below the header" or list every row. Adds a 1-based `ordinal` selector (backward-compatible; `ordinal=1` = nearest) and `anchor_locate_all` returning every match sorted by distance — the building block for table/list-row selection. Pure ranking core, deterministic.
+
 ## What's new (2026-06-23) — Held Modifiers Across an Action Group
 
 Hold ctrl/shift down across several actions, released even on error. Full reference: [`docs/source/Eng/doc/new_features/v123_features_doc.rst`](docs/source/Eng/doc/new_features/v123_features_doc.rst).

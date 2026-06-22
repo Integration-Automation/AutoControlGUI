@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 锚点序数与全部定位
+
+挑选第 N 个锚点相对匹配,或列举全部。完整参考:[`docs/source/Zh/doc/new_features/v124_features_doc.rst`](../docs/source/Zh/doc/new_features/v124_features_doc.rst)。
+
+- **`anchor_locate(..., ordinal=N)` / `anchor_locate_all`**(`AC_anchor_locate` ordinal、`AC_anchor_locate_all`):`anchor_locate` 总是返回单一最近的匹配——无法取「标题下方第 2 行」或列出每一行。本功能加入 1 起算的 `ordinal` 选择器(向后兼容;`ordinal=1` 即最近)与返回依距离排序所有匹配的 `anchor_locate_all`——表格/列表行选取的基础元件。纯排序核心、确定。
+
 ## 本次更新 (2026-06-23) — 在动作组中持续按住修饰键
 
 在多个动作之间持续按住 ctrl/shift,即使出错也会放开。完整参考:[`docs/source/Zh/doc/new_features/v123_features_doc.rst`](../docs/source/Zh/doc/new_features/v123_features_doc.rst)。

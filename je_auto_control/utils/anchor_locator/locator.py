@@ -137,7 +137,8 @@ class AnchorOutcome:
 
 def anchor_locate(*, anchor: Locator, target: Locator,
                    relation: str = REL_NEAR,
-                   max_distance_px: float = 200.0) -> AnchorOutcome:
+                   max_distance_px: float = 200.0,
+                   ordinal: int = 1) -> AnchorOutcome:
     """Find ``target`` near / above / below / beside ``anchor``.
 
     Strategy:
@@ -147,8 +148,10 @@ def anchor_locate(*, anchor: Locator, target: Locator,
     2. Resolve the target to a list of candidate bboxes. Image and
        OCR can enumerate; VLM / a11y always return one point so
        only that one candidate is considered.
-    3. Filter candidates by the spatial relation; tie-break by the
-       smallest centre-to-centre distance.
+    3. Filter candidates by the spatial relation and sort by the
+       centre-to-centre distance; return the ``ordinal``-th (1-based,
+       so ``ordinal=1`` is the nearest — "the 2nd row below the header"
+       is ``ordinal=2``).
     """
     relation_norm = _normalise_relation(relation)
     anchor_point = _resolve_single(anchor)
@@ -160,7 +163,6 @@ def anchor_locate(*, anchor: Locator, target: Locator,
             error="anchor not found",
         )
     candidates = _resolve_candidates(target)
-    candidates_considered = len(candidates)
     if not candidates:
         return AnchorOutcome(
             found=False, target_coords=None, anchor_coords=anchor_point,
@@ -168,24 +170,52 @@ def anchor_locate(*, anchor: Locator, target: Locator,
             target_kind=target.kind, anchor_kind=anchor.kind,
             candidates_considered=0, error="target not found",
         )
-    chosen = _pick_best(
-        anchor_point, candidates, relation_norm, float(max_distance_px),
-    )
-    if chosen is None:
+    ranked = _ranked(anchor_point, candidates, relation_norm,
+                     float(max_distance_px))
+    index = int(ordinal) - 1
+    if index < 0 or index >= len(ranked):
         return AnchorOutcome(
             found=False, target_coords=None, anchor_coords=anchor_point,
             distance_px=None, relation=relation_norm,
             target_kind=target.kind, anchor_kind=anchor.kind,
-            candidates_considered=candidates_considered,
-            error=f"no candidate satisfies relation {relation_norm!r}",
+            candidates_considered=len(candidates),
+            error=f"no candidate at ordinal {ordinal} for relation "
+                  f"{relation_norm!r}",
         )
-    coords, distance = chosen
+    coords, distance = ranked[index]
     return AnchorOutcome(
         found=True, target_coords=coords, anchor_coords=anchor_point,
         distance_px=round(distance, 2), relation=relation_norm,
         target_kind=target.kind, anchor_kind=anchor.kind,
-        candidates_considered=candidates_considered,
+        candidates_considered=len(candidates),
     )
+
+
+def anchor_locate_all(*, anchor: Locator, target: Locator,
+                      relation: str = REL_NEAR,
+                      max_distance_px: float = 200.0) -> List[AnchorOutcome]:
+    """Return every target matching the relation, nearest-first.
+
+    The building block for table / list-row selection: each result is a found
+    :class:`AnchorOutcome` ordered by distance from the anchor. Returns an empty
+    list when the anchor or all targets are missing.
+    """
+    relation_norm = _normalise_relation(relation)
+    anchor_point = _resolve_single(anchor)
+    if anchor_point is None:
+        return []
+    candidates = _resolve_candidates(target)
+    ranked = _ranked(anchor_point, candidates, relation_norm,
+                     float(max_distance_px))
+    return [
+        AnchorOutcome(
+            found=True, target_coords=coords, anchor_coords=anchor_point,
+            distance_px=round(distance, 2), relation=relation_norm,
+            target_kind=target.kind, anchor_kind=anchor.kind,
+            candidates_considered=len(candidates),
+        )
+        for coords, distance in ranked
+    ]
 
 
 def _normalise_relation(relation: str) -> str:
@@ -221,21 +251,22 @@ def _resolve_candidates(locator: Locator) -> List[_Bbox]:
     return []
 
 
-def _pick_best(anchor_point: Tuple[int, int],
-                candidates: List[_Bbox],
-                relation: str,
-                max_distance: float,
-                ) -> Optional[Tuple[Tuple[int, int], float]]:
-    best: Optional[Tuple[Tuple[int, int], float]] = None
+def _ranked(anchor_point: Tuple[int, int],
+            candidates: List[_Bbox],
+            relation: str,
+            max_distance: float,
+            ) -> List[Tuple[Tuple[int, int], float]]:
+    """Return (centre, distance) of matching candidates, nearest first."""
+    matches: List[Tuple[Tuple[int, int], float]] = []
     for bbox in candidates:
         if not _matches_relation(anchor_point, bbox, relation):
             continue
         distance = _euclid(anchor_point, bbox.center)
         if relation == REL_NEAR and distance > max_distance:
             continue
-        if best is None or distance < best[1]:
-            best = (bbox.center, distance)
-    return best
+        matches.append((bbox.center, distance))
+    matches.sort(key=lambda item: item[1])
+    return matches
 
 
 def _matches_relation(anchor_point: Tuple[int, int],
@@ -352,5 +383,6 @@ __all__ = [
     "AnchorLocatorError", "AnchorOutcome", "KIND_A11Y", "KIND_IMAGE",
     "KIND_OCR", "KIND_VLM", "Locator", "REL_ABOVE", "REL_BELOW",
     "REL_LEFT_OF", "REL_NEAR", "REL_RIGHT_OF", "a11y_locator",
-    "anchor_locate", "image_locator", "ocr_locator", "vlm_locator",
+    "anchor_locate", "anchor_locate_all", "image_locator", "ocr_locator",
+    "vlm_locator",
 ]

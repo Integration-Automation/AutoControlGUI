@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 錨點序數與全部定位
+
+挑選第 N 個錨點相對比對,或列舉全部。完整參考:[`docs/source/Zh/doc/new_features/v124_features_doc.rst`](../docs/source/Zh/doc/new_features/v124_features_doc.rst)。
+
+- **`anchor_locate(..., ordinal=N)` / `anchor_locate_all`**(`AC_anchor_locate` ordinal、`AC_anchor_locate_all`):`anchor_locate` 總是回傳單一最近的比對——無法取「標題下方第 2 列」或列出每一列。本功能加入 1 起算的 `ordinal` 選擇器(向後相容;`ordinal=1` 即最近)與回傳依距離排序所有比對的 `anchor_locate_all`——表格/清單列選取的基礎元件。純排序核心、具決定性。
+
 ## 本次更新 (2026-06-23) — 在動作群組中持續按住修飾鍵
 
 在多個動作之間持續按住 ctrl/shift,即使出錯也會放開。完整參考:[`docs/source/Zh/doc/new_features/v123_features_doc.rst`](../docs/source/Zh/doc/new_features/v123_features_doc.rst)。

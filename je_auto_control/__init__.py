@@ -607,8 +607,8 @@ from je_auto_control.utils.chatops import (
 # Anchor-based locators (spatial composition of locator backends)
 from je_auto_control.utils.anchor_locator import (
     AnchorLocatorError, AnchorOutcome, Locator as AnchorLocator,
-    a11y_locator, anchor_locate, image_locator, ocr_locator,
-    vlm_locator,
+    a11y_locator, anchor_locate, anchor_locate_all, image_locator,
+    ocr_locator, vlm_locator,
 )
 # Structured OCR (rows / tables / form fields)
 from je_auto_control.utils.ocr.structure import (
@@ -1245,7 +1245,8 @@ __all__ = [
     "register_chatops_default_commands",
     # Anchor-based locator
     "AnchorLocator", "AnchorLocatorError", "AnchorOutcome",
-    "a11y_locator", "anchor_locate", "image_locator", "ocr_locator",
+    "a11y_locator", "anchor_locate", "anchor_locate_all", "image_locator",
+    "ocr_locator",
     "vlm_locator",
     # Structured OCR
     "OCRField", "OCRRow", "OCRTable", "StructuredOCR",
