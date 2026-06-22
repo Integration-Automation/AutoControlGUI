@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 可讀性評分](#本次更新-2026-06-22--可讀性評分)
 - [本次更新 (2026-06-22) — 易混淆字元 / 同形異義字偵測](#本次更新-2026-06-22--易混淆字元--同形異義字偵測)
 - [本次更新 (2026-06-22) — 地區感知字串排序](#本次更新-2026-06-22--地區感知字串排序)
 - [本次更新 (2026-06-22) — 交易型 Outbox](#本次更新-2026-06-22--交易型-outbox)
@@ -164,6 +165,12 @@
 ## 本次更新 (2026-06-22) — 移動平均平滑
 
 平滑雜訊值序列。完整參考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 可讀性評分
+
+評估文字有多難讀;以閱讀年級把關產生的文案。完整參考:[`docs/source/Zh/doc/new_features/v110_features_doc.rst`](../docs/source/Zh/doc/new_features/v110_features_doc.rst)。
+
+- **`flesch_reading_ease` / `flesch_kincaid_grade` / `gunning_fog` / `smog_index` / `automated_readability_index` / `readability_report` / `readability_stats` / `count_syllables`**(`AC_readability_report`):文字工具能正規化、比對與排名文字,卻從未評估*難度*。本功能在決定性斷詞器與音節啟發式之上加入經典英文可讀性公式,讓測試能斷言畫面訊息或標籤落在目標閱讀年級內。純標準函式庫(`re`/`math`)、具決定性。
 
 ## 本次更新 (2026-06-22) — 易混淆字元 / 同形異義字偵測
 

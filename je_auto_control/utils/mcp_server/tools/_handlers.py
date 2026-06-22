@@ -1982,6 +1982,11 @@ def confusable_compare(first, second):
     return _confusable_compare(first, second)
 
 
+def readability_report(text):
+    from je_auto_control.utils.executor.action_executor import _readability_report
+    return _readability_report(text)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

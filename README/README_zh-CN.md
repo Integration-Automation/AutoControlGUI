@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 可读性评分](#本次更新-2026-06-22--可读性评分)
 - [本次更新 (2026-06-22) — 易混淆字符 / 同形异义字检测](#本次更新-2026-06-22--易混淆字符--同形异义字检测)
 - [本次更新 (2026-06-22) — 区域感知字符串排序](#本次更新-2026-06-22--区域感知字符串排序)
 - [本次更新 (2026-06-22) — 事务型 Outbox](#本次更新-2026-06-22--事务型-outbox)
@@ -164,6 +165,12 @@
 ## 本次更新 (2026-06-22) — 移动平均平滑
 
 平滑噪声值序列。完整参考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 可读性评分
+
+评估文字有多难读;以阅读年级把关生成的文案。完整参考:[`docs/source/Zh/doc/new_features/v110_features_doc.rst`](../docs/source/Zh/doc/new_features/v110_features_doc.rst)。
+
+- **`flesch_reading_ease` / `flesch_kincaid_grade` / `gunning_fog` / `smog_index` / `automated_readability_index` / `readability_report` / `readability_stats` / `count_syllables`**(`AC_readability_report`):文字工具能正规化、比对与排名文字,却从未评估*难度*。本功能在确定性分词器与音节启发式之上加入经典英文可读性公式,让测试能断言画面消息或标签落在目标阅读年级内。纯标准库(`re`/`math`)、确定。
 
 ## 本次更新 (2026-06-22) — 易混淆字符 / 同形异义字检测
 

@@ -3653,6 +3653,19 @@ def confusables_tools() -> List[MCPTool]:
     ]
 
 
+def readability_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_readability_report",
+            description=("Readability report for 'text': Flesch reading ease, "
+                         "Flesch-Kincaid grade, Gunning Fog, SMOG, ARI + counts."),
+            input_schema=schema({"text": {"type": "string"}}, ["text"]),
+            handler=h.readability_report,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def sequence_gap_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5693,7 +5706,7 @@ ALL_FACTORIES = (
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
     timeseries_tools, anomaly_tools, smoothing_tools, idempotency_tools,
     dedup_window_tools, sequence_gap_tools, optimistic_tools, outbox_tools,
-    locale_collation_tools, confusables_tools,
+    locale_collation_tools, confusables_tools, readability_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,
