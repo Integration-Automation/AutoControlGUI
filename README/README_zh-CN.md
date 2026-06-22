@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 易混淆字符 / 同形异义字检测](#本次更新-2026-06-22--易混淆字符--同形异义字检测)
 - [本次更新 (2026-06-22) — 区域感知字符串排序](#本次更新-2026-06-22--区域感知字符串排序)
 - [本次更新 (2026-06-22) — 事务型 Outbox](#本次更新-2026-06-22--事务型-outbox)
 - [本次更新 (2026-06-22) — 乐观并发版本存储](#本次更新-2026-06-22--乐观并发版本存储)
@@ -163,6 +164,12 @@
 ## 本次更新 (2026-06-22) — 移动平均平滑
 
 平滑噪声值序列。完整参考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 易混淆字符 / 同形异义字检测
+
+抓出 Unicode 视觉仿冒(IDN 同形异义字钓鱼、仿冒标签)。完整参考:[`docs/source/Zh/doc/new_features/v109_features_doc.rst`](../docs/source/Zh/doc/new_features/v109_features_doc.rst)。
+
+- **`confusable_skeleton` / `is_confusable` / `detect_homoglyphs` / `is_mixed_script` / `scripts_of`**(`AC_confusable_scan`、`AC_confusable_compare`):西里尔字母 `"а"` 与拉丁字母 `"a"` 在像素上相同,因此 `"pаypal"` 读来是 `"paypal"` 却比较不相等。参照 Unicode TR39,本功能将易混淆字折叠为原型骨架(骨架相同即相符),并标记混用文字系统的令牌。纯标准库(`unicodedata`)、确定。
 
 ## 本次更新 (2026-06-22) — 区域感知字符串排序
 

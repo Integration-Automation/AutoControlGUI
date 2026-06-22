@@ -3630,6 +3630,29 @@ def locale_collation_tools() -> List[MCPTool]:
     ]
 
 
+def confusables_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_confusable_scan",
+            description=("Homoglyph / mixed-script spoofing report for 'text'. "
+                         "Returns {skeleton, homoglyphs, mixed_script, scripts}."),
+            input_schema=schema({"text": {"type": "string"}}, ["text"]),
+            handler=h.confusable_scan,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_confusable_compare",
+            description=("Whether 'first' and 'second' render to the same "
+                         "confusable skeleton. Returns {confusable}."),
+            input_schema=schema(
+                {"first": {"type": "string"}, "second": {"type": "string"}},
+                ["first", "second"]),
+            handler=h.confusable_compare,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def sequence_gap_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5670,7 +5693,7 @@ ALL_FACTORIES = (
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
     timeseries_tools, anomaly_tools, smoothing_tools, idempotency_tools,
     dedup_window_tools, sequence_gap_tools, optimistic_tools, outbox_tools,
-    locale_collation_tools,
+    locale_collation_tools, confusables_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

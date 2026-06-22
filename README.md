@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Confusable / Homoglyph Detection](#whats-new-2026-06-22--confusable--homoglyph-detection)
 - [What's new (2026-06-22) — Locale-Aware String Collation](#whats-new-2026-06-22--locale-aware-string-collation)
 - [What's new (2026-06-22) — Transactional Outbox](#whats-new-2026-06-22--transactional-outbox)
 - [What's new (2026-06-22) — Optimistic-Concurrency Versioned Store](#whats-new-2026-06-22--optimistic-concurrency-versioned-store)
@@ -160,6 +161,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Confusable / Homoglyph Detection
+
+Catch Unicode visual spoofing (IDN-homograph phishing, lookalike labels). Full reference: [`docs/source/Eng/doc/new_features/v109_features_doc.rst`](docs/source/Eng/doc/new_features/v109_features_doc.rst).
+
+- **`confusable_skeleton` / `is_confusable` / `detect_homoglyphs` / `is_mixed_script` / `scripts_of`** (`AC_confusable_scan`, `AC_confusable_compare`): a Cyrillic `"а"` is pixel-for-pixel a Latin `"a"`, so `"pаypal"` reads as `"paypal"` yet compares unequal. Following Unicode TR39, this folds confusables to a prototype skeleton (strings match when skeletons match) and flags mixed-script tokens. Pure-stdlib (`unicodedata`), deterministic.
 
 ## What's new (2026-06-22) — Locale-Aware String Collation
 

@@ -12,6 +12,7 @@
 
 ## 目錄
 
+- [本次更新 (2026-06-22) — 易混淆字元 / 同形異義字偵測](#本次更新-2026-06-22--易混淆字元--同形異義字偵測)
 - [本次更新 (2026-06-22) — 地區感知字串排序](#本次更新-2026-06-22--地區感知字串排序)
 - [本次更新 (2026-06-22) — 交易型 Outbox](#本次更新-2026-06-22--交易型-outbox)
 - [本次更新 (2026-06-22) — 樂觀並行版本儲存](#本次更新-2026-06-22--樂觀並行版本儲存)
@@ -163,6 +164,12 @@
 ## 本次更新 (2026-06-22) — 移動平均平滑
 
 平滑雜訊值序列。完整參考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 易混淆字元 / 同形異義字偵測
+
+抓出 Unicode 視覺仿冒(IDN 同形異義字釣魚、仿冒標籤)。完整參考:[`docs/source/Zh/doc/new_features/v109_features_doc.rst`](../docs/source/Zh/doc/new_features/v109_features_doc.rst)。
+
+- **`confusable_skeleton` / `is_confusable` / `detect_homoglyphs` / `is_mixed_script` / `scripts_of`**(`AC_confusable_scan`、`AC_confusable_compare`):西里爾字母 `"а"` 與拉丁字母 `"a"` 在像素上相同,因此 `"pаypal"` 讀來是 `"paypal"` 卻比較不相等。參照 Unicode TR39,本功能將易混淆字折疊為原型骨架(骨架相同即相符),並標記混用文字系統的權杖。純標準函式庫(`unicodedata`)、具決定性。
 
 ## 本次更新 (2026-06-22) — 地區感知字串排序
 
