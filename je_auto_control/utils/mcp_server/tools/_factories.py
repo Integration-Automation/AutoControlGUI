@@ -3599,6 +3599,37 @@ def outbox_tools() -> List[MCPTool]:
     ]
 
 
+def locale_collation_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_collation_sort",
+            description=("Locale-aware sort of string list 'items'. 'strength' "
+                         "primary|secondary|tertiary; 'tailoring' is an ordered "
+                         "alphabet (e.g. Swedish '...xyzåäö'). Returns {sorted}."),
+            input_schema=schema(
+                {"items": {"type": "array", "items": {"type": "string"}},
+                 "strength": {"type": "string"},
+                 "tailoring": {"type": "string"},
+                 "reverse": {"type": "boolean"}},
+                ["items"]),
+            handler=h.collation_sort,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_collation_compare",
+            description=("Locale-aware compare of 'first' vs 'second'; returns "
+                         "{order: -1|0|1}. Same 'strength'/'tailoring' options."),
+            input_schema=schema(
+                {"first": {"type": "string"}, "second": {"type": "string"},
+                 "strength": {"type": "string"},
+                 "tailoring": {"type": "string"}},
+                ["first", "second"]),
+            handler=h.collation_compare,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def sequence_gap_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -5639,6 +5670,7 @@ ALL_FACTORIES = (
     sse_client_tools, layered_config_tools, data_drift_tools, schema_compat_tools,
     timeseries_tools, anomaly_tools, smoothing_tools, idempotency_tools,
     dedup_window_tools, sequence_gap_tools, optimistic_tools, outbox_tools,
+    locale_collation_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [What's new (2026-06-22) — Locale-Aware String Collation](#whats-new-2026-06-22--locale-aware-string-collation)
 - [What's new (2026-06-22) — Transactional Outbox](#whats-new-2026-06-22--transactional-outbox)
 - [What's new (2026-06-22) — Optimistic-Concurrency Versioned Store](#whats-new-2026-06-22--optimistic-concurrency-versioned-store)
 - [What's new (2026-06-22) — Per-Stream Sequence-Gap Detection](#whats-new-2026-06-22--per-stream-sequence-gap-detection)
@@ -159,6 +160,12 @@
 - [License](#license)
 
 ---
+
+## What's new (2026-06-22) — Locale-Aware String Collation
+
+Sort strings the way a reader of the language expects. Full reference: [`docs/source/Eng/doc/new_features/v108_features_doc.rst`](docs/source/Eng/doc/new_features/v108_features_doc.rst).
+
+- **`sort_strings` / `collation_compare` / `collation_key`** (`AC_collation_sort`, `AC_collation_compare`): Python's default `sorted` is codepoint order, so `"Z" < "a"` and `"ä"` lands far from `"a"`. This Unicode-Collation-lite key orders by base letter, then accent (secondary), then case (tertiary), with an optional `tailoring` alphabet so Swedish puts `å ä ö` after `z`. Pure-stdlib (`unicodedata`), deterministic across platforms — unlike `locale.strxfrm`.
 
 ## What's new (2026-06-22) — Transactional Outbox
 

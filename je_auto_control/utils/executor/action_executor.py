@@ -2956,6 +2956,26 @@ def _outbox_pending(name: str) -> Dict[str, Any]:
     return {"pending": outbox.pending()}
 
 
+def _collation_sort(items: Any, strength: str = "tertiary",
+                    tailoring: Any = None, reverse: Any = False) -> Dict[str, Any]:
+    """Adapter: locale-aware sort of a list of strings."""
+    import json
+    from je_auto_control.utils.locale_collation import sort_strings
+    if isinstance(items, str):
+        items = json.loads(items)
+    ordered = sort_strings(list(items), strength=strength,
+                           tailoring=tailoring or None, reverse=bool(reverse))
+    return {"sorted": ordered}
+
+
+def _collation_compare(first: str, second: str, strength: str = "tertiary",
+                       tailoring: Any = None) -> Dict[str, Any]:
+    """Adapter: locale-aware comparison of two strings."""
+    from je_auto_control.utils.locale_collation import compare
+    return {"order": compare(first, second, strength=strength,
+                             tailoring=tailoring or None)}
+
+
 def _cas_put(name: str, key: str, value: Any,
              expected_version: Any = None) -> Dict[str, Any]:
     """Adapter: optimistic put into a named versioned store."""
@@ -4638,6 +4658,8 @@ class Executor:
             "AC_cas_get": _cas_get,
             "AC_outbox_enqueue": _outbox_enqueue,
             "AC_outbox_pending": _outbox_pending,
+            "AC_collation_sort": _collation_sort,
+            "AC_collation_compare": _collation_compare,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,

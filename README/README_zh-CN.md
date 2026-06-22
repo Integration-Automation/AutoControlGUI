@@ -12,6 +12,7 @@
 
 ## 目录
 
+- [本次更新 (2026-06-22) — 区域感知字符串排序](#本次更新-2026-06-22--区域感知字符串排序)
 - [本次更新 (2026-06-22) — 事务型 Outbox](#本次更新-2026-06-22--事务型-outbox)
 - [本次更新 (2026-06-22) — 乐观并发版本存储](#本次更新-2026-06-22--乐观并发版本存储)
 - [本次更新 (2026-06-22) — 逐流序号间隙检测](#本次更新-2026-06-22--逐流序号间隙检测)
@@ -162,6 +163,12 @@
 ## 本次更新 (2026-06-22) — 移动平均平滑
 
 平滑噪声值序列。完整参考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
+
+## 本次更新 (2026-06-22) — 区域感知字符串排序
+
+依某语言读者的期望排序字符串。完整参考:[`docs/source/Zh/doc/new_features/v108_features_doc.rst`](../docs/source/Zh/doc/new_features/v108_features_doc.rst)。
+
+- **`sort_strings` / `collation_compare` / `collation_key`**(`AC_collation_sort`、`AC_collation_compare`):Python 默认的 `sorted` 是码位顺序,因此 `"Z" < "a"`,而 `"ä"` 离 `"a"` 很远。本 Unicode-Collation-lite 键先依基底字母、再依变音符号(次层)、再依大小写(三层)排序,并可用 `tailoring` 字母表让瑞典文将 `å ä ö` 排在 `z` 之后。纯标准库(`unicodedata`)、跨平台确定——不像 `locale.strxfrm`。
 
 ## 本次更新 (2026-06-22) — 事务型 Outbox
 
