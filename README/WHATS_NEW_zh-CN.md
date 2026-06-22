@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 表格 / 网格单元格定位
+
+依(行、列)从单元格边界框定位表格单元格。完整参考:[`docs/source/Zh/doc/new_features/v125_features_doc.rst`](../docs/source/Zh/doc/new_features/v125_features_doc.rst)。
+
+- **`cluster_grid` / `locate_cell`**(`AC_grid_cell`):`anchor_locator` 处理成对关系,但无法定位二维网格。给定单元格边界框(来自 `locate_all_image` / `find_text_matches`),本功能将其分群为行(依中心 y 在 `row_tolerance` 内)与列(依中心 x),并返回 0 起算 `(row, col)` 单元格的中心——可直接点击。纯分群、完全无头可测。
+
 ## 本次更新 (2026-06-23) — 锚点序数与全部定位
 
 挑选第 N 个锚点相对匹配,或列举全部。完整参考:[`docs/source/Zh/doc/new_features/v124_features_doc.rst`](../docs/source/Zh/doc/new_features/v124_features_doc.rst)。

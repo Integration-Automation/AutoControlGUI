@@ -2063,6 +2063,11 @@ def with_modifiers(modifiers, actions):
     return _with_modifiers(modifiers, actions)
 
 
+def grid_cell(boxes, row, col, row_tolerance=10):
+    from je_auto_control.utils.executor.action_executor import _grid_cell
+    return _grid_cell(boxes, row, col, row_tolerance)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
