@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — HSV Colour-Space Segmentation
+
+Find "any shade of red" regardless of lighting. Full reference: [`docs/source/Eng/doc/new_features/v139_features_doc.rst`](docs/source/Eng/doc/new_features/v139_features_doc.rst).
+
+- **`dominant_hue_regions` / `segment_hsv` / `color_mask`** (`AC_dominant_hue_regions`, `AC_segment_hsv`): `find_color_region` masks in RGB with a per-channel ± box — it can't match "the same colour at a different brightness" (status lights, highlights, theme tints). HSV separates hue from brightness, so a hue band + saturation/value floor catches every shade across lighting. `dominant_hue_regions(hue=…)` handles red's 0/180 wrap automatically; `segment_hsv` takes an explicit band; both return `{x,y,width,height,area,center}` blobs reusing the shared connected-components helper. Injectable haystack → headless-testable.
+
 ## What's new (2026-06-23) — Fuse & Order On-Screen Element Boxes
 
 Turn raw OCR + icon + a11y boxes into one clean, numbered element list. Full reference: [`docs/source/Eng/doc/new_features/v138_features_doc.rst`](docs/source/Eng/doc/new_features/v138_features_doc.rst).

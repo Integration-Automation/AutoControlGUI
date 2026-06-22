@@ -2188,6 +2188,18 @@ def reading_order(elements, row_tol=12):
     return _reading_order(elements, row_tol)
 
 
+def segment_hsv(lower_hsv, upper_hsv, min_area=50, region=None):
+    from je_auto_control.utils.executor.action_executor import _segment_hsv
+    return _segment_hsv(lower_hsv, upper_hsv, min_area, region)
+
+
+def dominant_hue_regions(hue, hue_tol=10, sat_min=80, val_min=80, min_area=50,
+                         region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _dominant_hue_regions)
+    return _dominant_hue_regions(hue, hue_tol, sat_min, val_min, min_area, region)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
