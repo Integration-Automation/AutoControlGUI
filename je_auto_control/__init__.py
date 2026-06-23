@@ -335,6 +335,10 @@ from je_auto_control.utils.expect_poll import (
 )
 # Composable / filtered candidate locators (chained-locator idiom)
 from je_auto_control.utils.locator_chain import Candidates, from_boxes
+# Rich clipboard formats — HTML (CF_HTML) build / parse / get / set
+from je_auto_control.utils.rich_clipboard import (
+    build_cf_html, get_clipboard_html, parse_cf_html, set_clipboard_html,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1187,6 +1191,10 @@ __all__ = [
     "to_be_stable",
     "Candidates",
     "from_boxes",
+    "build_cf_html",
+    "parse_cf_html",
+    "get_clipboard_html",
+    "set_clipboard_html",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

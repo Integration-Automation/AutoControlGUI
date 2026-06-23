@@ -2237,6 +2237,16 @@ def locate_chain(boxes, ops=None):
     return _locate_chain(boxes, ops)
 
 
+def set_clipboard_html(html, fragment_plaintext=None):
+    from je_auto_control.utils.executor.action_executor import _set_clipboard_html
+    return _set_clipboard_html(html, fragment_plaintext)
+
+
+def get_clipboard_html():
+    from je_auto_control.utils.executor.action_executor import _get_clipboard_html
+    return _get_clipboard_html()
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
