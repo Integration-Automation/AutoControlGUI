@@ -2350,6 +2350,11 @@ def best_candidate(candidates, want_role=None, want_name=None, anchor=None):
     return _best_candidate(candidates, want_role, want_name, anchor)
 
 
+def read_barcodes(source=None, region=None):
+    from je_auto_control.utils.executor.action_executor import _read_barcodes
+    return _read_barcodes(source, region)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

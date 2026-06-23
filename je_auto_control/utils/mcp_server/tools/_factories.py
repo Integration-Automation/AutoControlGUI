@@ -3410,6 +3410,24 @@ def element_scoring_tools() -> List[MCPTool]:
     ]
 
 
+def barcode_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_read_barcodes",
+            description=("Decode 1-D barcodes (EAN / UPC / Code-128) in 'source' "
+                         "(image path; default: screen grab of 'region'). Returns "
+                         "{count, barcodes:[{text, type, points}]}. QR codes have "
+                         "their own tool."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.read_barcodes,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6919,7 +6937,8 @@ ALL_FACTORIES = (
     motion_regions_tools, window_zorder_tools, soft_assert_tools,
     perceptual_diff_tools, window_geometry_tools, cua_action_tools,
     observation_tools, action_grounding_tools, agent_replay_tools,
-    element_diff_tools, element_scoring_tools, plugin_sdk_tools, governance_tools,
+    element_diff_tools, element_scoring_tools, barcode_tools, plugin_sdk_tools,
+    governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

@@ -3953,6 +3953,16 @@ def _best_candidate(candidates: Any, want_role: Any = None, want_name: Any = Non
             "best": best.to_dict() if best is not None else None}
 
 
+def _read_barcodes(source: Any = None, region: Any = None) -> Dict[str, Any]:
+    """Adapter: decode 1-D barcodes on screen / in an image."""
+    import json
+    from je_auto_control.utils.barcode import read_barcodes
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    barcodes = read_barcodes(source, region=region)
+    return {"count": len(barcodes), "barcodes": barcodes}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5716,6 +5726,7 @@ class Executor:
             "AC_assign_stable_ids": _assign_stable_ids,
             "AC_score_candidates": _score_candidates,
             "AC_best_candidate": _best_candidate,
+            "AC_read_barcodes": _read_barcodes,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 一维条码解码
+
+从屏幕或图像读取 EAN / UPC / Code-128 条码。完整参考:[`docs/source/Zh/doc/new_features/v157_features_doc.rst`](../docs/source/Zh/doc/new_features/v157_features_doc.rst)。
+
+- **`read_barcodes`**(`AC_read_barcodes`):框架已能解码 QR Code(`read_qr`),但缺少能读取*一维*条码(EAN-13/8、UPC-A、Code-128)的功能——这些正是商品、库存标签与物流面单上最常见的条码。本功能通过 OpenCV 的 `cv2.barcode.BarcodeDetector` 解码,每个条码返回 `{text, type, points}`。解码步骤为可注入接缝(默认调用 OpenCV;测试可传入自己的 `decoder`),因此可完整无头测试且能优雅降级——若 OpenCV 编译时未含 `barcode` 模块,返回 `[]` 而非抛出异常。重用共用的 `visual_match` haystack 加载器;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-23) — 加权候选评分
 
 以信心分数排序模棱两可的元素候选。完整参考:[`docs/source/Zh/doc/new_features/v156_features_doc.rst`](../docs/source/Zh/doc/new_features/v156_features_doc.rst)。

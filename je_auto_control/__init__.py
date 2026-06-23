@@ -385,6 +385,8 @@ from je_auto_control.utils.element_diff import (
 from je_auto_control.utils.element_scoring import (
     ScoredCandidate, best_candidate, score_candidates,
 )
+# 1-D barcode decoding (EAN / UPC) with an injectable decoder seam
+from je_auto_control.utils.barcode import read_barcodes
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1278,6 +1280,7 @@ __all__ = [
     "score_candidates",
     "best_candidate",
     "ScoredCandidate",
+    "read_barcodes",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

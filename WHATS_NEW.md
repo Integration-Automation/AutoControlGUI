@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Barcode Decoding (1-D)
+
+Read EAN / UPC / Code-128 barcodes off the screen or an image. Full reference: [`docs/source/Eng/doc/new_features/v157_features_doc.rst`](docs/source/Eng/doc/new_features/v157_features_doc.rst).
+
+- **`read_barcodes`** (`AC_read_barcodes`): the framework decoded QR codes (`read_qr`) but had no reader for the *1-D* barcodes (EAN-13/8, UPC-A, Code-128) that label physical goods, inventory tickets and shipping labels. This decodes them via OpenCV's `cv2.barcode.BarcodeDetector`, returning `{text, type, points}` per code. The decode step is an injectable seam (default calls OpenCV; tests pass their own `decoder`), so it's fully headless-testable and degrades gracefully — an OpenCV build without the `barcode` module returns `[]` instead of raising. Reuses the shared `visual_match` haystack loader; no `PySide6`.
+
 ## What's new (2026-06-23) — Weighted Candidate Scoring
 
 Rank ambiguous element candidates by a confidence score. Full reference: [`docs/source/Eng/doc/new_features/v156_features_doc.rst`](docs/source/Eng/doc/new_features/v156_features_doc.rst).
