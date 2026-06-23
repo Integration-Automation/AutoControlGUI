@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 重试式数值断言(expect.poll)
+
+重试*任意*值直到符合,不只限内建检查。完整参考:[`docs/source/Zh/doc/new_features/v142_features_doc.rst`](../docs/source/Zh/doc/new_features/v142_features_doc.rst)。
+
+- **`expect_poll` / `assert_poll` + matchers**(`AC_expect_poll`):`assert_eventually` 只能轮询固定字典规格检查(文字/图像/像素/…)。本功能对任意零参数 `getter` 以任意 `matcher`(`to_equal` / `to_contain` / `to_be_greater_than` / `to_match_regex` / `to_be_truthy` / `to_be_stable`)轮询直到通过或超时——OCR 出的总额、行数稳定、自定义判断式皆可。可注入 `clock`/`sleep` → 具确定性,对应 Playwright 的 `expect.poll`。执行器命令会重复执行嵌套动作直到其结果某键符合。
+
 ## 本次更新 (2026-06-23) — 线条 / 网格 / 分隔线检测(Hough)
 
 从原始像素找出表格网格线与 UI 分隔线。完整参考:[`docs/source/Zh/doc/new_features/v141_features_doc.rst`](../docs/source/Zh/doc/new_features/v141_features_doc.rst)。

@@ -3017,6 +3017,30 @@ def edge_lines_tools() -> List[MCPTool]:
     ]
 
 
+def expect_poll_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_expect_poll",
+            description=("Re-run a nested 'action' (e.g. [\"AC_get_clipboard\"]) "
+                         "until a 'key' of its result dict matches 'op' "
+                         "(truthy/equals/contains/gt/regex) vs 'expected', or "
+                         "'timeout_s' elapses. Retries an ARBITRARY value, unlike "
+                         "assert_eventually's fixed checks. Returns {ok, value, "
+                         "attempts, waited_s}."),
+            input_schema=schema({
+                "action": {"type": "array"},
+                "key": {"type": "string"},
+                "op": {"type": "string"},
+                "expected": {},
+                "timeout_s": {"type": "number"},
+                "interval_s": {"type": "number"}},
+                required=["action"]),
+            handler=h.expect_poll,
+            annotations=NON_DESTRUCTIVE,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6521,8 +6545,8 @@ ALL_FACTORIES = (
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
     window_layout_tools, window_arrange_tools, preprocess_tools,
     monitor_layout_tools, actionability_tools, element_parse_tools,
-    hsv_segment_tools, text_regions_tools, edge_lines_tools, plugin_sdk_tools,
-    governance_tools,
+    hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
+    plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
