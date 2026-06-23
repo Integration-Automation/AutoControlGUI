@@ -2108,6 +2108,13 @@ def match_rotated_all(template, min_score=0.8, scales=None, angles=None,
                               nms_iou, region)
 
 
+def match_with_trust(template, min_score=0.0, scales=None, ambiguous_ratio=0.9,
+                     region=None, method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _match_with_trust
+    return _match_with_trust(template, min_score, scales, ambiguous_ratio,
+                             region, method)
+
+
 def grid_cells(rows, cols, region=None):
     from je_auto_control.utils.executor.action_executor import _grid_cells
     return _grid_cells(rows, cols, region)

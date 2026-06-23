@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 信任評分樣板比對(歧義 / PSR)
+
+在點擊前就知道某次樣板比對雖強但*有歧義*。完整參考:[`docs/source/Zh/doc/new_features/v161_features_doc.rst`](../docs/source/Zh/doc/new_features/v161_features_doc.rst)。
+
+- **`match_with_trust` / `score_peaks`**(`AC_match_with_trust`):`match_template` 只回傳最高分並點擊——但工具列中重複的按鈕或近乎相同的同類元件可能在兩處都相關到 ~0.95,因此高分並非*無歧義*的比對。本功能為像素樣板加入 Lowe 式比值測試(ORB 透過 `feature_match` 已有,`match_template` 從未有):檢視整個相關性曲面,比較全域峰值與排除視窗外的次高峰,計算峰值對旁瓣比(PSR),回傳帶有 `second_score` / `peak_ratio` / `psr` / `is_ambiguous` 的 `TrustedMatch`。重用新增的 `visual_match._score_map`(公開比對器丟棄的完整 `matchTemplate` 曲面)——不重複任何比對程式。`haystack` 可注入;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-23) — 剪貼簿檔案拖放清單(CF_HDROP)
 
 把一份檔案清單放上剪貼簿,可直接貼進 Explorer。完整參考:[`docs/source/Zh/doc/new_features/v160_features_doc.rst`](../docs/source/Zh/doc/new_features/v160_features_doc.rst)。
