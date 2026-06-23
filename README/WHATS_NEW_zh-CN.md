@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 感知式(YIQ)图像比对含反锯齿抑制
+
+会忽略反锯齿边缘的视觉回归比对。完整参考:[`docs/source/Zh/doc/new_features/v149_features_doc.rst`](../docs/source/Zh/doc/new_features/v149_features_doc.rst)。
+
+- **`perceptual_diff` / `assert_perceptual`**(`AC_perceptual_diff`):`image_difference` 计算原始逐通道差、`ssim_compare` 是整体分数——两者都未使用感知式度量也不忽略反锯齿(视觉比对误报的首要来源)。本功能在 YIQ 空间比较(pixelmatch 的色彩度量),并预设以形态学开运算移除单像素反锯齿细边差异,只计算实心变化(`include_aa=True` 保留)。返回 `{diff_pixels, diff_ratio, regions}`;`assert_perceptual` / `max_diff_ratio` 把关回归测试。可注入图像配对 → 无头可测(1px 细边 → 0、实心区块 → 计入)。
+
 ## 本次更新 (2026-06-23) — 软性断言(汇整所有失败)
 
 验证很多项,一次报告每一个失败。完整参考:[`docs/source/Zh/doc/new_features/v148_features_doc.rst`](../docs/source/Zh/doc/new_features/v148_features_doc.rst)。

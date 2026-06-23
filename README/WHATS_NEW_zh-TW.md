@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 感知式(YIQ)影像比對含反鋸齒抑制
+
+會忽略反鋸齒邊緣的視覺回歸比對。完整參考:[`docs/source/Zh/doc/new_features/v149_features_doc.rst`](../docs/source/Zh/doc/new_features/v149_features_doc.rst)。
+
+- **`perceptual_diff` / `assert_perceptual`**(`AC_perceptual_diff`):`image_difference` 計算原始逐通道差、`ssim_compare` 是整體分數——兩者都未使用感知式度量也不忽略反鋸齒(視覺比對誤報的首要來源)。本功能在 YIQ 空間比較(pixelmatch 的色彩度量),並預設以形態學開運算移除單像素反鋸齒細邊差異,只計算實心變化(`include_aa=True` 保留)。回傳 `{diff_pixels, diff_ratio, regions}`;`assert_perceptual` / `max_diff_ratio` 把關回歸測試。可注入影像配對 → 無頭可測(1px 細邊 → 0、實心區塊 → 計入)。
+
 ## 本次更新 (2026-06-23) — 軟性斷言(彙整所有失敗)
 
 驗證很多項,一次回報每一個失敗。完整參考:[`docs/source/Zh/doc/new_features/v148_features_doc.rst`](../docs/source/Zh/doc/new_features/v148_features_doc.rst)。

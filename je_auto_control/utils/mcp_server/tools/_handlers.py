@@ -2288,6 +2288,12 @@ def soft_assert(checks, raise_on_fail=False):
     return _soft_assert(checks, raise_on_fail)
 
 
+def perceptual_diff(actual, expected, threshold=0.1, include_aa=False,
+                    max_diff_ratio=None):
+    from je_auto_control.utils.executor.action_executor import _perceptual_diff
+    return _perceptual_diff(actual, expected, threshold, include_aa, max_diff_ratio)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
