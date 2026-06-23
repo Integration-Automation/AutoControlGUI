@@ -2146,6 +2146,18 @@ def populate_table(grid, text_boxes, overlap=0.4):
     return _populate_table(grid, text_boxes, overlap)
 
 
+def column_gutters(boxes, page_width=None, min_gap=8):
+    from je_auto_control.utils.executor.action_executor import _column_gutters
+    return _column_gutters(boxes, page_width, min_gap)
+
+
+def detect_borderless_table(boxes, page_width=None, min_gap=8, min_cols=2,
+                            min_rows=2):
+    from je_auto_control.utils.executor.action_executor import (
+        _detect_borderless_table)
+    return _detect_borderless_table(boxes, page_width, min_gap, min_cols, min_rows)
+
+
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
     from je_auto_control.utils.executor.action_executor import (
         _find_color_region)

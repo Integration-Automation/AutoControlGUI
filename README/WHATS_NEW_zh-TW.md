@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 留白投影欄位偵測(無框線表格)
+
+靠留白間隙推導欄位來讀取無框線表格。完整參考:[`docs/source/Zh/doc/new_features/v165_features_doc.rst`](../docs/source/Zh/doc/new_features/v165_features_doc.rst)。
+
+- **`detect_borderless_table` / `column_gutters` / `assign_columns` / `vertical_projection`**(`AC_detect_borderless_table`、`AC_column_gutters`):`ocr/structure` 只有在每一列儲存格左緣 x 都相符時才偵測得到表格——對 ragged / 無框線 / 右對齊欄都失敗;`edge_lines.find_grid` 需要框線,而留白表格沒有。本功能靠*間隙*找欄位:把 OCR 框投影到 x 軸,讀出持續為空的垂直帶作為 gutter,指派欄索引,依間距分群成列,輸出 `{n_rows, n_cols, rows, columns}`。純標準函式庫差分陣列投影(不需 numpy);重用 `table_grid_fill` 的框讀取器。不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 自動門檻樣板比對(對分數圖做 Otsu)
 
 不再手調 `min_score`——由分數圖推導比對門檻。完整參考:[`docs/source/Zh/doc/new_features/v164_features_doc.rst`](../docs/source/Zh/doc/new_features/v164_features_doc.rst)。

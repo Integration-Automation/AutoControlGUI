@@ -3407,6 +3407,32 @@ def _populate_table(grid: Any, text_boxes: Any, overlap: Any = 0.4) -> Dict[str,
     return populate_table(grid, text_boxes, overlap=float(overlap))
 
 
+def _column_gutters(boxes: Any, page_width: Any = None,
+                    min_gap: Any = 8) -> Dict[str, Any]:
+    """Adapter: interior whitespace column gutters from OCR boxes."""
+    import json
+    from je_auto_control.utils.column_layout import column_gutters
+    if isinstance(boxes, str):
+        boxes = json.loads(boxes)
+    gutters = column_gutters(boxes, page_width=int(page_width) if page_width
+                             else None, min_gap=int(min_gap))
+    return {"count": len(gutters), "gutters": gutters}
+
+
+def _detect_borderless_table(boxes: Any, page_width: Any = None, min_gap: Any = 8,
+                             min_cols: Any = 2, min_rows: Any = 2) -> Dict[str, Any]:
+    """Adapter: infer a borderless table from OCR boxes via whitespace columns."""
+    import json
+    from je_auto_control.utils.column_layout import detect_borderless_table
+    if isinstance(boxes, str):
+        boxes = json.loads(boxes)
+    table = detect_borderless_table(boxes,
+                                    page_width=int(page_width) if page_width else None,
+                                    min_gap=int(min_gap), min_cols=int(min_cols),
+                                    min_rows=int(min_rows))
+    return {"found": table is not None, "table": table}
+
+
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
                        region: Any = None) -> Dict[str, Any]:
     """Adapter: locate coloured regions on the screen, largest first."""
@@ -5858,6 +5884,8 @@ class Executor:
             "AC_cell_for_point": _cell_for_point,
             "AC_point_for_cell": _point_for_cell,
             "AC_populate_table": _populate_table,
+            "AC_column_gutters": _column_gutters,
+            "AC_detect_borderless_table": _detect_borderless_table,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,

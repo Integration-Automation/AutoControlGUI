@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Whitespace-Projection Columns (Borderless Tables)
+
+Read borderless tables by inferring columns from the whitespace gaps. Full reference: [`docs/source/Eng/doc/new_features/v165_features_doc.rst`](docs/source/Eng/doc/new_features/v165_features_doc.rst).
+
+- **`detect_borderless_table` / `column_gutters` / `assign_columns` / `vertical_projection`** (`AC_detect_borderless_table`, `AC_column_gutters`): `ocr/structure` only detects a table when every row's cell-left-x matches — it fails on ragged / borderless / right-aligned columns; `edge_lines.find_grid` needs ruling lines a whitespace table doesn't have. This finds columns by the *gaps*: project OCR boxes onto the x-axis, read the persistent empty vertical bands as gutters, assign column indices, bucket rows by spacing, and emit `{n_rows, n_cols, rows, columns}`. Pure-stdlib difference-array projection (no numpy); reuses `table_grid_fill`'s box reader. No `PySide6`.
+
 ## What's new (2026-06-24) — Auto-Thresholded Template Matching (Otsu on the Score Map)
 
 No more hand-tuned `min_score` — derive the match threshold from the score map. Full reference: [`docs/source/Eng/doc/new_features/v164_features_doc.rst`](docs/source/Eng/doc/new_features/v164_features_doc.rst).

@@ -709,6 +709,27 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         description="Drop OCR text boxes into a ruling-line grid → addressable table.",
     ))
     specs.append(CommandSpec(
+        "AC_detect_borderless_table", "OCR", "Detect Borderless Table",
+        fields=(
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder='[{"x":10,"y":0,"width":60,"height":18,'
+                                  '"text":"Name"}]'),
+            FieldSpec("min_gap", FieldType.INT, optional=True, default=8),
+            FieldSpec("page_width", FieldType.INT, optional=True),
+        ),
+        description="Infer a borderless table from OCR boxes via whitespace columns.",
+    ))
+    specs.append(CommandSpec(
+        "AC_column_gutters", "OCR", "Column Gutters (whitespace)",
+        fields=(
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder='[{"x":10,"y":0,"width":60,"height":18}]'),
+            FieldSpec("min_gap", FieldType.INT, optional=True, default=8),
+            FieldSpec("page_width", FieldType.INT, optional=True),
+        ),
+        description="Find borderless-table column separators by whitespace projection.",
+    ))
+    specs.append(CommandSpec(
         "AC_scroll_to_find", "OCR", "Scroll Until Visible",
         fields=(
             FieldSpec("target", FieldType.STRING),

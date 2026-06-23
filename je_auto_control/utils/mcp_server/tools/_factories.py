@@ -3730,6 +3730,37 @@ def screen_grid_tools() -> List[MCPTool]:
             handler=h.populate_table,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_column_gutters",
+            description=("Find borderless-table COLUMNS by whitespace: project OCR "
+                         "'boxes' ([{x,y,width,height,text}]) onto the x-axis and "
+                         "return the interior empty vertical bands >= 'min_gap' wide. "
+                         "Returns {count, gutters:[{start,end,width}]}."),
+            input_schema=schema({
+                "boxes": {"type": "array", "items": {"type": "object"}},
+                "page_width": {"type": "integer"},
+                "min_gap": {"type": "integer"}},
+                required=["boxes"]),
+            handler=h.column_gutters,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_detect_borderless_table",
+            description=("Infer a BORDERLESS table from OCR 'boxes' (no ruling lines): "
+                         "columns from whitespace gutters, rows from vertical spacing. "
+                         "Returns {found, table:{n_rows,n_cols,rows:[[text]],columns}}. "
+                         "Use when find_grid finds no lines. 'min_gap', 'min_cols', "
+                         "'min_rows'."),
+            input_schema=schema({
+                "boxes": {"type": "array", "items": {"type": "object"}},
+                "page_width": {"type": "integer"},
+                "min_gap": {"type": "integer"},
+                "min_cols": {"type": "integer"},
+                "min_rows": {"type": "integer"}},
+                required=["boxes"]),
+            handler=h.detect_borderless_table,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

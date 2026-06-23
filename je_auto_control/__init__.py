@@ -303,6 +303,10 @@ from je_auto_control.utils.table_grid_fill import (
 from je_auto_control.utils.observation_delta import (
     delta_index, delta_observation, summarize_delta,
 )
+# Infer columns from vertical whitespace (borderless tables)
+from je_auto_control.utils.column_layout import (
+    assign_columns, column_gutters, detect_borderless_table, vertical_projection,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -1230,6 +1234,10 @@ __all__ = [
     "delta_index",
     "delta_observation",
     "summarize_delta",
+    "vertical_projection",
+    "column_gutters",
+    "assign_columns",
+    "detect_borderless_table",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",
