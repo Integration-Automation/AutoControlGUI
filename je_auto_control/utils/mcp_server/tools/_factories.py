@@ -3950,6 +3950,31 @@ def screen_grid_tools() -> List[MCPTool]:
             handler=h.xy_cut,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_group_paragraphs",
+            description=("Group OCR 'lines' (text + bbox) into paragraphs: a new "
+                         "paragraph starts where the vertical gap exceeds "
+                         "'line_gap_factor' x the median line height. Returns {count, "
+                         "paragraphs:[{left,top,right,bottom,text,n_lines}]}."),
+            input_schema=schema({
+                "lines": {"type": "array", "items": {"type": "object"}},
+                "line_gap_factor": {"type": "number"}},
+                required=["lines"]),
+            handler=h.group_paragraphs,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_detect_lists",
+            description=("Detect bulleted / numbered list items among OCR 'lines' by "
+                         "their leading marker (•/-/* or 1./2)/a.). Returns {count, "
+                         "items:[{text,marker,indent,box}]}; 'indent' is the left x "
+                         "for nesting."),
+            input_schema=schema({
+                "lines": {"type": "array", "items": {"type": "object"}}},
+                required=["lines"]),
+            handler=h.detect_lists,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

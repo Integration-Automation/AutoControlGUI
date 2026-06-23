@@ -3517,6 +3517,26 @@ def _xy_cut(boxes: Any, min_gap: Any = 12) -> Dict[str, Any]:
     return {"tree": xy_cut(boxes, min_gap=int(min_gap))}
 
 
+def _group_paragraphs(lines: Any, line_gap_factor: Any = 1.6) -> Dict[str, Any]:
+    """Adapter: group OCR lines into paragraphs by vertical spacing."""
+    import json
+    from je_auto_control.utils.text_blocks import group_paragraphs
+    if isinstance(lines, str):
+        lines = json.loads(lines)
+    paragraphs = group_paragraphs(lines, line_gap_factor=float(line_gap_factor))
+    return {"count": len(paragraphs), "paragraphs": paragraphs}
+
+
+def _detect_lists(lines: Any) -> Dict[str, Any]:
+    """Adapter: detect bulleted / numbered list items among OCR lines."""
+    import json
+    from je_auto_control.utils.text_blocks import detect_lists
+    if isinstance(lines, str):
+        lines = json.loads(lines)
+    items = detect_lists(lines)
+    return {"count": len(items), "items": items}
+
+
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
                        region: Any = None) -> Dict[str, Any]:
     """Adapter: locate coloured regions on the screen, largest first."""
@@ -6054,6 +6074,8 @@ class Executor:
             "AC_match_labels_to_widgets": _match_labels_to_widgets,
             "AC_flow_order": _flow_order,
             "AC_xy_cut": _xy_cut,
+            "AC_group_paragraphs": _group_paragraphs,
+            "AC_detect_lists": _detect_lists,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,

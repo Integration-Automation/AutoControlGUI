@@ -319,6 +319,10 @@ from je_auto_control.utils.column_layout import (
 from je_auto_control.utils.reading_flow import (
     flow_order, to_blocks, xy_cut,
 )
+# Group OCR lines into paragraphs and bulleted / numbered lists
+from je_auto_control.utils.text_blocks import (
+    detect_lists, group_paragraphs,
+)
 # Associate form labels with values (multi-direction) + checkbox state
 from je_auto_control.utils.form_fields import (
     associate_fields, checkbox_state, match_labels_to_widgets,
@@ -1279,6 +1283,8 @@ __all__ = [
     "xy_cut",
     "flow_order",
     "to_blocks",
+    "group_paragraphs",
+    "detect_lists",
     "associate_fields",
     "match_labels_to_widgets",
     "checkbox_state",

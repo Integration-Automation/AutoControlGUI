@@ -2195,6 +2195,16 @@ def xy_cut(boxes, min_gap=12):
     return _xy_cut(boxes, min_gap)
 
 
+def group_paragraphs(lines, line_gap_factor=1.6):
+    from je_auto_control.utils.executor.action_executor import _group_paragraphs
+    return _group_paragraphs(lines, line_gap_factor)
+
+
+def detect_lists(lines):
+    from je_auto_control.utils.executor.action_executor import _detect_lists
+    return _detect_lists(lines)
+
+
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
     from je_auto_control.utils.executor.action_executor import (
         _find_color_region)

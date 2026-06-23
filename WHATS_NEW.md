@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Paragraph & List Grouping of OCR Lines
+
+Group OCR lines into paragraphs and detect bulleted / numbered lists. Full reference: [`docs/source/Eng/doc/new_features/v174_features_doc.rst`](docs/source/Eng/doc/new_features/v174_features_doc.rst).
+
+- **`group_paragraphs` / `detect_lists`** (`AC_group_paragraphs`, `AC_detect_lists`): `text_regions` merges glyphs into lines but nothing grouped those lines into paragraphs or detected lists; `ocr/structure` stops at flat rows. `group_paragraphs` starts a new paragraph wherever the vertical gap exceeds `line_gap_factor` × the median line height; `detect_lists` recognises bullet (`•`/`-`/`*`) or ordinal (`1.`/`2)`/`a.`) items, returning `{text, marker, indent, box}`. Pure-stdlib over line dicts; reuses `table_grid_fill`'s box reader; no `PySide6`.
+
 ## What's new (2026-06-24) — Column-Aware Reading Order (XY-Cut)
 
 Read multi-column layouts down each column instead of interleaving them. Full reference: [`docs/source/Eng/doc/new_features/v173_features_doc.rst`](docs/source/Eng/doc/new_features/v173_features_doc.rst).

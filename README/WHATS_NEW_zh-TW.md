@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — OCR 行的段落與清單分組
+
+把 OCR 行分組成段落,並偵測項目符號 / 編號清單。完整參考:[`docs/source/Zh/doc/new_features/v174_features_doc.rst`](../docs/source/Zh/doc/new_features/v174_features_doc.rst)。
+
+- **`group_paragraphs` / `detect_lists`**(`AC_group_paragraphs`、`AC_detect_lists`):`text_regions` 把字形併成行,但沒有功能把那些行分組成段落或偵測清單;`ocr/structure` 止於平面列。`group_paragraphs` 在垂直間距超過 `line_gap_factor` × 中位行高處開始新段落;`detect_lists` 辨識項目符號(`•`/`-`/`*`)或序號(`1.`/`2)`/`a.`)項目,回傳 `{text, marker, indent, box}`。純標準函式庫,作用於行字典;重用 `table_grid_fill` 的框讀取器;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 欄位感知閱讀順序(XY-Cut)
 
 讀多欄版面時*完整讀完*每一欄,而非交錯。完整參考:[`docs/source/Zh/doc/new_features/v173_features_doc.rst`](../docs/source/Zh/doc/new_features/v173_features_doc.rst)。
