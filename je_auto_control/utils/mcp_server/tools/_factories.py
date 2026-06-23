@@ -3879,6 +3879,40 @@ def rotated_match_tools() -> List[MCPTool]:
             handler=h.vote_centers,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_match_color",
+            description=("Find 'template' by COLOUR on the HSV hue/saturation channels "
+                         "(not grayscale): tells a red status dot from a green one of "
+                         "identical shape. Returns {found, match}. 'channels' "
+                         "(default [\"h\",\"s\"]; use [\"h\"] for flat-saturation "
+                         "targets), 'min_score', 'scales', 'region'. For solid colour "
+                         "blobs use find_color_region instead."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "channels": {"type": "array", "items": {"type": "string"}},
+                "min_score": {"type": "number"},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.match_color,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_color_all",
+            description=("Find EVERY colour (HSV-channel) match of 'template' >= "
+                         "'min_score', overlaps removed by NMS. Returns "
+                         "{count, matches}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "channels": {"type": "array", "items": {"type": "string"}},
+                "min_score": {"type": "number"},
+                "max_results": {"type": "integer"},
+                "nms_iou": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.match_color_all,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

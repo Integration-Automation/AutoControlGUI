@@ -295,6 +295,10 @@ from je_auto_control.utils.edge_match import (
 from je_auto_control.utils.match_ensemble import (
     match_ensemble, vote_centers,
 )
+# Colour-aware template matching on HSV channels
+from je_auto_control.utils.color_match import (
+    match_color, match_color_all,
+)
 # Otsu auto-thresholding for template matching (no hand-tuned min_score)
 from je_auto_control.utils.match_autothresh import (
     auto_threshold, match_auto,
@@ -1280,6 +1284,8 @@ __all__ = [
     "chamfer_distance",
     "match_ensemble",
     "vote_centers",
+    "match_color",
+    "match_color_all",
     "SubPixelMatch",
     "match_subpixel",
     "refine_peak",

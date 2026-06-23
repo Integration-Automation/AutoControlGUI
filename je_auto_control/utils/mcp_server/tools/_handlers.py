@@ -2152,6 +2152,18 @@ def match_ensemble(templates, min_score=0.8, agree_px=10, min_votes=2, region=No
     return _match_ensemble(templates, min_score, agree_px, min_votes, region)
 
 
+def match_color(template, channels=None, min_score=0.7, scales=None, region=None):
+    from je_auto_control.utils.executor.action_executor import _match_color
+    return _match_color(template, channels, min_score, scales, region)
+
+
+def match_color_all(template, channels=None, min_score=0.7, max_results=20,
+                    nms_iou=0.3, region=None):
+    from je_auto_control.utils.executor.action_executor import _match_color_all
+    return _match_color_all(template, channels, min_score, max_results, nms_iou,
+                            region)
+
+
 def grid_cells(rows, cols, region=None):
     from je_auto_control.utils.executor.action_executor import _grid_cells
     return _grid_cells(rows, cols, region)
