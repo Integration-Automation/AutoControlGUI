@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 旋轉與縮放容忍的樣板比對
+
+不只縮放,還能找到旋轉或傾斜的樣板。完整參考:[`docs/source/Zh/doc/new_features/v158_features_doc.rst`](../docs/source/Zh/doc/new_features/v158_features_doc.rst)。
+
+- **`match_rotated` / `match_rotated_all` / `scale_space`**(`AC_match_rotated`、`AC_match_rotated_all`):`match_template` 只掃描*縮放*且假設軸對齊——OpenCV 的 `matchTemplate` 不具旋轉不變性,因此傾斜的控制項、旋轉的圖示,或轉到不同角度的刻度盤都會比對失敗。本功能掃描 `angles`(每個以 `cv2.warpAffine` 變形)並與 `np.linspace` 縮放空間交叉,回傳相關性最高、且帶有還原 `scale` + `angle` 的 `RotatedMatch`(`*_all` 版本以 NMS 合併相鄰角度 / 縮放)。重用 `visual_match` 的載入器 / resize / 方法表 / NMS——不重複任何比對或幾何程式。`haystack` 可注入;可無頭測試;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-23) — 一維條碼解碼
 
 從螢幕或影像讀取 EAN / UPC / Code-128 條碼。完整參考:[`docs/source/Zh/doc/new_features/v157_features_doc.rst`](../docs/source/Zh/doc/new_features/v157_features_doc.rst)。

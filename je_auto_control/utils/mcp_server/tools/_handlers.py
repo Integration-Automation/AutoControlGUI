@@ -2094,6 +2094,20 @@ def match_masked_all(template, mask=None, min_score=0.9, max_results=20,
                              region)
 
 
+def match_rotated(template, min_score=0.8, scales=None, angles=None,
+                  region=None, method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _match_rotated
+    return _match_rotated(template, min_score, scales, angles, region, method)
+
+
+def match_rotated_all(template, min_score=0.8, scales=None, angles=None,
+                      max_results=20, nms_iou=0.3, region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _match_rotated_all)
+    return _match_rotated_all(template, min_score, scales, angles, max_results,
+                              nms_iou, region)
+
+
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
     from je_auto_control.utils.executor.action_executor import (
         _find_color_region)

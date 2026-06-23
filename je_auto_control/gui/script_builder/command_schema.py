@@ -305,6 +305,37 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Find every masked match of a template (NMS-deduped).",
     ))
     specs.append(CommandSpec(
+        "AC_match_rotated", "Image", "Match Template (rotated)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("angles", FieldType.STRING, optional=True,
+                      placeholder="[-10, 0, 10]"),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[0.9, 1.0, 1.1]"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Locate a template tolerating rotation + scale; reports angle.",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_rotated_all", "Image", "Match Template All (rotated)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("angles", FieldType.STRING, optional=True,
+                      placeholder="[-10, 0, 10]"),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[0.9, 1.0, 1.1]"),
+            FieldSpec("max_results", FieldType.INT, optional=True, default=20),
+            FieldSpec("nms_iou", FieldType.FLOAT, optional=True, default=0.3,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Find every rotation/scale-tolerant match (NMS-deduped).",
+    ))
+    specs.append(CommandSpec(
         "AC_find_color_region", "Image", "Find Colour Region",
         fields=(
             FieldSpec("rgb", FieldType.STRING, placeholder="[0, 200, 0]"),
