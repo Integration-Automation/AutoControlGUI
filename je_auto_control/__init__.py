@@ -307,6 +307,10 @@ from je_auto_control.utils.observation_delta import (
 from je_auto_control.utils.column_layout import (
     assign_columns, column_gutters, detect_borderless_table, vertical_projection,
 )
+# Associate form labels with values (multi-direction) + checkbox state
+from je_auto_control.utils.form_fields import (
+    associate_fields, checkbox_state, match_labels_to_widgets,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -1238,6 +1242,9 @@ __all__ = [
     "column_gutters",
     "assign_columns",
     "detect_borderless_table",
+    "associate_fields",
+    "match_labels_to_widgets",
+    "checkbox_state",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",

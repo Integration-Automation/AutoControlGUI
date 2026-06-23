@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Form Field Association (Multi-Direction) + Checkbox State
+
+Pair form labels with values even when the value is below or right-aligned, and read checkbox state. Full reference: [`docs/source/Eng/doc/new_features/v166_features_doc.rst`](docs/source/Eng/doc/new_features/v166_features_doc.rst).
+
+- **`associate_fields` / `match_labels_to_widgets` / `checkbox_state`** (`AC_associate_fields`, `AC_match_labels_to_widgets`): `ocr/structure` only pairs a `label:` with the *immediately next* cell — it can't handle label-above-value, two-column key/value, right-aligned values, or non-text widgets, and has no checkbox notion. This pairs each label with the nearest aligned value across *directions* (right / below) within `max_gap`, matches free-standing widgets (checkbox/radio/input) to their nearest label, and reads checkbox state from the box's dark-pixel fill ratio. Association is pure-stdlib; only `checkbox_state` touches pixels (behind the `visual_match` gray loader). No `PySide6`.
+
 ## What's new (2026-06-24) — Whitespace-Projection Columns (Borderless Tables)
 
 Read borderless tables by inferring columns from the whitespace gaps. Full reference: [`docs/source/Eng/doc/new_features/v165_features_doc.rst`](docs/source/Eng/doc/new_features/v165_features_doc.rst).

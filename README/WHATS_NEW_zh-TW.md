@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 表單欄位關聯(多方向)+ 核取方塊狀態
+
+即使值在下方或右對齊也能把標籤與值配對,並讀取核取方塊狀態。完整參考:[`docs/source/Zh/doc/new_features/v166_features_doc.rst`](../docs/source/Zh/doc/new_features/v166_features_doc.rst)。
+
+- **`associate_fields` / `match_labels_to_widgets` / `checkbox_state`**(`AC_associate_fields`、`AC_match_labels_to_widgets`):`ocr/structure` 只把 `label:` 與*緊接的下一格*配對——無法處理標籤在上、雙欄 key/value、右對齊值或非文字 widget,且無核取方塊概念。本功能把每個標籤與多*方向*(右 / 下)中 `max_gap` 內最近的對齊值配對,把獨立 widget(核取方塊 / 單選鈕 / 輸入框)配到最近標籤,並由框內暗像素填充比例讀取核取方塊狀態。關聯部分純標準函式庫;只有 `checkbox_state` 觸及像素(隔離在 `visual_match` 灰階載入器之後)。不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 留白投影欄位偵測(無框線表格)
 
 靠留白間隙推導欄位來讀取無框線表格。完整參考:[`docs/source/Zh/doc/new_features/v165_features_doc.rst`](../docs/source/Zh/doc/new_features/v165_features_doc.rst)。
