@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Colour-Aware Template Matching (HSV)
+
+Tell a red status dot from a green one of identical shape. Full reference: [`docs/source/Eng/doc/new_features/v179_features_doc.rst`](docs/source/Eng/doc/new_features/v179_features_doc.rst).
+
+- **`match_color` / `match_color_all`** (`AC_match_color`, `AC_match_color_all`): every `visual_match` matcher grayscales first, so red vs green of identical shape is indistinguishable; `color_region` finds known-colour blobs but can't template-match a multi-colour glyph. This matches on HSV hue/saturation with a colour-*distance* metric (`TM_SQDIFF_NORMED` — correlation would normalise away the absolute hue, scoring a red→green edge same as black→blue). Reuses `color_region`'s RGB loaders + `visual_match`'s resize/NMS/`Match`. `channels` default `("h","s")` (use `("h",)` for flat-saturation targets); for solid blobs use `find_color_region`. No `PySide6`.
+
 ## What's new (2026-06-24) — Multi-Template Consensus Matching
 
 Vote several reference crops of one target into a single trustworthy location. Full reference: [`docs/source/Eng/doc/new_features/v178_features_doc.rst`](docs/source/Eng/doc/new_features/v178_features_doc.rst).

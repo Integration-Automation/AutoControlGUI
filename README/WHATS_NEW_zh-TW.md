@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 色彩感知樣板比對(HSV)
+
+區分形狀相同的紅色與綠色狀態點。完整參考:[`docs/source/Zh/doc/new_features/v179_features_doc.rst`](../docs/source/Zh/doc/new_features/v179_features_doc.rst)。
+
+- **`match_color` / `match_color_all`**(`AC_match_color`、`AC_match_color_all`):`visual_match` 每個比對器都先轉灰階,故形狀相同的紅 vs 綠無法區分;`color_region` 找已知顏色的 blob 卻無法對多色字形做樣板比對。本功能在 HSV 色相/飽和度上以色彩*距離*度量(`TM_SQDIFF_NORMED`——相關會把絕對色相正規化掉,使紅→綠邊與黑→藍邊同分)。重用 `color_region` 的 RGB 載入器 + `visual_match` 的 resize/NMS/`Match`。`channels` 預設 `("h","s")`(平坦飽和度目標用 `("h",)`);純色 blob 請用 `find_color_region`。不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 多模板共識比對
 
 把同一目標的多個參考裁切投票成單一可信位置。完整參考:[`docs/source/Zh/doc/new_features/v178_features_doc.rst`](../docs/source/Zh/doc/new_features/v178_features_doc.rst)。
