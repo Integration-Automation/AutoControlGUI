@@ -3847,6 +3847,38 @@ def rotated_match_tools() -> List[MCPTool]:
             handler=h.match_subpixel,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_match_ensemble",
+            description=("Match several reference crops of one target ('templates': "
+                         "image paths — e.g. default / hover / pressed states) and "
+                         "return their VOTED consensus location: {found, result:"
+                         "{point, votes, n_candidates, spread}}. Accepts only when "
+                         ">= 'min_votes' references agree within 'agree_px'. Cuts false "
+                         "positives on themed / animated UI. 'min_score', 'region'."),
+            input_schema=schema({
+                "templates": {"type": "array", "items": {"type": "string"}},
+                "min_score": {"type": "number"},
+                "agree_px": {"type": "number"},
+                "min_votes": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["templates"]),
+            handler=h.match_ensemble,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_vote_centers",
+            description=("Vote candidate hit 'centers' ([[x,y],...]) into one consensus "
+                         "target: {found, result:{point, votes, n_candidates, spread}}. "
+                         "Accepts only when >= 'min_votes' agree within 'agree_px'."),
+            input_schema=schema({
+                "centers": {"type": "array",
+                            "items": {"type": "array", "items": {"type": "integer"}}},
+                "agree_px": {"type": "number"},
+                "min_votes": {"type": "integer"}},
+                required=["centers"]),
+            handler=h.vote_centers,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

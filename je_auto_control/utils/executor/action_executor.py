@@ -3400,6 +3400,32 @@ def _match_subpixel(template: str, min_score: Any = 0.0, region: Any = None,
             "match": match.to_dict() if match else None}
 
 
+def _vote_centers(centers: Any, agree_px: Any = 10,
+                  min_votes: Any = 2) -> Dict[str, Any]:
+    """Adapter: vote candidate hit centres into a consensus target."""
+    import json
+    from je_auto_control.utils.match_ensemble import vote_centers
+    if isinstance(centers, str):
+        centers = json.loads(centers)
+    result = vote_centers(centers, agree_px=float(agree_px),
+                          min_votes=int(min_votes))
+    return {"found": result is not None, "result": result}
+
+
+def _match_ensemble(templates: Any, min_score: Any = 0.8, agree_px: Any = 10,
+                    min_votes: Any = 2, region: Any = None) -> Dict[str, Any]:
+    """Adapter: vote several template references onto one consensus location."""
+    import json
+    from je_auto_control.utils.match_ensemble import match_ensemble
+    if isinstance(templates, str):
+        templates = json.loads(templates)
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    result = match_ensemble(templates, region=region, min_score=float(min_score),
+                            agree_px=float(agree_px), min_votes=int(min_votes))
+    return {"found": result is not None, "result": result}
+
+
 def _region_arg(value: Any) -> Optional[List[int]]:
     """Coerce a JSON-string / list region arg into a list of ints, or None."""
     import json
@@ -6123,6 +6149,8 @@ class Executor:
             "AC_edge_match": _edge_match,
             "AC_edge_match_all": _edge_match_all,
             "AC_match_subpixel": _match_subpixel,
+            "AC_match_ensemble": _match_ensemble,
+            "AC_vote_centers": _vote_centers,
             "AC_grid_cells": _grid_cells,
             "AC_cell_for_point": _cell_for_point,
             "AC_point_for_cell": _point_for_cell,

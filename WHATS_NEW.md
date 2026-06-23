@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Multi-Template Consensus Matching
+
+Vote several reference crops of one target into a single trustworthy location. Full reference: [`docs/source/Eng/doc/new_features/v178_features_doc.rst`](docs/source/Eng/doc/new_features/v178_features_doc.rst).
+
+- **`match_ensemble` / `vote_centers`** (`AC_match_ensemble`, `AC_vote_centers`): a button renders in several states (default/hover/pressed) but is one logical target; `ab_locator` picks one strategy and `match_template(scales=...)` sweeps one template — neither fuses multiple references. This matches each reference, clusters the hit centres, and accepts a target only when ≥ `min_votes` agree within `agree_px`, returning `{point, votes, n_candidates, spread}` — cutting false positives on themed/animated UI. Reuses `visual_match.match_template` + `grounding_consensus`; `vote_centers` is the pure voting core. No `PySide6`.
+
 ## What's new (2026-06-24) — Per-Step Critic Features + Rule-Based Step Scorer
 
 Bundle the evidence to score an agent step, with a built-in rule-based scorer. Full reference: [`docs/source/Eng/doc/new_features/v177_features_doc.rst`](docs/source/Eng/doc/new_features/v177_features_doc.rst).

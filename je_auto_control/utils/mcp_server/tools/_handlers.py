@@ -2142,6 +2142,16 @@ def match_subpixel(template, min_score=0.0, region=None, method="ccoeff_normed")
     return _match_subpixel(template, min_score, region, method)
 
 
+def vote_centers(centers, agree_px=10, min_votes=2):
+    from je_auto_control.utils.executor.action_executor import _vote_centers
+    return _vote_centers(centers, agree_px, min_votes)
+
+
+def match_ensemble(templates, min_score=0.8, agree_px=10, min_votes=2, region=None):
+    from je_auto_control.utils.executor.action_executor import _match_ensemble
+    return _match_ensemble(templates, min_score, agree_px, min_votes, region)
+
+
 def grid_cells(rows, cols, region=None):
     from je_auto_control.utils.executor.action_executor import _grid_cells
     return _grid_cells(rows, cols, region)
