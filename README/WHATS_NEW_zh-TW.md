@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 軟性斷言(彙整所有失敗)
+
+驗證很多項,一次回報每一個失敗。完整參考:[`docs/source/Zh/doc/new_features/v148_features_doc.rst`](../docs/source/Zh/doc/new_features/v148_features_doc.rst)。
+
+- **`SoftAssertions`**(`AC_soft_assert`):`assert_all` 接受事先建好的規格清單——沒有可隨處呼叫 `check()`、並在區塊退出時一次拋出全部的作用域累加器(JUnit5 `assertAll` / Playwright `expect.soft`)。`with SoftAssertions() as soft: soft.check(...)` 記錄通過/失敗(區塊中永不拋出、回傳布林值可分支),退出時一次拋出列出每個失敗——且永不遮蔽已在傳播的例外。執行器命令彙整 JSON `checks` 清單(eq/ne/gt/lt/contains/truthy)。純標準函式庫、可無頭測試。
+
 ## 本次更新 (2026-06-23) — 視窗 Z-order(置頂 / 最前 / 最後)
 
 把視窗釘在最上層、移到最前、或推到後面。完整參考:[`docs/source/Zh/doc/new_features/v147_features_doc.rst`](../docs/source/Zh/doc/new_features/v147_features_doc.rst)。

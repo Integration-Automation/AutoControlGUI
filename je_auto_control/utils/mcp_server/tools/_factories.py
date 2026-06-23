@@ -3190,6 +3190,25 @@ def window_zorder_tools() -> List[MCPTool]:
     ]
 
 
+def soft_assert_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_soft_assert",
+            description=("Evaluate a list of 'checks' and aggregate ALL failures "
+                         "(don't stop at the first). Each is {value, op, expected, "
+                         "message}; op = eq/ne/gt/lt/contains/truthy. Returns "
+                         "{ok, passed, failures}; set 'raise_on_fail' to raise on "
+                         "any failure."),
+            input_schema=schema({
+                "checks": {"type": "array", "items": {"type": "object"}},
+                "raise_on_fail": {"type": "boolean"}},
+                required=["checks"]),
+            handler=h.soft_assert,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6696,7 +6715,8 @@ ALL_FACTORIES = (
     monitor_layout_tools, actionability_tools, element_parse_tools,
     hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
     locator_chain_tools, rich_clipboard_tools, img_histogram_tools,
-    motion_regions_tools, window_zorder_tools, plugin_sdk_tools, governance_tools,
+    motion_regions_tools, window_zorder_tools, soft_assert_tools,
+    plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

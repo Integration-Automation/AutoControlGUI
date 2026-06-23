@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 软性断言(汇整所有失败)
+
+验证很多项,一次报告每一个失败。完整参考:[`docs/source/Zh/doc/new_features/v148_features_doc.rst`](../docs/source/Zh/doc/new_features/v148_features_doc.rst)。
+
+- **`SoftAssertions`**(`AC_soft_assert`):`assert_all` 接受事先建好的规格列表——没有可随处调用 `check()`、并在区块退出时一次抛出全部的作用域累加器(JUnit5 `assertAll` / Playwright `expect.soft`)。`with SoftAssertions() as soft: soft.check(...)` 记录通过/失败(区块中永不抛出、返回布尔值可分支),退出时一次抛出列出每个失败——且永不遮蔽已在传播的异常。执行器命令汇整 JSON `checks` 列表(eq/ne/gt/lt/contains/truthy)。纯标准库、可无头测试。
+
 ## 本次更新 (2026-06-23) — 窗口 Z-order(置顶 / 最前 / 最后)
 
 把窗口钉在最上层、移到最前、或推到后面。完整参考:[`docs/source/Zh/doc/new_features/v147_features_doc.rst`](../docs/source/Zh/doc/new_features/v147_features_doc.rst)。
