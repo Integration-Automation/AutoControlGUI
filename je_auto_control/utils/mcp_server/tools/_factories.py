@@ -3309,6 +3309,26 @@ def observation_tools() -> List[MCPTool]:
     ]
 
 
+def action_grounding_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_validate_action",
+            description=("Validate a coordinate 'action' {type,x,y,…} before "
+                         "dispatch: reject out-of-bounds clicks and, given 'targets' "
+                         "(element boxes), snap a near-miss onto the nearest "
+                         "element's centre. 'screen' [w,h] defaults to the live "
+                         "screen. Returns {ok, reason, snapped}."),
+            input_schema=schema({
+                "action": {"type": "object"},
+                "screen": {"type": "array", "items": {"type": "integer"}},
+                "targets": {"type": "array", "items": {"type": "object"}}},
+                required=["action"]),
+            handler=h.validate_action,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6817,7 +6837,7 @@ ALL_FACTORIES = (
     locator_chain_tools, rich_clipboard_tools, img_histogram_tools,
     motion_regions_tools, window_zorder_tools, soft_assert_tools,
     perceptual_diff_tools, window_geometry_tools, cua_action_tools,
-    observation_tools, plugin_sdk_tools, governance_tools,
+    observation_tools, action_grounding_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

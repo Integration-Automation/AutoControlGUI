@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 动作前接地防护
+
+拒绝越界点击;把接近偏离者吸附到真正的元素。完整参考:[`docs/source/Zh/doc/new_features/v153_features_doc.rst`](../docs/source/Zh/doc/new_features/v153_features_doc.rst)。
+
+- **`validate_action` / `snap_to_element` / `in_bounds`**(`AC_validate_action`):`guardrail` 扫文字、`loop_guard` 检测循环——两者都不在派发前验证坐标动作,所以幻觉 `(9999,-5)` 点击会打到空处、偏 5px 的点击会错过。本功能拒绝屏幕外坐标,并在提供 `targets` 时把接近偏离者吸附到最近元素中心,返回 `{ok, reason, snapped}`。纯标准库几何,作用于元素字典;执行器 `screen` 默认为实际屏幕。可无头测试;接在 agent 循环派发之前。
+
 ## 本次更新 (2026-06-23) — 符记预算内的无障碍文字观测
 
 把无障碍树转成 VLM 可操作的已编号文字区块。完整参考:[`docs/source/Zh/doc/new_features/v152_features_doc.rst`](../docs/source/Zh/doc/new_features/v152_features_doc.rst)。

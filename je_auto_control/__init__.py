@@ -369,6 +369,10 @@ from je_auto_control.utils.cua_action import (
 from je_auto_control.utils.observation import (
     flatten_tree, observation_index, serialize_observation,
 )
+# Pre-action grounding guard (bounds check + snap-to-element)
+from je_auto_control.utils.action_grounding import (
+    in_bounds, snap_to_element, validate_action,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1250,6 +1254,9 @@ __all__ = [
     "flatten_tree",
     "observation_index",
     "serialize_observation",
+    "in_bounds",
+    "snap_to_element",
+    "validate_action",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 動作前接地防護
+
+拒絕越界點擊;把接近偏離者吸附到真正的元素。完整參考:[`docs/source/Zh/doc/new_features/v153_features_doc.rst`](../docs/source/Zh/doc/new_features/v153_features_doc.rst)。
+
+- **`validate_action` / `snap_to_element` / `in_bounds`**(`AC_validate_action`):`guardrail` 掃文字、`loop_guard` 偵測迴圈——兩者都不在派發前驗證座標動作,所以幻覺 `(9999,-5)` 點擊會打到空處、偏 5px 的點擊會錯過。本功能拒絕螢幕外座標,並在提供 `targets` 時把接近偏離者吸附到最近元素中心,回傳 `{ok, reason, snapped}`。純標準函式庫幾何,作用於元素字典;執行器 `screen` 預設為實際螢幕。可無頭測試;接在 agent 迴圈派發之前。
+
 ## 本次更新 (2026-06-23) — 符記預算內的無障礙文字觀測
 
 把無障礙樹轉成 VLM 可操作的已編號文字區塊。完整參考:[`docs/source/Zh/doc/new_features/v152_features_doc.rst`](../docs/source/Zh/doc/new_features/v152_features_doc.rst)。

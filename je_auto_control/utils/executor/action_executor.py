@@ -3860,6 +3860,24 @@ def _observation_index(elements: Any, viewport: Any = None,
     return {"count": len(indexed), "elements": indexed}
 
 
+def _validate_action(action: Any, screen: Any = None,
+                     targets: Any = None) -> Dict[str, Any]:
+    """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""
+    import json
+    from je_auto_control.utils.action_grounding import validate_action
+    if isinstance(action, str):
+        action = json.loads(action)
+    if isinstance(targets, str):
+        targets = json.loads(targets) if targets.strip() else None
+    if isinstance(screen, str):
+        screen = json.loads(screen) if screen.strip() else None
+    if not screen:
+        from je_auto_control.wrapper.auto_control_screen import screen_size
+        screen = list(screen_size())
+    return validate_action(action, screen_size=screen,
+                           targets=list(targets) if targets else None)
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5617,6 +5635,7 @@ class Executor:
             "AC_cua_command": _cua_command,
             "AC_serialize_observation": _serialize_observation,
             "AC_observation_index": _observation_index,
+            "AC_validate_action": _validate_action,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

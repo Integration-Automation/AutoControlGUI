@@ -2320,6 +2320,11 @@ def observation_index(elements, viewport=None, max_elements=80):
     return _observation_index(elements, viewport, max_elements)
 
 
+def validate_action(action, screen=None, targets=None):
+    from je_auto_control.utils.executor.action_executor import _validate_action
+    return _validate_action(action, screen, targets)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
