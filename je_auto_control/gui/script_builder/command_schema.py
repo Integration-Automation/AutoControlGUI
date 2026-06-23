@@ -1245,6 +1245,18 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Read the clipboard's HTML fragment (CF_HTML, Windows).",
     ))
     specs.append(CommandSpec(
+        "AC_set_clipboard_files", "Data", "Set Clipboard Files",
+        fields=(
+            FieldSpec("paths", FieldType.STRING,
+                      placeholder='["C:\\\\a\\\\one.txt", "C:\\\\b\\\\two.png"]'),
+        ),
+        description="Put a file-drop list on the clipboard (CF_HDROP, Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_clipboard_files", "Data", "Get Clipboard Files",
+        description="Read the clipboard's file-drop list (CF_HDROP, Windows).",
+    ))
+    specs.append(CommandSpec(
         "AC_watchdog_add", "Flow", "Watchdog: Add Popup Rule",
         fields=(
             FieldSpec("title", FieldType.STRING),

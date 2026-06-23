@@ -2276,6 +2276,16 @@ def get_clipboard_html():
     return _get_clipboard_html()
 
 
+def set_clipboard_files(paths):
+    from je_auto_control.utils.executor.action_executor import _set_clipboard_files
+    return _set_clipboard_files(paths)
+
+
+def get_clipboard_files():
+    from je_auto_control.utils.executor.action_executor import _get_clipboard_files
+    return _get_clipboard_files()
+
+
 def image_histogram(source=None, bins=32, space="hsv", region=None):
     from je_auto_control.utils.executor.action_executor import _image_histogram
     return _image_histogram(source, bins, space, region)
