@@ -3638,6 +3638,37 @@ def rotated_match_tools() -> List[MCPTool]:
             handler=h.match_with_trust,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_auto_threshold",
+            description=("Derive an accept threshold for 'template' by Otsu on the "
+                         "match score map (no hand-tuned min_score). Returns "
+                         "{found, info:{threshold, separability, n_above}}. "
+                         "separability near 0 = unimodal (no clear match) - do NOT "
+                         "trust the threshold. 'region', 'method'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.auto_threshold,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_auto",
+            description=("Find every occurrence of 'template' above an AUTO-derived "
+                         "(Otsu) threshold - one peak per region, no min_score to "
+                         "tune. 'floor' (default 0.5) clamps the threshold so a noisy "
+                         "surface can't match junk. Returns {count, matches}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "floor": {"type": "number"},
+                "max_results": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.match_auto,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

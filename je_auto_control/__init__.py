@@ -287,6 +287,10 @@ from je_auto_control.utils.rotated_match import (
 from je_auto_control.utils.match_trust import (
     TrustedMatch, match_with_trust, score_peaks,
 )
+# Otsu auto-thresholding for template matching (no hand-tuned min_score)
+from je_auto_control.utils.match_autothresh import (
+    auto_threshold, match_auto,
+)
 # Coarse labelled cell grid for VLM grounding (point <-> cell mapping)
 from je_auto_control.utils.screen_grid import (
     GridCell, cell_for_point, grid_cells, point_for_cell,
@@ -1213,6 +1217,8 @@ __all__ = [
     "TrustedMatch",
     "match_with_trust",
     "score_peaks",
+    "auto_threshold",
+    "match_auto",
     "GridCell",
     "grid_cells",
     "cell_for_point",
