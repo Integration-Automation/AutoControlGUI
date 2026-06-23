@@ -3924,6 +3924,32 @@ def screen_grid_tools() -> List[MCPTool]:
             handler=h.match_labels_to_widgets,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_flow_order",
+            description=("Column-aware reading order of OCR 'boxes' via XY-cut — reads "
+                         "DOWN each column before the next (vs the naive sort that "
+                         "interleaves columns). Returns {count, elements} each tagged "
+                         "with an 'index'. 'min_gap' is the smallest whitespace valley "
+                         "treated as a column / row break."),
+            input_schema=schema({
+                "boxes": {"type": "array", "items": {"type": "object"}},
+                "min_gap": {"type": "integer"}},
+                required=["boxes"]),
+            handler=h.flow_order,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_xy_cut",
+            description=("Recursive XY-cut region tree of OCR 'boxes' (splits at the "
+                         "widest whitespace valley). Returns {tree:{type,axis,"
+                         "children|boxes}}."),
+            input_schema=schema({
+                "boxes": {"type": "array", "items": {"type": "object"}},
+                "min_gap": {"type": "integer"}},
+                required=["boxes"]),
+            handler=h.xy_cut,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

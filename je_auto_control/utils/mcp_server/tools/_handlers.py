@@ -2185,6 +2185,16 @@ def match_labels_to_widgets(labels, widgets):
     return _match_labels_to_widgets(labels, widgets)
 
 
+def flow_order(boxes, min_gap=12):
+    from je_auto_control.utils.executor.action_executor import _flow_order
+    return _flow_order(boxes, min_gap)
+
+
+def xy_cut(boxes, min_gap=12):
+    from je_auto_control.utils.executor.action_executor import _xy_cut
+    return _xy_cut(boxes, min_gap)
+
+
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
     from je_auto_control.utils.executor.action_executor import (
         _find_color_region)

@@ -315,6 +315,10 @@ from je_auto_control.utils.observation_delta import (
 from je_auto_control.utils.column_layout import (
     assign_columns, column_gutters, detect_borderless_table, vertical_projection,
 )
+# Column-aware reading order via recursive XY-cut
+from je_auto_control.utils.reading_flow import (
+    flow_order, to_blocks, xy_cut,
+)
 # Associate form labels with values (multi-direction) + checkbox state
 from je_auto_control.utils.form_fields import (
     associate_fields, checkbox_state, match_labels_to_widgets,
@@ -1272,6 +1276,9 @@ __all__ = [
     "column_gutters",
     "assign_columns",
     "detect_borderless_table",
+    "xy_cut",
+    "flow_order",
+    "to_blocks",
     "associate_fields",
     "match_labels_to_widgets",
     "checkbox_state",
