@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 可攜式 Agent 軌跡記錄(錄製與重播)
+
+記錄 agent 的觀測→動作步驟並重播。完整參考:[`docs/source/Zh/doc/new_features/v154_features_doc.rst`](../docs/source/Zh/doc/new_features/v154_features_doc.rst)。
+
+- **`record_step` / `to_jsonl` / `from_jsonl` / `replay_trace`**(`AC_replay_trace`):`agent_trace` 記錄 OTel span(觀測性)、`trajectory_eval` 只評分、`semantic_recording` 重播人類巨集——都不是可重播的觀測→動作轉錄。本功能是 OmniTool 風格的 `{step, observation, action, result}` JSONL,加決定性重播驅動器(可注入 `runner`、無需即時模型)。執行器命令透過執行器重播每一步的 AC 動作。純標準函式庫、可無頭測試;可從 agent 執行建立回歸 / 訓練資料集。
+
 ## 本次更新 (2026-06-23) — 動作前接地防護
 
 拒絕越界點擊;把接近偏離者吸附到真正的元素。完整參考:[`docs/source/Zh/doc/new_features/v153_features_doc.rst`](../docs/source/Zh/doc/new_features/v153_features_doc.rst)。

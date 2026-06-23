@@ -3878,6 +3878,22 @@ def _validate_action(action: Any, screen: Any = None,
                            targets=list(targets) if targets else None)
 
 
+def _replay_trace(trace: Any) -> Dict[str, Any]:
+    """Adapter: replay a trajectory by running each step's action via the executor."""
+    import json
+    from je_auto_control.utils.agent_replay import from_jsonl, replay_trace
+    if isinstance(trace, str):
+        trace = (json.loads(trace) if trace.strip().startswith("[")
+                 else from_jsonl(trace))
+
+    def runner(action):
+        record = executor.execute_action([list(action)])
+        return next(iter(record.values()), None)
+
+    results = replay_trace(list(trace), runner)
+    return {"count": len(results), "results": results}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5636,6 +5652,7 @@ class Executor:
             "AC_serialize_observation": _serialize_observation,
             "AC_observation_index": _observation_index,
             "AC_validate_action": _validate_action,
+            "AC_replay_trace": _replay_trace,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,
