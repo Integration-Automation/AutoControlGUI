@@ -2094,6 +2094,35 @@ def match_masked_all(template, mask=None, min_score=0.9, max_results=20,
                              region)
 
 
+def match_rotated(template, min_score=0.8, scales=None, angles=None,
+                  region=None, method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _match_rotated
+    return _match_rotated(template, min_score, scales, angles, region, method)
+
+
+def match_rotated_all(template, min_score=0.8, scales=None, angles=None,
+                      max_results=20, nms_iou=0.3, region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _match_rotated_all)
+    return _match_rotated_all(template, min_score, scales, angles, max_results,
+                              nms_iou, region)
+
+
+def grid_cells(rows, cols, region=None):
+    from je_auto_control.utils.executor.action_executor import _grid_cells
+    return _grid_cells(rows, cols, region)
+
+
+def cell_for_point(x, y, rows, cols, region=None):
+    from je_auto_control.utils.executor.action_executor import _cell_for_point
+    return _cell_for_point(x, y, rows, cols, region)
+
+
+def point_for_cell(label, rows, cols, region=None):
+    from je_auto_control.utils.executor.action_executor import _point_for_cell
+    return _point_for_cell(label, rows, cols, region)
+
+
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
     from je_auto_control.utils.executor.action_executor import (
         _find_color_region)
@@ -2245,6 +2274,124 @@ def set_clipboard_html(html, fragment_plaintext=None):
 def get_clipboard_html():
     from je_auto_control.utils.executor.action_executor import _get_clipboard_html
     return _get_clipboard_html()
+
+
+def set_clipboard_files(paths):
+    from je_auto_control.utils.executor.action_executor import _set_clipboard_files
+    return _set_clipboard_files(paths)
+
+
+def get_clipboard_files():
+    from je_auto_control.utils.executor.action_executor import _get_clipboard_files
+    return _get_clipboard_files()
+
+
+def image_histogram(source=None, bins=32, space="hsv", region=None):
+    from je_auto_control.utils.executor.action_executor import _image_histogram
+    return _image_histogram(source, bins, space, region)
+
+
+def histogram_changed(reference, current=None, method="correlation",
+                      threshold=0.9, space="hsv", region=None):
+    from je_auto_control.utils.executor.action_executor import _histogram_changed
+    return _histogram_changed(reference, current, method, threshold, space, region)
+
+
+def changed_regions(before, after=None, threshold=25, min_area=80, blur=5):
+    from je_auto_control.utils.executor.action_executor import _changed_regions
+    return _changed_regions(before, after, threshold, min_area, blur)
+
+
+def has_motion(before, after=None, threshold=25, min_area=80):
+    from je_auto_control.utils.executor.action_executor import _has_motion
+    return _has_motion(before, after, threshold, min_area)
+
+
+def set_topmost(title, on=True):
+    from je_auto_control.utils.executor.action_executor import _set_topmost
+    return _set_topmost(title, on)
+
+
+def bring_to_front(title):
+    from je_auto_control.utils.executor.action_executor import _bring_to_front
+    return _bring_to_front(title)
+
+
+def send_to_back(title):
+    from je_auto_control.utils.executor.action_executor import _send_to_back
+    return _send_to_back(title)
+
+
+def soft_assert(checks, raise_on_fail=False):
+    from je_auto_control.utils.executor.action_executor import _soft_assert
+    return _soft_assert(checks, raise_on_fail)
+
+
+def perceptual_diff(actual, expected, threshold=0.1, include_aa=False,
+                    max_diff_ratio=None):
+    from je_auto_control.utils.executor.action_executor import _perceptual_diff
+    return _perceptual_diff(actual, expected, threshold, include_aa, max_diff_ratio)
+
+
+def get_client_rect(title):
+    from je_auto_control.utils.executor.action_executor import _get_client_rect
+    return _get_client_rect(title)
+
+
+def client_point(title, x, y):
+    from je_auto_control.utils.executor.action_executor import _client_point
+    return _client_point(title, x, y)
+
+
+def cua_command(payload, source="canonical"):
+    from je_auto_control.utils.executor.action_executor import _cua_command
+    return _cua_command(payload, source)
+
+
+def serialize_observation(elements, viewport=None, max_elements=80):
+    from je_auto_control.utils.executor.action_executor import (
+        _serialize_observation)
+    return _serialize_observation(elements, viewport, max_elements)
+
+
+def observation_index(elements, viewport=None, max_elements=80):
+    from je_auto_control.utils.executor.action_executor import _observation_index
+    return _observation_index(elements, viewport, max_elements)
+
+
+def validate_action(action, screen=None, targets=None):
+    from je_auto_control.utils.executor.action_executor import _validate_action
+    return _validate_action(action, screen, targets)
+
+
+def replay_trace(trace):
+    from je_auto_control.utils.executor.action_executor import _replay_trace
+    return _replay_trace(trace)
+
+
+def match_elements(before, after, iou_threshold=0.5):
+    from je_auto_control.utils.executor.action_executor import _match_elements
+    return _match_elements(before, after, iou_threshold)
+
+
+def assign_stable_ids(elements, prior=None, iou_threshold=0.5):
+    from je_auto_control.utils.executor.action_executor import _assign_stable_ids
+    return _assign_stable_ids(elements, prior, iou_threshold)
+
+
+def score_candidates(candidates, want_role=None, want_name=None, anchor=None):
+    from je_auto_control.utils.executor.action_executor import _score_candidates
+    return _score_candidates(candidates, want_role, want_name, anchor)
+
+
+def best_candidate(candidates, want_role=None, want_name=None, anchor=None):
+    from je_auto_control.utils.executor.action_executor import _best_candidate
+    return _best_candidate(candidates, want_role, want_name, anchor)
+
+
+def read_barcodes(source=None, region=None):
+    from je_auto_control.utils.executor.action_executor import _read_barcodes
+    return _read_barcodes(source, region)
 
 
 def detect_drift(reference, current, threshold=0.25, bins=10):

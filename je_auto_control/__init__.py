@@ -279,6 +279,14 @@ from je_auto_control.utils.visual_match import (
     match_template_all,
 )
 from je_auto_control.utils.visual_match import Match as TemplateMatch
+# Rotation- and scale-tolerant template matching (scale-space x angle sweep)
+from je_auto_control.utils.rotated_match import (
+    RotatedMatch, match_rotated, match_rotated_all, scale_space,
+)
+# Coarse labelled cell grid for VLM grounding (point <-> cell mapping)
+from je_auto_control.utils.screen_grid import (
+    GridCell, cell_for_point, grid_cells, point_for_cell,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -339,6 +347,58 @@ from je_auto_control.utils.locator_chain import Candidates, from_boxes
 from je_auto_control.utils.rich_clipboard import (
     build_cf_html, get_clipboard_html, parse_cf_html, set_clipboard_html,
 )
+# Clipboard file-drop list (CF_HDROP): pure DROPFILES packing + Win32 set/get
+from je_auto_control.utils.clipboard_files import (
+    build_dropfiles, get_clipboard_files, parse_dropfiles, set_clipboard_files,
+)
+# Colour-histogram fingerprint & change detection (illumination-robust)
+from je_auto_control.utils.img_histogram import (
+    compare_histograms, histogram_changed, image_histogram,
+)
+# Localized change / activity detection between two frames (absdiff)
+from je_auto_control.utils.motion_regions import (
+    activity_score, changed_regions, has_motion,
+)
+# Window z-order control (topmost / bring-to-front / send-to-back)
+from je_auto_control.utils.window_zorder import (
+    bring_to_front, plan_zorder, send_to_back, set_topmost,
+)
+# Soft assertions (accumulate checks, raise the aggregate at block end)
+from je_auto_control.utils.soft_assert import SoftAssertions
+# Perceptual (YIQ) image diff with anti-alias edge suppression
+from je_auto_control.utils.perceptual_diff import (
+    PerceptualDiffResult, assert_perceptual, perceptual_diff,
+)
+# Window client-area geometry (frame insets, client-to-screen mapping)
+from je_auto_control.utils.window_geometry import (
+    client_point, client_to_screen, frame_insets, get_client_rect,
+)
+# Canonical computer-use action schema (normalize Anthropic / OpenAI -> AC_*)
+from je_auto_control.utils.cua_action import (
+    canonical_action, from_anthropic, from_openai_cua, to_ac_command,
+)
+# Token-budgeted, indexed a11y text observation for VLM/agent grounding
+from je_auto_control.utils.observation import (
+    flatten_tree, observation_index, serialize_observation,
+)
+# Pre-action grounding guard (bounds check + snap-to-element)
+from je_auto_control.utils.action_grounding import (
+    in_bounds, snap_to_element, validate_action,
+)
+# Portable agent-trajectory trace (record observation->action steps, replay)
+from je_auto_control.utils.agent_replay import (
+    from_jsonl, record_step, replay_trace, to_jsonl,
+)
+# Geometry-aware element matching across frames (stable IDs, move tracking)
+from je_auto_control.utils.element_diff import (
+    assign_stable_ids, match_elements,
+)
+# Weighted candidate scoring (role + name similarity + proximity + enabled)
+from je_auto_control.utils.element_scoring import (
+    ScoredCandidate, best_candidate, score_candidates,
+)
+# 1-D barcode decoding (EAN / UPC) with an injectable decoder seam
+from je_auto_control.utils.barcode import read_barcodes
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1134,6 +1194,14 @@ __all__ = [
     "match_masked",
     "match_masked_all",
     "best_matches",
+    "RotatedMatch",
+    "match_rotated",
+    "match_rotated_all",
+    "scale_space",
+    "GridCell",
+    "grid_cells",
+    "cell_for_point",
+    "point_for_cell",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",
@@ -1195,6 +1263,48 @@ __all__ = [
     "parse_cf_html",
     "get_clipboard_html",
     "set_clipboard_html",
+    "build_dropfiles",
+    "parse_dropfiles",
+    "set_clipboard_files",
+    "get_clipboard_files",
+    "image_histogram",
+    "compare_histograms",
+    "histogram_changed",
+    "changed_regions",
+    "has_motion",
+    "activity_score",
+    "plan_zorder",
+    "set_topmost",
+    "bring_to_front",
+    "send_to_back",
+    "SoftAssertions",
+    "perceptual_diff",
+    "assert_perceptual",
+    "PerceptualDiffResult",
+    "frame_insets",
+    "client_to_screen",
+    "get_client_rect",
+    "client_point",
+    "canonical_action",
+    "from_anthropic",
+    "from_openai_cua",
+    "to_ac_command",
+    "flatten_tree",
+    "observation_index",
+    "serialize_observation",
+    "in_bounds",
+    "snap_to_element",
+    "validate_action",
+    "record_step",
+    "to_jsonl",
+    "from_jsonl",
+    "replay_trace",
+    "match_elements",
+    "assign_stable_ids",
+    "score_candidates",
+    "best_candidate",
+    "ScoredCandidate",
+    "read_barcodes",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

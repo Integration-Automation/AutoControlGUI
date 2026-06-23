@@ -1,5 +1,101 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Clipboard File-Drop List (CF_HDROP)
+
+Put a list of files on the clipboard, ready to paste into Explorer. Full reference: [`docs/source/Eng/doc/new_features/v160_features_doc.rst`](docs/source/Eng/doc/new_features/v160_features_doc.rst).
+
+- **`build_dropfiles` / `parse_dropfiles` / `set_clipboard_files` / `get_clipboard_files`** (`AC_set_clipboard_files`, `AC_get_clipboard_files`): the clipboard carried text, images and (via `rich_clipboard`) HTML, but never a *file list* — the `CF_HDROP` payload Explorer reads to paste files as a real copy. Building it is fiddly (20-byte `DROPFILES` header + double-null-terminated UTF-16 path list + `pFiles` offset). This isolates the packing into pure, fully testable `build_dropfiles` / `parse_dropfiles` byte functions, with thin Windows-only `set`/`get_clipboard_files` wrappers on top — the same split `rich_clipboard` uses for `CF_HTML`. No `PySide6`.
+
+## What's new (2026-06-23) — Coarse Labelled Screen Grid (VLM Grounding)
+
+Refer to screen regions as grid cells ("click C3") instead of raw pixels. Full reference: [`docs/source/Eng/doc/new_features/v159_features_doc.rst`](docs/source/Eng/doc/new_features/v159_features_doc.rst).
+
+- **`grid_cells` / `cell_for_point` / `point_for_cell`** (`AC_grid_cells`, `AC_cell_for_point`, `AC_point_for_cell`): VLM grounding is far more reliable when a model names a coarse cell than when it emits hallucinated pixel coordinates. This lays an `rows`x`cols` grid over the screen (or a `region`), labels each cell spreadsheet-style (`A1` top-left, past `Z` → `AA`), and maps both ways — point → containing cell, named cell → centre point (ready to click). Pure-stdlib geometry; the only device-bound path is the default that reads the live screen size, so every function is headless-testable with an explicit `region`. No `PySide6`.
+
+## What's new (2026-06-23) — Rotation- & Scale-Tolerant Template Matching
+
+Find templates that are rotated or skewed, not just scaled. Full reference: [`docs/source/Eng/doc/new_features/v158_features_doc.rst`](docs/source/Eng/doc/new_features/v158_features_doc.rst).
+
+- **`match_rotated` / `match_rotated_all` / `scale_space`** (`AC_match_rotated`, `AC_match_rotated_all`): `match_template` sweeps *scales* but assumes axis-aligned — OpenCV's `matchTemplate` isn't rotation-invariant, so a skewed control, a rotated icon or a dial at a different angle is missed. This sweeps `angles` (each warped with `cv2.warpAffine`) crossed with a `np.linspace` scale-space, returns the best-correlating `RotatedMatch` carrying the recovered `scale` + `angle` (the `*_all` form NMS-dedupes neighbouring angles/scales). Reuses `visual_match`'s loaders / resize / method table / NMS — no matching or geometry code duplicated. Injectable `haystack`; headless-testable; no `PySide6`.
+
+## What's new (2026-06-23) — Barcode Decoding (1-D)
+
+Read EAN / UPC / Code-128 barcodes off the screen or an image. Full reference: [`docs/source/Eng/doc/new_features/v157_features_doc.rst`](docs/source/Eng/doc/new_features/v157_features_doc.rst).
+
+- **`read_barcodes`** (`AC_read_barcodes`): the framework decoded QR codes (`read_qr`) but had no reader for the *1-D* barcodes (EAN-13/8, UPC-A, Code-128) that label physical goods, inventory tickets and shipping labels. This decodes them via OpenCV's `cv2.barcode.BarcodeDetector`, returning `{text, type, points}` per code. The decode step is an injectable seam (default calls OpenCV; tests pass their own `decoder`), so it's fully headless-testable and degrades gracefully — an OpenCV build without the `barcode` module returns `[]` instead of raising. Reuses the shared `visual_match` haystack loader; no `PySide6`.
+
+## What's new (2026-06-23) — Weighted Candidate Scoring
+
+Rank ambiguous element candidates by a confidence score. Full reference: [`docs/source/Eng/doc/new_features/v156_features_doc.rst`](docs/source/Eng/doc/new_features/v156_features_doc.rst).
+
+- **`score_candidates` / `best_candidate`** (`AC_score_candidates`, `AC_best_candidate`): `anchor_locator` is a single relation + distance sort and `ab_locator` races whole strategies by elapsed time — neither ranks ambiguous candidates by a *weighted* mix of role match + fuzzy name similarity + anchor proximity + enabled-state. This returns `ScoredCandidate`s best-first with a `matched_on` breakdown; the name similarity is injectable (default `fuzzy_ratio`, reused — no new string-distance code). Pure-stdlib over element dicts; powers self-heal / grounding when several boxes could be the target. Headless-testable.
+
+## What's new (2026-06-23) — Geometry-Aware Element Diff & Stable IDs
+
+Track elements across frames by overlap, with stable IDs. Full reference: [`docs/source/Eng/doc/new_features/v155_features_doc.rst`](docs/source/Eng/doc/new_features/v155_features_doc.rst).
+
+- **`match_elements` / `assign_stable_ids`** (`AC_match_elements`, `AC_assign_stable_ids`): `diff_snapshots` keys identity on `(role, name)` — it can't match a renamed-but-stationary control or a moved one, nor give persistent IDs across frames. This matches element boxes by IoU (reusing `element_parse.iou`): `match_elements` returns `{matched, added, removed}`; `assign_stable_ids` carries each element's `id` from a `prior` frame (a moved button keeps its id, a new one gets a fresh id) — so an agent can reliably refer to "element 7" turn-over-turn. Pure-stdlib, headless-testable.
+
+## What's new (2026-06-23) — Portable Agent-Trajectory Trace (Record & Replay)
+
+Log an agent's observation→action steps and replay them. Full reference: [`docs/source/Eng/doc/new_features/v154_features_doc.rst`](docs/source/Eng/doc/new_features/v154_features_doc.rst).
+
+- **`record_step` / `to_jsonl` / `from_jsonl` / `replay_trace`** (`AC_replay_trace`): `agent_trace` records OTel spans (observability), `trajectory_eval` only scores, `semantic_recording` replays human macros — none is a replayable obs→action transcript. This is the OmniTool-style `{step, observation, action, result}` JSONL with a deterministic replay driver (injectable `runner`, no live model). The executor command replays each step's AC action through the executor. Pure-stdlib, headless-testable; build regression / training datasets from agent runs.
+
+## What's new (2026-06-23) — Pre-Action Grounding Guard
+
+Reject out-of-bounds clicks; snap near-misses onto the real element. Full reference: [`docs/source/Eng/doc/new_features/v153_features_doc.rst`](docs/source/Eng/doc/new_features/v153_features_doc.rst).
+
+- **`validate_action` / `snap_to_element` / `in_bounds`** (`AC_validate_action`): `guardrail` scans text and `loop_guard` detects loops — neither validates a coordinate action before dispatch, so a hallucinated `(9999,-5)` click fires into nothing and a 5px-off click misses. This rejects off-screen coordinates and, given `targets`, snaps a near-miss onto the nearest element's centre, returning `{ok, reason, snapped}`. Pure-stdlib geometry over element dicts; the executor `screen` defaults to the live screen. Headless-testable; plugs in front of an agent loop's dispatch.
+
+## What's new (2026-06-23) — Token-Budgeted A11y Text Observation
+
+Turn the a11y tree into an indexed text block a VLM can act on. Full reference: [`docs/source/Eng/doc/new_features/v152_features_doc.rst`](docs/source/Eng/doc/new_features/v152_features_doc.rst).
+
+- **`serialize_observation` / `observation_index` / `flatten_tree`** (`AC_serialize_observation`, `AC_observation_index`): `describe_screen` gives role *counts* + a flat label list — no stable index, no `[12] button "Submit" @(x,y)` lines, no viewport clip, no token budget. This flattens a (nested) element tree to interactive-only, clips to the viewport, orders reading-style, caps at `max_elements`, assigns a stable `index`, and renders the lines a model acts on ("click [12]"). Pure-stdlib over element dicts; pairs with `fuse_elements`/`set_of_marks`. Headless-testable.
+
+## What's new (2026-06-23) — Canonical Computer-Use Action Schema
+
+Bridge Anthropic / OpenAI agent actions to AutoControl commands. Full reference: [`docs/source/Eng/doc/new_features/v151_features_doc.rst`](docs/source/Eng/doc/new_features/v151_features_doc.rst).
+
+- **`from_anthropic` / `from_openai_cua` / `to_ac_command` / `canonical_action`** (`AC_cua_command`): `tool_use_schema` exports AC_* signatures and `coordinate_space` rescales — neither *normalizes an inbound action payload*. Anthropic emits `{action:"left_click", coordinate:[x,y]}`, OpenAI CUA emits `{type:"click", x, y, button}`; these adapters map both to a canonical action and then to a runnable `[AC_*, params]` (with optional coordinate-space `scale`). Pure-stdlib, headless-testable; the executor command returns `{canonical, command}` for any source.
+
+## What's new (2026-06-23) — Window Client-Area Geometry
+
+Click *inside* a window regardless of its title bar / borders. Full reference: [`docs/source/Eng/doc/new_features/v150_features_doc.rst`](docs/source/Eng/doc/new_features/v150_features_doc.rst).
+
+- **`get_client_rect` / `client_point` / `frame_insets` / `client_to_screen`** (`AC_get_client_rect`, `AC_client_point`): `get_window_geometry` returns only the *outer* bbox — there was no client-area rect, frame-inset math, or client→screen mapping. `client_point("App", x, y)` maps a content-relative point to the screen so a click lands inside the window regardless of chrome; `frame_insets` reports border/title-bar thickness. `frame_insets`/`client_to_screen` are pure geometry (headless-testable); `get_client_rect` uses an injectable Win32 reader (`GetClientRect`+`ClientToScreen`).
+
+## What's new (2026-06-23) — Perceptual (YIQ) Image Diff with Anti-Alias Suppression
+
+Visual-regression diffing that ignores anti-aliased edges. Full reference: [`docs/source/Eng/doc/new_features/v149_features_doc.rst`](docs/source/Eng/doc/new_features/v149_features_doc.rst).
+
+- **`perceptual_diff` / `assert_perceptual`** (`AC_perceptual_diff`): `image_difference` counts raw per-channel deltas and `ssim_compare` is a global score — neither uses a perceptual metric or ignores anti-aliasing, the #1 source of false-positive visual-diff failures. This compares in YIQ space (pixelmatch's colour metric) and, by default, removes thin 1px anti-aliased edge diffs via a morphological open so only solid changes count (`include_aa=True` keeps them). Returns `{diff_pixels, diff_ratio, regions}`; `assert_perceptual` / `max_diff_ratio` gate a regression test. Injectable image pair → headless-testable (a 1px fringe → 0, a solid block → counted).
+
+## What's new (2026-06-23) — Soft Assertions (Aggregate Failures)
+
+Verify many things, report every failure at once. Full reference: [`docs/source/Eng/doc/new_features/v148_features_doc.rst`](docs/source/Eng/doc/new_features/v148_features_doc.rst).
+
+- **`SoftAssertions`** (`AC_soft_assert`): `assert_all` takes a pre-built spec list up front — there was no scoped accumulator you sprinkle `check()` calls into that raises everything on block exit (JUnit5 `assertAll` / Playwright `expect.soft`). `with SoftAssertions() as soft: soft.check(...)` records pass/fail (never raising mid-block, returns the bool to branch on), then raises once on exit listing every failure — and never masks an exception already propagating. The executor command aggregates a JSON `checks` list (eq/ne/gt/lt/contains/truthy). Pure-stdlib, headless-testable.
+
+## What's new (2026-06-23) — Window Z-Order (Always-On-Top / Front / Back)
+
+Pin a window on top, raise it, or push it behind. Full reference: [`docs/source/Eng/doc/new_features/v147_features_doc.rst`](docs/source/Eng/doc/new_features/v147_features_doc.rst).
+
+- **`set_topmost` / `bring_to_front` / `send_to_back` / `plan_zorder`** (`AC_set_topmost`, `AC_bring_to_front`, `AC_send_to_back`): the raw `set_window_position` existed but wasn't in the facade, had no title wrapper and no topmost semantics — the standard RPA "always-on-top" was missing. `plan_zorder` is a pure action→`SetWindowPos` constant lookup (headless-testable); the title-based setters apply it through an injectable driver (the `snap_window` seam pattern), Win32 by default. 
+
+## What's new (2026-06-23) — Localized Motion / Activity Detection
+
+Find which sub-regions are animating between two frames. Full reference: [`docs/source/Eng/doc/new_features/v146_features_doc.rst`](docs/source/Eng/doc/new_features/v146_features_doc.rst).
+
+- **`changed_regions` / `has_motion` / `activity_score`** (`AC_changed_regions`, `AC_has_motion`): `wait_until_screen_stable` is a boolean poll, `ssim_changed_regions` is structural (ignores fast motion), `diff_screenshots` isn't activity blobs. This is the cheap absdiff path — threshold the per-pixel difference, dilate, and return the moved-region boxes (largest first), a boolean, and the fraction of pixels that moved. Pick a quiet area or locate a spinner. Two injectable frames → headless-testable; reuses the shared connected-components helper; `after` defaults to a live screen grab in the executor.
+
+## What's new (2026-06-23) — Colour-Histogram Fingerprint & Change Detection
+
+Tell whether the view is "the same" despite lighting / scale. Full reference: [`docs/source/Eng/doc/new_features/v145_features_doc.rst`](docs/source/Eng/doc/new_features/v145_features_doc.rst).
+
+- **`image_histogram` / `compare_histograms` / `histogram_changed`** (`AC_image_histogram`, `AC_histogram_changed`): `image_dedup`'s perceptual hash is spatial (brittle to colour/theme) and `color_stats` is one colour. A normalized colour histogram is the illumination/scale-robust "same view, or palette shifted?" signal (theme switch, reload, rotated banner). `image_histogram` returns a per-channel histogram (`hsv`/`rgb`/`gray`); `compare_histograms` does correlation/chisqr/intersection/bhattacharyya; `histogram_changed` compares a reference vs the live screen. Injectable image → headless-testable; base OpenCV (`cv2.calcHist`/`compareHist`).
+
 ## What's new (2026-06-23) — Rich Clipboard (HTML / CF_HTML)
 
 Copy and paste *formatted* HTML into Word / Outlook. Full reference: [`docs/source/Eng/doc/new_features/v144_features_doc.rst`](docs/source/Eng/doc/new_features/v144_features_doc.rst).

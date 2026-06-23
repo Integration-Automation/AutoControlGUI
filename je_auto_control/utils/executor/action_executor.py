@@ -1,5 +1,5 @@
 import types
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from je_auto_control.utils.exception.exception_tags import (
     action_is_null_error_message, add_command_exception_error_message,
@@ -3282,6 +3282,81 @@ def _match_masked_all(template: str, mask: Any = None, min_score: Any = 0.9,
     return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
 
 
+def _seq_arg(value: Any, default: Sequence[float]) -> Sequence[float]:
+    """Coerce a JSON-string / list arg into a tuple of floats, or the default."""
+    import json
+    if isinstance(value, str):
+        value = json.loads(value) if value.strip() else None
+    return tuple(float(v) for v in value) if value else tuple(default)
+
+
+def _match_rotated(template: str, min_score: Any = 0.8, scales: Any = None,
+                   angles: Any = None, region: Any = None,
+                   method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: best rotation/scale-tolerant template match on the screen."""
+    import json
+    from je_auto_control.utils.rotated_match import match_rotated
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = match_rotated(template, region=region,
+                          scales=_seq_arg(scales, (1.0,)),
+                          angles=_seq_arg(angles, (0.0,)),
+                          min_score=float(min_score), method=method)
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
+def _match_rotated_all(template: str, min_score: Any = 0.8, scales: Any = None,
+                       angles: Any = None, max_results: Any = 20,
+                       nms_iou: Any = 0.3, region: Any = None) -> Dict[str, Any]:
+    """Adapter: every rotation/scale-tolerant template match (NMS)."""
+    import json
+    from je_auto_control.utils.rotated_match import match_rotated_all
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    matches = match_rotated_all(template, region=region,
+                                scales=_seq_arg(scales, (1.0,)),
+                                angles=_seq_arg(angles, (0.0,)),
+                                min_score=float(min_score),
+                                max_results=int(max_results),
+                                nms_iou=float(nms_iou))
+    return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
+
+
+def _region_arg(value: Any) -> Optional[List[int]]:
+    """Coerce a JSON-string / list region arg into a list of ints, or None."""
+    import json
+    if isinstance(value, str):
+        value = json.loads(value) if value.strip() else None
+    return [int(v) for v in value] if value else None
+
+
+def _grid_cells(rows: Any, cols: Any, region: Any = None) -> Dict[str, Any]:
+    """Adapter: every cell of an rows x cols labelled grid over the screen."""
+    from je_auto_control.utils.screen_grid import grid_cells
+    cells = grid_cells(int(rows), int(cols), region=_region_arg(region))
+    return {"count": len(cells), "cells": [c.to_dict() for c in cells]}
+
+
+def _cell_for_point(x: Any, y: Any, rows: Any, cols: Any,
+                    region: Any = None) -> Dict[str, Any]:
+    """Adapter: the grid cell containing a point (or found=False if outside)."""
+    from je_auto_control.utils.screen_grid import cell_for_point
+    cell = cell_for_point(int(x), int(y), int(rows), int(cols),
+                          region=_region_arg(region))
+    return {"found": cell is not None,
+            "cell": cell.to_dict() if cell else None}
+
+
+def _point_for_cell(label: str, rows: Any, cols: Any,
+                    region: Any = None) -> Dict[str, Any]:
+    """Adapter: the centre point of a named grid cell (ready to click)."""
+    from je_auto_control.utils.screen_grid import point_for_cell
+    point = point_for_cell(str(label), int(rows), int(cols),
+                           region=_region_arg(region))
+    return {"point": point}
+
+
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
                        region: Any = None) -> Dict[str, Any]:
     """Adapter: locate coloured regions on the screen, largest first."""
@@ -3674,6 +3749,311 @@ def _get_clipboard_html() -> Dict[str, Any]:
     from je_auto_control.utils.rich_clipboard import get_clipboard_html
     html = get_clipboard_html()
     return {"found": html is not None, "html": html}
+
+
+def _set_clipboard_files(paths: Any) -> Dict[str, Any]:
+    """Adapter: put a file-drop list (CF_HDROP) on the clipboard (Windows)."""
+    import json
+    from je_auto_control.utils.clipboard_files import set_clipboard_files
+    if isinstance(paths, str):
+        paths = json.loads(paths) if paths.strip().startswith("[") else [paths]
+    paths = [str(p) for p in paths]
+    set_clipboard_files(paths)
+    return {"set": True, "count": len(paths)}
+
+
+def _get_clipboard_files() -> Dict[str, Any]:
+    """Adapter: read the clipboard's file-drop list (CF_HDROP) (Windows)."""
+    from je_auto_control.utils.clipboard_files import get_clipboard_files
+    paths = get_clipboard_files()
+    return {"found": paths is not None, "paths": paths or []}
+
+
+def _image_histogram(source: Any = None, bins: Any = 32, space: str = "hsv",
+                     region: Any = None) -> Dict[str, Any]:
+    """Adapter: per-channel colour histogram of an image / the screen."""
+    import json
+    from je_auto_control.utils.img_histogram import image_histogram
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    hist = image_histogram(source, region=region, bins=int(bins), space=str(space))
+    return {"bins": int(bins), "space": str(space), "histogram": hist}
+
+
+def _histogram_changed(reference: str, current: Any = None, method: str =
+                       "correlation", threshold: Any = 0.9, space: str = "hsv",
+                       region: Any = None) -> Dict[str, Any]:
+    """Adapter: whether the screen / current image differs from a reference."""
+    import json
+    from je_auto_control.utils.img_histogram import (compare_histograms,
+                                                     histogram_changed,
+                                                     image_histogram)
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    changed = histogram_changed(reference, current, region=region,
+                                method=str(method), threshold=float(threshold),
+                                space=str(space))
+    ref_hist = image_histogram(reference, space=str(space))
+    cur_hist = (image_histogram(current, space=str(space)) if current is not None
+                else image_histogram(region=region, space=str(space)))
+    return {"changed": changed,
+            "score": compare_histograms(ref_hist, cur_hist, method=str(method))}
+
+
+def _changed_regions(before: str, after: Any = None, threshold: Any = 25,
+                     min_area: Any = 80, blur: Any = 5) -> Dict[str, Any]:
+    """Adapter: boxes of regions that moved between two frames (after=screen)."""
+    from je_auto_control.utils.motion_regions import changed_regions
+    regions = changed_regions(before, _resolve_after(after), threshold=int(threshold),
+                              min_area=int(min_area), blur=int(blur))
+    return {"count": len(regions), "regions": regions}
+
+
+def _has_motion(before: str, after: Any = None, threshold: Any = 25,
+                min_area: Any = 80) -> Dict[str, Any]:
+    """Adapter: whether anything moved between two frames (after=screen)."""
+    from je_auto_control.utils.motion_regions import activity_score, has_motion
+    resolved = _resolve_after(after)
+    return {"moved": has_motion(before, resolved, threshold=int(threshold),
+                                min_area=int(min_area)),
+            "activity": activity_score(before, resolved, threshold=int(threshold))}
+
+
+def _resolve_after(after: Any):
+    """Return the 'after' frame, grabbing the screen when it is not given."""
+    if after is not None:
+        return after
+    import numpy as np
+    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
+    return np.asarray(pil_screenshot().convert("RGB"))
+
+
+def _set_topmost(title: str, on: Any = True) -> Dict[str, Any]:
+    """Adapter: pin a window always-on-top (or release it)."""
+    from je_auto_control.utils.window_zorder import set_topmost
+    return {"applied": set_topmost(title, bool(on))}
+
+
+def _bring_to_front(title: str) -> Dict[str, Any]:
+    """Adapter: raise a window to the top of the z-order."""
+    from je_auto_control.utils.window_zorder import bring_to_front
+    return {"applied": bring_to_front(title)}
+
+
+def _send_to_back(title: str) -> Dict[str, Any]:
+    """Adapter: send a window to the bottom of the z-order."""
+    from je_auto_control.utils.window_zorder import send_to_back
+    return {"applied": send_to_back(title)}
+
+
+def _eval_check(op: str, value: Any, expected: Any) -> bool:
+    """Evaluate one soft-assert check by operator name."""
+    table = {"eq": lambda: value == expected,
+             "ne": lambda: value != expected,
+             "gt": lambda: value > expected,
+             "lt": lambda: value < expected,
+             "contains": lambda: expected in value,
+             "truthy": lambda: bool(value)}
+    if op not in table:
+        raise AutoControlActionException(f"unknown soft-assert op: {op!r}")
+    return bool(table[op]())
+
+
+def _soft_assert(checks: Any, raise_on_fail: Any = False) -> Dict[str, Any]:
+    """Adapter: aggregate a list of {value, op, expected, message} checks."""
+    import json
+    from je_auto_control.utils.soft_assert import SoftAssertions
+    if isinstance(checks, str):
+        checks = json.loads(checks)
+    soft = SoftAssertions(raise_on_exit=False)
+    for check in checks or ():
+        op = str(check.get("op", "truthy"))
+        ok = _eval_check(op, check.get("value"), check.get("expected"))
+        soft.check(ok, check.get("message", "")
+                   or f"{check.get('value')!r} {op} {check.get('expected')!r}")
+    if raise_on_fail:
+        soft.assert_all()
+    return {"ok": not soft.failures, "passed": soft.passed,
+            "failures": soft.failures}
+
+
+def _perceptual_diff(actual: str, expected: str, threshold: Any = 0.1,
+                     include_aa: Any = False,
+                     max_diff_ratio: Any = None) -> Dict[str, Any]:
+    """Adapter: perceptual (YIQ) image diff with anti-alias suppression."""
+    from je_auto_control.utils.perceptual_diff import perceptual_diff
+    result = perceptual_diff(actual, expected, threshold=float(threshold),
+                             include_aa=bool(include_aa))
+    if max_diff_ratio is not None and result.diff_ratio > float(max_diff_ratio):
+        raise AutoControlActionException(
+            f"perceptual diff {result.diff_ratio} exceeds {max_diff_ratio}")
+    return {"diff_pixels": result.diff_pixels, "total_pixels": result.total_pixels,
+            "diff_ratio": result.diff_ratio, "regions": result.regions}
+
+
+def _get_client_rect(title: str) -> Dict[str, Any]:
+    """Adapter: a window's client-area rect in screen coordinates."""
+    from je_auto_control.utils.window_geometry import get_client_rect
+    rect = get_client_rect(title)
+    return {"found": rect is not None,
+            "rect": list(rect) if rect is not None else None}
+
+
+def _client_point(title: str, x: Any, y: Any) -> Dict[str, Any]:
+    """Adapter: screen point for a client-area-local (x, y) inside a window."""
+    from je_auto_control.utils.window_geometry import client_point
+    point = client_point(title, int(x), int(y))
+    return {"found": point is not None,
+            "point": list(point) if point is not None else None}
+
+
+def _cua_command(payload: Any, source: str = "canonical") -> Dict[str, Any]:
+    """Adapter: normalize a computer-use payload and map it to an AC_* command."""
+    import json
+    from je_auto_control.utils.cua_action import (from_anthropic, from_openai_cua,
+                                                  to_ac_command)
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    normalizers = {"anthropic": from_anthropic, "openai": from_openai_cua,
+                   "canonical": dict}
+    if source not in normalizers:
+        raise AutoControlActionException(f"unknown cua source: {source!r}")
+    canonical = normalizers[source](payload)
+    return {"canonical": canonical, "command": to_ac_command(canonical)}
+
+
+def _serialize_observation(elements: Any, viewport: Any = None,
+                           max_elements: Any = 80) -> Dict[str, Any]:
+    """Adapter: render an indexed a11y text observation from element dicts."""
+    import json
+    from je_auto_control.utils.observation import (observation_index,
+                                                   serialize_observation)
+    if isinstance(elements, str):
+        elements = json.loads(elements)
+    if isinstance(viewport, str):
+        viewport = json.loads(viewport) if viewport.strip() else None
+    text = serialize_observation(list(elements), viewport=viewport,
+                                 max_elements=int(max_elements))
+    indexed = observation_index(list(elements), viewport=viewport,
+                                max_elements=int(max_elements))
+    return {"observation": text, "count": len(indexed)}
+
+
+def _observation_index(elements: Any, viewport: Any = None,
+                       max_elements: Any = 80) -> Dict[str, Any]:
+    """Adapter: the on-screen elements in reading order, capped, each indexed."""
+    import json
+    from je_auto_control.utils.observation import observation_index
+    if isinstance(elements, str):
+        elements = json.loads(elements)
+    if isinstance(viewport, str):
+        viewport = json.loads(viewport) if viewport.strip() else None
+    indexed = observation_index(list(elements), viewport=viewport,
+                                max_elements=int(max_elements))
+    return {"count": len(indexed), "elements": indexed}
+
+
+def _validate_action(action: Any, screen: Any = None,
+                     targets: Any = None) -> Dict[str, Any]:
+    """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""
+    import json
+    from je_auto_control.utils.action_grounding import validate_action
+    if isinstance(action, str):
+        action = json.loads(action)
+    if isinstance(targets, str):
+        targets = json.loads(targets) if targets.strip() else None
+    if isinstance(screen, str):
+        screen = json.loads(screen) if screen.strip() else None
+    if not screen:
+        from je_auto_control.wrapper.auto_control_screen import screen_size
+        screen = list(screen_size())
+    return validate_action(action, screen_size=screen,
+                           targets=list(targets) if targets else None)
+
+
+def _replay_trace(trace: Any) -> Dict[str, Any]:
+    """Adapter: replay a trajectory by running each step's action via the executor."""
+    import json
+    from je_auto_control.utils.agent_replay import from_jsonl, replay_trace
+    if isinstance(trace, str):
+        trace = (json.loads(trace) if trace.strip().startswith("[")
+                 else from_jsonl(trace))
+
+    def runner(action):
+        record = executor.execute_action([list(action)])
+        return next(iter(record.values()), None)
+
+    results = replay_trace(list(trace), runner)
+    return {"count": len(results), "results": results}
+
+
+def _match_elements(before: Any, after: Any,
+                    iou_threshold: Any = 0.5) -> Dict[str, Any]:
+    """Adapter: geometry-aware match of two element-box lists."""
+    import json
+    from je_auto_control.utils.element_diff import match_elements
+    if isinstance(before, str):
+        before = json.loads(before)
+    if isinstance(after, str):
+        after = json.loads(after)
+    result = match_elements(list(before), list(after),
+                            iou_threshold=float(iou_threshold))
+    return {"matched": result["matched"], "added": result["added"],
+            "removed": result["removed"]}
+
+
+def _assign_stable_ids(elements: Any, prior: Any = None,
+                       iou_threshold: Any = 0.5) -> Dict[str, Any]:
+    """Adapter: tag element boxes with stable IDs carried from a prior frame."""
+    import json
+    from je_auto_control.utils.element_diff import assign_stable_ids
+    if isinstance(elements, str):
+        elements = json.loads(elements)
+    if isinstance(prior, str):
+        prior = json.loads(prior) if prior.strip() else None
+    tagged = assign_stable_ids(list(elements),
+                               prior=list(prior) if prior else None,
+                               iou_threshold=float(iou_threshold))
+    return {"count": len(tagged), "elements": tagged}
+
+
+def _score_candidates(candidates: Any, want_role: Any = None, want_name: Any = None,
+                      anchor: Any = None) -> Dict[str, Any]:
+    """Adapter: rank candidate element boxes by role / name / proximity."""
+    import json
+    from je_auto_control.utils.element_scoring import score_candidates
+    if isinstance(candidates, str):
+        candidates = json.loads(candidates)
+    if isinstance(anchor, str):
+        anchor = json.loads(anchor) if anchor.strip() else None
+    ranked = score_candidates(list(candidates), want_role=want_role,
+                              want_name=want_name, anchor=anchor)
+    return {"count": len(ranked), "scored": [c.to_dict() for c in ranked]}
+
+
+def _best_candidate(candidates: Any, want_role: Any = None, want_name: Any = None,
+                    anchor: Any = None) -> Dict[str, Any]:
+    """Adapter: the single highest-scoring candidate element."""
+    import json
+    from je_auto_control.utils.element_scoring import best_candidate
+    if isinstance(candidates, str):
+        candidates = json.loads(candidates)
+    if isinstance(anchor, str):
+        anchor = json.loads(anchor) if anchor.strip() else None
+    best = best_candidate(list(candidates), want_role=want_role,
+                          want_name=want_name, anchor=anchor)
+    return {"found": best is not None,
+            "best": best.to_dict() if best is not None else None}
+
+
+def _read_barcodes(source: Any = None, region: Any = None) -> Dict[str, Any]:
+    """Adapter: decode 1-D barcodes on screen / in an image."""
+    import json
+    from je_auto_control.utils.barcode import read_barcodes
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    barcodes = read_barcodes(source, region=region)
+    return {"count": len(barcodes), "barcodes": barcodes}
 
 
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
@@ -5397,6 +5777,11 @@ class Executor:
             "AC_match_template_all": _match_template_all,
             "AC_match_masked": _match_masked,
             "AC_match_masked_all": _match_masked_all,
+            "AC_match_rotated": _match_rotated,
+            "AC_match_rotated_all": _match_rotated_all,
+            "AC_grid_cells": _grid_cells,
+            "AC_cell_for_point": _cell_for_point,
+            "AC_point_for_cell": _point_for_cell,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,
@@ -5419,6 +5804,29 @@ class Executor:
             "AC_locate_chain": _locate_chain,
             "AC_set_clipboard_html": _set_clipboard_html,
             "AC_get_clipboard_html": _get_clipboard_html,
+            "AC_set_clipboard_files": _set_clipboard_files,
+            "AC_get_clipboard_files": _get_clipboard_files,
+            "AC_image_histogram": _image_histogram,
+            "AC_histogram_changed": _histogram_changed,
+            "AC_changed_regions": _changed_regions,
+            "AC_has_motion": _has_motion,
+            "AC_set_topmost": _set_topmost,
+            "AC_bring_to_front": _bring_to_front,
+            "AC_send_to_back": _send_to_back,
+            "AC_soft_assert": _soft_assert,
+            "AC_perceptual_diff": _perceptual_diff,
+            "AC_get_client_rect": _get_client_rect,
+            "AC_client_point": _client_point,
+            "AC_cua_command": _cua_command,
+            "AC_serialize_observation": _serialize_observation,
+            "AC_observation_index": _observation_index,
+            "AC_validate_action": _validate_action,
+            "AC_replay_trace": _replay_trace,
+            "AC_match_elements": _match_elements,
+            "AC_assign_stable_ids": _assign_stable_ids,
+            "AC_score_candidates": _score_candidates,
+            "AC_best_candidate": _best_candidate,
+            "AC_read_barcodes": _read_barcodes,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

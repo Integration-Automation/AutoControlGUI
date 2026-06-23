@@ -167,6 +167,22 @@ AutoControl 所有功能的完整使用指南。
    doc/new_features/v142_features_doc
    doc/new_features/v143_features_doc
    doc/new_features/v144_features_doc
+   doc/new_features/v145_features_doc
+   doc/new_features/v146_features_doc
+   doc/new_features/v147_features_doc
+   doc/new_features/v148_features_doc
+   doc/new_features/v149_features_doc
+   doc/new_features/v150_features_doc
+   doc/new_features/v151_features_doc
+   doc/new_features/v152_features_doc
+   doc/new_features/v153_features_doc
+   doc/new_features/v154_features_doc
+   doc/new_features/v155_features_doc
+   doc/new_features/v156_features_doc
+   doc/new_features/v157_features_doc
+   doc/new_features/v158_features_doc
+   doc/new_features/v159_features_doc
+   doc/new_features/v160_features_doc
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
    doc/operations_layer/operations_layer_doc

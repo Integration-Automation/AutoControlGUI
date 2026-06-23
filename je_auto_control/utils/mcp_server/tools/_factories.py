@@ -3086,6 +3086,373 @@ def rich_clipboard_tools() -> List[MCPTool]:
     ]
 
 
+def clipboard_files_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_set_clipboard_files",
+            description=("Put a file-drop list on the clipboard as CF_HDROP so the "
+                         "files can be pasted (Ctrl+V) into Explorer / apps as a real "
+                         "file copy (Windows). 'paths' is a list of absolute paths. "
+                         "Returns {set, count}."),
+            input_schema=schema({
+                "paths": {"type": "array", "items": {"type": "string"}}},
+                required=["paths"]),
+            handler=h.set_clipboard_files,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_clipboard_files",
+            description=("Read the clipboard's file-drop list (CF_HDROP, Windows). "
+                         "Returns {found, paths}."),
+            input_schema=schema({}, required=[]),
+            handler=h.get_clipboard_files,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def img_histogram_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_image_histogram",
+            description=("Per-channel normalized colour histogram of 'source' "
+                         "(image path; default screen grab of 'region'). 'space' "
+                         "hsv/rgb/gray, 'bins' per channel. Returns {bins, space, "
+                         "histogram}. A scale/illumination-robust view fingerprint."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "bins": {"type": "integer"},
+                "space": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.image_histogram,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_histogram_changed",
+            description=("Whether the screen / 'current' image differs from "
+                         "'reference' by colour histogram (theme switch, reload). "
+                         "'method' correlation/chisqr/intersection/bhattacharyya, "
+                         "'threshold', 'space'. Returns {changed, score}."),
+            input_schema=schema({
+                "reference": {"type": "string"},
+                "current": {"type": "string"},
+                "method": {"type": "string"},
+                "threshold": {"type": "number"},
+                "space": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["reference"]),
+            handler=h.histogram_changed,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def motion_regions_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_changed_regions",
+            description=("Boxes of regions that MOVED between 'before' (image path) "
+                         "and 'after' (path; default: the live screen) via absdiff. "
+                         "Returns {count, regions}. For spinners / animations / "
+                         "picking a quiet area. 'threshold'/'min_area'/'blur'."),
+            input_schema=schema({
+                "before": {"type": "string"},
+                "after": {"type": "string"},
+                "threshold": {"type": "integer"},
+                "min_area": {"type": "integer"},
+                "blur": {"type": "integer"}},
+                required=["before"]),
+            handler=h.changed_regions,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_has_motion",
+            description=("Whether anything moved between 'before' and 'after' "
+                         "(default: screen). Returns {moved, activity} where "
+                         "activity is the fraction of pixels that changed."),
+            input_schema=schema({
+                "before": {"type": "string"},
+                "after": {"type": "string"},
+                "threshold": {"type": "integer"},
+                "min_area": {"type": "integer"}},
+                required=["before"]),
+            handler=h.has_motion,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def window_zorder_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_set_topmost",
+            description=("Pin the window matching 'title' always-on-top (or release "
+                         "it with on=false). Returns {applied}. Windows only."),
+            input_schema=schema({
+                "title": {"type": "string"},
+                "on": {"type": "boolean"}},
+                required=["title"]),
+            handler=h.set_topmost,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_bring_to_front",
+            description=("Raise the window matching 'title' to the top of the "
+                         "z-order. Returns {applied}. Windows only."),
+            input_schema=schema({"title": {"type": "string"}}, required=["title"]),
+            handler=h.bring_to_front,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_send_to_back",
+            description=("Send the window matching 'title' to the bottom of the "
+                         "z-order. Returns {applied}. Windows only."),
+            input_schema=schema({"title": {"type": "string"}}, required=["title"]),
+            handler=h.send_to_back,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def soft_assert_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_soft_assert",
+            description=("Evaluate a list of 'checks' and aggregate ALL failures "
+                         "(don't stop at the first). Each is {value, op, expected, "
+                         "message}; op = eq/ne/gt/lt/contains/truthy. Returns "
+                         "{ok, passed, failures}; set 'raise_on_fail' to raise on "
+                         "any failure."),
+            input_schema=schema({
+                "checks": {"type": "array", "items": {"type": "object"}},
+                "raise_on_fail": {"type": "boolean"}},
+                required=["checks"]),
+            handler=h.soft_assert,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def perceptual_diff_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_perceptual_diff",
+            description=("Perceptual (YIQ) diff of 'actual' vs 'expected' image "
+                         "paths. By default suppresses anti-aliased edge diffs "
+                         "(include_aa=true to keep them). Returns {diff_pixels, "
+                         "total_pixels, diff_ratio, regions}; pass 'max_diff_ratio' "
+                         "to raise when exceeded. 'threshold' 0..1 sensitivity."),
+            input_schema=schema({
+                "actual": {"type": "string"},
+                "expected": {"type": "string"},
+                "threshold": {"type": "number"},
+                "include_aa": {"type": "boolean"},
+                "max_diff_ratio": {"type": "number"}},
+                required=["actual", "expected"]),
+            handler=h.perceptual_diff,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def window_geometry_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_get_client_rect",
+            description=("The client-area rect [x,y,width,height] (screen coords, "
+                         "excluding title bar / borders) of the window matching "
+                         "'title'. Returns {found, rect}. Windows only."),
+            input_schema=schema({"title": {"type": "string"}}, required=["title"]),
+            handler=h.get_client_rect,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_client_point",
+            description=("Screen point for a client-area-local (x, y) inside the "
+                         "window 'title' — click inside it regardless of title-bar "
+                         "/ border thickness. Returns {found, point}."),
+            input_schema=schema({
+                "title": {"type": "string"},
+                "x": {"type": "integer"},
+                "y": {"type": "integer"}},
+                required=["title", "x", "y"]),
+            handler=h.client_point,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def cua_action_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_cua_command",
+            description=("Normalize a computer-use action 'payload' from 'source' "
+                         "(anthropic / openai / canonical) and map it to a runnable "
+                         "AC_* command. Returns {canonical, command:[name, params]}. "
+                         "Bridges Anthropic/OpenAI agent outputs to AutoControl."),
+            input_schema=schema({
+                "payload": {"type": "object"},
+                "source": {"type": "string"}},
+                required=["payload"]),
+            handler=h.cua_command,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def observation_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_serialize_observation",
+            description=("Render an indexed a11y text observation from 'elements' "
+                         "(role/name/x/y/width/height dicts, optionally nested): "
+                         "'[i] role \"name\" @(cx,cy)' lines, interactive-only, "
+                         "viewport-clipped, capped at 'max_elements'. Returns "
+                         "{observation, count} — feed it to a VLM, act by index."),
+            input_schema=schema({
+                "elements": {"type": "array", "items": {"type": "object"}},
+                "viewport": {"type": "array", "items": {"type": "integer"}},
+                "max_elements": {"type": "integer"}},
+                required=["elements"]),
+            handler=h.serialize_observation,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_observation_index",
+            description=("The on-screen elements in reading order, viewport-clipped "
+                         "and capped, each with a stable 'index'. Returns {count, "
+                         "elements} — the structured form behind the observation."),
+            input_schema=schema({
+                "elements": {"type": "array", "items": {"type": "object"}},
+                "viewport": {"type": "array", "items": {"type": "integer"}},
+                "max_elements": {"type": "integer"}},
+                required=["elements"]),
+            handler=h.observation_index,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def action_grounding_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_validate_action",
+            description=("Validate a coordinate 'action' {type,x,y,…} before "
+                         "dispatch: reject out-of-bounds clicks and, given 'targets' "
+                         "(element boxes), snap a near-miss onto the nearest "
+                         "element's centre. 'screen' [w,h] defaults to the live "
+                         "screen. Returns {ok, reason, snapped}."),
+            input_schema=schema({
+                "action": {"type": "object"},
+                "screen": {"type": "array", "items": {"type": "integer"}},
+                "targets": {"type": "array", "items": {"type": "object"}}},
+                required=["action"]),
+            handler=h.validate_action,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def agent_replay_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_replay_trace",
+            description=("Replay a recorded agent trajectory: run each step's "
+                         "'action' (an AC action list) through the executor, in "
+                         "order. 'trace' is a JSON array or JSONL of {step, "
+                         "observation, action, result} steps. Returns {count, "
+                         "results}. Side-effecting (runs the actions)."),
+            input_schema=schema({"trace": {"type": "array"}}, required=["trace"]),
+            handler=h.replay_trace,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def element_diff_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_match_elements",
+            description=("Geometry-aware match of two element-box lists ('before' / "
+                         "'after') by IoU. Returns {matched:[{before,after,iou}], "
+                         "added, removed} — tracks moves/renames where (role,name) "
+                         "diffing can't. 'iou_threshold'."),
+            input_schema=schema({
+                "before": {"type": "array", "items": {"type": "object"}},
+                "after": {"type": "array", "items": {"type": "object"}},
+                "iou_threshold": {"type": "number"}},
+                required=["before", "after"]),
+            handler=h.match_elements,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assign_stable_ids",
+            description=("Tag 'elements' with a stable 'id' each, carried from a "
+                         "'prior' frame by IoU (a moved element keeps its id, a new "
+                         "one gets a fresh id). Returns {count, elements}."),
+            input_schema=schema({
+                "elements": {"type": "array", "items": {"type": "object"}},
+                "prior": {"type": "array", "items": {"type": "object"}},
+                "iou_threshold": {"type": "number"}},
+                required=["elements"]),
+            handler=h.assign_stable_ids,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def element_scoring_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_score_candidates",
+            description=("Rank candidate element boxes best-first by a weighted mean "
+                         "of role match ('want_role'), fuzzy name similarity "
+                         "('want_name'), 'anchor' proximity and enabled-state. "
+                         "Returns {count, scored:[{element, score, matched_on}]}."),
+            input_schema=schema({
+                "candidates": {"type": "array", "items": {"type": "object"}},
+                "want_role": {"type": "string"},
+                "want_name": {"type": "string"},
+                "anchor": {"type": "array", "items": {"type": "integer"}}},
+                required=["candidates"]),
+            handler=h.score_candidates,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_best_candidate",
+            description=("The single highest-scoring candidate element by role / "
+                         "name / proximity. Returns {found, best}."),
+            input_schema=schema({
+                "candidates": {"type": "array", "items": {"type": "object"}},
+                "want_role": {"type": "string"},
+                "want_name": {"type": "string"},
+                "anchor": {"type": "array", "items": {"type": "integer"}}},
+                required=["candidates"]),
+            handler=h.best_candidate,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def barcode_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_read_barcodes",
+            description=("Decode 1-D barcodes (EAN / UPC / Code-128) in 'source' "
+                         "(image path; default: screen grab of 'region'). Returns "
+                         "{count, barcodes:[{text, type, points}]}. QR codes have "
+                         "their own tool."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.read_barcodes,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -3191,6 +3558,92 @@ def visual_match_tools() -> List[MCPTool]:
                 "region": {"type": "array", "items": {"type": "integer"}}},
                 required=["template"]),
             handler=h.match_masked_all,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def rotated_match_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_match_rotated",
+            description=("Find 'template' on screen tolerating ROTATION and scale: "
+                         "sweeps 'angles' (degrees, e.g. [-10,0,10]) x 'scales', "
+                         "returns the best {found, match:{x,y,width,height,score,"
+                         "scale,angle,center}}. Use when a control is skewed / a "
+                         "rotated icon / a dial. 'min_score', 'region', 'method'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "angles": {"type": "array", "items": {"type": "number"}},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.match_rotated,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_rotated_all",
+            description=("Find EVERY rotation/scale-tolerant match of 'template' "
+                         ">= 'min_score' over the angle x scale sweep, overlaps "
+                         "removed by NMS. Returns {count, matches}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "angles": {"type": "array", "items": {"type": "number"}},
+                "max_results": {"type": "integer"},
+                "nms_iou": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.match_rotated_all,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def screen_grid_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_grid_cells",
+            description=("Lay an 'rows' x 'cols' labelled grid over the screen (or "
+                         "'region') for coarse VLM grounding. Returns {count, cells:"
+                         "[{label,row,col,left,top,right,bottom,center}]}; labels are "
+                         "spreadsheet-style ('A1' top-left)."),
+            input_schema=schema({
+                "rows": {"type": "integer"},
+                "cols": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["rows", "cols"]),
+            handler=h.grid_cells,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_cell_for_point",
+            description=("Return the grid cell containing point (x, y) over an 'rows' "
+                         "x 'cols' grid: {found, cell}. found=false if outside."),
+            input_schema=schema({
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "rows": {"type": "integer"},
+                "cols": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["x", "y", "rows", "cols"]),
+            handler=h.cell_for_point,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_point_for_cell",
+            description=("Return the centre point {point:[x,y]} of grid cell 'label' "
+                         "(e.g. 'C3') over an 'rows' x 'cols' grid - ready to click."),
+            input_schema=schema({
+                "label": {"type": "string"},
+                "rows": {"type": "integer"},
+                "cols": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["label", "rows", "cols"]),
+            handler=h.point_for_cell,
             annotations=READ_ONLY,
         ),
     ]
@@ -6587,11 +7040,18 @@ ALL_FACTORIES = (
     process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
     modifier_state_tools, grid_locator_tools, visual_match_tools,
+    rotated_match_tools, screen_grid_tools,
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
     window_layout_tools, window_arrange_tools, preprocess_tools,
     monitor_layout_tools, actionability_tools, element_parse_tools,
     hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
-    locator_chain_tools, rich_clipboard_tools, plugin_sdk_tools, governance_tools,
+    locator_chain_tools, rich_clipboard_tools, clipboard_files_tools,
+    img_histogram_tools,
+    motion_regions_tools, window_zorder_tools, soft_assert_tools,
+    perceptual_diff_tools, window_geometry_tools, cua_action_tools,
+    observation_tools, action_grounding_tools, agent_replay_tools,
+    element_diff_tools, element_scoring_tools, barcode_tools, plugin_sdk_tools,
+    governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

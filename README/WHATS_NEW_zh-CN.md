@@ -1,5 +1,101 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 剪贴板文件拖放列表(CF_HDROP)
+
+把一份文件列表放上剪贴板,可直接粘贴进 Explorer。完整参考:[`docs/source/Zh/doc/new_features/v160_features_doc.rst`](../docs/source/Zh/doc/new_features/v160_features_doc.rst)。
+
+- **`build_dropfiles` / `parse_dropfiles` / `set_clipboard_files` / `get_clipboard_files`**(`AC_set_clipboard_files`、`AC_get_clipboard_files`):剪贴板原本能承载文本、图像与(通过 `rich_clipboard`)HTML,却从未支持*文件列表*——也就是 Explorer 读取以进行真正文件复制的 `CF_HDROP` 内容。构建它相当繁琐(20 字节 `DROPFILES` 头 + 双重 null 结尾的 UTF-16 路径列表 + `pFiles` 偏移)。本功能把封装独立为纯粹、可完整测试的 `build_dropfiles` / `parse_dropfiles` 字节函数,其上再叠加仅限 Windows 的 `set`/`get_clipboard_files` 薄包装——与 `rich_clipboard` 处理 `CF_HTML` 的拆分方式相同。不导入 `PySide6`。
+
+## 本次更新 (2026-06-23) — 粗粒度标签屏幕网格(VLM Grounding)
+
+以网格单元格(「点击 C3」)而非原始像素引用屏幕区域。完整参考:[`docs/source/Zh/doc/new_features/v159_features_doc.rst`](../docs/source/Zh/doc/new_features/v159_features_doc.rst)。
+
+- **`grid_cells` / `cell_for_point` / `point_for_cell`**(`AC_grid_cells`、`AC_cell_for_point`、`AC_point_for_cell`):VLM grounding 在模型指名粗粒度单元格时,远比输出容易幻觉的像素坐标更可靠。本功能在屏幕(或 `region`)上铺设 `rows`x`cols` 网格,以电子表格风格标记每个单元格(左上 `A1`,超过 `Z` → `AA`),并双向对应——点 → 包含的单元格、指名单元格 → 中心点(可直接点击)。纯标准库几何;唯一设备相关的路径是读取实时屏幕尺寸的默认行为,因此每个函数都可通过明确 `region` 无头测试。不导入 `PySide6`。
+
+## 本次更新 (2026-06-23) — 旋转与缩放容忍的模板匹配
+
+不只缩放,还能找到旋转或倾斜的模板。完整参考:[`docs/source/Zh/doc/new_features/v158_features_doc.rst`](../docs/source/Zh/doc/new_features/v158_features_doc.rst)。
+
+- **`match_rotated` / `match_rotated_all` / `scale_space`**(`AC_match_rotated`、`AC_match_rotated_all`):`match_template` 只扫描*缩放*且假设轴对齐——OpenCV 的 `matchTemplate` 不具旋转不变性,因此倾斜的控件、旋转的图标,或转到不同角度的刻度盘都会匹配失败。本功能扫描 `angles`(每个以 `cv2.warpAffine` 变形)并与 `np.linspace` 缩放空间交叉,返回相关性最高、且带有还原 `scale` + `angle` 的 `RotatedMatch`(`*_all` 版本以 NMS 合并相邻角度 / 缩放)。重用 `visual_match` 的加载器 / resize / 方法表 / NMS——不重复任何匹配或几何代码。`haystack` 可注入;可无头测试;不导入 `PySide6`。
+
+## 本次更新 (2026-06-23) — 一维条码解码
+
+从屏幕或图像读取 EAN / UPC / Code-128 条码。完整参考:[`docs/source/Zh/doc/new_features/v157_features_doc.rst`](../docs/source/Zh/doc/new_features/v157_features_doc.rst)。
+
+- **`read_barcodes`**(`AC_read_barcodes`):框架已能解码 QR Code(`read_qr`),但缺少能读取*一维*条码(EAN-13/8、UPC-A、Code-128)的功能——这些正是商品、库存标签与物流面单上最常见的条码。本功能通过 OpenCV 的 `cv2.barcode.BarcodeDetector` 解码,每个条码返回 `{text, type, points}`。解码步骤为可注入接缝(默认调用 OpenCV;测试可传入自己的 `decoder`),因此可完整无头测试且能优雅降级——若 OpenCV 编译时未含 `barcode` 模块,返回 `[]` 而非抛出异常。重用共用的 `visual_match` haystack 加载器;不导入 `PySide6`。
+
+## 本次更新 (2026-06-23) — 加权候选评分
+
+以信心分数排序模棱两可的元素候选。完整参考:[`docs/source/Zh/doc/new_features/v156_features_doc.rst`](../docs/source/Zh/doc/new_features/v156_features_doc.rst)。
+
+- **`score_candidates` / `best_candidate`**(`AC_score_candidates`、`AC_best_candidate`):`anchor_locator` 是单一关系 + 距离排序、`ab_locator` 依耗时竞赛整个策略——两者都不以*加权*混合(角色匹配 + 模糊名称相似度 + 锚点邻近 + 启用状态)排序模棱候选。本功能返回最佳优先的 `ScoredCandidate` 并含 `matched_on` 明细;名称相似度可注入(默认 `fuzzy_ratio`,重用——不新增字符串距离代码)。纯标准库,作用于元素字典;在多个框都可能是目标时驱动自我修复 / grounding。可无头测试。
+
+## 本次更新 (2026-06-23) — 几何感知的元素差异与稳定 ID
+
+以重叠跨帧追踪元素,并给予稳定 ID。完整参考:[`docs/source/Zh/doc/new_features/v155_features_doc.rst`](../docs/source/Zh/doc/new_features/v155_features_doc.rst)。
+
+- **`match_elements` / `assign_stable_ids`**(`AC_match_elements`、`AC_assign_stable_ids`):`diff_snapshots` 以 `(role, name)` 作识别——无法比对改名但未移动或移动了的控制项,也无法跨帧给持久 ID。本功能以 IoU 比对元素框(沿用 `element_parse.iou`):`match_elements` 返回 `{matched, added, removed}`;`assign_stable_ids` 从 `prior` 帧延续每个元素的 `id`(移动的按钮保留 id、新增者取得新 id)——让 agent 能跨回合可靠地引用「element 7」。纯标准库、可无头测试。
+
+## 本次更新 (2026-06-23) — 可携式 Agent 轨迹记录(录制与重播)
+
+记录 agent 的观测→动作步骤并重播。完整参考:[`docs/source/Zh/doc/new_features/v154_features_doc.rst`](../docs/source/Zh/doc/new_features/v154_features_doc.rst)。
+
+- **`record_step` / `to_jsonl` / `from_jsonl` / `replay_trace`**(`AC_replay_trace`):`agent_trace` 记录 OTel span(观测性)、`trajectory_eval` 只评分、`semantic_recording` 重播人类宏——都不是可重播的观测→动作转录。本功能是 OmniTool 风格的 `{step, observation, action, result}` JSONL,加确定性重播驱动器(可注入 `runner`、无需即时模型)。执行器命令透过执行器重播每一步的 AC 动作。纯标准库、可无头测试;可从 agent 执行建立回归 / 训练数据集。
+
+## 本次更新 (2026-06-23) — 动作前接地防护
+
+拒绝越界点击;把接近偏离者吸附到真正的元素。完整参考:[`docs/source/Zh/doc/new_features/v153_features_doc.rst`](../docs/source/Zh/doc/new_features/v153_features_doc.rst)。
+
+- **`validate_action` / `snap_to_element` / `in_bounds`**(`AC_validate_action`):`guardrail` 扫文字、`loop_guard` 检测循环——两者都不在派发前验证坐标动作,所以幻觉 `(9999,-5)` 点击会打到空处、偏 5px 的点击会错过。本功能拒绝屏幕外坐标,并在提供 `targets` 时把接近偏离者吸附到最近元素中心,返回 `{ok, reason, snapped}`。纯标准库几何,作用于元素字典;执行器 `screen` 默认为实际屏幕。可无头测试;接在 agent 循环派发之前。
+
+## 本次更新 (2026-06-23) — 符记预算内的无障碍文字观测
+
+把无障碍树转成 VLM 可操作的已编号文字区块。完整参考:[`docs/source/Zh/doc/new_features/v152_features_doc.rst`](../docs/source/Zh/doc/new_features/v152_features_doc.rst)。
+
+- **`serialize_observation` / `observation_index` / `flatten_tree`**(`AC_serialize_observation`、`AC_observation_index`):`describe_screen` 给角色*数量* + 平面标签列表——没有稳定索引、没有 `[12] button "Submit" @(x,y)` 行、没有视口裁切、没有符记预算。本功能把(嵌套)元素树扁平化为仅互动项、裁切到视口、依阅读顺序排序、上限 `max_elements`、指派稳定 `index`,并渲染模型可操作的行(「click [12]」)。纯标准库,作用于元素字典;与 `fuse_elements`/`set_of_marks` 搭配。可无头测试。
+
+## 本次更新 (2026-06-23) — 标准化 Computer-Use 动作结构
+
+把 Anthropic / OpenAI agent 动作桥接到 AutoControl 命令。完整参考:[`docs/source/Zh/doc/new_features/v151_features_doc.rst`](../docs/source/Zh/doc/new_features/v151_features_doc.rst)。
+
+- **`from_anthropic` / `from_openai_cua` / `to_ac_command` / `canonical_action`**(`AC_cua_command`):`tool_use_schema` 导出 AC_* 签章、`coordinate_space` 缩放——两者都不*正规化进来的动作载荷*。Anthropic 发出 `{action:"left_click", coordinate:[x,y]}`、OpenAI CUA 发出 `{type:"click", x, y, button}`;这些转接器把两者对应为标准动作再对应为可执行的 `[AC_*, params]`(含可选坐标空间 `scale`)。纯标准库、可无头测试;执行器命令对任一来源返回 `{canonical, command}`。
+
+## 本次更新 (2026-06-23) — 窗口客户区几何
+
+不论标题栏 / 边框,点击窗口*内部*。完整参考:[`docs/source/Zh/doc/new_features/v150_features_doc.rst`](../docs/source/Zh/doc/new_features/v150_features_doc.rst)。
+
+- **`get_client_rect` / `client_point` / `frame_insets` / `client_to_screen`**(`AC_get_client_rect`、`AC_client_point`):`get_window_geometry` 只返回*外框*——没有客户区矩形、框边内缩运算或客户区→屏幕对应。`client_point("App", x, y)` 把内容相对点对应到屏幕,让点击不论外框都落在窗口内;`frame_insets` 报告边框 / 标题栏厚度。`frame_insets`/`client_to_screen` 是纯几何(可无头测试);`get_client_rect` 使用可注入的 Win32 读取器(`GetClientRect`+`ClientToScreen`)。
+
+## 本次更新 (2026-06-23) — 感知式(YIQ)图像比对含反锯齿抑制
+
+会忽略反锯齿边缘的视觉回归比对。完整参考:[`docs/source/Zh/doc/new_features/v149_features_doc.rst`](../docs/source/Zh/doc/new_features/v149_features_doc.rst)。
+
+- **`perceptual_diff` / `assert_perceptual`**(`AC_perceptual_diff`):`image_difference` 计算原始逐通道差、`ssim_compare` 是整体分数——两者都未使用感知式度量也不忽略反锯齿(视觉比对误报的首要来源)。本功能在 YIQ 空间比较(pixelmatch 的色彩度量),并预设以形态学开运算移除单像素反锯齿细边差异,只计算实心变化(`include_aa=True` 保留)。返回 `{diff_pixels, diff_ratio, regions}`;`assert_perceptual` / `max_diff_ratio` 把关回归测试。可注入图像配对 → 无头可测(1px 细边 → 0、实心区块 → 计入)。
+
+## 本次更新 (2026-06-23) — 软性断言(汇整所有失败)
+
+验证很多项,一次报告每一个失败。完整参考:[`docs/source/Zh/doc/new_features/v148_features_doc.rst`](../docs/source/Zh/doc/new_features/v148_features_doc.rst)。
+
+- **`SoftAssertions`**(`AC_soft_assert`):`assert_all` 接受事先建好的规格列表——没有可随处调用 `check()`、并在区块退出时一次抛出全部的作用域累加器(JUnit5 `assertAll` / Playwright `expect.soft`)。`with SoftAssertions() as soft: soft.check(...)` 记录通过/失败(区块中永不抛出、返回布尔值可分支),退出时一次抛出列出每个失败——且永不遮蔽已在传播的异常。执行器命令汇整 JSON `checks` 列表(eq/ne/gt/lt/contains/truthy)。纯标准库、可无头测试。
+
+## 本次更新 (2026-06-23) — 窗口 Z-order(置顶 / 最前 / 最后)
+
+把窗口钉在最上层、移到最前、或推到后面。完整参考:[`docs/source/Zh/doc/new_features/v147_features_doc.rst`](../docs/source/Zh/doc/new_features/v147_features_doc.rst)。
+
+- **`set_topmost` / `bring_to_front` / `send_to_back` / `plan_zorder`**(`AC_set_topmost`、`AC_bring_to_front`、`AC_send_to_back`):原始 `set_window_position` 存在但未在 facade、无标题包装也无 topmost 语意——缺少标准 RPA 的「置顶」。`plan_zorder` 是纯动作→`SetWindowPos` 常数查找(可无头测试);以标题操作的设定器透过可注入 driver(`snap_window` 接缝模式)套用,默认为 Win32。
+
+## 本次更新 (2026-06-23) — 局部动态 / 活动检测
+
+找出两帧之间哪些子区域在动。完整参考:[`docs/source/Zh/doc/new_features/v146_features_doc.rst`](../docs/source/Zh/doc/new_features/v146_features_doc.rst)。
+
+- **`changed_regions` / `has_motion` / `activity_score`**(`AC_changed_regions`、`AC_has_motion`):`wait_until_screen_stable` 是布尔轮询、`ssim_changed_regions` 是结构性(忽略快速动态)、`diff_screenshots` 非活动区块。本功能是便宜的 absdiff 路径——对逐像素差做门槛、膨胀,返回移动区域方框(由大到小)、布尔值,以及移动像素比例。挑选安静区域或定位转圈动画。两个可注入帧 → 无头可测;沿用共用连通元件辅助;执行器中 `after` 默认为即时屏幕截取。
+
+## 本次更新 (2026-06-23) — 色彩直方图指纹与变化检测
+
+判断画面在光照 / 缩放下是否仍是「同一个」。完整参考:[`docs/source/Zh/doc/new_features/v145_features_doc.rst`](../docs/source/Zh/doc/new_features/v145_features_doc.rst)。
+
+- **`image_histogram` / `compare_histograms` / `histogram_changed`**(`AC_image_histogram`、`AC_histogram_changed`):`image_dedup` 的感知哈希是空间性的(对颜色/主题脆弱)、`color_stats` 只有单一颜色。归一化色彩直方图是耐光照/缩放的「同一画面、还是调色板变了?」信号(主题切换、重载、旋转横幅)。`image_histogram` 返回逐通道直方图(`hsv`/`rgb`/`gray`);`compare_histograms` 提供 correlation/chisqr/intersection/bhattacharyya;`histogram_changed` 比较参考与实际屏幕。可注入图像 → 无头可测;OpenCV 核心(`cv2.calcHist`/`compareHist`)。
+
 ## 本次更新 (2026-06-23) — 丰富剪贴板(HTML / CF_HTML)
 
 把*格式化*的 HTML 复制粘贴到 Word / Outlook。完整参考:[`docs/source/Zh/doc/new_features/v144_features_doc.rst`](../docs/source/Zh/doc/new_features/v144_features_doc.rst)。

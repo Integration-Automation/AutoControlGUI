@@ -305,6 +305,70 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Find every masked match of a template (NMS-deduped).",
     ))
     specs.append(CommandSpec(
+        "AC_match_rotated", "Image", "Match Template (rotated)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("angles", FieldType.STRING, optional=True,
+                      placeholder="[-10, 0, 10]"),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[0.9, 1.0, 1.1]"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Locate a template tolerating rotation + scale; reports angle.",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_rotated_all", "Image", "Match Template All (rotated)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("angles", FieldType.STRING, optional=True,
+                      placeholder="[-10, 0, 10]"),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[0.9, 1.0, 1.1]"),
+            FieldSpec("max_results", FieldType.INT, optional=True, default=20),
+            FieldSpec("nms_iou", FieldType.FLOAT, optional=True, default=0.3,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Find every rotation/scale-tolerant match (NMS-deduped).",
+    ))
+    specs.append(CommandSpec(
+        "AC_grid_cells", "Image", "Grid Cells (coarse grounding)",
+        fields=(
+            FieldSpec("rows", FieldType.INT, optional=True, default=3),
+            FieldSpec("cols", FieldType.INT, optional=True, default=3),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Label an rows x cols grid over the screen for VLM grounding.",
+    ))
+    specs.append(CommandSpec(
+        "AC_cell_for_point", "Image", "Cell For Point",
+        fields=(
+            FieldSpec("x", FieldType.INT),
+            FieldSpec("y", FieldType.INT),
+            FieldSpec("rows", FieldType.INT, optional=True, default=3),
+            FieldSpec("cols", FieldType.INT, optional=True, default=3),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Return the grid cell label containing a screen point.",
+    ))
+    specs.append(CommandSpec(
+        "AC_point_for_cell", "Image", "Point For Cell",
+        fields=(
+            FieldSpec("label", FieldType.STRING, placeholder="C3"),
+            FieldSpec("rows", FieldType.INT, optional=True, default=3),
+            FieldSpec("cols", FieldType.INT, optional=True, default=3),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Return the centre point of a named grid cell (click target).",
+    ))
+    specs.append(CommandSpec(
         "AC_find_color_region", "Image", "Find Colour Region",
         fields=(
             FieldSpec("rgb", FieldType.STRING, placeholder="[0, 200, 0]"),
@@ -502,6 +566,70 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Refine candidate boxes (within / filter / reading / nth / …).",
     ))
+    specs.append(CommandSpec(
+        "AC_image_histogram", "Image", "Image Histogram",
+        fields=(
+            FieldSpec("source", FieldType.FILE_PATH, optional=True),
+            FieldSpec("bins", FieldType.INT, optional=True, default=32),
+            FieldSpec("space", FieldType.ENUM, optional=True, default="hsv",
+                      choices=("hsv", "rgb", "gray")),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Colour-histogram fingerprint of an image / the screen.",
+    ))
+    specs.append(CommandSpec(
+        "AC_histogram_changed", "Image", "Histogram Changed?",
+        fields=(
+            FieldSpec("reference", FieldType.FILE_PATH),
+            FieldSpec("current", FieldType.FILE_PATH, optional=True),
+            FieldSpec("method", FieldType.ENUM, optional=True,
+                      default="correlation",
+                      choices=("correlation", "chisqr", "intersection",
+                               "bhattacharyya")),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True, default=0.9,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("space", FieldType.ENUM, optional=True, default="hsv",
+                      choices=("hsv", "rgb", "gray")),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Detect a palette/view change vs a reference (illumination-robust).",
+    ))
+    specs.append(CommandSpec(
+        "AC_changed_regions", "Image", "Changed Regions (motion)",
+        fields=(
+            FieldSpec("before", FieldType.FILE_PATH),
+            FieldSpec("after", FieldType.FILE_PATH, optional=True),
+            FieldSpec("threshold", FieldType.INT, optional=True, default=25),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=80),
+            FieldSpec("blur", FieldType.INT, optional=True, default=5),
+        ),
+        description="Boxes of regions that moved between two frames (after=screen).",
+    ))
+    specs.append(CommandSpec(
+        "AC_has_motion", "Image", "Has Motion?",
+        fields=(
+            FieldSpec("before", FieldType.FILE_PATH),
+            FieldSpec("after", FieldType.FILE_PATH, optional=True),
+            FieldSpec("threshold", FieldType.INT, optional=True, default=25),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=80),
+        ),
+        description="Whether anything moved between two frames (+ activity score).",
+    ))
+    specs.append(CommandSpec(
+        "AC_perceptual_diff", "Image", "Perceptual Diff (YIQ)",
+        fields=(
+            FieldSpec("actual", FieldType.FILE_PATH),
+            FieldSpec("expected", FieldType.FILE_PATH),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True, default=0.1,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("include_aa", FieldType.BOOL, optional=True, default=False),
+            FieldSpec("max_diff_ratio", FieldType.FLOAT, optional=True,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Perceptual image diff that ignores anti-aliased edges.",
+    ))
 
 
 def _add_ocr_specs(specs: List[CommandSpec]) -> None:
@@ -521,6 +649,15 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
                       placeholder="[0, 0, 400, 400]"),
         ),
         description="Decode QR codes in a screen region (OpenCV).",
+    ))
+    specs.append(CommandSpec(
+        "AC_read_barcodes", "OCR", "Read Barcodes (1-D)",
+        fields=(
+            FieldSpec("source", FieldType.FILE_PATH, optional=True),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Decode 1-D barcodes (EAN / UPC) in an image / screen region.",
     ))
     specs.append(CommandSpec(
         "AC_scroll_to_find", "OCR", "Scroll Until Visible",
@@ -624,6 +761,38 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("offset", FieldType.INT, optional=True, default=30),
         ),
         description="Cascade a list of windows diagonally.",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_topmost", "Window", "Set Always-On-Top",
+        fields=(
+            FieldSpec("title", FieldType.STRING),
+            FieldSpec("on", FieldType.BOOL, optional=True, default=True),
+        ),
+        description="Pin a window always-on-top (or release it).",
+    ))
+    specs.append(CommandSpec(
+        "AC_bring_to_front", "Window", "Bring Window to Front",
+        fields=(FieldSpec("title", FieldType.STRING),),
+        description="Raise a window to the top of the z-order.",
+    ))
+    specs.append(CommandSpec(
+        "AC_send_to_back", "Window", "Send Window to Back",
+        fields=(FieldSpec("title", FieldType.STRING),),
+        description="Send a window to the bottom of the z-order.",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_client_rect", "Window", "Get Client Rect",
+        fields=(FieldSpec("title", FieldType.STRING),),
+        description="A window's client-area rect (excludes title bar / borders).",
+    ))
+    specs.append(CommandSpec(
+        "AC_client_point", "Window", "Client-Relative Point",
+        fields=(
+            FieldSpec("title", FieldType.STRING),
+            FieldSpec("x", FieldType.INT),
+            FieldSpec("y", FieldType.INT),
+        ),
+        description="Screen point for an (x, y) inside a window's client area.",
     ))
     specs.append(CommandSpec(
         "AC_wait_window_closed", "Window", "Wait for Window to Close",
@@ -792,6 +961,24 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("interval_s", FieldType.FLOAT, optional=True, default=0.25),
         ),
         description="Re-run an action until a key of its result matches.",
+    ))
+    specs.append(CommandSpec(
+        "AC_soft_assert", "Flow", "Soft Assert (aggregate)",
+        fields=(
+            FieldSpec("checks", FieldType.STRING,
+                      placeholder='[{"value":5,"op":"gt","expected":3}]'),
+            FieldSpec("raise_on_fail", FieldType.BOOL, optional=True,
+                      default=False),
+        ),
+        description="Aggregate many checks and report all failures (not just first).",
+    ))
+    specs.append(CommandSpec(
+        "AC_replay_trace", "Flow", "Replay Agent Trace",
+        fields=(
+            FieldSpec("trace", FieldType.STRING,
+                      placeholder='[{"action":["AC_click_mouse",{...}]}]'),
+        ),
+        description="Replay a recorded trajectory's actions through the executor.",
     ))
     specs.append(CommandSpec(
         "AC_wait_pixel", "Flow", "Wait for Pixel",
@@ -1056,6 +1243,18 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_get_clipboard_html", "Data", "Get Clipboard HTML",
         description="Read the clipboard's HTML fragment (CF_HTML, Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_clipboard_files", "Data", "Set Clipboard Files",
+        fields=(
+            FieldSpec("paths", FieldType.STRING,
+                      placeholder='["C:\\\\a\\\\one.txt", "C:\\\\b\\\\two.png"]'),
+        ),
+        description="Put a file-drop list on the clipboard (CF_HDROP, Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_clipboard_files", "Data", "Get Clipboard Files",
+        description="Read the clipboard's file-drop list (CF_HDROP, Windows).",
     ))
     specs.append(CommandSpec(
         "AC_watchdog_add", "Flow", "Watchdog: Add Popup Rule",
@@ -2804,6 +3003,99 @@ def _add_screen_state_specs(specs: List[CommandSpec]) -> None:
 
 
 def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
+    specs.append(CommandSpec(
+        "AC_cua_command", "Native UI", "Computer-Use: Map Action",
+        fields=(
+            FieldSpec("payload", FieldType.STRING,
+                      placeholder='{"action":"left_click","coordinate":[x,y]}'),
+            FieldSpec("source", FieldType.ENUM, optional=True, default="canonical",
+                      choices=("canonical", "anthropic", "openai")),
+        ),
+        description="Map an Anthropic / OpenAI computer-use action to an AC command.",
+    ))
+    specs.append(CommandSpec(
+        "AC_serialize_observation", "Native UI", "Observation: Serialize Elements",
+        fields=(
+            FieldSpec("elements", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+            FieldSpec("viewport", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+            FieldSpec("max_elements", FieldType.INT, optional=True, default=80),
+        ),
+        description="Indexed text observation of UI elements for a VLM (act by index).",
+    ))
+    specs.append(CommandSpec(
+        "AC_observation_index", "Native UI", "Observation: Index Elements",
+        fields=(
+            FieldSpec("elements", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+            FieldSpec("viewport", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+            FieldSpec("max_elements", FieldType.INT, optional=True, default=80),
+        ),
+        description="Reading-ordered, viewport-clipped, indexed element list.",
+    ))
+    specs.append(CommandSpec(
+        "AC_validate_action", "Native UI", "Validate / Snap Action",
+        fields=(
+            FieldSpec("action", FieldType.STRING,
+                      placeholder='{"type":"click","x":..,"y":..}'),
+            FieldSpec("screen", FieldType.STRING, optional=True,
+                      placeholder="[width, height]"),
+            FieldSpec("targets", FieldType.STRING, optional=True,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+        ),
+        description="Reject out-of-bounds clicks; snap a near-miss to the nearest "
+                    "element.",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_elements", "Native UI", "Match Elements (frames)",
+        fields=(
+            FieldSpec("before", FieldType.STRING,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+            FieldSpec("after", FieldType.STRING,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+            FieldSpec("iou_threshold", FieldType.FLOAT, optional=True, default=0.5,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Match element boxes across two frames by overlap (move/rename).",
+    ))
+    specs.append(CommandSpec(
+        "AC_assign_stable_ids", "Native UI", "Assign Stable Element IDs",
+        fields=(
+            FieldSpec("elements", FieldType.STRING,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+            FieldSpec("prior", FieldType.STRING, optional=True,
+                      placeholder="prior frame's elements (with ids)"),
+            FieldSpec("iou_threshold", FieldType.FLOAT, optional=True, default=0.5,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Tag elements with IDs carried across frames by overlap.",
+    ))
+    specs.append(CommandSpec(
+        "AC_score_candidates", "Native UI", "Score Candidates",
+        fields=(
+            FieldSpec("candidates", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+            FieldSpec("want_role", FieldType.STRING, optional=True),
+            FieldSpec("want_name", FieldType.STRING, optional=True),
+            FieldSpec("anchor", FieldType.STRING, optional=True,
+                      placeholder="[x, y]"),
+        ),
+        description="Rank candidate elements by role / name / proximity confidence.",
+    ))
+    specs.append(CommandSpec(
+        "AC_best_candidate", "Native UI", "Best Candidate",
+        fields=(
+            FieldSpec("candidates", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+            FieldSpec("want_role", FieldType.STRING, optional=True),
+            FieldSpec("want_name", FieldType.STRING, optional=True),
+            FieldSpec("anchor", FieldType.STRING, optional=True,
+                      placeholder="[x, y]"),
+        ),
+        description="The single highest-scoring candidate element.",
+    ))
     specs.append(CommandSpec(
         "AC_mark_screen", "Native UI", "Set-of-Marks: Number Elements",
         fields=(
