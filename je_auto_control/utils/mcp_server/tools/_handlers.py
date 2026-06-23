@@ -2258,6 +2258,16 @@ def histogram_changed(reference, current=None, method="correlation",
     return _histogram_changed(reference, current, method, threshold, space, region)
 
 
+def changed_regions(before, after=None, threshold=25, min_area=80, blur=5):
+    from je_auto_control.utils.executor.action_executor import _changed_regions
+    return _changed_regions(before, after, threshold, min_area, blur)
+
+
+def has_motion(before, after=None, threshold=25, min_area=80):
+    from je_auto_control.utils.executor.action_executor import _has_motion
+    return _has_motion(before, after, threshold, min_area)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

@@ -343,6 +343,10 @@ from je_auto_control.utils.rich_clipboard import (
 from je_auto_control.utils.img_histogram import (
     compare_histograms, histogram_changed, image_histogram,
 )
+# Localized change / activity detection between two frames (absdiff)
+from je_auto_control.utils.motion_regions import (
+    activity_score, changed_regions, has_motion,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1202,6 +1206,9 @@ __all__ = [
     "image_histogram",
     "compare_histograms",
     "histogram_changed",
+    "changed_regions",
+    "has_motion",
+    "activity_score",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

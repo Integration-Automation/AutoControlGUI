@@ -3123,6 +3123,41 @@ def img_histogram_tools() -> List[MCPTool]:
     ]
 
 
+def motion_regions_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_changed_regions",
+            description=("Boxes of regions that MOVED between 'before' (image path) "
+                         "and 'after' (path; default: the live screen) via absdiff. "
+                         "Returns {count, regions}. For spinners / animations / "
+                         "picking a quiet area. 'threshold'/'min_area'/'blur'."),
+            input_schema=schema({
+                "before": {"type": "string"},
+                "after": {"type": "string"},
+                "threshold": {"type": "integer"},
+                "min_area": {"type": "integer"},
+                "blur": {"type": "integer"}},
+                required=["before"]),
+            handler=h.changed_regions,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_has_motion",
+            description=("Whether anything moved between 'before' and 'after' "
+                         "(default: screen). Returns {moved, activity} where "
+                         "activity is the fraction of pixels that changed."),
+            input_schema=schema({
+                "before": {"type": "string"},
+                "after": {"type": "string"},
+                "threshold": {"type": "integer"},
+                "min_area": {"type": "integer"}},
+                required=["before"]),
+            handler=h.has_motion,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6629,7 +6664,7 @@ ALL_FACTORIES = (
     monitor_layout_tools, actionability_tools, element_parse_tools,
     hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
     locator_chain_tools, rich_clipboard_tools, img_histogram_tools,
-    plugin_sdk_tools, governance_tools,
+    motion_regions_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
