@@ -8,7 +8,7 @@ from je_auto_control.utils.soft_assert import SoftAssertions
 
 def test_all_pass_does_not_raise():
     with SoftAssertions() as soft:
-        soft.check(1 == 1, "one")
+        soft.check(2 > 1, "one")
         soft.check_equal("ok", "ok")
     assert soft.passed == 2 and soft.failures == []
 
