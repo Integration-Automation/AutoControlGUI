@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 留白投影列推断(无框线表格)
+
+靠留白间隙推断列来读取无框线表格。完整参考:[`docs/source/Zh/doc/new_features/v165_features_doc.rst`](../docs/source/Zh/doc/new_features/v165_features_doc.rst)。
+
+- **`detect_borderless_table` / `column_gutters` / `assign_columns` / `vertical_projection`**(`AC_detect_borderless_table`、`AC_column_gutters`):`ocr/structure` 只有在每一行单元格左缘 x 都相符时才检测得到表格——对 ragged / 无框线 / 右对齐列都失败;`edge_lines.find_grid` 需要框线,而留白表格没有。本功能靠*间隙*找列:把 OCR 框投影到 x 轴,读出持续为空的垂直带作为 gutter,指派列索引,依间距分组成行,输出 `{n_rows, n_cols, rows, columns}`。纯标准库差分数组投影(不需 numpy);重用 `table_grid_fill` 的框读取器。不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 自动门槛模板匹配(对分数图做 Otsu)
 
 不再手调 `min_score`——由分数图推导匹配门槛。完整参考:[`docs/source/Zh/doc/new_features/v164_features_doc.rst`](../docs/source/Zh/doc/new_features/v164_features_doc.rst)。
