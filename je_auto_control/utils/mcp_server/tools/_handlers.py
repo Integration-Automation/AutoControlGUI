@@ -2126,6 +2126,17 @@ def match_auto(template, floor=0.5, max_results=20, region=None,
     return _match_auto(template, floor, max_results, region, method)
 
 
+def edge_match(template, min_score=0.7, scales=None, region=None):
+    from je_auto_control.utils.executor.action_executor import _edge_match
+    return _edge_match(template, min_score, scales, region)
+
+
+def edge_match_all(template, min_score=0.7, max_results=20, nms_iou=0.3,
+                   region=None):
+    from je_auto_control.utils.executor.action_executor import _edge_match_all
+    return _edge_match_all(template, min_score, max_results, nms_iou, region)
+
+
 def grid_cells(rows, cols, region=None):
     from je_auto_control.utils.executor.action_executor import _grid_cells
     return _grid_cells(rows, cols, region)

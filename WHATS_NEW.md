@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Edge-Shape (Chamfer) Template Matching
+
+Locate flat icons by outline, robust to fill / theme / anti-aliasing. Full reference: [`docs/source/Eng/doc/new_features/v168_features_doc.rst`](docs/source/Eng/doc/new_features/v168_features_doc.rst).
+
+- **`edge_match` / `edge_match_all` / `chamfer_distance`** (`AC_edge_match`, `AC_edge_match_all`): intensity NCC (`visual_match`) drops when a control is re-filled / re-themed, and ORB (`feature_match`) needs corner texture flat-design glyphs lack. This matches by *edge shape*: Canny both images, distance-transform the scene edges, slide the template's edges over it and score by mean edge-to-edge distance (Chamfer). A perfect outline aligns at ~0 cost regardless of fill. Reuses `visual_match`'s loaders / resize / NMS / `Match` and `edge_lines`'s Canny default. Injectable `haystack`; no `PySide6`.
+
 ## What's new (2026-06-24) — Action-Effect Classification (Did My Click Do Anything?)
 
 Tell an agent whether a click did anything — and whether it happened where it aimed. Full reference: [`docs/source/Eng/doc/new_features/v167_features_doc.rst`](docs/source/Eng/doc/new_features/v167_features_doc.rst).

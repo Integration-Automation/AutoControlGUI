@@ -287,6 +287,10 @@ from je_auto_control.utils.rotated_match import (
 from je_auto_control.utils.match_trust import (
     TrustedMatch, match_with_trust, score_peaks,
 )
+# Edge-shape (Chamfer / distance-transform) template matching
+from je_auto_control.utils.edge_match import (
+    chamfer_distance, edge_match, edge_match_all,
+)
 # Otsu auto-thresholding for template matching (no hand-tuned min_score)
 from je_auto_control.utils.match_autothresh import (
     auto_threshold, match_auto,
@@ -1231,6 +1235,9 @@ __all__ = [
     "score_peaks",
     "auto_threshold",
     "match_auto",
+    "edge_match",
+    "edge_match_all",
+    "chamfer_distance",
     "GridCell",
     "grid_cells",
     "cell_for_point",

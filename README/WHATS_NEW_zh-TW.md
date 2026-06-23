@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 邊緣形狀(Chamfer)樣板比對
+
+以輪廓定位扁平圖示,對填充 / 主題 / 抗鋸齒穩健。完整參考:[`docs/source/Zh/doc/new_features/v168_features_doc.rst`](../docs/source/Zh/doc/new_features/v168_features_doc.rst)。
+
+- **`edge_match` / `edge_match_all` / `chamfer_distance`**(`AC_edge_match`、`AC_edge_match_all`):強度 NCC(`visual_match`)在控制項換填充 / 換主題時分數下降,ORB(`feature_match`)需要扁平圖示缺乏的角點紋理。本功能以*邊緣形狀*比對:對兩圖跑 Canny,對場景邊緣做距離轉換,把樣板邊緣滑過它並以平均邊緣間距(Chamfer)評分。完美輪廓不論填充皆以約 0 成本對齊。重用 `visual_match` 的載入器 / resize / NMS / `Match` 與 `edge_lines` 的 Canny 預設。`haystack` 可注入;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 動作效果分類(我的點擊有沒有效果?)
 
 告訴代理點擊有沒有效果——以及是否發生在它瞄準之處。完整參考:[`docs/source/Zh/doc/new_features/v167_features_doc.rst`](../docs/source/Zh/doc/new_features/v167_features_doc.rst)。
