@@ -2330,6 +2330,16 @@ def replay_trace(trace):
     return _replay_trace(trace)
 
 
+def match_elements(before, after, iou_threshold=0.5):
+    from je_auto_control.utils.executor.action_executor import _match_elements
+    return _match_elements(before, after, iou_threshold)
+
+
+def assign_stable_ids(elements, prior=None, iou_threshold=0.5):
+    from je_auto_control.utils.executor.action_executor import _assign_stable_ids
+    return _assign_stable_ids(elements, prior, iou_threshold)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

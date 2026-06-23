@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 幾何感知的元素差異與穩定 ID
+
+以重疊跨影格追蹤元素,並給予穩定 ID。完整參考:[`docs/source/Zh/doc/new_features/v155_features_doc.rst`](../docs/source/Zh/doc/new_features/v155_features_doc.rst)。
+
+- **`match_elements` / `assign_stable_ids`**(`AC_match_elements`、`AC_assign_stable_ids`):`diff_snapshots` 以 `(role, name)` 作識別——無法比對改名但未移動或移動了的控制項,也無法跨影格給持久 ID。本功能以 IoU 比對元素框(沿用 `element_parse.iou`):`match_elements` 回傳 `{matched, added, removed}`;`assign_stable_ids` 從 `prior` 影格延續每個元素的 `id`(移動的按鈕保留 id、新增者取得新 id)——讓 agent 能跨回合可靠地引用「element 7」。純標準函式庫、可無頭測試。
+
 ## 本次更新 (2026-06-23) — 可攜式 Agent 軌跡記錄(錄製與重播)
 
 記錄 agent 的觀測→動作步驟並重播。完整參考:[`docs/source/Zh/doc/new_features/v154_features_doc.rst`](../docs/source/Zh/doc/new_features/v154_features_doc.rst)。

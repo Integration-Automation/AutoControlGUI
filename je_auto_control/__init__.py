@@ -377,6 +377,10 @@ from je_auto_control.utils.action_grounding import (
 from je_auto_control.utils.agent_replay import (
     from_jsonl, record_step, replay_trace, to_jsonl,
 )
+# Geometry-aware element matching across frames (stable IDs, move tracking)
+from je_auto_control.utils.element_diff import (
+    assign_stable_ids, match_elements,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1265,6 +1269,8 @@ __all__ = [
     "to_jsonl",
     "from_jsonl",
     "replay_trace",
+    "match_elements",
+    "assign_stable_ids",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

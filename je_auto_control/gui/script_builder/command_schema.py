@@ -2964,6 +2964,30 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
                     "element.",
     ))
     specs.append(CommandSpec(
+        "AC_match_elements", "Native UI", "Match Elements (frames)",
+        fields=(
+            FieldSpec("before", FieldType.STRING,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+            FieldSpec("after", FieldType.STRING,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+            FieldSpec("iou_threshold", FieldType.FLOAT, optional=True, default=0.5,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Match element boxes across two frames by overlap (move/rename).",
+    ))
+    specs.append(CommandSpec(
+        "AC_assign_stable_ids", "Native UI", "Assign Stable Element IDs",
+        fields=(
+            FieldSpec("elements", FieldType.STRING,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+            FieldSpec("prior", FieldType.STRING, optional=True,
+                      placeholder="prior frame's elements (with ids)"),
+            FieldSpec("iou_threshold", FieldType.FLOAT, optional=True, default=0.5,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Tag elements with IDs carried across frames by overlap.",
+    ))
+    specs.append(CommandSpec(
         "AC_mark_screen", "Native UI", "Set-of-Marks: Number Elements",
         fields=(
             FieldSpec("app_name", FieldType.STRING, optional=True),
