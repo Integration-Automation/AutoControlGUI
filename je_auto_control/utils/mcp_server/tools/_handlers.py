@@ -2325,6 +2325,11 @@ def validate_action(action, screen=None, targets=None):
     return _validate_action(action, screen, targets)
 
 
+def replay_trace(trace):
+    from je_auto_control.utils.executor.action_executor import _replay_trace
+    return _replay_trace(trace)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

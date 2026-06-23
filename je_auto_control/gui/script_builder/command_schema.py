@@ -900,6 +900,14 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
         description="Aggregate many checks and report all failures (not just first).",
     ))
     specs.append(CommandSpec(
+        "AC_replay_trace", "Flow", "Replay Agent Trace",
+        fields=(
+            FieldSpec("trace", FieldType.STRING,
+                      placeholder='[{"action":["AC_click_mouse",{...}]}]'),
+        ),
+        description="Replay a recorded trajectory's actions through the executor.",
+    ))
+    specs.append(CommandSpec(
         "AC_wait_pixel", "Flow", "Wait for Pixel",
         fields=(
             FieldSpec("x", FieldType.INT),

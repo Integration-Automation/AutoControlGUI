@@ -3329,6 +3329,22 @@ def action_grounding_tools() -> List[MCPTool]:
     ]
 
 
+def agent_replay_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_replay_trace",
+            description=("Replay a recorded agent trajectory: run each step's "
+                         "'action' (an AC action list) through the executor, in "
+                         "order. 'trace' is a JSON array or JSONL of {step, "
+                         "observation, action, result} steps. Returns {count, "
+                         "results}. Side-effecting (runs the actions)."),
+            input_schema=schema({"trace": {"type": "array"}}, required=["trace"]),
+            handler=h.replay_trace,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6837,7 +6853,8 @@ ALL_FACTORIES = (
     locator_chain_tools, rich_clipboard_tools, img_histogram_tools,
     motion_regions_tools, window_zorder_tools, soft_assert_tools,
     perceptual_diff_tools, window_geometry_tools, cua_action_tools,
-    observation_tools, action_grounding_tools, plugin_sdk_tools, governance_tools,
+    observation_tools, action_grounding_tools, agent_replay_tools,
+    plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

@@ -373,6 +373,10 @@ from je_auto_control.utils.observation import (
 from je_auto_control.utils.action_grounding import (
     in_bounds, snap_to_element, validate_action,
 )
+# Portable agent-trajectory trace (record observation->action steps, replay)
+from je_auto_control.utils.agent_replay import (
+    from_jsonl, record_step, replay_trace, to_jsonl,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1257,6 +1261,10 @@ __all__ = [
     "in_bounds",
     "snap_to_element",
     "validate_action",
+    "record_step",
+    "to_jsonl",
+    "from_jsonl",
+    "replay_trace",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

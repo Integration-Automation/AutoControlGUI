@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Portable Agent-Trajectory Trace (Record & Replay)
+
+Log an agent's observation→action steps and replay them. Full reference: [`docs/source/Eng/doc/new_features/v154_features_doc.rst`](docs/source/Eng/doc/new_features/v154_features_doc.rst).
+
+- **`record_step` / `to_jsonl` / `from_jsonl` / `replay_trace`** (`AC_replay_trace`): `agent_trace` records OTel spans (observability), `trajectory_eval` only scores, `semantic_recording` replays human macros — none is a replayable obs→action transcript. This is the OmniTool-style `{step, observation, action, result}` JSONL with a deterministic replay driver (injectable `runner`, no live model). The executor command replays each step's AC action through the executor. Pure-stdlib, headless-testable; build regression / training datasets from agent runs.
+
 ## What's new (2026-06-23) — Pre-Action Grounding Guard
 
 Reject out-of-bounds clicks; snap near-misses onto the real element. Full reference: [`docs/source/Eng/doc/new_features/v153_features_doc.rst`](docs/source/Eng/doc/new_features/v153_features_doc.rst).
