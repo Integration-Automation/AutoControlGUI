@@ -2304,6 +2304,11 @@ def client_point(title, x, y):
     return _client_point(title, x, y)
 
 
+def cua_command(payload, source="canonical"):
+    from je_auto_control.utils.executor.action_executor import _cua_command
+    return _cua_command(payload, source)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

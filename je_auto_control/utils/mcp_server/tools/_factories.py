@@ -3258,6 +3258,24 @@ def window_geometry_tools() -> List[MCPTool]:
     ]
 
 
+def cua_action_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_cua_command",
+            description=("Normalize a computer-use action 'payload' from 'source' "
+                         "(anthropic / openai / canonical) and map it to a runnable "
+                         "AC_* command. Returns {canonical, command:[name, params]}. "
+                         "Bridges Anthropic/OpenAI agent outputs to AutoControl."),
+            input_schema=schema({
+                "payload": {"type": "object"},
+                "source": {"type": "string"}},
+                required=["payload"]),
+            handler=h.cua_command,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6765,8 +6783,8 @@ ALL_FACTORIES = (
     hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
     locator_chain_tools, rich_clipboard_tools, img_histogram_tools,
     motion_regions_tools, window_zorder_tools, soft_assert_tools,
-    perceptual_diff_tools, window_geometry_tools, plugin_sdk_tools,
-    governance_tools,
+    perceptual_diff_tools, window_geometry_tools, cua_action_tools,
+    plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
