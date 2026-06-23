@@ -2164,6 +2164,16 @@ def match_color_all(template, channels=None, min_score=0.7, max_results=20,
                             region)
 
 
+def region_stability(frames, settle_threshold=0.99):
+    from je_auto_control.utils.executor.action_executor import _region_stability
+    return _region_stability(frames, settle_threshold)
+
+
+def match_persistence(template, frames, min_score=0.8, agree_px=8):
+    from je_auto_control.utils.executor.action_executor import _match_persistence
+    return _match_persistence(template, frames, min_score, agree_px)
+
+
 def grid_cells(rows, cols, region=None):
     from je_auto_control.utils.executor.action_executor import _grid_cells
     return _grid_cells(rows, cols, region)

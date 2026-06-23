@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 匹配前安定门 + 命中稳定性
+
+避免在动画进行中匹配,并确认命中跨帧维持稳定。完整参考:[`docs/source/Zh/doc/new_features/v180_features_doc.rst`](../docs/source/Zh/doc/new_features/v180_features_doc.rst)。
+
+- **`region_stability` / `match_persistence`**(`AC_region_stability`、`AC_match_persistence`):`smart_waits.wait_until_screen_stable` 以布尔门控实时循环——无法对可注入帧序列评分稳定度,也无法检查某*命中*是否维持。`region_stability` 以相邻帧 SSIM 评分(`{stable, mean_ssim, min_ssim}`);`match_persistence` 确认 template 在*每一*帧都找到且中心于 `agree_px` 内一致(`{persisted, n_hits, jitter}`)。重用 `ssim` + `visual_match` + `grounding_consensus`;帧可注入;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 色彩感知模板匹配(HSV)
 
 区分形状相同的红色与绿色状态点。完整参考:[`docs/source/Zh/doc/new_features/v179_features_doc.rst`](../docs/source/Zh/doc/new_features/v179_features_doc.rst)。
