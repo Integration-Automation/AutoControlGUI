@@ -828,6 +828,26 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         description="Detect bulleted / numbered list items among OCR lines.",
     ))
     specs.append(CommandSpec(
+        "AC_classify_lines", "OCR", "Classify Headings vs Body",
+        fields=(
+            FieldSpec("lines", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":200,"height":40,'
+                                  '"text":"Title"}]'),
+            FieldSpec("heading_ratio", FieldType.FLOAT, optional=True, default=1.2),
+        ),
+        description="Tag OCR lines as heading/body by height; assign heading levels.",
+    ))
+    specs.append(CommandSpec(
+        "AC_outline", "OCR", "Document Outline",
+        fields=(
+            FieldSpec("lines", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":200,"height":40,'
+                                  '"text":"Title"}]'),
+            FieldSpec("heading_ratio", FieldType.FLOAT, optional=True, default=1.2),
+        ),
+        description="Headings in order with levels (document outline) from OCR lines.",
+    ))
+    specs.append(CommandSpec(
         "AC_scroll_to_find", "OCR", "Scroll Until Visible",
         fields=(
             FieldSpec("target", FieldType.STRING),

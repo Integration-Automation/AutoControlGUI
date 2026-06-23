@@ -3990,6 +3990,31 @@ def screen_grid_tools() -> List[MCPTool]:
             handler=h.detect_lists,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_classify_lines",
+            description=("Classify OCR 'lines' as headings vs body by height: a line "
+                         "taller than 'heading_ratio' x the median line height is a "
+                         "heading, and distinct heading heights become levels (tallest "
+                         "= 1). Returns {count, lines:[{box,text,role,level}]}."),
+            input_schema=schema({
+                "lines": {"type": "array", "items": {"type": "object"}},
+                "heading_ratio": {"type": "number"}},
+                required=["lines"]),
+            handler=h.classify_lines,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_outline",
+            description=("Return the document outline from OCR 'lines' — the headings "
+                         "in top-to-bottom order with levels. Returns {count, "
+                         "headings:[{level,text,top}]}."),
+            input_schema=schema({
+                "lines": {"type": "array", "items": {"type": "object"}},
+                "heading_ratio": {"type": "number"}},
+                required=["lines"]),
+            handler=h.outline,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
