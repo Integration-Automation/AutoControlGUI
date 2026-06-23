@@ -2108,6 +2108,35 @@ def match_rotated_all(template, min_score=0.8, scales=None, angles=None,
                               nms_iou, region)
 
 
+def match_with_trust(template, min_score=0.0, scales=None, ambiguous_ratio=0.9,
+                     region=None, method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _match_with_trust
+    return _match_with_trust(template, min_score, scales, ambiguous_ratio,
+                             region, method)
+
+
+def auto_threshold(template, region=None, method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _auto_threshold
+    return _auto_threshold(template, region, method)
+
+
+def match_auto(template, floor=0.5, max_results=20, region=None,
+               method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _match_auto
+    return _match_auto(template, floor, max_results, region, method)
+
+
+def edge_match(template, min_score=0.7, scales=None, region=None):
+    from je_auto_control.utils.executor.action_executor import _edge_match
+    return _edge_match(template, min_score, scales, region)
+
+
+def edge_match_all(template, min_score=0.7, max_results=20, nms_iou=0.3,
+                   region=None):
+    from je_auto_control.utils.executor.action_executor import _edge_match_all
+    return _edge_match_all(template, min_score, max_results, nms_iou, region)
+
+
 def grid_cells(rows, cols, region=None):
     from je_auto_control.utils.executor.action_executor import _grid_cells
     return _grid_cells(rows, cols, region)
@@ -2121,6 +2150,34 @@ def cell_for_point(x, y, rows, cols, region=None):
 def point_for_cell(label, rows, cols, region=None):
     from je_auto_control.utils.executor.action_executor import _point_for_cell
     return _point_for_cell(label, rows, cols, region)
+
+
+def populate_table(grid, text_boxes, overlap=0.4):
+    from je_auto_control.utils.executor.action_executor import _populate_table
+    return _populate_table(grid, text_boxes, overlap)
+
+
+def column_gutters(boxes, page_width=None, min_gap=8):
+    from je_auto_control.utils.executor.action_executor import _column_gutters
+    return _column_gutters(boxes, page_width, min_gap)
+
+
+def detect_borderless_table(boxes, page_width=None, min_gap=8, min_cols=2,
+                            min_rows=2):
+    from je_auto_control.utils.executor.action_executor import (
+        _detect_borderless_table)
+    return _detect_borderless_table(boxes, page_width, min_gap, min_cols, min_rows)
+
+
+def associate_fields(text_boxes, directions=None, max_gap=150):
+    from je_auto_control.utils.executor.action_executor import _associate_fields
+    return _associate_fields(text_boxes, directions, max_gap)
+
+
+def match_labels_to_widgets(labels, widgets):
+    from je_auto_control.utils.executor.action_executor import (
+        _match_labels_to_widgets)
+    return _match_labels_to_widgets(labels, widgets)
 
 
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
@@ -2357,6 +2414,33 @@ def serialize_observation(elements, viewport=None, max_elements=80):
 def observation_index(elements, viewport=None, max_elements=80):
     from je_auto_control.utils.executor.action_executor import _observation_index
     return _observation_index(elements, viewport, max_elements)
+
+
+def delta_observation(prev, curr, viewport=None, max_elements=80, max_lines=40,
+                      interactive_only=True):
+    from je_auto_control.utils.executor.action_executor import _delta_observation
+    return _delta_observation(prev, curr, viewport, max_elements, max_lines,
+                              interactive_only)
+
+
+def classify_effect(before, after, action, radius=64):
+    from je_auto_control.utils.executor.action_executor import _classify_effect
+    return _classify_effect(before, after, action, radius)
+
+
+def effect_near_point(before, after, point, radius=64):
+    from je_auto_control.utils.executor.action_executor import _effect_near_point
+    return _effect_near_point(before, after, point, radius)
+
+
+def check_postcondition(after, spec, before=None):
+    from je_auto_control.utils.executor.action_executor import _check_postcondition
+    return _check_postcondition(after, spec, before)
+
+
+def plan_repair(verdict, max_attempts=3):
+    from je_auto_control.utils.executor.action_executor import _plan_repair
+    return _plan_repair(verdict, max_attempts)
 
 
 def validate_action(action, screen=None, targets=None):

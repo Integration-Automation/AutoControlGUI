@@ -336,6 +336,67 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Find every rotation/scale-tolerant match (NMS-deduped).",
     ))
     specs.append(CommandSpec(
+        "AC_match_with_trust", "Image", "Match Template (trust-scored)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.0,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("ambiguous_ratio", FieldType.FLOAT, optional=True,
+                      default=0.9, min_value=0.0, max_value=1.0),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[0.9, 1.0, 1.1]"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Match a template and flag if it is ambiguous (duplicate peak).",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_auto", "Image", "Match Template (auto-threshold)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("floor", FieldType.FLOAT, optional=True, default=0.5,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("max_results", FieldType.INT, optional=True, default=20),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Find a template with an Otsu auto-threshold (no min_score).",
+    ))
+    specs.append(CommandSpec(
+        "AC_auto_threshold", "Image", "Auto Threshold (Otsu on scores)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Derive a match threshold + separability from the score map.",
+    ))
+    specs.append(CommandSpec(
+        "AC_edge_match", "Image", "Match Template (edge shape)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.7,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[0.9, 1.0, 1.1]"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Locate by edge shape (Chamfer) — robust to fill / theme / AA.",
+    ))
+    specs.append(CommandSpec(
+        "AC_edge_match_all", "Image", "Match Template All (edge shape)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.7,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("max_results", FieldType.INT, optional=True, default=20),
+            FieldSpec("nms_iou", FieldType.FLOAT, optional=True, default=0.3,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Find every edge-shape (Chamfer) match (NMS-deduped).",
+    ))
+    specs.append(CommandSpec(
         "AC_grid_cells", "Image", "Grid Cells (coarse grounding)",
         fields=(
             FieldSpec("rows", FieldType.INT, optional=True, default=3),
@@ -658,6 +719,63 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
                       placeholder=_REGION_PLACEHOLDER),
         ),
         description="Decode 1-D barcodes (EAN / UPC) in an image / screen region.",
+    ))
+    specs.append(CommandSpec(
+        "AC_populate_table", "OCR", "Fill Table From Grid + OCR",
+        fields=(
+            FieldSpec("grid", FieldType.STRING,
+                      placeholder='{"rows": [0, 30, 60], "cols": [0, 100, 200]}'),
+            FieldSpec("text_boxes", FieldType.STRING,
+                      placeholder='[{"x": 10, "y": 5, "width": 60, "height": 20, '
+                                  '"text": "Name"}]'),
+            FieldSpec("overlap", FieldType.FLOAT, optional=True, default=0.4,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Drop OCR text boxes into a ruling-line grid → addressable table.",
+    ))
+    specs.append(CommandSpec(
+        "AC_detect_borderless_table", "OCR", "Detect Borderless Table",
+        fields=(
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder='[{"x":10,"y":0,"width":60,"height":18,'
+                                  '"text":"Name"}]'),
+            FieldSpec("min_gap", FieldType.INT, optional=True, default=8),
+            FieldSpec("page_width", FieldType.INT, optional=True),
+        ),
+        description="Infer a borderless table from OCR boxes via whitespace columns.",
+    ))
+    specs.append(CommandSpec(
+        "AC_column_gutters", "OCR", "Column Gutters (whitespace)",
+        fields=(
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder='[{"x":10,"y":0,"width":60,"height":18}]'),
+            FieldSpec("min_gap", FieldType.INT, optional=True, default=8),
+            FieldSpec("page_width", FieldType.INT, optional=True),
+        ),
+        description="Find borderless-table column separators by whitespace projection.",
+    ))
+    specs.append(CommandSpec(
+        "AC_associate_fields", "OCR", "Associate Form Fields",
+        fields=(
+            FieldSpec("text_boxes", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":60,"height":20,'
+                                  '"text":"Name:"}]'),
+            FieldSpec("directions", FieldType.STRING, optional=True,
+                      placeholder='["right", "below"]'),
+            FieldSpec("max_gap", FieldType.INT, optional=True, default=150),
+        ),
+        description="Pair 'label:' boxes with the nearest aligned value (right/below).",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_labels_to_widgets", "OCR", "Match Labels To Widgets",
+        fields=(
+            FieldSpec("labels", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":60,"height":20,'
+                                  '"text":"Accept"}]'),
+            FieldSpec("widgets", FieldType.STRING,
+                      placeholder='[{"x":120,"y":0,"width":16,"height":16}]'),
+        ),
+        description="Match each checkbox/radio/input to its nearest label by centre.",
     ))
     specs.append(CommandSpec(
         "AC_scroll_to_find", "OCR", "Scroll Until Visible",
@@ -3034,6 +3152,67 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("max_elements", FieldType.INT, optional=True, default=80),
         ),
         description="Reading-ordered, viewport-clipped, indexed element list.",
+    ))
+    specs.append(CommandSpec(
+        "AC_delta_observation", "Native UI", "Observation: Delta (what changed)",
+        fields=(
+            FieldSpec("prev", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+            FieldSpec("curr", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+            FieldSpec("viewport", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+            FieldSpec("max_elements", FieldType.INT, optional=True, default=80),
+            FieldSpec("max_lines", FieldType.INT, optional=True, default=40),
+        ),
+        description="Token-budgeted '+/~/-' summary of what changed between frames.",
+    ))
+    specs.append(CommandSpec(
+        "AC_classify_effect", "Native UI", "Classify Action Effect",
+        fields=(
+            FieldSpec("before", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":0,"y":0}]'),
+            FieldSpec("after", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":0,"y":0}]'),
+            FieldSpec("action", FieldType.STRING,
+                      placeholder='{"type":"click","x":50,"y":50}'),
+            FieldSpec("radius", FieldType.INT, optional=True, default=64),
+        ),
+        description="Did the action change the screen near its target? (no_op/…).",
+    ))
+    specs.append(CommandSpec(
+        "AC_effect_near_point", "Native UI", "Effect Near Point?",
+        fields=(
+            FieldSpec("before", FieldType.STRING,
+                      placeholder='[{"role":"button","x":0,"y":0}]'),
+            FieldSpec("after", FieldType.STRING,
+                      placeholder='[{"role":"button","x":0,"y":0}]'),
+            FieldSpec("point", FieldType.STRING, placeholder="[50, 50]"),
+            FieldSpec("radius", FieldType.INT, optional=True, default=64),
+        ),
+        description="Did any before/after change land within radius of a point?",
+    ))
+    specs.append(CommandSpec(
+        "AC_check_postcondition", "Native UI", "Check Postcondition",
+        fields=(
+            FieldSpec("after", FieldType.STRING,
+                      placeholder='[{"role":"dialog","name":"Saved"}]'),
+            FieldSpec("spec", FieldType.STRING,
+                      placeholder='{"appears":{"role":"dialog"},'
+                                  '"disabled":{"name":"Submit"}}'),
+            FieldSpec("before", FieldType.STRING, optional=True,
+                      placeholder='[{"role":"button","name":"Submit"}]'),
+        ),
+        description="Check expected outcome clauses against after/before frames.",
+    ))
+    specs.append(CommandSpec(
+        "AC_plan_repair", "Native UI", "Plan Repair Tactics",
+        fields=(
+            FieldSpec("verdict", FieldType.STRING,
+                      placeholder="no_op / changed_elsewhere / changed"),
+            FieldSpec("max_attempts", FieldType.INT, optional=True, default=3),
+        ),
+        description="Ordered repair tactics for a failed/no-effect action verdict.",
     ))
     specs.append(CommandSpec(
         "AC_validate_action", "Native UI", "Validate / Snap Action",

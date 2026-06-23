@@ -1,5 +1,65 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 失败 / 无效果动作的修复策略引擎
+
+当动作没效果时选择下一个修复战术——并驱动重试循环。完整参考:[`docs/source/Zh/doc/new_features/v170_features_doc.rst`](../docs/source/Zh/doc/new_features/v170_features_doc.rst)。
+
+- **`plan_repair` / `next_tactic` / `run_with_repair`**(`AC_plan_repair`):`self_healing`/`locator_repair` 只修复*无法解析*的定位器;`loop_guard` 只*检测*卡住循环而无战术选择。本功能消费效果判定(例如来自 `action_effect`)并返回有序战术——`wait_retry` / `relocate` / `nudge` / `scroll_into_view` / `escalate`——接着 `run_with_repair` 以注入的 `act` / `verify` / `apply_tactic` / `verdict_for` / `sleep` 接缝驱动有界重试循环,返回 `RepairOutcome`。纯标准库状态机;不导入 `PySide6`。与 `action_effect` + `postcondition` 完成自我修正三件套。
+
+## 本次更新 (2026-06-24) — 声明式动作后置条件
+
+以 JSON 规格断言动作的预期结果,并对照 before 帧做差异。完整参考:[`docs/source/Zh/doc/new_features/v169_features_doc.rst`](../docs/source/Zh/doc/new_features/v169_features_doc.rst)。
+
+- **`check_postcondition` / `compile_postcondition`**(`AC_check_postcondition`):`expect_poll`/`assert_eventually` 轮询单一条件,没有与动作绑定的规格、也没有 before 基准(因此无法表达「一个*新*对话框出现了」);`trajectory_eval` 是整条轨迹层级。本功能对 after 观测评估一个小型 JSON 子句规格——`appears`/`disappears`(对照 `before`)、`enabled`/`disabled`、`text_present`/`text_absent`、`count`——返回逐子句的 `{ok, clauses, failed}` 报告。`compile_postcondition` 把规格转成 `after -> bool` 判定函数以供 `expect_poll` 使用。纯标准库;不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 边缘形状(Chamfer)模板匹配
+
+以轮廓定位扁平图标,对填充 / 主题 / 抗锯齿稳健。完整参考:[`docs/source/Zh/doc/new_features/v168_features_doc.rst`](../docs/source/Zh/doc/new_features/v168_features_doc.rst)。
+
+- **`edge_match` / `edge_match_all` / `chamfer_distance`**(`AC_edge_match`、`AC_edge_match_all`):强度 NCC(`visual_match`)在控件换填充 / 换主题时分数下降,ORB(`feature_match`)需要扁平图标缺乏的角点纹理。本功能以*边缘形状*匹配:对两图跑 Canny,对场景边缘做距离变换,把模板边缘滑过它并以平均边缘间距(Chamfer)评分。完美轮廓不论填充皆以约 0 成本对齐。重用 `visual_match` 的加载器 / resize / NMS / `Match` 与 `edge_lines` 的 Canny 默认。`haystack` 可注入;不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 动作效果分类(我的点击有没有效果?)
+
+告诉代理点击有没有效果——以及是否发生在它瞄准之处。完整参考:[`docs/source/Zh/doc/new_features/v167_features_doc.rst`](../docs/source/Zh/doc/new_features/v167_features_doc.rst)。
+
+- **`classify_effect` / `effect_near_point` / `is_no_op`**(`AC_classify_effect`、`AC_effect_near_point`):`screen_state`/`element_diff` 报告变了什么却不归因到动作;`loop_guard` 要重复 N 次才标记 no-op。本功能比对前后观测,并依动作目标点在*第一步*就分类结果为 `no_op` / `changed_near_target` / `changed_elsewhere`(意外对话框)/ `changed`,返回含变化中心与原因的 `EffectVerdict`。重用 `element_diff.match_elements` + `observation_delta` 的字段变更检查。纯标准库;不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 表单字段关联(多方向)+ 复选框状态
+
+即使值在下方或右对齐也能把标签与值配对,并读取复选框状态。完整参考:[`docs/source/Zh/doc/new_features/v166_features_doc.rst`](../docs/source/Zh/doc/new_features/v166_features_doc.rst)。
+
+- **`associate_fields` / `match_labels_to_widgets` / `checkbox_state`**(`AC_associate_fields`、`AC_match_labels_to_widgets`):`ocr/structure` 只把 `label:` 与*紧接的下一格*配对——无法处理标签在上、双列 key/value、右对齐值或非文字 widget,且无复选框概念。本功能把每个标签与多*方向*(右 / 下)中 `max_gap` 内最近的对齐值配对,把独立 widget(复选框 / 单选钮 / 输入框)配到最近标签,并由框内暗像素填充比例读取复选框状态。关联部分纯标准库;只有 `checkbox_state` 触及像素(隔离在 `visual_match` 灰阶加载器之后)。不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 留白投影列推断(无框线表格)
+
+靠留白间隙推断列来读取无框线表格。完整参考:[`docs/source/Zh/doc/new_features/v165_features_doc.rst`](../docs/source/Zh/doc/new_features/v165_features_doc.rst)。
+
+- **`detect_borderless_table` / `column_gutters` / `assign_columns` / `vertical_projection`**(`AC_detect_borderless_table`、`AC_column_gutters`):`ocr/structure` 只有在每一行单元格左缘 x 都相符时才检测得到表格——对 ragged / 无框线 / 右对齐列都失败;`edge_lines.find_grid` 需要框线,而留白表格没有。本功能靠*间隙*找列:把 OCR 框投影到 x 轴,读出持续为空的垂直带作为 gutter,指派列索引,依间距分组成行,输出 `{n_rows, n_cols, rows, columns}`。纯标准库差分数组投影(不需 numpy);重用 `table_grid_fill` 的框读取器。不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 自动门槛模板匹配(对分数图做 Otsu)
+
+不再手调 `min_score`——由分数图推导匹配门槛。完整参考:[`docs/source/Zh/doc/new_features/v164_features_doc.rst`](../docs/source/Zh/doc/new_features/v164_features_doc.rst)。
+
+- **`match_auto` / `auto_threshold`**(`AC_match_auto`、`AC_auto_threshold`):每次 `match_template_all` 都迫使你猜 `min_score`(太低充满 NMS 噪声、太高漏掉换肤目标,且因素材而异)。本功能对*相关性分数直方图*套用 Otsu,找出背景相关与真正匹配之间的谷,返回该门槛加上 *separability* 分离度(接近 0 = 单峰、无明确匹配 → 不要信任)。`match_auto` 每个过门槛区域只返回单一峰(通过 `connected_boxes`,避免宽峰上的重复命中),并以 `floor` 夹住。重用新增的 `visual_match._score_map`;`haystack` 可注入;不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 令牌预算化的观测增量(变更了什么)
+
+告诉代理*变更了什么*,而非再次整个屏幕。完整参考:[`docs/source/Zh/doc/new_features/v163_features_doc.rst`](../docs/source/Zh/doc/new_features/v163_features_doc.rst)。
+
+- **`delta_observation` / `delta_index` / `summarize_delta`**(`AC_delta_observation`):`serialize_observation` 渲染单一整帧(每回合都撑爆令牌预算);`element_diff` 提供稳定 ID 对应但止于 matched/added/removed 的元素配对。本功能正是缺少的序列化器——比对两帧,将配对元素分类为 changed(role/name/enabled/value/移动)或 stable,只渲染变动部分:`+ [i] role "name"` / `~ [i] … (fields)` / `- …`(added 与 changed 优先、stable 略去、上限 `max_lines`)。重用 `element_diff.match_elements` + `observation.observation_index`。纯标准库;不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 以 OCR 文字填入框线网格(可定址表格)
+
+把有框线表格的线条 + OCR 文字转成可定址的 `R x C` 表格。完整参考:[`docs/source/Zh/doc/new_features/v162_features_doc.rst`](../docs/source/Zh/doc/new_features/v162_features_doc.rst)。
+
+- **`populate_table` / `assign_text_to_grid` / `table_to_records` / `table_to_csv`**(`AC_populate_table`):`edge_lines.find_grid` 能还原表格的框线几何但返回的单元格是*空的*;OCR 提供文字却无结构——两者从未串接。本功能把 OCR 框放入网格(依单元格中心指派,以重叠比例把关,使横跨细框线的框不被重复计入),将每个单元格的文字依阅读顺序串接,标记合并单元格的 span,并可直接转成 records / CSV。纯标准库,作用于纯字典——不需图像、OCR 引擎或设备。不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 信任评分模板匹配(歧义 / PSR)
+
+在点击前就知道某次模板匹配虽强但*有歧义*。完整参考:[`docs/source/Zh/doc/new_features/v161_features_doc.rst`](../docs/source/Zh/doc/new_features/v161_features_doc.rst)。
+
+- **`match_with_trust` / `score_peaks`**(`AC_match_with_trust`):`match_template` 只返回最高分并点击——但工具栏中重复的按钮或近乎相同的同类控件可能在两处都相关到 ~0.95,因此高分并非*无歧义*的匹配。本功能为像素模板加入 Lowe 式比值测试(ORB 通过 `feature_match` 已有,`match_template` 从未有):检视整个相关性曲面,比较全局峰值与排除窗口外的次高峰,计算峰值对旁瓣比(PSR),返回带有 `second_score` / `peak_ratio` / `psr` / `is_ambiguous` 的 `TrustedMatch`。重用新增的 `visual_match._score_map`(公开匹配器丢弃的完整 `matchTemplate` 曲面)——不重复任何匹配代码。`haystack` 可注入;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-23) — 剪贴板文件拖放列表(CF_HDROP)
 
 把一份文件列表放上剪贴板,可直接粘贴进 Explorer。完整参考:[`docs/source/Zh/doc/new_features/v160_features_doc.rst`](../docs/source/Zh/doc/new_features/v160_features_doc.rst)。

@@ -3331,6 +3331,84 @@ def observation_tools() -> List[MCPTool]:
             handler=h.observation_index,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_delta_observation",
+            description=("Token-budgeted 'what changed since last step': diff 'prev' "
+                         "vs 'curr' element lists and render ONLY the churn — "
+                         "'+ [i] role \"name\"' (appeared) / '~ [i] …' (changed) / "
+                         "'- …' (vanished), stable omitted, capped at 'max_lines'. "
+                         "Returns {summary, added, removed, changed}. Feed this each "
+                         "turn instead of the whole screen."),
+            input_schema=schema({
+                "prev": {"type": "array", "items": {"type": "object"}},
+                "curr": {"type": "array", "items": {"type": "object"}},
+                "viewport": {"type": "array", "items": {"type": "integer"}},
+                "max_elements": {"type": "integer"},
+                "max_lines": {"type": "integer"},
+                "interactive_only": {"type": "boolean"}},
+                required=["prev", "curr"]),
+            handler=h.delta_observation,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_classify_effect",
+            description=("Did my action do anything? Diff 'before' vs 'after' element "
+                         "lists and classify the result given the 'action' (with x,y): "
+                         "no_op / changed_near_target / changed_elsewhere / changed. "
+                         "Returns {effect, changed_near_target, changed_count, "
+                         "changed_centers, reason}. 'radius' for target attribution."),
+            input_schema=schema({
+                "before": {"type": "array", "items": {"type": "object"}},
+                "after": {"type": "array", "items": {"type": "object"}},
+                "action": {"type": "object"},
+                "radius": {"type": "integer"}},
+                required=["before", "after", "action"]),
+            handler=h.classify_effect,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_effect_near_point",
+            description=("Did any change between 'before' and 'after' land within "
+                         "'radius' of 'point' [x,y]? Returns {near}."),
+            input_schema=schema({
+                "before": {"type": "array", "items": {"type": "object"}},
+                "after": {"type": "array", "items": {"type": "object"}},
+                "point": {"type": "array", "items": {"type": "integer"}},
+                "radius": {"type": "integer"}},
+                required=["before", "after", "point"]),
+            handler=h.effect_near_point,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_check_postcondition",
+            description=("Check a declarative postcondition 'spec' against the "
+                         "'after' element list (optionally diffed vs 'before'). "
+                         "Clauses: appears / disappears / enabled / disabled / "
+                         "text_present / text_absent / count. Returns {ok, clauses:"
+                         "[{type,ok,detail}], failed}. e.g. spec {\"appears\": "
+                         "{\"role\":\"dialog\"}, \"disabled\": {\"name\":\"Submit\"}}."),
+            input_schema=schema({
+                "after": {"type": "array", "items": {"type": "object"}},
+                "spec": {"type": "object"},
+                "before": {"type": "array", "items": {"type": "object"}}},
+                required=["after", "spec"]),
+            handler=h.check_postcondition,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_plan_repair",
+            description=("Given an effect 'verdict' (string like 'no_op' / "
+                         "'changed_elsewhere', or an EffectVerdict dict), return the "
+                         "ordered repair tactics to try — wait_retry / relocate / "
+                         "nudge / scroll_into_view / escalate — capped at "
+                         "'max_attempts'. Returns {count, tactics}."),
+            input_schema=schema({
+                "verdict": {"type": "string"},
+                "max_attempts": {"type": "integer"}},
+                required=["verdict"]),
+            handler=h.plan_repair,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
@@ -3600,6 +3678,87 @@ def rotated_match_tools() -> List[MCPTool]:
             handler=h.match_rotated_all,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_match_with_trust",
+            description=("Find 'template' AND judge whether the match is trustworthy "
+                         "vs ambiguous: returns {found, match:{...,score,second_score,"
+                         "peak_ratio,psr,is_ambiguous,center}}. is_ambiguous=true means "
+                         "a second place scored ~as high (e.g. a duplicate toolbar "
+                         "button) - do NOT blindly click. 'ambiguous_ratio' (default "
+                         "0.9), 'min_score', 'scales', 'region', 'method'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "ambiguous_ratio": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.match_with_trust,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_auto_threshold",
+            description=("Derive an accept threshold for 'template' by Otsu on the "
+                         "match score map (no hand-tuned min_score). Returns "
+                         "{found, info:{threshold, separability, n_above}}. "
+                         "separability near 0 = unimodal (no clear match) - do NOT "
+                         "trust the threshold. 'region', 'method'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.auto_threshold,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_auto",
+            description=("Find every occurrence of 'template' above an AUTO-derived "
+                         "(Otsu) threshold - one peak per region, no min_score to "
+                         "tune. 'floor' (default 0.5) clamps the threshold so a noisy "
+                         "surface can't match junk. Returns {count, matches}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "floor": {"type": "number"},
+                "max_results": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.match_auto,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_edge_match",
+            description=("Find 'template' by its EDGE SHAPE (Chamfer / distance "
+                         "transform), robust to fill / gradient / theme / "
+                         "anti-aliasing where intensity NCC fails and to flat icons "
+                         "ORB can't key on. Returns {found, match}. 'min_score', "
+                         "'scales', 'region'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.edge_match,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_edge_match_all",
+            description=("Find EVERY edge-shape (Chamfer) match of 'template' >= "
+                         "'min_score', overlaps removed by NMS. Returns "
+                         "{count, matches}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "max_results": {"type": "integer"},
+                "nms_iou": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.edge_match_all,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
@@ -3644,6 +3803,79 @@ def screen_grid_tools() -> List[MCPTool]:
                 "region": {"type": "array", "items": {"type": "integer"}}},
                 required=["label", "rows", "cols"]),
             handler=h.point_for_cell,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_populate_table",
+            description=("Fill a ruling-line 'grid' (from find_grid: {rows:[y..],"
+                         "cols:[x..]}) with OCR 'text_boxes' ([{x,y,width,height,"
+                         "text}]) into an addressable table. Returns {n_rows, n_cols, "
+                         "cells:[{row,col,text}], spans:[merged-cell candidates]}. "
+                         "'overlap' (default 0.4) gates a box straddling a rule."),
+            input_schema=schema({
+                "grid": {"type": "object"},
+                "text_boxes": {"type": "array", "items": {"type": "object"}},
+                "overlap": {"type": "number"}},
+                required=["grid", "text_boxes"]),
+            handler=h.populate_table,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_column_gutters",
+            description=("Find borderless-table COLUMNS by whitespace: project OCR "
+                         "'boxes' ([{x,y,width,height,text}]) onto the x-axis and "
+                         "return the interior empty vertical bands >= 'min_gap' wide. "
+                         "Returns {count, gutters:[{start,end,width}]}."),
+            input_schema=schema({
+                "boxes": {"type": "array", "items": {"type": "object"}},
+                "page_width": {"type": "integer"},
+                "min_gap": {"type": "integer"}},
+                required=["boxes"]),
+            handler=h.column_gutters,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_detect_borderless_table",
+            description=("Infer a BORDERLESS table from OCR 'boxes' (no ruling lines): "
+                         "columns from whitespace gutters, rows from vertical spacing. "
+                         "Returns {found, table:{n_rows,n_cols,rows:[[text]],columns}}. "
+                         "Use when find_grid finds no lines. 'min_gap', 'min_cols', "
+                         "'min_rows'."),
+            input_schema=schema({
+                "boxes": {"type": "array", "items": {"type": "object"}},
+                "page_width": {"type": "integer"},
+                "min_gap": {"type": "integer"},
+                "min_cols": {"type": "integer"},
+                "min_rows": {"type": "integer"}},
+                required=["boxes"]),
+            handler=h.detect_borderless_table,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_associate_fields",
+            description=("Pair form labels with their values: for each 'text_boxes' "
+                         "entry whose text ends in ':', find the nearest aligned value "
+                         "box in 'directions' (right / below). Returns {count, fields:"
+                         "[{label,value,direction,gap,label_box,value_box}]}. "
+                         "'max_gap' caps the distance."),
+            input_schema=schema({
+                "text_boxes": {"type": "array", "items": {"type": "object"}},
+                "directions": {"type": "array", "items": {"type": "string"}},
+                "max_gap": {"type": "integer"}},
+                required=["text_boxes"]),
+            handler=h.associate_fields,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_labels_to_widgets",
+            description=("Match each widget (checkbox / radio / input box) to its "
+                         "nearest 'labels' entry by centre distance. Returns {count, "
+                         "pairs:[{widget,label,distance}]}."),
+            input_schema=schema({
+                "labels": {"type": "array", "items": {"type": "object"}},
+                "widgets": {"type": "array", "items": {"type": "object"}}},
+                required=["labels", "widgets"]),
+            handler=h.match_labels_to_widgets,
             annotations=READ_ONLY,
         ),
     ]

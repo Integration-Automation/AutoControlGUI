@@ -3323,6 +3323,70 @@ def _match_rotated_all(template: str, min_score: Any = 0.8, scales: Any = None,
     return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
 
 
+def _match_with_trust(template: str, min_score: Any = 0.0, scales: Any = None,
+                      ambiguous_ratio: Any = 0.9, region: Any = None,
+                      method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: best template match with trust metrics (ambiguity / PSR)."""
+    import json
+    from je_auto_control.utils.match_trust import match_with_trust
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = match_with_trust(template, region=region,
+                             scales=_seq_arg(scales, (1.0,)),
+                             method=method, min_score=float(min_score),
+                             ambiguous_ratio=float(ambiguous_ratio))
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
+def _auto_threshold(template: str, region: Any = None,
+                    method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: Otsu-derived accept threshold for a template (+ separability)."""
+    import json
+    from je_auto_control.utils.match_autothresh import auto_threshold
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    info = auto_threshold(template, region=region, method=method)
+    return {"found": info is not None, "info": info}
+
+
+def _match_auto(template: str, floor: Any = 0.5, max_results: Any = 20,
+                region: Any = None, method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: matches above the auto-derived (Otsu) threshold, one per region."""
+    import json
+    from je_auto_control.utils.match_autothresh import match_auto
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    matches = match_auto(template, region=region, floor=float(floor),
+                         max_results=int(max_results), method=method)
+    return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
+
+
+def _edge_match(template: str, min_score: Any = 0.7, scales: Any = None,
+                region: Any = None) -> Dict[str, Any]:
+    """Adapter: best edge-shape (Chamfer) template match on the screen."""
+    import json
+    from je_auto_control.utils.edge_match import edge_match
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = edge_match(template, region=region,
+                       scales=_seq_arg(scales, (1.0,)), min_score=float(min_score))
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
+def _edge_match_all(template: str, min_score: Any = 0.7, max_results: Any = 20,
+                    nms_iou: Any = 0.3, region: Any = None) -> Dict[str, Any]:
+    """Adapter: every edge-shape (Chamfer) match on the screen (NMS)."""
+    import json
+    from je_auto_control.utils.edge_match import edge_match_all
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    matches = edge_match_all(template, region=region, min_score=float(min_score),
+                             max_results=int(max_results), nms_iou=float(nms_iou))
+    return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
+
+
 def _region_arg(value: Any) -> Optional[List[int]]:
     """Coerce a JSON-string / list region arg into a list of ints, or None."""
     import json
@@ -3355,6 +3419,70 @@ def _point_for_cell(label: str, rows: Any, cols: Any,
     point = point_for_cell(str(label), int(rows), int(cols),
                            region=_region_arg(region))
     return {"point": point}
+
+
+def _populate_table(grid: Any, text_boxes: Any, overlap: Any = 0.4) -> Dict[str, Any]:
+    """Adapter: fill a ruling-line grid with OCR text boxes → addressable table."""
+    import json
+    from je_auto_control.utils.table_grid_fill import populate_table
+    if isinstance(grid, str):
+        grid = json.loads(grid)
+    if isinstance(text_boxes, str):
+        text_boxes = json.loads(text_boxes)
+    return populate_table(grid, text_boxes, overlap=float(overlap))
+
+
+def _column_gutters(boxes: Any, page_width: Any = None,
+                    min_gap: Any = 8) -> Dict[str, Any]:
+    """Adapter: interior whitespace column gutters from OCR boxes."""
+    import json
+    from je_auto_control.utils.column_layout import column_gutters
+    if isinstance(boxes, str):
+        boxes = json.loads(boxes)
+    gutters = column_gutters(boxes, page_width=int(page_width) if page_width
+                             else None, min_gap=int(min_gap))
+    return {"count": len(gutters), "gutters": gutters}
+
+
+def _detect_borderless_table(boxes: Any, page_width: Any = None, min_gap: Any = 8,
+                             min_cols: Any = 2, min_rows: Any = 2) -> Dict[str, Any]:
+    """Adapter: infer a borderless table from OCR boxes via whitespace columns."""
+    import json
+    from je_auto_control.utils.column_layout import detect_borderless_table
+    if isinstance(boxes, str):
+        boxes = json.loads(boxes)
+    table = detect_borderless_table(boxes,
+                                    page_width=int(page_width) if page_width else None,
+                                    min_gap=int(min_gap), min_cols=int(min_cols),
+                                    min_rows=int(min_rows))
+    return {"found": table is not None, "table": table}
+
+
+def _associate_fields(text_boxes: Any, directions: Any = None,
+                      max_gap: Any = 150) -> Dict[str, Any]:
+    """Adapter: pair form labels with their nearest aligned value boxes."""
+    import json
+    from je_auto_control.utils.form_fields import associate_fields
+    if isinstance(text_boxes, str):
+        text_boxes = json.loads(text_boxes)
+    if isinstance(directions, str):
+        directions = json.loads(directions) if directions.strip() else None
+    fields = associate_fields(text_boxes,
+                              directions=tuple(directions) if directions
+                              else ("right", "below"), max_gap=int(max_gap))
+    return {"count": len(fields), "fields": fields}
+
+
+def _match_labels_to_widgets(labels: Any, widgets: Any) -> Dict[str, Any]:
+    """Adapter: match each widget (checkbox / radio / input) to its nearest label."""
+    import json
+    from je_auto_control.utils.form_fields import match_labels_to_widgets
+    if isinstance(labels, str):
+        labels = json.loads(labels)
+    if isinstance(widgets, str):
+        widgets = json.loads(widgets)
+    pairs = match_labels_to_widgets(labels, widgets)
+    return {"count": len(pairs), "pairs": pairs}
 
 
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
@@ -3951,6 +4079,80 @@ def _observation_index(elements: Any, viewport: Any = None,
     indexed = observation_index(list(elements), viewport=viewport,
                                 max_elements=int(max_elements))
     return {"count": len(indexed), "elements": indexed}
+
+
+def _delta_observation(prev: Any, curr: Any, viewport: Any = None,
+                       max_elements: Any = 80, max_lines: Any = 40,
+                       interactive_only: Any = True) -> Dict[str, Any]:
+    """Adapter: token-budgeted "what changed" delta between two element frames."""
+    import json
+    from je_auto_control.utils.observation_delta import (delta_index,
+                                                         delta_observation)
+    if isinstance(prev, str):
+        prev = json.loads(prev)
+    if isinstance(curr, str):
+        curr = json.loads(curr)
+    if isinstance(viewport, str):
+        viewport = json.loads(viewport) if viewport.strip() else None
+    text = delta_observation(list(prev), list(curr), viewport=viewport,
+                             max_elements=int(max_elements),
+                             interactive_only=bool(interactive_only),
+                             max_lines=int(max_lines))
+    delta = delta_index(list(prev), list(curr))
+    return {"summary": text, "added": len(delta["added"]),
+            "removed": len(delta["removed"]), "changed": len(delta["changed"])}
+
+
+def _classify_effect(before: Any, after: Any, action: Any,
+                     radius: Any = 64) -> Dict[str, Any]:
+    """Adapter: classify whether an action changed the screen (target-local)."""
+    import json
+    from je_auto_control.utils.action_effect import classify_effect
+    if isinstance(before, str):
+        before = json.loads(before)
+    if isinstance(after, str):
+        after = json.loads(after)
+    if isinstance(action, str):
+        action = json.loads(action)
+    return classify_effect(before, after, action, radius=int(radius)).to_dict()
+
+
+def _effect_near_point(before: Any, after: Any, point: Any,
+                       radius: Any = 64) -> Dict[str, Any]:
+    """Adapter: did any before/after change land within radius of a point."""
+    import json
+    from je_auto_control.utils.action_effect import effect_near_point
+    if isinstance(before, str):
+        before = json.loads(before)
+    if isinstance(after, str):
+        after = json.loads(after)
+    if isinstance(point, str):
+        point = json.loads(point)
+    return {"near": effect_near_point(before, after, point, radius=int(radius))}
+
+
+def _check_postcondition(after: Any, spec: Any, before: Any = None) -> Dict[str, Any]:
+    """Adapter: evaluate a declarative postcondition spec against after/before frames."""
+    import json
+    from je_auto_control.utils.postcondition import check_postcondition
+    if isinstance(after, str):
+        after = json.loads(after)
+    if isinstance(spec, str):
+        spec = json.loads(spec)
+    if isinstance(before, str):
+        before = json.loads(before) if before.strip() else None
+    return check_postcondition(after, spec, before=before).to_dict()
+
+
+def _plan_repair(verdict: Any, max_attempts: Any = 3) -> Dict[str, Any]:
+    """Adapter: ordered repair tactics for an effect verdict (no_op / changed_…)."""
+    import json
+    from je_auto_control.utils.step_repair import RepairPolicy, plan_repair
+    if isinstance(verdict, str) and verdict.strip().startswith("{"):
+        verdict = json.loads(verdict)
+    tactics = plan_repair(verdict,
+                          policy=RepairPolicy(max_attempts=int(max_attempts)))
+    return {"count": len(tactics), "tactics": tactics}
 
 
 def _validate_action(action: Any, screen: Any = None,
@@ -5779,9 +5981,19 @@ class Executor:
             "AC_match_masked_all": _match_masked_all,
             "AC_match_rotated": _match_rotated,
             "AC_match_rotated_all": _match_rotated_all,
+            "AC_match_with_trust": _match_with_trust,
+            "AC_auto_threshold": _auto_threshold,
+            "AC_match_auto": _match_auto,
+            "AC_edge_match": _edge_match,
+            "AC_edge_match_all": _edge_match_all,
             "AC_grid_cells": _grid_cells,
             "AC_cell_for_point": _cell_for_point,
             "AC_point_for_cell": _point_for_cell,
+            "AC_populate_table": _populate_table,
+            "AC_column_gutters": _column_gutters,
+            "AC_detect_borderless_table": _detect_borderless_table,
+            "AC_associate_fields": _associate_fields,
+            "AC_match_labels_to_widgets": _match_labels_to_widgets,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,
@@ -5820,6 +6032,11 @@ class Executor:
             "AC_cua_command": _cua_command,
             "AC_serialize_observation": _serialize_observation,
             "AC_observation_index": _observation_index,
+            "AC_delta_observation": _delta_observation,
+            "AC_classify_effect": _classify_effect,
+            "AC_effect_near_point": _effect_near_point,
+            "AC_check_postcondition": _check_postcondition,
+            "AC_plan_repair": _plan_repair,
             "AC_validate_action": _validate_action,
             "AC_replay_trace": _replay_trace,
             "AC_match_elements": _match_elements,

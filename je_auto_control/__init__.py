@@ -283,9 +283,49 @@ from je_auto_control.utils.visual_match import Match as TemplateMatch
 from je_auto_control.utils.rotated_match import (
     RotatedMatch, match_rotated, match_rotated_all, scale_space,
 )
+# Template-match trustworthiness (second-peak ratio + peak-to-sidelobe)
+from je_auto_control.utils.match_trust import (
+    TrustedMatch, match_with_trust, score_peaks,
+)
+# Edge-shape (Chamfer / distance-transform) template matching
+from je_auto_control.utils.edge_match import (
+    chamfer_distance, edge_match, edge_match_all,
+)
+# Otsu auto-thresholding for template matching (no hand-tuned min_score)
+from je_auto_control.utils.match_autothresh import (
+    auto_threshold, match_auto,
+)
 # Coarse labelled cell grid for VLM grounding (point <-> cell mapping)
 from je_auto_control.utils.screen_grid import (
     GridCell, cell_for_point, grid_cells, point_for_cell,
+)
+# Fill a ruling-line grid with OCR text → addressable table
+from je_auto_control.utils.table_grid_fill import (
+    assign_text_to_grid, populate_table, table_to_csv, table_to_records,
+)
+# Token-budgeted observation delta (what changed between two UI frames)
+from je_auto_control.utils.observation_delta import (
+    delta_index, delta_observation, summarize_delta,
+)
+# Infer columns from vertical whitespace (borderless tables)
+from je_auto_control.utils.column_layout import (
+    assign_columns, column_gutters, detect_borderless_table, vertical_projection,
+)
+# Associate form labels with values (multi-direction) + checkbox state
+from je_auto_control.utils.form_fields import (
+    associate_fields, checkbox_state, match_labels_to_widgets,
+)
+# Classify whether an action did anything (target-local attribution)
+from je_auto_control.utils.action_effect import (
+    EffectVerdict, classify_effect, effect_near_point, is_no_op,
+)
+# Declarative action postconditions (expected outcome vs before/after)
+from je_auto_control.utils.postcondition import (
+    PostconditionReport, check_postcondition, compile_postcondition,
+)
+# Repair-tactic policy for failed / no-effect actions (self-correction loop)
+from je_auto_control.utils.step_repair import (
+    RepairOutcome, RepairPolicy, next_tactic, plan_repair, run_with_repair,
 )
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
@@ -1198,10 +1238,44 @@ __all__ = [
     "match_rotated",
     "match_rotated_all",
     "scale_space",
+    "TrustedMatch",
+    "match_with_trust",
+    "score_peaks",
+    "auto_threshold",
+    "match_auto",
+    "edge_match",
+    "edge_match_all",
+    "chamfer_distance",
     "GridCell",
     "grid_cells",
     "cell_for_point",
     "point_for_cell",
+    "assign_text_to_grid",
+    "populate_table",
+    "table_to_records",
+    "table_to_csv",
+    "delta_index",
+    "delta_observation",
+    "summarize_delta",
+    "vertical_projection",
+    "column_gutters",
+    "assign_columns",
+    "detect_borderless_table",
+    "associate_fields",
+    "match_labels_to_widgets",
+    "checkbox_state",
+    "EffectVerdict",
+    "classify_effect",
+    "effect_near_point",
+    "is_no_op",
+    "PostconditionReport",
+    "check_postcondition",
+    "compile_postcondition",
+    "RepairPolicy",
+    "RepairOutcome",
+    "plan_repair",
+    "next_tactic",
+    "run_with_repair",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",

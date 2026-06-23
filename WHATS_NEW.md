@@ -1,5 +1,65 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Repair-Tactic Policy for Failed / No-Effect Actions
+
+Pick the next repair tactic when an action does nothing — and drive the retry loop. Full reference: [`docs/source/Eng/doc/new_features/v170_features_doc.rst`](docs/source/Eng/doc/new_features/v170_features_doc.rst).
+
+- **`plan_repair` / `next_tactic` / `run_with_repair`** (`AC_plan_repair`): `self_healing`/`locator_repair` only fix a locator that *didn't resolve*; `loop_guard` only *detects* a stuck loop with no tactic selection. This consumes an effect verdict (e.g. from `action_effect`) and returns the ordered tactics to try — `wait_retry` / `relocate` / `nudge` / `scroll_into_view` / `escalate` — then `run_with_repair` drives a bounded retry loop with injected `act` / `verify` / `apply_tactic` / `verdict_for` / `sleep` seams, returning a `RepairOutcome`. Pure-stdlib state machine; no `PySide6`. Completes the self-correction trio with `action_effect` + `postcondition`.
+
+## What's new (2026-06-24) — Declarative Action Postconditions
+
+Assert an action's expected outcome as a JSON spec, diffed against the before-frame. Full reference: [`docs/source/Eng/doc/new_features/v169_features_doc.rst`](docs/source/Eng/doc/new_features/v169_features_doc.rst).
+
+- **`check_postcondition` / `compile_postcondition`** (`AC_check_postcondition`): `expect_poll`/`assert_eventually` poll a single condition with no action-bound spec and no before-baseline (so they can't express "a *new* dialog appeared"); `trajectory_eval` is whole-trajectory. This evaluates a small JSON spec of clauses — `appears`/`disappears` (diffed vs `before`), `enabled`/`disabled`, `text_present`/`text_absent`, `count` — against the after-observation, returning a per-clause `{ok, clauses, failed}` report. `compile_postcondition` turns a spec into an `after -> bool` predicate for `expect_poll`. Pure-stdlib; no `PySide6`.
+
+## What's new (2026-06-24) — Edge-Shape (Chamfer) Template Matching
+
+Locate flat icons by outline, robust to fill / theme / anti-aliasing. Full reference: [`docs/source/Eng/doc/new_features/v168_features_doc.rst`](docs/source/Eng/doc/new_features/v168_features_doc.rst).
+
+- **`edge_match` / `edge_match_all` / `chamfer_distance`** (`AC_edge_match`, `AC_edge_match_all`): intensity NCC (`visual_match`) drops when a control is re-filled / re-themed, and ORB (`feature_match`) needs corner texture flat-design glyphs lack. This matches by *edge shape*: Canny both images, distance-transform the scene edges, slide the template's edges over it and score by mean edge-to-edge distance (Chamfer). A perfect outline aligns at ~0 cost regardless of fill. Reuses `visual_match`'s loaders / resize / NMS / `Match` and `edge_lines`'s Canny default. Injectable `haystack`; no `PySide6`.
+
+## What's new (2026-06-24) — Action-Effect Classification (Did My Click Do Anything?)
+
+Tell an agent whether a click did anything — and whether it happened where it aimed. Full reference: [`docs/source/Eng/doc/new_features/v167_features_doc.rst`](docs/source/Eng/doc/new_features/v167_features_doc.rst).
+
+- **`classify_effect` / `effect_near_point` / `is_no_op`** (`AC_classify_effect`, `AC_effect_near_point`): `screen_state`/`element_diff` report what changed but never tie it to the action; `loop_guard` only flags a no-op after N repeats. This diffs the before/after observation and, given the action's target point, classifies the result on the *first* step as `no_op` / `changed_near_target` / `changed_elsewhere` (a surprise dialog) / `changed`, returning an `EffectVerdict` with the changed centres and a reason. Reuses `element_diff.match_elements` + `observation_delta`'s field-change check. Pure-stdlib; no `PySide6`.
+
+## What's new (2026-06-24) — Form Field Association (Multi-Direction) + Checkbox State
+
+Pair form labels with values even when the value is below or right-aligned, and read checkbox state. Full reference: [`docs/source/Eng/doc/new_features/v166_features_doc.rst`](docs/source/Eng/doc/new_features/v166_features_doc.rst).
+
+- **`associate_fields` / `match_labels_to_widgets` / `checkbox_state`** (`AC_associate_fields`, `AC_match_labels_to_widgets`): `ocr/structure` only pairs a `label:` with the *immediately next* cell — it can't handle label-above-value, two-column key/value, right-aligned values, or non-text widgets, and has no checkbox notion. This pairs each label with the nearest aligned value across *directions* (right / below) within `max_gap`, matches free-standing widgets (checkbox/radio/input) to their nearest label, and reads checkbox state from the box's dark-pixel fill ratio. Association is pure-stdlib; only `checkbox_state` touches pixels (behind the `visual_match` gray loader). No `PySide6`.
+
+## What's new (2026-06-24) — Whitespace-Projection Columns (Borderless Tables)
+
+Read borderless tables by inferring columns from the whitespace gaps. Full reference: [`docs/source/Eng/doc/new_features/v165_features_doc.rst`](docs/source/Eng/doc/new_features/v165_features_doc.rst).
+
+- **`detect_borderless_table` / `column_gutters` / `assign_columns` / `vertical_projection`** (`AC_detect_borderless_table`, `AC_column_gutters`): `ocr/structure` only detects a table when every row's cell-left-x matches — it fails on ragged / borderless / right-aligned columns; `edge_lines.find_grid` needs ruling lines a whitespace table doesn't have. This finds columns by the *gaps*: project OCR boxes onto the x-axis, read the persistent empty vertical bands as gutters, assign column indices, bucket rows by spacing, and emit `{n_rows, n_cols, rows, columns}`. Pure-stdlib difference-array projection (no numpy); reuses `table_grid_fill`'s box reader. No `PySide6`.
+
+## What's new (2026-06-24) — Auto-Thresholded Template Matching (Otsu on the Score Map)
+
+No more hand-tuned `min_score` — derive the match threshold from the score map. Full reference: [`docs/source/Eng/doc/new_features/v164_features_doc.rst`](docs/source/Eng/doc/new_features/v164_features_doc.rst).
+
+- **`match_auto` / `auto_threshold`** (`AC_match_auto`, `AC_auto_threshold`): every `match_template_all` call forces you to guess `min_score` (too low floods NMS, too high drops re-themed targets, and it differs per asset). This runs Otsu on the *correlation score histogram* to find the valley between background correlation and real matches, returns that cut-off plus a *separability* score (near 0 = unimodal, no clear match → don't trust it). `match_auto` returns one peak per above-threshold region (via `connected_boxes`, avoiding duplicate hits on a wide peak), clamped by a `floor`. Reuses the new `visual_match._score_map`; injectable `haystack`; no `PySide6`.
+
+## What's new (2026-06-24) — Token-Budgeted Observation Delta (What Changed)
+
+Tell an agent *what changed* since the last step, not the whole screen again. Full reference: [`docs/source/Eng/doc/new_features/v163_features_doc.rst`](docs/source/Eng/doc/new_features/v163_features_doc.rst).
+
+- **`delta_observation` / `delta_index` / `summarize_delta`** (`AC_delta_observation`): `serialize_observation` renders one full frame (blows the token budget every turn); `element_diff` gives the stable-ID correspondence but stops at matched/added/removed element pairs. This is the missing serializer — it diffs two frames, classifies matched elements as changed (role/name/enabled/value/moved) or stable, and renders only the churn as `+ [i] role "name"` / `~ [i] … (fields)` / `- …` lines (added & changed first, stable dropped, capped at `max_lines`). Reuses `element_diff.match_elements` + `observation.observation_index`. Pure-stdlib; no `PySide6`.
+
+## What's new (2026-06-24) — Fill a Ruling-Line Grid With OCR Text (Addressable Tables)
+
+Turn a bordered table's lines + OCR words into an addressable `R x C` table. Full reference: [`docs/source/Eng/doc/new_features/v162_features_doc.rst`](docs/source/Eng/doc/new_features/v162_features_doc.rst).
+
+- **`populate_table` / `assign_text_to_grid` / `table_to_records` / `table_to_csv`** (`AC_populate_table`): `edge_lines.find_grid` recovers a table's ruling-line geometry but the cells come back *empty*; OCR gives the text but no structure — nothing joined them. This drops OCR boxes into the grid (assigned by cell-centre, gated by an overlap fraction so a box straddling a thin rule isn't double-counted), concatenates each cell's text in reading order, flags merged-cell spans, and converts straight to records / CSV. Pure-stdlib over plain dicts — no image, no OCR engine, no device. No `PySide6`.
+
+## What's new (2026-06-24) — Trust-Scored Template Matching (Ambiguity / PSR)
+
+Know when a template match is strong but *ambiguous* before clicking it. Full reference: [`docs/source/Eng/doc/new_features/v161_features_doc.rst`](docs/source/Eng/doc/new_features/v161_features_doc.rst).
+
+- **`match_with_trust` / `score_peaks`** (`AC_match_with_trust`): `match_template` returns only the top score and clicks it — but a button repeated in a toolbar or a near-identical sibling correlates ~0.95 in two places, so a high score is not an *unambiguous* match. This adds a Lowe-style ratio test *for pixel templates* (ORB got one via `feature_match`; `match_template` never did): it inspects the whole correlation surface, compares the global peak to the next-best peak outside an exclusion window, computes the peak-to-sidelobe ratio (PSR), and returns a `TrustedMatch` with `second_score` / `peak_ratio` / `psr` / `is_ambiguous`. Reuses a new `visual_match._score_map` (the full `matchTemplate` surface the public matchers discard) — no matching code duplicated. Injectable `haystack`; no `PySide6`.
+
 ## What's new (2026-06-23) — Clipboard File-Drop List (CF_HDROP)
 
 Put a list of files on the clipboard, ready to paste into Explorer. Full reference: [`docs/source/Eng/doc/new_features/v160_features_doc.rst`](docs/source/Eng/doc/new_features/v160_features_doc.rst).
