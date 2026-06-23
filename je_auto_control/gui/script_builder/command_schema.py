@@ -587,6 +587,15 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         description="Decode QR codes in a screen region (OpenCV).",
     ))
     specs.append(CommandSpec(
+        "AC_read_barcodes", "OCR", "Read Barcodes (1-D)",
+        fields=(
+            FieldSpec("source", FieldType.FILE_PATH, optional=True),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Decode 1-D barcodes (EAN / UPC) in an image / screen region.",
+    ))
+    specs.append(CommandSpec(
         "AC_scroll_to_find", "OCR", "Scroll Until Visible",
         fields=(
             FieldSpec("target", FieldType.STRING),
