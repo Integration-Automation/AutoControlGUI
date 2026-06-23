@@ -347,6 +347,10 @@ from je_auto_control.utils.img_histogram import (
 from je_auto_control.utils.motion_regions import (
     activity_score, changed_regions, has_motion,
 )
+# Window z-order control (topmost / bring-to-front / send-to-back)
+from je_auto_control.utils.window_zorder import (
+    bring_to_front, plan_zorder, send_to_back, set_topmost,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1209,6 +1213,10 @@ __all__ = [
     "changed_regions",
     "has_motion",
     "activity_score",
+    "plan_zorder",
+    "set_topmost",
+    "bring_to_front",
+    "send_to_back",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

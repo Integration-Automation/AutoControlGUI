@@ -3158,6 +3158,38 @@ def motion_regions_tools() -> List[MCPTool]:
     ]
 
 
+def window_zorder_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_set_topmost",
+            description=("Pin the window matching 'title' always-on-top (or release "
+                         "it with on=false). Returns {applied}. Windows only."),
+            input_schema=schema({
+                "title": {"type": "string"},
+                "on": {"type": "boolean"}},
+                required=["title"]),
+            handler=h.set_topmost,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_bring_to_front",
+            description=("Raise the window matching 'title' to the top of the "
+                         "z-order. Returns {applied}. Windows only."),
+            input_schema=schema({"title": {"type": "string"}}, required=["title"]),
+            handler=h.bring_to_front,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_send_to_back",
+            description=("Send the window matching 'title' to the bottom of the "
+                         "z-order. Returns {applied}. Windows only."),
+            input_schema=schema({"title": {"type": "string"}}, required=["title"]),
+            handler=h.send_to_back,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6664,7 +6696,7 @@ ALL_FACTORIES = (
     monitor_layout_tools, actionability_tools, element_parse_tools,
     hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
     locator_chain_tools, rich_clipboard_tools, img_histogram_tools,
-    motion_regions_tools, plugin_sdk_tools, governance_tools,
+    motion_regions_tools, window_zorder_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

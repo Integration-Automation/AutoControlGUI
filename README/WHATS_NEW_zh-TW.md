@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 視窗 Z-order(置頂 / 最前 / 最後)
+
+把視窗釘在最上層、移到最前、或推到後面。完整參考:[`docs/source/Zh/doc/new_features/v147_features_doc.rst`](../docs/source/Zh/doc/new_features/v147_features_doc.rst)。
+
+- **`set_topmost` / `bring_to_front` / `send_to_back` / `plan_zorder`**(`AC_set_topmost`、`AC_bring_to_front`、`AC_send_to_back`):原始 `set_window_position` 存在但未在 facade、無標題包裝也無 topmost 語意——缺少標準 RPA 的「置頂」。`plan_zorder` 是純動作→`SetWindowPos` 常數查找(可無頭測試);以標題操作的設定器透過可注入 driver(`snap_window` 接縫模式)套用,預設為 Win32。
+
 ## 本次更新 (2026-06-23) — 局部動態 / 活動偵測
 
 找出兩幀之間哪些子區域在動。完整參考:[`docs/source/Zh/doc/new_features/v146_features_doc.rst`](../docs/source/Zh/doc/new_features/v146_features_doc.rst)。

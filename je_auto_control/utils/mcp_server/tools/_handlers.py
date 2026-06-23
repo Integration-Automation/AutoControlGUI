@@ -2268,6 +2268,21 @@ def has_motion(before, after=None, threshold=25, min_area=80):
     return _has_motion(before, after, threshold, min_area)
 
 
+def set_topmost(title, on=True):
+    from je_auto_control.utils.executor.action_executor import _set_topmost
+    return _set_topmost(title, on)
+
+
+def bring_to_front(title):
+    from je_auto_control.utils.executor.action_executor import _bring_to_front
+    return _bring_to_front(title)
+
+
+def send_to_back(title):
+    from je_auto_control.utils.executor.action_executor import _send_to_back
+    return _send_to_back(title)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

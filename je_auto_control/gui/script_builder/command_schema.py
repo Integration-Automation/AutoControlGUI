@@ -677,6 +677,24 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         description="Cascade a list of windows diagonally.",
     ))
     specs.append(CommandSpec(
+        "AC_set_topmost", "Window", "Set Always-On-Top",
+        fields=(
+            FieldSpec("title", FieldType.STRING),
+            FieldSpec("on", FieldType.BOOL, optional=True, default=True),
+        ),
+        description="Pin a window always-on-top (or release it).",
+    ))
+    specs.append(CommandSpec(
+        "AC_bring_to_front", "Window", "Bring Window to Front",
+        fields=(FieldSpec("title", FieldType.STRING),),
+        description="Raise a window to the top of the z-order.",
+    ))
+    specs.append(CommandSpec(
+        "AC_send_to_back", "Window", "Send Window to Back",
+        fields=(FieldSpec("title", FieldType.STRING),),
+        description="Send a window to the bottom of the z-order.",
+    ))
+    specs.append(CommandSpec(
         "AC_wait_window_closed", "Window", "Wait for Window to Close",
         fields=(
             FieldSpec("title", FieldType.STRING),

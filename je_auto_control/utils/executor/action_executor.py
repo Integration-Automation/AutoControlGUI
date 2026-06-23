@@ -3735,6 +3735,24 @@ def _resolve_after(after: Any):
     return np.asarray(pil_screenshot().convert("RGB"))
 
 
+def _set_topmost(title: str, on: Any = True) -> Dict[str, Any]:
+    """Adapter: pin a window always-on-top (or release it)."""
+    from je_auto_control.utils.window_zorder import set_topmost
+    return {"applied": set_topmost(title, bool(on))}
+
+
+def _bring_to_front(title: str) -> Dict[str, Any]:
+    """Adapter: raise a window to the top of the z-order."""
+    from je_auto_control.utils.window_zorder import bring_to_front
+    return {"applied": bring_to_front(title)}
+
+
+def _send_to_back(title: str) -> Dict[str, Any]:
+    """Adapter: send a window to the bottom of the z-order."""
+    from je_auto_control.utils.window_zorder import send_to_back
+    return {"applied": send_to_back(title)}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5482,6 +5500,9 @@ class Executor:
             "AC_histogram_changed": _histogram_changed,
             "AC_changed_regions": _changed_regions,
             "AC_has_motion": _has_motion,
+            "AC_set_topmost": _set_topmost,
+            "AC_bring_to_front": _bring_to_front,
+            "AC_send_to_back": _send_to_back,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,
