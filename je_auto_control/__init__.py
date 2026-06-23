@@ -323,6 +323,10 @@ from je_auto_control.utils.reading_flow import (
 from je_auto_control.utils.text_blocks import (
     detect_lists, group_paragraphs,
 )
+# Classify OCR lines as headings vs body and build a document outline
+from je_auto_control.utils.heading_segment import (
+    classify_lines, outline,
+)
 # Associate form labels with values (multi-direction) + checkbox state
 from je_auto_control.utils.form_fields import (
     associate_fields, checkbox_state, match_labels_to_widgets,
@@ -1289,6 +1293,8 @@ __all__ = [
     "to_blocks",
     "group_paragraphs",
     "detect_lists",
+    "classify_lines",
+    "outline",
     "associate_fields",
     "match_labels_to_widgets",
     "checkbox_state",

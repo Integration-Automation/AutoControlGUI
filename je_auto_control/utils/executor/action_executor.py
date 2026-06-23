@@ -3537,6 +3537,26 @@ def _detect_lists(lines: Any) -> Dict[str, Any]:
     return {"count": len(items), "items": items}
 
 
+def _classify_lines(lines: Any, heading_ratio: Any = 1.2) -> Dict[str, Any]:
+    """Adapter: classify OCR lines as headings vs body with levels."""
+    import json
+    from je_auto_control.utils.heading_segment import classify_lines
+    if isinstance(lines, str):
+        lines = json.loads(lines)
+    classified = classify_lines(lines, heading_ratio=float(heading_ratio))
+    return {"count": len(classified), "lines": classified}
+
+
+def _outline(lines: Any, heading_ratio: Any = 1.2) -> Dict[str, Any]:
+    """Adapter: the document outline (headings in order) from OCR lines."""
+    import json
+    from je_auto_control.utils.heading_segment import outline
+    if isinstance(lines, str):
+        lines = json.loads(lines)
+    headings = outline(lines, heading_ratio=float(heading_ratio))
+    return {"count": len(headings), "headings": headings}
+
+
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
                        region: Any = None) -> Dict[str, Any]:
     """Adapter: locate coloured regions on the screen, largest first."""
@@ -6089,6 +6109,8 @@ class Executor:
             "AC_xy_cut": _xy_cut,
             "AC_group_paragraphs": _group_paragraphs,
             "AC_detect_lists": _detect_lists,
+            "AC_classify_lines": _classify_lines,
+            "AC_outline": _outline,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,

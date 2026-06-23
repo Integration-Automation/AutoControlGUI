@@ -2205,6 +2205,16 @@ def detect_lists(lines):
     return _detect_lists(lines)
 
 
+def classify_lines(lines, heading_ratio=1.2):
+    from je_auto_control.utils.executor.action_executor import _classify_lines
+    return _classify_lines(lines, heading_ratio)
+
+
+def outline(lines, heading_ratio=1.2):
+    from je_auto_control.utils.executor.action_executor import _outline
+    return _outline(lines, heading_ratio)
+
+
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
     from je_auto_control.utils.executor.action_executor import (
         _find_color_region)

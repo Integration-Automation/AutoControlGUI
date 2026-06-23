@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 標題與內文分類 + 文件大綱
+
+以高度區分標題與內文,並建立文件大綱。完整參考:[`docs/source/Zh/doc/new_features/v176_features_doc.rst`](../docs/source/Zh/doc/new_features/v176_features_doc.rst)。
+
+- **`classify_lines` / `outline`**(`AC_classify_lines`、`AC_outline`):框架中沒有功能把行高對應到標題層級或建立章節大綱——`ocr/structure` / `element_parse` 純屬位置性,`text_blocks` 不排序。本功能套用標準啟發法:行高超過 `heading_ratio` × 中位行高者為標題,不同標題高度成為層級(最高 = 1)。`classify_lines` 為每行標記 `{box, text, role, level}`;`outline` 依序回傳標題作為目錄。純標準函式庫,作用於行字典;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 變化量序列的穩定偵測
 
 判斷 UI 何時安定下來——以純粹、可測試的函式作用於變化序列。完整參考:[`docs/source/Zh/doc/new_features/v175_features_doc.rst`](../docs/source/Zh/doc/new_features/v175_features_doc.rst)。

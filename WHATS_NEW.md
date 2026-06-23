@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Heading vs Body Classification + Document Outline
+
+Tell headings from body text by height and build a document outline. Full reference: [`docs/source/Eng/doc/new_features/v176_features_doc.rst`](docs/source/Eng/doc/new_features/v176_features_doc.rst).
+
+- **`classify_lines` / `outline`** (`AC_classify_lines`, `AC_outline`): nothing mapped line height to heading levels or built a section outline — `ocr/structure` / `element_parse` are positional and `text_blocks` doesn't rank. This applies the standard heuristic: a line taller than `heading_ratio` × the median line height is a heading, and distinct heading heights become levels (tallest = 1). `classify_lines` tags each line `{box, text, role, level}`; `outline` returns the headings in order as a table of contents. Pure-stdlib over line dicts; no `PySide6`.
+
 ## What's new (2026-06-24) — Settle Detection Over a Churn Series
 
 Decide when the UI has gone quiet — as a pure, testable function over a change series. Full reference: [`docs/source/Eng/doc/new_features/v175_features_doc.rst`](docs/source/Eng/doc/new_features/v175_features_doc.rst).
