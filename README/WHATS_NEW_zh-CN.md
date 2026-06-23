@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 粗粒度标签屏幕网格(VLM Grounding)
+
+以网格单元格(「点击 C3」)而非原始像素引用屏幕区域。完整参考:[`docs/source/Zh/doc/new_features/v159_features_doc.rst`](../docs/source/Zh/doc/new_features/v159_features_doc.rst)。
+
+- **`grid_cells` / `cell_for_point` / `point_for_cell`**(`AC_grid_cells`、`AC_cell_for_point`、`AC_point_for_cell`):VLM grounding 在模型指名粗粒度单元格时,远比输出容易幻觉的像素坐标更可靠。本功能在屏幕(或 `region`)上铺设 `rows`x`cols` 网格,以电子表格风格标记每个单元格(左上 `A1`,超过 `Z` → `AA`),并双向对应——点 → 包含的单元格、指名单元格 → 中心点(可直接点击)。纯标准库几何;唯一设备相关的路径是读取实时屏幕尺寸的默认行为,因此每个函数都可通过明确 `region` 无头测试。不导入 `PySide6`。
+
 ## 本次更新 (2026-06-23) — 旋转与缩放容忍的模板匹配
 
 不只缩放,还能找到旋转或倾斜的模板。完整参考:[`docs/source/Zh/doc/new_features/v158_features_doc.rst`](../docs/source/Zh/doc/new_features/v158_features_doc.rst)。

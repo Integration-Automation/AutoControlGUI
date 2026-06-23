@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Coarse Labelled Screen Grid (VLM Grounding)
+
+Refer to screen regions as grid cells ("click C3") instead of raw pixels. Full reference: [`docs/source/Eng/doc/new_features/v159_features_doc.rst`](docs/source/Eng/doc/new_features/v159_features_doc.rst).
+
+- **`grid_cells` / `cell_for_point` / `point_for_cell`** (`AC_grid_cells`, `AC_cell_for_point`, `AC_point_for_cell`): VLM grounding is far more reliable when a model names a coarse cell than when it emits hallucinated pixel coordinates. This lays an `rows`x`cols` grid over the screen (or a `region`), labels each cell spreadsheet-style (`A1` top-left, past `Z` → `AA`), and maps both ways — point → containing cell, named cell → centre point (ready to click). Pure-stdlib geometry; the only device-bound path is the default that reads the live screen size, so every function is headless-testable with an explicit `region`. No `PySide6`.
+
 ## What's new (2026-06-23) — Rotation- & Scale-Tolerant Template Matching
 
 Find templates that are rotated or skewed, not just scaled. Full reference: [`docs/source/Eng/doc/new_features/v158_features_doc.rst`](docs/source/Eng/doc/new_features/v158_features_doc.rst).

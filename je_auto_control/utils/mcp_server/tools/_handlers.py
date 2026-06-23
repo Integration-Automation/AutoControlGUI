@@ -2108,6 +2108,21 @@ def match_rotated_all(template, min_score=0.8, scales=None, angles=None,
                               nms_iou, region)
 
 
+def grid_cells(rows, cols, region=None):
+    from je_auto_control.utils.executor.action_executor import _grid_cells
+    return _grid_cells(rows, cols, region)
+
+
+def cell_for_point(x, y, rows, cols, region=None):
+    from je_auto_control.utils.executor.action_executor import _cell_for_point
+    return _cell_for_point(x, y, rows, cols, region)
+
+
+def point_for_cell(label, rows, cols, region=None):
+    from je_auto_control.utils.executor.action_executor import _point_for_cell
+    return _point_for_cell(label, rows, cols, region)
+
+
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
     from je_auto_control.utils.executor.action_executor import (
         _find_color_region)
