@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 局部动态 / 活动检测
+
+找出两帧之间哪些子区域在动。完整参考:[`docs/source/Zh/doc/new_features/v146_features_doc.rst`](../docs/source/Zh/doc/new_features/v146_features_doc.rst)。
+
+- **`changed_regions` / `has_motion` / `activity_score`**(`AC_changed_regions`、`AC_has_motion`):`wait_until_screen_stable` 是布尔轮询、`ssim_changed_regions` 是结构性(忽略快速动态)、`diff_screenshots` 非活动区块。本功能是便宜的 absdiff 路径——对逐像素差做门槛、膨胀,返回移动区域方框(由大到小)、布尔值,以及移动像素比例。挑选安静区域或定位转圈动画。两个可注入帧 → 无头可测;沿用共用连通元件辅助;执行器中 `after` 默认为即时屏幕截取。
+
 ## 本次更新 (2026-06-23) — 色彩直方图指纹与变化检测
 
 判断画面在光照 / 缩放下是否仍是「同一个」。完整参考:[`docs/source/Zh/doc/new_features/v145_features_doc.rst`](../docs/source/Zh/doc/new_features/v145_features_doc.rst)。

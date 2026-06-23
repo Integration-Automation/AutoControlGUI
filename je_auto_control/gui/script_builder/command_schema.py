@@ -532,6 +532,27 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Detect a palette/view change vs a reference (illumination-robust).",
     ))
+    specs.append(CommandSpec(
+        "AC_changed_regions", "Image", "Changed Regions (motion)",
+        fields=(
+            FieldSpec("before", FieldType.FILE_PATH),
+            FieldSpec("after", FieldType.FILE_PATH, optional=True),
+            FieldSpec("threshold", FieldType.INT, optional=True, default=25),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=80),
+            FieldSpec("blur", FieldType.INT, optional=True, default=5),
+        ),
+        description="Boxes of regions that moved between two frames (after=screen).",
+    ))
+    specs.append(CommandSpec(
+        "AC_has_motion", "Image", "Has Motion?",
+        fields=(
+            FieldSpec("before", FieldType.FILE_PATH),
+            FieldSpec("after", FieldType.FILE_PATH, optional=True),
+            FieldSpec("threshold", FieldType.INT, optional=True, default=25),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=80),
+        ),
+        description="Whether anything moved between two frames (+ activity score).",
+    ))
 
 
 def _add_ocr_specs(specs: List[CommandSpec]) -> None:

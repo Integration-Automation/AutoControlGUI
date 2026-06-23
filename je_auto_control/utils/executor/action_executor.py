@@ -3707,6 +3707,34 @@ def _histogram_changed(reference: str, current: Any = None, method: str =
             "score": compare_histograms(ref_hist, cur_hist, method=str(method))}
 
 
+def _changed_regions(before: str, after: Any = None, threshold: Any = 25,
+                     min_area: Any = 80, blur: Any = 5) -> Dict[str, Any]:
+    """Adapter: boxes of regions that moved between two frames (after=screen)."""
+    from je_auto_control.utils.motion_regions import changed_regions
+    regions = changed_regions(before, _resolve_after(after), threshold=int(threshold),
+                              min_area=int(min_area), blur=int(blur))
+    return {"count": len(regions), "regions": regions}
+
+
+def _has_motion(before: str, after: Any = None, threshold: Any = 25,
+                min_area: Any = 80) -> Dict[str, Any]:
+    """Adapter: whether anything moved between two frames (after=screen)."""
+    from je_auto_control.utils.motion_regions import activity_score, has_motion
+    resolved = _resolve_after(after)
+    return {"moved": has_motion(before, resolved, threshold=int(threshold),
+                                min_area=int(min_area)),
+            "activity": activity_score(before, resolved, threshold=int(threshold))}
+
+
+def _resolve_after(after: Any):
+    """Return the 'after' frame, grabbing the screen when it is not given."""
+    if after is not None:
+        return after
+    import numpy as np
+    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
+    return np.asarray(pil_screenshot().convert("RGB"))
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5452,6 +5480,8 @@ class Executor:
             "AC_get_clipboard_html": _get_clipboard_html,
             "AC_image_histogram": _image_histogram,
             "AC_histogram_changed": _histogram_changed,
+            "AC_changed_regions": _changed_regions,
+            "AC_has_motion": _has_motion,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

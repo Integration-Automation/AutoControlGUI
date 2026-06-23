@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Localized Motion / Activity Detection
+
+Find which sub-regions are animating between two frames. Full reference: [`docs/source/Eng/doc/new_features/v146_features_doc.rst`](docs/source/Eng/doc/new_features/v146_features_doc.rst).
+
+- **`changed_regions` / `has_motion` / `activity_score`** (`AC_changed_regions`, `AC_has_motion`): `wait_until_screen_stable` is a boolean poll, `ssim_changed_regions` is structural (ignores fast motion), `diff_screenshots` isn't activity blobs. This is the cheap absdiff path — threshold the per-pixel difference, dilate, and return the moved-region boxes (largest first), a boolean, and the fraction of pixels that moved. Pick a quiet area or locate a spinner. Two injectable frames → headless-testable; reuses the shared connected-components helper; `after` defaults to a live screen grab in the executor.
+
 ## What's new (2026-06-23) — Colour-Histogram Fingerprint & Change Detection
 
 Tell whether the view is "the same" despite lighting / scale. Full reference: [`docs/source/Eng/doc/new_features/v145_features_doc.rst`](docs/source/Eng/doc/new_features/v145_features_doc.rst).
