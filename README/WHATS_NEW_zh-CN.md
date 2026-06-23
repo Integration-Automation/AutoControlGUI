@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 丰富剪贴板(HTML / CF_HTML)
+
+把*格式化*的 HTML 复制粘贴到 Word / Outlook。完整参考:[`docs/source/Zh/doc/new_features/v144_features_doc.rst`](../docs/source/Zh/doc/new_features/v144_features_doc.rst)。
+
+- **`build_cf_html` / `parse_cf_html` / `set_clipboard_html` / `get_clipboard_html`**(`AC_set_clipboard_html`、`AC_get_clipboard_html`):基础剪贴板只处理纯文字 + 图像——富文字粘贴需要 `CF_HTML`,其字节偏移标头(`StartHTML`/`EndHTML`/`StartFragment`/`EndFragment`)极易出错。`build_cf_html`/`parse_cf_html` 以纯 Python 计算与还原它(往返测试、多字节 UTF-8 正确);`set/get_clipboard_html` 将其包装于 Win32 剪贴板(含纯文字后备)。字节偏移运算可无头测试;只有 I/O 为 Windows。
+
 ## 本次更新 (2026-06-23) — 可串接 / 可过滤的候选定位器
 
 用链式调用细化已定位的元素:`.within(panel).filter(has_text="Delete").nth(1)`。完整参考:[`docs/source/Zh/doc/new_features/v143_features_doc.rst`](../docs/source/Zh/doc/new_features/v143_features_doc.rst)。

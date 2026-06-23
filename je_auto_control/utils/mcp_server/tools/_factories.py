@@ -3060,6 +3060,32 @@ def locator_chain_tools() -> List[MCPTool]:
     ]
 
 
+def rich_clipboard_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_set_clipboard_html",
+            description=("Put an HTML fragment on the clipboard as CF_HTML for rich "
+                         "paste into Word / Outlook / rich editors (Windows). "
+                         "'fragment_plaintext' is also set as plain text. Returns "
+                         "{set, length}."),
+            input_schema=schema({
+                "html": {"type": "string"},
+                "fragment_plaintext": {"type": "string"}},
+                required=["html"]),
+            handler=h.set_clipboard_html,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_clipboard_html",
+            description=("Read the clipboard's HTML fragment (CF_HTML, Windows). "
+                         "Returns {found, html}."),
+            input_schema=schema({}, required=[]),
+            handler=h.get_clipboard_html,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6565,7 +6591,7 @@ ALL_FACTORIES = (
     window_layout_tools, window_arrange_tools, preprocess_tools,
     monitor_layout_tools, actionability_tools, element_parse_tools,
     hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
-    locator_chain_tools, plugin_sdk_tools, governance_tools,
+    locator_chain_tools, rich_clipboard_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

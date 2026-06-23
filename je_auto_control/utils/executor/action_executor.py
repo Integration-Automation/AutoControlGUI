@@ -3661,6 +3661,21 @@ def _locate_chain(boxes: Any, ops: Any = None) -> Dict[str, Any]:
             "center": candidates.center()}
 
 
+def _set_clipboard_html(html: str, fragment_plaintext: Any = None
+                        ) -> Dict[str, Any]:
+    """Adapter: put an HTML fragment on the clipboard as CF_HTML (Windows)."""
+    from je_auto_control.utils.rich_clipboard import set_clipboard_html
+    set_clipboard_html(str(html), fragment_plaintext=fragment_plaintext)
+    return {"set": True, "length": len(str(html))}
+
+
+def _get_clipboard_html() -> Dict[str, Any]:
+    """Adapter: read the clipboard's HTML fragment (Windows)."""
+    from je_auto_control.utils.rich_clipboard import get_clipboard_html
+    html = get_clipboard_html()
+    return {"found": html is not None, "html": html}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5402,6 +5417,8 @@ class Executor:
             "AC_find_separators": _find_separators,
             "AC_expect_poll": _expect_poll,
             "AC_locate_chain": _locate_chain,
+            "AC_set_clipboard_html": _set_clipboard_html,
+            "AC_get_clipboard_html": _get_clipboard_html,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

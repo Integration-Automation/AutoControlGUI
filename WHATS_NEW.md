@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Rich Clipboard (HTML / CF_HTML)
+
+Copy and paste *formatted* HTML into Word / Outlook. Full reference: [`docs/source/Eng/doc/new_features/v144_features_doc.rst`](docs/source/Eng/doc/new_features/v144_features_doc.rst).
+
+- **`build_cf_html` / `parse_cf_html` / `set_clipboard_html` / `get_clipboard_html`** (`AC_set_clipboard_html`, `AC_get_clipboard_html`): the base clipboard handles plain text + image only — rich paste needs `CF_HTML`, whose byte-offset header (`StartHTML`/`EndHTML`/`StartFragment`/`EndFragment`) is famously error-prone. `build_cf_html`/`parse_cf_html` compute and recover it in pure Python (round-trip tested, correct across multi-byte UTF-8); `set/get_clipboard_html` wrap them over the Win32 clipboard (with a plain-text fallback). Byte-offset math is headless-testable; only the I/O is Windows.
+
 ## What's new (2026-06-23) — Composable / Filtered Candidate Locators
 
 Refine located elements with a chain: `.within(panel).filter(has_text="Delete").nth(1)`. Full reference: [`docs/source/Eng/doc/new_features/v143_features_doc.rst`](docs/source/Eng/doc/new_features/v143_features_doc.rst).

@@ -1045,6 +1045,19 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
 def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_native_control_specs(specs)
     specs.append(CommandSpec(
+        "AC_set_clipboard_html", "Data", "Set Clipboard HTML",
+        fields=(
+            FieldSpec("html", FieldType.STRING,
+                      placeholder="<b>Bold</b> rich text"),
+            FieldSpec("fragment_plaintext", FieldType.STRING, optional=True),
+        ),
+        description="Put rich HTML on the clipboard (CF_HTML, Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_clipboard_html", "Data", "Get Clipboard HTML",
+        description="Read the clipboard's HTML fragment (CF_HTML, Windows).",
+    ))
+    specs.append(CommandSpec(
         "AC_watchdog_add", "Flow", "Watchdog: Add Popup Rule",
         fields=(
             FieldSpec("title", FieldType.STRING),
