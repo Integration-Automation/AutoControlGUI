@@ -3498,6 +3498,25 @@ def _match_labels_to_widgets(labels: Any, widgets: Any) -> Dict[str, Any]:
     return {"count": len(pairs), "pairs": pairs}
 
 
+def _flow_order(boxes: Any, min_gap: Any = 12) -> Dict[str, Any]:
+    """Adapter: column-aware reading order of OCR boxes (XY-cut)."""
+    import json
+    from je_auto_control.utils.reading_flow import flow_order
+    if isinstance(boxes, str):
+        boxes = json.loads(boxes)
+    ordered = flow_order(boxes, min_gap=int(min_gap))
+    return {"count": len(ordered), "elements": ordered}
+
+
+def _xy_cut(boxes: Any, min_gap: Any = 12) -> Dict[str, Any]:
+    """Adapter: recursive XY-cut region tree of OCR boxes."""
+    import json
+    from je_auto_control.utils.reading_flow import xy_cut
+    if isinstance(boxes, str):
+        boxes = json.loads(boxes)
+    return {"tree": xy_cut(boxes, min_gap=int(min_gap))}
+
+
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
                        region: Any = None) -> Dict[str, Any]:
     """Adapter: locate coloured regions on the screen, largest first."""
@@ -6033,6 +6052,8 @@ class Executor:
             "AC_detect_borderless_table": _detect_borderless_table,
             "AC_associate_fields": _associate_fields,
             "AC_match_labels_to_widgets": _match_labels_to_widgets,
+            "AC_flow_order": _flow_order,
+            "AC_xy_cut": _xy_cut,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,

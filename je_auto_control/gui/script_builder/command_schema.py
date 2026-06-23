@@ -789,6 +789,25 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         description="Match each checkbox/radio/input to its nearest label by centre.",
     ))
     specs.append(CommandSpec(
+        "AC_flow_order", "OCR", "Reading Order (column-aware)",
+        fields=(
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":40,"height":20,'
+                                  '"text":"A1"}]'),
+            FieldSpec("min_gap", FieldType.INT, optional=True, default=12),
+        ),
+        description="Column-aware reading order via XY-cut (reads down columns).",
+    ))
+    specs.append(CommandSpec(
+        "AC_xy_cut", "OCR", "XY-Cut Region Tree",
+        fields=(
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":40,"height":20}]'),
+            FieldSpec("min_gap", FieldType.INT, optional=True, default=12),
+        ),
+        description="Recursive XY-cut region tree (split at widest whitespace).",
+    ))
+    specs.append(CommandSpec(
         "AC_scroll_to_find", "OCR", "Scroll Until Visible",
         fields=(
             FieldSpec("target", FieldType.STRING),

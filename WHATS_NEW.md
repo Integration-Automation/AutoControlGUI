@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Column-Aware Reading Order (XY-Cut)
+
+Read multi-column layouts down each column instead of interleaving them. Full reference: [`docs/source/Eng/doc/new_features/v173_features_doc.rst`](docs/source/Eng/doc/new_features/v173_features_doc.rst).
+
+- **`flow_order` / `xy_cut` / `to_blocks`** (`AC_flow_order`, `AC_xy_cut`): `element_parse.reading_order` is a flat top-to-bottom sort that interleaves columns (reads A1, B1, A2, B2…). This recovers the correct order with recursive XY-cut — split at the widest whitespace valley (vertical → columns, horizontal → rows), so a two-column page reads A1, A2, B1, B2. `flow_order` returns the same `index`-tagged contract as `reading_order` (a drop-in column-aware upgrade, named to not shadow it); `xy_cut` exposes the region tree; `to_blocks` lists the leaf blocks. Pure-stdlib; no `PySide6`.
+
 ## What's new (2026-06-24) — Grounding Self-Consistency (Consensus Over Proposals)
 
 Fuse several grounding proposals into one agreed target with an agreement score. Full reference: [`docs/source/Eng/doc/new_features/v172_features_doc.rst`](docs/source/Eng/doc/new_features/v172_features_doc.rst).

@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 欄位感知閱讀順序(XY-Cut)
+
+讀多欄版面時*完整讀完*每一欄,而非交錯。完整參考:[`docs/source/Zh/doc/new_features/v173_features_doc.rst`](../docs/source/Zh/doc/new_features/v173_features_doc.rst)。
+
+- **`flow_order` / `xy_cut` / `to_blocks`**(`AC_flow_order`、`AC_xy_cut`):`element_parse.reading_order` 是平面上到下排序,會交錯欄位(讀作 A1, B1, A2, B2…)。本功能以遞迴 XY-cut 還原正確順序——在最寬留白谷切分(垂直 → 欄、水平 → 列),故兩欄頁面讀作 A1, A2, B1, B2。`flow_order` 回傳與 `reading_order` 相同的 `index` 標記契約(欄位感知的直接升級,且命名不遮蔽它);`xy_cut` 暴露區域樹;`to_blocks` 列出葉區塊。純標準函式庫;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — Grounding 自我一致性(提案共識)
 
 把多個 grounding 提案融合成單一一致目標,並附 agreement 分數。完整參考:[`docs/source/Zh/doc/new_features/v172_features_doc.rst`](../docs/source/Zh/doc/new_features/v172_features_doc.rst)。
