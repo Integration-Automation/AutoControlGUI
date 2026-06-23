@@ -3206,6 +3206,15 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Check expected outcome clauses against after/before frames.",
     ))
     specs.append(CommandSpec(
+        "AC_plan_repair", "Native UI", "Plan Repair Tactics",
+        fields=(
+            FieldSpec("verdict", FieldType.STRING,
+                      placeholder="no_op / changed_elsewhere / changed"),
+            FieldSpec("max_attempts", FieldType.INT, optional=True, default=3),
+        ),
+        description="Ordered repair tactics for a failed/no-effect action verdict.",
+    ))
+    specs.append(CommandSpec(
         "AC_validate_action", "Native UI", "Validate / Snap Action",
         fields=(
             FieldSpec("action", FieldType.STRING,

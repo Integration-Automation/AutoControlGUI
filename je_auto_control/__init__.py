@@ -323,6 +323,10 @@ from je_auto_control.utils.action_effect import (
 from je_auto_control.utils.postcondition import (
     PostconditionReport, check_postcondition, compile_postcondition,
 )
+# Repair-tactic policy for failed / no-effect actions (self-correction loop)
+from je_auto_control.utils.step_repair import (
+    RepairOutcome, RepairPolicy, next_tactic, plan_repair, run_with_repair,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -1267,6 +1271,11 @@ __all__ = [
     "PostconditionReport",
     "check_postcondition",
     "compile_postcondition",
+    "RepairPolicy",
+    "RepairOutcome",
+    "plan_repair",
+    "next_tactic",
+    "run_with_repair",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",
