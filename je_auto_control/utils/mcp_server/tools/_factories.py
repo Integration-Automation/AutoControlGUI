@@ -3086,6 +3086,31 @@ def rich_clipboard_tools() -> List[MCPTool]:
     ]
 
 
+def clipboard_files_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_set_clipboard_files",
+            description=("Put a file-drop list on the clipboard as CF_HDROP so the "
+                         "files can be pasted (Ctrl+V) into Explorer / apps as a real "
+                         "file copy (Windows). 'paths' is a list of absolute paths. "
+                         "Returns {set, count}."),
+            input_schema=schema({
+                "paths": {"type": "array", "items": {"type": "string"}}},
+                required=["paths"]),
+            handler=h.set_clipboard_files,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_clipboard_files",
+            description=("Read the clipboard's file-drop list (CF_HDROP, Windows). "
+                         "Returns {found, paths}."),
+            input_schema=schema({}, required=[]),
+            handler=h.get_clipboard_files,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def img_histogram_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -7020,7 +7045,8 @@ ALL_FACTORIES = (
     window_layout_tools, window_arrange_tools, preprocess_tools,
     monitor_layout_tools, actionability_tools, element_parse_tools,
     hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
-    locator_chain_tools, rich_clipboard_tools, img_histogram_tools,
+    locator_chain_tools, rich_clipboard_tools, clipboard_files_tools,
+    img_histogram_tools,
     motion_regions_tools, window_zorder_tools, soft_assert_tools,
     perceptual_diff_tools, window_geometry_tools, cua_action_tools,
     observation_tools, action_grounding_tools, agent_replay_tools,

@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 剪贴板文件拖放列表(CF_HDROP)
+
+把一份文件列表放上剪贴板,可直接粘贴进 Explorer。完整参考:[`docs/source/Zh/doc/new_features/v160_features_doc.rst`](../docs/source/Zh/doc/new_features/v160_features_doc.rst)。
+
+- **`build_dropfiles` / `parse_dropfiles` / `set_clipboard_files` / `get_clipboard_files`**(`AC_set_clipboard_files`、`AC_get_clipboard_files`):剪贴板原本能承载文本、图像与(通过 `rich_clipboard`)HTML,却从未支持*文件列表*——也就是 Explorer 读取以进行真正文件复制的 `CF_HDROP` 内容。构建它相当繁琐(20 字节 `DROPFILES` 头 + 双重 null 结尾的 UTF-16 路径列表 + `pFiles` 偏移)。本功能把封装独立为纯粹、可完整测试的 `build_dropfiles` / `parse_dropfiles` 字节函数,其上再叠加仅限 Windows 的 `set`/`get_clipboard_files` 薄包装——与 `rich_clipboard` 处理 `CF_HTML` 的拆分方式相同。不导入 `PySide6`。
+
 ## 本次更新 (2026-06-23) — 粗粒度标签屏幕网格(VLM Grounding)
 
 以网格单元格(「点击 C3」)而非原始像素引用屏幕区域。完整参考:[`docs/source/Zh/doc/new_features/v159_features_doc.rst`](../docs/source/Zh/doc/new_features/v159_features_doc.rst)。

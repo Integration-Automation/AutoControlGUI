@@ -347,6 +347,10 @@ from je_auto_control.utils.locator_chain import Candidates, from_boxes
 from je_auto_control.utils.rich_clipboard import (
     build_cf_html, get_clipboard_html, parse_cf_html, set_clipboard_html,
 )
+# Clipboard file-drop list (CF_HDROP): pure DROPFILES packing + Win32 set/get
+from je_auto_control.utils.clipboard_files import (
+    build_dropfiles, get_clipboard_files, parse_dropfiles, set_clipboard_files,
+)
 # Colour-histogram fingerprint & change detection (illumination-robust)
 from je_auto_control.utils.img_histogram import (
     compare_histograms, histogram_changed, image_histogram,
@@ -1259,6 +1263,10 @@ __all__ = [
     "parse_cf_html",
     "get_clipboard_html",
     "set_clipboard_html",
+    "build_dropfiles",
+    "parse_dropfiles",
+    "set_clipboard_files",
+    "get_clipboard_files",
     "image_histogram",
     "compare_histograms",
     "histogram_changed",

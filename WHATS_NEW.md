@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Clipboard File-Drop List (CF_HDROP)
+
+Put a list of files on the clipboard, ready to paste into Explorer. Full reference: [`docs/source/Eng/doc/new_features/v160_features_doc.rst`](docs/source/Eng/doc/new_features/v160_features_doc.rst).
+
+- **`build_dropfiles` / `parse_dropfiles` / `set_clipboard_files` / `get_clipboard_files`** (`AC_set_clipboard_files`, `AC_get_clipboard_files`): the clipboard carried text, images and (via `rich_clipboard`) HTML, but never a *file list* — the `CF_HDROP` payload Explorer reads to paste files as a real copy. Building it is fiddly (20-byte `DROPFILES` header + double-null-terminated UTF-16 path list + `pFiles` offset). This isolates the packing into pure, fully testable `build_dropfiles` / `parse_dropfiles` byte functions, with thin Windows-only `set`/`get_clipboard_files` wrappers on top — the same split `rich_clipboard` uses for `CF_HTML`. No `PySide6`.
+
 ## What's new (2026-06-23) — Coarse Labelled Screen Grid (VLM Grounding)
 
 Refer to screen regions as grid cells ("click C3") instead of raw pixels. Full reference: [`docs/source/Eng/doc/new_features/v159_features_doc.rst`](docs/source/Eng/doc/new_features/v159_features_doc.rst).

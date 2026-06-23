@@ -3751,6 +3751,24 @@ def _get_clipboard_html() -> Dict[str, Any]:
     return {"found": html is not None, "html": html}
 
 
+def _set_clipboard_files(paths: Any) -> Dict[str, Any]:
+    """Adapter: put a file-drop list (CF_HDROP) on the clipboard (Windows)."""
+    import json
+    from je_auto_control.utils.clipboard_files import set_clipboard_files
+    if isinstance(paths, str):
+        paths = json.loads(paths) if paths.strip().startswith("[") else [paths]
+    paths = [str(p) for p in paths]
+    set_clipboard_files(paths)
+    return {"set": True, "count": len(paths)}
+
+
+def _get_clipboard_files() -> Dict[str, Any]:
+    """Adapter: read the clipboard's file-drop list (CF_HDROP) (Windows)."""
+    from je_auto_control.utils.clipboard_files import get_clipboard_files
+    paths = get_clipboard_files()
+    return {"found": paths is not None, "paths": paths or []}
+
+
 def _image_histogram(source: Any = None, bins: Any = 32, space: str = "hsv",
                      region: Any = None) -> Dict[str, Any]:
     """Adapter: per-channel colour histogram of an image / the screen."""
@@ -5786,6 +5804,8 @@ class Executor:
             "AC_locate_chain": _locate_chain,
             "AC_set_clipboard_html": _set_clipboard_html,
             "AC_get_clipboard_html": _get_clipboard_html,
+            "AC_set_clipboard_files": _set_clipboard_files,
+            "AC_get_clipboard_files": _get_clipboard_files,
             "AC_image_histogram": _image_histogram,
             "AC_histogram_changed": _histogram_changed,
             "AC_changed_regions": _changed_regions,
