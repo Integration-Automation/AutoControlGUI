@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Trust-Scored Template Matching (Ambiguity / PSR)
+
+Know when a template match is strong but *ambiguous* before clicking it. Full reference: [`docs/source/Eng/doc/new_features/v161_features_doc.rst`](docs/source/Eng/doc/new_features/v161_features_doc.rst).
+
+- **`match_with_trust` / `score_peaks`** (`AC_match_with_trust`): `match_template` returns only the top score and clicks it — but a button repeated in a toolbar or a near-identical sibling correlates ~0.95 in two places, so a high score is not an *unambiguous* match. This adds a Lowe-style ratio test *for pixel templates* (ORB got one via `feature_match`; `match_template` never did): it inspects the whole correlation surface, compares the global peak to the next-best peak outside an exclusion window, computes the peak-to-sidelobe ratio (PSR), and returns a `TrustedMatch` with `second_score` / `peak_ratio` / `psr` / `is_ambiguous`. Reuses a new `visual_match._score_map` (the full `matchTemplate` surface the public matchers discard) — no matching code duplicated. Injectable `haystack`; no `PySide6`.
+
 ## What's new (2026-06-23) — Clipboard File-Drop List (CF_HDROP)
 
 Put a list of files on the clipboard, ready to paste into Explorer. Full reference: [`docs/source/Eng/doc/new_features/v160_features_doc.rst`](docs/source/Eng/doc/new_features/v160_features_doc.rst).

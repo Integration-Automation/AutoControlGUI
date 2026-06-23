@@ -283,6 +283,10 @@ from je_auto_control.utils.visual_match import Match as TemplateMatch
 from je_auto_control.utils.rotated_match import (
     RotatedMatch, match_rotated, match_rotated_all, scale_space,
 )
+# Template-match trustworthiness (second-peak ratio + peak-to-sidelobe)
+from je_auto_control.utils.match_trust import (
+    TrustedMatch, match_with_trust, score_peaks,
+)
 # Coarse labelled cell grid for VLM grounding (point <-> cell mapping)
 from je_auto_control.utils.screen_grid import (
     GridCell, cell_for_point, grid_cells, point_for_cell,
@@ -1198,6 +1202,9 @@ __all__ = [
     "match_rotated",
     "match_rotated_all",
     "scale_space",
+    "TrustedMatch",
+    "match_with_trust",
+    "score_peaks",
     "GridCell",
     "grid_cells",
     "cell_for_point",

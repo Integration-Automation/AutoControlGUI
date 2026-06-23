@@ -3600,6 +3600,25 @@ def rotated_match_tools() -> List[MCPTool]:
             handler=h.match_rotated_all,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_match_with_trust",
+            description=("Find 'template' AND judge whether the match is trustworthy "
+                         "vs ambiguous: returns {found, match:{...,score,second_score,"
+                         "peak_ratio,psr,is_ambiguous,center}}. is_ambiguous=true means "
+                         "a second place scored ~as high (e.g. a duplicate toolbar "
+                         "button) - do NOT blindly click. 'ambiguous_ratio' (default "
+                         "0.9), 'min_score', 'scales', 'region', 'method'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "ambiguous_ratio": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.match_with_trust,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

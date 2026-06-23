@@ -92,6 +92,27 @@ def _resize(template, scale: float):
     return cv2.resize(template, new_size)
 
 
+def _score_map(template: ImageSource, haystack: Optional[ImageSource] = None, *,
+               region: Optional[Sequence[int]] = None,
+               method: str = "ccoeff_normed", scale: float = 1.0):
+    """Return ``(full correlation score map, scaled gray template)``.
+
+    The map is oriented so higher = better for every method (``sqdiff_normed``
+    is inverted). Returns ``(None, template)`` when the template is larger than
+    the haystack at this scale. This exposes the whole ``matchTemplate`` surface
+    that the public matchers discard, for trust / threshold / sub-pixel analysis.
+    """
+    import cv2
+    tmpl = _resize(_to_gray(template), float(scale))
+    hay = _haystack_gray(haystack, region)
+    if tmpl.shape[0] > hay.shape[0] or tmpl.shape[1] > hay.shape[1]:
+        return None, tmpl
+    result = cv2.matchTemplate(hay, tmpl, _method(method))
+    if method == "sqdiff_normed":
+        result = 1.0 - result
+    return result, tmpl
+
+
 def match_template(template: ImageSource, *, haystack: Optional[ImageSource] = None,
                    region: Optional[Sequence[int]] = None,
                    scales: Sequence[float] = (1.0,), min_score: float = 0.8,

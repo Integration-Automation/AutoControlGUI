@@ -3323,6 +3323,22 @@ def _match_rotated_all(template: str, min_score: Any = 0.8, scales: Any = None,
     return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
 
 
+def _match_with_trust(template: str, min_score: Any = 0.0, scales: Any = None,
+                      ambiguous_ratio: Any = 0.9, region: Any = None,
+                      method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: best template match with trust metrics (ambiguity / PSR)."""
+    import json
+    from je_auto_control.utils.match_trust import match_with_trust
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = match_with_trust(template, region=region,
+                             scales=_seq_arg(scales, (1.0,)),
+                             method=method, min_score=float(min_score),
+                             ambiguous_ratio=float(ambiguous_ratio))
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
 def _region_arg(value: Any) -> Optional[List[int]]:
     """Coerce a JSON-string / list region arg into a list of ints, or None."""
     import json
@@ -5779,6 +5795,7 @@ class Executor:
             "AC_match_masked_all": _match_masked_all,
             "AC_match_rotated": _match_rotated,
             "AC_match_rotated_all": _match_rotated_all,
+            "AC_match_with_trust": _match_with_trust,
             "AC_grid_cells": _grid_cells,
             "AC_cell_for_point": _cell_for_point,
             "AC_point_for_cell": _point_for_cell,

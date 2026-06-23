@@ -336,6 +336,21 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Find every rotation/scale-tolerant match (NMS-deduped).",
     ))
     specs.append(CommandSpec(
+        "AC_match_with_trust", "Image", "Match Template (trust-scored)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.0,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("ambiguous_ratio", FieldType.FLOAT, optional=True,
+                      default=0.9, min_value=0.0, max_value=1.0),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[0.9, 1.0, 1.1]"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Match a template and flag if it is ambiguous (duplicate peak).",
+    ))
+    specs.append(CommandSpec(
         "AC_grid_cells", "Image", "Grid Cells (coarse grounding)",
         fields=(
             FieldSpec("rows", FieldType.INT, optional=True, default=3),
