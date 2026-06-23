@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 權杖預算化的觀測差異(變更了什麼)
+
+告訴代理*變更了什麼*,而非再次整個畫面。完整參考:[`docs/source/Zh/doc/new_features/v163_features_doc.rst`](../docs/source/Zh/doc/new_features/v163_features_doc.rst)。
+
+- **`delta_observation` / `delta_index` / `summarize_delta`**(`AC_delta_observation`):`serialize_observation` 渲染單一整幀(每回合都撐爆權杖預算);`element_diff` 提供穩定 ID 對應但止於 matched/added/removed 的元素配對。本功能正是缺少的序列化器——比對兩幀,將配對元素分類為 changed(role/name/enabled/value/移動)或 stable,只渲染變動部分:`+ [i] role "name"` / `~ [i] … (fields)` / `- …`(added 與 changed 優先、stable 略去、上限 `max_lines`)。重用 `element_diff.match_elements` + `observation.observation_index`。純標準函式庫;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 以 OCR 文字填入框線網格(可定址表格)
 
 把有框線表格的線條 + OCR 文字轉成可定址的 `R x C` 表格。完整參考:[`docs/source/Zh/doc/new_features/v162_features_doc.rst`](../docs/source/Zh/doc/new_features/v162_features_doc.rst)。

@@ -295,6 +295,10 @@ from je_auto_control.utils.screen_grid import (
 from je_auto_control.utils.table_grid_fill import (
     assign_text_to_grid, populate_table, table_to_csv, table_to_records,
 )
+# Token-budgeted observation delta (what changed between two UI frames)
+from je_auto_control.utils.observation_delta import (
+    delta_index, delta_observation, summarize_delta,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -1217,6 +1221,9 @@ __all__ = [
     "populate_table",
     "table_to_records",
     "table_to_csv",
+    "delta_index",
+    "delta_observation",
+    "summarize_delta",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",

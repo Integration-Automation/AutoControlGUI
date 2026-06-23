@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 令牌预算化的观测增量(变更了什么)
+
+告诉代理*变更了什么*,而非再次整个屏幕。完整参考:[`docs/source/Zh/doc/new_features/v163_features_doc.rst`](../docs/source/Zh/doc/new_features/v163_features_doc.rst)。
+
+- **`delta_observation` / `delta_index` / `summarize_delta`**(`AC_delta_observation`):`serialize_observation` 渲染单一整帧(每回合都撑爆令牌预算);`element_diff` 提供稳定 ID 对应但止于 matched/added/removed 的元素配对。本功能正是缺少的序列化器——比对两帧,将配对元素分类为 changed(role/name/enabled/value/移动)或 stable,只渲染变动部分:`+ [i] role "name"` / `~ [i] … (fields)` / `- …`(added 与 changed 优先、stable 略去、上限 `max_lines`)。重用 `element_diff.match_elements` + `observation.observation_index`。纯标准库;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 以 OCR 文字填入框线网格(可定址表格)
 
 把有框线表格的线条 + OCR 文字转成可定址的 `R x C` 表格。完整参考:[`docs/source/Zh/doc/new_features/v162_features_doc.rst`](../docs/source/Zh/doc/new_features/v162_features_doc.rst)。

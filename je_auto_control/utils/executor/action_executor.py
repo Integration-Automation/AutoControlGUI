@@ -3980,6 +3980,28 @@ def _observation_index(elements: Any, viewport: Any = None,
     return {"count": len(indexed), "elements": indexed}
 
 
+def _delta_observation(prev: Any, curr: Any, viewport: Any = None,
+                       max_elements: Any = 80, max_lines: Any = 40,
+                       interactive_only: Any = True) -> Dict[str, Any]:
+    """Adapter: token-budgeted "what changed" delta between two element frames."""
+    import json
+    from je_auto_control.utils.observation_delta import (delta_index,
+                                                         delta_observation)
+    if isinstance(prev, str):
+        prev = json.loads(prev)
+    if isinstance(curr, str):
+        curr = json.loads(curr)
+    if isinstance(viewport, str):
+        viewport = json.loads(viewport) if viewport.strip() else None
+    text = delta_observation(list(prev), list(curr), viewport=viewport,
+                             max_elements=int(max_elements),
+                             interactive_only=bool(interactive_only),
+                             max_lines=int(max_lines))
+    delta = delta_index(list(prev), list(curr))
+    return {"summary": text, "added": len(delta["added"]),
+            "removed": len(delta["removed"]), "changed": len(delta["changed"])}
+
+
 def _validate_action(action: Any, screen: Any = None,
                      targets: Any = None) -> Dict[str, Any]:
     """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""
@@ -5849,6 +5871,7 @@ class Executor:
             "AC_cua_command": _cua_command,
             "AC_serialize_observation": _serialize_observation,
             "AC_observation_index": _observation_index,
+            "AC_delta_observation": _delta_observation,
             "AC_validate_action": _validate_action,
             "AC_replay_trace": _replay_trace,
             "AC_match_elements": _match_elements,
