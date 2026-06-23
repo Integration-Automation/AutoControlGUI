@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 粗粒度標籤螢幕網格(VLM Grounding)
+
+以網格儲存格(「點擊 C3」)而非原始像素引用螢幕區域。完整參考:[`docs/source/Zh/doc/new_features/v159_features_doc.rst`](../docs/source/Zh/doc/new_features/v159_features_doc.rst)。
+
+- **`grid_cells` / `cell_for_point` / `point_for_cell`**(`AC_grid_cells`、`AC_cell_for_point`、`AC_point_for_cell`):VLM grounding 在模型指名粗粒度儲存格時,遠比輸出容易幻覺的像素座標更可靠。本功能在螢幕(或 `region`)上鋪設 `rows`x`cols` 網格,以試算表風格標記每個儲存格(左上 `A1`,超過 `Z` → `AA`),並雙向對應——點 → 包含的儲存格、指名儲存格 → 中心點(可直接點擊)。純標準函式庫幾何;唯一裝置相依的路徑是讀取即時螢幕尺寸的預設行為,因此每個函式都可透過明確 `region` 無頭測試。不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-23) — 旋轉與縮放容忍的樣板比對
 
 不只縮放,還能找到旋轉或傾斜的樣板。完整參考:[`docs/source/Zh/doc/new_features/v158_features_doc.rst`](../docs/source/Zh/doc/new_features/v158_features_doc.rst)。

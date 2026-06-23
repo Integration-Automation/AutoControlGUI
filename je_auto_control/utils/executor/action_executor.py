@@ -3323,6 +3323,40 @@ def _match_rotated_all(template: str, min_score: Any = 0.8, scales: Any = None,
     return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
 
 
+def _region_arg(value: Any) -> Optional[List[int]]:
+    """Coerce a JSON-string / list region arg into a list of ints, or None."""
+    import json
+    if isinstance(value, str):
+        value = json.loads(value) if value.strip() else None
+    return [int(v) for v in value] if value else None
+
+
+def _grid_cells(rows: Any, cols: Any, region: Any = None) -> Dict[str, Any]:
+    """Adapter: every cell of an rows x cols labelled grid over the screen."""
+    from je_auto_control.utils.screen_grid import grid_cells
+    cells = grid_cells(int(rows), int(cols), region=_region_arg(region))
+    return {"count": len(cells), "cells": [c.to_dict() for c in cells]}
+
+
+def _cell_for_point(x: Any, y: Any, rows: Any, cols: Any,
+                    region: Any = None) -> Dict[str, Any]:
+    """Adapter: the grid cell containing a point (or found=False if outside)."""
+    from je_auto_control.utils.screen_grid import cell_for_point
+    cell = cell_for_point(int(x), int(y), int(rows), int(cols),
+                          region=_region_arg(region))
+    return {"found": cell is not None,
+            "cell": cell.to_dict() if cell else None}
+
+
+def _point_for_cell(label: str, rows: Any, cols: Any,
+                    region: Any = None) -> Dict[str, Any]:
+    """Adapter: the centre point of a named grid cell (ready to click)."""
+    from je_auto_control.utils.screen_grid import point_for_cell
+    point = point_for_cell(str(label), int(rows), int(cols),
+                           region=_region_arg(region))
+    return {"point": point}
+
+
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
                        region: Any = None) -> Dict[str, Any]:
     """Adapter: locate coloured regions on the screen, largest first."""
@@ -5727,6 +5761,9 @@ class Executor:
             "AC_match_masked_all": _match_masked_all,
             "AC_match_rotated": _match_rotated,
             "AC_match_rotated_all": _match_rotated_all,
+            "AC_grid_cells": _grid_cells,
+            "AC_cell_for_point": _cell_for_point,
+            "AC_point_for_cell": _point_for_cell,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,

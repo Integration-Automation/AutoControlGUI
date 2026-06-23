@@ -283,6 +283,10 @@ from je_auto_control.utils.visual_match import Match as TemplateMatch
 from je_auto_control.utils.rotated_match import (
     RotatedMatch, match_rotated, match_rotated_all, scale_space,
 )
+# Coarse labelled cell grid for VLM grounding (point <-> cell mapping)
+from je_auto_control.utils.screen_grid import (
+    GridCell, cell_for_point, grid_cells, point_for_cell,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -1190,6 +1194,10 @@ __all__ = [
     "match_rotated",
     "match_rotated_all",
     "scale_space",
+    "GridCell",
+    "grid_cells",
+    "cell_for_point",
+    "point_for_cell",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",

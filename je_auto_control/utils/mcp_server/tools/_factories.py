@@ -3578,6 +3578,52 @@ def rotated_match_tools() -> List[MCPTool]:
     ]
 
 
+def screen_grid_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_grid_cells",
+            description=("Lay an 'rows' x 'cols' labelled grid over the screen (or "
+                         "'region') for coarse VLM grounding. Returns {count, cells:"
+                         "[{label,row,col,left,top,right,bottom,center}]}; labels are "
+                         "spreadsheet-style ('A1' top-left)."),
+            input_schema=schema({
+                "rows": {"type": "integer"},
+                "cols": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["rows", "cols"]),
+            handler=h.grid_cells,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_cell_for_point",
+            description=("Return the grid cell containing point (x, y) over an 'rows' "
+                         "x 'cols' grid: {found, cell}. found=false if outside."),
+            input_schema=schema({
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "rows": {"type": "integer"},
+                "cols": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["x", "y", "rows", "cols"]),
+            handler=h.cell_for_point,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_point_for_cell",
+            description=("Return the centre point {point:[x,y]} of grid cell 'label' "
+                         "(e.g. 'C3') over an 'rows' x 'cols' grid - ready to click."),
+            input_schema=schema({
+                "label": {"type": "string"},
+                "rows": {"type": "integer"},
+                "cols": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["label", "rows", "cols"]),
+            handler=h.point_for_cell,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def grid_locator_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6969,7 +7015,7 @@ ALL_FACTORIES = (
     process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
     modifier_state_tools, grid_locator_tools, visual_match_tools,
-    rotated_match_tools,
+    rotated_match_tools, screen_grid_tools,
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
     window_layout_tools, window_arrange_tools, preprocess_tools,
     monitor_layout_tools, actionability_tools, element_parse_tools,

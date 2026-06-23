@@ -336,6 +336,39 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Find every rotation/scale-tolerant match (NMS-deduped).",
     ))
     specs.append(CommandSpec(
+        "AC_grid_cells", "Image", "Grid Cells (coarse grounding)",
+        fields=(
+            FieldSpec("rows", FieldType.INT, optional=True, default=3),
+            FieldSpec("cols", FieldType.INT, optional=True, default=3),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Label an rows x cols grid over the screen for VLM grounding.",
+    ))
+    specs.append(CommandSpec(
+        "AC_cell_for_point", "Image", "Cell For Point",
+        fields=(
+            FieldSpec("x", FieldType.INT),
+            FieldSpec("y", FieldType.INT),
+            FieldSpec("rows", FieldType.INT, optional=True, default=3),
+            FieldSpec("cols", FieldType.INT, optional=True, default=3),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Return the grid cell label containing a screen point.",
+    ))
+    specs.append(CommandSpec(
+        "AC_point_for_cell", "Image", "Point For Cell",
+        fields=(
+            FieldSpec("label", FieldType.STRING, placeholder="C3"),
+            FieldSpec("rows", FieldType.INT, optional=True, default=3),
+            FieldSpec("cols", FieldType.INT, optional=True, default=3),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Return the centre point of a named grid cell (click target).",
+    ))
+    specs.append(CommandSpec(
         "AC_find_color_region", "Image", "Find Colour Region",
         fields=(
             FieldSpec("rgb", FieldType.STRING, placeholder="[0, 200, 0]"),
