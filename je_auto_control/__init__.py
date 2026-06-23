@@ -311,6 +311,10 @@ from je_auto_control.utils.column_layout import (
 from je_auto_control.utils.form_fields import (
     associate_fields, checkbox_state, match_labels_to_widgets,
 )
+# Classify whether an action did anything (target-local attribution)
+from je_auto_control.utils.action_effect import (
+    EffectVerdict, classify_effect, effect_near_point, is_no_op,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -1245,6 +1249,10 @@ __all__ = [
     "associate_fields",
     "match_labels_to_widgets",
     "checkbox_state",
+    "EffectVerdict",
+    "classify_effect",
+    "effect_near_point",
+    "is_no_op",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",

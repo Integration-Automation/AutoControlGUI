@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Action-Effect Classification (Did My Click Do Anything?)
+
+Tell an agent whether a click did anything — and whether it happened where it aimed. Full reference: [`docs/source/Eng/doc/new_features/v167_features_doc.rst`](docs/source/Eng/doc/new_features/v167_features_doc.rst).
+
+- **`classify_effect` / `effect_near_point` / `is_no_op`** (`AC_classify_effect`, `AC_effect_near_point`): `screen_state`/`element_diff` report what changed but never tie it to the action; `loop_guard` only flags a no-op after N repeats. This diffs the before/after observation and, given the action's target point, classifies the result on the *first* step as `no_op` / `changed_near_target` / `changed_elsewhere` (a surprise dialog) / `changed`, returning an `EffectVerdict` with the changed centres and a reason. Reuses `element_diff.match_elements` + `observation_delta`'s field-change check. Pure-stdlib; no `PySide6`.
+
 ## What's new (2026-06-24) — Form Field Association (Multi-Direction) + Checkbox State
 
 Pair form labels with values even when the value is below or right-aligned, and read checkbox state. Full reference: [`docs/source/Eng/doc/new_features/v166_features_doc.rst`](docs/source/Eng/doc/new_features/v166_features_doc.rst).

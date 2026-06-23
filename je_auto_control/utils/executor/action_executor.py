@@ -4078,6 +4078,34 @@ def _delta_observation(prev: Any, curr: Any, viewport: Any = None,
             "removed": len(delta["removed"]), "changed": len(delta["changed"])}
 
 
+def _classify_effect(before: Any, after: Any, action: Any,
+                     radius: Any = 64) -> Dict[str, Any]:
+    """Adapter: classify whether an action changed the screen (target-local)."""
+    import json
+    from je_auto_control.utils.action_effect import classify_effect
+    if isinstance(before, str):
+        before = json.loads(before)
+    if isinstance(after, str):
+        after = json.loads(after)
+    if isinstance(action, str):
+        action = json.loads(action)
+    return classify_effect(before, after, action, radius=int(radius)).to_dict()
+
+
+def _effect_near_point(before: Any, after: Any, point: Any,
+                       radius: Any = 64) -> Dict[str, Any]:
+    """Adapter: did any before/after change land within radius of a point."""
+    import json
+    from je_auto_control.utils.action_effect import effect_near_point
+    if isinstance(before, str):
+        before = json.loads(before)
+    if isinstance(after, str):
+        after = json.loads(after)
+    if isinstance(point, str):
+        point = json.loads(point)
+    return {"near": effect_near_point(before, after, point, radius=int(radius))}
+
+
 def _validate_action(action: Any, screen: Any = None,
                      targets: Any = None) -> Dict[str, Any]:
     """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""
@@ -5954,6 +5982,8 @@ class Executor:
             "AC_serialize_observation": _serialize_observation,
             "AC_observation_index": _observation_index,
             "AC_delta_observation": _delta_observation,
+            "AC_classify_effect": _classify_effect,
+            "AC_effect_near_point": _effect_near_point,
             "AC_validate_action": _validate_action,
             "AC_replay_trace": _replay_trace,
             "AC_match_elements": _match_elements,

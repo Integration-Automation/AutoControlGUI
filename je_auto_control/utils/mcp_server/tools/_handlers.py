@@ -2412,6 +2412,16 @@ def delta_observation(prev, curr, viewport=None, max_elements=80, max_lines=40,
                               interactive_only)
 
 
+def classify_effect(before, after, action, radius=64):
+    from je_auto_control.utils.executor.action_executor import _classify_effect
+    return _classify_effect(before, after, action, radius)
+
+
+def effect_near_point(before, after, point, radius=64):
+    from je_auto_control.utils.executor.action_executor import _effect_near_point
+    return _effect_near_point(before, after, point, radius)
+
+
 def validate_action(action, screen=None, targets=None):
     from je_auto_control.utils.executor.action_executor import _validate_action
     return _validate_action(action, screen, targets)

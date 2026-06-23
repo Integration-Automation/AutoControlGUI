@@ -3143,6 +3143,31 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Token-budgeted '+/~/-' summary of what changed between frames.",
     ))
     specs.append(CommandSpec(
+        "AC_classify_effect", "Native UI", "Classify Action Effect",
+        fields=(
+            FieldSpec("before", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":0,"y":0}]'),
+            FieldSpec("after", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":0,"y":0}]'),
+            FieldSpec("action", FieldType.STRING,
+                      placeholder='{"type":"click","x":50,"y":50}'),
+            FieldSpec("radius", FieldType.INT, optional=True, default=64),
+        ),
+        description="Did the action change the screen near its target? (no_op/…).",
+    ))
+    specs.append(CommandSpec(
+        "AC_effect_near_point", "Native UI", "Effect Near Point?",
+        fields=(
+            FieldSpec("before", FieldType.STRING,
+                      placeholder='[{"role":"button","x":0,"y":0}]'),
+            FieldSpec("after", FieldType.STRING,
+                      placeholder='[{"role":"button","x":0,"y":0}]'),
+            FieldSpec("point", FieldType.STRING, placeholder="[50, 50]"),
+            FieldSpec("radius", FieldType.INT, optional=True, default=64),
+        ),
+        description="Did any before/after change land within radius of a point?",
+    ))
+    specs.append(CommandSpec(
         "AC_validate_action", "Native UI", "Validate / Snap Action",
         fields=(
             FieldSpec("action", FieldType.STRING,

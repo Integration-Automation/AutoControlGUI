@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 動作效果分類(我的點擊有沒有效果?)
+
+告訴代理點擊有沒有效果——以及是否發生在它瞄準之處。完整參考:[`docs/source/Zh/doc/new_features/v167_features_doc.rst`](../docs/source/Zh/doc/new_features/v167_features_doc.rst)。
+
+- **`classify_effect` / `effect_near_point` / `is_no_op`**(`AC_classify_effect`、`AC_effect_near_point`):`screen_state`/`element_diff` 回報變了什麼卻不歸因到動作;`loop_guard` 要重複 N 次才標記 no-op。本功能比對前後觀測,並依動作目標點在*第一步*就分類結果為 `no_op` / `changed_near_target` / `changed_elsewhere`(意外對話框)/ `changed`,回傳含變化中心與原因的 `EffectVerdict`。重用 `element_diff.match_elements` + `observation_delta` 的欄位變更檢查。純標準函式庫;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 表單欄位關聯(多方向)+ 核取方塊狀態
 
 即使值在下方或右對齊也能把標籤與值配對,並讀取核取方塊狀態。完整參考:[`docs/source/Zh/doc/new_features/v166_features_doc.rst`](../docs/source/Zh/doc/new_features/v166_features_doc.rst)。
