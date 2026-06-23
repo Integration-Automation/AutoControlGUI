@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — OCR 行的段落与列表分组
+
+把 OCR 行分组成段落,并检测项目符号 / 编号列表。完整参考:[`docs/source/Zh/doc/new_features/v174_features_doc.rst`](../docs/source/Zh/doc/new_features/v174_features_doc.rst)。
+
+- **`group_paragraphs` / `detect_lists`**(`AC_group_paragraphs`、`AC_detect_lists`):`text_regions` 把字形并成行,但没有功能把那些行分组成段落或检测列表;`ocr/structure` 止于平面行。`group_paragraphs` 在垂直间距超过 `line_gap_factor` × 中位行高处开始新段落;`detect_lists` 识别项目符号(`•`/`-`/`*`)或序号(`1.`/`2)`/`a.`)项目,返回 `{text, marker, indent, box}`。纯标准库,作用于行字典;重用 `table_grid_fill` 的框读取器;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 列感知阅读顺序(XY-Cut)
 
 读多列布局时*完整读完*每一列,而非交错。完整参考:[`docs/source/Zh/doc/new_features/v173_features_doc.rst`](../docs/source/Zh/doc/new_features/v173_features_doc.rst)。

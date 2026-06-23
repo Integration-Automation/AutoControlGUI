@@ -808,6 +808,26 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         description="Recursive XY-cut region tree (split at widest whitespace).",
     ))
     specs.append(CommandSpec(
+        "AC_group_paragraphs", "OCR", "Group Paragraphs",
+        fields=(
+            FieldSpec("lines", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":200,"height":20,'
+                                  '"text":"line"}]'),
+            FieldSpec("line_gap_factor", FieldType.FLOAT, optional=True,
+                      default=1.6),
+        ),
+        description="Group OCR lines into paragraphs by vertical spacing.",
+    ))
+    specs.append(CommandSpec(
+        "AC_detect_lists", "OCR", "Detect Lists",
+        fields=(
+            FieldSpec("lines", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":200,"height":20,'
+                                  '"text":"* item"}]'),
+        ),
+        description="Detect bulleted / numbered list items among OCR lines.",
+    ))
+    specs.append(CommandSpec(
         "AC_scroll_to_find", "OCR", "Scroll Until Visible",
         fields=(
             FieldSpec("target", FieldType.STRING),
