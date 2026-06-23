@@ -3379,6 +3379,22 @@ def observation_tools() -> List[MCPTool]:
             handler=h.effect_near_point,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_check_postcondition",
+            description=("Check a declarative postcondition 'spec' against the "
+                         "'after' element list (optionally diffed vs 'before'). "
+                         "Clauses: appears / disappears / enabled / disabled / "
+                         "text_present / text_absent / count. Returns {ok, clauses:"
+                         "[{type,ok,detail}], failed}. e.g. spec {\"appears\": "
+                         "{\"role\":\"dialog\"}, \"disabled\": {\"name\":\"Submit\"}}."),
+            input_schema=schema({
+                "after": {"type": "array", "items": {"type": "object"}},
+                "spec": {"type": "object"},
+                "before": {"type": "array", "items": {"type": "object"}}},
+                required=["after", "spec"]),
+            handler=h.check_postcondition,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

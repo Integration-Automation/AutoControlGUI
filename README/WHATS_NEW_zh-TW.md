@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 宣告式動作後置條件
+
+以 JSON 規格斷言動作的預期結果,並對照 before 幀做差異。完整參考:[`docs/source/Zh/doc/new_features/v169_features_doc.rst`](../docs/source/Zh/doc/new_features/v169_features_doc.rst)。
+
+- **`check_postcondition` / `compile_postcondition`**(`AC_check_postcondition`):`expect_poll`/`assert_eventually` 輪詢單一條件,沒有與動作綁定的規格、也沒有 before 基準(因此無法表達「一個*新*對話框出現了」);`trajectory_eval` 是整條軌跡層級。本功能對 after 觀測評估一個小型 JSON 子句規格——`appears`/`disappears`(對照 `before`)、`enabled`/`disabled`、`text_present`/`text_absent`、`count`——回傳逐子句的 `{ok, clauses, failed}` 報告。`compile_postcondition` 把規格轉成 `after -> bool` 判定函式以供 `expect_poll` 使用。純標準函式庫;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 邊緣形狀(Chamfer)樣板比對
 
 以輪廓定位扁平圖示,對填充 / 主題 / 抗鋸齒穩健。完整參考:[`docs/source/Zh/doc/new_features/v168_features_doc.rst`](../docs/source/Zh/doc/new_features/v168_features_doc.rst)。

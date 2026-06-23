@@ -4131,6 +4131,19 @@ def _effect_near_point(before: Any, after: Any, point: Any,
     return {"near": effect_near_point(before, after, point, radius=int(radius))}
 
 
+def _check_postcondition(after: Any, spec: Any, before: Any = None) -> Dict[str, Any]:
+    """Adapter: evaluate a declarative postcondition spec against after/before frames."""
+    import json
+    from je_auto_control.utils.postcondition import check_postcondition
+    if isinstance(after, str):
+        after = json.loads(after)
+    if isinstance(spec, str):
+        spec = json.loads(spec)
+    if isinstance(before, str):
+        before = json.loads(before) if before.strip() else None
+    return check_postcondition(after, spec, before=before).to_dict()
+
+
 def _validate_action(action: Any, screen: Any = None,
                      targets: Any = None) -> Dict[str, Any]:
     """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""
@@ -6011,6 +6024,7 @@ class Executor:
             "AC_delta_observation": _delta_observation,
             "AC_classify_effect": _classify_effect,
             "AC_effect_near_point": _effect_near_point,
+            "AC_check_postcondition": _check_postcondition,
             "AC_validate_action": _validate_action,
             "AC_replay_trace": _replay_trace,
             "AC_match_elements": _match_elements,

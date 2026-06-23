@@ -319,6 +319,10 @@ from je_auto_control.utils.form_fields import (
 from je_auto_control.utils.action_effect import (
     EffectVerdict, classify_effect, effect_near_point, is_no_op,
 )
+# Declarative action postconditions (expected outcome vs before/after)
+from je_auto_control.utils.postcondition import (
+    PostconditionReport, check_postcondition, compile_postcondition,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -1260,6 +1264,9 @@ __all__ = [
     "classify_effect",
     "effect_near_point",
     "is_no_op",
+    "PostconditionReport",
+    "check_postcondition",
+    "compile_postcondition",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",
