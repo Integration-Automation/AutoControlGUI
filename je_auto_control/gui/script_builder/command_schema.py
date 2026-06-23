@@ -408,6 +408,30 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Match with a sub-pixel-refined centre (drag / slider precision).",
     ))
     specs.append(CommandSpec(
+        "AC_match_ensemble", "Image", "Match Ensemble (vote references)",
+        fields=(
+            FieldSpec("templates", FieldType.STRING,
+                      placeholder='["default.png", "hover.png", "pressed.png"]'),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("agree_px", FieldType.INT, optional=True, default=10),
+            FieldSpec("min_votes", FieldType.INT, optional=True, default=2),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Vote several reference crops onto one consensus location.",
+    ))
+    specs.append(CommandSpec(
+        "AC_vote_centers", "Image", "Vote Centers (consensus)",
+        fields=(
+            FieldSpec("centers", FieldType.STRING,
+                      placeholder="[[100, 100], [102, 98]]"),
+            FieldSpec("agree_px", FieldType.INT, optional=True, default=10),
+            FieldSpec("min_votes", FieldType.INT, optional=True, default=2),
+        ),
+        description="Vote candidate hit centres into one consensus target.",
+    ))
+    specs.append(CommandSpec(
         "AC_grid_cells", "Image", "Grid Cells (coarse grounding)",
         fields=(
             FieldSpec("rows", FieldType.INT, optional=True, default=3),

@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 多模板共識比對
+
+把同一目標的多個參考裁切投票成單一可信位置。完整參考:[`docs/source/Zh/doc/new_features/v178_features_doc.rst`](../docs/source/Zh/doc/new_features/v178_features_doc.rst)。
+
+- **`match_ensemble` / `vote_centers`**(`AC_match_ensemble`、`AC_vote_centers`):一個按鈕以多種狀態呈現(預設/懸停/按下)但是單一邏輯目標;`ab_locator` 只選一個策略、`match_template(scales=...)` 只掃一個模板——兩者都不融合多參考。本功能比對每個參考,聚類命中中心,只有在 ≥ `min_votes` 個於 `agree_px` 內一致時才接受,回傳 `{point, votes, n_candidates, spread}`——減少換膚/動畫 UI 的誤判。重用 `visual_match.match_template` + `grounding_consensus`;`vote_centers` 為純投票核心。不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 逐步評審特徵 + 規則式步驟評分
 
 把為代理步驟評分所需的證據打包,並內建規則式評分器。完整參考:[`docs/source/Zh/doc/new_features/v177_features_doc.rst`](../docs/source/Zh/doc/new_features/v177_features_doc.rst)。
