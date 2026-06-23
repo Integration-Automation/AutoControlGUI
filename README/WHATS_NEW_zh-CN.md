@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — Grounding 自我一致性(提案共识)
+
+把多个 grounding 提案融合成单一一致目标,并附 agreement 分数。完整参考:[`docs/source/Zh/doc/new_features/v172_features_doc.rst`](../docs/source/Zh/doc/new_features/v172_features_doc.rst)。
+
+- **`consensus_point` / `consensus_element` / `is_confident`**(`AC_consensus_point`、`AC_consensus_element`):一个目标可同时以多种方式 grounding(set-of-marks / OCR / 模板 / a11y / 模型 N 次采样)而未必一致。`ab_locator`/`element_scoring` 依历史排序*策略*;`snap_to_element` 只贴*单一*坐标——两者都不融合*同时*的提案。本功能将候选点聚类(或对候选元素投票),返回一致的 `point` + `agreement` 比例 + `spread`,而 `is_confident` 标记低一致度目标,让代理改为放大 / 询问而非盲目点击。纯标准库;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 亚像素模板匹配精修
 
 把匹配中心精修到像素的分数位,供拖曳 / 滑块 / 高 DPI 精度。完整参考:[`docs/source/Zh/doc/new_features/v171_features_doc.rst`](../docs/source/Zh/doc/new_features/v171_features_doc.rst)。

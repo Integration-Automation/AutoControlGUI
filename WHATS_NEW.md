@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Grounding Self-Consistency (Consensus Over Proposals)
+
+Fuse several grounding proposals into one agreed target with an agreement score. Full reference: [`docs/source/Eng/doc/new_features/v172_features_doc.rst`](docs/source/Eng/doc/new_features/v172_features_doc.rst).
+
+- **`consensus_point` / `consensus_element` / `is_confident`** (`AC_consensus_point`, `AC_consensus_element`): a target can be grounded several ways at once (set-of-marks / OCR / template / a11y / N model samples) and they don't always agree. `ab_locator`/`element_scoring` rank *strategies* by history; `snap_to_element` snaps a *single* coordinate — neither fuses *simultaneous* proposals. This clusters candidate points (or votes candidate elements), returns the agreed `point` + an `agreement` fraction + `spread`, and `is_confident` flags low-agreement targets so the agent zooms / asks instead of clicking blind. Pure-stdlib; no `PySide6`.
+
 ## What's new (2026-06-24) — Sub-Pixel Template-Match Refinement
 
 Refine a match's centre to a fraction of a pixel for drag / slider / high-DPI precision. Full reference: [`docs/source/Eng/doc/new_features/v171_features_doc.rst`](docs/source/Eng/doc/new_features/v171_features_doc.rst).

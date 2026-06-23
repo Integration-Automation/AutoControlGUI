@@ -331,6 +331,10 @@ from je_auto_control.utils.postcondition import (
 from je_auto_control.utils.step_repair import (
     RepairOutcome, RepairPolicy, next_tactic, plan_repair, run_with_repair,
 )
+# Self-consistency over multiple grounding proposals for one target
+from je_auto_control.utils.grounding_consensus import (
+    ConsensusResult, consensus_element, consensus_point, is_confident,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -1283,6 +1287,10 @@ __all__ = [
     "plan_repair",
     "next_tactic",
     "run_with_repair",
+    "ConsensusResult",
+    "consensus_point",
+    "consensus_element",
+    "is_confident",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",

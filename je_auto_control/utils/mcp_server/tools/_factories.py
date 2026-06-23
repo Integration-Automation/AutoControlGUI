@@ -3409,6 +3409,36 @@ def observation_tools() -> List[MCPTool]:
             handler=h.plan_repair,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_consensus_point",
+            description=("Fuse several grounding proposals into one agreed point: "
+                         "cluster 'candidates' ([[x,y] or [x,y,weight]]) and return "
+                         "{found, result:{point,agreement,spread,n_clusters}}. Low "
+                         "'agreement' = the proposals disagree — don't click blind. "
+                         "'cluster_radius'."),
+            input_schema=schema({
+                "candidates": {"type": "array",
+                               "items": {"type": "array",
+                                         "items": {"type": "number"}}},
+                "cluster_radius": {"type": "number"}},
+                required=["candidates"]),
+            handler=h.consensus_point,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_consensus_element",
+            description=("Vote grounding 'candidates' ([[x,y]…]) to the nearest of "
+                         "'elements' (role/name/x/y/width/height dicts) and return "
+                         "{found, element, agreement}."),
+            input_schema=schema({
+                "candidates": {"type": "array",
+                               "items": {"type": "array",
+                                         "items": {"type": "number"}}},
+                "elements": {"type": "array", "items": {"type": "object"}}},
+                required=["candidates", "elements"]),
+            handler=h.consensus_element,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

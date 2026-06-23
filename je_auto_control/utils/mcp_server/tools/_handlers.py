@@ -2448,6 +2448,16 @@ def plan_repair(verdict, max_attempts=3):
     return _plan_repair(verdict, max_attempts)
 
 
+def consensus_point(candidates, cluster_radius=24):
+    from je_auto_control.utils.executor.action_executor import _consensus_point
+    return _consensus_point(candidates, cluster_radius)
+
+
+def consensus_element(candidates, elements):
+    from je_auto_control.utils.executor.action_executor import _consensus_element
+    return _consensus_element(candidates, elements)
+
+
 def validate_action(action, screen=None, targets=None):
     from je_auto_control.utils.executor.action_executor import _validate_action
     return _validate_action(action, screen, targets)
