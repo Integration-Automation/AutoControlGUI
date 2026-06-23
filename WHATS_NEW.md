@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Geometry-Aware Element Diff & Stable IDs
+
+Track elements across frames by overlap, with stable IDs. Full reference: [`docs/source/Eng/doc/new_features/v155_features_doc.rst`](docs/source/Eng/doc/new_features/v155_features_doc.rst).
+
+- **`match_elements` / `assign_stable_ids`** (`AC_match_elements`, `AC_assign_stable_ids`): `diff_snapshots` keys identity on `(role, name)` — it can't match a renamed-but-stationary control or a moved one, nor give persistent IDs across frames. This matches element boxes by IoU (reusing `element_parse.iou`): `match_elements` returns `{matched, added, removed}`; `assign_stable_ids` carries each element's `id` from a `prior` frame (a moved button keeps its id, a new one gets a fresh id) — so an agent can reliably refer to "element 7" turn-over-turn. Pure-stdlib, headless-testable.
+
 ## What's new (2026-06-23) — Portable Agent-Trajectory Trace (Record & Replay)
 
 Log an agent's observation→action steps and replay them. Full reference: [`docs/source/Eng/doc/new_features/v154_features_doc.rst`](docs/source/Eng/doc/new_features/v154_features_doc.rst).

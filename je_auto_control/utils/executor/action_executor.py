@@ -3894,6 +3894,36 @@ def _replay_trace(trace: Any) -> Dict[str, Any]:
     return {"count": len(results), "results": results}
 
 
+def _match_elements(before: Any, after: Any,
+                    iou_threshold: Any = 0.5) -> Dict[str, Any]:
+    """Adapter: geometry-aware match of two element-box lists."""
+    import json
+    from je_auto_control.utils.element_diff import match_elements
+    if isinstance(before, str):
+        before = json.loads(before)
+    if isinstance(after, str):
+        after = json.loads(after)
+    result = match_elements(list(before), list(after),
+                            iou_threshold=float(iou_threshold))
+    return {"matched": result["matched"], "added": result["added"],
+            "removed": result["removed"]}
+
+
+def _assign_stable_ids(elements: Any, prior: Any = None,
+                       iou_threshold: Any = 0.5) -> Dict[str, Any]:
+    """Adapter: tag element boxes with stable IDs carried from a prior frame."""
+    import json
+    from je_auto_control.utils.element_diff import assign_stable_ids
+    if isinstance(elements, str):
+        elements = json.loads(elements)
+    if isinstance(prior, str):
+        prior = json.loads(prior) if prior.strip() else None
+    tagged = assign_stable_ids(list(elements),
+                               prior=list(prior) if prior else None,
+                               iou_threshold=float(iou_threshold))
+    return {"count": len(tagged), "elements": tagged}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5653,6 +5683,8 @@ class Executor:
             "AC_observation_index": _observation_index,
             "AC_validate_action": _validate_action,
             "AC_replay_trace": _replay_trace,
+            "AC_match_elements": _match_elements,
+            "AC_assign_stable_ids": _assign_stable_ids,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

@@ -3345,6 +3345,38 @@ def agent_replay_tools() -> List[MCPTool]:
     ]
 
 
+def element_diff_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_match_elements",
+            description=("Geometry-aware match of two element-box lists ('before' / "
+                         "'after') by IoU. Returns {matched:[{before,after,iou}], "
+                         "added, removed} — tracks moves/renames where (role,name) "
+                         "diffing can't. 'iou_threshold'."),
+            input_schema=schema({
+                "before": {"type": "array", "items": {"type": "object"}},
+                "after": {"type": "array", "items": {"type": "object"}},
+                "iou_threshold": {"type": "number"}},
+                required=["before", "after"]),
+            handler=h.match_elements,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_assign_stable_ids",
+            description=("Tag 'elements' with a stable 'id' each, carried from a "
+                         "'prior' frame by IoU (a moved element keeps its id, a new "
+                         "one gets a fresh id). Returns {count, elements}."),
+            input_schema=schema({
+                "elements": {"type": "array", "items": {"type": "object"}},
+                "prior": {"type": "array", "items": {"type": "object"}},
+                "iou_threshold": {"type": "number"}},
+                required=["elements"]),
+            handler=h.assign_stable_ids,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6854,7 +6886,7 @@ ALL_FACTORIES = (
     motion_regions_tools, window_zorder_tools, soft_assert_tools,
     perceptual_diff_tools, window_geometry_tools, cua_action_tools,
     observation_tools, action_grounding_tools, agent_replay_tools,
-    plugin_sdk_tools, governance_tools,
+    element_diff_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

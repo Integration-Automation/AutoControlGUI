@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 几何感知的元素差异与稳定 ID
+
+以重叠跨帧追踪元素,并给予稳定 ID。完整参考:[`docs/source/Zh/doc/new_features/v155_features_doc.rst`](../docs/source/Zh/doc/new_features/v155_features_doc.rst)。
+
+- **`match_elements` / `assign_stable_ids`**(`AC_match_elements`、`AC_assign_stable_ids`):`diff_snapshots` 以 `(role, name)` 作识别——无法比对改名但未移动或移动了的控制项,也无法跨帧给持久 ID。本功能以 IoU 比对元素框(沿用 `element_parse.iou`):`match_elements` 返回 `{matched, added, removed}`;`assign_stable_ids` 从 `prior` 帧延续每个元素的 `id`(移动的按钮保留 id、新增者取得新 id)——让 agent 能跨回合可靠地引用「element 7」。纯标准库、可无头测试。
+
 ## 本次更新 (2026-06-23) — 可携式 Agent 轨迹记录(录制与重播)
 
 记录 agent 的观测→动作步骤并重播。完整参考:[`docs/source/Zh/doc/new_features/v154_features_doc.rst`](../docs/source/Zh/doc/new_features/v154_features_doc.rst)。
