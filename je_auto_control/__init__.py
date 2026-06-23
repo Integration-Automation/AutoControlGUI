@@ -333,6 +333,8 @@ from je_auto_control.utils.expect_poll import (
     PollResult, assert_poll, expect_poll, to_be_greater_than, to_be_stable,
     to_be_truthy, to_contain, to_equal, to_match_regex,
 )
+# Composable / filtered candidate locators (chained-locator idiom)
+from je_auto_control.utils.locator_chain import Candidates, from_boxes
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1183,6 +1185,8 @@ __all__ = [
     "to_match_regex",
     "to_be_truthy",
     "to_be_stable",
+    "Candidates",
+    "from_boxes",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

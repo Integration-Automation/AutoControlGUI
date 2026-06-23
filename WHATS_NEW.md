@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Composable / Filtered Candidate Locators
+
+Refine located elements with a chain: `.within(panel).filter(has_text="Delete").nth(1)`. Full reference: [`docs/source/Eng/doc/new_features/v143_features_doc.rst`](docs/source/Eng/doc/new_features/v143_features_doc.rst).
+
+- **`from_boxes` / `Candidates`** (`AC_locate_chain`): `anchor_locator` is a single relation and `grid_locator` is cells — neither supports composable refinement of a candidate set (the Selenium-4 / Playwright chained-locator idiom). This is a pure post-filter over boxes from *any* source (template / OCR / a11y / `fuse_elements`): `within` (region clip), `filter` (`has_text` / `near` / area / predicate), `sort_reading`, `nth` / `first` / `last`, `resolve()` / `center()`. Every method returns a new `Candidates` (no mutation) → fully headless-testable. The executor command applies a JSON `ops` list.
+
 ## What's new (2026-06-23) — Retrying Value Assertions (expect.poll)
 
 Retry *any* value until it matches, not just the built-in checks. Full reference: [`docs/source/Eng/doc/new_features/v142_features_doc.rst`](docs/source/Eng/doc/new_features/v142_features_doc.rst).

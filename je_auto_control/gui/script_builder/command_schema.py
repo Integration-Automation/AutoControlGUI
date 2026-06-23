@@ -492,6 +492,16 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Order element boxes top-to-bottom, left-to-right (+ index).",
     ))
+    specs.append(CommandSpec(
+        "AC_locate_chain", "Image", "Locate Chain (refine boxes)",
+        fields=(
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+            FieldSpec("ops", FieldType.STRING,
+                      placeholder='[{"op":"filter","has_text":"OK"},{"op":"first"}]'),
+        ),
+        description="Refine candidate boxes (within / filter / reading / nth / …).",
+    ))
 
 
 def _add_ocr_specs(specs: List[CommandSpec]) -> None:

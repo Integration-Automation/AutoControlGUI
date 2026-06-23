@@ -3625,6 +3625,42 @@ def _expect_poll(action: Any, key: Any = None, op: str = "truthy",
             "waited_s": result.waited_s}
 
 
+def _apply_locate_op(candidates, op: Dict[str, Any]):
+    """Apply one locate-chain op spec to a Candidates set."""
+    name = op.get("op")
+    if name == "within":
+        return candidates.within(op["region"])
+    if name == "filter":
+        return candidates.filter(has_text=op.get("has_text"), near=op.get("near"),
+                                 min_area=op.get("min_area"),
+                                 max_area=op.get("max_area"))
+    if name == "reading":
+        return candidates.sort_reading(row_tol=int(op.get("row_tol", 12)))
+    if name == "nth":
+        return candidates.nth(int(op["index"]))
+    if name == "first":
+        return candidates.first()
+    if name == "last":
+        return candidates.last()
+    raise AutoControlActionException(f"unknown locate-chain op: {name!r}")
+
+
+def _locate_chain(boxes: Any, ops: Any = None) -> Dict[str, Any]:
+    """Adapter: apply a chain of refinement ops to a set of element boxes."""
+    import json
+    from je_auto_control.utils.locator_chain import from_boxes
+    if isinstance(boxes, str):
+        boxes = json.loads(boxes)
+    if isinstance(ops, str):
+        ops = json.loads(ops) if ops.strip() else []
+    candidates = from_boxes(list(boxes))
+    for op in ops or ():
+        candidates = _apply_locate_op(candidates, op)
+    resolved = candidates.resolve()
+    return {"count": len(resolved), "boxes": resolved,
+            "center": candidates.center()}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5365,6 +5401,7 @@ class Executor:
             "AC_find_grid": _find_grid,
             "AC_find_separators": _find_separators,
             "AC_expect_poll": _expect_poll,
+            "AC_locate_chain": _locate_chain,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,
