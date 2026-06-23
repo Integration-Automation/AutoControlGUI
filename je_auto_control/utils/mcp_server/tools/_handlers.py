@@ -2247,6 +2247,17 @@ def get_clipboard_html():
     return _get_clipboard_html()
 
 
+def image_histogram(source=None, bins=32, space="hsv", region=None):
+    from je_auto_control.utils.executor.action_executor import _image_histogram
+    return _image_histogram(source, bins, space, region)
+
+
+def histogram_changed(reference, current=None, method="correlation",
+                      threshold=0.9, space="hsv", region=None):
+    from je_auto_control.utils.executor.action_executor import _histogram_changed
+    return _histogram_changed(reference, current, method, threshold, space, region)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

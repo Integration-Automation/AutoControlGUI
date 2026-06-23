@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Colour-Histogram Fingerprint & Change Detection
+
+Tell whether the view is "the same" despite lighting / scale. Full reference: [`docs/source/Eng/doc/new_features/v145_features_doc.rst`](docs/source/Eng/doc/new_features/v145_features_doc.rst).
+
+- **`image_histogram` / `compare_histograms` / `histogram_changed`** (`AC_image_histogram`, `AC_histogram_changed`): `image_dedup`'s perceptual hash is spatial (brittle to colour/theme) and `color_stats` is one colour. A normalized colour histogram is the illumination/scale-robust "same view, or palette shifted?" signal (theme switch, reload, rotated banner). `image_histogram` returns a per-channel histogram (`hsv`/`rgb`/`gray`); `compare_histograms` does correlation/chisqr/intersection/bhattacharyya; `histogram_changed` compares a reference vs the live screen. Injectable image → headless-testable; base OpenCV (`cv2.calcHist`/`compareHist`).
+
 ## What's new (2026-06-23) — Rich Clipboard (HTML / CF_HTML)
 
 Copy and paste *formatted* HTML into Word / Outlook. Full reference: [`docs/source/Eng/doc/new_features/v144_features_doc.rst`](docs/source/Eng/doc/new_features/v144_features_doc.rst).
