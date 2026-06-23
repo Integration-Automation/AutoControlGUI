@@ -2970,6 +2970,53 @@ def text_regions_tools() -> List[MCPTool]:
     ]
 
 
+def edge_lines_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_find_lines",
+            description=("Detect straight line segments on screen (Hough): "
+                         "{count, lines:[{x1,y1,x2,y2,angle,length,orientation}]} "
+                         "longest first. 'orientation' horizontal/vertical/diagonal/"
+                         "any filters; 'min_length'/'max_gap' tune the probe."),
+            input_schema=schema({
+                "min_length": {"type": "integer"},
+                "max_gap": {"type": "integer"},
+                "orientation": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.find_lines,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_find_grid",
+            description=("Recover a table's grid from screen lines: {rows:[y...], "
+                         "cols:[x...], cells:[{x,y,width,height}]}. Address 'row 3, "
+                         "col 2' without a template. 'min_length' filters edges."),
+            input_schema=schema({
+                "min_length": {"type": "integer"},
+                "tol": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.find_grid,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_find_separators",
+            description=("Coordinates of long divider lines along 'axis' "
+                         "(horizontal -> y of each rule, vertical -> x). Returns "
+                         "{count, axis, coordinates}. Split a panel at its dividers."),
+            input_schema=schema({
+                "axis": {"type": "string"},
+                "min_length": {"type": "integer"},
+                "tol": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.find_separators,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6474,7 +6521,8 @@ ALL_FACTORIES = (
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
     window_layout_tools, window_arrange_tools, preprocess_tools,
     monitor_layout_tools, actionability_tools, element_parse_tools,
-    hsv_segment_tools, text_regions_tools, plugin_sdk_tools, governance_tools,
+    hsv_segment_tools, text_regions_tools, edge_lines_tools, plugin_sdk_tools,
+    governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
