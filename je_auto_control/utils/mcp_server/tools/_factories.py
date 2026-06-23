@@ -3454,6 +3454,33 @@ def observation_tools() -> List[MCPTool]:
             handler=h.settle_point,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_build_critic_record",
+            description=("Build a per-step critic record from 'action' + 'before' / "
+                         "'after' element lists (+ optional 'postcondition' spec): "
+                         "composes effect / delta-counts / postcondition into "
+                         "{action, effect, delta_counts, postcondition?} — the "
+                         "evidence a step critic scores."),
+            input_schema=schema({
+                "action": {"type": "object"},
+                "before": {"type": "array", "items": {"type": "object"}},
+                "after": {"type": "array", "items": {"type": "object"}},
+                "postcondition": {"type": "object"},
+                "radius": {"type": "integer"}},
+                required=["action", "before", "after"]),
+            handler=h.build_critic_record,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_score_step",
+            description=("Rule-based score of a critic 'record' (from "
+                         "ac_build_critic_record): {outcome (binary success), "
+                         "process_score (0..1), reasons}. Deterministic, no model."),
+            input_schema=schema({"record": {"type": "object"}},
+                                required=["record"]),
+            handler=h.score_step,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

@@ -2493,6 +2493,16 @@ def settle_point(churns, quiet_samples=3, max_churn=1.0):
     return _settle_point(churns, quiet_samples, max_churn)
 
 
+def build_critic_record(action, before, after, postcondition=None, radius=64):
+    from je_auto_control.utils.executor.action_executor import _build_critic_record
+    return _build_critic_record(action, before, after, postcondition, radius)
+
+
+def score_step(record):
+    from je_auto_control.utils.executor.action_executor import _score_step
+    return _score_step(record)
+
+
 def validate_action(action, screen=None, targets=None):
     from je_auto_control.utils.executor.action_executor import _validate_action
     return _validate_action(action, screen, targets)

@@ -3304,6 +3304,29 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Index where a churn series first settles (offline settle check).",
     ))
     specs.append(CommandSpec(
+        "AC_build_critic_record", "Native UI", "Build Critic Record",
+        fields=(
+            FieldSpec("action", FieldType.STRING,
+                      placeholder='{"type":"click","x":50,"y":50}'),
+            FieldSpec("before", FieldType.STRING,
+                      placeholder='[{"role":"button","x":0,"y":0}]'),
+            FieldSpec("after", FieldType.STRING,
+                      placeholder='[{"role":"dialog","x":40,"y":40}]'),
+            FieldSpec("postcondition", FieldType.STRING, optional=True,
+                      placeholder='{"appears":{"role":"dialog"}}'),
+            FieldSpec("radius", FieldType.INT, optional=True, default=64),
+        ),
+        description="Per-step critic evidence (effect + delta + postcondition).",
+    ))
+    specs.append(CommandSpec(
+        "AC_score_step", "Native UI", "Score Step (rule-based)",
+        fields=(
+            FieldSpec("record", FieldType.STRING,
+                      placeholder='{"effect":{"effect":"changed_near_target"}}'),
+        ),
+        description="Rule-based outcome + process score of a critic record.",
+    ))
+    specs.append(CommandSpec(
         "AC_consensus_element", "Native UI", "Grounding Consensus Element",
         fields=(
             FieldSpec("candidates", FieldType.STRING,

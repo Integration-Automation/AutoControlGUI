@@ -4265,6 +4265,32 @@ def _settle_point(churns: Any, quiet_samples: Any = 3,
     return {"settled": index is not None, "index": index}
 
 
+def _build_critic_record(action: Any, before: Any, after: Any,
+                         postcondition: Any = None, radius: Any = 64) -> Dict[str, Any]:
+    """Adapter: per-step critic feature bundle (effect + delta + postcondition)."""
+    import json
+    from je_auto_control.utils.critic_features import build_critic_record
+    if isinstance(action, str):
+        action = json.loads(action)
+    if isinstance(before, str):
+        before = json.loads(before)
+    if isinstance(after, str):
+        after = json.loads(after)
+    if isinstance(postcondition, str):
+        postcondition = json.loads(postcondition) if postcondition.strip() else None
+    return build_critic_record(action, before, after, postcondition=postcondition,
+                               radius=int(radius))
+
+
+def _score_step(record: Any) -> Dict[str, Any]:
+    """Adapter: rule-based score of a critic record."""
+    import json
+    from je_auto_control.utils.critic_features import score_step_rule_based
+    if isinstance(record, str):
+        record = json.loads(record)
+    return score_step_rule_based(record)
+
+
 def _validate_action(action: Any, screen: Any = None,
                      targets: Any = None) -> Dict[str, Any]:
     """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""
@@ -6157,6 +6183,8 @@ class Executor:
             "AC_consensus_point": _consensus_point,
             "AC_consensus_element": _consensus_element,
             "AC_settle_point": _settle_point,
+            "AC_build_critic_record": _build_critic_record,
+            "AC_score_step": _score_step,
             "AC_validate_action": _validate_action,
             "AC_replay_trace": _replay_trace,
             "AC_match_elements": _match_elements,

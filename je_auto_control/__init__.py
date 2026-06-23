@@ -351,6 +351,10 @@ from je_auto_control.utils.grounding_consensus import (
 from je_auto_control.utils.settle_detector import (
     SettleState, SettleTracker, is_settled, settle_point,
 )
+# Per-step critic feature bundle + rule-based step scorer
+from je_auto_control.utils.critic_features import (
+    build_critic_record, score_step_rule_based, to_judge_prompt,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -1318,6 +1322,9 @@ __all__ = [
     "SettleTracker",
     "settle_point",
     "is_settled",
+    "build_critic_record",
+    "score_step_rule_based",
+    "to_judge_prompt",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",
