@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Fill a Ruling-Line Grid With OCR Text (Addressable Tables)
+
+Turn a bordered table's lines + OCR words into an addressable `R x C` table. Full reference: [`docs/source/Eng/doc/new_features/v162_features_doc.rst`](docs/source/Eng/doc/new_features/v162_features_doc.rst).
+
+- **`populate_table` / `assign_text_to_grid` / `table_to_records` / `table_to_csv`** (`AC_populate_table`): `edge_lines.find_grid` recovers a table's ruling-line geometry but the cells come back *empty*; OCR gives the text but no structure — nothing joined them. This drops OCR boxes into the grid (assigned by cell-centre, gated by an overlap fraction so a box straddling a thin rule isn't double-counted), concatenates each cell's text in reading order, flags merged-cell spans, and converts straight to records / CSV. Pure-stdlib over plain dicts — no image, no OCR engine, no device. No `PySide6`.
+
 ## What's new (2026-06-24) — Trust-Scored Template Matching (Ambiguity / PSR)
 
 Know when a template match is strong but *ambiguous* before clicking it. Full reference: [`docs/source/Eng/doc/new_features/v161_features_doc.rst`](docs/source/Eng/doc/new_features/v161_features_doc.rst).

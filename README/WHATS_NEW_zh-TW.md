@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 以 OCR 文字填入框線網格(可定址表格)
+
+把有框線表格的線條 + OCR 文字轉成可定址的 `R x C` 表格。完整參考:[`docs/source/Zh/doc/new_features/v162_features_doc.rst`](../docs/source/Zh/doc/new_features/v162_features_doc.rst)。
+
+- **`populate_table` / `assign_text_to_grid` / `table_to_records` / `table_to_csv`**(`AC_populate_table`):`edge_lines.find_grid` 能還原表格的框線幾何但回傳的儲存格是*空的*;OCR 提供文字卻無結構——兩者從未串接。本功能把 OCR 框放入網格(依儲存格中心指派,以重疊比例把關,使橫跨細框線的框不被重複計入),將每個儲存格的文字依閱讀順序串接,標記合併儲存格的 span,並可直接轉成 records / CSV。純標準函式庫,作用於純字典——不需影像、OCR 引擎或裝置。不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 信任評分樣板比對(歧義 / PSR)
 
 在點擊前就知道某次樣板比對雖強但*有歧義*。完整參考:[`docs/source/Zh/doc/new_features/v161_features_doc.rst`](../docs/source/Zh/doc/new_features/v161_features_doc.rst)。

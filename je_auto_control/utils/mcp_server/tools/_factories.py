@@ -3665,6 +3665,21 @@ def screen_grid_tools() -> List[MCPTool]:
             handler=h.point_for_cell,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_populate_table",
+            description=("Fill a ruling-line 'grid' (from find_grid: {rows:[y..],"
+                         "cols:[x..]}) with OCR 'text_boxes' ([{x,y,width,height,"
+                         "text}]) into an addressable table. Returns {n_rows, n_cols, "
+                         "cells:[{row,col,text}], spans:[merged-cell candidates]}. "
+                         "'overlap' (default 0.4) gates a box straddling a rule."),
+            input_schema=schema({
+                "grid": {"type": "object"},
+                "text_boxes": {"type": "array", "items": {"type": "object"}},
+                "overlap": {"type": "number"}},
+                required=["grid", "text_boxes"]),
+            handler=h.populate_table,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
