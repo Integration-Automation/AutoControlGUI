@@ -279,6 +279,10 @@ from je_auto_control.utils.visual_match import (
     match_template_all,
 )
 from je_auto_control.utils.visual_match import Match as TemplateMatch
+# Rotation- and scale-tolerant template matching (scale-space x angle sweep)
+from je_auto_control.utils.rotated_match import (
+    RotatedMatch, match_rotated, match_rotated_all, scale_space,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -1182,6 +1186,10 @@ __all__ = [
     "match_masked",
     "match_masked_all",
     "best_matches",
+    "RotatedMatch",
+    "match_rotated",
+    "match_rotated_all",
+    "scale_space",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",

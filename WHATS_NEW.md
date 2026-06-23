@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Rotation- & Scale-Tolerant Template Matching
+
+Find templates that are rotated or skewed, not just scaled. Full reference: [`docs/source/Eng/doc/new_features/v158_features_doc.rst`](docs/source/Eng/doc/new_features/v158_features_doc.rst).
+
+- **`match_rotated` / `match_rotated_all` / `scale_space`** (`AC_match_rotated`, `AC_match_rotated_all`): `match_template` sweeps *scales* but assumes axis-aligned — OpenCV's `matchTemplate` isn't rotation-invariant, so a skewed control, a rotated icon or a dial at a different angle is missed. This sweeps `angles` (each warped with `cv2.warpAffine`) crossed with a `np.linspace` scale-space, returns the best-correlating `RotatedMatch` carrying the recovered `scale` + `angle` (the `*_all` form NMS-dedupes neighbouring angles/scales). Reuses `visual_match`'s loaders / resize / method table / NMS — no matching or geometry code duplicated. Injectable `haystack`; headless-testable; no `PySide6`.
+
 ## What's new (2026-06-23) — Barcode Decoding (1-D)
 
 Read EAN / UPC / Code-128 barcodes off the screen or an image. Full reference: [`docs/source/Eng/doc/new_features/v157_features_doc.rst`](docs/source/Eng/doc/new_features/v157_features_doc.rst).

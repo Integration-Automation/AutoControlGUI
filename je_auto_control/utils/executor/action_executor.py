@@ -1,5 +1,5 @@
 import types
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from je_auto_control.utils.exception.exception_tags import (
     action_is_null_error_message, add_command_exception_error_message,
@@ -3282,6 +3282,47 @@ def _match_masked_all(template: str, mask: Any = None, min_score: Any = 0.9,
     return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
 
 
+def _seq_arg(value: Any, default: Sequence[float]) -> Sequence[float]:
+    """Coerce a JSON-string / list arg into a tuple of floats, or the default."""
+    import json
+    if isinstance(value, str):
+        value = json.loads(value) if value.strip() else None
+    return tuple(float(v) for v in value) if value else tuple(default)
+
+
+def _match_rotated(template: str, min_score: Any = 0.8, scales: Any = None,
+                   angles: Any = None, region: Any = None,
+                   method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: best rotation/scale-tolerant template match on the screen."""
+    import json
+    from je_auto_control.utils.rotated_match import match_rotated
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = match_rotated(template, region=region,
+                          scales=_seq_arg(scales, (1.0,)),
+                          angles=_seq_arg(angles, (0.0,)),
+                          min_score=float(min_score), method=method)
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
+def _match_rotated_all(template: str, min_score: Any = 0.8, scales: Any = None,
+                       angles: Any = None, max_results: Any = 20,
+                       nms_iou: Any = 0.3, region: Any = None) -> Dict[str, Any]:
+    """Adapter: every rotation/scale-tolerant template match (NMS)."""
+    import json
+    from je_auto_control.utils.rotated_match import match_rotated_all
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    matches = match_rotated_all(template, region=region,
+                                scales=_seq_arg(scales, (1.0,)),
+                                angles=_seq_arg(angles, (0.0,)),
+                                min_score=float(min_score),
+                                max_results=int(max_results),
+                                nms_iou=float(nms_iou))
+    return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
+
+
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
                        region: Any = None) -> Dict[str, Any]:
     """Adapter: locate coloured regions on the screen, largest first."""
@@ -5684,6 +5725,8 @@ class Executor:
             "AC_match_template_all": _match_template_all,
             "AC_match_masked": _match_masked,
             "AC_match_masked_all": _match_masked_all,
+            "AC_match_rotated": _match_rotated,
+            "AC_match_rotated_all": _match_rotated_all,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,

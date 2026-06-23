@@ -3538,6 +3538,46 @@ def visual_match_tools() -> List[MCPTool]:
     ]
 
 
+def rotated_match_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_match_rotated",
+            description=("Find 'template' on screen tolerating ROTATION and scale: "
+                         "sweeps 'angles' (degrees, e.g. [-10,0,10]) x 'scales', "
+                         "returns the best {found, match:{x,y,width,height,score,"
+                         "scale,angle,center}}. Use when a control is skewed / a "
+                         "rotated icon / a dial. 'min_score', 'region', 'method'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "angles": {"type": "array", "items": {"type": "number"}},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.match_rotated,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_rotated_all",
+            description=("Find EVERY rotation/scale-tolerant match of 'template' "
+                         ">= 'min_score' over the angle x scale sweep, overlaps "
+                         "removed by NMS. Returns {count, matches}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "angles": {"type": "array", "items": {"type": "number"}},
+                "max_results": {"type": "integer"},
+                "nms_iou": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.match_rotated_all,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def grid_locator_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6929,6 +6969,7 @@ ALL_FACTORIES = (
     process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
     key_hold_tools, mouse_relative_tools, text_unicode_tools,
     modifier_state_tools, grid_locator_tools, visual_match_tools,
+    rotated_match_tools,
     color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
     window_layout_tools, window_arrange_tools, preprocess_tools,
     monitor_layout_tools, actionability_tools, element_parse_tools,
