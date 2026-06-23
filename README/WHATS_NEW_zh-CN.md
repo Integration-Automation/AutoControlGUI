@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 表单字段关联(多方向)+ 复选框状态
+
+即使值在下方或右对齐也能把标签与值配对,并读取复选框状态。完整参考:[`docs/source/Zh/doc/new_features/v166_features_doc.rst`](../docs/source/Zh/doc/new_features/v166_features_doc.rst)。
+
+- **`associate_fields` / `match_labels_to_widgets` / `checkbox_state`**(`AC_associate_fields`、`AC_match_labels_to_widgets`):`ocr/structure` 只把 `label:` 与*紧接的下一格*配对——无法处理标签在上、双列 key/value、右对齐值或非文字 widget,且无复选框概念。本功能把每个标签与多*方向*(右 / 下)中 `max_gap` 内最近的对齐值配对,把独立 widget(复选框 / 单选钮 / 输入框)配到最近标签,并由框内暗像素填充比例读取复选框状态。关联部分纯标准库;只有 `checkbox_state` 触及像素(隔离在 `visual_match` 灰阶加载器之后)。不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 留白投影列推断(无框线表格)
 
 靠留白间隙推断列来读取无框线表格。完整参考:[`docs/source/Zh/doc/new_features/v165_features_doc.rst`](../docs/source/Zh/doc/new_features/v165_features_doc.rst)。

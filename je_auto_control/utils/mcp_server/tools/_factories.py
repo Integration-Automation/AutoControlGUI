@@ -3761,6 +3761,33 @@ def screen_grid_tools() -> List[MCPTool]:
             handler=h.detect_borderless_table,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_associate_fields",
+            description=("Pair form labels with their values: for each 'text_boxes' "
+                         "entry whose text ends in ':', find the nearest aligned value "
+                         "box in 'directions' (right / below). Returns {count, fields:"
+                         "[{label,value,direction,gap,label_box,value_box}]}. "
+                         "'max_gap' caps the distance."),
+            input_schema=schema({
+                "text_boxes": {"type": "array", "items": {"type": "object"}},
+                "directions": {"type": "array", "items": {"type": "string"}},
+                "max_gap": {"type": "integer"}},
+                required=["text_boxes"]),
+            handler=h.associate_fields,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_labels_to_widgets",
+            description=("Match each widget (checkbox / radio / input box) to its "
+                         "nearest 'labels' entry by centre distance. Returns {count, "
+                         "pairs:[{widget,label,distance}]}."),
+            input_schema=schema({
+                "labels": {"type": "array", "items": {"type": "object"}},
+                "widgets": {"type": "array", "items": {"type": "object"}}},
+                required=["labels", "widgets"]),
+            handler=h.match_labels_to_widgets,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

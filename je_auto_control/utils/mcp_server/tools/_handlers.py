@@ -2158,6 +2158,17 @@ def detect_borderless_table(boxes, page_width=None, min_gap=8, min_cols=2,
     return _detect_borderless_table(boxes, page_width, min_gap, min_cols, min_rows)
 
 
+def associate_fields(text_boxes, directions=None, max_gap=150):
+    from je_auto_control.utils.executor.action_executor import _associate_fields
+    return _associate_fields(text_boxes, directions, max_gap)
+
+
+def match_labels_to_widgets(labels, widgets):
+    from je_auto_control.utils.executor.action_executor import (
+        _match_labels_to_widgets)
+    return _match_labels_to_widgets(labels, widgets)
+
+
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
     from je_auto_control.utils.executor.action_executor import (
         _find_color_region)

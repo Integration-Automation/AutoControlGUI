@@ -730,6 +730,29 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         description="Find borderless-table column separators by whitespace projection.",
     ))
     specs.append(CommandSpec(
+        "AC_associate_fields", "OCR", "Associate Form Fields",
+        fields=(
+            FieldSpec("text_boxes", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":60,"height":20,'
+                                  '"text":"Name:"}]'),
+            FieldSpec("directions", FieldType.STRING, optional=True,
+                      placeholder='["right", "below"]'),
+            FieldSpec("max_gap", FieldType.INT, optional=True, default=150),
+        ),
+        description="Pair 'label:' boxes with the nearest aligned value (right/below).",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_labels_to_widgets", "OCR", "Match Labels To Widgets",
+        fields=(
+            FieldSpec("labels", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":60,"height":20,'
+                                  '"text":"Accept"}]'),
+            FieldSpec("widgets", FieldType.STRING,
+                      placeholder='[{"x":120,"y":0,"width":16,"height":16}]'),
+        ),
+        description="Match each checkbox/radio/input to its nearest label by centre.",
+    ))
+    specs.append(CommandSpec(
         "AC_scroll_to_find", "OCR", "Scroll Until Visible",
         fields=(
             FieldSpec("target", FieldType.STRING),

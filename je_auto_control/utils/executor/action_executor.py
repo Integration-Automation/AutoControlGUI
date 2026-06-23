@@ -3433,6 +3433,33 @@ def _detect_borderless_table(boxes: Any, page_width: Any = None, min_gap: Any = 
     return {"found": table is not None, "table": table}
 
 
+def _associate_fields(text_boxes: Any, directions: Any = None,
+                      max_gap: Any = 150) -> Dict[str, Any]:
+    """Adapter: pair form labels with their nearest aligned value boxes."""
+    import json
+    from je_auto_control.utils.form_fields import associate_fields
+    if isinstance(text_boxes, str):
+        text_boxes = json.loads(text_boxes)
+    if isinstance(directions, str):
+        directions = json.loads(directions) if directions.strip() else None
+    fields = associate_fields(text_boxes,
+                              directions=tuple(directions) if directions
+                              else ("right", "below"), max_gap=int(max_gap))
+    return {"count": len(fields), "fields": fields}
+
+
+def _match_labels_to_widgets(labels: Any, widgets: Any) -> Dict[str, Any]:
+    """Adapter: match each widget (checkbox / radio / input) to its nearest label."""
+    import json
+    from je_auto_control.utils.form_fields import match_labels_to_widgets
+    if isinstance(labels, str):
+        labels = json.loads(labels)
+    if isinstance(widgets, str):
+        widgets = json.loads(widgets)
+    pairs = match_labels_to_widgets(labels, widgets)
+    return {"count": len(pairs), "pairs": pairs}
+
+
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
                        region: Any = None) -> Dict[str, Any]:
     """Adapter: locate coloured regions on the screen, largest first."""
@@ -5886,6 +5913,8 @@ class Executor:
             "AC_populate_table": _populate_table,
             "AC_column_gutters": _column_gutters,
             "AC_detect_borderless_table": _detect_borderless_table,
+            "AC_associate_fields": _associate_fields,
+            "AC_match_labels_to_widgets": _match_labels_to_widgets,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,
