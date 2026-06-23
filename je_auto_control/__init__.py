@@ -291,6 +291,10 @@ from je_auto_control.utils.match_trust import (
 from je_auto_control.utils.screen_grid import (
     GridCell, cell_for_point, grid_cells, point_for_cell,
 )
+# Fill a ruling-line grid with OCR text → addressable table
+from je_auto_control.utils.table_grid_fill import (
+    assign_text_to_grid, populate_table, table_to_csv, table_to_records,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -1209,6 +1213,10 @@ __all__ = [
     "grid_cells",
     "cell_for_point",
     "point_for_cell",
+    "assign_text_to_grid",
+    "populate_table",
+    "table_to_records",
+    "table_to_csv",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",

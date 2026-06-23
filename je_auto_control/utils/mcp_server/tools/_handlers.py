@@ -2130,6 +2130,11 @@ def point_for_cell(label, rows, cols, region=None):
     return _point_for_cell(label, rows, cols, region)
 
 
+def populate_table(grid, text_boxes, overlap=0.4):
+    from je_auto_control.utils.executor.action_executor import _populate_table
+    return _populate_table(grid, text_boxes, overlap)
+
+
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
     from je_auto_control.utils.executor.action_executor import (
         _find_color_region)

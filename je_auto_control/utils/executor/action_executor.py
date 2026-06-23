@@ -3373,6 +3373,17 @@ def _point_for_cell(label: str, rows: Any, cols: Any,
     return {"point": point}
 
 
+def _populate_table(grid: Any, text_boxes: Any, overlap: Any = 0.4) -> Dict[str, Any]:
+    """Adapter: fill a ruling-line grid with OCR text boxes → addressable table."""
+    import json
+    from je_auto_control.utils.table_grid_fill import populate_table
+    if isinstance(grid, str):
+        grid = json.loads(grid)
+    if isinstance(text_boxes, str):
+        text_boxes = json.loads(text_boxes)
+    return populate_table(grid, text_boxes, overlap=float(overlap))
+
+
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
                        region: Any = None) -> Dict[str, Any]:
     """Adapter: locate coloured regions on the screen, largest first."""
@@ -5799,6 +5810,7 @@ class Executor:
             "AC_grid_cells": _grid_cells,
             "AC_cell_for_point": _cell_for_point,
             "AC_point_for_cell": _point_for_cell,
+            "AC_populate_table": _populate_table,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,

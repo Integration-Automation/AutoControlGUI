@@ -675,6 +675,19 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         description="Decode 1-D barcodes (EAN / UPC) in an image / screen region.",
     ))
     specs.append(CommandSpec(
+        "AC_populate_table", "OCR", "Fill Table From Grid + OCR",
+        fields=(
+            FieldSpec("grid", FieldType.STRING,
+                      placeholder='{"rows": [0, 30, 60], "cols": [0, 100, 200]}'),
+            FieldSpec("text_boxes", FieldType.STRING,
+                      placeholder='[{"x": 10, "y": 5, "width": 60, "height": 20, '
+                                  '"text": "Name"}]'),
+            FieldSpec("overlap", FieldType.FLOAT, optional=True, default=0.4,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Drop OCR text boxes into a ruling-line grid → addressable table.",
+    ))
+    specs.append(CommandSpec(
         "AC_scroll_to_find", "OCR", "Scroll Until Visible",
         fields=(
             FieldSpec("target", FieldType.STRING),
