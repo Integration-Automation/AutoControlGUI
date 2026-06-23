@@ -3086,6 +3086,43 @@ def rich_clipboard_tools() -> List[MCPTool]:
     ]
 
 
+def img_histogram_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_image_histogram",
+            description=("Per-channel normalized colour histogram of 'source' "
+                         "(image path; default screen grab of 'region'). 'space' "
+                         "hsv/rgb/gray, 'bins' per channel. Returns {bins, space, "
+                         "histogram}. A scale/illumination-robust view fingerprint."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "bins": {"type": "integer"},
+                "space": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.image_histogram,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_histogram_changed",
+            description=("Whether the screen / 'current' image differs from "
+                         "'reference' by colour histogram (theme switch, reload). "
+                         "'method' correlation/chisqr/intersection/bhattacharyya, "
+                         "'threshold', 'space'. Returns {changed, score}."),
+            input_schema=schema({
+                "reference": {"type": "string"},
+                "current": {"type": "string"},
+                "method": {"type": "string"},
+                "threshold": {"type": "number"},
+                "space": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["reference"]),
+            handler=h.histogram_changed,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6591,7 +6628,8 @@ ALL_FACTORIES = (
     window_layout_tools, window_arrange_tools, preprocess_tools,
     monitor_layout_tools, actionability_tools, element_parse_tools,
     hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
-    locator_chain_tools, rich_clipboard_tools, plugin_sdk_tools, governance_tools,
+    locator_chain_tools, rich_clipboard_tools, img_histogram_tools,
+    plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

@@ -502,6 +502,36 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Refine candidate boxes (within / filter / reading / nth / …).",
     ))
+    specs.append(CommandSpec(
+        "AC_image_histogram", "Image", "Image Histogram",
+        fields=(
+            FieldSpec("source", FieldType.FILE_PATH, optional=True),
+            FieldSpec("bins", FieldType.INT, optional=True, default=32),
+            FieldSpec("space", FieldType.ENUM, optional=True, default="hsv",
+                      choices=("hsv", "rgb", "gray")),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Colour-histogram fingerprint of an image / the screen.",
+    ))
+    specs.append(CommandSpec(
+        "AC_histogram_changed", "Image", "Histogram Changed?",
+        fields=(
+            FieldSpec("reference", FieldType.FILE_PATH),
+            FieldSpec("current", FieldType.FILE_PATH, optional=True),
+            FieldSpec("method", FieldType.ENUM, optional=True,
+                      default="correlation",
+                      choices=("correlation", "chisqr", "intersection",
+                               "bhattacharyya")),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True, default=0.9,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("space", FieldType.ENUM, optional=True, default="hsv",
+                      choices=("hsv", "rgb", "gray")),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Detect a palette/view change vs a reference (illumination-robust).",
+    ))
 
 
 def _add_ocr_specs(specs: List[CommandSpec]) -> None:

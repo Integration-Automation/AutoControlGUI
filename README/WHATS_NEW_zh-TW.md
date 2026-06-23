@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 色彩直方圖指紋與變化偵測
+
+判斷畫面在光照 / 縮放下是否仍是「同一個」。完整參考:[`docs/source/Zh/doc/new_features/v145_features_doc.rst`](../docs/source/Zh/doc/new_features/v145_features_doc.rst)。
+
+- **`image_histogram` / `compare_histograms` / `histogram_changed`**(`AC_image_histogram`、`AC_histogram_changed`):`image_dedup` 的感知雜湊是空間性的(對顏色/主題脆弱)、`color_stats` 只有單一顏色。正規化色彩直方圖是耐光照/縮放的「同一畫面、還是調色盤變了?」訊號(主題切換、重載、旋轉橫幅)。`image_histogram` 回傳逐通道直方圖(`hsv`/`rgb`/`gray`);`compare_histograms` 提供 correlation/chisqr/intersection/bhattacharyya;`histogram_changed` 比較參考與實際螢幕。可注入影像 → 無頭可測;OpenCV 核心(`cv2.calcHist`/`compareHist`)。
+
 ## 本次更新 (2026-06-23) — 豐富剪貼簿(HTML / CF_HTML)
 
 把*格式化*的 HTML 複製貼上到 Word / Outlook。完整參考:[`docs/source/Zh/doc/new_features/v144_features_doc.rst`](../docs/source/Zh/doc/new_features/v144_features_doc.rst)。

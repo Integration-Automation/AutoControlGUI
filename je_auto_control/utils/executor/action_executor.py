@@ -3676,6 +3676,37 @@ def _get_clipboard_html() -> Dict[str, Any]:
     return {"found": html is not None, "html": html}
 
 
+def _image_histogram(source: Any = None, bins: Any = 32, space: str = "hsv",
+                     region: Any = None) -> Dict[str, Any]:
+    """Adapter: per-channel colour histogram of an image / the screen."""
+    import json
+    from je_auto_control.utils.img_histogram import image_histogram
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    hist = image_histogram(source, region=region, bins=int(bins), space=str(space))
+    return {"bins": int(bins), "space": str(space), "histogram": hist}
+
+
+def _histogram_changed(reference: str, current: Any = None, method: str =
+                       "correlation", threshold: Any = 0.9, space: str = "hsv",
+                       region: Any = None) -> Dict[str, Any]:
+    """Adapter: whether the screen / current image differs from a reference."""
+    import json
+    from je_auto_control.utils.img_histogram import (compare_histograms,
+                                                     histogram_changed,
+                                                     image_histogram)
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    changed = histogram_changed(reference, current, region=region,
+                                method=str(method), threshold=float(threshold),
+                                space=str(space))
+    ref_hist = image_histogram(reference, space=str(space))
+    cur_hist = (image_histogram(current, space=str(space)) if current is not None
+                else image_histogram(region=region, space=str(space)))
+    return {"changed": changed,
+            "score": compare_histograms(ref_hist, cur_hist, method=str(method))}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5419,6 +5450,8 @@ class Executor:
             "AC_locate_chain": _locate_chain,
             "AC_set_clipboard_html": _set_clipboard_html,
             "AC_get_clipboard_html": _get_clipboard_html,
+            "AC_image_histogram": _image_histogram,
+            "AC_histogram_changed": _histogram_changed,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

@@ -339,6 +339,10 @@ from je_auto_control.utils.locator_chain import Candidates, from_boxes
 from je_auto_control.utils.rich_clipboard import (
     build_cf_html, get_clipboard_html, parse_cf_html, set_clipboard_html,
 )
+# Colour-histogram fingerprint & change detection (illumination-robust)
+from je_auto_control.utils.img_histogram import (
+    compare_histograms, histogram_changed, image_histogram,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1195,6 +1199,9 @@ __all__ = [
     "parse_cf_html",
     "get_clipboard_html",
     "set_clipboard_html",
+    "image_histogram",
+    "compare_histograms",
+    "histogram_changed",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
