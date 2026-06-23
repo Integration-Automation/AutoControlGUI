@@ -1,5 +1,23 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 比對前安定閘 + 命中穩定性
+
+避免在動畫進行中比對,並確認命中跨幀維持穩定。完整參考:[`docs/source/Zh/doc/new_features/v180_features_doc.rst`](../docs/source/Zh/doc/new_features/v180_features_doc.rst)。
+
+- **`region_stability` / `match_persistence`**(`AC_region_stability`、`AC_match_persistence`):`smart_waits.wait_until_screen_stable` 以布林閘控即時迴圈——無法對可注入幀序列評分穩定度,也無法檢查某*命中*是否維持。`region_stability` 以相鄰幀 SSIM 評分(`{stable, mean_ssim, min_ssim}`);`match_persistence` 確認 template 在*每一*幀都找到且中心於 `agree_px` 內一致(`{persisted, n_hits, jitter}`)。重用 `ssim` + `visual_match` + `grounding_consensus`;幀可注入;不匯入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 色彩感知樣板比對(HSV)
+
+區分形狀相同的紅色與綠色狀態點。完整參考:[`docs/source/Zh/doc/new_features/v179_features_doc.rst`](../docs/source/Zh/doc/new_features/v179_features_doc.rst)。
+
+- **`match_color` / `match_color_all`**(`AC_match_color`、`AC_match_color_all`):`visual_match` 每個比對器都先轉灰階,故形狀相同的紅 vs 綠無法區分;`color_region` 找已知顏色的 blob 卻無法對多色字形做樣板比對。本功能在 HSV 色相/飽和度上以色彩*距離*度量(`TM_SQDIFF_NORMED`——相關會把絕對色相正規化掉,使紅→綠邊與黑→藍邊同分)。重用 `color_region` 的 RGB 載入器 + `visual_match` 的 resize/NMS/`Match`。`channels` 預設 `("h","s")`(平坦飽和度目標用 `("h",)`);純色 blob 請用 `find_color_region`。不匯入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 多模板共識比對
+
+把同一目標的多個參考裁切投票成單一可信位置。完整參考:[`docs/source/Zh/doc/new_features/v178_features_doc.rst`](../docs/source/Zh/doc/new_features/v178_features_doc.rst)。
+
+- **`match_ensemble` / `vote_centers`**(`AC_match_ensemble`、`AC_vote_centers`):一個按鈕以多種狀態呈現(預設/懸停/按下)但是單一邏輯目標;`ab_locator` 只選一個策略、`match_template(scales=...)` 只掃一個模板——兩者都不融合多參考。本功能比對每個參考,聚類命中中心,只有在 ≥ `min_votes` 個於 `agree_px` 內一致時才接受,回傳 `{point, votes, n_candidates, spread}`——減少換膚/動畫 UI 的誤判。重用 `visual_match.match_template` + `grounding_consensus`;`vote_centers` 為純投票核心。不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 逐步評審特徵 + 規則式步驟評分
 
 把為代理步驟評分所需的證據打包,並內建規則式評分器。完整參考:[`docs/source/Zh/doc/new_features/v177_features_doc.rst`](../docs/source/Zh/doc/new_features/v177_features_doc.rst)。

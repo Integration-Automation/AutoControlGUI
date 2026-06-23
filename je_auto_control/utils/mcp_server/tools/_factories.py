@@ -3847,6 +3847,102 @@ def rotated_match_tools() -> List[MCPTool]:
             handler=h.match_subpixel,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_match_ensemble",
+            description=("Match several reference crops of one target ('templates': "
+                         "image paths — e.g. default / hover / pressed states) and "
+                         "return their VOTED consensus location: {found, result:"
+                         "{point, votes, n_candidates, spread}}. Accepts only when "
+                         ">= 'min_votes' references agree within 'agree_px'. Cuts false "
+                         "positives on themed / animated UI. 'min_score', 'region'."),
+            input_schema=schema({
+                "templates": {"type": "array", "items": {"type": "string"}},
+                "min_score": {"type": "number"},
+                "agree_px": {"type": "number"},
+                "min_votes": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["templates"]),
+            handler=h.match_ensemble,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_vote_centers",
+            description=("Vote candidate hit 'centers' ([[x,y],...]) into one consensus "
+                         "target: {found, result:{point, votes, n_candidates, spread}}. "
+                         "Accepts only when >= 'min_votes' agree within 'agree_px'."),
+            input_schema=schema({
+                "centers": {"type": "array",
+                            "items": {"type": "array", "items": {"type": "integer"}}},
+                "agree_px": {"type": "number"},
+                "min_votes": {"type": "integer"}},
+                required=["centers"]),
+            handler=h.vote_centers,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_color",
+            description=("Find 'template' by COLOUR on the HSV hue/saturation channels "
+                         "(not grayscale): tells a red status dot from a green one of "
+                         "identical shape. Returns {found, match}. 'channels' "
+                         "(default [\"h\",\"s\"]; use [\"h\"] for flat-saturation "
+                         "targets), 'min_score', 'scales', 'region'. For solid colour "
+                         "blobs use find_color_region instead."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "channels": {"type": "array", "items": {"type": "string"}},
+                "min_score": {"type": "number"},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.match_color,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_color_all",
+            description=("Find EVERY colour (HSV-channel) match of 'template' >= "
+                         "'min_score', overlaps removed by NMS. Returns "
+                         "{count, matches}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "channels": {"type": "array", "items": {"type": "string"}},
+                "min_score": {"type": "number"},
+                "max_results": {"type": "integer"},
+                "nms_iou": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.match_color_all,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_region_stability",
+            description=("Score how settled a sequence of 'frames' (image paths) is by "
+                         "consecutive-frame SSIM: {stable, mean_ssim, min_ssim}. "
+                         "stable=true when nothing moved between frames "
+                         "(min_ssim >= 'settle_threshold') - match only when stable to "
+                         "avoid mid-animation hits."),
+            input_schema=schema({
+                "frames": {"type": "array", "items": {"type": "string"}},
+                "settle_threshold": {"type": "number"}},
+                required=["frames"]),
+            handler=h.region_stability,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_persistence",
+            description=("Check a 'template' matches the same place across 'frames' "
+                         "(image paths): {persisted, n_hits, jitter}. persisted=true "
+                         "when found in every frame and the centres agree within "
+                         "'agree_px' - a steady match, not one lucky frame. "
+                         "'min_score'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "frames": {"type": "array", "items": {"type": "string"}},
+                "min_score": {"type": "number"},
+                "agree_px": {"type": "number"}},
+                required=["template", "frames"]),
+            handler=h.match_persistence,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

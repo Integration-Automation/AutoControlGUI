@@ -1,5 +1,23 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 匹配前安定门 + 命中稳定性
+
+避免在动画进行中匹配,并确认命中跨帧维持稳定。完整参考:[`docs/source/Zh/doc/new_features/v180_features_doc.rst`](../docs/source/Zh/doc/new_features/v180_features_doc.rst)。
+
+- **`region_stability` / `match_persistence`**(`AC_region_stability`、`AC_match_persistence`):`smart_waits.wait_until_screen_stable` 以布尔门控实时循环——无法对可注入帧序列评分稳定度,也无法检查某*命中*是否维持。`region_stability` 以相邻帧 SSIM 评分(`{stable, mean_ssim, min_ssim}`);`match_persistence` 确认 template 在*每一*帧都找到且中心于 `agree_px` 内一致(`{persisted, n_hits, jitter}`)。重用 `ssim` + `visual_match` + `grounding_consensus`;帧可注入;不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 色彩感知模板匹配(HSV)
+
+区分形状相同的红色与绿色状态点。完整参考:[`docs/source/Zh/doc/new_features/v179_features_doc.rst`](../docs/source/Zh/doc/new_features/v179_features_doc.rst)。
+
+- **`match_color` / `match_color_all`**(`AC_match_color`、`AC_match_color_all`):`visual_match` 每个匹配器都先转灰阶,故形状相同的红 vs 绿无法区分;`color_region` 找已知颜色的 blob 却无法对多色字形做模板匹配。本功能在 HSV 色相/饱和度上以色彩*距离*度量(`TM_SQDIFF_NORMED`——相关会把绝对色相正规化掉,使红→绿边与黑→蓝边同分)。重用 `color_region` 的 RGB 加载器 + `visual_match` 的 resize/NMS/`Match`。`channels` 默认 `("h","s")`(平坦饱和度目标用 `("h",)`);纯色 blob 请用 `find_color_region`。不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 多模板共识匹配
+
+把同一目标的多个参考裁切投票成单一可信位置。完整参考:[`docs/source/Zh/doc/new_features/v178_features_doc.rst`](../docs/source/Zh/doc/new_features/v178_features_doc.rst)。
+
+- **`match_ensemble` / `vote_centers`**(`AC_match_ensemble`、`AC_vote_centers`):一个按钮以多种状态呈现(默认/悬停/按下)但是单一逻辑目标;`ab_locator` 只选一个策略、`match_template(scales=...)` 只扫一个模板——两者都不融合多参考。本功能匹配每个参考,聚类命中中心,只有在 ≥ `min_votes` 个于 `agree_px` 内一致时才接受,返回 `{point, votes, n_candidates, spread}`——减少换肤/动画 UI 的误判。重用 `visual_match.match_template` + `grounding_consensus`;`vote_centers` 为纯投票核心。不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 逐步评审特征 + 规则式步骤评分
 
 把为代理步骤评分所需的证据打包,并内建规则式评分器。完整参考:[`docs/source/Zh/doc/new_features/v177_features_doc.rst`](../docs/source/Zh/doc/new_features/v177_features_doc.rst)。

@@ -1,5 +1,23 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Pre-Match Settle Gating + Match Persistence
+
+Avoid matching mid-animation, and confirm a hit holds steady across frames. Full reference: [`docs/source/Eng/doc/new_features/v180_features_doc.rst`](docs/source/Eng/doc/new_features/v180_features_doc.rst).
+
+- **`region_stability` / `match_persistence`** (`AC_region_stability`, `AC_match_persistence`): `smart_waits.wait_until_screen_stable` gates a live loop with a boolean — it can't score stability on an injectable frame sequence or check whether a *match* held steady. `region_stability` scores consecutive-frame SSIM (`{stable, mean_ssim, min_ssim}`); `match_persistence` confirms a template is found in *every* frame with the centres agreeing within `agree_px` (`{persisted, n_hits, jitter}`). Reuses `ssim` + `visual_match` + `grounding_consensus`; injectable frames; no `PySide6`.
+
+## What's new (2026-06-24) — Colour-Aware Template Matching (HSV)
+
+Tell a red status dot from a green one of identical shape. Full reference: [`docs/source/Eng/doc/new_features/v179_features_doc.rst`](docs/source/Eng/doc/new_features/v179_features_doc.rst).
+
+- **`match_color` / `match_color_all`** (`AC_match_color`, `AC_match_color_all`): every `visual_match` matcher grayscales first, so red vs green of identical shape is indistinguishable; `color_region` finds known-colour blobs but can't template-match a multi-colour glyph. This matches on HSV hue/saturation with a colour-*distance* metric (`TM_SQDIFF_NORMED` — correlation would normalise away the absolute hue, scoring a red→green edge same as black→blue). Reuses `color_region`'s RGB loaders + `visual_match`'s resize/NMS/`Match`. `channels` default `("h","s")` (use `("h",)` for flat-saturation targets); for solid blobs use `find_color_region`. No `PySide6`.
+
+## What's new (2026-06-24) — Multi-Template Consensus Matching
+
+Vote several reference crops of one target into a single trustworthy location. Full reference: [`docs/source/Eng/doc/new_features/v178_features_doc.rst`](docs/source/Eng/doc/new_features/v178_features_doc.rst).
+
+- **`match_ensemble` / `vote_centers`** (`AC_match_ensemble`, `AC_vote_centers`): a button renders in several states (default/hover/pressed) but is one logical target; `ab_locator` picks one strategy and `match_template(scales=...)` sweeps one template — neither fuses multiple references. This matches each reference, clusters the hit centres, and accepts a target only when ≥ `min_votes` agree within `agree_px`, returning `{point, votes, n_candidates, spread}` — cutting false positives on themed/animated UI. Reuses `visual_match.match_template` + `grounding_consensus`; `vote_centers` is the pure voting core. No `PySide6`.
+
 ## What's new (2026-06-24) — Per-Step Critic Features + Rule-Based Step Scorer
 
 Bundle the evidence to score an agent step, with a built-in rule-based scorer. Full reference: [`docs/source/Eng/doc/new_features/v177_features_doc.rst`](docs/source/Eng/doc/new_features/v177_features_doc.rst).

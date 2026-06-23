@@ -291,6 +291,18 @@ from je_auto_control.utils.match_trust import (
 from je_auto_control.utils.edge_match import (
     chamfer_distance, edge_match, edge_match_all,
 )
+# Multi-template consensus matching (vote references onto one location)
+from je_auto_control.utils.match_ensemble import (
+    match_ensemble, vote_centers,
+)
+# Colour-aware template matching on HSV channels
+from je_auto_control.utils.color_match import (
+    match_color, match_color_all,
+)
+# Pre-match settle gating + match persistence over a frame sequence
+from je_auto_control.utils.match_stability import (
+    match_persistence, region_stability,
+)
 # Otsu auto-thresholding for template matching (no hand-tuned min_score)
 from je_auto_control.utils.match_autothresh import (
     auto_threshold, match_auto,
@@ -1274,6 +1286,12 @@ __all__ = [
     "edge_match",
     "edge_match_all",
     "chamfer_distance",
+    "match_ensemble",
+    "vote_centers",
+    "match_color",
+    "match_color_all",
+    "region_stability",
+    "match_persistence",
     "SubPixelMatch",
     "match_subpixel",
     "refine_peak",

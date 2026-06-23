@@ -408,6 +408,79 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Match with a sub-pixel-refined centre (drag / slider precision).",
     ))
     specs.append(CommandSpec(
+        "AC_match_ensemble", "Image", "Match Ensemble (vote references)",
+        fields=(
+            FieldSpec("templates", FieldType.STRING,
+                      placeholder='["default.png", "hover.png", "pressed.png"]'),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("agree_px", FieldType.INT, optional=True, default=10),
+            FieldSpec("min_votes", FieldType.INT, optional=True, default=2),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Vote several reference crops onto one consensus location.",
+    ))
+    specs.append(CommandSpec(
+        "AC_vote_centers", "Image", "Vote Centers (consensus)",
+        fields=(
+            FieldSpec("centers", FieldType.STRING,
+                      placeholder="[[100, 100], [102, 98]]"),
+            FieldSpec("agree_px", FieldType.INT, optional=True, default=10),
+            FieldSpec("min_votes", FieldType.INT, optional=True, default=2),
+        ),
+        description="Vote candidate hit centres into one consensus target.",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_color", "Image", "Match Template (colour/HSV)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("channels", FieldType.STRING, optional=True,
+                      placeholder='["h", "s"]'),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.7,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Match by colour on HSV channels (red vs green, not grayscale).",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_color_all", "Image", "Match Template All (colour/HSV)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("channels", FieldType.STRING, optional=True,
+                      placeholder='["h", "s"]'),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.7,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("max_results", FieldType.INT, optional=True, default=20),
+            FieldSpec("nms_iou", FieldType.FLOAT, optional=True, default=0.3,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Find every colour (HSV) match of a template (NMS-deduped).",
+    ))
+    specs.append(CommandSpec(
+        "AC_region_stability", "Image", "Region Stability (frames)",
+        fields=(
+            FieldSpec("frames", FieldType.STRING,
+                      placeholder='["f1.png", "f2.png", "f3.png"]'),
+            FieldSpec("settle_threshold", FieldType.FLOAT, optional=True,
+                      default=0.99, min_value=0.0, max_value=1.0),
+        ),
+        description="Is a frame sequence settled? (consecutive-frame SSIM).",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_persistence", "Image", "Match Persistence (frames)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("frames", FieldType.STRING,
+                      placeholder='["f1.png", "f2.png", "f3.png"]'),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("agree_px", FieldType.INT, optional=True, default=8),
+        ),
+        description="Does a template match hold steady across frames? (jitter).",
+    ))
+    specs.append(CommandSpec(
         "AC_grid_cells", "Image", "Grid Cells (coarse grounding)",
         fields=(
             FieldSpec("rows", FieldType.INT, optional=True, default=3),

@@ -3400,6 +3400,85 @@ def _match_subpixel(template: str, min_score: Any = 0.0, region: Any = None,
             "match": match.to_dict() if match else None}
 
 
+def _vote_centers(centers: Any, agree_px: Any = 10,
+                  min_votes: Any = 2) -> Dict[str, Any]:
+    """Adapter: vote candidate hit centres into a consensus target."""
+    import json
+    from je_auto_control.utils.match_ensemble import vote_centers
+    if isinstance(centers, str):
+        centers = json.loads(centers)
+    result = vote_centers(centers, agree_px=float(agree_px),
+                          min_votes=int(min_votes))
+    return {"found": result is not None, "result": result}
+
+
+def _match_ensemble(templates: Any, min_score: Any = 0.8, agree_px: Any = 10,
+                    min_votes: Any = 2, region: Any = None) -> Dict[str, Any]:
+    """Adapter: vote several template references onto one consensus location."""
+    import json
+    from je_auto_control.utils.match_ensemble import match_ensemble
+    if isinstance(templates, str):
+        templates = json.loads(templates)
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    result = match_ensemble(templates, region=region, min_score=float(min_score),
+                            agree_px=float(agree_px), min_votes=int(min_votes))
+    return {"found": result is not None, "result": result}
+
+
+def _match_color(template: str, channels: Any = None, min_score: Any = 0.7,
+                 scales: Any = None, region: Any = None) -> Dict[str, Any]:
+    """Adapter: best colour (HSV-channel) template match on the screen."""
+    import json
+    from je_auto_control.utils.color_match import match_color
+    if isinstance(channels, str):
+        channels = json.loads(channels) if channels.strip() else None
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = match_color(template, region=region,
+                        channels=tuple(channels) if channels else ("h", "s"),
+                        scales=_seq_arg(scales, (1.0,)), min_score=float(min_score))
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
+def _match_color_all(template: str, channels: Any = None, min_score: Any = 0.7,
+                     max_results: Any = 20, nms_iou: Any = 0.3,
+                     region: Any = None) -> Dict[str, Any]:
+    """Adapter: every colour (HSV-channel) match on the screen (NMS)."""
+    import json
+    from je_auto_control.utils.color_match import match_color_all
+    if isinstance(channels, str):
+        channels = json.loads(channels) if channels.strip() else None
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    matches = match_color_all(template, region=region,
+                              channels=tuple(channels) if channels else ("h", "s"),
+                              min_score=float(min_score),
+                              max_results=int(max_results), nms_iou=float(nms_iou))
+    return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
+
+
+def _region_stability(frames: Any, settle_threshold: Any = 0.99) -> Dict[str, Any]:
+    """Adapter: how settled an injected frame sequence is (consecutive SSIM)."""
+    import json
+    from je_auto_control.utils.match_stability import region_stability
+    if isinstance(frames, str):
+        frames = json.loads(frames)
+    return region_stability(frames, settle_threshold=float(settle_threshold))
+
+
+def _match_persistence(template: str, frames: Any, min_score: Any = 0.8,
+                       agree_px: Any = 8) -> Dict[str, Any]:
+    """Adapter: whether a template match holds steady across frames."""
+    import json
+    from je_auto_control.utils.match_stability import match_persistence
+    if isinstance(frames, str):
+        frames = json.loads(frames)
+    return match_persistence(template, frames, min_score=float(min_score),
+                             agree_px=float(agree_px))
+
+
 def _region_arg(value: Any) -> Optional[List[int]]:
     """Coerce a JSON-string / list region arg into a list of ints, or None."""
     import json
@@ -6123,6 +6202,12 @@ class Executor:
             "AC_edge_match": _edge_match,
             "AC_edge_match_all": _edge_match_all,
             "AC_match_subpixel": _match_subpixel,
+            "AC_match_ensemble": _match_ensemble,
+            "AC_vote_centers": _vote_centers,
+            "AC_match_color": _match_color,
+            "AC_match_color_all": _match_color_all,
+            "AC_region_stability": _region_stability,
+            "AC_match_persistence": _match_persistence,
             "AC_grid_cells": _grid_cells,
             "AC_cell_for_point": _cell_for_point,
             "AC_point_for_cell": _point_for_cell,

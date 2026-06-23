@@ -2142,6 +2142,38 @@ def match_subpixel(template, min_score=0.0, region=None, method="ccoeff_normed")
     return _match_subpixel(template, min_score, region, method)
 
 
+def vote_centers(centers, agree_px=10, min_votes=2):
+    from je_auto_control.utils.executor.action_executor import _vote_centers
+    return _vote_centers(centers, agree_px, min_votes)
+
+
+def match_ensemble(templates, min_score=0.8, agree_px=10, min_votes=2, region=None):
+    from je_auto_control.utils.executor.action_executor import _match_ensemble
+    return _match_ensemble(templates, min_score, agree_px, min_votes, region)
+
+
+def match_color(template, channels=None, min_score=0.7, scales=None, region=None):
+    from je_auto_control.utils.executor.action_executor import _match_color
+    return _match_color(template, channels, min_score, scales, region)
+
+
+def match_color_all(template, channels=None, min_score=0.7, max_results=20,
+                    nms_iou=0.3, region=None):
+    from je_auto_control.utils.executor.action_executor import _match_color_all
+    return _match_color_all(template, channels, min_score, max_results, nms_iou,
+                            region)
+
+
+def region_stability(frames, settle_threshold=0.99):
+    from je_auto_control.utils.executor.action_executor import _region_stability
+    return _region_stability(frames, settle_threshold)
+
+
+def match_persistence(template, frames, min_score=0.8, agree_px=8):
+    from je_auto_control.utils.executor.action_executor import _match_persistence
+    return _match_persistence(template, frames, min_score, agree_px)
+
+
 def grid_cells(rows, cols, region=None):
     from je_auto_control.utils.executor.action_executor import _grid_cells
     return _grid_cells(rows, cols, region)
