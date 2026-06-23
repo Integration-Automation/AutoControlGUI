@@ -18,6 +18,7 @@ indefinitely. All capture is injectable for unit tests.
 """
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import asdict, dataclass
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
@@ -238,6 +239,52 @@ def _default_window_finder(title: str, case_sensitive: bool) -> bool:
     return find_window(title, case_sensitive=case_sensitive) is not None
 
 
+WindowTitleLister = Callable[[], List[str]]
+
+
+def _title_matches(titles: List[str], pattern: str,
+                   compiled: Optional["re.Pattern"]) -> bool:
+    if compiled is not None:
+        return any(compiled.search(title) for title in titles)
+    return any(pattern in title for title in titles)
+
+
+def wait_until_window_title(pattern: str, *, present: bool = True,
+                            regex: bool = True, timeout_s: float = 10.0,
+                            poll_interval_s: float = 0.2,
+                            title_lister: Optional[WindowTitleLister] = None
+                            ) -> WaitOutcome:
+    """Wait until a window whose title matches ``pattern`` appears (or vanishes).
+
+    Unlike ``wait_for_window`` (substring, appear only) this matches a regular
+    expression by default (``regex=False`` falls back to a substring test) and
+    can wait for the title to *vanish* with ``present=False`` — e.g. wait for a
+    browser tab to navigate to ``r".*— Checkout$"``. ``title_lister() -> [titles]``
+    is injectable for tests.
+    """
+    if timeout_s <= 0:
+        raise ValueError(_TIMEOUT_POSITIVE)
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
+    titles_of = title_lister or _default_title_lister
+    compiled = re.compile(pattern) if regex else None
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    while time.monotonic() < deadline:
+        samples += 1
+        if _title_matches(titles_of(), pattern, compiled) == bool(present):
+            return _finish(True, "window title condition met", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, "timeout while waiting for window title",
+                   started, samples)
+
+
+def _default_title_lister() -> List[str]:
+    from je_auto_control.wrapper.auto_control_window import list_windows
+    return [title for _id, title in list_windows()]
+
+
 FileStatReader = Callable[[str], Optional[int]]
 
 
@@ -376,6 +423,123 @@ def wait_until_process(name: str, *, present: bool = True,
         time.sleep(float(poll_interval_s))
     return _finish(False, f"timeout waiting for process {name!r} to {verb}",
                    started, samples)
+
+
+def wait_until_gone(present: Callable[[], bool], *,
+                    timeout_s: float = 10.0, poll_interval_s: float = 0.2,
+                    gone_for_s: float = 0.0) -> WaitOutcome:
+    """Return once ``present()`` has been falsey for ``gone_for_s`` seconds.
+
+    The blocking complement of ``wait_for_image`` / ``wait_for_text``: wait for a
+    spinner / toast / dialog to *disappear*. ``present`` is any predicate (e.g.
+    "is this image still on screen"); it is polled every ``poll_interval_s`` up to
+    ``timeout_s``. Injecting ``present`` keeps the loop headless-testable.
+    """
+    if timeout_s <= 0:
+        raise ValueError(_TIMEOUT_POSITIVE)
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
+    if gone_for_s < 0:
+        raise ValueError("gone_for_s must be >= 0")
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    gone_since: Optional[float] = None
+    while time.monotonic() < deadline:
+        samples += 1
+        if present():
+            gone_since = None
+        else:
+            if gone_since is None:
+                gone_since = time.monotonic()
+            if time.monotonic() - gone_since >= float(gone_for_s):
+                return _finish(True, "target gone", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, "timeout while waiting for target to vanish",
+                   started, samples)
+
+
+def _image_present(image: Any, detect_threshold: float) -> bool:
+    """Whether ``image`` is currently locatable on screen."""
+    from je_auto_control.utils.exception.exceptions import ImageNotFoundException
+    from je_auto_control.wrapper.auto_control_image import locate_image_center
+    try:
+        locate_image_center(image, detect_threshold=detect_threshold)
+        return True
+    except ImageNotFoundException:
+        return False
+
+
+def wait_until_image_gone(image: Any, *, detect_threshold: float = 1.0,
+                          timeout_s: float = 10.0, poll_interval_s: float = 0.2,
+                          gone_for_s: float = 0.0) -> WaitOutcome:
+    """Wait until ``image`` is no longer found on screen."""
+    return wait_until_gone(lambda: _image_present(image, detect_threshold),
+                           timeout_s=timeout_s, poll_interval_s=poll_interval_s,
+                           gone_for_s=gone_for_s)
+
+
+def _text_present(text: str) -> bool:
+    """Whether ``text`` is currently found on screen via OCR."""
+    from je_auto_control.utils.ocr.ocr_engine import find_text_matches
+    return bool(find_text_matches(text))
+
+
+def wait_until_text_gone(text: str, *, timeout_s: float = 10.0,
+                         poll_interval_s: float = 0.2,
+                         gone_for_s: float = 0.0) -> WaitOutcome:
+    """Wait until ``text`` is no longer found on screen (OCR)."""
+    return wait_until_gone(lambda: _text_present(text), timeout_s=timeout_s,
+                           poll_interval_s=poll_interval_s, gone_for_s=gone_for_s)
+
+
+def _color_fraction(frame: "Frame", target: Sequence[int],
+                    tolerance: int) -> float:
+    """Fraction of the frame's pixels within ``tolerance`` of ``target`` RGB."""
+    pixels = frame.pixels
+    total = len(pixels) // 3
+    if total == 0:
+        return 0.0
+    red, green, blue = int(target[0]), int(target[1]), int(target[2])
+    tol = int(tolerance)
+    matched = 0
+    for offset in range(0, total * 3, 3):
+        if (abs(pixels[offset] - red) <= tol
+                and abs(pixels[offset + 1] - green) <= tol
+                and abs(pixels[offset + 2] - blue) <= tol):
+            matched += 1
+    return matched / total
+
+
+def wait_until_color(*, region: Optional[Sequence[int]] = None,
+                     target_rgb: Sequence[int], tolerance: int = 10,
+                     min_fraction: float = 0.5, present: bool = True,
+                     timeout_s: float = 10.0, poll_interval_s: float = 0.2,
+                     sampler: Optional[ScreenSampler] = None) -> WaitOutcome:
+    """Wait until ``target_rgb`` covers (or stops covering) a fraction of ``region``.
+
+    Counts pixels within ``tolerance`` (per channel) of ``target_rgb``. With
+    ``present=True`` the wait succeeds once that fraction reaches
+    ``min_fraction`` (a status light turns green, a progress bar fills); with
+    ``present=False`` it succeeds once the fraction drops below it (the colour
+    disappears). ``sampler`` is injectable for headless tests.
+    """
+    if timeout_s <= 0:
+        raise ValueError(_TIMEOUT_POSITIVE)
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
+    grab = sampler or _default_sampler
+    started = time.monotonic()
+    deadline = started + float(timeout_s)
+    samples = 0
+    while time.monotonic() < deadline:
+        samples += 1
+        fraction = _color_fraction(grab(region), target_rgb, tolerance)
+        reached = fraction >= float(min_fraction)
+        if reached == bool(present):
+            return _finish(True, "colour condition met", started, samples)
+        time.sleep(float(poll_interval_s))
+    return _finish(False, "timeout while waiting for colour", started, samples)
 
 
 def _default_process_lister(name: str) -> List[str]:

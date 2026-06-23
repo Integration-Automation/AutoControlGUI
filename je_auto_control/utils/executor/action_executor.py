@@ -361,6 +361,58 @@ def _wait_clipboard_change(baseline: Optional[str] = None,
     ).to_dict()
 
 
+def _wait_image_gone(image: Any, detect_threshold: float = 1.0,
+                     timeout_s: float = 10.0, poll_interval_s: float = 0.2,
+                     gone_for_s: float = 0.0) -> Dict[str, Any]:
+    """Executor adapter: wait until an image is no longer on screen."""
+    from je_auto_control.utils.smart_waits import wait_until_image_gone
+    return wait_until_image_gone(
+        image, detect_threshold=float(detect_threshold),
+        timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
+        gone_for_s=float(gone_for_s),
+    ).to_dict()
+
+
+def _wait_text_gone(text: str, timeout_s: float = 10.0,
+                    poll_interval_s: float = 0.2,
+                    gone_for_s: float = 0.0) -> Dict[str, Any]:
+    """Executor adapter: wait until text is no longer on screen (OCR)."""
+    from je_auto_control.utils.smart_waits import wait_until_text_gone
+    return wait_until_text_gone(
+        text, timeout_s=float(timeout_s),
+        poll_interval_s=float(poll_interval_s), gone_for_s=float(gone_for_s),
+    ).to_dict()
+
+
+def _wait_window_title(pattern: str, present: bool = True, regex: bool = True,
+                       timeout_s: float = 10.0,
+                       poll_interval_s: float = 0.2) -> Dict[str, Any]:
+    """Executor adapter: wait for a window title (regex) to appear / vanish."""
+    from je_auto_control.utils.smart_waits import wait_until_window_title
+    return wait_until_window_title(
+        pattern, present=bool(present), regex=bool(regex),
+        timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
+    ).to_dict()
+
+
+def _wait_color(target_rgb: Any, region: Any = None,
+                tolerance: int = 10, min_fraction: float = 0.5,
+                present: bool = True, timeout_s: float = 10.0,
+                poll_interval_s: float = 0.2) -> Dict[str, Any]:
+    """Executor adapter: wait until a colour fills/leaves a region."""
+    import json
+    from je_auto_control.utils.smart_waits import wait_until_color
+    if isinstance(target_rgb, str):
+        target_rgb = json.loads(target_rgb)
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    return wait_until_color(
+        region=region, target_rgb=target_rgb, tolerance=int(tolerance),
+        min_fraction=float(min_fraction), present=bool(present),
+        timeout_s=float(timeout_s), poll_interval_s=float(poll_interval_s),
+    ).to_dict()
+
+
 def _wait_window_closed(title: str, case_sensitive: bool = False,
                         timeout_s: float = 10.0,
                         poll_interval_s: float = 0.2) -> Dict[str, Any]:
@@ -437,8 +489,9 @@ def _ocr_read_structure(region: Optional[List[int]] = None,
 
 def _anchor_locate(anchor: Dict[str, Any], target: Dict[str, Any],
                    relation: str = "near",
-                   max_distance_px: float = 200.0) -> Dict[str, Any]:
-    """Executor adapter: anchor-based spatial locator."""
+                   max_distance_px: float = 200.0,
+                   ordinal: Any = 1) -> Dict[str, Any]:
+    """Executor adapter: anchor-based spatial locator (Nth match via ordinal)."""
     from je_auto_control.utils.anchor_locator import (
         Locator, anchor_locate,
     )
@@ -447,8 +500,21 @@ def _anchor_locate(anchor: Dict[str, Any], target: Dict[str, Any],
     outcome = anchor_locate(
         anchor=anchor_loc, target=target_loc,
         relation=relation, max_distance_px=float(max_distance_px),
+        ordinal=int(ordinal),
     )
     return outcome.to_dict()
+
+
+def _anchor_locate_all(anchor: Dict[str, Any], target: Dict[str, Any],
+                       relation: str = "near",
+                       max_distance_px: float = 200.0) -> Dict[str, Any]:
+    """Executor adapter: every anchor-relative match, nearest-first."""
+    from je_auto_control.utils.anchor_locator import Locator, anchor_locate_all
+    outcomes = anchor_locate_all(
+        anchor=Locator(**anchor), target=Locator(**target),
+        relation=relation, max_distance_px=float(max_distance_px),
+    )
+    return {"count": len(outcomes), "matches": [o.to_dict() for o in outcomes]}
 
 
 def _anchor_click(anchor: Dict[str, Any], target: Dict[str, Any],
@@ -2112,6 +2178,31 @@ def _snap_window(title: str, position: str = "left") -> Dict[str, Any]:
     return {"moved": snap_window(title, position)}
 
 
+def _arrange_grid(titles: Any, rows: Any = None, cols: Any = None,
+                  gap: Any = 0) -> Dict[str, Any]:
+    """Executor adapter: tile a list of window titles into a grid."""
+    import json
+    from je_auto_control.utils.window_capture import arrange_grid
+    if isinstance(titles, str):
+        titles = json.loads(titles)
+    moved = arrange_grid(list(titles),
+                         rows=int(rows) if rows is not None else None,
+                         cols=int(cols) if cols is not None else None,
+                         gap=int(gap))
+    return {"moved": moved, "count": len(list(titles))}
+
+
+def _arrange_cascade(titles: Any, offset: Any = 30) -> Dict[str, Any]:
+    """Executor adapter: cascade a list of window titles diagonally."""
+    import json
+    from je_auto_control.utils.window_capture import arrange_cascade
+    if isinstance(titles, str):
+        titles = json.loads(titles)
+    titles = list(titles)
+    return {"moved": arrange_cascade(titles, offset=int(offset)),
+            "count": len(titles)}
+
+
 def _save_window_layout(path: Optional[str] = None) -> Dict[str, Any]:
     """Executor adapter: snapshot every window's geometry (optionally to file)."""
     from je_auto_control.utils.window_capture import save_window_layout
@@ -3045,6 +3136,558 @@ def _gettext_ngettext(po: str, msgid: str, msgid_plural: str,
     from je_auto_control.utils.gettext_catalog import parse_po
     catalog = parse_po(po)
     return {"text": catalog.ngettext(msgid, msgid_plural, int(n))}
+
+
+def _checksum_validate(scheme: str, number: str) -> Dict[str, Any]:
+    """Adapter: validate a number's check digit under a named scheme."""
+    from je_auto_control.utils import checksum as cs
+    validators = {"luhn": cs.luhn_validate, "verhoeff": cs.verhoeff_validate,
+                  "damm": cs.damm_validate, "mod97": cs.mod97_10_validate}
+    func = validators.get(scheme)
+    if func is None:
+        raise AutoControlActionException(f"unknown checksum scheme: {scheme!r}")
+    return {"valid": func(number)}
+
+
+def _checksum_digit(scheme: str, partial: str) -> Dict[str, Any]:
+    """Adapter: compute the check digit(s) for a value under a named scheme."""
+    from je_auto_control.utils import checksum as cs
+    digits = {"luhn": cs.luhn_check_digit, "verhoeff": cs.verhoeff_check_digit,
+              "damm": cs.damm_check_digit, "mod97": cs.mod97_10_check_digits}
+    func = digits.get(scheme)
+    if func is None:
+        raise AutoControlActionException(f"unknown checksum scheme: {scheme!r}")
+    return {"check_digit": func(partial)}
+
+
+def _waypoints(value: Any) -> Any:
+    """Coerce a JSON string of waypoints into a list."""
+    import json
+    return json.loads(value) if isinstance(value, str) else value
+
+
+def _move_along_path(waypoints: Any, easing: str = "linear",
+                     per_segment_steps: Any = 20) -> Dict[str, Any]:
+    """Adapter: move the pointer through a polyline of waypoints."""
+    from je_auto_control.utils.mouse_path import move_along_path
+    return move_along_path(_waypoints(waypoints), easing=easing,
+                           per_segment_steps=int(per_segment_steps))
+
+
+def _drag_path(waypoints: Any, button: str = "mouse_left",
+               easing: str = "linear",
+               per_segment_steps: Any = 20) -> Dict[str, Any]:
+    """Adapter: press, drag through a polyline of waypoints, release."""
+    from je_auto_control.utils.mouse_path import drag_path
+    return drag_path(_waypoints(waypoints), button=button, easing=easing,
+                     per_segment_steps=int(per_segment_steps))
+
+
+def _set_field_text(text: str, clear: str = "select_all", paste: Any = False,
+                    modifier: str = "ctrl") -> Dict[str, Any]:
+    """Adapter: clear the focused field and enter text."""
+    from je_auto_control.utils.field_entry import set_field_text
+    return set_field_text(text, clear=clear, paste=bool(paste),
+                          modifier=modifier)
+
+
+def _hold_key(key: str, duration_s: Any = 1.0,
+              rate_hz: Any = None) -> Dict[str, Any]:
+    """Adapter: hold a key for a duration (or auto-repeat at rate_hz)."""
+    from je_auto_control.utils.key_hold import hold_key
+    rate = float(rate_hz) if rate_hz not in (None, "") else None
+    return hold_key(key, float(duration_s), rate_hz=rate)
+
+
+def _move_mouse_relative(dx: Any, dy: Any) -> Dict[str, Any]:
+    """Adapter: move the pointer by a delta from its current position."""
+    from je_auto_control.utils.mouse_relative import move_mouse_relative
+    return move_mouse_relative(int(dx), int(dy))
+
+
+def _type_unicode(text: str, modifier: str = "ctrl") -> Dict[str, Any]:
+    """Adapter: enter arbitrary Unicode text via clipboard paste."""
+    from je_auto_control.utils.text_unicode import type_unicode
+    return type_unicode(text, modifier=modifier)
+
+
+def _grid_cell(boxes: Any, row: Any, col: Any,
+               row_tolerance: Any = 10) -> Dict[str, Any]:
+    """Adapter: address a grid cell by (row, col) from a JSON list of boxes."""
+    import json
+    from je_auto_control.utils.grid_locator import locate_cell
+    if isinstance(boxes, str):
+        boxes = json.loads(boxes)
+    return locate_cell(list(boxes), int(row), int(col),
+                       row_tolerance=int(row_tolerance))
+
+
+def _match_template(template: str, min_score: Any = 0.8, scales: Any = None,
+                    region: Any = None,
+                    method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: best confidence-scored template match on the screen."""
+    import json
+    from je_auto_control.utils.visual_match import match_template
+    if isinstance(scales, str):
+        scales = json.loads(scales) if scales.strip() else None
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = match_template(template, region=region,
+                           scales=tuple(scales) if scales else (1.0,),
+                           min_score=float(min_score), method=method)
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
+def _match_template_all(template: str, min_score: Any = 0.8,
+                        max_results: Any = 20, nms_iou: Any = 0.3,
+                        region: Any = None) -> Dict[str, Any]:
+    """Adapter: every confidence-scored template match on the screen (NMS)."""
+    import json
+    from je_auto_control.utils.visual_match import match_template_all
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    matches = match_template_all(template, region=region,
+                                 min_score=float(min_score),
+                                 max_results=int(max_results),
+                                 nms_iou=float(nms_iou))
+    return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
+
+
+def _match_masked(template: str, mask: Any = None, min_score: Any = 0.9,
+                  region: Any = None) -> Dict[str, Any]:
+    """Adapter: best masked template match (alpha / mask ignores background)."""
+    import json
+    from je_auto_control.utils.visual_match import match_masked
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = match_masked(template, mask=mask, region=region,
+                         min_score=float(min_score))
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
+def _match_masked_all(template: str, mask: Any = None, min_score: Any = 0.9,
+                      max_results: Any = 20, nms_iou: Any = 0.3,
+                      region: Any = None) -> Dict[str, Any]:
+    """Adapter: every masked template match on the screen (NMS)."""
+    import json
+    from je_auto_control.utils.visual_match import match_masked_all
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    matches = match_masked_all(template, mask=mask, region=region,
+                               min_score=float(min_score),
+                               max_results=int(max_results),
+                               nms_iou=float(nms_iou))
+    return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
+
+
+def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
+                       region: Any = None) -> Dict[str, Any]:
+    """Adapter: locate coloured regions on the screen, largest first."""
+    import json
+    from je_auto_control.utils.color_region import find_color_regions
+    if isinstance(rgb, str):
+        rgb = json.loads(rgb)
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    regions = find_color_regions(list(rgb), region=region,
+                                 tolerance=int(tolerance),
+                                 min_area=int(min_area))
+    return {"count": len(regions), "regions": regions,
+            "best": regions[0] if regions else None}
+
+
+def _ssim_compare(reference: str, current: Any = None, ignore: Any = None,
+                  region: Any = None) -> Dict[str, Any]:
+    """Adapter: structural-similarity score between reference and current/screen."""
+    import json
+    from je_auto_control.utils.ssim import ssim_compare
+    if isinstance(ignore, str):
+        ignore = json.loads(ignore) if ignore.strip() else None
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    score = ssim_compare(reference, current, ignore=ignore, region=region)
+    return {"score": score}
+
+
+def _ssim_changed_regions(reference: str, current: Any = None, ignore: Any = None,
+                          threshold: Any = 0.35, min_area: Any = 50,
+                          region: Any = None) -> Dict[str, Any]:
+    """Adapter: boxes of the regions that structurally changed, largest first."""
+    import json
+    from je_auto_control.utils.ssim import ssim_changed_regions
+    if isinstance(ignore, str):
+        ignore = json.loads(ignore) if ignore.strip() else None
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    regions = ssim_changed_regions(reference, current, ignore=ignore,
+                                   threshold=float(threshold),
+                                   min_area=int(min_area), region=region)
+    return {"count": len(regions), "regions": regions}
+
+
+def _feature_match(template: str, region: Any = None, max_features: Any = 500,
+                   ratio: Any = 0.75, min_inliers: Any = 10) -> Dict[str, Any]:
+    """Adapter: locate a template by ORB keypoints (rotation/scale/theme robust)."""
+    import json
+    from je_auto_control.utils.feature_match import feature_match
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = feature_match(template, region=region, max_features=int(max_features),
+                          ratio=float(ratio), min_inliers=int(min_inliers))
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
+def _find_shapes(region: Any = None, min_area: Any = 400,
+                 max_area: Any = None) -> Dict[str, Any]:
+    """Adapter: bounding boxes of all distinct on-screen shapes, largest first."""
+    import json
+    from je_auto_control.utils.shape_locator import find_shapes
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    shapes = find_shapes(region=region, min_area=int(min_area),
+                         max_area=int(max_area) if max_area is not None else None)
+    return {"count": len(shapes), "shapes": shapes}
+
+
+def _find_rectangles(region: Any = None, min_area: Any = 400, max_area: Any = None,
+                     aspect_range: Any = None, epsilon: Any = 0.04
+                     ) -> Dict[str, Any]:
+    """Adapter: boxes of the ~rectangular shapes (buttons / cards), largest first."""
+    import json
+    from je_auto_control.utils.shape_locator import find_rectangles
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    if isinstance(aspect_range, str):
+        aspect_range = json.loads(aspect_range) if aspect_range.strip() else None
+    rects = find_rectangles(
+        region=region, min_area=int(min_area),
+        max_area=int(max_area) if max_area is not None else None,
+        aspect_range=tuple(aspect_range) if aspect_range else None,
+        epsilon=float(epsilon))
+    return {"count": len(rects), "rectangles": rects}
+
+
+def _resolve_screen(screen: Any) -> list:
+    """Parse a JSON screen rect, or default to the live primary screen work area."""
+    import json
+    if isinstance(screen, str):
+        screen = json.loads(screen) if screen.strip() else None
+    if screen:
+        return list(screen)
+    from je_auto_control.wrapper.auto_control_screen import screen_size
+    width, height = screen_size()
+    return [0, 0, int(width), int(height)]
+
+
+def _tile_rect(slot: str, screen: Any = None, gap: Any = 0) -> Dict[str, Any]:
+    """Adapter: rectangle for a named tiling slot of the screen work area."""
+    from je_auto_control.utils.window_layout import tile_rect
+    rect = tile_rect(_resolve_screen(screen), str(slot), gap=int(gap))
+    return {"rect": rect.to_dict()}
+
+
+def _grid_rects(rows: Any, cols: Any, screen: Any = None,
+                gap: Any = 0) -> Dict[str, Any]:
+    """Adapter: one rectangle per cell of an rows x cols grid over the screen."""
+    from je_auto_control.utils.window_layout import grid_rects
+    rects = grid_rects(_resolve_screen(screen), int(rows), int(cols), gap=int(gap))
+    return {"count": len(rects), "rects": [rect.to_dict() for rect in rects]}
+
+
+def _cascade_rects(count: Any, screen: Any = None, offset: Any = 30,
+                   size: Any = None) -> Dict[str, Any]:
+    """Adapter: count staggered, overlapping window rectangles (a cascade)."""
+    import json
+    from je_auto_control.utils.window_layout import cascade_rects
+    if isinstance(size, str):
+        size = json.loads(size) if size.strip() else None
+    rects = cascade_rects(_resolve_screen(screen), int(count), offset=int(offset),
+                          size=tuple(size) if size else None)
+    return {"count": len(rects), "rects": [rect.to_dict() for rect in rects]}
+
+
+def _preprocess_image(output_path: str, source: Any = None, steps: Any = None,
+                      scale: Any = 2.0, region: Any = None, block_size: Any = 31,
+                      c: Any = 11) -> Dict[str, Any]:
+    """Adapter: run the preprocessing pipeline and write the result to a file."""
+    import json
+    import cv2
+    from je_auto_control.utils.preprocess import preprocess_image
+    if isinstance(steps, str):
+        steps = (json.loads(steps) if steps.strip().startswith("[")
+                 else [part.strip() for part in steps.split(",") if part.strip()])
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    result = preprocess_image(
+        source, region=region,
+        steps=tuple(steps) if steps else ("grayscale", "upscale", "binarize"),
+        scale=float(scale), block_size=int(block_size), c=int(c))
+    if not cv2.imwrite(str(output_path), result):
+        raise AutoControlActionException(f"could not write image: {output_path!r}")
+    return {"path": str(output_path), "width": int(result.shape[1]),
+            "height": int(result.shape[0])}
+
+
+def _enumerate_monitors() -> Dict[str, Any]:
+    """Adapter: list connected monitors with virtual-desktop geometry."""
+    from je_auto_control.utils.monitor_layout import (
+        enumerate_monitors, virtual_bounds)
+    monitors = enumerate_monitors()
+    bounds = virtual_bounds(monitors) if monitors else (0, 0, 0, 0)
+    return {"count": len(monitors),
+            "monitors": [monitor.to_dict() for monitor in monitors],
+            "virtual_bounds": list(bounds)}
+
+
+def _monitor_at_point(x: Any, y: Any) -> Dict[str, Any]:
+    """Adapter: report which monitor contains a virtual point."""
+    from je_auto_control.utils.monitor_layout import (
+        enumerate_monitors, monitor_at_point)
+    monitor = monitor_at_point(enumerate_monitors(), int(x), int(y))
+    return {"found": monitor is not None,
+            "monitor": monitor.to_dict() if monitor else None}
+
+
+def _region_pixel_token(bbox):
+    """Stability token: a hash of the bbox region's pixels (changes on movement)."""
+    from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
+    left, top, width, height = bbox
+    image = pil_screenshot(screen_region=[left, top, left + width, top + height])
+    return hash(image.tobytes())
+
+
+def _wait_actionable(template: str, timeout_s: Any = 5.0, stable_for_s: Any = 0.3,
+                     min_score: Any = 0.8, region: Any = None) -> Dict[str, Any]:
+    """Adapter: wait until a template is visible + stable before acting."""
+    import json
+    from je_auto_control.utils.actionability import GateConfig, wait_actionable
+    from je_auto_control.utils.visual_match import match_template
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+
+    def locate():
+        match = match_template(template, region=region, min_score=float(min_score))
+        return (match.x, match.y, match.width, match.height) if match else None
+
+    report = wait_actionable(
+        locate, region_sampler=_region_pixel_token,
+        config=GateConfig(timeout_s=float(timeout_s),
+                          stable_for_s=float(stable_for_s)))
+    return report.to_dict()
+
+
+def _fuse_elements(ocr: Any = None, icon: Any = None, a11y: Any = None,
+                   iou_threshold: Any = 0.9) -> Dict[str, Any]:
+    """Adapter: union OCR / icon / a11y element boxes, dropping duplicates."""
+    import json
+    from je_auto_control.utils.element_parse import fuse_elements
+
+    def parse(value: Any) -> list:
+        if isinstance(value, str):
+            return json.loads(value) if value.strip() else []
+        return list(value) if value else []
+
+    elements = fuse_elements(parse(ocr), parse(icon), parse(a11y),
+                             iou_threshold=float(iou_threshold))
+    return {"count": len(elements), "elements": elements}
+
+
+def _reading_order(elements: Any, row_tol: Any = 12) -> Dict[str, Any]:
+    """Adapter: order element boxes top-to-bottom, left-to-right, with an index."""
+    import json
+    from je_auto_control.utils.element_parse import reading_order
+    if isinstance(elements, str):
+        elements = json.loads(elements)
+    ordered = reading_order(list(elements), row_tol=int(row_tol))
+    return {"count": len(ordered), "elements": ordered}
+
+
+def _segment_hsv(lower_hsv: Any, upper_hsv: Any, min_area: Any = 50,
+                 region: Any = None) -> Dict[str, Any]:
+    """Adapter: locate blobs inside an explicit HSV band on the screen."""
+    import json
+    from je_auto_control.utils.hsv_segment import segment_hsv
+    if isinstance(lower_hsv, str):
+        lower_hsv = json.loads(lower_hsv)
+    if isinstance(upper_hsv, str):
+        upper_hsv = json.loads(upper_hsv)
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    boxes = segment_hsv(region=region, lower_hsv=list(lower_hsv),
+                        upper_hsv=list(upper_hsv), min_area=int(min_area))
+    return {"count": len(boxes), "regions": boxes,
+            "best": boxes[0] if boxes else None}
+
+
+def _dominant_hue_regions(hue: Any, hue_tol: Any = 10, sat_min: Any = 80,
+                          val_min: Any = 80, min_area: Any = 50,
+                          region: Any = None) -> Dict[str, Any]:
+    """Adapter: locate any-brightness regions near a hue on the screen."""
+    import json
+    from je_auto_control.utils.hsv_segment import dominant_hue_regions
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    boxes = dominant_hue_regions(region=region, hue=int(hue), hue_tol=int(hue_tol),
+                                 sat_min=int(sat_min), val_min=int(val_min),
+                                 min_area=int(min_area))
+    return {"count": len(boxes), "regions": boxes,
+            "best": boxes[0] if boxes else None}
+
+
+def _find_text_regions(min_area: Any = 60, max_area: Any = None, merge: Any = True,
+                       max_aspect: Any = 12.0, region: Any = None) -> Dict[str, Any]:
+    """Adapter: locate text/glyph regions on screen via MSER (no OCR)."""
+    import json
+    from je_auto_control.utils.text_regions import find_text_regions
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    regions = find_text_regions(
+        region=region, min_area=int(min_area),
+        max_area=int(max_area) if max_area is not None else None,
+        merge=bool(merge), max_aspect=float(max_aspect))
+    return {"count": len(regions), "regions": regions}
+
+
+def _find_text_lines(y_tolerance: Any = 8, region: Any = None) -> Dict[str, Any]:
+    """Adapter: locate horizontal text lines on screen via MSER (no OCR)."""
+    import json
+    from je_auto_control.utils.text_regions import find_text_lines
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    lines = find_text_lines(region=region, y_tolerance=int(y_tolerance))
+    return {"count": len(lines), "lines": lines}
+
+
+def _find_lines(min_length: Any = 80, max_gap: Any = 10, orientation: str = "any",
+                region: Any = None) -> Dict[str, Any]:
+    """Adapter: detect straight line segments on screen (Hough)."""
+    import json
+    from je_auto_control.utils.edge_lines import find_lines
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    lines = find_lines(region=region, min_length=int(min_length),
+                       max_gap=int(max_gap), orientation=str(orientation))
+    return {"count": len(lines), "lines": lines}
+
+
+def _find_grid(min_length: Any = 120, tol: Any = 10,
+               region: Any = None) -> Dict[str, Any]:
+    """Adapter: recover a table grid (rows / cols / cells) from screen lines."""
+    import json
+    from je_auto_control.utils.edge_lines import find_grid
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    return find_grid(region=region, min_length=int(min_length), tol=int(tol))
+
+
+def _find_separators(axis: str = "horizontal", min_length: Any = 120, tol: Any = 10,
+                     region: Any = None) -> Dict[str, Any]:
+    """Adapter: coordinates of long divider lines along an axis."""
+    import json
+    from je_auto_control.utils.edge_lines import find_separators
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    coords = find_separators(region=region, axis=str(axis),
+                             min_length=int(min_length), tol=int(tol))
+    return {"count": len(coords), "axis": str(axis), "coordinates": coords}
+
+
+def _expect_poll(action: Any, key: Any = None, op: str = "truthy",
+                 expected: Any = None, timeout_s: Any = 5.0,
+                 interval_s: Any = 0.25) -> Dict[str, Any]:
+    """Adapter: re-run a nested action until a key of its result matches."""
+    import json
+    from je_auto_control.utils.expect_poll import (
+        expect_poll, to_be_greater_than, to_be_truthy, to_contain, to_equal,
+        to_match_regex)
+    if isinstance(action, str):
+        action = json.loads(action)
+    builders = {"equals": lambda: to_equal(expected),
+                "contains": lambda: to_contain(expected),
+                "gt": lambda: to_be_greater_than(expected),
+                "regex": lambda: to_match_regex(str(expected)),
+                "truthy": to_be_truthy}
+    matcher = builders.get(str(op), to_be_truthy)()
+
+    def getter():
+        record = executor.execute_action([list(action)])
+        value = next(iter(record.values()), None)
+        if key is not None and isinstance(value, dict):
+            return value.get(key)
+        return value
+
+    result = expect_poll(getter, matcher, timeout_s=float(timeout_s),
+                         interval_s=float(interval_s))
+    return {"ok": result.ok, "value": result.value, "attempts": result.attempts,
+            "waited_s": result.waited_s}
+
+
+def _apply_locate_op(candidates, op: Dict[str, Any]):
+    """Apply one locate-chain op spec to a Candidates set."""
+    name = op.get("op")
+    if name == "within":
+        return candidates.within(op["region"])
+    if name == "filter":
+        return candidates.filter(has_text=op.get("has_text"), near=op.get("near"),
+                                 min_area=op.get("min_area"),
+                                 max_area=op.get("max_area"))
+    if name == "reading":
+        return candidates.sort_reading(row_tol=int(op.get("row_tol", 12)))
+    if name == "nth":
+        return candidates.nth(int(op["index"]))
+    if name == "first":
+        return candidates.first()
+    if name == "last":
+        return candidates.last()
+    raise AutoControlActionException(f"unknown locate-chain op: {name!r}")
+
+
+def _locate_chain(boxes: Any, ops: Any = None) -> Dict[str, Any]:
+    """Adapter: apply a chain of refinement ops to a set of element boxes."""
+    import json
+    from je_auto_control.utils.locator_chain import from_boxes
+    if isinstance(boxes, str):
+        boxes = json.loads(boxes)
+    if isinstance(ops, str):
+        ops = json.loads(ops) if ops.strip() else []
+    candidates = from_boxes(list(boxes))
+    for op in ops or ():
+        candidates = _apply_locate_op(candidates, op)
+    resolved = candidates.resolve()
+    return {"count": len(resolved), "boxes": resolved,
+            "center": candidates.center()}
+
+
+def _set_clipboard_html(html: str, fragment_plaintext: Any = None
+                        ) -> Dict[str, Any]:
+    """Adapter: put an HTML fragment on the clipboard as CF_HTML (Windows)."""
+    from je_auto_control.utils.rich_clipboard import set_clipboard_html
+    set_clipboard_html(str(html), fragment_plaintext=fragment_plaintext)
+    return {"set": True, "length": len(str(html))}
+
+
+def _get_clipboard_html() -> Dict[str, Any]:
+    """Adapter: read the clipboard's HTML fragment (Windows)."""
+    from je_auto_control.utils.rich_clipboard import get_clipboard_html
+    html = get_clipboard_html()
+    return {"found": html is not None, "html": html}
+
+
+def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
+    """Adapter: run nested actions while modifier keys are held down."""
+    import json
+    from je_auto_control.utils.modifier_state import hold_modifiers
+    if isinstance(modifiers, str):
+        modifiers = (json.loads(modifiers) if modifiers.strip().startswith("[")
+                     else [part.strip() for part in modifiers.split("+")])
+    if isinstance(actions, str):
+        actions = json.loads(actions)
+    with hold_modifiers(list(modifiers)):
+        record = executor.execute_action(list(actions), raise_on_error=True)
+    return {"modifiers": list(modifiers), "record": record}
 
 
 def _cas_put(name: str, key: str, value: Any,
@@ -4740,6 +5383,46 @@ class Executor:
             "AC_format_message": _format_message,
             "AC_gettext_translate": _gettext_translate,
             "AC_gettext_ngettext": _gettext_ngettext,
+            "AC_checksum_validate": _checksum_validate,
+            "AC_checksum_digit": _checksum_digit,
+            "AC_move_along_path": _move_along_path,
+            "AC_drag_path": _drag_path,
+            "AC_set_field_text": _set_field_text,
+            "AC_hold_key": _hold_key,
+            "AC_move_mouse_relative": _move_mouse_relative,
+            "AC_type_unicode": _type_unicode,
+            "AC_with_modifiers": _with_modifiers,
+            "AC_grid_cell": _grid_cell,
+            "AC_match_template": _match_template,
+            "AC_match_template_all": _match_template_all,
+            "AC_match_masked": _match_masked,
+            "AC_match_masked_all": _match_masked_all,
+            "AC_ssim_compare": _ssim_compare,
+            "AC_ssim_changed_regions": _ssim_changed_regions,
+            "AC_feature_match": _feature_match,
+            "AC_find_shapes": _find_shapes,
+            "AC_find_rectangles": _find_rectangles,
+            "AC_preprocess_image": _preprocess_image,
+            "AC_enumerate_monitors": _enumerate_monitors,
+            "AC_monitor_at_point": _monitor_at_point,
+            "AC_wait_actionable": _wait_actionable,
+            "AC_fuse_elements": _fuse_elements,
+            "AC_reading_order": _reading_order,
+            "AC_segment_hsv": _segment_hsv,
+            "AC_dominant_hue_regions": _dominant_hue_regions,
+            "AC_find_text_regions": _find_text_regions,
+            "AC_find_text_lines": _find_text_lines,
+            "AC_find_lines": _find_lines,
+            "AC_find_grid": _find_grid,
+            "AC_find_separators": _find_separators,
+            "AC_expect_poll": _expect_poll,
+            "AC_locate_chain": _locate_chain,
+            "AC_set_clipboard_html": _set_clipboard_html,
+            "AC_get_clipboard_html": _get_clipboard_html,
+            "AC_tile_rect": _tile_rect,
+            "AC_grid_rects": _grid_rects,
+            "AC_cascade_rects": _cascade_rects,
+            "AC_find_color_region": _find_color_region,
             "AC_detect_drift": _detect_drift,
             "AC_categorical_drift": _categorical_drift,
             "AC_diff_rows": _diff_rows,
@@ -4900,6 +5583,7 @@ class Executor:
 
             # Anchor-based locator (spatial composition of locator backends)
             "AC_anchor_locate": _anchor_locate,
+            "AC_anchor_locate_all": _anchor_locate_all,
             "AC_anchor_click": _anchor_click,
 
             # Structured OCR (rows / tables / form fields)
@@ -4913,6 +5597,10 @@ class Executor:
             "AC_wait_for_port": _wait_for_port,
             "AC_wait_for_process": _wait_for_process,
             "AC_wait_clipboard_change": _wait_clipboard_change,
+            "AC_wait_image_gone": _wait_image_gone,
+            "AC_wait_text_gone": _wait_text_gone,
+            "AC_wait_color": _wait_color,
+            "AC_wait_window_title": _wait_window_title,
             "AC_wait_window_closed": _wait_window_closed,
 
             # Cost telemetry (LLM token + USD tracking)
@@ -5101,6 +5789,8 @@ class Executor:
             "AC_save_window_layout": _save_window_layout,
             "AC_restore_window_layout": _restore_window_layout,
             "AC_snap_window": _snap_window,
+            "AC_arrange_grid": _arrange_grid,
+            "AC_arrange_cascade": _arrange_cascade,
         }
 
     def known_commands(self) -> set:

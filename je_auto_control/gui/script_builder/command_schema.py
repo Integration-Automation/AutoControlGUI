@@ -44,6 +44,7 @@ class CommandSpec:
 
 
 _MOUSE_BUTTONS = ("mouse_left", "mouse_right", "mouse_middle")
+_REGION_PLACEHOLDER = "[left, top, right, bottom]"
 
 
 def _build_specs() -> List[CommandSpec]:
@@ -163,6 +164,47 @@ def _add_keyboard_specs(specs: List[CommandSpec]) -> None:
         description="Type text with randomized per-key delays.",
     ))
     specs.append(CommandSpec(
+        "AC_set_field_text", "Keyboard", "Set Field Text",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="new value"),
+            FieldSpec("clear", FieldType.ENUM, choices=("select_all", "none"),
+                      optional=True, default="select_all"),
+            FieldSpec("paste", FieldType.BOOL, optional=True, default=False),
+            FieldSpec("modifier", FieldType.STRING, optional=True,
+                      default="ctrl", placeholder="ctrl | command"),
+        ),
+        description="Clear the focused field then enter text (paste for Unicode).",
+    ))
+    specs.append(CommandSpec(
+        "AC_hold_key", "Keyboard", "Hold Key",
+        fields=(
+            FieldSpec("key", FieldType.STRING, placeholder="e.g. key_d, space"),
+            FieldSpec("duration_s", FieldType.FLOAT, default=1.0,
+                      min_value=0.01),
+            FieldSpec("rate_hz", FieldType.FLOAT, optional=True,
+                      placeholder="auto-repeat presses/sec (blank = hold)"),
+        ),
+        description="Hold a key for a duration, or auto-repeat it at rate_hz.",
+    ))
+    specs.append(CommandSpec(
+        "AC_type_unicode", "Keyboard", "Type Unicode (emoji / CJK)",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="café 🚀 値"),
+            FieldSpec("modifier", FieldType.STRING, optional=True,
+                      default="ctrl", placeholder="ctrl | command"),
+        ),
+        description="Enter any Unicode text via clipboard paste (write can't).",
+    ))
+    specs.append(CommandSpec(
+        "AC_with_modifiers", "Keyboard", "With Modifiers Held",
+        fields=(
+            FieldSpec("modifiers", FieldType.STRING, placeholder="ctrl+shift"),
+            FieldSpec("actions", FieldType.STRING,
+                      placeholder='[["AC_click_mouse", {...}], ...]'),
+        ),
+        description="Run nested actions while modifiers are held (release-safe).",
+    ))
+    specs.append(CommandSpec(
         "AC_hotkey", "Keyboard", "Hotkey",
         fields=(
             FieldSpec("key_code_list", FieldType.STRING,
@@ -211,6 +253,254 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("detect_threshold", FieldType.FLOAT, optional=True,
                       default=0.8, min_value=0.0, max_value=1.0),
         ),
+    ))
+    specs.append(CommandSpec(
+        "AC_match_template", "Image", "Match Template (scored)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[0.9, 1.0, 1.1]"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Locate a template and return its confidence score + scale.",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_template_all", "Image", "Match Template All (scored)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("max_results", FieldType.INT, optional=True, default=20),
+            FieldSpec("nms_iou", FieldType.FLOAT, optional=True, default=0.3,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Find every occurrence of a template (scored, NMS-deduped).",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_masked", "Image", "Match Masked Template",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("mask", FieldType.FILE_PATH, optional=True),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.9,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Match counting only opaque/masked pixels (alpha or mask).",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_masked_all", "Image", "Match Masked Template All",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("mask", FieldType.FILE_PATH, optional=True),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.9,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("max_results", FieldType.INT, optional=True, default=20),
+            FieldSpec("nms_iou", FieldType.FLOAT, optional=True, default=0.3,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Find every masked match of a template (NMS-deduped).",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_color_region", "Image", "Find Colour Region",
+        fields=(
+            FieldSpec("rgb", FieldType.STRING, placeholder="[0, 200, 0]"),
+            FieldSpec("tolerance", FieldType.INT, optional=True, default=20),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=50),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Locate regions by colour (status light / banner / fill).",
+    ))
+    specs.append(CommandSpec(
+        "AC_ssim_compare", "Image", "SSIM Compare",
+        fields=(
+            FieldSpec("reference", FieldType.FILE_PATH),
+            FieldSpec("current", FieldType.FILE_PATH, optional=True),
+            FieldSpec("ignore", FieldType.STRING, optional=True,
+                      placeholder="[[x, y, w, h], ...]"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Structural-similarity score (0..1) vs reference / screen.",
+    ))
+    specs.append(CommandSpec(
+        "AC_ssim_changed_regions", "Image", "SSIM Changed Regions",
+        fields=(
+            FieldSpec("reference", FieldType.FILE_PATH),
+            FieldSpec("current", FieldType.FILE_PATH, optional=True),
+            FieldSpec("ignore", FieldType.STRING, optional=True,
+                      placeholder="[[x, y, w, h], ...]"),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True, default=0.35,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=50),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Boxes of the regions that structurally changed.",
+    ))
+    specs.append(CommandSpec(
+        "AC_feature_match", "Image", "Feature Match (ORB)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+            FieldSpec("max_features", FieldType.INT, optional=True, default=500),
+            FieldSpec("ratio", FieldType.FLOAT, optional=True, default=0.75,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("min_inliers", FieldType.INT, optional=True, default=10),
+        ),
+        description="Locate a template under rotation / scale / theme change.",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_shapes", "Image", "Find Shapes",
+        fields=(
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=400),
+            FieldSpec("max_area", FieldType.INT, optional=True),
+        ),
+        description="Locate distinct shapes by edge/contour detection (no template).",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_rectangles", "Image", "Find Rectangles",
+        fields=(
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=400),
+            FieldSpec("max_area", FieldType.INT, optional=True),
+            FieldSpec("aspect_range", FieldType.STRING, optional=True,
+                      placeholder="[1.5, 8.0]"),
+            FieldSpec("epsilon", FieldType.FLOAT, optional=True, default=0.04,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Locate rectangular regions (buttons / cards / input fields).",
+    ))
+    specs.append(CommandSpec(
+        "AC_preprocess_image", "Image", "Preprocess Image (OCR/match)",
+        fields=(
+            FieldSpec("output_path", FieldType.FILE_PATH),
+            FieldSpec("source", FieldType.FILE_PATH, optional=True),
+            FieldSpec("steps", FieldType.STRING, optional=True,
+                      placeholder="grayscale,upscale,binarize"),
+            FieldSpec("scale", FieldType.FLOAT, optional=True, default=2.0),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Clean up an image for OCR / matching (grayscale/binarize/…).",
+    ))
+    specs.append(CommandSpec(
+        "AC_segment_hsv", "Image", "Segment by HSV",
+        fields=(
+            FieldSpec("lower_hsv", FieldType.STRING, placeholder="[40, 80, 80]"),
+            FieldSpec("upper_hsv", FieldType.STRING, placeholder="[80, 255, 255]"),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=50),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Locate regions inside an HSV band (lighting-robust).",
+    ))
+    specs.append(CommandSpec(
+        "AC_dominant_hue_regions", "Image", "Find Hue Regions",
+        fields=(
+            FieldSpec("hue", FieldType.INT, placeholder="0=red, 60=green, 120=blue"),
+            FieldSpec("hue_tol", FieldType.INT, optional=True, default=10),
+            FieldSpec("sat_min", FieldType.INT, optional=True, default=80),
+            FieldSpec("val_min", FieldType.INT, optional=True, default=80),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=50),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Locate any shade of a hue, any brightness (handles red wrap).",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_text_regions", "Image", "Find Text Regions (MSER)",
+        fields=(
+            FieldSpec("min_area", FieldType.INT, optional=True, default=60),
+            FieldSpec("max_area", FieldType.INT, optional=True),
+            FieldSpec("merge", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("max_aspect", FieldType.FLOAT, optional=True, default=12.0),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Locate text regions without OCR (crop to feed an OCR engine).",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_text_lines", "Image", "Find Text Lines (MSER)",
+        fields=(
+            FieldSpec("y_tolerance", FieldType.INT, optional=True, default=8),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Locate horizontal text lines without OCR.",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_lines", "Image", "Find Lines (Hough)",
+        fields=(
+            FieldSpec("min_length", FieldType.INT, optional=True, default=80),
+            FieldSpec("max_gap", FieldType.INT, optional=True, default=10),
+            FieldSpec("orientation", FieldType.ENUM, optional=True, default="any",
+                      choices=("any", "horizontal", "vertical", "diagonal")),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Detect straight line segments on raw pixels.",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_grid", "Image", "Find Table Grid",
+        fields=(
+            FieldSpec("min_length", FieldType.INT, optional=True, default=120),
+            FieldSpec("tol", FieldType.INT, optional=True, default=10),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Recover a table's rows / columns / cells from its lines.",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_separators", "Image", "Find Separator Lines",
+        fields=(
+            FieldSpec("axis", FieldType.ENUM, optional=True, default="horizontal",
+                      choices=("horizontal", "vertical")),
+            FieldSpec("min_length", FieldType.INT, optional=True, default=120),
+            FieldSpec("tol", FieldType.INT, optional=True, default=10),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Coordinates of long divider lines along an axis.",
+    ))
+    specs.append(CommandSpec(
+        "AC_fuse_elements", "Image", "Fuse Element Boxes",
+        fields=(
+            FieldSpec("ocr", FieldType.STRING, optional=True,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+            FieldSpec("icon", FieldType.STRING, optional=True),
+            FieldSpec("a11y", FieldType.STRING, optional=True),
+            FieldSpec("iou_threshold", FieldType.FLOAT, optional=True, default=0.9,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Union OCR/icon/a11y boxes, dropping cross-source duplicates.",
+    ))
+    specs.append(CommandSpec(
+        "AC_reading_order", "Image", "Reading Order",
+        fields=(
+            FieldSpec("elements", FieldType.STRING,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+            FieldSpec("row_tol", FieldType.INT, optional=True, default=12),
+        ),
+        description="Order element boxes top-to-bottom, left-to-right (+ index).",
+    ))
+    specs.append(CommandSpec(
+        "AC_locate_chain", "Image", "Locate Chain (refine boxes)",
+        fields=(
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+            FieldSpec("ops", FieldType.STRING,
+                      placeholder='[{"op":"filter","has_text":"OK"},{"op":"first"}]'),
+        ),
+        description="Refine candidate boxes (within / filter / reading / nth / …).",
     ))
 
 
@@ -316,6 +606,26 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         description="Move a window to a screen half / quarter / maximize.",
     ))
     specs.append(CommandSpec(
+        "AC_arrange_grid", "Window", "Arrange Windows in Grid",
+        fields=(
+            FieldSpec("titles", FieldType.STRING,
+                      placeholder='["Editor", "Browser", "Terminal"]'),
+            FieldSpec("rows", FieldType.INT, optional=True),
+            FieldSpec("cols", FieldType.INT, optional=True),
+            FieldSpec("gap", FieldType.INT, optional=True, default=0),
+        ),
+        description="Tile a list of windows into a grid (auto-shape if unset).",
+    ))
+    specs.append(CommandSpec(
+        "AC_arrange_cascade", "Window", "Arrange Windows in Cascade",
+        fields=(
+            FieldSpec("titles", FieldType.STRING,
+                      placeholder='["Editor", "Browser", "Terminal"]'),
+            FieldSpec("offset", FieldType.INT, optional=True, default=30),
+        ),
+        description="Cascade a list of windows diagonally.",
+    ))
+    specs.append(CommandSpec(
         "AC_wait_window_closed", "Window", "Wait for Window to Close",
         fields=(
             FieldSpec("title", FieldType.STRING),
@@ -386,6 +696,55 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("layout", FieldType.FILE_PATH),),
         description="Move windows back to a saved layout file.",
     ))
+    specs.append(CommandSpec(
+        "AC_tile_rect", "Window", "Tile Rect (compute)",
+        fields=(
+            FieldSpec("slot", FieldType.ENUM,
+                      choices=("full", "left", "right", "top", "bottom",
+                               "top_left", "top_right", "bottom_left",
+                               "bottom_right", "center", "left_third",
+                               "center_third", "right_third"), default="left"),
+            FieldSpec("screen", FieldType.STRING, optional=True,
+                      placeholder="[x, y, width, height]"),
+            FieldSpec("gap", FieldType.INT, optional=True, default=0),
+        ),
+        description="Compute the rectangle for a tiling slot of the screen.",
+    ))
+    specs.append(CommandSpec(
+        "AC_grid_rects", "Window", "Grid Rects (compute)",
+        fields=(
+            FieldSpec("rows", FieldType.INT, default=2),
+            FieldSpec("cols", FieldType.INT, default=2),
+            FieldSpec("screen", FieldType.STRING, optional=True,
+                      placeholder="[x, y, width, height]"),
+            FieldSpec("gap", FieldType.INT, optional=True, default=0),
+        ),
+        description="Compute the cell rectangles of an R×C screen grid.",
+    ))
+    specs.append(CommandSpec(
+        "AC_cascade_rects", "Window", "Cascade Rects (compute)",
+        fields=(
+            FieldSpec("count", FieldType.INT, default=3),
+            FieldSpec("screen", FieldType.STRING, optional=True,
+                      placeholder="[x, y, width, height]"),
+            FieldSpec("offset", FieldType.INT, optional=True, default=30),
+            FieldSpec("size", FieldType.STRING, optional=True,
+                      placeholder="[width, height]"),
+        ),
+        description="Compute staggered, overlapping window rectangles.",
+    ))
+    specs.append(CommandSpec(
+        "AC_enumerate_monitors", "Window", "Enumerate Monitors",
+        description="List monitors + virtual bounds (multi-display geometry).",
+    ))
+    specs.append(CommandSpec(
+        "AC_monitor_at_point", "Window", "Monitor at Point",
+        fields=(
+            FieldSpec("x", FieldType.INT),
+            FieldSpec("y", FieldType.INT),
+        ),
+        description="Report which monitor contains a virtual point.",
+    ))
 
 
 def _add_flow_specs(specs: List[CommandSpec]) -> None:
@@ -405,6 +764,34 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("poll", FieldType.FLOAT, optional=True, default=0.2,
                       min_value=0.01),
         ),
+    ))
+    specs.append(CommandSpec(
+        "AC_wait_actionable", "Flow", "Wait Until Actionable",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True, default=5.0),
+            FieldSpec("stable_for_s", FieldType.FLOAT, optional=True, default=0.3),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Wait until a target is visible + stable before acting.",
+    ))
+    specs.append(CommandSpec(
+        "AC_expect_poll", "Flow", "Expect (poll until match)",
+        fields=(
+            FieldSpec("action", FieldType.STRING,
+                      placeholder='["AC_get_clipboard"]'),
+            FieldSpec("key", FieldType.STRING, optional=True,
+                      placeholder="result dict key, e.g. text"),
+            FieldSpec("op", FieldType.ENUM, optional=True, default="truthy",
+                      choices=("truthy", "equals", "contains", "gt", "regex")),
+            FieldSpec("expected", FieldType.STRING, optional=True),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True, default=5.0),
+            FieldSpec("interval_s", FieldType.FLOAT, optional=True, default=0.25),
+        ),
+        description="Re-run an action until a key of its result matches.",
     ))
     specs.append(CommandSpec(
         "AC_wait_pixel", "Flow", "Wait for Pixel",
@@ -430,6 +817,58 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
                       default=0.2, min_value=0.01),
         ),
         description="Wait until the clipboard changes or matches target.",
+    ))
+    specs.append(CommandSpec(
+        "AC_wait_image_gone", "Flow", "Wait for Image to Vanish",
+        fields=(
+            FieldSpec("image", FieldType.STRING, placeholder="path/to/spinner.png"),
+            FieldSpec("detect_threshold", FieldType.FLOAT, optional=True,
+                      default=1.0),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True, default=10.0),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.2, min_value=0.01),
+            FieldSpec("gone_for_s", FieldType.FLOAT, optional=True, default=0.0),
+        ),
+        description="Block until an image (spinner/toast) leaves the screen.",
+    ))
+    specs.append(CommandSpec(
+        "AC_wait_text_gone", "Flow", "Wait for Text to Vanish",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="Loading..."),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True, default=10.0),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.2, min_value=0.01),
+            FieldSpec("gone_for_s", FieldType.FLOAT, optional=True, default=0.0),
+        ),
+        description="Block until on-screen text (OCR) disappears.",
+    ))
+    specs.append(CommandSpec(
+        "AC_wait_color", "Flow", "Wait for Region Colour",
+        fields=(
+            FieldSpec("target_rgb", FieldType.STRING, placeholder="[0, 200, 0]"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+            FieldSpec("tolerance", FieldType.INT, optional=True, default=10),
+            FieldSpec("min_fraction", FieldType.FLOAT, optional=True,
+                      default=0.5, min_value=0.0, max_value=1.0),
+            FieldSpec("present", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True, default=10.0),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.2, min_value=0.01),
+        ),
+        description="Block until a colour fills (or leaves) a screen region.",
+    ))
+    specs.append(CommandSpec(
+        "AC_wait_window_title", "Flow", "Wait for Window Title",
+        fields=(
+            FieldSpec("pattern", FieldType.STRING, placeholder="Checkout$"),
+            FieldSpec("present", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("regex", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True, default=10.0),
+            FieldSpec("poll_interval_s", FieldType.FLOAT, optional=True,
+                      default=0.2, min_value=0.01),
+        ),
+        description="Block until a window title matches a regex (or vanishes).",
     ))
     specs.append(CommandSpec(
         "AC_loop", "Flow", "Loop (N times)",
@@ -606,6 +1045,19 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
 def _add_misc_specs(specs: List[CommandSpec]) -> None:
     _add_native_control_specs(specs)
     specs.append(CommandSpec(
+        "AC_set_clipboard_html", "Data", "Set Clipboard HTML",
+        fields=(
+            FieldSpec("html", FieldType.STRING,
+                      placeholder="<b>Bold</b> rich text"),
+            FieldSpec("fragment_plaintext", FieldType.STRING, optional=True),
+        ),
+        description="Put rich HTML on the clipboard (CF_HTML, Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_clipboard_html", "Data", "Get Clipboard HTML",
+        description="Read the clipboard's HTML fragment (CF_HTML, Windows).",
+    ))
+    specs.append(CommandSpec(
         "AC_watchdog_add", "Flow", "Watchdog: Add Popup Rule",
         fields=(
             FieldSpec("title", FieldType.STRING),
@@ -680,6 +1132,55 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Drag along an eased path; 'start'/'end' [x,y] via JSON "
                     "view.",
+    ))
+    specs.append(CommandSpec(
+        "AC_move_along_path", "Mouse", "Move Along Path",
+        fields=(
+            FieldSpec("waypoints", FieldType.STRING,
+                      placeholder="[[100,100],[400,150],[400,500]]"),
+            FieldSpec("easing", FieldType.ENUM,
+                      choices=("linear", "ease_in_out_quad", "ease_out_cubic",
+                               "ease_in_cubic"),
+                      optional=True, default="linear"),
+            FieldSpec("per_segment_steps", FieldType.INT, optional=True,
+                      default=20),
+        ),
+        description="Move the pointer through a polyline of waypoints.",
+    ))
+    specs.append(CommandSpec(
+        "AC_drag_path", "Mouse", "Drag Along Path",
+        fields=(
+            FieldSpec("waypoints", FieldType.STRING,
+                      placeholder="[[50,50],[300,50],[300,300]]"),
+            FieldSpec("button", FieldType.ENUM, choices=_MOUSE_BUTTONS,
+                      optional=True, default="mouse_left"),
+            FieldSpec("easing", FieldType.ENUM,
+                      choices=("linear", "ease_in_out_quad", "ease_out_cubic",
+                               "ease_in_cubic"),
+                      optional=True, default="linear"),
+            FieldSpec("per_segment_steps", FieldType.INT, optional=True,
+                      default=20),
+        ),
+        description="Press, drag through a polyline of waypoints, release.",
+    ))
+    specs.append(CommandSpec(
+        "AC_move_mouse_relative", "Mouse", "Move Relative",
+        fields=(
+            FieldSpec("dx", FieldType.INT, placeholder="-40"),
+            FieldSpec("dy", FieldType.INT, placeholder="12"),
+        ),
+        description="Move the pointer by (dx, dy) from its current position.",
+    ))
+    specs.append(CommandSpec(
+        "AC_grid_cell", "Mouse", "Grid Cell (row / col)",
+        fields=(
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder="[[10,100,20,10],[110,100,20,10], ...]"),
+            FieldSpec("row", FieldType.INT, placeholder="0"),
+            FieldSpec("col", FieldType.INT, placeholder="0"),
+            FieldSpec("row_tolerance", FieldType.INT, optional=True, default=10),
+        ),
+        description="Resolve a table cell centre by row/col from cell boxes.",
     ))
     specs.append(CommandSpec(
         "AC_list_plugins", "Tools", "List Plugin Commands",
@@ -2169,6 +2670,24 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("n", FieldType.INT, placeholder="3"),
         ),
         description="Pick the plural-correct translation for count n.",
+    ))
+    specs.append(CommandSpec(
+        "AC_checksum_validate", "Data", "Checksum: Validate",
+        fields=(
+            FieldSpec("scheme", FieldType.STRING,
+                      placeholder="luhn | verhoeff | damm | mod97"),
+            FieldSpec("number", FieldType.STRING, placeholder="4111111111111111"),
+        ),
+        description="Validate a number's check digit (Luhn/Verhoeff/Damm/mod97).",
+    ))
+    specs.append(CommandSpec(
+        "AC_checksum_digit", "Data", "Checksum: Check Digit",
+        fields=(
+            FieldSpec("scheme", FieldType.STRING,
+                      placeholder="luhn | verhoeff | damm | mod97"),
+            FieldSpec("partial", FieldType.STRING, placeholder="799273987"),
+        ),
+        description="Compute the check digit(s) to append to a value.",
     ))
     specs.append(CommandSpec(
         "AC_diff_rows", "Data", "Dataset Diff: Rows by Key",

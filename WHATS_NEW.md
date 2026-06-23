@@ -1,5 +1,185 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Rich Clipboard (HTML / CF_HTML)
+
+Copy and paste *formatted* HTML into Word / Outlook. Full reference: [`docs/source/Eng/doc/new_features/v144_features_doc.rst`](docs/source/Eng/doc/new_features/v144_features_doc.rst).
+
+- **`build_cf_html` / `parse_cf_html` / `set_clipboard_html` / `get_clipboard_html`** (`AC_set_clipboard_html`, `AC_get_clipboard_html`): the base clipboard handles plain text + image only — rich paste needs `CF_HTML`, whose byte-offset header (`StartHTML`/`EndHTML`/`StartFragment`/`EndFragment`) is famously error-prone. `build_cf_html`/`parse_cf_html` compute and recover it in pure Python (round-trip tested, correct across multi-byte UTF-8); `set/get_clipboard_html` wrap them over the Win32 clipboard (with a plain-text fallback). Byte-offset math is headless-testable; only the I/O is Windows.
+
+## What's new (2026-06-23) — Composable / Filtered Candidate Locators
+
+Refine located elements with a chain: `.within(panel).filter(has_text="Delete").nth(1)`. Full reference: [`docs/source/Eng/doc/new_features/v143_features_doc.rst`](docs/source/Eng/doc/new_features/v143_features_doc.rst).
+
+- **`from_boxes` / `Candidates`** (`AC_locate_chain`): `anchor_locator` is a single relation and `grid_locator` is cells — neither supports composable refinement of a candidate set (the Selenium-4 / Playwright chained-locator idiom). This is a pure post-filter over boxes from *any* source (template / OCR / a11y / `fuse_elements`): `within` (region clip), `filter` (`has_text` / `near` / area / predicate), `sort_reading`, `nth` / `first` / `last`, `resolve()` / `center()`. Every method returns a new `Candidates` (no mutation) → fully headless-testable. The executor command applies a JSON `ops` list.
+
+## What's new (2026-06-23) — Retrying Value Assertions (expect.poll)
+
+Retry *any* value until it matches, not just the built-in checks. Full reference: [`docs/source/Eng/doc/new_features/v142_features_doc.rst`](docs/source/Eng/doc/new_features/v142_features_doc.rst).
+
+- **`expect_poll` / `assert_poll` + matchers** (`AC_expect_poll`): `assert_eventually` only polls the fixed dict-spec checks (text/image/pixel/…). This polls any zero-arg `getter` against any `matcher` (`to_equal` / `to_contain` / `to_be_greater_than` / `to_match_regex` / `to_be_truthy` / `to_be_stable`) until it passes or times out — an OCR'd total, a row count stabilising, a custom predicate. Injectable `clock`/`sleep` → deterministic, mirrors Playwright's `expect.poll`. The executor command re-runs a nested action until a key of its result matches.
+
+## What's new (2026-06-23) — Line / Grid / Separator Detection (Hough)
+
+Find table grid lines and UI dividers from raw pixels. Full reference: [`docs/source/Eng/doc/new_features/v141_features_doc.rst`](docs/source/Eng/doc/new_features/v141_features_doc.rst).
+
+- **`find_lines` / `find_grid` / `find_separators`** (`AC_find_lines`, `AC_find_grid`, `AC_find_separators`): `grid_locator` clusters *already-found* boxes and `shape_locator` finds closed rectangles — neither finds a table's ruling lines or a divider from pixels. Canny + probabilistic Hough detects straight segments (classified horizontal/vertical/diagonal), `find_grid` recovers `{rows, cols, cells}` so you can address "row 3, col 2", and `find_separators` returns the coordinates of long dividers. Injectable haystack → headless-testable; base OpenCV (`cv2.HoughLinesP`).
+
+## What's new (2026-06-23) — Model-Free Text-Region Detection (MSER)
+
+Find where text is on screen without running OCR. Full reference: [`docs/source/Eng/doc/new_features/v140_features_doc.rst`](docs/source/Eng/doc/new_features/v140_features_doc.rst).
+
+- **`find_text_regions` / `find_text_lines`** (`AC_find_text_regions`, `AC_find_text_lines`): `shape_locator` finds rectangles (not text) and `locate_text` needs an OCR engine *and* the exact string — neither answers "where is *any* text?". MSER finds the glyph/word/line blobs, so a script can crop candidate boxes to feed OCR (faster + more accurate than full-frame) or detect a label appeared with no OCR dependency. `merge` unions MSER's nested per-glyph regions; `find_text_lines` groups glyphs into per-line boxes; a blank screen returns `[]`. Base OpenCV (`cv2.MSER_create`), injectable haystack → headless-testable.
+
+## What's new (2026-06-23) — HSV Colour-Space Segmentation
+
+Find "any shade of red" regardless of lighting. Full reference: [`docs/source/Eng/doc/new_features/v139_features_doc.rst`](docs/source/Eng/doc/new_features/v139_features_doc.rst).
+
+- **`dominant_hue_regions` / `segment_hsv` / `color_mask`** (`AC_dominant_hue_regions`, `AC_segment_hsv`): `find_color_region` masks in RGB with a per-channel ± box — it can't match "the same colour at a different brightness" (status lights, highlights, theme tints). HSV separates hue from brightness, so a hue band + saturation/value floor catches every shade across lighting. `dominant_hue_regions(hue=…)` handles red's 0/180 wrap automatically; `segment_hsv` takes an explicit band; both return `{x,y,width,height,area,center}` blobs reusing the shared connected-components helper. Injectable haystack → headless-testable.
+
+## What's new (2026-06-23) — Fuse & Order On-Screen Element Boxes
+
+Turn raw OCR + icon + a11y boxes into one clean, numbered element list. Full reference: [`docs/source/Eng/doc/new_features/v138_features_doc.rst`](docs/source/Eng/doc/new_features/v138_features_doc.rst).
+
+- **`iou` / `merge_boxes` / `fuse_elements` / `reading_order`** (`AC_fuse_elements`, `AC_reading_order`): `set_of_marks` numbers a clean element list but nothing *produced* it — a real screen parse yields three overlapping sources with duplicates and no order. These supply the missing step: drop near-duplicate boxes by IoU, union OCR/icon/a11y keeping the most trustworthy source on overlap (`source_priority` a11y > ocr > icon), and sort top-to-bottom/left-to-right with a stable `index`. Plain `dict` boxes → pure-stdlib, fully headless-testable; pairs directly with `set_of_marks`.
+
+## What's new (2026-06-23) — Actionability Gate (Wait Until Ready Before Acting)
+
+Don't click until the target is genuinely ready. Full reference: [`docs/source/Eng/doc/new_features/v137_features_doc.rst`](docs/source/Eng/doc/new_features/v137_features_doc.rst).
+
+- **`wait_actionable` / `act_when_ready`** (`AC_wait_actionable`): Playwright/Cypress run an actionability check before every click — present + stopped moving + enabled + not covered — but AutoControl had none (`self_heal_click` clicks immediately; `wait_until_screen_stable` watches the whole frame). This composes the four checks into one gate and returns an `ActionabilityReport` (per-check booleans, target `point`, `reason` = first failing check). Every signal is an injectable callable (`bbox_provider` / `region_sampler` / `enabled_probe` / `hit_tester`) plus an injectable `clock`/`sleep`, so it's fully deterministic and headless-testable. The executor command gates on a template image.
+
+## What's new (2026-06-23) — Multi-Monitor / Virtual-Desktop Geometry
+
+Place windows and points correctly across several displays. Full reference: [`docs/source/Eng/doc/new_features/v136_features_doc.rst`](docs/source/Eng/doc/new_features/v136_features_doc.rst).
+
+- **`enumerate_monitors` + `Monitor` / `virtual_bounds` / `monitor_at_point` / `monitor_for_window` / `to_local` / `to_virtual` / `remap_point`** (`AC_enumerate_monitors`, `AC_monitor_at_point`): `snap_window` / `arrange_grid` / the layout planner all assumed a single primary `(width, height)` — monitor-blind, unable to tile on a second display or handle a negative-origin virtual desktop. This adds the physical layer: union virtual bounds, which-monitor-owns-this-point/window, virtual↔monitor-local conversion, and equivalent-spot remapping across resolutions/DPI. Pure geometry over `Monitor` dataclasses → fully headless-testable; `enumerate_monitors` has an injectable provider (default `mss`).
+
+## What's new (2026-06-23) — Image Pre-processing for OCR / Template Matching
+
+Clean up the screen before reading or matching it. Full reference: [`docs/source/Eng/doc/new_features/v135_features_doc.rst`](docs/source/Eng/doc/new_features/v135_features_doc.rst).
+
+- **`preprocess_image` + `to_grayscale` / `binarize` / `upscale` / `denoise` / `deskew` / `enhance_contrast`** (`AC_preprocess_image`): `locate_text` and `match_template` fed the *raw* capture to OCR / the matcher — small text, dark themes, low contrast and skew wrecked both, with no preprocessing seam anywhere. This adds the standard pipeline (grayscale → upscale → binarize → deskew → denoise → CLAHE) that multiplies their accuracy. Injectable haystack → ndarray; `detect_skew_angle` measures text rotation; `binarize` does otsu / adaptive. The executor command writes the cleaned image to a path. Headless-testable on synthetic arrays.
+
+## What's new (2026-06-23) — Arrange Multiple Windows (Grid / Cascade)
+
+Lay out a whole set of windows in one call. Full reference: [`docs/source/Eng/doc/new_features/v134_features_doc.rst`](docs/source/Eng/doc/new_features/v134_features_doc.rst).
+
+- **`arrange_grid` / `arrange_cascade`** (`AC_arrange_grid`, `AC_arrange_cascade`): `snap_window` moves *one* window and the layout planner only *computes* rectangles — these close the loop, taking a list of window titles and actually moving every match into a grid (auto near-square shape, or explicit `rows`/`cols` + `gap`) or a diagonal cascade. Build on the layout planner and reuse `snap_window`'s injectable `mover`/`screen_size` seams, so they are fully headless-testable; return the count moved.
+
+## What's new (2026-06-23) — Window Tiling / Layout Geometry Planner
+
+Compute where to place application windows — halves, grids, cascades. Full reference: [`docs/source/Eng/doc/new_features/v133_features_doc.rst`](docs/source/Eng/doc/new_features/v133_features_doc.rst).
+
+- **`tile_rect` / `grid_rects` / `cascade_rects`** (`AC_tile_rect`, `AC_grid_rects`, `AC_cascade_rects`): `save/restore_window_layout` replay *exact* saved positions and `snap_window` moves *one* window — nothing *computes* a fresh multi-window layout. This pure-geometry planner returns the target rectangles for halves, quadrants, thirds, an R×C grid and a staggered cascade given a screen work area, so a script can lay out windows deterministically. Returns `WindowRect` (`.as_tuple()` / `.to_dict()`); `gap` insets tiles; cross-platform and fully headless-testable; composes with any window-move backend.
+
+## What's new (2026-06-23) — Locate UI Elements by Edge / Contour (No Template)
+
+Find the clickable boxes on a screen you have never seen. Full reference: [`docs/source/Eng/doc/new_features/v132_features_doc.rst`](docs/source/Eng/doc/new_features/v132_features_doc.rst).
+
+- **`find_shapes` / `find_rectangles`** (`AC_find_shapes`, `AC_find_rectangles`): every other locator needs something to look *for* — a template, a colour, some text. These need nothing: Canny edge detection + contour extraction returns the bounding boxes (`{x,y,width,height,area,center,aspect}`, largest first) of the distinct shapes, so a script can enumerate cards / buttons / input fields structurally and click the Nth one. `find_rectangles` keeps only convex quads and adds an `aspect_range=(min,max)` w/h filter (`(1.5,8)` wide buttons). Injectable haystack → headless-testable.
+
+## What's new (2026-06-23) — ORB Feature Matching (Rotation / Scale / Theme Robust)
+
+Find a target even when it is rotated, rescaled or re-themed. Full reference: [`docs/source/Eng/doc/new_features/v131_features_doc.rst`](docs/source/Eng/doc/new_features/v131_features_doc.rst).
+
+- **`feature_match`** (`AC_feature_match`): pixel template matching (`match_template` / `match_masked`) correlates pixels, so it breaks the moment the target is rotated, scaled by an unlisted factor, or re-coloured (light/dark theme, hover). This matches ORB *keypoints* and fits a RANSAC homography, returning the four projected `corners`, the `center`, the `inliers` count and an inlier-fraction `score`. ORB border/patch sizes auto-scale down for icon-sized templates (OpenCV's defaults reject them). Core OpenCV only (no contrib); injectable haystack → headless-testable.
+
+## What's new (2026-06-23) — Structural-Similarity (SSIM) Comparison
+
+Perceptual screen comparison that tells you *what* changed. Full reference: [`docs/source/Eng/doc/new_features/v130_features_doc.rst`](docs/source/Eng/doc/new_features/v130_features_doc.rst).
+
+- **`ssim_compare` / `ssim_changed_regions`** (`AC_ssim_compare`, `AC_ssim_changed_regions`): pixel diff (`diff_screenshots`) fires on a one-pixel shift; a histogram (`detect_drift`) is blind to layout. SSIM is the standard visual-regression metric — tolerant of small illumination changes, sensitive to structural change. `ssim_compare` returns a 0..1 score (1.0 = identical); `ssim_changed_regions` returns boxes of what moved. `ignore=[[x,y,w,h]]` masks live clocks / cursors. Pure NumPy + OpenCV (no scikit-image); injectable image pair → headless-testable.
+
+## What's new (2026-06-23) — Masked Template Matching
+
+Match icons regardless of their background. Full reference: [`docs/source/Eng/doc/new_features/v129_features_doc.rst`](docs/source/Eng/doc/new_features/v129_features_doc.rst).
+
+- **`match_masked` / `match_masked_all`** (`AC_match_masked`, `AC_match_masked_all`): plain template matching scores *every* pixel, so an icon clipped from one background fails over a different one. These count only the pixels you mark relevant — an explicit grayscale `mask`, or an RGBA template's alpha channel — so transparent / "don't care" pixels stop dragging the score down. Returns the same `Match` (score/center) as scored template matching; OpenCV masked `TM_CCORR_NORMED`, NaNs zeroed. Injectable haystack → headless-testable.
+
+## What's new (2026-06-23) — Locate On-Screen Regions by Colour
+
+Find the green status pill / red banner by colour. Full reference: [`docs/source/Eng/doc/new_features/v128_features_doc.rst`](docs/source/Eng/doc/new_features/v128_features_doc.rst).
+
+- **`find_color_region` / `find_color_regions`** (`AC_find_color_region`): `color_stats` only describes a region's colour and `assert_pixel` checks one point — neither *locates* a coloured region. This masks pixels within `tolerance` of a target RGB and returns the connected blobs' boxes (`{x,y,width,height,area,center}`, largest first) — for status lights, progress fills, error banners where a template is brittle. Injectable haystack → headless-testable; OpenCV/NumPy via `je_open_cv`.
+
+## What's new (2026-06-23) — Confidence-Returning Template Matching
+
+Template matching that returns the score, searches multiple scales, and finds all occurrences. Full reference: [`docs/source/Eng/doc/new_features/v127_features_doc.rst`](docs/source/Eng/doc/new_features/v127_features_doc.rst).
+
+- **`match_template` / `match_template_all` / `best_matches` / `TemplateMatch`** (`AC_match_template`, `AC_match_template_all`): the existing matcher (`find_object`) is single-scale and *discards the score*. This returns a `Match` with `score`/`scale`/`center`, searches `scales` for DPI/zoom tolerance, and enumerates every occurrence with non-maximum suppression. Injectable `haystack` (ndarray/path/PIL) → headless-testable on synthetic arrays; OpenCV/NumPy via the `je_open_cv` dependency.
+
+## What's new (2026-06-23) — Wait for Window Title (Regex)
+
+Block until a window title matches a regex (or vanishes). Full reference: [`docs/source/Eng/doc/new_features/v126_features_doc.rst`](docs/source/Eng/doc/new_features/v126_features_doc.rst).
+
+- **`wait_until_window_title`** (`AC_wait_window_title`): `wait_for_window` matches a title substring and only waits for *appear*; `wait_until_window_closed` is substring vanish. This matches a regular expression by default (`regex=False` for substring) and can wait for the title to vanish (`present=False`) — e.g. wait for a tab to navigate to `r".*— Checkout$"`. Injectable title source, headless-testable.
+
+## What's new (2026-06-23) — Grid / Table Cell Addressing
+
+Address a table cell by (row, column) from cell bounding boxes. Full reference: [`docs/source/Eng/doc/new_features/v125_features_doc.rst`](docs/source/Eng/doc/new_features/v125_features_doc.rst).
+
+- **`cluster_grid` / `locate_cell`** (`AC_grid_cell`): `anchor_locator` does pairwise relations but nothing addresses a 2-D grid. Given the cell bounding boxes (from `locate_all_image` / `find_text_matches`), this clusters them into rows (by centre-y within `row_tolerance`) and columns (by centre-x) and returns the centre of the 0-based `(row, col)` cell — ready to click. Pure clustering, fully headless-testable.
+
+## What's new (2026-06-23) — Anchor Ordinal & Locate-All
+
+Pick the Nth anchor-relative match, or enumerate them all. Full reference: [`docs/source/Eng/doc/new_features/v124_features_doc.rst`](docs/source/Eng/doc/new_features/v124_features_doc.rst).
+
+- **`anchor_locate(..., ordinal=N)` / `anchor_locate_all`** (`AC_anchor_locate` ordinal, `AC_anchor_locate_all`): `anchor_locate` always returned the single nearest match — no way to grab "the 2nd row below the header" or list every row. Adds a 1-based `ordinal` selector (backward-compatible; `ordinal=1` = nearest) and `anchor_locate_all` returning every match sorted by distance — the building block for table/list-row selection. Pure ranking core, deterministic.
+
+## What's new (2026-06-23) — Held Modifiers Across an Action Group
+
+Hold ctrl/shift down across several actions, released even on error. Full reference: [`docs/source/Eng/doc/new_features/v123_features_doc.rst`](docs/source/Eng/doc/new_features/v123_features_doc.rst).
+
+- **`hold_modifiers` / `plan_with_modifiers`** (`AC_with_modifiers`): `hotkey` releases its keys immediately — there was no way to hold a modifier down across several independent actions (shift-click range select, ctrl-click multi-select) with a guaranteed release. `hold_modifiers` is a context manager that presses on enter and releases in reverse on exit (in a `finally`, so nothing leaks); `plan_with_modifiers` is the pure plan. Injectable sink, deterministic.
+
+## What's new (2026-06-23) — Unicode Text Entry (Emoji / CJK)
+
+Type any Unicode (emoji / CJK / accented) that `write` can't. Full reference: [`docs/source/Eng/doc/new_features/v122_features_doc.rst`](docs/source/Eng/doc/new_features/v122_features_doc.rst).
+
+- **`type_unicode` / `plan_paste` / `unicode_code_units`** (`AC_type_unicode`): `write` types through the virtual-key table and *raises* on emoji/CJK/many accented chars. `type_unicode` enters any text reliably by setting the clipboard and pasting (`modifier` ctrl/command). `unicode_code_units` splits text into UTF-16 code units (surrogate pairs) for KEYEVENTF_UNICODE backends. Pure-planning + injectable sink, deterministic.
+
+## What's new (2026-06-23) — Wait for Region Colour
+
+Block until a colour fills (or leaves) a screen region. Full reference: [`docs/source/Eng/doc/new_features/v121_features_doc.rst`](docs/source/Eng/doc/new_features/v121_features_doc.rst).
+
+- **`wait_until_color`** (`AC_wait_color`): `wait_for_pixel` matches one point exactly and `wait_until_pixel_changes` detects any change at one point — neither waits for "the status light turns green" / "the progress bar fills" / "the red banner is gone". This counts pixels within `tolerance` of `target_rgb` over a region and succeeds when that fraction crosses `min_fraction` (or drops below it, `present=False`). Injectable sampler, headless-testable. Pure-stdlib.
+
+## What's new (2026-06-23) — Relative Mouse Movement
+
+Nudge the pointer by a delta from where it is. Full reference: [`docs/source/Eng/doc/new_features/v120_features_doc.rst`](docs/source/Eng/doc/new_features/v120_features_doc.rst).
+
+- **`move_mouse_relative` / `relative_target`** (`AC_move_mouse_relative`): the mouse wrapper only had absolute `set_mouse_position` — no `moveRel(dx, dy)` for relative-pointer / canvas / FPS apps and incremental drags. Reads the live position and moves by the delta; `relative_target` is the pure arithmetic, and the getter/setter are injectable for headless tests. Pure-stdlib, deterministic.
+
+## What's new (2026-06-23) — Hold Key / Auto-Repeat
+
+Hold a key for a duration, or auto-repeat it at a fixed rate. Full reference: [`docs/source/Eng/doc/new_features/v119_features_doc.rst`](docs/source/Eng/doc/new_features/v119_features_doc.rst).
+
+- **`hold_key` / `plan_key_hold`** (`AC_hold_key`): `type_keyboard` is an instant down+up — there was no "hold this key for N seconds" (game movement, hold-to-scroll) or "send it at R presses/second" (auto-repeat). `plan_key_hold` builds the deterministic op-plan (press/wait/release, or N spaced key events for `rate_hz`); `hold_key` routes waits to an injectable `sleep` and keys to an injectable `sink`. Pure-planning, deterministic.
+
+## What's new (2026-06-23) — Wait Until Gone (Blocking Vanish Waits)
+
+Block until a spinner / toast / dialog disappears. Full reference: [`docs/source/Eng/doc/new_features/v118_features_doc.rst`](docs/source/Eng/doc/new_features/v118_features_doc.rst).
+
+- **`wait_until_gone` / `wait_until_image_gone` / `wait_until_text_gone`** (`AC_wait_image_gone`, `AC_wait_text_gone`): `wait_for_image`/`wait_for_text` only block until something *appears*, and `observer` fires async callbacks on vanish — there was no *blocking* "wait until this image/text disappears then continue" call. The generic `wait_until_gone` takes any predicate (headless-testable); the image/text helpers build it from the locate functions. `gone_for_s` debounces flicker. Returns a `WaitOutcome`. Pure-stdlib.
+
+## What's new (2026-06-23) — Clear-Then-Type Field Entry
+
+Reliably set a text field's value (the Playwright `fill` idiom). Full reference: [`docs/source/Eng/doc/new_features/v117_features_doc.rst`](docs/source/Eng/doc/new_features/v117_features_doc.rst).
+
+- **`set_field_text` / `plan_field_set`** (`AC_set_field_text`): there was no single "focus → clear → set value" primitive, and `write` raises on emoji/CJK. This clears the field (select-all + delete) then enters the text — optionally via the clipboard (`paste=True`) which is the Unicode-safe path `write` can't do. `modifier` is the platform command key (`ctrl`/`command`). Pure-planning + injectable sink, deterministic.
+
+## What's new (2026-06-22) — Multi-Waypoint Mouse Gestures
+
+Move or drag the pointer through a polyline of waypoints. Full reference: [`docs/source/Eng/doc/new_features/v116_features_doc.rst`](docs/source/Eng/doc/new_features/v116_features_doc.rst).
+
+- **`plan_path` / `move_along_path` / `drag_path` / `path_easings`** (`AC_move_along_path`, `AC_drag_path`): `humanize` and `tween_drag` only interpolate a single start→end hop — there was no way to drive an arbitrary chain of waypoints (signatures, marquee selects, multi-stop drags) with the button held across the whole path. `plan_path` is pure eased point math (reusing `tween_drag`'s easings, junctions de-duplicated); the move/drag dispatch through an injectable sink for headless testing. Pure-stdlib, deterministic.
+
+## What's new (2026-06-22) — Check-Digit Algorithms
+
+Compute / verify Luhn, Verhoeff, Damm and ISO 7064 MOD 97-10 check digits. Full reference: [`docs/source/Eng/doc/new_features/v115_features_doc.rst`](docs/source/Eng/doc/new_features/v115_features_doc.rst).
+
+- **`luhn_validate` / `luhn_check_digit` / `verhoeff_*` / `damm_*` / `mod97_10_*`** (`AC_checksum_validate`, `AC_checksum_digit`): `pii_text` detects card/IBAN shapes by regex and `data_quality` does regex validation, but nothing computed or verified a *check digit*. This adds the four schemes behind most identifiers (cards/IMEI, national IDs, IBAN) — the shared engine `identifier_validate` builds on. Pure-stdlib, deterministic.
+
 ## What's new (2026-06-22) — GNU gettext Catalog I/O (.po / .mo)
 
 Read/compile the de-facto translation format. Full reference: [`docs/source/Eng/doc/new_features/v114_features_doc.rst`](docs/source/Eng/doc/new_features/v114_features_doc.rst).

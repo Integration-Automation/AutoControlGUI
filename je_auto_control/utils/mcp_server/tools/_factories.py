@@ -1278,6 +1278,67 @@ def cost_telemetry_tools() -> List[MCPTool]:
 def smart_wait_tools() -> List[MCPTool]:
     return [
         MCPTool(
+            name="ac_wait_image_gone",
+            description=("Block until 'image' is no longer found on screen "
+                         "(spinner/toast/dialog vanished). 'detect_threshold', "
+                         "'timeout_s', 'poll_interval_s', 'gone_for_s'."),
+            input_schema=schema({
+                "image": {"type": "string"},
+                "detect_threshold": {"type": "number"},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"},
+                "gone_for_s": {"type": "number"}},
+                required=["image"]),
+            handler=h.wait_image_gone,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_wait_text_gone",
+            description=("Block until 'text' is no longer found on screen (OCR). "
+                         "'timeout_s', 'poll_interval_s', 'gone_for_s'."),
+            input_schema=schema({
+                "text": {"type": "string"},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"},
+                "gone_for_s": {"type": "number"}},
+                required=["text"]),
+            handler=h.wait_text_gone,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_wait_color",
+            description=("Block until 'target_rgb' [r,g,b] covers >= "
+                         "'min_fraction' of 'region' [l,t,r,b] within "
+                         "'tolerance' (present=True), or drops below it "
+                         "(present=False). A status-light / progress-bar wait."),
+            input_schema=schema({
+                "target_rgb": {"type": "array", "items": {"type": "integer"}},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "tolerance": {"type": "integer"},
+                "min_fraction": {"type": "number"},
+                "present": {"type": "boolean"},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"}},
+                required=["target_rgb"]),
+            handler=h.wait_color,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_wait_window_title",
+            description=("Block until a window title matches 'pattern' (a regex "
+                         "by default; regex=False for substring) — or vanishes "
+                         "with present=False. e.g. r'.*— Checkout$'."),
+            input_schema=schema({
+                "pattern": {"type": "string"},
+                "present": {"type": "boolean"},
+                "regex": {"type": "boolean"},
+                "timeout_s": {"type": "number"},
+                "poll_interval_s": {"type": "number"}},
+                required=["pattern"]),
+            handler=h.wait_window_title,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_wait_screen_stable",
             description=("Block until the screen stops moving (consecutive "
                          "frames differ by <= max_pixel_diff bytes for "
@@ -1426,8 +1487,25 @@ def anchor_locator_tools() -> List[MCPTool]:
                               "enum": ["above", "below", "left_of",
                                        "right_of", "near"]},
                 "max_distance_px": {"type": "number"},
+                "ordinal": {"type": "integer"},
             }, required=["anchor", "target"]),
             handler=h.anchor_locate,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_anchor_locate_all",
+            description=("Every target matching the spatial relation to the "
+                         "anchor, nearest-first (for table / list-row "
+                         "selection). Returns {count, matches}."),
+            input_schema=schema({
+                "anchor": locator_schema,
+                "target": locator_schema,
+                "relation": {"type": "string",
+                              "enum": ["above", "below", "left_of",
+                                       "right_of", "near"]},
+                "max_distance_px": {"type": "number"},
+            }, required=["anchor", "target"]),
+            handler=h.anchor_locate_all,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2545,6 +2623,717 @@ def tween_drag_tools() -> List[MCPTool]:
                 "button": {"type": "string"}},
                 required=["start", "end"]),
             handler=h.tween_drag,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def color_region_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_find_color_region",
+            description=("Locate on-screen regions matching 'rgb' [r,g,b] within "
+                         "'tolerance' (per channel), blobs >= 'min_area'. "
+                         "Returns {count, regions, best} (largest first). "
+                         "For status lights / progress bars / coloured banners."),
+            input_schema=schema({
+                "rgb": {"type": "array", "items": {"type": "integer"}},
+                "tolerance": {"type": "integer"},
+                "min_area": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["rgb"]),
+            handler=h.find_color_region,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def feature_match_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_feature_match",
+            description=("Locate 'template' (image path) on screen by ORB "
+                         "keypoints + a RANSAC homography — robust to ROTATION, "
+                         "SCALE and theme/colour change, where pixel template "
+                         "matching fails. Returns {found, match:{corners (4 "
+                         "points), center, inliers, matches, score}}. 'min_inliers' "
+                         "is the confidence floor; 'ratio' the match cutoff."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "max_features": {"type": "integer"},
+                "ratio": {"type": "number"},
+                "min_inliers": {"type": "integer"}},
+                required=["template"]),
+            handler=h.feature_match,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def shape_locator_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_find_shapes",
+            description=("Locate distinct on-screen shapes by edge/contour "
+                         "detection — NO template/colour/text needed. Returns "
+                         "{count, shapes:[{x,y,width,height,area,center,aspect}]} "
+                         "(largest first). 'min_area'/'max_area' filter by "
+                         "bounding-box area."),
+            input_schema=schema({
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "min_area": {"type": "integer"},
+                "max_area": {"type": "integer"}},
+                required=[]),
+            handler=h.find_shapes,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_find_rectangles",
+            description=("Locate ~rectangular regions (buttons / cards / input "
+                         "fields) by contour approximation. Returns {count, "
+                         "rectangles:[{x,y,width,height,area,center,aspect}]} "
+                         "(largest first). 'aspect_range' [min,max] filters w/h "
+                         "(e.g. [1.5,8] wide buttons); 'epsilon' the approx "
+                         "tolerance."),
+            input_schema=schema({
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "min_area": {"type": "integer"},
+                "max_area": {"type": "integer"},
+                "aspect_range": {"type": "array", "items": {"type": "number"}},
+                "epsilon": {"type": "number"}},
+                required=[]),
+            handler=h.find_rectangles,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def window_layout_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_tile_rect",
+            description=("Compute the rectangle for a named tiling 'slot' of the "
+                         "screen work area: full/left/right/top/bottom/top_left/"
+                         "top_right/bottom_left/bottom_right/center/left_third/"
+                         "center_third/right_third. 'screen' [x,y,w,h] defaults to "
+                         "the live primary screen; 'gap' insets all sides. Returns "
+                         "{rect:{x,y,width,height}} — feed to a window-move."),
+            input_schema=schema({
+                "slot": {"type": "string"},
+                "screen": {"type": "array", "items": {"type": "integer"}},
+                "gap": {"type": "integer"}},
+                required=["slot"]),
+            handler=h.tile_rect,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_grid_rects",
+            description=("Split the screen work area into an 'rows' x 'cols' grid; "
+                         "return {count, rects:[{x,y,width,height}]} row-major. "
+                         "'screen' [x,y,w,h] defaults to the live screen; 'gap' "
+                         "insets each cell."),
+            input_schema=schema({
+                "rows": {"type": "integer"},
+                "cols": {"type": "integer"},
+                "screen": {"type": "array", "items": {"type": "integer"}},
+                "gap": {"type": "integer"}},
+                required=["rows", "cols"]),
+            handler=h.grid_rects,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_cascade_rects",
+            description=("Compute 'count' staggered, overlapping window rectangles "
+                         "(a cascade), each 'offset' px down-right of the previous, "
+                         "clamped to the screen. 'size' [w,h] defaults to 60% of "
+                         "the work area. Returns {count, rects}."),
+            input_schema=schema({
+                "count": {"type": "integer"},
+                "screen": {"type": "array", "items": {"type": "integer"}},
+                "offset": {"type": "integer"},
+                "size": {"type": "array", "items": {"type": "integer"}}},
+                required=["count"]),
+            handler=h.cascade_rects,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def window_arrange_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_arrange_grid",
+            description=("Tile the given window 'titles' into a grid and MOVE "
+                         "them. 'rows'/'cols' default to a near-square auto-shape; "
+                         "'gap' spaces cells. Returns {moved, count}."),
+            input_schema=schema({
+                "titles": {"type": "array", "items": {"type": "string"}},
+                "rows": {"type": "integer"},
+                "cols": {"type": "integer"},
+                "gap": {"type": "integer"}},
+                required=["titles"]),
+            handler=h.arrange_grid,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_arrange_cascade",
+            description=("Cascade the given window 'titles' diagonally and MOVE "
+                         "them, each 'offset' px down-right of the previous. "
+                         "Returns {moved, count}."),
+            input_schema=schema({
+                "titles": {"type": "array", "items": {"type": "string"}},
+                "offset": {"type": "integer"}},
+                required=["titles"]),
+            handler=h.arrange_cascade,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def preprocess_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_preprocess_image",
+            description=("Pre-process an image for OCR / template matching and "
+                         "WRITE the result to 'output_path'. 'source' is an image "
+                         "path (default: screen grab of 'region'). 'steps' is an "
+                         "ordered list from grayscale/upscale/binarize/denoise/"
+                         "deskew/contrast (default grayscale,upscale,binarize); "
+                         "'scale' for upscale. Returns {path, width, height}."),
+            input_schema=schema({
+                "output_path": {"type": "string"},
+                "source": {"type": "string"},
+                "steps": {"type": "array", "items": {"type": "string"}},
+                "scale": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "block_size": {"type": "integer"},
+                "c": {"type": "integer"}},
+                required=["output_path"]),
+            handler=h.preprocess_image,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def monitor_layout_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_enumerate_monitors",
+            description=("List connected monitors with virtual-desktop geometry: "
+                         "{count, monitors:[{index,x,y,width,height,scale,primary,"
+                         "work}], virtual_bounds:[x,y,w,h]}. Unlike a single "
+                         "screen_size, this exposes per-monitor origins (which may "
+                         "be negative) for multi-display placement."),
+            input_schema=schema({}, required=[]),
+            handler=h.enumerate_monitors,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_monitor_at_point",
+            description=("Report which monitor contains virtual point (x, y): "
+                         "{found, monitor}. Returns found=false when the point is "
+                         "off every display."),
+            input_schema=schema({
+                "x": {"type": "integer"},
+                "y": {"type": "integer"}},
+                required=["x", "y"]),
+            handler=h.monitor_at_point,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def actionability_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_wait_actionable",
+            description=("Wait until 'template' (image path) is VISIBLE and STABLE "
+                         "(stopped moving / animating) on screen before you act — "
+                         "the Playwright-style actionability gate. Returns {actionable, "
+                         "visible, stable, enabled, receives_events, point, reason, "
+                         "waited_s}. 'timeout_s', 'stable_for_s', 'min_score', "
+                         "'region'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "timeout_s": {"type": "number"},
+                "stable_for_s": {"type": "number"},
+                "min_score": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.wait_actionable,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def element_parse_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_fuse_elements",
+            description=("Union OCR + icon + accessibility element boxes into one "
+                         "de-duplicated list (drop cross-source overlaps > "
+                         "'iou_threshold'; higher-priority source wins). Each box "
+                         "is {x,y,width,height,...}. Returns {count, elements}."),
+            input_schema=schema({
+                "ocr": {"type": "array", "items": {"type": "object"}},
+                "icon": {"type": "array", "items": {"type": "object"}},
+                "a11y": {"type": "array", "items": {"type": "object"}},
+                "iou_threshold": {"type": "number"}},
+                required=[]),
+            handler=h.fuse_elements,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_reading_order",
+            description=("Sort element boxes top-to-bottom, left-to-right and add a "
+                         "stable 'index' to each (elements within 'row_tol' px of "
+                         "each other count as one row). Returns {count, elements}."),
+            input_schema=schema({
+                "elements": {"type": "array", "items": {"type": "object"}},
+                "row_tol": {"type": "integer"}},
+                required=["elements"]),
+            handler=h.reading_order,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def hsv_segment_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_segment_hsv",
+            description=("Locate on-screen blobs inside an explicit HSV band "
+                         "(H 0-179, S/V 0-255): 'lower_hsv' [h,s,v] .. 'upper_hsv' "
+                         "[h,s,v], blobs >= 'min_area'. Returns {count, regions, "
+                         "best}. HSV is lighting-robust where RGB tolerance is not."),
+            input_schema=schema({
+                "lower_hsv": {"type": "array", "items": {"type": "integer"}},
+                "upper_hsv": {"type": "array", "items": {"type": "integer"}},
+                "min_area": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["lower_hsv", "upper_hsv"]),
+            handler=h.segment_hsv,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_dominant_hue_regions",
+            description=("Locate regions of ANY shade of a colour near 'hue' "
+                         "(0-179, ± 'hue_tol'), any brightness, with a 'sat_min' / "
+                         "'val_min' floor. Red's 0/180 wrap is handled. Returns "
+                         "{count, regions, best}."),
+            input_schema=schema({
+                "hue": {"type": "integer"},
+                "hue_tol": {"type": "integer"},
+                "sat_min": {"type": "integer"},
+                "val_min": {"type": "integer"},
+                "min_area": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["hue"]),
+            handler=h.dominant_hue_regions,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def text_regions_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_find_text_regions",
+            description=("Locate text/glyph regions on screen via MSER — NO OCR "
+                         "engine or known string needed. Returns {count, regions:"
+                         "[{x,y,width,height,area,center}]} (largest first). "
+                         "'merge' unions nested glyph boxes; 'min_area'/'max_area'/"
+                         "'max_aspect' filter. Crop these to feed OCR."),
+            input_schema=schema({
+                "min_area": {"type": "integer"},
+                "max_area": {"type": "integer"},
+                "merge": {"type": "boolean"},
+                "max_aspect": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.find_text_regions,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_find_text_lines",
+            description=("Locate horizontal lines of text on screen via MSER: one "
+                         "box per line (glyphs within 'y_tolerance' px grouped). "
+                         "Returns {count, lines}. No OCR needed."),
+            input_schema=schema({
+                "y_tolerance": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.find_text_lines,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def edge_lines_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_find_lines",
+            description=("Detect straight line segments on screen (Hough): "
+                         "{count, lines:[{x1,y1,x2,y2,angle,length,orientation}]} "
+                         "longest first. 'orientation' horizontal/vertical/diagonal/"
+                         "any filters; 'min_length'/'max_gap' tune the probe."),
+            input_schema=schema({
+                "min_length": {"type": "integer"},
+                "max_gap": {"type": "integer"},
+                "orientation": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.find_lines,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_find_grid",
+            description=("Recover a table's grid from screen lines: {rows:[y...], "
+                         "cols:[x...], cells:[{x,y,width,height}]}. Address 'row 3, "
+                         "col 2' without a template. 'min_length' filters edges."),
+            input_schema=schema({
+                "min_length": {"type": "integer"},
+                "tol": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.find_grid,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_find_separators",
+            description=("Coordinates of long divider lines along 'axis' "
+                         "(horizontal -> y of each rule, vertical -> x). Returns "
+                         "{count, axis, coordinates}. Split a panel at its dividers."),
+            input_schema=schema({
+                "axis": {"type": "string"},
+                "min_length": {"type": "integer"},
+                "tol": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=[]),
+            handler=h.find_separators,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def expect_poll_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_expect_poll",
+            description=("Re-run a nested 'action' (e.g. [\"AC_get_clipboard\"]) "
+                         "until a 'key' of its result dict matches 'op' "
+                         "(truthy/equals/contains/gt/regex) vs 'expected', or "
+                         "'timeout_s' elapses. Retries an ARBITRARY value, unlike "
+                         "assert_eventually's fixed checks. Returns {ok, value, "
+                         "attempts, waited_s}."),
+            input_schema=schema({
+                "action": {"type": "array"},
+                "key": {"type": "string"},
+                "op": {"type": "string"},
+                "expected": {},
+                "timeout_s": {"type": "number"},
+                "interval_s": {"type": "number"}},
+                required=["action"]),
+            handler=h.expect_poll,
+            annotations=NON_DESTRUCTIVE,
+        ),
+    ]
+
+
+def locator_chain_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_locate_chain",
+            description=("Refine a set of element 'boxes' with a chain of 'ops' "
+                         "applied in order: {op:'within',region:[x,y,w,h]}, "
+                         "{op:'filter',has_text/near/min_area/max_area}, "
+                         "{op:'reading'}, {op:'nth',index}, {op:'first'}, "
+                         "{op:'last'}. Returns {count, boxes, center}."),
+            input_schema=schema({
+                "boxes": {"type": "array", "items": {"type": "object"}},
+                "ops": {"type": "array", "items": {"type": "object"}}},
+                required=["boxes"]),
+            handler=h.locate_chain,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def rich_clipboard_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_set_clipboard_html",
+            description=("Put an HTML fragment on the clipboard as CF_HTML for rich "
+                         "paste into Word / Outlook / rich editors (Windows). "
+                         "'fragment_plaintext' is also set as plain text. Returns "
+                         "{set, length}."),
+            input_schema=schema({
+                "html": {"type": "string"},
+                "fragment_plaintext": {"type": "string"}},
+                required=["html"]),
+            handler=h.set_clipboard_html,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_clipboard_html",
+            description=("Read the clipboard's HTML fragment (CF_HTML, Windows). "
+                         "Returns {found, html}."),
+            input_schema=schema({}, required=[]),
+            handler=h.get_clipboard_html,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def ssim_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_ssim_compare",
+            description=("Structural-similarity (SSIM) score 0..1 between "
+                         "'reference' (image path) and 'current' (path; default: "
+                         "screen grab of 'region'). 1.0 = identical. 'ignore' is "
+                         "a list of [x,y,w,h] boxes to exclude (clocks/cursors). "
+                         "Returns {score}. Perceptual, unlike pixel diff."),
+            input_schema=schema({
+                "reference": {"type": "string"},
+                "current": {"type": "string"},
+                "ignore": {"type": "array",
+                           "items": {"type": "array",
+                                     "items": {"type": "integer"}}},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["reference"]),
+            handler=h.ssim_compare,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_ssim_changed_regions",
+            description=("Boxes of the regions that STRUCTURALLY changed between "
+                         "'reference' and 'current' (default: screen). A pixel "
+                         "changed where 1-SSIM > 'threshold'; blobs >= 'min_area'. "
+                         "'ignore' [x,y,w,h] boxes suppressed. Returns "
+                         "{count, regions} (largest first)."),
+            input_schema=schema({
+                "reference": {"type": "string"},
+                "current": {"type": "string"},
+                "ignore": {"type": "array",
+                           "items": {"type": "array",
+                                     "items": {"type": "integer"}}},
+                "threshold": {"type": "number"},
+                "min_area": {"type": "integer"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["reference"]),
+            handler=h.ssim_changed_regions,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def visual_match_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_match_template",
+            description=("Find 'template' (image path) on screen and return the "
+                         "match WITH its score: {found, match:{x,y,width,height,"
+                         "score,scale,center}}. 'scales' [..] for DPI/zoom, "
+                         "'min_score', 'region', 'method'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.match_template,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_template_all",
+            description=("Find EVERY occurrence of 'template' on screen "
+                         ">= 'min_score', overlaps removed by NMS. "
+                         "Returns {count, matches}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "max_results": {"type": "integer"},
+                "nms_iou": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.match_template_all,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_masked",
+            description=("Find 'template' on screen counting only masked/opaque "
+                         "pixels: a grayscale 'mask' (non-zero = use) or, if "
+                         "omitted, the template's RGBA alpha. For glyphs/icons "
+                         "over a transparent or varying background. Returns "
+                         "{found, match}. 'min_score', 'region'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "mask": {"type": "string"},
+                "min_score": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.match_masked,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_masked_all",
+            description=("Find EVERY masked match of 'template' >= 'min_score', "
+                         "overlaps removed by NMS. Returns {count, matches}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "mask": {"type": "string"},
+                "min_score": {"type": "number"},
+                "max_results": {"type": "integer"},
+                "nms_iou": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.match_masked_all,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def grid_locator_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_grid_cell",
+            description=("Address a table cell: cluster 'boxes' ([[x,y,w,h],...] "
+                         "from an image/OCR enumeration) into a grid and return "
+                         "the centre of cell ('row','col') (0-based). "
+                         "Returns {found, center, row, col, rows, cols}."),
+            input_schema=schema({
+                "boxes": {"type": "array",
+                          "items": {"type": "array",
+                                    "items": {"type": "integer"}}},
+                "row": {"type": "integer"}, "col": {"type": "integer"},
+                "row_tolerance": {"type": "integer"}},
+                required=["boxes", "row", "col"]),
+            handler=h.grid_cell,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def modifier_state_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_with_modifiers",
+            description=("Run 'actions' (a JSON action list) while 'modifiers' "
+                         "(e.g. ['ctrl'] or 'ctrl+shift') are held down; the "
+                         "modifiers are released even if an action fails. "
+                         "For shift-click range / ctrl-click multi-select."),
+            input_schema=schema({
+                "modifiers": {"type": "array", "items": {"type": "string"}},
+                "actions": {"type": "array"}},
+                required=["modifiers", "actions"]),
+            handler=h.with_modifiers,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def text_unicode_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_type_unicode",
+            description=("Enter arbitrary Unicode 'text' (emoji / CJK / accented "
+                         "that the normal type cannot) via clipboard paste. "
+                         "'modifier' is the paste key (ctrl / command). "
+                         "Returns {ops, plan, code_units}."),
+            input_schema=schema(
+                {"text": {"type": "string"}, "modifier": {"type": "string"}},
+                required=["text"]),
+            handler=h.type_unicode,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def mouse_relative_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_move_mouse_relative",
+            description=("Move the pointer by ('dx', 'dy') relative to its "
+                         "current position. Returns {from, to, delta}."),
+            input_schema=schema(
+                {"dx": {"type": "integer"}, "dy": {"type": "integer"}},
+                required=["dx", "dy"]),
+            handler=h.move_mouse_relative,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def key_hold_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_hold_key",
+            description=("Hold 'key' for 'duration_s' seconds, or set 'rate_hz' "
+                         "to auto-repeat it at that many presses/second. "
+                         "Returns {ops, plan}."),
+            input_schema=schema({
+                "key": {"type": "string"},
+                "duration_s": {"type": "number"},
+                "rate_hz": {"type": "number"}},
+                required=["key", "duration_s"]),
+            handler=h.hold_key,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def field_entry_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_set_field_text",
+            description=("Clear the focused field and enter 'text' (Playwright "
+                         "fill). 'clear' select_all|none; 'paste' True for "
+                         "Unicode/emoji via clipboard; 'modifier' ctrl|command. "
+                         "Returns {ops, plan}."),
+            input_schema=schema({
+                "text": {"type": "string"}, "clear": {"type": "string"},
+                "paste": {"type": "boolean"}, "modifier": {"type": "string"}},
+                required=["text"]),
+            handler=h.set_field_text,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+    ]
+
+
+def mouse_path_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_move_along_path",
+            description=("Move the pointer through 'waypoints' ([[x,y],...]) as "
+                         "an eased polyline. 'per_segment_steps' + 'easing' "
+                         "(linear / ease_*). Returns {points, path}."),
+            input_schema=schema({
+                "waypoints": {"type": "array",
+                              "items": {"type": "array",
+                                        "items": {"type": "integer"}}},
+                "easing": {"type": "string"},
+                "per_segment_steps": {"type": "integer"}},
+                required=["waypoints"]),
+            handler=h.move_along_path,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_drag_path",
+            description=("Press at the first of 'waypoints' ([[x,y],...]), drag "
+                         "through them, release at the last. 'button', 'easing', "
+                         "'per_segment_steps'. Returns {points, path}."),
+            input_schema=schema({
+                "waypoints": {"type": "array",
+                              "items": {"type": "array",
+                                        "items": {"type": "integer"}}},
+                "button": {"type": "string"},
+                "easing": {"type": "string"},
+                "per_segment_steps": {"type": "integer"}},
+                required=["waypoints"]),
+            handler=h.drag_path,
             annotations=SIDE_EFFECT_ONLY,
         ),
     ]
@@ -3704,6 +4493,32 @@ def gettext_catalog_tools() -> List[MCPTool]:
                  "msgid_plural": {"type": "string"}, "n": {"type": "integer"}},
                 ["po", "msgid", "msgid_plural", "n"]),
             handler=h.gettext_ngettext,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def checksum_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_checksum_validate",
+            description=("Validate a number's check digit. 'scheme' is "
+                         "luhn|verhoeff|damm|mod97. Returns {valid}."),
+            input_schema=schema(
+                {"scheme": {"type": "string"}, "number": {"type": "string"}},
+                ["scheme", "number"]),
+            handler=h.checksum_validate,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_checksum_digit",
+            description=("Compute the check digit(s) to append to 'partial'. "
+                         "'scheme' is luhn|verhoeff|damm|mod97. "
+                         "Returns {check_digit}."),
+            input_schema=schema(
+                {"scheme": {"type": "string"}, "partial": {"type": "string"}},
+                ["scheme", "partial"]),
+            handler=h.checksum_digit,
             annotations=READ_ONLY,
         ),
     ]
@@ -5769,7 +6584,14 @@ ALL_FACTORIES = (
     checkpoint_tools, set_of_marks_tools, screen_state_tools,
     input_macro_tools, resilience_tools,
     ci_annotation_tools, clipboard_history_tools, audit_analysis_tools,
-    process_doc_tools, tween_drag_tools, plugin_sdk_tools, governance_tools,
+    process_doc_tools, tween_drag_tools, mouse_path_tools, field_entry_tools,
+    key_hold_tools, mouse_relative_tools, text_unicode_tools,
+    modifier_state_tools, grid_locator_tools, visual_match_tools,
+    color_region_tools, ssim_tools, feature_match_tools, shape_locator_tools,
+    window_layout_tools, window_arrange_tools, preprocess_tools,
+    monitor_layout_tools, actionability_tools, element_parse_tools,
+    hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
+    locator_chain_tools, rich_clipboard_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
@@ -5789,7 +6611,7 @@ ALL_FACTORIES = (
     dedup_window_tools, sequence_gap_tools, optimistic_tools, outbox_tools,
     locale_collation_tools, confusables_tools, readability_tools,
     bidi_check_tools, list_format_tools, message_format_tools,
-    gettext_catalog_tools,
+    gettext_catalog_tools, checksum_tools,
     dataset_diff_tools, referential_tools, link_header_tools, multipart_tools,
     http_content_tools, cookie_jar_tools, http_conditional_tools,
     saga_tools, decision_table_tools, locator_repair_tools,

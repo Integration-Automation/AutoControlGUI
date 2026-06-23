@@ -74,8 +74,8 @@ from je_auto_control.utils.notify import NotifyResult, notify
 from je_auto_control.utils.color_stats import ColorStats, region_color_stats
 # Per-window capture, window-layout save / restore, snap/tile.
 from je_auto_control.utils.window_capture import (
-    capture_window, get_window_geometry, restore_window_layout,
-    save_window_layout, snap_window,
+    arrange_cascade, arrange_grid, capture_window, get_window_geometry,
+    restore_window_layout, save_window_layout, snap_window,
 )
 # Scroll until a target image / text is visible.
 from je_auto_control.utils.scroll_find import scroll_until_visible
@@ -244,6 +244,100 @@ from je_auto_control.utils.message_format import (
 # GNU gettext catalog I/O (parse .po, compile/read .mo, message lookup)
 from je_auto_control.utils.gettext_catalog import (
     GettextCatalog, parse_po, parse_po_file, read_mo, read_mo_file,
+)
+# Check-digit algorithms (Luhn / Verhoeff / Damm / ISO 7064 MOD 97-10)
+from je_auto_control.utils.checksum import (
+    damm_check_digit, damm_validate, luhn_check_digit, luhn_validate,
+    mod97_10_check_digits, mod97_10_validate, verhoeff_check_digit,
+    verhoeff_validate,
+)
+# Multi-waypoint mouse gestures (move / drag through a polyline of points)
+from je_auto_control.utils.mouse_path import (
+    drag_path, move_along_path, path_easings, plan_path,
+)
+# Clear-then-type a text field (Playwright `fill` idiom; paste for Unicode)
+from je_auto_control.utils.field_entry import plan_field_set, set_field_text
+# Hold a key for a duration / auto-repeat at a fixed rate
+from je_auto_control.utils.key_hold import hold_key, plan_key_hold
+# Relative mouse movement (move by a delta from the current position)
+from je_auto_control.utils.mouse_relative import (
+    move_mouse_relative, relative_target,
+)
+# Type arbitrary Unicode (emoji / CJK) via the clipboard
+from je_auto_control.utils.text_unicode import (
+    plan_paste, type_unicode, unicode_code_units,
+)
+# Hold modifier keys across a group of actions (release-on-error)
+from je_auto_control.utils.modifier_state import (
+    hold_modifiers, plan_with_modifiers,
+)
+# Address a table / grid cell by (row, column) from bounding boxes
+from je_auto_control.utils.grid_locator import cluster_grid, locate_cell
+# Confidence-returning template matching (score / multi-scale / find-all + NMS)
+from je_auto_control.utils.visual_match import (
+    best_matches, match_masked, match_masked_all, match_template,
+    match_template_all,
+)
+from je_auto_control.utils.visual_match import Match as TemplateMatch
+# Locate on-screen regions by colour (mask + connected components)
+from je_auto_control.utils.color_region import (
+    find_color_region, find_color_regions,
+)
+# Structural-similarity comparison (perceptual score + changed regions)
+from je_auto_control.utils.ssim import (
+    ssim_changed_regions, ssim_compare,
+)
+# ORB feature matching (rotation / scale / theme-robust template location)
+from je_auto_control.utils.feature_match import feature_match
+from je_auto_control.utils.feature_match import FeatureMatch
+# Locate UI elements by edge/contour detection (rectangles / shapes, no template)
+from je_auto_control.utils.shape_locator import (
+    find_rectangles, find_shapes,
+)
+# Window tiling/layout geometry planner (halves, quadrants, grids, cascade)
+from je_auto_control.utils.window_layout import (
+    WindowRect, available_slots, cascade_rects, grid_rects, tile_rect,
+)
+# Image pre-processing for OCR / template matching (grayscale, binarize, deskew, …)
+from je_auto_control.utils.preprocess import (
+    binarize, denoise, deskew, detect_skew_angle, enhance_contrast,
+    preprocess_image, to_grayscale, upscale,
+)
+# Multi-monitor / virtual-desktop geometry (which monitor, where, remapping)
+from je_auto_control.utils.monitor_layout import (
+    Monitor, enumerate_monitors, monitor_at_point, monitor_for_window,
+    primary_monitor, remap_point, to_local, to_virtual, virtual_bounds,
+)
+# Pre-action readiness gate (visible + stable + enabled + not-occluded)
+from je_auto_control.utils.actionability import (
+    ActionabilityReport, GateConfig, act_when_ready, wait_actionable,
+)
+# Fuse and order on-screen element boxes (IoU, merge, fuse sources, reading order)
+from je_auto_control.utils.element_parse import (
+    fuse_elements, iou, merge_boxes, reading_order,
+)
+# HSV colour-space segmentation (lighting-robust colour masking + blob boxes)
+from je_auto_control.utils.hsv_segment import (
+    color_mask, dominant_hue_regions, segment_hsv,
+)
+# Model-free on-screen text-region detection (MSER): regions and lines
+from je_auto_control.utils.text_regions import (
+    find_text_lines, find_text_regions,
+)
+# Line / grid / separator detection on raw pixels (Hough transform)
+from je_auto_control.utils.edge_lines import (
+    find_grid, find_lines, find_separators,
+)
+# Retry an arbitrary value until it matches (Playwright-style expect.poll)
+from je_auto_control.utils.expect_poll import (
+    PollResult, assert_poll, expect_poll, to_be_greater_than, to_be_stable,
+    to_be_truthy, to_contain, to_equal, to_match_regex,
+)
+# Composable / filtered candidate locators (chained-locator idiom)
+from je_auto_control.utils.locator_chain import Candidates, from_boxes
+# Rich clipboard formats — HTML (CF_HTML) build / parse / get / set
+from je_auto_control.utils.rich_clipboard import (
+    build_cf_html, get_clipboard_html, parse_cf_html, set_clipboard_html,
 )
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
@@ -581,8 +675,8 @@ from je_auto_control.utils.chatops import (
 # Anchor-based locators (spatial composition of locator backends)
 from je_auto_control.utils.anchor_locator import (
     AnchorLocatorError, AnchorOutcome, Locator as AnchorLocator,
-    a11y_locator, anchor_locate, image_locator, ocr_locator,
-    vlm_locator,
+    a11y_locator, anchor_locate, anchor_locate_all, image_locator,
+    ocr_locator, vlm_locator,
 )
 # Structured OCR (rows / tables / form fields)
 from je_auto_control.utils.ocr.structure import (
@@ -592,9 +686,11 @@ from je_auto_control.utils.ocr.structure import (
 )
 # Smart waits (frame-diff replacements for time.sleep)
 from je_auto_control.utils.smart_waits import (
-    WaitOutcome, wait_until_clipboard_changes, wait_until_file,
+    WaitOutcome, wait_until_clipboard_changes, wait_until_color,
+    wait_until_file, wait_until_gone, wait_until_image_gone,
     wait_until_pixel_changes, wait_until_port, wait_until_process,
-    wait_until_region_idle, wait_until_screen_stable, wait_until_window_closed,
+    wait_until_region_idle, wait_until_screen_stable, wait_until_text_gone,
+    wait_until_window_closed, wait_until_window_title,
 )
 # Visual regression (golden-image comparison)
 from je_auto_control.utils.visual_regression import (
@@ -1007,6 +1103,98 @@ __all__ = [
     "parse_po_file",
     "read_mo",
     "read_mo_file",
+    "luhn_validate",
+    "luhn_check_digit",
+    "verhoeff_validate",
+    "verhoeff_check_digit",
+    "damm_validate",
+    "damm_check_digit",
+    "mod97_10_validate",
+    "mod97_10_check_digits",
+    "plan_path",
+    "move_along_path",
+    "drag_path",
+    "path_easings",
+    "plan_field_set",
+    "set_field_text",
+    "plan_key_hold",
+    "hold_key",
+    "move_mouse_relative",
+    "relative_target",
+    "type_unicode",
+    "plan_paste",
+    "unicode_code_units",
+    "hold_modifiers",
+    "plan_with_modifiers",
+    "cluster_grid",
+    "locate_cell",
+    "TemplateMatch",
+    "match_template",
+    "match_template_all",
+    "match_masked",
+    "match_masked_all",
+    "best_matches",
+    "find_color_region",
+    "find_color_regions",
+    "ssim_compare",
+    "ssim_changed_regions",
+    "feature_match",
+    "FeatureMatch",
+    "find_shapes",
+    "find_rectangles",
+    "WindowRect",
+    "available_slots",
+    "tile_rect",
+    "grid_rects",
+    "cascade_rects",
+    "preprocess_image",
+    "to_grayscale",
+    "binarize",
+    "upscale",
+    "denoise",
+    "deskew",
+    "detect_skew_angle",
+    "enhance_contrast",
+    "Monitor",
+    "enumerate_monitors",
+    "monitor_at_point",
+    "monitor_for_window",
+    "primary_monitor",
+    "remap_point",
+    "to_local",
+    "to_virtual",
+    "virtual_bounds",
+    "wait_actionable",
+    "act_when_ready",
+    "ActionabilityReport",
+    "GateConfig",
+    "iou",
+    "merge_boxes",
+    "fuse_elements",
+    "reading_order",
+    "segment_hsv",
+    "color_mask",
+    "dominant_hue_regions",
+    "find_text_regions",
+    "find_text_lines",
+    "find_lines",
+    "find_grid",
+    "find_separators",
+    "expect_poll",
+    "assert_poll",
+    "PollResult",
+    "to_equal",
+    "to_contain",
+    "to_be_greater_than",
+    "to_match_regex",
+    "to_be_truthy",
+    "to_be_stable",
+    "Candidates",
+    "from_boxes",
+    "build_cf_html",
+    "parse_cf_html",
+    "get_clipboard_html",
+    "set_clipboard_html",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
@@ -1194,7 +1382,8 @@ __all__ = [
     "register_chatops_default_commands",
     # Anchor-based locator
     "AnchorLocator", "AnchorLocatorError", "AnchorOutcome",
-    "a11y_locator", "anchor_locate", "image_locator", "ocr_locator",
+    "a11y_locator", "anchor_locate", "anchor_locate_all", "image_locator",
+    "ocr_locator",
     "vlm_locator",
     # Structured OCR
     "OCRField", "OCRRow", "OCRTable", "StructuredOCR",
@@ -1204,6 +1393,8 @@ __all__ = [
     "wait_until_region_idle", "wait_until_screen_stable",
     "wait_until_clipboard_changes", "wait_until_window_closed",
     "wait_until_file", "wait_until_port", "wait_until_process",
+    "wait_until_gone", "wait_until_image_gone", "wait_until_text_gone",
+    "wait_until_color", "wait_until_window_title",
     # Visual regression + state machine
     "take_golden", "compare_to_golden", "image_difference",
     "DiffResult", "MaskRegion",
@@ -1263,6 +1454,7 @@ __all__ = [
     # Per-window capture + window-layout save / restore + snap
     "capture_window", "get_window_geometry",
     "save_window_layout", "restore_window_layout", "snap_window",
+    "arrange_grid", "arrange_cascade",
     # Scroll-to-find
     "scroll_until_visible",
     # Recoverable deletion (recycle bin)

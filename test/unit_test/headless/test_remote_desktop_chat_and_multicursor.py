@@ -22,6 +22,19 @@ def jpeg_bytes():
     return _make_jpeg()
 
 
+def _await_clients(host, expected: int = 1, timeout: float = 5.0) -> None:
+    """Wait until the host has authenticated ``expected`` viewers.
+
+    ``viewer.connect()`` returns once the *client* side is up; the host's accept
+    thread may not have authenticated the viewer yet, so a broadcast issued
+    immediately can reach zero clients (reliably so on a slow CI container). This
+    closes that race using the host's own authenticated-client count.
+    """
+    deadline = time.monotonic() + timeout
+    while host.connected_clients < expected and time.monotonic() < deadline:
+        time.sleep(0.02)
+
+
 # --- Phase 5.2: chat ----------------------------------------------------
 
 def test_host_broadcasts_chat_to_viewer(jpeg_bytes):
@@ -44,6 +57,7 @@ def test_host_broadcasts_chat_to_viewer(jpeg_bytes):
         )
         viewer.connect(timeout=5.0)
         try:
+            _await_clients(host)
             sent = host.broadcast_chat("hello viewer")
             assert sent == 1
             deadline = time.monotonic() + 2.0
@@ -75,6 +89,7 @@ def test_viewer_can_chat_back_to_host(jpeg_bytes):
         viewer = RemoteDesktopViewer(host="127.0.0.1", port=host.port, token="t")
         viewer.connect(timeout=5.0)
         try:
+            _await_clients(host)
             viewer.send_chat("ping from viewer", sender="alice")
             deadline = time.monotonic() + 2.0
             while not received and time.monotonic() < deadline:
@@ -124,6 +139,7 @@ def test_viewer_cursor_payload_routes_to_separate_callback(jpeg_bytes):
         )
         viewer.connect(timeout=5.0)
         try:
+            _await_clients(host)
             # Simulate MultiViewerHost relaying another operator's cursor.
             host.broadcast_viewer_cursor("alice", 200, 300)
             deadline = time.monotonic() + 2.0

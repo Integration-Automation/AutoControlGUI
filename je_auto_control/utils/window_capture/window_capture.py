@@ -11,6 +11,7 @@ geometry / capture / list / move operations are all injectable so the
 logic is fully unit-testable without real windows. GUI-free.
 """
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -168,3 +169,64 @@ def snap_window(title: str, position: str = "left", *,
     width, height = (screen_size or _default_screen_size)()
     x, y, w, h = _snap_rect(position, int(width), int(height))
     return (mover or _default_mover)(title, x, y, w, h)
+
+
+def _move_into(titles: List[str], rects, move: WindowMover) -> int:
+    """Move each title to the matching rectangle; return the number moved."""
+    moved = 0
+    for title, rect in zip(titles, rects):
+        if move(title, rect.x, rect.y, rect.width, rect.height):
+            moved += 1
+    return moved
+
+
+def _grid_shape(count: int, rows: Optional[int],
+                cols: Optional[int]) -> Tuple[int, int]:
+    """Resolve the (rows, cols) grid shape, auto-sizing to near-square when unset."""
+    if rows and cols:
+        return int(rows), int(cols)
+    if cols:
+        return math.ceil(count / int(cols)), int(cols)
+    if rows:
+        return int(rows), math.ceil(count / int(rows))
+    side = math.ceil(math.sqrt(count))
+    return math.ceil(count / side), side
+
+
+def arrange_grid(titles: List[str], *, rows: Optional[int] = None,
+                 cols: Optional[int] = None, gap: int = 0,
+                 mover: Optional[WindowMover] = None,
+                 screen_size: Optional[SizeProvider] = None) -> int:
+    """Tile the given window ``titles`` into a grid; return the count moved.
+
+    ``rows`` / ``cols`` default to a near-square auto-shape for the number of
+    windows; ``gap`` spaces the cells. The mover and size provider are injectable
+    for tests. Windows beyond the grid capacity are left untouched.
+    """
+    from je_auto_control.utils.window_layout import grid_rects
+    titles = list(titles)
+    if not titles:
+        return 0
+    width, height = (screen_size or _default_screen_size)()
+    grid_rows, grid_cols = _grid_shape(len(titles), rows, cols)
+    rects = grid_rects((0, 0, int(width), int(height)), grid_rows, grid_cols,
+                       gap=int(gap))
+    return _move_into(titles, rects, mover or _default_mover)
+
+
+def arrange_cascade(titles: List[str], *, offset: int = 30,
+                    mover: Optional[WindowMover] = None,
+                    screen_size: Optional[SizeProvider] = None) -> int:
+    """Cascade the given window ``titles`` diagonally; return the count moved.
+
+    Each window is ``offset`` pixels down-right of the previous, sized to 60% of
+    the work area and clamped on-screen. The mover and size provider are injectable.
+    """
+    from je_auto_control.utils.window_layout import cascade_rects
+    titles = list(titles)
+    if not titles:
+        return 0
+    width, height = (screen_size or _default_screen_size)()
+    rects = cascade_rects((0, 0, int(width), int(height)), len(titles),
+                          offset=int(offset))
+    return _move_into(titles, rects, mover or _default_mover)

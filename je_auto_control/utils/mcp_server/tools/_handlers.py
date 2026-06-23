@@ -2017,6 +2017,236 @@ def gettext_ngettext(po, msgid, msgid_plural, n):
     return _gettext_ngettext(po, msgid, msgid_plural, n)
 
 
+def checksum_validate(scheme, number):
+    from je_auto_control.utils.executor.action_executor import _checksum_validate
+    return _checksum_validate(scheme, number)
+
+
+def checksum_digit(scheme, partial):
+    from je_auto_control.utils.executor.action_executor import _checksum_digit
+    return _checksum_digit(scheme, partial)
+
+
+def move_along_path(waypoints, easing="linear", per_segment_steps=20):
+    from je_auto_control.utils.executor.action_executor import _move_along_path
+    return _move_along_path(waypoints, easing, per_segment_steps)
+
+
+def drag_path(waypoints, button="mouse_left", easing="linear",
+              per_segment_steps=20):
+    from je_auto_control.utils.executor.action_executor import _drag_path
+    return _drag_path(waypoints, button, easing, per_segment_steps)
+
+
+def set_field_text(text, clear="select_all", paste=False, modifier="ctrl"):
+    from je_auto_control.utils.executor.action_executor import _set_field_text
+    return _set_field_text(text, clear, paste, modifier)
+
+
+def hold_key(key, duration_s=1.0, rate_hz=None):
+    from je_auto_control.utils.executor.action_executor import _hold_key
+    return _hold_key(key, duration_s, rate_hz)
+
+
+def move_mouse_relative(dx, dy):
+    from je_auto_control.utils.executor.action_executor import _move_mouse_relative
+    return _move_mouse_relative(dx, dy)
+
+
+def type_unicode(text, modifier="ctrl"):
+    from je_auto_control.utils.executor.action_executor import _type_unicode
+    return _type_unicode(text, modifier)
+
+
+def with_modifiers(modifiers, actions):
+    from je_auto_control.utils.executor.action_executor import _with_modifiers
+    return _with_modifiers(modifiers, actions)
+
+
+def grid_cell(boxes, row, col, row_tolerance=10):
+    from je_auto_control.utils.executor.action_executor import _grid_cell
+    return _grid_cell(boxes, row, col, row_tolerance)
+
+
+def match_template(template, min_score=0.8, scales=None, region=None,
+                   method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _match_template
+    return _match_template(template, min_score, scales, region, method)
+
+
+def match_template_all(template, min_score=0.8, max_results=20, nms_iou=0.3,
+                       region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _match_template_all)
+    return _match_template_all(template, min_score, max_results, nms_iou, region)
+
+
+def match_masked(template, mask=None, min_score=0.9, region=None):
+    from je_auto_control.utils.executor.action_executor import _match_masked
+    return _match_masked(template, mask, min_score, region)
+
+
+def match_masked_all(template, mask=None, min_score=0.9, max_results=20,
+                     nms_iou=0.3, region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _match_masked_all)
+    return _match_masked_all(template, mask, min_score, max_results, nms_iou,
+                             region)
+
+
+def find_color_region(rgb, tolerance=20, min_area=50, region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _find_color_region)
+    return _find_color_region(rgb, tolerance, min_area, region)
+
+
+def ssim_compare(reference, current=None, ignore=None, region=None):
+    from je_auto_control.utils.executor.action_executor import _ssim_compare
+    return _ssim_compare(reference, current, ignore, region)
+
+
+def ssim_changed_regions(reference, current=None, ignore=None, threshold=0.35,
+                         min_area=50, region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _ssim_changed_regions)
+    return _ssim_changed_regions(reference, current, ignore, threshold, min_area,
+                                 region)
+
+
+def feature_match(template, region=None, max_features=500, ratio=0.75,
+                  min_inliers=10):
+    from je_auto_control.utils.executor.action_executor import _feature_match
+    return _feature_match(template, region, max_features, ratio, min_inliers)
+
+
+def find_shapes(region=None, min_area=400, max_area=None):
+    from je_auto_control.utils.executor.action_executor import _find_shapes
+    return _find_shapes(region, min_area, max_area)
+
+
+def find_rectangles(region=None, min_area=400, max_area=None, aspect_range=None,
+                    epsilon=0.04):
+    from je_auto_control.utils.executor.action_executor import _find_rectangles
+    return _find_rectangles(region, min_area, max_area, aspect_range, epsilon)
+
+
+def tile_rect(slot, screen=None, gap=0):
+    from je_auto_control.utils.executor.action_executor import _tile_rect
+    return _tile_rect(slot, screen, gap)
+
+
+def grid_rects(rows, cols, screen=None, gap=0):
+    from je_auto_control.utils.executor.action_executor import _grid_rects
+    return _grid_rects(rows, cols, screen, gap)
+
+
+def cascade_rects(count, screen=None, offset=30, size=None):
+    from je_auto_control.utils.executor.action_executor import _cascade_rects
+    return _cascade_rects(count, screen, offset, size)
+
+
+def arrange_grid(titles, rows=None, cols=None, gap=0):
+    from je_auto_control.utils.executor.action_executor import _arrange_grid
+    return _arrange_grid(titles, rows, cols, gap)
+
+
+def arrange_cascade(titles, offset=30):
+    from je_auto_control.utils.executor.action_executor import _arrange_cascade
+    return _arrange_cascade(titles, offset)
+
+
+def preprocess_image(output_path, source=None, steps=None, scale=2.0, region=None,
+                     block_size=31, c=11):
+    from je_auto_control.utils.executor.action_executor import _preprocess_image
+    return _preprocess_image(output_path, source, steps, scale, region,
+                             block_size, c)
+
+
+def enumerate_monitors():
+    from je_auto_control.utils.executor.action_executor import _enumerate_monitors
+    return _enumerate_monitors()
+
+
+def monitor_at_point(x, y):
+    from je_auto_control.utils.executor.action_executor import _monitor_at_point
+    return _monitor_at_point(x, y)
+
+
+def wait_actionable(template, timeout_s=5.0, stable_for_s=0.3, min_score=0.8,
+                    region=None):
+    from je_auto_control.utils.executor.action_executor import _wait_actionable
+    return _wait_actionable(template, timeout_s, stable_for_s, min_score, region)
+
+
+def fuse_elements(ocr=None, icon=None, a11y=None, iou_threshold=0.9):
+    from je_auto_control.utils.executor.action_executor import _fuse_elements
+    return _fuse_elements(ocr, icon, a11y, iou_threshold)
+
+
+def reading_order(elements, row_tol=12):
+    from je_auto_control.utils.executor.action_executor import _reading_order
+    return _reading_order(elements, row_tol)
+
+
+def segment_hsv(lower_hsv, upper_hsv, min_area=50, region=None):
+    from je_auto_control.utils.executor.action_executor import _segment_hsv
+    return _segment_hsv(lower_hsv, upper_hsv, min_area, region)
+
+
+def dominant_hue_regions(hue, hue_tol=10, sat_min=80, val_min=80, min_area=50,
+                         region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _dominant_hue_regions)
+    return _dominant_hue_regions(hue, hue_tol, sat_min, val_min, min_area, region)
+
+
+def find_text_regions(min_area=60, max_area=None, merge=True, max_aspect=12.0,
+                      region=None):
+    from je_auto_control.utils.executor.action_executor import _find_text_regions
+    return _find_text_regions(min_area, max_area, merge, max_aspect, region)
+
+
+def find_text_lines(y_tolerance=8, region=None):
+    from je_auto_control.utils.executor.action_executor import _find_text_lines
+    return _find_text_lines(y_tolerance, region)
+
+
+def find_lines(min_length=80, max_gap=10, orientation="any", region=None):
+    from je_auto_control.utils.executor.action_executor import _find_lines
+    return _find_lines(min_length, max_gap, orientation, region)
+
+
+def find_grid(min_length=120, tol=10, region=None):
+    from je_auto_control.utils.executor.action_executor import _find_grid
+    return _find_grid(min_length, tol, region)
+
+
+def find_separators(axis="horizontal", min_length=120, tol=10, region=None):
+    from je_auto_control.utils.executor.action_executor import _find_separators
+    return _find_separators(axis, min_length, tol, region)
+
+
+def expect_poll(action, key=None, op="truthy", expected=None, timeout_s=5.0,
+                interval_s=0.25):
+    from je_auto_control.utils.executor.action_executor import _expect_poll
+    return _expect_poll(action, key, op, expected, timeout_s, interval_s)
+
+
+def locate_chain(boxes, ops=None):
+    from je_auto_control.utils.executor.action_executor import _locate_chain
+    return _locate_chain(boxes, ops)
+
+
+def set_clipboard_html(html, fragment_plaintext=None):
+    from je_auto_control.utils.executor.action_executor import _set_clipboard_html
+    return _set_clipboard_html(html, fragment_plaintext)
+
+
+def get_clipboard_html():
+    from je_auto_control.utils.executor.action_executor import _get_clipboard_html
+    return _get_clipboard_html()
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
@@ -2392,6 +2622,35 @@ def wait_screen_stable(region: Optional[List[int]] = None,
     ).to_dict()
 
 
+def wait_image_gone(image, detect_threshold: float = 1.0,
+                    timeout_s: float = 10.0, poll_interval_s: float = 0.2,
+                    gone_for_s: float = 0.0) -> Dict[str, Any]:
+    from je_auto_control.utils.executor.action_executor import _wait_image_gone
+    return _wait_image_gone(image, detect_threshold, timeout_s,
+                            poll_interval_s, gone_for_s)
+
+
+def wait_text_gone(text: str, timeout_s: float = 10.0,
+                   poll_interval_s: float = 0.2,
+                   gone_for_s: float = 0.0) -> Dict[str, Any]:
+    from je_auto_control.utils.executor.action_executor import _wait_text_gone
+    return _wait_text_gone(text, timeout_s, poll_interval_s, gone_for_s)
+
+
+def wait_color(target_rgb, region=None, tolerance=10, min_fraction=0.5,
+               present=True, timeout_s=10.0, poll_interval_s=0.2):
+    from je_auto_control.utils.executor.action_executor import _wait_color
+    return _wait_color(target_rgb, region, tolerance, min_fraction,
+                       present, timeout_s, poll_interval_s)
+
+
+def wait_window_title(pattern, present=True, regex=True, timeout_s=10.0,
+                      poll_interval_s=0.2):
+    from je_auto_control.utils.executor.action_executor import _wait_window_title
+    return _wait_window_title(pattern, present, regex, timeout_s,
+                              poll_interval_s)
+
+
 def wait_for_file(path: str, timeout_s: float = 30.0,
                   poll_interval_s: float = 0.25,
                   stable_for_s: float = 1.0,
@@ -2464,14 +2723,17 @@ def ocr_read_structure(region: Optional[List[int]] = None,
 
 def anchor_locate(anchor: Dict[str, Any], target: Dict[str, Any],
                   relation: str = "near",
-                  max_distance_px: float = 200.0) -> Dict[str, Any]:
-    from je_auto_control.utils.anchor_locator import (
-        Locator, anchor_locate as _impl,
-    )
-    return _impl(
-        anchor=Locator(**anchor), target=Locator(**target),
-        relation=relation, max_distance_px=float(max_distance_px),
-    ).to_dict()
+                  max_distance_px: float = 200.0,
+                  ordinal: int = 1) -> Dict[str, Any]:
+    from je_auto_control.utils.executor.action_executor import _anchor_locate
+    return _anchor_locate(anchor, target, relation, max_distance_px, ordinal)
+
+
+def anchor_locate_all(anchor: Dict[str, Any], target: Dict[str, Any],
+                      relation: str = "near",
+                      max_distance_px: float = 200.0) -> Dict[str, Any]:
+    from je_auto_control.utils.executor.action_executor import _anchor_locate_all
+    return _anchor_locate_all(anchor, target, relation, max_distance_px)
 
 
 def anchor_click(anchor: Dict[str, Any], target: Dict[str, Any],

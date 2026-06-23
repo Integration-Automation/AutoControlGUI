@@ -1,5 +1,185 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 丰富剪贴板(HTML / CF_HTML)
+
+把*格式化*的 HTML 复制粘贴到 Word / Outlook。完整参考:[`docs/source/Zh/doc/new_features/v144_features_doc.rst`](../docs/source/Zh/doc/new_features/v144_features_doc.rst)。
+
+- **`build_cf_html` / `parse_cf_html` / `set_clipboard_html` / `get_clipboard_html`**(`AC_set_clipboard_html`、`AC_get_clipboard_html`):基础剪贴板只处理纯文字 + 图像——富文字粘贴需要 `CF_HTML`,其字节偏移标头(`StartHTML`/`EndHTML`/`StartFragment`/`EndFragment`)极易出错。`build_cf_html`/`parse_cf_html` 以纯 Python 计算与还原它(往返测试、多字节 UTF-8 正确);`set/get_clipboard_html` 将其包装于 Win32 剪贴板(含纯文字后备)。字节偏移运算可无头测试;只有 I/O 为 Windows。
+
+## 本次更新 (2026-06-23) — 可串接 / 可过滤的候选定位器
+
+用链式调用细化已定位的元素:`.within(panel).filter(has_text="Delete").nth(1)`。完整参考:[`docs/source/Zh/doc/new_features/v143_features_doc.rst`](../docs/source/Zh/doc/new_features/v143_features_doc.rst)。
+
+- **`from_boxes` / `Candidates`**(`AC_locate_chain`):`anchor_locator` 是单一关系、`grid_locator` 是单元格——两者都不支援对候选集合做可组合细化(Selenium-4 / Playwright 的链式定位惯用法)。本功能是对来自*任何*来源(模板 / OCR / a11y / `fuse_elements`)的框做纯后置过滤:`within`(区域裁切)、`filter`(`has_text` / `near` / 面积 / predicate)、`sort_reading`、`nth` / `first` / `last`、`resolve()` / `center()`。每个方法返回新的 `Candidates`(不变动)→ 完全无头可测。执行器命令套用 JSON `ops` 列表。
+
+## 本次更新 (2026-06-23) — 重试式数值断言(expect.poll)
+
+重试*任意*值直到符合,不只限内建检查。完整参考:[`docs/source/Zh/doc/new_features/v142_features_doc.rst`](../docs/source/Zh/doc/new_features/v142_features_doc.rst)。
+
+- **`expect_poll` / `assert_poll` + matchers**(`AC_expect_poll`):`assert_eventually` 只能轮询固定字典规格检查(文字/图像/像素/…)。本功能对任意零参数 `getter` 以任意 `matcher`(`to_equal` / `to_contain` / `to_be_greater_than` / `to_match_regex` / `to_be_truthy` / `to_be_stable`)轮询直到通过或超时——OCR 出的总额、行数稳定、自定义判断式皆可。可注入 `clock`/`sleep` → 具确定性,对应 Playwright 的 `expect.poll`。执行器命令会重复执行嵌套动作直到其结果某键符合。
+
+## 本次更新 (2026-06-23) — 线条 / 网格 / 分隔线检测(Hough)
+
+从原始像素找出表格网格线与 UI 分隔线。完整参考:[`docs/source/Zh/doc/new_features/v141_features_doc.rst`](../docs/source/Zh/doc/new_features/v141_features_doc.rst)。
+
+- **`find_lines` / `find_grid` / `find_separators`**(`AC_find_lines`、`AC_find_grid`、`AC_find_separators`):`grid_locator` 分群*已找到*的框、`shape_locator` 找封闭矩形——两者都无法从像素找出表格网格线或分隔线。Canny + 概率 Hough 检测直线段(分类水平/垂直/斜向),`find_grid` 还原 `{rows, cols, cells}` 让你定址「第 3 行、第 2 列」,`find_separators` 返回长分隔线坐标。可注入 haystack → 无头可测;OpenCV 核心(`cv2.HoughLinesP`)。
+
+## 本次更新 (2026-06-23) — 免模型文字区检测(MSER)
+
+不跑 OCR 也能找出画面上文字的位置。完整参考:[`docs/source/Zh/doc/new_features/v140_features_doc.rst`](../docs/source/Zh/doc/new_features/v140_features_doc.rst)。
+
+- **`find_text_regions` / `find_text_lines`**(`AC_find_text_regions`、`AC_find_text_lines`):`shape_locator` 找矩形(不是文字)、`locate_text` 需要 OCR 引擎*以及*确切字串——两者都无法回答「哪里有*任何*文字?」。MSER 找出字元 / 词 / 行区块,让脚本能裁切候选框喂给 OCR(比全画面更快更准),或在未安装 OCR 相依时检测标签出现。`merge` 并集 MSER 逐字元的嵌套区域;`find_text_lines` 将字元归为逐行框;空白画面返回 `[]`。OpenCV 核心(`cv2.MSER_create`)、可注入 haystack → 无头可测。
+
+## 本次更新 (2026-06-23) — HSV 色彩空间分割
+
+不论光照都能找出「任一色阶的红色」。完整参考:[`docs/source/Zh/doc/new_features/v139_features_doc.rst`](../docs/source/Zh/doc/new_features/v139_features_doc.rst)。
+
+- **`dominant_hue_regions` / `segment_hsv` / `color_mask`**(`AC_dominant_hue_regions`、`AC_segment_hsv`):`find_color_region` 在 RGB 以各通道 ± 框遮罩——无法匹配「同一颜色但不同亮度」(状态灯、强调色、主题色调)。HSV 把色相与亮度分离,因此「色相带 + 饱和度 / 明度下限」可在不同光照下捕捉所有色阶。`dominant_hue_regions(hue=…)` 自动处理红色 0/180 环绕;`segment_hsv` 接受明确带;两者皆返回 `{x,y,width,height,area,center}` 区块并沿用共用连通元件辅助函数。可注入 haystack → 无头可测。
+
+## 本次更新 (2026-06-23) — 融合并排序屏幕元素框
+
+把原始的 OCR + 图标 + a11y 框转成一份干净、已编号的元素列表。完整参考:[`docs/source/Zh/doc/new_features/v138_features_doc.rst`](../docs/source/Zh/doc/new_features/v138_features_doc.rst)。
+
+- **`iou` / `merge_boxes` / `fuse_elements` / `reading_order`**(`AC_fuse_elements`、`AC_reading_order`):`set_of_marks` 为干净的元素列表编号,但没有任何功能*产生*它——真实画面解析会产出三个彼此重叠、有重复且无顺序的来源。本功能补上这一步:依 IoU 去除近重复框、并集 OCR/icon/a11y 并在重叠时保留最可信来源(`source_priority` a11y > ocr > icon)、再由上到下 / 由左到右排序并给予稳定 `index`。纯 `dict` 框 → 纯标准库、完全无头可测;直接与 `set_of_marks` 搭配。
+
+## 本次更新 (2026-06-23) — 可操作性闸门(操作前先等待就绪)
+
+目标真正就绪前不要点击。完整参考:[`docs/source/Zh/doc/new_features/v137_features_doc.rst`](../docs/source/Zh/doc/new_features/v137_features_doc.rst)。
+
+- **`wait_actionable` / `act_when_ready`**(`AC_wait_actionable`):Playwright/Cypress 在每次点击前都会做可操作性检查——存在 + 已停止移动 + 启用 + 未被遮盖——但 AutoControl 先前没有(`self_heal_click` 立即点击;`wait_until_screen_stable` 观察整个画面)。本功能把这四项合成单一闸门,返回 `ActionabilityReport`(各项检查布尔值、目标 `point`、`reason` = 第一个失败的检查)。每个信号都是可注入 callable(`bbox_provider` / `region_sampler` / `enabled_probe` / `hit_tester`)再加可注入 `clock`/`sleep`,因此完全确定性且可无头测试。执行器命令以模板图像把关。
+
+## 本次更新 (2026-06-23) — 多显示器 / 虚拟桌面几何
+
+在多台显示器间正确摆放窗口与坐标。完整参考:[`docs/source/Zh/doc/new_features/v136_features_doc.rst`](../docs/source/Zh/doc/new_features/v136_features_doc.rst)。
+
+- **`enumerate_monitors` + `Monitor` / `virtual_bounds` / `monitor_at_point` / `monitor_for_window` / `to_local` / `to_virtual` / `remap_point`**(`AC_enumerate_monitors`、`AC_monitor_at_point`):`snap_window` / `arrange_grid` / 版面规划器都假设单一主屏 `(width, height)`——对多显示器无感,无法在第二台显示器铺排或处理负原点虚拟桌面。本功能补上实体层:并集虚拟边界、某点 / 某窗口属于哪台显示器、虚拟↔显示器区域坐标转换,以及跨分辨率 / DPI 的等效位置重映射。对 `Monitor` dataclass 的纯几何 → 完全无头可测;`enumerate_monitors` 具可注入 provider(默认 `mss`)。
+
+## 本次更新 (2026-06-23) — 图像预处理(供 OCR / 模板匹配)
+
+在识别或匹配前先清理画面。完整参考:[`docs/source/Zh/doc/new_features/v135_features_doc.rst`](../docs/source/Zh/doc/new_features/v135_features_doc.rst)。
+
+- **`preprocess_image` + `to_grayscale` / `binarize` / `upscale` / `denoise` / `deskew` / `enhance_contrast`**(`AC_preprocess_image`):`locate_text` 与 `match_template` 把*原始*截取直接喂给 OCR / 匹配器——小字、暗色主题、低对比与歪斜会严重影响两者,而框架毫无预处理接缝。本功能加入标准流程(灰阶 → 放大 → 二值化 → 去歪斜 → 去噪 → CLAHE),倍增其准确度。可注入 haystack → ndarray;`detect_skew_angle` 测量文字旋转;`binarize` 提供 otsu / adaptive。执行器命令把清理后图像写入路径。可对合成数组无头测试。
+
+## 本次更新 (2026-06-23) — 排列多个窗口(网格 / 层叠)
+
+一次调用排好一整组窗口。完整参考:[`docs/source/Zh/doc/new_features/v134_features_doc.rst`](../docs/source/Zh/doc/new_features/v134_features_doc.rst)。
+
+- **`arrange_grid` / `arrange_cascade`**(`AC_arrange_grid`、`AC_arrange_cascade`):`snap_window` 移动*一个*窗口、版面规划器只*计算*矩形——这两个把循环补完,接受一组窗口标题并实际把每个匹配的窗口移入网格(自动近正方形,或明确 `rows`/`cols` + `gap`)或对角线层叠。以版面规划器为基础并沿用 `snap_window` 的可注入 `mover`/`screen_size` 接缝,因此完全无头可测;返回移动的窗口数。
+
+## 本次更新 (2026-06-23) — 窗口铺排 / 版面几何规划器
+
+计算应用程序窗口该放在哪里——半边、网格、层叠。完整参考:[`docs/source/Zh/doc/new_features/v133_features_doc.rst`](../docs/source/Zh/doc/new_features/v133_features_doc.rst)。
+
+- **`tile_rect` / `grid_rects` / `cascade_rects`**(`AC_tile_rect`、`AC_grid_rects`、`AC_cascade_rects`):`save/restore_window_layout` 重播*精确*的已存位置、`snap_window` 移动*一个*窗口——没有任何功能能*计算*出全新的多窗口版面。此纯几何规划器在给定屏幕工作区下,返回半边、四分之一、三分之一、R×C 网格与错位层叠的目标矩形,让脚本能以确定性方式排列窗口。返回 `WindowRect`(`.as_tuple()` / `.to_dict()`);`gap` 内缩铺排间距;跨平台且完全无头可测;可与任何窗口移动后端组合。
+
+## 本次更新 (2026-06-23) — 以边缘 / 轮廓定位 UI 元素(免模板)
+
+在从未见过的画面上找出可点击的方框。完整参考:[`docs/source/Zh/doc/new_features/v132_features_doc.rst`](../docs/source/Zh/doc/new_features/v132_features_doc.rst)。
+
+- **`find_shapes` / `find_rectangles`**(`AC_find_shapes`、`AC_find_rectangles`):其他定位器都需要一个寻找对象——模板、颜色或文字。这两个什么都不需要:Canny 边缘检测 + 轮廓提取返回各个形状的边界框(`{x,y,width,height,area,center,aspect}`,由大到小),让脚本能结构性地列举卡片 / 按钮 / 输入框并点击第 N 个。`find_rectangles` 只保留凸四边形,并加上 `aspect_range=(min,max)` 宽高比过滤(`(1.5,8)` 取宽按钮)。可注入 haystack → 无头可测。
+
+## 本次更新 (2026-06-23) — ORB 特征匹配(对旋转 / 缩放 / 主题稳健)
+
+即使目标旋转、缩放或换主题也能找到。完整参考:[`docs/source/Zh/doc/new_features/v131_features_doc.rst`](../docs/source/Zh/doc/new_features/v131_features_doc.rst)。
+
+- **`feature_match`**(`AC_feature_match`):像素模板匹配(`match_template` / `match_masked`)是做像素相关运算,因此目标一旦旋转、以未列出的倍率缩放或重新上色(亮 / 暗主题、hover)就会失效。本功能匹配 ORB *关键点*并拟合 RANSAC 单应矩阵,返回四个投影 `corners`、`center`、`inliers` 内点数与内点比例 `score`。ORB 边界 / patch 尺寸会针对图标大小的模板自动缩小(OpenCV 预设会将其舍弃)。仅用 OpenCV 核心(不需 contrib);可注入 haystack → 无头可测。
+
+## 本次更新 (2026-06-23) — 结构相似度(SSIM)比较
+
+会告诉你*哪里*变了的感知式画面比较。完整参考:[`docs/source/Zh/doc/new_features/v130_features_doc.rst`](../docs/source/Zh/doc/new_features/v130_features_doc.rst)。
+
+- **`ssim_compare` / `ssim_changed_regions`**(`AC_ssim_compare`、`AC_ssim_changed_regions`):像素差(`diff_screenshots`)会因一像素位移而误报;直方图(`detect_drift`)对版面无感。SSIM 是标准视觉回归度量——容忍轻微光照变化、对结构变化敏感。`ssim_compare` 返回 0..1 分数(1.0 = 完全相同);`ssim_changed_regions` 返回哪里移动了的方框。`ignore=[[x,y,w,h]]` 可遮罩即时时钟 / 光标。纯 NumPy + OpenCV(不需 scikit-image);可注入影像配对 → 无头可测。
+
+## 本次更新 (2026-06-23) — 遮罩模板匹配
+
+不论背景如何都能匹配图标。完整参考:[`docs/source/Zh/doc/new_features/v129_features_doc.rst`](../docs/source/Zh/doc/new_features/v129_features_doc.rst)。
+
+- **`match_masked` / `match_masked_all`**(`AC_match_masked`、`AC_match_masked_all`):一般模板匹配会计分*每个*像素,因此从某背景裁切出的图标在不同背景上会匹配失败。本功能只计算你标记为相关的像素——明确的灰阶 `mask`,或 RGBA 模板的 alpha 通道——让透明 /「不在乎」的像素不再拉低分数。返回与计分模板匹配相同的 `Match`(score/center);使用 OpenCV 遮罩 `TM_CCORR_NORMED`,NaN 归零。可注入 haystack → 无头可测。
+
+## 本次更新 (2026-06-23) — 依颜色定位屏幕区域
+
+依颜色找出绿色状态药丸 / 红色横幅。完整参考:[`docs/source/Zh/doc/new_features/v128_features_doc.rst`](../docs/source/Zh/doc/new_features/v128_features_doc.rst)。
+
+- **`find_color_region` / `find_color_regions`**(`AC_find_color_region`):`color_stats` 只描述区域颜色、`assert_pixel` 检查单点——两者都不*定位*彩色区域。本功能将接近目标 RGB(在 `tolerance` 内)的像素遮罩起来,返回相连区块的框(`{x,y,width,height,area,center}`,由大到小)——用于模板脆弱的状态灯、进度填充、错误横幅。可注入 haystack → 无头可测;OpenCV/NumPy 透过 `je_open_cv`。
+
+## 本次更新 (2026-06-23) — 具信心分数的模板匹配
+
+返回分数、搜索多尺度、找出所有出现处的模板匹配。完整参考:[`docs/source/Zh/doc/new_features/v127_features_doc.rst`](../docs/source/Zh/doc/new_features/v127_features_doc.rst)。
+
+- **`match_template` / `match_template_all` / `best_matches` / `TemplateMatch`**(`AC_match_template`、`AC_match_template_all`):既有匹配器(`find_object`)为单一尺度且*丢弃分数*。本功能返回带 `score`/`scale`/`center` 的 `Match`、搜索 `scales` 容忍 DPI/缩放,并以非极大值抑制列举每个出现处。可注入 `haystack`(ndarray/路径/PIL)→ 无头可测;OpenCV/NumPy 透过 `je_open_cv` 依赖。
+
+## 本次更新 (2026-06-23) — 等待窗口标题(正则)
+
+阻塞直到窗口标题符合正则(或消失)。完整参考:[`docs/source/Zh/doc/new_features/v126_features_doc.rst`](../docs/source/Zh/doc/new_features/v126_features_doc.rst)。
+
+- **`wait_until_window_title`**(`AC_wait_window_title`):`wait_for_window` 以子字符串比对且仅等*出现*;`wait_until_window_closed` 为子字符串消失。本功能默认以正则表达式比对(`regex=False` 改子字符串),并可等待标题消失(`present=False`)——例如等标签页导览至 `r".*— Checkout$"`。标题来源可注入、无头可测。
+
+## 本次更新 (2026-06-23) — 表格 / 网格单元格定位
+
+依(行、列)从单元格边界框定位表格单元格。完整参考:[`docs/source/Zh/doc/new_features/v125_features_doc.rst`](../docs/source/Zh/doc/new_features/v125_features_doc.rst)。
+
+- **`cluster_grid` / `locate_cell`**(`AC_grid_cell`):`anchor_locator` 处理成对关系,但无法定位二维网格。给定单元格边界框(来自 `locate_all_image` / `find_text_matches`),本功能将其分群为行(依中心 y 在 `row_tolerance` 内)与列(依中心 x),并返回 0 起算 `(row, col)` 单元格的中心——可直接点击。纯分群、完全无头可测。
+
+## 本次更新 (2026-06-23) — 锚点序数与全部定位
+
+挑选第 N 个锚点相对匹配,或列举全部。完整参考:[`docs/source/Zh/doc/new_features/v124_features_doc.rst`](../docs/source/Zh/doc/new_features/v124_features_doc.rst)。
+
+- **`anchor_locate(..., ordinal=N)` / `anchor_locate_all`**(`AC_anchor_locate` ordinal、`AC_anchor_locate_all`):`anchor_locate` 总是返回单一最近的匹配——无法取「标题下方第 2 行」或列出每一行。本功能加入 1 起算的 `ordinal` 选择器(向后兼容;`ordinal=1` 即最近)与返回依距离排序所有匹配的 `anchor_locate_all`——表格/列表行选取的基础元件。纯排序核心、确定。
+
+## 本次更新 (2026-06-23) — 在动作组中持续按住修饰键
+
+在多个动作之间持续按住 ctrl/shift,即使出错也会放开。完整参考:[`docs/source/Zh/doc/new_features/v123_features_doc.rst`](../docs/source/Zh/doc/new_features/v123_features_doc.rst)。
+
+- **`hold_modifiers` / `plan_with_modifiers`**(`AC_with_modifiers`):`hotkey` 会立即放开按键——先前无法在多个独立动作之间持续按住修饰键(shift 连点范围选取、ctrl 连点多选)并保证放开。`hold_modifiers` 是 context manager,进入时按下、离开时(在 `finally`)以反向放开,因此不会泄漏;`plan_with_modifiers` 为纯计划。可注入 sink、确定。
+
+## 本次更新 (2026-06-23) — Unicode 文本输入(emoji / CJK)
+
+输入 `write` 无法处理的任何 Unicode(emoji / CJK / 重音)。完整参考:[`docs/source/Zh/doc/new_features/v122_features_doc.rst`](../docs/source/Zh/doc/new_features/v122_features_doc.rst)。
+
+- **`type_unicode` / `plan_paste` / `unicode_code_units`**(`AC_type_unicode`):`write` 通过虚拟键表输入,对 emoji/CJK/许多重音字会*抛异常*。`type_unicode` 以设定剪贴板再粘贴(`modifier` ctrl/command)可靠地输入任何文本。`unicode_code_units` 将文本拆成 UTF-16 码元(代理对)供 KEYEVENTF_UNICODE 后端使用。纯计划 + 可注入 sink、确定。
+
+## 本次更新 (2026-06-23) — 等待区域颜色
+
+阻塞直到某颜色填满(或离开)屏幕区域。完整参考:[`docs/source/Zh/doc/new_features/v121_features_doc.rst`](../docs/source/Zh/doc/new_features/v121_features_doc.rst)。
+
+- **`wait_until_color`**(`AC_wait_color`):`wait_for_pixel` 精确比对单点、`wait_until_pixel_changes` 检测单点任何变化——两者都无法等「状态灯变绿」/「进度条填满」/「红色横幅消失」。本功能计数区域中接近 `target_rgb`(在 `tolerance` 内)的像素,当比例越过 `min_fraction`(或 `present=False` 时低于)即成功。可注入 sampler、无头可测。纯标准库。
+
+## 本次更新 (2026-06-23) — 相对鼠标移动
+
+从当前位置将指针位移一个增量。完整参考:[`docs/source/Zh/doc/new_features/v120_features_doc.rst`](../docs/source/Zh/doc/new_features/v120_features_doc.rst)。
+
+- **`move_mouse_relative` / `relative_target`**(`AC_move_mouse_relative`):鼠标 wrapper 只有绝对的 `set_mouse_position`——没有给相对指针 / 画布 / FPS 应用与渐进式拖曳用的 `moveRel(dx, dy)`。本功能读取实时位置并依增量移动;`relative_target` 为纯算术,getter/setter 可注入以供无头测试。纯标准库、确定。
+
+## 本次更新 (2026-06-23) — 按住按键 / 自动重复
+
+按住一个键一段时间,或以固定频率自动重复。完整参考:[`docs/source/Zh/doc/new_features/v119_features_doc.rst`](../docs/source/Zh/doc/new_features/v119_features_doc.rst)。
+
+- **`hold_key` / `plan_key_hold`**(`AC_hold_key`):`type_keyboard` 是瞬间按下+放开——先前没有「按住此键 N 秒」(游戏移动、按住滚动)或「每秒送 R 次」(自动重复)。`plan_key_hold` 建立确定性操作计划(按下/等待/放开,或为 `rate_hz` 产生 N 个间隔按键事件);`hold_key` 将等待导向可注入的 `sleep`、按键导向可注入的 `sink`。纯计划、确定。
+
+## 本次更新 (2026-06-23) — 等待消失(阻塞式 vanish 等待)
+
+阻塞直到转圈圈 / toast / 对话框消失。完整参考:[`docs/source/Zh/doc/new_features/v118_features_doc.rst`](../docs/source/Zh/doc/new_features/v118_features_doc.rst)。
+
+- **`wait_until_gone` / `wait_until_image_gone` / `wait_until_text_gone`**(`AC_wait_image_gone`、`AC_wait_text_gone`):`wait_for_image`/`wait_for_text` 只阻塞到某物*出现*,`observer` 则以异步回调在消失时触发——先前没有*阻塞式*的「等到此图像/文本消失再继续」。通用的 `wait_until_gone` 接受任意谓词(可无头测试);图像/文本辅助函数从定位函数建立。`gone_for_s` 可消抖。返回 `WaitOutcome`。纯标准库。
+
+## 本次更新 (2026-06-23) — 清空再输入字段
+
+可靠地设定文本字段的值(Playwright 的 `fill` 惯用法)。完整参考:[`docs/source/Zh/doc/new_features/v117_features_doc.rst`](../docs/source/Zh/doc/new_features/v117_features_doc.rst)。
+
+- **`set_field_text` / `plan_field_set`**(`AC_set_field_text`):先前没有单一的「聚焦 → 清空 → 设值」基本元件,且 `write` 对 emoji/CJK 会抛异常。本功能清空字段(全选 + 删除)后再输入文本——可选择通过剪贴板(`paste=True`),这是 `write` 无法处理之 Unicode 的安全途径。`modifier` 为平台命令键(`ctrl`/`command`)。纯计划 + 可注入 sink、确定。
+
+## 本次更新 (2026-06-22) — 多路径点鼠标手势
+
+让指针沿着路径点折线移动或拖曳。完整参考:[`docs/source/Zh/doc/new_features/v116_features_doc.rst`](../docs/source/Zh/doc/new_features/v116_features_doc.rst)。
+
+- **`plan_path` / `move_along_path` / `drag_path` / `path_easings`**(`AC_move_along_path`、`AC_drag_path`):`humanize` 与 `tween_drag` 只在单一起点→终点之间插值——先前无法驱动任意的路径点链(签名、框选、多停靠点拖曳)并在整段路径中按住按键。`plan_path` 为纯缓动点运算(重用 `tween_drag` 的缓动、交接点去重);移动/拖曳通过可注入的 sink 派发以供无头测试。纯标准库、确定。
+
+## 本次更新 (2026-06-22) — 校验位算法
+
+计算/验证 Luhn、Verhoeff、Damm 与 ISO 7064 MOD 97-10 校验位。完整参考:[`docs/source/Zh/doc/new_features/v115_features_doc.rst`](../docs/source/Zh/doc/new_features/v115_features_doc.rst)。
+
+- **`luhn_validate` / `luhn_check_digit` / `verhoeff_*` / `damm_*` / `mod97_10_*`**(`AC_checksum_validate`、`AC_checksum_digit`):`pii_text` 以正则检测卡号/IBAN 形状、`data_quality` 做正则验证,但没有任何功能计算或验证*校验位*。本功能加入多数标识符背后的四种方案(卡号/IMEI、身份证号、IBAN)——`identifier_validate` 所依据的共用引擎。纯标准库、确定。
+
 ## 本次更新 (2026-06-22) — 移动平均平滑
 
 平滑噪声值序列。完整参考:[`docs/source/Zh/doc/new_features/v102_features_doc.rst`](../docs/source/Zh/doc/new_features/v102_features_doc.rst)。
