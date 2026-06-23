@@ -3231,6 +3231,33 @@ def perceptual_diff_tools() -> List[MCPTool]:
     ]
 
 
+def window_geometry_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_get_client_rect",
+            description=("The client-area rect [x,y,width,height] (screen coords, "
+                         "excluding title bar / borders) of the window matching "
+                         "'title'. Returns {found, rect}. Windows only."),
+            input_schema=schema({"title": {"type": "string"}}, required=["title"]),
+            handler=h.get_client_rect,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_client_point",
+            description=("Screen point for a client-area-local (x, y) inside the "
+                         "window 'title' — click inside it regardless of title-bar "
+                         "/ border thickness. Returns {found, point}."),
+            input_schema=schema({
+                "title": {"type": "string"},
+                "x": {"type": "integer"},
+                "y": {"type": "integer"}},
+                required=["title", "x", "y"]),
+            handler=h.client_point,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6738,7 +6765,8 @@ ALL_FACTORIES = (
     hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
     locator_chain_tools, rich_clipboard_tools, img_histogram_tools,
     motion_regions_tools, window_zorder_tools, soft_assert_tools,
-    perceptual_diff_tools, plugin_sdk_tools, governance_tools,
+    perceptual_diff_tools, window_geometry_tools, plugin_sdk_tools,
+    governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
