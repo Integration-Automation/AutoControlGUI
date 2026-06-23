@@ -299,6 +299,10 @@ from je_auto_control.utils.match_ensemble import (
 from je_auto_control.utils.color_match import (
     match_color, match_color_all,
 )
+# Pre-match settle gating + match persistence over a frame sequence
+from je_auto_control.utils.match_stability import (
+    match_persistence, region_stability,
+)
 # Otsu auto-thresholding for template matching (no hand-tuned min_score)
 from je_auto_control.utils.match_autothresh import (
     auto_threshold, match_auto,
@@ -1286,6 +1290,8 @@ __all__ = [
     "vote_centers",
     "match_color",
     "match_color_all",
+    "region_stability",
+    "match_persistence",
     "SubPixelMatch",
     "match_subpixel",
     "refine_peak",

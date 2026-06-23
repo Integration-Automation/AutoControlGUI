@@ -459,6 +459,28 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Find every colour (HSV) match of a template (NMS-deduped).",
     ))
     specs.append(CommandSpec(
+        "AC_region_stability", "Image", "Region Stability (frames)",
+        fields=(
+            FieldSpec("frames", FieldType.STRING,
+                      placeholder='["f1.png", "f2.png", "f3.png"]'),
+            FieldSpec("settle_threshold", FieldType.FLOAT, optional=True,
+                      default=0.99, min_value=0.0, max_value=1.0),
+        ),
+        description="Is a frame sequence settled? (consecutive-frame SSIM).",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_persistence", "Image", "Match Persistence (frames)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("frames", FieldType.STRING,
+                      placeholder='["f1.png", "f2.png", "f3.png"]'),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("agree_px", FieldType.INT, optional=True, default=8),
+        ),
+        description="Does a template match hold steady across frames? (jitter).",
+    ))
+    specs.append(CommandSpec(
         "AC_grid_cells", "Image", "Grid Cells (coarse grounding)",
         fields=(
             FieldSpec("rows", FieldType.INT, optional=True, default=3),

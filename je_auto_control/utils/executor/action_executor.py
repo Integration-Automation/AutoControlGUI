@@ -3459,6 +3459,26 @@ def _match_color_all(template: str, channels: Any = None, min_score: Any = 0.7,
     return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
 
 
+def _region_stability(frames: Any, settle_threshold: Any = 0.99) -> Dict[str, Any]:
+    """Adapter: how settled an injected frame sequence is (consecutive SSIM)."""
+    import json
+    from je_auto_control.utils.match_stability import region_stability
+    if isinstance(frames, str):
+        frames = json.loads(frames)
+    return region_stability(frames, settle_threshold=float(settle_threshold))
+
+
+def _match_persistence(template: str, frames: Any, min_score: Any = 0.8,
+                       agree_px: Any = 8) -> Dict[str, Any]:
+    """Adapter: whether a template match holds steady across frames."""
+    import json
+    from je_auto_control.utils.match_stability import match_persistence
+    if isinstance(frames, str):
+        frames = json.loads(frames)
+    return match_persistence(template, frames, min_score=float(min_score),
+                             agree_px=float(agree_px))
+
+
 def _region_arg(value: Any) -> Optional[List[int]]:
     """Coerce a JSON-string / list region arg into a list of ints, or None."""
     import json
@@ -6186,6 +6206,8 @@ class Executor:
             "AC_vote_centers": _vote_centers,
             "AC_match_color": _match_color,
             "AC_match_color_all": _match_color_all,
+            "AC_region_stability": _region_stability,
+            "AC_match_persistence": _match_persistence,
             "AC_grid_cells": _grid_cells,
             "AC_cell_for_point": _cell_for_point,
             "AC_point_for_cell": _point_for_cell,

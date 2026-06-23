@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Pre-Match Settle Gating + Match Persistence
+
+Avoid matching mid-animation, and confirm a hit holds steady across frames. Full reference: [`docs/source/Eng/doc/new_features/v180_features_doc.rst`](docs/source/Eng/doc/new_features/v180_features_doc.rst).
+
+- **`region_stability` / `match_persistence`** (`AC_region_stability`, `AC_match_persistence`): `smart_waits.wait_until_screen_stable` gates a live loop with a boolean — it can't score stability on an injectable frame sequence or check whether a *match* held steady. `region_stability` scores consecutive-frame SSIM (`{stable, mean_ssim, min_ssim}`); `match_persistence` confirms a template is found in *every* frame with the centres agreeing within `agree_px` (`{persisted, n_hits, jitter}`). Reuses `ssim` + `visual_match` + `grounding_consensus`; injectable frames; no `PySide6`.
+
 ## What's new (2026-06-24) — Colour-Aware Template Matching (HSV)
 
 Tell a red status dot from a green one of identical shape. Full reference: [`docs/source/Eng/doc/new_features/v179_features_doc.rst`](docs/source/Eng/doc/new_features/v179_features_doc.rst).

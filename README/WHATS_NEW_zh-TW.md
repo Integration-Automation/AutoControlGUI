@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 比對前安定閘 + 命中穩定性
+
+避免在動畫進行中比對,並確認命中跨幀維持穩定。完整參考:[`docs/source/Zh/doc/new_features/v180_features_doc.rst`](../docs/source/Zh/doc/new_features/v180_features_doc.rst)。
+
+- **`region_stability` / `match_persistence`**(`AC_region_stability`、`AC_match_persistence`):`smart_waits.wait_until_screen_stable` 以布林閘控即時迴圈——無法對可注入幀序列評分穩定度,也無法檢查某*命中*是否維持。`region_stability` 以相鄰幀 SSIM 評分(`{stable, mean_ssim, min_ssim}`);`match_persistence` 確認 template 在*每一*幀都找到且中心於 `agree_px` 內一致(`{persisted, n_hits, jitter}`)。重用 `ssim` + `visual_match` + `grounding_consensus`;幀可注入;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 色彩感知樣板比對(HSV)
 
 區分形狀相同的紅色與綠色狀態點。完整參考:[`docs/source/Zh/doc/new_features/v179_features_doc.rst`](../docs/source/Zh/doc/new_features/v179_features_doc.rst)。

@@ -3913,6 +3913,36 @@ def rotated_match_tools() -> List[MCPTool]:
             handler=h.match_color_all,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_region_stability",
+            description=("Score how settled a sequence of 'frames' (image paths) is by "
+                         "consecutive-frame SSIM: {stable, mean_ssim, min_ssim}. "
+                         "stable=true when nothing moved between frames "
+                         "(min_ssim >= 'settle_threshold') - match only when stable to "
+                         "avoid mid-animation hits."),
+            input_schema=schema({
+                "frames": {"type": "array", "items": {"type": "string"}},
+                "settle_threshold": {"type": "number"}},
+                required=["frames"]),
+            handler=h.region_stability,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_persistence",
+            description=("Check a 'template' matches the same place across 'frames' "
+                         "(image paths): {persisted, n_hits, jitter}. persisted=true "
+                         "when found in every frame and the centres agree within "
+                         "'agree_px' - a steady match, not one lucky frame. "
+                         "'min_score'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "frames": {"type": "array", "items": {"type": "string"}},
+                "min_score": {"type": "number"},
+                "agree_px": {"type": "number"}},
+                required=["template", "frames"]),
+            handler=h.match_persistence,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
