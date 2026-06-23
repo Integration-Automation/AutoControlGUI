@@ -353,6 +353,10 @@ from je_auto_control.utils.window_zorder import (
 )
 # Soft assertions (accumulate checks, raise the aggregate at block end)
 from je_auto_control.utils.soft_assert import SoftAssertions
+# Perceptual (YIQ) image diff with anti-alias edge suppression
+from je_auto_control.utils.perceptual_diff import (
+    PerceptualDiffResult, assert_perceptual, perceptual_diff,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1220,6 +1224,9 @@ __all__ = [
     "bring_to_front",
     "send_to_back",
     "SoftAssertions",
+    "perceptual_diff",
+    "assert_perceptual",
+    "PerceptualDiffResult",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

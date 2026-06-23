@@ -553,6 +553,19 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Whether anything moved between two frames (+ activity score).",
     ))
+    specs.append(CommandSpec(
+        "AC_perceptual_diff", "Image", "Perceptual Diff (YIQ)",
+        fields=(
+            FieldSpec("actual", FieldType.FILE_PATH),
+            FieldSpec("expected", FieldType.FILE_PATH),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True, default=0.1,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("include_aa", FieldType.BOOL, optional=True, default=False),
+            FieldSpec("max_diff_ratio", FieldType.FLOAT, optional=True,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Perceptual image diff that ignores anti-aliased edges.",
+    ))
 
 
 def _add_ocr_specs(specs: List[CommandSpec]) -> None:

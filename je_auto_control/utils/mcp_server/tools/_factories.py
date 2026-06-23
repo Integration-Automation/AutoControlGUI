@@ -3209,6 +3209,28 @@ def soft_assert_tools() -> List[MCPTool]:
     ]
 
 
+def perceptual_diff_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_perceptual_diff",
+            description=("Perceptual (YIQ) diff of 'actual' vs 'expected' image "
+                         "paths. By default suppresses anti-aliased edge diffs "
+                         "(include_aa=true to keep them). Returns {diff_pixels, "
+                         "total_pixels, diff_ratio, regions}; pass 'max_diff_ratio' "
+                         "to raise when exceeded. 'threshold' 0..1 sensitivity."),
+            input_schema=schema({
+                "actual": {"type": "string"},
+                "expected": {"type": "string"},
+                "threshold": {"type": "number"},
+                "include_aa": {"type": "boolean"},
+                "max_diff_ratio": {"type": "number"}},
+                required=["actual", "expected"]),
+            handler=h.perceptual_diff,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6716,7 +6738,7 @@ ALL_FACTORIES = (
     hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
     locator_chain_tools, rich_clipboard_tools, img_histogram_tools,
     motion_regions_tools, window_zorder_tools, soft_assert_tools,
-    plugin_sdk_tools, governance_tools,
+    perceptual_diff_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

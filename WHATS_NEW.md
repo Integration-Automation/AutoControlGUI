@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Perceptual (YIQ) Image Diff with Anti-Alias Suppression
+
+Visual-regression diffing that ignores anti-aliased edges. Full reference: [`docs/source/Eng/doc/new_features/v149_features_doc.rst`](docs/source/Eng/doc/new_features/v149_features_doc.rst).
+
+- **`perceptual_diff` / `assert_perceptual`** (`AC_perceptual_diff`): `image_difference` counts raw per-channel deltas and `ssim_compare` is a global score — neither uses a perceptual metric or ignores anti-aliasing, the #1 source of false-positive visual-diff failures. This compares in YIQ space (pixelmatch's colour metric) and, by default, removes thin 1px anti-aliased edge diffs via a morphological open so only solid changes count (`include_aa=True` keeps them). Returns `{diff_pixels, diff_ratio, regions}`; `assert_perceptual` / `max_diff_ratio` gate a regression test. Injectable image pair → headless-testable (a 1px fringe → 0, a solid block → counted).
+
 ## What's new (2026-06-23) — Soft Assertions (Aggregate Failures)
 
 Verify many things, report every failure at once. Full reference: [`docs/source/Eng/doc/new_features/v148_features_doc.rst`](docs/source/Eng/doc/new_features/v148_features_doc.rst).

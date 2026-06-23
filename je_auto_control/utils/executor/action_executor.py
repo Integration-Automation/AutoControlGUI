@@ -3784,6 +3784,20 @@ def _soft_assert(checks: Any, raise_on_fail: Any = False) -> Dict[str, Any]:
             "failures": soft.failures}
 
 
+def _perceptual_diff(actual: str, expected: str, threshold: Any = 0.1,
+                     include_aa: Any = False,
+                     max_diff_ratio: Any = None) -> Dict[str, Any]:
+    """Adapter: perceptual (YIQ) image diff with anti-alias suppression."""
+    from je_auto_control.utils.perceptual_diff import perceptual_diff
+    result = perceptual_diff(actual, expected, threshold=float(threshold),
+                             include_aa=bool(include_aa))
+    if max_diff_ratio is not None and result.diff_ratio > float(max_diff_ratio):
+        raise AutoControlActionException(
+            f"perceptual diff {result.diff_ratio} exceeds {max_diff_ratio}")
+    return {"diff_pixels": result.diff_pixels, "total_pixels": result.total_pixels,
+            "diff_ratio": result.diff_ratio, "regions": result.regions}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5535,6 +5549,7 @@ class Executor:
             "AC_bring_to_front": _bring_to_front,
             "AC_send_to_back": _send_to_back,
             "AC_soft_assert": _soft_assert,
+            "AC_perceptual_diff": _perceptual_diff,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,
