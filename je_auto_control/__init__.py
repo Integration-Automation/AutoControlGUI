@@ -328,6 +328,11 @@ from je_auto_control.utils.text_regions import (
 from je_auto_control.utils.edge_lines import (
     find_grid, find_lines, find_separators,
 )
+# Retry an arbitrary value until it matches (Playwright-style expect.poll)
+from je_auto_control.utils.expect_poll import (
+    PollResult, assert_poll, expect_poll, to_be_greater_than, to_be_stable,
+    to_be_truthy, to_contain, to_equal, to_match_regex,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1169,6 +1174,15 @@ __all__ = [
     "find_lines",
     "find_grid",
     "find_separators",
+    "expect_poll",
+    "assert_poll",
+    "PollResult",
+    "to_equal",
+    "to_contain",
+    "to_be_greater_than",
+    "to_match_regex",
+    "to_be_truthy",
+    "to_be_stable",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

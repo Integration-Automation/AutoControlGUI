@@ -3595,6 +3595,36 @@ def _find_separators(axis: str = "horizontal", min_length: Any = 120, tol: Any =
     return {"count": len(coords), "axis": str(axis), "coordinates": coords}
 
 
+def _expect_poll(action: Any, key: Any = None, op: str = "truthy",
+                 expected: Any = None, timeout_s: Any = 5.0,
+                 interval_s: Any = 0.25) -> Dict[str, Any]:
+    """Adapter: re-run a nested action until a key of its result matches."""
+    import json
+    from je_auto_control.utils.expect_poll import (
+        expect_poll, to_be_greater_than, to_be_truthy, to_contain, to_equal,
+        to_match_regex)
+    if isinstance(action, str):
+        action = json.loads(action)
+    builders = {"equals": lambda: to_equal(expected),
+                "contains": lambda: to_contain(expected),
+                "gt": lambda: to_be_greater_than(expected),
+                "regex": lambda: to_match_regex(str(expected)),
+                "truthy": to_be_truthy}
+    matcher = builders.get(str(op), to_be_truthy)()
+
+    def getter():
+        record = executor.execute_action([list(action)])
+        value = next(iter(record.values()), None)
+        if key is not None and isinstance(value, dict):
+            return value.get(key)
+        return value
+
+    result = expect_poll(getter, matcher, timeout_s=float(timeout_s),
+                         interval_s=float(interval_s))
+    return {"ok": result.ok, "value": result.value, "attempts": result.attempts,
+            "waited_s": result.waited_s}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5334,6 +5364,7 @@ class Executor:
             "AC_find_lines": _find_lines,
             "AC_find_grid": _find_grid,
             "AC_find_separators": _find_separators,
+            "AC_expect_poll": _expect_poll,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

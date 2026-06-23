@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Retrying Value Assertions (expect.poll)
+
+Retry *any* value until it matches, not just the built-in checks. Full reference: [`docs/source/Eng/doc/new_features/v142_features_doc.rst`](docs/source/Eng/doc/new_features/v142_features_doc.rst).
+
+- **`expect_poll` / `assert_poll` + matchers** (`AC_expect_poll`): `assert_eventually` only polls the fixed dict-spec checks (text/image/pixel/…). This polls any zero-arg `getter` against any `matcher` (`to_equal` / `to_contain` / `to_be_greater_than` / `to_match_regex` / `to_be_truthy` / `to_be_stable`) until it passes or times out — an OCR'd total, a row count stabilising, a custom predicate. Injectable `clock`/`sleep` → deterministic, mirrors Playwright's `expect.poll`. The executor command re-runs a nested action until a key of its result matches.
+
 ## What's new (2026-06-23) — Line / Grid / Separator Detection (Hough)
 
 Find table grid lines and UI dividers from raw pixels. Full reference: [`docs/source/Eng/doc/new_features/v141_features_doc.rst`](docs/source/Eng/doc/new_features/v141_features_doc.rst).

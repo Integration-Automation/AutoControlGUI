@@ -769,6 +769,21 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
         description="Wait until a target is visible + stable before acting.",
     ))
     specs.append(CommandSpec(
+        "AC_expect_poll", "Flow", "Expect (poll until match)",
+        fields=(
+            FieldSpec("action", FieldType.STRING,
+                      placeholder='["AC_get_clipboard"]'),
+            FieldSpec("key", FieldType.STRING, optional=True,
+                      placeholder="result dict key, e.g. text"),
+            FieldSpec("op", FieldType.ENUM, optional=True, default="truthy",
+                      choices=("truthy", "equals", "contains", "gt", "regex")),
+            FieldSpec("expected", FieldType.STRING, optional=True),
+            FieldSpec("timeout_s", FieldType.FLOAT, optional=True, default=5.0),
+            FieldSpec("interval_s", FieldType.FLOAT, optional=True, default=0.25),
+        ),
+        description="Re-run an action until a key of its result matches.",
+    ))
+    specs.append(CommandSpec(
         "AC_wait_pixel", "Flow", "Wait for Pixel",
         fields=(
             FieldSpec("x", FieldType.INT),

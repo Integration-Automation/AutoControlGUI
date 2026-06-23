@@ -2226,6 +2226,12 @@ def find_separators(axis="horizontal", min_length=120, tol=10, region=None):
     return _find_separators(axis, min_length, tol, region)
 
 
+def expect_poll(action, key=None, op="truthy", expected=None, timeout_s=5.0,
+                interval_s=0.25):
+    from je_auto_control.utils.executor.action_executor import _expect_poll
+    return _expect_poll(action, key, op, expected, timeout_s, interval_s)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)
