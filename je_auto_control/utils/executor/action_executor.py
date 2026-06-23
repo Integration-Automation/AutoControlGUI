@@ -3387,6 +3387,19 @@ def _edge_match_all(template: str, min_score: Any = 0.7, max_results: Any = 20,
     return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
 
 
+def _match_subpixel(template: str, min_score: Any = 0.0, region: Any = None,
+                    method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: best template match with a sub-pixel-refined centre."""
+    import json
+    from je_auto_control.utils.subpixel_match import match_subpixel
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = match_subpixel(template, region=region, method=method,
+                           min_score=float(min_score))
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
 def _region_arg(value: Any) -> Optional[List[int]]:
     """Coerce a JSON-string / list region arg into a list of ints, or None."""
     import json
@@ -3483,6 +3496,45 @@ def _match_labels_to_widgets(labels: Any, widgets: Any) -> Dict[str, Any]:
         widgets = json.loads(widgets)
     pairs = match_labels_to_widgets(labels, widgets)
     return {"count": len(pairs), "pairs": pairs}
+
+
+def _flow_order(boxes: Any, min_gap: Any = 12) -> Dict[str, Any]:
+    """Adapter: column-aware reading order of OCR boxes (XY-cut)."""
+    import json
+    from je_auto_control.utils.reading_flow import flow_order
+    if isinstance(boxes, str):
+        boxes = json.loads(boxes)
+    ordered = flow_order(boxes, min_gap=int(min_gap))
+    return {"count": len(ordered), "elements": ordered}
+
+
+def _xy_cut(boxes: Any, min_gap: Any = 12) -> Dict[str, Any]:
+    """Adapter: recursive XY-cut region tree of OCR boxes."""
+    import json
+    from je_auto_control.utils.reading_flow import xy_cut
+    if isinstance(boxes, str):
+        boxes = json.loads(boxes)
+    return {"tree": xy_cut(boxes, min_gap=int(min_gap))}
+
+
+def _group_paragraphs(lines: Any, line_gap_factor: Any = 1.6) -> Dict[str, Any]:
+    """Adapter: group OCR lines into paragraphs by vertical spacing."""
+    import json
+    from je_auto_control.utils.text_blocks import group_paragraphs
+    if isinstance(lines, str):
+        lines = json.loads(lines)
+    paragraphs = group_paragraphs(lines, line_gap_factor=float(line_gap_factor))
+    return {"count": len(paragraphs), "paragraphs": paragraphs}
+
+
+def _detect_lists(lines: Any) -> Dict[str, Any]:
+    """Adapter: detect bulleted / numbered list items among OCR lines."""
+    import json
+    from je_auto_control.utils.text_blocks import detect_lists
+    if isinstance(lines, str):
+        lines = json.loads(lines)
+    items = detect_lists(lines)
+    return {"count": len(items), "items": items}
 
 
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
@@ -4153,6 +4205,31 @@ def _plan_repair(verdict: Any, max_attempts: Any = 3) -> Dict[str, Any]:
     tactics = plan_repair(verdict,
                           policy=RepairPolicy(max_attempts=int(max_attempts)))
     return {"count": len(tactics), "tactics": tactics}
+
+
+def _consensus_point(candidates: Any, cluster_radius: Any = 24) -> Dict[str, Any]:
+    """Adapter: agreed target point from clustered grounding proposals."""
+    import json
+    from je_auto_control.utils.grounding_consensus import consensus_point
+    if isinstance(candidates, str):
+        candidates = json.loads(candidates)
+    result = consensus_point(candidates, cluster_radius=float(cluster_radius))
+    return {"found": result is not None,
+            "result": result.to_dict() if result else None}
+
+
+def _consensus_element(candidates: Any, elements: Any) -> Dict[str, Any]:
+    """Adapter: vote grounding proposals to the nearest element."""
+    import json
+    from je_auto_control.utils.grounding_consensus import consensus_element
+    if isinstance(candidates, str):
+        candidates = json.loads(candidates)
+    if isinstance(elements, str):
+        elements = json.loads(elements)
+    winner = consensus_element(candidates, elements)
+    return {"found": winner is not None,
+            "element": winner[0] if winner else None,
+            "agreement": winner[1] if winner else 0.0}
 
 
 def _validate_action(action: Any, screen: Any = None,
@@ -5986,6 +6063,7 @@ class Executor:
             "AC_match_auto": _match_auto,
             "AC_edge_match": _edge_match,
             "AC_edge_match_all": _edge_match_all,
+            "AC_match_subpixel": _match_subpixel,
             "AC_grid_cells": _grid_cells,
             "AC_cell_for_point": _cell_for_point,
             "AC_point_for_cell": _point_for_cell,
@@ -5994,6 +6072,10 @@ class Executor:
             "AC_detect_borderless_table": _detect_borderless_table,
             "AC_associate_fields": _associate_fields,
             "AC_match_labels_to_widgets": _match_labels_to_widgets,
+            "AC_flow_order": _flow_order,
+            "AC_xy_cut": _xy_cut,
+            "AC_group_paragraphs": _group_paragraphs,
+            "AC_detect_lists": _detect_lists,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,
@@ -6037,6 +6119,8 @@ class Executor:
             "AC_effect_near_point": _effect_near_point,
             "AC_check_postcondition": _check_postcondition,
             "AC_plan_repair": _plan_repair,
+            "AC_consensus_point": _consensus_point,
+            "AC_consensus_element": _consensus_element,
             "AC_validate_action": _validate_action,
             "AC_replay_trace": _replay_trace,
             "AC_match_elements": _match_elements,

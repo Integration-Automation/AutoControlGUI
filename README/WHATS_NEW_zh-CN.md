@@ -1,5 +1,29 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — OCR 行的段落与列表分组
+
+把 OCR 行分组成段落,并检测项目符号 / 编号列表。完整参考:[`docs/source/Zh/doc/new_features/v174_features_doc.rst`](../docs/source/Zh/doc/new_features/v174_features_doc.rst)。
+
+- **`group_paragraphs` / `detect_lists`**(`AC_group_paragraphs`、`AC_detect_lists`):`text_regions` 把字形并成行,但没有功能把那些行分组成段落或检测列表;`ocr/structure` 止于平面行。`group_paragraphs` 在垂直间距超过 `line_gap_factor` × 中位行高处开始新段落;`detect_lists` 识别项目符号(`•`/`-`/`*`)或序号(`1.`/`2)`/`a.`)项目,返回 `{text, marker, indent, box}`。纯标准库,作用于行字典;重用 `table_grid_fill` 的框读取器;不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 列感知阅读顺序(XY-Cut)
+
+读多列布局时*完整读完*每一列,而非交错。完整参考:[`docs/source/Zh/doc/new_features/v173_features_doc.rst`](../docs/source/Zh/doc/new_features/v173_features_doc.rst)。
+
+- **`flow_order` / `xy_cut` / `to_blocks`**(`AC_flow_order`、`AC_xy_cut`):`element_parse.reading_order` 是平面上到下排序,会交错列(读作 A1, B1, A2, B2…)。本功能以递归 XY-cut 还原正确顺序——在最宽留白谷切分(垂直 → 列、水平 → 行),故两列页面读作 A1, A2, B1, B2。`flow_order` 返回与 `reading_order` 相同的 `index` 标记契约(列感知的直接升级,且命名不遮蔽它);`xy_cut` 暴露区域树;`to_blocks` 列出叶区块。纯标准库;不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — Grounding 自我一致性(提案共识)
+
+把多个 grounding 提案融合成单一一致目标,并附 agreement 分数。完整参考:[`docs/source/Zh/doc/new_features/v172_features_doc.rst`](../docs/source/Zh/doc/new_features/v172_features_doc.rst)。
+
+- **`consensus_point` / `consensus_element` / `is_confident`**(`AC_consensus_point`、`AC_consensus_element`):一个目标可同时以多种方式 grounding(set-of-marks / OCR / 模板 / a11y / 模型 N 次采样)而未必一致。`ab_locator`/`element_scoring` 依历史排序*策略*;`snap_to_element` 只贴*单一*坐标——两者都不融合*同时*的提案。本功能将候选点聚类(或对候选元素投票),返回一致的 `point` + `agreement` 比例 + `spread`,而 `is_confident` 标记低一致度目标,让代理改为放大 / 询问而非盲目点击。纯标准库;不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 亚像素模板匹配精修
+
+把匹配中心精修到像素的分数位,供拖曳 / 滑块 / 高 DPI 精度。完整参考:[`docs/source/Zh/doc/new_features/v171_features_doc.rst`](../docs/source/Zh/doc/new_features/v171_features_doc.rst)。
+
+- **`match_subpixel` / `refine_peak`**(`AC_match_subpixel`):每个匹配器都从 `cv2.minMaxLoc` 返回*整数*坐标——对拖曳把手、细滑块或高 DPI 显示器,这种舍入是主要的点击落点误差。本功能以抛物线拟合峰值周围的 3×3 分数邻域(x/y 各自独立,标准 NCC 亚像素法),返回带浮点 `cx`/`cy` 与套用的 `offset_x`/`offset_y` 的 `SubPixelMatch`。重用 `visual_match._score_map`;`haystack` 可注入;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 失败 / 无效果动作的修复策略引擎
 
 当动作没效果时选择下一个修复战术——并驱动重试循环。完整参考:[`docs/source/Zh/doc/new_features/v170_features_doc.rst`](../docs/source/Zh/doc/new_features/v170_features_doc.rst)。

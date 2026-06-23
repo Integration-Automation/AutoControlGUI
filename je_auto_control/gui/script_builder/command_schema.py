@@ -397,6 +397,17 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Find every edge-shape (Chamfer) match (NMS-deduped).",
     ))
     specs.append(CommandSpec(
+        "AC_match_subpixel", "Image", "Match Template (sub-pixel)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.0,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Match with a sub-pixel-refined centre (drag / slider precision).",
+    ))
+    specs.append(CommandSpec(
         "AC_grid_cells", "Image", "Grid Cells (coarse grounding)",
         fields=(
             FieldSpec("rows", FieldType.INT, optional=True, default=3),
@@ -776,6 +787,45 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
                       placeholder='[{"x":120,"y":0,"width":16,"height":16}]'),
         ),
         description="Match each checkbox/radio/input to its nearest label by centre.",
+    ))
+    specs.append(CommandSpec(
+        "AC_flow_order", "OCR", "Reading Order (column-aware)",
+        fields=(
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":40,"height":20,'
+                                  '"text":"A1"}]'),
+            FieldSpec("min_gap", FieldType.INT, optional=True, default=12),
+        ),
+        description="Column-aware reading order via XY-cut (reads down columns).",
+    ))
+    specs.append(CommandSpec(
+        "AC_xy_cut", "OCR", "XY-Cut Region Tree",
+        fields=(
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":40,"height":20}]'),
+            FieldSpec("min_gap", FieldType.INT, optional=True, default=12),
+        ),
+        description="Recursive XY-cut region tree (split at widest whitespace).",
+    ))
+    specs.append(CommandSpec(
+        "AC_group_paragraphs", "OCR", "Group Paragraphs",
+        fields=(
+            FieldSpec("lines", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":200,"height":20,'
+                                  '"text":"line"}]'),
+            FieldSpec("line_gap_factor", FieldType.FLOAT, optional=True,
+                      default=1.6),
+        ),
+        description="Group OCR lines into paragraphs by vertical spacing.",
+    ))
+    specs.append(CommandSpec(
+        "AC_detect_lists", "OCR", "Detect Lists",
+        fields=(
+            FieldSpec("lines", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":200,"height":20,'
+                                  '"text":"* item"}]'),
+        ),
+        description="Detect bulleted / numbered list items among OCR lines.",
     ))
     specs.append(CommandSpec(
         "AC_scroll_to_find", "OCR", "Scroll Until Visible",
@@ -3213,6 +3263,25 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("max_attempts", FieldType.INT, optional=True, default=3),
         ),
         description="Ordered repair tactics for a failed/no-effect action verdict.",
+    ))
+    specs.append(CommandSpec(
+        "AC_consensus_point", "Native UI", "Grounding Consensus Point",
+        fields=(
+            FieldSpec("candidates", FieldType.STRING,
+                      placeholder="[[100, 100], [104, 98], [97, 103]]"),
+            FieldSpec("cluster_radius", FieldType.INT, optional=True, default=24),
+        ),
+        description="Agreed target point from clustered grounding proposals.",
+    ))
+    specs.append(CommandSpec(
+        "AC_consensus_element", "Native UI", "Grounding Consensus Element",
+        fields=(
+            FieldSpec("candidates", FieldType.STRING,
+                      placeholder="[[8, 8], [12, 10]]"),
+            FieldSpec("elements", FieldType.STRING,
+                      placeholder='[{"role":"button","x":0,"y":0}]'),
+        ),
+        description="Vote grounding proposals to the nearest element.",
     ))
     specs.append(CommandSpec(
         "AC_validate_action", "Native UI", "Validate / Snap Action",

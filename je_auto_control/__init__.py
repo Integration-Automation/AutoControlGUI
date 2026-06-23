@@ -295,6 +295,10 @@ from je_auto_control.utils.edge_match import (
 from je_auto_control.utils.match_autothresh import (
     auto_threshold, match_auto,
 )
+# Sub-pixel refinement of a template match (quadratic peak fit)
+from je_auto_control.utils.subpixel_match import (
+    SubPixelMatch, match_subpixel, refine_peak,
+)
 # Coarse labelled cell grid for VLM grounding (point <-> cell mapping)
 from je_auto_control.utils.screen_grid import (
     GridCell, cell_for_point, grid_cells, point_for_cell,
@@ -311,6 +315,14 @@ from je_auto_control.utils.observation_delta import (
 from je_auto_control.utils.column_layout import (
     assign_columns, column_gutters, detect_borderless_table, vertical_projection,
 )
+# Column-aware reading order via recursive XY-cut
+from je_auto_control.utils.reading_flow import (
+    flow_order, to_blocks, xy_cut,
+)
+# Group OCR lines into paragraphs and bulleted / numbered lists
+from je_auto_control.utils.text_blocks import (
+    detect_lists, group_paragraphs,
+)
 # Associate form labels with values (multi-direction) + checkbox state
 from je_auto_control.utils.form_fields import (
     associate_fields, checkbox_state, match_labels_to_widgets,
@@ -326,6 +338,10 @@ from je_auto_control.utils.postcondition import (
 # Repair-tactic policy for failed / no-effect actions (self-correction loop)
 from je_auto_control.utils.step_repair import (
     RepairOutcome, RepairPolicy, next_tactic, plan_repair, run_with_repair,
+)
+# Self-consistency over multiple grounding proposals for one target
+from je_auto_control.utils.grounding_consensus import (
+    ConsensusResult, consensus_element, consensus_point, is_confident,
 )
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
@@ -1246,6 +1262,9 @@ __all__ = [
     "edge_match",
     "edge_match_all",
     "chamfer_distance",
+    "SubPixelMatch",
+    "match_subpixel",
+    "refine_peak",
     "GridCell",
     "grid_cells",
     "cell_for_point",
@@ -1261,6 +1280,11 @@ __all__ = [
     "column_gutters",
     "assign_columns",
     "detect_borderless_table",
+    "xy_cut",
+    "flow_order",
+    "to_blocks",
+    "group_paragraphs",
+    "detect_lists",
     "associate_fields",
     "match_labels_to_widgets",
     "checkbox_state",
@@ -1276,6 +1300,10 @@ __all__ = [
     "plan_repair",
     "next_tactic",
     "run_with_repair",
+    "ConsensusResult",
+    "consensus_point",
+    "consensus_element",
+    "is_confident",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",

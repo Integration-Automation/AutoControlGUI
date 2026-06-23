@@ -1,5 +1,29 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — OCR 行的段落與清單分組
+
+把 OCR 行分組成段落,並偵測項目符號 / 編號清單。完整參考:[`docs/source/Zh/doc/new_features/v174_features_doc.rst`](../docs/source/Zh/doc/new_features/v174_features_doc.rst)。
+
+- **`group_paragraphs` / `detect_lists`**(`AC_group_paragraphs`、`AC_detect_lists`):`text_regions` 把字形併成行,但沒有功能把那些行分組成段落或偵測清單;`ocr/structure` 止於平面列。`group_paragraphs` 在垂直間距超過 `line_gap_factor` × 中位行高處開始新段落;`detect_lists` 辨識項目符號(`•`/`-`/`*`)或序號(`1.`/`2)`/`a.`)項目,回傳 `{text, marker, indent, box}`。純標準函式庫,作用於行字典;重用 `table_grid_fill` 的框讀取器;不匯入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 欄位感知閱讀順序(XY-Cut)
+
+讀多欄版面時*完整讀完*每一欄,而非交錯。完整參考:[`docs/source/Zh/doc/new_features/v173_features_doc.rst`](../docs/source/Zh/doc/new_features/v173_features_doc.rst)。
+
+- **`flow_order` / `xy_cut` / `to_blocks`**(`AC_flow_order`、`AC_xy_cut`):`element_parse.reading_order` 是平面上到下排序,會交錯欄位(讀作 A1, B1, A2, B2…)。本功能以遞迴 XY-cut 還原正確順序——在最寬留白谷切分(垂直 → 欄、水平 → 列),故兩欄頁面讀作 A1, A2, B1, B2。`flow_order` 回傳與 `reading_order` 相同的 `index` 標記契約(欄位感知的直接升級,且命名不遮蔽它);`xy_cut` 暴露區域樹;`to_blocks` 列出葉區塊。純標準函式庫;不匯入 `PySide6`。
+
+## 本次更新 (2026-06-24) — Grounding 自我一致性(提案共識)
+
+把多個 grounding 提案融合成單一一致目標,並附 agreement 分數。完整參考:[`docs/source/Zh/doc/new_features/v172_features_doc.rst`](../docs/source/Zh/doc/new_features/v172_features_doc.rst)。
+
+- **`consensus_point` / `consensus_element` / `is_confident`**(`AC_consensus_point`、`AC_consensus_element`):一個目標可同時以多種方式 grounding(set-of-marks / OCR / 樣板 / a11y / 模型 N 次抽樣)而未必一致。`ab_locator`/`element_scoring` 依歷史排序*策略*;`snap_to_element` 只貼*單一*座標——兩者都不融合*同時*的提案。本功能將候選點聚類(或對候選元素投票),回傳一致的 `point` + `agreement` 比例 + `spread`,而 `is_confident` 標記低一致度目標,讓代理改為放大 / 詢問而非盲目點擊。純標準函式庫;不匯入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 次像素樣板比對精修
+
+把比對中心精修到像素的分數位,供拖曳 / 滑桿 / 高 DPI 精度。完整參考:[`docs/source/Zh/doc/new_features/v171_features_doc.rst`](../docs/source/Zh/doc/new_features/v171_features_doc.rst)。
+
+- **`match_subpixel` / `refine_peak`**(`AC_match_subpixel`):每個比對器都從 `cv2.minMaxLoc` 回傳*整數*座標——對拖曳把手、細滑桿或高 DPI 顯示器,這種捨入是主要的點擊落點誤差。本功能以拋物線擬合峰值周圍的 3×3 分數鄰域(x/y 各自獨立,標準 NCC 次像素法),回傳帶浮點 `cx`/`cy` 與套用的 `offset_x`/`offset_y` 的 `SubPixelMatch`。重用 `visual_match._score_map`;`haystack` 可注入;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 失敗 / 無效果動作的修復策略引擎
 
 當動作沒效果時選擇下一個修復戰術——並驅動重試迴圈。完整參考:[`docs/source/Zh/doc/new_features/v170_features_doc.rst`](../docs/source/Zh/doc/new_features/v170_features_doc.rst)。

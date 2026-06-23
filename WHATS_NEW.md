@@ -1,5 +1,29 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Paragraph & List Grouping of OCR Lines
+
+Group OCR lines into paragraphs and detect bulleted / numbered lists. Full reference: [`docs/source/Eng/doc/new_features/v174_features_doc.rst`](docs/source/Eng/doc/new_features/v174_features_doc.rst).
+
+- **`group_paragraphs` / `detect_lists`** (`AC_group_paragraphs`, `AC_detect_lists`): `text_regions` merges glyphs into lines but nothing grouped those lines into paragraphs or detected lists; `ocr/structure` stops at flat rows. `group_paragraphs` starts a new paragraph wherever the vertical gap exceeds `line_gap_factor` × the median line height; `detect_lists` recognises bullet (`•`/`-`/`*`) or ordinal (`1.`/`2)`/`a.`) items, returning `{text, marker, indent, box}`. Pure-stdlib over line dicts; reuses `table_grid_fill`'s box reader; no `PySide6`.
+
+## What's new (2026-06-24) — Column-Aware Reading Order (XY-Cut)
+
+Read multi-column layouts down each column instead of interleaving them. Full reference: [`docs/source/Eng/doc/new_features/v173_features_doc.rst`](docs/source/Eng/doc/new_features/v173_features_doc.rst).
+
+- **`flow_order` / `xy_cut` / `to_blocks`** (`AC_flow_order`, `AC_xy_cut`): `element_parse.reading_order` is a flat top-to-bottom sort that interleaves columns (reads A1, B1, A2, B2…). This recovers the correct order with recursive XY-cut — split at the widest whitespace valley (vertical → columns, horizontal → rows), so a two-column page reads A1, A2, B1, B2. `flow_order` returns the same `index`-tagged contract as `reading_order` (a drop-in column-aware upgrade, named to not shadow it); `xy_cut` exposes the region tree; `to_blocks` lists the leaf blocks. Pure-stdlib; no `PySide6`.
+
+## What's new (2026-06-24) — Grounding Self-Consistency (Consensus Over Proposals)
+
+Fuse several grounding proposals into one agreed target with an agreement score. Full reference: [`docs/source/Eng/doc/new_features/v172_features_doc.rst`](docs/source/Eng/doc/new_features/v172_features_doc.rst).
+
+- **`consensus_point` / `consensus_element` / `is_confident`** (`AC_consensus_point`, `AC_consensus_element`): a target can be grounded several ways at once (set-of-marks / OCR / template / a11y / N model samples) and they don't always agree. `ab_locator`/`element_scoring` rank *strategies* by history; `snap_to_element` snaps a *single* coordinate — neither fuses *simultaneous* proposals. This clusters candidate points (or votes candidate elements), returns the agreed `point` + an `agreement` fraction + `spread`, and `is_confident` flags low-agreement targets so the agent zooms / asks instead of clicking blind. Pure-stdlib; no `PySide6`.
+
+## What's new (2026-06-24) — Sub-Pixel Template-Match Refinement
+
+Refine a match's centre to a fraction of a pixel for drag / slider / high-DPI precision. Full reference: [`docs/source/Eng/doc/new_features/v171_features_doc.rst`](docs/source/Eng/doc/new_features/v171_features_doc.rst).
+
+- **`match_subpixel` / `refine_peak`** (`AC_match_subpixel`): every matcher returns *integer* coordinates from `cv2.minMaxLoc` — for a drag handle, fine slider or high-DPI display that rounding is the dominant click-placement error. This fits a parabola to the 3×3 score neighbourhood around the peak (independently on x/y, the standard NCC sub-pixel method) and returns a `SubPixelMatch` with float `cx`/`cy` + the applied `offset_x`/`offset_y`. Reuses `visual_match._score_map`; injectable `haystack`; no `PySide6`.
+
 ## What's new (2026-06-24) — Repair-Tactic Policy for Failed / No-Effect Actions
 
 Pick the next repair tactic when an action does nothing — and drive the retry loop. Full reference: [`docs/source/Eng/doc/new_features/v170_features_doc.rst`](docs/source/Eng/doc/new_features/v170_features_doc.rst).

@@ -3409,6 +3409,36 @@ def observation_tools() -> List[MCPTool]:
             handler=h.plan_repair,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_consensus_point",
+            description=("Fuse several grounding proposals into one agreed point: "
+                         "cluster 'candidates' ([[x,y] or [x,y,weight]]) and return "
+                         "{found, result:{point,agreement,spread,n_clusters}}. Low "
+                         "'agreement' = the proposals disagree — don't click blind. "
+                         "'cluster_radius'."),
+            input_schema=schema({
+                "candidates": {"type": "array",
+                               "items": {"type": "array",
+                                         "items": {"type": "number"}}},
+                "cluster_radius": {"type": "number"}},
+                required=["candidates"]),
+            handler=h.consensus_point,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_consensus_element",
+            description=("Vote grounding 'candidates' ([[x,y]…]) to the nearest of "
+                         "'elements' (role/name/x/y/width/height dicts) and return "
+                         "{found, element, agreement}."),
+            input_schema=schema({
+                "candidates": {"type": "array",
+                               "items": {"type": "array",
+                                         "items": {"type": "number"}}},
+                "elements": {"type": "array", "items": {"type": "object"}}},
+                required=["candidates", "elements"]),
+            handler=h.consensus_element,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
@@ -3759,6 +3789,22 @@ def rotated_match_tools() -> List[MCPTool]:
             handler=h.edge_match_all,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_match_subpixel",
+            description=("Find 'template' and refine the centre to SUB-PIXEL precision "
+                         "(quadratic fit on the score peak). Returns {found, match:"
+                         "{x,y,width,height,score,cx,cy,offset_x,offset_y,center}} — "
+                         "cx/cy are float for drag / slider / high-DPI accuracy. "
+                         "'min_score', 'region', 'method'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.match_subpixel,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
@@ -3876,6 +3922,57 @@ def screen_grid_tools() -> List[MCPTool]:
                 "widgets": {"type": "array", "items": {"type": "object"}}},
                 required=["labels", "widgets"]),
             handler=h.match_labels_to_widgets,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_flow_order",
+            description=("Column-aware reading order of OCR 'boxes' via XY-cut — reads "
+                         "DOWN each column before the next (vs the naive sort that "
+                         "interleaves columns). Returns {count, elements} each tagged "
+                         "with an 'index'. 'min_gap' is the smallest whitespace valley "
+                         "treated as a column / row break."),
+            input_schema=schema({
+                "boxes": {"type": "array", "items": {"type": "object"}},
+                "min_gap": {"type": "integer"}},
+                required=["boxes"]),
+            handler=h.flow_order,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_xy_cut",
+            description=("Recursive XY-cut region tree of OCR 'boxes' (splits at the "
+                         "widest whitespace valley). Returns {tree:{type,axis,"
+                         "children|boxes}}."),
+            input_schema=schema({
+                "boxes": {"type": "array", "items": {"type": "object"}},
+                "min_gap": {"type": "integer"}},
+                required=["boxes"]),
+            handler=h.xy_cut,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_group_paragraphs",
+            description=("Group OCR 'lines' (text + bbox) into paragraphs: a new "
+                         "paragraph starts where the vertical gap exceeds "
+                         "'line_gap_factor' x the median line height. Returns {count, "
+                         "paragraphs:[{left,top,right,bottom,text,n_lines}]}."),
+            input_schema=schema({
+                "lines": {"type": "array", "items": {"type": "object"}},
+                "line_gap_factor": {"type": "number"}},
+                required=["lines"]),
+            handler=h.group_paragraphs,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_detect_lists",
+            description=("Detect bulleted / numbered list items among OCR 'lines' by "
+                         "their leading marker (•/-/* or 1./2)/a.). Returns {count, "
+                         "items:[{text,marker,indent,box}]}; 'indent' is the left x "
+                         "for nesting."),
+            input_schema=schema({
+                "lines": {"type": "array", "items": {"type": "object"}}},
+                required=["lines"]),
+            handler=h.detect_lists,
             annotations=READ_ONLY,
         ),
     ]

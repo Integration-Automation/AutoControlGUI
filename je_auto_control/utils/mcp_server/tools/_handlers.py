@@ -2137,6 +2137,11 @@ def edge_match_all(template, min_score=0.7, max_results=20, nms_iou=0.3,
     return _edge_match_all(template, min_score, max_results, nms_iou, region)
 
 
+def match_subpixel(template, min_score=0.0, region=None, method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _match_subpixel
+    return _match_subpixel(template, min_score, region, method)
+
+
 def grid_cells(rows, cols, region=None):
     from je_auto_control.utils.executor.action_executor import _grid_cells
     return _grid_cells(rows, cols, region)
@@ -2178,6 +2183,26 @@ def match_labels_to_widgets(labels, widgets):
     from je_auto_control.utils.executor.action_executor import (
         _match_labels_to_widgets)
     return _match_labels_to_widgets(labels, widgets)
+
+
+def flow_order(boxes, min_gap=12):
+    from je_auto_control.utils.executor.action_executor import _flow_order
+    return _flow_order(boxes, min_gap)
+
+
+def xy_cut(boxes, min_gap=12):
+    from je_auto_control.utils.executor.action_executor import _xy_cut
+    return _xy_cut(boxes, min_gap)
+
+
+def group_paragraphs(lines, line_gap_factor=1.6):
+    from je_auto_control.utils.executor.action_executor import _group_paragraphs
+    return _group_paragraphs(lines, line_gap_factor)
+
+
+def detect_lists(lines):
+    from je_auto_control.utils.executor.action_executor import _detect_lists
+    return _detect_lists(lines)
 
 
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
@@ -2441,6 +2466,16 @@ def check_postcondition(after, spec, before=None):
 def plan_repair(verdict, max_attempts=3):
     from je_auto_control.utils.executor.action_executor import _plan_repair
     return _plan_repair(verdict, max_attempts)
+
+
+def consensus_point(candidates, cluster_radius=24):
+    from je_auto_control.utils.executor.action_executor import _consensus_point
+    return _consensus_point(candidates, cluster_radius)
+
+
+def consensus_element(candidates, elements):
+    from je_auto_control.utils.executor.action_executor import _consensus_element
+    return _consensus_element(candidates, elements)
 
 
 def validate_action(action, screen=None, targets=None):
