@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Soft Assertions (Aggregate Failures)
+
+Verify many things, report every failure at once. Full reference: [`docs/source/Eng/doc/new_features/v148_features_doc.rst`](docs/source/Eng/doc/new_features/v148_features_doc.rst).
+
+- **`SoftAssertions`** (`AC_soft_assert`): `assert_all` takes a pre-built spec list up front — there was no scoped accumulator you sprinkle `check()` calls into that raises everything on block exit (JUnit5 `assertAll` / Playwright `expect.soft`). `with SoftAssertions() as soft: soft.check(...)` records pass/fail (never raising mid-block, returns the bool to branch on), then raises once on exit listing every failure — and never masks an exception already propagating. The executor command aggregates a JSON `checks` list (eq/ne/gt/lt/contains/truthy). Pure-stdlib, headless-testable.
+
 ## What's new (2026-06-23) — Window Z-Order (Always-On-Top / Front / Back)
 
 Pin a window on top, raise it, or push it behind. Full reference: [`docs/source/Eng/doc/new_features/v147_features_doc.rst`](docs/source/Eng/doc/new_features/v147_features_doc.rst).

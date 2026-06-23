@@ -863,6 +863,16 @@ def _add_flow_specs(specs: List[CommandSpec]) -> None:
         description="Re-run an action until a key of its result matches.",
     ))
     specs.append(CommandSpec(
+        "AC_soft_assert", "Flow", "Soft Assert (aggregate)",
+        fields=(
+            FieldSpec("checks", FieldType.STRING,
+                      placeholder='[{"value":5,"op":"gt","expected":3}]'),
+            FieldSpec("raise_on_fail", FieldType.BOOL, optional=True,
+                      default=False),
+        ),
+        description="Aggregate many checks and report all failures (not just first).",
+    ))
+    specs.append(CommandSpec(
         "AC_wait_pixel", "Flow", "Wait for Pixel",
         fields=(
             FieldSpec("x", FieldType.INT),

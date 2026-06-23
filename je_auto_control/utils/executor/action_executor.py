@@ -3753,6 +3753,37 @@ def _send_to_back(title: str) -> Dict[str, Any]:
     return {"applied": send_to_back(title)}
 
 
+def _eval_check(op: str, value: Any, expected: Any) -> bool:
+    """Evaluate one soft-assert check by operator name."""
+    table = {"eq": lambda: value == expected,
+             "ne": lambda: value != expected,
+             "gt": lambda: value > expected,
+             "lt": lambda: value < expected,
+             "contains": lambda: expected in value,
+             "truthy": lambda: bool(value)}
+    if op not in table:
+        raise AutoControlActionException(f"unknown soft-assert op: {op!r}")
+    return bool(table[op]())
+
+
+def _soft_assert(checks: Any, raise_on_fail: Any = False) -> Dict[str, Any]:
+    """Adapter: aggregate a list of {value, op, expected, message} checks."""
+    import json
+    from je_auto_control.utils.soft_assert import SoftAssertions
+    if isinstance(checks, str):
+        checks = json.loads(checks)
+    soft = SoftAssertions(raise_on_exit=False)
+    for check in checks or ():
+        op = str(check.get("op", "truthy"))
+        ok = _eval_check(op, check.get("value"), check.get("expected"))
+        soft.check(ok, check.get("message", "")
+                   or f"{check.get('value')!r} {op} {check.get('expected')!r}")
+    if raise_on_fail:
+        soft.assert_all()
+    return {"ok": not soft.failures, "passed": soft.passed,
+            "failures": soft.failures}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5503,6 +5534,7 @@ class Executor:
             "AC_set_topmost": _set_topmost,
             "AC_bring_to_front": _bring_to_front,
             "AC_send_to_back": _send_to_back,
+            "AC_soft_assert": _soft_assert,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

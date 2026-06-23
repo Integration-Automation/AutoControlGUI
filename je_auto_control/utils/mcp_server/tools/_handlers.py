@@ -2283,6 +2283,11 @@ def send_to_back(title):
     return _send_to_back(title)
 
 
+def soft_assert(checks, raise_on_fail=False):
+    from je_auto_control.utils.executor.action_executor import _soft_assert
+    return _soft_assert(checks, raise_on_fail)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

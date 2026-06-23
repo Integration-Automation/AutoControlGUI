@@ -351,6 +351,8 @@ from je_auto_control.utils.motion_regions import (
 from je_auto_control.utils.window_zorder import (
     bring_to_front, plan_zorder, send_to_back, set_topmost,
 )
+# Soft assertions (accumulate checks, raise the aggregate at block end)
+from je_auto_control.utils.soft_assert import SoftAssertions
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1217,6 +1219,7 @@ __all__ = [
     "set_topmost",
     "bring_to_front",
     "send_to_back",
+    "SoftAssertions",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
