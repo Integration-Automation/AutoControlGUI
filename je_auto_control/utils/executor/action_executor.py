@@ -4144,6 +4144,17 @@ def _check_postcondition(after: Any, spec: Any, before: Any = None) -> Dict[str,
     return check_postcondition(after, spec, before=before).to_dict()
 
 
+def _plan_repair(verdict: Any, max_attempts: Any = 3) -> Dict[str, Any]:
+    """Adapter: ordered repair tactics for an effect verdict (no_op / changed_…)."""
+    import json
+    from je_auto_control.utils.step_repair import RepairPolicy, plan_repair
+    if isinstance(verdict, str) and verdict.strip().startswith("{"):
+        verdict = json.loads(verdict)
+    tactics = plan_repair(verdict,
+                          policy=RepairPolicy(max_attempts=int(max_attempts)))
+    return {"count": len(tactics), "tactics": tactics}
+
+
 def _validate_action(action: Any, screen: Any = None,
                      targets: Any = None) -> Dict[str, Any]:
     """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""
@@ -6025,6 +6036,7 @@ class Executor:
             "AC_classify_effect": _classify_effect,
             "AC_effect_near_point": _effect_near_point,
             "AC_check_postcondition": _check_postcondition,
+            "AC_plan_repair": _plan_repair,
             "AC_validate_action": _validate_action,
             "AC_replay_trace": _replay_trace,
             "AC_match_elements": _match_elements,

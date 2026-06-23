@@ -2438,6 +2438,11 @@ def check_postcondition(after, spec, before=None):
     return _check_postcondition(after, spec, before)
 
 
+def plan_repair(verdict, max_attempts=3):
+    from je_auto_control.utils.executor.action_executor import _plan_repair
+    return _plan_repair(verdict, max_attempts)
+
+
 def validate_action(action, screen=None, targets=None):
     from je_auto_control.utils.executor.action_executor import _validate_action
     return _validate_action(action, screen, targets)

@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 失敗 / 無效果動作的修復策略引擎
+
+當動作沒效果時選擇下一個修復戰術——並驅動重試迴圈。完整參考:[`docs/source/Zh/doc/new_features/v170_features_doc.rst`](../docs/source/Zh/doc/new_features/v170_features_doc.rst)。
+
+- **`plan_repair` / `next_tactic` / `run_with_repair`**(`AC_plan_repair`):`self_healing`/`locator_repair` 只修復*無法解析*的定位器;`loop_guard` 只*偵測*卡住迴圈而無戰術選擇。本功能消費效果判定(例如來自 `action_effect`)並回傳有序戰術——`wait_retry` / `relocate` / `nudge` / `scroll_into_view` / `escalate`——接著 `run_with_repair` 以注入的 `act` / `verify` / `apply_tactic` / `verdict_for` / `sleep` 接縫驅動有界重試迴圈,回傳 `RepairOutcome`。純標準函式庫狀態機;不匯入 `PySide6`。與 `action_effect` + `postcondition` 完成自我修正三件套。
+
 ## 本次更新 (2026-06-24) — 宣告式動作後置條件
 
 以 JSON 規格斷言動作的預期結果,並對照 before 幀做差異。完整參考:[`docs/source/Zh/doc/new_features/v169_features_doc.rst`](../docs/source/Zh/doc/new_features/v169_features_doc.rst)。

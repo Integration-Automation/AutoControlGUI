@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Repair-Tactic Policy for Failed / No-Effect Actions
+
+Pick the next repair tactic when an action does nothing — and drive the retry loop. Full reference: [`docs/source/Eng/doc/new_features/v170_features_doc.rst`](docs/source/Eng/doc/new_features/v170_features_doc.rst).
+
+- **`plan_repair` / `next_tactic` / `run_with_repair`** (`AC_plan_repair`): `self_healing`/`locator_repair` only fix a locator that *didn't resolve*; `loop_guard` only *detects* a stuck loop with no tactic selection. This consumes an effect verdict (e.g. from `action_effect`) and returns the ordered tactics to try — `wait_retry` / `relocate` / `nudge` / `scroll_into_view` / `escalate` — then `run_with_repair` drives a bounded retry loop with injected `act` / `verify` / `apply_tactic` / `verdict_for` / `sleep` seams, returning a `RepairOutcome`. Pure-stdlib state machine; no `PySide6`. Completes the self-correction trio with `action_effect` + `postcondition`.
+
 ## What's new (2026-06-24) — Declarative Action Postconditions
 
 Assert an action's expected outcome as a JSON spec, diffed against the before-frame. Full reference: [`docs/source/Eng/doc/new_features/v169_features_doc.rst`](docs/source/Eng/doc/new_features/v169_features_doc.rst).

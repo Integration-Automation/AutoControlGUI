@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 失败 / 无效果动作的修复策略引擎
+
+当动作没效果时选择下一个修复战术——并驱动重试循环。完整参考:[`docs/source/Zh/doc/new_features/v170_features_doc.rst`](../docs/source/Zh/doc/new_features/v170_features_doc.rst)。
+
+- **`plan_repair` / `next_tactic` / `run_with_repair`**(`AC_plan_repair`):`self_healing`/`locator_repair` 只修复*无法解析*的定位器;`loop_guard` 只*检测*卡住循环而无战术选择。本功能消费效果判定(例如来自 `action_effect`)并返回有序战术——`wait_retry` / `relocate` / `nudge` / `scroll_into_view` / `escalate`——接着 `run_with_repair` 以注入的 `act` / `verify` / `apply_tactic` / `verdict_for` / `sleep` 接缝驱动有界重试循环,返回 `RepairOutcome`。纯标准库状态机;不导入 `PySide6`。与 `action_effect` + `postcondition` 完成自我修正三件套。
+
 ## 本次更新 (2026-06-24) — 声明式动作后置条件
 
 以 JSON 规格断言动作的预期结果,并对照 before 帧做差异。完整参考:[`docs/source/Zh/doc/new_features/v169_features_doc.rst`](../docs/source/Zh/doc/new_features/v169_features_doc.rst)。

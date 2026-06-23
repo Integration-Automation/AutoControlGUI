@@ -3395,6 +3395,20 @@ def observation_tools() -> List[MCPTool]:
             handler=h.check_postcondition,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_plan_repair",
+            description=("Given an effect 'verdict' (string like 'no_op' / "
+                         "'changed_elsewhere', or an EffectVerdict dict), return the "
+                         "ordered repair tactics to try — wait_retry / relocate / "
+                         "nudge / scroll_into_view / escalate — capped at "
+                         "'max_attempts'. Returns {count, tactics}."),
+            input_schema=schema({
+                "verdict": {"type": "string"},
+                "max_attempts": {"type": "integer"}},
+                required=["verdict"]),
+            handler=h.plan_repair,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
