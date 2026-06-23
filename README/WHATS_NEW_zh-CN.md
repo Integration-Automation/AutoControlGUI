@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 亚像素模板匹配精修
+
+把匹配中心精修到像素的分数位,供拖曳 / 滑块 / 高 DPI 精度。完整参考:[`docs/source/Zh/doc/new_features/v171_features_doc.rst`](../docs/source/Zh/doc/new_features/v171_features_doc.rst)。
+
+- **`match_subpixel` / `refine_peak`**(`AC_match_subpixel`):每个匹配器都从 `cv2.minMaxLoc` 返回*整数*坐标——对拖曳把手、细滑块或高 DPI 显示器,这种舍入是主要的点击落点误差。本功能以抛物线拟合峰值周围的 3×3 分数邻域(x/y 各自独立,标准 NCC 亚像素法),返回带浮点 `cx`/`cy` 与套用的 `offset_x`/`offset_y` 的 `SubPixelMatch`。重用 `visual_match._score_map`;`haystack` 可注入;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 失败 / 无效果动作的修复策略引擎
 
 当动作没效果时选择下一个修复战术——并驱动重试循环。完整参考:[`docs/source/Zh/doc/new_features/v170_features_doc.rst`](../docs/source/Zh/doc/new_features/v170_features_doc.rst)。

@@ -295,6 +295,10 @@ from je_auto_control.utils.edge_match import (
 from je_auto_control.utils.match_autothresh import (
     auto_threshold, match_auto,
 )
+# Sub-pixel refinement of a template match (quadratic peak fit)
+from je_auto_control.utils.subpixel_match import (
+    SubPixelMatch, match_subpixel, refine_peak,
+)
 # Coarse labelled cell grid for VLM grounding (point <-> cell mapping)
 from je_auto_control.utils.screen_grid import (
     GridCell, cell_for_point, grid_cells, point_for_cell,
@@ -1246,6 +1250,9 @@ __all__ = [
     "edge_match",
     "edge_match_all",
     "chamfer_distance",
+    "SubPixelMatch",
+    "match_subpixel",
+    "refine_peak",
     "GridCell",
     "grid_cells",
     "cell_for_point",

@@ -3387,6 +3387,19 @@ def _edge_match_all(template: str, min_score: Any = 0.7, max_results: Any = 20,
     return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
 
 
+def _match_subpixel(template: str, min_score: Any = 0.0, region: Any = None,
+                    method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: best template match with a sub-pixel-refined centre."""
+    import json
+    from je_auto_control.utils.subpixel_match import match_subpixel
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = match_subpixel(template, region=region, method=method,
+                           min_score=float(min_score))
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
 def _region_arg(value: Any) -> Optional[List[int]]:
     """Coerce a JSON-string / list region arg into a list of ints, or None."""
     import json
@@ -5986,6 +5999,7 @@ class Executor:
             "AC_match_auto": _match_auto,
             "AC_edge_match": _edge_match,
             "AC_edge_match_all": _edge_match_all,
+            "AC_match_subpixel": _match_subpixel,
             "AC_grid_cells": _grid_cells,
             "AC_cell_for_point": _cell_for_point,
             "AC_point_for_cell": _point_for_cell,

@@ -2137,6 +2137,11 @@ def edge_match_all(template, min_score=0.7, max_results=20, nms_iou=0.3,
     return _edge_match_all(template, min_score, max_results, nms_iou, region)
 
 
+def match_subpixel(template, min_score=0.0, region=None, method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _match_subpixel
+    return _match_subpixel(template, min_score, region, method)
+
+
 def grid_cells(rows, cols, region=None):
     from je_auto_control.utils.executor.action_executor import _grid_cells
     return _grid_cells(rows, cols, region)
