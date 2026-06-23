@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Sub-Pixel Template-Match Refinement
+
+Refine a match's centre to a fraction of a pixel for drag / slider / high-DPI precision. Full reference: [`docs/source/Eng/doc/new_features/v171_features_doc.rst`](docs/source/Eng/doc/new_features/v171_features_doc.rst).
+
+- **`match_subpixel` / `refine_peak`** (`AC_match_subpixel`): every matcher returns *integer* coordinates from `cv2.minMaxLoc` — for a drag handle, fine slider or high-DPI display that rounding is the dominant click-placement error. This fits a parabola to the 3×3 score neighbourhood around the peak (independently on x/y, the standard NCC sub-pixel method) and returns a `SubPixelMatch` with float `cx`/`cy` + the applied `offset_x`/`offset_y`. Reuses `visual_match._score_map`; injectable `haystack`; no `PySide6`.
+
 ## What's new (2026-06-24) — Repair-Tactic Policy for Failed / No-Effect Actions
 
 Pick the next repair tactic when an action does nothing — and drive the retry loop. Full reference: [`docs/source/Eng/doc/new_features/v170_features_doc.rst`](docs/source/Eng/doc/new_features/v170_features_doc.rst).

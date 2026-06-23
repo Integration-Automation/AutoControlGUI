@@ -397,6 +397,17 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Find every edge-shape (Chamfer) match (NMS-deduped).",
     ))
     specs.append(CommandSpec(
+        "AC_match_subpixel", "Image", "Match Template (sub-pixel)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.0,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Match with a sub-pixel-refined centre (drag / slider precision).",
+    ))
+    specs.append(CommandSpec(
         "AC_grid_cells", "Image", "Grid Cells (coarse grounding)",
         fields=(
             FieldSpec("rows", FieldType.INT, optional=True, default=3),

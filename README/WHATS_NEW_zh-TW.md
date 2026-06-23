@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 次像素樣板比對精修
+
+把比對中心精修到像素的分數位,供拖曳 / 滑桿 / 高 DPI 精度。完整參考:[`docs/source/Zh/doc/new_features/v171_features_doc.rst`](../docs/source/Zh/doc/new_features/v171_features_doc.rst)。
+
+- **`match_subpixel` / `refine_peak`**(`AC_match_subpixel`):每個比對器都從 `cv2.minMaxLoc` 回傳*整數*座標——對拖曳把手、細滑桿或高 DPI 顯示器,這種捨入是主要的點擊落點誤差。本功能以拋物線擬合峰值周圍的 3×3 分數鄰域(x/y 各自獨立,標準 NCC 次像素法),回傳帶浮點 `cx`/`cy` 與套用的 `offset_x`/`offset_y` 的 `SubPixelMatch`。重用 `visual_match._score_map`;`haystack` 可注入;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 失敗 / 無效果動作的修復策略引擎
 
 當動作沒效果時選擇下一個修復戰術——並驅動重試迴圈。完整參考:[`docs/source/Zh/doc/new_features/v170_features_doc.rst`](../docs/source/Zh/doc/new_features/v170_features_doc.rst)。

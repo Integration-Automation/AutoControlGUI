@@ -3759,6 +3759,22 @@ def rotated_match_tools() -> List[MCPTool]:
             handler=h.edge_match_all,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_match_subpixel",
+            description=("Find 'template' and refine the centre to SUB-PIXEL precision "
+                         "(quadratic fit on the score peak). Returns {found, match:"
+                         "{x,y,width,height,score,cx,cy,offset_x,offset_y,center}} — "
+                         "cx/cy are float for drag / slider / high-DPI accuracy. "
+                         "'min_score', 'region', 'method'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.match_subpixel,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
