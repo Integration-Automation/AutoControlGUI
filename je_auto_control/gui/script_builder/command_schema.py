@@ -2921,6 +2921,28 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Map an Anthropic / OpenAI computer-use action to an AC command.",
     ))
     specs.append(CommandSpec(
+        "AC_serialize_observation", "Native UI", "Observation: Serialize Elements",
+        fields=(
+            FieldSpec("elements", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+            FieldSpec("viewport", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+            FieldSpec("max_elements", FieldType.INT, optional=True, default=80),
+        ),
+        description="Indexed text observation of UI elements for a VLM (act by index).",
+    ))
+    specs.append(CommandSpec(
+        "AC_observation_index", "Native UI", "Observation: Index Elements",
+        fields=(
+            FieldSpec("elements", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+            FieldSpec("viewport", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+            FieldSpec("max_elements", FieldType.INT, optional=True, default=80),
+        ),
+        description="Reading-ordered, viewport-clipped, indexed element list.",
+    ))
+    specs.append(CommandSpec(
         "AC_mark_screen", "Native UI", "Set-of-Marks: Number Elements",
         fields=(
             FieldSpec("app_name", FieldType.STRING, optional=True),

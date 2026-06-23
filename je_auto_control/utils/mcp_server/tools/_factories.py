@@ -3276,6 +3276,39 @@ def cua_action_tools() -> List[MCPTool]:
     ]
 
 
+def observation_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_serialize_observation",
+            description=("Render an indexed a11y text observation from 'elements' "
+                         "(role/name/x/y/width/height dicts, optionally nested): "
+                         "'[i] role \"name\" @(cx,cy)' lines, interactive-only, "
+                         "viewport-clipped, capped at 'max_elements'. Returns "
+                         "{observation, count} — feed it to a VLM, act by index."),
+            input_schema=schema({
+                "elements": {"type": "array", "items": {"type": "object"}},
+                "viewport": {"type": "array", "items": {"type": "integer"}},
+                "max_elements": {"type": "integer"}},
+                required=["elements"]),
+            handler=h.serialize_observation,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_observation_index",
+            description=("The on-screen elements in reading order, viewport-clipped "
+                         "and capped, each with a stable 'index'. Returns {count, "
+                         "elements} — the structured form behind the observation."),
+            input_schema=schema({
+                "elements": {"type": "array", "items": {"type": "object"}},
+                "viewport": {"type": "array", "items": {"type": "integer"}},
+                "max_elements": {"type": "integer"}},
+                required=["elements"]),
+            handler=h.observation_index,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6784,7 +6817,7 @@ ALL_FACTORIES = (
     locator_chain_tools, rich_clipboard_tools, img_histogram_tools,
     motion_regions_tools, window_zorder_tools, soft_assert_tools,
     perceptual_diff_tools, window_geometry_tools, cua_action_tools,
-    plugin_sdk_tools, governance_tools,
+    observation_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

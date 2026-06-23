@@ -365,6 +365,10 @@ from je_auto_control.utils.window_geometry import (
 from je_auto_control.utils.cua_action import (
     canonical_action, from_anthropic, from_openai_cua, to_ac_command,
 )
+# Token-budgeted, indexed a11y text observation for VLM/agent grounding
+from je_auto_control.utils.observation import (
+    flatten_tree, observation_index, serialize_observation,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1243,6 +1247,9 @@ __all__ = [
     "from_anthropic",
     "from_openai_cua",
     "to_ac_command",
+    "flatten_tree",
+    "observation_index",
+    "serialize_observation",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
