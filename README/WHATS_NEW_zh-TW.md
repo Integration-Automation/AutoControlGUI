@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 加權候選評分
+
+以信心分數排序模稜兩可的元素候選。完整參考:[`docs/source/Zh/doc/new_features/v156_features_doc.rst`](../docs/source/Zh/doc/new_features/v156_features_doc.rst)。
+
+- **`score_candidates` / `best_candidate`**(`AC_score_candidates`、`AC_best_candidate`):`anchor_locator` 是單一關係 + 距離排序、`ab_locator` 依耗時競賽整個策略——兩者都不以*加權*混合(角色匹配 + 模糊名稱相似度 + 錨點鄰近 + 啟用狀態)排序模稜候選。本功能回傳最佳優先的 `ScoredCandidate` 並含 `matched_on` 明細;名稱相似度可注入(預設 `fuzzy_ratio`,重用——不新增字串距離程式)。純標準函式庫,作用於元素字典;在多個框都可能是目標時驅動自我修復 / grounding。可無頭測試。
+
 ## 本次更新 (2026-06-23) — 幾何感知的元素差異與穩定 ID
 
 以重疊跨影格追蹤元素,並給予穩定 ID。完整參考:[`docs/source/Zh/doc/new_features/v155_features_doc.rst`](../docs/source/Zh/doc/new_features/v155_features_doc.rst)。

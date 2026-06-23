@@ -3924,6 +3924,35 @@ def _assign_stable_ids(elements: Any, prior: Any = None,
     return {"count": len(tagged), "elements": tagged}
 
 
+def _score_candidates(candidates: Any, want_role: Any = None, want_name: Any = None,
+                      anchor: Any = None) -> Dict[str, Any]:
+    """Adapter: rank candidate element boxes by role / name / proximity."""
+    import json
+    from je_auto_control.utils.element_scoring import score_candidates
+    if isinstance(candidates, str):
+        candidates = json.loads(candidates)
+    if isinstance(anchor, str):
+        anchor = json.loads(anchor) if anchor.strip() else None
+    ranked = score_candidates(list(candidates), want_role=want_role,
+                              want_name=want_name, anchor=anchor)
+    return {"count": len(ranked), "scored": [c.to_dict() for c in ranked]}
+
+
+def _best_candidate(candidates: Any, want_role: Any = None, want_name: Any = None,
+                    anchor: Any = None) -> Dict[str, Any]:
+    """Adapter: the single highest-scoring candidate element."""
+    import json
+    from je_auto_control.utils.element_scoring import best_candidate
+    if isinstance(candidates, str):
+        candidates = json.loads(candidates)
+    if isinstance(anchor, str):
+        anchor = json.loads(anchor) if anchor.strip() else None
+    best = best_candidate(list(candidates), want_role=want_role,
+                          want_name=want_name, anchor=anchor)
+    return {"found": best is not None,
+            "best": best.to_dict() if best is not None else None}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5685,6 +5714,8 @@ class Executor:
             "AC_replay_trace": _replay_trace,
             "AC_match_elements": _match_elements,
             "AC_assign_stable_ids": _assign_stable_ids,
+            "AC_score_candidates": _score_candidates,
+            "AC_best_candidate": _best_candidate,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,
