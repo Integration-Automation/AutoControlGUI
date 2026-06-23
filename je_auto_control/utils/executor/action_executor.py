@@ -4168,6 +4168,31 @@ def _plan_repair(verdict: Any, max_attempts: Any = 3) -> Dict[str, Any]:
     return {"count": len(tactics), "tactics": tactics}
 
 
+def _consensus_point(candidates: Any, cluster_radius: Any = 24) -> Dict[str, Any]:
+    """Adapter: agreed target point from clustered grounding proposals."""
+    import json
+    from je_auto_control.utils.grounding_consensus import consensus_point
+    if isinstance(candidates, str):
+        candidates = json.loads(candidates)
+    result = consensus_point(candidates, cluster_radius=float(cluster_radius))
+    return {"found": result is not None,
+            "result": result.to_dict() if result else None}
+
+
+def _consensus_element(candidates: Any, elements: Any) -> Dict[str, Any]:
+    """Adapter: vote grounding proposals to the nearest element."""
+    import json
+    from je_auto_control.utils.grounding_consensus import consensus_element
+    if isinstance(candidates, str):
+        candidates = json.loads(candidates)
+    if isinstance(elements, str):
+        elements = json.loads(elements)
+    winner = consensus_element(candidates, elements)
+    return {"found": winner is not None,
+            "element": winner[0] if winner else None,
+            "agreement": winner[1] if winner else 0.0}
+
+
 def _validate_action(action: Any, screen: Any = None,
                      targets: Any = None) -> Dict[str, Any]:
     """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""
@@ -6051,6 +6076,8 @@ class Executor:
             "AC_effect_near_point": _effect_near_point,
             "AC_check_postcondition": _check_postcondition,
             "AC_plan_repair": _plan_repair,
+            "AC_consensus_point": _consensus_point,
+            "AC_consensus_element": _consensus_element,
             "AC_validate_action": _validate_action,
             "AC_replay_trace": _replay_trace,
             "AC_match_elements": _match_elements,

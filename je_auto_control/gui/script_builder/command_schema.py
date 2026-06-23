@@ -3226,6 +3226,25 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Ordered repair tactics for a failed/no-effect action verdict.",
     ))
     specs.append(CommandSpec(
+        "AC_consensus_point", "Native UI", "Grounding Consensus Point",
+        fields=(
+            FieldSpec("candidates", FieldType.STRING,
+                      placeholder="[[100, 100], [104, 98], [97, 103]]"),
+            FieldSpec("cluster_radius", FieldType.INT, optional=True, default=24),
+        ),
+        description="Agreed target point from clustered grounding proposals.",
+    ))
+    specs.append(CommandSpec(
+        "AC_consensus_element", "Native UI", "Grounding Consensus Element",
+        fields=(
+            FieldSpec("candidates", FieldType.STRING,
+                      placeholder="[[8, 8], [12, 10]]"),
+            FieldSpec("elements", FieldType.STRING,
+                      placeholder='[{"role":"button","x":0,"y":0}]'),
+        ),
+        description="Vote grounding proposals to the nearest element.",
+    ))
+    specs.append(CommandSpec(
         "AC_validate_action", "Native UI", "Validate / Snap Action",
         fields=(
             FieldSpec("action", FieldType.STRING,
