@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 變化量序列的穩定偵測
+
+判斷 UI 何時安定下來——以純粹、可測試的函式作用於變化序列。完整參考:[`docs/source/Zh/doc/new_features/v175_features_doc.rst`](../docs/source/Zh/doc/new_features/v175_features_doc.rst)。
+
+- **`settle_point` / `is_settled` / `SettleTracker`**(`AC_settle_point`):`smart_waits.wait_until_screen_stable` 把穩定邏輯包在 `time.sleep` 迴圈內、作用於即時幀——你無法餵記錄好的序列,也無法單元測試該決策。本功能把它抽離:給定一串*變化量*(像素差 / 元素數差 / 0-1 digest 是否變),在變化量連續 `quiet_samples` 次維持 ≤ `max_churn` 時回報穩定(尖峰重置 run)。`settle_point` 回傳穩定索引,`SettleTracker` 為供即時迴圈的增量形式。純標準函式庫,不需時鐘、不需擷取;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — OCR 行的段落與清單分組
 
 把 OCR 行分組成段落,並偵測項目符號 / 編號清單。完整參考:[`docs/source/Zh/doc/new_features/v174_features_doc.rst`](../docs/source/Zh/doc/new_features/v174_features_doc.rst)。
