@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 动作效果分类(我的点击有没有效果?)
+
+告诉代理点击有没有效果——以及是否发生在它瞄准之处。完整参考:[`docs/source/Zh/doc/new_features/v167_features_doc.rst`](../docs/source/Zh/doc/new_features/v167_features_doc.rst)。
+
+- **`classify_effect` / `effect_near_point` / `is_no_op`**(`AC_classify_effect`、`AC_effect_near_point`):`screen_state`/`element_diff` 报告变了什么却不归因到动作;`loop_guard` 要重复 N 次才标记 no-op。本功能比对前后观测,并依动作目标点在*第一步*就分类结果为 `no_op` / `changed_near_target` / `changed_elsewhere`(意外对话框)/ `changed`,返回含变化中心与原因的 `EffectVerdict`。重用 `element_diff.match_elements` + `observation_delta` 的字段变更检查。纯标准库;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 表单字段关联(多方向)+ 复选框状态
 
 即使值在下方或右对齐也能把标签与值配对,并读取复选框状态。完整参考:[`docs/source/Zh/doc/new_features/v166_features_doc.rst`](../docs/source/Zh/doc/new_features/v166_features_doc.rst)。

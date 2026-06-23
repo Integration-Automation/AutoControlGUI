@@ -3350,6 +3350,35 @@ def observation_tools() -> List[MCPTool]:
             handler=h.delta_observation,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_classify_effect",
+            description=("Did my action do anything? Diff 'before' vs 'after' element "
+                         "lists and classify the result given the 'action' (with x,y): "
+                         "no_op / changed_near_target / changed_elsewhere / changed. "
+                         "Returns {effect, changed_near_target, changed_count, "
+                         "changed_centers, reason}. 'radius' for target attribution."),
+            input_schema=schema({
+                "before": {"type": "array", "items": {"type": "object"}},
+                "after": {"type": "array", "items": {"type": "object"}},
+                "action": {"type": "object"},
+                "radius": {"type": "integer"}},
+                required=["before", "after", "action"]),
+            handler=h.classify_effect,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_effect_near_point",
+            description=("Did any change between 'before' and 'after' land within "
+                         "'radius' of 'point' [x,y]? Returns {near}."),
+            input_schema=schema({
+                "before": {"type": "array", "items": {"type": "object"}},
+                "after": {"type": "array", "items": {"type": "object"}},
+                "point": {"type": "array", "items": {"type": "integer"}},
+                "radius": {"type": "integer"}},
+                required=["before", "after", "point"]),
+            handler=h.effect_near_point,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
