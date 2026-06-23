@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 窗口客户区几何
+
+不论标题栏 / 边框,点击窗口*内部*。完整参考:[`docs/source/Zh/doc/new_features/v150_features_doc.rst`](../docs/source/Zh/doc/new_features/v150_features_doc.rst)。
+
+- **`get_client_rect` / `client_point` / `frame_insets` / `client_to_screen`**(`AC_get_client_rect`、`AC_client_point`):`get_window_geometry` 只返回*外框*——没有客户区矩形、框边内缩运算或客户区→屏幕对应。`client_point("App", x, y)` 把内容相对点对应到屏幕,让点击不论外框都落在窗口内;`frame_insets` 报告边框 / 标题栏厚度。`frame_insets`/`client_to_screen` 是纯几何(可无头测试);`get_client_rect` 使用可注入的 Win32 读取器(`GetClientRect`+`ClientToScreen`)。
+
 ## 本次更新 (2026-06-23) — 感知式(YIQ)图像比对含反锯齿抑制
 
 会忽略反锯齿边缘的视觉回归比对。完整参考:[`docs/source/Zh/doc/new_features/v149_features_doc.rst`](../docs/source/Zh/doc/new_features/v149_features_doc.rst)。

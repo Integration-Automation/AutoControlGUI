@@ -3798,6 +3798,22 @@ def _perceptual_diff(actual: str, expected: str, threshold: Any = 0.1,
             "diff_ratio": result.diff_ratio, "regions": result.regions}
 
 
+def _get_client_rect(title: str) -> Dict[str, Any]:
+    """Adapter: a window's client-area rect in screen coordinates."""
+    from je_auto_control.utils.window_geometry import get_client_rect
+    rect = get_client_rect(title)
+    return {"found": rect is not None,
+            "rect": list(rect) if rect is not None else None}
+
+
+def _client_point(title: str, x: Any, y: Any) -> Dict[str, Any]:
+    """Adapter: screen point for a client-area-local (x, y) inside a window."""
+    from je_auto_control.utils.window_geometry import client_point
+    point = client_point(title, int(x), int(y))
+    return {"found": point is not None,
+            "point": list(point) if point is not None else None}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5550,6 +5566,8 @@ class Executor:
             "AC_send_to_back": _send_to_back,
             "AC_soft_assert": _soft_assert,
             "AC_perceptual_diff": _perceptual_diff,
+            "AC_get_client_rect": _get_client_rect,
+            "AC_client_point": _client_point,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

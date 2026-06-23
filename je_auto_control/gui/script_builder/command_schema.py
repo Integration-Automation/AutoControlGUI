@@ -708,6 +708,20 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         description="Send a window to the bottom of the z-order.",
     ))
     specs.append(CommandSpec(
+        "AC_get_client_rect", "Window", "Get Client Rect",
+        fields=(FieldSpec("title", FieldType.STRING),),
+        description="A window's client-area rect (excludes title bar / borders).",
+    ))
+    specs.append(CommandSpec(
+        "AC_client_point", "Window", "Client-Relative Point",
+        fields=(
+            FieldSpec("title", FieldType.STRING),
+            FieldSpec("x", FieldType.INT),
+            FieldSpec("y", FieldType.INT),
+        ),
+        description="Screen point for an (x, y) inside a window's client area.",
+    ))
+    specs.append(CommandSpec(
         "AC_wait_window_closed", "Window", "Wait for Window to Close",
         fields=(
             FieldSpec("title", FieldType.STRING),

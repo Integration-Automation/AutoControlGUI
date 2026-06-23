@@ -357,6 +357,10 @@ from je_auto_control.utils.soft_assert import SoftAssertions
 from je_auto_control.utils.perceptual_diff import (
     PerceptualDiffResult, assert_perceptual, perceptual_diff,
 )
+# Window client-area geometry (frame insets, client-to-screen mapping)
+from je_auto_control.utils.window_geometry import (
+    client_point, client_to_screen, frame_insets, get_client_rect,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1227,6 +1231,10 @@ __all__ = [
     "perceptual_diff",
     "assert_perceptual",
     "PerceptualDiffResult",
+    "frame_insets",
+    "client_to_screen",
+    "get_client_rect",
+    "client_point",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

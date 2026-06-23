@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 視窗客戶區幾何
+
+不論標題列 / 邊框,點擊視窗*內部*。完整參考:[`docs/source/Zh/doc/new_features/v150_features_doc.rst`](../docs/source/Zh/doc/new_features/v150_features_doc.rst)。
+
+- **`get_client_rect` / `client_point` / `frame_insets` / `client_to_screen`**(`AC_get_client_rect`、`AC_client_point`):`get_window_geometry` 只回傳*外框*——沒有客戶區矩形、框邊內縮運算或客戶區→螢幕對應。`client_point("App", x, y)` 把內容相對點對應到螢幕,讓點擊不論外框都落在視窗內;`frame_insets` 回報邊框 / 標題列厚度。`frame_insets`/`client_to_screen` 是純幾何(可無頭測試);`get_client_rect` 使用可注入的 Win32 讀取器(`GetClientRect`+`ClientToScreen`)。
+
 ## 本次更新 (2026-06-23) — 感知式(YIQ)影像比對含反鋸齒抑制
 
 會忽略反鋸齒邊緣的視覺回歸比對。完整參考:[`docs/source/Zh/doc/new_features/v149_features_doc.rst`](../docs/source/Zh/doc/new_features/v149_features_doc.rst)。

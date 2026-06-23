@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Window Client-Area Geometry
+
+Click *inside* a window regardless of its title bar / borders. Full reference: [`docs/source/Eng/doc/new_features/v150_features_doc.rst`](docs/source/Eng/doc/new_features/v150_features_doc.rst).
+
+- **`get_client_rect` / `client_point` / `frame_insets` / `client_to_screen`** (`AC_get_client_rect`, `AC_client_point`): `get_window_geometry` returns only the *outer* bbox — there was no client-area rect, frame-inset math, or client→screen mapping. `client_point("App", x, y)` maps a content-relative point to the screen so a click lands inside the window regardless of chrome; `frame_insets` reports border/title-bar thickness. `frame_insets`/`client_to_screen` are pure geometry (headless-testable); `get_client_rect` uses an injectable Win32 reader (`GetClientRect`+`ClientToScreen`).
+
 ## What's new (2026-06-23) — Perceptual (YIQ) Image Diff with Anti-Alias Suppression
 
 Visual-regression diffing that ignores anti-aliased edges. Full reference: [`docs/source/Eng/doc/new_features/v149_features_doc.rst`](docs/source/Eng/doc/new_features/v149_features_doc.rst).
