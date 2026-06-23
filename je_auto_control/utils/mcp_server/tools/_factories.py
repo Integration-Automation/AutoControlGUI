@@ -3331,6 +3331,25 @@ def observation_tools() -> List[MCPTool]:
             handler=h.observation_index,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_delta_observation",
+            description=("Token-budgeted 'what changed since last step': diff 'prev' "
+                         "vs 'curr' element lists and render ONLY the churn — "
+                         "'+ [i] role \"name\"' (appeared) / '~ [i] …' (changed) / "
+                         "'- …' (vanished), stable omitted, capped at 'max_lines'. "
+                         "Returns {summary, added, removed, changed}. Feed this each "
+                         "turn instead of the whole screen."),
+            input_schema=schema({
+                "prev": {"type": "array", "items": {"type": "object"}},
+                "curr": {"type": "array", "items": {"type": "object"}},
+                "viewport": {"type": "array", "items": {"type": "integer"}},
+                "max_elements": {"type": "integer"},
+                "max_lines": {"type": "integer"},
+                "interactive_only": {"type": "boolean"}},
+                required=["prev", "curr"]),
+            handler=h.delta_observation,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

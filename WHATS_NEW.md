@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Token-Budgeted Observation Delta (What Changed)
+
+Tell an agent *what changed* since the last step, not the whole screen again. Full reference: [`docs/source/Eng/doc/new_features/v163_features_doc.rst`](docs/source/Eng/doc/new_features/v163_features_doc.rst).
+
+- **`delta_observation` / `delta_index` / `summarize_delta`** (`AC_delta_observation`): `serialize_observation` renders one full frame (blows the token budget every turn); `element_diff` gives the stable-ID correspondence but stops at matched/added/removed element pairs. This is the missing serializer — it diffs two frames, classifies matched elements as changed (role/name/enabled/value/moved) or stable, and renders only the churn as `+ [i] role "name"` / `~ [i] … (fields)` / `- …` lines (added & changed first, stable dropped, capped at `max_lines`). Reuses `element_diff.match_elements` + `observation.observation_index`. Pure-stdlib; no `PySide6`.
+
 ## What's new (2026-06-24) — Fill a Ruling-Line Grid With OCR Text (Addressable Tables)
 
 Turn a bordered table's lines + OCR words into an addressable `R x C` table. Full reference: [`docs/source/Eng/doc/new_features/v162_features_doc.rst`](docs/source/Eng/doc/new_features/v162_features_doc.rst).

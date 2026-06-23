@@ -2371,6 +2371,13 @@ def observation_index(elements, viewport=None, max_elements=80):
     return _observation_index(elements, viewport, max_elements)
 
 
+def delta_observation(prev, curr, viewport=None, max_elements=80, max_lines=40,
+                      interactive_only=True):
+    from je_auto_control.utils.executor.action_executor import _delta_observation
+    return _delta_observation(prev, curr, viewport, max_elements, max_lines,
+                              interactive_only)
+
+
 def validate_action(action, screen=None, targets=None):
     from je_auto_control.utils.executor.action_executor import _validate_action
     return _validate_action(action, screen, targets)

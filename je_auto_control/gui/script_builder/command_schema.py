@@ -3064,6 +3064,20 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Reading-ordered, viewport-clipped, indexed element list.",
     ))
     specs.append(CommandSpec(
+        "AC_delta_observation", "Native UI", "Observation: Delta (what changed)",
+        fields=(
+            FieldSpec("prev", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+            FieldSpec("curr", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+            FieldSpec("viewport", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+            FieldSpec("max_elements", FieldType.INT, optional=True, default=80),
+            FieldSpec("max_lines", FieldType.INT, optional=True, default=40),
+        ),
+        description="Token-budgeted '+/~/-' summary of what changed between frames.",
+    ))
+    specs.append(CommandSpec(
         "AC_validate_action", "Native UI", "Validate / Snap Action",
         fields=(
             FieldSpec("action", FieldType.STRING,
