@@ -381,6 +381,10 @@ from je_auto_control.utils.agent_replay import (
 from je_auto_control.utils.element_diff import (
     assign_stable_ids, match_elements,
 )
+# Weighted candidate scoring (role + name similarity + proximity + enabled)
+from je_auto_control.utils.element_scoring import (
+    ScoredCandidate, best_candidate, score_candidates,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1271,6 +1275,9 @@ __all__ = [
     "replay_trace",
     "match_elements",
     "assign_stable_ids",
+    "score_candidates",
+    "best_candidate",
+    "ScoredCandidate",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

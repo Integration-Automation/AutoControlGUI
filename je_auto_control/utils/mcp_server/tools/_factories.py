@@ -3377,6 +3377,39 @@ def element_diff_tools() -> List[MCPTool]:
     ]
 
 
+def element_scoring_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_score_candidates",
+            description=("Rank candidate element boxes best-first by a weighted mean "
+                         "of role match ('want_role'), fuzzy name similarity "
+                         "('want_name'), 'anchor' proximity and enabled-state. "
+                         "Returns {count, scored:[{element, score, matched_on}]}."),
+            input_schema=schema({
+                "candidates": {"type": "array", "items": {"type": "object"}},
+                "want_role": {"type": "string"},
+                "want_name": {"type": "string"},
+                "anchor": {"type": "array", "items": {"type": "integer"}}},
+                required=["candidates"]),
+            handler=h.score_candidates,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_best_candidate",
+            description=("The single highest-scoring candidate element by role / "
+                         "name / proximity. Returns {found, best}."),
+            input_schema=schema({
+                "candidates": {"type": "array", "items": {"type": "object"}},
+                "want_role": {"type": "string"},
+                "want_name": {"type": "string"},
+                "anchor": {"type": "array", "items": {"type": "integer"}}},
+                required=["candidates"]),
+            handler=h.best_candidate,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6886,7 +6919,7 @@ ALL_FACTORIES = (
     motion_regions_tools, window_zorder_tools, soft_assert_tools,
     perceptual_diff_tools, window_geometry_tools, cua_action_tools,
     observation_tools, action_grounding_tools, agent_replay_tools,
-    element_diff_tools, plugin_sdk_tools, governance_tools,
+    element_diff_tools, element_scoring_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,

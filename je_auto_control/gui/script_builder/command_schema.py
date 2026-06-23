@@ -2988,6 +2988,30 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Tag elements with IDs carried across frames by overlap.",
     ))
     specs.append(CommandSpec(
+        "AC_score_candidates", "Native UI", "Score Candidates",
+        fields=(
+            FieldSpec("candidates", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+            FieldSpec("want_role", FieldType.STRING, optional=True),
+            FieldSpec("want_name", FieldType.STRING, optional=True),
+            FieldSpec("anchor", FieldType.STRING, optional=True,
+                      placeholder="[x, y]"),
+        ),
+        description="Rank candidate elements by role / name / proximity confidence.",
+    ))
+    specs.append(CommandSpec(
+        "AC_best_candidate", "Native UI", "Best Candidate",
+        fields=(
+            FieldSpec("candidates", FieldType.STRING,
+                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+            FieldSpec("want_role", FieldType.STRING, optional=True),
+            FieldSpec("want_name", FieldType.STRING, optional=True),
+            FieldSpec("anchor", FieldType.STRING, optional=True,
+                      placeholder="[x, y]"),
+        ),
+        description="The single highest-scoring candidate element.",
+    ))
+    specs.append(CommandSpec(
         "AC_mark_screen", "Native UI", "Set-of-Marks: Number Elements",
         fields=(
             FieldSpec("app_name", FieldType.STRING, optional=True),

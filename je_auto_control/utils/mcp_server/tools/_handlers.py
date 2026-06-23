@@ -2340,6 +2340,16 @@ def assign_stable_ids(elements, prior=None, iou_threshold=0.5):
     return _assign_stable_ids(elements, prior, iou_threshold)
 
 
+def score_candidates(candidates, want_role=None, want_name=None, anchor=None):
+    from je_auto_control.utils.executor.action_executor import _score_candidates
+    return _score_candidates(candidates, want_role, want_name, anchor)
+
+
+def best_candidate(candidates, want_role=None, want_name=None, anchor=None):
+    from je_auto_control.utils.executor.action_executor import _best_candidate
+    return _best_candidate(candidates, want_role, want_name, anchor)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

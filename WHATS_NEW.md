@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Weighted Candidate Scoring
+
+Rank ambiguous element candidates by a confidence score. Full reference: [`docs/source/Eng/doc/new_features/v156_features_doc.rst`](docs/source/Eng/doc/new_features/v156_features_doc.rst).
+
+- **`score_candidates` / `best_candidate`** (`AC_score_candidates`, `AC_best_candidate`): `anchor_locator` is a single relation + distance sort and `ab_locator` races whole strategies by elapsed time — neither ranks ambiguous candidates by a *weighted* mix of role match + fuzzy name similarity + anchor proximity + enabled-state. This returns `ScoredCandidate`s best-first with a `matched_on` breakdown; the name similarity is injectable (default `fuzzy_ratio`, reused — no new string-distance code). Pure-stdlib over element dicts; powers self-heal / grounding when several boxes could be the target. Headless-testable.
+
 ## What's new (2026-06-23) — Geometry-Aware Element Diff & Stable IDs
 
 Track elements across frames by overlap, with stable IDs. Full reference: [`docs/source/Eng/doc/new_features/v155_features_doc.rst`](docs/source/Eng/doc/new_features/v155_features_doc.rst).
