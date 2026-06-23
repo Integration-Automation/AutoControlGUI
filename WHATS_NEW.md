@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Settle Detection Over a Churn Series
+
+Decide when the UI has gone quiet — as a pure, testable function over a change series. Full reference: [`docs/source/Eng/doc/new_features/v175_features_doc.rst`](docs/source/Eng/doc/new_features/v175_features_doc.rst).
+
+- **`settle_point` / `is_settled` / `SettleTracker`** (`AC_settle_point`): `smart_waits.wait_until_screen_stable` bakes the settle logic inside a `time.sleep` loop over live frames — you can't feed it a recorded series or unit-test the decision. This extracts it: given a stream of *churn* values (pixel delta / element-count delta / 0-1 digest-changed), it reports when churn stayed ≤ `max_churn` for `quiet_samples` in a row (a spike resets the run). `settle_point` returns the settle index, `SettleTracker` is the incremental form for a live loop. Pure-stdlib, no clock, no capture; no `PySide6`.
+
 ## What's new (2026-06-24) — Paragraph & List Grouping of OCR Lines
 
 Group OCR lines into paragraphs and detect bulleted / numbered lists. Full reference: [`docs/source/Eng/doc/new_features/v174_features_doc.rst`](docs/source/Eng/doc/new_features/v174_features_doc.rst).

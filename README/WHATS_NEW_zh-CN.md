@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 变化量序列的稳定检测
+
+判断 UI 何时安定下来——以纯粹、可测试的函数作用于变化序列。完整参考:[`docs/source/Zh/doc/new_features/v175_features_doc.rst`](../docs/source/Zh/doc/new_features/v175_features_doc.rst)。
+
+- **`settle_point` / `is_settled` / `SettleTracker`**(`AC_settle_point`):`smart_waits.wait_until_screen_stable` 把稳定逻辑包在 `time.sleep` 循环内、作用于实时帧——你无法喂记录好的序列,也无法单元测试该决策。本功能把它抽离:给定一串*变化量*(像素差 / 元素数差 / 0-1 digest 是否变),在变化量连续 `quiet_samples` 次维持 ≤ `max_churn` 时报告稳定(尖峰重置 run)。`settle_point` 返回稳定索引,`SettleTracker` 为供实时循环的增量形式。纯标准库,不需时钟、不需捕获;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — OCR 行的段落与列表分组
 
 把 OCR 行分组成段落,并检测项目符号 / 编号列表。完整参考:[`docs/source/Zh/doc/new_features/v174_features_doc.rst`](../docs/source/Zh/doc/new_features/v174_features_doc.rst)。

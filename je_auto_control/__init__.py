@@ -343,6 +343,10 @@ from je_auto_control.utils.step_repair import (
 from je_auto_control.utils.grounding_consensus import (
     ConsensusResult, consensus_element, consensus_point, is_confident,
 )
+# Decide when a UI has settled, as a pure seam over a churn series
+from je_auto_control.utils.settle_detector import (
+    SettleState, SettleTracker, is_settled, settle_point,
+)
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
     find_color_region, find_color_regions,
@@ -1304,6 +1308,10 @@ __all__ = [
     "consensus_point",
     "consensus_element",
     "is_confident",
+    "SettleState",
+    "SettleTracker",
+    "settle_point",
+    "is_settled",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",

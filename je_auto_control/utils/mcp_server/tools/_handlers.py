@@ -2478,6 +2478,11 @@ def consensus_element(candidates, elements):
     return _consensus_element(candidates, elements)
 
 
+def settle_point(churns, quiet_samples=3, max_churn=1.0):
+    from je_auto_control.utils.executor.action_executor import _settle_point
+    return _settle_point(churns, quiet_samples, max_churn)
+
+
 def validate_action(action, screen=None, targets=None):
     from je_auto_control.utils.executor.action_executor import _validate_action
     return _validate_action(action, screen, targets)

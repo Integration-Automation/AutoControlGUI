@@ -3274,6 +3274,16 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Agreed target point from clustered grounding proposals.",
     ))
     specs.append(CommandSpec(
+        "AC_settle_point", "Flow", "Settle Point (churn series)",
+        fields=(
+            FieldSpec("churns", FieldType.STRING,
+                      placeholder="[5, 4, 0.5, 0.3, 0.2]"),
+            FieldSpec("quiet_samples", FieldType.INT, optional=True, default=3),
+            FieldSpec("max_churn", FieldType.FLOAT, optional=True, default=1.0),
+        ),
+        description="Index where a churn series first settles (offline settle check).",
+    ))
+    specs.append(CommandSpec(
         "AC_consensus_element", "Native UI", "Grounding Consensus Element",
         fields=(
             FieldSpec("candidates", FieldType.STRING,

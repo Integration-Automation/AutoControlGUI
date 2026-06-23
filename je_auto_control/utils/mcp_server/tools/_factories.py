@@ -3439,6 +3439,21 @@ def observation_tools() -> List[MCPTool]:
             handler=h.consensus_element,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_settle_point",
+            description=("Decide when a UI settled from a 'churns' series (how much "
+                         "changed each sample). Returns {settled, index} — the index "
+                         "where churn first stayed <= 'max_churn' for 'quiet_samples' "
+                         "in a row (a spike resets the run). Feed pixel deltas / "
+                         "element-count deltas / 0-1 digest-changed flags."),
+            input_schema=schema({
+                "churns": {"type": "array", "items": {"type": "number"}},
+                "quiet_samples": {"type": "integer"},
+                "max_churn": {"type": "number"}},
+                required=["churns"]),
+            handler=h.settle_point,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

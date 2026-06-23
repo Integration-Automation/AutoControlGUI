@@ -4232,6 +4232,19 @@ def _consensus_element(candidates: Any, elements: Any) -> Dict[str, Any]:
             "agreement": winner[1] if winner else 0.0}
 
 
+def _settle_point(churns: Any, quiet_samples: Any = 3,
+                  max_churn: Any = 1.0) -> Dict[str, Any]:
+    """Adapter: index at which a churn series first settles (or settled=False)."""
+    import json
+    from je_auto_control.utils.settle_detector import settle_point
+    if isinstance(churns, str):
+        churns = json.loads(churns)
+    index = settle_point([float(c) for c in churns],
+                         quiet_samples=int(quiet_samples),
+                         max_churn=float(max_churn))
+    return {"settled": index is not None, "index": index}
+
+
 def _validate_action(action: Any, screen: Any = None,
                      targets: Any = None) -> Dict[str, Any]:
     """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""
@@ -6121,6 +6134,7 @@ class Executor:
             "AC_plan_repair": _plan_repair,
             "AC_consensus_point": _consensus_point,
             "AC_consensus_element": _consensus_element,
+            "AC_settle_point": _settle_point,
             "AC_validate_action": _validate_action,
             "AC_replay_trace": _replay_trace,
             "AC_match_elements": _match_elements,
