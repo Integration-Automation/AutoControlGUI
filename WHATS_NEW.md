@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Pre-Action Grounding Guard
+
+Reject out-of-bounds clicks; snap near-misses onto the real element. Full reference: [`docs/source/Eng/doc/new_features/v153_features_doc.rst`](docs/source/Eng/doc/new_features/v153_features_doc.rst).
+
+- **`validate_action` / `snap_to_element` / `in_bounds`** (`AC_validate_action`): `guardrail` scans text and `loop_guard` detects loops — neither validates a coordinate action before dispatch, so a hallucinated `(9999,-5)` click fires into nothing and a 5px-off click misses. This rejects off-screen coordinates and, given `targets`, snaps a near-miss onto the nearest element's centre, returning `{ok, reason, snapped}`. Pure-stdlib geometry over element dicts; the executor `screen` defaults to the live screen. Headless-testable; plugs in front of an agent loop's dispatch.
+
 ## What's new (2026-06-23) — Token-Budgeted A11y Text Observation
 
 Turn the a11y tree into an indexed text block a VLM can act on. Full reference: [`docs/source/Eng/doc/new_features/v152_features_doc.rst`](docs/source/Eng/doc/new_features/v152_features_doc.rst).

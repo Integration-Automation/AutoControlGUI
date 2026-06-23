@@ -2943,6 +2943,19 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Reading-ordered, viewport-clipped, indexed element list.",
     ))
     specs.append(CommandSpec(
+        "AC_validate_action", "Native UI", "Validate / Snap Action",
+        fields=(
+            FieldSpec("action", FieldType.STRING,
+                      placeholder='{"type":"click","x":..,"y":..}'),
+            FieldSpec("screen", FieldType.STRING, optional=True,
+                      placeholder="[width, height]"),
+            FieldSpec("targets", FieldType.STRING, optional=True,
+                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+        ),
+        description="Reject out-of-bounds clicks; snap a near-miss to the nearest "
+                    "element.",
+    ))
+    specs.append(CommandSpec(
         "AC_mark_screen", "Native UI", "Set-of-Marks: Number Elements",
         fields=(
             FieldSpec("app_name", FieldType.STRING, optional=True),
