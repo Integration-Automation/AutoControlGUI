@@ -2911,6 +2911,16 @@ def _add_screen_state_specs(specs: List[CommandSpec]) -> None:
 
 def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
+        "AC_cua_command", "Native UI", "Computer-Use: Map Action",
+        fields=(
+            FieldSpec("payload", FieldType.STRING,
+                      placeholder='{"action":"left_click","coordinate":[x,y]}'),
+            FieldSpec("source", FieldType.ENUM, optional=True, default="canonical",
+                      choices=("canonical", "anthropic", "openai")),
+        ),
+        description="Map an Anthropic / OpenAI computer-use action to an AC command.",
+    ))
+    specs.append(CommandSpec(
         "AC_mark_screen", "Native UI", "Set-of-Marks: Number Elements",
         fields=(
             FieldSpec("app_name", FieldType.STRING, optional=True),

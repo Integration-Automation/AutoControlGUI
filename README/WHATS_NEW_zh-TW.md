@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 標準化 Computer-Use 動作結構
+
+把 Anthropic / OpenAI agent 動作橋接到 AutoControl 命令。完整參考:[`docs/source/Zh/doc/new_features/v151_features_doc.rst`](../docs/source/Zh/doc/new_features/v151_features_doc.rst)。
+
+- **`from_anthropic` / `from_openai_cua` / `to_ac_command` / `canonical_action`**(`AC_cua_command`):`tool_use_schema` 匯出 AC_* 簽章、`coordinate_space` 縮放——兩者都不*正規化進來的動作酬載*。Anthropic 發出 `{action:"left_click", coordinate:[x,y]}`、OpenAI CUA 發出 `{type:"click", x, y, button}`;這些轉接器把兩者對應為標準動作再對應為可執行的 `[AC_*, params]`(含選用座標空間 `scale`)。純標準函式庫、可無頭測試;執行器命令對任一來源回傳 `{canonical, command}`。
+
 ## 本次更新 (2026-06-23) — 視窗客戶區幾何
 
 不論標題列 / 邊框,點擊視窗*內部*。完整參考:[`docs/source/Zh/doc/new_features/v150_features_doc.rst`](../docs/source/Zh/doc/new_features/v150_features_doc.rst)。

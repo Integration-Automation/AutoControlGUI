@@ -361,6 +361,10 @@ from je_auto_control.utils.perceptual_diff import (
 from je_auto_control.utils.window_geometry import (
     client_point, client_to_screen, frame_insets, get_client_rect,
 )
+# Canonical computer-use action schema (normalize Anthropic / OpenAI -> AC_*)
+from je_auto_control.utils.cua_action import (
+    canonical_action, from_anthropic, from_openai_cua, to_ac_command,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1235,6 +1239,10 @@ __all__ = [
     "client_to_screen",
     "get_client_rect",
     "client_point",
+    "canonical_action",
+    "from_anthropic",
+    "from_openai_cua",
+    "to_ac_command",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",

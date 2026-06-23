@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Canonical Computer-Use Action Schema
+
+Bridge Anthropic / OpenAI agent actions to AutoControl commands. Full reference: [`docs/source/Eng/doc/new_features/v151_features_doc.rst`](docs/source/Eng/doc/new_features/v151_features_doc.rst).
+
+- **`from_anthropic` / `from_openai_cua` / `to_ac_command` / `canonical_action`** (`AC_cua_command`): `tool_use_schema` exports AC_* signatures and `coordinate_space` rescales — neither *normalizes an inbound action payload*. Anthropic emits `{action:"left_click", coordinate:[x,y]}`, OpenAI CUA emits `{type:"click", x, y, button}`; these adapters map both to a canonical action and then to a runnable `[AC_*, params]` (with optional coordinate-space `scale`). Pure-stdlib, headless-testable; the executor command returns `{canonical, command}` for any source.
+
 ## What's new (2026-06-23) — Window Client-Area Geometry
 
 Click *inside* a window regardless of its title bar / borders. Full reference: [`docs/source/Eng/doc/new_features/v150_features_doc.rst`](docs/source/Eng/doc/new_features/v150_features_doc.rst).

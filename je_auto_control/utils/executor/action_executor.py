@@ -3814,6 +3814,21 @@ def _client_point(title: str, x: Any, y: Any) -> Dict[str, Any]:
             "point": list(point) if point is not None else None}
 
 
+def _cua_command(payload: Any, source: str = "canonical") -> Dict[str, Any]:
+    """Adapter: normalize a computer-use payload and map it to an AC_* command."""
+    import json
+    from je_auto_control.utils.cua_action import (from_anthropic, from_openai_cua,
+                                                  to_ac_command)
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    normalizers = {"anthropic": from_anthropic, "openai": from_openai_cua,
+                   "canonical": dict}
+    if source not in normalizers:
+        raise AutoControlActionException(f"unknown cua source: {source!r}")
+    canonical = normalizers[source](payload)
+    return {"canonical": canonical, "command": to_ac_command(canonical)}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5568,6 +5583,7 @@ class Executor:
             "AC_perceptual_diff": _perceptual_diff,
             "AC_get_client_rect": _get_client_rect,
             "AC_client_point": _client_point,
+            "AC_cua_command": _cua_command,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,
