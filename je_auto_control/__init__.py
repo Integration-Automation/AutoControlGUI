@@ -323,6 +323,10 @@ from je_auto_control.utils.reading_flow import (
 from je_auto_control.utils.text_blocks import (
     detect_lists, group_paragraphs,
 )
+# Classify OCR lines as headings vs body and build a document outline
+from je_auto_control.utils.heading_segment import (
+    classify_lines, outline,
+)
 # Associate form labels with values (multi-direction) + checkbox state
 from je_auto_control.utils.form_fields import (
     associate_fields, checkbox_state, match_labels_to_widgets,
@@ -342,6 +346,14 @@ from je_auto_control.utils.step_repair import (
 # Self-consistency over multiple grounding proposals for one target
 from je_auto_control.utils.grounding_consensus import (
     ConsensusResult, consensus_element, consensus_point, is_confident,
+)
+# Decide when a UI has settled, as a pure seam over a churn series
+from je_auto_control.utils.settle_detector import (
+    SettleState, SettleTracker, is_settled, settle_point,
+)
+# Per-step critic feature bundle + rule-based step scorer
+from je_auto_control.utils.critic_features import (
+    build_critic_record, score_step_rule_based, to_judge_prompt,
 )
 # Locate on-screen regions by colour (mask + connected components)
 from je_auto_control.utils.color_region import (
@@ -1285,6 +1297,8 @@ __all__ = [
     "to_blocks",
     "group_paragraphs",
     "detect_lists",
+    "classify_lines",
+    "outline",
     "associate_fields",
     "match_labels_to_widgets",
     "checkbox_state",
@@ -1304,6 +1318,13 @@ __all__ = [
     "consensus_point",
     "consensus_element",
     "is_confident",
+    "SettleState",
+    "SettleTracker",
+    "settle_point",
+    "is_settled",
+    "build_critic_record",
+    "score_step_rule_based",
+    "to_judge_prompt",
     "find_color_region",
     "find_color_regions",
     "ssim_compare",

@@ -1,5 +1,23 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 逐步評審特徵 + 規則式步驟評分
+
+把為代理步驟評分所需的證據打包,並內建規則式評分器。完整參考:[`docs/source/Zh/doc/new_features/v177_features_doc.rst`](../docs/source/Zh/doc/new_features/v177_features_doc.rst)。
+
+- **`build_critic_record` / `score_step_rule_based` / `to_judge_prompt`**(`AC_build_critic_record`、`AC_score_step`):`trajectory_eval` 對整條軌跡評分而無逐步證據;`agent_trace` 發出 span 而非品質;`agent_replay` 保存步驟卻不評分。本功能把 `action_effect` + `observation_delta` + `postcondition` 組合成單一逐步記錄,接著 `score_step_rule_based` 給出確定性的 `{outcome, process_score, reasons}`(不需模型),`to_judge_prompt` 把它渲染給可選的 LLM-as-judge。純標準函式庫聚合器;不匯入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 標題與內文分類 + 文件大綱
+
+以高度區分標題與內文,並建立文件大綱。完整參考:[`docs/source/Zh/doc/new_features/v176_features_doc.rst`](../docs/source/Zh/doc/new_features/v176_features_doc.rst)。
+
+- **`classify_lines` / `outline`**(`AC_classify_lines`、`AC_outline`):框架中沒有功能把行高對應到標題層級或建立章節大綱——`ocr/structure` / `element_parse` 純屬位置性,`text_blocks` 不排序。本功能套用標準啟發法:行高超過 `heading_ratio` × 中位行高者為標題,不同標題高度成為層級(最高 = 1)。`classify_lines` 為每行標記 `{box, text, role, level}`;`outline` 依序回傳標題作為目錄。純標準函式庫,作用於行字典;不匯入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 變化量序列的穩定偵測
+
+判斷 UI 何時安定下來——以純粹、可測試的函式作用於變化序列。完整參考:[`docs/source/Zh/doc/new_features/v175_features_doc.rst`](../docs/source/Zh/doc/new_features/v175_features_doc.rst)。
+
+- **`settle_point` / `is_settled` / `SettleTracker`**(`AC_settle_point`):`smart_waits.wait_until_screen_stable` 把穩定邏輯包在 `time.sleep` 迴圈內、作用於即時幀——你無法餵記錄好的序列,也無法單元測試該決策。本功能把它抽離:給定一串*變化量*(像素差 / 元素數差 / 0-1 digest 是否變),在變化量連續 `quiet_samples` 次維持 ≤ `max_churn` 時回報穩定(尖峰重置 run)。`settle_point` 回傳穩定索引,`SettleTracker` 為供即時迴圈的增量形式。純標準函式庫,不需時鐘、不需擷取;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — OCR 行的段落與清單分組
 
 把 OCR 行分組成段落,並偵測項目符號 / 編號清單。完整參考:[`docs/source/Zh/doc/new_features/v174_features_doc.rst`](../docs/source/Zh/doc/new_features/v174_features_doc.rst)。

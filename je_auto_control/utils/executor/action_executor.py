@@ -3537,6 +3537,26 @@ def _detect_lists(lines: Any) -> Dict[str, Any]:
     return {"count": len(items), "items": items}
 
 
+def _classify_lines(lines: Any, heading_ratio: Any = 1.2) -> Dict[str, Any]:
+    """Adapter: classify OCR lines as headings vs body with levels."""
+    import json
+    from je_auto_control.utils.heading_segment import classify_lines
+    if isinstance(lines, str):
+        lines = json.loads(lines)
+    classified = classify_lines(lines, heading_ratio=float(heading_ratio))
+    return {"count": len(classified), "lines": classified}
+
+
+def _outline(lines: Any, heading_ratio: Any = 1.2) -> Dict[str, Any]:
+    """Adapter: the document outline (headings in order) from OCR lines."""
+    import json
+    from je_auto_control.utils.heading_segment import outline
+    if isinstance(lines, str):
+        lines = json.loads(lines)
+    headings = outline(lines, heading_ratio=float(heading_ratio))
+    return {"count": len(headings), "headings": headings}
+
+
 def _find_color_region(rgb: Any, tolerance: Any = 20, min_area: Any = 50,
                        region: Any = None) -> Dict[str, Any]:
     """Adapter: locate coloured regions on the screen, largest first."""
@@ -4230,6 +4250,45 @@ def _consensus_element(candidates: Any, elements: Any) -> Dict[str, Any]:
     return {"found": winner is not None,
             "element": winner[0] if winner else None,
             "agreement": winner[1] if winner else 0.0}
+
+
+def _settle_point(churns: Any, quiet_samples: Any = 3,
+                  max_churn: Any = 1.0) -> Dict[str, Any]:
+    """Adapter: index at which a churn series first settles (or settled=False)."""
+    import json
+    from je_auto_control.utils.settle_detector import settle_point
+    if isinstance(churns, str):
+        churns = json.loads(churns)
+    index = settle_point([float(c) for c in churns],
+                         quiet_samples=int(quiet_samples),
+                         max_churn=float(max_churn))
+    return {"settled": index is not None, "index": index}
+
+
+def _build_critic_record(action: Any, before: Any, after: Any,
+                         postcondition: Any = None, radius: Any = 64) -> Dict[str, Any]:
+    """Adapter: per-step critic feature bundle (effect + delta + postcondition)."""
+    import json
+    from je_auto_control.utils.critic_features import build_critic_record
+    if isinstance(action, str):
+        action = json.loads(action)
+    if isinstance(before, str):
+        before = json.loads(before)
+    if isinstance(after, str):
+        after = json.loads(after)
+    if isinstance(postcondition, str):
+        postcondition = json.loads(postcondition) if postcondition.strip() else None
+    return build_critic_record(action, before, after, postcondition=postcondition,
+                               radius=int(radius))
+
+
+def _score_step(record: Any) -> Dict[str, Any]:
+    """Adapter: rule-based score of a critic record."""
+    import json
+    from je_auto_control.utils.critic_features import score_step_rule_based
+    if isinstance(record, str):
+        record = json.loads(record)
+    return score_step_rule_based(record)
 
 
 def _validate_action(action: Any, screen: Any = None,
@@ -6076,6 +6135,8 @@ class Executor:
             "AC_xy_cut": _xy_cut,
             "AC_group_paragraphs": _group_paragraphs,
             "AC_detect_lists": _detect_lists,
+            "AC_classify_lines": _classify_lines,
+            "AC_outline": _outline,
             "AC_ssim_compare": _ssim_compare,
             "AC_ssim_changed_regions": _ssim_changed_regions,
             "AC_feature_match": _feature_match,
@@ -6121,6 +6182,9 @@ class Executor:
             "AC_plan_repair": _plan_repair,
             "AC_consensus_point": _consensus_point,
             "AC_consensus_element": _consensus_element,
+            "AC_settle_point": _settle_point,
+            "AC_build_critic_record": _build_critic_record,
+            "AC_score_step": _score_step,
             "AC_validate_action": _validate_action,
             "AC_replay_trace": _replay_trace,
             "AC_match_elements": _match_elements,

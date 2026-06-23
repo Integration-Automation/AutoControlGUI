@@ -2205,6 +2205,16 @@ def detect_lists(lines):
     return _detect_lists(lines)
 
 
+def classify_lines(lines, heading_ratio=1.2):
+    from je_auto_control.utils.executor.action_executor import _classify_lines
+    return _classify_lines(lines, heading_ratio)
+
+
+def outline(lines, heading_ratio=1.2):
+    from je_auto_control.utils.executor.action_executor import _outline
+    return _outline(lines, heading_ratio)
+
+
 def find_color_region(rgb, tolerance=20, min_area=50, region=None):
     from je_auto_control.utils.executor.action_executor import (
         _find_color_region)
@@ -2476,6 +2486,21 @@ def consensus_point(candidates, cluster_radius=24):
 def consensus_element(candidates, elements):
     from je_auto_control.utils.executor.action_executor import _consensus_element
     return _consensus_element(candidates, elements)
+
+
+def settle_point(churns, quiet_samples=3, max_churn=1.0):
+    from je_auto_control.utils.executor.action_executor import _settle_point
+    return _settle_point(churns, quiet_samples, max_churn)
+
+
+def build_critic_record(action, before, after, postcondition=None, radius=64):
+    from je_auto_control.utils.executor.action_executor import _build_critic_record
+    return _build_critic_record(action, before, after, postcondition, radius)
+
+
+def score_step(record):
+    from je_auto_control.utils.executor.action_executor import _score_step
+    return _score_step(record)
 
 
 def validate_action(action, screen=None, targets=None):

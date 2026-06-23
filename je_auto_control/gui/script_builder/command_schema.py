@@ -828,6 +828,26 @@ def _add_ocr_specs(specs: List[CommandSpec]) -> None:
         description="Detect bulleted / numbered list items among OCR lines.",
     ))
     specs.append(CommandSpec(
+        "AC_classify_lines", "OCR", "Classify Headings vs Body",
+        fields=(
+            FieldSpec("lines", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":200,"height":40,'
+                                  '"text":"Title"}]'),
+            FieldSpec("heading_ratio", FieldType.FLOAT, optional=True, default=1.2),
+        ),
+        description="Tag OCR lines as heading/body by height; assign heading levels.",
+    ))
+    specs.append(CommandSpec(
+        "AC_outline", "OCR", "Document Outline",
+        fields=(
+            FieldSpec("lines", FieldType.STRING,
+                      placeholder='[{"x":0,"y":0,"width":200,"height":40,'
+                                  '"text":"Title"}]'),
+            FieldSpec("heading_ratio", FieldType.FLOAT, optional=True, default=1.2),
+        ),
+        description="Headings in order with levels (document outline) from OCR lines.",
+    ))
+    specs.append(CommandSpec(
         "AC_scroll_to_find", "OCR", "Scroll Until Visible",
         fields=(
             FieldSpec("target", FieldType.STRING),
@@ -3272,6 +3292,39 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("cluster_radius", FieldType.INT, optional=True, default=24),
         ),
         description="Agreed target point from clustered grounding proposals.",
+    ))
+    specs.append(CommandSpec(
+        "AC_settle_point", "Flow", "Settle Point (churn series)",
+        fields=(
+            FieldSpec("churns", FieldType.STRING,
+                      placeholder="[5, 4, 0.5, 0.3, 0.2]"),
+            FieldSpec("quiet_samples", FieldType.INT, optional=True, default=3),
+            FieldSpec("max_churn", FieldType.FLOAT, optional=True, default=1.0),
+        ),
+        description="Index where a churn series first settles (offline settle check).",
+    ))
+    specs.append(CommandSpec(
+        "AC_build_critic_record", "Native UI", "Build Critic Record",
+        fields=(
+            FieldSpec("action", FieldType.STRING,
+                      placeholder='{"type":"click","x":50,"y":50}'),
+            FieldSpec("before", FieldType.STRING,
+                      placeholder='[{"role":"button","x":0,"y":0}]'),
+            FieldSpec("after", FieldType.STRING,
+                      placeholder='[{"role":"dialog","x":40,"y":40}]'),
+            FieldSpec("postcondition", FieldType.STRING, optional=True,
+                      placeholder='{"appears":{"role":"dialog"}}'),
+            FieldSpec("radius", FieldType.INT, optional=True, default=64),
+        ),
+        description="Per-step critic evidence (effect + delta + postcondition).",
+    ))
+    specs.append(CommandSpec(
+        "AC_score_step", "Native UI", "Score Step (rule-based)",
+        fields=(
+            FieldSpec("record", FieldType.STRING,
+                      placeholder='{"effect":{"effect":"changed_near_target"}}'),
+        ),
+        description="Rule-based outcome + process score of a critic record.",
     ))
     specs.append(CommandSpec(
         "AC_consensus_element", "Native UI", "Grounding Consensus Element",

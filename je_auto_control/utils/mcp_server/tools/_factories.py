@@ -3439,6 +3439,48 @@ def observation_tools() -> List[MCPTool]:
             handler=h.consensus_element,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_settle_point",
+            description=("Decide when a UI settled from a 'churns' series (how much "
+                         "changed each sample). Returns {settled, index} — the index "
+                         "where churn first stayed <= 'max_churn' for 'quiet_samples' "
+                         "in a row (a spike resets the run). Feed pixel deltas / "
+                         "element-count deltas / 0-1 digest-changed flags."),
+            input_schema=schema({
+                "churns": {"type": "array", "items": {"type": "number"}},
+                "quiet_samples": {"type": "integer"},
+                "max_churn": {"type": "number"}},
+                required=["churns"]),
+            handler=h.settle_point,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_build_critic_record",
+            description=("Build a per-step critic record from 'action' + 'before' / "
+                         "'after' element lists (+ optional 'postcondition' spec): "
+                         "composes effect / delta-counts / postcondition into "
+                         "{action, effect, delta_counts, postcondition?} — the "
+                         "evidence a step critic scores."),
+            input_schema=schema({
+                "action": {"type": "object"},
+                "before": {"type": "array", "items": {"type": "object"}},
+                "after": {"type": "array", "items": {"type": "object"}},
+                "postcondition": {"type": "object"},
+                "radius": {"type": "integer"}},
+                required=["action", "before", "after"]),
+            handler=h.build_critic_record,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_score_step",
+            description=("Rule-based score of a critic 'record' (from "
+                         "ac_build_critic_record): {outcome (binary success), "
+                         "process_score (0..1), reasons}. Deterministic, no model."),
+            input_schema=schema({"record": {"type": "object"}},
+                                required=["record"]),
+            handler=h.score_step,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
@@ -3973,6 +4015,31 @@ def screen_grid_tools() -> List[MCPTool]:
                 "lines": {"type": "array", "items": {"type": "object"}}},
                 required=["lines"]),
             handler=h.detect_lists,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_classify_lines",
+            description=("Classify OCR 'lines' as headings vs body by height: a line "
+                         "taller than 'heading_ratio' x the median line height is a "
+                         "heading, and distinct heading heights become levels (tallest "
+                         "= 1). Returns {count, lines:[{box,text,role,level}]}."),
+            input_schema=schema({
+                "lines": {"type": "array", "items": {"type": "object"}},
+                "heading_ratio": {"type": "number"}},
+                required=["lines"]),
+            handler=h.classify_lines,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_outline",
+            description=("Return the document outline from OCR 'lines' — the headings "
+                         "in top-to-bottom order with levels. Returns {count, "
+                         "headings:[{level,text,top}]}."),
+            input_schema=schema({
+                "lines": {"type": "array", "items": {"type": "object"}},
+                "heading_ratio": {"type": "number"}},
+                required=["lines"]),
+            handler=h.outline,
             annotations=READ_ONLY,
         ),
     ]

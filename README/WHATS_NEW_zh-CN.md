@@ -1,5 +1,23 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 逐步评审特征 + 规则式步骤评分
+
+把为代理步骤评分所需的证据打包,并内建规则式评分器。完整参考:[`docs/source/Zh/doc/new_features/v177_features_doc.rst`](../docs/source/Zh/doc/new_features/v177_features_doc.rst)。
+
+- **`build_critic_record` / `score_step_rule_based` / `to_judge_prompt`**(`AC_build_critic_record`、`AC_score_step`):`trajectory_eval` 对整条轨迹评分而无逐步证据;`agent_trace` 发出 span 而非质量;`agent_replay` 保存步骤却不评分。本功能把 `action_effect` + `observation_delta` + `postcondition` 组合成单一逐步记录,接着 `score_step_rule_based` 给出确定性的 `{outcome, process_score, reasons}`(不需模型),`to_judge_prompt` 把它渲染给可选的 LLM-as-judge。纯标准库聚合器;不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 标题与正文分类 + 文档大纲
+
+以高度区分标题与正文,并建立文档大纲。完整参考:[`docs/source/Zh/doc/new_features/v176_features_doc.rst`](../docs/source/Zh/doc/new_features/v176_features_doc.rst)。
+
+- **`classify_lines` / `outline`**(`AC_classify_lines`、`AC_outline`):框架中没有功能把行高对应到标题层级或建立章节大纲——`ocr/structure` / `element_parse` 纯属位置性,`text_blocks` 不排序。本功能套用标准启发法:行高超过 `heading_ratio` × 中位行高者为标题,不同标题高度成为层级(最高 = 1)。`classify_lines` 为每行标记 `{box, text, role, level}`;`outline` 依序返回标题作为目录。纯标准库,作用于行字典;不导入 `PySide6`。
+
+## 本次更新 (2026-06-24) — 变化量序列的稳定检测
+
+判断 UI 何时安定下来——以纯粹、可测试的函数作用于变化序列。完整参考:[`docs/source/Zh/doc/new_features/v175_features_doc.rst`](../docs/source/Zh/doc/new_features/v175_features_doc.rst)。
+
+- **`settle_point` / `is_settled` / `SettleTracker`**(`AC_settle_point`):`smart_waits.wait_until_screen_stable` 把稳定逻辑包在 `time.sleep` 循环内、作用于实时帧——你无法喂记录好的序列,也无法单元测试该决策。本功能把它抽离:给定一串*变化量*(像素差 / 元素数差 / 0-1 digest 是否变),在变化量连续 `quiet_samples` 次维持 ≤ `max_churn` 时报告稳定(尖峰重置 run)。`settle_point` 返回稳定索引,`SettleTracker` 为供实时循环的增量形式。纯标准库,不需时钟、不需捕获;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — OCR 行的段落与列表分组
 
 把 OCR 行分组成段落,并检测项目符号 / 编号列表。完整参考:[`docs/source/Zh/doc/new_features/v174_features_doc.rst`](../docs/source/Zh/doc/new_features/v174_features_doc.rst)。

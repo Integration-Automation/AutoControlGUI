@@ -1,5 +1,23 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Per-Step Critic Features + Rule-Based Step Scorer
+
+Bundle the evidence to score an agent step, with a built-in rule-based scorer. Full reference: [`docs/source/Eng/doc/new_features/v177_features_doc.rst`](docs/source/Eng/doc/new_features/v177_features_doc.rst).
+
+- **`build_critic_record` / `score_step_rule_based` / `to_judge_prompt`** (`AC_build_critic_record`, `AC_score_step`): `trajectory_eval` scores a whole trajectory with no per-step evidence; `agent_trace` emits spans not quality; `agent_replay` stores steps but doesn't score. This composes `action_effect` + `observation_delta` + `postcondition` into one per-step record, then `score_step_rule_based` gives a deterministic `{outcome, process_score, reasons}` (no model needed) and `to_judge_prompt` renders it for an optional LLM-as-judge. Pure-stdlib aggregator; no `PySide6`.
+
+## What's new (2026-06-24) — Heading vs Body Classification + Document Outline
+
+Tell headings from body text by height and build a document outline. Full reference: [`docs/source/Eng/doc/new_features/v176_features_doc.rst`](docs/source/Eng/doc/new_features/v176_features_doc.rst).
+
+- **`classify_lines` / `outline`** (`AC_classify_lines`, `AC_outline`): nothing mapped line height to heading levels or built a section outline — `ocr/structure` / `element_parse` are positional and `text_blocks` doesn't rank. This applies the standard heuristic: a line taller than `heading_ratio` × the median line height is a heading, and distinct heading heights become levels (tallest = 1). `classify_lines` tags each line `{box, text, role, level}`; `outline` returns the headings in order as a table of contents. Pure-stdlib over line dicts; no `PySide6`.
+
+## What's new (2026-06-24) — Settle Detection Over a Churn Series
+
+Decide when the UI has gone quiet — as a pure, testable function over a change series. Full reference: [`docs/source/Eng/doc/new_features/v175_features_doc.rst`](docs/source/Eng/doc/new_features/v175_features_doc.rst).
+
+- **`settle_point` / `is_settled` / `SettleTracker`** (`AC_settle_point`): `smart_waits.wait_until_screen_stable` bakes the settle logic inside a `time.sleep` loop over live frames — you can't feed it a recorded series or unit-test the decision. This extracts it: given a stream of *churn* values (pixel delta / element-count delta / 0-1 digest-changed), it reports when churn stayed ≤ `max_churn` for `quiet_samples` in a row (a spike resets the run). `settle_point` returns the settle index, `SettleTracker` is the incremental form for a live loop. Pure-stdlib, no clock, no capture; no `PySide6`.
+
 ## What's new (2026-06-24) — Paragraph & List Grouping of OCR Lines
 
 Group OCR lines into paragraphs and detect bulleted / numbered lists. Full reference: [`docs/source/Eng/doc/new_features/v174_features_doc.rst`](docs/source/Eng/doc/new_features/v174_features_doc.rst).
