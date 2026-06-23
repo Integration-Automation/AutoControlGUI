@@ -3362,6 +3362,31 @@ def _match_auto(template: str, floor: Any = 0.5, max_results: Any = 20,
     return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
 
 
+def _edge_match(template: str, min_score: Any = 0.7, scales: Any = None,
+                region: Any = None) -> Dict[str, Any]:
+    """Adapter: best edge-shape (Chamfer) template match on the screen."""
+    import json
+    from je_auto_control.utils.edge_match import edge_match
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    match = edge_match(template, region=region,
+                       scales=_seq_arg(scales, (1.0,)), min_score=float(min_score))
+    return {"found": match is not None,
+            "match": match.to_dict() if match else None}
+
+
+def _edge_match_all(template: str, min_score: Any = 0.7, max_results: Any = 20,
+                    nms_iou: Any = 0.3, region: Any = None) -> Dict[str, Any]:
+    """Adapter: every edge-shape (Chamfer) match on the screen (NMS)."""
+    import json
+    from je_auto_control.utils.edge_match import edge_match_all
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    matches = edge_match_all(template, region=region, min_score=float(min_score),
+                             max_results=int(max_results), nms_iou=float(nms_iou))
+    return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
+
+
 def _region_arg(value: Any) -> Optional[List[int]]:
     """Coerce a JSON-string / list region arg into a list of ints, or None."""
     import json
@@ -5935,6 +5960,8 @@ class Executor:
             "AC_match_with_trust": _match_with_trust,
             "AC_auto_threshold": _auto_threshold,
             "AC_match_auto": _match_auto,
+            "AC_edge_match": _edge_match,
+            "AC_edge_match_all": _edge_match_all,
             "AC_grid_cells": _grid_cells,
             "AC_cell_for_point": _cell_for_point,
             "AC_point_for_cell": _point_for_cell,

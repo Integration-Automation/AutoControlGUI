@@ -372,6 +372,31 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Derive a match threshold + separability from the score map.",
     ))
     specs.append(CommandSpec(
+        "AC_edge_match", "Image", "Match Template (edge shape)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.7,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[0.9, 1.0, 1.1]"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Locate by edge shape (Chamfer) — robust to fill / theme / AA.",
+    ))
+    specs.append(CommandSpec(
+        "AC_edge_match_all", "Image", "Match Template All (edge shape)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.7,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("max_results", FieldType.INT, optional=True, default=20),
+            FieldSpec("nms_iou", FieldType.FLOAT, optional=True, default=0.3,
+                      min_value=0.0, max_value=1.0),
+        ),
+        description="Find every edge-shape (Chamfer) match (NMS-deduped).",
+    ))
+    specs.append(CommandSpec(
         "AC_grid_cells", "Image", "Grid Cells (coarse grounding)",
         fields=(
             FieldSpec("rows", FieldType.INT, optional=True, default=3),

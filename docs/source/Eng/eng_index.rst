@@ -190,6 +190,7 @@ Comprehensive guides for all AutoControl features.
    doc/new_features/v165_features_doc
    doc/new_features/v166_features_doc
    doc/new_features/v167_features_doc
+   doc/new_features/v168_features_doc
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
    doc/operations_layer/operations_layer_doc

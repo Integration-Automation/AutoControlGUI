@@ -3698,6 +3698,37 @@ def rotated_match_tools() -> List[MCPTool]:
             handler=h.match_auto,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_edge_match",
+            description=("Find 'template' by its EDGE SHAPE (Chamfer / distance "
+                         "transform), robust to fill / gradient / theme / "
+                         "anti-aliasing where intensity NCC fails and to flat icons "
+                         "ORB can't key on. Returns {found, match}. 'min_score', "
+                         "'scales', 'region'."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.edge_match,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_edge_match_all",
+            description=("Find EVERY edge-shape (Chamfer) match of 'template' >= "
+                         "'min_score', overlaps removed by NMS. Returns "
+                         "{count, matches}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "min_score": {"type": "number"},
+                "max_results": {"type": "integer"},
+                "nms_iou": {"type": "number"},
+                "region": {"type": "array", "items": {"type": "integer"}}},
+                required=["template"]),
+            handler=h.edge_match_all,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

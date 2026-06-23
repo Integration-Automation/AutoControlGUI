@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 边缘形状(Chamfer)模板匹配
+
+以轮廓定位扁平图标,对填充 / 主题 / 抗锯齿稳健。完整参考:[`docs/source/Zh/doc/new_features/v168_features_doc.rst`](../docs/source/Zh/doc/new_features/v168_features_doc.rst)。
+
+- **`edge_match` / `edge_match_all` / `chamfer_distance`**(`AC_edge_match`、`AC_edge_match_all`):强度 NCC(`visual_match`)在控件换填充 / 换主题时分数下降,ORB(`feature_match`)需要扁平图标缺乏的角点纹理。本功能以*边缘形状*匹配:对两图跑 Canny,对场景边缘做距离变换,把模板边缘滑过它并以平均边缘间距(Chamfer)评分。完美轮廓不论填充皆以约 0 成本对齐。重用 `visual_match` 的加载器 / resize / NMS / `Match` 与 `edge_lines` 的 Canny 默认。`haystack` 可注入;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 动作效果分类(我的点击有没有效果?)
 
 告诉代理点击有没有效果——以及是否发生在它瞄准之处。完整参考:[`docs/source/Zh/doc/new_features/v167_features_doc.rst`](../docs/source/Zh/doc/new_features/v167_features_doc.rst)。
