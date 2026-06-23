@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Declarative Action Postconditions
+
+Assert an action's expected outcome as a JSON spec, diffed against the before-frame. Full reference: [`docs/source/Eng/doc/new_features/v169_features_doc.rst`](docs/source/Eng/doc/new_features/v169_features_doc.rst).
+
+- **`check_postcondition` / `compile_postcondition`** (`AC_check_postcondition`): `expect_poll`/`assert_eventually` poll a single condition with no action-bound spec and no before-baseline (so they can't express "a *new* dialog appeared"); `trajectory_eval` is whole-trajectory. This evaluates a small JSON spec of clauses — `appears`/`disappears` (diffed vs `before`), `enabled`/`disabled`, `text_present`/`text_absent`, `count` — against the after-observation, returning a per-clause `{ok, clauses, failed}` report. `compile_postcondition` turns a spec into an `after -> bool` predicate for `expect_poll`. Pure-stdlib; no `PySide6`.
+
 ## What's new (2026-06-24) — Edge-Shape (Chamfer) Template Matching
 
 Locate flat icons by outline, robust to fill / theme / anti-aliasing. Full reference: [`docs/source/Eng/doc/new_features/v168_features_doc.rst`](docs/source/Eng/doc/new_features/v168_features_doc.rst).

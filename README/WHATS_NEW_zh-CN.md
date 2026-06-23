@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 声明式动作后置条件
+
+以 JSON 规格断言动作的预期结果,并对照 before 帧做差异。完整参考:[`docs/source/Zh/doc/new_features/v169_features_doc.rst`](../docs/source/Zh/doc/new_features/v169_features_doc.rst)。
+
+- **`check_postcondition` / `compile_postcondition`**(`AC_check_postcondition`):`expect_poll`/`assert_eventually` 轮询单一条件,没有与动作绑定的规格、也没有 before 基准(因此无法表达「一个*新*对话框出现了」);`trajectory_eval` 是整条轨迹层级。本功能对 after 观测评估一个小型 JSON 子句规格——`appears`/`disappears`(对照 `before`)、`enabled`/`disabled`、`text_present`/`text_absent`、`count`——返回逐子句的 `{ok, clauses, failed}` 报告。`compile_postcondition` 把规格转成 `after -> bool` 判定函数以供 `expect_poll` 使用。纯标准库;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 边缘形状(Chamfer)模板匹配
 
 以轮廓定位扁平图标,对填充 / 主题 / 抗锯齿稳健。完整参考:[`docs/source/Zh/doc/new_features/v168_features_doc.rst`](../docs/source/Zh/doc/new_features/v168_features_doc.rst)。

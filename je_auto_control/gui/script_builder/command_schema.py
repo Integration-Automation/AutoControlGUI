@@ -3193,6 +3193,19 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Did any before/after change land within radius of a point?",
     ))
     specs.append(CommandSpec(
+        "AC_check_postcondition", "Native UI", "Check Postcondition",
+        fields=(
+            FieldSpec("after", FieldType.STRING,
+                      placeholder='[{"role":"dialog","name":"Saved"}]'),
+            FieldSpec("spec", FieldType.STRING,
+                      placeholder='{"appears":{"role":"dialog"},'
+                                  '"disabled":{"name":"Submit"}}'),
+            FieldSpec("before", FieldType.STRING, optional=True,
+                      placeholder='[{"role":"button","name":"Submit"}]'),
+        ),
+        description="Check expected outcome clauses against after/before frames.",
+    ))
+    specs.append(CommandSpec(
         "AC_validate_action", "Native UI", "Validate / Snap Action",
         fields=(
             FieldSpec("action", FieldType.STRING,

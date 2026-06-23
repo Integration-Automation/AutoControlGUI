@@ -2433,6 +2433,11 @@ def effect_near_point(before, after, point, radius=64):
     return _effect_near_point(before, after, point, radius)
 
 
+def check_postcondition(after, spec, before=None):
+    from je_auto_control.utils.executor.action_executor import _check_postcondition
+    return _check_postcondition(after, spec, before)
+
+
 def validate_action(action, screen=None, targets=None):
     from je_auto_control.utils.executor.action_executor import _validate_action
     return _validate_action(action, screen, targets)
