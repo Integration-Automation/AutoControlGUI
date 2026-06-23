@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Line / Grid / Separator Detection (Hough)
+
+Find table grid lines and UI dividers from raw pixels. Full reference: [`docs/source/Eng/doc/new_features/v141_features_doc.rst`](docs/source/Eng/doc/new_features/v141_features_doc.rst).
+
+- **`find_lines` / `find_grid` / `find_separators`** (`AC_find_lines`, `AC_find_grid`, `AC_find_separators`): `grid_locator` clusters *already-found* boxes and `shape_locator` finds closed rectangles — neither finds a table's ruling lines or a divider from pixels. Canny + probabilistic Hough detects straight segments (classified horizontal/vertical/diagonal), `find_grid` recovers `{rows, cols, cells}` so you can address "row 3, col 2", and `find_separators` returns the coordinates of long dividers. Injectable haystack → headless-testable; base OpenCV (`cv2.HoughLinesP`).
+
 ## What's new (2026-06-23) — Model-Free Text-Region Detection (MSER)
 
 Find where text is on screen without running OCR. Full reference: [`docs/source/Eng/doc/new_features/v140_features_doc.rst`](docs/source/Eng/doc/new_features/v140_features_doc.rst).

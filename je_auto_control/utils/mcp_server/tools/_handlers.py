@@ -2211,6 +2211,21 @@ def find_text_lines(y_tolerance=8, region=None):
     return _find_text_lines(y_tolerance, region)
 
 
+def find_lines(min_length=80, max_gap=10, orientation="any", region=None):
+    from je_auto_control.utils.executor.action_executor import _find_lines
+    return _find_lines(min_length, max_gap, orientation, region)
+
+
+def find_grid(min_length=120, tol=10, region=None):
+    from je_auto_control.utils.executor.action_executor import _find_grid
+    return _find_grid(min_length, tol, region)
+
+
+def find_separators(axis="horizontal", min_length=120, tol=10, region=None):
+    from je_auto_control.utils.executor.action_executor import _find_separators
+    return _find_separators(axis, min_length, tol, region)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

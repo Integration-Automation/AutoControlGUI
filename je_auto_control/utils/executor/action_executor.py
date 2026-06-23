@@ -3561,6 +3561,40 @@ def _find_text_lines(y_tolerance: Any = 8, region: Any = None) -> Dict[str, Any]
     return {"count": len(lines), "lines": lines}
 
 
+def _find_lines(min_length: Any = 80, max_gap: Any = 10, orientation: str = "any",
+                region: Any = None) -> Dict[str, Any]:
+    """Adapter: detect straight line segments on screen (Hough)."""
+    import json
+    from je_auto_control.utils.edge_lines import find_lines
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    lines = find_lines(region=region, min_length=int(min_length),
+                       max_gap=int(max_gap), orientation=str(orientation))
+    return {"count": len(lines), "lines": lines}
+
+
+def _find_grid(min_length: Any = 120, tol: Any = 10,
+               region: Any = None) -> Dict[str, Any]:
+    """Adapter: recover a table grid (rows / cols / cells) from screen lines."""
+    import json
+    from je_auto_control.utils.edge_lines import find_grid
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    return find_grid(region=region, min_length=int(min_length), tol=int(tol))
+
+
+def _find_separators(axis: str = "horizontal", min_length: Any = 120, tol: Any = 10,
+                     region: Any = None) -> Dict[str, Any]:
+    """Adapter: coordinates of long divider lines along an axis."""
+    import json
+    from je_auto_control.utils.edge_lines import find_separators
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    coords = find_separators(region=region, axis=str(axis),
+                             min_length=int(min_length), tol=int(tol))
+    return {"count": len(coords), "axis": str(axis), "coordinates": coords}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5297,6 +5331,9 @@ class Executor:
             "AC_dominant_hue_regions": _dominant_hue_regions,
             "AC_find_text_regions": _find_text_regions,
             "AC_find_text_lines": _find_text_lines,
+            "AC_find_lines": _find_lines,
+            "AC_find_grid": _find_grid,
+            "AC_find_separators": _find_separators,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

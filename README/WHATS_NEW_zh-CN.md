@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 线条 / 网格 / 分隔线检测(Hough)
+
+从原始像素找出表格网格线与 UI 分隔线。完整参考:[`docs/source/Zh/doc/new_features/v141_features_doc.rst`](../docs/source/Zh/doc/new_features/v141_features_doc.rst)。
+
+- **`find_lines` / `find_grid` / `find_separators`**(`AC_find_lines`、`AC_find_grid`、`AC_find_separators`):`grid_locator` 分群*已找到*的框、`shape_locator` 找封闭矩形——两者都无法从像素找出表格网格线或分隔线。Canny + 概率 Hough 检测直线段(分类水平/垂直/斜向),`find_grid` 还原 `{rows, cols, cells}` 让你定址「第 3 行、第 2 列」,`find_separators` 返回长分隔线坐标。可注入 haystack → 无头可测;OpenCV 核心(`cv2.HoughLinesP`)。
+
 ## 本次更新 (2026-06-23) — 免模型文字区检测(MSER)
 
 不跑 OCR 也能找出画面上文字的位置。完整参考:[`docs/source/Zh/doc/new_features/v140_features_doc.rst`](../docs/source/Zh/doc/new_features/v140_features_doc.rst)。

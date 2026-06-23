@@ -438,6 +438,40 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Locate horizontal text lines without OCR.",
     ))
     specs.append(CommandSpec(
+        "AC_find_lines", "Image", "Find Lines (Hough)",
+        fields=(
+            FieldSpec("min_length", FieldType.INT, optional=True, default=80),
+            FieldSpec("max_gap", FieldType.INT, optional=True, default=10),
+            FieldSpec("orientation", FieldType.ENUM, optional=True, default="any",
+                      choices=("any", "horizontal", "vertical", "diagonal")),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Detect straight line segments on raw pixels.",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_grid", "Image", "Find Table Grid",
+        fields=(
+            FieldSpec("min_length", FieldType.INT, optional=True, default=120),
+            FieldSpec("tol", FieldType.INT, optional=True, default=10),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Recover a table's rows / columns / cells from its lines.",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_separators", "Image", "Find Separator Lines",
+        fields=(
+            FieldSpec("axis", FieldType.ENUM, optional=True, default="horizontal",
+                      choices=("horizontal", "vertical")),
+            FieldSpec("min_length", FieldType.INT, optional=True, default=120),
+            FieldSpec("tol", FieldType.INT, optional=True, default=10),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Coordinates of long divider lines along an axis.",
+    ))
+    specs.append(CommandSpec(
         "AC_fuse_elements", "Image", "Fuse Element Boxes",
         fields=(
             FieldSpec("ocr", FieldType.STRING, optional=True,

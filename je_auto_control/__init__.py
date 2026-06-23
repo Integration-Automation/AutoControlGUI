@@ -324,6 +324,10 @@ from je_auto_control.utils.hsv_segment import (
 from je_auto_control.utils.text_regions import (
     find_text_lines, find_text_regions,
 )
+# Line / grid / separator detection on raw pixels (Hough transform)
+from je_auto_control.utils.edge_lines import (
+    find_grid, find_lines, find_separators,
+)
 # CI workflow annotations (GitHub Actions)
 from je_auto_control.utils.ci_annotations import (
     emit_annotations, format_annotation,
@@ -1162,6 +1166,9 @@ __all__ = [
     "dominant_hue_regions",
     "find_text_regions",
     "find_text_lines",
+    "find_lines",
+    "find_grid",
+    "find_separators",
     "emit_annotations", "format_annotation",
     "ClipboardHistory", "default_clipboard_history",
     "analyze_heal_log", "heal_stats", "scan_secrets",
