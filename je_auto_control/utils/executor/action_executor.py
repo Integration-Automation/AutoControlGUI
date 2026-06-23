@@ -3829,6 +3829,37 @@ def _cua_command(payload: Any, source: str = "canonical") -> Dict[str, Any]:
     return {"canonical": canonical, "command": to_ac_command(canonical)}
 
 
+def _serialize_observation(elements: Any, viewport: Any = None,
+                           max_elements: Any = 80) -> Dict[str, Any]:
+    """Adapter: render an indexed a11y text observation from element dicts."""
+    import json
+    from je_auto_control.utils.observation import (observation_index,
+                                                   serialize_observation)
+    if isinstance(elements, str):
+        elements = json.loads(elements)
+    if isinstance(viewport, str):
+        viewport = json.loads(viewport) if viewport.strip() else None
+    text = serialize_observation(list(elements), viewport=viewport,
+                                 max_elements=int(max_elements))
+    indexed = observation_index(list(elements), viewport=viewport,
+                                max_elements=int(max_elements))
+    return {"observation": text, "count": len(indexed)}
+
+
+def _observation_index(elements: Any, viewport: Any = None,
+                       max_elements: Any = 80) -> Dict[str, Any]:
+    """Adapter: the on-screen elements in reading order, capped, each indexed."""
+    import json
+    from je_auto_control.utils.observation import observation_index
+    if isinstance(elements, str):
+        elements = json.loads(elements)
+    if isinstance(viewport, str):
+        viewport = json.loads(viewport) if viewport.strip() else None
+    indexed = observation_index(list(elements), viewport=viewport,
+                                max_elements=int(max_elements))
+    return {"count": len(indexed), "elements": indexed}
+
+
 def _with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
     """Adapter: run nested actions while modifier keys are held down."""
     import json
@@ -5584,6 +5615,8 @@ class Executor:
             "AC_get_client_rect": _get_client_rect,
             "AC_client_point": _client_point,
             "AC_cua_command": _cua_command,
+            "AC_serialize_observation": _serialize_observation,
+            "AC_observation_index": _observation_index,
             "AC_tile_rect": _tile_rect,
             "AC_grid_rects": _grid_rects,
             "AC_cascade_rects": _cascade_rects,

@@ -2309,6 +2309,17 @@ def cua_command(payload, source="canonical"):
     return _cua_command(payload, source)
 
 
+def serialize_observation(elements, viewport=None, max_elements=80):
+    from je_auto_control.utils.executor.action_executor import (
+        _serialize_observation)
+    return _serialize_observation(elements, viewport, max_elements)
+
+
+def observation_index(elements, viewport=None, max_elements=80):
+    from je_auto_control.utils.executor.action_executor import _observation_index
+    return _observation_index(elements, viewport, max_elements)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

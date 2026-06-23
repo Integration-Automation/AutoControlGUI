@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Token-Budgeted A11y Text Observation
+
+Turn the a11y tree into an indexed text block a VLM can act on. Full reference: [`docs/source/Eng/doc/new_features/v152_features_doc.rst`](docs/source/Eng/doc/new_features/v152_features_doc.rst).
+
+- **`serialize_observation` / `observation_index` / `flatten_tree`** (`AC_serialize_observation`, `AC_observation_index`): `describe_screen` gives role *counts* + a flat label list — no stable index, no `[12] button "Submit" @(x,y)` lines, no viewport clip, no token budget. This flattens a (nested) element tree to interactive-only, clips to the viewport, orders reading-style, caps at `max_elements`, assigns a stable `index`, and renders the lines a model acts on ("click [12]"). Pure-stdlib over element dicts; pairs with `fuse_elements`/`set_of_marks`. Headless-testable.
+
 ## What's new (2026-06-23) — Canonical Computer-Use Action Schema
 
 Bridge Anthropic / OpenAI agent actions to AutoControl commands. Full reference: [`docs/source/Eng/doc/new_features/v151_features_doc.rst`](docs/source/Eng/doc/new_features/v151_features_doc.rst).

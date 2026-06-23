@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 符记预算内的无障碍文字观测
+
+把无障碍树转成 VLM 可操作的已编号文字区块。完整参考:[`docs/source/Zh/doc/new_features/v152_features_doc.rst`](../docs/source/Zh/doc/new_features/v152_features_doc.rst)。
+
+- **`serialize_observation` / `observation_index` / `flatten_tree`**(`AC_serialize_observation`、`AC_observation_index`):`describe_screen` 给角色*数量* + 平面标签列表——没有稳定索引、没有 `[12] button "Submit" @(x,y)` 行、没有视口裁切、没有符记预算。本功能把(嵌套)元素树扁平化为仅互动项、裁切到视口、依阅读顺序排序、上限 `max_elements`、指派稳定 `index`,并渲染模型可操作的行(「click [12]」)。纯标准库,作用于元素字典;与 `fuse_elements`/`set_of_marks` 搭配。可无头测试。
+
 ## 本次更新 (2026-06-23) — 标准化 Computer-Use 动作结构
 
 把 Anthropic / OpenAI agent 动作桥接到 AutoControl 命令。完整参考:[`docs/source/Zh/doc/new_features/v151_features_doc.rst`](../docs/source/Zh/doc/new_features/v151_features_doc.rst)。
