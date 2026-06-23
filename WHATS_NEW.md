@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Auto-Thresholded Template Matching (Otsu on the Score Map)
+
+No more hand-tuned `min_score` — derive the match threshold from the score map. Full reference: [`docs/source/Eng/doc/new_features/v164_features_doc.rst`](docs/source/Eng/doc/new_features/v164_features_doc.rst).
+
+- **`match_auto` / `auto_threshold`** (`AC_match_auto`, `AC_auto_threshold`): every `match_template_all` call forces you to guess `min_score` (too low floods NMS, too high drops re-themed targets, and it differs per asset). This runs Otsu on the *correlation score histogram* to find the valley between background correlation and real matches, returns that cut-off plus a *separability* score (near 0 = unimodal, no clear match → don't trust it). `match_auto` returns one peak per above-threshold region (via `connected_boxes`, avoiding duplicate hits on a wide peak), clamped by a `floor`. Reuses the new `visual_match._score_map`; injectable `haystack`; no `PySide6`.
+
 ## What's new (2026-06-24) — Token-Budgeted Observation Delta (What Changed)
 
 Tell an agent *what changed* since the last step, not the whole screen again. Full reference: [`docs/source/Eng/doc/new_features/v163_features_doc.rst`](docs/source/Eng/doc/new_features/v163_features_doc.rst).

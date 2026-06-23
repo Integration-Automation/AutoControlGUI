@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 自动门槛模板匹配(对分数图做 Otsu)
+
+不再手调 `min_score`——由分数图推导匹配门槛。完整参考:[`docs/source/Zh/doc/new_features/v164_features_doc.rst`](../docs/source/Zh/doc/new_features/v164_features_doc.rst)。
+
+- **`match_auto` / `auto_threshold`**(`AC_match_auto`、`AC_auto_threshold`):每次 `match_template_all` 都迫使你猜 `min_score`(太低充满 NMS 噪声、太高漏掉换肤目标,且因素材而异)。本功能对*相关性分数直方图*套用 Otsu,找出背景相关与真正匹配之间的谷,返回该门槛加上 *separability* 分离度(接近 0 = 单峰、无明确匹配 → 不要信任)。`match_auto` 每个过门槛区域只返回单一峰(通过 `connected_boxes`,避免宽峰上的重复命中),并以 `floor` 夹住。重用新增的 `visual_match._score_map`;`haystack` 可注入;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 令牌预算化的观测增量(变更了什么)
 
 告诉代理*变更了什么*,而非再次整个屏幕。完整参考:[`docs/source/Zh/doc/new_features/v163_features_doc.rst`](../docs/source/Zh/doc/new_features/v163_features_doc.rst)。

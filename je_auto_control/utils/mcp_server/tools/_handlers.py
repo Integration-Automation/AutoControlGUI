@@ -2115,6 +2115,17 @@ def match_with_trust(template, min_score=0.0, scales=None, ambiguous_ratio=0.9,
                              region, method)
 
 
+def auto_threshold(template, region=None, method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _auto_threshold
+    return _auto_threshold(template, region, method)
+
+
+def match_auto(template, floor=0.5, max_results=20, region=None,
+               method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _match_auto
+    return _match_auto(template, floor, max_results, region, method)
+
+
 def grid_cells(rows, cols, region=None):
     from je_auto_control.utils.executor.action_executor import _grid_cells
     return _grid_cells(rows, cols, region)

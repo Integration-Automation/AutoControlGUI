@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 自動門檻樣板比對(對分數圖做 Otsu)
+
+不再手調 `min_score`——由分數圖推導比對門檻。完整參考:[`docs/source/Zh/doc/new_features/v164_features_doc.rst`](../docs/source/Zh/doc/new_features/v164_features_doc.rst)。
+
+- **`match_auto` / `auto_threshold`**(`AC_match_auto`、`AC_auto_threshold`):每次 `match_template_all` 都迫使你猜 `min_score`(太低充滿 NMS 雜訊、太高漏掉換膚目標,且因素材而異)。本功能對*相關性分數直方圖*套用 Otsu,找出背景相關與真正匹配之間的谷,回傳該門檻加上 *separability* 分離度(接近 0 = 單峰、無明確匹配 → 不要信任)。`match_auto` 每個過門檻區域只回傳單一峰(透過 `connected_boxes`,避免寬峰上的重複命中),並以 `floor` 夾住。重用新增的 `visual_match._score_map`;`haystack` 可注入;不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 權杖預算化的觀測差異(變更了什麼)
 
 告訴代理*變更了什麼*,而非再次整個畫面。完整參考:[`docs/source/Zh/doc/new_features/v163_features_doc.rst`](../docs/source/Zh/doc/new_features/v163_features_doc.rst)。

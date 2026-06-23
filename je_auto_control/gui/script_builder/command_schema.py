@@ -351,6 +351,27 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Match a template and flag if it is ambiguous (duplicate peak).",
     ))
     specs.append(CommandSpec(
+        "AC_match_auto", "Image", "Match Template (auto-threshold)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("floor", FieldType.FLOAT, optional=True, default=0.5,
+                      min_value=0.0, max_value=1.0),
+            FieldSpec("max_results", FieldType.INT, optional=True, default=20),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Find a template with an Otsu auto-threshold (no min_score).",
+    ))
+    specs.append(CommandSpec(
+        "AC_auto_threshold", "Image", "Auto Threshold (Otsu on scores)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Derive a match threshold + separability from the score map.",
+    ))
+    specs.append(CommandSpec(
         "AC_grid_cells", "Image", "Grid Cells (coarse grounding)",
         fields=(
             FieldSpec("rows", FieldType.INT, optional=True, default=3),

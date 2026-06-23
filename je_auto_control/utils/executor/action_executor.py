@@ -3339,6 +3339,29 @@ def _match_with_trust(template: str, min_score: Any = 0.0, scales: Any = None,
             "match": match.to_dict() if match else None}
 
 
+def _auto_threshold(template: str, region: Any = None,
+                    method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: Otsu-derived accept threshold for a template (+ separability)."""
+    import json
+    from je_auto_control.utils.match_autothresh import auto_threshold
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    info = auto_threshold(template, region=region, method=method)
+    return {"found": info is not None, "info": info}
+
+
+def _match_auto(template: str, floor: Any = 0.5, max_results: Any = 20,
+                region: Any = None, method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: matches above the auto-derived (Otsu) threshold, one per region."""
+    import json
+    from je_auto_control.utils.match_autothresh import match_auto
+    if isinstance(region, str):
+        region = json.loads(region) if region.strip() else None
+    matches = match_auto(template, region=region, floor=float(floor),
+                         max_results=int(max_results), method=method)
+    return {"count": len(matches), "matches": [m.to_dict() for m in matches]}
+
+
 def _region_arg(value: Any) -> Optional[List[int]]:
     """Coerce a JSON-string / list region arg into a list of ints, or None."""
     import json
@@ -5829,6 +5852,8 @@ class Executor:
             "AC_match_rotated": _match_rotated,
             "AC_match_rotated_all": _match_rotated_all,
             "AC_match_with_trust": _match_with_trust,
+            "AC_auto_threshold": _auto_threshold,
+            "AC_match_auto": _match_auto,
             "AC_grid_cells": _grid_cells,
             "AC_cell_for_point": _cell_for_point,
             "AC_point_for_cell": _point_for_cell,
