@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-23) — 可串接 / 可过滤的候选定位器
+
+用链式调用细化已定位的元素:`.within(panel).filter(has_text="Delete").nth(1)`。完整参考:[`docs/source/Zh/doc/new_features/v143_features_doc.rst`](../docs/source/Zh/doc/new_features/v143_features_doc.rst)。
+
+- **`from_boxes` / `Candidates`**(`AC_locate_chain`):`anchor_locator` 是单一关系、`grid_locator` 是单元格——两者都不支援对候选集合做可组合细化(Selenium-4 / Playwright 的链式定位惯用法)。本功能是对来自*任何*来源(模板 / OCR / a11y / `fuse_elements`)的框做纯后置过滤:`within`(区域裁切)、`filter`(`has_text` / `near` / 面积 / predicate)、`sort_reading`、`nth` / `first` / `last`、`resolve()` / `center()`。每个方法返回新的 `Candidates`(不变动)→ 完全无头可测。执行器命令套用 JSON `ops` 列表。
+
 ## 本次更新 (2026-06-23) — 重试式数值断言(expect.poll)
 
 重试*任意*值直到符合,不只限内建检查。完整参考:[`docs/source/Zh/doc/new_features/v142_features_doc.rst`](../docs/source/Zh/doc/new_features/v142_features_doc.rst)。

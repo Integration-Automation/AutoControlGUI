@@ -2232,6 +2232,11 @@ def expect_poll(action, key=None, op="truthy", expected=None, timeout_s=5.0,
     return _expect_poll(action, key, op, expected, timeout_s, interval_s)
 
 
+def locate_chain(boxes, ops=None):
+    from je_auto_control.utils.executor.action_executor import _locate_chain
+    return _locate_chain(boxes, ops)
+
+
 def detect_drift(reference, current, threshold=0.25, bins=10):
     from je_auto_control.utils.executor.action_executor import _detect_drift
     return _detect_drift(reference, current, threshold, bins)

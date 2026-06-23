@@ -3041,6 +3041,25 @@ def expect_poll_tools() -> List[MCPTool]:
     ]
 
 
+def locator_chain_tools() -> List[MCPTool]:
+    return [
+        MCPTool(
+            name="ac_locate_chain",
+            description=("Refine a set of element 'boxes' with a chain of 'ops' "
+                         "applied in order: {op:'within',region:[x,y,w,h]}, "
+                         "{op:'filter',has_text/near/min_area/max_area}, "
+                         "{op:'reading'}, {op:'nth',index}, {op:'first'}, "
+                         "{op:'last'}. Returns {count, boxes, center}."),
+            input_schema=schema({
+                "boxes": {"type": "array", "items": {"type": "object"}},
+                "ops": {"type": "array", "items": {"type": "object"}}},
+                required=["boxes"]),
+            handler=h.locate_chain,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
 def ssim_tools() -> List[MCPTool]:
     return [
         MCPTool(
@@ -6546,7 +6565,7 @@ ALL_FACTORIES = (
     window_layout_tools, window_arrange_tools, preprocess_tools,
     monitor_layout_tools, actionability_tools, element_parse_tools,
     hsv_segment_tools, text_regions_tools, edge_lines_tools, expect_poll_tools,
-    plugin_sdk_tools, governance_tools,
+    locator_chain_tools, plugin_sdk_tools, governance_tools,
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
