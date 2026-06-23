@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-23) — Window Z-Order (Always-On-Top / Front / Back)
+
+Pin a window on top, raise it, or push it behind. Full reference: [`docs/source/Eng/doc/new_features/v147_features_doc.rst`](docs/source/Eng/doc/new_features/v147_features_doc.rst).
+
+- **`set_topmost` / `bring_to_front` / `send_to_back` / `plan_zorder`** (`AC_set_topmost`, `AC_bring_to_front`, `AC_send_to_back`): the raw `set_window_position` existed but wasn't in the facade, had no title wrapper and no topmost semantics — the standard RPA "always-on-top" was missing. `plan_zorder` is a pure action→`SetWindowPos` constant lookup (headless-testable); the title-based setters apply it through an injectable driver (the `snap_window` seam pattern), Win32 by default. 
+
 ## What's new (2026-06-23) — Localized Motion / Activity Detection
 
 Find which sub-regions are animating between two frames. Full reference: [`docs/source/Eng/doc/new_features/v146_features_doc.rst`](docs/source/Eng/doc/new_features/v146_features_doc.rst).
