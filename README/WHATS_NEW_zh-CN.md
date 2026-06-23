@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 逐步评审特征 + 规则式步骤评分
+
+把为代理步骤评分所需的证据打包,并内建规则式评分器。完整参考:[`docs/source/Zh/doc/new_features/v177_features_doc.rst`](../docs/source/Zh/doc/new_features/v177_features_doc.rst)。
+
+- **`build_critic_record` / `score_step_rule_based` / `to_judge_prompt`**(`AC_build_critic_record`、`AC_score_step`):`trajectory_eval` 对整条轨迹评分而无逐步证据;`agent_trace` 发出 span 而非质量;`agent_replay` 保存步骤却不评分。本功能把 `action_effect` + `observation_delta` + `postcondition` 组合成单一逐步记录,接着 `score_step_rule_based` 给出确定性的 `{outcome, process_score, reasons}`(不需模型),`to_judge_prompt` 把它渲染给可选的 LLM-as-judge。纯标准库聚合器;不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 标题与正文分类 + 文档大纲
 
 以高度区分标题与正文,并建立文档大纲。完整参考:[`docs/source/Zh/doc/new_features/v176_features_doc.rst`](../docs/source/Zh/doc/new_features/v176_features_doc.rst)。
