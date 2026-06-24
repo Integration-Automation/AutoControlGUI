@@ -2516,6 +2516,44 @@ def _cell_by_header(row: Any, column_header: str, name: Optional[str] = None,
     return {"found": value is not None, "value": value}
 
 
+def _move_element(x: Any, y: Any, name: Optional[str] = None,
+                  role: Optional[str] = None, app_name: Optional[str] = None,
+                  automation_id: Optional[str] = None) -> bool:
+    """Adapter: move a UIA element to (x, y) (TransformPattern)."""
+    from je_auto_control.utils.transform_window import move_element
+    return move_element(float(x), float(y), name=name, role=role,
+                        app_name=app_name, automation_id=automation_id)
+
+
+def _resize_element(width: Any, height: Any, name: Optional[str] = None,
+                    role: Optional[str] = None, app_name: Optional[str] = None,
+                    automation_id: Optional[str] = None) -> bool:
+    """Adapter: resize a UIA element (TransformPattern)."""
+    from je_auto_control.utils.transform_window import resize_element
+    return resize_element(float(width), float(height), name=name, role=role,
+                          app_name=app_name, automation_id=automation_id)
+
+
+def _set_window_state(state: str, name: Optional[str] = None,
+                      role: Optional[str] = None, app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None) -> bool:
+    """Adapter: set a window's visual state normal/maximized/minimized."""
+    from je_auto_control.utils.transform_window import set_window_state
+    return set_window_state(str(state), name=name, role=role, app_name=app_name,
+                            automation_id=automation_id)
+
+
+def _window_interaction_state(name: Optional[str] = None,
+                              role: Optional[str] = None,
+                              app_name: Optional[str] = None,
+                              automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: a window's interaction state (ready/blocked/not_responding)."""
+    from je_auto_control.utils.transform_window import window_interaction_state
+    return {"state": window_interaction_state(name=name, role=role,
+                                              app_name=app_name,
+                                              automation_id=automation_id)}
+
+
 def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
                       app_name: Optional[str] = None,
                       automation_id: Optional[str] = None) -> Dict[str, Any]:
@@ -6464,6 +6502,10 @@ class Executor:
             "AC_table_headers": _table_headers,
             "AC_table_cell": _table_cell,
             "AC_cell_by_header": _cell_by_header,
+            "AC_move_element": _move_element,
+            "AC_resize_element": _resize_element,
+            "AC_set_window_state": _set_window_state,
+            "AC_window_interaction_state": _window_interaction_state,
             "AC_get_control_text": _get_control_text,
             "AC_get_selected_text": _get_selected_text,
             "AC_get_visible_text": _get_visible_text,

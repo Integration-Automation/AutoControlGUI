@@ -34,8 +34,15 @@ _UIA_ITEMCONTAINER_PATTERN_ID = 10019
 _UIA_VIRTUALIZEDITEM_PATTERN_ID = 10020
 _UIA_TABLE_PATTERN_ID = 10012
 _UIA_GRIDITEM_PATTERN_ID = 10007
+_UIA_TRANSFORM_PATTERN_ID = 10016
+_UIA_WINDOW_PATTERN_ID = 10009
 _UIA_AUTOMATIONID_PROPERTY = 30011
 _EXPAND_STATES = {0: "collapsed", 1: "expanded", 2: "partial", 3: "leaf"}
+_WINDOW_VISUAL_STATES = {"normal": 0, "maximized": 1, "minimized": 2}
+_WINDOW_INTERACTION_STATES = {
+    0: "running", 1: "closing", 2: "ready", 3: "blocked_by_modal",
+    4: "not_responding",
+}
 
 
 def _is_available() -> bool:
@@ -306,6 +313,43 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         if not raw:
             return None
         return _read_properties(raw)
+
+    def move_element(self, x=0.0, y=0.0, name=None, role=None, app_name=None,
+                     automation_id=None):
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id, _UIA_TRANSFORM_PATTERN_ID,
+            "IUIAutomationTransformPattern",
+            lambda pattern: pattern.Move(float(x), float(y)))
+
+    def resize_element(self, width=0.0, height=0.0, name=None, role=None,
+                       app_name=None, automation_id=None):
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id, _UIA_TRANSFORM_PATTERN_ID,
+            "IUIAutomationTransformPattern",
+            lambda pattern: pattern.Resize(float(width), float(height)))
+
+    def set_window_state(self, state="normal", name=None, role=None,
+                         app_name=None, automation_id=None):
+        visual = _WINDOW_VISUAL_STATES.get(str(state).lower())
+        if visual is None:
+            return False
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id, _UIA_WINDOW_PATTERN_ID,
+            "IUIAutomationWindowPattern",
+            lambda pattern: pattern.SetWindowVisualState(visual))
+
+    def window_interaction_state(self, name=None, role=None, app_name=None,
+                                 automation_id=None) -> Optional[str]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_WINDOW_PATTERN_ID,
+                                "IUIAutomationWindowPattern") if raw else None
+        if pattern is None:
+            return None
+        try:
+            return _WINDOW_INTERACTION_STATES.get(
+                int(pattern.CurrentWindowInteractionState))
+        except (OSError, AttributeError, ValueError, TypeError):
+            return None
 
     def get_table_headers(self, name=None, role=None, app_name=None,
                           automation_id=None) -> Optional[Dict[str, Any]]:

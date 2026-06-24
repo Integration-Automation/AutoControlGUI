@@ -1644,6 +1644,29 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Read the cell at (row, named column) — assert by header.",
     ))
     specs.append(CommandSpec(
+        "AC_move_element", "Native UI", "Move Element (Transform)",
+        fields=(FieldSpec("x", FieldType.FLOAT),
+                FieldSpec("y", FieldType.FLOAT)) + fields,
+        description="Move a UIA element to (x, y) (TransformPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_resize_element", "Native UI", "Resize Element (Transform)",
+        fields=(FieldSpec("width", FieldType.FLOAT),
+                FieldSpec("height", FieldType.FLOAT)) + fields,
+        description="Resize a UIA element (TransformPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_window_state", "Native UI", "Set Window State",
+        fields=(FieldSpec("state", FieldType.ENUM, default="normal",
+                          choices=("normal", "maximized", "minimized")),) + fields,
+        description="Minimize / maximize / restore a window (WindowPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_window_interaction_state", "Native UI", "Window Interaction State",
+        fields=fields,
+        description="Read window readiness (ready/blocked_by_modal/...).",
+    ))
+    specs.append(CommandSpec(
         "AC_get_control_text", "Native UI", "Get Control Text",
         fields=fields,
         description="Read full text via TextPattern (multiline / document safe).",

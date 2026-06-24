@@ -181,6 +181,38 @@ class AccessibilityBackend:
         row_span, column_span}`` (GridPattern.GetItem + GridItemPattern)."""
         self._unsupported("get_grid_cell")
 
+    # --- transform + window patterns (UIA-element-level) --------------------
+
+    def move_element(self, x: float = 0.0, y: float = 0.0,
+                     name: Optional[str] = None, role: Optional[str] = None,
+                     app_name: Optional[str] = None,
+                     automation_id: Optional[str] = None) -> bool:
+        """Move the matched element to ``(x, y)`` (TransformPattern); True on success."""
+        self._unsupported("move_element")
+
+    def resize_element(self, width: float = 0.0, height: float = 0.0,
+                       name: Optional[str] = None, role: Optional[str] = None,
+                       app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None) -> bool:
+        """Resize the matched element (TransformPattern); True on success."""
+        self._unsupported("resize_element")
+
+    def set_window_state(self, state: str = "normal",
+                         name: Optional[str] = None, role: Optional[str] = None,
+                         app_name: Optional[str] = None,
+                         automation_id: Optional[str] = None) -> bool:
+        """Set a window's visual state ``normal`` / ``maximized`` / ``minimized``."""
+        self._unsupported("set_window_state")
+
+    def window_interaction_state(self, name: Optional[str] = None,
+                                 role: Optional[str] = None,
+                                 app_name: Optional[str] = None,
+                                 automation_id: Optional[str] = None,
+                                 ) -> Optional[str]:
+        """Return a window's interaction state — ``ready`` / ``blocked_by_modal`` /
+        ``not_responding`` / ``running`` / ``closing`` (WindowPattern), or None."""
+        self._unsupported("window_interaction_state")
+
     def _unsupported(self, operation: str):
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(

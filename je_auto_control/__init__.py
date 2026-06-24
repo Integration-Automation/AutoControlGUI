@@ -76,6 +76,10 @@ from je_auto_control.utils.ax_props import (
 from je_auto_control.utils.table_pattern import (
     cell_by_header, table_cell, table_headers,
 )
+# Move/resize UIA elements + window state (Transform + Window patterns)
+from je_auto_control.utils.transform_window import (
+    move_element, resize_element, set_window_state, window_interaction_state,
+)
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1679,6 +1683,8 @@ __all__ = [
     "realize_item",
     "get_element_properties", "is_element_enabled",
     "table_headers", "table_cell", "cell_by_header",
+    "move_element", "resize_element", "set_window_state",
+    "window_interaction_state",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",
