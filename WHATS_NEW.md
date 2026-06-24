@@ -1,5 +1,29 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Per-Run Step Timeline (waterfall + bottleneck steps)
+
+Read why *this* run was slow — a step waterfall and its bottlenecks. Full reference: [`docs/source/Eng/doc/new_features/v194_features_doc.rst`](docs/source/Eng/doc/new_features/v194_features_doc.rst).
+
+- **`build_timeline` / `critical_steps`** (`AC_build_timeline`, `AC_critical_steps`): the action profiler aggregates timings by step *name* across runs — useless for "why was *this* run slow". This turns one run's ordered steps into a waterfall (each step's offset, duration, and `pct` share of the total) with the `bottleneck` step and a `parallelism` ratio (`> 1` when steps overlap via explicit `start` times); `critical_steps` ranks the dominant steps to optimise. A step is any `{name, duration, start?}` dict. Pure stdlib. No `PySide6`.
+
+## What's new (2026-06-25) — Flaky-Test Co-Failure Clustering
+
+Find the tests that flake *together* — and the shared root cause behind them. Full reference: [`docs/source/Eng/doc/new_features/v193_features_doc.rst`](docs/source/Eng/doc/new_features/v193_features_doc.rst).
+
+- **`cofailure_pairs` / `failure_clusters`** (`AC_cofailure_pairs`, `AC_failure_clusters`): flaky tests are rarely independent — a wobbly fixture or noisy dependency makes a *group* fail in the same runs (~75% of flaky tests cluster). Ranking tests one-by-one by flip rate misses that. This measures how often each pair of tests fails in the *same* runs (Jaccard over their failing-run sets) and groups tests above a threshold into connected clusters with a cohesion score — so you chase one root cause instead of N symptoms. Input is a list of runs, each the test names that failed in it. Pure stdlib. No `PySide6`.
+
+## What's new (2026-06-25) — Run-Trace Diff (what changed between two executions)
+
+See exactly what changed between a passing run and a failing one. Full reference: [`docs/source/Eng/doc/new_features/v192_features_doc.rst`](docs/source/Eng/doc/new_features/v192_features_doc.rst).
+
+- **`diff_runs` / `summarize_run_diff`** (`AC_diff_runs`): a run history says a run *failed* but not *what changed* from the run that passed. This aligns two step sequences with a longest-common-subsequence walk (so an inserted/removed step shifts the rest into place instead of mis-pairing everything) and classifies the differences: **added**/**removed** steps, **status_flips** (an aligned step that changed status — with the new failure's `failure_signature` when it carries an error), and **timing_regressions** (a step that got `regress_factor`× slower). `summarize_run_diff` renders a one-line summary. Pure stdlib over lists of `{name,status,duration,error}` step dicts. No `PySide6`.
+
+## What's new (2026-06-25) — Stable Failure Signatures
+
+Match the *same kind* of failure across runs, despite differing paths and ids. Full reference: [`docs/source/Eng/doc/new_features/v191_features_doc.rst`](docs/source/Eng/doc/new_features/v191_features_doc.rst).
+
+- **`normalize_error` / `failure_signature` / `group_failures`** (`AC_failure_signature`, `AC_group_failures`): two runs that failed the same way rarely have byte-identical error text — paths, line numbers, addresses, ids and timestamps differ every time — which defeats "is this the same failure?" and "which tests fail together?". This strips the variable parts of an error to a canonical form and hashes it (SHA-256), so the same kind of failure gets the same short signature across runs — the join key the rest of the test-robustness tools (run diffing, flake clustering) group on. `group_failures` buckets a list of errors by signature, most frequent first. Pure stdlib (`re` + `hashlib`). No `PySide6`.
+
 ## What's new (2026-06-24) — Visual Saliency (where to look — spectral-residual)
 
 Find the region that stands out, with no template / colour / text. Full reference: [`docs/source/Eng/doc/new_features/v190_features_doc.rst`](docs/source/Eng/doc/new_features/v190_features_doc.rst).

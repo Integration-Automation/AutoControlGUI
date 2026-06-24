@@ -7652,6 +7652,98 @@ def flakiness_tools() -> List[MCPTool]:
             handler=h.flaky_report,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_failure_signature",
+            description=("Normalise an error message (strip paths / addresses / "
+                         "line numbers / timestamps / ids) and hash it to a stable "
+                         "SHA-256 signature, so the same kind of failure matches "
+                         "across runs. Returns {signature, normalized}."),
+            input_schema=schema({"error": {"type": "string"},
+                                 "length": {"type": "integer"}},
+                                required=["error"]),
+            handler=h.failure_signature,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_group_failures",
+            description=("Group a list of error messages by failure signature, "
+                         "most frequent first: [{signature, normalized, count, "
+                         "examples}]."),
+            input_schema=schema({
+                "errors": {"type": "array", "items": {"type": "string"}}},
+                required=["errors"]),
+            handler=h.group_failures,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_diff_runs",
+            description=("Diff two run step-traces (lists of {name,status,"
+                         "duration,error}) — LCS-aligned so inserts shift rather "
+                         "than mis-pair. Returns {added, removed, status_flips "
+                         "(with failure signature), timing_regressions, aligned, "
+                         "identical, summary}. 'regress_factor' = slowdown ratio."),
+            input_schema=schema({
+                "before": {"type": "array", "items": {"type": "object"}},
+                "after": {"type": "array", "items": {"type": "object"}},
+                "key": {"type": "string"},
+                "regress_factor": {"type": "number"}},
+                required=["before", "after"]),
+            handler=h.diff_runs,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_failure_clusters",
+            description=("Cluster tests that flake TOGETHER: 'runs' is a list of "
+                         "runs, each the list of test names that failed in that "
+                         "run. Groups tests whose co-failure Jaccard >= "
+                         "'threshold'. Returns {clusters:[{tests,size,cohesion}], "
+                         "count} — chase one root cause, not N symptoms."),
+            input_schema=schema({
+                "runs": {"type": "array",
+                         "items": {"type": "array", "items": {"type": "string"}}},
+                "threshold": {"type": "number"},
+                "min_size": {"type": "integer"}},
+                required=["runs"]),
+            handler=h.failure_clusters,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_cofailure_pairs",
+            description=("Test pairs that fail together above a Jaccard "
+                         "'threshold' over shared failing runs: "
+                         "{pairs:[{tests,jaccard,co_failures}], count}."),
+            input_schema=schema({
+                "runs": {"type": "array",
+                         "items": {"type": "array", "items": {"type": "string"}}},
+                "threshold": {"type": "number"}},
+                required=["runs"]),
+            handler=h.cofailure_pairs,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_build_timeline",
+            description=("Per-run step waterfall from 'steps' (list of {name,"
+                         "duration,start?}): {steps:[{name,offset,duration,pct}], "
+                         "total, busy, bottleneck, parallelism}. Reads ONE slow "
+                         "run, not a per-name average."),
+            input_schema=schema({
+                "steps": {"type": "array", "items": {"type": "object"}}},
+                required=["steps"]),
+            handler=h.build_timeline,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_critical_steps",
+            description=("The 'top' steps that dominate a run's time (bottlenecks "
+                         "to optimise): {steps:[{name,duration,pct}]}, longest "
+                         "first."),
+            input_schema=schema({
+                "steps": {"type": "array", "items": {"type": "object"}},
+                "top": {"type": "integer"}},
+                required=["steps"]),
+            handler=h.critical_steps,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

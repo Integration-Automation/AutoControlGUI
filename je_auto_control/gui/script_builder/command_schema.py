@@ -2709,6 +2709,68 @@ def _add_audit_specs(specs: List[CommandSpec]) -> None:
                     "locators).",
     ))
     specs.append(CommandSpec(
+        "AC_failure_signature", "Testing", "Failure Signature",
+        fields=(
+            FieldSpec("error", FieldType.STRING,
+                      placeholder="Timeout at C:\\app.py line 42 (0x7ff..)"),
+            FieldSpec("length", FieldType.INT, optional=True, default=12),
+        ),
+        description="Normalise + hash an error to a stable failure signature.",
+    ))
+    specs.append(CommandSpec(
+        "AC_group_failures", "Testing", "Group Failures by Signature",
+        fields=(FieldSpec("errors", FieldType.STRING,
+                          placeholder='["err one", "err two"]'),),
+        description="Group error messages by failure signature (most frequent).",
+    ))
+    specs.append(CommandSpec(
+        "AC_diff_runs", "Testing", "Diff Two Run Traces",
+        fields=(
+            FieldSpec("before", FieldType.STRING,
+                      placeholder='[{"name": "login", "status": "ok"}]'),
+            FieldSpec("after", FieldType.STRING,
+                      placeholder='[{"name": "login", "status": "error"}]'),
+            FieldSpec("key", FieldType.STRING, optional=True, default="name"),
+            FieldSpec("regress_factor", FieldType.FLOAT, optional=True,
+                      default=1.5),
+        ),
+        description="LCS-align two run step-traces: added/removed/flips/regress.",
+    ))
+    specs.append(CommandSpec(
+        "AC_failure_clusters", "Testing", "Cluster Co-Failing Tests",
+        fields=(
+            FieldSpec("runs", FieldType.STRING,
+                      placeholder='[["test_a", "test_b"], ["test_a", "test_b"]]'),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True, default=0.5),
+            FieldSpec("min_size", FieldType.INT, optional=True, default=2),
+        ),
+        description="Cluster tests that flake together (co-failure Jaccard).",
+    ))
+    specs.append(CommandSpec(
+        "AC_cofailure_pairs", "Testing", "Co-Failing Test Pairs",
+        fields=(
+            FieldSpec("runs", FieldType.STRING,
+                      placeholder='[["test_a", "test_b"]]'),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True, default=0.5),
+        ),
+        description="Test pairs that fail together above a Jaccard threshold.",
+    ))
+    specs.append(CommandSpec(
+        "AC_build_timeline", "Testing", "Step Timeline (waterfall)",
+        fields=(FieldSpec("steps", FieldType.STRING,
+                          placeholder='[{"name": "login", "duration": 1.2}]'),),
+        description="Per-run step waterfall: offsets, durations, bottleneck.",
+    ))
+    specs.append(CommandSpec(
+        "AC_critical_steps", "Testing", "Critical (Bottleneck) Steps",
+        fields=(
+            FieldSpec("steps", FieldType.STRING,
+                      placeholder='[{"name": "login", "duration": 1.2}]'),
+            FieldSpec("top", FieldType.INT, optional=True, default=3),
+        ),
+        description="The steps that dominate a run's time, longest first.",
+    ))
+    specs.append(CommandSpec(
         "AC_scan_secrets", "Tools", "Scan for Hardcoded Secrets",
         description="Scan 'data' (JSON view) for hardcoded secrets that "
                     "should use ${secrets.*}.",

@@ -2543,6 +2543,41 @@ def most_salient(source=None, region=None, size=64, threshold=None, min_area=4):
     return _most_salient(source, region, size, threshold, min_area)
 
 
+def failure_signature(error, length=12):
+    from je_auto_control.utils.executor.action_executor import _failure_signature
+    return _failure_signature(error, length)
+
+
+def group_failures(errors):
+    from je_auto_control.utils.executor.action_executor import _group_failures
+    return _group_failures(errors)
+
+
+def diff_runs(before, after, key="name", regress_factor=1.5):
+    from je_auto_control.utils.executor.action_executor import _diff_runs
+    return _diff_runs(before, after, key, regress_factor)
+
+
+def failure_clusters(runs, threshold=0.5, min_size=2):
+    from je_auto_control.utils.executor.action_executor import _failure_clusters
+    return _failure_clusters(runs, threshold, min_size)
+
+
+def cofailure_pairs(runs, threshold=0.5):
+    from je_auto_control.utils.executor.action_executor import _cofailure_pairs
+    return _cofailure_pairs(runs, threshold)
+
+
+def build_timeline(steps):
+    from je_auto_control.utils.executor.action_executor import _build_timeline
+    return _build_timeline(steps)
+
+
+def critical_steps(steps, top=3):
+    from je_auto_control.utils.executor.action_executor import _critical_steps
+    return _critical_steps(steps, top)
+
+
 def image_histogram(source=None, bins=32, space="hsv", region=None):
     from je_auto_control.utils.executor.action_executor import _image_histogram
     return _image_histogram(source, bins, space, region)
