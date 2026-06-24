@@ -7691,6 +7691,35 @@ def flakiness_tools() -> List[MCPTool]:
             handler=h.diff_runs,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_failure_clusters",
+            description=("Cluster tests that flake TOGETHER: 'runs' is a list of "
+                         "runs, each the list of test names that failed in that "
+                         "run. Groups tests whose co-failure Jaccard >= "
+                         "'threshold'. Returns {clusters:[{tests,size,cohesion}], "
+                         "count} — chase one root cause, not N symptoms."),
+            input_schema=schema({
+                "runs": {"type": "array",
+                         "items": {"type": "array", "items": {"type": "string"}}},
+                "threshold": {"type": "number"},
+                "min_size": {"type": "integer"}},
+                required=["runs"]),
+            handler=h.failure_clusters,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_cofailure_pairs",
+            description=("Test pairs that fail together above a Jaccard "
+                         "'threshold' over shared failing runs: "
+                         "{pairs:[{tests,jaccard,co_failures}], count}."),
+            input_schema=schema({
+                "runs": {"type": "array",
+                         "items": {"type": "array", "items": {"type": "string"}}},
+                "threshold": {"type": "number"}},
+                required=["runs"]),
+            handler=h.cofailure_pairs,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
