@@ -14,29 +14,37 @@ class _FakeBackend(backend_base.AccessibilityBackend):
     def __init__(self):
         self.calls = []
 
-    def expand(self, **kw):
-        self.calls.append(("expand", kw))
+    def expand(self, name=None, role=None, app_name=None, automation_id=None):
+        self.calls.append(("expand", {"name": name, "role": role,
+                                      "app_name": app_name,
+                                      "automation_id": automation_id}))
         return True
 
-    def collapse(self, **kw):
-        self.calls.append(("collapse", kw))
+    def collapse(self, name=None, role=None, app_name=None, automation_id=None):
+        self.calls.append(("collapse", {"name": name, "role": role,
+                                        "app_name": app_name,
+                                        "automation_id": automation_id}))
         return True
 
-    def expand_state(self, **kw):
+    def expand_state(self, name=None, role=None, app_name=None,
+                     automation_id=None):
         return "collapsed"
 
-    def select_item(self, **kw):
-        self.calls.append(("select", kw))
+    def select_item(self, name=None, role=None, app_name=None,
+                    automation_id=None):
+        self.calls.append(("select", name))
         return True
 
-    def get_range(self, **kw):
+    def get_range(self, name=None, role=None, app_name=None, automation_id=None):
         return {"value": 30.0, "minimum": 0.0, "maximum": 100.0}
 
-    def set_range_value(self, value, **kw):
+    def set_range_value(self, value, name=None, role=None, app_name=None,
+                        automation_id=None):
         self.calls.append(("set_range", value))
         return True
 
-    def scroll_into_view(self, **kw):
+    def scroll_into_view(self, name=None, role=None, app_name=None,
+                         automation_id=None):
         return True
 
 
