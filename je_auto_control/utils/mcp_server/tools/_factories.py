@@ -1189,6 +1189,37 @@ def a11y_control_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_table_headers",
+            description=("Read a native table's header labels via TablePattern: "
+                         "{found, headers:{columns:[...], rows:[...]}}."),
+            input_schema=schema(dict(_M)),
+            handler=h.table_headers,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_table_cell",
+            description=("Read the cell at ('row','column') of a native grid: "
+                         "{found, cell:{value,row,column,row_span,column_span}} "
+                         "(GridPattern.GetItem + GridItemPattern)."),
+            input_schema=schema({"row": {"type": "integer"},
+                                 "column": {"type": "integer"}, **_M},
+                                required=["row", "column"]),
+            handler=h.table_cell,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_cell_by_header",
+            description=("Read the cell at row 'row' in the column named "
+                         "'column_header' — assert 'the Status column of row 5 "
+                         "says Shipped' without guessing indices. Returns "
+                         "{found, value}."),
+            input_schema=schema({"row": {"type": "integer"},
+                                 "column_header": {"type": "string"}, **_M},
+                                required=["row", "column_header"]),
+            handler=h.cell_by_header,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_get_control_text",
             description=("Read a control's full text via TextPattern: "
                          "{text}. Works on multiline edits / RichEdit / document "

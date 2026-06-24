@@ -1627,6 +1627,23 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Read rich UIA props (enabled/offscreen/help/status/keys).",
     ))
     specs.append(CommandSpec(
+        "AC_table_headers", "Native UI", "Get Table Headers",
+        fields=fields,
+        description="Read a table's row/column header labels (TablePattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_table_cell", "Native UI", "Get Table Cell (by index)",
+        fields=(FieldSpec("row", FieldType.INT),
+                FieldSpec("column", FieldType.INT)) + fields,
+        description="Read the cell at (row, column) with its span.",
+    ))
+    specs.append(CommandSpec(
+        "AC_cell_by_header", "Native UI", "Get Table Cell (by header)",
+        fields=(FieldSpec("row", FieldType.INT),
+                FieldSpec("column_header", FieldType.STRING)) + fields,
+        description="Read the cell at (row, named column) — assert by header.",
+    ))
+    specs.append(CommandSpec(
         "AC_get_control_text", "Native UI", "Get Control Text",
         fields=fields,
         description="Read full text via TextPattern (multiline / document safe).",

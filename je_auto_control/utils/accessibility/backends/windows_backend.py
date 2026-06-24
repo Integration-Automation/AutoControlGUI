@@ -32,6 +32,8 @@ _UIA_SCROLLITEM_PATTERN_ID = 10017
 _UIA_TEXT_PATTERN_ID = 10014
 _UIA_ITEMCONTAINER_PATTERN_ID = 10019
 _UIA_VIRTUALIZEDITEM_PATTERN_ID = 10020
+_UIA_TABLE_PATTERN_ID = 10012
+_UIA_GRIDITEM_PATTERN_ID = 10007
 _UIA_AUTOMATIONID_PROPERTY = 30011
 _EXPAND_STATES = {0: "collapsed", 1: "expanded", 2: "partial", 3: "leaf"}
 
@@ -305,6 +307,37 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             return None
         return _read_properties(raw)
 
+    def get_table_headers(self, name=None, role=None, app_name=None,
+                          automation_id=None) -> Optional[Dict[str, Any]]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_TABLE_PATTERN_ID,
+                                "IUIAutomationTablePattern") if raw else None
+        if pattern is None:
+            return None
+        try:
+            columns = pattern.GetCurrentColumnHeaders()
+            rows = pattern.GetCurrentRowHeaders()
+        except (OSError, AttributeError):
+            return None
+        return {"columns": _header_names(columns), "rows": _header_names(rows)}
+
+    def get_grid_cell(self, row=0, column=0, name=None, role=None,
+                      app_name=None, automation_id=None) -> Optional[Dict[str, Any]]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        grid = self._pattern(raw, _UIA_GRID_PATTERN_ID,
+                             "IUIAutomationGridPattern") if raw else None
+        if grid is None:
+            return None
+        try:
+            cell = grid.GetItem(int(row), int(column))
+        except (OSError, AttributeError):
+            return None
+        if not cell:
+            return None
+        return _read_cell(self._pattern(cell, _UIA_GRIDITEM_PATTERN_ID,
+                                        "IUIAutomationGridItemPattern"),
+                          cell, int(row), int(column))
+
     def _text_pattern(self, name, role, app_name, automation_id):
         """Find a control and return its IUIAutomationTextPattern, or None."""
         raw = self._find_raw(name, role, app_name, automation_id)
@@ -371,6 +404,45 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             except (OSError, AttributeError):
                 cells.append("")
         return cells
+
+
+def _header_names(array) -> List[str]:
+    """Read an IUIAutomationElementArray of header elements into name strings."""
+    names: List[str] = []
+    try:
+        count = int(array.Length or 0)
+    except (OSError, AttributeError):
+        return names
+    for index in range(count):
+        try:
+            names.append(str(array.GetElement(index).CurrentName or ""))
+        except (OSError, AttributeError):
+            names.append("")
+    return names
+
+
+def _read_cell(item_pattern, cell, row: int, column: int) -> Dict[str, Any]:
+    """Build a cell record, enriching with GridItemPattern row/col/span if present."""
+    info: Dict[str, Any] = {
+        "value": _safe_name(cell), "row": row, "column": column,
+        "row_span": 1, "column_span": 1,
+    }
+    if item_pattern is not None:
+        for key, attr in (("row", "CurrentRow"), ("column", "CurrentColumn"),
+                          ("row_span", "CurrentRowSpan"),
+                          ("column_span", "CurrentColumnSpan")):
+            try:
+                info[key] = int(getattr(item_pattern, attr))
+            except (OSError, AttributeError, ValueError, TypeError):
+                pass
+    return info
+
+
+def _safe_name(raw) -> str:
+    try:
+        return str(raw.CurrentName or "")
+    except (OSError, AttributeError):
+        return ""
 
 
 def _as_text(value) -> str:

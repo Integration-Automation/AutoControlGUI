@@ -2486,6 +2486,36 @@ def _get_element_properties(name: Optional[str] = None, role: Optional[str] = No
     return {"found": props is not None, "properties": props}
 
 
+def _table_headers(name: Optional[str] = None, role: Optional[str] = None,
+                   app_name: Optional[str] = None,
+                   automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: a table's row/column header labels (TablePattern)."""
+    from je_auto_control.utils.table_pattern import table_headers
+    headers = table_headers(name=name, role=role, app_name=app_name,
+                            automation_id=automation_id)
+    return {"found": headers is not None, "headers": headers}
+
+
+def _table_cell(row: Any, column: Any, name: Optional[str] = None,
+                role: Optional[str] = None, app_name: Optional[str] = None,
+                automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: the cell at (row, column) with its span (GridItemPattern)."""
+    from je_auto_control.utils.table_pattern import table_cell
+    cell = table_cell(int(row), int(column), name=name, role=role,
+                      app_name=app_name, automation_id=automation_id)
+    return {"found": cell is not None, "cell": cell}
+
+
+def _cell_by_header(row: Any, column_header: str, name: Optional[str] = None,
+                    role: Optional[str] = None, app_name: Optional[str] = None,
+                    automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read the cell at (row, named column) — assert by header."""
+    from je_auto_control.utils.table_pattern import cell_by_header
+    value = cell_by_header(int(row), str(column_header), name=name, role=role,
+                           app_name=app_name, automation_id=automation_id)
+    return {"found": value is not None, "value": value}
+
+
 def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
                       app_name: Optional[str] = None,
                       automation_id: Optional[str] = None) -> Dict[str, Any]:
@@ -6431,6 +6461,9 @@ class Executor:
             "AC_scroll_control_into_view": _scroll_control_into_view,
             "AC_realize_item": _realize_item,
             "AC_get_element_properties": _get_element_properties,
+            "AC_table_headers": _table_headers,
+            "AC_table_cell": _table_cell,
+            "AC_cell_by_header": _cell_by_header,
             "AC_get_control_text": _get_control_text,
             "AC_get_selected_text": _get_selected_text,
             "AC_get_visible_text": _get_visible_text,

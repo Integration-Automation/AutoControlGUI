@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Table Headers + Cell Addressing (UIA TablePattern)
+
+Assert "the Status column of row 5 says Shipped" — by header, not by guessing indices. Full reference: [`docs/source/Eng/doc/new_features/v197_features_doc.rst`](docs/source/Eng/doc/new_features/v197_features_doc.rst).
+
+- **`table_headers` / `table_cell` / `cell_by_header`** (`AC_table_headers`, `AC_table_cell`, `AC_cell_by_header`): `read_control_table` (GridPattern) dumps a flat 2-D list of cell names with no header labels and no way to address one cell by (header, row) — you can dump a grid but not test one. This adds the missing half: `table_headers` reads the row/column header labels (TablePattern), `table_cell` reads the cell at `(row, column)` with its span (GridItemPattern), and `cell_by_header` resolves the column index from the headers so you can read the cell at `(row, "Status")` directly. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
 ## What's new (2026-06-25) — Rich UIA Element Properties
 
 Know if a control is enabled / off-screen / has a tooltip before you act. Full reference: [`docs/source/Eng/doc/new_features/v196_features_doc.rst`](docs/source/Eng/doc/new_features/v196_features_doc.rst).
