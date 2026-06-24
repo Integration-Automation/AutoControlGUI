@@ -2756,6 +2756,21 @@ def _add_audit_specs(specs: List[CommandSpec]) -> None:
         description="Test pairs that fail together above a Jaccard threshold.",
     ))
     specs.append(CommandSpec(
+        "AC_build_timeline", "Testing", "Step Timeline (waterfall)",
+        fields=(FieldSpec("steps", FieldType.STRING,
+                          placeholder='[{"name": "login", "duration": 1.2}]'),),
+        description="Per-run step waterfall: offsets, durations, bottleneck.",
+    ))
+    specs.append(CommandSpec(
+        "AC_critical_steps", "Testing", "Critical (Bottleneck) Steps",
+        fields=(
+            FieldSpec("steps", FieldType.STRING,
+                      placeholder='[{"name": "login", "duration": 1.2}]'),
+            FieldSpec("top", FieldType.INT, optional=True, default=3),
+        ),
+        description="The steps that dominate a run's time, longest first.",
+    ))
+    specs.append(CommandSpec(
         "AC_scan_secrets", "Tools", "Scan for Hardcoded Secrets",
         description="Scan 'data' (JSON view) for hardcoded secrets that "
                     "should use ${secrets.*}.",

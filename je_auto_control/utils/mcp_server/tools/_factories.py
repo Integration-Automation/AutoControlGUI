@@ -7720,6 +7720,30 @@ def flakiness_tools() -> List[MCPTool]:
             handler=h.cofailure_pairs,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_build_timeline",
+            description=("Per-run step waterfall from 'steps' (list of {name,"
+                         "duration,start?}): {steps:[{name,offset,duration,pct}], "
+                         "total, busy, bottleneck, parallelism}. Reads ONE slow "
+                         "run, not a per-name average."),
+            input_schema=schema({
+                "steps": {"type": "array", "items": {"type": "object"}}},
+                required=["steps"]),
+            handler=h.build_timeline,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_critical_steps",
+            description=("The 'top' steps that dominate a run's time (bottlenecks "
+                         "to optimise): {steps:[{name,duration,pct}]}, longest "
+                         "first."),
+            input_schema=schema({
+                "steps": {"type": "array", "items": {"type": "object"}},
+                "top": {"type": "integer"}},
+                required=["steps"]),
+            handler=h.critical_steps,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

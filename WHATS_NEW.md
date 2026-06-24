@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Per-Run Step Timeline (waterfall + bottleneck steps)
+
+Read why *this* run was slow — a step waterfall and its bottlenecks. Full reference: [`docs/source/Eng/doc/new_features/v194_features_doc.rst`](docs/source/Eng/doc/new_features/v194_features_doc.rst).
+
+- **`build_timeline` / `critical_steps`** (`AC_build_timeline`, `AC_critical_steps`): the action profiler aggregates timings by step *name* across runs — useless for "why was *this* run slow". This turns one run's ordered steps into a waterfall (each step's offset, duration, and `pct` share of the total) with the `bottleneck` step and a `parallelism` ratio (`> 1` when steps overlap via explicit `start` times); `critical_steps` ranks the dominant steps to optimise. A step is any `{name, duration, start?}` dict. Pure stdlib. No `PySide6`.
+
 ## What's new (2026-06-25) — Flaky-Test Co-Failure Clustering
 
 Find the tests that flake *together* — and the shared root cause behind them. Full reference: [`docs/source/Eng/doc/new_features/v193_features_doc.rst`](docs/source/Eng/doc/new_features/v193_features_doc.rst).

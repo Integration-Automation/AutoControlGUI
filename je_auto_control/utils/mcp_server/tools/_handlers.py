@@ -2568,6 +2568,16 @@ def cofailure_pairs(runs, threshold=0.5):
     return _cofailure_pairs(runs, threshold)
 
 
+def build_timeline(steps):
+    from je_auto_control.utils.executor.action_executor import _build_timeline
+    return _build_timeline(steps)
+
+
+def critical_steps(steps, top=3):
+    from je_auto_control.utils.executor.action_executor import _critical_steps
+    return _critical_steps(steps, top)
+
+
 def image_histogram(source=None, bins=32, space="hsv", region=None):
     from je_auto_control.utils.executor.action_executor import _image_histogram
     return _image_histogram(source, bins, space, region)

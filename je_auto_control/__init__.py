@@ -96,6 +96,8 @@ from je_auto_control.utils.failure_signature import (
 from je_auto_control.utils.run_diff import diff_runs, summarize_run_diff
 # Flaky-test co-failure clustering (Jaccard over shared failing runs)
 from je_auto_control.utils.flake_cluster import cofailure_pairs, failure_clusters
+# Per-run step waterfall + bottleneck (critical) steps
+from je_auto_control.utils.step_timeline import build_timeline, critical_steps
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
@@ -1676,6 +1678,7 @@ __all__ = [
     "normalize_error", "failure_signature", "group_failures",
     "diff_runs", "summarize_run_diff",
     "cofailure_pairs", "failure_clusters",
+    "build_timeline", "critical_steps",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "verify_description",
