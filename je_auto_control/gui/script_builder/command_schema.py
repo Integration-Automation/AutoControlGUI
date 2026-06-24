@@ -1682,6 +1682,25 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Read full text via TextPattern (multiline / document safe).",
     ))
     specs.append(CommandSpec(
+        "AC_find_control_text", "Native UI", "Find Text in Control",
+        fields=(FieldSpec("text", FieldType.STRING),
+                FieldSpec("ignore_case", FieldType.BOOL, optional=True,
+                          default=True)) + fields,
+        description="Whether text occurs in a control (TextPattern.FindText).",
+    ))
+    specs.append(CommandSpec(
+        "AC_select_control_text", "Native UI", "Select Text in Control",
+        fields=(FieldSpec("text", FieldType.STRING),
+                FieldSpec("ignore_case", FieldType.BOOL, optional=True,
+                          default=True)) + fields,
+        description="Find + select text in a control (FindText + Select).",
+    ))
+    specs.append(CommandSpec(
+        "AC_control_text_attributes", "Native UI", "Get Text Attributes",
+        fields=fields,
+        description="Read selection formatting (font/size/bold/italic/colour).",
+    ))
+    specs.append(CommandSpec(
         "AC_get_selected_text", "Native UI", "Get Selected Text",
         fields=fields,
         description="Read the currently selected text via TextPattern.",

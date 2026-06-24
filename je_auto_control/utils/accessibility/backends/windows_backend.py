@@ -445,6 +445,48 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         except (OSError, AttributeError):
             return None
 
+    def _find_range(self, text, ignore_case, name, role, app_name, automation_id):
+        """Find ``text`` in the control's document range (TextPattern.FindText)."""
+        pattern = self._text_pattern(name, role, app_name, automation_id)
+        if pattern is None:
+            return None
+        try:
+            return pattern.DocumentRange.FindText(str(text), False,
+                                                  bool(ignore_case))
+        except (OSError, AttributeError):
+            return None
+
+    def find_text(self, text="", ignore_case=True, name=None, role=None,
+                  app_name=None, automation_id=None) -> bool:
+        return self._find_range(text, ignore_case, name, role, app_name,
+                                automation_id) is not None
+
+    def select_text(self, text="", ignore_case=True, name=None, role=None,
+                    app_name=None, automation_id=None) -> bool:
+        found = self._find_range(text, ignore_case, name, role, app_name,
+                                 automation_id)
+        if not found:
+            return False
+        try:
+            found.Select()
+            return True
+        except (OSError, AttributeError):
+            return False
+
+    def text_attributes(self, name=None, role=None, app_name=None,
+                        automation_id=None) -> Optional[Dict[str, Any]]:
+        pattern = self._text_pattern(name, role, app_name, automation_id)
+        if pattern is None:
+            return None
+        try:
+            selection = pattern.GetSelection()
+            text_range = (selection.GetElement(0)
+                          if selection and int(selection.Length or 0) > 0
+                          else pattern.DocumentRange)
+        except (OSError, AttributeError):
+            return None
+        return _read_text_attributes(text_range)
+
     def set_focus(self, name=None, role=None, app_name=None,
                   automation_id=None) -> bool:
         raw = self._find_raw(name, role, app_name, automation_id)
@@ -510,6 +552,33 @@ def _safe_name(raw) -> str:
 
 def _as_text(value) -> str:
     return str(value or "")
+
+
+# UIA TextPattern attribute ids (UIAutomationClient AttributeId range).
+_TEXT_ATTR_FONT_NAME = 40005
+_TEXT_ATTR_FONT_SIZE = 40006
+_TEXT_ATTR_FONT_WEIGHT = 40007
+_TEXT_ATTR_FOREGROUND = 40008
+_TEXT_ATTR_IS_ITALIC = 40014
+
+
+def _attr(text_range, attribute_id, cast):
+    try:
+        return cast(text_range.GetAttributeValue(attribute_id))
+    except (OSError, AttributeError, ValueError, TypeError):
+        return None
+
+
+def _read_text_attributes(text_range) -> Dict[str, Any]:
+    """Read font / colour formatting of a TextRange into a plain dict."""
+    weight = _attr(text_range, _TEXT_ATTR_FONT_WEIGHT, int)
+    return {
+        "font_name": _attr(text_range, _TEXT_ATTR_FONT_NAME, _as_text),
+        "font_size": _attr(text_range, _TEXT_ATTR_FONT_SIZE, float),
+        "bold": (weight >= 700) if isinstance(weight, int) else None,
+        "italic": _attr(text_range, _TEXT_ATTR_IS_ITALIC, bool),
+        "foreground_color": _attr(text_range, _TEXT_ATTR_FOREGROUND, int),
+    }
 
 
 # (key, LegacyIAccessiblePattern attribute, cast) for the MSAA bridge read.
