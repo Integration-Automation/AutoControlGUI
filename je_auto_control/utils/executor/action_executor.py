@@ -4216,6 +4216,32 @@ def _get_clipboard_csv(delimiter: str = ",") -> Dict[str, Any]:
     return {"found": rows is not None, "rows": rows or []}
 
 
+def _clipboard_formats() -> Dict[str, Any]:
+    """Adapter: enumerate and classify the live clipboard's formats (Windows)."""
+    from je_auto_control.utils.clipboard_formats import clipboard_formats
+    return clipboard_formats()
+
+
+def _classify_formats(formats: Any) -> Dict[str, Any]:
+    """Adapter: classify a provided list of clipboard formats (pure)."""
+    import json
+    from je_auto_control.utils.clipboard_formats import classify_formats
+    if isinstance(formats, str):
+        formats = json.loads(formats)
+    return classify_formats(formats)
+
+
+def _diff_formats(before: Any, after: Any) -> Dict[str, Any]:
+    """Adapter: diff two clipboard-format snapshots (pure)."""
+    import json
+    from je_auto_control.utils.clipboard_formats import diff_formats
+    if isinstance(before, str):
+        before = json.loads(before)
+    if isinstance(after, str):
+        after = json.loads(after)
+    return diff_formats(before, after)
+
+
 def _image_histogram(source: Any = None, bins: Any = 32, space: str = "hsv",
                      region: Any = None) -> Dict[str, Any]:
     """Adapter: per-channel colour histogram of an image / the screen."""
@@ -6433,6 +6459,9 @@ class Executor:
             "AC_get_clipboard_rtf": _get_clipboard_rtf,
             "AC_set_clipboard_csv": _set_clipboard_csv,
             "AC_get_clipboard_csv": _get_clipboard_csv,
+            "AC_clipboard_formats": _clipboard_formats,
+            "AC_classify_formats": _classify_formats,
+            "AC_diff_formats": _diff_formats,
             "AC_image_histogram": _image_histogram,
             "AC_histogram_changed": _histogram_changed,
             "AC_changed_regions": _changed_regions,

@@ -3292,6 +3292,37 @@ def clipboard_files_tools() -> List[MCPTool]:
             handler=h.get_clipboard_csv,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_clipboard_formats",
+            description=("Enumerate and classify the formats currently on the "
+                         "clipboard without consuming them (Windows). Returns "
+                         "{categories, formats:[{id,name,category}], has_text, "
+                         "has_image, has_files}."),
+            input_schema=schema({}, required=[]),
+            handler=h.clipboard_formats,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_classify_formats",
+            description=("Classify a provided list of clipboard formats (pure). "
+                         "'formats' is a list of ids or {id,name}. Returns the "
+                         "same summary as ac_clipboard_formats."),
+            input_schema=schema({"formats": {"type": "array"}},
+                                required=["formats"]),
+            handler=h.classify_formats,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_diff_formats",
+            description=("Diff two clipboard-format snapshots (pure): "
+                         "{added, removed, changed}. 'before'/'after' are lists "
+                         "of ids or {id,name}."),
+            input_schema=schema({"before": {"type": "array"},
+                                 "after": {"type": "array"}},
+                                required=["before", "after"]),
+            handler=h.diff_formats,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
