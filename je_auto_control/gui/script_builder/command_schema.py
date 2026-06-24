@@ -1550,6 +1550,24 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("role", FieldType.STRING),),
         description="Translate a raw UIA role (ControlType_50000) to a name.",
     ))
+    tree_fields = (FieldSpec("app_name", FieldType.STRING, optional=True),
+                   FieldSpec("max_results", FieldType.INT, optional=True,
+                             default=500))
+    specs.append(CommandSpec(
+        "AC_tab_order", "Native UI", "Keyboard Tab Order",
+        fields=tree_fields,
+        description="List focusable controls in keyboard Tab (reading) order.",
+    ))
+    specs.append(CommandSpec(
+        "AC_audit_focus_order", "Native UI", "Audit Focus Order (WCAG)",
+        fields=tree_fields,
+        description="WCAG 2.4.x focus-order audit: tab sequence + flagged issues.",
+    ))
+    specs.append(CommandSpec(
+        "AC_focus_control", "Native UI", "Set Keyboard Focus",
+        fields=fields,
+        description="Set keyboard focus on a control natively (UIA SetFocus).",
+    ))
 
 
 def _add_misc_specs(specs: List[CommandSpec]) -> None:

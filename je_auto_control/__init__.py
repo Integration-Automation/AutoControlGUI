@@ -62,6 +62,10 @@ from je_auto_control.utils.ax_tree_walk import (
     assign_node_paths, control_type_name, find_by_path, humanize_role,
     humanize_tree,
 )
+# Keyboard focus order (tab sequence / WCAG audit / set-focus)
+from je_auto_control.utils.focus_order import (
+    audit_focus_order, focus_control, is_interactive_role, tab_order,
+)
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
@@ -1629,6 +1633,7 @@ __all__ = [
     "get_control_text", "get_selected_text", "get_visible_text",
     "control_type_name", "humanize_role", "humanize_tree",
     "assign_node_paths", "find_by_path",
+    "is_interactive_role", "tab_order", "audit_focus_order", "focus_control",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "verify_description",

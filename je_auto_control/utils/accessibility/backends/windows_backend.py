@@ -308,6 +308,17 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         except (OSError, AttributeError):
             return None
 
+    def set_focus(self, name=None, role=None, app_name=None,
+                  automation_id=None) -> bool:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        if not raw:
+            return False
+        try:
+            raw.SetFocus()
+            return True
+        except (OSError, AttributeError):
+            return False
+
     @staticmethod
     def _read_row(pattern, row: int, cols: int):
         """Read one grid row into a list of cell strings."""

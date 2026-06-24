@@ -123,6 +123,14 @@ class AccessibilityBackend:
         """Return only the on-screen text of the control (TextPattern), or None."""
         self._unsupported("visible_text")
 
+    # --- keyboard focus ----------------------------------------------------
+
+    def set_focus(self, name: Optional[str] = None, role: Optional[str] = None,
+                  app_name: Optional[str] = None,
+                  automation_id: Optional[str] = None) -> bool:
+        """Set keyboard focus on the matched control (SetFocus); True on success."""
+        self._unsupported("set_focus")
+
     def _unsupported(self, operation: str):
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(
