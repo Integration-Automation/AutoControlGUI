@@ -257,6 +257,30 @@ class AccessibilityBackend:
         success — the fallback when Value / Invoke / Toggle all do nothing."""
         self._unsupported("legacy_default_action")
 
+    # --- container selection + views (Selection / MultipleView patterns) ----
+
+    def get_selection(self, name: Optional[str] = None, role: Optional[str] = None,
+                      app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None,
+                      ) -> Optional[Dict[str, Any]]:
+        """Return a container's selection state — ``{items, can_select_multiple,
+        is_required}`` (SelectionPattern), or None."""
+        self._unsupported("get_selection")
+
+    def list_views(self, name: Optional[str] = None, role: Optional[str] = None,
+                   app_name: Optional[str] = None,
+                   automation_id: Optional[str] = None,
+                   ) -> Optional[Dict[str, Any]]:
+        """Return a control's selectable views — ``{current, views: [...]}``
+        (MultipleViewPattern: list / details / tile / …), or None."""
+        self._unsupported("list_views")
+
+    def set_view(self, view: str = "", name: Optional[str] = None,
+                 role: Optional[str] = None, app_name: Optional[str] = None,
+                 automation_id: Optional[str] = None) -> bool:
+        """Switch a control to the named view (MultipleViewPattern); True on success."""
+        self._unsupported("set_view")
+
     def _unsupported(self, operation: str):
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(

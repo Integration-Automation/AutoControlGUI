@@ -2573,6 +2573,35 @@ def _legacy_default_action(name: Optional[str] = None, role: Optional[str] = Non
                                  automation_id=automation_id)
 
 
+def _get_selection(name: Optional[str] = None, role: Optional[str] = None,
+                   app_name: Optional[str] = None,
+                   automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: a container's selection state (SelectionPattern)."""
+    from je_auto_control.utils.selection_view import get_selection
+    selection = get_selection(name=name, role=role, app_name=app_name,
+                              automation_id=automation_id)
+    return {"found": selection is not None, "selection": selection}
+
+
+def _list_views(name: Optional[str] = None, role: Optional[str] = None,
+                app_name: Optional[str] = None,
+                automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: a control's selectable views (MultipleViewPattern)."""
+    from je_auto_control.utils.selection_view import list_views
+    views = list_views(name=name, role=role, app_name=app_name,
+                       automation_id=automation_id)
+    return {"found": views is not None, "views": views}
+
+
+def _set_view(view: str, name: Optional[str] = None, role: Optional[str] = None,
+              app_name: Optional[str] = None,
+              automation_id: Optional[str] = None) -> bool:
+    """Adapter: switch a control to a named view (MultipleViewPattern)."""
+    from je_auto_control.utils.selection_view import set_view
+    return set_view(str(view), name=name, role=role, app_name=app_name,
+                    automation_id=automation_id)
+
+
 def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
                       app_name: Optional[str] = None,
                       automation_id: Optional[str] = None) -> Dict[str, Any]:
@@ -6559,6 +6588,9 @@ class Executor:
             "AC_window_interaction_state": _window_interaction_state,
             "AC_legacy_info": _legacy_info,
             "AC_legacy_default_action": _legacy_default_action,
+            "AC_get_selection": _get_selection,
+            "AC_list_views": _list_views,
+            "AC_set_view": _set_view,
             "AC_get_control_text": _get_control_text,
             "AC_find_control_text": _find_control_text,
             "AC_select_control_text": _select_control_text,

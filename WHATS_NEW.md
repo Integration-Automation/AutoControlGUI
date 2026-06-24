@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Container Selection + View Switching (Selection / MultipleView)
+
+Read what's selected in a listbox/grid, and switch Explorer-style views. Full reference: [`docs/source/Eng/doc/new_features/v201_features_doc.rst`](docs/source/Eng/doc/new_features/v201_features_doc.rst).
+
+- **`get_selection` / `list_views` / `set_view`** (`AC_get_selection`, `AC_list_views`, `AC_set_view`): `select_control_item` selects *one* item, but the container-level `SelectionPattern` answers "what is currently selected, and may it select multiple?" — the assertion target after selecting. `MultipleViewPattern` switches a control between its views (Explorer's list / details / tile / thumbnail), a precondition that otherwise needs fragile menu clicking. `get_selection` returns `{items, can_select_multiple, is_required}`, `list_views` returns `{current, views}`, and `set_view` switches by view name. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
 ## What's new (2026-06-25) — Advanced TextPattern (find / select / read attributes)
 
 Search a control's text, select a match to replace it, and read font/colour formatting. Full reference: [`docs/source/Eng/doc/new_features/v200_features_doc.rst`](docs/source/Eng/doc/new_features/v200_features_doc.rst).
