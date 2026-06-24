@@ -2516,6 +2516,92 @@ def _cell_by_header(row: Any, column_header: str, name: Optional[str] = None,
     return {"found": value is not None, "value": value}
 
 
+def _move_element(x: Any, y: Any, name: Optional[str] = None,
+                  role: Optional[str] = None, app_name: Optional[str] = None,
+                  automation_id: Optional[str] = None) -> bool:
+    """Adapter: move a UIA element to (x, y) (TransformPattern)."""
+    from je_auto_control.utils.transform_window import move_element
+    return move_element(float(x), float(y), name=name, role=role,
+                        app_name=app_name, automation_id=automation_id)
+
+
+def _resize_element(width: Any, height: Any, name: Optional[str] = None,
+                    role: Optional[str] = None, app_name: Optional[str] = None,
+                    automation_id: Optional[str] = None) -> bool:
+    """Adapter: resize a UIA element (TransformPattern)."""
+    from je_auto_control.utils.transform_window import resize_element
+    return resize_element(float(width), float(height), name=name, role=role,
+                          app_name=app_name, automation_id=automation_id)
+
+
+def _set_window_state(state: str, name: Optional[str] = None,
+                      role: Optional[str] = None, app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None) -> bool:
+    """Adapter: set a window's visual state normal/maximized/minimized."""
+    from je_auto_control.utils.transform_window import set_window_state
+    return set_window_state(str(state), name=name, role=role, app_name=app_name,
+                            automation_id=automation_id)
+
+
+def _window_interaction_state(name: Optional[str] = None,
+                              role: Optional[str] = None,
+                              app_name: Optional[str] = None,
+                              automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: a window's interaction state (ready/blocked/not_responding)."""
+    from je_auto_control.utils.transform_window import window_interaction_state
+    return {"state": window_interaction_state(name=name, role=role,
+                                              app_name=app_name,
+                                              automation_id=automation_id)}
+
+
+def _legacy_info(name: Optional[str] = None, role: Optional[str] = None,
+                 app_name: Optional[str] = None,
+                 automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: MSAA IAccessible info of an old control (LegacyIAccessible)."""
+    from je_auto_control.utils.legacy_accessible import legacy_info
+    info = legacy_info(name=name, role=role, app_name=app_name,
+                       automation_id=automation_id)
+    return {"found": info is not None, "info": info}
+
+
+def _legacy_default_action(name: Optional[str] = None, role: Optional[str] = None,
+                           app_name: Optional[str] = None,
+                           automation_id: Optional[str] = None) -> bool:
+    """Adapter: fire an old control's MSAA default action (Value/Invoke fallback)."""
+    from je_auto_control.utils.legacy_accessible import legacy_default_action
+    return legacy_default_action(name=name, role=role, app_name=app_name,
+                                 automation_id=automation_id)
+
+
+def _get_selection(name: Optional[str] = None, role: Optional[str] = None,
+                   app_name: Optional[str] = None,
+                   automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: a container's selection state (SelectionPattern)."""
+    from je_auto_control.utils.selection_view import get_selection
+    selection = get_selection(name=name, role=role, app_name=app_name,
+                              automation_id=automation_id)
+    return {"found": selection is not None, "selection": selection}
+
+
+def _list_views(name: Optional[str] = None, role: Optional[str] = None,
+                app_name: Optional[str] = None,
+                automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: a control's selectable views (MultipleViewPattern)."""
+    from je_auto_control.utils.selection_view import list_views
+    views = list_views(name=name, role=role, app_name=app_name,
+                       automation_id=automation_id)
+    return {"found": views is not None, "views": views}
+
+
+def _set_view(view: str, name: Optional[str] = None, role: Optional[str] = None,
+              app_name: Optional[str] = None,
+              automation_id: Optional[str] = None) -> bool:
+    """Adapter: switch a control to a named view (MultipleViewPattern)."""
+    from je_auto_control.utils.selection_view import set_view
+    return set_view(str(view), name=name, role=role, app_name=app_name,
+                    automation_id=automation_id)
+
+
 def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
                       app_name: Optional[str] = None,
                       automation_id: Optional[str] = None) -> Dict[str, Any]:
@@ -2523,6 +2609,38 @@ def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
     from je_auto_control.utils.ax_text import get_control_text
     return {"text": get_control_text(name=name, role=role, app_name=app_name,
                                      automation_id=automation_id)}
+
+
+def _find_control_text(text: str, ignore_case: Any = True,
+                       name: Optional[str] = None, role: Optional[str] = None,
+                       app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None) -> bool:
+    """Adapter: whether text occurs in a control (TextPattern.FindText)."""
+    from je_auto_control.utils.ax_text import find_control_text
+    return find_control_text(str(text), ignore_case=bool(ignore_case), name=name,
+                             role=role, app_name=app_name,
+                             automation_id=automation_id)
+
+
+def _select_control_text(text: str, ignore_case: Any = True,
+                         name: Optional[str] = None, role: Optional[str] = None,
+                         app_name: Optional[str] = None,
+                         automation_id: Optional[str] = None) -> bool:
+    """Adapter: find + select text in a control (TextPattern.FindText + Select)."""
+    from je_auto_control.utils.ax_text import select_control_text
+    return select_control_text(str(text), ignore_case=bool(ignore_case),
+                               name=name, role=role, app_name=app_name,
+                               automation_id=automation_id)
+
+
+def _control_text_attributes(name: Optional[str] = None, role: Optional[str] = None,
+                             app_name: Optional[str] = None,
+                             automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read a control selection's font/colour formatting (TextPattern)."""
+    from je_auto_control.utils.ax_text import control_text_attributes
+    attrs = control_text_attributes(name=name, role=role, app_name=app_name,
+                                    automation_id=automation_id)
+    return {"found": attrs is not None, "attributes": attrs}
 
 
 def _get_selected_text(name: Optional[str] = None, role: Optional[str] = None,
@@ -6464,7 +6582,19 @@ class Executor:
             "AC_table_headers": _table_headers,
             "AC_table_cell": _table_cell,
             "AC_cell_by_header": _cell_by_header,
+            "AC_move_element": _move_element,
+            "AC_resize_element": _resize_element,
+            "AC_set_window_state": _set_window_state,
+            "AC_window_interaction_state": _window_interaction_state,
+            "AC_legacy_info": _legacy_info,
+            "AC_legacy_default_action": _legacy_default_action,
+            "AC_get_selection": _get_selection,
+            "AC_list_views": _list_views,
+            "AC_set_view": _set_view,
             "AC_get_control_text": _get_control_text,
+            "AC_find_control_text": _find_control_text,
+            "AC_select_control_text": _select_control_text,
+            "AC_control_text_attributes": _control_text_attributes,
             "AC_get_selected_text": _get_selected_text,
             "AC_get_visible_text": _get_visible_text,
             "AC_read_table": _read_table,

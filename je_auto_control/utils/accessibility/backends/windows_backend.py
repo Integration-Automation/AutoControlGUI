@@ -34,8 +34,18 @@ _UIA_ITEMCONTAINER_PATTERN_ID = 10019
 _UIA_VIRTUALIZEDITEM_PATTERN_ID = 10020
 _UIA_TABLE_PATTERN_ID = 10012
 _UIA_GRIDITEM_PATTERN_ID = 10007
+_UIA_TRANSFORM_PATTERN_ID = 10016
+_UIA_WINDOW_PATTERN_ID = 10009
+_UIA_LEGACYIACCESSIBLE_PATTERN_ID = 10018
+_UIA_SELECTION_PATTERN_ID = 10001
+_UIA_MULTIPLEVIEW_PATTERN_ID = 10008
 _UIA_AUTOMATIONID_PROPERTY = 30011
 _EXPAND_STATES = {0: "collapsed", 1: "expanded", 2: "partial", 3: "leaf"}
+_WINDOW_VISUAL_STATES = {"normal": 0, "maximized": 1, "minimized": 2}
+_WINDOW_INTERACTION_STATES = {
+    0: "running", 1: "closing", 2: "ready", 3: "blocked_by_modal",
+    4: "not_responding",
+}
 
 
 def _is_available() -> bool:
@@ -307,6 +317,109 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             return None
         return _read_properties(raw)
 
+    def move_element(self, x=0.0, y=0.0, name=None, role=None, app_name=None,
+                     automation_id=None):
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id, _UIA_TRANSFORM_PATTERN_ID,
+            "IUIAutomationTransformPattern",
+            lambda pattern: pattern.Move(float(x), float(y)))
+
+    def resize_element(self, width=0.0, height=0.0, name=None, role=None,
+                       app_name=None, automation_id=None):
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id, _UIA_TRANSFORM_PATTERN_ID,
+            "IUIAutomationTransformPattern",
+            lambda pattern: pattern.Resize(float(width), float(height)))
+
+    def set_window_state(self, state="normal", name=None, role=None,
+                         app_name=None, automation_id=None):
+        visual = _WINDOW_VISUAL_STATES.get(str(state).lower())
+        if visual is None:
+            return False
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id, _UIA_WINDOW_PATTERN_ID,
+            "IUIAutomationWindowPattern",
+            lambda pattern: pattern.SetWindowVisualState(visual))
+
+    def window_interaction_state(self, name=None, role=None, app_name=None,
+                                 automation_id=None) -> Optional[str]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_WINDOW_PATTERN_ID,
+                                "IUIAutomationWindowPattern") if raw else None
+        if pattern is None:
+            return None
+        try:
+            return _WINDOW_INTERACTION_STATES.get(
+                int(pattern.CurrentWindowInteractionState))
+        except (OSError, AttributeError, ValueError, TypeError):
+            return None
+
+    def legacy_info(self, name=None, role=None, app_name=None,
+                    automation_id=None) -> Optional[Dict[str, Any]]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_LEGACYIACCESSIBLE_PATTERN_ID,
+                                "IUIAutomationLegacyIAccessiblePattern"
+                                ) if raw else None
+        if pattern is None:
+            return None
+        return _read_legacy(pattern)
+
+    def legacy_default_action(self, name=None, role=None, app_name=None,
+                              automation_id=None):
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id,
+            _UIA_LEGACYIACCESSIBLE_PATTERN_ID,
+            "IUIAutomationLegacyIAccessiblePattern",
+            lambda pattern: pattern.DoDefaultAction())
+
+    def get_selection(self, name=None, role=None, app_name=None,
+                      automation_id=None) -> Optional[Dict[str, Any]]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_SELECTION_PATTERN_ID,
+                                "IUIAutomationSelectionPattern") if raw else None
+        if pattern is None:
+            return None
+        try:
+            items = _header_names(pattern.GetCurrentSelection())
+            can_multiple = bool(pattern.CurrentCanSelectMultiple)
+            required = bool(pattern.CurrentIsSelectionRequired)
+        except (OSError, AttributeError):
+            return None
+        return {"items": items, "can_select_multiple": can_multiple,
+                "is_required": required}
+
+    def _multiple_view(self, name, role, app_name, automation_id):
+        raw = self._find_raw(name, role, app_name, automation_id)
+        return self._pattern(raw, _UIA_MULTIPLEVIEW_PATTERN_ID,
+                             "IUIAutomationMultipleViewPattern") if raw else None
+
+    def list_views(self, name=None, role=None, app_name=None,
+                   automation_id=None) -> Optional[Dict[str, Any]]:
+        pattern = self._multiple_view(name, role, app_name, automation_id)
+        if pattern is None:
+            return None
+        try:
+            view_ids = list(pattern.GetCurrentSupportedViews())
+            current = int(pattern.CurrentCurrentView)
+        except (OSError, AttributeError, ValueError, TypeError):
+            return None
+        return {"current": _view_name(pattern, current),
+                "views": [_view_name(pattern, view_id) for view_id in view_ids]}
+
+    def set_view(self, view="", name=None, role=None, app_name=None,
+                 automation_id=None):
+        pattern = self._multiple_view(name, role, app_name, automation_id)
+        if pattern is None:
+            return False
+        try:
+            for view_id in pattern.GetCurrentSupportedViews():
+                if _view_name(pattern, view_id) == str(view):
+                    pattern.SetCurrentView(int(view_id))
+                    return True
+        except (OSError, AttributeError, ValueError, TypeError):
+            return False
+        return False
+
     def get_table_headers(self, name=None, role=None, app_name=None,
                           automation_id=None) -> Optional[Dict[str, Any]]:
         raw = self._find_raw(name, role, app_name, automation_id)
@@ -382,6 +495,48 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         except (OSError, AttributeError):
             return None
 
+    def _find_range(self, text, ignore_case, name, role, app_name, automation_id):
+        """Find ``text`` in the control's document range (TextPattern.FindText)."""
+        pattern = self._text_pattern(name, role, app_name, automation_id)
+        if pattern is None:
+            return None
+        try:
+            return pattern.DocumentRange.FindText(str(text), False,
+                                                  bool(ignore_case))
+        except (OSError, AttributeError):
+            return None
+
+    def find_text(self, text="", ignore_case=True, name=None, role=None,
+                  app_name=None, automation_id=None) -> bool:
+        return self._find_range(text, ignore_case, name, role, app_name,
+                                automation_id) is not None
+
+    def select_text(self, text="", ignore_case=True, name=None, role=None,
+                    app_name=None, automation_id=None) -> bool:
+        found = self._find_range(text, ignore_case, name, role, app_name,
+                                 automation_id)
+        if not found:
+            return False
+        try:
+            found.Select()
+            return True
+        except (OSError, AttributeError):
+            return False
+
+    def text_attributes(self, name=None, role=None, app_name=None,
+                        automation_id=None) -> Optional[Dict[str, Any]]:
+        pattern = self._text_pattern(name, role, app_name, automation_id)
+        if pattern is None:
+            return None
+        try:
+            selection = pattern.GetSelection()
+            text_range = (selection.GetElement(0)
+                          if selection and int(selection.Length or 0) > 0
+                          else pattern.DocumentRange)
+        except (OSError, AttributeError):
+            return None
+        return _read_text_attributes(text_range)
+
     def set_focus(self, name=None, role=None, app_name=None,
                   automation_id=None) -> bool:
         raw = self._find_raw(name, role, app_name, automation_id)
@@ -404,6 +559,14 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             except (OSError, AttributeError):
                 cells.append("")
         return cells
+
+
+def _view_name(pattern, view_id) -> str:
+    """Return a MultipleViewPattern view's name, or '' on failure."""
+    try:
+        return str(pattern.GetViewName(int(view_id)) or "")
+    except (OSError, AttributeError, ValueError, TypeError):
+        return ""
 
 
 def _header_names(array) -> List[str]:
@@ -447,6 +610,55 @@ def _safe_name(raw) -> str:
 
 def _as_text(value) -> str:
     return str(value or "")
+
+
+# UIA TextPattern attribute ids (UIAutomationClient AttributeId range).
+_TEXT_ATTR_FONT_NAME = 40005
+_TEXT_ATTR_FONT_SIZE = 40006
+_TEXT_ATTR_FONT_WEIGHT = 40007
+_TEXT_ATTR_FOREGROUND = 40008
+_TEXT_ATTR_IS_ITALIC = 40014
+
+
+def _attr(text_range, attribute_id, cast):
+    try:
+        return cast(text_range.GetAttributeValue(attribute_id))
+    except (OSError, AttributeError, ValueError, TypeError):
+        return None
+
+
+def _read_text_attributes(text_range) -> Dict[str, Any]:
+    """Read font / colour formatting of a TextRange into a plain dict."""
+    weight = _attr(text_range, _TEXT_ATTR_FONT_WEIGHT, int)
+    return {
+        "font_name": _attr(text_range, _TEXT_ATTR_FONT_NAME, _as_text),
+        "font_size": _attr(text_range, _TEXT_ATTR_FONT_SIZE, float),
+        "bold": (weight >= 700) if isinstance(weight, int) else None,
+        "italic": _attr(text_range, _TEXT_ATTR_IS_ITALIC, bool),
+        "foreground_color": _attr(text_range, _TEXT_ATTR_FOREGROUND, int),
+    }
+
+
+# (key, LegacyIAccessiblePattern attribute, cast) for the MSAA bridge read.
+_LEGACY_READS = (
+    ("name", "CurrentName", _as_text),
+    ("value", "CurrentValue", _as_text),
+    ("description", "CurrentDescription", _as_text),
+    ("default_action", "CurrentDefaultAction", _as_text),
+    ("role", "CurrentRole", int),
+    ("state", "CurrentState", int),
+)
+
+
+def _read_legacy(pattern) -> Dict[str, Any]:
+    """Read a LegacyIAccessiblePattern's MSAA fields into a plain dict."""
+    info: Dict[str, Any] = {}
+    for key, attribute, cast in _LEGACY_READS:
+        try:
+            info[key] = cast(getattr(pattern, attribute))
+        except (OSError, AttributeError, ValueError, TypeError):
+            info[key] = None
+    return info
 
 
 # (key, UIA element attribute, cast) for the rich properties the flat list omits.

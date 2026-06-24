@@ -1,5 +1,29 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Container Selection + View Switching (Selection / MultipleView)
+
+Read what's selected in a listbox/grid, and switch Explorer-style views. Full reference: [`docs/source/Eng/doc/new_features/v201_features_doc.rst`](docs/source/Eng/doc/new_features/v201_features_doc.rst).
+
+- **`get_selection` / `list_views` / `set_view`** (`AC_get_selection`, `AC_list_views`, `AC_set_view`): `select_control_item` selects *one* item, but the container-level `SelectionPattern` answers "what is currently selected, and may it select multiple?" — the assertion target after selecting. `MultipleViewPattern` switches a control between its views (Explorer's list / details / tile / thumbnail), a precondition that otherwise needs fragile menu clicking. `get_selection` returns `{items, can_select_multiple, is_required}`, `list_views` returns `{current, views}`, and `set_view` switches by view name. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
+## What's new (2026-06-25) — Advanced TextPattern (find / select / read attributes)
+
+Search a control's text, select a match to replace it, and read font/colour formatting. Full reference: [`docs/source/Eng/doc/new_features/v200_features_doc.rst`](docs/source/Eng/doc/new_features/v200_features_doc.rst).
+
+- **`find_control_text` / `select_control_text` / `control_text_attributes`** (`AC_find_control_text`, `AC_select_control_text`, `AC_control_text_attributes`): `ax_text` shipped the three whole-range *reads*, but couldn't search for a substring, select a found range, or read text formatting — needed to assert "the error word is red and bold" or to place the selection at matched text before typing. This rounds out TextPattern: `find_control_text` searches the real content (not OCR) via `FindText`, `select_control_text` finds + selects a range so the next keystrokes replace it, and `control_text_attributes` reads `{font_name, font_size, bold, italic, foreground_color}`. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
+## What's new (2026-06-25) — MSAA Bridge for Legacy Controls (LegacyIAccessible)
+
+Automate the long tail of old Win32 controls that expose nothing via modern UIA. Full reference: [`docs/source/Eng/doc/new_features/v199_features_doc.rst`](docs/source/Eng/doc/new_features/v199_features_doc.rst).
+
+- **`legacy_info` / `legacy_default_action`** (`AC_legacy_info`, `AC_legacy_default_action`): many legacy Win32 / MFC / Delphi controls expose nothing useful via modern UIA patterns (`control_get_value` / `control_invoke` / `control_toggle` all return None), yet they're fully described through the MSAA `IAccessible` bridge — Name, Value, Description, Role, State and a **DefaultAction**. This reads that info and fires the default action via `LegacyIAccessiblePattern` — the last-resort fallback that makes old apps automatable. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
+## What's new (2026-06-25) — Move / Resize Elements + Window State (UIA Transform + Window)
+
+Move a floating panel, resize a control, and know if a window is modal-blocked. Full reference: [`docs/source/Eng/doc/new_features/v198_features_doc.rst`](docs/source/Eng/doc/new_features/v198_features_doc.rst).
+
+- **`move_element` / `resize_element` / `set_window_state` / `window_interaction_state`** (`AC_move_element`, `AC_resize_element`, `AC_set_window_state`, `AC_window_interaction_state`): this is UIA-**element-level**, not the HWND/title-level geometry in `window_layout`. `TransformPattern` moves/resizes a specific control or floating panel (dockable toolbars, MDI children, splitters) with no top-level window of its own; `WindowPattern` minimizes/maximizes a window and reports its **interaction state** (`ready` / `blocked_by_modal` / `not_responding`) — a reliable "is this window ready or modal-blocked?" signal pixel/title polling can't give. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
 ## What's new (2026-06-25) — Table Headers + Cell Addressing (UIA TablePattern)
 
 Assert "the Status column of row 5 says Shipped" — by header, not by guessing indices. Full reference: [`docs/source/Eng/doc/new_features/v197_features_doc.rst`](docs/source/Eng/doc/new_features/v197_features_doc.rst).

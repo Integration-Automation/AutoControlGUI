@@ -1220,12 +1220,136 @@ def a11y_control_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_move_element",
+            description=("Move a UIA element to ('x','y') via TransformPattern — "
+                         "element-level, for panels / toolbars / MDI children "
+                         "without their own window. Returns True on success."),
+            input_schema=schema({"x": {"type": "number"},
+                                 "y": {"type": "number"}, **_M},
+                                required=["x", "y"]),
+            handler=h.move_element,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_resize_element",
+            description=("Resize a UIA element to 'width' x 'height' via "
+                         "TransformPattern. Returns True on success."),
+            input_schema=schema({"width": {"type": "number"},
+                                 "height": {"type": "number"}, **_M},
+                                required=["width", "height"]),
+            handler=h.resize_element,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_set_window_state",
+            description=("Set a window's visual state via WindowPattern: 'state' "
+                         "= normal / maximized / minimized. Returns True on "
+                         "success."),
+            input_schema=schema({
+                "state": {"type": "string",
+                          "enum": ["normal", "maximized", "minimized"]}, **_M},
+                required=["state"]),
+            handler=h.set_window_state,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_window_interaction_state",
+            description=("Read a window's interaction state via WindowPattern: "
+                         "{state: ready|blocked_by_modal|not_responding|running|"
+                         "closing|null}. A reliable 'is this window ready / "
+                         "modal-blocked?' signal."),
+            input_schema=schema(dict(_M)),
+            handler=h.window_interaction_state,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_legacy_info",
+            description=("Read an old control's MSAA IAccessible info via "
+                         "LegacyIAccessiblePattern: {found, info:{name, value, "
+                         "description, default_action, role, state}}. The "
+                         "last-resort read for legacy Win32 controls UIA can't "
+                         "model."),
+            input_schema=schema(dict(_M)),
+            handler=h.legacy_info,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_legacy_default_action",
+            description=("Fire an old control's MSAA default action "
+                         "(LegacyIAccessible.DoDefaultAction) — the fallback when "
+                         "Value/Invoke/Toggle all do nothing. Returns True on "
+                         "success."),
+            input_schema=schema(dict(_M)),
+            handler=h.legacy_default_action,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_get_selection",
+            description=("Read a container's selection via SelectionPattern: "
+                         "{found, selection:{items:[names], can_select_multiple, "
+                         "is_required}} — what's selected in a listbox/grid/tab."),
+            input_schema=schema(dict(_M)),
+            handler=h.get_selection,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_list_views",
+            description=("List a control's selectable views via "
+                         "MultipleViewPattern: {found, views:{current, views:"
+                         "[names]}} — e.g. Explorer list / details / tile."),
+            input_schema=schema(dict(_M)),
+            handler=h.list_views,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_set_view",
+            description=("Switch a control to the named 'view' via "
+                         "MultipleViewPattern. Returns True on success."),
+            input_schema=schema({"view": {"type": "string"}, **_M},
+                                required=["view"]),
+            handler=h.set_view,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
             name="ac_get_control_text",
             description=("Read a control's full text via TextPattern: "
                          "{text}. Works on multiline edits / RichEdit / document "
                          "controls where ac_control_get_value returns empty."),
             input_schema=schema(dict(_M)),
             handler=h.get_control_text,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_find_control_text",
+            description=("Whether 'text' occurs in a control via "
+                         "TextPattern.FindText (searches the real text content, "
+                         "not OCR). Returns True/False. 'ignore_case' default "
+                         "true."),
+            input_schema=schema({"text": {"type": "string"},
+                                 "ignore_case": {"type": "boolean"}, **_M},
+                                required=["text"]),
+            handler=h.find_control_text,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_select_control_text",
+            description=("Find 'text' in a control and SELECT its range "
+                         "(TextPattern.FindText + Select) — position the caret / "
+                         "selection before typing to replace it. Returns True on "
+                         "success."),
+            input_schema=schema({"text": {"type": "string"},
+                                 "ignore_case": {"type": "boolean"}, **_M},
+                                required=["text"]),
+            handler=h.select_control_text,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_control_text_attributes",
+            description=("Read the control selection's formatting via TextPattern "
+                         "attributes: {found, attributes:{font_name, font_size, "
+                         "bold, italic, foreground_color}}."),
+            input_schema=schema(dict(_M)),
+            handler=h.control_text_attributes,
             annotations=READ_ONLY,
         ),
         MCPTool(

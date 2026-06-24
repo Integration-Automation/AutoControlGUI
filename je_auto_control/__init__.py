@@ -53,9 +53,10 @@ from je_auto_control.utils.control_patterns import (
     collapse_control, control_expand_state, control_range, expand_control,
     scroll_control_into_view, select_control_item, set_control_range,
 )
-# Native text reads via UIA TextPattern (document / selection / visible)
+# Native text via UIA TextPattern (read / find / select / attributes)
 from je_auto_control.utils.ax_text import (
-    get_control_text, get_selected_text, get_visible_text,
+    control_text_attributes, find_control_text, get_control_text,
+    get_selected_text, get_visible_text, select_control_text,
 )
 # Readable / addressable a11y-tree post-processing (role names + node paths)
 from je_auto_control.utils.ax_tree_walk import (
@@ -75,6 +76,18 @@ from je_auto_control.utils.ax_props import (
 # Table headers + cell addressing for native grids (UIA TablePattern)
 from je_auto_control.utils.table_pattern import (
     cell_by_header, table_cell, table_headers,
+)
+# Move/resize UIA elements + window state (Transform + Window patterns)
+from je_auto_control.utils.transform_window import (
+    move_element, resize_element, set_window_state, window_interaction_state,
+)
+# MSAA bridge for old controls UIA can't model (LegacyIAccessiblePattern)
+from je_auto_control.utils.legacy_accessible import (
+    legacy_default_action, legacy_info,
+)
+# Container selection state + view switching (Selection / MultipleView patterns)
+from je_auto_control.utils.selection_view import (
+    get_selection, list_views, set_view,
 )
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
@@ -1673,12 +1686,17 @@ __all__ = [
     "select_control_item", "control_range", "set_control_range",
     "scroll_control_into_view",
     "get_control_text", "get_selected_text", "get_visible_text",
+    "find_control_text", "select_control_text", "control_text_attributes",
     "control_type_name", "humanize_role", "humanize_tree",
     "assign_node_paths", "find_by_path",
     "is_interactive_role", "tab_order", "audit_focus_order", "focus_control",
     "realize_item",
     "get_element_properties", "is_element_enabled",
     "table_headers", "table_cell", "cell_by_header",
+    "move_element", "resize_element", "set_window_state",
+    "window_interaction_state",
+    "legacy_info", "legacy_default_action",
+    "get_selection", "list_views", "set_view",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",

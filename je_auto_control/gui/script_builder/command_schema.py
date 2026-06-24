@@ -1644,9 +1644,76 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Read the cell at (row, named column) — assert by header.",
     ))
     specs.append(CommandSpec(
+        "AC_move_element", "Native UI", "Move Element (Transform)",
+        fields=(FieldSpec("x", FieldType.FLOAT),
+                FieldSpec("y", FieldType.FLOAT)) + fields,
+        description="Move a UIA element to (x, y) (TransformPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_resize_element", "Native UI", "Resize Element (Transform)",
+        fields=(FieldSpec("width", FieldType.FLOAT),
+                FieldSpec("height", FieldType.FLOAT)) + fields,
+        description="Resize a UIA element (TransformPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_window_state", "Native UI", "Set Window State",
+        fields=(FieldSpec("state", FieldType.ENUM, default="normal",
+                          choices=("normal", "maximized", "minimized")),) + fields,
+        description="Minimize / maximize / restore a window (WindowPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_window_interaction_state", "Native UI", "Window Interaction State",
+        fields=fields,
+        description="Read window readiness (ready/blocked_by_modal/...).",
+    ))
+    specs.append(CommandSpec(
+        "AC_legacy_info", "Native UI", "Legacy (MSAA) Info",
+        fields=fields,
+        description="Read an old control's MSAA info (LegacyIAccessible).",
+    ))
+    specs.append(CommandSpec(
+        "AC_legacy_default_action", "Native UI", "Legacy (MSAA) Default Action",
+        fields=fields,
+        description="Fire an old control's MSAA default action (fallback).",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_selection", "Native UI", "Get Container Selection",
+        fields=fields,
+        description="Read a container's selection (SelectionPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_list_views", "Native UI", "List Control Views",
+        fields=fields,
+        description="List a control's selectable views (MultipleViewPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_view", "Native UI", "Set Control View",
+        fields=(FieldSpec("view", FieldType.STRING),) + fields,
+        description="Switch a control to the named view (MultipleViewPattern).",
+    ))
+    specs.append(CommandSpec(
         "AC_get_control_text", "Native UI", "Get Control Text",
         fields=fields,
         description="Read full text via TextPattern (multiline / document safe).",
+    ))
+    specs.append(CommandSpec(
+        "AC_find_control_text", "Native UI", "Find Text in Control",
+        fields=(FieldSpec("text", FieldType.STRING),
+                FieldSpec("ignore_case", FieldType.BOOL, optional=True,
+                          default=True)) + fields,
+        description="Whether text occurs in a control (TextPattern.FindText).",
+    ))
+    specs.append(CommandSpec(
+        "AC_select_control_text", "Native UI", "Select Text in Control",
+        fields=(FieldSpec("text", FieldType.STRING),
+                FieldSpec("ignore_case", FieldType.BOOL, optional=True,
+                          default=True)) + fields,
+        description="Find + select text in a control (FindText + Select).",
+    ))
+    specs.append(CommandSpec(
+        "AC_control_text_attributes", "Native UI", "Get Text Attributes",
+        fields=fields,
+        description="Read selection formatting (font/size/bold/italic/colour).",
     ))
     specs.append(CommandSpec(
         "AC_get_selected_text", "Native UI", "Get Selected Text",
