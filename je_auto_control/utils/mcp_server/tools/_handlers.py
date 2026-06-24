@@ -885,6 +885,21 @@ def legacy_default_action(name=None, role=None, app_name=None,
     return _legacy_default_action(name, role, app_name, automation_id)
 
 
+def get_selection(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _get_selection
+    return _get_selection(name, role, app_name, automation_id)
+
+
+def list_views(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _list_views
+    return _list_views(name, role, app_name, automation_id)
+
+
+def set_view(view, name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _set_view
+    return _set_view(view, name, role, app_name, automation_id)
+
+
 def get_selected_text(name=None, role=None, app_name=None, automation_id=None):
     from je_auto_control.utils.executor.action_executor import _get_selected_text
     return _get_selected_text(name, role, app_name, automation_id)

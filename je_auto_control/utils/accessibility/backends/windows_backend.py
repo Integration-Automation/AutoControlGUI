@@ -37,6 +37,8 @@ _UIA_GRIDITEM_PATTERN_ID = 10007
 _UIA_TRANSFORM_PATTERN_ID = 10016
 _UIA_WINDOW_PATTERN_ID = 10009
 _UIA_LEGACYIACCESSIBLE_PATTERN_ID = 10018
+_UIA_SELECTION_PATTERN_ID = 10001
+_UIA_MULTIPLEVIEW_PATTERN_ID = 10008
 _UIA_AUTOMATIONID_PROPERTY = 30011
 _EXPAND_STATES = {0: "collapsed", 1: "expanded", 2: "partial", 3: "leaf"}
 _WINDOW_VISUAL_STATES = {"normal": 0, "maximized": 1, "minimized": 2}
@@ -370,6 +372,54 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             "IUIAutomationLegacyIAccessiblePattern",
             lambda pattern: pattern.DoDefaultAction())
 
+    def get_selection(self, name=None, role=None, app_name=None,
+                      automation_id=None) -> Optional[Dict[str, Any]]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_SELECTION_PATTERN_ID,
+                                "IUIAutomationSelectionPattern") if raw else None
+        if pattern is None:
+            return None
+        try:
+            items = _header_names(pattern.GetCurrentSelection())
+            can_multiple = bool(pattern.CurrentCanSelectMultiple)
+            required = bool(pattern.CurrentIsSelectionRequired)
+        except (OSError, AttributeError):
+            return None
+        return {"items": items, "can_select_multiple": can_multiple,
+                "is_required": required}
+
+    def _multiple_view(self, name, role, app_name, automation_id):
+        raw = self._find_raw(name, role, app_name, automation_id)
+        return self._pattern(raw, _UIA_MULTIPLEVIEW_PATTERN_ID,
+                             "IUIAutomationMultipleViewPattern") if raw else None
+
+    def list_views(self, name=None, role=None, app_name=None,
+                   automation_id=None) -> Optional[Dict[str, Any]]:
+        pattern = self._multiple_view(name, role, app_name, automation_id)
+        if pattern is None:
+            return None
+        try:
+            view_ids = list(pattern.GetCurrentSupportedViews())
+            current = int(pattern.CurrentCurrentView)
+        except (OSError, AttributeError, ValueError, TypeError):
+            return None
+        return {"current": _view_name(pattern, current),
+                "views": [_view_name(pattern, view_id) for view_id in view_ids]}
+
+    def set_view(self, view="", name=None, role=None, app_name=None,
+                 automation_id=None):
+        pattern = self._multiple_view(name, role, app_name, automation_id)
+        if pattern is None:
+            return False
+        try:
+            for view_id in pattern.GetCurrentSupportedViews():
+                if _view_name(pattern, view_id) == str(view):
+                    pattern.SetCurrentView(int(view_id))
+                    return True
+        except (OSError, AttributeError, ValueError, TypeError):
+            return False
+        return False
+
     def get_table_headers(self, name=None, role=None, app_name=None,
                           automation_id=None) -> Optional[Dict[str, Any]]:
         raw = self._find_raw(name, role, app_name, automation_id)
@@ -509,6 +559,14 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             except (OSError, AttributeError):
                 cells.append("")
         return cells
+
+
+def _view_name(pattern, view_id) -> str:
+    """Return a MultipleViewPattern view's name, or '' on failure."""
+    try:
+        return str(pattern.GetViewName(int(view_id)) or "")
+    except (OSError, AttributeError, ValueError, TypeError):
+        return ""
 
 
 def _header_names(array) -> List[str]:

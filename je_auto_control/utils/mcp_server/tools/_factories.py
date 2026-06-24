@@ -1284,6 +1284,33 @@ def a11y_control_tools() -> List[MCPTool]:
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
+            name="ac_get_selection",
+            description=("Read a container's selection via SelectionPattern: "
+                         "{found, selection:{items:[names], can_select_multiple, "
+                         "is_required}} — what's selected in a listbox/grid/tab."),
+            input_schema=schema(dict(_M)),
+            handler=h.get_selection,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_list_views",
+            description=("List a control's selectable views via "
+                         "MultipleViewPattern: {found, views:{current, views:"
+                         "[names]}} — e.g. Explorer list / details / tile."),
+            input_schema=schema(dict(_M)),
+            handler=h.list_views,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_set_view",
+            description=("Switch a control to the named 'view' via "
+                         "MultipleViewPattern. Returns True on success."),
+            input_schema=schema({"view": {"type": "string"}, **_M},
+                                required=["view"]),
+            handler=h.set_view,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
             name="ac_get_control_text",
             description=("Read a control's full text via TextPattern: "
                          "{text}. Works on multiline edits / RichEdit / document "

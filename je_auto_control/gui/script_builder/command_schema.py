@@ -1677,6 +1677,21 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Fire an old control's MSAA default action (fallback).",
     ))
     specs.append(CommandSpec(
+        "AC_get_selection", "Native UI", "Get Container Selection",
+        fields=fields,
+        description="Read a container's selection (SelectionPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_list_views", "Native UI", "List Control Views",
+        fields=fields,
+        description="List a control's selectable views (MultipleViewPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_view", "Native UI", "Set Control View",
+        fields=(FieldSpec("view", FieldType.STRING),) + fields,
+        description="Switch a control to the named view (MultipleViewPattern).",
+    ))
+    specs.append(CommandSpec(
         "AC_get_control_text", "Native UI", "Get Control Text",
         fields=fields,
         description="Read full text via TextPattern (multiline / document safe).",
