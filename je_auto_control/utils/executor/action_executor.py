@@ -2462,6 +2462,20 @@ def _scroll_control_into_view(name: Optional[str] = None, role: Optional[str] = 
                                     automation_id=automation_id)
 
 
+def _realize_item(item_name: str, by: str = "name",
+                  container_name: Optional[str] = None,
+                  container_role: Optional[str] = None,
+                  app_name: Optional[str] = None,
+                  automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: find + realize a virtualized list/grid item (VirtualizedItem)."""
+    from je_auto_control.utils.virtualized import realize_item
+    element = realize_item(item_name, by=str(by), container_name=container_name,
+                           container_role=container_role, app_name=app_name,
+                           automation_id=automation_id)
+    return {"found": element is not None,
+            "element": element.to_dict() if element else None}
+
+
 def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
                       app_name: Optional[str] = None,
                       automation_id: Optional[str] = None) -> Dict[str, Any]:
@@ -6405,6 +6419,7 @@ class Executor:
             "AC_control_range": _control_range,
             "AC_set_control_range": _set_control_range,
             "AC_scroll_control_into_view": _scroll_control_into_view,
+            "AC_realize_item": _realize_item,
             "AC_get_control_text": _get_control_text,
             "AC_get_selected_text": _get_selected_text,
             "AC_get_visible_text": _get_visible_text,

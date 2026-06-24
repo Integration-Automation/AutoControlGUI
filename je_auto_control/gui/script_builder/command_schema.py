@@ -1609,6 +1609,19 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Scroll a control into view (ScrollItemPattern).",
     ))
     specs.append(CommandSpec(
+        "AC_realize_item", "Native UI", "Realize Virtualized Item",
+        fields=(
+            FieldSpec("item_name", FieldType.STRING),
+            FieldSpec("by", FieldType.ENUM, optional=True, default="name",
+                      choices=("name", "automation_id")),
+            FieldSpec("container_name", FieldType.STRING, optional=True),
+            FieldSpec("container_role", FieldType.STRING, optional=True),
+            FieldSpec("app_name", FieldType.STRING, optional=True),
+            FieldSpec("automation_id", FieldType.STRING, optional=True),
+        ),
+        description="Realize an off-screen item in a virtualized list/grid.",
+    ))
+    specs.append(CommandSpec(
         "AC_get_control_text", "Native UI", "Get Control Text",
         fields=fields,
         description="Read full text via TextPattern (multiline / document safe).",

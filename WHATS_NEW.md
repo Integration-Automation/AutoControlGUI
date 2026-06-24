@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Realize Off-Screen Items in Virtualized Lists / Grids
+
+Reach a row that isn't scrolled into view yet — the "element not found in a long list" fix. Full reference: [`docs/source/Eng/doc/new_features/v195_features_doc.rst`](docs/source/Eng/doc/new_features/v195_features_doc.rst).
+
+- **`realize_item`** (`AC_realize_item`): long lists / data grids / trees only materialize visible rows, so an off-screen row has no accessibility element at all — `list_accessibility_elements` / `read_control_table` / `select_control_item` can't see it, and `scroll_control_into_view` can't help because the element doesn't exist yet. This locates the item by property (UIA `ItemContainerPattern.FindItemByProperty`) and realizes it (`VirtualizedItemPattern.Realize`) so it becomes a real, clickable element. Match `by` name (default) or `automation_id`; locate the container by name/role/app. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
 ## What's new (2026-06-25) — Per-Run Step Timeline (waterfall + bottleneck steps)
 
 Read why *this* run was slow — a step waterfall and its bottlenecks. Full reference: [`docs/source/Eng/doc/new_features/v194_features_doc.rst`](docs/source/Eng/doc/new_features/v194_features_doc.rst).

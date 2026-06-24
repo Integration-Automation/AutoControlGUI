@@ -1158,6 +1158,27 @@ def a11y_control_tools() -> List[MCPTool]:
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
+            name="ac_realize_item",
+            description=("Find and REALIZE an off-screen item in a virtualized "
+                         "list/grid (ItemContainer + VirtualizedItem patterns) so "
+                         "it materializes as a real element — rows that aren't "
+                         "scrolled into view have no element until realized. "
+                         "'item_name' matched by 'name' (default) or "
+                         "'automation_id'; the container by container_name/"
+                         "container_role/app_name/automation_id. Returns "
+                         "{found, element}."),
+            input_schema=schema({
+                "item_name": {"type": "string"},
+                "by": {"type": "string", "enum": ["name", "automation_id"]},
+                "container_name": {"type": "string"},
+                "container_role": {"type": "string"},
+                "app_name": {"type": "string"},
+                "automation_id": {"type": "string"}},
+                required=["item_name"]),
+            handler=h.realize_item,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_get_control_text",
             description=("Read a control's full text via TextPattern: "
                          "{text}. Works on multiline edits / RichEdit / document "

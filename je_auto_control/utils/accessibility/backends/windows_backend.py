@@ -30,6 +30,9 @@ _UIA_SELECTIONITEM_PATTERN_ID = 10010
 _UIA_RANGEVALUE_PATTERN_ID = 10003
 _UIA_SCROLLITEM_PATTERN_ID = 10017
 _UIA_TEXT_PATTERN_ID = 10014
+_UIA_ITEMCONTAINER_PATTERN_ID = 10019
+_UIA_VIRTUALIZEDITEM_PATTERN_ID = 10020
+_UIA_AUTOMATIONID_PROPERTY = 30011
 _EXPAND_STATES = {0: "collapsed", 1: "expanded", 2: "partial", 3: "leaf"}
 
 
@@ -263,6 +266,37 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
                     "maximum": float(pattern.CurrentMaximum)}
         except (OSError, AttributeError, ValueError, TypeError):
             return None
+
+    def _realize(self, raw) -> None:
+        """Realize a virtualized element so it materializes (VirtualizedItemPattern)."""
+        pattern = self._pattern(raw, _UIA_VIRTUALIZEDITEM_PATTERN_ID,
+                                "IUIAutomationVirtualizedItemPattern")
+        if pattern is None:
+            return
+        try:
+            pattern.Realize()
+        except (OSError, AttributeError):
+            pass
+
+    def find_virtual_item(self, item_name=None, by="name", container_name=None,
+                          container_role=None, app_name=None, automation_id=None):
+        container = self._find_raw(container_name, container_role, app_name,
+                                   automation_id)
+        pattern = self._pattern(container, _UIA_ITEMCONTAINER_PATTERN_ID,
+                                "IUIAutomationItemContainerPattern"
+                                ) if container else None
+        if pattern is None:
+            return None
+        property_id = (_UIA_AUTOMATIONID_PROPERTY if by == "automation_id"
+                       else _UIA_NAME_PROPERTY)
+        try:
+            found = pattern.FindItemByProperty(None, property_id, item_name)
+        except (OSError, AttributeError, ValueError):
+            return None
+        if not found:
+            return None
+        self._realize(found)
+        return _convert_uia(found)
 
     def _text_pattern(self, name, role, app_name, automation_id):
         """Find a control and return its IUIAutomationTextPattern, or None."""

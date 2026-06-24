@@ -131,6 +131,23 @@ class AccessibilityBackend:
         """Set keyboard focus on the matched control (SetFocus); True on success."""
         self._unsupported("set_focus")
 
+    # --- virtualized items (realize off-screen list / grid items) -----------
+
+    def find_virtual_item(self, item_name: Optional[str] = None, by: str = "name",
+                          container_name: Optional[str] = None,
+                          container_role: Optional[str] = None,
+                          app_name: Optional[str] = None,
+                          automation_id: Optional[str] = None,
+                          ) -> Optional[AccessibilityElement]:
+        """Find a (possibly virtualized) item inside a container and realize it.
+
+        Long virtualized lists / grids only materialize visible rows; this locates
+        the item by property (``ItemContainerPattern``) and realizes it
+        (``VirtualizedItemPattern``) so it exists as a real element. Returns the
+        realized element, or None if the container or item isn't found.
+        """
+        self._unsupported("find_virtual_item")
+
     def _unsupported(self, operation: str):
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(
