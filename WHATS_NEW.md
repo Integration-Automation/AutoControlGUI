@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Reactive UIA Event Wait (focus change)
+
+Wait until focus lands on the dialog — a real, zero-latency UIA event, not polling. Full reference: [`docs/source/Eng/doc/new_features/v202_features_doc.rst`](docs/source/Eng/doc/new_features/v202_features_doc.rst).
+
+- **`wait_for_focus_change`** (`AC_wait_for_focus_change`): the accessibility recorder *polls* focus every ~250 ms, so it can miss a fast transition and reacts late. This blocks on the native `AddFocusChangedEventHandler` and returns the moment focus moves — the zero-latency, miss-free "wait until focus lands on the dialog" primitive, the accessibility-tree analogue of `wait_for_window` / `wait_for_image`. Returns the newly-focused element (or `None` on timeout). The real event subscription is registered/unregistered under a lock on the calling thread; dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
 ## What's new (2026-06-25) — Container Selection + View Switching (Selection / MultipleView)
 
 Read what's selected in a listbox/grid, and switch Explorer-style views. Full reference: [`docs/source/Eng/doc/new_features/v201_features_doc.rst`](docs/source/Eng/doc/new_features/v201_features_doc.rst).

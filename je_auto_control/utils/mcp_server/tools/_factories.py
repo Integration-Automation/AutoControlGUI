@@ -1311,6 +1311,16 @@ def a11y_control_tools() -> List[MCPTool]:
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
+            name="ac_wait_for_focus_change",
+            description=("Block until the keyboard focus moves (real UIA focus "
+                         "event — zero-latency, miss-free, unlike polling). "
+                         "Returns {changed, element} or {changed: false} on "
+                         "'timeout' seconds (default 5)."),
+            input_schema=schema({"timeout": {"type": "number"}}),
+            handler=h.wait_for_focus_change,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_get_control_text",
             description=("Read a control's full text via TextPattern: "
                          "{text}. Works on multiline edits / RichEdit / document "

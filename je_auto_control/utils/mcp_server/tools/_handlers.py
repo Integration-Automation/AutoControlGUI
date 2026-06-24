@@ -900,6 +900,12 @@ def set_view(view, name=None, role=None, app_name=None, automation_id=None):
     return _set_view(view, name, role, app_name, automation_id)
 
 
+def wait_for_focus_change(timeout=5.0):
+    from je_auto_control.utils.executor.action_executor import (
+        _wait_for_focus_change)
+    return _wait_for_focus_change(timeout)
+
+
 def get_selected_text(name=None, role=None, app_name=None, automation_id=None):
     from je_auto_control.utils.executor.action_executor import _get_selected_text
     return _get_selected_text(name, role, app_name, automation_id)
