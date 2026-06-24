@@ -3323,6 +3323,31 @@ def clipboard_files_tools() -> List[MCPTool]:
             handler=h.diff_formats,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_plan_file_drop",
+            description=("Build the WM_DROPFILES payload for dropping 'paths' at "
+                         "'point' without sending it (pure dry-run). Returns "
+                         "{message, paths, point, wide, blob_size}."),
+            input_schema=schema({
+                "paths": {"type": "array", "items": {"type": "string"}},
+                "point": {"type": "array", "items": {"type": "integer"}}},
+                required=["paths"]),
+            handler=h.plan_file_drop,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_drop_files",
+            description=("Drop 'paths' onto window 'hwnd' via WM_DROPFILES — the "
+                         "completion of a drag-and-drop (Windows). 'point' is the "
+                         "client-area drop coordinate. Returns {dropped, count}."),
+            input_schema=schema({
+                "hwnd": {"type": "integer"},
+                "paths": {"type": "array", "items": {"type": "string"}},
+                "point": {"type": "array", "items": {"type": "integer"}}},
+                required=["hwnd", "paths"]),
+            handler=h.drop_files,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
     ]
 
 

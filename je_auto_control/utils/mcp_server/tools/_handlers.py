@@ -2499,6 +2499,16 @@ def diff_formats(before, after):
     return _diff_formats(before, after)
 
 
+def plan_file_drop(paths, point=None):
+    from je_auto_control.utils.executor.action_executor import _plan_file_drop
+    return _plan_file_drop(paths, point)
+
+
+def drop_files(hwnd, paths, point=None):
+    from je_auto_control.utils.executor.action_executor import _drop_files
+    return _drop_files(hwnd, paths, point)
+
+
 def image_histogram(source=None, bins=32, space="hsv", region=None):
     from je_auto_control.utils.executor.action_executor import _image_histogram
     return _image_histogram(source, bins, space, region)

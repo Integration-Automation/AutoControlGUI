@@ -4242,6 +4242,38 @@ def _diff_formats(before: Any, after: Any) -> Dict[str, Any]:
     return diff_formats(before, after)
 
 
+def _coerce_paths(paths: Any) -> list:
+    """Normalise a paths argument (JSON list string / single path / list)."""
+    import json
+    if isinstance(paths, str):
+        paths = json.loads(paths) if paths.strip().startswith("[") else [paths]
+    return [str(p) for p in paths]
+
+
+def _coerce_point(point: Any) -> tuple:
+    """Normalise a point argument (JSON '[x,y]' / list / default origin)."""
+    import json
+    if isinstance(point, str):
+        point = json.loads(point) if point.strip().startswith("[") else (0, 0)
+    if not point:
+        return (0, 0)
+    return (int(point[0]), int(point[1]))
+
+
+def _plan_file_drop(paths: Any, point: Any = None) -> Dict[str, Any]:
+    """Adapter: build the WM_DROPFILES payload without sending (pure)."""
+    from je_auto_control.utils.file_drop import plan_file_drop
+    return plan_file_drop(_coerce_paths(paths), point=_coerce_point(point))
+
+
+def _drop_files(hwnd: Any, paths: Any, point: Any = None) -> Dict[str, Any]:
+    """Adapter: drop files onto a window via WM_DROPFILES (Windows)."""
+    from je_auto_control.utils.file_drop import drop_files
+    coerced = _coerce_paths(paths)
+    dropped = drop_files(int(hwnd), coerced, point=_coerce_point(point))
+    return {"dropped": bool(dropped), "count": len(coerced)}
+
+
 def _image_histogram(source: Any = None, bins: Any = 32, space: str = "hsv",
                      region: Any = None) -> Dict[str, Any]:
     """Adapter: per-channel colour histogram of an image / the screen."""
@@ -6462,6 +6494,8 @@ class Executor:
             "AC_clipboard_formats": _clipboard_formats,
             "AC_classify_formats": _classify_formats,
             "AC_diff_formats": _diff_formats,
+            "AC_plan_file_drop": _plan_file_drop,
+            "AC_drop_files": _drop_files,
             "AC_image_histogram": _image_histogram,
             "AC_histogram_changed": _histogram_changed,
             "AC_changed_regions": _changed_regions,

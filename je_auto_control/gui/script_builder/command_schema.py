@@ -992,6 +992,27 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("title_substring", FieldType.STRING),),
     ))
     specs.append(CommandSpec(
+        "AC_drop_files", "Window", "Drop Files onto Window",
+        fields=(
+            FieldSpec("hwnd", FieldType.INT),
+            FieldSpec("paths", FieldType.STRING,
+                      placeholder='["C:\\\\a\\\\one.txt"]'),
+            FieldSpec("point", FieldType.STRING, optional=True,
+                      placeholder="[10, 20]"),
+        ),
+        description="Drop files onto a window via WM_DROPFILES (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_plan_file_drop", "Window", "Plan File Drop",
+        fields=(
+            FieldSpec("paths", FieldType.STRING,
+                      placeholder='["C:\\\\a\\\\one.txt"]'),
+            FieldSpec("point", FieldType.STRING, optional=True,
+                      placeholder="[10, 20]"),
+        ),
+        description="Build the WM_DROPFILES payload without sending (pure).",
+    ))
+    specs.append(CommandSpec(
         "AC_snap_window", "Window", "Snap / Tile Window",
         fields=(
             FieldSpec("title", FieldType.STRING),
