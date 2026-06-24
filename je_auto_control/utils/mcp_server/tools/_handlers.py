@@ -558,6 +558,16 @@ def shell_command(command: str, timeout: float = 30.0
     }
 
 
+def open_path(target, verb="open"):
+    from je_auto_control.utils.executor.action_executor import _open_path
+    return _open_path(target, verb)
+
+
+def plan_open(target, verb="open"):
+    from je_auto_control.utils.executor.action_executor import _plan_open
+    return _plan_open(target, verb)
+
+
 def get_clipboard() -> str:
     from je_auto_control.utils.clipboard.clipboard import get_clipboard as _get
     return _get()

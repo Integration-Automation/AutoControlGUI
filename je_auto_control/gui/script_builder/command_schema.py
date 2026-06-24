@@ -4251,6 +4251,24 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("shell_command", FieldType.STRING),),
     ))
     specs.append(CommandSpec(
+        "AC_open_path", "Shell", "Open File / URL (default app)",
+        fields=(
+            FieldSpec("target", FieldType.STRING,
+                      placeholder="report.pdf  or  https://example.com"),
+            FieldSpec("verb", FieldType.STRING, optional=True, default="open",
+                      placeholder="open / print / edit"),
+        ),
+        description="Open a file with its default app, or a URL in the browser.",
+    ))
+    specs.append(CommandSpec(
+        "AC_plan_open", "Shell", "Plan Open (classify)",
+        fields=(
+            FieldSpec("target", FieldType.STRING),
+            FieldSpec("verb", FieldType.STRING, optional=True, default="open"),
+        ),
+        description="Classify how a file/URL would be opened (pure, no launch).",
+    ))
+    specs.append(CommandSpec(
         "AC_take_golden", "Report", "Capture Golden Image",
         fields=(FieldSpec("path", FieldType.FILE_PATH),),
         description="Capture and save a baseline image for visual regression.",

@@ -2084,6 +2084,28 @@ def process_and_shell_tools() -> List[MCPTool]:
             handler=h.shell_command,
             annotations=DESTRUCTIVE,
         ),
+        MCPTool(
+            name="ac_open_path",
+            description=("Open a file with its OS-registered default app (or a "
+                         "'verb' like print), or a URL in the default browser. "
+                         "'target' is a path or URL. Returns {opened}."),
+            input_schema=schema({"target": {"type": "string"},
+                                 "verb": {"type": "string"}},
+                                required=["target"]),
+            handler=h.open_path,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_plan_open",
+            description=("Classify how a file path / URL would be opened without "
+                         "opening it (pure): {kind, target, backend, verb} "
+                         "(+scheme for URLs). Rejects non-allow-listed schemes."),
+            input_schema=schema({"target": {"type": "string"},
+                                 "verb": {"type": "string"}},
+                                required=["target"]),
+            handler=h.plan_open,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

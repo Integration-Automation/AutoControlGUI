@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Open Files / URLs with the Default App
+
+Hand a file to its default app, print it, or open a URL in the browser. Full reference: [`docs/source/Eng/doc/new_features/v203_features_doc.rst`](docs/source/Eng/doc/new_features/v203_features_doc.rst).
+
+- **`open_path` / `plan_open`** (`AC_open_path`, `AC_plan_open`): the framework could launch a literal `.exe`, but not the most common "hand off to another app" step — open `report.pdf` with its registered app, `print` a document, or open a URL in the default browser. This routes per-OS to `os.startfile` / `open` / `xdg-open` / `webbrowser`. `plan_open` is a pure planner that classifies the target (URL vs file path), validates it (URL scheme allow-list; `realpath` for files — a Windows drive `C:\` is correctly a path, not a scheme) and returns the dispatch descriptor; `open_path` runs it through an injectable `opener` (the real OS call by default), so the logic is unit-testable without launching anything. First feature of the ROUND-15 cross-app OS lane. No `PySide6`.
+
 ## What's new (2026-06-25) — Reactive UIA Event Wait (focus change)
 
 Wait until focus lands on the dialog — a real, zero-latency UIA event, not polling. Full reference: [`docs/source/Eng/doc/new_features/v202_features_doc.rst`](docs/source/Eng/doc/new_features/v202_features_doc.rst).
