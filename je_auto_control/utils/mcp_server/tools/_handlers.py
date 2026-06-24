@@ -2509,6 +2509,17 @@ def drop_files(hwnd, paths, point=None):
     return _drop_files(hwnd, paths, point)
 
 
+def image_quality(source=None, region=None):
+    from je_auto_control.utils.executor.action_executor import _image_quality
+    return _image_quality(source, region)
+
+
+def quality_gate(source=None, region=None, min_sharpness=100.0,
+                 min_contrast=12.0):
+    from je_auto_control.utils.executor.action_executor import _quality_gate
+    return _quality_gate(source, region, min_sharpness, min_contrast)
+
+
 def image_histogram(source=None, bins=32, space="hsv", region=None):
     from je_auto_control.utils.executor.action_executor import _image_histogram
     return _image_histogram(source, bins, space, region)

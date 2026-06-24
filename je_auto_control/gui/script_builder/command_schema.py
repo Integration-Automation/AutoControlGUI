@@ -742,6 +742,28 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Detect a palette/view change vs a reference (illumination-robust).",
     ))
     specs.append(CommandSpec(
+        "AC_image_quality", "Image", "Image Quality",
+        fields=(
+            FieldSpec("source", FieldType.FILE_PATH, optional=True),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Sharpness / contrast / brightness of an image or the screen.",
+    ))
+    specs.append(CommandSpec(
+        "AC_quality_gate", "Image", "Quality Gate (OCR-ready?)",
+        fields=(
+            FieldSpec("source", FieldType.FILE_PATH, optional=True),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+            FieldSpec("min_sharpness", FieldType.FLOAT, optional=True,
+                      default=100.0),
+            FieldSpec("min_contrast", FieldType.FLOAT, optional=True,
+                      default=12.0),
+        ),
+        description="Pass/fail an image for OCR readability with named issues.",
+    ))
+    specs.append(CommandSpec(
         "AC_changed_regions", "Image", "Changed Regions (motion)",
         fields=(
             FieldSpec("before", FieldType.FILE_PATH),

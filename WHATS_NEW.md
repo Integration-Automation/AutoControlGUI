@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Image Quality Scoring (sharpness / contrast / brightness gate)
+
+Refuse to OCR a blurry or washed-out frame — score quality and gate before recognition. Full reference: [`docs/source/Eng/doc/new_features/v188_features_doc.rst`](docs/source/Eng/doc/new_features/v188_features_doc.rst).
+
+- **`image_quality` / `is_blurry` / `quality_gate`** (`AC_image_quality`, `AC_quality_gate`): OCR and template matching quietly fail on a blurry, washed-out or too-dark capture, and the caller can't tell a *missing* element from an *unreadable* one. This measures sharpness (variance of the Laplacian), contrast (grayscale stddev) and brightness (mean 0–255); `quality_gate` turns them into `{passed, issues}` flagging `blurry` / `low_contrast` / `too_dark` / `too_bright` so a script can pre-process or re-capture before OCR. Reuses `visual_match`'s grayscale loader (any ndarray / path / PIL image, or the live screen); cv2/numpy lazily imported. No `PySide6`.
+
 ## What's new (2026-06-24) — Drop Files onto a Window (WM_DROPFILES)
 
 Complete a drag-and-drop programmatically — drop files onto a target window. Full reference: [`docs/source/Eng/doc/new_features/v187_features_doc.rst`](docs/source/Eng/doc/new_features/v187_features_doc.rst).

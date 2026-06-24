@@ -3385,6 +3385,32 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.histogram_changed,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_image_quality",
+            description=("Measure image quality of 'source' (image path; default "
+                         "screen grab of 'region'): {sharpness (Laplacian "
+                         "variance — low=blurry), contrast (grayscale stddev), "
+                         "brightness (mean 0-255)}."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}}}),
+            handler=h.image_quality,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_quality_gate",
+            description=("Grade 'source' for OCR readability: {sharpness, "
+                         "contrast, brightness, passed, issues}. 'issues' flags "
+                         "blurry / low_contrast / too_dark / too_bright. Tune with "
+                         "'min_sharpness' / 'min_contrast'."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "min_sharpness": {"type": "number"},
+                "min_contrast": {"type": "number"}}),
+            handler=h.quality_gate,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
