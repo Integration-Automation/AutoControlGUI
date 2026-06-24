@@ -27,7 +27,7 @@ def test_plan_file_path_is_realpathed():
 
 
 def test_windows_drive_is_a_file_not_a_scheme():
-    assert plan_open(r"C:\tmp\a.txt")["kind"] == "file"
+    assert plan_open(r"C:\Users\me\report.txt")["kind"] == "file"
 
 
 def test_verb_is_carried():
