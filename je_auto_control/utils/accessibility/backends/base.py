@@ -148,6 +148,20 @@ class AccessibilityBackend:
         """
         self._unsupported("find_virtual_item")
 
+    # --- rich element properties -------------------------------------------
+
+    def get_properties(self, name: Optional[str] = None,
+                       role: Optional[str] = None, app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None,
+                       ) -> Optional[Dict[str, Any]]:
+        """Return rich UIA properties of the matched control, or None.
+
+        Surfaces the high-value properties the flat element list omits —
+        ``enabled`` / ``offscreen`` / ``help_text`` / ``item_status`` /
+        ``accelerator_key`` / ``access_key`` / ``orientation``.
+        """
+        self._unsupported("get_properties")
+
     def _unsupported(self, operation: str):
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(

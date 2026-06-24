@@ -1179,6 +1179,16 @@ def a11y_control_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_get_element_properties",
+            description=("Read rich UIA properties the flat list omits: "
+                         "{found, properties:{enabled, offscreen, help_text, "
+                         "item_status, accelerator_key, access_key, "
+                         "orientation}}. Check 'enabled' before clicking."),
+            input_schema=schema(dict(_M)),
+            handler=h.get_element_properties,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_get_control_text",
             description=("Read a control's full text via TextPattern: "
                          "{text}. Works on multiline edits / RichEdit / document "

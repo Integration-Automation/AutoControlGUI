@@ -1622,6 +1622,11 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Realize an off-screen item in a virtualized list/grid.",
     ))
     specs.append(CommandSpec(
+        "AC_get_element_properties", "Native UI", "Get Element Properties",
+        fields=fields,
+        description="Read rich UIA props (enabled/offscreen/help/status/keys).",
+    ))
+    specs.append(CommandSpec(
         "AC_get_control_text", "Native UI", "Get Control Text",
         fields=fields,
         description="Read full text via TextPattern (multiline / document safe).",
