@@ -4185,6 +4185,37 @@ def _get_clipboard_files() -> Dict[str, Any]:
     return {"found": paths is not None, "paths": paths or []}
 
 
+def _set_clipboard_rtf(text: str) -> Dict[str, Any]:
+    """Adapter: put text on the clipboard as Rich Text Format (Windows)."""
+    from je_auto_control.utils.clipboard_rich_formats import set_clipboard_rtf
+    set_clipboard_rtf(str(text))
+    return {"set": True, "length": len(str(text))}
+
+
+def _get_clipboard_rtf() -> Dict[str, Any]:
+    """Adapter: read the clipboard's RTF document string (Windows)."""
+    from je_auto_control.utils.clipboard_rich_formats import get_clipboard_rtf
+    rtf = get_clipboard_rtf()
+    return {"found": rtf is not None, "rtf": rtf}
+
+
+def _set_clipboard_csv(rows: Any, delimiter: str = ",") -> Dict[str, Any]:
+    """Adapter: put a table on the clipboard as the Csv format (Windows)."""
+    import json
+    from je_auto_control.utils.clipboard_rich_formats import set_clipboard_csv
+    if isinstance(rows, str):
+        rows = json.loads(rows)
+    set_clipboard_csv(rows, delimiter=str(delimiter))
+    return {"set": True, "rows": len(rows)}
+
+
+def _get_clipboard_csv(delimiter: str = ",") -> Dict[str, Any]:
+    """Adapter: read the clipboard's Csv content as rows (Windows)."""
+    from je_auto_control.utils.clipboard_rich_formats import get_clipboard_csv
+    rows = get_clipboard_csv(delimiter=str(delimiter))
+    return {"found": rows is not None, "rows": rows or []}
+
+
 def _image_histogram(source: Any = None, bins: Any = 32, space: str = "hsv",
                      region: Any = None) -> Dict[str, Any]:
     """Adapter: per-channel colour histogram of an image / the screen."""
@@ -6398,6 +6429,10 @@ class Executor:
             "AC_get_clipboard_html": _get_clipboard_html,
             "AC_set_clipboard_files": _set_clipboard_files,
             "AC_get_clipboard_files": _get_clipboard_files,
+            "AC_set_clipboard_rtf": _set_clipboard_rtf,
+            "AC_get_clipboard_rtf": _get_clipboard_rtf,
+            "AC_set_clipboard_csv": _set_clipboard_csv,
+            "AC_get_clipboard_csv": _get_clipboard_csv,
             "AC_image_histogram": _image_histogram,
             "AC_histogram_changed": _histogram_changed,
             "AC_changed_regions": _changed_regions,

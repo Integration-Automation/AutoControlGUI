@@ -1598,6 +1598,31 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Read the clipboard's file-drop list (CF_HDROP, Windows).",
     ))
     specs.append(CommandSpec(
+        "AC_set_clipboard_rtf", "Data", "Set Clipboard RTF",
+        fields=(FieldSpec("text", FieldType.STRING,
+                          placeholder="Styled paste text"),),
+        description="Put text on the clipboard as Rich Text Format (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_clipboard_rtf", "Data", "Get Clipboard RTF",
+        description="Read the clipboard's RTF document string (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_clipboard_csv", "Data", "Set Clipboard CSV/TSV",
+        fields=(
+            FieldSpec("rows", FieldType.STRING,
+                      placeholder='[["a", "b"], ["1", "2"]]'),
+            FieldSpec("delimiter", FieldType.STRING, optional=True, default=","),
+        ),
+        description="Put a table on the clipboard as the Csv format (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_clipboard_csv", "Data", "Get Clipboard CSV/TSV",
+        fields=(FieldSpec("delimiter", FieldType.STRING, optional=True,
+                          default=","),),
+        description="Read the clipboard's Csv content as rows (Windows).",
+    ))
+    specs.append(CommandSpec(
         "AC_watchdog_add", "Flow", "Watchdog: Add Popup Rule",
         fields=(
             FieldSpec("title", FieldType.STRING),

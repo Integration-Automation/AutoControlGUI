@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Rich Clipboard Formats (RTF and CSV/TSV)
+
+Put styled text and tables on the clipboard for cross-app paste into Word and Excel. Full reference: [`docs/source/Eng/doc/new_features/v185_features_doc.rst`](docs/source/Eng/doc/new_features/v185_features_doc.rst).
+
+- **`build_rtf` / `rtf_to_text` / `rows_to_csv` / `csv_to_rows` + `set_clipboard_rtf` / `get_clipboard_rtf` / `set_clipboard_csv` / `get_clipboard_csv`** (`AC_set_clipboard_rtf`, `AC_get_clipboard_rtf`, `AC_set_clipboard_csv`, `AC_get_clipboard_csv`): `rich_clipboard` added CF_HTML, but RTF (the format rich editors accept) and the `Csv` format Excel reads were still missing. This adds both: `build_rtf`/`rtf_to_text` build and strip RTF control words and `\uNNNN` / `\'XX` escapes in pure Python (fully unit-testable round-trip), and `rows_to_csv`/`csv_to_rows` wrap the stdlib `csv` module (delimiter-parametrised, so `\t` gives TSV). The codecs are platform-independent; the Win32 get/set share one generic byte-transfer helper, and the sets seed plain text so plain editors still paste. No `PySide6`.
+
 ## What's new (2026-06-24) — Keyboard Focus Order (Tab sequence / WCAG audit / set-focus)
 
 Reason about keyboard navigation: the Tab order, a WCAG focus-order audit, and set-focus. Full reference: [`docs/source/Eng/doc/new_features/v184_features_doc.rst`](docs/source/Eng/doc/new_features/v184_features_doc.rst).
