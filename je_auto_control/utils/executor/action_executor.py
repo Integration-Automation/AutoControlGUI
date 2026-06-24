@@ -2609,6 +2609,18 @@ def _wait_for_focus_change(timeout: Any = 5.0) -> Dict[str, Any]:
     return {"changed": element is not None, "element": element}
 
 
+def _plan_open(target: str, verb: str = "open") -> Dict[str, Any]:
+    """Adapter: classify how a file path / URL would be opened (pure)."""
+    from je_auto_control.utils.shell_open import plan_open
+    return plan_open(str(target), verb=str(verb))
+
+
+def _open_path(target: str, verb: str = "open") -> Dict[str, Any]:
+    """Adapter: open a file with its default app / a URL in the browser."""
+    from je_auto_control.utils.shell_open import open_path
+    return {"opened": bool(open_path(str(target), verb=str(verb)))}
+
+
 def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
                       app_name: Optional[str] = None,
                       automation_id: Optional[str] = None) -> Dict[str, Any]:
@@ -6599,6 +6611,8 @@ class Executor:
             "AC_list_views": _list_views,
             "AC_set_view": _set_view,
             "AC_wait_for_focus_change": _wait_for_focus_change,
+            "AC_plan_open": _plan_open,
+            "AC_open_path": _open_path,
             "AC_get_control_text": _get_control_text,
             "AC_find_control_text": _find_control_text,
             "AC_select_control_text": _select_control_text,
