@@ -162,6 +162,25 @@ class AccessibilityBackend:
         """
         self._unsupported("get_properties")
 
+    # --- table headers + cell addressing (TablePattern / GridItemPattern) ---
+
+    def get_table_headers(self, name: Optional[str] = None,
+                          role: Optional[str] = None,
+                          app_name: Optional[str] = None,
+                          automation_id: Optional[str] = None,
+                          ) -> Optional[Dict[str, Any]]:
+        """Return a table's header labels as ``{columns: [...], rows: [...]}``."""
+        self._unsupported("get_table_headers")
+
+    def get_grid_cell(self, row: int = 0, column: int = 0,
+                      name: Optional[str] = None, role: Optional[str] = None,
+                      app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None,
+                      ) -> Optional[Dict[str, Any]]:
+        """Return the cell at ``(row, column)`` as ``{value, row, column,
+        row_span, column_span}`` (GridPattern.GetItem + GridItemPattern)."""
+        self._unsupported("get_grid_cell")
+
     def _unsupported(self, operation: str):
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(

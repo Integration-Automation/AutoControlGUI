@@ -809,6 +809,24 @@ def get_element_properties(name=None, role=None, app_name=None,
     return _get_element_properties(name, role, app_name, automation_id)
 
 
+def table_headers(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _table_headers
+    return _table_headers(name, role, app_name, automation_id)
+
+
+def table_cell(row, column, name=None, role=None, app_name=None,
+               automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _table_cell
+    return _table_cell(row, column, name, role, app_name, automation_id)
+
+
+def cell_by_header(row, column_header, name=None, role=None, app_name=None,
+                   automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _cell_by_header
+    return _cell_by_header(row, column_header, name, role, app_name,
+                           automation_id)
+
+
 def get_selected_text(name=None, role=None, app_name=None, automation_id=None):
     from je_auto_control.utils.executor.action_executor import _get_selected_text
     return _get_selected_text(name, role, app_name, automation_id)
