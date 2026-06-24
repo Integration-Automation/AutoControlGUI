@@ -7675,6 +7675,22 @@ def flakiness_tools() -> List[MCPTool]:
             handler=h.group_failures,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_diff_runs",
+            description=("Diff two run step-traces (lists of {name,status,"
+                         "duration,error}) — LCS-aligned so inserts shift rather "
+                         "than mis-pair. Returns {added, removed, status_flips "
+                         "(with failure signature), timing_regressions, aligned, "
+                         "identical, summary}. 'regress_factor' = slowdown ratio."),
+            input_schema=schema({
+                "before": {"type": "array", "items": {"type": "object"}},
+                "after": {"type": "array", "items": {"type": "object"}},
+                "key": {"type": "string"},
+                "regress_factor": {"type": "number"}},
+                required=["before", "after"]),
+            handler=h.diff_runs,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
