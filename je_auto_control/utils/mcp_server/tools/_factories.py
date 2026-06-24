@@ -3443,6 +3443,35 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.scale_sweep,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_salient_regions",
+            description=("Visually salient regions of 'source' (image path; "
+                         "default screen grab of 'region') via spectral-residual "
+                         "saliency — where to look with no template/text. Returns "
+                         "{regions:[{x,y,width,height,center,score}], count}."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "size": {"type": "integer"},
+                "threshold": {"type": "number"},
+                "min_area": {"type": "integer"}}),
+            handler=h.salient_regions,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_most_salient",
+            description=("The single most visually salient region of 'source' "
+                         "(default screen): {found, region:{x,y,width,height,"
+                         "center,score}}. The first place to look."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "size": {"type": "integer"},
+                "threshold": {"type": "number"},
+                "min_area": {"type": "integer"}}),
+            handler=h.most_salient,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

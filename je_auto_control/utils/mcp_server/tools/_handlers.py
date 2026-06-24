@@ -2532,6 +2532,17 @@ def scale_sweep(template, haystack=None, region=None, scales=None,
     return _scale_sweep(template, haystack, region, scales, method)
 
 
+def salient_regions(source=None, region=None, size=64, threshold=None,
+                    min_area=4):
+    from je_auto_control.utils.executor.action_executor import _salient_regions
+    return _salient_regions(source, region, size, threshold, min_area)
+
+
+def most_salient(source=None, region=None, size=64, threshold=None, min_area=4):
+    from je_auto_control.utils.executor.action_executor import _most_salient
+    return _most_salient(source, region, size, threshold, min_area)
+
+
 def image_histogram(source=None, bins=32, space="hsv", region=None):
     from je_auto_control.utils.executor.action_executor import _image_histogram
     return _image_histogram(source, bins, space, region)
