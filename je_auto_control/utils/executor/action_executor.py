@@ -2352,6 +2352,70 @@ def _control_toggle(name: Optional[str] = None, role: Optional[str] = None,
                           automation_id=automation_id)
 
 
+def _expand_control(name: Optional[str] = None, role: Optional[str] = None,
+                    app_name: Optional[str] = None,
+                    automation_id: Optional[str] = None) -> bool:
+    """Adapter: expand a tree node / combobox (ExpandCollapsePattern)."""
+    from je_auto_control.utils.control_patterns import expand_control
+    return expand_control(name=name, role=role, app_name=app_name,
+                          automation_id=automation_id)
+
+
+def _collapse_control(name: Optional[str] = None, role: Optional[str] = None,
+                      app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None) -> bool:
+    """Adapter: collapse a tree node / combobox (ExpandCollapsePattern)."""
+    from je_auto_control.utils.control_patterns import collapse_control
+    return collapse_control(name=name, role=role, app_name=app_name,
+                            automation_id=automation_id)
+
+
+def _control_expand_state(name: Optional[str] = None, role: Optional[str] = None,
+                          app_name: Optional[str] = None,
+                          automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: the expand/collapse state of a control."""
+    from je_auto_control.utils.control_patterns import control_expand_state
+    return {"state": control_expand_state(name=name, role=role, app_name=app_name,
+                                          automation_id=automation_id)}
+
+
+def _select_control_item(name: Optional[str] = None, role: Optional[str] = None,
+                         app_name: Optional[str] = None,
+                         automation_id: Optional[str] = None) -> bool:
+    """Adapter: select a list / tree / tab item (SelectionItemPattern)."""
+    from je_auto_control.utils.control_patterns import select_control_item
+    return select_control_item(name=name, role=role, app_name=app_name,
+                               automation_id=automation_id)
+
+
+def _control_range(name: Optional[str] = None, role: Optional[str] = None,
+                   app_name: Optional[str] = None,
+                   automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read a slider / progress range (RangeValuePattern)."""
+    from je_auto_control.utils.control_patterns import control_range
+    info = control_range(name=name, role=role, app_name=app_name,
+                         automation_id=automation_id)
+    return {"found": info is not None, "range": info}
+
+
+def _set_control_range(value: Any, name: Optional[str] = None,
+                       role: Optional[str] = None, app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None) -> bool:
+    """Adapter: set a slider / progress / spinner value (RangeValuePattern)."""
+    from je_auto_control.utils.control_patterns import set_control_range
+    return set_control_range(float(value), name=name, role=role,
+                             app_name=app_name, automation_id=automation_id)
+
+
+def _scroll_control_into_view(name: Optional[str] = None, role: Optional[str] = None,
+                              app_name: Optional[str] = None,
+                              automation_id: Optional[str] = None) -> bool:
+    """Adapter: scroll a control into view (ScrollItemPattern)."""
+    from je_auto_control.utils.control_patterns import scroll_control_into_view
+    return scroll_control_into_view(name=name, role=role, app_name=app_name,
+                                    automation_id=automation_id)
+
+
 def _read_table(name: Optional[str] = None, role: Optional[str] = None,
                 app_name: Optional[str] = None,
                 automation_id: Optional[str] = None) -> List[List[str]]:
@@ -6021,6 +6085,13 @@ class Executor:
             "AC_control_set_value": _control_set_value,
             "AC_control_invoke": _control_invoke,
             "AC_control_toggle": _control_toggle,
+            "AC_expand_control": _expand_control,
+            "AC_collapse_control": _collapse_control,
+            "AC_control_expand_state": _control_expand_state,
+            "AC_select_control_item": _select_control_item,
+            "AC_control_range": _control_range,
+            "AC_set_control_range": _set_control_range,
+            "AC_scroll_control_into_view": _scroll_control_into_view,
             "AC_read_table": _read_table,
             "AC_watchdog_add": _watchdog_add,
             "AC_watchdog_start": _watchdog_start,

@@ -1488,6 +1488,41 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         fields=fields,
         description="Read a grid/table/list control as rows of cell strings.",
     ))
+    specs.append(CommandSpec(
+        "AC_expand_control", "Native UI", "Expand Control",
+        fields=fields,
+        description="Expand a tree node / combobox (ExpandCollapsePattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_collapse_control", "Native UI", "Collapse Control",
+        fields=fields,
+        description="Collapse a tree node / combobox (ExpandCollapsePattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_control_expand_state", "Native UI", "Control Expand State",
+        fields=fields,
+        description="Read expanded/collapsed/partial/leaf state of a control.",
+    ))
+    specs.append(CommandSpec(
+        "AC_select_control_item", "Native UI", "Select Control Item",
+        fields=fields,
+        description="Select a list / tree / tab item (SelectionItemPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_control_range", "Native UI", "Get Control Range",
+        fields=fields,
+        description="Read a slider / progress range (RangeValuePattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_control_range", "Native UI", "Set Control Range",
+        fields=(FieldSpec("value", FieldType.FLOAT),) + fields,
+        description="Set a slider / progress / spinner value (RangeValuePattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_scroll_control_into_view", "Native UI", "Scroll Control Into View",
+        fields=fields,
+        description="Scroll a control into view (ScrollItemPattern).",
+    ))
 
 
 def _add_misc_specs(specs: List[CommandSpec]) -> None:

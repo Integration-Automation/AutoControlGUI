@@ -1099,6 +1099,64 @@ def a11y_control_tools() -> List[MCPTool]:
             handler=h.read_table,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_expand_control",
+            description=("Expand a tree node / combobox / expander natively "
+                         "(ExpandCollapsePattern). Located by name/role/app_name/"
+                         "automation_id. Returns True on success."),
+            input_schema=schema(dict(_M)),
+            handler=h.expand_control,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_collapse_control",
+            description=("Collapse a tree node / combobox / expander natively "
+                         "(ExpandCollapsePattern). Returns True on success."),
+            input_schema=schema(dict(_M)),
+            handler=h.collapse_control,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_control_expand_state",
+            description=("Read a control's expand state via ExpandCollapsePattern: "
+                         "{state: expanded|collapsed|partial|leaf|null}."),
+            input_schema=schema(dict(_M)),
+            handler=h.control_expand_state,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_select_control_item",
+            description=("Select a list / tree / tab item natively "
+                         "(SelectionItemPattern). Returns True on success."),
+            input_schema=schema(dict(_M)),
+            handler=h.select_control_item,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_control_range",
+            description=("Read a slider / progress / spinner range via "
+                         "RangeValuePattern: {found, range:{value,minimum,maximum}}."),
+            input_schema=schema(dict(_M)),
+            handler=h.control_range,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_set_control_range",
+            description=("Set a slider / progress / spinner 'value' natively "
+                         "(RangeValuePattern). Returns True on success."),
+            input_schema=schema({"value": {"type": "number"}, **_M},
+                                required=["value"]),
+            handler=h.set_control_range,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_scroll_control_into_view",
+            description=("Scroll a control into view before acting "
+                         "(ScrollItemPattern). Returns True on success."),
+            input_schema=schema(dict(_M)),
+            handler=h.scroll_control_into_view,
+            annotations=DESTRUCTIVE,
+        ),
     ]
 
 
