@@ -92,6 +92,8 @@ from je_auto_control.utils.saliency import (
 from je_auto_control.utils.failure_signature import (
     failure_signature, group_failures, normalize_error,
 )
+# Run-trace diff (LCS-aligned: added/removed steps, status flips, regressions)
+from je_auto_control.utils.run_diff import diff_runs, summarize_run_diff
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
@@ -1670,6 +1672,7 @@ __all__ = [
     "detect_scale", "scale_sweep",
     "saliency_map", "salient_regions", "most_salient",
     "normalize_error", "failure_signature", "group_failures",
+    "diff_runs", "summarize_run_diff",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "verify_description",

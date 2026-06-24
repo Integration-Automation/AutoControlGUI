@@ -2724,6 +2724,19 @@ def _add_audit_specs(specs: List[CommandSpec]) -> None:
         description="Group error messages by failure signature (most frequent).",
     ))
     specs.append(CommandSpec(
+        "AC_diff_runs", "Testing", "Diff Two Run Traces",
+        fields=(
+            FieldSpec("before", FieldType.STRING,
+                      placeholder='[{"name": "login", "status": "ok"}]'),
+            FieldSpec("after", FieldType.STRING,
+                      placeholder='[{"name": "login", "status": "error"}]'),
+            FieldSpec("key", FieldType.STRING, optional=True, default="name"),
+            FieldSpec("regress_factor", FieldType.FLOAT, optional=True,
+                      default=1.5),
+        ),
+        description="LCS-align two run step-traces: added/removed/flips/regress.",
+    ))
+    specs.append(CommandSpec(
         "AC_scan_secrets", "Tools", "Scan for Hardcoded Secrets",
         description="Scan 'data' (JSON view) for hardcoded secrets that "
                     "should use ${secrets.*}.",

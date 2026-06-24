@@ -4366,6 +4366,20 @@ def _group_failures(errors: Any) -> Dict[str, Any]:
     return {"groups": groups, "count": len(groups)}
 
 
+def _diff_runs(before: Any, after: Any, key: str = "name",
+               regress_factor: Any = 1.5) -> Dict[str, Any]:
+    """Adapter: diff two run step-traces (added/removed/flips/regressions)."""
+    import json
+    from je_auto_control.utils.run_diff import diff_runs, summarize_run_diff
+    if isinstance(before, str):
+        before = json.loads(before)
+    if isinstance(after, str):
+        after = json.loads(after)
+    diff = diff_runs(before, after, key=str(key),
+                     regress_factor=float(regress_factor))
+    return {**diff, "summary": summarize_run_diff(diff)}
+
+
 def _image_histogram(source: Any = None, bins: Any = 32, space: str = "hsv",
                      region: Any = None) -> Dict[str, Any]:
     """Adapter: per-channel colour histogram of an image / the screen."""
@@ -6596,6 +6610,7 @@ class Executor:
             "AC_most_salient": _most_salient,
             "AC_failure_signature": _failure_signature,
             "AC_group_failures": _group_failures,
+            "AC_diff_runs": _diff_runs,
             "AC_image_histogram": _image_histogram,
             "AC_histogram_changed": _histogram_changed,
             "AC_changed_regions": _changed_regions,

@@ -2553,6 +2553,11 @@ def group_failures(errors):
     return _group_failures(errors)
 
 
+def diff_runs(before, after, key="name", regress_factor=1.5):
+    from je_auto_control.utils.executor.action_executor import _diff_runs
+    return _diff_runs(before, after, key, regress_factor)
+
+
 def image_histogram(source=None, bins=32, space="hsv", region=None):
     from je_auto_control.utils.executor.action_executor import _image_histogram
     return _image_histogram(source, bins, space, region)

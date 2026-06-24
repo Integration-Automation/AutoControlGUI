@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Run-Trace Diff (what changed between two executions)
+
+See exactly what changed between a passing run and a failing one. Full reference: [`docs/source/Eng/doc/new_features/v192_features_doc.rst`](docs/source/Eng/doc/new_features/v192_features_doc.rst).
+
+- **`diff_runs` / `summarize_run_diff`** (`AC_diff_runs`): a run history says a run *failed* but not *what changed* from the run that passed. This aligns two step sequences with a longest-common-subsequence walk (so an inserted/removed step shifts the rest into place instead of mis-pairing everything) and classifies the differences: **added**/**removed** steps, **status_flips** (an aligned step that changed status — with the new failure's `failure_signature` when it carries an error), and **timing_regressions** (a step that got `regress_factor`× slower). `summarize_run_diff` renders a one-line summary. Pure stdlib over lists of `{name,status,duration,error}` step dicts. No `PySide6`.
+
 ## What's new (2026-06-25) — Stable Failure Signatures
 
 Match the *same kind* of failure across runs, despite differing paths and ids. Full reference: [`docs/source/Eng/doc/new_features/v191_features_doc.rst`](docs/source/Eng/doc/new_features/v191_features_doc.rst).
