@@ -71,6 +71,11 @@ from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
     rtf_to_text, set_clipboard_csv, set_clipboard_rtf,
 )
+# Clipboard format inspection (classify / diff available formats)
+from je_auto_control.utils.clipboard_formats import (
+    classify_format, classify_formats, clipboard_formats, diff_formats,
+    list_clipboard_formats,
+)
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
@@ -1642,6 +1647,8 @@ __all__ = [
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",
+    "classify_format", "classify_formats", "diff_formats",
+    "list_clipboard_formats", "clipboard_formats",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "verify_description",

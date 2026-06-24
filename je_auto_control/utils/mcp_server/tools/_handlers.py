@@ -2484,6 +2484,21 @@ def get_clipboard_csv(delimiter=","):
     return _get_clipboard_csv(delimiter)
 
 
+def clipboard_formats():
+    from je_auto_control.utils.executor.action_executor import _clipboard_formats
+    return _clipboard_formats()
+
+
+def classify_formats(formats):
+    from je_auto_control.utils.executor.action_executor import _classify_formats
+    return _classify_formats(formats)
+
+
+def diff_formats(before, after):
+    from je_auto_control.utils.executor.action_executor import _diff_formats
+    return _diff_formats(before, after)
+
+
 def image_histogram(source=None, bins=32, space="hsv", region=None):
     from je_auto_control.utils.executor.action_executor import _image_histogram
     return _image_histogram(source, bins, space, region)

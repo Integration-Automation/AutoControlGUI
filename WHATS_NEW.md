@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Clipboard Format Inspection (classify / diff available formats)
+
+See which formats are on the clipboard, and detect when its shape changes. Full reference: [`docs/source/Eng/doc/new_features/v186_features_doc.rst`](docs/source/Eng/doc/new_features/v186_features_doc.rst).
+
+- **`classify_format` / `classify_formats` / `diff_formats` / `list_clipboard_formats` / `clipboard_formats`** (`AC_clipboard_formats`, `AC_classify_formats`, `AC_diff_formats`): the clipboard usually holds the same content in several formats at once (a Word copy = text + HTML + RTF; a file copy = CF_HDROP; a screenshot = CF_DIB). This enumerates the live clipboard (`EnumClipboardFormats`) without consuming anything and classifies each format into a friendly category (text/image/files/html/rtf/csv/audio/…); `diff_formats` is a pure monitor primitive returning `{added, removed, changed}` between two snapshots. The classifier and diff are pure (registered names take priority over dynamic ids); only the live enumeration is Win32. No `PySide6`.
+
 ## What's new (2026-06-24) — Rich Clipboard Formats (RTF and CSV/TSV)
 
 Put styled text and tables on the clipboard for cross-app paste into Word and Excel. Full reference: [`docs/source/Eng/doc/new_features/v185_features_doc.rst`](docs/source/Eng/doc/new_features/v185_features_doc.rst).

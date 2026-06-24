@@ -1623,6 +1623,24 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Read the clipboard's Csv content as rows (Windows).",
     ))
     specs.append(CommandSpec(
+        "AC_clipboard_formats", "Data", "List Clipboard Formats",
+        description="Enumerate + classify the clipboard's formats (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_classify_formats", "Data", "Classify Clipboard Formats",
+        fields=(FieldSpec("formats", FieldType.STRING,
+                          placeholder='[1, 13, {"id": 49161, "name": "Csv"}]'),),
+        description="Classify a provided list of clipboard formats (pure).",
+    ))
+    specs.append(CommandSpec(
+        "AC_diff_formats", "Data", "Diff Clipboard Formats",
+        fields=(
+            FieldSpec("before", FieldType.STRING, placeholder="[1, 13]"),
+            FieldSpec("after", FieldType.STRING, placeholder="[1, 13, 15]"),
+        ),
+        description="Diff two clipboard-format snapshots (pure).",
+    ))
+    specs.append(CommandSpec(
         "AC_watchdog_add", "Flow", "Watchdog: Add Popup Rule",
         fields=(
             FieldSpec("title", FieldType.STRING),
