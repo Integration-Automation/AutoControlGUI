@@ -3252,6 +3252,46 @@ def clipboard_files_tools() -> List[MCPTool]:
             handler=h.get_clipboard_files,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_set_clipboard_rtf",
+            description=("Put 'text' on the clipboard as Rich Text Format so it "
+                         "pastes as styled text into Word / rich editors (Windows). "
+                         "Also seeds plain text. Returns {set, length}."),
+            input_schema=schema({"text": {"type": "string"}}, required=["text"]),
+            handler=h.set_clipboard_rtf,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_clipboard_rtf",
+            description=("Read the clipboard's RTF document string (Windows). "
+                         "Returns {found, rtf}."),
+            input_schema=schema({}, required=[]),
+            handler=h.get_clipboard_rtf,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_set_clipboard_csv",
+            description=("Put a table on the clipboard as the 'Csv' format Excel "
+                         "reads (Windows). 'rows' is a list of row arrays; "
+                         "'delimiter' defaults to ',' (use '\\t' for TSV). "
+                         "Returns {set, rows}."),
+            input_schema=schema({
+                "rows": {"type": "array",
+                         "items": {"type": "array", "items": {"type": "string"}}},
+                "delimiter": {"type": "string"}},
+                required=["rows"]),
+            handler=h.set_clipboard_csv,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_clipboard_csv",
+            description=("Read the clipboard's 'Csv' content as rows of cell "
+                         "strings (Windows). 'delimiter' defaults to ','. "
+                         "Returns {found, rows}."),
+            input_schema=schema({"delimiter": {"type": "string"}}),
+            handler=h.get_clipboard_csv,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
