@@ -4348,6 +4348,24 @@ def _most_salient(source: Any = None, region: Any = None, size: Any = 64,
     return {"found": result is not None, "region": result}
 
 
+def _failure_signature(error: str, length: Any = 12) -> Dict[str, Any]:
+    """Adapter: normalise + hash an error message to a stable signature."""
+    from je_auto_control.utils.failure_signature import (
+        failure_signature, normalize_error)
+    return {"signature": failure_signature(str(error), length=int(length)),
+            "normalized": normalize_error(str(error))}
+
+
+def _group_failures(errors: Any) -> Dict[str, Any]:
+    """Adapter: group error messages by failure signature."""
+    import json
+    from je_auto_control.utils.failure_signature import group_failures
+    if isinstance(errors, str):
+        errors = json.loads(errors)
+    groups = group_failures(errors)
+    return {"groups": groups, "count": len(groups)}
+
+
 def _image_histogram(source: Any = None, bins: Any = 32, space: str = "hsv",
                      region: Any = None) -> Dict[str, Any]:
     """Adapter: per-channel colour histogram of an image / the screen."""
@@ -6576,6 +6594,8 @@ class Executor:
             "AC_scale_sweep": _scale_sweep,
             "AC_salient_regions": _salient_regions,
             "AC_most_salient": _most_salient,
+            "AC_failure_signature": _failure_signature,
+            "AC_group_failures": _group_failures,
             "AC_image_histogram": _image_histogram,
             "AC_histogram_changed": _histogram_changed,
             "AC_changed_regions": _changed_regions,

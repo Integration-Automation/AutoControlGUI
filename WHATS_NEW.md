@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Stable Failure Signatures
+
+Match the *same kind* of failure across runs, despite differing paths and ids. Full reference: [`docs/source/Eng/doc/new_features/v191_features_doc.rst`](docs/source/Eng/doc/new_features/v191_features_doc.rst).
+
+- **`normalize_error` / `failure_signature` / `group_failures`** (`AC_failure_signature`, `AC_group_failures`): two runs that failed the same way rarely have byte-identical error text — paths, line numbers, addresses, ids and timestamps differ every time — which defeats "is this the same failure?" and "which tests fail together?". This strips the variable parts of an error to a canonical form and hashes it (SHA-256), so the same kind of failure gets the same short signature across runs — the join key the rest of the test-robustness tools (run diffing, flake clustering) group on. `group_failures` buckets a list of errors by signature, most frequent first. Pure stdlib (`re` + `hashlib`). No `PySide6`.
+
 ## What's new (2026-06-24) — Visual Saliency (where to look — spectral-residual)
 
 Find the region that stands out, with no template / colour / text. Full reference: [`docs/source/Eng/doc/new_features/v190_features_doc.rst`](docs/source/Eng/doc/new_features/v190_features_doc.rst).

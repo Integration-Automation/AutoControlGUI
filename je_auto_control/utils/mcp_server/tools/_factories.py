@@ -7652,6 +7652,29 @@ def flakiness_tools() -> List[MCPTool]:
             handler=h.flaky_report,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_failure_signature",
+            description=("Normalise an error message (strip paths / addresses / "
+                         "line numbers / timestamps / ids) and hash it to a stable "
+                         "SHA-256 signature, so the same kind of failure matches "
+                         "across runs. Returns {signature, normalized}."),
+            input_schema=schema({"error": {"type": "string"},
+                                 "length": {"type": "integer"}},
+                                required=["error"]),
+            handler=h.failure_signature,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_group_failures",
+            description=("Group a list of error messages by failure signature, "
+                         "most frequent first: [{signature, normalized, count, "
+                         "examples}]."),
+            input_schema=schema({
+                "errors": {"type": "array", "items": {"type": "string"}}},
+                required=["errors"]),
+            handler=h.group_failures,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
