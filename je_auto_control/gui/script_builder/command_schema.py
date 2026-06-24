@@ -2737,6 +2737,25 @@ def _add_audit_specs(specs: List[CommandSpec]) -> None:
         description="LCS-align two run step-traces: added/removed/flips/regress.",
     ))
     specs.append(CommandSpec(
+        "AC_failure_clusters", "Testing", "Cluster Co-Failing Tests",
+        fields=(
+            FieldSpec("runs", FieldType.STRING,
+                      placeholder='[["test_a", "test_b"], ["test_a", "test_b"]]'),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True, default=0.5),
+            FieldSpec("min_size", FieldType.INT, optional=True, default=2),
+        ),
+        description="Cluster tests that flake together (co-failure Jaccard).",
+    ))
+    specs.append(CommandSpec(
+        "AC_cofailure_pairs", "Testing", "Co-Failing Test Pairs",
+        fields=(
+            FieldSpec("runs", FieldType.STRING,
+                      placeholder='[["test_a", "test_b"]]'),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True, default=0.5),
+        ),
+        description="Test pairs that fail together above a Jaccard threshold.",
+    ))
+    specs.append(CommandSpec(
         "AC_scan_secrets", "Tools", "Scan for Hardcoded Secrets",
         description="Scan 'data' (JSON view) for hardcoded secrets that "
                     "should use ${secrets.*}.",

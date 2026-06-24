@@ -2558,6 +2558,16 @@ def diff_runs(before, after, key="name", regress_factor=1.5):
     return _diff_runs(before, after, key, regress_factor)
 
 
+def failure_clusters(runs, threshold=0.5, min_size=2):
+    from je_auto_control.utils.executor.action_executor import _failure_clusters
+    return _failure_clusters(runs, threshold, min_size)
+
+
+def cofailure_pairs(runs, threshold=0.5):
+    from je_auto_control.utils.executor.action_executor import _cofailure_pairs
+    return _cofailure_pairs(runs, threshold)
+
+
 def image_histogram(source=None, bins=32, space="hsv", region=None):
     from je_auto_control.utils.executor.action_executor import _image_histogram
     return _image_histogram(source, bins, space, region)

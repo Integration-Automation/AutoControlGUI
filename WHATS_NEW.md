@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Flaky-Test Co-Failure Clustering
+
+Find the tests that flake *together* — and the shared root cause behind them. Full reference: [`docs/source/Eng/doc/new_features/v193_features_doc.rst`](docs/source/Eng/doc/new_features/v193_features_doc.rst).
+
+- **`cofailure_pairs` / `failure_clusters`** (`AC_cofailure_pairs`, `AC_failure_clusters`): flaky tests are rarely independent — a wobbly fixture or noisy dependency makes a *group* fail in the same runs (~75% of flaky tests cluster). Ranking tests one-by-one by flip rate misses that. This measures how often each pair of tests fails in the *same* runs (Jaccard over their failing-run sets) and groups tests above a threshold into connected clusters with a cohesion score — so you chase one root cause instead of N symptoms. Input is a list of runs, each the test names that failed in it. Pure stdlib. No `PySide6`.
+
 ## What's new (2026-06-25) — Run-Trace Diff (what changed between two executions)
 
 See exactly what changed between a passing run and a failing one. Full reference: [`docs/source/Eng/doc/new_features/v192_features_doc.rst`](docs/source/Eng/doc/new_features/v192_features_doc.rst).
