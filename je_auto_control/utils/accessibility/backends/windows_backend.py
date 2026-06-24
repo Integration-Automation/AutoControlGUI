@@ -29,6 +29,7 @@ _UIA_EXPANDCOLLAPSE_PATTERN_ID = 10005
 _UIA_SELECTIONITEM_PATTERN_ID = 10010
 _UIA_RANGEVALUE_PATTERN_ID = 10003
 _UIA_SCROLLITEM_PATTERN_ID = 10017
+_UIA_TEXT_PATTERN_ID = 10014
 _EXPAND_STATES = {0: "collapsed", 1: "expanded", 2: "partial", 3: "leaf"}
 
 
@@ -261,6 +262,50 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
                     "minimum": float(pattern.CurrentMinimum),
                     "maximum": float(pattern.CurrentMaximum)}
         except (OSError, AttributeError, ValueError, TypeError):
+            return None
+
+    def _text_pattern(self, name, role, app_name, automation_id):
+        """Find a control and return its IUIAutomationTextPattern, or None."""
+        raw = self._find_raw(name, role, app_name, automation_id)
+        if not raw:
+            return None
+        return self._pattern(raw, _UIA_TEXT_PATTERN_ID,
+                             "IUIAutomationTextPattern")
+
+    def document_text(self, name=None, role=None, app_name=None,
+                      automation_id=None) -> Optional[str]:
+        pattern = self._text_pattern(name, role, app_name, automation_id)
+        if pattern is None:
+            return None
+        try:
+            return str(pattern.DocumentRange.GetText(-1) or "")
+        except (OSError, AttributeError):
+            return None
+
+    def selected_text(self, name=None, role=None, app_name=None,
+                      automation_id=None) -> Optional[str]:
+        pattern = self._text_pattern(name, role, app_name, automation_id)
+        if pattern is None:
+            return None
+        try:
+            selection = pattern.GetSelection()
+            if not selection or int(selection.Length or 0) == 0:
+                return ""
+            return str(selection.GetElement(0).GetText(-1) or "")
+        except (OSError, AttributeError):
+            return None
+
+    def visible_text(self, name=None, role=None, app_name=None,
+                     automation_id=None) -> Optional[str]:
+        pattern = self._text_pattern(name, role, app_name, automation_id)
+        if pattern is None:
+            return None
+        try:
+            ranges = pattern.GetVisibleRanges()
+            count = int(ranges.Length or 0)
+            return "".join(str(ranges.GetElement(i).GetText(-1) or "")
+                           for i in range(count))
+        except (OSError, AttributeError):
             return None
 
     @staticmethod

@@ -2416,6 +2416,33 @@ def _scroll_control_into_view(name: Optional[str] = None, role: Optional[str] = 
                                     automation_id=automation_id)
 
 
+def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
+                      app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read a control's full text via TextPattern (multiline-safe)."""
+    from je_auto_control.utils.ax_text import get_control_text
+    return {"text": get_control_text(name=name, role=role, app_name=app_name,
+                                     automation_id=automation_id)}
+
+
+def _get_selected_text(name: Optional[str] = None, role: Optional[str] = None,
+                       app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read a control's currently selected text (TextPattern)."""
+    from je_auto_control.utils.ax_text import get_selected_text
+    return {"text": get_selected_text(name=name, role=role, app_name=app_name,
+                                      automation_id=automation_id)}
+
+
+def _get_visible_text(name: Optional[str] = None, role: Optional[str] = None,
+                      app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read only the on-screen text of a control (TextPattern)."""
+    from je_auto_control.utils.ax_text import get_visible_text
+    return {"text": get_visible_text(name=name, role=role, app_name=app_name,
+                                     automation_id=automation_id)}
+
+
 def _read_table(name: Optional[str] = None, role: Optional[str] = None,
                 app_name: Optional[str] = None,
                 automation_id: Optional[str] = None) -> List[List[str]]:
@@ -6092,6 +6119,9 @@ class Executor:
             "AC_control_range": _control_range,
             "AC_set_control_range": _set_control_range,
             "AC_scroll_control_into_view": _scroll_control_into_view,
+            "AC_get_control_text": _get_control_text,
+            "AC_get_selected_text": _get_selected_text,
+            "AC_get_visible_text": _get_visible_text,
             "AC_read_table": _read_table,
             "AC_watchdog_add": _watchdog_add,
             "AC_watchdog_start": _watchdog_start,

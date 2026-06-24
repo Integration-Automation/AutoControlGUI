@@ -1157,6 +1157,31 @@ def a11y_control_tools() -> List[MCPTool]:
             handler=h.scroll_control_into_view,
             annotations=DESTRUCTIVE,
         ),
+        MCPTool(
+            name="ac_get_control_text",
+            description=("Read a control's full text via TextPattern: "
+                         "{text}. Works on multiline edits / RichEdit / document "
+                         "controls where ac_control_get_value returns empty."),
+            input_schema=schema(dict(_M)),
+            handler=h.get_control_text,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_selected_text",
+            description=("Read a control's currently selected text via "
+                         "TextPattern: {text} ('' when nothing selected)."),
+            input_schema=schema(dict(_M)),
+            handler=h.get_selected_text,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_visible_text",
+            description=("Read only the on-screen text of a control via "
+                         "TextPattern.GetVisibleRanges: {text}."),
+            input_schema=schema(dict(_M)),
+            handler=h.get_visible_text,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
