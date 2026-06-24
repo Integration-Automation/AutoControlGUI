@@ -1263,6 +1263,27 @@ def a11y_control_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_legacy_info",
+            description=("Read an old control's MSAA IAccessible info via "
+                         "LegacyIAccessiblePattern: {found, info:{name, value, "
+                         "description, default_action, role, state}}. The "
+                         "last-resort read for legacy Win32 controls UIA can't "
+                         "model."),
+            input_schema=schema(dict(_M)),
+            handler=h.legacy_info,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_legacy_default_action",
+            description=("Fire an old control's MSAA default action "
+                         "(LegacyIAccessible.DoDefaultAction) — the fallback when "
+                         "Value/Invoke/Toggle all do nothing. Returns True on "
+                         "success."),
+            input_schema=schema(dict(_M)),
+            handler=h.legacy_default_action,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
             name="ac_get_control_text",
             description=("Read a control's full text via TextPattern: "
                          "{text}. Works on multiline edits / RichEdit / document "

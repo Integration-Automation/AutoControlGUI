@@ -36,6 +36,7 @@ _UIA_TABLE_PATTERN_ID = 10012
 _UIA_GRIDITEM_PATTERN_ID = 10007
 _UIA_TRANSFORM_PATTERN_ID = 10016
 _UIA_WINDOW_PATTERN_ID = 10009
+_UIA_LEGACYIACCESSIBLE_PATTERN_ID = 10018
 _UIA_AUTOMATIONID_PROPERTY = 30011
 _EXPAND_STATES = {0: "collapsed", 1: "expanded", 2: "partial", 3: "leaf"}
 _WINDOW_VISUAL_STATES = {"normal": 0, "maximized": 1, "minimized": 2}
@@ -351,6 +352,24 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         except (OSError, AttributeError, ValueError, TypeError):
             return None
 
+    def legacy_info(self, name=None, role=None, app_name=None,
+                    automation_id=None) -> Optional[Dict[str, Any]]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_LEGACYIACCESSIBLE_PATTERN_ID,
+                                "IUIAutomationLegacyIAccessiblePattern"
+                                ) if raw else None
+        if pattern is None:
+            return None
+        return _read_legacy(pattern)
+
+    def legacy_default_action(self, name=None, role=None, app_name=None,
+                              automation_id=None):
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id,
+            _UIA_LEGACYIACCESSIBLE_PATTERN_ID,
+            "IUIAutomationLegacyIAccessiblePattern",
+            lambda pattern: pattern.DoDefaultAction())
+
     def get_table_headers(self, name=None, role=None, app_name=None,
                           automation_id=None) -> Optional[Dict[str, Any]]:
         raw = self._find_raw(name, role, app_name, automation_id)
@@ -491,6 +510,28 @@ def _safe_name(raw) -> str:
 
 def _as_text(value) -> str:
     return str(value or "")
+
+
+# (key, LegacyIAccessiblePattern attribute, cast) for the MSAA bridge read.
+_LEGACY_READS = (
+    ("name", "CurrentName", _as_text),
+    ("value", "CurrentValue", _as_text),
+    ("description", "CurrentDescription", _as_text),
+    ("default_action", "CurrentDefaultAction", _as_text),
+    ("role", "CurrentRole", int),
+    ("state", "CurrentState", int),
+)
+
+
+def _read_legacy(pattern) -> Dict[str, Any]:
+    """Read a LegacyIAccessiblePattern's MSAA fields into a plain dict."""
+    info: Dict[str, Any] = {}
+    for key, attribute, cast in _LEGACY_READS:
+        try:
+            info[key] = cast(getattr(pattern, attribute))
+        except (OSError, AttributeError, ValueError, TypeError):
+            info[key] = None
+    return info
 
 
 # (key, UIA element attribute, cast) for the rich properties the flat list omits.

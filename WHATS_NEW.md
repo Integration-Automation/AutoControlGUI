@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — MSAA Bridge for Legacy Controls (LegacyIAccessible)
+
+Automate the long tail of old Win32 controls that expose nothing via modern UIA. Full reference: [`docs/source/Eng/doc/new_features/v199_features_doc.rst`](docs/source/Eng/doc/new_features/v199_features_doc.rst).
+
+- **`legacy_info` / `legacy_default_action`** (`AC_legacy_info`, `AC_legacy_default_action`): many legacy Win32 / MFC / Delphi controls expose nothing useful via modern UIA patterns (`control_get_value` / `control_invoke` / `control_toggle` all return None), yet they're fully described through the MSAA `IAccessible` bridge — Name, Value, Description, Role, State and a **DefaultAction**. This reads that info and fires the default action via `LegacyIAccessiblePattern` — the last-resort fallback that makes old apps automatable. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
 ## What's new (2026-06-25) — Move / Resize Elements + Window State (UIA Transform + Window)
 
 Move a floating panel, resize a control, and know if a window is modal-blocked. Full reference: [`docs/source/Eng/doc/new_features/v198_features_doc.rst`](docs/source/Eng/doc/new_features/v198_features_doc.rst).

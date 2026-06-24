@@ -80,6 +80,10 @@ from je_auto_control.utils.table_pattern import (
 from je_auto_control.utils.transform_window import (
     move_element, resize_element, set_window_state, window_interaction_state,
 )
+# MSAA bridge for old controls UIA can't model (LegacyIAccessiblePattern)
+from je_auto_control.utils.legacy_accessible import (
+    legacy_default_action, legacy_info,
+)
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1685,6 +1689,7 @@ __all__ = [
     "table_headers", "table_cell", "cell_by_header",
     "move_element", "resize_element", "set_window_state",
     "window_interaction_state",
+    "legacy_info", "legacy_default_action",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",
