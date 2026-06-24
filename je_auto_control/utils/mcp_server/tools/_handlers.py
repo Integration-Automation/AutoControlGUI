@@ -2520,6 +2520,18 @@ def quality_gate(source=None, region=None, min_sharpness=100.0,
     return _quality_gate(source, region, min_sharpness, min_contrast)
 
 
+def detect_scale(template, haystack=None, region=None, scales=None,
+                 method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _detect_scale
+    return _detect_scale(template, haystack, region, scales, method)
+
+
+def scale_sweep(template, haystack=None, region=None, scales=None,
+                method="ccoeff_normed"):
+    from je_auto_control.utils.executor.action_executor import _scale_sweep
+    return _scale_sweep(template, haystack, region, scales, method)
+
+
 def image_histogram(source=None, bins=32, space="hsv", region=None):
     from je_auto_control.utils.executor.action_executor import _image_histogram
     return _image_histogram(source, bins, space, region)

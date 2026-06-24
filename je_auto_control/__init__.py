@@ -82,6 +82,8 @@ from je_auto_control.utils.file_drop import drop_files, plan_file_drop
 from je_auto_control.utils.image_quality import (
     image_quality, is_blurry, quality_gate,
 )
+# Display-scale / visual-DPI detection (per-scale match profile)
+from je_auto_control.utils.scale_detect import detect_scale, scale_sweep
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
@@ -1657,6 +1659,7 @@ __all__ = [
     "list_clipboard_formats", "clipboard_formats",
     "plan_file_drop", "drop_files",
     "image_quality", "is_blurry", "quality_gate",
+    "detect_scale", "scale_sweep",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "verify_description",

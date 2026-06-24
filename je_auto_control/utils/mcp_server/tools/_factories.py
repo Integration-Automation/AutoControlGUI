@@ -3411,6 +3411,38 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.quality_gate,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_detect_scale",
+            description=("Infer the display scale a 'template' renders at (visual "
+                         "DPI) by scoring it against 'haystack' (default screen) "
+                         "across 'scales'. Returns {found, result:{scale, "
+                         "scale_percent, score, center, margin, candidates}}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "haystack": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.detect_scale,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_scale_sweep",
+            description=("Per-scale match-score profile of a 'template' against "
+                         "'haystack' (default screen): {sweep:[{scale, score, x, "
+                         "y, width, height, center}]} — the raw scores match_"
+                         "template discards."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "haystack": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.scale_sweep,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

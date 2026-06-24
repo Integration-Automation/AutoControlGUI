@@ -764,6 +764,30 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Pass/fail an image for OCR readability with named issues.",
     ))
     specs.append(CommandSpec(
+        "AC_detect_scale", "Image", "Detect Display Scale (DPI)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("haystack", FieldType.FILE_PATH, optional=True),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[1.0, 1.25, 1.5, 1.75, 2.0]"),
+        ),
+        description="Infer the display scale a template renders at (visual DPI).",
+    ))
+    specs.append(CommandSpec(
+        "AC_scale_sweep", "Image", "Scale Sweep (per-scale scores)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("haystack", FieldType.FILE_PATH, optional=True),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[1.0, 1.25, 1.5, 1.75, 2.0]"),
+        ),
+        description="Per-scale match-score profile of a template.",
+    ))
+    specs.append(CommandSpec(
         "AC_changed_regions", "Image", "Changed Regions (motion)",
         fields=(
             FieldSpec("before", FieldType.FILE_PATH),
