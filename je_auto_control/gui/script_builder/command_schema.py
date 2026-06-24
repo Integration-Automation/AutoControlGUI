@@ -1692,6 +1692,12 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Switch a control to the named view (MultipleViewPattern).",
     ))
     specs.append(CommandSpec(
+        "AC_wait_for_focus_change", "Native UI", "Wait for Focus Change",
+        fields=(FieldSpec("timeout", FieldType.FLOAT, optional=True,
+                          default=5.0),),
+        description="Block until keyboard focus moves (real UIA focus event).",
+    ))
+    specs.append(CommandSpec(
         "AC_get_control_text", "Native UI", "Get Control Text",
         fields=fields,
         description="Read full text via TextPattern (multiline / document safe).",

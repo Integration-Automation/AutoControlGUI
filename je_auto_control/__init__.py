@@ -89,6 +89,8 @@ from je_auto_control.utils.legacy_accessible import (
 from je_auto_control.utils.selection_view import (
     get_selection, list_views, set_view,
 )
+# Reactive UIA event waits (focus-changed)
+from je_auto_control.utils.ax_events import wait_for_focus_change
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1697,6 +1699,7 @@ __all__ = [
     "window_interaction_state",
     "legacy_info", "legacy_default_action",
     "get_selection", "list_views", "set_view",
+    "wait_for_focus_change",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",
