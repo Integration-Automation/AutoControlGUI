@@ -4274,6 +4274,80 @@ def _drop_files(hwnd: Any, paths: Any, point: Any = None) -> Dict[str, Any]:
     return {"dropped": bool(dropped), "count": len(coerced)}
 
 
+def _coerce_region(region: Any):
+    """Normalise a region argument (JSON '[x,y,w,h]' string / list / None)."""
+    import json
+    if isinstance(region, str):
+        return json.loads(region) if region.strip() else None
+    return region
+
+
+def _image_quality(source: Any = None, region: Any = None) -> Dict[str, Any]:
+    """Adapter: sharpness / contrast / brightness of an image or the screen."""
+    from je_auto_control.utils.image_quality import image_quality
+    return image_quality(source, region=_coerce_region(region))
+
+
+def _quality_gate(source: Any = None, region: Any = None,
+                  min_sharpness: Any = 100.0,
+                  min_contrast: Any = 12.0) -> Dict[str, Any]:
+    """Adapter: pass / fail an image for OCR readability with named issues."""
+    from je_auto_control.utils.image_quality import quality_gate
+    return quality_gate(source, region=_coerce_region(region),
+                        min_sharpness=float(min_sharpness),
+                        min_contrast=float(min_contrast))
+
+
+def _coerce_scales(scales: Any):
+    """Normalise a scales argument (JSON '[1.0,1.5]' string / list / None)."""
+    import json
+    if isinstance(scales, str):
+        return json.loads(scales) if scales.strip() else None
+    return scales
+
+
+def _detect_scale(template: Any, haystack: Any = None, region: Any = None,
+                  scales: Any = None,
+                  method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: infer the display scale a template renders at (visual DPI)."""
+    from je_auto_control.utils.scale_detect import detect_scale
+    result = detect_scale(template, haystack, region=_coerce_region(region),
+                          scales=_coerce_scales(scales), method=str(method))
+    return {"found": result is not None, "result": result}
+
+
+def _scale_sweep(template: Any, haystack: Any = None, region: Any = None,
+                 scales: Any = None,
+                 method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: per-scale match-score profile of a template."""
+    from je_auto_control.utils.scale_detect import scale_sweep
+    return {"sweep": scale_sweep(template, haystack,
+                                 region=_coerce_region(region),
+                                 scales=_coerce_scales(scales),
+                                 method=str(method))}
+
+
+def _salient_regions(source: Any = None, region: Any = None, size: Any = 64,
+                     threshold: Any = None, min_area: Any = 4) -> Dict[str, Any]:
+    """Adapter: ranked visually-salient regions of an image / the screen."""
+    from je_auto_control.utils.saliency import salient_regions
+    cut = float(threshold) if threshold not in (None, "") else None
+    regions = salient_regions(source, region=_coerce_region(region),
+                              size=int(size), threshold=cut,
+                              min_area=int(min_area))
+    return {"regions": regions, "count": len(regions)}
+
+
+def _most_salient(source: Any = None, region: Any = None, size: Any = 64,
+                  threshold: Any = None, min_area: Any = 4) -> Dict[str, Any]:
+    """Adapter: the single most visually-salient region (where to look)."""
+    from je_auto_control.utils.saliency import most_salient
+    cut = float(threshold) if threshold not in (None, "") else None
+    result = most_salient(source, region=_coerce_region(region),
+                          size=int(size), threshold=cut, min_area=int(min_area))
+    return {"found": result is not None, "region": result}
+
+
 def _image_histogram(source: Any = None, bins: Any = 32, space: str = "hsv",
                      region: Any = None) -> Dict[str, Any]:
     """Adapter: per-channel colour histogram of an image / the screen."""
@@ -6496,6 +6570,12 @@ class Executor:
             "AC_diff_formats": _diff_formats,
             "AC_plan_file_drop": _plan_file_drop,
             "AC_drop_files": _drop_files,
+            "AC_image_quality": _image_quality,
+            "AC_quality_gate": _quality_gate,
+            "AC_detect_scale": _detect_scale,
+            "AC_scale_sweep": _scale_sweep,
+            "AC_salient_regions": _salient_regions,
+            "AC_most_salient": _most_salient,
             "AC_image_histogram": _image_histogram,
             "AC_histogram_changed": _histogram_changed,
             "AC_changed_regions": _changed_regions,

@@ -3385,6 +3385,93 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.histogram_changed,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_image_quality",
+            description=("Measure image quality of 'source' (image path; default "
+                         "screen grab of 'region'): {sharpness (Laplacian "
+                         "variance — low=blurry), contrast (grayscale stddev), "
+                         "brightness (mean 0-255)}."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}}}),
+            handler=h.image_quality,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_quality_gate",
+            description=("Grade 'source' for OCR readability: {sharpness, "
+                         "contrast, brightness, passed, issues}. 'issues' flags "
+                         "blurry / low_contrast / too_dark / too_bright. Tune with "
+                         "'min_sharpness' / 'min_contrast'."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "min_sharpness": {"type": "number"},
+                "min_contrast": {"type": "number"}}),
+            handler=h.quality_gate,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_detect_scale",
+            description=("Infer the display scale a 'template' renders at (visual "
+                         "DPI) by scoring it against 'haystack' (default screen) "
+                         "across 'scales'. Returns {found, result:{scale, "
+                         "scale_percent, score, center, margin, candidates}}."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "haystack": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.detect_scale,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_scale_sweep",
+            description=("Per-scale match-score profile of a 'template' against "
+                         "'haystack' (default screen): {sweep:[{scale, score, x, "
+                         "y, width, height, center}]} — the raw scores match_"
+                         "template discards."),
+            input_schema=schema({
+                "template": {"type": "string"},
+                "haystack": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "scales": {"type": "array", "items": {"type": "number"}},
+                "method": {"type": "string"}},
+                required=["template"]),
+            handler=h.scale_sweep,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_salient_regions",
+            description=("Visually salient regions of 'source' (image path; "
+                         "default screen grab of 'region') via spectral-residual "
+                         "saliency — where to look with no template/text. Returns "
+                         "{regions:[{x,y,width,height,center,score}], count}."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "size": {"type": "integer"},
+                "threshold": {"type": "number"},
+                "min_area": {"type": "integer"}}),
+            handler=h.salient_regions,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_most_salient",
+            description=("The single most visually salient region of 'source' "
+                         "(default screen): {found, region:{x,y,width,height,"
+                         "center,score}}. The first place to look."),
+            input_schema=schema({
+                "source": {"type": "string"},
+                "region": {"type": "array", "items": {"type": "integer"}},
+                "size": {"type": "integer"},
+                "threshold": {"type": "number"},
+                "min_area": {"type": "integer"}}),
+            handler=h.most_salient,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

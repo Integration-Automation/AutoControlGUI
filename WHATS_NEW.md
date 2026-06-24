@@ -1,5 +1,23 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Visual Saliency (where to look — spectral-residual)
+
+Find the region that stands out, with no template / colour / text. Full reference: [`docs/source/Eng/doc/new_features/v190_features_doc.rst`](docs/source/Eng/doc/new_features/v190_features_doc.rst).
+
+- **`saliency_map` / `salient_regions` / `most_salient`** (`AC_salient_regions`, `AC_most_salient`): when there's no template, colour or text to key on, an agent still needs a cue for *where to look*. This computes the spectral-residual saliency map (Hou & Zhang 2007 — log amplitude minus its local average, reconstructed through the phase) and turns it into ranked salient boxes in source pixel coordinates. The transform is a pure numpy FFT (`cv2.saliency` is in the forbidden opencv-contrib package, so it's re-implemented over base opencv); it reuses `visual_match`'s grayscale loader and `cv2_utils.blobs.connected_boxes`. Regions threshold at `mean + 2·std` by default. A coarse attention cue to *narrow* where a template / OCR pass then looks. No `PySide6`.
+
+## What's new (2026-06-24) — Display-Scale / Visual-DPI Detection
+
+Infer which display scale (DPI) a template renders at — and how confidently. Full reference: [`docs/source/Eng/doc/new_features/v189_features_doc.rst`](docs/source/Eng/doc/new_features/v189_features_doc.rst).
+
+- **`detect_scale` / `scale_sweep`** (`AC_detect_scale`, `AC_scale_sweep`): a template cropped at 100% scale won't match on a 150%-DPI machine, and `match_template` returns only the single best match — discarding the per-scale scores. This keeps the whole profile: `scale_sweep` scores the template at every scale, and `detect_scale` reports the winning scale as a DPI inference (`scale_percent`) with a confidence `margin` (how far it beats the runner-up). Reuses `visual_match._score_map` per scale; source is any ndarray / path / PIL image (or the live screen); scales default to the common Windows values. cv2/numpy lazily imported. No `PySide6`.
+
+## What's new (2026-06-24) — Image Quality Scoring (sharpness / contrast / brightness gate)
+
+Refuse to OCR a blurry or washed-out frame — score quality and gate before recognition. Full reference: [`docs/source/Eng/doc/new_features/v188_features_doc.rst`](docs/source/Eng/doc/new_features/v188_features_doc.rst).
+
+- **`image_quality` / `is_blurry` / `quality_gate`** (`AC_image_quality`, `AC_quality_gate`): OCR and template matching quietly fail on a blurry, washed-out or too-dark capture, and the caller can't tell a *missing* element from an *unreadable* one. This measures sharpness (variance of the Laplacian), contrast (grayscale stddev) and brightness (mean 0–255); `quality_gate` turns them into `{passed, issues}` flagging `blurry` / `low_contrast` / `too_dark` / `too_bright` so a script can pre-process or re-capture before OCR. Reuses `visual_match`'s grayscale loader (any ndarray / path / PIL image, or the live screen); cv2/numpy lazily imported. No `PySide6`.
+
 ## What's new (2026-06-24) — Drop Files onto a Window (WM_DROPFILES)
 
 Complete a drag-and-drop programmatically — drop files onto a target window. Full reference: [`docs/source/Eng/doc/new_features/v187_features_doc.rst`](docs/source/Eng/doc/new_features/v187_features_doc.rst).

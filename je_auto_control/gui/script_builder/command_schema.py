@@ -742,6 +742,70 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         description="Detect a palette/view change vs a reference (illumination-robust).",
     ))
     specs.append(CommandSpec(
+        "AC_image_quality", "Image", "Image Quality",
+        fields=(
+            FieldSpec("source", FieldType.FILE_PATH, optional=True),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+        ),
+        description="Sharpness / contrast / brightness of an image or the screen.",
+    ))
+    specs.append(CommandSpec(
+        "AC_quality_gate", "Image", "Quality Gate (OCR-ready?)",
+        fields=(
+            FieldSpec("source", FieldType.FILE_PATH, optional=True),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+            FieldSpec("min_sharpness", FieldType.FLOAT, optional=True,
+                      default=100.0),
+            FieldSpec("min_contrast", FieldType.FLOAT, optional=True,
+                      default=12.0),
+        ),
+        description="Pass/fail an image for OCR readability with named issues.",
+    ))
+    specs.append(CommandSpec(
+        "AC_detect_scale", "Image", "Detect Display Scale (DPI)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("haystack", FieldType.FILE_PATH, optional=True),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[1.0, 1.25, 1.5, 1.75, 2.0]"),
+        ),
+        description="Infer the display scale a template renders at (visual DPI).",
+    ))
+    specs.append(CommandSpec(
+        "AC_scale_sweep", "Image", "Scale Sweep (per-scale scores)",
+        fields=(
+            FieldSpec("template", FieldType.FILE_PATH),
+            FieldSpec("haystack", FieldType.FILE_PATH, optional=True),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder=_REGION_PLACEHOLDER),
+            FieldSpec("scales", FieldType.STRING, optional=True,
+                      placeholder="[1.0, 1.25, 1.5, 1.75, 2.0]"),
+        ),
+        description="Per-scale match-score profile of a template.",
+    ))
+    saliency_fields = (
+        FieldSpec("source", FieldType.FILE_PATH, optional=True),
+        FieldSpec("region", FieldType.STRING, optional=True,
+                  placeholder=_REGION_PLACEHOLDER),
+        FieldSpec("size", FieldType.INT, optional=True, default=64),
+        FieldSpec("threshold", FieldType.FLOAT, optional=True),
+        FieldSpec("min_area", FieldType.INT, optional=True, default=4),
+    )
+    specs.append(CommandSpec(
+        "AC_salient_regions", "Image", "Salient Regions",
+        fields=saliency_fields,
+        description="Visually salient regions (spectral-residual; where to look).",
+    ))
+    specs.append(CommandSpec(
+        "AC_most_salient", "Image", "Most Salient Region",
+        fields=saliency_fields,
+        description="The single most visually salient region of an image/screen.",
+    ))
+    specs.append(CommandSpec(
         "AC_changed_regions", "Image", "Changed Regions (motion)",
         fields=(
             FieldSpec("before", FieldType.FILE_PATH),
