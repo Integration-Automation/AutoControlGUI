@@ -78,6 +78,10 @@ from je_auto_control.utils.clipboard_formats import (
 )
 # Drop files onto a window (WM_DROPFILES sender)
 from je_auto_control.utils.file_drop import drop_files, plan_file_drop
+# Image quality scoring (sharpness / contrast / brightness gate before OCR)
+from je_auto_control.utils.image_quality import (
+    image_quality, is_blurry, quality_gate,
+)
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
@@ -1652,6 +1656,7 @@ __all__ = [
     "classify_format", "classify_formats", "diff_formats",
     "list_clipboard_formats", "clipboard_formats",
     "plan_file_drop", "drop_files",
+    "image_quality", "is_blurry", "quality_gate",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "verify_description",
