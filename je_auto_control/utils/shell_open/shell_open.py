@@ -72,11 +72,12 @@ def _default_opener(plan: Dict[str, Any]) -> bool:
     if backend == "startfile":
         if not sys.platform.startswith("win"):
             raise RuntimeError("startfile is only supported on Windows")
-        # noqa: S606 / nosec B606 — verb is from the allow-listed plan, no shell
-        os.startfile(target, plan.get("verb") or "open")  # noqa: S606  # nosec B606
+        # file path is from the allow-listed plan; os.startfile is not a shell
+        os.startfile(target, plan.get("verb") or "open")  # noqa: S606  # nosec B606  # nosemgrep
         return True
     import subprocess  # nosec B404  # reason: argv list, no shell
-    subprocess.Popen([backend, target])  # nosec B603  # reason: fixed backend + argv, no shell
+    # fixed backend + argv list, no shell — injection-safe
+    subprocess.Popen([backend, target])  # nosec B603  # nosemgrep
     return True
 
 
