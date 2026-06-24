@@ -1538,6 +1538,18 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         fields=fields,
         description="Read only the on-screen text via TextPattern.GetVisibleRanges.",
     ))
+    specs.append(CommandSpec(
+        "AC_walk_tree", "Native UI", "Walk Accessibility Tree",
+        fields=(FieldSpec("app_name", FieldType.STRING, optional=True),
+                FieldSpec("max_results", FieldType.INT, optional=True,
+                          default=500)),
+        description="Dump the a11y tree with friendly roles + a path per node.",
+    ))
+    specs.append(CommandSpec(
+        "AC_humanize_role", "Native UI", "Humanize UIA Role",
+        fields=(FieldSpec("role", FieldType.STRING),),
+        description="Translate a raw UIA role (ControlType_50000) to a name.",
+    ))
 
 
 def _add_misc_specs(specs: List[CommandSpec]) -> None:

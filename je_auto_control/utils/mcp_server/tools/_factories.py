@@ -1201,6 +1201,29 @@ def a11y_tree_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_walk_tree",
+            description=("Dump the accessibility tree like ac_a11y_dump but with "
+                         "friendly role names (UIA 'ControlType_50000' → "
+                         "'Button') and a stable positional 'path' per node "
+                         "(addressable via the path attribute)."),
+            input_schema=schema({
+                "app_name": {"type": "string"},
+                "max_results": {"type": "integer"},
+            }),
+            handler=h.walk_tree,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_humanize_role",
+            description=("Translate a raw UIA role ('ControlType_50000' / "
+                         "'50000') to a friendly name: {role}. Unknown / "
+                         "already-friendly roles pass through unchanged."),
+            input_schema=schema({"role": {"type": "string"}},
+                                required=["role"]),
+            handler=h.humanize_role,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_a11y_record_start",
             description=("Start the polling accessibility recorder. "
                          "Captures focus / bounds changes on the focused "

@@ -57,6 +57,11 @@ from je_auto_control.utils.control_patterns import (
 from je_auto_control.utils.ax_text import (
     get_control_text, get_selected_text, get_visible_text,
 )
+# Readable / addressable a11y-tree post-processing (role names + node paths)
+from je_auto_control.utils.ax_tree_walk import (
+    assign_node_paths, control_type_name, find_by_path, humanize_role,
+    humanize_tree,
+)
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
@@ -1622,6 +1627,8 @@ __all__ = [
     "select_control_item", "control_range", "set_control_range",
     "scroll_control_into_view",
     "get_control_text", "get_selected_text", "get_visible_text",
+    "control_type_name", "humanize_role", "humanize_tree",
+    "assign_node_paths", "find_by_path",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "verify_description",

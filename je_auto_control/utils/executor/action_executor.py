@@ -182,6 +182,23 @@ def _a11y_dump(app_name: Optional[str] = None,
     ).to_dict()
 
 
+def _walk_tree(app_name: Optional[str] = None,
+               max_results: int = 500) -> Dict[str, Any]:
+    """Executor adapter: dump the a11y tree with friendly roles + node paths."""
+    from je_auto_control.utils.accessibility import dump_accessibility_tree
+    from je_auto_control.utils.ax_tree_walk import (
+        assign_node_paths, humanize_tree)
+    root = dump_accessibility_tree(app_name=app_name,
+                                   max_results=int(max_results))
+    return assign_node_paths(humanize_tree(root)).to_dict()
+
+
+def _humanize_role(role: str) -> Dict[str, Any]:
+    """Executor adapter: translate a raw UIA role to a friendly name."""
+    from je_auto_control.utils.ax_tree_walk import humanize_role
+    return {"role": humanize_role(role)}
+
+
 def _a11y_record_start(app_name: Optional[str] = None,
                         poll_interval_s: float = 0.25,
                         min_movement_px: int = 8) -> Dict[str, Any]:
@@ -6108,6 +6125,8 @@ class Executor:
             "AC_a11y_find": _a11y_find_as_dict,
             "AC_a11y_click": click_accessibility_element,
             "AC_a11y_dump": _a11y_dump,
+            "AC_walk_tree": _walk_tree,
+            "AC_humanize_role": _humanize_role,
             "AC_control_get_value": _control_get_value,
             "AC_control_set_value": _control_set_value,
             "AC_control_invoke": _control_invoke,
