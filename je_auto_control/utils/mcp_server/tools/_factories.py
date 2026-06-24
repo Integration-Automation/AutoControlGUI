@@ -1224,6 +1224,44 @@ def a11y_tree_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_tab_order",
+            description=("List the focusable controls in the order the keyboard "
+                         "Tab key would visit them (reading order): "
+                         "{order:[{name,role,bounds,center,...}]}."),
+            input_schema=schema({
+                "app_name": {"type": "string"},
+                "max_results": {"type": "integer"},
+            }),
+            handler=h.tab_order,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_audit_focus_order",
+            description=("WCAG 2.4.x focus-order audit over an app's controls: "
+                         "{order, issues, focusable_count, issue_count}. Flags "
+                         "focusable controls with no visible area."),
+            input_schema=schema({
+                "app_name": {"type": "string"},
+                "max_results": {"type": "integer"},
+            }),
+            handler=h.audit_focus_order,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_focus_control",
+            description=("Set keyboard focus on a control natively (UIA "
+                         "SetFocus), located by name/role/app_name/"
+                         "automation_id. Returns True on success."),
+            input_schema=schema({
+                "name": {"type": "string"},
+                "role": {"type": "string"},
+                "app_name": {"type": "string"},
+                "automation_id": {"type": "string"},
+            }),
+            handler=h.focus_control,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
             name="ac_a11y_record_start",
             description=("Start the polling accessibility recorder. "
                          "Captures focus / bounds changes on the focused "

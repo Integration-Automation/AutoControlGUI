@@ -2897,6 +2897,21 @@ def humanize_role(role):
     return _humanize_role(role)
 
 
+def tab_order(app_name=None, max_results: int = 500):
+    from je_auto_control.utils.executor.action_executor import _tab_order
+    return _tab_order(app_name, max_results)
+
+
+def audit_focus_order(app_name=None, max_results: int = 500):
+    from je_auto_control.utils.executor.action_executor import _audit_focus_order
+    return _audit_focus_order(app_name, max_results)
+
+
+def focus_control(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _focus_control
+    return _focus_control(name, role, app_name, automation_id)
+
+
 def a11y_record_start(app_name: Optional[str] = None,
                       poll_interval_s: float = 0.25,
                       min_movement_px: int = 8) -> Dict[str, Any]:

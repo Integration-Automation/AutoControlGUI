@@ -199,6 +199,35 @@ def _humanize_role(role: str) -> Dict[str, Any]:
     return {"role": humanize_role(role)}
 
 
+def _tab_order(app_name: Optional[str] = None,
+               max_results: int = 500) -> Dict[str, Any]:
+    """Executor adapter: focusable elements in keyboard Tab order."""
+    from je_auto_control.utils.accessibility import list_accessibility_elements
+    from je_auto_control.utils.focus_order import tab_order
+    elements = list_accessibility_elements(app_name=app_name,
+                                           max_results=int(max_results))
+    return {"order": [el.to_dict() for el in tab_order(elements)]}
+
+
+def _audit_focus_order(app_name: Optional[str] = None,
+                       max_results: int = 500) -> Dict[str, Any]:
+    """Executor adapter: WCAG focus-order audit over the app's elements."""
+    from je_auto_control.utils.accessibility import list_accessibility_elements
+    from je_auto_control.utils.focus_order import audit_focus_order
+    elements = list_accessibility_elements(app_name=app_name,
+                                           max_results=int(max_results))
+    return audit_focus_order(elements)
+
+
+def _focus_control(name: Optional[str] = None, role: Optional[str] = None,
+                   app_name: Optional[str] = None,
+                   automation_id: Optional[str] = None) -> bool:
+    """Executor adapter: set keyboard focus on a control (UIA SetFocus)."""
+    from je_auto_control.utils.focus_order import focus_control
+    return focus_control(name=name, role=role, app_name=app_name,
+                         automation_id=automation_id)
+
+
 def _a11y_record_start(app_name: Optional[str] = None,
                         poll_interval_s: float = 0.25,
                         min_movement_px: int = 8) -> Dict[str, Any]:
@@ -6127,6 +6156,9 @@ class Executor:
             "AC_a11y_dump": _a11y_dump,
             "AC_walk_tree": _walk_tree,
             "AC_humanize_role": _humanize_role,
+            "AC_tab_order": _tab_order,
+            "AC_audit_focus_order": _audit_focus_order,
+            "AC_focus_control": _focus_control,
             "AC_control_get_value": _control_get_value,
             "AC_control_set_value": _control_set_value,
             "AC_control_invoke": _control_invoke,
