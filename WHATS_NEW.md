@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Drop Files onto a Window (WM_DROPFILES)
+
+Complete a drag-and-drop programmatically — drop files onto a target window. Full reference: [`docs/source/Eng/doc/new_features/v187_features_doc.rst`](docs/source/Eng/doc/new_features/v187_features_doc.rst).
+
+- **`plan_file_drop` / `drop_files`** (`AC_plan_file_drop`, `AC_drop_files`): `clipboard_files` *stages* a file list on the clipboard for `Ctrl+V`; this actively **drops** files onto a target window by posting a `WM_DROPFILES` message. It reuses `clipboard_files.build_dropfiles` to pack the `DROPFILES` blob (shared byte layout, not re-implemented) and dispatches through an injectable driver seam, so the build-and-dispatch logic is unit-testable with a fake driver; the real `GlobalAlloc` + `PostMessage` lives in the default Win32 driver. `plan_file_drop` is a pure dry-run returning `{message, paths, point, wide, blob_size}`. No `PySide6`.
+
 ## What's new (2026-06-24) — Clipboard Format Inspection (classify / diff available formats)
 
 See which formats are on the clipboard, and detect when its shape changes. Full reference: [`docs/source/Eng/doc/new_features/v186_features_doc.rst`](docs/source/Eng/doc/new_features/v186_features_doc.rst).

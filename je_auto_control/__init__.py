@@ -76,6 +76,8 @@ from je_auto_control.utils.clipboard_formats import (
     classify_format, classify_formats, clipboard_formats, diff_formats,
     list_clipboard_formats,
 )
+# Drop files onto a window (WM_DROPFILES sender)
+from je_auto_control.utils.file_drop import drop_files, plan_file_drop
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
@@ -1649,6 +1651,7 @@ __all__ = [
     "set_clipboard_csv", "get_clipboard_csv",
     "classify_format", "classify_formats", "diff_formats",
     "list_clipboard_formats", "clipboard_formats",
+    "plan_file_drop", "drop_files",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "verify_description",
