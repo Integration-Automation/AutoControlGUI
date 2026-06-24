@@ -30,6 +30,11 @@ _UIA_SELECTIONITEM_PATTERN_ID = 10010
 _UIA_RANGEVALUE_PATTERN_ID = 10003
 _UIA_SCROLLITEM_PATTERN_ID = 10017
 _UIA_TEXT_PATTERN_ID = 10014
+_UIA_ITEMCONTAINER_PATTERN_ID = 10019
+_UIA_VIRTUALIZEDITEM_PATTERN_ID = 10020
+_UIA_TABLE_PATTERN_ID = 10012
+_UIA_GRIDITEM_PATTERN_ID = 10007
+_UIA_AUTOMATIONID_PROPERTY = 30011
 _EXPAND_STATES = {0: "collapsed", 1: "expanded", 2: "partial", 3: "leaf"}
 
 
@@ -264,6 +269,75 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         except (OSError, AttributeError, ValueError, TypeError):
             return None
 
+    def _realize(self, raw) -> None:
+        """Realize a virtualized element so it materializes (VirtualizedItemPattern)."""
+        pattern = self._pattern(raw, _UIA_VIRTUALIZEDITEM_PATTERN_ID,
+                                "IUIAutomationVirtualizedItemPattern")
+        if pattern is None:
+            return
+        try:
+            pattern.Realize()
+        except (OSError, AttributeError):
+            pass
+
+    def find_virtual_item(self, item_name=None, by="name", container_name=None,
+                          container_role=None, app_name=None, automation_id=None):
+        container = self._find_raw(container_name, container_role, app_name,
+                                   automation_id)
+        pattern = self._pattern(container, _UIA_ITEMCONTAINER_PATTERN_ID,
+                                "IUIAutomationItemContainerPattern"
+                                ) if container else None
+        if pattern is None:
+            return None
+        property_id = (_UIA_AUTOMATIONID_PROPERTY if by == "automation_id"
+                       else _UIA_NAME_PROPERTY)
+        try:
+            found = pattern.FindItemByProperty(None, property_id, item_name)
+        except (OSError, AttributeError, ValueError):
+            return None
+        if not found:
+            return None
+        self._realize(found)
+        return _convert_uia(found)
+
+    def get_properties(self, name=None, role=None, app_name=None,
+                       automation_id=None) -> Optional[Dict[str, Any]]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        if not raw:
+            return None
+        return _read_properties(raw)
+
+    def get_table_headers(self, name=None, role=None, app_name=None,
+                          automation_id=None) -> Optional[Dict[str, Any]]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_TABLE_PATTERN_ID,
+                                "IUIAutomationTablePattern") if raw else None
+        if pattern is None:
+            return None
+        try:
+            columns = pattern.GetCurrentColumnHeaders()
+            rows = pattern.GetCurrentRowHeaders()
+        except (OSError, AttributeError):
+            return None
+        return {"columns": _header_names(columns), "rows": _header_names(rows)}
+
+    def get_grid_cell(self, row=0, column=0, name=None, role=None,
+                      app_name=None, automation_id=None) -> Optional[Dict[str, Any]]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        grid = self._pattern(raw, _UIA_GRID_PATTERN_ID,
+                             "IUIAutomationGridPattern") if raw else None
+        if grid is None:
+            return None
+        try:
+            cell = grid.GetItem(int(row), int(column))
+        except (OSError, AttributeError):
+            return None
+        if not cell:
+            return None
+        return _read_cell(self._pattern(cell, _UIA_GRIDITEM_PATTERN_ID,
+                                        "IUIAutomationGridItemPattern"),
+                          cell, int(row), int(column))
+
     def _text_pattern(self, name, role, app_name, automation_id):
         """Find a control and return its IUIAutomationTextPattern, or None."""
         raw = self._find_raw(name, role, app_name, automation_id)
@@ -330,6 +404,72 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             except (OSError, AttributeError):
                 cells.append("")
         return cells
+
+
+def _header_names(array) -> List[str]:
+    """Read an IUIAutomationElementArray of header elements into name strings."""
+    names: List[str] = []
+    try:
+        count = int(array.Length or 0)
+    except (OSError, AttributeError):
+        return names
+    for index in range(count):
+        try:
+            names.append(str(array.GetElement(index).CurrentName or ""))
+        except (OSError, AttributeError):
+            names.append("")
+    return names
+
+
+def _read_cell(item_pattern, cell, row: int, column: int) -> Dict[str, Any]:
+    """Build a cell record, enriching with GridItemPattern row/col/span if present."""
+    info: Dict[str, Any] = {
+        "value": _safe_name(cell), "row": row, "column": column,
+        "row_span": 1, "column_span": 1,
+    }
+    if item_pattern is not None:
+        for key, attr in (("row", "CurrentRow"), ("column", "CurrentColumn"),
+                          ("row_span", "CurrentRowSpan"),
+                          ("column_span", "CurrentColumnSpan")):
+            try:
+                info[key] = int(getattr(item_pattern, attr))
+            except (OSError, AttributeError, ValueError, TypeError):
+                pass
+    return info
+
+
+def _safe_name(raw) -> str:
+    try:
+        return str(raw.CurrentName or "")
+    except (OSError, AttributeError):
+        return ""
+
+
+def _as_text(value) -> str:
+    return str(value or "")
+
+
+# (key, UIA element attribute, cast) for the rich properties the flat list omits.
+_PROPERTY_READS = (
+    ("enabled", "CurrentIsEnabled", bool),
+    ("offscreen", "CurrentIsOffscreen", bool),
+    ("help_text", "CurrentHelpText", _as_text),
+    ("item_status", "CurrentItemStatus", _as_text),
+    ("accelerator_key", "CurrentAcceleratorKey", _as_text),
+    ("access_key", "CurrentAccessKey", _as_text),
+    ("orientation", "CurrentOrientation", int),
+)
+
+
+def _read_properties(raw) -> Dict[str, Any]:
+    """Read the rich UIA properties of a raw element into a plain dict."""
+    properties: Dict[str, Any] = {}
+    for key, attribute, cast in _PROPERTY_READS:
+        try:
+            properties[key] = cast(getattr(raw, attribute))
+        except (OSError, AttributeError, ValueError, TypeError):
+            properties[key] = None
+    return properties
 
 
 def _convert_uia(raw) -> Optional[AccessibilityElement]:

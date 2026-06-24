@@ -1,5 +1,23 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Table Headers + Cell Addressing (UIA TablePattern)
+
+Assert "the Status column of row 5 says Shipped" — by header, not by guessing indices. Full reference: [`docs/source/Eng/doc/new_features/v197_features_doc.rst`](docs/source/Eng/doc/new_features/v197_features_doc.rst).
+
+- **`table_headers` / `table_cell` / `cell_by_header`** (`AC_table_headers`, `AC_table_cell`, `AC_cell_by_header`): `read_control_table` (GridPattern) dumps a flat 2-D list of cell names with no header labels and no way to address one cell by (header, row) — you can dump a grid but not test one. This adds the missing half: `table_headers` reads the row/column header labels (TablePattern), `table_cell` reads the cell at `(row, column)` with its span (GridItemPattern), and `cell_by_header` resolves the column index from the headers so you can read the cell at `(row, "Status")` directly. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
+## What's new (2026-06-25) — Rich UIA Element Properties
+
+Know if a control is enabled / off-screen / has a tooltip before you act. Full reference: [`docs/source/Eng/doc/new_features/v196_features_doc.rst`](docs/source/Eng/doc/new_features/v196_features_doc.rst).
+
+- **`get_element_properties` / `is_element_enabled`** (`AC_get_element_properties`): the flat element list carries only name/role/bounds/app/id, but automation needs more before it acts — **is the control enabled** (don't click a disabled button), **is it off-screen**, its **item_status** (field validation/error), **help_text** (tooltip), and **accelerator_key** (drive via hotkey). This reads those high-value UIA properties (`enabled`/`offscreen`/`help_text`/`item_status`/`accelerator_key`/`access_key`/`orientation`); `is_element_enabled` is the common pre-action guard. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA reads in the Windows backend). No `PySide6`.
+
+## What's new (2026-06-25) — Realize Off-Screen Items in Virtualized Lists / Grids
+
+Reach a row that isn't scrolled into view yet — the "element not found in a long list" fix. Full reference: [`docs/source/Eng/doc/new_features/v195_features_doc.rst`](docs/source/Eng/doc/new_features/v195_features_doc.rst).
+
+- **`realize_item`** (`AC_realize_item`): long lists / data grids / trees only materialize visible rows, so an off-screen row has no accessibility element at all — `list_accessibility_elements` / `read_control_table` / `select_control_item` can't see it, and `scroll_control_into_view` can't help because the element doesn't exist yet. This locates the item by property (UIA `ItemContainerPattern.FindItemByProperty`) and realizes it (`VirtualizedItemPattern.Realize`) so it becomes a real, clickable element. Match `by` name (default) or `automation_id`; locate the container by name/role/app. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
 ## What's new (2026-06-25) — Per-Run Step Timeline (waterfall + bottleneck steps)
 
 Read why *this* run was slow — a step waterfall and its bottlenecks. Full reference: [`docs/source/Eng/doc/new_features/v194_features_doc.rst`](docs/source/Eng/doc/new_features/v194_features_doc.rst).

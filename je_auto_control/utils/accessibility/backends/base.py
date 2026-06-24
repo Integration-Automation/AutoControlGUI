@@ -131,6 +131,56 @@ class AccessibilityBackend:
         """Set keyboard focus on the matched control (SetFocus); True on success."""
         self._unsupported("set_focus")
 
+    # --- virtualized items (realize off-screen list / grid items) -----------
+
+    def find_virtual_item(self, item_name: Optional[str] = None, by: str = "name",
+                          container_name: Optional[str] = None,
+                          container_role: Optional[str] = None,
+                          app_name: Optional[str] = None,
+                          automation_id: Optional[str] = None,
+                          ) -> Optional[AccessibilityElement]:
+        """Find a (possibly virtualized) item inside a container and realize it.
+
+        Long virtualized lists / grids only materialize visible rows; this locates
+        the item by property (``ItemContainerPattern``) and realizes it
+        (``VirtualizedItemPattern``) so it exists as a real element. Returns the
+        realized element, or None if the container or item isn't found.
+        """
+        self._unsupported("find_virtual_item")
+
+    # --- rich element properties -------------------------------------------
+
+    def get_properties(self, name: Optional[str] = None,
+                       role: Optional[str] = None, app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None,
+                       ) -> Optional[Dict[str, Any]]:
+        """Return rich UIA properties of the matched control, or None.
+
+        Surfaces the high-value properties the flat element list omits —
+        ``enabled`` / ``offscreen`` / ``help_text`` / ``item_status`` /
+        ``accelerator_key`` / ``access_key`` / ``orientation``.
+        """
+        self._unsupported("get_properties")
+
+    # --- table headers + cell addressing (TablePattern / GridItemPattern) ---
+
+    def get_table_headers(self, name: Optional[str] = None,
+                          role: Optional[str] = None,
+                          app_name: Optional[str] = None,
+                          automation_id: Optional[str] = None,
+                          ) -> Optional[Dict[str, Any]]:
+        """Return a table's header labels as ``{columns: [...], rows: [...]}``."""
+        self._unsupported("get_table_headers")
+
+    def get_grid_cell(self, row: int = 0, column: int = 0,
+                      name: Optional[str] = None, role: Optional[str] = None,
+                      app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None,
+                      ) -> Optional[Dict[str, Any]]:
+        """Return the cell at ``(row, column)`` as ``{value, row, column,
+        row_span, column_span}`` (GridPattern.GetItem + GridItemPattern)."""
+        self._unsupported("get_grid_cell")
+
     def _unsupported(self, operation: str):
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(

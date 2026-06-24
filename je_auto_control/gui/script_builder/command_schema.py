@@ -1609,6 +1609,41 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Scroll a control into view (ScrollItemPattern).",
     ))
     specs.append(CommandSpec(
+        "AC_realize_item", "Native UI", "Realize Virtualized Item",
+        fields=(
+            FieldSpec("item_name", FieldType.STRING),
+            FieldSpec("by", FieldType.ENUM, optional=True, default="name",
+                      choices=("name", "automation_id")),
+            FieldSpec("container_name", FieldType.STRING, optional=True),
+            FieldSpec("container_role", FieldType.STRING, optional=True),
+            FieldSpec("app_name", FieldType.STRING, optional=True),
+            FieldSpec("automation_id", FieldType.STRING, optional=True),
+        ),
+        description="Realize an off-screen item in a virtualized list/grid.",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_element_properties", "Native UI", "Get Element Properties",
+        fields=fields,
+        description="Read rich UIA props (enabled/offscreen/help/status/keys).",
+    ))
+    specs.append(CommandSpec(
+        "AC_table_headers", "Native UI", "Get Table Headers",
+        fields=fields,
+        description="Read a table's row/column header labels (TablePattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_table_cell", "Native UI", "Get Table Cell (by index)",
+        fields=(FieldSpec("row", FieldType.INT),
+                FieldSpec("column", FieldType.INT)) + fields,
+        description="Read the cell at (row, column) with its span.",
+    ))
+    specs.append(CommandSpec(
+        "AC_cell_by_header", "Native UI", "Get Table Cell (by header)",
+        fields=(FieldSpec("row", FieldType.INT),
+                FieldSpec("column_header", FieldType.STRING)) + fields,
+        description="Read the cell at (row, named column) — assert by header.",
+    ))
+    specs.append(CommandSpec(
         "AC_get_control_text", "Native UI", "Get Control Text",
         fields=fields,
         description="Read full text via TextPattern (multiline / document safe).",

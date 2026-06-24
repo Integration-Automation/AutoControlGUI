@@ -1158,6 +1158,68 @@ def a11y_control_tools() -> List[MCPTool]:
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
+            name="ac_realize_item",
+            description=("Find and REALIZE an off-screen item in a virtualized "
+                         "list/grid (ItemContainer + VirtualizedItem patterns) so "
+                         "it materializes as a real element — rows that aren't "
+                         "scrolled into view have no element until realized. "
+                         "'item_name' matched by 'name' (default) or "
+                         "'automation_id'; the container by container_name/"
+                         "container_role/app_name/automation_id. Returns "
+                         "{found, element}."),
+            input_schema=schema({
+                "item_name": {"type": "string"},
+                "by": {"type": "string", "enum": ["name", "automation_id"]},
+                "container_name": {"type": "string"},
+                "container_role": {"type": "string"},
+                "app_name": {"type": "string"},
+                "automation_id": {"type": "string"}},
+                required=["item_name"]),
+            handler=h.realize_item,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_element_properties",
+            description=("Read rich UIA properties the flat list omits: "
+                         "{found, properties:{enabled, offscreen, help_text, "
+                         "item_status, accelerator_key, access_key, "
+                         "orientation}}. Check 'enabled' before clicking."),
+            input_schema=schema(dict(_M)),
+            handler=h.get_element_properties,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_table_headers",
+            description=("Read a native table's header labels via TablePattern: "
+                         "{found, headers:{columns:[...], rows:[...]}}."),
+            input_schema=schema(dict(_M)),
+            handler=h.table_headers,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_table_cell",
+            description=("Read the cell at ('row','column') of a native grid: "
+                         "{found, cell:{value,row,column,row_span,column_span}} "
+                         "(GridPattern.GetItem + GridItemPattern)."),
+            input_schema=schema({"row": {"type": "integer"},
+                                 "column": {"type": "integer"}, **_M},
+                                required=["row", "column"]),
+            handler=h.table_cell,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_cell_by_header",
+            description=("Read the cell at row 'row' in the column named "
+                         "'column_header' — assert 'the Status column of row 5 "
+                         "says Shipped' without guessing indices. Returns "
+                         "{found, value}."),
+            input_schema=schema({"row": {"type": "integer"},
+                                 "column_header": {"type": "string"}, **_M},
+                                required=["row", "column_header"]),
+            handler=h.cell_by_header,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_get_control_text",
             description=("Read a control's full text via TextPattern: "
                          "{text}. Works on multiline edits / RichEdit / document "
