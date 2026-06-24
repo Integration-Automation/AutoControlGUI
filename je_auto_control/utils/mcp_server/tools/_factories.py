@@ -3252,6 +3252,102 @@ def clipboard_files_tools() -> List[MCPTool]:
             handler=h.get_clipboard_files,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_set_clipboard_rtf",
+            description=("Put 'text' on the clipboard as Rich Text Format so it "
+                         "pastes as styled text into Word / rich editors (Windows). "
+                         "Also seeds plain text. Returns {set, length}."),
+            input_schema=schema({"text": {"type": "string"}}, required=["text"]),
+            handler=h.set_clipboard_rtf,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_clipboard_rtf",
+            description=("Read the clipboard's RTF document string (Windows). "
+                         "Returns {found, rtf}."),
+            input_schema=schema({}, required=[]),
+            handler=h.get_clipboard_rtf,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_set_clipboard_csv",
+            description=("Put a table on the clipboard as the 'Csv' format Excel "
+                         "reads (Windows). 'rows' is a list of row arrays; "
+                         "'delimiter' defaults to ',' (use '\\t' for TSV). "
+                         "Returns {set, rows}."),
+            input_schema=schema({
+                "rows": {"type": "array",
+                         "items": {"type": "array", "items": {"type": "string"}}},
+                "delimiter": {"type": "string"}},
+                required=["rows"]),
+            handler=h.set_clipboard_csv,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_clipboard_csv",
+            description=("Read the clipboard's 'Csv' content as rows of cell "
+                         "strings (Windows). 'delimiter' defaults to ','. "
+                         "Returns {found, rows}."),
+            input_schema=schema({"delimiter": {"type": "string"}}),
+            handler=h.get_clipboard_csv,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_clipboard_formats",
+            description=("Enumerate and classify the formats currently on the "
+                         "clipboard without consuming them (Windows). Returns "
+                         "{categories, formats:[{id,name,category}], has_text, "
+                         "has_image, has_files}."),
+            input_schema=schema({}, required=[]),
+            handler=h.clipboard_formats,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_classify_formats",
+            description=("Classify a provided list of clipboard formats (pure). "
+                         "'formats' is a list of ids or {id,name}. Returns the "
+                         "same summary as ac_clipboard_formats."),
+            input_schema=schema({"formats": {"type": "array"}},
+                                required=["formats"]),
+            handler=h.classify_formats,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_diff_formats",
+            description=("Diff two clipboard-format snapshots (pure): "
+                         "{added, removed, changed}. 'before'/'after' are lists "
+                         "of ids or {id,name}."),
+            input_schema=schema({"before": {"type": "array"},
+                                 "after": {"type": "array"}},
+                                required=["before", "after"]),
+            handler=h.diff_formats,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_plan_file_drop",
+            description=("Build the WM_DROPFILES payload for dropping 'paths' at "
+                         "'point' without sending it (pure dry-run). Returns "
+                         "{message, paths, point, wide, blob_size}."),
+            input_schema=schema({
+                "paths": {"type": "array", "items": {"type": "string"}},
+                "point": {"type": "array", "items": {"type": "integer"}}},
+                required=["paths"]),
+            handler=h.plan_file_drop,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_drop_files",
+            description=("Drop 'paths' onto window 'hwnd' via WM_DROPFILES — the "
+                         "completion of a drag-and-drop (Windows). 'point' is the "
+                         "client-area drop coordinate. Returns {dropped, count}."),
+            input_schema=schema({
+                "hwnd": {"type": "integer"},
+                "paths": {"type": "array", "items": {"type": "string"}},
+                "point": {"type": "array", "items": {"type": "integer"}}},
+                required=["hwnd", "paths"]),
+            handler=h.drop_files,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
     ]
 
 

@@ -992,6 +992,27 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("title_substring", FieldType.STRING),),
     ))
     specs.append(CommandSpec(
+        "AC_drop_files", "Window", "Drop Files onto Window",
+        fields=(
+            FieldSpec("hwnd", FieldType.INT),
+            FieldSpec("paths", FieldType.STRING,
+                      placeholder='["C:\\\\a\\\\one.txt"]'),
+            FieldSpec("point", FieldType.STRING, optional=True,
+                      placeholder="[10, 20]"),
+        ),
+        description="Drop files onto a window via WM_DROPFILES (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_plan_file_drop", "Window", "Plan File Drop",
+        fields=(
+            FieldSpec("paths", FieldType.STRING,
+                      placeholder='["C:\\\\a\\\\one.txt"]'),
+            FieldSpec("point", FieldType.STRING, optional=True,
+                      placeholder="[10, 20]"),
+        ),
+        description="Build the WM_DROPFILES payload without sending (pure).",
+    ))
+    specs.append(CommandSpec(
         "AC_snap_window", "Window", "Snap / Tile Window",
         fields=(
             FieldSpec("title", FieldType.STRING),
@@ -1596,6 +1617,49 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_get_clipboard_files", "Data", "Get Clipboard Files",
         description="Read the clipboard's file-drop list (CF_HDROP, Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_clipboard_rtf", "Data", "Set Clipboard RTF",
+        fields=(FieldSpec("text", FieldType.STRING,
+                          placeholder="Styled paste text"),),
+        description="Put text on the clipboard as Rich Text Format (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_clipboard_rtf", "Data", "Get Clipboard RTF",
+        description="Read the clipboard's RTF document string (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_clipboard_csv", "Data", "Set Clipboard CSV/TSV",
+        fields=(
+            FieldSpec("rows", FieldType.STRING,
+                      placeholder='[["a", "b"], ["1", "2"]]'),
+            FieldSpec("delimiter", FieldType.STRING, optional=True, default=","),
+        ),
+        description="Put a table on the clipboard as the Csv format (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_clipboard_csv", "Data", "Get Clipboard CSV/TSV",
+        fields=(FieldSpec("delimiter", FieldType.STRING, optional=True,
+                          default=","),),
+        description="Read the clipboard's Csv content as rows (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_clipboard_formats", "Data", "List Clipboard Formats",
+        description="Enumerate + classify the clipboard's formats (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_classify_formats", "Data", "Classify Clipboard Formats",
+        fields=(FieldSpec("formats", FieldType.STRING,
+                          placeholder='[1, 13, {"id": 49161, "name": "Csv"}]'),),
+        description="Classify a provided list of clipboard formats (pure).",
+    ))
+    specs.append(CommandSpec(
+        "AC_diff_formats", "Data", "Diff Clipboard Formats",
+        fields=(
+            FieldSpec("before", FieldType.STRING, placeholder="[1, 13]"),
+            FieldSpec("after", FieldType.STRING, placeholder="[1, 13, 15]"),
+        ),
+        description="Diff two clipboard-format snapshots (pure).",
     ))
     specs.append(CommandSpec(
         "AC_watchdog_add", "Flow", "Watchdog: Add Popup Rule",

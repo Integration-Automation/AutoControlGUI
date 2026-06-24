@@ -1,5 +1,23 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Drop Files onto a Window (WM_DROPFILES)
+
+Complete a drag-and-drop programmatically — drop files onto a target window. Full reference: [`docs/source/Eng/doc/new_features/v187_features_doc.rst`](docs/source/Eng/doc/new_features/v187_features_doc.rst).
+
+- **`plan_file_drop` / `drop_files`** (`AC_plan_file_drop`, `AC_drop_files`): `clipboard_files` *stages* a file list on the clipboard for `Ctrl+V`; this actively **drops** files onto a target window by posting a `WM_DROPFILES` message. It reuses `clipboard_files.build_dropfiles` to pack the `DROPFILES` blob (shared byte layout, not re-implemented) and dispatches through an injectable driver seam, so the build-and-dispatch logic is unit-testable with a fake driver; the real `GlobalAlloc` + `PostMessage` lives in the default Win32 driver. `plan_file_drop` is a pure dry-run returning `{message, paths, point, wide, blob_size}`. No `PySide6`.
+
+## What's new (2026-06-24) — Clipboard Format Inspection (classify / diff available formats)
+
+See which formats are on the clipboard, and detect when its shape changes. Full reference: [`docs/source/Eng/doc/new_features/v186_features_doc.rst`](docs/source/Eng/doc/new_features/v186_features_doc.rst).
+
+- **`classify_format` / `classify_formats` / `diff_formats` / `list_clipboard_formats` / `clipboard_formats`** (`AC_clipboard_formats`, `AC_classify_formats`, `AC_diff_formats`): the clipboard usually holds the same content in several formats at once (a Word copy = text + HTML + RTF; a file copy = CF_HDROP; a screenshot = CF_DIB). This enumerates the live clipboard (`EnumClipboardFormats`) without consuming anything and classifies each format into a friendly category (text/image/files/html/rtf/csv/audio/…); `diff_formats` is a pure monitor primitive returning `{added, removed, changed}` between two snapshots. The classifier and diff are pure (registered names take priority over dynamic ids); only the live enumeration is Win32. No `PySide6`.
+
+## What's new (2026-06-24) — Rich Clipboard Formats (RTF and CSV/TSV)
+
+Put styled text and tables on the clipboard for cross-app paste into Word and Excel. Full reference: [`docs/source/Eng/doc/new_features/v185_features_doc.rst`](docs/source/Eng/doc/new_features/v185_features_doc.rst).
+
+- **`build_rtf` / `rtf_to_text` / `rows_to_csv` / `csv_to_rows` + `set_clipboard_rtf` / `get_clipboard_rtf` / `set_clipboard_csv` / `get_clipboard_csv`** (`AC_set_clipboard_rtf`, `AC_get_clipboard_rtf`, `AC_set_clipboard_csv`, `AC_get_clipboard_csv`): `rich_clipboard` added CF_HTML, but RTF (the format rich editors accept) and the `Csv` format Excel reads were still missing. This adds both: `build_rtf`/`rtf_to_text` build and strip RTF control words and `\uNNNN` / `\'XX` escapes in pure Python (fully unit-testable round-trip), and `rows_to_csv`/`csv_to_rows` wrap the stdlib `csv` module (delimiter-parametrised, so `\t` gives TSV). The codecs are platform-independent; the Win32 get/set share one generic byte-transfer helper, and the sets seed plain text so plain editors still paste. No `PySide6`.
+
 ## What's new (2026-06-24) — Keyboard Focus Order (Tab sequence / WCAG audit / set-focus)
 
 Reason about keyboard navigation: the Tab order, a WCAG focus-order audit, and set-focus. Full reference: [`docs/source/Eng/doc/new_features/v184_features_doc.rst`](docs/source/Eng/doc/new_features/v184_features_doc.rst).

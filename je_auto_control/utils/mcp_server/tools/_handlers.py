@@ -2464,6 +2464,51 @@ def get_clipboard_files():
     return _get_clipboard_files()
 
 
+def set_clipboard_rtf(text):
+    from je_auto_control.utils.executor.action_executor import _set_clipboard_rtf
+    return _set_clipboard_rtf(text)
+
+
+def get_clipboard_rtf():
+    from je_auto_control.utils.executor.action_executor import _get_clipboard_rtf
+    return _get_clipboard_rtf()
+
+
+def set_clipboard_csv(rows, delimiter=","):
+    from je_auto_control.utils.executor.action_executor import _set_clipboard_csv
+    return _set_clipboard_csv(rows, delimiter)
+
+
+def get_clipboard_csv(delimiter=","):
+    from je_auto_control.utils.executor.action_executor import _get_clipboard_csv
+    return _get_clipboard_csv(delimiter)
+
+
+def clipboard_formats():
+    from je_auto_control.utils.executor.action_executor import _clipboard_formats
+    return _clipboard_formats()
+
+
+def classify_formats(formats):
+    from je_auto_control.utils.executor.action_executor import _classify_formats
+    return _classify_formats(formats)
+
+
+def diff_formats(before, after):
+    from je_auto_control.utils.executor.action_executor import _diff_formats
+    return _diff_formats(before, after)
+
+
+def plan_file_drop(paths, point=None):
+    from je_auto_control.utils.executor.action_executor import _plan_file_drop
+    return _plan_file_drop(paths, point)
+
+
+def drop_files(hwnd, paths, point=None):
+    from je_auto_control.utils.executor.action_executor import _drop_files
+    return _drop_files(hwnd, paths, point)
+
+
 def image_histogram(source=None, bins=32, space="hsv", region=None):
     from je_auto_control.utils.executor.action_executor import _image_histogram
     return _image_histogram(source, bins, space, region)
