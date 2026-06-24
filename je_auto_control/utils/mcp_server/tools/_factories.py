@@ -1099,6 +1099,89 @@ def a11y_control_tools() -> List[MCPTool]:
             handler=h.read_table,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_expand_control",
+            description=("Expand a tree node / combobox / expander natively "
+                         "(ExpandCollapsePattern). Located by name/role/app_name/"
+                         "automation_id. Returns True on success."),
+            input_schema=schema(dict(_M)),
+            handler=h.expand_control,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_collapse_control",
+            description=("Collapse a tree node / combobox / expander natively "
+                         "(ExpandCollapsePattern). Returns True on success."),
+            input_schema=schema(dict(_M)),
+            handler=h.collapse_control,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_control_expand_state",
+            description=("Read a control's expand state via ExpandCollapsePattern: "
+                         "{state: expanded|collapsed|partial|leaf|null}."),
+            input_schema=schema(dict(_M)),
+            handler=h.control_expand_state,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_select_control_item",
+            description=("Select a list / tree / tab item natively "
+                         "(SelectionItemPattern). Returns True on success."),
+            input_schema=schema(dict(_M)),
+            handler=h.select_control_item,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_control_range",
+            description=("Read a slider / progress / spinner range via "
+                         "RangeValuePattern: {found, range:{value,minimum,maximum}}."),
+            input_schema=schema(dict(_M)),
+            handler=h.control_range,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_set_control_range",
+            description=("Set a slider / progress / spinner 'value' natively "
+                         "(RangeValuePattern). Returns True on success."),
+            input_schema=schema({"value": {"type": "number"}, **_M},
+                                required=["value"]),
+            handler=h.set_control_range,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_scroll_control_into_view",
+            description=("Scroll a control into view before acting "
+                         "(ScrollItemPattern). Returns True on success."),
+            input_schema=schema(dict(_M)),
+            handler=h.scroll_control_into_view,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_get_control_text",
+            description=("Read a control's full text via TextPattern: "
+                         "{text}. Works on multiline edits / RichEdit / document "
+                         "controls where ac_control_get_value returns empty."),
+            input_schema=schema(dict(_M)),
+            handler=h.get_control_text,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_selected_text",
+            description=("Read a control's currently selected text via "
+                         "TextPattern: {text} ('' when nothing selected)."),
+            input_schema=schema(dict(_M)),
+            handler=h.get_selected_text,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_get_visible_text",
+            description=("Read only the on-screen text of a control via "
+                         "TextPattern.GetVisibleRanges: {text}."),
+            input_schema=schema(dict(_M)),
+            handler=h.get_visible_text,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
@@ -1116,6 +1199,67 @@ def a11y_tree_tools() -> List[MCPTool]:
             }),
             handler=h.a11y_dump,
             annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_walk_tree",
+            description=("Dump the accessibility tree like ac_a11y_dump but with "
+                         "friendly role names (UIA 'ControlType_50000' → "
+                         "'Button') and a stable positional 'path' per node "
+                         "(addressable via the path attribute)."),
+            input_schema=schema({
+                "app_name": {"type": "string"},
+                "max_results": {"type": "integer"},
+            }),
+            handler=h.walk_tree,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_humanize_role",
+            description=("Translate a raw UIA role ('ControlType_50000' / "
+                         "'50000') to a friendly name: {role}. Unknown / "
+                         "already-friendly roles pass through unchanged."),
+            input_schema=schema({"role": {"type": "string"}},
+                                required=["role"]),
+            handler=h.humanize_role,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_tab_order",
+            description=("List the focusable controls in the order the keyboard "
+                         "Tab key would visit them (reading order): "
+                         "{order:[{name,role,bounds,center,...}]}."),
+            input_schema=schema({
+                "app_name": {"type": "string"},
+                "max_results": {"type": "integer"},
+            }),
+            handler=h.tab_order,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_audit_focus_order",
+            description=("WCAG 2.4.x focus-order audit over an app's controls: "
+                         "{order, issues, focusable_count, issue_count}. Flags "
+                         "focusable controls with no visible area."),
+            input_schema=schema({
+                "app_name": {"type": "string"},
+                "max_results": {"type": "integer"},
+            }),
+            handler=h.audit_focus_order,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_focus_control",
+            description=("Set keyboard focus on a control natively (UIA "
+                         "SetFocus), located by name/role/app_name/"
+                         "automation_id. Returns True on success."),
+            input_schema=schema({
+                "name": {"type": "string"},
+                "role": {"type": "string"},
+                "app_name": {"type": "string"},
+                "automation_id": {"type": "string"},
+            }),
+            handler=h.focus_control,
+            annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_a11y_record_start",

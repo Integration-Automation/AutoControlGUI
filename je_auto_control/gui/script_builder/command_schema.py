@@ -1488,6 +1488,86 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         fields=fields,
         description="Read a grid/table/list control as rows of cell strings.",
     ))
+    specs.append(CommandSpec(
+        "AC_expand_control", "Native UI", "Expand Control",
+        fields=fields,
+        description="Expand a tree node / combobox (ExpandCollapsePattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_collapse_control", "Native UI", "Collapse Control",
+        fields=fields,
+        description="Collapse a tree node / combobox (ExpandCollapsePattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_control_expand_state", "Native UI", "Control Expand State",
+        fields=fields,
+        description="Read expanded/collapsed/partial/leaf state of a control.",
+    ))
+    specs.append(CommandSpec(
+        "AC_select_control_item", "Native UI", "Select Control Item",
+        fields=fields,
+        description="Select a list / tree / tab item (SelectionItemPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_control_range", "Native UI", "Get Control Range",
+        fields=fields,
+        description="Read a slider / progress range (RangeValuePattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_control_range", "Native UI", "Set Control Range",
+        fields=(FieldSpec("value", FieldType.FLOAT),) + fields,
+        description="Set a slider / progress / spinner value (RangeValuePattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_scroll_control_into_view", "Native UI", "Scroll Control Into View",
+        fields=fields,
+        description="Scroll a control into view (ScrollItemPattern).",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_control_text", "Native UI", "Get Control Text",
+        fields=fields,
+        description="Read full text via TextPattern (multiline / document safe).",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_selected_text", "Native UI", "Get Selected Text",
+        fields=fields,
+        description="Read the currently selected text via TextPattern.",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_visible_text", "Native UI", "Get Visible Text",
+        fields=fields,
+        description="Read only the on-screen text via TextPattern.GetVisibleRanges.",
+    ))
+    specs.append(CommandSpec(
+        "AC_walk_tree", "Native UI", "Walk Accessibility Tree",
+        fields=(FieldSpec("app_name", FieldType.STRING, optional=True),
+                FieldSpec("max_results", FieldType.INT, optional=True,
+                          default=500)),
+        description="Dump the a11y tree with friendly roles + a path per node.",
+    ))
+    specs.append(CommandSpec(
+        "AC_humanize_role", "Native UI", "Humanize UIA Role",
+        fields=(FieldSpec("role", FieldType.STRING),),
+        description="Translate a raw UIA role (ControlType_50000) to a name.",
+    ))
+    tree_fields = (FieldSpec("app_name", FieldType.STRING, optional=True),
+                   FieldSpec("max_results", FieldType.INT, optional=True,
+                             default=500))
+    specs.append(CommandSpec(
+        "AC_tab_order", "Native UI", "Keyboard Tab Order",
+        fields=tree_fields,
+        description="List focusable controls in keyboard Tab (reading) order.",
+    ))
+    specs.append(CommandSpec(
+        "AC_audit_focus_order", "Native UI", "Audit Focus Order (WCAG)",
+        fields=tree_fields,
+        description="WCAG 2.4.x focus-order audit: tab sequence + flagged issues.",
+    ))
+    specs.append(CommandSpec(
+        "AC_focus_control", "Native UI", "Set Keyboard Focus",
+        fields=fields,
+        description="Set keyboard focus on a control natively (UIA SetFocus).",
+    ))
 
 
 def _add_misc_specs(specs: List[CommandSpec]) -> None:

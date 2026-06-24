@@ -8,7 +8,7 @@ level at a time starting from the root desktop, filtered by app if needed.
 Only ``is_control_element=True`` nodes are surfaced to avoid millions of
 decorative text children.
 """
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.accessibility.backends.base import (
     AccessibilityBackend,
@@ -25,6 +25,12 @@ _UIA_VALUE_PATTERN_ID = 10002
 _UIA_INVOKE_PATTERN_ID = 10000
 _UIA_TOGGLE_PATTERN_ID = 10015
 _UIA_GRID_PATTERN_ID = 10006
+_UIA_EXPANDCOLLAPSE_PATTERN_ID = 10005
+_UIA_SELECTIONITEM_PATTERN_ID = 10010
+_UIA_RANGEVALUE_PATTERN_ID = 10003
+_UIA_SCROLLITEM_PATTERN_ID = 10017
+_UIA_TEXT_PATTERN_ID = 10014
+_EXPAND_STATES = {0: "collapsed", 1: "expanded", 2: "partial", 3: "leaf"}
 
 
 def _is_available() -> bool:
@@ -191,6 +197,127 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         except (OSError, AttributeError):
             return []
         return [self._read_row(pattern, r, cols) for r in range(rows)]
+
+    def _invoke_pattern_method(self, name, role, app_name, automation_id,
+                               pattern_id, interface_name, action):
+        """Find a control, query a pattern, run ``action(pattern)`` → bool."""
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, pattern_id, interface_name) if raw else None
+        if pattern is None:
+            return False
+        try:
+            action(pattern)
+            return True
+        except (OSError, AttributeError):
+            return False
+
+    def expand(self, name=None, role=None, app_name=None, automation_id=None):
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id, _UIA_EXPANDCOLLAPSE_PATTERN_ID,
+            "IUIAutomationExpandCollapsePattern", lambda p: p.Expand())
+
+    def collapse(self, name=None, role=None, app_name=None, automation_id=None):
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id, _UIA_EXPANDCOLLAPSE_PATTERN_ID,
+            "IUIAutomationExpandCollapsePattern", lambda p: p.Collapse())
+
+    def expand_state(self, name=None, role=None, app_name=None,
+                     automation_id=None) -> Optional[str]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_EXPANDCOLLAPSE_PATTERN_ID,
+                                "IUIAutomationExpandCollapsePattern") if raw else None
+        if pattern is None:
+            return None
+        try:
+            return _EXPAND_STATES.get(int(pattern.CurrentExpandCollapseState))
+        except (OSError, AttributeError, ValueError, TypeError):
+            return None
+
+    def select_item(self, name=None, role=None, app_name=None, automation_id=None):
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id, _UIA_SELECTIONITEM_PATTERN_ID,
+            "IUIAutomationSelectionItemPattern", lambda p: p.Select())
+
+    def set_range_value(self, value, name=None, role=None, app_name=None,
+                        automation_id=None):
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id, _UIA_RANGEVALUE_PATTERN_ID,
+            "IUIAutomationRangeValuePattern", lambda p: p.SetValue(float(value)))
+
+    def scroll_into_view(self, name=None, role=None, app_name=None,
+                         automation_id=None):
+        return self._invoke_pattern_method(
+            name, role, app_name, automation_id, _UIA_SCROLLITEM_PATTERN_ID,
+            "IUIAutomationScrollItemPattern", lambda p: p.ScrollIntoView())
+
+    def get_range(self, name=None, role=None, app_name=None,
+                  automation_id=None) -> Optional[Dict[str, Any]]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        pattern = self._pattern(raw, _UIA_RANGEVALUE_PATTERN_ID,
+                                "IUIAutomationRangeValuePattern") if raw else None
+        if pattern is None:
+            return None
+        try:
+            return {"value": float(pattern.CurrentValue),
+                    "minimum": float(pattern.CurrentMinimum),
+                    "maximum": float(pattern.CurrentMaximum)}
+        except (OSError, AttributeError, ValueError, TypeError):
+            return None
+
+    def _text_pattern(self, name, role, app_name, automation_id):
+        """Find a control and return its IUIAutomationTextPattern, or None."""
+        raw = self._find_raw(name, role, app_name, automation_id)
+        if not raw:
+            return None
+        return self._pattern(raw, _UIA_TEXT_PATTERN_ID,
+                             "IUIAutomationTextPattern")
+
+    def document_text(self, name=None, role=None, app_name=None,
+                      automation_id=None) -> Optional[str]:
+        pattern = self._text_pattern(name, role, app_name, automation_id)
+        if pattern is None:
+            return None
+        try:
+            return str(pattern.DocumentRange.GetText(-1) or "")
+        except (OSError, AttributeError):
+            return None
+
+    def selected_text(self, name=None, role=None, app_name=None,
+                      automation_id=None) -> Optional[str]:
+        pattern = self._text_pattern(name, role, app_name, automation_id)
+        if pattern is None:
+            return None
+        try:
+            selection = pattern.GetSelection()
+            if not selection or int(selection.Length or 0) == 0:
+                return ""
+            return str(selection.GetElement(0).GetText(-1) or "")
+        except (OSError, AttributeError):
+            return None
+
+    def visible_text(self, name=None, role=None, app_name=None,
+                     automation_id=None) -> Optional[str]:
+        pattern = self._text_pattern(name, role, app_name, automation_id)
+        if pattern is None:
+            return None
+        try:
+            ranges = pattern.GetVisibleRanges()
+            count = int(ranges.Length or 0)
+            return "".join(str(ranges.GetElement(i).GetText(-1) or "")
+                           for i in range(count))
+        except (OSError, AttributeError):
+            return None
+
+    def set_focus(self, name=None, role=None, app_name=None,
+                  automation_id=None) -> bool:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        if not raw:
+            return False
+        try:
+            raw.SetFocus()
+            return True
+        except (OSError, AttributeError):
+            return False
 
     @staticmethod
     def _read_row(pattern, row: int, cols: int):

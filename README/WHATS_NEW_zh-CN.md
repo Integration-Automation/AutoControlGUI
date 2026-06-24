@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 扩充 UIA 控制模式(展开 / 选取 / 范围 / 滚动)
+
+以原生模式驱动树节点、列表/下拉项目、滑块与滚动,而非像素猜测。完整参考:[`docs/source/Zh/doc/new_features/v181_features_doc.rst`](../docs/source/Zh/doc/new_features/v181_features_doc.rst)。
+
+- **`expand_control` / `collapse_control` / `control_expand_state` / `select_control_item` / `control_range` / `set_control_range` / `scroll_control_into_view`**(`AC_expand_control`、`AC_select_control_item`、`AC_set_control_range` 等):无障碍后端原本只有 Value/Invoke/Toggle/Grid-read 模式,故树状视图、列表/下拉、滑块与屏幕外行都没有原生调用路径。本功能在既有后端 ABC 之上补上 ExpandCollapse / SelectionItem / RangeValue / ScrollItem 模式,通过可注入的 `accessibility.backends.get_backend()` 接缝分派(以 fake backend 无头测试;真正 UIA 调用在 Windows 后端)。不导入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 匹配前安定门 + 命中稳定性
 
 避免在动画进行中匹配,并确认命中跨帧维持稳定。完整参考:[`docs/source/Zh/doc/new_features/v180_features_doc.rst`](../docs/source/Zh/doc/new_features/v180_features_doc.rst)。

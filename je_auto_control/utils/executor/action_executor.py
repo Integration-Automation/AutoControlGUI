@@ -182,6 +182,52 @@ def _a11y_dump(app_name: Optional[str] = None,
     ).to_dict()
 
 
+def _walk_tree(app_name: Optional[str] = None,
+               max_results: int = 500) -> Dict[str, Any]:
+    """Executor adapter: dump the a11y tree with friendly roles + node paths."""
+    from je_auto_control.utils.accessibility import dump_accessibility_tree
+    from je_auto_control.utils.ax_tree_walk import (
+        assign_node_paths, humanize_tree)
+    root = dump_accessibility_tree(app_name=app_name,
+                                   max_results=int(max_results))
+    return assign_node_paths(humanize_tree(root)).to_dict()
+
+
+def _humanize_role(role: str) -> Dict[str, Any]:
+    """Executor adapter: translate a raw UIA role to a friendly name."""
+    from je_auto_control.utils.ax_tree_walk import humanize_role
+    return {"role": humanize_role(role)}
+
+
+def _tab_order(app_name: Optional[str] = None,
+               max_results: int = 500) -> Dict[str, Any]:
+    """Executor adapter: focusable elements in keyboard Tab order."""
+    from je_auto_control.utils.accessibility import list_accessibility_elements
+    from je_auto_control.utils.focus_order import tab_order
+    elements = list_accessibility_elements(app_name=app_name,
+                                           max_results=int(max_results))
+    return {"order": [el.to_dict() for el in tab_order(elements)]}
+
+
+def _audit_focus_order(app_name: Optional[str] = None,
+                       max_results: int = 500) -> Dict[str, Any]:
+    """Executor adapter: WCAG focus-order audit over the app's elements."""
+    from je_auto_control.utils.accessibility import list_accessibility_elements
+    from je_auto_control.utils.focus_order import audit_focus_order
+    elements = list_accessibility_elements(app_name=app_name,
+                                           max_results=int(max_results))
+    return audit_focus_order(elements)
+
+
+def _focus_control(name: Optional[str] = None, role: Optional[str] = None,
+                   app_name: Optional[str] = None,
+                   automation_id: Optional[str] = None) -> bool:
+    """Executor adapter: set keyboard focus on a control (UIA SetFocus)."""
+    from je_auto_control.utils.focus_order import focus_control
+    return focus_control(name=name, role=role, app_name=app_name,
+                         automation_id=automation_id)
+
+
 def _a11y_record_start(app_name: Optional[str] = None,
                         poll_interval_s: float = 0.25,
                         min_movement_px: int = 8) -> Dict[str, Any]:
@@ -2350,6 +2396,97 @@ def _control_toggle(name: Optional[str] = None, role: Optional[str] = None,
     from je_auto_control.utils.accessibility import control_toggle
     return control_toggle(name=name, role=role, app_name=app_name,
                           automation_id=automation_id)
+
+
+def _expand_control(name: Optional[str] = None, role: Optional[str] = None,
+                    app_name: Optional[str] = None,
+                    automation_id: Optional[str] = None) -> bool:
+    """Adapter: expand a tree node / combobox (ExpandCollapsePattern)."""
+    from je_auto_control.utils.control_patterns import expand_control
+    return expand_control(name=name, role=role, app_name=app_name,
+                          automation_id=automation_id)
+
+
+def _collapse_control(name: Optional[str] = None, role: Optional[str] = None,
+                      app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None) -> bool:
+    """Adapter: collapse a tree node / combobox (ExpandCollapsePattern)."""
+    from je_auto_control.utils.control_patterns import collapse_control
+    return collapse_control(name=name, role=role, app_name=app_name,
+                            automation_id=automation_id)
+
+
+def _control_expand_state(name: Optional[str] = None, role: Optional[str] = None,
+                          app_name: Optional[str] = None,
+                          automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: the expand/collapse state of a control."""
+    from je_auto_control.utils.control_patterns import control_expand_state
+    return {"state": control_expand_state(name=name, role=role, app_name=app_name,
+                                          automation_id=automation_id)}
+
+
+def _select_control_item(name: Optional[str] = None, role: Optional[str] = None,
+                         app_name: Optional[str] = None,
+                         automation_id: Optional[str] = None) -> bool:
+    """Adapter: select a list / tree / tab item (SelectionItemPattern)."""
+    from je_auto_control.utils.control_patterns import select_control_item
+    return select_control_item(name=name, role=role, app_name=app_name,
+                               automation_id=automation_id)
+
+
+def _control_range(name: Optional[str] = None, role: Optional[str] = None,
+                   app_name: Optional[str] = None,
+                   automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read a slider / progress range (RangeValuePattern)."""
+    from je_auto_control.utils.control_patterns import control_range
+    info = control_range(name=name, role=role, app_name=app_name,
+                         automation_id=automation_id)
+    return {"found": info is not None, "range": info}
+
+
+def _set_control_range(value: Any, name: Optional[str] = None,
+                       role: Optional[str] = None, app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None) -> bool:
+    """Adapter: set a slider / progress / spinner value (RangeValuePattern)."""
+    from je_auto_control.utils.control_patterns import set_control_range
+    return set_control_range(float(value), name=name, role=role,
+                             app_name=app_name, automation_id=automation_id)
+
+
+def _scroll_control_into_view(name: Optional[str] = None, role: Optional[str] = None,
+                              app_name: Optional[str] = None,
+                              automation_id: Optional[str] = None) -> bool:
+    """Adapter: scroll a control into view (ScrollItemPattern)."""
+    from je_auto_control.utils.control_patterns import scroll_control_into_view
+    return scroll_control_into_view(name=name, role=role, app_name=app_name,
+                                    automation_id=automation_id)
+
+
+def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
+                      app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read a control's full text via TextPattern (multiline-safe)."""
+    from je_auto_control.utils.ax_text import get_control_text
+    return {"text": get_control_text(name=name, role=role, app_name=app_name,
+                                     automation_id=automation_id)}
+
+
+def _get_selected_text(name: Optional[str] = None, role: Optional[str] = None,
+                       app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read a control's currently selected text (TextPattern)."""
+    from je_auto_control.utils.ax_text import get_selected_text
+    return {"text": get_selected_text(name=name, role=role, app_name=app_name,
+                                      automation_id=automation_id)}
+
+
+def _get_visible_text(name: Optional[str] = None, role: Optional[str] = None,
+                      app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read only the on-screen text of a control (TextPattern)."""
+    from je_auto_control.utils.ax_text import get_visible_text
+    return {"text": get_visible_text(name=name, role=role, app_name=app_name,
+                                     automation_id=automation_id)}
 
 
 def _read_table(name: Optional[str] = None, role: Optional[str] = None,
@@ -6017,10 +6154,25 @@ class Executor:
             "AC_a11y_find": _a11y_find_as_dict,
             "AC_a11y_click": click_accessibility_element,
             "AC_a11y_dump": _a11y_dump,
+            "AC_walk_tree": _walk_tree,
+            "AC_humanize_role": _humanize_role,
+            "AC_tab_order": _tab_order,
+            "AC_audit_focus_order": _audit_focus_order,
+            "AC_focus_control": _focus_control,
             "AC_control_get_value": _control_get_value,
             "AC_control_set_value": _control_set_value,
             "AC_control_invoke": _control_invoke,
             "AC_control_toggle": _control_toggle,
+            "AC_expand_control": _expand_control,
+            "AC_collapse_control": _collapse_control,
+            "AC_control_expand_state": _control_expand_state,
+            "AC_select_control_item": _select_control_item,
+            "AC_control_range": _control_range,
+            "AC_set_control_range": _set_control_range,
+            "AC_scroll_control_into_view": _scroll_control_into_view,
+            "AC_get_control_text": _get_control_text,
+            "AC_get_selected_text": _get_selected_text,
+            "AC_get_visible_text": _get_visible_text,
             "AC_read_table": _read_table,
             "AC_watchdog_add": _watchdog_add,
             "AC_watchdog_start": _watchdog_start,

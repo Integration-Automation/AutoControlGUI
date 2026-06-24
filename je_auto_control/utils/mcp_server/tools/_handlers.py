@@ -751,6 +751,60 @@ def read_table(name=None, role=None, app_name=None, automation_id=None):
               automation_id=automation_id)
 
 
+def expand_control(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _expand_control
+    return _expand_control(name, role, app_name, automation_id)
+
+
+def collapse_control(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _collapse_control
+    return _collapse_control(name, role, app_name, automation_id)
+
+
+def control_expand_state(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _control_expand_state)
+    return _control_expand_state(name, role, app_name, automation_id)
+
+
+def select_control_item(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _select_control_item
+    return _select_control_item(name, role, app_name, automation_id)
+
+
+def control_range(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _control_range
+    return _control_range(name, role, app_name, automation_id)
+
+
+def set_control_range(value, name=None, role=None, app_name=None,
+                      automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _set_control_range
+    return _set_control_range(value, name, role, app_name, automation_id)
+
+
+def scroll_control_into_view(name=None, role=None, app_name=None,
+                             automation_id=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _scroll_control_into_view)
+    return _scroll_control_into_view(name, role, app_name, automation_id)
+
+
+def get_control_text(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _get_control_text
+    return _get_control_text(name, role, app_name, automation_id)
+
+
+def get_selected_text(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _get_selected_text
+    return _get_selected_text(name, role, app_name, automation_id)
+
+
+def get_visible_text(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _get_visible_text
+    return _get_visible_text(name, role, app_name, automation_id)
+
+
 def watchdog_add(title, action="close", case_sensitive=False, name=None):
     from je_auto_control.utils.watchdog import default_popup_watchdog
     default_popup_watchdog.add_window_rule(
@@ -2831,6 +2885,31 @@ def a11y_dump(app_name: Optional[str] = None,
     return dump_accessibility_tree(
         app_name=app_name, max_results=int(max_results),
     ).to_dict()
+
+
+def walk_tree(app_name=None, max_results: int = 500):
+    from je_auto_control.utils.executor.action_executor import _walk_tree
+    return _walk_tree(app_name, max_results)
+
+
+def humanize_role(role):
+    from je_auto_control.utils.executor.action_executor import _humanize_role
+    return _humanize_role(role)
+
+
+def tab_order(app_name=None, max_results: int = 500):
+    from je_auto_control.utils.executor.action_executor import _tab_order
+    return _tab_order(app_name, max_results)
+
+
+def audit_focus_order(app_name=None, max_results: int = 500):
+    from je_auto_control.utils.executor.action_executor import _audit_focus_order
+    return _audit_focus_order(app_name, max_results)
+
+
+def focus_control(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _focus_control
+    return _focus_control(name, role, app_name, automation_id)
 
 
 def a11y_record_start(app_name: Optional[str] = None,

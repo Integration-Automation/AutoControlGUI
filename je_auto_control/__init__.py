@@ -48,6 +48,24 @@ from je_auto_control.utils.accessibility import (
     find_accessibility_element, list_accessibility_elements,
     read_control_table,
 )
+# Extended UIA control patterns (Expand / Select / Range / Scroll)
+from je_auto_control.utils.control_patterns import (
+    collapse_control, control_expand_state, control_range, expand_control,
+    scroll_control_into_view, select_control_item, set_control_range,
+)
+# Native text reads via UIA TextPattern (document / selection / visible)
+from je_auto_control.utils.ax_text import (
+    get_control_text, get_selected_text, get_visible_text,
+)
+# Readable / addressable a11y-tree post-processing (role names + node paths)
+from je_auto_control.utils.ax_tree_walk import (
+    assign_node_paths, control_type_name, find_by_path, humanize_role,
+    humanize_tree,
+)
+# Keyboard focus order (tab sequence / WCAG audit / set-focus)
+from je_auto_control.utils.focus_order import (
+    audit_focus_order, focus_control, is_interactive_role, tab_order,
+)
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
@@ -1609,6 +1627,13 @@ __all__ = [
     "find_accessibility_element", "list_accessibility_elements",
     "control_get_value", "control_set_value", "control_invoke",
     "control_toggle", "read_control_table",
+    "expand_control", "collapse_control", "control_expand_state",
+    "select_control_item", "control_range", "set_control_range",
+    "scroll_control_into_view",
+    "get_control_text", "get_selected_text", "get_visible_text",
+    "control_type_name", "humanize_role", "humanize_tree",
+    "assign_node_paths", "find_by_path",
+    "is_interactive_role", "tab_order", "audit_focus_order", "focus_control",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "verify_description",

@@ -1,5 +1,29 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Keyboard Focus Order (Tab sequence / WCAG audit / set-focus)
+
+Reason about keyboard navigation: the Tab order, a WCAG focus-order audit, and set-focus. Full reference: [`docs/source/Eng/doc/new_features/v184_features_doc.rst`](docs/source/Eng/doc/new_features/v184_features_doc.rst).
+
+- **`is_interactive_role` / `tab_order` / `audit_focus_order` / `focus_control`** (`AC_tab_order`, `AC_audit_focus_order`, `AC_focus_control`): nothing reasoned about *keyboard* navigation — only mouse coordinates and element values. This adds the keyboard layer: `tab_order` returns the focusable elements in the order Tab visits them (reading order), `audit_focus_order` is a WCAG 2.4.x report (the sequence + flagged problems like a focusable element with no visible area), and `focus_control` sets keyboard focus via UIA `SetFocus`. The first three are pure functions over `AccessibilityElement` lists — `tab_order` reuses `element_parse.reading_order` and `is_interactive_role` reuses `ax_tree_walk.humanize_role`, so no logic is duplicated; `focus_control` dispatches the injectable backend seam (real `SetFocus` in the Windows backend). No `PySide6`.
+
+## What's new (2026-06-24) — Readable, Addressable Accessibility Tree (role names + node paths)
+
+Turn a raw `ControlType_50000` tree dump into readable roles with a stable path per node. Full reference: [`docs/source/Eng/doc/new_features/v183_features_doc.rst`](docs/source/Eng/doc/new_features/v183_features_doc.rst).
+
+- **`control_type_name` / `humanize_role` / `humanize_tree` / `assign_node_paths` / `find_by_path`** (`AC_walk_tree`, `AC_humanize_role`): `dump_accessibility_tree` emits the platform's raw role (on Windows the bare UIA ControlType id, e.g. `ControlType_50000` for a button) and carries no stable per-node identity once serialised. This adds the pure post-processing it lacks: translate ControlType ids to friendly names, deep-copy a tree with every role humanised, stamp each node with a stable positional `path` (`"0.2.1"` — a pure stand-in for RuntimeId), and resolve a node back by path. `AC_walk_tree` is the readable counterpart to `AC_a11y_dump`. Pure-stdlib over `AXTreeNode`; unknown / non-UIA roles pass through unchanged. No `PySide6`.
+
+## What's new (2026-06-24) — Native Text Reading via the UIA TextPattern (document / selection / visible)
+
+Read the text in multiline editors and document controls where ValuePattern returns nothing. Full reference: [`docs/source/Eng/doc/new_features/v182_features_doc.rst`](docs/source/Eng/doc/new_features/v182_features_doc.rst).
+
+- **`get_control_text` / `get_selected_text` / `get_visible_text`** (`AC_get_control_text`, `AC_get_selected_text`, `AC_get_visible_text`): `control_get_value` reads through UIA ValuePattern, which returns an empty string on multiline edits, RichEdit / document controls and web text areas — exactly the controls whose text you most want. This reads through `TextPattern` instead: `get_control_text` returns the whole `DocumentRange`, `get_selected_text` the current `GetSelection`, `get_visible_text` only the on-screen `GetVisibleRanges`. Dispatched through the injectable `accessibility.backends.get_backend()` seam (headless-testable via a fake backend; real UIA calls in the Windows backend), returning `{text}` from the executor/MCP. No `PySide6`.
+
+## What's new (2026-06-24) — Extended UIA Control Patterns (Expand / Select / Range / Scroll)
+
+Drive tree nodes, list/combo items, sliders and scroll natively, not by pixel guessing. Full reference: [`docs/source/Eng/doc/new_features/v181_features_doc.rst`](docs/source/Eng/doc/new_features/v181_features_doc.rst).
+
+- **`expand_control` / `collapse_control` / `control_expand_state` / `select_control_item` / `control_range` / `set_control_range` / `scroll_control_into_view`** (`AC_expand_control`, `AC_select_control_item`, `AC_set_control_range`, …): the accessibility backend had only Value/Invoke/Toggle/Grid-read patterns, so treeviews, listboxes/combos, sliders and off-screen rows had no native call path. This adds ExpandCollapse / SelectionItem / RangeValue / ScrollItem patterns on top of the existing backend ABC, dispatched through the injectable `accessibility.backends.get_backend()` seam (headless-testable via a fake backend; real UIA calls in the Windows backend). No `PySide6`.
+
 ## What's new (2026-06-24) — Pre-Match Settle Gating + Match Persistence
 
 Avoid matching mid-animation, and confirm a hit holds steady across frames. Full reference: [`docs/source/Eng/doc/new_features/v180_features_doc.rst`](docs/source/Eng/doc/new_features/v180_features_doc.rst).
