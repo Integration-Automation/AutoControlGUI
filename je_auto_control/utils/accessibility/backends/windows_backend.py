@@ -62,9 +62,11 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
     name = "windows-uia"
 
     def __init__(self) -> None:
+        import threading
         self.available = _is_available()
         self._automation = None
         self._uia_module = None
+        self._event_lock = threading.Lock()
 
     def _ensure_automation(self):
         if self._automation is not None:
@@ -419,6 +421,48 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         except (OSError, AttributeError, ValueError, TypeError):
             return False
         return False
+
+    def _make_focus_handler(self, sink):
+        """Build a COM focus-changed event handler that puts events on ``sink``."""
+        try:
+            import comtypes
+            interface = self._uia_module.IUIAutomationFocusChangedEventHandler
+        except (ImportError, AttributeError):
+            return None
+
+        class _FocusHandler(comtypes.COMObject):
+            _com_interfaces_ = [interface]
+
+            def IUIAutomationFocusChangedEventHandler_HandleFocusChangedEvent(
+                    self, sender):  # noqa: N802  # reason: comtypes callback name
+                element = _convert_uia(sender)
+                sink.put(element.to_dict() if element else {"focused": True})
+                return 0
+
+        return _FocusHandler()
+
+    def wait_for_focus_change(self, timeout=5.0) -> Optional[Dict[str, Any]]:
+        import queue
+        automation = self._ensure_automation()
+        events: "queue.Queue" = queue.Queue()
+        handler = self._make_focus_handler(events)
+        if handler is None:
+            return None
+        try:
+            with self._event_lock:
+                automation.AddFocusChangedEventHandler(None, handler)
+        except (OSError, AttributeError):
+            return None
+        try:
+            return events.get(timeout=float(timeout))
+        except queue.Empty:
+            return None
+        finally:
+            with self._event_lock:
+                try:
+                    automation.RemoveFocusChangedEventHandler(handler)
+                except (OSError, AttributeError):
+                    pass
 
     def get_table_headers(self, name=None, role=None, app_name=None,
                           automation_id=None) -> Optional[Dict[str, Any]]:

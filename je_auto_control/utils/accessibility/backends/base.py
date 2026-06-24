@@ -281,6 +281,18 @@ class AccessibilityBackend:
         """Switch a control to the named view (MultipleViewPattern); True on success."""
         self._unsupported("set_view")
 
+    # --- reactive events (UIA event subscription) --------------------------
+
+    def wait_for_focus_change(self, timeout: float = 5.0,
+                              ) -> Optional[Dict[str, Any]]:
+        """Block until the keyboard focus moves, then return the newly-focused
+        element ``{name, role, app_name, ...}`` (or None on ``timeout``).
+
+        A zero-latency native wait (UIA AddFocusChangedEventHandler) — unlike the
+        polling recorder, it can't miss a fast focus transition.
+        """
+        self._unsupported("wait_for_focus_change")
+
     def _unsupported(self, operation: str):
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(
