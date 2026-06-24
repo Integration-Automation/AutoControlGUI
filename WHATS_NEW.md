@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Native Text Reading via the UIA TextPattern (document / selection / visible)
+
+Read the text in multiline editors and document controls where ValuePattern returns nothing. Full reference: [`docs/source/Eng/doc/new_features/v182_features_doc.rst`](docs/source/Eng/doc/new_features/v182_features_doc.rst).
+
+- **`get_control_text` / `get_selected_text` / `get_visible_text`** (`AC_get_control_text`, `AC_get_selected_text`, `AC_get_visible_text`): `control_get_value` reads through UIA ValuePattern, which returns an empty string on multiline edits, RichEdit / document controls and web text areas — exactly the controls whose text you most want. This reads through `TextPattern` instead: `get_control_text` returns the whole `DocumentRange`, `get_selected_text` the current `GetSelection`, `get_visible_text` only the on-screen `GetVisibleRanges`. Dispatched through the injectable `accessibility.backends.get_backend()` seam (headless-testable via a fake backend; real UIA calls in the Windows backend), returning `{text}` from the executor/MCP. No `PySide6`.
+
 ## What's new (2026-06-24) — Extended UIA Control Patterns (Expand / Select / Range / Scroll)
 
 Drive tree nodes, list/combo items, sliders and scroll natively, not by pixel guessing. Full reference: [`docs/source/Eng/doc/new_features/v181_features_doc.rst`](docs/source/Eng/doc/new_features/v181_features_doc.rst).

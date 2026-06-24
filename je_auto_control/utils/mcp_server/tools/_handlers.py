@@ -790,6 +790,21 @@ def scroll_control_into_view(name=None, role=None, app_name=None,
     return _scroll_control_into_view(name, role, app_name, automation_id)
 
 
+def get_control_text(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _get_control_text
+    return _get_control_text(name, role, app_name, automation_id)
+
+
+def get_selected_text(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _get_selected_text
+    return _get_selected_text(name, role, app_name, automation_id)
+
+
+def get_visible_text(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _get_visible_text
+    return _get_visible_text(name, role, app_name, automation_id)
+
+
 def watchdog_add(title, action="close", case_sensitive=False, name=None):
     from je_auto_control.utils.watchdog import default_popup_watchdog
     default_popup_watchdog.add_window_rule(

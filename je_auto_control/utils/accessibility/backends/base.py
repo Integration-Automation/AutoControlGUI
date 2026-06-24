@@ -100,6 +100,29 @@ class AccessibilityBackend:
         """Scroll the matched control into view (ScrollItemPattern); True on success."""
         self._unsupported("scroll_into_view")
 
+    # --- text patterns (TextPattern reads) ---------------------------------
+
+    def document_text(self, name: Optional[str] = None, role: Optional[str] = None,
+                      app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None) -> Optional[str]:
+        """Return the matched control's full text (TextPattern), or None.
+
+        Reads multiline / document controls where ValuePattern returns ``""``.
+        """
+        self._unsupported("document_text")
+
+    def selected_text(self, name: Optional[str] = None, role: Optional[str] = None,
+                      app_name: Optional[str] = None,
+                      automation_id: Optional[str] = None) -> Optional[str]:
+        """Return the control's currently selected text (TextPattern), or None."""
+        self._unsupported("selected_text")
+
+    def visible_text(self, name: Optional[str] = None, role: Optional[str] = None,
+                     app_name: Optional[str] = None,
+                     automation_id: Optional[str] = None) -> Optional[str]:
+        """Return only the on-screen text of the control (TextPattern), or None."""
+        self._unsupported("visible_text")
+
     def _unsupported(self, operation: str):
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(

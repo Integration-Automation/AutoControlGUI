@@ -1523,6 +1523,21 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         fields=fields,
         description="Scroll a control into view (ScrollItemPattern).",
     ))
+    specs.append(CommandSpec(
+        "AC_get_control_text", "Native UI", "Get Control Text",
+        fields=fields,
+        description="Read full text via TextPattern (multiline / document safe).",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_selected_text", "Native UI", "Get Selected Text",
+        fields=fields,
+        description="Read the currently selected text via TextPattern.",
+    ))
+    specs.append(CommandSpec(
+        "AC_get_visible_text", "Native UI", "Get Visible Text",
+        fields=fields,
+        description="Read only the on-screen text via TextPattern.GetVisibleRanges.",
+    ))
 
 
 def _add_misc_specs(specs: List[CommandSpec]) -> None:

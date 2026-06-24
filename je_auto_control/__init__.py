@@ -53,6 +53,10 @@ from je_auto_control.utils.control_patterns import (
     collapse_control, control_expand_state, control_range, expand_control,
     scroll_control_into_view, select_control_item, set_control_range,
 )
+# Native text reads via UIA TextPattern (document / selection / visible)
+from je_auto_control.utils.ax_text import (
+    get_control_text, get_selected_text, get_visible_text,
+)
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
@@ -1617,6 +1621,7 @@ __all__ = [
     "expand_control", "collapse_control", "control_expand_state",
     "select_control_item", "control_range", "set_control_range",
     "scroll_control_into_view",
+    "get_control_text", "get_selected_text", "get_visible_text",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "verify_description",
