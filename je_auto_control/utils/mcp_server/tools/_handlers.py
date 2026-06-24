@@ -827,6 +827,30 @@ def cell_by_header(row, column_header, name=None, role=None, app_name=None,
                            automation_id)
 
 
+def move_element(x, y, name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _move_element
+    return _move_element(x, y, name, role, app_name, automation_id)
+
+
+def resize_element(width, height, name=None, role=None, app_name=None,
+                   automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _resize_element
+    return _resize_element(width, height, name, role, app_name, automation_id)
+
+
+def set_window_state(state, name=None, role=None, app_name=None,
+                     automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _set_window_state
+    return _set_window_state(state, name, role, app_name, automation_id)
+
+
+def window_interaction_state(name=None, role=None, app_name=None,
+                             automation_id=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _window_interaction_state)
+    return _window_interaction_state(name, role, app_name, automation_id)
+
+
 def get_selected_text(name=None, role=None, app_name=None, automation_id=None):
     from je_auto_control.utils.executor.action_executor import _get_selected_text
     return _get_selected_text(name, role, app_name, automation_id)

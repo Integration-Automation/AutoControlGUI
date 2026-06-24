@@ -1220,6 +1220,49 @@ def a11y_control_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_move_element",
+            description=("Move a UIA element to ('x','y') via TransformPattern — "
+                         "element-level, for panels / toolbars / MDI children "
+                         "without their own window. Returns True on success."),
+            input_schema=schema({"x": {"type": "number"},
+                                 "y": {"type": "number"}, **_M},
+                                required=["x", "y"]),
+            handler=h.move_element,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_resize_element",
+            description=("Resize a UIA element to 'width' x 'height' via "
+                         "TransformPattern. Returns True on success."),
+            input_schema=schema({"width": {"type": "number"},
+                                 "height": {"type": "number"}, **_M},
+                                required=["width", "height"]),
+            handler=h.resize_element,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_set_window_state",
+            description=("Set a window's visual state via WindowPattern: 'state' "
+                         "= normal / maximized / minimized. Returns True on "
+                         "success."),
+            input_schema=schema({
+                "state": {"type": "string",
+                          "enum": ["normal", "maximized", "minimized"]}, **_M},
+                required=["state"]),
+            handler=h.set_window_state,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_window_interaction_state",
+            description=("Read a window's interaction state via WindowPattern: "
+                         "{state: ready|blocked_by_modal|not_responding|running|"
+                         "closing|null}. A reliable 'is this window ready / "
+                         "modal-blocked?' signal."),
+            input_schema=schema(dict(_M)),
+            handler=h.window_interaction_state,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_get_control_text",
             description=("Read a control's full text via TextPattern: "
                          "{text}. Works on multiline edits / RichEdit / document "

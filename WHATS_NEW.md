@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Move / Resize Elements + Window State (UIA Transform + Window)
+
+Move a floating panel, resize a control, and know if a window is modal-blocked. Full reference: [`docs/source/Eng/doc/new_features/v198_features_doc.rst`](docs/source/Eng/doc/new_features/v198_features_doc.rst).
+
+- **`move_element` / `resize_element` / `set_window_state` / `window_interaction_state`** (`AC_move_element`, `AC_resize_element`, `AC_set_window_state`, `AC_window_interaction_state`): this is UIA-**element-level**, not the HWND/title-level geometry in `window_layout`. `TransformPattern` moves/resizes a specific control or floating panel (dockable toolbars, MDI children, splitters) with no top-level window of its own; `WindowPattern` minimizes/maximizes a window and reports its **interaction state** (`ready` / `blocked_by_modal` / `not_responding`) — a reliable "is this window ready or modal-blocked?" signal pixel/title polling can't give. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
 ## What's new (2026-06-25) — Table Headers + Cell Addressing (UIA TablePattern)
 
 Assert "the Status column of row 5 says Shipped" — by header, not by guessing indices. Full reference: [`docs/source/Eng/doc/new_features/v197_features_doc.rst`](docs/source/Eng/doc/new_features/v197_features_doc.rst).
