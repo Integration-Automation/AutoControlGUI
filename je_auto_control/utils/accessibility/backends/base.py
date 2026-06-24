@@ -213,6 +213,28 @@ class AccessibilityBackend:
         ``not_responding`` / ``running`` / ``closing`` (WindowPattern), or None."""
         self._unsupported("window_interaction_state")
 
+    # --- MSAA bridge (LegacyIAccessiblePattern) ----------------------------
+
+    def legacy_info(self, name: Optional[str] = None, role: Optional[str] = None,
+                    app_name: Optional[str] = None,
+                    automation_id: Optional[str] = None,
+                    ) -> Optional[Dict[str, Any]]:
+        """Return the MSAA ``IAccessible`` info of an old control, or None.
+
+        ``{name, value, description, default_action, role, state}`` — the
+        last-resort read for legacy Win32 controls that expose nothing useful via
+        the modern UIA patterns.
+        """
+        self._unsupported("legacy_info")
+
+    def legacy_default_action(self, name: Optional[str] = None,
+                              role: Optional[str] = None,
+                              app_name: Optional[str] = None,
+                              automation_id: Optional[str] = None) -> bool:
+        """Fire an old control's MSAA default action (DoDefaultAction); True on
+        success — the fallback when Value / Invoke / Toggle all do nothing."""
+        self._unsupported("legacy_default_action")
+
     def _unsupported(self, operation: str):
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(

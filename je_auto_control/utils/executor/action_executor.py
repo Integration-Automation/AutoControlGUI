@@ -2554,6 +2554,25 @@ def _window_interaction_state(name: Optional[str] = None,
                                               automation_id=automation_id)}
 
 
+def _legacy_info(name: Optional[str] = None, role: Optional[str] = None,
+                 app_name: Optional[str] = None,
+                 automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: MSAA IAccessible info of an old control (LegacyIAccessible)."""
+    from je_auto_control.utils.legacy_accessible import legacy_info
+    info = legacy_info(name=name, role=role, app_name=app_name,
+                       automation_id=automation_id)
+    return {"found": info is not None, "info": info}
+
+
+def _legacy_default_action(name: Optional[str] = None, role: Optional[str] = None,
+                           app_name: Optional[str] = None,
+                           automation_id: Optional[str] = None) -> bool:
+    """Adapter: fire an old control's MSAA default action (Value/Invoke fallback)."""
+    from je_auto_control.utils.legacy_accessible import legacy_default_action
+    return legacy_default_action(name=name, role=role, app_name=app_name,
+                                 automation_id=automation_id)
+
+
 def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
                       app_name: Optional[str] = None,
                       automation_id: Optional[str] = None) -> Dict[str, Any]:
@@ -6506,6 +6525,8 @@ class Executor:
             "AC_resize_element": _resize_element,
             "AC_set_window_state": _set_window_state,
             "AC_window_interaction_state": _window_interaction_state,
+            "AC_legacy_info": _legacy_info,
+            "AC_legacy_default_action": _legacy_default_action,
             "AC_get_control_text": _get_control_text,
             "AC_get_selected_text": _get_selected_text,
             "AC_get_visible_text": _get_visible_text,

@@ -1667,6 +1667,16 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Read window readiness (ready/blocked_by_modal/...).",
     ))
     specs.append(CommandSpec(
+        "AC_legacy_info", "Native UI", "Legacy (MSAA) Info",
+        fields=fields,
+        description="Read an old control's MSAA info (LegacyIAccessible).",
+    ))
+    specs.append(CommandSpec(
+        "AC_legacy_default_action", "Native UI", "Legacy (MSAA) Default Action",
+        fields=fields,
+        description="Fire an old control's MSAA default action (fallback).",
+    ))
+    specs.append(CommandSpec(
         "AC_get_control_text", "Native UI", "Get Control Text",
         fields=fields,
         description="Read full text via TextPattern (multiline / document safe).",

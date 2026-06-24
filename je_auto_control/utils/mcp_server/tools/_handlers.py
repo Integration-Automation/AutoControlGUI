@@ -851,6 +851,18 @@ def window_interaction_state(name=None, role=None, app_name=None,
     return _window_interaction_state(name, role, app_name, automation_id)
 
 
+def legacy_info(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _legacy_info
+    return _legacy_info(name, role, app_name, automation_id)
+
+
+def legacy_default_action(name=None, role=None, app_name=None,
+                          automation_id=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _legacy_default_action)
+    return _legacy_default_action(name, role, app_name, automation_id)
+
+
 def get_selected_text(name=None, role=None, app_name=None, automation_id=None):
     from je_auto_control.utils.executor.action_executor import _get_selected_text
     return _get_selected_text(name, role, app_name, automation_id)
