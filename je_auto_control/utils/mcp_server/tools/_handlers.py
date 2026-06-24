@@ -2887,6 +2887,16 @@ def a11y_dump(app_name: Optional[str] = None,
     ).to_dict()
 
 
+def walk_tree(app_name=None, max_results: int = 500):
+    from je_auto_control.utils.executor.action_executor import _walk_tree
+    return _walk_tree(app_name, max_results)
+
+
+def humanize_role(role):
+    from je_auto_control.utils.executor.action_executor import _humanize_role
+    return _humanize_role(role)
+
+
 def a11y_record_start(app_name: Optional[str] = None,
                       poll_interval_s: float = 0.25,
                       min_movement_px: int = 8) -> Dict[str, Any]:

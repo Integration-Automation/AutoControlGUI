@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Readable, Addressable Accessibility Tree (role names + node paths)
+
+Turn a raw `ControlType_50000` tree dump into readable roles with a stable path per node. Full reference: [`docs/source/Eng/doc/new_features/v183_features_doc.rst`](docs/source/Eng/doc/new_features/v183_features_doc.rst).
+
+- **`control_type_name` / `humanize_role` / `humanize_tree` / `assign_node_paths` / `find_by_path`** (`AC_walk_tree`, `AC_humanize_role`): `dump_accessibility_tree` emits the platform's raw role (on Windows the bare UIA ControlType id, e.g. `ControlType_50000` for a button) and carries no stable per-node identity once serialised. This adds the pure post-processing it lacks: translate ControlType ids to friendly names, deep-copy a tree with every role humanised, stamp each node with a stable positional `path` (`"0.2.1"` — a pure stand-in for RuntimeId), and resolve a node back by path. `AC_walk_tree` is the readable counterpart to `AC_a11y_dump`. Pure-stdlib over `AXTreeNode`; unknown / non-UIA roles pass through unchanged. No `PySide6`.
+
 ## What's new (2026-06-24) — Native Text Reading via the UIA TextPattern (document / selection / visible)
 
 Read the text in multiline editors and document controls where ValuePattern returns nothing. Full reference: [`docs/source/Eng/doc/new_features/v182_features_doc.rst`](docs/source/Eng/doc/new_features/v182_features_doc.rst).
