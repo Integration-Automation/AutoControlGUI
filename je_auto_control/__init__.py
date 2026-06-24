@@ -48,6 +48,11 @@ from je_auto_control.utils.accessibility import (
     find_accessibility_element, list_accessibility_elements,
     read_control_table,
 )
+# Extended UIA control patterns (Expand / Select / Range / Scroll)
+from je_auto_control.utils.control_patterns import (
+    collapse_control, control_expand_state, control_range, expand_control,
+    scroll_control_into_view, select_control_item, set_control_range,
+)
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
@@ -1609,6 +1614,9 @@ __all__ = [
     "find_accessibility_element", "list_accessibility_elements",
     "control_get_value", "control_set_value", "control_invoke",
     "control_toggle", "read_control_table",
+    "expand_control", "collapse_control", "control_expand_state",
+    "select_control_item", "control_range", "set_control_range",
+    "scroll_control_into_view",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "verify_description",

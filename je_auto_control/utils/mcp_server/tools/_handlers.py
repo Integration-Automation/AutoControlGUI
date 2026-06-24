@@ -751,6 +751,45 @@ def read_table(name=None, role=None, app_name=None, automation_id=None):
               automation_id=automation_id)
 
 
+def expand_control(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _expand_control
+    return _expand_control(name, role, app_name, automation_id)
+
+
+def collapse_control(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _collapse_control
+    return _collapse_control(name, role, app_name, automation_id)
+
+
+def control_expand_state(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _control_expand_state)
+    return _control_expand_state(name, role, app_name, automation_id)
+
+
+def select_control_item(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _select_control_item
+    return _select_control_item(name, role, app_name, automation_id)
+
+
+def control_range(name=None, role=None, app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _control_range
+    return _control_range(name, role, app_name, automation_id)
+
+
+def set_control_range(value, name=None, role=None, app_name=None,
+                      automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _set_control_range
+    return _set_control_range(value, name, role, app_name, automation_id)
+
+
+def scroll_control_into_view(name=None, role=None, app_name=None,
+                             automation_id=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _scroll_control_into_view)
+    return _scroll_control_into_view(name, role, app_name, automation_id)
+
+
 def watchdog_add(title, action="close", case_sensitive=False, name=None):
     from je_auto_control.utils.watchdog import default_popup_watchdog
     default_popup_watchdog.add_window_rule(

@@ -1,5 +1,11 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-06-24) — 擴充 UIA 控制模式(展開 / 選取 / 範圍 / 捲動)
+
+以原生模式驅動樹節點、清單/下拉項目、滑桿與捲動,而非像素猜測。完整參考:[`docs/source/Zh/doc/new_features/v181_features_doc.rst`](../docs/source/Zh/doc/new_features/v181_features_doc.rst)。
+
+- **`expand_control` / `collapse_control` / `control_expand_state` / `select_control_item` / `control_range` / `set_control_range` / `scroll_control_into_view`**(`AC_expand_control`、`AC_select_control_item`、`AC_set_control_range` 等):無障礙後端原本只有 Value/Invoke/Toggle/Grid-read 模式,故樹狀檢視、清單/下拉、滑桿與螢幕外列都沒有原生呼叫路徑。本功能在既有後端 ABC 之上補上 ExpandCollapse / SelectionItem / RangeValue / ScrollItem 模式,透過可注入的 `accessibility.backends.get_backend()` 接縫分派(以 fake backend 無頭測試;真正 UIA 呼叫在 Windows 後端)。不匯入 `PySide6`。
+
 ## 本次更新 (2026-06-24) — 比對前安定閘 + 命中穩定性
 
 避免在動畫進行中比對,並確認命中跨幀維持穩定。完整參考:[`docs/source/Zh/doc/new_features/v180_features_doc.rst`](../docs/source/Zh/doc/new_features/v180_features_doc.rst)。

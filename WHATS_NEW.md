@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Extended UIA Control Patterns (Expand / Select / Range / Scroll)
+
+Drive tree nodes, list/combo items, sliders and scroll natively, not by pixel guessing. Full reference: [`docs/source/Eng/doc/new_features/v181_features_doc.rst`](docs/source/Eng/doc/new_features/v181_features_doc.rst).
+
+- **`expand_control` / `collapse_control` / `control_expand_state` / `select_control_item` / `control_range` / `set_control_range` / `scroll_control_into_view`** (`AC_expand_control`, `AC_select_control_item`, `AC_set_control_range`, …): the accessibility backend had only Value/Invoke/Toggle/Grid-read patterns, so treeviews, listboxes/combos, sliders and off-screen rows had no native call path. This adds ExpandCollapse / SelectionItem / RangeValue / ScrollItem patterns on top of the existing backend ABC, dispatched through the injectable `accessibility.backends.get_backend()` seam (headless-testable via a fake backend; real UIA calls in the Windows backend). No `PySide6`.
+
 ## What's new (2026-06-24) — Pre-Match Settle Gating + Match Persistence
 
 Avoid matching mid-animation, and confirm a hit holds steady across frames. Full reference: [`docs/source/Eng/doc/new_features/v180_features_doc.rst`](docs/source/Eng/doc/new_features/v180_features_doc.rst).
