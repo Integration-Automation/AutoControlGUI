@@ -2709,6 +2709,21 @@ def _add_audit_specs(specs: List[CommandSpec]) -> None:
                     "locators).",
     ))
     specs.append(CommandSpec(
+        "AC_failure_signature", "Testing", "Failure Signature",
+        fields=(
+            FieldSpec("error", FieldType.STRING,
+                      placeholder="Timeout at C:\\app.py line 42 (0x7ff..)"),
+            FieldSpec("length", FieldType.INT, optional=True, default=12),
+        ),
+        description="Normalise + hash an error to a stable failure signature.",
+    ))
+    specs.append(CommandSpec(
+        "AC_group_failures", "Testing", "Group Failures by Signature",
+        fields=(FieldSpec("errors", FieldType.STRING,
+                          placeholder='["err one", "err two"]'),),
+        description="Group error messages by failure signature (most frequent).",
+    ))
+    specs.append(CommandSpec(
         "AC_scan_secrets", "Tools", "Scan for Hardcoded Secrets",
         description="Scan 'data' (JSON view) for hardcoded secrets that "
                     "should use ${secrets.*}.",

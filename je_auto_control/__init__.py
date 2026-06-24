@@ -88,6 +88,10 @@ from je_auto_control.utils.scale_detect import detect_scale, scale_sweep
 from je_auto_control.utils.saliency import (
     most_salient, salient_regions, saliency_map,
 )
+# Stable failure signatures (normalise + hash error text; group failures)
+from je_auto_control.utils.failure_signature import (
+    failure_signature, group_failures, normalize_error,
+)
 # VLM element locator (headless)
 from je_auto_control.utils.vision import (
     VLMNotAvailableError, click_by_description, locate_by_description,
@@ -1665,6 +1669,7 @@ __all__ = [
     "image_quality", "is_blurry", "quality_gate",
     "detect_scale", "scale_sweep",
     "saliency_map", "salient_regions", "most_salient",
+    "normalize_error", "failure_signature", "group_failures",
     # VLM locator
     "VLMNotAvailableError", "locate_by_description", "click_by_description",
     "verify_description",

@@ -2543,6 +2543,16 @@ def most_salient(source=None, region=None, size=64, threshold=None, min_area=4):
     return _most_salient(source, region, size, threshold, min_area)
 
 
+def failure_signature(error, length=12):
+    from je_auto_control.utils.executor.action_executor import _failure_signature
+    return _failure_signature(error, length)
+
+
+def group_failures(errors):
+    from je_auto_control.utils.executor.action_executor import _group_failures
+    return _group_failures(errors)
+
+
 def image_histogram(source=None, bins=32, space="hsv", region=None):
     from je_auto_control.utils.executor.action_executor import _image_histogram
     return _image_histogram(source, bins, space, region)
