@@ -4402,6 +4402,24 @@ def _cofailure_pairs(runs: Any, threshold: Any = 0.5) -> Dict[str, Any]:
     return {"pairs": pairs, "count": len(pairs)}
 
 
+def _build_timeline(steps: Any) -> Dict[str, Any]:
+    """Adapter: a per-run step waterfall (offsets / durations / bottleneck)."""
+    import json
+    from je_auto_control.utils.step_timeline import build_timeline
+    if isinstance(steps, str):
+        steps = json.loads(steps)
+    return build_timeline(steps)
+
+
+def _critical_steps(steps: Any, top: Any = 3) -> Dict[str, Any]:
+    """Adapter: the steps that dominate a run's time (bottlenecks)."""
+    import json
+    from je_auto_control.utils.step_timeline import critical_steps
+    if isinstance(steps, str):
+        steps = json.loads(steps)
+    return {"steps": critical_steps(steps, top=int(top))}
+
+
 def _image_histogram(source: Any = None, bins: Any = 32, space: str = "hsv",
                      region: Any = None) -> Dict[str, Any]:
     """Adapter: per-channel colour histogram of an image / the screen."""
@@ -6635,6 +6653,8 @@ class Executor:
             "AC_diff_runs": _diff_runs,
             "AC_failure_clusters": _failure_clusters,
             "AC_cofailure_pairs": _cofailure_pairs,
+            "AC_build_timeline": _build_timeline,
+            "AC_critical_steps": _critical_steps,
             "AC_image_histogram": _image_histogram,
             "AC_histogram_changed": _histogram_changed,
             "AC_changed_regions": _changed_regions,
