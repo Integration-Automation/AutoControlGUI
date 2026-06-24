@@ -787,6 +787,24 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         ),
         description="Per-scale match-score profile of a template.",
     ))
+    saliency_fields = (
+        FieldSpec("source", FieldType.FILE_PATH, optional=True),
+        FieldSpec("region", FieldType.STRING, optional=True,
+                  placeholder=_REGION_PLACEHOLDER),
+        FieldSpec("size", FieldType.INT, optional=True, default=64),
+        FieldSpec("threshold", FieldType.FLOAT, optional=True),
+        FieldSpec("min_area", FieldType.INT, optional=True, default=4),
+    )
+    specs.append(CommandSpec(
+        "AC_salient_regions", "Image", "Salient Regions",
+        fields=saliency_fields,
+        description="Visually salient regions (spectral-residual; where to look).",
+    ))
+    specs.append(CommandSpec(
+        "AC_most_salient", "Image", "Most Salient Region",
+        fields=saliency_fields,
+        description="The single most visually salient region of an image/screen.",
+    ))
     specs.append(CommandSpec(
         "AC_changed_regions", "Image", "Changed Regions (motion)",
         fields=(

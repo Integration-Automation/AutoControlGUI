@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Visual Saliency (where to look — spectral-residual)
+
+Find the region that stands out, with no template / colour / text. Full reference: [`docs/source/Eng/doc/new_features/v190_features_doc.rst`](docs/source/Eng/doc/new_features/v190_features_doc.rst).
+
+- **`saliency_map` / `salient_regions` / `most_salient`** (`AC_salient_regions`, `AC_most_salient`): when there's no template, colour or text to key on, an agent still needs a cue for *where to look*. This computes the spectral-residual saliency map (Hou & Zhang 2007 — log amplitude minus its local average, reconstructed through the phase) and turns it into ranked salient boxes in source pixel coordinates. The transform is a pure numpy FFT (`cv2.saliency` is in the forbidden opencv-contrib package, so it's re-implemented over base opencv); it reuses `visual_match`'s grayscale loader and `cv2_utils.blobs.connected_boxes`. Regions threshold at `mean + 2·std` by default. A coarse attention cue to *narrow* where a template / OCR pass then looks. No `PySide6`.
+
 ## What's new (2026-06-24) — Display-Scale / Visual-DPI Detection
 
 Infer which display scale (DPI) a template renders at — and how confidently. Full reference: [`docs/source/Eng/doc/new_features/v189_features_doc.rst`](docs/source/Eng/doc/new_features/v189_features_doc.rst).

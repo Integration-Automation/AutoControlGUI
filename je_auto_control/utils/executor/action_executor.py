@@ -4327,6 +4327,27 @@ def _scale_sweep(template: Any, haystack: Any = None, region: Any = None,
                                  method=str(method))}
 
 
+def _salient_regions(source: Any = None, region: Any = None, size: Any = 64,
+                     threshold: Any = None, min_area: Any = 4) -> Dict[str, Any]:
+    """Adapter: ranked visually-salient regions of an image / the screen."""
+    from je_auto_control.utils.saliency import salient_regions
+    cut = float(threshold) if threshold not in (None, "") else None
+    regions = salient_regions(source, region=_coerce_region(region),
+                              size=int(size), threshold=cut,
+                              min_area=int(min_area))
+    return {"regions": regions, "count": len(regions)}
+
+
+def _most_salient(source: Any = None, region: Any = None, size: Any = 64,
+                  threshold: Any = None, min_area: Any = 4) -> Dict[str, Any]:
+    """Adapter: the single most visually-salient region (where to look)."""
+    from je_auto_control.utils.saliency import most_salient
+    cut = float(threshold) if threshold not in (None, "") else None
+    result = most_salient(source, region=_coerce_region(region),
+                          size=int(size), threshold=cut, min_area=int(min_area))
+    return {"found": result is not None, "region": result}
+
+
 def _image_histogram(source: Any = None, bins: Any = 32, space: str = "hsv",
                      region: Any = None) -> Dict[str, Any]:
     """Adapter: per-channel colour histogram of an image / the screen."""
@@ -6553,6 +6574,8 @@ class Executor:
             "AC_quality_gate": _quality_gate,
             "AC_detect_scale": _detect_scale,
             "AC_scale_sweep": _scale_sweep,
+            "AC_salient_regions": _salient_regions,
+            "AC_most_salient": _most_salient,
             "AC_image_histogram": _image_histogram,
             "AC_histogram_changed": _histogram_changed,
             "AC_changed_regions": _changed_regions,
