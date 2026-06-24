@@ -802,6 +802,13 @@ def realize_item(item_name, by="name", container_name=None, container_role=None,
                          app_name, automation_id)
 
 
+def get_element_properties(name=None, role=None, app_name=None,
+                           automation_id=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _get_element_properties)
+    return _get_element_properties(name, role, app_name, automation_id)
+
+
 def get_selected_text(name=None, role=None, app_name=None, automation_id=None):
     from je_auto_control.utils.executor.action_executor import _get_selected_text
     return _get_selected_text(name, role, app_name, automation_id)

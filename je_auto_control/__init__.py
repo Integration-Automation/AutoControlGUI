@@ -68,6 +68,10 @@ from je_auto_control.utils.focus_order import (
 )
 # Realize off-screen items in virtualized lists / grids (UIA VirtualizedItem)
 from je_auto_control.utils.virtualized import realize_item
+# Rich UIA element properties (enabled / offscreen / help / status / keys)
+from je_auto_control.utils.ax_props import (
+    get_element_properties, is_element_enabled,
+)
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1669,6 +1673,7 @@ __all__ = [
     "assign_node_paths", "find_by_path",
     "is_interactive_role", "tab_order", "audit_focus_order", "focus_control",
     "realize_item",
+    "get_element_properties", "is_element_enabled",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",

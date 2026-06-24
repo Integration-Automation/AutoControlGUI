@@ -298,6 +298,13 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         self._realize(found)
         return _convert_uia(found)
 
+    def get_properties(self, name=None, role=None, app_name=None,
+                       automation_id=None) -> Optional[Dict[str, Any]]:
+        raw = self._find_raw(name, role, app_name, automation_id)
+        if not raw:
+            return None
+        return _read_properties(raw)
+
     def _text_pattern(self, name, role, app_name, automation_id):
         """Find a control and return its IUIAutomationTextPattern, or None."""
         raw = self._find_raw(name, role, app_name, automation_id)
@@ -364,6 +371,33 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             except (OSError, AttributeError):
                 cells.append("")
         return cells
+
+
+def _as_text(value) -> str:
+    return str(value or "")
+
+
+# (key, UIA element attribute, cast) for the rich properties the flat list omits.
+_PROPERTY_READS = (
+    ("enabled", "CurrentIsEnabled", bool),
+    ("offscreen", "CurrentIsOffscreen", bool),
+    ("help_text", "CurrentHelpText", _as_text),
+    ("item_status", "CurrentItemStatus", _as_text),
+    ("accelerator_key", "CurrentAcceleratorKey", _as_text),
+    ("access_key", "CurrentAccessKey", _as_text),
+    ("orientation", "CurrentOrientation", int),
+)
+
+
+def _read_properties(raw) -> Dict[str, Any]:
+    """Read the rich UIA properties of a raw element into a plain dict."""
+    properties: Dict[str, Any] = {}
+    for key, attribute, cast in _PROPERTY_READS:
+        try:
+            properties[key] = cast(getattr(raw, attribute))
+        except (OSError, AttributeError, ValueError, TypeError):
+            properties[key] = None
+    return properties
 
 
 def _convert_uia(raw) -> Optional[AccessibilityElement]:

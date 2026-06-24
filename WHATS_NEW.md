@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Rich UIA Element Properties
+
+Know if a control is enabled / off-screen / has a tooltip before you act. Full reference: [`docs/source/Eng/doc/new_features/v196_features_doc.rst`](docs/source/Eng/doc/new_features/v196_features_doc.rst).
+
+- **`get_element_properties` / `is_element_enabled`** (`AC_get_element_properties`): the flat element list carries only name/role/bounds/app/id, but automation needs more before it acts — **is the control enabled** (don't click a disabled button), **is it off-screen**, its **item_status** (field validation/error), **help_text** (tooltip), and **accelerator_key** (drive via hotkey). This reads those high-value UIA properties (`enabled`/`offscreen`/`help_text`/`item_status`/`accelerator_key`/`access_key`/`orientation`); `is_element_enabled` is the common pre-action guard. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA reads in the Windows backend). No `PySide6`.
+
 ## What's new (2026-06-25) — Realize Off-Screen Items in Virtualized Lists / Grids
 
 Reach a row that isn't scrolled into view yet — the "element not found in a long list" fix. Full reference: [`docs/source/Eng/doc/new_features/v195_features_doc.rst`](docs/source/Eng/doc/new_features/v195_features_doc.rst).

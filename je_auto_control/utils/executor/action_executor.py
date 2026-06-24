@@ -2476,6 +2476,16 @@ def _realize_item(item_name: str, by: str = "name",
             "element": element.to_dict() if element else None}
 
 
+def _get_element_properties(name: Optional[str] = None, role: Optional[str] = None,
+                            app_name: Optional[str] = None,
+                            automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read rich UIA properties (enabled/offscreen/help/status/keys)."""
+    from je_auto_control.utils.ax_props import get_element_properties
+    props = get_element_properties(name=name, role=role, app_name=app_name,
+                                   automation_id=automation_id)
+    return {"found": props is not None, "properties": props}
+
+
 def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
                       app_name: Optional[str] = None,
                       automation_id: Optional[str] = None) -> Dict[str, Any]:
@@ -6420,6 +6430,7 @@ class Executor:
             "AC_set_control_range": _set_control_range,
             "AC_scroll_control_into_view": _scroll_control_into_view,
             "AC_realize_item": _realize_item,
+            "AC_get_element_properties": _get_element_properties,
             "AC_get_control_text": _get_control_text,
             "AC_get_selected_text": _get_selected_text,
             "AC_get_visible_text": _get_visible_text,
