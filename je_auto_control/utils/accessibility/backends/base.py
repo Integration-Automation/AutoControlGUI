@@ -123,6 +123,28 @@ class AccessibilityBackend:
         """Return only the on-screen text of the control (TextPattern), or None."""
         self._unsupported("visible_text")
 
+    def find_text(self, text: str = "", ignore_case: bool = True,
+                  name: Optional[str] = None, role: Optional[str] = None,
+                  app_name: Optional[str] = None,
+                  automation_id: Optional[str] = None) -> bool:
+        """Return whether ``text`` occurs in the control (TextPattern.FindText)."""
+        self._unsupported("find_text")
+
+    def select_text(self, text: str = "", ignore_case: bool = True,
+                    name: Optional[str] = None, role: Optional[str] = None,
+                    app_name: Optional[str] = None,
+                    automation_id: Optional[str] = None) -> bool:
+        """Find ``text`` and select its range (TextPattern.FindText + Select)."""
+        self._unsupported("select_text")
+
+    def text_attributes(self, name: Optional[str] = None,
+                        role: Optional[str] = None, app_name: Optional[str] = None,
+                        automation_id: Optional[str] = None,
+                        ) -> Optional[Dict[str, Any]]:
+        """Return formatting of the control's selection — ``{font_name, font_size,
+        bold, italic, foreground_color}`` (TextPattern attributes), or None."""
+        self._unsupported("text_attributes")
+
     # --- keyboard focus ----------------------------------------------------
 
     def set_focus(self, name: Optional[str] = None, role: Optional[str] = None,

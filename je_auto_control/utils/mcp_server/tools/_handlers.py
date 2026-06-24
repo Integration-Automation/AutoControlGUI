@@ -795,6 +795,28 @@ def get_control_text(name=None, role=None, app_name=None, automation_id=None):
     return _get_control_text(name, role, app_name, automation_id)
 
 
+def find_control_text(text, ignore_case=True, name=None, role=None,
+                      app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import _find_control_text
+    return _find_control_text(text, ignore_case, name, role, app_name,
+                              automation_id)
+
+
+def select_control_text(text, ignore_case=True, name=None, role=None,
+                        app_name=None, automation_id=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _select_control_text)
+    return _select_control_text(text, ignore_case, name, role, app_name,
+                                automation_id)
+
+
+def control_text_attributes(name=None, role=None, app_name=None,
+                            automation_id=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _control_text_attributes)
+    return _control_text_attributes(name, role, app_name, automation_id)
+
+
 def realize_item(item_name, by="name", container_name=None, container_role=None,
                  app_name=None, automation_id=None):
     from je_auto_control.utils.executor.action_executor import _realize_item

@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Advanced TextPattern (find / select / read attributes)
+
+Search a control's text, select a match to replace it, and read font/colour formatting. Full reference: [`docs/source/Eng/doc/new_features/v200_features_doc.rst`](docs/source/Eng/doc/new_features/v200_features_doc.rst).
+
+- **`find_control_text` / `select_control_text` / `control_text_attributes`** (`AC_find_control_text`, `AC_select_control_text`, `AC_control_text_attributes`): `ax_text` shipped the three whole-range *reads*, but couldn't search for a substring, select a found range, or read text formatting — needed to assert "the error word is red and bold" or to place the selection at matched text before typing. This rounds out TextPattern: `find_control_text` searches the real content (not OCR) via `FindText`, `select_control_text` finds + selects a range so the next keystrokes replace it, and `control_text_attributes` reads `{font_name, font_size, bold, italic, foreground_color}`. Dispatched through the injectable accessibility backend seam (headless-testable via a fake backend; real UIA in the Windows backend). No `PySide6`.
+
 ## What's new (2026-06-25) — MSAA Bridge for Legacy Controls (LegacyIAccessible)
 
 Automate the long tail of old Win32 controls that expose nothing via modern UIA. Full reference: [`docs/source/Eng/doc/new_features/v199_features_doc.rst`](docs/source/Eng/doc/new_features/v199_features_doc.rst).

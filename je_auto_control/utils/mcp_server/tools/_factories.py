@@ -1293,6 +1293,39 @@ def a11y_control_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_find_control_text",
+            description=("Whether 'text' occurs in a control via "
+                         "TextPattern.FindText (searches the real text content, "
+                         "not OCR). Returns True/False. 'ignore_case' default "
+                         "true."),
+            input_schema=schema({"text": {"type": "string"},
+                                 "ignore_case": {"type": "boolean"}, **_M},
+                                required=["text"]),
+            handler=h.find_control_text,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_select_control_text",
+            description=("Find 'text' in a control and SELECT its range "
+                         "(TextPattern.FindText + Select) — position the caret / "
+                         "selection before typing to replace it. Returns True on "
+                         "success."),
+            input_schema=schema({"text": {"type": "string"},
+                                 "ignore_case": {"type": "boolean"}, **_M},
+                                required=["text"]),
+            handler=h.select_control_text,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_control_text_attributes",
+            description=("Read the control selection's formatting via TextPattern "
+                         "attributes: {found, attributes:{font_name, font_size, "
+                         "bold, italic, foreground_color}}."),
+            input_schema=schema(dict(_M)),
+            handler=h.control_text_attributes,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_get_selected_text",
             description=("Read a control's currently selected text via "
                          "TextPattern: {text} ('' when nothing selected)."),

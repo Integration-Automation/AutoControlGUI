@@ -2582,6 +2582,38 @@ def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
                                      automation_id=automation_id)}
 
 
+def _find_control_text(text: str, ignore_case: Any = True,
+                       name: Optional[str] = None, role: Optional[str] = None,
+                       app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None) -> bool:
+    """Adapter: whether text occurs in a control (TextPattern.FindText)."""
+    from je_auto_control.utils.ax_text import find_control_text
+    return find_control_text(str(text), ignore_case=bool(ignore_case), name=name,
+                             role=role, app_name=app_name,
+                             automation_id=automation_id)
+
+
+def _select_control_text(text: str, ignore_case: Any = True,
+                         name: Optional[str] = None, role: Optional[str] = None,
+                         app_name: Optional[str] = None,
+                         automation_id: Optional[str] = None) -> bool:
+    """Adapter: find + select text in a control (TextPattern.FindText + Select)."""
+    from je_auto_control.utils.ax_text import select_control_text
+    return select_control_text(str(text), ignore_case=bool(ignore_case),
+                               name=name, role=role, app_name=app_name,
+                               automation_id=automation_id)
+
+
+def _control_text_attributes(name: Optional[str] = None, role: Optional[str] = None,
+                             app_name: Optional[str] = None,
+                             automation_id: Optional[str] = None) -> Dict[str, Any]:
+    """Adapter: read a control selection's font/colour formatting (TextPattern)."""
+    from je_auto_control.utils.ax_text import control_text_attributes
+    attrs = control_text_attributes(name=name, role=role, app_name=app_name,
+                                    automation_id=automation_id)
+    return {"found": attrs is not None, "attributes": attrs}
+
+
 def _get_selected_text(name: Optional[str] = None, role: Optional[str] = None,
                        app_name: Optional[str] = None,
                        automation_id: Optional[str] = None) -> Dict[str, Any]:
@@ -6528,6 +6560,9 @@ class Executor:
             "AC_legacy_info": _legacy_info,
             "AC_legacy_default_action": _legacy_default_action,
             "AC_get_control_text": _get_control_text,
+            "AC_find_control_text": _find_control_text,
+            "AC_select_control_text": _select_control_text,
+            "AC_control_text_attributes": _control_text_attributes,
             "AC_get_selected_text": _get_selected_text,
             "AC_get_visible_text": _get_visible_text,
             "AC_read_table": _read_table,
