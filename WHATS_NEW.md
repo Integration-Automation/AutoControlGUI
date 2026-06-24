@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-24) — Display-Scale / Visual-DPI Detection
+
+Infer which display scale (DPI) a template renders at — and how confidently. Full reference: [`docs/source/Eng/doc/new_features/v189_features_doc.rst`](docs/source/Eng/doc/new_features/v189_features_doc.rst).
+
+- **`detect_scale` / `scale_sweep`** (`AC_detect_scale`, `AC_scale_sweep`): a template cropped at 100% scale won't match on a 150%-DPI machine, and `match_template` returns only the single best match — discarding the per-scale scores. This keeps the whole profile: `scale_sweep` scores the template at every scale, and `detect_scale` reports the winning scale as a DPI inference (`scale_percent`) with a confidence `margin` (how far it beats the runner-up). Reuses `visual_match._score_map` per scale; source is any ndarray / path / PIL image (or the live screen); scales default to the common Windows values. cv2/numpy lazily imported. No `PySide6`.
+
 ## What's new (2026-06-24) — Image Quality Scoring (sharpness / contrast / brightness gate)
 
 Refuse to OCR a blurry or washed-out frame — score quality and gate before recognition. Full reference: [`docs/source/Eng/doc/new_features/v188_features_doc.rst`](docs/source/Eng/doc/new_features/v188_features_doc.rst).

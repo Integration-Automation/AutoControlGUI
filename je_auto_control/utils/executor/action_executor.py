@@ -4298,6 +4298,35 @@ def _quality_gate(source: Any = None, region: Any = None,
                         min_contrast=float(min_contrast))
 
 
+def _coerce_scales(scales: Any):
+    """Normalise a scales argument (JSON '[1.0,1.5]' string / list / None)."""
+    import json
+    if isinstance(scales, str):
+        return json.loads(scales) if scales.strip() else None
+    return scales
+
+
+def _detect_scale(template: Any, haystack: Any = None, region: Any = None,
+                  scales: Any = None,
+                  method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: infer the display scale a template renders at (visual DPI)."""
+    from je_auto_control.utils.scale_detect import detect_scale
+    result = detect_scale(template, haystack, region=_coerce_region(region),
+                          scales=_coerce_scales(scales), method=str(method))
+    return {"found": result is not None, "result": result}
+
+
+def _scale_sweep(template: Any, haystack: Any = None, region: Any = None,
+                 scales: Any = None,
+                 method: str = "ccoeff_normed") -> Dict[str, Any]:
+    """Adapter: per-scale match-score profile of a template."""
+    from je_auto_control.utils.scale_detect import scale_sweep
+    return {"sweep": scale_sweep(template, haystack,
+                                 region=_coerce_region(region),
+                                 scales=_coerce_scales(scales),
+                                 method=str(method))}
+
+
 def _image_histogram(source: Any = None, bins: Any = 32, space: str = "hsv",
                      region: Any = None) -> Dict[str, Any]:
     """Adapter: per-channel colour histogram of an image / the screen."""
@@ -6522,6 +6551,8 @@ class Executor:
             "AC_drop_files": _drop_files,
             "AC_image_quality": _image_quality,
             "AC_quality_gate": _quality_gate,
+            "AC_detect_scale": _detect_scale,
+            "AC_scale_sweep": _scale_sweep,
             "AC_image_histogram": _image_histogram,
             "AC_histogram_changed": _histogram_changed,
             "AC_changed_regions": _changed_regions,
