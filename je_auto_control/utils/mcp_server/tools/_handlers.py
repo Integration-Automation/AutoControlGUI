@@ -668,6 +668,20 @@ def decode_conversion_mode(flags):
     return _decode_conversion_mode(flags)
 
 
+def retry_delay(attempt, base=0.1, max_delay=5.0, multiplier=2.0,
+                jitter="none"):
+    from je_auto_control.utils.executor.action_executor import _retry_delay
+    return _retry_delay(attempt, base, max_delay, multiplier, jitter)
+
+
+def plan_retry_delays(attempts, base=0.1, max_delay=5.0, multiplier=2.0,
+                      jitter="none"):
+    from je_auto_control.utils.executor.action_executor import (
+        _plan_retry_delays,
+    )
+    return _plan_retry_delays(attempts, base, max_delay, multiplier, jitter)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

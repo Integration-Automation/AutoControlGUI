@@ -1769,6 +1769,34 @@ def smart_wait_tools() -> List[MCPTool]:
             handler=h.wait_for_process,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_retry_delay",
+            description=("Capped exponential backoff delay (seconds) before a "
+                         "given 1-based retry 'attempt'. 'jitter' is none / "
+                         "full / equal (default none). Returns {delay}."),
+            input_schema=schema({"attempt": {"type": "integer"},
+                                 "base": {"type": "number"},
+                                 "max_delay": {"type": "number"},
+                                 "multiplier": {"type": "number"},
+                                 "jitter": {"type": "string"}},
+                                required=["attempt"]),
+            handler=h.retry_delay,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_plan_retry_delays",
+            description=("The backoff delay schedule (seconds) for the first "
+                         "'attempts' retries. 'jitter' none / full / equal "
+                         "(default none). Returns {delays}."),
+            input_schema=schema({"attempts": {"type": "integer"},
+                                 "base": {"type": "number"},
+                                 "max_delay": {"type": "number"},
+                                 "multiplier": {"type": "number"},
+                                 "jitter": {"type": "string"}},
+                                required=["attempts"]),
+            handler=h.plan_retry_delays,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

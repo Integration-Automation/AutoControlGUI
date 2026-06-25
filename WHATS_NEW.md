@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Retry Budget — Deadline + Jitter
+
+Retry a flaky step bounded by a total time budget, with jittered backoff. Full reference: [`docs/source/Eng/doc/new_features/v209_features_doc.rst`](docs/source/Eng/doc/new_features/v209_features_doc.rst).
+
+- **`RetryBudget` / `run_with_budget` / `backoff_delay` / `jittered_delay`** (`AC_retry_delay`, `AC_plan_retry_delays`): `resilience.RetryPolicy` retries a fixed attempt count with plain exponential backoff — it can't express a *wall-clock deadline* ("give up after 30 s total, however many attempts that is") or *jitter* (randomized backoff so retrying workers don't resynchronize into a thundering herd). `RetryBudget` adds both: bounded by `max_attempts` *and/or* `deadline_s`, `run_with_budget` honours whichever is hit first and never sleeps past the deadline; delays use capped exponential backoff with a selectable `full`/`equal`/`none` jitter strategy. The randomness (`uniform`), clock and sleeper are all injectable, so every delay and giveup decision is deterministic in tests. First feature of the ROUND-15 input-fidelity lane. No `PySide6`.
+
 ### Live IME State for Safe CJK Entry
 
 Wait for the input method to commit before reading a Japanese/Chinese/Korean field. Full reference: [`docs/source/Eng/doc/new_features/v208_features_doc.rst`](docs/source/Eng/doc/new_features/v208_features_doc.rst).
