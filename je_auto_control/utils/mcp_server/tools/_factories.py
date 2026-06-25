@@ -2149,6 +2149,25 @@ def process_and_shell_tools() -> List[MCPTool]:
             handler=h.allow_sleep,
             annotations=SIDE_EFFECT_ONLY,
         ),
+        MCPTool(
+            name="ac_normalize_ext",
+            description=("Return the lowercased file extension (with leading "
+                         "dot) of a path or bare extension (pure): {ext}."),
+            input_schema=schema({"target": {"type": "string"}},
+                                required=["target"]),
+            handler=h.normalize_ext,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_file_association",
+            description=("Which application is registered to open a file type. "
+                         "'target' is a path / .ext / bare ext. Returns {ext, "
+                         "command, exe, friendly, content_type} (Windows)."),
+            input_schema=schema({"target": {"type": "string"}},
+                                required=["target"]),
+            handler=h.file_association,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

@@ -593,6 +593,16 @@ def allow_sleep():
     return _allow_sleep()
 
 
+def normalize_ext(target):
+    from je_auto_control.utils.executor.action_executor import _normalize_ext
+    return _normalize_ext(target)
+
+
+def file_association(target):
+    from je_auto_control.utils.executor.action_executor import _file_association
+    return _file_association(target)
+
+
 def get_clipboard() -> str:
     from je_auto_control.utils.clipboard.clipboard import get_clipboard as _get
     return _get()

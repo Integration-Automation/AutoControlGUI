@@ -2652,6 +2652,18 @@ def _allow_sleep() -> Dict[str, Any]:
     return {"released": bool(allow_sleep())}
 
 
+def _normalize_ext(target: str) -> Dict[str, Any]:
+    """Adapter: the lowercased extension of a path / bare ext (pure)."""
+    from je_auto_control.utils.file_assoc import normalize_ext
+    return {"ext": normalize_ext(str(target))}
+
+
+def _file_association(target: str) -> Dict[str, Any]:
+    """Adapter: the app registered to open ``target``'s file type."""
+    from je_auto_control.utils.file_assoc import file_association
+    return file_association(str(target))
+
+
 def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
                       app_name: Optional[str] = None,
                       automation_id: Optional[str] = None) -> Dict[str, Any]:
@@ -6649,6 +6661,8 @@ class Executor:
             "AC_plan_keep_awake": _plan_keep_awake,
             "AC_keep_awake_on": _keep_awake_on,
             "AC_allow_sleep": _allow_sleep,
+            "AC_normalize_ext": _normalize_ext,
+            "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,
             "AC_find_control_text": _find_control_text,
             "AC_select_control_text": _select_control_text,
