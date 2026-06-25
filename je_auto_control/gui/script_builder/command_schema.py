@@ -4432,6 +4432,33 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="The backoff delay schedule for the first N retries.",
     ))
     specs.append(CommandSpec(
+        "AC_compare_field_value", "Flow", "Compare Field Value",
+        fields=(
+            FieldSpec("expected", FieldType.STRING, placeholder="expected"),
+            FieldSpec("actual", FieldType.STRING, placeholder="actual"),
+            FieldSpec("mode", FieldType.STRING, optional=True, default="exact",
+                      placeholder="exact / trim / ci / normalized / contains"),
+        ),
+        description="Compare expected vs actual field value under a mode.",
+    ))
+    specs.append(CommandSpec(
+        "AC_verify_field_value", "Flow", "Verify Field Value",
+        fields=(
+            FieldSpec("expected", FieldType.STRING, placeholder="expected"),
+            FieldSpec("name", FieldType.STRING, optional=True,
+                      placeholder="control name"),
+            FieldSpec("role", FieldType.STRING, optional=True,
+                      placeholder="control role"),
+            FieldSpec("app_name", FieldType.STRING, optional=True,
+                      placeholder="app name"),
+            FieldSpec("automation_id", FieldType.STRING, optional=True,
+                      placeholder="automation id"),
+            FieldSpec("mode", FieldType.STRING, optional=True, default="exact",
+                      placeholder="exact / trim / ci / normalized / contains"),
+        ),
+        description="Read a control's value back and confirm it equals expected.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,

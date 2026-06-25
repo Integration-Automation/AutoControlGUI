@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Verify a Field After Typing
+
+Read the field back and confirm the value actually landed — don't type and hope. Full reference: [`docs/source/Eng/doc/new_features/v210_features_doc.rst`](docs/source/Eng/doc/new_features/v210_features_doc.rst).
+
+- **`compare_field_value` / `verify_field_value` / `fill_and_verify`** (`AC_compare_field_value`, `AC_verify_field_value`): `field_entry` types into a control and *hopes* — a slow IME, focus steal, input mask or auto-format can silently mangle or drop characters, and nothing reads the field back. This is distinct from `action_effect` (did *anything* change near the target?) and `postcondition.text_present` (does the text appear *anywhere*?) — neither confirms *this* field equals *this* value. `compare_field_value` is the pure comparator (`exact`/`trim`/`ci`/`normalized` NFKC/`contains`); `verify_field_value` reads through an injectable `reader` (native accessibility value in the executor); `fill_and_verify` types via an injectable `filler`, reads back, and retries (optionally clearing first) until it matches or attempts run out. Every comparison and retry decision is pure and unit-tested without a real control. Second feature of the ROUND-15 input-fidelity lane. No `PySide6`.
+
 ### Retry Budget — Deadline + Jitter
 
 Retry a flaky step bounded by a total time budget, with jittered backoff. Full reference: [`docs/source/Eng/doc/new_features/v209_features_doc.rst`](docs/source/Eng/doc/new_features/v209_features_doc.rst).
