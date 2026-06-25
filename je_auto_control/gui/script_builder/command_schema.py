@@ -4459,6 +4459,32 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Read a control's value back and confirm it equals expected.",
     ))
     specs.append(CommandSpec(
+        "AC_adaptive_timeout", "Flow", "Adaptive Timeout",
+        fields=(
+            FieldSpec("durations", FieldType.STRING,
+                      placeholder="JSON list of durations (seconds)"),
+            FieldSpec("percentile_q", FieldType.FLOAT, optional=True,
+                      default=95.0),
+            FieldSpec("factor", FieldType.FLOAT, optional=True, default=1.5),
+            FieldSpec("min_s", FieldType.FLOAT, optional=True, default=1.0),
+            FieldSpec("max_s", FieldType.FLOAT, optional=True, default=60.0),
+        ),
+        description="Recommend a wait timeout from observed step durations.",
+    ))
+    specs.append(CommandSpec(
+        "AC_timeout_stats", "Flow", "Timeout Stats",
+        fields=(
+            FieldSpec("durations", FieldType.STRING,
+                      placeholder="JSON list of durations (seconds)"),
+            FieldSpec("percentile_q", FieldType.FLOAT, optional=True,
+                      default=95.0),
+            FieldSpec("factor", FieldType.FLOAT, optional=True, default=1.5),
+            FieldSpec("min_s", FieldType.FLOAT, optional=True, default=1.0),
+            FieldSpec("max_s", FieldType.FLOAT, optional=True, default=60.0),
+        ),
+        description="Timeout recommendation plus percentiles and clamp flags.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,

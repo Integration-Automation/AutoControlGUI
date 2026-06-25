@@ -2783,6 +2783,28 @@ def _verify_field_value(expected: Any, name: Optional[str] = None,
         mode=str(mode))
 
 
+def _adaptive_timeout(durations: Any, percentile_q: Any = 95.0,
+                      factor: Any = 1.5, min_s: Any = 1.0,
+                      max_s: Any = 60.0) -> Dict[str, Any]:
+    """Adapter: recommend a wait timeout from observed durations (pure)."""
+    from je_auto_control.utils.adaptive_timeout import recommend_timeout
+    samples = [float(d) for d in _coerce_list(durations)] if durations else []
+    timeout = recommend_timeout(samples, percentile_q=float(percentile_q),
+                                factor=float(factor), min_s=float(min_s),
+                                max_s=float(max_s))
+    return {"timeout_s": float(timeout)}
+
+
+def _timeout_stats(durations: Any, percentile_q: Any = 95.0, factor: Any = 1.5,
+                   min_s: Any = 1.0, max_s: Any = 60.0) -> Dict[str, Any]:
+    """Adapter: timeout recommendation plus percentiles / clamp flags (pure)."""
+    from je_auto_control.utils.adaptive_timeout import timeout_stats
+    samples = [float(d) for d in _coerce_list(durations)] if durations else []
+    return timeout_stats(samples, percentile_q=float(percentile_q),
+                         factor=float(factor), min_s=float(min_s),
+                         max_s=float(max_s))
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6809,6 +6831,8 @@ class Executor:
             "AC_plan_retry_delays": _plan_retry_delays,
             "AC_compare_field_value": _compare_field_value,
             "AC_verify_field_value": _verify_field_value,
+            "AC_adaptive_timeout": _adaptive_timeout,
+            "AC_timeout_stats": _timeout_stats,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

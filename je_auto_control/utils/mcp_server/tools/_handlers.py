@@ -698,6 +698,20 @@ def verify_field_value(expected, name=None, role=None, app_name=None,
                                mode)
 
 
+def adaptive_timeout(durations, percentile_q=95.0, factor=1.5, min_s=1.0,
+                     max_s=60.0):
+    from je_auto_control.utils.executor.action_executor import (
+        _adaptive_timeout,
+    )
+    return _adaptive_timeout(durations, percentile_q, factor, min_s, max_s)
+
+
+def timeout_stats(durations, percentile_q=95.0, factor=1.5, min_s=1.0,
+                  max_s=60.0):
+    from je_auto_control.utils.executor.action_executor import _timeout_stats
+    return _timeout_stats(durations, percentile_q, factor, min_s, max_s)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

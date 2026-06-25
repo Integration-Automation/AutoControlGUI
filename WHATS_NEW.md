@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Adaptive Timeout from Observed Durations
+
+Stop guessing wait timeouts — learn them from how long the step actually takes. Full reference: [`docs/source/Eng/doc/new_features/v211_features_doc.rst`](docs/source/Eng/doc/new_features/v211_features_doc.rst).
+
+- **`recommend_timeout` / `timeout_stats`** (`AC_adaptive_timeout`, `AC_timeout_stats`): hard-coded waits are a perennial flakiness source — too short races a slow machine, too long makes every failure pay the full timeout. This learns the timeout from observed step durations: a high percentile (the slow-but-real case) scaled by a safety `factor`, clamped to a sane `[min_s, max_s]` band. `recommend_timeout` is the single number to feed a `wait_for_*` / actionability `GateConfig`; `timeout_stats` also exposes the percentiles and `floored`/`capped` flags for tuning. Both are pure and reuse `stats.percentile`; with no samples they fall back to `default_s`. Third feature of the ROUND-15 input-fidelity lane. No `PySide6`.
+
 ### Verify a Field After Typing
 
 Read the field back and confirm the value actually landed — don't type and hope. Full reference: [`docs/source/Eng/doc/new_features/v210_features_doc.rst`](docs/source/Eng/doc/new_features/v210_features_doc.rst).

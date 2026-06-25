@@ -123,6 +123,10 @@ from je_auto_control.utils.retry_budget import (
 from je_auto_control.utils.verify_field import (
     compare_field_value, fill_and_verify, verify_field_value,
 )
+# Derive a wait timeout from observed step durations
+from je_auto_control.utils.adaptive_timeout import (
+    recommend_timeout, timeout_stats,
+)
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1744,6 +1748,7 @@ __all__ = [
     "decode_conversion_mode",
     "RetryBudget", "run_with_budget", "backoff_delay", "jittered_delay",
     "compare_field_value", "verify_field_value", "fill_and_verify",
+    "recommend_timeout", "timeout_stats",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",
