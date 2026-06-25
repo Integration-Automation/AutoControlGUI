@@ -4374,6 +4374,34 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Reduce lock-state samples to lock / unlock events.",
     ))
     specs.append(CommandSpec(
+        "AC_ime_state", "Shell", "IME State",
+        fields=(),
+        description="Read the focused window's live IME composition state.",
+    ))
+    specs.append(CommandSpec(
+        "AC_is_composing", "Shell", "Is IME Composing",
+        fields=(),
+        description="True while the IME has an uncommitted composition.",
+    ))
+    specs.append(CommandSpec(
+        "AC_wait_for_composition_commit", "Shell", "Wait for IME Commit",
+        fields=(
+            FieldSpec("timeout", FieldType.FLOAT, optional=True, default=5.0,
+                      placeholder="timeout seconds"),
+            FieldSpec("interval", FieldType.FLOAT, optional=True, default=0.1,
+                      placeholder="poll interval seconds"),
+        ),
+        description="Block until the IME finishes composing or timeout.",
+    ))
+    specs.append(CommandSpec(
+        "AC_decode_conversion_mode", "Shell", "Decode IME Conversion Mode",
+        fields=(
+            FieldSpec("flags", FieldType.INT, default=0,
+                      placeholder="IMM32 conversion bitmask"),
+        ),
+        description="Decode an IMM32 conversion bitmask into named flags.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,

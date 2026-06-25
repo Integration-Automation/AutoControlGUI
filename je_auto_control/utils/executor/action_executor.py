@@ -2711,6 +2711,33 @@ def _classify_lock_transitions(states: Any) -> Dict[str, Any]:
     return {"events": classify_lock_transitions(samples)}
 
 
+def _ime_state() -> Dict[str, Any]:
+    """Adapter: the focused window's live IME composition / conversion state."""
+    from je_auto_control.utils.ime_state import ime_state
+    return ime_state()
+
+
+def _is_composing() -> Dict[str, Any]:
+    """Adapter: whether the IME has an uncommitted composition."""
+    from je_auto_control.utils.ime_state import is_composing
+    return {"composing": bool(is_composing())}
+
+
+def _wait_for_composition_commit(timeout: Any = 5.0, interval: Any = 0.1
+                                 ) -> Dict[str, Any]:
+    """Adapter: block until the IME finishes composing or timeout."""
+    from je_auto_control.utils.ime_state import wait_for_composition_commit
+    committed = wait_for_composition_commit(timeout_s=float(timeout),
+                                            interval_s=float(interval))
+    return {"committed": bool(committed)}
+
+
+def _decode_conversion_mode(flags: Any) -> Dict[str, Any]:
+    """Adapter: decode an IMM32 conversion bitmask into named flags (pure)."""
+    from je_auto_control.utils.ime_state import decode_conversion_mode
+    return decode_conversion_mode(int(flags))
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6729,6 +6756,10 @@ class Executor:
             "AC_plan_lock_session": _plan_lock_session,
             "AC_wait_for_unlock": _wait_for_unlock,
             "AC_classify_lock_transitions": _classify_lock_transitions,
+            "AC_ime_state": _ime_state,
+            "AC_is_composing": _is_composing,
+            "AC_wait_for_composition_commit": _wait_for_composition_commit,
+            "AC_decode_conversion_mode": _decode_conversion_mode,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

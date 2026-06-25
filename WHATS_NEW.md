@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Live IME State for Safe CJK Entry
+
+Wait for the input method to commit before reading a Japanese/Chinese/Korean field. Full reference: [`docs/source/Eng/doc/new_features/v208_features_doc.rst`](docs/source/Eng/doc/new_features/v208_features_doc.rst).
+
+- **`ime_state` / `is_composing` / `wait_for_composition_commit` / `decode_conversion_mode`** (`AC_ime_state`, `AC_is_composing`, `AC_wait_for_composition_commit`, `AC_decode_conversion_mode`): typing into a CJK field is unsafe while an IME is *composing* — the candidate text isn't committed, so reading the field back returns half-entered glyphs and the next keystroke edits the composition. `text_unicode` (`VK_PACKET`) is blind to this. `ime_state` exposes the focused window's live `{open, composing, composition, conversion}` (Windows IMM32, read-only) through an injectable `reader`; `is_composing` is the boolean gate; `wait_for_composition_commit` blocks until the IME commits (injectable `clock`/`sleep`/`reader`); `decode_conversion_mode` is the pure `IME_CMODE_*` bitmask decoder. All decode/wait logic is unit-tested without an IME. Sixth feature of the ROUND-15 cross-app OS lane. No `PySide6`.
+
 ### Lock the Workstation + Wait for Unlock
 
 Lock the box at the end of a run, and block until a human unlocks it before resuming. Full reference: [`docs/source/Eng/doc/new_features/v207_features_doc.rst`](docs/source/Eng/doc/new_features/v207_features_doc.rst).
