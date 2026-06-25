@@ -6,7 +6,7 @@ from je_auto_control.utils.critic_features import (
 
 
 def _el(x, y, name="", role="button"):
-    return dict(x=x, y=y, width=40, height=20, role=role, name=name)
+    return {"x": x, "y": y, "width": 40, "height": 20, "role": role, "name": name}
 
 
 def test_record_captures_effect_and_delta():

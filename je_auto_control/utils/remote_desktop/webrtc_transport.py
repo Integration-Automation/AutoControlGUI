@@ -319,8 +319,10 @@ class ScreenVideoTrack(VideoStreamTrack):
 
 # --- ICE gathering helper -----------------------------------------------------
 
-async def wait_for_ice_gathering(pc: RTCPeerConnection,
-                                 timeout: float = _ICE_GATHER_TIMEOUT_S) -> None:
+async def wait_for_ice_gathering(
+    pc: RTCPeerConnection,
+    timeout: float = _ICE_GATHER_TIMEOUT_S,  # NOSONAR 3.10 has no asyncio.timeout
+) -> None:
     """Block until the PeerConnection has gathered all local ICE candidates."""
     if pc.iceGatheringState == "complete":
         return
@@ -335,7 +337,7 @@ async def wait_for_ice_gathering(pc: RTCPeerConnection,
         # asyncio.timeout() context manager only landed in Python 3.11;
         # this project supports 3.10, where wait_for(timeout=...) is the
         # idiomatic primitive.
-        await asyncio.wait_for(future, timeout=timeout)  # NOSONAR python:S7483  # reason: asyncio.timeout() needs 3.11+; project supports 3.10
+        await asyncio.wait_for(future, timeout=timeout)  # NOSONAR
     except asyncio.TimeoutError:
         autocontrol_logger.warning(
             "webrtc: ICE gather timeout; sending what we have",

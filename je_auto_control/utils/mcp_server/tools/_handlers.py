@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.mcp_server.tools._base import MCPContent
 
+_DEFAULT_APPROVALS_DIR = ".approvals"
+
 
 # === Mouse / keyboard =======================================================
 
@@ -1515,7 +1517,7 @@ def egress_reset():
     return {"allow": None, "deny": []}
 
 
-def verify_artifact(name: str, content, approvals_dir: str = ".approvals",
+def verify_artifact(name: str, content, approvals_dir: str = _DEFAULT_APPROVALS_DIR,
                     extension: str = "txt"):
     from je_auto_control.utils.approval import verify_artifact as _verify
     result = _verify(name, content, approvals_dir, extension)
@@ -1524,13 +1526,13 @@ def verify_artifact(name: str, content, approvals_dir: str = ".approvals",
             "received_path": result.received_path}
 
 
-def approve_artifact(name: str, approvals_dir: str = ".approvals",
+def approve_artifact(name: str, approvals_dir: str = _DEFAULT_APPROVALS_DIR,
                      extension: str = "txt"):
     from je_auto_control.utils.approval import approve_artifact as _approve
     return {"approved": _approve(name, approvals_dir, extension)}
 
 
-def pending_artifacts(approvals_dir: str = ".approvals"):
+def pending_artifacts(approvals_dir: str = _DEFAULT_APPROVALS_DIR):
     from je_auto_control.utils.approval import pending_artifacts as _pending
     return {"pending": _pending(approvals_dir)}
 

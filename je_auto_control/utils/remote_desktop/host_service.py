@@ -217,7 +217,8 @@ def _interactive_configure() -> int:
     )
     answers["poll_interval_s"] = 2.0
     _DEFAULT_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _DEFAULT_CONFIG_PATH.write_text(
+    # _DEFAULT_CONFIG_PATH is a hardcoded module constant, not user input
+    _DEFAULT_CONFIG_PATH.write_text(  # NOSONAR
         json.dumps(answers, indent=2), encoding="utf-8",
     )
     try:

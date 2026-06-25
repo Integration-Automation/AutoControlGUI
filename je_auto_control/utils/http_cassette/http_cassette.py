@@ -41,15 +41,9 @@ def _matches(recorded: Mapping[str, Any], call: Mapping[str, Any],
              match_on: Sequence[str]) -> bool:
     view = _request_view(call)
     for field in match_on:
-        if field == "method":
-            if recorded.get("method") != view["method"]:
-                return False
-        elif field == "url":
-            if recorded.get("url") != view["url"]:
-                return False
-        elif field == "body":
-            if recorded.get("body") != view["body"]:
-                return False
+        if field in ("method", "url", "body") and \
+                recorded.get(field) != view[field]:
+            return False
     return True
 
 

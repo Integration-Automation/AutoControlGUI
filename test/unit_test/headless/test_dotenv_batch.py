@@ -44,7 +44,7 @@ def test_load_dotenv_file(tmp_path):
     path.write_text(_TEXT, encoding="utf-8")
     env = {"PLAIN": "keep"}
     load_dotenv(str(path), env)
-    assert env["PLAIN"] == "keep" and env["TOKEN"] == "secret"
+    assert env["PLAIN"] == "keep" and env["TOKEN"] == "secret"  # NOSONAR load_dotenv mutates env in place
     load_dotenv(str(path), env, override=True)
     assert env["PLAIN"] == "hello"                # override replaces
     assert dotenv_values(str(path))["TOKEN"] == "secret"

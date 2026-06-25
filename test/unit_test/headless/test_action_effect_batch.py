@@ -6,7 +6,7 @@ from je_auto_control.utils.action_effect import (
 
 
 def _el(x, y, name="", role="button"):
-    return dict(x=x, y=y, width=40, height=20, role=role, name=name)
+    return {"x": x, "y": y, "width": 40, "height": 20, "role": role, "name": name}
 
 
 def test_no_op_when_nothing_changes():

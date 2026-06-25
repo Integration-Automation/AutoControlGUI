@@ -46,7 +46,7 @@ def test_paginate_follows_next_over_injected_fetch():
     }
     responses = paginate("u1", lambda url: pages[url])
     assert len(responses) == 3
-    assert responses is not None and responses[-1]["headers"] == {}
+    assert responses[-1]["headers"] == {}
 
 
 def test_paginate_respects_max_pages():

@@ -17,11 +17,13 @@ from je_auto_control.gui.flow_editor.layout import (
     FlowEdge, FlowLayout, FlowNodePosition, layout_steps,
 )
 
+_SCENE_MODULE = "je_auto_control.gui.flow_editor.scene"
+_TAB_MODULE = "je_auto_control.gui.flow_editor.tab"
 _LAZY_SUBMODULES = {
-    "FlowEdgeItem": "je_auto_control.gui.flow_editor.scene",
-    "FlowGraphScene": "je_auto_control.gui.flow_editor.scene",
-    "FlowNodeItem": "je_auto_control.gui.flow_editor.scene",
-    "FlowEditorTab": "je_auto_control.gui.flow_editor.tab",
+    "FlowEdgeItem": _SCENE_MODULE,
+    "FlowGraphScene": _SCENE_MODULE,
+    "FlowNodeItem": _SCENE_MODULE,
+    "FlowEditorTab": _TAB_MODULE,
 }
 
 

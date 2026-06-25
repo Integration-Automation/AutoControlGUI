@@ -89,8 +89,12 @@ def test_snap_window_left_half():
 
 def test_snap_window_right_half():
     rects = []
-    snap_window("E", "right", screen_size=lambda: (1000, 800),
-                mover=lambda t, x, y, w, h: rects.append((x, y, w, h)) is None)
+
+    def mover(_title, x, y, w, h):
+        rects.append((x, y, w, h))
+        return 1
+
+    snap_window("E", "right", screen_size=lambda: (1000, 800), mover=mover)
     assert rects == [(500, 0, 500, 800)]
 
 
