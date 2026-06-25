@@ -489,11 +489,12 @@ def assert_by_description(description: str,
     )
     passed = (matched == present)
     state = "shows" if present else "does not show"
+    verdict = "match" if matched else "no match"
     message = (
         f"assert_by_description passed: screen {state} {description!r}"
         if passed else
         f"assert_by_description failed: expected screen to {state} "
-        f"{description!r} (VLM verdict: {'match' if matched else 'no match'})"
+        f"{description!r} (VLM verdict: {verdict})"
     )
     return _finalize(
         "vlm", passed, message,

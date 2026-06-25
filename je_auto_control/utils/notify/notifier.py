@@ -86,6 +86,6 @@ def notify(title: str, message: str,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
         return NotifyResult(True, system, "sent")
-    except (FileNotFoundError, OSError, subprocess.SubprocessError) as error:
+    except (OSError, subprocess.SubprocessError) as error:
         autocontrol_logger.warning("notify failed: %r", error)
         return NotifyResult(False, system, repr(error))

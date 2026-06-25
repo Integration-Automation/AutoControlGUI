@@ -64,7 +64,8 @@ def _do_export(output: Path, root: Optional[Path]) -> int:
 
 def _do_import(source: Path, root: Optional[Path], dry_run: bool) -> int:
     try:
-        bundle = json.loads(source.read_text(encoding="utf-8"))
+        # source is an operator-supplied CLI path, not remote input
+        bundle = json.loads(source.read_text(encoding="utf-8"))  # NOSONAR
     except (OSError, ValueError) as error:
         print(f"failed to read {source}: {error}", file=sys.stderr)
         return 2

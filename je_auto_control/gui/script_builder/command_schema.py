@@ -45,6 +45,16 @@ class CommandSpec:
 
 _MOUSE_BUTTONS = ("mouse_left", "mouse_right", "mouse_middle")
 _REGION_PLACEHOLDER = "[left, top, right, bottom]"
+_NATIVE_UI = "Native UI"
+_SCALES_PLACEHOLDER = "[0.9, 1.0, 1.1]"
+_POINT_PLACEHOLDER = "[10, 20]"
+_RECT_PLACEHOLDER = "[x, y, width, height]"
+_RECT4_PLACEHOLDER = "[x, y, w, h]"
+_APPROVALS_DIR = ".approvals"
+_DOTTED_KEY_PLACEHOLDER = "db.host"
+_POINTS_JSON_PLACEHOLDER = '[{"x":..,"y":..,"width":..,"height":..}]'
+_MARKS_JSON_PLACEHOLDER = '[{"role":"button","name":"OK","x":..,"y":..}]'
+_BOXES_JSON_PLACEHOLDER = '[{"role":"button","x":0,"y":0}]'
 
 
 def _build_specs() -> List[CommandSpec]:
@@ -261,7 +271,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.8,
                       min_value=0.0, max_value=1.0),
             FieldSpec("scales", FieldType.STRING, optional=True,
-                      placeholder="[0.9, 1.0, 1.1]"),
+                      placeholder=_SCALES_PLACEHOLDER),
             FieldSpec("region", FieldType.STRING, optional=True,
                       placeholder=_REGION_PLACEHOLDER),
         ),
@@ -313,7 +323,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("angles", FieldType.STRING, optional=True,
                       placeholder="[-10, 0, 10]"),
             FieldSpec("scales", FieldType.STRING, optional=True,
-                      placeholder="[0.9, 1.0, 1.1]"),
+                      placeholder=_SCALES_PLACEHOLDER),
             FieldSpec("region", FieldType.STRING, optional=True,
                       placeholder=_REGION_PLACEHOLDER),
         ),
@@ -328,7 +338,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("angles", FieldType.STRING, optional=True,
                       placeholder="[-10, 0, 10]"),
             FieldSpec("scales", FieldType.STRING, optional=True,
-                      placeholder="[0.9, 1.0, 1.1]"),
+                      placeholder=_SCALES_PLACEHOLDER),
             FieldSpec("max_results", FieldType.INT, optional=True, default=20),
             FieldSpec("nms_iou", FieldType.FLOAT, optional=True, default=0.3,
                       min_value=0.0, max_value=1.0),
@@ -344,7 +354,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("ambiguous_ratio", FieldType.FLOAT, optional=True,
                       default=0.9, min_value=0.0, max_value=1.0),
             FieldSpec("scales", FieldType.STRING, optional=True,
-                      placeholder="[0.9, 1.0, 1.1]"),
+                      placeholder=_SCALES_PLACEHOLDER),
             FieldSpec("region", FieldType.STRING, optional=True,
                       placeholder=_REGION_PLACEHOLDER),
         ),
@@ -378,7 +388,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("min_score", FieldType.FLOAT, optional=True, default=0.7,
                       min_value=0.0, max_value=1.0),
             FieldSpec("scales", FieldType.STRING, optional=True,
-                      placeholder="[0.9, 1.0, 1.1]"),
+                      placeholder=_SCALES_PLACEHOLDER),
             FieldSpec("region", FieldType.STRING, optional=True,
                       placeholder=_REGION_PLACEHOLDER),
         ),
@@ -684,7 +694,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         "AC_fuse_elements", "Image", "Fuse Element Boxes",
         fields=(
             FieldSpec("ocr", FieldType.STRING, optional=True,
-                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+                      placeholder=_POINTS_JSON_PLACEHOLDER),
             FieldSpec("icon", FieldType.STRING, optional=True),
             FieldSpec("a11y", FieldType.STRING, optional=True),
             FieldSpec("iou_threshold", FieldType.FLOAT, optional=True, default=0.9,
@@ -696,7 +706,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         "AC_reading_order", "Image", "Reading Order",
         fields=(
             FieldSpec("elements", FieldType.STRING,
-                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+                      placeholder=_POINTS_JSON_PLACEHOLDER),
             FieldSpec("row_tol", FieldType.INT, optional=True, default=12),
         ),
         description="Order element boxes top-to-bottom, left-to-right (+ index).",
@@ -705,7 +715,7 @@ def _add_image_specs(specs: List[CommandSpec]) -> None:
         "AC_locate_chain", "Image", "Locate Chain (refine boxes)",
         fields=(
             FieldSpec("boxes", FieldType.STRING,
-                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+                      placeholder=_POINTS_JSON_PLACEHOLDER),
             FieldSpec("ops", FieldType.STRING,
                       placeholder='[{"op":"filter","has_text":"OK"},{"op":"first"}]'),
         ),
@@ -1062,7 +1072,7 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("paths", FieldType.STRING,
                       placeholder='["C:\\\\a\\\\one.txt"]'),
             FieldSpec("point", FieldType.STRING, optional=True,
-                      placeholder="[10, 20]"),
+                      placeholder=_POINT_PLACEHOLDER),
         ),
         description="Drop files onto a window via WM_DROPFILES (Windows).",
     ))
@@ -1072,7 +1082,7 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("paths", FieldType.STRING,
                       placeholder='["C:\\\\a\\\\one.txt"]'),
             FieldSpec("point", FieldType.STRING, optional=True,
-                      placeholder="[10, 20]"),
+                      placeholder=_POINT_PLACEHOLDER),
         ),
         description="Build the WM_DROPFILES payload without sending (pure).",
     ))
@@ -1220,7 +1230,7 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
                                "bottom_right", "center", "left_third",
                                "center_third", "right_third"), default="left"),
             FieldSpec("screen", FieldType.STRING, optional=True,
-                      placeholder="[x, y, width, height]"),
+                      placeholder=_RECT_PLACEHOLDER),
             FieldSpec("gap", FieldType.INT, optional=True, default=0),
         ),
         description="Compute the rectangle for a tiling slot of the screen.",
@@ -1231,7 +1241,7 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("rows", FieldType.INT, default=2),
             FieldSpec("cols", FieldType.INT, default=2),
             FieldSpec("screen", FieldType.STRING, optional=True,
-                      placeholder="[x, y, width, height]"),
+                      placeholder=_RECT_PLACEHOLDER),
             FieldSpec("gap", FieldType.INT, optional=True, default=0),
         ),
         description="Compute the cell rectangles of an R×C screen grid.",
@@ -1241,7 +1251,7 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("count", FieldType.INT, default=3),
             FieldSpec("screen", FieldType.STRING, optional=True,
-                      placeholder="[x, y, width, height]"),
+                      placeholder=_RECT_PLACEHOLDER),
             FieldSpec("offset", FieldType.INT, optional=True, default=30),
             FieldSpec("size", FieldType.STRING, optional=True,
                       placeholder="[width, height]"),
@@ -1549,67 +1559,67 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         FieldSpec("automation_id", FieldType.STRING, optional=True),
     )
     specs.append(CommandSpec(
-        "AC_control_get_value", "Native UI", "Get Control Value",
+        "AC_control_get_value", _NATIVE_UI, "Get Control Value",
         fields=fields,
         description="Read a native control's value via the accessibility API.",
     ))
     specs.append(CommandSpec(
-        "AC_control_set_value", "Native UI", "Set Control Value",
+        "AC_control_set_value", _NATIVE_UI, "Set Control Value",
         fields=(FieldSpec("value", FieldType.STRING),) + fields,
         description="Set a native control's value directly (no per-key typing).",
     ))
     specs.append(CommandSpec(
-        "AC_control_invoke", "Native UI", "Invoke Control",
+        "AC_control_invoke", _NATIVE_UI, "Invoke Control",
         fields=fields,
         description="Invoke a native control (e.g. press a button).",
     ))
     specs.append(CommandSpec(
-        "AC_control_toggle", "Native UI", "Toggle Control",
+        "AC_control_toggle", _NATIVE_UI, "Toggle Control",
         fields=fields,
         description="Toggle a native control (e.g. a checkbox).",
     ))
     specs.append(CommandSpec(
-        "AC_read_table", "Native UI", "Read Table / Grid",
+        "AC_read_table", _NATIVE_UI, "Read Table / Grid",
         fields=fields,
         description="Read a grid/table/list control as rows of cell strings.",
     ))
     specs.append(CommandSpec(
-        "AC_expand_control", "Native UI", "Expand Control",
+        "AC_expand_control", _NATIVE_UI, "Expand Control",
         fields=fields,
         description="Expand a tree node / combobox (ExpandCollapsePattern).",
     ))
     specs.append(CommandSpec(
-        "AC_collapse_control", "Native UI", "Collapse Control",
+        "AC_collapse_control", _NATIVE_UI, "Collapse Control",
         fields=fields,
         description="Collapse a tree node / combobox (ExpandCollapsePattern).",
     ))
     specs.append(CommandSpec(
-        "AC_control_expand_state", "Native UI", "Control Expand State",
+        "AC_control_expand_state", _NATIVE_UI, "Control Expand State",
         fields=fields,
         description="Read expanded/collapsed/partial/leaf state of a control.",
     ))
     specs.append(CommandSpec(
-        "AC_select_control_item", "Native UI", "Select Control Item",
+        "AC_select_control_item", _NATIVE_UI, "Select Control Item",
         fields=fields,
         description="Select a list / tree / tab item (SelectionItemPattern).",
     ))
     specs.append(CommandSpec(
-        "AC_control_range", "Native UI", "Get Control Range",
+        "AC_control_range", _NATIVE_UI, "Get Control Range",
         fields=fields,
         description="Read a slider / progress range (RangeValuePattern).",
     ))
     specs.append(CommandSpec(
-        "AC_set_control_range", "Native UI", "Set Control Range",
+        "AC_set_control_range", _NATIVE_UI, "Set Control Range",
         fields=(FieldSpec("value", FieldType.FLOAT),) + fields,
         description="Set a slider / progress / spinner value (RangeValuePattern).",
     ))
     specs.append(CommandSpec(
-        "AC_scroll_control_into_view", "Native UI", "Scroll Control Into View",
+        "AC_scroll_control_into_view", _NATIVE_UI, "Scroll Control Into View",
         fields=fields,
         description="Scroll a control into view (ScrollItemPattern).",
     ))
     specs.append(CommandSpec(
-        "AC_realize_item", "Native UI", "Realize Virtualized Item",
+        "AC_realize_item", _NATIVE_UI, "Realize Virtualized Item",
         fields=(
             FieldSpec("item_name", FieldType.STRING),
             FieldSpec("by", FieldType.ENUM, optional=True, default="name",
@@ -1622,124 +1632,124 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
         description="Realize an off-screen item in a virtualized list/grid.",
     ))
     specs.append(CommandSpec(
-        "AC_get_element_properties", "Native UI", "Get Element Properties",
+        "AC_get_element_properties", _NATIVE_UI, "Get Element Properties",
         fields=fields,
         description="Read rich UIA props (enabled/offscreen/help/status/keys).",
     ))
     specs.append(CommandSpec(
-        "AC_table_headers", "Native UI", "Get Table Headers",
+        "AC_table_headers", _NATIVE_UI, "Get Table Headers",
         fields=fields,
         description="Read a table's row/column header labels (TablePattern).",
     ))
     specs.append(CommandSpec(
-        "AC_table_cell", "Native UI", "Get Table Cell (by index)",
+        "AC_table_cell", _NATIVE_UI, "Get Table Cell (by index)",
         fields=(FieldSpec("row", FieldType.INT),
                 FieldSpec("column", FieldType.INT)) + fields,
         description="Read the cell at (row, column) with its span.",
     ))
     specs.append(CommandSpec(
-        "AC_cell_by_header", "Native UI", "Get Table Cell (by header)",
+        "AC_cell_by_header", _NATIVE_UI, "Get Table Cell (by header)",
         fields=(FieldSpec("row", FieldType.INT),
                 FieldSpec("column_header", FieldType.STRING)) + fields,
         description="Read the cell at (row, named column) — assert by header.",
     ))
     specs.append(CommandSpec(
-        "AC_move_element", "Native UI", "Move Element (Transform)",
+        "AC_move_element", _NATIVE_UI, "Move Element (Transform)",
         fields=(FieldSpec("x", FieldType.FLOAT),
                 FieldSpec("y", FieldType.FLOAT)) + fields,
         description="Move a UIA element to (x, y) (TransformPattern).",
     ))
     specs.append(CommandSpec(
-        "AC_resize_element", "Native UI", "Resize Element (Transform)",
+        "AC_resize_element", _NATIVE_UI, "Resize Element (Transform)",
         fields=(FieldSpec("width", FieldType.FLOAT),
                 FieldSpec("height", FieldType.FLOAT)) + fields,
         description="Resize a UIA element (TransformPattern).",
     ))
     specs.append(CommandSpec(
-        "AC_set_window_state", "Native UI", "Set Window State",
+        "AC_set_window_state", _NATIVE_UI, "Set Window State",
         fields=(FieldSpec("state", FieldType.ENUM, default="normal",
                           choices=("normal", "maximized", "minimized")),) + fields,
         description="Minimize / maximize / restore a window (WindowPattern).",
     ))
     specs.append(CommandSpec(
-        "AC_window_interaction_state", "Native UI", "Window Interaction State",
+        "AC_window_interaction_state", _NATIVE_UI, "Window Interaction State",
         fields=fields,
         description="Read window readiness (ready/blocked_by_modal/...).",
     ))
     specs.append(CommandSpec(
-        "AC_legacy_info", "Native UI", "Legacy (MSAA) Info",
+        "AC_legacy_info", _NATIVE_UI, "Legacy (MSAA) Info",
         fields=fields,
         description="Read an old control's MSAA info (LegacyIAccessible).",
     ))
     specs.append(CommandSpec(
-        "AC_legacy_default_action", "Native UI", "Legacy (MSAA) Default Action",
+        "AC_legacy_default_action", _NATIVE_UI, "Legacy (MSAA) Default Action",
         fields=fields,
         description="Fire an old control's MSAA default action (fallback).",
     ))
     specs.append(CommandSpec(
-        "AC_get_selection", "Native UI", "Get Container Selection",
+        "AC_get_selection", _NATIVE_UI, "Get Container Selection",
         fields=fields,
         description="Read a container's selection (SelectionPattern).",
     ))
     specs.append(CommandSpec(
-        "AC_list_views", "Native UI", "List Control Views",
+        "AC_list_views", _NATIVE_UI, "List Control Views",
         fields=fields,
         description="List a control's selectable views (MultipleViewPattern).",
     ))
     specs.append(CommandSpec(
-        "AC_set_view", "Native UI", "Set Control View",
+        "AC_set_view", _NATIVE_UI, "Set Control View",
         fields=(FieldSpec("view", FieldType.STRING),) + fields,
         description="Switch a control to the named view (MultipleViewPattern).",
     ))
     specs.append(CommandSpec(
-        "AC_wait_for_focus_change", "Native UI", "Wait for Focus Change",
+        "AC_wait_for_focus_change", _NATIVE_UI, "Wait for Focus Change",
         fields=(FieldSpec("timeout", FieldType.FLOAT, optional=True,
                           default=5.0),),
         description="Block until keyboard focus moves (real UIA focus event).",
     ))
     specs.append(CommandSpec(
-        "AC_get_control_text", "Native UI", "Get Control Text",
+        "AC_get_control_text", _NATIVE_UI, "Get Control Text",
         fields=fields,
         description="Read full text via TextPattern (multiline / document safe).",
     ))
     specs.append(CommandSpec(
-        "AC_find_control_text", "Native UI", "Find Text in Control",
+        "AC_find_control_text", _NATIVE_UI, "Find Text in Control",
         fields=(FieldSpec("text", FieldType.STRING),
                 FieldSpec("ignore_case", FieldType.BOOL, optional=True,
                           default=True)) + fields,
         description="Whether text occurs in a control (TextPattern.FindText).",
     ))
     specs.append(CommandSpec(
-        "AC_select_control_text", "Native UI", "Select Text in Control",
+        "AC_select_control_text", _NATIVE_UI, "Select Text in Control",
         fields=(FieldSpec("text", FieldType.STRING),
                 FieldSpec("ignore_case", FieldType.BOOL, optional=True,
                           default=True)) + fields,
         description="Find + select text in a control (FindText + Select).",
     ))
     specs.append(CommandSpec(
-        "AC_control_text_attributes", "Native UI", "Get Text Attributes",
+        "AC_control_text_attributes", _NATIVE_UI, "Get Text Attributes",
         fields=fields,
         description="Read selection formatting (font/size/bold/italic/colour).",
     ))
     specs.append(CommandSpec(
-        "AC_get_selected_text", "Native UI", "Get Selected Text",
+        "AC_get_selected_text", _NATIVE_UI, "Get Selected Text",
         fields=fields,
         description="Read the currently selected text via TextPattern.",
     ))
     specs.append(CommandSpec(
-        "AC_get_visible_text", "Native UI", "Get Visible Text",
+        "AC_get_visible_text", _NATIVE_UI, "Get Visible Text",
         fields=fields,
         description="Read only the on-screen text via TextPattern.GetVisibleRanges.",
     ))
     specs.append(CommandSpec(
-        "AC_walk_tree", "Native UI", "Walk Accessibility Tree",
+        "AC_walk_tree", _NATIVE_UI, "Walk Accessibility Tree",
         fields=(FieldSpec("app_name", FieldType.STRING, optional=True),
                 FieldSpec("max_results", FieldType.INT, optional=True,
                           default=500)),
         description="Dump the a11y tree with friendly roles + a path per node.",
     ))
     specs.append(CommandSpec(
-        "AC_humanize_role", "Native UI", "Humanize UIA Role",
+        "AC_humanize_role", _NATIVE_UI, "Humanize UIA Role",
         fields=(FieldSpec("role", FieldType.STRING),),
         description="Translate a raw UIA role (ControlType_50000) to a name.",
     ))
@@ -1747,17 +1757,17 @@ def _add_native_control_specs(specs: List[CommandSpec]) -> None:
                    FieldSpec("max_results", FieldType.INT, optional=True,
                              default=500))
     specs.append(CommandSpec(
-        "AC_tab_order", "Native UI", "Keyboard Tab Order",
+        "AC_tab_order", _NATIVE_UI, "Keyboard Tab Order",
         fields=tree_fields,
         description="List focusable controls in keyboard Tab (reading) order.",
     ))
     specs.append(CommandSpec(
-        "AC_audit_focus_order", "Native UI", "Audit Focus Order (WCAG)",
+        "AC_audit_focus_order", _NATIVE_UI, "Audit Focus Order (WCAG)",
         fields=tree_fields,
         description="WCAG 2.4.x focus-order audit: tab sequence + flagged issues.",
     ))
     specs.append(CommandSpec(
-        "AC_focus_control", "Native UI", "Set Keyboard Focus",
+        "AC_focus_control", _NATIVE_UI, "Set Keyboard Focus",
         fields=fields,
         description="Set keyboard focus on a control natively (UIA SetFocus).",
     ))
@@ -1862,7 +1872,7 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Generate a TOTP 2FA code from a base32 secret.",
     ))
     specs.append(CommandSpec(
-        "AC_handle_file_dialog", "Native UI", "Handle File Dialog",
+        "AC_handle_file_dialog", _NATIVE_UI, "Handle File Dialog",
         fields=(
             FieldSpec("path", FieldType.STRING),
             FieldSpec("action", FieldType.ENUM,
@@ -2055,7 +2065,7 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("name", FieldType.STRING, placeholder="login_screen"),
             FieldSpec("content", FieldType.STRING),
             FieldSpec("approvals_dir", FieldType.STRING, optional=True,
-                      default=".approvals"),
+                      default=_APPROVALS_DIR),
             FieldSpec("extension", FieldType.STRING, optional=True,
                       default="txt"),
         ),
@@ -2066,7 +2076,7 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("name", FieldType.STRING),
             FieldSpec("approvals_dir", FieldType.STRING, optional=True,
-                      default=".approvals"),
+                      default=_APPROVALS_DIR),
             FieldSpec("extension", FieldType.STRING, optional=True,
                       default="txt"),
         ),
@@ -2075,7 +2085,7 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_pending_artifacts", "Testing", "Approval: List Pending",
         fields=(FieldSpec("approvals_dir", FieldType.STRING, optional=True,
-                          default=".approvals"),),
+                          default=_APPROVALS_DIR),),
         description="List artifacts awaiting approval.",
     ))
     specs.append(CommandSpec(
@@ -2730,7 +2740,7 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("key", FieldType.STRING),
             FieldSpec("method", FieldType.STRING, placeholder="vlm/image"),
             FieldSpec("coordinates", FieldType.STRING, optional=True,
-                      placeholder="[10, 20]"),
+                      placeholder=_POINT_PLACEHOLDER),
             FieldSpec("description", FieldType.STRING, optional=True),
             FieldSpec("confidence", FieldType.FLOAT, optional=True,
                       default=1.0),
@@ -3247,7 +3257,7 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         fields=(
             FieldSpec("layers", FieldType.STRING,
                       placeholder='[{"name": "defaults", "mapping": {}}]'),
-            FieldSpec("key", FieldType.STRING, placeholder="db.host"),
+            FieldSpec("key", FieldType.STRING, placeholder=_DOTTED_KEY_PLACEHOLDER),
         ),
         description="Show the value and winning layer for a dotted config key.",
     ))
@@ -3375,7 +3385,7 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         "AC_cas_put", "Flow", "Optimistic: Put (CAS)",
         fields=(
             FieldSpec("name", FieldType.STRING, placeholder="config"),
-            FieldSpec("key", FieldType.STRING, placeholder="db.host"),
+            FieldSpec("key", FieldType.STRING, placeholder=_DOTTED_KEY_PLACEHOLDER),
             FieldSpec("value", FieldType.STRING, placeholder='"prod-1"'),
             FieldSpec("expected_version", FieldType.INT, optional=True),
         ),
@@ -3385,7 +3395,7 @@ def _add_resilience_specs(specs: List[CommandSpec]) -> None:
         "AC_cas_get", "Flow", "Optimistic: Get",
         fields=(
             FieldSpec("name", FieldType.STRING, placeholder="config"),
-            FieldSpec("key", FieldType.STRING, placeholder="db.host"),
+            FieldSpec("key", FieldType.STRING, placeholder=_DOTTED_KEY_PLACEHOLDER),
         ),
         description="Read a versioned record {value, version}.",
     ))
@@ -3621,21 +3631,21 @@ def _add_input_macro_specs(specs: List[CommandSpec]) -> None:
 def _add_screen_state_specs(specs: List[CommandSpec]) -> None:
     app = FieldSpec("app_name", FieldType.STRING, optional=True)
     specs.append(CommandSpec(
-        "AC_screen_snapshot", "Native UI", "Screen: Snapshot Baseline",
+        "AC_screen_snapshot", _NATIVE_UI, "Screen: Snapshot Baseline",
         fields=(app,),
         description="Snapshot the a11y tree as a semantic-diff baseline.",
     ))
     specs.append(CommandSpec(
-        "AC_screen_diff", "Native UI", "Screen: Diff Snapshots",
+        "AC_screen_diff", _NATIVE_UI, "Screen: Diff Snapshots",
         description="Semantic diff of 'before'/'after' snapshots (JSON view).",
     ))
     specs.append(CommandSpec(
-        "AC_screen_changed", "Native UI", "Screen: What Changed",
+        "AC_screen_changed", _NATIVE_UI, "Screen: What Changed",
         fields=(app,),
         description="Diff the live screen against the last snapshot baseline.",
     ))
     specs.append(CommandSpec(
-        "AC_describe_screen", "Native UI", "Screen: Describe",
+        "AC_describe_screen", _NATIVE_UI, "Screen: Describe",
         fields=(app,),
         description="Structured 'where am I' (role counts + control labels).",
     ))
@@ -3643,7 +3653,7 @@ def _add_screen_state_specs(specs: List[CommandSpec]) -> None:
 
 def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
-        "AC_cua_command", "Native UI", "Computer-Use: Map Action",
+        "AC_cua_command", _NATIVE_UI, "Computer-Use: Map Action",
         fields=(
             FieldSpec("payload", FieldType.STRING,
                       placeholder='{"action":"left_click","coordinate":[x,y]}'),
@@ -3653,43 +3663,43 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Map an Anthropic / OpenAI computer-use action to an AC command.",
     ))
     specs.append(CommandSpec(
-        "AC_serialize_observation", "Native UI", "Observation: Serialize Elements",
+        "AC_serialize_observation", _NATIVE_UI, "Observation: Serialize Elements",
         fields=(
             FieldSpec("elements", FieldType.STRING,
-                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+                      placeholder=_MARKS_JSON_PLACEHOLDER),
             FieldSpec("viewport", FieldType.STRING, optional=True,
-                      placeholder="[x, y, w, h]"),
+                      placeholder=_RECT4_PLACEHOLDER),
             FieldSpec("max_elements", FieldType.INT, optional=True, default=80),
         ),
         description="Indexed text observation of UI elements for a VLM (act by index).",
     ))
     specs.append(CommandSpec(
-        "AC_observation_index", "Native UI", "Observation: Index Elements",
+        "AC_observation_index", _NATIVE_UI, "Observation: Index Elements",
         fields=(
             FieldSpec("elements", FieldType.STRING,
-                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+                      placeholder=_MARKS_JSON_PLACEHOLDER),
             FieldSpec("viewport", FieldType.STRING, optional=True,
-                      placeholder="[x, y, w, h]"),
+                      placeholder=_RECT4_PLACEHOLDER),
             FieldSpec("max_elements", FieldType.INT, optional=True, default=80),
         ),
         description="Reading-ordered, viewport-clipped, indexed element list.",
     ))
     specs.append(CommandSpec(
-        "AC_delta_observation", "Native UI", "Observation: Delta (what changed)",
+        "AC_delta_observation", _NATIVE_UI, "Observation: Delta (what changed)",
         fields=(
             FieldSpec("prev", FieldType.STRING,
-                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+                      placeholder=_MARKS_JSON_PLACEHOLDER),
             FieldSpec("curr", FieldType.STRING,
-                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+                      placeholder=_MARKS_JSON_PLACEHOLDER),
             FieldSpec("viewport", FieldType.STRING, optional=True,
-                      placeholder="[x, y, w, h]"),
+                      placeholder=_RECT4_PLACEHOLDER),
             FieldSpec("max_elements", FieldType.INT, optional=True, default=80),
             FieldSpec("max_lines", FieldType.INT, optional=True, default=40),
         ),
         description="Token-budgeted '+/~/-' summary of what changed between frames.",
     ))
     specs.append(CommandSpec(
-        "AC_classify_effect", "Native UI", "Classify Action Effect",
+        "AC_classify_effect", _NATIVE_UI, "Classify Action Effect",
         fields=(
             FieldSpec("before", FieldType.STRING,
                       placeholder='[{"role":"button","name":"OK","x":0,"y":0}]'),
@@ -3702,19 +3712,19 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Did the action change the screen near its target? (no_op/…).",
     ))
     specs.append(CommandSpec(
-        "AC_effect_near_point", "Native UI", "Effect Near Point?",
+        "AC_effect_near_point", _NATIVE_UI, "Effect Near Point?",
         fields=(
             FieldSpec("before", FieldType.STRING,
-                      placeholder='[{"role":"button","x":0,"y":0}]'),
+                      placeholder=_BOXES_JSON_PLACEHOLDER),
             FieldSpec("after", FieldType.STRING,
-                      placeholder='[{"role":"button","x":0,"y":0}]'),
+                      placeholder=_BOXES_JSON_PLACEHOLDER),
             FieldSpec("point", FieldType.STRING, placeholder="[50, 50]"),
             FieldSpec("radius", FieldType.INT, optional=True, default=64),
         ),
         description="Did any before/after change land within radius of a point?",
     ))
     specs.append(CommandSpec(
-        "AC_check_postcondition", "Native UI", "Check Postcondition",
+        "AC_check_postcondition", _NATIVE_UI, "Check Postcondition",
         fields=(
             FieldSpec("after", FieldType.STRING,
                       placeholder='[{"role":"dialog","name":"Saved"}]'),
@@ -3727,7 +3737,7 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Check expected outcome clauses against after/before frames.",
     ))
     specs.append(CommandSpec(
-        "AC_plan_repair", "Native UI", "Plan Repair Tactics",
+        "AC_plan_repair", _NATIVE_UI, "Plan Repair Tactics",
         fields=(
             FieldSpec("verdict", FieldType.STRING,
                       placeholder="no_op / changed_elsewhere / changed"),
@@ -3736,7 +3746,7 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Ordered repair tactics for a failed/no-effect action verdict.",
     ))
     specs.append(CommandSpec(
-        "AC_consensus_point", "Native UI", "Grounding Consensus Point",
+        "AC_consensus_point", _NATIVE_UI, "Grounding Consensus Point",
         fields=(
             FieldSpec("candidates", FieldType.STRING,
                       placeholder="[[100, 100], [104, 98], [97, 103]]"),
@@ -3755,12 +3765,12 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Index where a churn series first settles (offline settle check).",
     ))
     specs.append(CommandSpec(
-        "AC_build_critic_record", "Native UI", "Build Critic Record",
+        "AC_build_critic_record", _NATIVE_UI, "Build Critic Record",
         fields=(
             FieldSpec("action", FieldType.STRING,
                       placeholder='{"type":"click","x":50,"y":50}'),
             FieldSpec("before", FieldType.STRING,
-                      placeholder='[{"role":"button","x":0,"y":0}]'),
+                      placeholder=_BOXES_JSON_PLACEHOLDER),
             FieldSpec("after", FieldType.STRING,
                       placeholder='[{"role":"dialog","x":40,"y":40}]'),
             FieldSpec("postcondition", FieldType.STRING, optional=True,
@@ -3770,7 +3780,7 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Per-step critic evidence (effect + delta + postcondition).",
     ))
     specs.append(CommandSpec(
-        "AC_score_step", "Native UI", "Score Step (rule-based)",
+        "AC_score_step", _NATIVE_UI, "Score Step (rule-based)",
         fields=(
             FieldSpec("record", FieldType.STRING,
                       placeholder='{"effect":{"effect":"changed_near_target"}}'),
@@ -3778,45 +3788,45 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Rule-based outcome + process score of a critic record.",
     ))
     specs.append(CommandSpec(
-        "AC_consensus_element", "Native UI", "Grounding Consensus Element",
+        "AC_consensus_element", _NATIVE_UI, "Grounding Consensus Element",
         fields=(
             FieldSpec("candidates", FieldType.STRING,
                       placeholder="[[8, 8], [12, 10]]"),
             FieldSpec("elements", FieldType.STRING,
-                      placeholder='[{"role":"button","x":0,"y":0}]'),
+                      placeholder=_BOXES_JSON_PLACEHOLDER),
         ),
         description="Vote grounding proposals to the nearest element.",
     ))
     specs.append(CommandSpec(
-        "AC_validate_action", "Native UI", "Validate / Snap Action",
+        "AC_validate_action", _NATIVE_UI, "Validate / Snap Action",
         fields=(
             FieldSpec("action", FieldType.STRING,
                       placeholder='{"type":"click","x":..,"y":..}'),
             FieldSpec("screen", FieldType.STRING, optional=True,
                       placeholder="[width, height]"),
             FieldSpec("targets", FieldType.STRING, optional=True,
-                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+                      placeholder=_POINTS_JSON_PLACEHOLDER),
         ),
         description="Reject out-of-bounds clicks; snap a near-miss to the nearest "
                     "element.",
     ))
     specs.append(CommandSpec(
-        "AC_match_elements", "Native UI", "Match Elements (frames)",
+        "AC_match_elements", _NATIVE_UI, "Match Elements (frames)",
         fields=(
             FieldSpec("before", FieldType.STRING,
-                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+                      placeholder=_POINTS_JSON_PLACEHOLDER),
             FieldSpec("after", FieldType.STRING,
-                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+                      placeholder=_POINTS_JSON_PLACEHOLDER),
             FieldSpec("iou_threshold", FieldType.FLOAT, optional=True, default=0.5,
                       min_value=0.0, max_value=1.0),
         ),
         description="Match element boxes across two frames by overlap (move/rename).",
     ))
     specs.append(CommandSpec(
-        "AC_assign_stable_ids", "Native UI", "Assign Stable Element IDs",
+        "AC_assign_stable_ids", _NATIVE_UI, "Assign Stable Element IDs",
         fields=(
             FieldSpec("elements", FieldType.STRING,
-                      placeholder='[{"x":..,"y":..,"width":..,"height":..}]'),
+                      placeholder=_POINTS_JSON_PLACEHOLDER),
             FieldSpec("prior", FieldType.STRING, optional=True,
                       placeholder="prior frame's elements (with ids)"),
             FieldSpec("iou_threshold", FieldType.FLOAT, optional=True, default=0.5,
@@ -3825,10 +3835,10 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Tag elements with IDs carried across frames by overlap.",
     ))
     specs.append(CommandSpec(
-        "AC_score_candidates", "Native UI", "Score Candidates",
+        "AC_score_candidates", _NATIVE_UI, "Score Candidates",
         fields=(
             FieldSpec("candidates", FieldType.STRING,
-                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+                      placeholder=_MARKS_JSON_PLACEHOLDER),
             FieldSpec("want_role", FieldType.STRING, optional=True),
             FieldSpec("want_name", FieldType.STRING, optional=True),
             FieldSpec("anchor", FieldType.STRING, optional=True,
@@ -3837,10 +3847,10 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="Rank candidate elements by role / name / proximity confidence.",
     ))
     specs.append(CommandSpec(
-        "AC_best_candidate", "Native UI", "Best Candidate",
+        "AC_best_candidate", _NATIVE_UI, "Best Candidate",
         fields=(
             FieldSpec("candidates", FieldType.STRING,
-                      placeholder='[{"role":"button","name":"OK","x":..,"y":..}]'),
+                      placeholder=_MARKS_JSON_PLACEHOLDER),
             FieldSpec("want_role", FieldType.STRING, optional=True),
             FieldSpec("want_name", FieldType.STRING, optional=True),
             FieldSpec("anchor", FieldType.STRING, optional=True,
@@ -3849,7 +3859,7 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
         description="The single highest-scoring candidate element.",
     ))
     specs.append(CommandSpec(
-        "AC_mark_screen", "Native UI", "Set-of-Marks: Number Elements",
+        "AC_mark_screen", _NATIVE_UI, "Set-of-Marks: Number Elements",
         fields=(
             FieldSpec("app_name", FieldType.STRING, optional=True),
             FieldSpec("render_path", FieldType.FILE_PATH, optional=True),
@@ -3858,7 +3868,7 @@ def _add_set_of_marks_specs(specs: List[CommandSpec]) -> None:
                     "grounding; optional numbered-box overlay screenshot.",
     ))
     specs.append(CommandSpec(
-        "AC_mark_click", "Native UI", "Set-of-Marks: Click Number",
+        "AC_mark_click", _NATIVE_UI, "Set-of-Marks: Click Number",
         fields=(FieldSpec("mark_id", FieldType.INT),),
         description="Click the element behind a numbered mark.",
     ))
@@ -4085,7 +4095,7 @@ def _add_authoring_specs(specs: List[CommandSpec]) -> None:
     path = FieldSpec("path", FieldType.FILE_PATH)
     key = FieldSpec("key", FieldType.STRING)
     specs.append(CommandSpec(
-        "AC_element_save", "Native UI", "Element: Save Locator",
+        "AC_element_save", _NATIVE_UI, "Element: Save Locator",
         fields=(path, key,
                 FieldSpec("name", FieldType.STRING, optional=True),
                 FieldSpec("role", FieldType.STRING, optional=True),
@@ -4093,22 +4103,22 @@ def _add_authoring_specs(specs: List[CommandSpec]) -> None:
         description="Save a named native-UI locator (object repository).",
     ))
     specs.append(CommandSpec(
-        "AC_element_find", "Native UI", "Element: Find Saved",
+        "AC_element_find", _NATIVE_UI, "Element: Find Saved",
         fields=(path, key),
         description="Resolve a saved locator to a live element summary.",
     ))
     specs.append(CommandSpec(
-        "AC_element_click", "Native UI", "Element: Click Saved",
+        "AC_element_click", _NATIVE_UI, "Element: Click Saved",
         fields=(path, key),
         description="Click the element behind a saved locator.",
     ))
     specs.append(CommandSpec(
-        "AC_element_remove", "Native UI", "Element: Remove Saved",
+        "AC_element_remove", _NATIVE_UI, "Element: Remove Saved",
         fields=(path, key),
         description="Delete a saved locator.",
     ))
     specs.append(CommandSpec(
-        "AC_element_list", "Native UI", "Element: List Saved",
+        "AC_element_list", _NATIVE_UI, "Element: List Saved",
         fields=(path,),
         description="List saved locator names in a repository file.",
     ))

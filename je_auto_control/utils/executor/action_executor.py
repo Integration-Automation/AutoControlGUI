@@ -171,6 +171,7 @@ def _run_dag(definition: Dict[str, Any],
 
 
 _AX_RECORDER_SINGLETON = None
+_DEFAULT_APPROVALS_DIR = ".approvals"
 
 
 def _a11y_dump(app_name: Optional[str] = None,
@@ -6029,7 +6030,7 @@ def _egress_reset() -> Dict[str, Any]:
 
 
 def _verify_artifact(name: str, content: Any,
-                     approvals_dir: str = ".approvals",
+                     approvals_dir: str = _DEFAULT_APPROVALS_DIR,
                      extension: str = "txt") -> Dict[str, Any]:
     """Adapter: verify an artifact against its approved baseline."""
     from je_auto_control.utils.approval import verify_artifact
@@ -6039,14 +6040,14 @@ def _verify_artifact(name: str, content: Any,
             "received_path": result.received_path}
 
 
-def _approve_artifact(name: str, approvals_dir: str = ".approvals",
+def _approve_artifact(name: str, approvals_dir: str = _DEFAULT_APPROVALS_DIR,
                       extension: str = "txt") -> Dict[str, Any]:
     """Adapter: promote a received artifact to the approved baseline."""
     from je_auto_control.utils.approval import approve_artifact
     return {"approved": approve_artifact(name, approvals_dir, extension)}
 
 
-def _pending_artifacts(approvals_dir: str = ".approvals") -> Dict[str, Any]:
+def _pending_artifacts(approvals_dir: str = _DEFAULT_APPROVALS_DIR) -> Dict[str, Any]:
     """Adapter: list artifacts awaiting approval."""
     from je_auto_control.utils.approval import pending_artifacts
     return {"pending": pending_artifacts(approvals_dir)}

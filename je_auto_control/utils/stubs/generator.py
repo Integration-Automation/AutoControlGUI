@@ -88,7 +88,8 @@ def write_pyi(target: Path,
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(target.suffix + ".tmp")
     tmp.write_text(body, encoding="utf-8")
-    tmp.replace(target)
+    # target is an operator-supplied CLI path, not remote input
+    tmp.replace(target)  # NOSONAR
     return target
 
 

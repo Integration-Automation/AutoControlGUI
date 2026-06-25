@@ -49,9 +49,9 @@ def test_unique_multi_match_raises():
 
 def test_wildcard_and_literal_conditions():
     spec = {"inputs": ["role", "active"], "hit_policy": "FIRST", "rules": [
-        {"conditions": {"role": "admin", "active": None},   # active = wildcard
+        {"conditions": {"role": "admin", "active": None},   # active -> wildcard
          "outputs": {"allow": True}},
-        {"conditions": {"role": "-", "active": True},        # role = wildcard
+        {"conditions": {"role": "-", "active": True},        # role -> wildcard
          "outputs": {"allow": False}},
     ]}
     assert evaluate_table(spec, {"role": "admin", "active": False}) == \

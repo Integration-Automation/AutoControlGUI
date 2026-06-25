@@ -18,7 +18,7 @@ def test_rate_and_increase():
 
 def test_rate_handles_counter_reset():
     series = [(0, 90), (10, 100), (20, 5), (30, 25)]    # reset between 100 and 5
-    # increase = (100-90) + reset(5) + (25-5) = 10 + 5 + 20 = 35
+    # increase: (100-90) + reset(5) + (25-5) -> 10 + 5 + 20 -> 35
     assert ts_increase(series) == pytest.approx(35.0)
     assert ts_rate(series) == pytest.approx(35.0 / 30)
 

@@ -40,6 +40,26 @@ def _proximity(element: Element, anchor: Sequence[int]) -> float:
     return 1.0 / (1.0 + distance / 100.0)
 
 
+def _signal_parts(element: Element, want_role: Optional[str],
+                  want_name: Optional[str],
+                  similarity: Callable[[str, str], float],
+                  prefer_enabled: bool,
+                  anchor: Optional[Sequence[int]]) -> Dict[str, float]:
+    """Build the per-signal 0..1 breakdown for one ``element``."""
+    parts: Dict[str, float] = {}
+    if want_role is not None:
+        parts["role"] = (1.0 if str(element.get("role", "")).lower()
+                         == str(want_role).lower() else 0.0)
+    if want_name is not None:
+        parts["name"] = float(similarity(want_name,
+                                         str(element.get("name", ""))))
+    if anchor is not None:
+        parts["proximity"] = _proximity(element, anchor)
+    if prefer_enabled:
+        parts["enabled"] = 1.0 if element.get("enabled", True) else 0.0
+    return parts
+
+
 def score_candidates(candidates: Sequence[Element], *,
                      want_role: Optional[str] = None,
                      want_name: Optional[str] = None,
@@ -57,17 +77,8 @@ def score_candidates(candidates: Sequence[Element], *,
     similarity = name_similarity or fuzzy_ratio
     scored: List[ScoredCandidate] = []
     for element in candidates:
-        parts: Dict[str, float] = {}
-        if want_role is not None:
-            parts["role"] = (1.0 if str(element.get("role", "")).lower()
-                             == str(want_role).lower() else 0.0)
-        if want_name is not None:
-            parts["name"] = float(similarity(want_name,
-                                             str(element.get("name", ""))))
-        if anchor is not None:
-            parts["proximity"] = _proximity(element, anchor)
-        if prefer_enabled:
-            parts["enabled"] = 1.0 if element.get("enabled", True) else 0.0
+        parts = _signal_parts(element, want_role, want_name, similarity,
+                              prefer_enabled, anchor)
         score = sum(parts.values()) / len(parts) if parts else 0.0
         scored.append(ScoredCandidate(element, round(score, 4), parts))
     scored.sort(key=lambda candidate: candidate.score, reverse=True)
