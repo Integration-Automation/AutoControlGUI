@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Set-of-Marks Label Layout (No Overlap, Readable Colour)
+
+Number every element without the labels piling up or vanishing into the background. Full reference: [`docs/source/Eng/doc/new_features/v215_features_doc.rst`](docs/source/Eng/doc/new_features/v215_features_doc.rst).
+
+- **`place_labels` / `label_color`** (`AC_place_labels`, `AC_label_color`): Set-of-Marks draws each numbered label at a fixed offset, so on dense UIs the numbers pile on top of each other and a dark label on a dark element vanishes. `place_labels` is greedy non-overlap placement — for each mark it tries a ring of candidate positions around its box (above/below/inside, left/right aligned) and takes the first that stays in bounds and clears every already-placed label; `label_color` picks black or white by whichever has the better WCAG contrast against the element background (reusing `a11y_audit.contrast_ratio`). Pure standard library, deterministic, fully testable without rendering. Second feature of the ROUND-15 perception lane. No `PySide6`.
+
 ### Colour-Vision-Deficiency Simulation + Collision Check
 
 Check whether your red/green status colours are distinguishable to colour-blind users. Full reference: [`docs/source/Eng/doc/new_features/v214_features_doc.rst`](docs/source/Eng/doc/new_features/v214_features_doc.rst).

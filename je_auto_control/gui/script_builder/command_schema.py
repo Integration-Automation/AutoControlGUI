@@ -4548,6 +4548,26 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Whether two colours become confusable under a CVD type.",
     ))
     specs.append(CommandSpec(
+        "AC_place_labels", "Image", "Place Mark Labels",
+        fields=(
+            FieldSpec("marks", FieldType.STRING,
+                      placeholder="JSON list of {id, bbox}"),
+            FieldSpec("label_width", FieldType.INT, optional=True, default=22),
+            FieldSpec("label_height", FieldType.INT, optional=True,
+                      default=16),
+            FieldSpec("bounds", FieldType.STRING, optional=True,
+                      placeholder="[width, height]"),
+        ),
+        description="Lay out non-overlapping Set-of-Marks label boxes.",
+    ))
+    specs.append(CommandSpec(
+        "AC_label_color", "Image", "Label Colour for Background",
+        fields=(
+            FieldSpec("background", FieldType.STRING, placeholder="[r, g, b]"),
+        ),
+        description="Higher-contrast label colour (black/white) for a background.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,
