@@ -2839,6 +2839,30 @@ def _idle_point(busy_samples: Any, quiet_samples: Any = 3) -> Dict[str, Any]:
     return {"index": idle_point(samples, quiet_samples=int(quiet_samples))}
 
 
+def _coerce_rgb(value: Any) -> tuple:
+    """Normalise an RGB argument (JSON '[r,g,b]' string / list) to (r, g, b)."""
+    seq = _coerce_list(value) if isinstance(value, str) else list(value)
+    return (int(seq[0]), int(seq[1]), int(seq[2]))
+
+
+def _simulate_cvd(rgb: Any, kind: Any = "deuteranopia",
+                  severity: Any = 1.0) -> Dict[str, Any]:
+    """Adapter: map an RGB colour through a CVD simulation matrix (pure)."""
+    from je_auto_control.utils.cvd_simulate import simulate_cvd
+    result = simulate_cvd(_coerce_rgb(rgb), str(kind), float(severity))
+    return {"rgb": list(result)}
+
+
+def _colors_collide(left: Any, right: Any, kind: Any = "deuteranopia",
+                    severity: Any = 1.0, threshold: Any = 40.0
+                    ) -> Dict[str, Any]:
+    """Adapter: whether two colours become confusable under a CVD type (pure)."""
+    from je_auto_control.utils.cvd_simulate import colors_collide
+    return colors_collide(_coerce_rgb(left), _coerce_rgb(right),
+                          kind=str(kind), severity=float(severity),
+                          threshold=float(threshold))
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6870,6 +6894,8 @@ class Executor:
             "AC_ensure_field_value": _ensure_field_value,
             "AC_wait_until_app_idle": _wait_until_app_idle,
             "AC_idle_point": _idle_point,
+            "AC_simulate_cvd": _simulate_cvd,
+            "AC_colors_collide": _colors_collide,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

@@ -733,6 +733,17 @@ def idle_point(busy_samples, quiet_samples=3):
     return _idle_point(busy_samples, quiet_samples)
 
 
+def simulate_cvd(rgb, kind="deuteranopia", severity=1.0):
+    from je_auto_control.utils.executor.action_executor import _simulate_cvd
+    return _simulate_cvd(rgb, kind, severity)
+
+
+def colors_collide(left, right, kind="deuteranopia", severity=1.0,
+                   threshold=40.0):
+    from je_auto_control.utils.executor.action_executor import _colors_collide
+    return _colors_collide(left, right, kind, severity, threshold)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

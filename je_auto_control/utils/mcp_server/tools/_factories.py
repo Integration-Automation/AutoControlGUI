@@ -4000,6 +4000,36 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.most_salient,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_simulate_cvd",
+            description=("Map an 'rgb' colour [r,g,b] through a colour-vision-"
+                         "deficiency simulation (kind=protanopia/deuteranopia/"
+                         "tritanopia, severity 0..1). Returns {rgb}."),
+            input_schema=schema({"rgb": {"type": "array",
+                                        "items": {"type": "integer"}},
+                                 "kind": {"type": "string"},
+                                 "severity": {"type": "number"}},
+                                required=["rgb"]),
+            handler=h.simulate_cvd,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_colors_collide",
+            description=("Whether two colours 'left'/'right' [r,g,b] become "
+                         "confusable under a CVD 'kind' (distance below "
+                         "'threshold'). Returns {collide, distance, kind, "
+                         "severity, simulated_left, simulated_right}."),
+            input_schema=schema({"left": {"type": "array",
+                                         "items": {"type": "integer"}},
+                                 "right": {"type": "array",
+                                          "items": {"type": "integer"}},
+                                 "kind": {"type": "string"},
+                                 "severity": {"type": "number"},
+                                 "threshold": {"type": "number"}},
+                                required=["left", "right"]),
+            handler=h.colors_collide,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
