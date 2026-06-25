@@ -595,6 +595,31 @@ def allow_sleep():
     return _allow_sleep()
 
 
+def get_volume():
+    from je_auto_control.utils.executor.action_executor import _get_volume
+    return _get_volume()
+
+
+def set_volume(level):
+    from je_auto_control.utils.executor.action_executor import _set_volume
+    return _set_volume(level)
+
+
+def change_volume(delta):
+    from je_auto_control.utils.executor.action_executor import _change_volume
+    return _change_volume(delta)
+
+
+def set_mute(muted=True):
+    from je_auto_control.utils.executor.action_executor import _set_mute
+    return _set_mute(muted)
+
+
+def toggle_mute():
+    from je_auto_control.utils.executor.action_executor import _toggle_mute
+    return _toggle_mute()
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

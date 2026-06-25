@@ -2653,6 +2653,36 @@ def _allow_sleep() -> Dict[str, Any]:
     return {"released": bool(allow_sleep())}
 
 
+def _get_volume() -> Dict[str, Any]:
+    """Adapter: the system master volume as an integer percent."""
+    from je_auto_control.utils.system_volume import get_volume, is_muted
+    return {"volume": int(get_volume()), "muted": bool(is_muted())}
+
+
+def _set_volume(level: Any) -> Dict[str, Any]:
+    """Adapter: set the master volume to ``level`` percent."""
+    from je_auto_control.utils.system_volume import set_volume
+    return {"volume": int(set_volume(float(level)))}
+
+
+def _change_volume(delta: Any) -> Dict[str, Any]:
+    """Adapter: add ``delta`` percent to the master volume."""
+    from je_auto_control.utils.system_volume import change_volume
+    return {"volume": int(change_volume(float(delta)))}
+
+
+def _set_mute(muted: Any = True) -> Dict[str, Any]:
+    """Adapter: set the master mute flag."""
+    from je_auto_control.utils.system_volume import set_mute
+    return {"muted": bool(set_mute(bool(muted)))}
+
+
+def _toggle_mute() -> Dict[str, Any]:
+    """Adapter: flip the master mute flag."""
+    from je_auto_control.utils.system_volume import toggle_mute
+    return {"muted": bool(toggle_mute())}
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6662,6 +6692,11 @@ class Executor:
             "AC_plan_keep_awake": _plan_keep_awake,
             "AC_keep_awake_on": _keep_awake_on,
             "AC_allow_sleep": _allow_sleep,
+            "AC_get_volume": _get_volume,
+            "AC_set_volume": _set_volume,
+            "AC_change_volume": _change_volume,
+            "AC_set_mute": _set_mute,
+            "AC_toggle_mute": _toggle_mute,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

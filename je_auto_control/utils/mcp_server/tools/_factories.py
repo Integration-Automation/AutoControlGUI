@@ -2168,6 +2168,49 @@ def process_and_shell_tools() -> List[MCPTool]:
             handler=h.file_association,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_get_volume",
+            description=("Read the system master volume as an integer percent "
+                         "0..100. Returns {volume, muted} (Windows, needs "
+                         "the optional 'pycaw' dependency)."),
+            input_schema=schema({}),
+            handler=h.get_volume,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_set_volume",
+            description=("Set the master volume to 'level' percent (clamped to "
+                         "0..100). Returns the applied {volume}."),
+            input_schema=schema({"level": {"type": "number"}},
+                                required=["level"]),
+            handler=h.set_volume,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_change_volume",
+            description=("Add 'delta' percent to the master volume (may be "
+                         "negative; clamped to 0..100). Returns {volume}."),
+            input_schema=schema({"delta": {"type": "number"}},
+                                required=["delta"]),
+            handler=h.change_volume,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_set_mute",
+            description=("Mute or unmute the master output. 'muted' defaults to "
+                         "true. Returns the new {muted} state."),
+            input_schema=schema({"muted": {"type": "boolean"}}),
+            handler=h.set_mute,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_toggle_mute",
+            description=("Flip the master mute flag. Returns the new {muted} "
+                         "state."),
+            input_schema=schema({}),
+            handler=h.toggle_mute,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
     ]
 
 
