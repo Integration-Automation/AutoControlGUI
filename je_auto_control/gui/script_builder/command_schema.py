@@ -4402,6 +4402,36 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Decode an IMM32 conversion bitmask into named flags.",
     ))
     specs.append(CommandSpec(
+        "AC_retry_delay", "Flow", "Retry Backoff Delay",
+        fields=(
+            FieldSpec("attempt", FieldType.INT, default=1,
+                      placeholder="1-based retry attempt"),
+            FieldSpec("base", FieldType.FLOAT, optional=True, default=0.1),
+            FieldSpec("max_delay", FieldType.FLOAT, optional=True,
+                      default=5.0),
+            FieldSpec("multiplier", FieldType.FLOAT, optional=True,
+                      default=2.0),
+            FieldSpec("jitter", FieldType.STRING, optional=True,
+                      default="none", placeholder="none / full / equal"),
+        ),
+        description="Capped exponential backoff delay before a retry attempt.",
+    ))
+    specs.append(CommandSpec(
+        "AC_plan_retry_delays", "Flow", "Plan Retry Delays",
+        fields=(
+            FieldSpec("attempts", FieldType.INT, default=5,
+                      placeholder="number of retries"),
+            FieldSpec("base", FieldType.FLOAT, optional=True, default=0.1),
+            FieldSpec("max_delay", FieldType.FLOAT, optional=True,
+                      default=5.0),
+            FieldSpec("multiplier", FieldType.FLOAT, optional=True,
+                      default=2.0),
+            FieldSpec("jitter", FieldType.STRING, optional=True,
+                      default="none", placeholder="none / full / equal"),
+        ),
+        description="The backoff delay schedule for the first N retries.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,

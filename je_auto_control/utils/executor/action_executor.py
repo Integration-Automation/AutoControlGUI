@@ -2738,6 +2738,29 @@ def _decode_conversion_mode(flags: Any) -> Dict[str, Any]:
     return decode_conversion_mode(int(flags))
 
 
+def _make_retry_budget(base: Any, max_delay: Any, multiplier: Any,
+                       jitter: Any) -> Any:
+    """Build a RetryBudget from executor scalars (helper for the adapters)."""
+    from je_auto_control.utils.retry_budget import RetryBudget
+    return RetryBudget(base_delay_s=float(base), max_delay_s=float(max_delay),
+                       multiplier=float(multiplier), jitter=str(jitter))
+
+
+def _retry_delay(attempt: Any, base: Any = 0.1, max_delay: Any = 5.0,
+                 multiplier: Any = 2.0, jitter: Any = "none") -> Dict[str, Any]:
+    """Adapter: the (jittered) backoff delay before a retry attempt (pure)."""
+    budget = _make_retry_budget(base, max_delay, multiplier, jitter)
+    return {"delay": float(budget.next_delay(int(attempt)))}
+
+
+def _plan_retry_delays(attempts: Any, base: Any = 0.1, max_delay: Any = 5.0,
+                       multiplier: Any = 2.0, jitter: Any = "none"
+                       ) -> Dict[str, Any]:
+    """Adapter: the backoff delay schedule for the first N retries (pure)."""
+    budget = _make_retry_budget(base, max_delay, multiplier, jitter)
+    return {"delays": [float(d) for d in budget.plan(int(attempts))]}
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6760,6 +6783,8 @@ class Executor:
             "AC_is_composing": _is_composing,
             "AC_wait_for_composition_commit": _wait_for_composition_commit,
             "AC_decode_conversion_mode": _decode_conversion_mode,
+            "AC_retry_delay": _retry_delay,
+            "AC_plan_retry_delays": _plan_retry_delays,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

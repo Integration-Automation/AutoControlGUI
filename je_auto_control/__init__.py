@@ -115,6 +115,10 @@ from je_auto_control.utils.ime_state import (
     decode_conversion_mode, ime_state, is_composing,
     wait_for_composition_commit,
 )
+# Retry budget — deadline + jitter retries over a callable
+from je_auto_control.utils.retry_budget import (
+    RetryBudget, backoff_delay, jittered_delay, run_with_budget,
+)
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1734,6 +1738,7 @@ __all__ = [
     "wait_for_lock", "classify_lock_transitions",
     "ime_state", "is_composing", "wait_for_composition_commit",
     "decode_conversion_mode",
+    "RetryBudget", "run_with_budget", "backoff_delay", "jittered_delay",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",
