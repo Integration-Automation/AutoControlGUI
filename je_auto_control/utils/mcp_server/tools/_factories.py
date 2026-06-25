@@ -1769,6 +1769,135 @@ def smart_wait_tools() -> List[MCPTool]:
             handler=h.wait_for_process,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_retry_delay",
+            description=("Capped exponential backoff delay (seconds) before a "
+                         "given 1-based retry 'attempt'. 'jitter' is none / "
+                         "full / equal (default none). Returns {delay}."),
+            input_schema=schema({"attempt": {"type": "integer"},
+                                 "base": {"type": "number"},
+                                 "max_delay": {"type": "number"},
+                                 "multiplier": {"type": "number"},
+                                 "jitter": {"type": "string"}},
+                                required=["attempt"]),
+            handler=h.retry_delay,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_plan_retry_delays",
+            description=("The backoff delay schedule (seconds) for the first "
+                         "'attempts' retries. 'jitter' none / full / equal "
+                         "(default none). Returns {delays}."),
+            input_schema=schema({"attempts": {"type": "integer"},
+                                 "base": {"type": "number"},
+                                 "max_delay": {"type": "number"},
+                                 "multiplier": {"type": "number"},
+                                 "jitter": {"type": "string"}},
+                                required=["attempts"]),
+            handler=h.plan_retry_delays,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_compare_field_value",
+            description=("Compare an 'expected' vs 'actual' field value under a "
+                         "match 'mode' (exact / trim / ci / normalized / "
+                         "contains). Pure. Returns {match, mode, expected, "
+                         "actual}."),
+            input_schema=schema({"expected": {"type": "string"},
+                                 "actual": {"type": "string"},
+                                 "mode": {"type": "string"}},
+                                required=["expected", "actual"]),
+            handler=h.compare_field_value,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_verify_field_value",
+            description=("Read a native control's value back (accessibility) "
+                         "and confirm it equals 'expected' under match 'mode'. "
+                         "Identify the control by name / role / app_name / "
+                         "automation_id. Returns {match, expected, actual}."),
+            input_schema=schema({"expected": {"type": "string"},
+                                 "name": {"type": "string"},
+                                 "role": {"type": "string"},
+                                 "app_name": {"type": "string"},
+                                 "automation_id": {"type": "string"},
+                                 "mode": {"type": "string"}},
+                                required=["expected"]),
+            handler=h.verify_field_value,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_adaptive_timeout",
+            description=("Recommend a wait timeout (seconds) from observed step "
+                         "'durations': the 'percentile_q'-th percentile scaled "
+                         "by 'factor', clamped to [min_s, max_s]. Returns "
+                         "{timeout_s}."),
+            input_schema=schema({"durations": {"type": "array",
+                                              "items": {"type": "number"}},
+                                 "percentile_q": {"type": "number"},
+                                 "factor": {"type": "number"},
+                                 "min_s": {"type": "number"},
+                                 "max_s": {"type": "number"}},
+                                required=["durations"]),
+            handler=h.adaptive_timeout,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_timeout_stats",
+            description=("Recommend a timeout and expose the percentiles and "
+                         "clamp decisions. Returns {n, p50, p_high, "
+                         "percentile_q, recommended, floored, capped}."),
+            input_schema=schema({"durations": {"type": "array",
+                                              "items": {"type": "number"}},
+                                 "percentile_q": {"type": "number"},
+                                 "factor": {"type": "number"},
+                                 "min_s": {"type": "number"},
+                                 "max_s": {"type": "number"}},
+                                required=["durations"]),
+            handler=h.timeout_stats,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_ensure_field_value",
+            description=("Idempotently set a native control's value to "
+                         "'desired' and verify: reads first and does nothing if "
+                         "it already matches. Identify the control by name / "
+                         "role / app_name / automation_id. Returns {ok, "
+                         "changed, value, attempts}."),
+            input_schema=schema({"desired": {"type": "string"},
+                                 "name": {"type": "string"},
+                                 "role": {"type": "string"},
+                                 "app_name": {"type": "string"},
+                                 "automation_id": {"type": "string"},
+                                 "attempts": {"type": "integer"}},
+                                required=["desired"]),
+            handler=h.ensure_field_value,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_wait_until_app_idle",
+            description=("Block until the foreground app's busy / wait cursor "
+                         "settles idle for 'quiet_samples' polls (or 'timeout' "
+                         "seconds). Returns {idle, polls, quiet_run, "
+                         "elapsed_s} (Windows)."),
+            input_schema=schema({"quiet_samples": {"type": "integer"},
+                                 "timeout": {"type": "number"},
+                                 "interval": {"type": "number"}}),
+            handler=h.wait_until_app_idle,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_idle_point",
+            description=("Index in a recorded busy/idle 'busy_samples' series "
+                         "at which it first settles idle for 'quiet_samples' in "
+                         "a row (pure). Returns {index} (null if never)."),
+            input_schema=schema({"busy_samples": {"type": "array",
+                                                 "items": {"type": "boolean"}},
+                                 "quiet_samples": {"type": "integer"}},
+                                required=["busy_samples"]),
+            handler=h.idle_point,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

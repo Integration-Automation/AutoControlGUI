@@ -4402,6 +4402,127 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Decode an IMM32 conversion bitmask into named flags.",
     ))
     specs.append(CommandSpec(
+        "AC_retry_delay", "Flow", "Retry Backoff Delay",
+        fields=(
+            FieldSpec("attempt", FieldType.INT, default=1,
+                      placeholder="1-based retry attempt"),
+            FieldSpec("base", FieldType.FLOAT, optional=True, default=0.1),
+            FieldSpec("max_delay", FieldType.FLOAT, optional=True,
+                      default=5.0),
+            FieldSpec("multiplier", FieldType.FLOAT, optional=True,
+                      default=2.0),
+            FieldSpec("jitter", FieldType.STRING, optional=True,
+                      default="none", placeholder="none / full / equal"),
+        ),
+        description="Capped exponential backoff delay before a retry attempt.",
+    ))
+    specs.append(CommandSpec(
+        "AC_plan_retry_delays", "Flow", "Plan Retry Delays",
+        fields=(
+            FieldSpec("attempts", FieldType.INT, default=5,
+                      placeholder="number of retries"),
+            FieldSpec("base", FieldType.FLOAT, optional=True, default=0.1),
+            FieldSpec("max_delay", FieldType.FLOAT, optional=True,
+                      default=5.0),
+            FieldSpec("multiplier", FieldType.FLOAT, optional=True,
+                      default=2.0),
+            FieldSpec("jitter", FieldType.STRING, optional=True,
+                      default="none", placeholder="none / full / equal"),
+        ),
+        description="The backoff delay schedule for the first N retries.",
+    ))
+    specs.append(CommandSpec(
+        "AC_compare_field_value", "Flow", "Compare Field Value",
+        fields=(
+            FieldSpec("expected", FieldType.STRING, placeholder="expected"),
+            FieldSpec("actual", FieldType.STRING, placeholder="actual"),
+            FieldSpec("mode", FieldType.STRING, optional=True, default="exact",
+                      placeholder="exact / trim / ci / normalized / contains"),
+        ),
+        description="Compare expected vs actual field value under a mode.",
+    ))
+    specs.append(CommandSpec(
+        "AC_verify_field_value", "Flow", "Verify Field Value",
+        fields=(
+            FieldSpec("expected", FieldType.STRING, placeholder="expected"),
+            FieldSpec("name", FieldType.STRING, optional=True,
+                      placeholder="control name"),
+            FieldSpec("role", FieldType.STRING, optional=True,
+                      placeholder="control role"),
+            FieldSpec("app_name", FieldType.STRING, optional=True,
+                      placeholder="app name"),
+            FieldSpec("automation_id", FieldType.STRING, optional=True,
+                      placeholder="automation id"),
+            FieldSpec("mode", FieldType.STRING, optional=True, default="exact",
+                      placeholder="exact / trim / ci / normalized / contains"),
+        ),
+        description="Read a control's value back and confirm it equals expected.",
+    ))
+    specs.append(CommandSpec(
+        "AC_adaptive_timeout", "Flow", "Adaptive Timeout",
+        fields=(
+            FieldSpec("durations", FieldType.STRING,
+                      placeholder="JSON list of durations (seconds)"),
+            FieldSpec("percentile_q", FieldType.FLOAT, optional=True,
+                      default=95.0),
+            FieldSpec("factor", FieldType.FLOAT, optional=True, default=1.5),
+            FieldSpec("min_s", FieldType.FLOAT, optional=True, default=1.0),
+            FieldSpec("max_s", FieldType.FLOAT, optional=True, default=60.0),
+        ),
+        description="Recommend a wait timeout from observed step durations.",
+    ))
+    specs.append(CommandSpec(
+        "AC_timeout_stats", "Flow", "Timeout Stats",
+        fields=(
+            FieldSpec("durations", FieldType.STRING,
+                      placeholder="JSON list of durations (seconds)"),
+            FieldSpec("percentile_q", FieldType.FLOAT, optional=True,
+                      default=95.0),
+            FieldSpec("factor", FieldType.FLOAT, optional=True, default=1.5),
+            FieldSpec("min_s", FieldType.FLOAT, optional=True, default=1.0),
+            FieldSpec("max_s", FieldType.FLOAT, optional=True, default=60.0),
+        ),
+        description="Timeout recommendation plus percentiles and clamp flags.",
+    ))
+    specs.append(CommandSpec(
+        "AC_ensure_field_value", "Flow", "Ensure Field Value",
+        fields=(
+            FieldSpec("desired", FieldType.STRING, placeholder="desired value"),
+            FieldSpec("name", FieldType.STRING, optional=True,
+                      placeholder="control name"),
+            FieldSpec("role", FieldType.STRING, optional=True,
+                      placeholder="control role"),
+            FieldSpec("app_name", FieldType.STRING, optional=True,
+                      placeholder="app name"),
+            FieldSpec("automation_id", FieldType.STRING, optional=True,
+                      placeholder="automation id"),
+            FieldSpec("attempts", FieldType.INT, optional=True, default=2),
+        ),
+        description="Idempotently set a control's value (no-op if already set).",
+    ))
+    specs.append(CommandSpec(
+        "AC_wait_until_app_idle", "Flow", "Wait Until App Idle",
+        fields=(
+            FieldSpec("quiet_samples", FieldType.INT, optional=True,
+                      default=3, placeholder="consecutive idle polls"),
+            FieldSpec("timeout", FieldType.FLOAT, optional=True, default=10.0,
+                      placeholder="timeout seconds"),
+            FieldSpec("interval", FieldType.FLOAT, optional=True, default=0.1,
+                      placeholder="poll interval seconds"),
+        ),
+        description="Block until the app's busy cursor settles idle or timeout.",
+    ))
+    specs.append(CommandSpec(
+        "AC_idle_point", "Flow", "Idle Point",
+        fields=(
+            FieldSpec("busy_samples", FieldType.STRING,
+                      placeholder="JSON list of busy booleans"),
+            FieldSpec("quiet_samples", FieldType.INT, optional=True,
+                      default=3),
+        ),
+        description="Index where a busy/idle series first settles idle.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,

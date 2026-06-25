@@ -2,6 +2,36 @@
 
 ## What's new (2026-06-26)
 
+### Wait Until the App Is Idle
+
+Hold off the next click until the busy/wait cursor settles — don't act mid-churn. Full reference: [`docs/source/Eng/doc/new_features/v213_features_doc.rst`](docs/source/Eng/doc/new_features/v213_features_doc.rst).
+
+- **`wait_until_app_idle` / `idle_point`** (`AC_wait_until_app_idle`, `AC_idle_point`): a click fired while the app is still churning (busy cursor up, dialog mid-paint, long handler running) is dropped or mis-targeted. `smart_waits` watches *pixels* settle; this watches the app's *busy signal* settle, which is cheaper and survives animated-but-idle UI. It reuses `settle_detector.SettleTracker` — each poll feeds 1.0 when busy / 0.0 when idle, and returns once the app has read idle for `quiet_samples` polls in a row (a busy spike resets the run). `wait_until_app_idle` polls an injectable `busy_probe` (default = Windows busy/app-starting cursor) with injectable `clock`/`sleep`; `idle_point` is the pure analyser over a recorded busy/idle trace. Fully testable without an app. Fifth feature of the ROUND-15 input-fidelity lane. No `PySide6`.
+
+### Ensure a Control Is in the Desired State (Idempotent)
+
+Read-compare-act-verify instead of acting blind — don't double-toggle an already-checked box. Full reference: [`docs/source/Eng/doc/new_features/v212_features_doc.rst`](docs/source/Eng/doc/new_features/v212_features_doc.rst).
+
+- **`ensure_state` / `ensure_toggle`** (`AC_ensure_field_value`): automation that acts *unconditionally* double-toggles a box that was already checked or re-enters an already-correct field, and can't be safely re-run. The robust shape is read-compare-act-verify. `ensure_state` reads via an injectable `reader`, and only if it doesn't equal `desired` applies `setter` and re-reads (up to `attempts`); `ensure_toggle` is the boolean specialization that calls `toggle` only while the state differs. A control already in the desired state is left untouched (`changed=False`) — idempotent and safe to re-run, distinct from `idempotency` (a request-key replay cache) since this converges *device state*. The executor's `AC_ensure_field_value` idempotently sets a native control's value via the accessibility backend. Fourth feature of the ROUND-15 input-fidelity lane. No `PySide6`.
+
+### Adaptive Timeout from Observed Durations
+
+Stop guessing wait timeouts — learn them from how long the step actually takes. Full reference: [`docs/source/Eng/doc/new_features/v211_features_doc.rst`](docs/source/Eng/doc/new_features/v211_features_doc.rst).
+
+- **`recommend_timeout` / `timeout_stats`** (`AC_adaptive_timeout`, `AC_timeout_stats`): hard-coded waits are a perennial flakiness source — too short races a slow machine, too long makes every failure pay the full timeout. This learns the timeout from observed step durations: a high percentile (the slow-but-real case) scaled by a safety `factor`, clamped to a sane `[min_s, max_s]` band. `recommend_timeout` is the single number to feed a `wait_for_*` / actionability `GateConfig`; `timeout_stats` also exposes the percentiles and `floored`/`capped` flags for tuning. Both are pure and reuse `stats.percentile`; with no samples they fall back to `default_s`. Third feature of the ROUND-15 input-fidelity lane. No `PySide6`.
+
+### Verify a Field After Typing
+
+Read the field back and confirm the value actually landed — don't type and hope. Full reference: [`docs/source/Eng/doc/new_features/v210_features_doc.rst`](docs/source/Eng/doc/new_features/v210_features_doc.rst).
+
+- **`compare_field_value` / `verify_field_value` / `fill_and_verify`** (`AC_compare_field_value`, `AC_verify_field_value`): `field_entry` types into a control and *hopes* — a slow IME, focus steal, input mask or auto-format can silently mangle or drop characters, and nothing reads the field back. This is distinct from `action_effect` (did *anything* change near the target?) and `postcondition.text_present` (does the text appear *anywhere*?) — neither confirms *this* field equals *this* value. `compare_field_value` is the pure comparator (`exact`/`trim`/`ci`/`normalized` NFKC/`contains`); `verify_field_value` reads through an injectable `reader` (native accessibility value in the executor); `fill_and_verify` types via an injectable `filler`, reads back, and retries (optionally clearing first) until it matches or attempts run out. Every comparison and retry decision is pure and unit-tested without a real control. Second feature of the ROUND-15 input-fidelity lane. No `PySide6`.
+
+### Retry Budget — Deadline + Jitter
+
+Retry a flaky step bounded by a total time budget, with jittered backoff. Full reference: [`docs/source/Eng/doc/new_features/v209_features_doc.rst`](docs/source/Eng/doc/new_features/v209_features_doc.rst).
+
+- **`RetryBudget` / `run_with_budget` / `backoff_delay` / `jittered_delay`** (`AC_retry_delay`, `AC_plan_retry_delays`): `resilience.RetryPolicy` retries a fixed attempt count with plain exponential backoff — it can't express a *wall-clock deadline* ("give up after 30 s total, however many attempts that is") or *jitter* (randomized backoff so retrying workers don't resynchronize into a thundering herd). `RetryBudget` adds both: bounded by `max_attempts` *and/or* `deadline_s`, `run_with_budget` honours whichever is hit first and never sleeps past the deadline; delays use capped exponential backoff with a selectable `full`/`equal`/`none` jitter strategy. The randomness (`uniform`), clock and sleeper are all injectable, so every delay and giveup decision is deterministic in tests. First feature of the ROUND-15 input-fidelity lane. No `PySide6`.
+
 ### Live IME State for Safe CJK Entry
 
 Wait for the input method to commit before reading a Japanese/Chinese/Korean field. Full reference: [`docs/source/Eng/doc/new_features/v208_features_doc.rst`](docs/source/Eng/doc/new_features/v208_features_doc.rst).

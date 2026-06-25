@@ -115,6 +115,22 @@ from je_auto_control.utils.ime_state import (
     decode_conversion_mode, ime_state, is_composing,
     wait_for_composition_commit,
 )
+# Retry budget — deadline + jitter retries over a callable
+from je_auto_control.utils.retry_budget import (
+    RetryBudget, backoff_delay, jittered_delay, run_with_budget,
+)
+# Read a field back after typing and confirm the intended value landed
+from je_auto_control.utils.verify_field import (
+    compare_field_value, fill_and_verify, verify_field_value,
+)
+# Derive a wait timeout from observed step durations
+from je_auto_control.utils.adaptive_timeout import (
+    recommend_timeout, timeout_stats,
+)
+# Idempotently bring a control / setting to a desired state
+from je_auto_control.utils.ensure_state import ensure_state, ensure_toggle
+# Wait until an application stops being busy before the next step
+from je_auto_control.utils.app_idle import idle_point, wait_until_app_idle
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1734,6 +1750,11 @@ __all__ = [
     "wait_for_lock", "classify_lock_transitions",
     "ime_state", "is_composing", "wait_for_composition_commit",
     "decode_conversion_mode",
+    "RetryBudget", "run_with_budget", "backoff_delay", "jittered_delay",
+    "compare_field_value", "verify_field_value", "fill_and_verify",
+    "recommend_timeout", "timeout_stats",
+    "ensure_state", "ensure_toggle",
+    "wait_until_app_idle", "idle_point",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",

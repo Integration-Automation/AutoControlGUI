@@ -668,6 +668,71 @@ def decode_conversion_mode(flags):
     return _decode_conversion_mode(flags)
 
 
+def retry_delay(attempt, base=0.1, max_delay=5.0, multiplier=2.0,
+                jitter="none"):
+    from je_auto_control.utils.executor.action_executor import _retry_delay
+    return _retry_delay(attempt, base, max_delay, multiplier, jitter)
+
+
+def plan_retry_delays(attempts, base=0.1, max_delay=5.0, multiplier=2.0,
+                      jitter="none"):
+    from je_auto_control.utils.executor.action_executor import (
+        _plan_retry_delays,
+    )
+    return _plan_retry_delays(attempts, base, max_delay, multiplier, jitter)
+
+
+def compare_field_value(expected, actual, mode="exact"):
+    from je_auto_control.utils.executor.action_executor import (
+        _compare_field_value,
+    )
+    return _compare_field_value(expected, actual, mode)
+
+
+def verify_field_value(expected, name=None, role=None, app_name=None,
+                       automation_id=None, mode="exact"):
+    from je_auto_control.utils.executor.action_executor import (
+        _verify_field_value,
+    )
+    return _verify_field_value(expected, name, role, app_name, automation_id,
+                               mode)
+
+
+def adaptive_timeout(durations, percentile_q=95.0, factor=1.5, min_s=1.0,
+                     max_s=60.0):
+    from je_auto_control.utils.executor.action_executor import (
+        _adaptive_timeout,
+    )
+    return _adaptive_timeout(durations, percentile_q, factor, min_s, max_s)
+
+
+def timeout_stats(durations, percentile_q=95.0, factor=1.5, min_s=1.0,
+                  max_s=60.0):
+    from je_auto_control.utils.executor.action_executor import _timeout_stats
+    return _timeout_stats(durations, percentile_q, factor, min_s, max_s)
+
+
+def ensure_field_value(desired, name=None, role=None, app_name=None,
+                       automation_id=None, attempts=2):
+    from je_auto_control.utils.executor.action_executor import (
+        _ensure_field_value,
+    )
+    return _ensure_field_value(desired, name, role, app_name, automation_id,
+                               attempts)
+
+
+def wait_until_app_idle(quiet_samples=3, timeout=10.0, interval=0.1):
+    from je_auto_control.utils.executor.action_executor import (
+        _wait_until_app_idle,
+    )
+    return _wait_until_app_idle(quiet_samples, timeout, interval)
+
+
+def idle_point(busy_samples, quiet_samples=3):
+    from je_auto_control.utils.executor.action_executor import _idle_point
+    return _idle_point(busy_samples, quiet_samples)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

@@ -2738,6 +2738,107 @@ def _decode_conversion_mode(flags: Any) -> Dict[str, Any]:
     return decode_conversion_mode(int(flags))
 
 
+def _make_retry_budget(base: Any, max_delay: Any, multiplier: Any,
+                       jitter: Any) -> Any:
+    """Build a RetryBudget from executor scalars (helper for the adapters)."""
+    from je_auto_control.utils.retry_budget import RetryBudget
+    return RetryBudget(base_delay_s=float(base), max_delay_s=float(max_delay),
+                       multiplier=float(multiplier), jitter=str(jitter))
+
+
+def _retry_delay(attempt: Any, base: Any = 0.1, max_delay: Any = 5.0,
+                 multiplier: Any = 2.0, jitter: Any = "none") -> Dict[str, Any]:
+    """Adapter: the (jittered) backoff delay before a retry attempt (pure)."""
+    budget = _make_retry_budget(base, max_delay, multiplier, jitter)
+    return {"delay": float(budget.next_delay(int(attempt)))}
+
+
+def _plan_retry_delays(attempts: Any, base: Any = 0.1, max_delay: Any = 5.0,
+                       multiplier: Any = 2.0, jitter: Any = "none"
+                       ) -> Dict[str, Any]:
+    """Adapter: the backoff delay schedule for the first N retries (pure)."""
+    budget = _make_retry_budget(base, max_delay, multiplier, jitter)
+    return {"delays": [float(d) for d in budget.plan(int(attempts))]}
+
+
+def _compare_field_value(expected: Any, actual: Any,
+                         mode: Any = "exact") -> Dict[str, Any]:
+    """Adapter: compare an expected vs actual field value under a mode (pure)."""
+    from je_auto_control.utils.verify_field import compare_field_value
+    return compare_field_value(expected, actual, mode=str(mode))
+
+
+def _verify_field_value(expected: Any, name: Optional[str] = None,
+                        role: Optional[str] = None,
+                        app_name: Optional[str] = None,
+                        automation_id: Optional[str] = None,
+                        mode: Any = "exact") -> Dict[str, Any]:
+    """Adapter: read a native control's value back and compare to expected."""
+    from je_auto_control.utils.verify_field import verify_field_value
+    return verify_field_value(
+        expected,
+        reader=lambda: _control_get_value(name=name, role=role,
+                                          app_name=app_name,
+                                          automation_id=automation_id),
+        mode=str(mode))
+
+
+def _adaptive_timeout(durations: Any, percentile_q: Any = 95.0,
+                      factor: Any = 1.5, min_s: Any = 1.0,
+                      max_s: Any = 60.0) -> Dict[str, Any]:
+    """Adapter: recommend a wait timeout from observed durations (pure)."""
+    from je_auto_control.utils.adaptive_timeout import recommend_timeout
+    samples = [float(d) for d in _coerce_list(durations)] if durations else []
+    timeout = recommend_timeout(samples, percentile_q=float(percentile_q),
+                                factor=float(factor), min_s=float(min_s),
+                                max_s=float(max_s))
+    return {"timeout_s": float(timeout)}
+
+
+def _timeout_stats(durations: Any, percentile_q: Any = 95.0, factor: Any = 1.5,
+                   min_s: Any = 1.0, max_s: Any = 60.0) -> Dict[str, Any]:
+    """Adapter: timeout recommendation plus percentiles / clamp flags (pure)."""
+    from je_auto_control.utils.adaptive_timeout import timeout_stats
+    samples = [float(d) for d in _coerce_list(durations)] if durations else []
+    return timeout_stats(samples, percentile_q=float(percentile_q),
+                         factor=float(factor), min_s=float(min_s),
+                         max_s=float(max_s))
+
+
+def _ensure_field_value(desired: Any, name: Optional[str] = None,
+                        role: Optional[str] = None,
+                        app_name: Optional[str] = None,
+                        automation_id: Optional[str] = None,
+                        attempts: Any = 2) -> Dict[str, Any]:
+    """Adapter: idempotently set a native control's value and verify (read-act)."""
+    from je_auto_control.utils.ensure_state import ensure_state
+    return ensure_state(
+        str(desired),
+        reader=lambda: _control_get_value(name=name, role=role,
+                                          app_name=app_name,
+                                          automation_id=automation_id),
+        setter=lambda value: _control_set_value(value, name=name, role=role,
+                                                app_name=app_name,
+                                                automation_id=automation_id),
+        attempts=int(attempts))
+
+
+def _wait_until_app_idle(quiet_samples: Any = 3, timeout: Any = 10.0,
+                         interval: Any = 0.1) -> Dict[str, Any]:
+    """Adapter: block until the foreground app's busy cursor settles or timeout."""
+    from je_auto_control.utils.app_idle import wait_until_app_idle
+    return wait_until_app_idle(quiet_samples=int(quiet_samples),
+                               timeout_s=float(timeout),
+                               interval_s=float(interval))
+
+
+def _idle_point(busy_samples: Any, quiet_samples: Any = 3) -> Dict[str, Any]:
+    """Adapter: index where a busy/idle sample series first settles idle (pure)."""
+    from je_auto_control.utils.app_idle import idle_point
+    samples = _coerce_list(busy_samples) if busy_samples else []
+    return {"index": idle_point(samples, quiet_samples=int(quiet_samples))}
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6760,6 +6861,15 @@ class Executor:
             "AC_is_composing": _is_composing,
             "AC_wait_for_composition_commit": _wait_for_composition_commit,
             "AC_decode_conversion_mode": _decode_conversion_mode,
+            "AC_retry_delay": _retry_delay,
+            "AC_plan_retry_delays": _plan_retry_delays,
+            "AC_compare_field_value": _compare_field_value,
+            "AC_verify_field_value": _verify_field_value,
+            "AC_adaptive_timeout": _adaptive_timeout,
+            "AC_timeout_stats": _timeout_stats,
+            "AC_ensure_field_value": _ensure_field_value,
+            "AC_wait_until_app_idle": _wait_until_app_idle,
+            "AC_idle_point": _idle_point,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,
