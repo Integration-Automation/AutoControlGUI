@@ -2761,6 +2761,28 @@ def _plan_retry_delays(attempts: Any, base: Any = 0.1, max_delay: Any = 5.0,
     return {"delays": [float(d) for d in budget.plan(int(attempts))]}
 
 
+def _compare_field_value(expected: Any, actual: Any,
+                         mode: Any = "exact") -> Dict[str, Any]:
+    """Adapter: compare an expected vs actual field value under a mode (pure)."""
+    from je_auto_control.utils.verify_field import compare_field_value
+    return compare_field_value(expected, actual, mode=str(mode))
+
+
+def _verify_field_value(expected: Any, name: Optional[str] = None,
+                        role: Optional[str] = None,
+                        app_name: Optional[str] = None,
+                        automation_id: Optional[str] = None,
+                        mode: Any = "exact") -> Dict[str, Any]:
+    """Adapter: read a native control's value back and compare to expected."""
+    from je_auto_control.utils.verify_field import verify_field_value
+    return verify_field_value(
+        expected,
+        reader=lambda: _control_get_value(name=name, role=role,
+                                          app_name=app_name,
+                                          automation_id=automation_id),
+        mode=str(mode))
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6785,6 +6807,8 @@ class Executor:
             "AC_decode_conversion_mode": _decode_conversion_mode,
             "AC_retry_delay": _retry_delay,
             "AC_plan_retry_delays": _plan_retry_delays,
+            "AC_compare_field_value": _compare_field_value,
+            "AC_verify_field_value": _verify_field_value,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

@@ -682,6 +682,22 @@ def plan_retry_delays(attempts, base=0.1, max_delay=5.0, multiplier=2.0,
     return _plan_retry_delays(attempts, base, max_delay, multiplier, jitter)
 
 
+def compare_field_value(expected, actual, mode="exact"):
+    from je_auto_control.utils.executor.action_executor import (
+        _compare_field_value,
+    )
+    return _compare_field_value(expected, actual, mode)
+
+
+def verify_field_value(expected, name=None, role=None, app_name=None,
+                       automation_id=None, mode="exact"):
+    from je_auto_control.utils.executor.action_executor import (
+        _verify_field_value,
+    )
+    return _verify_field_value(expected, name, role, app_name, automation_id,
+                               mode)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

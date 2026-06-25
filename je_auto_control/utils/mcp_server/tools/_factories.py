@@ -1797,6 +1797,35 @@ def smart_wait_tools() -> List[MCPTool]:
             handler=h.plan_retry_delays,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_compare_field_value",
+            description=("Compare an 'expected' vs 'actual' field value under a "
+                         "match 'mode' (exact / trim / ci / normalized / "
+                         "contains). Pure. Returns {match, mode, expected, "
+                         "actual}."),
+            input_schema=schema({"expected": {"type": "string"},
+                                 "actual": {"type": "string"},
+                                 "mode": {"type": "string"}},
+                                required=["expected", "actual"]),
+            handler=h.compare_field_value,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_verify_field_value",
+            description=("Read a native control's value back (accessibility) "
+                         "and confirm it equals 'expected' under match 'mode'. "
+                         "Identify the control by name / role / app_name / "
+                         "automation_id. Returns {match, expected, actual}."),
+            input_schema=schema({"expected": {"type": "string"},
+                                 "name": {"type": "string"},
+                                 "role": {"type": "string"},
+                                 "app_name": {"type": "string"},
+                                 "automation_id": {"type": "string"},
+                                 "mode": {"type": "string"}},
+                                required=["expected"]),
+            handler=h.verify_field_value,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
