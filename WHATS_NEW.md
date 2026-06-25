@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Ensure a Control Is in the Desired State (Idempotent)
+
+Read-compare-act-verify instead of acting blind — don't double-toggle an already-checked box. Full reference: [`docs/source/Eng/doc/new_features/v212_features_doc.rst`](docs/source/Eng/doc/new_features/v212_features_doc.rst).
+
+- **`ensure_state` / `ensure_toggle`** (`AC_ensure_field_value`): automation that acts *unconditionally* double-toggles a box that was already checked or re-enters an already-correct field, and can't be safely re-run. The robust shape is read-compare-act-verify. `ensure_state` reads via an injectable `reader`, and only if it doesn't equal `desired` applies `setter` and re-reads (up to `attempts`); `ensure_toggle` is the boolean specialization that calls `toggle` only while the state differs. A control already in the desired state is left untouched (`changed=False`) — idempotent and safe to re-run, distinct from `idempotency` (a request-key replay cache) since this converges *device state*. The executor's `AC_ensure_field_value` idempotently sets a native control's value via the accessibility backend. Fourth feature of the ROUND-15 input-fidelity lane. No `PySide6`.
+
 ### Adaptive Timeout from Observed Durations
 
 Stop guessing wait timeouts — learn them from how long the step actually takes. Full reference: [`docs/source/Eng/doc/new_features/v211_features_doc.rst`](docs/source/Eng/doc/new_features/v211_features_doc.rst).

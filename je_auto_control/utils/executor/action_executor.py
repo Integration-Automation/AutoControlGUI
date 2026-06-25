@@ -2805,6 +2805,24 @@ def _timeout_stats(durations: Any, percentile_q: Any = 95.0, factor: Any = 1.5,
                          max_s=float(max_s))
 
 
+def _ensure_field_value(desired: Any, name: Optional[str] = None,
+                        role: Optional[str] = None,
+                        app_name: Optional[str] = None,
+                        automation_id: Optional[str] = None,
+                        attempts: Any = 2) -> Dict[str, Any]:
+    """Adapter: idempotently set a native control's value and verify (read-act)."""
+    from je_auto_control.utils.ensure_state import ensure_state
+    return ensure_state(
+        str(desired),
+        reader=lambda: _control_get_value(name=name, role=role,
+                                          app_name=app_name,
+                                          automation_id=automation_id),
+        setter=lambda value: _control_set_value(value, name=name, role=role,
+                                                app_name=app_name,
+                                                automation_id=automation_id),
+        attempts=int(attempts))
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6833,6 +6851,7 @@ class Executor:
             "AC_verify_field_value": _verify_field_value,
             "AC_adaptive_timeout": _adaptive_timeout,
             "AC_timeout_stats": _timeout_stats,
+            "AC_ensure_field_value": _ensure_field_value,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,
