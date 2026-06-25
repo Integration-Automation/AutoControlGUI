@@ -18,7 +18,8 @@ def test_backoff_delay_exponential_capped():
     # capped
     assert backoff_delay(10, base=0.1, max_delay=1.0,
                          multiplier=2.0) == pytest.approx(1.0)
-    assert backoff_delay(0, base=0.1, max_delay=5.0, multiplier=2.0) == 0.0
+    assert backoff_delay(0, base=0.1, max_delay=5.0,
+                         multiplier=2.0) == pytest.approx(0.0)
 
 
 def test_jittered_delay_none_is_identity():
