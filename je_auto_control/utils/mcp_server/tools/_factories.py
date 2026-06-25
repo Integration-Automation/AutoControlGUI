@@ -1826,6 +1826,37 @@ def smart_wait_tools() -> List[MCPTool]:
             handler=h.verify_field_value,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_adaptive_timeout",
+            description=("Recommend a wait timeout (seconds) from observed step "
+                         "'durations': the 'percentile_q'-th percentile scaled "
+                         "by 'factor', clamped to [min_s, max_s]. Returns "
+                         "{timeout_s}."),
+            input_schema=schema({"durations": {"type": "array",
+                                              "items": {"type": "number"}},
+                                 "percentile_q": {"type": "number"},
+                                 "factor": {"type": "number"},
+                                 "min_s": {"type": "number"},
+                                 "max_s": {"type": "number"}},
+                                required=["durations"]),
+            handler=h.adaptive_timeout,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_timeout_stats",
+            description=("Recommend a timeout and expose the percentiles and "
+                         "clamp decisions. Returns {n, p50, p_high, "
+                         "percentile_q, recommended, floored, capped}."),
+            input_schema=schema({"durations": {"type": "array",
+                                              "items": {"type": "number"}},
+                                 "percentile_q": {"type": "number"},
+                                 "factor": {"type": "number"},
+                                 "min_s": {"type": "number"},
+                                 "max_s": {"type": "number"}},
+                                required=["durations"]),
+            handler=h.timeout_stats,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
