@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Lock the Workstation + Wait for Unlock
+
+Lock the box at the end of a run, and block until a human unlocks it before resuming. Full reference: [`docs/source/Eng/doc/new_features/v207_features_doc.rst`](docs/source/Eng/doc/new_features/v207_features_doc.rst).
+
+- **`lock_session` / `plan_lock_session` / `wait_for_unlock` / `wait_for_lock` / `classify_lock_transitions`** (`AC_lock_session`, `AC_plan_lock_session`, `AC_wait_for_unlock`, `AC_classify_lock_transitions`): `session_guard` could *detect* a locked session and raise; this adds *acting* on it. `lock_session` locks the workstation now (`LockWorkStation` on Windows, `loginctl lock-session` / `CGSession -suspend` elsewhere) through an injectable `driver`; `wait_for_unlock` / `wait_for_lock` poll `session_guard.is_session_locked` (reusing its real Windows `OpenInputDesktop` probe) until the state flips or a timeout, with injectable `clock` / `sleep` / `probe`; `plan_lock_session` is the pure per-OS planner and `classify_lock_transitions` reduces a lock-state sample stream to `{event, locked}` lock/unlock events. `wait_for_unlock` is the blocking companion to `ensure_interactive_session`. Fifth feature of the ROUND-15 cross-app OS lane. No `PySide6`.
+
 ### Read and Control the System Volume
 
 Set a known audio baseline before a run — mute, set 30%, or assert the level. Full reference: [`docs/source/Eng/doc/new_features/v206_features_doc.rst`](docs/source/Eng/doc/new_features/v206_features_doc.rst).

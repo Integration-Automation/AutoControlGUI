@@ -620,6 +620,30 @@ def toggle_mute():
     return _toggle_mute()
 
 
+def lock_session():
+    from je_auto_control.utils.executor.action_executor import _lock_session
+    return _lock_session()
+
+
+def plan_lock_session():
+    from je_auto_control.utils.executor.action_executor import (
+        _plan_lock_session,
+    )
+    return _plan_lock_session()
+
+
+def wait_for_unlock(timeout=30.0, interval=0.5):
+    from je_auto_control.utils.executor.action_executor import _wait_for_unlock
+    return _wait_for_unlock(timeout, interval)
+
+
+def classify_lock_transitions(states):
+    from je_auto_control.utils.executor.action_executor import (
+        _classify_lock_transitions,
+    )
+    return _classify_lock_transitions(states)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

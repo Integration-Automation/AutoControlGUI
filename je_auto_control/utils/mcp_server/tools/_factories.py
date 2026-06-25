@@ -2211,6 +2211,44 @@ def process_and_shell_tools() -> List[MCPTool]:
             handler=h.toggle_mute,
             annotations=SIDE_EFFECT_ONLY,
         ),
+        MCPTool(
+            name="ac_lock_session",
+            description=("Lock the workstation now (LockWorkStation / loginctl "
+                         "lock-session / CGSession). Returns {locked}. "
+                         "Interrupts the interactive session."),
+            input_schema=schema({}),
+            handler=h.lock_session,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_plan_lock_session",
+            description=("Describe how the workstation would be locked on this "
+                         "OS without locking (pure): {backend, argv, "
+                         "available}."),
+            input_schema=schema({}),
+            handler=h.plan_lock_session,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_wait_for_unlock",
+            description=("Block until the session is unlocked (or 'timeout' "
+                         "seconds), polling every 'interval'. Returns "
+                         "{unlocked}."),
+            input_schema=schema({"timeout": {"type": "number"},
+                                 "interval": {"type": "number"}}),
+            handler=h.wait_for_unlock,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_classify_lock_transitions",
+            description=("Reduce a list of lock-state booleans ('states') to "
+                         "lock / unlock events (pure). Returns {events}."),
+            input_schema=schema({"states": {"type": "array",
+                                            "items": {"type": "boolean"}}},
+                                required=["states"]),
+            handler=h.classify_lock_transitions,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

@@ -4346,6 +4346,34 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Flip the master mute flag.",
     ))
     specs.append(CommandSpec(
+        "AC_lock_session", "Shell", "Lock Workstation",
+        fields=(),
+        description="Lock the workstation now (interrupts the session).",
+    ))
+    specs.append(CommandSpec(
+        "AC_plan_lock_session", "Shell", "Plan Lock Workstation",
+        fields=(),
+        description="Describe how the workstation would be locked (pure).",
+    ))
+    specs.append(CommandSpec(
+        "AC_wait_for_unlock", "Shell", "Wait for Unlock",
+        fields=(
+            FieldSpec("timeout", FieldType.FLOAT, optional=True, default=30.0,
+                      placeholder="timeout seconds"),
+            FieldSpec("interval", FieldType.FLOAT, optional=True, default=0.5,
+                      placeholder="poll interval seconds"),
+        ),
+        description="Block until the session is unlocked or timeout.",
+    ))
+    specs.append(CommandSpec(
+        "AC_classify_lock_transitions", "Shell", "Classify Lock Transitions",
+        fields=(
+            FieldSpec("states", FieldType.STRING,
+                      placeholder="JSON list of booleans"),
+        ),
+        description="Reduce lock-state samples to lock / unlock events.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,

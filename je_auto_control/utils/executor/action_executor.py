@@ -2683,6 +2683,34 @@ def _toggle_mute() -> Dict[str, Any]:
     return {"muted": bool(toggle_mute())}
 
 
+def _lock_session() -> Dict[str, Any]:
+    """Adapter: lock the workstation now."""
+    from je_auto_control.utils.lock_session import lock_session
+    return {"locked": bool(lock_session())}
+
+
+def _plan_lock_session() -> Dict[str, Any]:
+    """Adapter: describe how the workstation would be locked (pure)."""
+    from je_auto_control.utils.lock_session import plan_lock_session
+    return plan_lock_session()
+
+
+def _wait_for_unlock(timeout: Any = 30.0, interval: Any = 0.5
+                     ) -> Dict[str, Any]:
+    """Adapter: block until the session is unlocked or timeout."""
+    from je_auto_control.utils.lock_session import wait_for_unlock
+    unlocked = wait_for_unlock(timeout_s=float(timeout),
+                               interval_s=float(interval))
+    return {"unlocked": bool(unlocked)}
+
+
+def _classify_lock_transitions(states: Any) -> Dict[str, Any]:
+    """Adapter: reduce lock-state samples to lock / unlock events (pure)."""
+    from je_auto_control.utils.lock_session import classify_lock_transitions
+    samples = [bool(s) for s in _coerce_list(states)] if states else []
+    return {"events": classify_lock_transitions(samples)}
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6697,6 +6725,10 @@ class Executor:
             "AC_change_volume": _change_volume,
             "AC_set_mute": _set_mute,
             "AC_toggle_mute": _toggle_mute,
+            "AC_lock_session": _lock_session,
+            "AC_plan_lock_session": _plan_lock_session,
+            "AC_wait_for_unlock": _wait_for_unlock,
+            "AC_classify_lock_transitions": _classify_lock_transitions,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

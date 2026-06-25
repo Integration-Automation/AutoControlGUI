@@ -105,6 +105,11 @@ from je_auto_control.utils.system_volume import (
     change_volume, get_volume, is_muted, mute, set_mute, set_volume,
     toggle_mute, unmute,
 )
+# Lock the workstation, wait for unlock, classify lock transitions
+from je_auto_control.utils.lock_session import (
+    classify_lock_transitions, lock_session, plan_lock_session,
+    wait_for_lock, wait_for_unlock,
+)
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1720,6 +1725,8 @@ __all__ = [
     "normalize_ext", "file_association",
     "get_volume", "set_volume", "change_volume",
     "is_muted", "set_mute", "mute", "unmute", "toggle_mute",
+    "lock_session", "plan_lock_session", "wait_for_unlock",
+    "wait_for_lock", "classify_lock_transitions",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",
