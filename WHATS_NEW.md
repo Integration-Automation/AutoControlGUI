@@ -1,5 +1,13 @@
 # What's New — AutoControl
 
+## What's new (2026-06-26)
+
+### Read and Control the System Volume
+
+Set a known audio baseline before a run — mute, set 30%, or assert the level. Full reference: [`docs/source/Eng/doc/new_features/v206_features_doc.rst`](docs/source/Eng/doc/new_features/v206_features_doc.rst).
+
+- **`get_volume` / `set_volume` / `change_volume` / `is_muted` / `set_mute` / `mute` / `unmute` / `toggle_mute`** (`AC_get_volume`, `AC_set_volume`, `AC_change_volume`, `AC_set_mute`, `AC_toggle_mute`): the framework only had the blind media-key steps (`volume up` / `down` nudge by an unknown amount with no read-back). This adds absolute, read-backable control of the default output device — read or set the master level as an integer percent `0..100`, and read / set / toggle the mute flag. All logic (clamping, percent↔scalar conversion, toggle) is pure and runs through an injectable `VolumeDriver` seam, so it is fully unit-tested without an audio device; the default driver uses the Windows Core Audio `IAudioEndpointVolume` interface through the optional `pycaw` dependency (`pip install je_auto_control[audio]`), degrading with a clear error when absent. Fourth feature of the ROUND-15 cross-app OS lane. No `PySide6`.
+
 ## What's new (2026-06-25)
 
 ### Resolve the App Registered for a File Type

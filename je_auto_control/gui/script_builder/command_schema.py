@@ -4313,6 +4313,39 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Release a previously-started keep-awake.",
     ))
     specs.append(CommandSpec(
+        "AC_get_volume", "Shell", "Get System Volume",
+        fields=(),
+        description="Read the master volume percent and mute state.",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_volume", "Shell", "Set System Volume",
+        fields=(
+            FieldSpec("level", FieldType.INT, default=50,
+                      placeholder="volume percent 0-100"),
+        ),
+        description="Set the master volume to level percent (clamped 0-100).",
+    ))
+    specs.append(CommandSpec(
+        "AC_change_volume", "Shell", "Change System Volume",
+        fields=(
+            FieldSpec("delta", FieldType.INT, default=10,
+                      placeholder="percent delta (may be negative)"),
+        ),
+        description="Add delta percent to the master volume (clamped 0-100).",
+    ))
+    specs.append(CommandSpec(
+        "AC_set_mute", "Shell", "Set Mute",
+        fields=(
+            FieldSpec("muted", FieldType.BOOL, optional=True, default=True),
+        ),
+        description="Mute or unmute the master output.",
+    ))
+    specs.append(CommandSpec(
+        "AC_toggle_mute", "Shell", "Toggle Mute",
+        fields=(),
+        description="Flip the master mute flag.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,

@@ -100,6 +100,11 @@ from je_auto_control.utils.idle_keepawake import (
 )
 # Resolve which application is registered to open a given file type
 from je_auto_control.utils.file_assoc import file_association, normalize_ext
+# Read and control the system master volume and mute state
+from je_auto_control.utils.system_volume import (
+    change_volume, get_volume, is_muted, mute, set_mute, set_volume,
+    toggle_mute, unmute,
+)
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1713,6 +1718,8 @@ __all__ = [
     "idle_seconds", "is_idle", "plan_keep_awake",
     "keep_awake", "keep_awake_on", "allow_sleep",
     "normalize_ext", "file_association",
+    "get_volume", "set_volume", "change_volume",
+    "is_muted", "set_mute", "mute", "unmute", "toggle_mute",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",
