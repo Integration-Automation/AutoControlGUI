@@ -644,6 +644,30 @@ def classify_lock_transitions(states):
     return _classify_lock_transitions(states)
 
 
+def ime_state():
+    from je_auto_control.utils.executor.action_executor import _ime_state
+    return _ime_state()
+
+
+def is_composing():
+    from je_auto_control.utils.executor.action_executor import _is_composing
+    return _is_composing()
+
+
+def wait_for_composition_commit(timeout=5.0, interval=0.1):
+    from je_auto_control.utils.executor.action_executor import (
+        _wait_for_composition_commit,
+    )
+    return _wait_for_composition_commit(timeout, interval)
+
+
+def decode_conversion_mode(flags):
+    from je_auto_control.utils.executor.action_executor import (
+        _decode_conversion_mode,
+    )
+    return _decode_conversion_mode(flags)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)
