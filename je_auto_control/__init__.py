@@ -91,6 +91,15 @@ from je_auto_control.utils.selection_view import (
 )
 # Reactive UIA event waits (focus-changed)
 from je_auto_control.utils.ax_events import wait_for_focus_change
+# Open a file with its default app / a URL in the default browser
+from je_auto_control.utils.shell_open import open_path, plan_open
+# Detect user-idle time and keep the machine awake during unattended runs
+from je_auto_control.utils.idle_keepawake import (
+    allow_sleep, idle_seconds, is_idle, keep_awake, keep_awake_on,
+    plan_keep_awake,
+)
+# Resolve which application is registered to open a given file type
+from je_auto_control.utils.file_assoc import file_association, normalize_ext
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1700,6 +1709,10 @@ __all__ = [
     "legacy_info", "legacy_default_action",
     "get_selection", "list_views", "set_view",
     "wait_for_focus_change",
+    "plan_open", "open_path",
+    "idle_seconds", "is_idle", "plan_keep_awake",
+    "keep_awake", "keep_awake_on", "allow_sleep",
+    "normalize_ext", "file_association",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",

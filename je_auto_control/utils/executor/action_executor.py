@@ -2609,6 +2609,61 @@ def _wait_for_focus_change(timeout: Any = 5.0) -> Dict[str, Any]:
     return {"changed": element is not None, "element": element}
 
 
+def _plan_open(target: str, verb: str = "open") -> Dict[str, Any]:
+    """Adapter: classify how a file path / URL would be opened (pure)."""
+    from je_auto_control.utils.shell_open import plan_open
+    return plan_open(str(target), verb=str(verb))
+
+
+def _open_path(target: str, verb: str = "open") -> Dict[str, Any]:
+    """Adapter: open a file with its default app / a URL in the browser."""
+    from je_auto_control.utils.shell_open import open_path
+    return {"opened": bool(open_path(str(target), verb=str(verb)))}
+
+
+def _idle_seconds() -> Dict[str, Any]:
+    """Adapter: seconds since the last user input."""
+    from je_auto_control.utils.idle_keepawake import idle_seconds
+    return {"idle_seconds": float(idle_seconds())}
+
+
+def _is_idle(threshold: Any) -> Dict[str, Any]:
+    """Adapter: whether the user has been idle for >= ``threshold`` seconds."""
+    from je_auto_control.utils.idle_keepawake import idle_seconds, is_idle
+    seconds = float(threshold)
+    return {"idle": bool(is_idle(seconds)), "idle_seconds": idle_seconds()}
+
+
+def _plan_keep_awake(display: Any = True, system: Any = True) -> Dict[str, Any]:
+    """Adapter: describe a keep-awake request (pure, no OS call)."""
+    from je_auto_control.utils.idle_keepawake import plan_keep_awake
+    return plan_keep_awake(display=bool(display), system=bool(system))
+
+
+def _keep_awake_on(display: Any = True, system: Any = True) -> Dict[str, Any]:
+    """Adapter: keep the machine awake until ``AC_allow_sleep``."""
+    from je_auto_control.utils.idle_keepawake import keep_awake_on
+    return keep_awake_on(display=bool(display), system=bool(system))
+
+
+def _allow_sleep() -> Dict[str, Any]:
+    """Adapter: release a previously-started keep-awake."""
+    from je_auto_control.utils.idle_keepawake import allow_sleep
+    return {"released": bool(allow_sleep())}
+
+
+def _normalize_ext(target: str) -> Dict[str, Any]:
+    """Adapter: the lowercased extension of a path / bare ext (pure)."""
+    from je_auto_control.utils.file_assoc import normalize_ext
+    return {"ext": normalize_ext(str(target))}
+
+
+def _file_association(target: str) -> Dict[str, Any]:
+    """Adapter: the app registered to open ``target``'s file type."""
+    from je_auto_control.utils.file_assoc import file_association
+    return file_association(str(target))
+
+
 def _get_control_text(name: Optional[str] = None, role: Optional[str] = None,
                       app_name: Optional[str] = None,
                       automation_id: Optional[str] = None) -> Dict[str, Any]:
@@ -6599,6 +6654,15 @@ class Executor:
             "AC_list_views": _list_views,
             "AC_set_view": _set_view,
             "AC_wait_for_focus_change": _wait_for_focus_change,
+            "AC_plan_open": _plan_open,
+            "AC_open_path": _open_path,
+            "AC_idle_seconds": _idle_seconds,
+            "AC_is_idle": _is_idle,
+            "AC_plan_keep_awake": _plan_keep_awake,
+            "AC_keep_awake_on": _keep_awake_on,
+            "AC_allow_sleep": _allow_sleep,
+            "AC_normalize_ext": _normalize_ext,
+            "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,
             "AC_find_control_text": _find_control_text,
             "AC_select_control_text": _select_control_text,

@@ -4251,6 +4251,74 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         fields=(FieldSpec("shell_command", FieldType.STRING),),
     ))
     specs.append(CommandSpec(
+        "AC_open_path", "Shell", "Open File / URL (default app)",
+        fields=(
+            FieldSpec("target", FieldType.STRING,
+                      placeholder="report.pdf  or  https://example.com"),
+            FieldSpec("verb", FieldType.STRING, optional=True, default="open",
+                      placeholder="open / print / edit"),
+        ),
+        description="Open a file with its default app, or a URL in the browser.",
+    ))
+    specs.append(CommandSpec(
+        "AC_plan_open", "Shell", "Plan Open (classify)",
+        fields=(
+            FieldSpec("target", FieldType.STRING),
+            FieldSpec("verb", FieldType.STRING, optional=True, default="open"),
+        ),
+        description="Classify how a file/URL would be opened (pure, no launch).",
+    ))
+    specs.append(CommandSpec(
+        "AC_idle_seconds", "Shell", "Idle Seconds",
+        fields=(),
+        description="Seconds since the last user keyboard / mouse input.",
+    ))
+    specs.append(CommandSpec(
+        "AC_is_idle", "Shell", "Is User Idle",
+        fields=(
+            FieldSpec("threshold", FieldType.FLOAT, default=300.0,
+                      placeholder="idle seconds threshold"),
+        ),
+        description="True if the user has been idle for >= threshold seconds.",
+    ))
+    specs.append(CommandSpec(
+        "AC_plan_keep_awake", "Shell", "Plan Keep Awake",
+        fields=(
+            FieldSpec("display", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("system", FieldType.BOOL, optional=True, default=True),
+        ),
+        description="Describe a keep-awake request (pure, no OS call).",
+    ))
+    specs.append(CommandSpec(
+        "AC_keep_awake_on", "Shell", "Keep Machine Awake",
+        fields=(
+            FieldSpec("display", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("system", FieldType.BOOL, optional=True, default=True),
+        ),
+        description="Keep the machine awake until Allow Sleep is run.",
+    ))
+    specs.append(CommandSpec(
+        "AC_allow_sleep", "Shell", "Allow Machine to Sleep",
+        fields=(),
+        description="Release a previously-started keep-awake.",
+    ))
+    specs.append(CommandSpec(
+        "AC_normalize_ext", "Shell", "Normalize Extension",
+        fields=(
+            FieldSpec("target", FieldType.STRING,
+                      placeholder="report.pdf  or  .pdf  or  pdf"),
+        ),
+        description="Lowercased file extension (with dot) of a path / ext.",
+    ))
+    specs.append(CommandSpec(
+        "AC_file_association", "Shell", "File Association (default app)",
+        fields=(
+            FieldSpec("target", FieldType.STRING,
+                      placeholder="report.pdf  or  .pdf"),
+        ),
+        description="Which app is registered to open a file type (Windows).",
+    ))
+    specs.append(CommandSpec(
         "AC_take_golden", "Report", "Capture Golden Image",
         fields=(FieldSpec("path", FieldType.FILE_PATH),),
         description="Capture and save a baseline image for visual regression.",
