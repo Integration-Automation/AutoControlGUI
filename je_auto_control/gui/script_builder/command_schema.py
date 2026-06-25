@@ -4485,6 +4485,22 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Timeout recommendation plus percentiles and clamp flags.",
     ))
     specs.append(CommandSpec(
+        "AC_ensure_field_value", "Flow", "Ensure Field Value",
+        fields=(
+            FieldSpec("desired", FieldType.STRING, placeholder="desired value"),
+            FieldSpec("name", FieldType.STRING, optional=True,
+                      placeholder="control name"),
+            FieldSpec("role", FieldType.STRING, optional=True,
+                      placeholder="control role"),
+            FieldSpec("app_name", FieldType.STRING, optional=True,
+                      placeholder="app name"),
+            FieldSpec("automation_id", FieldType.STRING, optional=True,
+                      placeholder="automation id"),
+            FieldSpec("attempts", FieldType.INT, optional=True, default=2),
+        ),
+        description="Idempotently set a control's value (no-op if already set).",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,

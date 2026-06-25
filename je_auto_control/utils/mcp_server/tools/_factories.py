@@ -1857,6 +1857,23 @@ def smart_wait_tools() -> List[MCPTool]:
             handler=h.timeout_stats,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_ensure_field_value",
+            description=("Idempotently set a native control's value to "
+                         "'desired' and verify: reads first and does nothing if "
+                         "it already matches. Identify the control by name / "
+                         "role / app_name / automation_id. Returns {ok, "
+                         "changed, value, attempts}."),
+            input_schema=schema({"desired": {"type": "string"},
+                                 "name": {"type": "string"},
+                                 "role": {"type": "string"},
+                                 "app_name": {"type": "string"},
+                                 "automation_id": {"type": "string"},
+                                 "attempts": {"type": "integer"}},
+                                required=["desired"]),
+            handler=h.ensure_field_value,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
     ]
 
 

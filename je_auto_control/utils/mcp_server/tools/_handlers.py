@@ -712,6 +712,15 @@ def timeout_stats(durations, percentile_q=95.0, factor=1.5, min_s=1.0,
     return _timeout_stats(durations, percentile_q, factor, min_s, max_s)
 
 
+def ensure_field_value(desired, name=None, role=None, app_name=None,
+                       automation_id=None, attempts=2):
+    from je_auto_control.utils.executor.action_executor import (
+        _ensure_field_value,
+    )
+    return _ensure_field_value(desired, name, role, app_name, automation_id,
+                               attempts)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)
