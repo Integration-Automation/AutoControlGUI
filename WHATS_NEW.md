@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Resolve the App Registered for a File Type
+
+Find out *which* app opens a file type — assert "PDFs open in Acrobat, not the browser". Full reference: [`docs/source/Eng/doc/new_features/v205_features_doc.rst`](docs/source/Eng/doc/new_features/v205_features_doc.rst).
+
+- **`normalize_ext` / `file_association`** (`AC_normalize_ext`, `AC_file_association`): `open_path` (`shell_open`) opens a file with whatever app is registered for it; this answers the inverse, read-only question — *which* app is that? Given `report.pdf` (or a bare `.pdf` / `pdf`) `file_association` returns the registered executable, friendly app name, open command line and MIME content type via the Windows `AssocQueryStringW` shell API. `normalize_ext` is the pure path/`.ext`/bare-`ext` → `.ext` helper. The assembly logic is unit-testable without Windows through an injectable `resolver` seam (the real shell API by default). The natural companion to `open_path`: one tells you what would open a file, the other opens it. Third feature of the ROUND-15 cross-app OS lane. No `PySide6`.
+
 ## What's new (2026-06-25) — Idle Detection + Keep the Machine Awake
 
 Run only when the user has stepped away, and stop an overnight run from sleeping. Full reference: [`docs/source/Eng/doc/new_features/v204_features_doc.rst`](docs/source/Eng/doc/new_features/v204_features_doc.rst).

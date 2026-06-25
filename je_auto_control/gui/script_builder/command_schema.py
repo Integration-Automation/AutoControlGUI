@@ -4303,6 +4303,22 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Release a previously-started keep-awake.",
     ))
     specs.append(CommandSpec(
+        "AC_normalize_ext", "Shell", "Normalize Extension",
+        fields=(
+            FieldSpec("target", FieldType.STRING,
+                      placeholder="report.pdf  or  .pdf  or  pdf"),
+        ),
+        description="Lowercased file extension (with dot) of a path / ext.",
+    ))
+    specs.append(CommandSpec(
+        "AC_file_association", "Shell", "File Association (default app)",
+        fields=(
+            FieldSpec("target", FieldType.STRING,
+                      placeholder="report.pdf  or  .pdf"),
+        ),
+        description="Which app is registered to open a file type (Windows).",
+    ))
+    specs.append(CommandSpec(
         "AC_take_golden", "Report", "Capture Golden Image",
         fields=(FieldSpec("path", FieldType.FILE_PATH),),
         description="Capture and save a baseline image for visual regression.",
