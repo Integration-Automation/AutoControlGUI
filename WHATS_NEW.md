@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Colour-Vision-Deficiency Simulation + Collision Check
+
+Check whether your red/green status colours are distinguishable to colour-blind users. Full reference: [`docs/source/Eng/doc/new_features/v214_features_doc.rst`](docs/source/Eng/doc/new_features/v214_features_doc.rst).
+
+- **`simulate_cvd` / `colors_collide` / `color_distance`** (`AC_simulate_cvd`, `AC_colors_collide`): status UIs lean on colour (green "ok" vs red "error"), but for the ~8% of men with a colour-vision deficiency those can be indistinguishable — and nothing in the framework could check it. `simulate_cvd` maps an RGB colour through a dichromat simulation matrix (protanopia/deuteranopia/tritanopia) at a given `severity`; `colors_collide` simulates two colours and reports whether they become confusable (a perceptual `redmean` distance below `threshold`); `color_distance` is the underlying metric. Pure standard library — no numpy/OpenCV, operating on plain RGB tuples, fully testable. First feature of the ROUND-15 perception lane. No `PySide6`.
+
 ### Wait Until the App Is Idle
 
 Hold off the next click until the busy/wait cursor settles — don't act mid-churn. Full reference: [`docs/source/Eng/doc/new_features/v213_features_doc.rst`](docs/source/Eng/doc/new_features/v213_features_doc.rst).

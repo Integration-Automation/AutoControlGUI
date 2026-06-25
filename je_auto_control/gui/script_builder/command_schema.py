@@ -4523,6 +4523,31 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Index where a busy/idle series first settles idle.",
     ))
     specs.append(CommandSpec(
+        "AC_simulate_cvd", "Image", "Simulate Colour-Vision Deficiency",
+        fields=(
+            FieldSpec("rgb", FieldType.STRING, placeholder="[r, g, b]"),
+            FieldSpec("kind", FieldType.STRING, optional=True,
+                      default="deuteranopia",
+                      placeholder="protanopia / deuteranopia / tritanopia"),
+            FieldSpec("severity", FieldType.FLOAT, optional=True, default=1.0),
+        ),
+        description="Map an RGB colour through a CVD simulation matrix.",
+    ))
+    specs.append(CommandSpec(
+        "AC_colors_collide", "Image", "Colours Collide Under CVD",
+        fields=(
+            FieldSpec("left", FieldType.STRING, placeholder="[r, g, b]"),
+            FieldSpec("right", FieldType.STRING, placeholder="[r, g, b]"),
+            FieldSpec("kind", FieldType.STRING, optional=True,
+                      default="deuteranopia",
+                      placeholder="protanopia / deuteranopia / tritanopia"),
+            FieldSpec("severity", FieldType.FLOAT, optional=True, default=1.0),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True,
+                      default=40.0),
+        ),
+        description="Whether two colours become confusable under a CVD type.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,
