@@ -2823,6 +2823,22 @@ def _ensure_field_value(desired: Any, name: Optional[str] = None,
         attempts=int(attempts))
 
 
+def _wait_until_app_idle(quiet_samples: Any = 3, timeout: Any = 10.0,
+                         interval: Any = 0.1) -> Dict[str, Any]:
+    """Adapter: block until the foreground app's busy cursor settles or timeout."""
+    from je_auto_control.utils.app_idle import wait_until_app_idle
+    return wait_until_app_idle(quiet_samples=int(quiet_samples),
+                               timeout_s=float(timeout),
+                               interval_s=float(interval))
+
+
+def _idle_point(busy_samples: Any, quiet_samples: Any = 3) -> Dict[str, Any]:
+    """Adapter: index where a busy/idle sample series first settles idle (pure)."""
+    from je_auto_control.utils.app_idle import idle_point
+    samples = _coerce_list(busy_samples) if busy_samples else []
+    return {"index": idle_point(samples, quiet_samples=int(quiet_samples))}
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6852,6 +6868,8 @@ class Executor:
             "AC_adaptive_timeout": _adaptive_timeout,
             "AC_timeout_stats": _timeout_stats,
             "AC_ensure_field_value": _ensure_field_value,
+            "AC_wait_until_app_idle": _wait_until_app_idle,
+            "AC_idle_point": _idle_point,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

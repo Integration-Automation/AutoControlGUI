@@ -721,6 +721,18 @@ def ensure_field_value(desired, name=None, role=None, app_name=None,
                                attempts)
 
 
+def wait_until_app_idle(quiet_samples=3, timeout=10.0, interval=0.1):
+    from je_auto_control.utils.executor.action_executor import (
+        _wait_until_app_idle,
+    )
+    return _wait_until_app_idle(quiet_samples, timeout, interval)
+
+
+def idle_point(busy_samples, quiet_samples=3):
+    from je_auto_control.utils.executor.action_executor import _idle_point
+    return _idle_point(busy_samples, quiet_samples)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)
