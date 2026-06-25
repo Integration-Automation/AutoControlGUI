@@ -43,7 +43,7 @@ def test_to_dict_payload_shape():
 
 def test_cli_exits_zero_when_all_green():
     """The CLI module should respect the runner's overall ``ok`` flag."""
-    completed = subprocess.run(  # noqa: S603  # local CLI test
+    completed = subprocess.run(  # noqa: S603  # nosemgrep  # local CLI test
         [sys.executable, "-m", "je_auto_control.utils.diagnostics"],
         capture_output=True, text=True, timeout=30, check=False,
     )

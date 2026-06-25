@@ -10,7 +10,7 @@ from je_auto_control.utils.image_dedup import (
 
 def test_hamming_distance_and_similar():
     assert hamming_distance("00", "00") == 0
-    assert hamming_distance("0f", "00") == 4      # 0x0f = 1111
+    assert hamming_distance("0f", "00") == 4      # 0x0f -> 1111 bits
     assert images_similar("ff", "fe", max_distance=1) is True
     assert images_similar("ff", "f0", max_distance=1) is False
 
@@ -34,11 +34,11 @@ def test_dedupe_empty():
 
 
 def test_real_pillow_hashing(tmp_path):
-    Image = pytest.importorskip("PIL.Image")
+    pil_image = pytest.importorskip("PIL.Image")
     black = tmp_path / "black.png"
     white = tmp_path / "white.png"
-    Image.new("RGB", (64, 64), (0, 0, 0)).save(black)
-    Image.new("RGB", (64, 64), (255, 255, 255)).save(white)
+    pil_image.new("RGB", (64, 64), (0, 0, 0)).save(black)
+    pil_image.new("RGB", (64, 64), (255, 255, 255)).save(white)
 
     h_black = average_hash(str(black))
     assert isinstance(h_black, str) and h_black
@@ -54,11 +54,11 @@ def test_real_pillow_hashing(tmp_path):
 # --- wiring ---------------------------------------------------------------
 
 def test_executor_round_trip(tmp_path):
-    Image = pytest.importorskip("PIL.Image")
+    pil_image = pytest.importorskip("PIL.Image")
     a = tmp_path / "a.png"
     b = tmp_path / "b.png"
-    Image.new("RGB", (32, 32), (10, 10, 10)).save(a)
-    Image.new("RGB", (32, 32), (10, 10, 10)).save(b)   # identical
+    pil_image.new("RGB", (32, 32), (10, 10, 10)).save(a)
+    pil_image.new("RGB", (32, 32), (10, 10, 10)).save(b)   # identical
     rec = ac.execute_action([
         ["AC_dedupe_images", {"paths": [str(a), str(b)], "max_distance": 2}],
     ])

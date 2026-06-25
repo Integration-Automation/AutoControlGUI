@@ -26,8 +26,10 @@ _CHANNEL_INDEX = {"h": 0, "s": 1, "v": 2}
 
 def _hsv(source, region, is_haystack: bool):
     import cv2
-    rgb = (_to_rgb(source) if source is not None
-           else _grab_rgb(region)) if is_haystack else _to_rgb(source)
+    if is_haystack:
+        rgb = _to_rgb(source) if source is not None else _grab_rgb(region)
+    else:
+        rgb = _to_rgb(source)
     return cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
 
 

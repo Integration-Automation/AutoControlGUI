@@ -86,13 +86,16 @@ class CredentialBroker:
         """List non-expired leases as ``{token, name, ttl_remaining}`` (no values)."""
         now = self._clock()
         result: List[Dict[str, object]] = []
-        for token, lease in list(self._leases.items()):
+        expired: List[str] = []
+        for token, lease in self._leases.items():
             remaining = float(lease["expires_at"]) - now
             if remaining > 0:
                 result.append({"token": token, "name": lease["name"],
                                "ttl_remaining": remaining})
             else:
-                self._leases.pop(token, None)
+                expired.append(token)
+        for token in expired:
+            self._leases.pop(token, None)
         return result
 
 

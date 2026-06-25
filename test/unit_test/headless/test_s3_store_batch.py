@@ -23,12 +23,12 @@ class _FakeS3:
     def download_file(self, bucket, key, filename):
         Path(filename).write_bytes(self.objects[(bucket, key)])
 
-    def list_objects_v2(self, Bucket, Prefix=""):
+    def list_objects_v2(self, Bucket, Prefix=""):  # NOSONAR boto3 API names
         keys = [k for (b, k) in self.objects if b == Bucket
                 and k.startswith(Prefix)]
         return {"Contents": [{"Key": k} for k in sorted(keys)]}
 
-    def delete_object(self, Bucket, Key):
+    def delete_object(self, Bucket, Key):  # NOSONAR boto3 API names
         self.objects.pop((Bucket, Key), None)
 
 

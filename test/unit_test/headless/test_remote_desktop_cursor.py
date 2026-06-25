@@ -137,7 +137,8 @@ def test_frame_display_paints_cursor_overlay():
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     pytest.importorskip("PySide6.QtWidgets")
     from PySide6.QtWidgets import QApplication
-    QApplication.instance() or QApplication([])
+    if QApplication.instance() is None:
+        QApplication([])
     from je_auto_control.gui.remote_desktop.frame_display import _FrameDisplay
 
     display = _FrameDisplay()

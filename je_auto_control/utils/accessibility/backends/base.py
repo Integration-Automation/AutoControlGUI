@@ -29,32 +29,32 @@ class AccessibilityBackend:
                   app_name: Optional[str] = None,
                   automation_id: Optional[str] = None) -> Optional[str]:
         """Return the matched control's value text, or None if not found."""
-        self._unsupported("get_value")
+        self._unsupported("get_value", name, role, app_name, automation_id)
 
     def set_value(self, value: str, name: Optional[str] = None,
                   role: Optional[str] = None, app_name: Optional[str] = None,
                   automation_id: Optional[str] = None) -> bool:
         """Set the matched control's value; return True on success."""
-        self._unsupported("set_value")
+        self._unsupported("set_value", value, name, role, app_name, automation_id)
 
     def invoke(self, name: Optional[str] = None, role: Optional[str] = None,
                app_name: Optional[str] = None,
                automation_id: Optional[str] = None) -> bool:
         """Invoke the matched control (e.g. press a button)."""
-        self._unsupported("invoke")
+        self._unsupported("invoke", name, role, app_name, automation_id)
 
     def toggle(self, name: Optional[str] = None, role: Optional[str] = None,
                app_name: Optional[str] = None,
                automation_id: Optional[str] = None) -> bool:
         """Toggle the matched control (e.g. a checkbox)."""
-        self._unsupported("toggle")
+        self._unsupported("toggle", name, role, app_name, automation_id)
 
     def read_table(self, name: Optional[str] = None, role: Optional[str] = None,
                    app_name: Optional[str] = None,
                    automation_id: Optional[str] = None,
                    ) -> List[List[str]]:
         """Read a grid/table/list control as rows of cell strings."""
-        self._unsupported("read_table")
+        self._unsupported("read_table", name, role, app_name, automation_id)
 
     # --- extended control patterns (Expand / Selection / Range / Scroll) ----
 
@@ -62,43 +62,43 @@ class AccessibilityBackend:
                app_name: Optional[str] = None,
                automation_id: Optional[str] = None) -> bool:
         """Expand the matched control (ExpandCollapsePattern); True on success."""
-        self._unsupported("expand")
+        self._unsupported("expand", name, role, app_name, automation_id)
 
     def collapse(self, name: Optional[str] = None, role: Optional[str] = None,
                  app_name: Optional[str] = None,
                  automation_id: Optional[str] = None) -> bool:
         """Collapse the matched control (ExpandCollapsePattern); True on success."""
-        self._unsupported("collapse")
+        self._unsupported("collapse", name, role, app_name, automation_id)
 
     def expand_state(self, name: Optional[str] = None, role: Optional[str] = None,
                      app_name: Optional[str] = None,
                      automation_id: Optional[str] = None) -> Optional[str]:
         """Return ``expanded`` / ``collapsed`` / ``partial`` / ``leaf``, or None."""
-        self._unsupported("expand_state")
+        self._unsupported("expand_state", name, role, app_name, automation_id)
 
     def select_item(self, name: Optional[str] = None, role: Optional[str] = None,
                     app_name: Optional[str] = None,
                     automation_id: Optional[str] = None) -> bool:
         """Select the matched item (SelectionItemPattern); True on success."""
-        self._unsupported("select_item")
+        self._unsupported("select_item", name, role, app_name, automation_id)
 
     def get_range(self, name: Optional[str] = None, role: Optional[str] = None,
                   app_name: Optional[str] = None,
                   automation_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Return ``{value, minimum, maximum}`` (RangeValuePattern), or None."""
-        self._unsupported("get_range")
+        self._unsupported("get_range", name, role, app_name, automation_id)
 
     def set_range_value(self, value: float, name: Optional[str] = None,
                         role: Optional[str] = None, app_name: Optional[str] = None,
                         automation_id: Optional[str] = None) -> bool:
         """Set a slider / progress value (RangeValuePattern); True on success."""
-        self._unsupported("set_range_value")
+        self._unsupported("set_range_value", value, name, role, app_name, automation_id)
 
     def scroll_into_view(self, name: Optional[str] = None,
                          role: Optional[str] = None, app_name: Optional[str] = None,
                          automation_id: Optional[str] = None) -> bool:
         """Scroll the matched control into view (ScrollItemPattern); True on success."""
-        self._unsupported("scroll_into_view")
+        self._unsupported("scroll_into_view", name, role, app_name, automation_id)
 
     # --- text patterns (TextPattern reads) ---------------------------------
 
@@ -109,33 +109,33 @@ class AccessibilityBackend:
 
         Reads multiline / document controls where ValuePattern returns ``""``.
         """
-        self._unsupported("document_text")
+        self._unsupported("document_text", name, role, app_name, automation_id)
 
     def selected_text(self, name: Optional[str] = None, role: Optional[str] = None,
                       app_name: Optional[str] = None,
                       automation_id: Optional[str] = None) -> Optional[str]:
         """Return the control's currently selected text (TextPattern), or None."""
-        self._unsupported("selected_text")
+        self._unsupported("selected_text", name, role, app_name, automation_id)
 
     def visible_text(self, name: Optional[str] = None, role: Optional[str] = None,
                      app_name: Optional[str] = None,
                      automation_id: Optional[str] = None) -> Optional[str]:
         """Return only the on-screen text of the control (TextPattern), or None."""
-        self._unsupported("visible_text")
+        self._unsupported("visible_text", name, role, app_name, automation_id)
 
     def find_text(self, text: str = "", ignore_case: bool = True,
                   name: Optional[str] = None, role: Optional[str] = None,
                   app_name: Optional[str] = None,
                   automation_id: Optional[str] = None) -> bool:
         """Return whether ``text`` occurs in the control (TextPattern.FindText)."""
-        self._unsupported("find_text")
+        self._unsupported("find_text", text, ignore_case, name, role, app_name, automation_id)
 
     def select_text(self, text: str = "", ignore_case: bool = True,
                     name: Optional[str] = None, role: Optional[str] = None,
                     app_name: Optional[str] = None,
                     automation_id: Optional[str] = None) -> bool:
         """Find ``text`` and select its range (TextPattern.FindText + Select)."""
-        self._unsupported("select_text")
+        self._unsupported("select_text", text, ignore_case, name, role, app_name, automation_id)
 
     def text_attributes(self, name: Optional[str] = None,
                         role: Optional[str] = None, app_name: Optional[str] = None,
@@ -143,7 +143,7 @@ class AccessibilityBackend:
                         ) -> Optional[Dict[str, Any]]:
         """Return formatting of the control's selection — ``{font_name, font_size,
         bold, italic, foreground_color}`` (TextPattern attributes), or None."""
-        self._unsupported("text_attributes")
+        self._unsupported("text_attributes", name, role, app_name, automation_id)
 
     # --- keyboard focus ----------------------------------------------------
 
@@ -151,7 +151,7 @@ class AccessibilityBackend:
                   app_name: Optional[str] = None,
                   automation_id: Optional[str] = None) -> bool:
         """Set keyboard focus on the matched control (SetFocus); True on success."""
-        self._unsupported("set_focus")
+        self._unsupported("set_focus", name, role, app_name, automation_id)
 
     # --- virtualized items (realize off-screen list / grid items) -----------
 
@@ -168,7 +168,7 @@ class AccessibilityBackend:
         (``VirtualizedItemPattern``) so it exists as a real element. Returns the
         realized element, or None if the container or item isn't found.
         """
-        self._unsupported("find_virtual_item")
+        self._unsupported("find_virtual_item", item_name, by, container_name, container_role, app_name, automation_id)
 
     # --- rich element properties -------------------------------------------
 
@@ -182,7 +182,7 @@ class AccessibilityBackend:
         ``enabled`` / ``offscreen`` / ``help_text`` / ``item_status`` /
         ``accelerator_key`` / ``access_key`` / ``orientation``.
         """
-        self._unsupported("get_properties")
+        self._unsupported("get_properties", name, role, app_name, automation_id)
 
     # --- table headers + cell addressing (TablePattern / GridItemPattern) ---
 
@@ -192,7 +192,7 @@ class AccessibilityBackend:
                           automation_id: Optional[str] = None,
                           ) -> Optional[Dict[str, Any]]:
         """Return a table's header labels as ``{columns: [...], rows: [...]}``."""
-        self._unsupported("get_table_headers")
+        self._unsupported("get_table_headers", name, role, app_name, automation_id)
 
     def get_grid_cell(self, row: int = 0, column: int = 0,
                       name: Optional[str] = None, role: Optional[str] = None,
@@ -201,7 +201,7 @@ class AccessibilityBackend:
                       ) -> Optional[Dict[str, Any]]:
         """Return the cell at ``(row, column)`` as ``{value, row, column,
         row_span, column_span}`` (GridPattern.GetItem + GridItemPattern)."""
-        self._unsupported("get_grid_cell")
+        self._unsupported("get_grid_cell", row, column, name, role, app_name, automation_id)
 
     # --- transform + window patterns (UIA-element-level) --------------------
 
@@ -210,21 +210,21 @@ class AccessibilityBackend:
                      app_name: Optional[str] = None,
                      automation_id: Optional[str] = None) -> bool:
         """Move the matched element to ``(x, y)`` (TransformPattern); True on success."""
-        self._unsupported("move_element")
+        self._unsupported("move_element", x, y, name, role, app_name, automation_id)
 
     def resize_element(self, width: float = 0.0, height: float = 0.0,
                        name: Optional[str] = None, role: Optional[str] = None,
                        app_name: Optional[str] = None,
                        automation_id: Optional[str] = None) -> bool:
         """Resize the matched element (TransformPattern); True on success."""
-        self._unsupported("resize_element")
+        self._unsupported("resize_element", width, height, name, role, app_name, automation_id)
 
     def set_window_state(self, state: str = "normal",
                          name: Optional[str] = None, role: Optional[str] = None,
                          app_name: Optional[str] = None,
                          automation_id: Optional[str] = None) -> bool:
         """Set a window's visual state ``normal`` / ``maximized`` / ``minimized``."""
-        self._unsupported("set_window_state")
+        self._unsupported("set_window_state", state, name, role, app_name, automation_id)
 
     def window_interaction_state(self, name: Optional[str] = None,
                                  role: Optional[str] = None,
@@ -233,7 +233,7 @@ class AccessibilityBackend:
                                  ) -> Optional[str]:
         """Return a window's interaction state — ``ready`` / ``blocked_by_modal`` /
         ``not_responding`` / ``running`` / ``closing`` (WindowPattern), or None."""
-        self._unsupported("window_interaction_state")
+        self._unsupported("window_interaction_state", name, role, app_name, automation_id)
 
     # --- MSAA bridge (LegacyIAccessiblePattern) ----------------------------
 
@@ -247,7 +247,7 @@ class AccessibilityBackend:
         last-resort read for legacy Win32 controls that expose nothing useful via
         the modern UIA patterns.
         """
-        self._unsupported("legacy_info")
+        self._unsupported("legacy_info", name, role, app_name, automation_id)
 
     def legacy_default_action(self, name: Optional[str] = None,
                               role: Optional[str] = None,
@@ -255,7 +255,7 @@ class AccessibilityBackend:
                               automation_id: Optional[str] = None) -> bool:
         """Fire an old control's MSAA default action (DoDefaultAction); True on
         success — the fallback when Value / Invoke / Toggle all do nothing."""
-        self._unsupported("legacy_default_action")
+        self._unsupported("legacy_default_action", name, role, app_name, automation_id)
 
     # --- container selection + views (Selection / MultipleView patterns) ----
 
@@ -265,7 +265,7 @@ class AccessibilityBackend:
                       ) -> Optional[Dict[str, Any]]:
         """Return a container's selection state — ``{items, can_select_multiple,
         is_required}`` (SelectionPattern), or None."""
-        self._unsupported("get_selection")
+        self._unsupported("get_selection", name, role, app_name, automation_id)
 
     def list_views(self, name: Optional[str] = None, role: Optional[str] = None,
                    app_name: Optional[str] = None,
@@ -273,13 +273,13 @@ class AccessibilityBackend:
                    ) -> Optional[Dict[str, Any]]:
         """Return a control's selectable views — ``{current, views: [...]}``
         (MultipleViewPattern: list / details / tile / …), or None."""
-        self._unsupported("list_views")
+        self._unsupported("list_views", name, role, app_name, automation_id)
 
     def set_view(self, view: str = "", name: Optional[str] = None,
                  role: Optional[str] = None, app_name: Optional[str] = None,
                  automation_id: Optional[str] = None) -> bool:
         """Switch a control to the named view (MultipleViewPattern); True on success."""
-        self._unsupported("set_view")
+        self._unsupported("set_view", view, name, role, app_name, automation_id)
 
     # --- reactive events (UIA event subscription) --------------------------
 
@@ -291,9 +291,9 @@ class AccessibilityBackend:
         A zero-latency native wait (UIA AddFocusChangedEventHandler) — unlike the
         polling recorder, it can't miss a fast focus transition.
         """
-        self._unsupported("wait_for_focus_change")
+        self._unsupported("wait_for_focus_change", timeout)
 
-    def _unsupported(self, operation: str):
+    def _unsupported(self, operation: str, *context: Any):
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(
             f"{operation} is not supported by the {self.name} backend",

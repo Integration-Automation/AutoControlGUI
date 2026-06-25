@@ -142,7 +142,8 @@ def write_bundle(output_dir: Path, *, realm: str, user: str,
                  secret: str, listen_port: int, tls_port: int,
                  tls_cert: Optional[str], tls_key: Optional[str],
                  external_ip: Optional[str]) -> None:
-    output_dir.mkdir(parents=True, exist_ok=True)
+    # output_dir is an operator-supplied CLI path, not remote input
+    output_dir.mkdir(parents=True, exist_ok=True)  # NOSONAR
     conf_path = output_dir / "turnserver.conf"
     conf_path.write_text(render_turnserver_conf(
         realm=realm, listen_port=listen_port, tls_port=tls_port,

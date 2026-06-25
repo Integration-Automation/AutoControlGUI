@@ -1,5 +1,25 @@
 # What's New — AutoControl
 
+## What's new (2026-06-26)
+
+### Live IME State for Safe CJK Entry
+
+Wait for the input method to commit before reading a Japanese/Chinese/Korean field. Full reference: [`docs/source/Eng/doc/new_features/v208_features_doc.rst`](docs/source/Eng/doc/new_features/v208_features_doc.rst).
+
+- **`ime_state` / `is_composing` / `wait_for_composition_commit` / `decode_conversion_mode`** (`AC_ime_state`, `AC_is_composing`, `AC_wait_for_composition_commit`, `AC_decode_conversion_mode`): typing into a CJK field is unsafe while an IME is *composing* — the candidate text isn't committed, so reading the field back returns half-entered glyphs and the next keystroke edits the composition. `text_unicode` (`VK_PACKET`) is blind to this. `ime_state` exposes the focused window's live `{open, composing, composition, conversion}` (Windows IMM32, read-only) through an injectable `reader`; `is_composing` is the boolean gate; `wait_for_composition_commit` blocks until the IME commits (injectable `clock`/`sleep`/`reader`); `decode_conversion_mode` is the pure `IME_CMODE_*` bitmask decoder. All decode/wait logic is unit-tested without an IME. Sixth feature of the ROUND-15 cross-app OS lane. No `PySide6`.
+
+### Lock the Workstation + Wait for Unlock
+
+Lock the box at the end of a run, and block until a human unlocks it before resuming. Full reference: [`docs/source/Eng/doc/new_features/v207_features_doc.rst`](docs/source/Eng/doc/new_features/v207_features_doc.rst).
+
+- **`lock_session` / `plan_lock_session` / `wait_for_unlock` / `wait_for_lock` / `classify_lock_transitions`** (`AC_lock_session`, `AC_plan_lock_session`, `AC_wait_for_unlock`, `AC_classify_lock_transitions`): `session_guard` could *detect* a locked session and raise; this adds *acting* on it. `lock_session` locks the workstation now (`LockWorkStation` on Windows, `loginctl lock-session` / `CGSession -suspend` elsewhere) through an injectable `driver`; `wait_for_unlock` / `wait_for_lock` poll `session_guard.is_session_locked` (reusing its real Windows `OpenInputDesktop` probe) until the state flips or a timeout, with injectable `clock` / `sleep` / `probe`; `plan_lock_session` is the pure per-OS planner and `classify_lock_transitions` reduces a lock-state sample stream to `{event, locked}` lock/unlock events. `wait_for_unlock` is the blocking companion to `ensure_interactive_session`. Fifth feature of the ROUND-15 cross-app OS lane. No `PySide6`.
+
+### Read and Control the System Volume
+
+Set a known audio baseline before a run — mute, set 30%, or assert the level. Full reference: [`docs/source/Eng/doc/new_features/v206_features_doc.rst`](docs/source/Eng/doc/new_features/v206_features_doc.rst).
+
+- **`get_volume` / `set_volume` / `change_volume` / `is_muted` / `set_mute` / `mute` / `unmute` / `toggle_mute`** (`AC_get_volume`, `AC_set_volume`, `AC_change_volume`, `AC_set_mute`, `AC_toggle_mute`): the framework only had the blind media-key steps (`volume up` / `down` nudge by an unknown amount with no read-back). This adds absolute, read-backable control of the default output device — read or set the master level as an integer percent `0..100`, and read / set / toggle the mute flag. All logic (clamping, percent↔scalar conversion, toggle) is pure and runs through an injectable `VolumeDriver` seam, so it is fully unit-tested without an audio device; the default driver uses the Windows Core Audio `IAudioEndpointVolume` interface through the optional `pycaw` dependency (`pip install je_auto_control[audio]`), degrading with a clear error when absent. Fourth feature of the ROUND-15 cross-app OS lane. No `PySide6`.
+
 ## What's new (2026-06-25)
 
 ### Resolve the App Registered for a File Type

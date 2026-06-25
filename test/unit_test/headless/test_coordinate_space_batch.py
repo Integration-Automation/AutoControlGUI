@@ -43,14 +43,14 @@ def test_clamping_is_in_bounds():
 
 
 def test_downscale_png_matches_model_size():
-    Image = pytest.importorskip("PIL.Image")
+    pil_image = pytest.importorskip("PIL.Image")
     import io
     buf = io.BytesIO()
-    Image.new("RGB", (640, 480), (1, 2, 3)).save(buf, format="PNG")
+    pil_image.new("RGB", (640, 480), (1, 2, 3)).save(buf, format="PNG")
     from je_auto_control.utils.coordinate_space import downscale_png
     space = normalized_space(640, 480, grid=64)
     out = downscale_png(buf.getvalue(), space)
-    with Image.open(io.BytesIO(out)) as resized:
+    with pil_image.open(io.BytesIO(out)) as resized:
         assert resized.size == (64, 64)
 
 

@@ -26,7 +26,7 @@ def _overlap_1d(a0: int, a1: int, b0: int, b1: int) -> int:
 
 def _right_value(label: Box, values: Sequence[Box], max_gap: int):
     """Nearest value to the right of ``label`` that shares a row, or ``None``."""
-    left, top, right, bottom = _box_bounds(label)
+    _, top, right, bottom = _box_bounds(label)
     best: Optional[Tuple[Box, int]] = None
     for value in values:
         vl, vt, _, vb = _box_bounds(value)
@@ -39,7 +39,7 @@ def _right_value(label: Box, values: Sequence[Box], max_gap: int):
 
 def _below_value(label: Box, values: Sequence[Box], max_gap: int):
     """Nearest value below ``label`` that shares a column, or ``None``."""
-    left, top, right, bottom = _box_bounds(label)
+    left, _, right, bottom = _box_bounds(label)
     best: Optional[Tuple[Box, int]] = None
     for value in values:
         vl, vt, vr, _ = _box_bounds(value)

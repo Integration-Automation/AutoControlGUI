@@ -100,6 +100,21 @@ from je_auto_control.utils.idle_keepawake import (
 )
 # Resolve which application is registered to open a given file type
 from je_auto_control.utils.file_assoc import file_association, normalize_ext
+# Read and control the system master volume and mute state
+from je_auto_control.utils.system_volume import (
+    change_volume, get_volume, is_muted, mute, set_mute, set_volume,
+    toggle_mute, unmute,
+)
+# Lock the workstation, wait for unlock, classify lock transitions
+from je_auto_control.utils.lock_session import (
+    classify_lock_transitions, lock_session, plan_lock_session,
+    wait_for_lock, wait_for_unlock,
+)
+# Read the live IME composition / conversion state for safe CJK entry
+from je_auto_control.utils.ime_state import (
+    decode_conversion_mode, ime_state, is_composing,
+    wait_for_composition_commit,
+)
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1713,6 +1728,12 @@ __all__ = [
     "idle_seconds", "is_idle", "plan_keep_awake",
     "keep_awake", "keep_awake_on", "allow_sleep",
     "normalize_ext", "file_association",
+    "get_volume", "set_volume", "change_volume",
+    "is_muted", "set_mute", "mute", "unmute", "toggle_mute",
+    "lock_session", "plan_lock_session", "wait_for_unlock",
+    "wait_for_lock", "classify_lock_transitions",
+    "ime_state", "is_composing", "wait_for_composition_commit",
+    "decode_conversion_mode",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",

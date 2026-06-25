@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.mcp_server.tools._base import MCPContent
 
+_DEFAULT_APPROVALS_DIR = ".approvals"
+
 
 # === Mouse / keyboard =======================================================
 
@@ -591,6 +593,79 @@ def keep_awake_on(display=True, system=True):
 def allow_sleep():
     from je_auto_control.utils.executor.action_executor import _allow_sleep
     return _allow_sleep()
+
+
+def get_volume():
+    from je_auto_control.utils.executor.action_executor import _get_volume
+    return _get_volume()
+
+
+def set_volume(level):
+    from je_auto_control.utils.executor.action_executor import _set_volume
+    return _set_volume(level)
+
+
+def change_volume(delta):
+    from je_auto_control.utils.executor.action_executor import _change_volume
+    return _change_volume(delta)
+
+
+def set_mute(muted=True):
+    from je_auto_control.utils.executor.action_executor import _set_mute
+    return _set_mute(muted)
+
+
+def toggle_mute():
+    from je_auto_control.utils.executor.action_executor import _toggle_mute
+    return _toggle_mute()
+
+
+def lock_session():
+    from je_auto_control.utils.executor.action_executor import _lock_session
+    return _lock_session()
+
+
+def plan_lock_session():
+    from je_auto_control.utils.executor.action_executor import (
+        _plan_lock_session,
+    )
+    return _plan_lock_session()
+
+
+def wait_for_unlock(timeout=30.0, interval=0.5):
+    from je_auto_control.utils.executor.action_executor import _wait_for_unlock
+    return _wait_for_unlock(timeout, interval)
+
+
+def classify_lock_transitions(states):
+    from je_auto_control.utils.executor.action_executor import (
+        _classify_lock_transitions,
+    )
+    return _classify_lock_transitions(states)
+
+
+def ime_state():
+    from je_auto_control.utils.executor.action_executor import _ime_state
+    return _ime_state()
+
+
+def is_composing():
+    from je_auto_control.utils.executor.action_executor import _is_composing
+    return _is_composing()
+
+
+def wait_for_composition_commit(timeout=5.0, interval=0.1):
+    from je_auto_control.utils.executor.action_executor import (
+        _wait_for_composition_commit,
+    )
+    return _wait_for_composition_commit(timeout, interval)
+
+
+def decode_conversion_mode(flags):
+    from je_auto_control.utils.executor.action_executor import (
+        _decode_conversion_mode,
+    )
+    return _decode_conversion_mode(flags)
 
 
 def normalize_ext(target):
@@ -1515,7 +1590,7 @@ def egress_reset():
     return {"allow": None, "deny": []}
 
 
-def verify_artifact(name: str, content, approvals_dir: str = ".approvals",
+def verify_artifact(name: str, content, approvals_dir: str = _DEFAULT_APPROVALS_DIR,
                     extension: str = "txt"):
     from je_auto_control.utils.approval import verify_artifact as _verify
     result = _verify(name, content, approvals_dir, extension)
@@ -1524,13 +1599,13 @@ def verify_artifact(name: str, content, approvals_dir: str = ".approvals",
             "received_path": result.received_path}
 
 
-def approve_artifact(name: str, approvals_dir: str = ".approvals",
+def approve_artifact(name: str, approvals_dir: str = _DEFAULT_APPROVALS_DIR,
                      extension: str = "txt"):
     from je_auto_control.utils.approval import approve_artifact as _approve
     return {"approved": _approve(name, approvals_dir, extension)}
 
 
-def pending_artifacts(approvals_dir: str = ".approvals"):
+def pending_artifacts(approvals_dir: str = _DEFAULT_APPROVALS_DIR):
     from je_auto_control.utils.approval import pending_artifacts as _pending
     return {"pending": _pending(approvals_dir)}
 

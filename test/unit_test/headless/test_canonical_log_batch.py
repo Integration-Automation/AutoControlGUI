@@ -20,6 +20,7 @@ def test_timer_uses_injected_clock():
     ticks = iter([10.0, 10.5])
     line = CanonicalLogLine(clock=lambda: next(ticks))
     with line.timer("step"):
+        # body intentionally empty: the timer measures the enter->exit interval
         pass
     assert line.to_dict()["step_ms"] == pytest.approx(500.0)
 

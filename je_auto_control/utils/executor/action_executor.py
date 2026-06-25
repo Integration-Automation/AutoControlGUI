@@ -171,6 +171,7 @@ def _run_dag(definition: Dict[str, Any],
 
 
 _AX_RECORDER_SINGLETON = None
+_DEFAULT_APPROVALS_DIR = ".approvals"
 
 
 def _a11y_dump(app_name: Optional[str] = None,
@@ -2650,6 +2651,91 @@ def _allow_sleep() -> Dict[str, Any]:
     """Adapter: release a previously-started keep-awake."""
     from je_auto_control.utils.idle_keepawake import allow_sleep
     return {"released": bool(allow_sleep())}
+
+
+def _get_volume() -> Dict[str, Any]:
+    """Adapter: the system master volume as an integer percent."""
+    from je_auto_control.utils.system_volume import get_volume, is_muted
+    return {"volume": int(get_volume()), "muted": bool(is_muted())}
+
+
+def _set_volume(level: Any) -> Dict[str, Any]:
+    """Adapter: set the master volume to ``level`` percent."""
+    from je_auto_control.utils.system_volume import set_volume
+    return {"volume": int(set_volume(float(level)))}
+
+
+def _change_volume(delta: Any) -> Dict[str, Any]:
+    """Adapter: add ``delta`` percent to the master volume."""
+    from je_auto_control.utils.system_volume import change_volume
+    return {"volume": int(change_volume(float(delta)))}
+
+
+def _set_mute(muted: Any = True) -> Dict[str, Any]:
+    """Adapter: set the master mute flag."""
+    from je_auto_control.utils.system_volume import set_mute
+    return {"muted": bool(set_mute(bool(muted)))}
+
+
+def _toggle_mute() -> Dict[str, Any]:
+    """Adapter: flip the master mute flag."""
+    from je_auto_control.utils.system_volume import toggle_mute
+    return {"muted": bool(toggle_mute())}
+
+
+def _lock_session() -> Dict[str, Any]:
+    """Adapter: lock the workstation now."""
+    from je_auto_control.utils.lock_session import lock_session
+    return {"locked": bool(lock_session())}
+
+
+def _plan_lock_session() -> Dict[str, Any]:
+    """Adapter: describe how the workstation would be locked (pure)."""
+    from je_auto_control.utils.lock_session import plan_lock_session
+    return plan_lock_session()
+
+
+def _wait_for_unlock(timeout: Any = 30.0, interval: Any = 0.5
+                     ) -> Dict[str, Any]:
+    """Adapter: block until the session is unlocked or timeout."""
+    from je_auto_control.utils.lock_session import wait_for_unlock
+    unlocked = wait_for_unlock(timeout_s=float(timeout),
+                               interval_s=float(interval))
+    return {"unlocked": bool(unlocked)}
+
+
+def _classify_lock_transitions(states: Any) -> Dict[str, Any]:
+    """Adapter: reduce lock-state samples to lock / unlock events (pure)."""
+    from je_auto_control.utils.lock_session import classify_lock_transitions
+    samples = [bool(s) for s in _coerce_list(states)] if states else []
+    return {"events": classify_lock_transitions(samples)}
+
+
+def _ime_state() -> Dict[str, Any]:
+    """Adapter: the focused window's live IME composition / conversion state."""
+    from je_auto_control.utils.ime_state import ime_state
+    return ime_state()
+
+
+def _is_composing() -> Dict[str, Any]:
+    """Adapter: whether the IME has an uncommitted composition."""
+    from je_auto_control.utils.ime_state import is_composing
+    return {"composing": bool(is_composing())}
+
+
+def _wait_for_composition_commit(timeout: Any = 5.0, interval: Any = 0.1
+                                 ) -> Dict[str, Any]:
+    """Adapter: block until the IME finishes composing or timeout."""
+    from je_auto_control.utils.ime_state import wait_for_composition_commit
+    committed = wait_for_composition_commit(timeout_s=float(timeout),
+                                            interval_s=float(interval))
+    return {"committed": bool(committed)}
+
+
+def _decode_conversion_mode(flags: Any) -> Dict[str, Any]:
+    """Adapter: decode an IMM32 conversion bitmask into named flags (pure)."""
+    from je_auto_control.utils.ime_state import decode_conversion_mode
+    return decode_conversion_mode(int(flags))
 
 
 def _normalize_ext(target: str) -> Dict[str, Any]:
@@ -6029,7 +6115,7 @@ def _egress_reset() -> Dict[str, Any]:
 
 
 def _verify_artifact(name: str, content: Any,
-                     approvals_dir: str = ".approvals",
+                     approvals_dir: str = _DEFAULT_APPROVALS_DIR,
                      extension: str = "txt") -> Dict[str, Any]:
     """Adapter: verify an artifact against its approved baseline."""
     from je_auto_control.utils.approval import verify_artifact
@@ -6039,14 +6125,14 @@ def _verify_artifact(name: str, content: Any,
             "received_path": result.received_path}
 
 
-def _approve_artifact(name: str, approvals_dir: str = ".approvals",
+def _approve_artifact(name: str, approvals_dir: str = _DEFAULT_APPROVALS_DIR,
                       extension: str = "txt") -> Dict[str, Any]:
     """Adapter: promote a received artifact to the approved baseline."""
     from je_auto_control.utils.approval import approve_artifact
     return {"approved": approve_artifact(name, approvals_dir, extension)}
 
 
-def _pending_artifacts(approvals_dir: str = ".approvals") -> Dict[str, Any]:
+def _pending_artifacts(approvals_dir: str = _DEFAULT_APPROVALS_DIR) -> Dict[str, Any]:
     """Adapter: list artifacts awaiting approval."""
     from je_auto_control.utils.approval import pending_artifacts
     return {"pending": pending_artifacts(approvals_dir)}
@@ -6661,6 +6747,19 @@ class Executor:
             "AC_plan_keep_awake": _plan_keep_awake,
             "AC_keep_awake_on": _keep_awake_on,
             "AC_allow_sleep": _allow_sleep,
+            "AC_get_volume": _get_volume,
+            "AC_set_volume": _set_volume,
+            "AC_change_volume": _change_volume,
+            "AC_set_mute": _set_mute,
+            "AC_toggle_mute": _toggle_mute,
+            "AC_lock_session": _lock_session,
+            "AC_plan_lock_session": _plan_lock_session,
+            "AC_wait_for_unlock": _wait_for_unlock,
+            "AC_classify_lock_transitions": _classify_lock_transitions,
+            "AC_ime_state": _ime_state,
+            "AC_is_composing": _is_composing,
+            "AC_wait_for_composition_commit": _wait_for_composition_commit,
+            "AC_decode_conversion_mode": _decode_conversion_mode,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

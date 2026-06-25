@@ -24,7 +24,7 @@ def test_added_required_breaks_backward():
            "required": ["id", "email"]}
     assert is_backward_compatible(_BASE, new) is False
     assert is_forward_compatible(_BASE, new) is True
-    [change] = [c for c in check_compatibility(_BASE, new)["breaking"]]
+    [change] = list(check_compatibility(_BASE, new)["breaking"])
     assert change["kind"] == "field_added" and change["path"] == "email"
 
 

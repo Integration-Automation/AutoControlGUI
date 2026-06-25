@@ -2168,6 +2168,125 @@ def process_and_shell_tools() -> List[MCPTool]:
             handler=h.file_association,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_get_volume",
+            description=("Read the system master volume as an integer percent "
+                         "0..100. Returns {volume, muted} (Windows, needs "
+                         "the optional 'pycaw' dependency)."),
+            input_schema=schema({}),
+            handler=h.get_volume,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_set_volume",
+            description=("Set the master volume to 'level' percent (clamped to "
+                         "0..100). Returns the applied {volume}."),
+            input_schema=schema({"level": {"type": "number"}},
+                                required=["level"]),
+            handler=h.set_volume,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_change_volume",
+            description=("Add 'delta' percent to the master volume (may be "
+                         "negative; clamped to 0..100). Returns {volume}."),
+            input_schema=schema({"delta": {"type": "number"}},
+                                required=["delta"]),
+            handler=h.change_volume,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_set_mute",
+            description=("Mute or unmute the master output. 'muted' defaults to "
+                         "true. Returns the new {muted} state."),
+            input_schema=schema({"muted": {"type": "boolean"}}),
+            handler=h.set_mute,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_toggle_mute",
+            description=("Flip the master mute flag. Returns the new {muted} "
+                         "state."),
+            input_schema=schema({}),
+            handler=h.toggle_mute,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_lock_session",
+            description=("Lock the workstation now (LockWorkStation / loginctl "
+                         "lock-session / CGSession). Returns {locked}. "
+                         "Interrupts the interactive session."),
+            input_schema=schema({}),
+            handler=h.lock_session,
+            annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_plan_lock_session",
+            description=("Describe how the workstation would be locked on this "
+                         "OS without locking (pure): {backend, argv, "
+                         "available}."),
+            input_schema=schema({}),
+            handler=h.plan_lock_session,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_wait_for_unlock",
+            description=("Block until the session is unlocked (or 'timeout' "
+                         "seconds), polling every 'interval'. Returns "
+                         "{unlocked}."),
+            input_schema=schema({"timeout": {"type": "number"},
+                                 "interval": {"type": "number"}}),
+            handler=h.wait_for_unlock,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_classify_lock_transitions",
+            description=("Reduce a list of lock-state booleans ('states') to "
+                         "lock / unlock events (pure). Returns {events}."),
+            input_schema=schema({"states": {"type": "array",
+                                            "items": {"type": "boolean"}}},
+                                required=["states"]),
+            handler=h.classify_lock_transitions,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_ime_state",
+            description=("Read the focused window's live IME state (Windows "
+                         "IMM32). Returns {open, composing, composition, "
+                         "conversion, conversion_flags}."),
+            input_schema=schema({}),
+            handler=h.ime_state,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_is_composing",
+            description=("Whether the IME has an uncommitted composition "
+                         "(unsafe to type / read the field). Returns "
+                         "{composing}."),
+            input_schema=schema({}),
+            handler=h.is_composing,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_wait_for_composition_commit",
+            description=("Block until the IME finishes composing (or 'timeout' "
+                         "seconds), polling every 'interval'. Returns "
+                         "{committed}."),
+            input_schema=schema({"timeout": {"type": "number"},
+                                 "interval": {"type": "number"}}),
+            handler=h.wait_for_composition_commit,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_decode_conversion_mode",
+            description=("Decode an IMM32 IME_CMODE_* conversion bitmask "
+                         "('flags') into {native, katakana, full_shape, roman, "
+                         "char_code} (pure)."),
+            input_schema=schema({"flags": {"type": "integer"}},
+                                required=["flags"]),
+            handler=h.decode_conversion_mode,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
