@@ -4501,6 +4501,28 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Idempotently set a control's value (no-op if already set).",
     ))
     specs.append(CommandSpec(
+        "AC_wait_until_app_idle", "Flow", "Wait Until App Idle",
+        fields=(
+            FieldSpec("quiet_samples", FieldType.INT, optional=True,
+                      default=3, placeholder="consecutive idle polls"),
+            FieldSpec("timeout", FieldType.FLOAT, optional=True, default=10.0,
+                      placeholder="timeout seconds"),
+            FieldSpec("interval", FieldType.FLOAT, optional=True, default=0.1,
+                      placeholder="poll interval seconds"),
+        ),
+        description="Block until the app's busy cursor settles idle or timeout.",
+    ))
+    specs.append(CommandSpec(
+        "AC_idle_point", "Flow", "Idle Point",
+        fields=(
+            FieldSpec("busy_samples", FieldType.STRING,
+                      placeholder="JSON list of busy booleans"),
+            FieldSpec("quiet_samples", FieldType.INT, optional=True,
+                      default=3),
+        ),
+        description="Index where a busy/idle series first settles idle.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,

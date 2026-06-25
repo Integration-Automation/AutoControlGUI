@@ -129,6 +129,8 @@ from je_auto_control.utils.adaptive_timeout import (
 )
 # Idempotently bring a control / setting to a desired state
 from je_auto_control.utils.ensure_state import ensure_state, ensure_toggle
+# Wait until an application stops being busy before the next step
+from je_auto_control.utils.app_idle import idle_point, wait_until_app_idle
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1752,6 +1754,7 @@ __all__ = [
     "compare_field_value", "verify_field_value", "fill_and_verify",
     "recommend_timeout", "timeout_stats",
     "ensure_state", "ensure_toggle",
+    "wait_until_app_idle", "idle_point",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",

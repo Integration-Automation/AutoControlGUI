@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Wait Until the App Is Idle
+
+Hold off the next click until the busy/wait cursor settles — don't act mid-churn. Full reference: [`docs/source/Eng/doc/new_features/v213_features_doc.rst`](docs/source/Eng/doc/new_features/v213_features_doc.rst).
+
+- **`wait_until_app_idle` / `idle_point`** (`AC_wait_until_app_idle`, `AC_idle_point`): a click fired while the app is still churning (busy cursor up, dialog mid-paint, long handler running) is dropped or mis-targeted. `smart_waits` watches *pixels* settle; this watches the app's *busy signal* settle, which is cheaper and survives animated-but-idle UI. It reuses `settle_detector.SettleTracker` — each poll feeds 1.0 when busy / 0.0 when idle, and returns once the app has read idle for `quiet_samples` polls in a row (a busy spike resets the run). `wait_until_app_idle` polls an injectable `busy_probe` (default = Windows busy/app-starting cursor) with injectable `clock`/`sleep`; `idle_point` is the pure analyser over a recorded busy/idle trace. Fully testable without an app. Fifth feature of the ROUND-15 input-fidelity lane. No `PySide6`.
+
 ### Ensure a Control Is in the Desired State (Idempotent)
 
 Read-compare-act-verify instead of acting blind — don't double-toggle an already-checked box. Full reference: [`docs/source/Eng/doc/new_features/v212_features_doc.rst`](docs/source/Eng/doc/new_features/v212_features_doc.rst).

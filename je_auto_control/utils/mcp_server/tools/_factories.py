@@ -1874,6 +1874,30 @@ def smart_wait_tools() -> List[MCPTool]:
             handler=h.ensure_field_value,
             annotations=SIDE_EFFECT_ONLY,
         ),
+        MCPTool(
+            name="ac_wait_until_app_idle",
+            description=("Block until the foreground app's busy / wait cursor "
+                         "settles idle for 'quiet_samples' polls (or 'timeout' "
+                         "seconds). Returns {idle, polls, quiet_run, "
+                         "elapsed_s} (Windows)."),
+            input_schema=schema({"quiet_samples": {"type": "integer"},
+                                 "timeout": {"type": "number"},
+                                 "interval": {"type": "number"}}),
+            handler=h.wait_until_app_idle,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_idle_point",
+            description=("Index in a recorded busy/idle 'busy_samples' series "
+                         "at which it first settles idle for 'quiet_samples' in "
+                         "a row (pure). Returns {index} (null if never)."),
+            input_schema=schema({"busy_samples": {"type": "array",
+                                                 "items": {"type": "boolean"}},
+                                 "quiet_samples": {"type": "integer"}},
+                                required=["busy_samples"]),
+            handler=h.idle_point,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
