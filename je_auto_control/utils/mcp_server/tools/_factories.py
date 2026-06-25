@@ -2106,6 +2106,49 @@ def process_and_shell_tools() -> List[MCPTool]:
             handler=h.plan_open,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_idle_seconds",
+            description=("Seconds since the last user keyboard / mouse input "
+                         "(GetLastInputInfo on Windows). Returns {idle_seconds}."),
+            input_schema=schema({}),
+            handler=h.idle_seconds,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_is_idle",
+            description=("Whether the user has been idle for at least "
+                         "'threshold' seconds. Returns {idle, idle_seconds}."),
+            input_schema=schema({"threshold": {"type": "number"}},
+                                required=["threshold"]),
+            handler=h.is_idle,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_plan_keep_awake",
+            description=("Describe a keep-awake request without applying it "
+                         "(pure): {display, system, backend, flags}."),
+            input_schema=schema({"display": {"type": "boolean"},
+                                 "system": {"type": "boolean"}}),
+            handler=h.plan_keep_awake,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_keep_awake_on",
+            description=("Keep the machine (and 'display') awake until "
+                         "ac_allow_sleep is called. Returns the active plan."),
+            input_schema=schema({"display": {"type": "boolean"},
+                                 "system": {"type": "boolean"}}),
+            handler=h.keep_awake_on,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_allow_sleep",
+            description=("Release a previously-started keep-awake so the machine "
+                         "can sleep again. Returns {released}."),
+            input_schema=schema({}),
+            handler=h.allow_sleep,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
     ]
 
 

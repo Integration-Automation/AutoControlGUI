@@ -4269,6 +4269,40 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Classify how a file/URL would be opened (pure, no launch).",
     ))
     specs.append(CommandSpec(
+        "AC_idle_seconds", "Shell", "Idle Seconds",
+        fields=(),
+        description="Seconds since the last user keyboard / mouse input.",
+    ))
+    specs.append(CommandSpec(
+        "AC_is_idle", "Shell", "Is User Idle",
+        fields=(
+            FieldSpec("threshold", FieldType.FLOAT, default=300.0,
+                      placeholder="idle seconds threshold"),
+        ),
+        description="True if the user has been idle for >= threshold seconds.",
+    ))
+    specs.append(CommandSpec(
+        "AC_plan_keep_awake", "Shell", "Plan Keep Awake",
+        fields=(
+            FieldSpec("display", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("system", FieldType.BOOL, optional=True, default=True),
+        ),
+        description="Describe a keep-awake request (pure, no OS call).",
+    ))
+    specs.append(CommandSpec(
+        "AC_keep_awake_on", "Shell", "Keep Machine Awake",
+        fields=(
+            FieldSpec("display", FieldType.BOOL, optional=True, default=True),
+            FieldSpec("system", FieldType.BOOL, optional=True, default=True),
+        ),
+        description="Keep the machine awake until Allow Sleep is run.",
+    ))
+    specs.append(CommandSpec(
+        "AC_allow_sleep", "Shell", "Allow Machine to Sleep",
+        fields=(),
+        description="Release a previously-started keep-awake.",
+    ))
+    specs.append(CommandSpec(
         "AC_take_golden", "Report", "Capture Golden Image",
         fields=(FieldSpec("path", FieldType.FILE_PATH),),
         description="Capture and save a baseline image for visual regression.",

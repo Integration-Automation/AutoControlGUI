@@ -568,6 +568,31 @@ def plan_open(target, verb="open"):
     return _plan_open(target, verb)
 
 
+def idle_seconds():
+    from je_auto_control.utils.executor.action_executor import _idle_seconds
+    return _idle_seconds()
+
+
+def is_idle(threshold):
+    from je_auto_control.utils.executor.action_executor import _is_idle
+    return _is_idle(threshold)
+
+
+def plan_keep_awake(display=True, system=True):
+    from je_auto_control.utils.executor.action_executor import _plan_keep_awake
+    return _plan_keep_awake(display, system)
+
+
+def keep_awake_on(display=True, system=True):
+    from je_auto_control.utils.executor.action_executor import _keep_awake_on
+    return _keep_awake_on(display, system)
+
+
+def allow_sleep():
+    from je_auto_control.utils.executor.action_executor import _allow_sleep
+    return _allow_sleep()
+
+
 def get_clipboard() -> str:
     from je_auto_control.utils.clipboard.clipboard import get_clipboard as _get
     return _get()
