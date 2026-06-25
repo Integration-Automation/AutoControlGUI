@@ -1,5 +1,11 @@
 # What's New — AutoControl
 
+## What's new (2026-06-25) — Idle Detection + Keep the Machine Awake
+
+Run only when the user has stepped away, and stop an overnight run from sleeping. Full reference: [`docs/source/Eng/doc/new_features/v204_features_doc.rst`](docs/source/Eng/doc/new_features/v204_features_doc.rst).
+
+- **`idle_seconds` / `is_idle` / `keep_awake` / `keep_awake_on` / `allow_sleep` / `plan_keep_awake`** (`AC_idle_seconds`, `AC_is_idle`, `AC_plan_keep_awake`, `AC_keep_awake_on`, `AC_allow_sleep`): long unattended runs get derailed two ways — the screensaver / power policy sleeps the box mid-run, or the run should hold while a human is actively using the machine. The framework had neither signal. `idle_seconds` / `is_idle` report time since the last keyboard / mouse input (`GetLastInputInfo` on Windows) through an injectable `probe`; `keep_awake` (scoped context manager) and `keep_awake_on` / `allow_sleep` (process-global on/off for JSON flows) stop the system and display sleeping, applied through an injectable `driver` (`SetThreadExecutionState` / `caffeinate` / `systemd-inhibit` by default) and restored on release. `plan_keep_awake` is the pure planner. All logic is unit-testable without touching the OS via the injected probe/driver. Second feature of the ROUND-15 cross-app OS lane. No `PySide6`.
+
 ## What's new (2026-06-25) — Open Files / URLs with the Default App
 
 Hand a file to its default app, print it, or open a URL in the browser. Full reference: [`docs/source/Eng/doc/new_features/v203_features_doc.rst`](docs/source/Eng/doc/new_features/v203_features_doc.rst).
