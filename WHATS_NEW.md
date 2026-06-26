@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Localize a Change to the Elements That Changed
+
+Turn a raw screen diff into "element 3 changed" by scoring a list of element boxes. Full reference: [`docs/source/Eng/doc/new_features/v218_features_doc.rst`](docs/source/Eng/doc/new_features/v218_features_doc.rst).
+
+- **`localize_changes` / `rank_changes`** (`AC_localize_changes`, `AC_rank_changes`): existing diffs answer *where* pixels changed (`motion_regions`, `perceptual_diff`, `ssim_changed_regions` → raw pixel regions) or which *accessibility* elements differ (`element_diff`, needs metadata) — but not "given a frame diff **and a list of element boxes**, which of *those* changed?". `localize_changes` diffs a reference against the current screen and scores each supplied element box by its mean per-pixel change; `rank_changes` is the pure ranker that flags `changed` (score ≥ `threshold`) and sorts most-changed first. Pairs with `set_of_marks`/accessibility boxes to give a per-element "what changed" feedback signal after a click. cv2/numpy imported lazily; ranking is pure and fully testable. Fifth feature of the ROUND-15 perception lane. No `PySide6`.
+
 ### Theme-Invariant Matching (Light Template, Dark Mode)
 
 Find a button captured in light mode even after the app switches to dark mode. Full reference: [`docs/source/Eng/doc/new_features/v217_features_doc.rst`](docs/source/Eng/doc/new_features/v217_features_doc.rst).

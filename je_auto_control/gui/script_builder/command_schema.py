@@ -4607,6 +4607,32 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Locate a template across a light/dark theme flip.",
     ))
     specs.append(CommandSpec(
+        "AC_rank_changes", "Image", "Rank Changed Boxes",
+        fields=(
+            FieldSpec("scored_boxes", FieldType.STRING,
+                      placeholder="JSON list of {box, score}"),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True,
+                      default=0.1),
+        ),
+        description="Rank scored element boxes by how much they changed.",
+    ))
+    specs.append(CommandSpec(
+        "AC_localize_changes", "Image", "Localize Changed Elements",
+        fields=(
+            FieldSpec("reference", FieldType.STRING,
+                      placeholder="reference image path"),
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder="JSON list of [x, y, w, h]"),
+            FieldSpec("current", FieldType.STRING, optional=True,
+                      placeholder="current image path (else screen)"),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True,
+                      default=0.1),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+        ),
+        description="Rank which element boxes changed between two frames.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,
