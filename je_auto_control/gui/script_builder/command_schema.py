@@ -4523,6 +4523,35 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Index where a busy/idle series first settles idle.",
     ))
     specs.append(CommandSpec(
+        "AC_act_in_view", "Flow", "Act In View (scroll + click)",
+        fields=(
+            FieldSpec("target", FieldType.STRING,
+                      placeholder="template path or text"),
+            FieldSpec("kind", FieldType.STRING, optional=True,
+                      default="image", placeholder="image / text"),
+            FieldSpec("direction", FieldType.STRING, optional=True,
+                      default="down", placeholder="up / down"),
+            FieldSpec("max_scrolls", FieldType.INT, optional=True, default=10),
+            FieldSpec("scroll_amount", FieldType.INT, optional=True,
+                      default=3),
+            FieldSpec("button", FieldType.STRING, optional=True,
+                      default="left"),
+        ),
+        description="Scroll a target into view, then click it when actionable.",
+    ))
+    specs.append(CommandSpec(
+        "AC_act_with_mode", "Flow", "Click with Mode (auto/trial/force)",
+        fields=(
+            FieldSpec("x", FieldType.INT, placeholder="x"),
+            FieldSpec("y", FieldType.INT, placeholder="y"),
+            FieldSpec("mode", FieldType.STRING, optional=True, default="auto",
+                      placeholder="auto / trial / force"),
+            FieldSpec("button", FieldType.STRING, optional=True,
+                      default="left"),
+        ),
+        description="Click a point under an action mode (gate / dry-run / force).",
+    ))
+    specs.append(CommandSpec(
         "AC_simulate_cvd", "Image", "Simulate Colour-Vision Deficiency",
         fields=(
             FieldSpec("rgb", FieldType.STRING, placeholder="[r, g, b]"),
