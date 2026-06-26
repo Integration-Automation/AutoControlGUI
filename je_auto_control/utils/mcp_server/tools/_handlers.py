@@ -816,6 +816,11 @@ def act_in_view(target, kind="image", direction="down", max_scrolls=10,
                         button)
 
 
+def act_with_mode(x, y, mode="auto", button="left"):
+    from je_auto_control.utils.executor.action_executor import _act_with_mode
+    return _act_with_mode(x, y, mode, button)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Trial and Force Action Modes (Playwright-style)
+
+Dry-run "is this control ready?" without clicking, or force a click past the gate. Full reference: [`docs/source/Eng/doc/new_features/v222_features_doc.rst`](docs/source/Eng/doc/new_features/v222_features_doc.rst).
+
+- **`act_with_mode`** (`AC_act_with_mode`): `actionability.act_when_ready` only waits-then-acts. Real flows need two more modes Playwright codified: **trial** (run every actionability check but *don't* act — a side-effect-free "would this work?" dry run) and **force** (skip the checks and act now — the escape hatch when the gate misjudges a control as occluded/disabled). `act_with_mode` adds both alongside the default `auto`, over the same injectable seams as the gate, returning `{mode, acted, actionable, reason, point, result}`. Reuses `actionability.wait_actionable`; fully testable without a screen. Completes the ROUND-15 input-fidelity lane (7/7). No `PySide6`.
+
 ### Act In View — Scroll to a Target, Then Act When Actionable
 
 Click the row three pages down: scroll it into view, then gate on actionability before clicking. Full reference: [`docs/source/Eng/doc/new_features/v221_features_doc.rst`](docs/source/Eng/doc/new_features/v221_features_doc.rst).
