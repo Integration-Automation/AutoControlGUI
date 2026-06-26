@@ -2,6 +2,24 @@
 
 ## What's new (2026-06-26)
 
+### Template-Free Element Proposal (Pixels to Elements)
+
+Get a clean numbered element list straight from the screen when there's no accessibility tree. Full reference: [`docs/source/Eng/doc/new_features/v220_features_doc.rst`](docs/source/Eng/doc/new_features/v220_features_doc.rst).
+
+- **`propose_elements` / `tag_kinds`** (`AC_propose_elements`, `AC_tag_kinds`): Set-of-Marks, `observation` and the grounding helpers all assume you already have element boxes — but a game, a custom-drawn app or a remote desktop has no accessibility tree. `propose_elements` builds that top-of-funnel list from pixels: detect widget boxes (closed-edge blobs via Canny + morphology + `connected_boxes`) and text boxes (`text_regions.find_text_regions`), fuse them — the `element_parse` `ocr > icon` priority *is* the "drop widget-that-is-really-text" cross-check — and return them in reading order, each tagged `text` or `widget`. `tag_kinds` is the pure labeller. cv2 imported lazily; the labeller is fully testable. Seventh and final feature of the ROUND-15 perception lane. No `PySide6`.
+
+### Classify a Widget from Its Pixel Shape
+
+Tell a checkbox from a radio button from a text field — from pixels, no model. Full reference: [`docs/source/Eng/doc/new_features/v219_features_doc.rst`](docs/source/Eng/doc/new_features/v219_features_doc.rst).
+
+- **`classify_widget` / `box_features` / `classify_icon`** (`AC_classify_widget`, `AC_classify_icon`): Set-of-Marks and element proposers return *boxes* but not *what each box is*; `form_fields.checkbox_state` reads a box already known to be a checkbox — the gap is the typing step before it. `box_features` extracts `{aspect, fill, edge_density, circularity}` for a box; `classify_widget` is the pure heuristic classifier (round→radio, wide-rounded→toggle, square-sparse→checkbox, wide-hollow→text_field, wide-filled→button, else icon); `classify_icon` composes them. The classifier is pure and fully testable; cv2/numpy imported lazily so the module stays importable. Sixth feature of the ROUND-15 perception lane. No `PySide6`.
+
+### Localize a Change to the Elements That Changed
+
+Turn a raw screen diff into "element 3 changed" by scoring a list of element boxes. Full reference: [`docs/source/Eng/doc/new_features/v218_features_doc.rst`](docs/source/Eng/doc/new_features/v218_features_doc.rst).
+
+- **`localize_changes` / `rank_changes`** (`AC_localize_changes`, `AC_rank_changes`): existing diffs answer *where* pixels changed (`motion_regions`, `perceptual_diff`, `ssim_changed_regions` → raw pixel regions) or which *accessibility* elements differ (`element_diff`, needs metadata) — but not "given a frame diff **and a list of element boxes**, which of *those* changed?". `localize_changes` diffs a reference against the current screen and scores each supplied element box by its mean per-pixel change; `rank_changes` is the pure ranker that flags `changed` (score ≥ `threshold`) and sorts most-changed first. Pairs with `set_of_marks`/accessibility boxes to give a per-element "what changed" feedback signal after a click. cv2/numpy imported lazily; ranking is pure and fully testable. Fifth feature of the ROUND-15 perception lane. No `PySide6`.
+
 ### Theme-Invariant Matching (Light Template, Dark Mode)
 
 Find a button captured in light mode even after the app switches to dark mode. Full reference: [`docs/source/Eng/doc/new_features/v217_features_doc.rst`](docs/source/Eng/doc/new_features/v217_features_doc.rst).

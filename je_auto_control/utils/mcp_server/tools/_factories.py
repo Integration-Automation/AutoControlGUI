@@ -4107,6 +4107,83 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.match_theme,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_rank_changes",
+            description=("Rank scored element boxes by how much they changed. "
+                         "'scored_boxes' is a list of {box:[x,y,w,h], score}. "
+                         "Pure. Returns {changes:[{box, score, changed}]} "
+                         "sorted most-changed first."),
+            input_schema=schema({"scored_boxes": {"type": "array",
+                                                 "items": {"type": "object"}},
+                                 "threshold": {"type": "number"}},
+                                required=["scored_boxes"]),
+            handler=h.rank_changes,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_localize_changes",
+            description=("Which of the supplied element 'boxes' changed between "
+                         "a 'reference' image and the current screen (or "
+                         "'current' image). Returns {changes:[{box, score, "
+                         "changed}]}."),
+            input_schema=schema({"reference": {"type": "string"},
+                                 "boxes": {"type": "array",
+                                          "items": {"type": "array"}},
+                                 "current": {"type": "string"},
+                                 "threshold": {"type": "number"},
+                                 "region": {"type": "array",
+                                           "items": {"type": "integer"}}},
+                                required=["reference", "boxes"]),
+            handler=h.localize_changes,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_classify_widget",
+            description=("Map geometric 'features' {aspect, circularity, fill} "
+                         "to a widget type (radio/toggle/checkbox/text_field/"
+                         "button/icon). Pure. Returns {type}."),
+            input_schema=schema({"features": {"type": "object"}},
+                                required=["features"]),
+            handler=h.classify_widget,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_classify_icon",
+            description=("Classify the widget in a 'box' [x,y,w,h] of a "
+                         "'source' image from its pixel shape. Returns {type, "
+                         "features}."),
+            input_schema=schema({"source": {"type": "string"},
+                                 "box": {"type": "array",
+                                        "items": {"type": "integer"}}},
+                                required=["source", "box"]),
+            handler=h.classify_icon,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_propose_elements",
+            description=("Propose text/widget element boxes from raw screen "
+                         "pixels (template-free): detect widget blobs + text "
+                         "regions, fuse, order. 'region' [x,y,w,h] clips. "
+                         "Returns {elements:[{box, kind, index}]}."),
+            input_schema=schema({"region": {"type": "array",
+                                           "items": {"type": "integer"}},
+                                 "min_area": {"type": "integer"},
+                                 "iou_threshold": {"type": "number"}}),
+            handler=h.propose_elements,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_tag_kinds",
+            description=("Label fused element boxes 'text'/'widget' by source "
+                         "(pure). 'elements' is a list of {x,y,width,height,"
+                         "source,index}. Returns {elements:[{box, kind, "
+                         "index}]}."),
+            input_schema=schema({"elements": {"type": "array",
+                                             "items": {"type": "object"}}},
+                                required=["elements"]),
+            handler=h.tag_kinds,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

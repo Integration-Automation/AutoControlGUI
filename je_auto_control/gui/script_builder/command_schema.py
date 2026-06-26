@@ -4607,6 +4607,67 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Locate a template across a light/dark theme flip.",
     ))
     specs.append(CommandSpec(
+        "AC_rank_changes", "Image", "Rank Changed Boxes",
+        fields=(
+            FieldSpec("scored_boxes", FieldType.STRING,
+                      placeholder="JSON list of {box, score}"),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True,
+                      default=0.1),
+        ),
+        description="Rank scored element boxes by how much they changed.",
+    ))
+    specs.append(CommandSpec(
+        "AC_localize_changes", "Image", "Localize Changed Elements",
+        fields=(
+            FieldSpec("reference", FieldType.STRING,
+                      placeholder="reference image path"),
+            FieldSpec("boxes", FieldType.STRING,
+                      placeholder="JSON list of [x, y, w, h]"),
+            FieldSpec("current", FieldType.STRING, optional=True,
+                      placeholder="current image path (else screen)"),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True,
+                      default=0.1),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+        ),
+        description="Rank which element boxes changed between two frames.",
+    ))
+    specs.append(CommandSpec(
+        "AC_classify_widget", "Image", "Classify Widget (features)",
+        fields=(
+            FieldSpec("features", FieldType.STRING,
+                      placeholder="JSON {aspect, circularity, fill}"),
+        ),
+        description="Map geometric features to a widget type.",
+    ))
+    specs.append(CommandSpec(
+        "AC_classify_icon", "Image", "Classify Icon (box)",
+        fields=(
+            FieldSpec("source", FieldType.STRING, placeholder="image path"),
+            FieldSpec("box", FieldType.STRING, placeholder="[x, y, w, h]"),
+        ),
+        description="Classify the widget in an image box from its pixels.",
+    ))
+    specs.append(CommandSpec(
+        "AC_propose_elements", "Image", "Propose Elements (template-free)",
+        fields=(
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=80),
+            FieldSpec("iou_threshold", FieldType.FLOAT, optional=True,
+                      default=0.5),
+        ),
+        description="Propose text/widget element boxes from raw screen pixels.",
+    ))
+    specs.append(CommandSpec(
+        "AC_tag_kinds", "Image", "Tag Element Kinds",
+        fields=(
+            FieldSpec("elements", FieldType.STRING,
+                      placeholder="JSON list of fused boxes"),
+        ),
+        description="Label fused element boxes text/widget by source.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,

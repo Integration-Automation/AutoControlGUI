@@ -774,6 +774,41 @@ def match_theme(template, region=None, method="sobel", min_score=0.5):
     return _match_theme(template, region, method, min_score)
 
 
+def rank_changes(scored_boxes, threshold=0.1):
+    from je_auto_control.utils.executor.action_executor import _rank_changes
+    return _rank_changes(scored_boxes, threshold)
+
+
+def localize_changes(reference, boxes, current=None, threshold=0.1,
+                     region=None):
+    from je_auto_control.utils.executor.action_executor import (
+        _localize_changes,
+    )
+    return _localize_changes(reference, boxes, current, threshold, region)
+
+
+def classify_widget(features):
+    from je_auto_control.utils.executor.action_executor import _classify_widget
+    return _classify_widget(features)
+
+
+def classify_icon(source, box):
+    from je_auto_control.utils.executor.action_executor import _classify_icon
+    return _classify_icon(source, box)
+
+
+def propose_elements(region=None, min_area=80, iou_threshold=0.5):
+    from je_auto_control.utils.executor.action_executor import (
+        _propose_elements,
+    )
+    return _propose_elements(region, min_area, iou_threshold)
+
+
+def tag_kinds(elements):
+    from je_auto_control.utils.executor.action_executor import _tag_kinds
+    return _tag_kinds(elements)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)
