@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "je_auto_control"
-version = "0.0.212"
+version = "0.0.213"
 authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]
