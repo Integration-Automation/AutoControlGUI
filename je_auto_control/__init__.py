@@ -149,6 +149,8 @@ from je_auto_control.utils.change_localize import localize_changes, rank_changes
 from je_auto_control.utils.icon_classify import (
     box_features, classify_icon, classify_widget,
 )
+# Propose a clean element list from raw pixels (template-free)
+from je_auto_control.utils.element_proposal import propose_elements, tag_kinds
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1779,6 +1781,7 @@ __all__ = [
     "normalize_theme", "match_theme",
     "localize_changes", "rank_changes",
     "classify_widget", "box_features", "classify_icon",
+    "propose_elements", "tag_kinds",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",

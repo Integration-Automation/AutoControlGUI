@@ -4159,6 +4159,31 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.classify_icon,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_propose_elements",
+            description=("Propose text/widget element boxes from raw screen "
+                         "pixels (template-free): detect widget blobs + text "
+                         "regions, fuse, order. 'region' [x,y,w,h] clips. "
+                         "Returns {elements:[{box, kind, index}]}."),
+            input_schema=schema({"region": {"type": "array",
+                                           "items": {"type": "integer"}},
+                                 "min_area": {"type": "integer"},
+                                 "iou_threshold": {"type": "number"}}),
+            handler=h.propose_elements,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_tag_kinds",
+            description=("Label fused element boxes 'text'/'widget' by source "
+                         "(pure). 'elements' is a list of {x,y,width,height,"
+                         "source,index}. Returns {elements:[{box, kind, "
+                         "index}]}."),
+            input_schema=schema({"elements": {"type": "array",
+                                             "items": {"type": "object"}}},
+                                required=["elements"]),
+            handler=h.tag_kinds,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
