@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Classify a Widget from Its Pixel Shape
+
+Tell a checkbox from a radio button from a text field — from pixels, no model. Full reference: [`docs/source/Eng/doc/new_features/v219_features_doc.rst`](docs/source/Eng/doc/new_features/v219_features_doc.rst).
+
+- **`classify_widget` / `box_features` / `classify_icon`** (`AC_classify_widget`, `AC_classify_icon`): Set-of-Marks and element proposers return *boxes* but not *what each box is*; `form_fields.checkbox_state` reads a box already known to be a checkbox — the gap is the typing step before it. `box_features` extracts `{aspect, fill, edge_density, circularity}` for a box; `classify_widget` is the pure heuristic classifier (round→radio, wide-rounded→toggle, square-sparse→checkbox, wide-hollow→text_field, wide-filled→button, else icon); `classify_icon` composes them. The classifier is pure and fully testable; cv2/numpy imported lazily so the module stays importable. Sixth feature of the ROUND-15 perception lane. No `PySide6`.
+
 ### Localize a Change to the Elements That Changed
 
 Turn a raw screen diff into "element 3 changed" by scoring a list of element boxes. Full reference: [`docs/source/Eng/doc/new_features/v218_features_doc.rst`](docs/source/Eng/doc/new_features/v218_features_doc.rst).

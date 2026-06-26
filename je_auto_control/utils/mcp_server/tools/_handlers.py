@@ -787,6 +787,16 @@ def localize_changes(reference, boxes, current=None, threshold=0.1,
     return _localize_changes(reference, boxes, current, threshold, region)
 
 
+def classify_widget(features):
+    from je_auto_control.utils.executor.action_executor import _classify_widget
+    return _classify_widget(features)
+
+
+def classify_icon(source, box):
+    from je_auto_control.utils.executor.action_executor import _classify_icon
+    return _classify_icon(source, box)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

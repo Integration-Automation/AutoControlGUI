@@ -4137,6 +4137,28 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.localize_changes,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_classify_widget",
+            description=("Map geometric 'features' {aspect, circularity, fill} "
+                         "to a widget type (radio/toggle/checkbox/text_field/"
+                         "button/icon). Pure. Returns {type}."),
+            input_schema=schema({"features": {"type": "object"}},
+                                required=["features"]),
+            handler=h.classify_widget,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_classify_icon",
+            description=("Classify the widget in a 'box' [x,y,w,h] of a "
+                         "'source' image from its pixel shape. Returns {type, "
+                         "features}."),
+            input_schema=schema({"source": {"type": "string"},
+                                 "box": {"type": "array",
+                                        "items": {"type": "integer"}}},
+                                required=["source", "box"]),
+            handler=h.classify_icon,
+            annotations=READ_ONLY,
+        ),
     ]
 
 
