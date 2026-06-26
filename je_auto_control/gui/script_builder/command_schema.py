@@ -4568,6 +4568,30 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Higher-contrast label colour (black/white) for a background.",
     ))
     specs.append(CommandSpec(
+        "AC_grade_contrast", "Image", "Grade Contrast (WCAG)",
+        fields=(
+            FieldSpec("foreground", FieldType.STRING, placeholder="[r, g, b]"),
+            FieldSpec("background", FieldType.STRING, placeholder="[r, g, b]"),
+        ),
+        description="Grade a foreground/background colour pair against WCAG.",
+    ))
+    specs.append(CommandSpec(
+        "AC_dominant_pair", "Image", "Dominant FG/BG Colours",
+        fields=(
+            FieldSpec("pixels", FieldType.STRING,
+                      placeholder="JSON list of [r, g, b] pixels"),
+        ),
+        description="Split sampled pixels into dominant foreground/background.",
+    ))
+    specs.append(CommandSpec(
+        "AC_region_contrast", "Image", "Region Text Contrast",
+        fields=(
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+        ),
+        description="Sample a screen region and grade its text contrast.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,
