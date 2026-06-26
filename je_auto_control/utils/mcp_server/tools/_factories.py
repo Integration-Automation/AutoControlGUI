@@ -1898,6 +1898,21 @@ def smart_wait_tools() -> List[MCPTool]:
             handler=h.idle_point,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_act_in_view",
+            description=("Scroll a 'target' (kind=image template path / text) "
+                         "into view, wait until it is actionable, then click it "
+                         "('button'). Returns {acted, coords, scrolls}."),
+            input_schema=schema({"target": {"type": "string"},
+                                 "kind": {"type": "string"},
+                                 "direction": {"type": "string"},
+                                 "max_scrolls": {"type": "integer"},
+                                 "scroll_amount": {"type": "integer"},
+                                 "button": {"type": "string"}},
+                                required=["target"]),
+            handler=h.act_in_view,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
     ]
 
 
