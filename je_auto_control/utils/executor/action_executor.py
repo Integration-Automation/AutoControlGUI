@@ -2863,6 +2863,23 @@ def _colors_collide(left: Any, right: Any, kind: Any = "deuteranopia",
                           threshold=float(threshold))
 
 
+def _place_labels(marks: Any, label_width: Any = 22, label_height: Any = 16,
+                  bounds: Any = None) -> Dict[str, Any]:
+    """Adapter: lay out non-overlapping Set-of-Marks label boxes (pure)."""
+    from je_auto_control.utils.marks_layout import place_labels
+    items = _coerce_list(marks) if marks else []
+    limit = _coerce_list(bounds) if bounds else None
+    labels = place_labels(items, label_width=int(label_width),
+                          label_height=int(label_height), bounds=limit)
+    return {"labels": labels}
+
+
+def _label_color(background: Any) -> Dict[str, Any]:
+    """Adapter: the higher-contrast label colour for a background (pure)."""
+    from je_auto_control.utils.marks_layout import label_color
+    return label_color(_coerce_rgb(background))
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6896,6 +6913,8 @@ class Executor:
             "AC_idle_point": _idle_point,
             "AC_simulate_cvd": _simulate_cvd,
             "AC_colors_collide": _colors_collide,
+            "AC_place_labels": _place_labels,
+            "AC_label_color": _label_color,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

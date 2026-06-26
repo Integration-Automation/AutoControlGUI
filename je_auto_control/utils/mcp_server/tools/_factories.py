@@ -4030,6 +4030,33 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.colors_collide,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_place_labels",
+            description=("Lay out non-overlapping Set-of-Marks label boxes for "
+                         "'marks' (each {id, bbox:[x,y,w,h]}). 'bounds' is "
+                         "[width, height] to stay within. Pure. Returns "
+                         "{labels:[{id, label:[x,y,w,h], anchor}]}."),
+            input_schema=schema({"marks": {"type": "array",
+                                          "items": {"type": "object"}},
+                                 "label_width": {"type": "integer"},
+                                 "label_height": {"type": "integer"},
+                                 "bounds": {"type": "array",
+                                           "items": {"type": "integer"}}},
+                                required=["marks"]),
+            handler=h.place_labels,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_label_color",
+            description=("The higher-contrast label text colour (black or "
+                         "white) for a 'background' [r,g,b], by WCAG contrast. "
+                         "Returns {rgb, contrast}."),
+            input_schema=schema({"background": {"type": "array",
+                                               "items": {"type": "integer"}}},
+                                required=["background"]),
+            handler=h.label_color,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

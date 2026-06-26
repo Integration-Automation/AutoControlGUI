@@ -135,6 +135,8 @@ from je_auto_control.utils.app_idle import idle_point, wait_until_app_idle
 from je_auto_control.utils.cvd_simulate import (
     color_distance, colors_collide, simulate_cvd,
 )
+# Lay out Set-of-Marks labels without overlap + readable colour
+from je_auto_control.utils.marks_layout import label_color, place_labels
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1760,6 +1762,7 @@ __all__ = [
     "ensure_state", "ensure_toggle",
     "wait_until_app_idle", "idle_point",
     "simulate_cvd", "colors_collide", "color_distance",
+    "place_labels", "label_color",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",

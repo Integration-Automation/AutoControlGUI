@@ -744,6 +744,16 @@ def colors_collide(left, right, kind="deuteranopia", severity=1.0,
     return _colors_collide(left, right, kind, severity, threshold)
 
 
+def place_labels(marks, label_width=22, label_height=16, bounds=None):
+    from je_auto_control.utils.executor.action_executor import _place_labels
+    return _place_labels(marks, label_width, label_height, bounds)
+
+
+def label_color(background):
+    from je_auto_control.utils.executor.action_executor import _label_color
+    return _label_color(background)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)
