@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Theme-Invariant Matching (Light Template, Dark Mode)
+
+Find a button captured in light mode even after the app switches to dark mode. Full reference: [`docs/source/Eng/doc/new_features/v217_features_doc.rst`](docs/source/Eng/doc/new_features/v217_features_doc.rst).
+
+- **`normalize_theme` / `match_theme`** (`AC_match_theme`): `match_template` correlates raw pixel intensities, so a light-mode template scores terribly against the same control in dark mode — the polarity is inverted. The fix is to compare *structure*. `normalize_theme` maps an image to a polarity-invariant single channel (`sobel`/`laplacian` gradient magnitude — identical for an image and its colour inverse — or `zscore`); `match_theme` normalizes both the template and the screen, then locates the template via `visual_match.match_template`, finding it across a light/dark flip that defeats raw matching. cv2/numpy are imported lazily so the module stays importable everywhere. Fourth feature of the ROUND-15 perception lane. No `PySide6`.
+
 ### Sample a Region's Text Contrast (WCAG)
 
 Grade the legibility of on-screen text when you only have a region, not the two colours. Full reference: [`docs/source/Eng/doc/new_features/v216_features_doc.rst`](docs/source/Eng/doc/new_features/v216_features_doc.rst).

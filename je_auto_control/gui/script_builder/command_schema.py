@@ -4592,6 +4592,21 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Sample a screen region and grade its text contrast.",
     ))
     specs.append(CommandSpec(
+        "AC_match_theme", "Image", "Match (Theme-Invariant)",
+        fields=(
+            FieldSpec("template", FieldType.STRING,
+                      placeholder="template image path"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+            FieldSpec("method", FieldType.STRING, optional=True,
+                      default="sobel",
+                      placeholder="sobel / laplacian / zscore"),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True,
+                      default=0.5),
+        ),
+        description="Locate a template across a light/dark theme flip.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,
