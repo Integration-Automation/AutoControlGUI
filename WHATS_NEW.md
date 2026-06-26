@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Template-Free Element Proposal (Pixels to Elements)
+
+Get a clean numbered element list straight from the screen when there's no accessibility tree. Full reference: [`docs/source/Eng/doc/new_features/v220_features_doc.rst`](docs/source/Eng/doc/new_features/v220_features_doc.rst).
+
+- **`propose_elements` / `tag_kinds`** (`AC_propose_elements`, `AC_tag_kinds`): Set-of-Marks, `observation` and the grounding helpers all assume you already have element boxes — but a game, a custom-drawn app or a remote desktop has no accessibility tree. `propose_elements` builds that top-of-funnel list from pixels: detect widget boxes (closed-edge blobs via Canny + morphology + `connected_boxes`) and text boxes (`text_regions.find_text_regions`), fuse them — the `element_parse` `ocr > icon` priority *is* the "drop widget-that-is-really-text" cross-check — and return them in reading order, each tagged `text` or `widget`. `tag_kinds` is the pure labeller. cv2 imported lazily; the labeller is fully testable. Seventh and final feature of the ROUND-15 perception lane. No `PySide6`.
+
 ### Classify a Widget from Its Pixel Shape
 
 Tell a checkbox from a radio button from a text field — from pixels, no model. Full reference: [`docs/source/Eng/doc/new_features/v219_features_doc.rst`](docs/source/Eng/doc/new_features/v219_features_doc.rst).

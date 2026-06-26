@@ -4649,6 +4649,25 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Classify the widget in an image box from its pixels.",
     ))
     specs.append(CommandSpec(
+        "AC_propose_elements", "Image", "Propose Elements (template-free)",
+        fields=(
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+            FieldSpec("min_area", FieldType.INT, optional=True, default=80),
+            FieldSpec("iou_threshold", FieldType.FLOAT, optional=True,
+                      default=0.5),
+        ),
+        description="Propose text/widget element boxes from raw screen pixels.",
+    ))
+    specs.append(CommandSpec(
+        "AC_tag_kinds", "Image", "Tag Element Kinds",
+        fields=(
+            FieldSpec("elements", FieldType.STRING,
+                      placeholder="JSON list of fused boxes"),
+        ),
+        description="Label fused element boxes text/widget by source.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,

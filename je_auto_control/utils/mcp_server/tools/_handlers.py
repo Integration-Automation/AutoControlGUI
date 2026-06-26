@@ -797,6 +797,18 @@ def classify_icon(source, box):
     return _classify_icon(source, box)
 
 
+def propose_elements(region=None, min_area=80, iou_threshold=0.5):
+    from je_auto_control.utils.executor.action_executor import (
+        _propose_elements,
+    )
+    return _propose_elements(region, min_area, iou_threshold)
+
+
+def tag_kinds(elements):
+    from je_auto_control.utils.executor.action_executor import _tag_kinds
+    return _tag_kinds(elements)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)
