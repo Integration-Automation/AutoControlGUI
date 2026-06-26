@@ -145,6 +145,10 @@ from je_auto_control.utils.contrast_map import (
 from je_auto_control.utils.theme_normalize import match_theme, normalize_theme
 # Attribute a screen change to the specific element boxes that changed
 from je_auto_control.utils.change_localize import localize_changes, rank_changes
+# Classify what kind of widget a box is from its pixel shape
+from je_auto_control.utils.icon_classify import (
+    box_features, classify_icon, classify_widget,
+)
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1774,6 +1778,7 @@ __all__ = [
     "grade_contrast", "dominant_pair", "region_contrast",
     "normalize_theme", "match_theme",
     "localize_changes", "rank_changes",
+    "classify_widget", "box_features", "classify_icon",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",

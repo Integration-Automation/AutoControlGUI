@@ -4633,6 +4633,22 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Rank which element boxes changed between two frames.",
     ))
     specs.append(CommandSpec(
+        "AC_classify_widget", "Image", "Classify Widget (features)",
+        fields=(
+            FieldSpec("features", FieldType.STRING,
+                      placeholder="JSON {aspect, circularity, fill}"),
+        ),
+        description="Map geometric features to a widget type.",
+    ))
+    specs.append(CommandSpec(
+        "AC_classify_icon", "Image", "Classify Icon (box)",
+        fields=(
+            FieldSpec("source", FieldType.STRING, placeholder="image path"),
+            FieldSpec("box", FieldType.STRING, placeholder="[x, y, w, h]"),
+        ),
+        description="Classify the widget in an image box from its pixels.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,

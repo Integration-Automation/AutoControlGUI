@@ -2932,6 +2932,20 @@ def _localize_changes(reference: Any, boxes: Any, current: Any = None,
     return {"changes": changes}
 
 
+def _classify_widget(features: Any) -> Dict[str, Any]:
+    """Adapter: map geometric features to a widget type (pure)."""
+    from je_auto_control.utils.icon_classify import classify_widget
+    import json
+    data = json.loads(features) if isinstance(features, str) else dict(features)
+    return {"type": classify_widget(data)}
+
+
+def _classify_icon(source: Any, box: Any) -> Dict[str, Any]:
+    """Adapter: classify the widget in a box from its pixels (device)."""
+    from je_auto_control.utils.icon_classify import classify_icon
+    return classify_icon(str(source), _coerce_list(box))
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6973,6 +6987,8 @@ class Executor:
             "AC_match_theme": _match_theme,
             "AC_rank_changes": _rank_changes,
             "AC_localize_changes": _localize_changes,
+            "AC_classify_widget": _classify_widget,
+            "AC_classify_icon": _classify_icon,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,
