@@ -769,6 +769,11 @@ def region_contrast(region=None):
     return _region_contrast(region)
 
 
+def match_theme(template, region=None, method="sobel", min_score=0.5):
+    from je_auto_control.utils.executor.action_executor import _match_theme
+    return _match_theme(template, region, method, min_score)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

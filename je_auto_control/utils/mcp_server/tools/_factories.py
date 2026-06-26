@@ -4091,6 +4091,22 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.region_contrast,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_match_theme",
+            description=("Locate a 'template' image on screen across a "
+                         "light/dark theme flip, by matching gradient "
+                         "structure ('method' sobel/laplacian/zscore). "
+                         "'region' [x,y,w,h] clips the search. Returns {found, "
+                         "x, y, width, height, score}."),
+            input_schema=schema({"template": {"type": "string"},
+                                 "region": {"type": "array",
+                                           "items": {"type": "integer"}},
+                                 "method": {"type": "string"},
+                                 "min_score": {"type": "number"}},
+                                required=["template"]),
+            handler=h.match_theme,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

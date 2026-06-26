@@ -2900,6 +2900,18 @@ def _region_contrast(region: Any = None) -> Dict[str, Any]:
     return region_contrast(region=_coerce_region(region))
 
 
+def _match_theme(template: Any, region: Any = None, method: Any = "sobel",
+                 min_score: Any = 0.5) -> Dict[str, Any]:
+    """Adapter: locate a template across a light/dark theme flip (device)."""
+    from je_auto_control.utils.theme_normalize import match_theme
+    match = match_theme(str(template), method=str(method),
+                        min_score=float(min_score),
+                        region=_coerce_region(region))
+    if match is None:
+        return {"found": False}
+    return {"found": True, **match}
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6938,6 +6950,7 @@ class Executor:
             "AC_grade_contrast": _grade_contrast,
             "AC_dominant_pair": _dominant_pair,
             "AC_region_contrast": _region_contrast,
+            "AC_match_theme": _match_theme,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

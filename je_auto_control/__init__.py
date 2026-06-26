@@ -141,6 +141,8 @@ from je_auto_control.utils.marks_layout import label_color, place_labels
 from je_auto_control.utils.contrast_map import (
     dominant_pair, grade_contrast, region_contrast,
 )
+# Theme-invariant matching so a light template matches dark mode
+from je_auto_control.utils.theme_normalize import match_theme, normalize_theme
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1768,6 +1770,7 @@ __all__ = [
     "simulate_cvd", "colors_collide", "color_distance",
     "place_labels", "label_color",
     "grade_contrast", "dominant_pair", "region_contrast",
+    "normalize_theme", "match_theme",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",
