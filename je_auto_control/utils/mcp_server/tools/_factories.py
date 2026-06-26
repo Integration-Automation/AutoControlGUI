@@ -1913,6 +1913,20 @@ def smart_wait_tools() -> List[MCPTool]:
             handler=h.act_in_view,
             annotations=SIDE_EFFECT_ONLY,
         ),
+        MCPTool(
+            name="ac_act_with_mode",
+            description=("Click point (x, y) under an action 'mode': 'auto' "
+                         "(gate then click), 'trial' (gate but DON'T click — "
+                         "dry run), or 'force' (click with no checks). Returns "
+                         "{mode, acted, actionable, reason, point}."),
+            input_schema=schema({"x": {"type": "integer"},
+                                 "y": {"type": "integer"},
+                                 "mode": {"type": "string"},
+                                 "button": {"type": "string"}},
+                                required=["x", "y"]),
+            handler=h.act_with_mode,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
     ]
 
 

@@ -153,6 +153,8 @@ from je_auto_control.utils.icon_classify import (
 from je_auto_control.utils.element_proposal import propose_elements, tag_kinds
 # Scroll a target into view, then act on it once it is actionable
 from je_auto_control.utils.act_in_view import ScrollPlan, act_in_view
+# Trial / force action modes over the actionability gate
+from je_auto_control.utils.act_modes import act_with_mode
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1784,7 +1786,7 @@ __all__ = [
     "localize_changes", "rank_changes",
     "classify_widget", "box_features", "classify_icon",
     "propose_elements", "tag_kinds",
-    "act_in_view", "ScrollPlan",
+    "act_in_view", "ScrollPlan", "act_with_mode",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",

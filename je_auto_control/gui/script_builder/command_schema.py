@@ -4540,6 +4540,18 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Scroll a target into view, then click it when actionable.",
     ))
     specs.append(CommandSpec(
+        "AC_act_with_mode", "Flow", "Click with Mode (auto/trial/force)",
+        fields=(
+            FieldSpec("x", FieldType.INT, placeholder="x"),
+            FieldSpec("y", FieldType.INT, placeholder="y"),
+            FieldSpec("mode", FieldType.STRING, optional=True, default="auto",
+                      placeholder="auto / trial / force"),
+            FieldSpec("button", FieldType.STRING, optional=True,
+                      default="left"),
+        ),
+        description="Click a point under an action mode (gate / dry-run / force).",
+    ))
+    specs.append(CommandSpec(
         "AC_simulate_cvd", "Image", "Simulate Colour-Vision Deficiency",
         fields=(
             FieldSpec("rgb", FieldType.STRING, placeholder="[r, g, b]"),
