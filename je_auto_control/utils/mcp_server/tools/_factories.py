@@ -4107,6 +4107,36 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.match_theme,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_rank_changes",
+            description=("Rank scored element boxes by how much they changed. "
+                         "'scored_boxes' is a list of {box:[x,y,w,h], score}. "
+                         "Pure. Returns {changes:[{box, score, changed}]} "
+                         "sorted most-changed first."),
+            input_schema=schema({"scored_boxes": {"type": "array",
+                                                 "items": {"type": "object"}},
+                                 "threshold": {"type": "number"}},
+                                required=["scored_boxes"]),
+            handler=h.rank_changes,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_localize_changes",
+            description=("Which of the supplied element 'boxes' changed between "
+                         "a 'reference' image and the current screen (or "
+                         "'current' image). Returns {changes:[{box, score, "
+                         "changed}]}."),
+            input_schema=schema({"reference": {"type": "string"},
+                                 "boxes": {"type": "array",
+                                          "items": {"type": "array"}},
+                                 "current": {"type": "string"},
+                                 "threshold": {"type": "number"},
+                                 "region": {"type": "array",
+                                           "items": {"type": "integer"}}},
+                                required=["reference", "boxes"]),
+            handler=h.localize_changes,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

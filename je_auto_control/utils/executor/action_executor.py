@@ -2912,6 +2912,26 @@ def _match_theme(template: Any, region: Any = None, method: Any = "sobel",
     return {"found": True, **match}
 
 
+def _rank_changes(scored_boxes: Any, threshold: Any = 0.1) -> Dict[str, Any]:
+    """Adapter: rank scored element boxes by how much they changed (pure)."""
+    from je_auto_control.utils.change_localize import rank_changes
+    items = _coerce_list(scored_boxes) if scored_boxes else []
+    return {"changes": rank_changes(items, threshold=float(threshold))}
+
+
+def _localize_changes(reference: Any, boxes: Any, current: Any = None,
+                      threshold: Any = 0.1, region: Any = None
+                      ) -> Dict[str, Any]:
+    """Adapter: rank which element boxes changed between two frames (device)."""
+    from je_auto_control.utils.change_localize import localize_changes
+    box_list = _coerce_list(boxes) if boxes else []
+    changes = localize_changes(str(reference), box_list,
+                               current=str(current) if current else None,
+                               threshold=float(threshold),
+                               region=_coerce_region(region))
+    return {"changes": changes}
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6951,6 +6971,8 @@ class Executor:
             "AC_dominant_pair": _dominant_pair,
             "AC_region_contrast": _region_contrast,
             "AC_match_theme": _match_theme,
+            "AC_rank_changes": _rank_changes,
+            "AC_localize_changes": _localize_changes,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,
