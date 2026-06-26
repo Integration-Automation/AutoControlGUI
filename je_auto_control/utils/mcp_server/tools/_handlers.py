@@ -809,6 +809,13 @@ def tag_kinds(elements):
     return _tag_kinds(elements)
 
 
+def act_in_view(target, kind="image", direction="down", max_scrolls=10,
+                scroll_amount=3, button="left"):
+    from je_auto_control.utils.executor.action_executor import _act_in_view
+    return _act_in_view(target, kind, direction, max_scrolls, scroll_amount,
+                        button)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

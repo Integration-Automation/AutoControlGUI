@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Act In View — Scroll to a Target, Then Act When Actionable
+
+Click the row three pages down: scroll it into view, then gate on actionability before clicking. Full reference: [`docs/source/Eng/doc/new_features/v221_features_doc.rst`](docs/source/Eng/doc/new_features/v221_features_doc.rst).
+
+- **`act_in_view` / `ScrollPlan`** (`AC_act_in_view`): two reliability primitives stayed separate — `scroll_find.scroll_until_visible` brings an off-screen target on-screen, and `actionability.act_when_ready` waits for it to be visible/stable/enabled/unoccluded before acting. A real "click the off-screen row" step needs both. `act_in_view` composes them: scroll until the target is located, then run the actionability gate at its point and perform the action. `ScrollPlan` bundles the scroll search + its `locator`/`scroller` seams so the call stays within the argument limit; the actionability probes (`region_sampler`/`enabled_probe`/`hit_tester`) and gate `config` are injectable too, so the whole flow is testable without a screen. Closes the input-fidelity lane's composition gap. No `PySide6`.
+
 ### Template-Free Element Proposal (Pixels to Elements)
 
 Get a clean numbered element list straight from the screen when there's no accessibility tree. Full reference: [`docs/source/Eng/doc/new_features/v220_features_doc.rst`](docs/source/Eng/doc/new_features/v220_features_doc.rst).

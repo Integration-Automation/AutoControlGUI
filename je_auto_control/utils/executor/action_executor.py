@@ -2963,6 +2963,22 @@ def _tag_kinds(elements: Any) -> Dict[str, Any]:
     return {"elements": tag_kinds(items)}
 
 
+def _act_in_view(target: Any, kind: Any = "image", direction: Any = "down",
+                 max_scrolls: Any = 10, scroll_amount: Any = 3,
+                 button: Any = "left") -> Dict[str, Any]:
+    """Adapter: scroll a target into view then click it when actionable."""
+    from je_auto_control.utils.act_in_view import ScrollPlan, act_in_view
+    plan = ScrollPlan(kind=str(kind), direction=str(direction),
+                      max_scrolls=int(max_scrolls),
+                      scroll_amount=int(scroll_amount))
+    out = act_in_view(
+        str(target),
+        lambda point: click_mouse(str(button), int(point[0]), int(point[1])),
+        scroll=plan)
+    return {"acted": out["acted"], "coords": out["coords"],
+            "scrolls": out["scrolls"]}
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -7008,6 +7024,7 @@ class Executor:
             "AC_classify_icon": _classify_icon,
             "AC_propose_elements": _propose_elements,
             "AC_tag_kinds": _tag_kinds,
+            "AC_act_in_view": _act_in_view,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,
