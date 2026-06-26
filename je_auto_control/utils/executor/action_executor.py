@@ -2839,6 +2839,79 @@ def _idle_point(busy_samples: Any, quiet_samples: Any = 3) -> Dict[str, Any]:
     return {"index": idle_point(samples, quiet_samples=int(quiet_samples))}
 
 
+def _coerce_rgb(value: Any) -> tuple:
+    """Normalise an RGB argument (JSON '[r,g,b]' string / list) to (r, g, b)."""
+    seq = _coerce_list(value) if isinstance(value, str) else list(value)
+    return (int(seq[0]), int(seq[1]), int(seq[2]))
+
+
+def _simulate_cvd(rgb: Any, kind: Any = "deuteranopia",
+                  severity: Any = 1.0) -> Dict[str, Any]:
+    """Adapter: map an RGB colour through a CVD simulation matrix (pure)."""
+    from je_auto_control.utils.cvd_simulate import simulate_cvd
+    result = simulate_cvd(_coerce_rgb(rgb), str(kind), float(severity))
+    return {"rgb": list(result)}
+
+
+def _colors_collide(left: Any, right: Any, kind: Any = "deuteranopia",
+                    severity: Any = 1.0, threshold: Any = 40.0
+                    ) -> Dict[str, Any]:
+    """Adapter: whether two colours become confusable under a CVD type (pure)."""
+    from je_auto_control.utils.cvd_simulate import colors_collide
+    return colors_collide(_coerce_rgb(left), _coerce_rgb(right),
+                          kind=str(kind), severity=float(severity),
+                          threshold=float(threshold))
+
+
+def _place_labels(marks: Any, label_width: Any = 22, label_height: Any = 16,
+                  bounds: Any = None) -> Dict[str, Any]:
+    """Adapter: lay out non-overlapping Set-of-Marks label boxes (pure)."""
+    from je_auto_control.utils.marks_layout import place_labels
+    items = _coerce_list(marks) if marks else []
+    limit = _coerce_list(bounds) if bounds else None
+    labels = place_labels(items, label_width=int(label_width),
+                          label_height=int(label_height), bounds=limit)
+    return {"labels": labels}
+
+
+def _label_color(background: Any) -> Dict[str, Any]:
+    """Adapter: the higher-contrast label colour for a background (pure)."""
+    from je_auto_control.utils.marks_layout import label_color
+    return label_color(_coerce_rgb(background))
+
+
+def _grade_contrast(foreground: Any, background: Any) -> Dict[str, Any]:
+    """Adapter: grade a foreground/background colour pair vs WCAG (pure)."""
+    from je_auto_control.utils.contrast_map import grade_contrast
+    return grade_contrast(_coerce_rgb(foreground), _coerce_rgb(background))
+
+
+def _dominant_pair(pixels: Any) -> Dict[str, Any]:
+    """Adapter: split sampled RGB pixels into fg/bg dominant colours (pure)."""
+    from je_auto_control.utils.contrast_map import dominant_pair
+    items = [_coerce_rgb(pixel) for pixel in _coerce_list(pixels)] \
+        if pixels else []
+    return dominant_pair(items)
+
+
+def _region_contrast(region: Any = None) -> Dict[str, Any]:
+    """Adapter: sample a screen region and grade its text contrast (device)."""
+    from je_auto_control.utils.contrast_map import region_contrast
+    return region_contrast(region=_coerce_region(region))
+
+
+def _match_theme(template: Any, region: Any = None, method: Any = "sobel",
+                 min_score: Any = 0.5) -> Dict[str, Any]:
+    """Adapter: locate a template across a light/dark theme flip (device)."""
+    from je_auto_control.utils.theme_normalize import match_theme
+    match = match_theme(str(template), method=str(method),
+                        min_score=float(min_score),
+                        region=_coerce_region(region))
+    if match is None:
+        return {"found": False}
+    return {"found": True, **match}
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6870,6 +6943,14 @@ class Executor:
             "AC_ensure_field_value": _ensure_field_value,
             "AC_wait_until_app_idle": _wait_until_app_idle,
             "AC_idle_point": _idle_point,
+            "AC_simulate_cvd": _simulate_cvd,
+            "AC_colors_collide": _colors_collide,
+            "AC_place_labels": _place_labels,
+            "AC_label_color": _label_color,
+            "AC_grade_contrast": _grade_contrast,
+            "AC_dominant_pair": _dominant_pair,
+            "AC_region_contrast": _region_contrast,
+            "AC_match_theme": _match_theme,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

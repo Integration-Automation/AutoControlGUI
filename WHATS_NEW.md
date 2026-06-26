@@ -2,6 +2,30 @@
 
 ## What's new (2026-06-26)
 
+### Theme-Invariant Matching (Light Template, Dark Mode)
+
+Find a button captured in light mode even after the app switches to dark mode. Full reference: [`docs/source/Eng/doc/new_features/v217_features_doc.rst`](docs/source/Eng/doc/new_features/v217_features_doc.rst).
+
+- **`normalize_theme` / `match_theme`** (`AC_match_theme`): `match_template` correlates raw pixel intensities, so a light-mode template scores terribly against the same control in dark mode — the polarity is inverted. The fix is to compare *structure*. `normalize_theme` maps an image to a polarity-invariant single channel (`sobel`/`laplacian` gradient magnitude — identical for an image and its colour inverse — or `zscore`); `match_theme` normalizes both the template and the screen, then locates the template via `visual_match.match_template`, finding it across a light/dark flip that defeats raw matching. cv2/numpy are imported lazily so the module stays importable everywhere. Fourth feature of the ROUND-15 perception lane. No `PySide6`.
+
+### Sample a Region's Text Contrast (WCAG)
+
+Grade the legibility of on-screen text when you only have a region, not the two colours. Full reference: [`docs/source/Eng/doc/new_features/v216_features_doc.rst`](docs/source/Eng/doc/new_features/v216_features_doc.rst).
+
+- **`grade_contrast` / `dominant_pair` / `region_contrast`** (`AC_grade_contrast`, `AC_dominant_pair`, `AC_region_contrast`): `a11y_audit.contrast_ratio` grades a foreground/background pair you already know — but a button or label on screen is a *patch of pixels*, not two known colours. `dominant_pair` splits sampled pixels at the mean luminance into the dominant foreground (minority, the text) and background (majority); `grade_contrast` grades a pair against the WCAG 2.x AA/AAA thresholds (normal + large text); `region_contrast` samples a screen region (through an injectable `sampler`) and grades it. The grading and split are pure and reuse `a11y_audit.contrast_ratio`, fully testable without a screen. Third feature of the ROUND-15 perception lane. No `PySide6`.
+
+### Set-of-Marks Label Layout (No Overlap, Readable Colour)
+
+Number every element without the labels piling up or vanishing into the background. Full reference: [`docs/source/Eng/doc/new_features/v215_features_doc.rst`](docs/source/Eng/doc/new_features/v215_features_doc.rst).
+
+- **`place_labels` / `label_color`** (`AC_place_labels`, `AC_label_color`): Set-of-Marks draws each numbered label at a fixed offset, so on dense UIs the numbers pile on top of each other and a dark label on a dark element vanishes. `place_labels` is greedy non-overlap placement — for each mark it tries a ring of candidate positions around its box (above/below/inside, left/right aligned) and takes the first that stays in bounds and clears every already-placed label; `label_color` picks black or white by whichever has the better WCAG contrast against the element background (reusing `a11y_audit.contrast_ratio`). Pure standard library, deterministic, fully testable without rendering. Second feature of the ROUND-15 perception lane. No `PySide6`.
+
+### Colour-Vision-Deficiency Simulation + Collision Check
+
+Check whether your red/green status colours are distinguishable to colour-blind users. Full reference: [`docs/source/Eng/doc/new_features/v214_features_doc.rst`](docs/source/Eng/doc/new_features/v214_features_doc.rst).
+
+- **`simulate_cvd` / `colors_collide` / `color_distance`** (`AC_simulate_cvd`, `AC_colors_collide`): status UIs lean on colour (green "ok" vs red "error"), but for the ~8% of men with a colour-vision deficiency those can be indistinguishable — and nothing in the framework could check it. `simulate_cvd` maps an RGB colour through a dichromat simulation matrix (protanopia/deuteranopia/tritanopia) at a given `severity`; `colors_collide` simulates two colours and reports whether they become confusable (a perceptual `redmean` distance below `threshold`); `color_distance` is the underlying metric. Pure standard library — no numpy/OpenCV, operating on plain RGB tuples, fully testable. First feature of the ROUND-15 perception lane. No `PySide6`.
+
 ### Wait Until the App Is Idle
 
 Hold off the next click until the busy/wait cursor settles — don't act mid-churn. Full reference: [`docs/source/Eng/doc/new_features/v213_features_doc.rst`](docs/source/Eng/doc/new_features/v213_features_doc.rst).

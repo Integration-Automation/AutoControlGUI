@@ -733,6 +733,47 @@ def idle_point(busy_samples, quiet_samples=3):
     return _idle_point(busy_samples, quiet_samples)
 
 
+def simulate_cvd(rgb, kind="deuteranopia", severity=1.0):
+    from je_auto_control.utils.executor.action_executor import _simulate_cvd
+    return _simulate_cvd(rgb, kind, severity)
+
+
+def colors_collide(left, right, kind="deuteranopia", severity=1.0,
+                   threshold=40.0):
+    from je_auto_control.utils.executor.action_executor import _colors_collide
+    return _colors_collide(left, right, kind, severity, threshold)
+
+
+def place_labels(marks, label_width=22, label_height=16, bounds=None):
+    from je_auto_control.utils.executor.action_executor import _place_labels
+    return _place_labels(marks, label_width, label_height, bounds)
+
+
+def label_color(background):
+    from je_auto_control.utils.executor.action_executor import _label_color
+    return _label_color(background)
+
+
+def grade_contrast(foreground, background):
+    from je_auto_control.utils.executor.action_executor import _grade_contrast
+    return _grade_contrast(foreground, background)
+
+
+def dominant_pair(pixels):
+    from je_auto_control.utils.executor.action_executor import _dominant_pair
+    return _dominant_pair(pixels)
+
+
+def region_contrast(region=None):
+    from je_auto_control.utils.executor.action_executor import _region_contrast
+    return _region_contrast(region)
+
+
+def match_theme(template, region=None, method="sobel", min_score=0.5):
+    from je_auto_control.utils.executor.action_executor import _match_theme
+    return _match_theme(template, region, method, min_score)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

@@ -4000,6 +4000,113 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.most_salient,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_simulate_cvd",
+            description=("Map an 'rgb' colour [r,g,b] through a colour-vision-"
+                         "deficiency simulation (kind=protanopia/deuteranopia/"
+                         "tritanopia, severity 0..1). Returns {rgb}."),
+            input_schema=schema({"rgb": {"type": "array",
+                                        "items": {"type": "integer"}},
+                                 "kind": {"type": "string"},
+                                 "severity": {"type": "number"}},
+                                required=["rgb"]),
+            handler=h.simulate_cvd,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_colors_collide",
+            description=("Whether two colours 'left'/'right' [r,g,b] become "
+                         "confusable under a CVD 'kind' (distance below "
+                         "'threshold'). Returns {collide, distance, kind, "
+                         "severity, simulated_left, simulated_right}."),
+            input_schema=schema({"left": {"type": "array",
+                                         "items": {"type": "integer"}},
+                                 "right": {"type": "array",
+                                          "items": {"type": "integer"}},
+                                 "kind": {"type": "string"},
+                                 "severity": {"type": "number"},
+                                 "threshold": {"type": "number"}},
+                                required=["left", "right"]),
+            handler=h.colors_collide,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_place_labels",
+            description=("Lay out non-overlapping Set-of-Marks label boxes for "
+                         "'marks' (each {id, bbox:[x,y,w,h]}). 'bounds' is "
+                         "[width, height] to stay within. Pure. Returns "
+                         "{labels:[{id, label:[x,y,w,h], anchor}]}."),
+            input_schema=schema({"marks": {"type": "array",
+                                          "items": {"type": "object"}},
+                                 "label_width": {"type": "integer"},
+                                 "label_height": {"type": "integer"},
+                                 "bounds": {"type": "array",
+                                           "items": {"type": "integer"}}},
+                                required=["marks"]),
+            handler=h.place_labels,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_label_color",
+            description=("The higher-contrast label text colour (black or "
+                         "white) for a 'background' [r,g,b], by WCAG contrast. "
+                         "Returns {rgb, contrast}."),
+            input_schema=schema({"background": {"type": "array",
+                                               "items": {"type": "integer"}}},
+                                required=["background"]),
+            handler=h.label_color,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_grade_contrast",
+            description=("Grade a 'foreground'/'background' [r,g,b] colour pair "
+                         "against WCAG. Returns {ratio, aa, aaa, aa_large, "
+                         "aaa_large}. Pure."),
+            input_schema=schema({"foreground": {"type": "array",
+                                               "items": {"type": "integer"}},
+                                 "background": {"type": "array",
+                                               "items": {"type": "integer"}}},
+                                required=["foreground", "background"]),
+            handler=h.grade_contrast,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_dominant_pair",
+            description=("Split sampled RGB 'pixels' (list of [r,g,b]) into the "
+                         "dominant {foreground, background} colours by "
+                         "luminance. Pure."),
+            input_schema=schema({"pixels": {"type": "array",
+                                           "items": {"type": "array"}}},
+                                required=["pixels"]),
+            handler=h.dominant_pair,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_region_contrast",
+            description=("Sample a screen 'region' [x,y,w,h] and grade its text "
+                         "contrast: {ratio, aa, aaa, aa_large, aaa_large, "
+                         "foreground, background, samples}."),
+            input_schema=schema({"region": {"type": "array",
+                                           "items": {"type": "integer"}}}),
+            handler=h.region_contrast,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_match_theme",
+            description=("Locate a 'template' image on screen across a "
+                         "light/dark theme flip, by matching gradient "
+                         "structure ('method' sobel/laplacian/zscore). "
+                         "'region' [x,y,w,h] clips the search. Returns {found, "
+                         "x, y, width, height, score}."),
+            input_schema=schema({"template": {"type": "string"},
+                                 "region": {"type": "array",
+                                           "items": {"type": "integer"}},
+                                 "method": {"type": "string"},
+                                 "min_score": {"type": "number"}},
+                                required=["template"]),
+            handler=h.match_theme,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

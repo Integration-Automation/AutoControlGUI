@@ -131,6 +131,18 @@ from je_auto_control.utils.adaptive_timeout import (
 from je_auto_control.utils.ensure_state import ensure_state, ensure_toggle
 # Wait until an application stops being busy before the next step
 from je_auto_control.utils.app_idle import idle_point, wait_until_app_idle
+# Colour-vision-deficiency simulation + colour-collision check
+from je_auto_control.utils.cvd_simulate import (
+    color_distance, colors_collide, simulate_cvd,
+)
+# Lay out Set-of-Marks labels without overlap + readable colour
+from je_auto_control.utils.marks_layout import label_color, place_labels
+# Grade on-screen text legibility by sampling its actual colours (WCAG)
+from je_auto_control.utils.contrast_map import (
+    dominant_pair, grade_contrast, region_contrast,
+)
+# Theme-invariant matching so a light template matches dark mode
+from je_auto_control.utils.theme_normalize import match_theme, normalize_theme
 # Rich clipboard formats — RTF + CSV/TSV codecs and Windows get / set
 from je_auto_control.utils.clipboard_rich_formats import (
     build_rtf, csv_to_rows, get_clipboard_csv, get_clipboard_rtf, rows_to_csv,
@@ -1755,6 +1767,10 @@ __all__ = [
     "recommend_timeout", "timeout_stats",
     "ensure_state", "ensure_toggle",
     "wait_until_app_idle", "idle_point",
+    "simulate_cvd", "colors_collide", "color_distance",
+    "place_labels", "label_color",
+    "grade_contrast", "dominant_pair", "region_contrast",
+    "normalize_theme", "match_theme",
     "build_rtf", "rtf_to_text", "rows_to_csv", "csv_to_rows",
     "set_clipboard_rtf", "get_clipboard_rtf",
     "set_clipboard_csv", "get_clipboard_csv",

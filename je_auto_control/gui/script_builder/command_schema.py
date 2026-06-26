@@ -4523,6 +4523,90 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
         description="Index where a busy/idle series first settles idle.",
     ))
     specs.append(CommandSpec(
+        "AC_simulate_cvd", "Image", "Simulate Colour-Vision Deficiency",
+        fields=(
+            FieldSpec("rgb", FieldType.STRING, placeholder="[r, g, b]"),
+            FieldSpec("kind", FieldType.STRING, optional=True,
+                      default="deuteranopia",
+                      placeholder="protanopia / deuteranopia / tritanopia"),
+            FieldSpec("severity", FieldType.FLOAT, optional=True, default=1.0),
+        ),
+        description="Map an RGB colour through a CVD simulation matrix.",
+    ))
+    specs.append(CommandSpec(
+        "AC_colors_collide", "Image", "Colours Collide Under CVD",
+        fields=(
+            FieldSpec("left", FieldType.STRING, placeholder="[r, g, b]"),
+            FieldSpec("right", FieldType.STRING, placeholder="[r, g, b]"),
+            FieldSpec("kind", FieldType.STRING, optional=True,
+                      default="deuteranopia",
+                      placeholder="protanopia / deuteranopia / tritanopia"),
+            FieldSpec("severity", FieldType.FLOAT, optional=True, default=1.0),
+            FieldSpec("threshold", FieldType.FLOAT, optional=True,
+                      default=40.0),
+        ),
+        description="Whether two colours become confusable under a CVD type.",
+    ))
+    specs.append(CommandSpec(
+        "AC_place_labels", "Image", "Place Mark Labels",
+        fields=(
+            FieldSpec("marks", FieldType.STRING,
+                      placeholder="JSON list of {id, bbox}"),
+            FieldSpec("label_width", FieldType.INT, optional=True, default=22),
+            FieldSpec("label_height", FieldType.INT, optional=True,
+                      default=16),
+            FieldSpec("bounds", FieldType.STRING, optional=True,
+                      placeholder="[width, height]"),
+        ),
+        description="Lay out non-overlapping Set-of-Marks label boxes.",
+    ))
+    specs.append(CommandSpec(
+        "AC_label_color", "Image", "Label Colour for Background",
+        fields=(
+            FieldSpec("background", FieldType.STRING, placeholder="[r, g, b]"),
+        ),
+        description="Higher-contrast label colour (black/white) for a background.",
+    ))
+    specs.append(CommandSpec(
+        "AC_grade_contrast", "Image", "Grade Contrast (WCAG)",
+        fields=(
+            FieldSpec("foreground", FieldType.STRING, placeholder="[r, g, b]"),
+            FieldSpec("background", FieldType.STRING, placeholder="[r, g, b]"),
+        ),
+        description="Grade a foreground/background colour pair against WCAG.",
+    ))
+    specs.append(CommandSpec(
+        "AC_dominant_pair", "Image", "Dominant FG/BG Colours",
+        fields=(
+            FieldSpec("pixels", FieldType.STRING,
+                      placeholder="JSON list of [r, g, b] pixels"),
+        ),
+        description="Split sampled pixels into dominant foreground/background.",
+    ))
+    specs.append(CommandSpec(
+        "AC_region_contrast", "Image", "Region Text Contrast",
+        fields=(
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+        ),
+        description="Sample a screen region and grade its text contrast.",
+    ))
+    specs.append(CommandSpec(
+        "AC_match_theme", "Image", "Match (Theme-Invariant)",
+        fields=(
+            FieldSpec("template", FieldType.STRING,
+                      placeholder="template image path"),
+            FieldSpec("region", FieldType.STRING, optional=True,
+                      placeholder="[x, y, w, h]"),
+            FieldSpec("method", FieldType.STRING, optional=True,
+                      default="sobel",
+                      placeholder="sobel / laplacian / zscore"),
+            FieldSpec("min_score", FieldType.FLOAT, optional=True,
+                      default=0.5),
+        ),
+        description="Locate a template across a light/dark theme flip.",
+    ))
+    specs.append(CommandSpec(
         "AC_normalize_ext", "Shell", "Normalize Extension",
         fields=(
             FieldSpec("target", FieldType.STRING,
