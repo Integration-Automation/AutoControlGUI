@@ -754,6 +754,21 @@ def label_color(background):
     return _label_color(background)
 
 
+def grade_contrast(foreground, background):
+    from je_auto_control.utils.executor.action_executor import _grade_contrast
+    return _grade_contrast(foreground, background)
+
+
+def dominant_pair(pixels):
+    from je_auto_control.utils.executor.action_executor import _dominant_pair
+    return _dominant_pair(pixels)
+
+
+def region_contrast(region=None):
+    from je_auto_control.utils.executor.action_executor import _region_contrast
+    return _region_contrast(region)
+
+
 def normalize_ext(target):
     from je_auto_control.utils.executor.action_executor import _normalize_ext
     return _normalize_ext(target)

@@ -4057,6 +4057,40 @@ def img_histogram_tools() -> List[MCPTool]:
             handler=h.label_color,
             annotations=READ_ONLY,
         ),
+        MCPTool(
+            name="ac_grade_contrast",
+            description=("Grade a 'foreground'/'background' [r,g,b] colour pair "
+                         "against WCAG. Returns {ratio, aa, aaa, aa_large, "
+                         "aaa_large}. Pure."),
+            input_schema=schema({"foreground": {"type": "array",
+                                               "items": {"type": "integer"}},
+                                 "background": {"type": "array",
+                                               "items": {"type": "integer"}}},
+                                required=["foreground", "background"]),
+            handler=h.grade_contrast,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_dominant_pair",
+            description=("Split sampled RGB 'pixels' (list of [r,g,b]) into the "
+                         "dominant {foreground, background} colours by "
+                         "luminance. Pure."),
+            input_schema=schema({"pixels": {"type": "array",
+                                           "items": {"type": "array"}}},
+                                required=["pixels"]),
+            handler=h.dominant_pair,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_region_contrast",
+            description=("Sample a screen 'region' [x,y,w,h] and grade its text "
+                         "contrast: {ratio, aa, aaa, aa_large, aaa_large, "
+                         "foreground, background, samples}."),
+            input_schema=schema({"region": {"type": "array",
+                                           "items": {"type": "integer"}}}),
+            handler=h.region_contrast,
+            annotations=READ_ONLY,
+        ),
     ]
 
 

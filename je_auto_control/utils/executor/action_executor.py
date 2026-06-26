@@ -2880,6 +2880,26 @@ def _label_color(background: Any) -> Dict[str, Any]:
     return label_color(_coerce_rgb(background))
 
 
+def _grade_contrast(foreground: Any, background: Any) -> Dict[str, Any]:
+    """Adapter: grade a foreground/background colour pair vs WCAG (pure)."""
+    from je_auto_control.utils.contrast_map import grade_contrast
+    return grade_contrast(_coerce_rgb(foreground), _coerce_rgb(background))
+
+
+def _dominant_pair(pixels: Any) -> Dict[str, Any]:
+    """Adapter: split sampled RGB pixels into fg/bg dominant colours (pure)."""
+    from je_auto_control.utils.contrast_map import dominant_pair
+    items = [_coerce_rgb(pixel) for pixel in _coerce_list(pixels)] \
+        if pixels else []
+    return dominant_pair(items)
+
+
+def _region_contrast(region: Any = None) -> Dict[str, Any]:
+    """Adapter: sample a screen region and grade its text contrast (device)."""
+    from je_auto_control.utils.contrast_map import region_contrast
+    return region_contrast(region=_coerce_region(region))
+
+
 def _normalize_ext(target: str) -> Dict[str, Any]:
     """Adapter: the lowercased extension of a path / bare ext (pure)."""
     from je_auto_control.utils.file_assoc import normalize_ext
@@ -6915,6 +6935,9 @@ class Executor:
             "AC_colors_collide": _colors_collide,
             "AC_place_labels": _place_labels,
             "AC_label_color": _label_color,
+            "AC_grade_contrast": _grade_contrast,
+            "AC_dominant_pair": _dominant_pair,
+            "AC_region_contrast": _region_contrast,
             "AC_normalize_ext": _normalize_ext,
             "AC_file_association": _file_association,
             "AC_get_control_text": _get_control_text,

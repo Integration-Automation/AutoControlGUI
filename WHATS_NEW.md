@@ -2,6 +2,12 @@
 
 ## What's new (2026-06-26)
 
+### Sample a Region's Text Contrast (WCAG)
+
+Grade the legibility of on-screen text when you only have a region, not the two colours. Full reference: [`docs/source/Eng/doc/new_features/v216_features_doc.rst`](docs/source/Eng/doc/new_features/v216_features_doc.rst).
+
+- **`grade_contrast` / `dominant_pair` / `region_contrast`** (`AC_grade_contrast`, `AC_dominant_pair`, `AC_region_contrast`): `a11y_audit.contrast_ratio` grades a foreground/background pair you already know — but a button or label on screen is a *patch of pixels*, not two known colours. `dominant_pair` splits sampled pixels at the mean luminance into the dominant foreground (minority, the text) and background (majority); `grade_contrast` grades a pair against the WCAG 2.x AA/AAA thresholds (normal + large text); `region_contrast` samples a screen region (through an injectable `sampler`) and grades it. The grading and split are pure and reuse `a11y_audit.contrast_ratio`, fully testable without a screen. Third feature of the ROUND-15 perception lane. No `PySide6`.
+
 ### Set-of-Marks Label Layout (No Overlap, Readable Colour)
 
 Number every element without the labels piling up or vanishing into the background. Full reference: [`docs/source/Eng/doc/new_features/v215_features_doc.rst`](docs/source/Eng/doc/new_features/v215_features_doc.rst).
