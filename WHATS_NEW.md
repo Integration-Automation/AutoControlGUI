@@ -1,5 +1,13 @@
 # What's New — AutoControl
 
+## What's new (2026-07-02)
+
+### Menu-Driven GUI: the Actions Menu Replaces In-Tab Buttons
+
+Every tab's commands now live in one predictable place. The window menu bar gains a dynamic **Actions** menu that rebuilds for the active tab; tabs keep only their inputs, tables, and result/status views instead of rows of buttons.
+
+- **Window-level Actions menu**: core tabs declare their commands at registration; feature tabs expose a `menu_actions()` hook returning `(label_key, handler)` pairs. 46 of 48 registered tabs now surface their commands this way — Script Builder and Remote Desktop intentionally keep their interactive panel layouts, and the menu shows a placeholder there. Buttons a window-level menu cannot replace stay in place (per-page browse buttons inside stacked trigger forms, the visibility-toggled data-source browse button, stateful auto-refresh checkboxes). A headless regression test guards the contract so no tab can silently lose its commands.
+
 ## What's new (2026-06-26)
 
 ### Trial and Force Action Modes (Playwright-style)
