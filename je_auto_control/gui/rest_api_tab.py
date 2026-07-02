@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
     QCheckBox, QFileDialog, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QMessageBox, QPushButton, QSpinBox, QVBoxLayout, QWidget,
+    QMessageBox, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -52,11 +52,23 @@ class RestApiTab(TranslatableMixin, QWidget):
         self._timer.start()
 
     def _build_layout(self) -> None:
+        # Start/stop/copy/export/import commands run from the Actions
+        # menu; the tab keeps only the config inputs and the status group.
         root = QVBoxLayout(self)
         root.addWidget(self._build_config_group())
-        root.addLayout(self._build_button_row())
         root.addWidget(self._build_status_group())
         root.addStretch(1)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("rest_start", self._on_start),
+            ("rest_stop", self._on_stop),
+            ("rest_copy_url", self._on_copy_url),
+            ("rest_copy_token", self._on_copy_token),
+            ("rest_config_export", self._on_config_export),
+            ("rest_config_import", self._on_config_import),
+        ]
 
     def _build_config_group(self) -> QGroupBox:
         group = self._tr(QGroupBox(), "rest_config_group")
@@ -74,29 +86,6 @@ class RestApiTab(TranslatableMixin, QWidget):
         self._tr(self._audit_check, "rest_enable_audit")
         form.addWidget(self._audit_check)
         return group
-
-    def _build_button_row(self) -> QHBoxLayout:
-        row = QHBoxLayout()
-        start = self._tr(QPushButton(), "rest_start")
-        start.clicked.connect(self._on_start)
-        row.addWidget(start)
-        stop = self._tr(QPushButton(), "rest_stop")
-        stop.clicked.connect(self._on_stop)
-        row.addWidget(stop)
-        copy_url = self._tr(QPushButton(), "rest_copy_url")
-        copy_url.clicked.connect(self._on_copy_url)
-        row.addWidget(copy_url)
-        copy_token = self._tr(QPushButton(), "rest_copy_token")
-        copy_token.clicked.connect(self._on_copy_token)
-        row.addWidget(copy_token)
-        export_btn = self._tr(QPushButton(), "rest_config_export")
-        export_btn.clicked.connect(self._on_config_export)
-        row.addWidget(export_btn)
-        import_btn = self._tr(QPushButton(), "rest_config_import")
-        import_btn.clicked.connect(self._on_config_import)
-        row.addWidget(import_btn)
-        row.addStretch(1)
-        return row
 
     def _on_config_export(self) -> None:
         path_str, _ = QFileDialog.getSaveFileName(

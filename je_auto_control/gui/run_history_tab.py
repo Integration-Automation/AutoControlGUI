@@ -7,7 +7,7 @@ from PySide6.QtCore import QTimer, Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QComboBox, QFrame, QHBoxLayout, QHeaderView, QLabel,
-    QMessageBox, QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
+    QMessageBox, QSplitter, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget,
 )
 
@@ -129,20 +129,15 @@ class RunHistoryTab(TranslatableMixin, QWidget):
         ])
 
     def _build_layout(self) -> None:
+        # Refresh/clear/open-artifact commands run from the Actions menu;
+        # the tab keeps only the filter, timeline, table, and preview.
         root = QVBoxLayout(self)
         top = QHBoxLayout()
         top.addWidget(self._tr(QLabel(), "rh_filter_label"))
         top.addWidget(self._filter)
         top.addStretch()
-        refresh_btn = self._tr(QPushButton(), "rh_refresh")
-        refresh_btn.clicked.connect(self._refresh)
-        top.addWidget(refresh_btn)
-        clear_btn = self._tr(QPushButton(), "rh_clear")
-        clear_btn.clicked.connect(self._on_clear)
-        top.addWidget(clear_btn)
         root.addLayout(top)
 
-        self._tr(QLabel(), "rh_timeline_heading")
         timeline_label = self._tr(QLabel(), "rh_timeline_heading")
         root.addWidget(timeline_label)
         root.addWidget(self._timeline)
@@ -162,13 +157,15 @@ class RunHistoryTab(TranslatableMixin, QWidget):
 
         self._table.cellDoubleClicked.connect(self._on_cell_double_clicked)
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
-        open_row = QHBoxLayout()
-        self._open_artifact_btn = self._tr(QPushButton(), "rh_open_artifact")
-        self._open_artifact_btn.clicked.connect(self._open_selected_artifact)
-        open_row.addWidget(self._open_artifact_btn)
-        open_row.addStretch()
-        root.addLayout(open_row)
         root.addWidget(self._count_label)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("rh_refresh", self._refresh),
+            ("rh_clear", self._on_clear),
+            ("rh_open_artifact", self._open_selected_artifact),
+        ]
 
     def _on_clear(self) -> None:
         reply = QMessageBox.question(

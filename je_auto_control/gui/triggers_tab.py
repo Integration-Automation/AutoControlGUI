@@ -88,38 +88,32 @@ class TriggersTab(TranslatableMixin, QWidget):
         self._refresh()
 
     def _build_layout(self) -> None:
+        # Browse/add/remove/combine/start/stop commands run from the Actions
+        # menu; the tab keeps only the inputs, the table, and the status.
         root = QVBoxLayout(self)
         form_top = QHBoxLayout()
         form_top.addWidget(self._tr(QLabel(), "tr_script_label"))
         form_top.addWidget(self._script_input, stretch=1)
-        browse = self._tr(QPushButton(), "browse")
-        browse.clicked.connect(self._browse_script)
-        form_top.addWidget(browse)
         form_top.addWidget(self._repeat_check)
         form_top.addWidget(self._tr(QLabel(), "tr_type_label"))
         form_top.addWidget(self._type_combo)
-        add_btn = self._tr(QPushButton(), "tr_add")
-        add_btn.clicked.connect(self._on_add)
-        form_top.addWidget(add_btn)
         root.addLayout(form_top)
         root.addWidget(self._stack)
         root.addWidget(self._table, stretch=1)
+        root.addWidget(self._status)
 
-        ctl = QHBoxLayout()
-        for key, handler in (
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("browse", self._browse_script),
+            ("tr_add", self._on_add),
             ("tr_remove_selected", self._on_remove),
             ("tr_combine_all", lambda: self._on_combine("all")),
             ("tr_combine_any", lambda: self._on_combine("any")),
             ("tr_combine_seq", lambda: self._on_combine("sequence")),
             ("tr_start_engine", self._on_start),
             ("tr_stop_engine", self._on_stop),
-        ):
-            btn = self._tr(QPushButton(), key)
-            btn.clicked.connect(handler)
-            ctl.addWidget(btn)
-        ctl.addStretch()
-        root.addLayout(ctl)
-        root.addWidget(self._status)
+        ]
 
     def _build_image_form(self) -> dict:
         widget = QWidget()

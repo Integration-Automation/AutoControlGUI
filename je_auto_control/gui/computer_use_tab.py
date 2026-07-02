@@ -4,7 +4,7 @@ from typing import Optional
 
 from PySide6.QtCore import QObject, QThread, Signal
 from PySide6.QtWidgets import (
-    QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,
+    QFormLayout, QLabel, QLineEdit, QMessageBox,
     QSpinBox, QTextEdit, QVBoxLayout, QWidget,
 )
 
@@ -58,7 +58,6 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._max_tokens = QSpinBox()
         self._max_tokens.setRange(64, 8192)
         self._max_tokens.setValue(1024)
-        self._run_btn = QPushButton()
         self._output = QTextEdit()
         self._output.setReadOnly(True)
         self._status = QLabel()
@@ -73,6 +72,8 @@ class ComputerUseTab(TranslatableMixin, QWidget):
     # --- layout ----------------------------------------------------
 
     def _build_layout(self) -> None:
+        # The run command runs from the Actions menu; the tab keeps only
+        # the goal/model/limit inputs, the output view, and the status.
         root = QVBoxLayout(self)
         form = QFormLayout()
         self._goal_label = QLabel()
@@ -86,11 +87,6 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         form.addRow(self._wall_seconds_label, self._wall_seconds)
         form.addRow(self._max_tokens_label, self._max_tokens)
         root.addLayout(form)
-        btn_row = QHBoxLayout()
-        self._run_btn.clicked.connect(self._on_run)
-        btn_row.addWidget(self._run_btn)
-        btn_row.addStretch()
-        root.addLayout(btn_row)
         root.addWidget(self._status)
         self._output_label = QLabel()
         root.addWidget(self._output_label)
@@ -105,7 +101,12 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._max_tokens_label.setText(_t("computer_use_max_tokens_label"))
         self._output_label.setText(_t("computer_use_output_label"))
         self._goal_input.setPlaceholderText(_t("computer_use_goal_placeholder"))
-        self._run_btn.setText(_t("computer_use_run_btn"))
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("computer_use_run_btn", self._on_run),
+        ]
 
     # --- run path --------------------------------------------------
 
@@ -128,7 +129,6 @@ class ComputerUseTab(TranslatableMixin, QWidget):
             "max_tokens": int(self._max_tokens.value()),
         }
         self._status.setText(_t("computer_use_running"))
-        self._run_btn.setEnabled(False)
         self._spawn_worker(params)
 
     def _spawn_worker(self, params: dict) -> None:
@@ -147,7 +147,6 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         thread.start()
 
     def _on_worker_finished(self, data: dict) -> None:
-        self._run_btn.setEnabled(True)
         ok = bool(data.get("succeeded"))
         key = "computer_use_success" if ok else "computer_use_failure"
         self._status.setText(_t(key))
@@ -158,7 +157,6 @@ class ComputerUseTab(TranslatableMixin, QWidget):
         self._worker = None
 
     def _on_worker_failed(self, message: str) -> None:
-        self._run_btn.setEnabled(True)
         self._status.setText(f"{_t('computer_use_error')}: {message}")
         self._thread = None
         self._worker = None

@@ -4,7 +4,7 @@ from typing import Optional
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QMessageBox, QPushButton, QTableWidget, QTableWidgetItem,
+    QMessageBox, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget,
 )
 
@@ -59,6 +59,8 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         ])
 
     def _build_layout(self) -> None:
+        # Refresh/click commands run from the Actions menu; the tab keeps
+        # only the filter inputs, the element table, and the status line.
         root = QVBoxLayout(self)
         row = QHBoxLayout()
         row.addWidget(self._tr(QLabel(), "a11y_app_label"))
@@ -67,18 +69,16 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         row.addWidget(self._tr(QLabel(), "a11y_name_label"))
         self._name_filter.setPlaceholderText(_t("a11y_name_placeholder"))
         row.addWidget(self._name_filter, stretch=1)
-        refresh = self._tr(QPushButton(), "a11y_refresh")
-        refresh.clicked.connect(self._refresh)
-        row.addWidget(refresh)
         root.addLayout(row)
         root.addWidget(self._table, stretch=1)
-        action_row = QHBoxLayout()
-        click_btn = self._tr(QPushButton(), "a11y_click_selected")
-        click_btn.clicked.connect(self._click_selected)
-        action_row.addWidget(click_btn)
-        action_row.addStretch()
-        root.addLayout(action_row)
         root.addWidget(self._status)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("a11y_refresh", self._refresh),
+            ("a11y_click_selected", self._click_selected),
+        ]
 
     def _refresh(self) -> None:
         app = self._app_filter.text().strip() or None

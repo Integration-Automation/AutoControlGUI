@@ -4,7 +4,7 @@ from typing import Optional
 
 from PySide6.QtCore import QObject, Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QFileDialog, QHBoxLayout, QLabel, QPushButton, QSpinBox,
+    QFileDialog, QHBoxLayout, QLabel, QSpinBox,
     QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
 )
 
@@ -65,17 +65,10 @@ class DagTab(TranslatableMixin, QWidget):
         self._apply_translations()
 
     def _build_layout(self) -> None:
+        # Load/validate/run commands run from the Actions menu; the tab
+        # keeps only the editor, the parallel input, table, and status.
         root = QVBoxLayout(self)
         controls = QHBoxLayout()
-        for label_key, slot in (
-                ("dag_load_btn", self._on_load),
-                ("dag_validate_btn", self._on_validate),
-                ("dag_run_btn", self._on_run),
-        ):
-            btn = QPushButton()
-            btn.setObjectName(label_key)
-            btn.clicked.connect(slot)
-            controls.addWidget(btn)
         controls.addWidget(QLabel(_t("dag_parallel_label")))
         controls.addWidget(self._max_parallel)
         controls.addStretch()
@@ -85,11 +78,15 @@ class DagTab(TranslatableMixin, QWidget):
         root.addWidget(self._table, stretch=3)
         self._apply_translations()
 
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("dag_load_btn", self._on_load),
+            ("dag_validate_btn", self._on_validate),
+            ("dag_run_btn", self._on_run),
+        ]
+
     def _apply_translations(self) -> None:
-        for key in ("dag_load_btn", "dag_validate_btn", "dag_run_btn"):
-            btn = self.findChild(QPushButton, key)
-            if btn is not None:
-                btn.setText(_t(key))
         self._table.setHorizontalHeaderLabels(
             [_t(f"dag_col_{name}") for name in _COLUMNS],
         )

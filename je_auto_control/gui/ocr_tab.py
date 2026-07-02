@@ -4,7 +4,7 @@ import re
 from typing import Optional
 
 from PySide6.QtWidgets import (
-    QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,
+    QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
     QTextEdit, QVBoxLayout, QWidget,
 )
 
@@ -59,15 +59,14 @@ class OCRReaderTab(TranslatableMixin, QWidget):
         self._regex.setPlaceholderText(_t("ocr_regex_placeholder"))
 
     def _build_layout(self) -> None:
+        # Pick/dump/find commands run from the Actions menu; the tab keeps
+        # only the region/params/regex inputs, the results view, and status.
         root = QVBoxLayout(self)
 
         region_group = self._tr(QGroupBox(), "ocr_region_group")
         region_layout = QHBoxLayout()
         region_layout.addWidget(self._tr(QLabel(), "ocr_region_label"))
         region_layout.addWidget(self._region, stretch=1)
-        pick_btn = self._tr(QPushButton(), "ocr_pick_region")
-        pick_btn.clicked.connect(self._on_pick_region)
-        region_layout.addWidget(pick_btn)
         region_group.setLayout(region_layout)
         root.addWidget(region_group)
 
@@ -84,19 +83,17 @@ class OCRReaderTab(TranslatableMixin, QWidget):
         regex_layout.addWidget(self._regex, stretch=1)
         root.addLayout(regex_layout)
 
-        btn_row = QHBoxLayout()
-        dump_btn = self._tr(QPushButton(), "ocr_dump_region")
-        dump_btn.clicked.connect(self._on_dump)
-        find_btn = self._tr(QPushButton(), "ocr_find_regex")
-        find_btn.clicked.connect(self._on_find_regex)
-        btn_row.addWidget(dump_btn)
-        btn_row.addWidget(find_btn)
-        btn_row.addStretch()
-        root.addLayout(btn_row)
-
         root.addWidget(self._tr(QLabel(), "ocr_results_label"))
         root.addWidget(self._result, stretch=1)
         root.addWidget(self._status)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("ocr_pick_region", self._on_pick_region),
+            ("ocr_dump_region", self._on_dump),
+            ("ocr_find_regex", self._on_find_regex),
+        ]
 
     def _on_pick_region(self) -> None:
         region = open_region_selector(self)

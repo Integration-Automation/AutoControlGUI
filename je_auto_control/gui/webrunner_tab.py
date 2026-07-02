@@ -10,7 +10,7 @@ from typing import Optional
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
-    QLineEdit, QListWidget, QMessageBox, QPushButton, QTextEdit,
+    QLineEdit, QListWidget, QMessageBox, QTextEdit,
     QVBoxLayout, QWidget,
 )
 
@@ -58,6 +58,8 @@ class WebRunnerTab(TranslatableMixin, QWidget):
     # --- layout ----------------------------------------------------
 
     def _build_layout(self) -> None:
+        # Browse/open/quit/screenshot/run/refresh commands run from the
+        # Actions menu; the tab keeps only the inputs, list, and output.
         root = QVBoxLayout(self)
         root.addWidget(self._available_label)
         root.addWidget(self._build_convenience_group())
@@ -69,28 +71,23 @@ class WebRunnerTab(TranslatableMixin, QWidget):
         root.addWidget(QLabel(_t("web_output_label")))
         root.addWidget(self._output, stretch=2)
 
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("web_browse", self._on_browse_screenshot),
+            ("web_open_btn", self._on_open),
+            ("web_quit_btn", self._on_quit),
+            ("web_screenshot_btn", self._on_screenshot),
+            ("web_run_btn", self._on_run_freeform),
+            ("web_refresh_btn", self._on_refresh_commands),
+        ]
+
     def _build_convenience_group(self) -> QGroupBox:
         group = QGroupBox(_t("web_convenience_title"))
         form = QFormLayout(group)
         form.addRow(QLabel(_t("web_url_label")), self._url_input)
         form.addRow(QLabel(_t("web_browser_label")), self._browser_input)
-        shot_row = QHBoxLayout()
-        shot_row.addWidget(self._screenshot_input, stretch=1)
-        browse = QPushButton(_t("web_browse"))
-        browse.clicked.connect(self._on_browse_screenshot)
-        shot_row.addWidget(browse)
-        form.addRow(QLabel(_t("web_screenshot_label")), shot_row)
-        actions_row = QHBoxLayout()
-        for label_key, slot in (
-                ("web_open_btn", self._on_open),
-                ("web_quit_btn", self._on_quit),
-                ("web_screenshot_btn", self._on_screenshot),
-        ):
-            btn = QPushButton(_t(label_key))
-            btn.clicked.connect(slot)
-            actions_row.addWidget(btn)
-        actions_row.addStretch()
-        form.addRow(QLabel(), actions_row)
+        form.addRow(QLabel(_t("web_screenshot_label")), self._screenshot_input)
         return group
 
     def _build_freeform_group(self) -> QGroupBox:
@@ -102,15 +99,6 @@ class WebRunnerTab(TranslatableMixin, QWidget):
         )
         form.addRow(QLabel(_t("web_action_label")), self._action_input)
         form.addRow(QLabel(_t("web_params_label")), self._params_input)
-        run_row = QHBoxLayout()
-        run = QPushButton(_t("web_run_btn"))
-        run.clicked.connect(self._on_run_freeform)
-        refresh = QPushButton(_t("web_refresh_btn"))
-        refresh.clicked.connect(self._on_refresh_commands)
-        run_row.addWidget(run)
-        run_row.addWidget(refresh)
-        run_row.addStretch()
-        form.addRow(QLabel(), run_row)
         return group
 
     # --- availability ---------------------------------------------

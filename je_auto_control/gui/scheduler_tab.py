@@ -4,7 +4,7 @@ from typing import Optional
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
     QCheckBox, QFileDialog, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
-    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -56,35 +56,29 @@ class SchedulerTab(TranslatableMixin, QWidget):
         self._refresh_table()
 
     def _build_layout(self) -> None:
+        # Browse/add/remove/start/stop commands run from the Actions menu;
+        # the tab keeps only the inputs, the jobs table, and the status.
         root = QVBoxLayout(self)
         form = QHBoxLayout()
         form.addWidget(self._tr(QLabel(), "sch_script_label"))
         form.addWidget(self._path_input, stretch=1)
-        browse = self._tr(QPushButton(), "browse")
-        browse.clicked.connect(self._browse)
-        form.addWidget(browse)
         form.addWidget(self._tr(QLabel(), "sch_interval_label"))
         form.addWidget(self._interval_input)
         form.addWidget(self._repeat_check)
-        add_btn = self._tr(QPushButton(), "sch_add")
-        add_btn.clicked.connect(self._on_add)
-        form.addWidget(add_btn)
         root.addLayout(form)
 
         root.addWidget(self._table, stretch=1)
+        root.addWidget(self._status)
 
-        ctl = QHBoxLayout()
-        for key, handler in (
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("browse", self._browse),
+            ("sch_add", self._on_add),
             ("sch_remove_selected", self._on_remove),
             ("sch_start", self._on_start),
             ("sch_stop", self._on_stop),
-        ):
-            btn = self._tr(QPushButton(), key)
-            btn.clicked.connect(handler)
-            ctl.addWidget(btn)
-        ctl.addStretch()
-        root.addLayout(ctl)
-        root.addWidget(self._status)
+        ]
 
     def _browse(self) -> None:
         path, _ = QFileDialog.getOpenFileName(

@@ -9,7 +9,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
-    QHBoxLayout, QHeaderView, QLabel, QPushButton, QTableWidget,
+    QHeaderView, QLabel, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -56,32 +56,25 @@ class PresenceTab(TranslatableMixin, QWidget):
     # --- layout ----------------------------------------------------
 
     def _build_layout(self) -> None:
+        # Refresh/promote/demote/kick commands run from the Actions menu;
+        # the tab keeps only the roster table and the status line.
         root = QVBoxLayout(self)
-        controls = QHBoxLayout()
-        for key, slot in (
-                ("presence_refresh_btn", self.refresh),
-                ("presence_promote_btn", self._on_promote),
-                ("presence_demote_btn", self._on_demote),
-                ("presence_kick_btn", self._on_kick),
-        ):
-            btn = QPushButton()
-            btn.setObjectName(key)
-            btn.clicked.connect(slot)
-            controls.addWidget(btn)
-        controls.addStretch()
-        root.addLayout(controls)
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._status)
         header = self._table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
         self._apply_translations()
 
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("presence_refresh_btn", self.refresh),
+            ("presence_promote_btn", self._on_promote),
+            ("presence_demote_btn", self._on_demote),
+            ("presence_kick_btn", self._on_kick),
+        ]
+
     def _apply_translations(self) -> None:
-        for key in ("presence_refresh_btn", "presence_promote_btn",
-                     "presence_demote_btn", "presence_kick_btn"):
-            btn = self.findChild(QPushButton, key)
-            if btn is not None:
-                btn.setText(_t(key))
         self._table.setHorizontalHeaderLabels(
             [_t(f"presence_col_{col}") for col in _COLUMNS],
         )

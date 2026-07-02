@@ -7,7 +7,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QAbstractItemView, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton,
+    QAbstractItemView, QHBoxLayout, QLabel, QPlainTextEdit,
     QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -58,6 +58,8 @@ class DeviceMatrixTab(TranslatableMixin, QWidget):
         self._table.setHorizontalHeaderLabels([_t(k) for k in _COLS])
 
     def _build_layout(self) -> None:
+        # The run command runs from the Actions menu; the tab keeps only
+        # the device/action editors, the result table, and the summary.
         root = QVBoxLayout(self)
         root.addWidget(QLabel(_t("dm_devices")))
         root.addWidget(self._devices)
@@ -66,13 +68,16 @@ class DeviceMatrixTab(TranslatableMixin, QWidget):
         row = QHBoxLayout()
         row.addWidget(QLabel(_t("dm_parallel")))
         row.addWidget(self._parallel)
-        run_btn = self._tr(QPushButton(), "dm_run")
-        run_btn.clicked.connect(self._on_run)
-        row.addWidget(run_btn)
         row.addStretch()
         root.addLayout(row)
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._summary)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("dm_run", self._on_run),
+        ]
 
     def _on_run(self) -> None:
         try:
