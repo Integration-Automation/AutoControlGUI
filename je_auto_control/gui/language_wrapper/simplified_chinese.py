@@ -813,7 +813,6 @@ simplified_chinese_word_dict = {
 
     # Profiler tab
     "prof_enable": "启用性能分析",
-    "prof_disable": "停用性能分析",
     "prof_reset": "清除统计",
     "prof_refresh": "刷新",
     "prof_running": "性能分析中。",

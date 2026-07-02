@@ -935,7 +935,6 @@ english_word_dict = {
 
     # Profiler tab
     "prof_enable": "Enable profiler",
-    "prof_disable": "Disable profiler",
     "prof_reset": "Reset stats",
     "prof_refresh": "Refresh",
     "prof_running": "Profiler is recording.",

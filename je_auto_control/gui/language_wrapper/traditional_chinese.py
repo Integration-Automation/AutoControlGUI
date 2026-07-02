@@ -814,7 +814,6 @@ traditional_chinese_word_dict = {
 
     # Profiler tab
     "prof_enable": "啟用效能分析",
-    "prof_disable": "停用效能分析",
     "prof_reset": "清除統計",
     "prof_refresh": "重新整理",
     "prof_running": "效能分析中。",

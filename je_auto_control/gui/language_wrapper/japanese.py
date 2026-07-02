@@ -824,7 +824,6 @@ japanese_word_dict = {
 
     # Profiler tab
     "prof_enable": "プロファイラを有効化",
-    "prof_disable": "プロファイラを無効化",
     "prof_reset": "統計をリセット",
     "prof_refresh": "更新",
     "prof_running": "プロファイラ計測中。",
