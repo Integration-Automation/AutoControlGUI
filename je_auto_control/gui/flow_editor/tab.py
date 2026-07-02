@@ -10,8 +10,8 @@ from typing import List, Optional, Tuple
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QFileDialog, QGraphicsView, QHBoxLayout, QLabel, QMessageBox,
-    QPushButton, QSplitter, QTextEdit, QVBoxLayout, QWidget,
+    QFileDialog, QGraphicsView, QLabel, QMessageBox,
+    QSplitter, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -50,21 +50,9 @@ class FlowEditorTab(TranslatableMixin, QWidget):
         self._apply_translations()
 
     def _build_layout(self) -> None:
+        # Open/save/zoom/fit commands run from the Actions menu; the tab
+        # keeps only the graph view, the inspector, and the status line.
         root = QVBoxLayout(self)
-        toolbar = QHBoxLayout()
-        for key, slot in (
-                ("flow_open_btn", self._on_open),
-                ("flow_save_btn", self._on_save),
-                ("flow_zoom_in_btn", self._on_zoom_in),
-                ("flow_zoom_out_btn", self._on_zoom_out),
-                ("flow_fit_btn", self._on_fit),
-        ):
-            btn = QPushButton()
-            btn.setObjectName(key)
-            btn.clicked.connect(slot)
-            toolbar.addWidget(btn)
-        toolbar.addStretch()
-        root.addLayout(toolbar)
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(self._view)
         splitter.addWidget(self._inspector)
@@ -74,13 +62,17 @@ class FlowEditorTab(TranslatableMixin, QWidget):
         root.addWidget(self._status)
         self._apply_translations()
 
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("flow_open_btn", self._on_open),
+            ("flow_save_btn", self._on_save),
+            ("flow_zoom_in_btn", self._on_zoom_in),
+            ("flow_zoom_out_btn", self._on_zoom_out),
+            ("flow_fit_btn", self._on_fit),
+        ]
+
     def _apply_translations(self) -> None:
-        for key in ("flow_open_btn", "flow_save_btn",
-                     "flow_zoom_in_btn", "flow_zoom_out_btn",
-                     "flow_fit_btn"):
-            widget = self.findChild(QPushButton, key)
-            if widget is not None:
-                widget.setText(_t(key))
         self._inspector.setPlaceholderText(_t("flow_inspector_placeholder"))
 
     # --- public ----------------------------------------------------

@@ -3,7 +3,7 @@ from typing import Optional
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
-    QFileDialog, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,
+    QFileDialog, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -38,34 +38,28 @@ class HotkeysTab(TranslatableMixin, QWidget):
         self._build_layout()
 
     def _build_layout(self) -> None:
+        # Bind/remove/start/stop commands run from the Actions menu; the
+        # tab keeps only the inputs, the bindings table, and the status.
         root = QVBoxLayout(self)
         form = QHBoxLayout()
         form.addWidget(self._tr(QLabel(), "hk_combo_label"))
         form.addWidget(self._combo_input)
         form.addWidget(self._tr(QLabel(), "hk_script_label"))
         form.addWidget(self._script_input, stretch=1)
-        browse = self._tr(QPushButton(), "browse")
-        browse.clicked.connect(self._browse)
-        form.addWidget(browse)
-        add = self._tr(QPushButton(), "hk_bind")
-        add.clicked.connect(self._on_bind)
-        form.addWidget(add)
         root.addLayout(form)
 
         root.addWidget(self._table, stretch=1)
+        root.addWidget(self._status)
 
-        ctl = QHBoxLayout()
-        for key, handler in (
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("browse", self._browse),
+            ("hk_bind", self._on_bind),
             ("hk_remove_selected", self._on_remove),
             ("hk_start_daemon", self._on_start),
             ("hk_stop_daemon", self._on_stop),
-        ):
-            btn = self._tr(QPushButton(), key)
-            btn.clicked.connect(handler)
-            ctl.addWidget(btn)
-        ctl.addStretch()
-        root.addLayout(ctl)
-        root.addWidget(self._status)
+        ]
 
     def _apply_status_label(self) -> None:
         key = "hk_daemon_running" if self._daemon_running else "hk_daemon_stopped"

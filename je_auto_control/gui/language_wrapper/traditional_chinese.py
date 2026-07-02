@@ -1181,4 +1181,8 @@ traditional_chinese_word_dict = {
     "menu_language": "語言",
     "menu_help": "說明",
     "menu_help_about": "關於 AutoControlGUI",
+    "menu_actions": "操作",
+    "menu_actions_none": "（此分頁沒有操作）",
+    "menu_choose_script_dir": "選擇腳本資料夾...",
+    "execute_editor_script": "執行編輯器內容",
 }

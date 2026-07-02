@@ -5,7 +5,7 @@ from typing import Optional
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
-    QMessageBox, QPushButton, QTextEdit, QVBoxLayout, QWidget,
+    QMessageBox, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -65,19 +65,12 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         self._refresh()
 
     def _build_layout(self) -> None:
+        # Load/save/export and every edit command run from the Actions
+        # menu; the tab keeps only inputs, the list, preview, and status.
         root = QVBoxLayout(self)
         top = QHBoxLayout()
         top.addWidget(self._tr(QLabel(), "re_file_label"))
         top.addWidget(self._path_input, stretch=1)
-        for key, handler in (
-            ("re_browse", self._browse),
-            ("re_load", self._load),
-            ("re_save_as", self._save_as),
-            ("re_export_code", self._export_code),
-        ):
-            btn = self._tr(QPushButton(), key)
-            btn.clicked.connect(handler)
-            top.addWidget(btn)
         root.addLayout(top)
 
         root.addWidget(self._list, stretch=1)
@@ -87,15 +80,6 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         ops1.addWidget(self._trim_start)
         ops1.addWidget(self._tr(QLabel(), "re_trim_end"))
         ops1.addWidget(self._trim_end)
-        trim_btn = self._tr(QPushButton(), "re_apply_trim")
-        trim_btn.clicked.connect(self._apply_trim)
-        ops1.addWidget(trim_btn)
-        remove_btn = self._tr(QPushButton(), "re_remove_selected")
-        remove_btn.clicked.connect(self._remove_selected)
-        ops1.addWidget(remove_btn)
-        undo_btn = self._tr(QPushButton(), "re_undo")
-        undo_btn.clicked.connect(self._undo)
-        ops1.addWidget(undo_btn)
         ops1.addStretch()
         root.addLayout(ops1)
 
@@ -104,35 +88,41 @@ class RecordingEditorTab(TranslatableMixin, QWidget):
         ops2.addWidget(self._delay_factor)
         ops2.addWidget(self._tr(QLabel(), "re_floor_ms"))
         ops2.addWidget(self._delay_clamp)
-        delay_btn = self._tr(QPushButton(), "re_apply_delays")
-        delay_btn.clicked.connect(self._apply_delays)
-        ops2.addWidget(delay_btn)
         ops2.addWidget(self._tr(QLabel(), "re_scale_x"))
         ops2.addWidget(self._scale_x)
         ops2.addWidget(self._tr(QLabel(), "re_scale_y"))
         ops2.addWidget(self._scale_y)
-        scale_btn = self._tr(QPushButton(), "re_apply_scale")
-        scale_btn.clicked.connect(self._apply_scale)
-        ops2.addWidget(scale_btn)
         ops2.addStretch()
         root.addLayout(ops2)
-
-        ops3 = QHBoxLayout()
-        keep_mouse = self._tr(QPushButton(), "re_keep_mouse")
-        keep_mouse.clicked.connect(lambda: self._filter_prefix("AC_mouse"))
-        keep_keyboard = self._tr(QPushButton(), "re_keep_keyboard")
-        keep_keyboard.clicked.connect(
-            lambda: self._filter_prefix(("AC_type_keyboard", "AC_press_keyboard_key",
-                                         "AC_release_keyboard_key", "AC_hotkey", "AC_write"))
-        )
-        ops3.addWidget(keep_mouse)
-        ops3.addWidget(keep_keyboard)
-        ops3.addStretch()
-        root.addLayout(ops3)
 
         root.addWidget(self._tr(QLabel(), "re_preview"))
         root.addWidget(self._preview, stretch=1)
         root.addWidget(self._status)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("re_browse", self._browse),
+            ("re_load", self._load),
+            ("re_save_as", self._save_as),
+            ("re_export_code", self._export_code),
+            ("re_apply_trim", self._apply_trim),
+            ("re_remove_selected", self._remove_selected),
+            ("re_undo", self._undo),
+            ("re_apply_delays", self._apply_delays),
+            ("re_apply_scale", self._apply_scale),
+            ("re_keep_mouse", self._keep_mouse),
+            ("re_keep_keyboard", self._keep_keyboard),
+        ]
+
+    def _keep_mouse(self) -> None:
+        self._filter_prefix("AC_mouse")
+
+    def _keep_keyboard(self) -> None:
+        self._filter_prefix((
+            "AC_type_keyboard", "AC_press_keyboard_key",
+            "AC_release_keyboard_key", "AC_hotkey", "AC_write",
+        ))
 
     def _browse(self) -> None:
         path, _ = QFileDialog.getOpenFileName(

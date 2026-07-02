@@ -10,7 +10,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox,
-    QPushButton, QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout,
+    QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout,
     QWidget,
 )
 
@@ -60,21 +60,14 @@ class VariablesTab(TranslatableMixin, QWidget):
         ])
 
     def _build_layout(self) -> None:
+        # Refresh/clear/set/seed commands run from the Actions menu; the
+        # tab keeps only the table, the inputs, and the status line.
         root = QVBoxLayout(self)
 
         view_group = self._tr(QGroupBox(), "vars_current_group")
         view_layout = QVBoxLayout()
         self._update_table_headers()
         view_layout.addWidget(self._table)
-        view_btns = QHBoxLayout()
-        refresh_btn = self._tr(QPushButton(), "vars_refresh")
-        refresh_btn.clicked.connect(self._refresh)
-        clear_btn = self._tr(QPushButton(), "vars_clear")
-        clear_btn.clicked.connect(self._on_clear)
-        view_btns.addWidget(refresh_btn)
-        view_btns.addWidget(clear_btn)
-        view_btns.addStretch()
-        view_layout.addLayout(view_btns)
         view_group.setLayout(view_layout)
         root.addWidget(view_group)
 
@@ -84,22 +77,25 @@ class VariablesTab(TranslatableMixin, QWidget):
         set_layout.addWidget(self._set_name, stretch=1)
         set_layout.addWidget(self._tr(QLabel(), "vars_value_label"))
         set_layout.addWidget(self._set_value, stretch=2)
-        set_btn = self._tr(QPushButton(), "vars_set_btn")
-        set_btn.clicked.connect(self._on_set_one)
-        set_layout.addWidget(set_btn)
         set_group.setLayout(set_layout)
         root.addWidget(set_group)
 
         seed_group = self._tr(QGroupBox(), "vars_seed_group")
         seed_layout = QVBoxLayout()
         seed_layout.addWidget(self._seed_text)
-        seed_btn = self._tr(QPushButton(), "vars_seed_btn")
-        seed_btn.clicked.connect(self._on_seed_json)
-        seed_layout.addWidget(seed_btn)
         seed_group.setLayout(seed_layout)
         root.addWidget(seed_group)
 
         root.addWidget(self._status)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("vars_refresh", self._refresh),
+            ("vars_set_btn", self._on_set_one),
+            ("vars_seed_btn", self._on_seed_json),
+            ("vars_clear", self._on_clear),
+        ]
 
     def _refresh(self) -> None:
         snapshot = executor.variables.as_dict()
