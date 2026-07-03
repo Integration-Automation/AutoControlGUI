@@ -16,6 +16,15 @@ permissions:
   contents: read
 
 jobs:
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -84,4 +93,23 @@ jobs:
           pip install ruff==0.15.14 bandit==1.9.4 pytest==9.0.3 pytest-timeout==2.4.0 pytest-rerunfailures==15.1 PySide6==6.11.1
 
       - name: Run headless pytest suite
-        run: pytest test/unit_test/headless/ -v --tb=short --timeout=120
+        run: >-
+          pytest test/unit_test/headless/ -v --tb=short --timeout=120
+          --cov=je_auto_control --cov-report=term-missing
+          --cov-report=xml --cov-fail-under=35
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+
+  typing-stable-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e . mypy
+      - run: mypy je_auto_control/api je_auto_control/utils/failure_bundle

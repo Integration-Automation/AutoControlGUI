@@ -88,3 +88,33 @@ exclude_dirs = [
 # B101 (use of assert) — pytest test code intentionally uses assert.
 # Library code is enforced by CLAUDE.md (no assert in non-test code).
 skips = ["B101"]
+
+[tool.pytest.ini_options]
+testpaths = ["test/unit_test/headless"]
+addopts = "--strict-markers --strict-config"
+
+[tool.coverage.run]
+branch = true
+source = ["je_auto_control"]
+omit = ["*/gui/*", "*/language_wrapper/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+# Initial measured repository baseline. Raise toward 70 as legacy modules are
+# brought under the stable API contract; CI enforces that it cannot regress.
+fail_under = 35
+
+[tool.mypy]
+python_version = "3.10"
+warn_redundant_casts = true
+check_untyped_defs = true
+no_implicit_optional = true
+# CI type-checks only the stable API surface; followed legacy modules are
+# analysed for signatures but not reported until they join the contract.
+follow_imports = "silent"
+exclude = "(^test/|^docs/|^build/)"
+
+[[tool.mypy.overrides]]
+module = ["cv2.*", "Xlib.*", "PySide6.*", "objc.*"]
+ignore_missing_imports = true

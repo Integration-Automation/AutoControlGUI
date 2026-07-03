@@ -126,3 +126,8 @@ dmypy.json
 /.claude/
 /.claude
 /.idea
+
+# Local test/smoke artifacts
+.test-tmp/
+bundle-smoke.zip
+platform-smoke.zip
