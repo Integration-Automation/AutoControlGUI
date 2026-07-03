@@ -122,6 +122,11 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 # numpy's stubs use `type` statements, which mypy rejects while parsing under
 # python_version 3.10 — skip them; the stable API does not expose numpy types.
-module = ["numpy.*"]
+# The top-level `numpy` module must be listed explicitly: `numpy.*` only matches
+# submodules, so numpy>=2.5's PEP 695 statements in numpy/__init__.pyi would leak.
+# `follow_imports_for_stubs` is required — otherwise `follow_imports = skip` is
+# ignored for .pyi files and mypy parses (and chokes on) the numpy stub anyway.
+module = ["numpy", "numpy.*"]
 follow_imports = "skip"
+follow_imports_for_stubs = true
 ignore_missing_imports = true
