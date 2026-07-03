@@ -40,11 +40,30 @@ def _accept(rect: Rect, shape, min_area: int, max_area: Optional[int],
     return aspect <= max_aspect
 
 
+# OpenCV 5 tightened MSER's diversity pruning: flat-background UI scenes
+# that OpenCV 4 segmented fine now yield zero regions at the default
+# min_diversity (0.2). Relax the pruning progressively before concluding
+# the frame has no text.
+_MSER_PARAM_LADDER = ({}, {"min_diversity": 0.01},
+                      {"delta": 1, "min_diversity": 0.0})
+
+
+def _detect_regions(gray):
+    """Return MSER point sets, relaxing diversity pruning if none found."""
+    import cv2
+    regions = ()
+    for params in _MSER_PARAM_LADDER:
+        regions, _bboxes = cv2.MSER_create(**params).detectRegions(gray)
+        if len(regions):
+            break
+    return regions
+
+
 def _filtered_boxes(gray, min_area: int, max_area: Optional[int],
                     max_aspect: float) -> List[Rect]:
     """Return de-duplicated MSER bounding boxes passing the size / aspect filters."""
     import cv2
-    regions, _bboxes = cv2.MSER_create().detectRegions(gray)
+    regions = _detect_regions(gray)
     out: List[Rect] = []
     seen = set()
     for points in regions:
