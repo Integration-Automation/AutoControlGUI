@@ -24,7 +24,7 @@ from typing import Any, Callable, Dict, List, Optional
 from PySide6.QtCore import QObject, QThread, Signal
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox,
-    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -167,11 +167,19 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
         self._apply_table_headers()
 
     def _build_layout(self) -> None:
+        # Fetch/open commands run from the Actions menu; the tab keeps
+        # only the target inputs, the status line, and the device table.
         root = QVBoxLayout(self)
         root.addWidget(self._build_target_group())
-        root.addLayout(self._build_button_row())
         root.addWidget(self._status_label)
         root.addWidget(self._table, stretch=1)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("usb_browser_fetch", self._on_fetch),
+            ("usb_browser_open", self._on_open_selected),
+        ]
 
     def _build_target_group(self) -> QGroupBox:
         group = self._tr(QGroupBox(), "usb_browser_target_group")
@@ -185,17 +193,6 @@ class UsbBrowserTab(TranslatableMixin, QWidget):
         token_row.addWidget(self._token_input, stretch=1)
         form.addLayout(token_row)
         return group
-
-    def _build_button_row(self) -> QHBoxLayout:
-        row = QHBoxLayout()
-        refresh = self._tr(QPushButton(), "usb_browser_fetch")
-        refresh.clicked.connect(self._on_fetch)
-        row.addWidget(refresh)
-        open_btn = self._tr(QPushButton(), "usb_browser_open")
-        open_btn.clicked.connect(self._on_open_selected)
-        row.addWidget(open_btn)
-        row.addStretch(1)
-        return row
 
     def _apply_table_headers(self) -> None:
         self._table.setHorizontalHeaderLabels([

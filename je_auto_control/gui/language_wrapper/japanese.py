@@ -824,7 +824,6 @@ japanese_word_dict = {
 
     # Profiler tab
     "prof_enable": "プロファイラを有効化",
-    "prof_disable": "プロファイラを無効化",
     "prof_reset": "統計をリセット",
     "prof_refresh": "更新",
     "prof_running": "プロファイラ計測中。",
@@ -1195,4 +1194,8 @@ japanese_word_dict = {
     "menu_language": "言語",
     "menu_help": "ヘルプ",
     "menu_help_about": "AutoControlGUI について",
+    "menu_actions": "アクション",
+    "menu_actions_none": "（このタブにアクションはありません）",
+    "menu_choose_script_dir": "スクリプトフォルダーを選択...",
+    "execute_editor_script": "エディター内容を実行",
 }

@@ -935,7 +935,6 @@ english_word_dict = {
 
     # Profiler tab
     "prof_enable": "Enable profiler",
-    "prof_disable": "Disable profiler",
     "prof_reset": "Reset stats",
     "prof_refresh": "Refresh",
     "prof_running": "Profiler is recording.",
@@ -1308,4 +1307,8 @@ english_word_dict = {
     "menu_language": "Language",
     "menu_help": "Help",
     "menu_help_about": "About AutoControlGUI",
+    "menu_actions": "Actions",
+    "menu_actions_none": "(No actions on this tab)",
+    "menu_choose_script_dir": "Choose Script Directory...",
+    "execute_editor_script": "Run Editor Content",
 }

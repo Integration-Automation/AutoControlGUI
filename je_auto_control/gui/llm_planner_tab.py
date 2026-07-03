@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from PySide6.QtCore import QObject, QThread, Signal
 from PySide6.QtWidgets import (
-    QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,
+    QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
     QTextEdit, QVBoxLayout, QWidget,
 )
 
@@ -69,13 +69,10 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         self._result_view.setReadOnly(True)
         self._status = QLabel()
         self._planned_actions: Optional[list] = None
-        self._plan_btn: Optional[QPushButton] = None
-        self._run_btn: Optional[QPushButton] = None
         self._plan_thread: Optional[QThread] = None
         self._plan_worker: Optional[_PlanWorker] = None
         self._build_layout()
         self._apply_placeholders()
-        self._set_run_enabled(False)
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)
@@ -86,6 +83,8 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         self._model.setPlaceholderText(_t("llm_model_placeholder"))
 
     def _build_layout(self) -> None:
+        # Plan/run commands run from the Actions menu; the tab keeps only
+        # the description/model inputs, the plan/result views, and status.
         root = QVBoxLayout(self)
 
         desc_group = self._tr(QGroupBox(), "llm_desc_group")
@@ -95,15 +94,6 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         model_row.addWidget(self._tr(QLabel(), "llm_model_label"))
         model_row.addWidget(self._model, stretch=1)
         desc_layout.addLayout(model_row)
-        btn_row = QHBoxLayout()
-        self._plan_btn = self._tr(QPushButton(), "llm_plan_btn")
-        self._plan_btn.clicked.connect(self._on_plan)
-        self._run_btn = self._tr(QPushButton(), "llm_run_btn")
-        self._run_btn.clicked.connect(self._on_run)
-        btn_row.addWidget(self._plan_btn)
-        btn_row.addWidget(self._run_btn)
-        btn_row.addStretch()
-        desc_layout.addLayout(btn_row)
         desc_group.setLayout(desc_layout)
         root.addWidget(desc_group)
 
@@ -121,9 +111,12 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
 
         root.addWidget(self._status)
 
-    def _set_run_enabled(self, enabled: bool) -> None:
-        if self._run_btn is not None:
-            self._run_btn.setEnabled(enabled)
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("llm_plan_btn", self._on_plan),
+            ("llm_run_btn", self._on_run),
+        ]
 
     def _on_plan(self) -> None:
         description = self._description.toPlainText().strip()
@@ -133,12 +126,9 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         if self._plan_thread is not None and self._plan_thread.isRunning():
             return
         model = self._model.text().strip() or None
-        if self._plan_btn is not None:
-            self._plan_btn.setEnabled(False)
         self._status.setText(_t("llm_planning"))
         self._actions_view.clear()
         self._planned_actions = None
-        self._set_run_enabled(False)
         worker = _PlanWorker(description, model, sorted(executor.known_commands()))
         thread = QThread(self)
         worker.moveToThread(thread)
@@ -160,11 +150,9 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
         self._status.setText(
             _t("llm_plan_count").replace("{n}", str(len(actions)))
         )
-        self._set_run_enabled(bool(actions))
 
     def _on_plan_failed(self, message: str) -> None:
         self._planned_actions = None
-        self._set_run_enabled(False)
         QMessageBox.warning(self, _t("llm_plan_btn"), message)
         self._status.setText(message)
 
@@ -175,8 +163,6 @@ class LLMPlannerTab(TranslatableMixin, QWidget):
             self._plan_worker.deleteLater()
         self._plan_thread = None
         self._plan_worker = None
-        if self._plan_btn is not None:
-            self._plan_btn.setEnabled(True)
 
     def _on_run(self) -> None:
         if not self._planned_actions:

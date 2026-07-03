@@ -52,9 +52,10 @@ def find_lines(haystack: Optional[ImageSource] = None, *,
     segments = _segments(_haystack_gray(haystack, region), int(min_length),
                          int(max_gap))
     out: List[Dict[str, Any]] = []
-    if segments is None:
+    if segments is None or len(segments) == 0:
         return out
-    for x1, y1, x2, y2 in segments[:, 0]:
+    # OpenCV 4 returns (N, 1, 4); OpenCV 5 flattened it to (N, 4).
+    for x1, y1, x2, y2 in segments.reshape(-1, 4):
         angle = math.degrees(math.atan2(int(y2) - int(y1), int(x2) - int(x1)))
         kind = _orientation(angle)
         if orientation not in ("any", kind):

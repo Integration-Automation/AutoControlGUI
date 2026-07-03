@@ -3,7 +3,7 @@ from typing import Optional
 
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
-    QHBoxLayout, QHeaderView, QLabel, QPushButton, QTableWidget,
+    QHeaderView, QLabel, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -42,15 +42,17 @@ class DiagnosticsTab(TranslatableMixin, QWidget):
         self._refresh()
 
     def _build_layout(self) -> None:
+        # The run command runs from the Actions menu; the tab keeps only
+        # the summary label and the results table.
         root = QVBoxLayout(self)
-        header = QHBoxLayout()
-        run_btn = self._tr(QPushButton(), "diag_run")
-        run_btn.clicked.connect(self._refresh)
-        header.addWidget(run_btn)
-        header.addStretch(1)
-        root.addLayout(header)
         root.addWidget(self._summary_label)
         root.addWidget(self._table, stretch=1)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("diag_run", self._refresh),
+        ]
 
     def _apply_table_headers(self) -> None:
         self._table.setHorizontalHeaderLabels([

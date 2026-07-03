@@ -3,7 +3,7 @@ from typing import Optional
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
-    QCheckBox, QHBoxLayout, QHeaderView, QLabel, QPushButton, QTableWidget,
+    QCheckBox, QHBoxLayout, QHeaderView, QLabel, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -44,6 +44,8 @@ class UsbDevicesTab(TranslatableMixin, QWidget):
         self._refresh()
 
     def _build_layout(self) -> None:
+        # The refresh command runs from the Actions menu; the tab keeps
+        # only the backend labels, the auto-refresh toggle, and the table.
         root = QVBoxLayout(self)
         header = QHBoxLayout()
         header.addWidget(self._tr(QLabel(), "usb_backend_label"))
@@ -51,13 +53,16 @@ class UsbDevicesTab(TranslatableMixin, QWidget):
         header.addStretch(1)
         self._tr(self._auto_check, "usb_auto_refresh")
         header.addWidget(self._auto_check)
-        refresh = self._tr(QPushButton(), "usb_refresh")
-        refresh.clicked.connect(self._refresh)
-        header.addWidget(refresh)
         root.addLayout(header)
         root.addWidget(self._error_label)
         root.addWidget(self._events_label)
         root.addWidget(self._table, stretch=1)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("usb_refresh", self._refresh),
+        ]
 
     def _on_auto_toggled(self, on: bool) -> None:
         watcher = default_usb_watcher()

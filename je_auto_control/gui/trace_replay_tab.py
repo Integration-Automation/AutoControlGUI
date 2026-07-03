@@ -12,7 +12,7 @@ from typing import Optional
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
-    QFileDialog, QHBoxLayout, QLabel, QPushButton, QSlider,
+    QFileDialog, QLabel, QSlider,
     QSplitter, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -58,21 +58,9 @@ class TraceReplayTab(TranslatableMixin, QWidget):
     # --- layout ---------------------------------------------------
 
     def _build_layout(self) -> None:
+        # Open/first/prev/next/last commands run from the Actions menu;
+        # the tab keeps only the slider, frame, table, and status.
         root = QVBoxLayout(self)
-        controls = QHBoxLayout()
-        for key, slot in (
-                ("trace_open_btn", self._on_open),
-                ("trace_first_btn", self._on_first),
-                ("trace_prev_btn", self._on_prev),
-                ("trace_next_btn", self._on_next),
-                ("trace_last_btn", self._on_last),
-        ):
-            btn = QPushButton()
-            btn.setObjectName(key)
-            btn.clicked.connect(slot)
-            controls.addWidget(btn)
-        controls.addStretch()
-        root.addLayout(controls)
         root.addWidget(self._slider)
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(self._frame_label)
@@ -83,12 +71,17 @@ class TraceReplayTab(TranslatableMixin, QWidget):
         root.addWidget(self._status)
         self._apply_translations()
 
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("trace_open_btn", self._on_open),
+            ("trace_first_btn", self._on_first),
+            ("trace_prev_btn", self._on_prev),
+            ("trace_next_btn", self._on_next),
+            ("trace_last_btn", self._on_last),
+        ]
+
     def _apply_translations(self) -> None:
-        for key in ("trace_open_btn", "trace_first_btn",
-                     "trace_prev_btn", "trace_next_btn", "trace_last_btn"):
-            widget = self.findChild(QPushButton, key)
-            if widget is not None:
-                widget.setText(_t(key))
         headers = [_t(f"trace_col_{col}") for col in _ACTION_COLUMNS]
         self._actions_table.setHorizontalHeaderLabels(headers)
 

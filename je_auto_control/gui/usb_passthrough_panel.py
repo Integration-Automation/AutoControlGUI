@@ -22,7 +22,7 @@ from typing import Any, Callable, List, Optional
 from PySide6.QtCore import QObject, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QGroupBox, QHBoxLayout, QHeaderView,
-    QLabel, QLineEdit, QMessageBox, QPushButton, QTableWidget,
+    QLabel, QLineEdit, QMessageBox, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -116,11 +116,28 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
     # --- layout ------------------------------------------------------------
 
     def _build_layout(self) -> None:
+        # Share/ACL/use/remote-fetch commands run from the Actions menu;
+        # the panel keeps only the badge, tables, inputs, and status.
         root = QHBoxLayout(self)
         root.setContentsMargins(16, 16, 16, 16)
         root.setSpacing(16)
         root.addWidget(self._build_host_section(), stretch=1)
         root.addWidget(self._build_viewer_section(), stretch=1)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("usb_share_enable", self._enable_sharing),
+            ("usb_share_disable", self._disable_sharing),
+            ("usb_share_refresh_local", self._refresh_local_devices),
+            ("usb_share_allow", self._allow_selected),
+            ("usb_share_block", self._block_selected),
+            ("usb_share_export_acl", self._export_acl),
+            ("usb_share_import_acl", self._import_acl),
+            ("usb_share_fetch_shared", self._list_shared),
+            ("usb_share_open_selected", self._open_selected),
+            ("usb_share_remote_fetch", self._fetch_remote),
+        ]
 
     def _build_host_section(self) -> QWidget:
         group = QGroupBox()
@@ -128,37 +145,13 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         layout = QVBoxLayout(group)
         layout.setSpacing(8)
         layout.addWidget(self._host_badge)
-        btn_row = QHBoxLayout()
-        enable_btn = self._tr(QPushButton(), "usb_share_enable")
-        enable_btn.clicked.connect(self._enable_sharing)
-        disable_btn = self._tr(QPushButton(), "usb_share_disable")
-        disable_btn.clicked.connect(self._disable_sharing)
-        btn_row.addWidget(enable_btn, stretch=1)
-        btn_row.addWidget(disable_btn, stretch=1)
-        layout.addLayout(btn_row)
         layout.addWidget(self._tr(QLabel(), "usb_share_local_devices"))
         layout.addWidget(self._local_table, stretch=1)
         acl_row = QHBoxLayout()
-        refresh_btn = self._tr(QPushButton(), "usb_share_refresh_local")
-        refresh_btn.clicked.connect(self._refresh_local_devices)
-        allow_btn = self._tr(QPushButton(), "usb_share_allow")
-        allow_btn.clicked.connect(lambda: self._set_policy(True))
-        block_btn = self._tr(QPushButton(), "usb_share_block")
-        block_btn.clicked.connect(lambda: self._set_policy(False))
-        acl_row.addWidget(refresh_btn)
-        acl_row.addWidget(allow_btn)
-        acl_row.addWidget(block_btn)
         self._tr(self._auto_check, "usb_share_auto_refresh")
         acl_row.addWidget(self._auto_check)
+        acl_row.addStretch(1)
         layout.addLayout(acl_row)
-        io_row = QHBoxLayout()
-        export_btn = self._tr(QPushButton(), "usb_share_export_acl")
-        export_btn.clicked.connect(self._export_acl)
-        import_btn = self._tr(QPushButton(), "usb_share_import_acl")
-        import_btn.clicked.connect(self._import_acl)
-        io_row.addWidget(export_btn)
-        io_row.addWidget(import_btn)
-        layout.addLayout(io_row)
         return group
 
     def _build_viewer_section(self) -> QWidget:
@@ -174,14 +167,6 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         source_row.addWidget(self._source_combo, stretch=1)
         layout.addLayout(source_row)
         layout.addWidget(self._shared_table, stretch=1)
-        use_row = QHBoxLayout()
-        list_btn = self._tr(QPushButton(), "usb_share_fetch_shared")
-        list_btn.clicked.connect(self._list_shared)
-        open_btn = self._tr(QPushButton(), "usb_share_open_selected")
-        open_btn.clicked.connect(self._open_selected)
-        use_row.addWidget(list_btn)
-        use_row.addWidget(open_btn)
-        layout.addLayout(use_row)
         layout.addWidget(self._viewer_status)
         layout.addWidget(self._build_remote_box())
         return group
@@ -198,9 +183,6 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
         token_row.addWidget(self._tr(QLabel(), "usb_share_remote_token"))
         token_row.addWidget(self._remote_token, stretch=1)
         layout.addLayout(token_row)
-        fetch_btn = self._tr(QPushButton(), "usb_share_remote_fetch")
-        fetch_btn.clicked.connect(self._fetch_remote)
-        layout.addWidget(fetch_btn)
         return box
 
     def _apply_local_headers(self) -> None:
@@ -300,6 +282,12 @@ class UsbPassthroughPanel(TranslatableMixin, QWidget):
             return
         self._last_seen_seq = events[-1]["seq"]
         self._refresh_local_devices()
+
+    def _allow_selected(self) -> None:
+        self._set_policy(True)
+
+    def _block_selected(self) -> None:
+        self._set_policy(False)
 
     def _set_policy(self, allow: bool) -> None:
         row = _selected_row(self._local_table)

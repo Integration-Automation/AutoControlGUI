@@ -2,7 +2,7 @@
 from typing import Optional
 
 from PySide6.QtWidgets import (
-    QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,
+    QHBoxLayout, QLabel, QLineEdit, QMessageBox,
     QVBoxLayout, QWidget,
 )
 
@@ -42,6 +42,8 @@ class VLMTab(TranslatableMixin, QWidget):
         self._model.setPlaceholderText(_t("vlm_model_placeholder"))
 
     def _build_layout(self) -> None:
+        # Locate/click commands run from the Actions menu; the tab keeps
+        # only the description/model inputs and the result labels.
         root = QVBoxLayout(self)
         desc_row = QHBoxLayout()
         desc_row.addWidget(self._tr(QLabel(), "vlm_desc_label"))
@@ -51,18 +53,16 @@ class VLMTab(TranslatableMixin, QWidget):
         model_row.addWidget(self._tr(QLabel(), "vlm_model_label"))
         model_row.addWidget(self._model, stretch=1)
         root.addLayout(model_row)
-        btn_row = QHBoxLayout()
-        locate_btn = self._tr(QPushButton(), "vlm_locate")
-        locate_btn.clicked.connect(self._on_locate)
-        click_btn = self._tr(QPushButton(), "vlm_click")
-        click_btn.clicked.connect(self._on_click)
-        btn_row.addWidget(locate_btn)
-        btn_row.addWidget(click_btn)
-        btn_row.addStretch()
-        root.addLayout(btn_row)
         root.addWidget(self._last_result)
         root.addWidget(self._status)
         root.addStretch()
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("vlm_locate", self._on_locate),
+            ("vlm_click", self._on_click),
+        ]
 
     def _collect_inputs(self):
         description = self._description.text().strip()
