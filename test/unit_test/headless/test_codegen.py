@@ -78,6 +78,14 @@ def test_empty_actions_rejected():
         generate_code([])
 
 
+def test_pytest_can_emit_automatic_failure_bundle():
+    code = generate_code(_ACTIONS, failure_bundle=True, name="login")
+    assert "import je_auto_control.api as ac" in code
+    assert "with ac.failure_bundle_on_error(" in code
+    assert "login-failure.zip" in code
+    assert _compiles(code)
+
+
 def test_generate_code_file_from_path(tmp_path):
     src = tmp_path / "flow.json"
     src.write_text(json.dumps(_ACTIONS), encoding="utf-8")

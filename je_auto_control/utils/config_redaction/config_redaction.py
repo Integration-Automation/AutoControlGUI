@@ -44,6 +44,21 @@ def redact_config(obj: Any, *, mask: str = _DEFAULT_MASK) -> Any:
 
 def redact_secret_text(text: str, *, mask: str = _DEFAULT_MASK) -> str:
     """Mask secret-looking tokens within a free-text string (e.g. a log line)."""
+    # Explicit credential syntax must be masked even when the value is short or
+    # low-entropy and therefore intentionally below the generic scanner's
+    # threshold (common in tests, local deployments, and leaked error text).
+    text = re.sub(
+        r"(?i)(\bauthorization\s*:\s*bearer\s+)[^\s,;]+",
+        lambda match: match.group(1) + mask,
+        text or "",
+    )
+    text = re.sub(
+        r"(?i)(\b(?:api[_-]?key|access[_-]?token|token|password|passwd|secret)"
+        r"\s*[=:]\s*)([^\s,;]+)",
+        lambda match: match.group(1) + mask,
+        text,
+    )
+
     def _replace(match: "re.Match[str]") -> str:
         token = match.group(0)
         core = token.strip(_PUNCT)
@@ -51,4 +66,4 @@ def redact_secret_text(text: str, *, mask: str = _DEFAULT_MASK) -> str:
             return token.replace(core, mask)
         return token
 
-    return re.sub(r"\S+", _replace, text or "")
+    return re.sub(r"\S+", _replace, text)
