@@ -1,5 +1,20 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-07-03) — 穩定 API、失敗診斷包與發佈工程
+
+給新整合用的版本化進入點、可攜式失敗診斷格式,以及強化後的發佈管線。完整參考:[`docs/API_LIFECYCLE.md`](../docs/API_LIFECYCLE.md) 與 [`docs/CAPABILITY_MATRIX.md`](../docs/CAPABILITY_MATRIX.md)。
+
+- **穩定 `je_auto_control.api` 門面**:小巧、延遲載入、有型別的命名空間(`execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、failure bundles),新的使用者匯入核心自動化時不必連帶載入數百個選用整合。受書面生命週期政策管轄——移除穩定 API 需要棄用警告加兩個 minor 版本——並由 `utils/deprecation.deprecated` 提供一致、帶中繼資料的警告。CI 以 mypy 檢查此介面型別,並在 Windows/Ubuntu/macOS × Python 3.10/3.14 矩陣上煙霧測試匯入。
+- **失敗診斷包**(`create_failure_bundle` / `failure_bundle_on_error`,CLI `je_auto_control failure-bundle out.zip`):一個原子寫入、自足的 `autocontrol.failure-bundle/v1` ZIP,用於診斷失敗的執行——含執行環境資訊的 manifest、已遮罩的 error/context/events、已遮罩的 log 尾段、可選截圖與診斷報告、opt-in 附件。收集器為 best-effort:截圖或診斷探測壞掉會記進 `collector_failures` 而不是丟失整個診斷包。`codegen --failure-bundle` 讓產生的 pytest 流程自動封存自己的失敗證據。秘密遮罩現在也會遮蔽明確的 `key=value` / `Authorization: Bearer` 憑證語法,不論其熵值高低。
+- **發佈工程**:發佈從 push-to-main 改為不可變的 `v*` 標籤——新的 `release.yml` 驗證標籤與套件版本一致、建置、煙霧測試 wheel、附上建置來源證明(provenance attestation),並經 PyPI Trusted Publishing 發佈。`quality.yml` 新增 dependency review、覆蓋率下限(fail-under 35,分支覆蓋)與穩定 API 的 mypy 關卡;新的 platform-smoke workflow 在三個作業系統上演練穩定 API。
+- **專案文件**:新增 [`SECURITY.md`](../SECURITY.md)(私密安全通報、回應時限、操作預設值)、[`CHANGELOG.md`](../CHANGELOG.md)(Keep-a-Changelog 相容性紀錄)、API 生命週期政策與能力/平台支援矩陣。Sphinx 索引補齊 v182–v223 兩種語言的功能文件。
+
+## 本次更新 (2026-07-02) — 選單驅動 GUI:Actions 選單取代分頁內按鈕
+
+每個分頁的指令現在集中在一個可預期的位置。視窗選單列新增動態 **Actions** 選單,會隨當前分頁重建;分頁只保留輸入欄位、表格與結果/狀態檢視,不再是一排排按鈕。完整參考:[`docs/source/Zh/doc/new_features/v223_features_doc.rst`](../docs/source/Zh/doc/new_features/v223_features_doc.rst)。
+
+- **視窗層級 Actions 選單**:核心分頁在註冊時宣告指令;功能分頁提供 `menu_actions()` 掛鉤,回傳 `(label_key, handler)` 配對。48 個已註冊分頁中有 46 個以此方式呈現指令——Script Builder 與 Remote Desktop 刻意保留互動式面板版面,選單在該處顯示佔位訊息。視窗層級選單無法取代的按鈕維持原位(堆疊觸發器表單內的逐頁瀏覽按鈕、隨可見性切換的資料來源瀏覽按鈕、有狀態的自動更新核取方塊)。無頭迴歸測試守護此契約,分頁不可能默默失去其指令。
+
 ## 本次更新 (2026-06-24) — 擴充 UIA 控制模式(展開 / 選取 / 範圍 / 捲動)
 
 以原生模式驅動樹節點、清單/下拉項目、滑桿與捲動,而非像素猜測。完整參考:[`docs/source/Zh/doc/new_features/v181_features_doc.rst`](../docs/source/Zh/doc/new_features/v181_features_doc.rst)。

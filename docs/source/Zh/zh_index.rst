@@ -204,6 +204,48 @@ AutoControl 所有功能的完整使用指南。
    doc/new_features/v179_features_doc
    doc/new_features/v180_features_doc
    doc/new_features/v181_features_doc
+   doc/new_features/v182_features_doc
+   doc/new_features/v183_features_doc
+   doc/new_features/v184_features_doc
+   doc/new_features/v185_features_doc
+   doc/new_features/v186_features_doc
+   doc/new_features/v187_features_doc
+   doc/new_features/v188_features_doc
+   doc/new_features/v189_features_doc
+   doc/new_features/v190_features_doc
+   doc/new_features/v191_features_doc
+   doc/new_features/v192_features_doc
+   doc/new_features/v193_features_doc
+   doc/new_features/v194_features_doc
+   doc/new_features/v195_features_doc
+   doc/new_features/v196_features_doc
+   doc/new_features/v197_features_doc
+   doc/new_features/v198_features_doc
+   doc/new_features/v199_features_doc
+   doc/new_features/v200_features_doc
+   doc/new_features/v201_features_doc
+   doc/new_features/v202_features_doc
+   doc/new_features/v203_features_doc
+   doc/new_features/v204_features_doc
+   doc/new_features/v205_features_doc
+   doc/new_features/v206_features_doc
+   doc/new_features/v207_features_doc
+   doc/new_features/v208_features_doc
+   doc/new_features/v209_features_doc
+   doc/new_features/v210_features_doc
+   doc/new_features/v211_features_doc
+   doc/new_features/v212_features_doc
+   doc/new_features/v213_features_doc
+   doc/new_features/v214_features_doc
+   doc/new_features/v215_features_doc
+   doc/new_features/v216_features_doc
+   doc/new_features/v217_features_doc
+   doc/new_features/v218_features_doc
+   doc/new_features/v219_features_doc
+   doc/new_features/v220_features_doc
+   doc/new_features/v221_features_doc
+   doc/new_features/v222_features_doc
+   doc/new_features/v223_features_doc
    doc/ocr_backends/ocr_backends_doc
    doc/observability/observability_doc
    doc/operations_layer/operations_layer_doc

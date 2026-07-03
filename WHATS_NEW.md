@@ -1,10 +1,21 @@
 # What's New — AutoControl
 
+## What's new (2026-07-03)
+
+### Stable API, Failure Bundles, and Release Engineering
+
+A versioned entry point for new integrations, a portable failure-diagnostics format, and a hardened release pipeline. Full reference: [`docs/API_LIFECYCLE.md`](docs/API_LIFECYCLE.md) and [`docs/CAPABILITY_MATRIX.md`](docs/CAPABILITY_MATRIX.md).
+
+- **Stable `je_auto_control.api` façade**: small, lazy, typed namespace (`execute_action`, `execute_action_with_vars`, `generate_code`, `run_diagnostics`, failure bundles) so new consumers can import core automation without eagerly loading hundreds of optional integrations. Governed by a written lifecycle policy — stable removals need a deprecation warning plus two minor releases — with `utils/deprecation.deprecated` supplying consistent, metadata-carrying warnings. CI type-checks this surface with mypy and smoke-imports it on a Windows/Ubuntu/macOS × Python 3.10/3.14 matrix.
+- **Failure bundles** (`create_failure_bundle` / `failure_bundle_on_error`, CLI `je_auto_control failure-bundle out.zip`): one atomic, self-contained `autocontrol.failure-bundle/v1` ZIP for diagnosing a failed run — manifest with runtime info, redacted error/context/events, redacted log tail, optional screenshot and diagnostics report, opt-in attachments. Collectors are best-effort: a broken screen grab or diagnostics probe is recorded in `collector_failures` instead of losing the bundle. `codegen --failure-bundle` wraps generated pytest flows so every generated test archives its own failure evidence. Secret redaction now also masks explicit `key=value` / `Authorization: Bearer` credential syntax regardless of entropy.
+- **Release engineering**: publishing moves from push-to-main to immutable `v*` tags — the new `release.yml` verifies the tag matches the package version, builds, smoke-tests the wheel, attests build provenance, and publishes via PyPI Trusted Publishing. `quality.yml` gains dependency review, a coverage floor (fail-under 35, branch coverage), and a mypy gate on the stable API; a new platform-smoke workflow exercises the stable API on all three OSes.
+- **Project docs**: new [`SECURITY.md`](SECURITY.md) (private-advisory reporting, response targets, operational defaults), [`CHANGELOG.md`](CHANGELOG.md) (Keep-a-Changelog compatibility record), API lifecycle policy, and a capability/platform support matrix. The Sphinx indexes catch up on v182–v223 feature docs in both languages.
+
 ## What's new (2026-07-02)
 
 ### Menu-Driven GUI: the Actions Menu Replaces In-Tab Buttons
 
-Every tab's commands now live in one predictable place. The window menu bar gains a dynamic **Actions** menu that rebuilds for the active tab; tabs keep only their inputs, tables, and result/status views instead of rows of buttons.
+Every tab's commands now live in one predictable place. The window menu bar gains a dynamic **Actions** menu that rebuilds for the active tab; tabs keep only their inputs, tables, and result/status views instead of rows of buttons. Full reference: [`docs/source/Eng/doc/new_features/v223_features_doc.rst`](docs/source/Eng/doc/new_features/v223_features_doc.rst).
 
 - **Window-level Actions menu**: core tabs declare their commands at registration; feature tabs expose a `menu_actions()` hook returning `(label_key, handler)` pairs. 46 of 48 registered tabs now surface their commands this way — Script Builder and Remote Desktop intentionally keep their interactive panel layouts, and the menu shows a placeholder there. Buttons a window-level menu cannot replace stay in place (per-page browse buttons inside stacked trigger forms, the visibility-toggled data-source browse button, stateful auto-refresh checkboxes). A headless regression test guards the contract so no tab can silently lose its commands.
 
