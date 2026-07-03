@@ -118,3 +118,10 @@ exclude = "(^test/|^docs/|^build/)"
 [[tool.mypy.overrides]]
 module = ["cv2.*", "Xlib.*", "PySide6.*", "objc.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# numpy's stubs use `type` statements, which mypy rejects while parsing under
+# python_version 3.10 — skip them; the stable API does not expose numpy types.
+module = ["numpy.*"]
+follow_imports = "skip"
+ignore_missing_imports = true
