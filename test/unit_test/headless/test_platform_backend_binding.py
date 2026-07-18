@@ -136,7 +136,7 @@ def test_scroll_moves_the_cursor_when_coords_are_given(monkeypatch, platform):
 
     auto_control_mouse.mouse_scroll(5, x=100, y=200)
 
-    assert events[0] == ("move", 100, 200)
+    assert events[:1] == [("move", 100, 200)]
 
 
 @pytest.mark.parametrize("platform", ["win32", "darwin", "linux"])

@@ -22,6 +22,7 @@ behind TLS termination (nginx / Caddy) and pin certificates.
 """
 from __future__ import annotations
 
+import select
 import socket
 import threading
 from typing import Dict, Optional, Tuple
@@ -36,6 +37,13 @@ _HANDSHAKE_TIMEOUT_S = 30.0
 # accept() 的輪詢間隔，用來定期檢查 _shutdown 旗標。
 # How long accept() blocks before re-checking the _shutdown flag.
 _ACCEPT_POLL_TIMEOUT_S = 0.5
+# How long a pipe thread waits for readable data before re-checking the stop
+# flag. A blocking recv() can only be woken by the opposite thread's
+# dst.shutdown(); on some platforms/Python versions (observed on Linux +
+# CPython 3.14) that shutdown does not reliably interrupt a recv() already
+# parked on the same socket, so the join() hangs forever. Polling readability
+# with select() guarantees the thread re-checks stop_event and exits.
+_PIPE_POLL_TIMEOUT_S = 0.5
 
 
 class RelayError(RuntimeError):
@@ -58,6 +66,16 @@ def _pipe(src: socket.socket, dst: socket.socket,
     """Forward bytes from ``src`` to ``dst`` until either closes."""
     try:
         while not stop_event.is_set():
+            # Wait for readability with a timeout instead of a bare blocking
+            # recv() so the loop always circles back to re-check stop_event
+            # even if a cross-thread shutdown() fails to wake the recv().
+            try:
+                readable, _, _ = select.select([src], [], [],
+                                                _PIPE_POLL_TIMEOUT_S)
+            except (OSError, ValueError):
+                break  # src closed under us
+            if not readable:
+                continue
             data = src.recv(_BUFFER_SIZE)
             if not data:
                 break
