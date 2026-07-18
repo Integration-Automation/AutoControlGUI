@@ -24,6 +24,9 @@ class _FakeRequest:
         self._chunks = list(chunks)
         self.sent: list = []
 
+    def settimeout(self, _timeout) -> None:
+        """No-op: real sockets expose this; the handler sets a read timeout."""
+
     def recv(self, _bufsize) -> bytes:
         if self._chunks:
             return self._chunks.pop(0)

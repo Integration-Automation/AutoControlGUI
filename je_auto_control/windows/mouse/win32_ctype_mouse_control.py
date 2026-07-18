@@ -65,6 +65,12 @@ _WINDOW_MESSAGE_TABLE: dict = {
 
 _get_cursor_pos = windll.user32.GetCursorPos
 _set_cursor_pos = windll.user32.SetCursorPos
+# Prototype the calls: without argtypes ctypes marshals args as 32-bit c_int,
+# and a non-int coord raises ctypes.ArgumentError instead of converting.
+_get_cursor_pos.argtypes = (ctypes.POINTER(wintypes.POINT),)
+_get_cursor_pos.restype = wintypes.BOOL
+_set_cursor_pos.argtypes = (ctypes.c_int, ctypes.c_int)
+_set_cursor_pos.restype = wintypes.BOOL
 
 
 def _convert_position(x: int, y: int) -> Tuple[int, int]:
@@ -73,6 +79,10 @@ def _convert_position(x: int, y: int) -> Tuple[int, int]:
     Convert screen coordinates to absolute coordinates
     """
     width, height = size()
+    # A 0-sized screen (headless / no display) would make this divide by zero,
+    # an ArithmeticError that escapes the executor and aborts the whole run.
+    if width <= 0 or height <= 0:
+        return 0, 0
     converted_x = 65536 * x // width + 1
     converted_y = 65536 * y // height + 1
     return converted_x, converted_y
