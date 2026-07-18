@@ -57,7 +57,9 @@
 
 ## What's New
 
-All per-release notes have moved to **[WHATS_NEW.md](WHATS_NEW.md)**.
+**Latest (2026-07-18) — cross-platform reliability hardening.** A full-project runtime audit fixed execution-time defects across the macOS / Windows / Linux / Wayland backends, the executor, and the remote-desktop / USB stacks — correct Retina cursor math, a relay hang on CPython 3.14, `AC_expect_poll` / `AC_parallel` robustness, localhost-by-default USB/IP, and typed exceptions preserved at I/O boundaries — each covered by a headless regression test. No API changes.
+
+All per-release notes are in **[WHATS_NEW.md](WHATS_NEW.md)**.
 
 ## Features
 
