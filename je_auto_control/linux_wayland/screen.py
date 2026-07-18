@@ -55,8 +55,11 @@ def _run(argv: list, *, timeout: float = 10.0) -> bytes:
     return completed.stdout or b""
 
 
-def screen_size() -> Tuple[int, int]:
+def size() -> Tuple[int, int]:
     """Return the primary monitor's pixel size.
+
+    Named ``size`` to match the backend contract the wrapper calls
+    (``screen.size()``), as the windows / osx / x11 backends all do.
 
     Tries ``wlr-randr`` first (sway / hyprland) then falls back to
     grim's PNG header so the call still works on GNOME / KDE without
@@ -66,6 +69,22 @@ def screen_size() -> Tuple[int, int]:
     if coords is not None:
         return coords
     return _size_from_grim_capture()
+
+
+def get_pixel(x: int, y: int) -> Tuple[int, int, int]:
+    """Return the ``(r, g, b)`` colour at ``(x, y)``.
+
+    grim can capture an arbitrary region, so a 1x1 grab at the requested
+    point is the cheapest way to read a single pixel. Returns RGB to match
+    the x11 backend.
+    """
+    grim = _require_grim()
+    data = _run([grim, "-g", f"{int(x)},{int(y)} 1x1", "-"], timeout=10.0)
+    if not data:
+        raise AutoControlException("grim produced no output")
+    from io import BytesIO
+    with Image.open(BytesIO(data)) as image:
+        return image.convert("RGB").getpixel((0, 0))
 
 
 def screenshot(file_path: Optional[str] = None,
@@ -113,4 +132,4 @@ def _size_from_grim_capture() -> Tuple[int, int]:
         return int(image.width), int(image.height)
 
 
-__all__ = ["screen_size", "screenshot"]
+__all__ = ["size", "get_pixel", "screenshot"]

@@ -97,9 +97,10 @@
 - **WebRTC 包监测** — 由既有 WebRTC stats 轮询喂入的进程级 `StatsSnapshot` 滚动窗口（默认 600 条 / 1 Hz 约 10 分钟）。对 RTT、FPS、bitrate、丢包率、jitter 各回 `last/min/max/avg/p95`
 - **USB 设备列举** — 只读的跨平台 USB 设备列举。优先尝试 pyusb（libusb）；若无则退回平台特定命令（Windows `Get-PnpDevice`、macOS `system_profiler`、Linux `/sys/bus/usb/devices`）。第二阶段 passthrough 构建于此（见下）
 - **系统诊断** — 一键"目前正常吗？"探测：平台、可选依赖包、executor 命令数、审计链、截图、鼠标、磁盘空间、REST registry。CLI 全绿 exit 0／否则 1；REST `/diagnose`；按严重度上色的 GUI 分页
+- **稳定 API 与失败诊断包** — 给新集成用的版本化、延迟加载 `je_auto_control.api` 门面(`execute_action`、`generate_code`、`run_diagnostics`、failure bundles),附[生命周期政策](../docs/API_LIFECYCLE.md)。便携式 `autocontrol.failure-bundle/v1` 诊断 ZIP:manifest + 已脱敏的 context/events/log 尾段、可选截图与诊断、best-effort 收集器、原子写入。CLI `je_auto_control failure-bundle out.zip`;`codegen --failure-bundle` 让生成的 pytest 自动包上失败诊断
 - **USB Hotplug 事件** — 轮询式 hotplug 监测（`UsbHotplugWatcher`），含 bounded ring buffer 与带序号的事件；`GET /usb/events?since=N` 让晚加入的订阅者补上进度。USB 分页有自动刷新切换钮。
 - **OpenAPI 3.1 + Swagger UI** — `GET /openapi.json`（auth-gated，从活的路由表生成）+ `GET /docs`（浏览器版 Swagger UI 含 bearer token 栏）。CI 上有 drift 测试，新加路由忘记写 metadata 会被拦下。
-- **配置包导出／导入** — 单一 JSON 文件，导出／导入用户配置（admin hosts、address book、trusted viewers、known hosts、host service、IDs）。原子写入加 `<name>.bak.<时间戳>` 备份；CLI `python -m je_auto_control.utils.config_bundle export|import`；`POST /config/{export,import}`；REST API 分页有按钮。
+- **配置包导出／导入** — 单一 JSON 文件，导出／导入用户配置（admin hosts、address book、trusted viewers、known hosts、host service、IDs）。原子写入加 `<name>.bak.<时间戳>` 备份；CLI `python -m je_auto_control.utils.config_bundle export|import`；`POST /config/{export,import}`；REST API 分页的导出／导入命令位于窗口的 Actions 菜单。
 - **USB Passthrough（需主动启用）** — 让远端 viewer 使用实体插在 host 上的 USB 设备，走 WebRTC `usb` DataChannel。Wire-level 协议（11 个 opcode 含 `RESUME`、CREDIT 流量控制、16 KiB payload 上限，超量传输以 EOF 分片）。八个原始未决问题全部解决：可靠有序 channel、LIST 走 channel（ACL 过滤）、per-claim credit、Linux kernel driver detach/reattach、ACL **HMAC-SHA256 完整性**（篡改 fail-closed；密钥可插拔 — Windows DPAPI 或 passphrase vault）。**Backend：**`LibusbBackend`（production）、`WinusbBackend`（ctypes）、`IokitBackend`（原生 IOKit 列举 + libusb 传输）— Windows/macOS *硬件未验证*；`default_passthrough_backend()` 依 OS 自动挑。Viewer 端阻塞式 client（`control/bulk/interrupt_transfer`、`list_devices`、`resume`）；in-process `UsbLoopback` 让同机可走完整堆栈 share+use。**已接入 WebRTC** host/viewer（`viewer.usb_client()`）并含断线可续租的 **resume token**。持久化 ACL（默认 deny、mode 0600），含 host 端 prompt 对话框、滥用 **rate-limit / lockout** 与可检测篡改审计整合。五个驱动面：AnyDesk 风 **GUI 面板**（分享 + ACL 允许/封锁 + 本机/远端使用）、`AC_usb_*` executor 命令（JSON / socket / 调度器）、**REST** `/usb/...`、一级 **MCP** `ac_usb_*` 工具、以及 Python API。默认 off — 用 `enable_usb_passthrough(True)` 或 `JE_AUTOCONTROL_USB_PASSTHROUGH=1` 启用；默认启用仍待 Phase 2e 外部安全签核 + 实机硬件验证。
 
 ---
@@ -529,7 +530,7 @@ ac.run_from_description("打开记事本并输入 hello", executor=executor)
 | `AUTOCONTROL_LLM_BACKEND` | 强制指定 `anthropic` |
 | `AUTOCONTROL_LLM_MODEL` | 覆盖默认模型（如 `claude-opus-4-7`） |
 
-GUI：**LLM Planner** 分页 — 描述输入框、`QThread` 后台执行的 *Plan* 按钮、预览指令清单，以及 *Run plan* 按钮。
+GUI：**LLM Planner** 分页 — 描述输入框与指令清单预览；*Plan*（`QThread` 后台执行）与 *Run plan* 位于窗口的 Actions 菜单。
 
 ### 运行期变量与流程控制
 
@@ -1004,8 +1005,8 @@ for run in default_history_store.list_runs(limit=20):
     print(run.id, run.source, run.status, run.artifact_path)
 ```
 
-GUI **执行历史** 标签页提供筛选 / 刷新 / 清除功能，并可双击截图列打开
-附件。
+GUI **执行历史** 标签页显示运行记录表格，可双击截图列打开附件；筛选 /
+刷新 / 清除命令位于窗口的 Actions 菜单。
 
 ### 报告生成
 
@@ -1236,6 +1237,13 @@ je_auto_control.start_autocontrol_gui()
 ```bash
 python -m je_auto_control
 ```
+
+主窗口采用菜单驱动设计：标签页只保留输入字段、表格与结果视图，每个
+标签页的命令都集中在窗口级的 **Actions** 菜单，会随当前标签页动态重建。
+**View → Tabs** 可按分类（核心 / 编辑 / 检测与视觉 / 自动化引擎 / 系统）
+显示或隐藏约 48 个已注册标签页；默认布局只打开录制、脚本构建器与远程
+桌面三个标签页。**View → Text Size** 提供自动／预设字号，**Language**
+菜单（English / 繁體中文 / 简体中文 / 日本語）可即时切换整个窗口的语言。
 
 ---
 

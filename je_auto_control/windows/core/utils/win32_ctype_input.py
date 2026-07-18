@@ -69,4 +69,4 @@ LPINPUT: ctypes.POINTER = ctypes.POINTER(Input)
 SendInput: user32.SendInput = user32.SendInput
 
 user32.SendInput.errcheck = _check_count
-user32.SendInput.arg_types = (wintypes.UINT, ctypes.c_void_p, ctypes.c_int)
+user32.SendInput.argtypes = (wintypes.UINT, ctypes.c_void_p, ctypes.c_int)

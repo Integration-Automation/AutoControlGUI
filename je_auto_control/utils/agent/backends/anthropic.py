@@ -71,6 +71,21 @@ class AnthropicAgentBackend(AgentBackend):
                 tools=self._tools,
                 messages=self._conversation,
                 max_tokens=self._max_tokens,
+                # 這個迴圈一次只執行一個工具:_handle_response 只回傳第一個
+                # tool_use,_ingest_history 也只附上一筆 tool_result。平行
+                # 工具呼叫預設是開啟的,一旦模型回傳兩個 tool_use,下一次
+                # 請求就會因為有 tool_use 沒有對應的 tool_result 而 400。
+                # This loop executes exactly one tool per step: _handle_response
+                # returns only the first tool_use block and _ingest_history
+                # appends exactly one tool_result. Parallel tool use is on by
+                # default, and every tool_use must be answered — so a response
+                # with two tool_use blocks made the *next* create() 400 with an
+                # unanswered tool_use id, killing the run. Disabling it matches
+                # the API to the loop this backend actually implements.
+                tool_choice={
+                    "type": "auto",
+                    "disable_parallel_tool_use": True,
+                },
             )
         except Exception as exc:  # noqa: BLE001  rewrap to a clear backend error
             raise AgentBackendError(
@@ -95,7 +110,11 @@ class AnthropicAgentBackend(AgentBackend):
                     "input": _attr(block, "input") or {},
                     "_tool_use_id": _attr(block, "id"),
                 }
-        # No tool_use — interpret the text as a final answer + stop.
+        # No tool_use — interpret the text as a final answer + stop, unless
+        # the turn was cut short (default max_tokens can be hit mid-plan, or
+        # the model may refuse). Surfacing a truncated reply as a successful
+        # final answer would silently end the run with a half-formed message.
+        _raise_if_truncated(response)
         text_parts: List[str] = []
         for block in content:
             block_type = (
@@ -157,6 +176,18 @@ def _attr(block: Any, name: str) -> Any:
     if isinstance(block, dict):
         return block.get(name)
     return getattr(block, name, None)
+
+
+_TRUNCATION_STOP_REASONS = frozenset({"max_tokens", "refusal"})
+
+
+def _raise_if_truncated(response: Any) -> None:
+    """Reject an incomplete turn instead of treating it as a final answer."""
+    stop_reason = _attr(response, "stop_reason")
+    if stop_reason in _TRUNCATION_STOP_REASONS:
+        raise AgentBackendError(
+            f"anthropic response was incomplete (stop_reason={stop_reason!r})",
+        )
 
 
 def _last_tool_use_id(conversation: Sequence[Dict[str, Any]]) -> Optional[str]:

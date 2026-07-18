@@ -7,7 +7,7 @@ table auto-refreshes when the registry notifies of a change.
 """
 from typing import Optional
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QHeaderView, QLabel, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
@@ -33,6 +33,10 @@ def _t(key: str) -> str:
 class PresenceTab(TranslatableMixin, QWidget):
     """Roster view + role controls for the multi-viewer presence registry."""
 
+    # Emitted from the registry listener (which runs off the Qt thread); a
+    # queued connection bounces the refresh onto the GUI thread.
+    _registry_changed = Signal()
+
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
@@ -40,6 +44,7 @@ class PresenceTab(TranslatableMixin, QWidget):
         self._table = QTableWidget(0, len(_COLUMNS))
         self._status = QLabel()
         self._build_layout()
+        self._registry_changed.connect(self.refresh)
         # Listener fires on every change; the timer is a belt-and-braces
         # refresh in case a listener exception drops us off.
         self._registry.add_listener(self._on_registry_event)
@@ -103,8 +108,10 @@ class PresenceTab(TranslatableMixin, QWidget):
 
     def _on_registry_event(self, _viewer_id: str,
                             _row: Optional[ViewerPresence]) -> None:
-        # Listener runs off the Qt thread; bounce onto the GUI loop.
-        QTimer.singleShot(0, self.refresh)
+        # Listener runs off the Qt thread, which has no event loop, so
+        # QTimer.singleShot would never fire. Emit a signal — Qt queues the
+        # refresh onto the GUI thread.
+        self._registry_changed.emit()
 
     def _selected_viewer_id(self) -> Optional[str]:
         row = self._table.currentRow()

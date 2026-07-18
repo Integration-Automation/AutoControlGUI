@@ -22,21 +22,37 @@ _C1 = (0.01 * 255) ** 2
 _C2 = (0.03 * 255) ** 2
 
 
+def _gray_code(channels: int, is_bgr: bool) -> int:
+    """OpenCV colour-to-gray conversion code for the given channel order."""
+    import cv2
+    if channels == 4:
+        return cv2.COLOR_BGRA2GRAY if is_bgr else cv2.COLOR_RGBA2GRAY
+    return cv2.COLOR_BGR2GRAY if is_bgr else cv2.COLOR_RGB2GRAY
+
+
 def _to_gray_f(source: ImageSource):
-    """Load a path / ndarray / PIL image as a 2-D float64 grayscale image."""
+    """Load a path / ndarray / PIL image as a 2-D float64 grayscale image.
+
+    Channel order is tracked so luminance weights stay correct: ``cv2.imread``
+    paths are BGR, while ndarray / PIL sources (the live ``pil_screenshot``
+    grab) are RGB. Converting both with BGR weights would swap the R/B
+    luminance weights, so a saved red baseline and the same red on screen would
+    read as structurally different (~47/255 apart).
+    """
     import cv2
     import numpy as np
+    is_bgr = False
     if hasattr(source, "shape"):
         array = np.asarray(source)
     elif isinstance(source, (str, bytes)) or hasattr(source, "__fspath__"):
         array = cv2.imread(str(source), cv2.IMREAD_COLOR)
         if array is None:
             raise ValueError(f"could not read image: {source!r}")
+        is_bgr = True
     else:
         array = np.asarray(source)
     if array.ndim == 3:
-        code = cv2.COLOR_BGRA2GRAY if array.shape[2] == 4 else cv2.COLOR_BGR2GRAY
-        array = cv2.cvtColor(array, code)
+        array = cv2.cvtColor(array, _gray_code(array.shape[2], is_bgr))
     return array.astype(np.float64)
 
 

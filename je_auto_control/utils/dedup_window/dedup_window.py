@@ -31,7 +31,9 @@ class DedupWindow:
         """Whether ``message_id`` is in the window and not expired."""
         now = self._clock()
         self._purge(now)
-        return message_id in self._seen
+        # Coerce on lookup exactly as mark() coerces on store, so an int id
+        # (123) matches the "123" that was stored instead of never deduping.
+        return str(message_id) in self._seen
 
     def mark(self, message_id: str) -> None:
         """Record ``message_id`` as seen now."""
@@ -41,9 +43,10 @@ class DedupWindow:
         """Atomically return ``True`` if first-seen (and mark), else ``False``."""
         now = self._clock()
         self._purge(now)
-        if message_id in self._seen:
+        key = str(message_id)
+        if key in self._seen:
             return False
-        self._seen[str(message_id)] = now
+        self._seen[key] = now
         return True
 
     def purge_expired(self) -> int:

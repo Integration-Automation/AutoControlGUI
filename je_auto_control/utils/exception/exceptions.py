@@ -1,99 +1,106 @@
 # general
 class AutoControlException(Exception):
-    pass
+    """Base class for every AutoControl runtime error.
+
+    All framework exceptions derive from this so that containment boundaries
+    (executor, background poll loops, request handlers, GUI slots) can catch
+    the whole family with a single ``except AutoControlException``. Do not add
+    a sibling that inherits ``Exception`` directly — that silently escapes
+    every such boundary.
+    """
 
 
 # Keyboard
-class AutoControlKeyboardException(Exception):
+class AutoControlKeyboardException(AutoControlException):
     pass
 
 
-class AutoControlCantFindKeyException(Exception):
+class AutoControlCantFindKeyException(AutoControlException):
     pass
 
 
 # Mouse
-class AutoControlMouseException(Exception):
+class AutoControlMouseException(AutoControlException):
     pass
 
 
 # Screen
 
 
-class AutoControlScreenException(Exception):
+class AutoControlScreenException(AutoControlException):
     pass
 
 
 # Image detect
 
 
-class ImageNotFoundException(Exception):
+class ImageNotFoundException(AutoControlException):
     pass
 
 
 # Record
 
 
-class AutoControlRecordException(Exception):
+class AutoControlRecordException(AutoControlException):
     pass
 
 
 # Execute action
 
-class AutoControlExecuteActionException(Exception):
+class AutoControlExecuteActionException(AutoControlException):
     pass
 
 
-class AutoControlJsonActionException(Exception):
+class AutoControlJsonActionException(AutoControlException):
     pass
 
 
-class AutoControlActionNullException(Exception):
+class AutoControlActionNullException(AutoControlException):
     pass
 
 
-class AutoControlActionException(Exception):
+class AutoControlActionException(AutoControlException):
     pass
 
 
-class AutoControlAddCommandException(Exception):
+class AutoControlAddCommandException(AutoControlException):
     pass
 
 
-class AutoControlAssertionException(Exception):
+class AutoControlAssertionException(AutoControlException):
     """Raised when an ``AC_assert_*`` check fails."""
 
 
-class AutoControlArgparseException(Exception):
+class AutoControlArgparseException(AutoControlException):
     pass
 
 
 # html exception
 
-class AutoControlHTMLException(Exception):
+class AutoControlHTMLException(AutoControlException):
     pass
 
 
 # Json Exception
 
-class AutoControlJsonException(Exception):
+class AutoControlJsonException(AutoControlException):
     pass
 
 
-class AutoControlGenerateJsonReportException(Exception):
+class AutoControlGenerateJsonReportException(AutoControlException):
     pass
 
 
 # XML
 
-class XMLException(Exception):
+class XMLException(AutoControlException):
     pass
 
 
-class XMLTypeException(Exception):
+class XMLTypeException(AutoControlException):
     pass
 
 
 # Execute callback
-class CallbackExecutorException(Exception):
+class CallbackExecutorException(AutoControlException):
     pass

@@ -63,6 +63,12 @@ class ScreenObserver:
         self._poll = max(0.05, float(poll_interval_s))
         self._rules: List[WatchRule] = []
         self._lock = threading.Lock()
+        # 序列化 start()/stop():兩者原本無互斥,交錯的 stop() 會在 start()
+        # 指派 _thread 與 .start() 之間 join 未啟動的執行緒 → RuntimeError。
+        # Serialises start()/stop(): without it, a concurrent stop() joins the
+        # thread between start()'s assignment and its .start() call →
+        # "cannot join thread before it is started".
+        self._lifecycle_lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
         self._events: List[Dict[str, Any]] = []
@@ -138,20 +144,22 @@ class ScreenObserver:
 
     def start(self) -> None:
         """Start the background poll thread (idempotent)."""
-        if self.running:
-            return
-        self._stop.clear()
-        self._thread = threading.Thread(
-            target=self._loop, name="screen-observer", daemon=True)
-        self._thread.start()
+        with self._lifecycle_lock:
+            if self.running:
+                return
+            self._stop.clear()
+            self._thread = threading.Thread(
+                target=self._loop, name="screen-observer", daemon=True)
+            self._thread.start()
 
     def stop(self, timeout: float = 2.0) -> None:
         """Signal the poll thread to stop and join it."""
-        self._stop.set()
-        thread = self._thread
-        if thread is not None:
-            thread.join(timeout=float(timeout))
-        self._thread = None
+        with self._lifecycle_lock:
+            self._stop.set()
+            thread = self._thread
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=float(timeout))
+            self._thread = None
 
     def _loop(self) -> None:
         while not self._stop.is_set():

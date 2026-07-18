@@ -84,6 +84,7 @@ No feature is complete unless it can be driven entirely without the GUI **and** 
 - **Re-export from the package facade**: add the public functions / classes to `je_auto_control/__init__.py` and its `__all__` so `import je_auto_control as ac; ac.<feature>(...)` works out of the box.
 - **Executor command coverage**: wire an `AC_*` command into `utils/executor/action_executor.py` so the feature is usable from JSON action files, the socket server, the scheduler, and the visual script builder — all without Python glue.
 - **GUI tab or control is a thin wrapper**: the Qt widget must only translate user input into calls on the headless core. It must not contain business logic that would be unreachable headlessly.
+- **Tab commands live in the Actions menu, not in-tab buttons**: the main window is menu-driven. A tab keeps only its inputs, tables, and result/status views; its commands surface through the window-level **Actions** menu. Core tabs declare `(label_key, handler)` pairs at registration in `gui/main_widget.py`; feature tabs expose a `menu_actions()` method returning the same shape. Script Builder and Remote Desktop are the only exempt tabs (interactive panel layouts). `test/unit_test/headless/test_actions_menu_gui.py` guards this contract — a new tab without registry actions or a `menu_actions()` hook fails CI.
 - **The top-level package stays Qt-free**: `import je_auto_control` MUST NOT import `PySide6`. The GUI entry point is loaded lazily inside `start_autocontrol_gui()`. Verify with:
 
   ```python

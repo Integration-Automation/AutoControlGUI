@@ -11,7 +11,7 @@ import time
 from typing import Any, Callable, Dict, Mapping, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import (
-    AutoControlActionException, ImageNotFoundException,
+    AutoControlActionException, AutoControlException, ImageNotFoundException,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.wrapper.auto_control_image import locate_image_center
@@ -51,8 +51,27 @@ def _run_branch(executor: Any, body: Optional[list]) -> Any:
 
 
 def _run_strict(executor: Any, body: list) -> Any:
-    """Execute a nested body, re-raising the first error."""
+    """Execute a nested body, re-raising the first error.
+
+    An empty body is a valid no-op (matching :func:`_run_branch`); it must
+    not reach ``execute_action``, which rejects an empty action list.
+    """
+    if not body:
+        return None
     return executor.execute_action(body, raise_on_error=True, _validated=True)
+
+
+def _run_loop_body(executor: Any, body: Optional[list]) -> None:
+    """Execute a loop body once, treating an empty body as a no-op.
+
+    A loop with an empty ``body`` is valid (it does nothing each pass) and
+    must not reach ``execute_action``, which raises on an empty action list.
+    ``AC_break`` / ``AC_continue`` raised from within the body still
+    propagate to the caller's loop handler.
+    """
+    if not body:
+        return
+    executor.execute_action(body, _validated=True)
 
 
 def exec_if_image_found(executor: Any, args: Mapping[str, Any]) -> Any:
@@ -117,7 +136,7 @@ def exec_loop(executor: Any, args: Mapping[str, Any]) -> int:
     completed = 0
     for _ in range(times):
         try:
-            executor.execute_action(body, _validated=True)
+            _run_loop_body(executor, body)
         except LoopContinue:
             completed += 1
             continue
@@ -136,7 +155,7 @@ def exec_while_image(executor: Any, args: Mapping[str, Any]) -> int:
     iterations = 0
     while iterations < max_iter and _image_present(image, threshold):
         try:
-            executor.execute_action(body, _validated=True)
+            _run_loop_body(executor, body)
         except LoopContinue:
             pass
         except LoopBreak:
@@ -154,7 +173,7 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
     for attempt in range(max_attempts):
         try:
             return _run_strict(executor, body)
-        except (AutoControlActionException, OSError, RuntimeError,
+        except (AutoControlException, OSError, RuntimeError,
                 AttributeError, TypeError, ValueError) as error:
             last_error = error
             autocontrol_logger.info(
@@ -171,9 +190,14 @@ def exec_retry(executor: Any, args: Mapping[str, Any]) -> Any:
 # Errors a protected block may raise that ``AC_try`` is willing to catch.
 # ``LoopBreak`` / ``LoopContinue`` are deliberately excluded so loop
 # control-flow still propagates through a try block.
+# ``LookupError`` keeps this aligned with the executor's own catch tuple, so
+# a KeyError/IndexError from a malformed nested action is catchable by
+# ``AC_try`` rather than tearing down the whole script. ``AutoControlException``
+# is the family base (every framework error subclasses it), so image/mouse/
+# keyboard/screen/assertion failures inside the body are recoverable too.
 _TRY_CATCHABLE = (
-    AutoControlActionException, OSError, RuntimeError,
-    AttributeError, TypeError, ValueError,
+    AutoControlException, OSError, RuntimeError,
+    AttributeError, TypeError, ValueError, LookupError,
 )
 
 
@@ -302,7 +326,7 @@ def exec_while_var(executor: Any, args: Mapping[str, Any]) -> int:
     iterations = 0
     while iterations < max_iter and _compare_var(executor, args, "AC_while_var"):
         try:
-            executor.execute_action(body, _validated=True)
+            _run_loop_body(executor, body)
         except LoopContinue:
             pass
         except LoopBreak:
@@ -324,7 +348,7 @@ def exec_for_each(executor: Any, args: Mapping[str, Any]) -> int:
     for item in items:
         executor.variables.set(var_name, item)
         try:
-            executor.execute_action(body, _validated=True)
+            _run_loop_body(executor, body)
         except LoopContinue:
             iterations += 1
             continue
@@ -355,7 +379,7 @@ def exec_for_each_row(executor: Any, args: Mapping[str, Any]) -> int:
     for row in rows:
         executor.variables.set(var_name, row)
         try:
-            executor.execute_action(body, _validated=True)
+            _run_loop_body(executor, body)
         except LoopContinue:
             iterations += 1
             continue
@@ -378,10 +402,18 @@ def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     command = args.get("command", args.get("shell_command"))
     argv = ([str(part) for part in command] if isinstance(command, list)
             else shlex.split(str(command), posix=(os.name != "nt")))
-    completed = subprocess.run(  # nosec B603 — argv list, no shell  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
-        argv, capture_output=True, check=False,
-        timeout=float(args.get("timeout", 30.0)),
-    )
+    timeout_s = float(args.get("timeout", 30.0))
+    try:
+        completed = subprocess.run(  # nosec B603 — argv list, no shell  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
+            argv, capture_output=True, check=False, timeout=timeout_s,
+        )
+    except subprocess.TimeoutExpired as error:
+        # TimeoutExpired subclasses SubprocessError (not AutoControlException
+        # nor OSError), so without this it escapes every executor containment
+        # boundary and aborts the whole script.
+        raise AutoControlActionException(
+            f"AC_shell_to_var: command timed out after {timeout_s}s"
+        ) from error
     output = completed.stdout.decode("utf-8", errors="replace").strip()
     var_name = args.get("var", "shell_output")
     executor.variables.set(var_name, output)
@@ -602,15 +634,42 @@ def exec_parallel(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
 
     ``branches`` is a list of action lists (or a JSON string of one). Each
     branch runs on a fresh :class:`Executor` with a separate variable scope,
-    so concurrent branches never race on shared state.
+    so concurrent branches never race on shared state. Custom commands
+    (registered via ``add_command_to_executor``) and ``AC_define_macro``
+    macros are copied from the parent so a branch recognises them — otherwise
+    a branch's fresh executor only has the stock command set and rejects them
+    at runtime even though validation (against the parent) passed.
     """
-    del executor
     from je_auto_control.utils.executor.action_executor import Executor
+    # Snapshot before spawning threads so branch workers never read the
+    # parent's live command/macro maps concurrently.
+    parent_event_dict = dict(executor.event_dict)
+    parent_macros = dict(executor.macros)
     branches = _as_list(args.get("branches"))
     results: list = [None] * len(branches)
+    errors: Dict[int, str] = {}
 
     def _run(index: int, branch: Any) -> None:
-        results[index] = Executor().execute_action(branch, _validated=True)
+        # An exception here would otherwise only kill this worker thread,
+        # leaving results[index] as None — indistinguishable from a branch
+        # that legitimately returned None, and reported as success.
+        try:
+            branch_executor = Executor()
+            # setdefault (not update): copy the parent's *custom* commands/macros
+            # while keeping the branch executor's own self-bound stock commands.
+            # A blind update() would overwrite AC_execute_action/AC_execute_files
+            # (bound to the parent) so a nested execute inside a branch would run
+            # against the parent's variable scope, defeating the isolation this
+            # function promises and reintroducing the cross-branch race.
+            for _name, _handler in parent_event_dict.items():
+                branch_executor.event_dict.setdefault(_name, _handler)
+            branch_executor.macros.update(parent_macros)
+            results[index] = branch_executor.execute_action(
+                branch, _validated=True)
+        except Exception as error:  # noqa: BLE001  # reason: see comment above
+            errors[index] = repr(error)
+            autocontrol_logger.error(
+                "AC_parallel branch %d failed: %r", index, error, exc_info=True)
 
     threads = [threading.Thread(target=_run, args=(idx, branch), daemon=True)
                for idx, branch in enumerate(branches)]
@@ -618,6 +677,13 @@ def exec_parallel(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
         thread.start()
     for thread in threads:
         thread.join()
+    if errors:
+        # Raise so the executor's own machinery handles it like any other
+        # failed command: recorded when raise_on_error is off, propagated
+        # when it is on.
+        failed = ", ".join(f"branch {idx}: {err}" for idx, err in sorted(errors.items()))
+        raise AutoControlActionException(
+            f"AC_parallel: {len(errors)} branch(es) failed: {failed}")
     return {"branches": len(branches), "results": results}
 
 

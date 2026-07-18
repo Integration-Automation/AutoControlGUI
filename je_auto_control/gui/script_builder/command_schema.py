@@ -78,7 +78,6 @@ def _add_mouse_specs(specs: List[CommandSpec]) -> None:
                       default="mouse_left"),
             FieldSpec("x", FieldType.INT, optional=True),
             FieldSpec("y", FieldType.INT, optional=True),
-            FieldSpec("times", FieldType.INT, optional=True, default=1, min_value=1),
         ),
     ))
     specs.append(CommandSpec(
@@ -4840,7 +4839,9 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
     ))
     specs.append(CommandSpec(
         "AC_execute_process", "Shell", "Start Executable",
-        fields=(FieldSpec("program_path", FieldType.FILE_PATH),),
+        # Must match start_exe(exe_path); the executor dispatches
+        # event(**params), so a renamed field is a guaranteed TypeError.
+        fields=(FieldSpec("exe_path", FieldType.FILE_PATH),),
     ))
     specs.append(CommandSpec(
         "AC_move_to_trash", "Shell", "Move File to Recycle Bin",

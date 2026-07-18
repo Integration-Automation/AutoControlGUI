@@ -16,7 +16,7 @@ from je_auto_control.windows.core.utils.win32_vk import (
     WIN32_RIGHTDOWN, WIN32_RIGHTUP,
     WIN32_XBUTTON1, WIN32_XBUTTON2,
     WIN32_DOWN, WIN32_XUP,
-    WIN32_WHEEL
+    WIN32_WHEEL, WIN32_WHEEL_DELTA
 )
 from je_auto_control.windows.screen.win32_screen import size
 
@@ -26,6 +26,42 @@ win32_mouse_middle: Tuple[int, int, int] = (WIN32_MIDDLEUP, WIN32_MIDDLEDOWN, 0)
 win32_mouse_right: Tuple[int, int, int] = (WIN32_RIGHTUP, WIN32_RIGHTDOWN, 0)
 win32_mouse_x1: Tuple[int, int, int] = (WIN32_XUP, WIN32_DOWN, WIN32_XBUTTON1)
 win32_mouse_x2: Tuple[int, int, int] = (WIN32_XUP, WIN32_DOWN, WIN32_XBUTTON2)
+
+# Window-message constants for the PostMessageW targeting path. The
+# SendInput dwFlags above are *not* window messages, so posting a button
+# tuple straight into PostMessageW's UINT ``Msg`` slot is a type error;
+# these WM_*/MK_* values are what a window actually expects.
+WM_LBUTTONDOWN: int = 0x0201
+WM_LBUTTONUP: int = 0x0202
+WM_RBUTTONDOWN: int = 0x0204
+WM_RBUTTONUP: int = 0x0205
+WM_MBUTTONDOWN: int = 0x0207
+WM_MBUTTONUP: int = 0x0208
+WM_XBUTTONDOWN: int = 0x020B
+WM_XBUTTONUP: int = 0x020C
+MK_LBUTTON: int = 0x0001
+MK_RBUTTON: int = 0x0002
+MK_MBUTTON: int = 0x0010
+MK_XBUTTON1: int = 0x0020
+MK_XBUTTON2: int = 0x0040
+_XBUTTON1_HI: int = 0x0001
+_XBUTTON2_HI: int = 0x0002
+
+# Map a button tuple to (down_msg, down_wparam, up_msg, up_wparam). The X
+# buttons pack the button id into the wParam high word, per WM_XBUTTON*.
+_WINDOW_MESSAGE_TABLE: dict = {
+    win32_mouse_left: (WM_LBUTTONDOWN, MK_LBUTTON, WM_LBUTTONUP, 0),
+    win32_mouse_right: (WM_RBUTTONDOWN, MK_RBUTTON, WM_RBUTTONUP, 0),
+    win32_mouse_middle: (WM_MBUTTONDOWN, MK_MBUTTON, WM_MBUTTONUP, 0),
+    win32_mouse_x1: (
+        WM_XBUTTONDOWN, (_XBUTTON1_HI << 16) | MK_XBUTTON1,
+        WM_XBUTTONUP, _XBUTTON1_HI << 16,
+    ),
+    win32_mouse_x2: (
+        WM_XBUTTONDOWN, (_XBUTTON2_HI << 16) | MK_XBUTTON2,
+        WM_XBUTTONUP, _XBUTTON2_HI << 16,
+    ),
+}
 
 _get_cursor_pos = windll.user32.GetCursorPos
 _set_cursor_pos = windll.user32.SetCursorPos
@@ -129,25 +165,46 @@ def scroll(scroll_value: int, x: int = 0, y: int = 0) -> None:
     模擬滑鼠滾輪
     Simulate mouse scroll
 
-    :param scroll_value: 滾動數值 Scroll value
+    :param scroll_value: 滾動刻度數，正值向上、負值向下
+        Scroll notches; positive scrolls up, negative down.
     :param x: X 座標 X position
     :param y: Y 座標 Y position
     """
-    mouse_event(WIN32_WHEEL, x, y, dw_data=scroll_value)
+    # dwData 以 WHEEL_DELTA (120) 為單位，必須換算，否則傳入 5 只會滾動
+    # 5/120 個刻度，等同沒有作用。
+    # dwData is measured in WHEEL_DELTA units, so a notch count must be scaled:
+    # passing 5 raw moves 5/120 of a notch, i.e. nothing perceptible.
+    mouse_event(WIN32_WHEEL, x, y, dw_data=int(scroll_value) * WIN32_WHEEL_DELTA)
 
 
-def send_mouse_event_to_window(window, mouse_keycode: int, x: int = 0, y: int = 0):
+def _resolve_window_messages(
+        mouse_keycode: Tuple[int, int, int]) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    """Translate a button tuple into ``((down_msg, down_wparam), (up_msg, up_wparam))``.
+
+    :param mouse_keycode: a button tuple from ``mouse_keys_table``
+    :raises AutoControlException: when the button is not a known tuple
+    """
+    entry = _WINDOW_MESSAGE_TABLE.get(mouse_keycode) if isinstance(mouse_keycode, tuple) else None
+    if entry is None:
+        raise AutoControlException(f"Unsupported window mouse button: {mouse_keycode!r}")
+    down_msg, down_wparam, up_msg, up_wparam = entry
+    return (down_msg, down_wparam), (up_msg, up_wparam)
+
+
+def send_mouse_event_to_window(window, mouse_keycode: Tuple[int, int, int],
+                               x: int = 0, y: int = 0):
     """
     將滑鼠事件送到指定視窗
     Send mouse event to a specific window
 
     :param window: 視窗 HWND Window handle
-    :param mouse_keycode: 滑鼠事件代碼 Mouse event code
+    :param mouse_keycode: 滑鼠按鍵代碼 tuple Mouse button tuple
     :param x: X 座標 X position
     :param y: Y 座標 Y position
     """
     if window is None:
         raise AutoControlException("Invalid window handle")
-    lparam = (y << 16) | x
-    user32.PostMessageW(window, mouse_keycode, 1, lparam)
-    user32.PostMessageW(window, mouse_keycode, 0, lparam)
+    lparam = (int(y) << 16) | int(x)
+    (down_msg, down_wparam), (up_msg, up_wparam) = _resolve_window_messages(mouse_keycode)
+    user32.PostMessageW(window, down_msg, down_wparam, lparam)
+    user32.PostMessageW(window, up_msg, up_wparam, lparam)

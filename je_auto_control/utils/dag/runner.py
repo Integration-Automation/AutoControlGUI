@@ -16,6 +16,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Set
 from je_auto_control.utils.dag.graph import (
     DagDefinition, DagDefinitionError, DagNode, parse_definition,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -118,22 +119,21 @@ def _execute_with_pool(dag: DagDefinition,
     """Schedule nodes whose deps are all done; cascade skip on failure."""
     pending: Set[str] = set(results)
     inflight: Dict[Future, str] = {}
-    failed_ancestors: Dict[str, Set[str]] = _ancestor_index(dag)
+    ancestors: Dict[str, Set[str]] = _ancestor_index(dag)
     nodes_by_id = dag.by_id()
-    failed: Set[str] = set()
     with ThreadPoolExecutor(max_workers=max_parallel) as pool:
         while pending or inflight:
             _spawn_ready_nodes(
-                pending, inflight, results, failed,
-                failed_ancestors, nodes_by_id, local, remote, pool,
+                pending, inflight, results,
+                ancestors, nodes_by_id, local, remote, pool,
             )
             if not inflight:
                 continue
-            _harvest_one(inflight, results, failed)
+            _harvest_one(inflight, results)
 
 
 def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
-                       results: Dict[str, NodeResult], failed: Set[str],
+                       results: Dict[str, NodeResult],
                        ancestors: Dict[str, Set[str]],
                        nodes_by_id: Dict[str, DagNode],
                        local: NodeRunner, remote: NodeRunner,
@@ -143,7 +143,7 @@ def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
         deps_done = {results[d].status for d in node.depends_on}
         if {STATUS_PENDING, STATUS_RUNNING} & deps_done:
             continue
-        if ancestors[nid] & failed:
+        if _blocked_by_ancestor(ancestors[nid], results):
             results[nid].status = STATUS_SKIPPED
             pending.discard(nid)
             continue
@@ -155,27 +155,44 @@ def _spawn_ready_nodes(pending: Set[str], inflight: Dict[Future, str],
         pending.discard(nid)
 
 
+def _blocked_by_ancestor(ancestor_ids: Set[str],
+                         results: Dict[str, NodeResult]) -> bool:
+    """True if any ancestor already failed or was skipped.
+
+    Reads the ancestors' live status rather than a separately-maintained
+    "failed" set, so the skip cascade is deterministic even when a node
+    fails fast inside its worker thread before the harvest loop observes it.
+    """
+    return any(
+        results[aid].status in (STATUS_FAILED, STATUS_SKIPPED)
+        for aid in ancestor_ids
+    )
+
+
 def _harvest_one(inflight: Dict[Future, str],
-                 results: Dict[str, NodeResult],
-                 failed: Set[str]) -> None:
+                 results: Dict[str, NodeResult]) -> None:
     finished = next(iter(inflight))
     nid = inflight.pop(finished)
     try:
         finished.result()
-    except (RuntimeError, OSError, ValueError) as error:
+    except (AutoControlException, RuntimeError, OSError, ValueError) as error:
         # Defensive: _run_one swallows tool errors into NodeResult.
-        # This branch only catches pool / runner-side faults.
+        # This branch only catches pool / runner-side faults. It includes
+        # AutoControlException so a framework failure that slips past
+        # _run_one still fails the node instead of tearing down run_dag.
         results[nid].status = STATUS_FAILED
         results[nid].error = repr(error)
-    if results[nid].status == STATUS_FAILED:
-        failed.add(nid)
 
 
 def _run_one(node: DagNode, result: NodeResult,
              runner: NodeRunner, _nodes: Dict[str, DagNode]) -> None:
     try:
         outcome = runner(node, _build_proxy_definition(node, _nodes))
-    except (RuntimeError, OSError, ValueError) as error:
+    except (AutoControlException, RuntimeError, OSError, ValueError) as error:
+        # AutoControlException covers validate_actions / locate / assert
+        # failures raised by the executor: a node failure becomes a failed
+        # NodeResult (and a downstream skip cascade), not a raw crash that
+        # leaves the node stuck "running" and returns no DagRunResult.
         result.status = STATUS_FAILED
         result.error = f"{type(error).__name__}: {error}"
         autocontrol_logger.warning(

@@ -18,6 +18,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Optional, Tuple
 
+from je_auto_control.utils.http_headers import parse_content_length
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.server import (
     MCPServer, _notification_message,
@@ -29,12 +30,21 @@ _SSE_MEDIA_TYPE = "text/event-stream"
 # Cap drain reads so a hostile Content-Length can't make us spin forever.
 _DRAIN_CHUNK = 64 * 1024
 _DRAIN_CAP_MULTIPLE = 4
+# Bound per-request reads so a client that declares a Content-Length then
+# stalls (body underrun) can't pin a worker thread forever.
+_REQUEST_TIMEOUT = 30.0
+# Bound the TLS handshake so one silent client can't wedge the single accept
+# thread waiting for a ClientHello that never arrives.
+_HANDSHAKE_TIMEOUT = 10.0
 
 
 class _MCPHttpHandler(BaseHTTPRequestHandler):
     """Bridges HTTP requests onto :meth:`MCPServer.handle_line`."""
 
     server_version = "AutoControlMCP/1.0"
+    # socketserver applies this to the connection socket in setup(); it bounds
+    # every read (headers *and* body) so a stalled request cannot pin a worker.
+    timeout = _REQUEST_TIMEOUT
 
     # Suppress default stderr access logs — route through project logger.
     def log_message(self, format, *args) -> None:  # noqa: A002  # pylint: disable=redefined-builtin  # reason: stdlib override
@@ -51,15 +61,29 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         if line is None:
             return
         bridge: MCPServer = self.server.mcp  # type: ignore[attr-defined]
+        conn_id = id(self)
         if self._client_accepts_sse():
-            self._dispatch_sse(bridge, line)
+            self._dispatch_sse(bridge, line, conn_id)
             return
-        response = bridge.handle_line(line)
+        # Scope this connection's identity so active-call slots and client
+        # capabilities don't collide with another peer that reuses the same
+        # JSON-RPC ids. No notifier/writer: a plain POST has no stream.
+        with bridge.connection_scope(connection_id=conn_id):
+            response = bridge.handle_line(line)
         if response is None:
             # MCP notification — no body, ack with 202.
             self._send_blank(status=202)
             return
         self._send_raw_json(response)
+
+    def finish(self) -> None:
+        """Release this connection's per-peer server state, then close."""
+        try:
+            super().finish()
+        finally:
+            bridge = getattr(self.server, "mcp", None)
+            if bridge is not None:
+                bridge.forget_connection(id(self))
 
     def _authorize(self) -> bool:
         """Validate Bearer token if the server has one configured."""
@@ -80,7 +104,8 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         accept = self.headers.get("Accept", "")
         return _SSE_MEDIA_TYPE in accept
 
-    def _dispatch_sse(self, bridge: MCPServer, line: str) -> None:
+    def _dispatch_sse(self, bridge: MCPServer, line: str,
+                      conn_id: int) -> None:
         """Stream progress notifications + the final response as SSE events."""
         # Force connection close so the client gets EOF after the last event.
         self.close_connection = True
@@ -99,21 +124,23 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
                 self.wfile.write(b"\n\n")
                 self.wfile.flush()
 
-        sse_lock = self.server.sse_lock  # type: ignore[attr-defined]
-        with sse_lock:
-            saved = (bridge._notifier, bridge._writer,
-                      bridge._concurrent_tools)
-            bridge._notifier = lambda method, params: emit(
+        # Bind this connection's emit to *this thread only*. Swapping the
+        # attributes on the shared bridge (even under sse_lock) leaked across
+        # peers: a plain POST deliberately skips that lock, reads the
+        # server-global notifier, and so emitted its progress down whichever
+        # SSE socket happened to be open — delivering one client's payload to
+        # another. connection_scope keeps it thread-local instead.
+        with bridge.connection_scope(
+            notifier=lambda method, params: emit(
                 _notification_message(method, params),
-            )
-            bridge._writer = emit
-            bridge._concurrent_tools = False
-            try:
-                response = bridge.handle_line(line)
-                if response is not None:
-                    emit(response)
-            finally:
-                bridge._notifier, bridge._writer, bridge._concurrent_tools = saved
+            ),
+            writer=emit,
+            concurrent_tools=False,
+            connection_id=conn_id,
+        ):
+            response = bridge.handle_line(line)
+            if response is not None:
+                emit(response)
 
     def do_GET(self) -> None:  # noqa: N802  # reason: stdlib API
         if not self._authorize():
@@ -130,7 +157,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
     # --- helpers -------------------------------------------------------------
 
     def _read_body(self) -> Optional[str]:
-        length = int(self.headers.get("Content-Length", "0") or "0")
+        length = parse_content_length(self.headers)
         if length <= 0 or length > _MAX_BODY:
             self._send_json({"error": "invalid Content-Length"}, status=400)
             return None
@@ -153,7 +180,7 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             self._drain_body()
 
     def _drain_body(self) -> None:
-        declared = int(self.headers.get("Content-Length") or 0)
+        declared = parse_content_length(self.headers)
         if declared <= 0:
             return
         cap = min(declared, _MAX_BODY * _DRAIN_CAP_MULTIPLE)
@@ -190,10 +217,31 @@ class _MCPHttpServer(ThreadingHTTPServer):
         super().__init__(server_address, _MCPHttpHandler)
         self.mcp = mcp
         self.auth_token = auth_token
-        # Serialise SSE requests — they swap server-wide notifier/writer
-        # state, so concurrent SSE streams would race. POST-without-SSE
-        # requests don't take this lock and remain fully concurrent.
-        self.sse_lock = threading.Lock()
+        # No sse_lock: SSE requests used to swap server-wide notifier/writer
+        # state and needed serialising. They now bind that state to their own
+        # thread via MCPServer.connection_scope, so concurrent SSE streams no
+        # longer race — and, unlike the lock, plain POSTs can no longer read
+        # another connection's notifier either.
+
+    def get_request(self) -> Tuple[Any, Any]:
+        """Accept a connection, time-boxing any TLS handshake.
+
+        For a TLS listener wrapped with ``do_handshake_on_connect=False`` the
+        handshake is performed here (on the accept thread) under a timeout, so
+        a client that connects but never sends a ClientHello is dropped
+        instead of wedging the accept thread for every other peer. On timeout
+        ``do_handshake`` raises ``OSError``, which ``serve_forever`` treats as
+        a failed accept and discards cleanly.
+        """
+        conn, addr = super().get_request()
+        if isinstance(conn, ssl.SSLSocket):
+            conn.settimeout(_HANDSHAKE_TIMEOUT)
+            try:
+                conn.do_handshake()
+            except OSError:
+                conn.close()
+                raise
+        return conn, addr
 
 
 class HttpMCPServer:
@@ -230,8 +278,11 @@ class HttpMCPServer:
             self._address, self._mcp, auth_token=self._auth_token,
         )
         if self._ssl_context is not None:
+            # Defer the handshake so it runs in get_request() under a timeout
+            # rather than implicitly inside accept() with no bound.
             self._server.socket = self._ssl_context.wrap_socket(
                 self._server.socket, server_side=True,
+                do_handshake_on_connect=False,
             )
         self._address = self._server.server_address[:2]
         self._thread = threading.Thread(

@@ -11,6 +11,8 @@ unit-testable); :func:`hold_key` dispatches it through an injectable ``sink`` an
 import time
 from typing import Any, Callable, Dict, List, Optional
 
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+
 Sink = Callable[[Dict[str, Any]], None]
 
 
@@ -54,20 +56,48 @@ def _default_sink(event: Dict[str, Any]) -> None:
         type_keyboard(event["key"])
 
 
+def _dispatch_tracking_holds(dispatch: Sink, event: Dict[str, Any],
+                             held: List[str]) -> None:
+    """Dispatch one non-wait op, keeping ``held`` in sync with press/release."""
+    dispatch(event)
+    op = event["op"]
+    if op == "press":
+        held.append(event["key"])
+    elif op == "release" and event["key"] in held:
+        held.remove(event["key"])
+
+
+def _release_held(dispatch: Sink, held: List[str]) -> None:
+    """Best-effort release of any keys still down (e.g. after an interrupt)."""
+    for held_key in held:
+        try:
+            dispatch({"op": "release", "key": held_key})
+        except Exception:  # noqa: BLE001  # reason: best-effort teardown release — a stuck key is worse than a swallowed error
+            autocontrol_logger.exception(
+                "hold_key release failed for %r", held_key,
+            )
+
+
 def hold_key(key: str, duration_s: float, *, rate_hz: Optional[float] = None,
              sink: Optional[Sink] = None,
              sleep: Optional[Callable[[float], None]] = None) -> Dict[str, Any]:
     """Hold or auto-repeat ``key`` for ``duration_s``; return the dispatched plan.
 
     ``wait`` ops go to ``sleep`` (default :func:`time.sleep`); key ops go to
-    ``sink`` (default: the real keyboard backend).
+    ``sink`` (default: the real keyboard backend). A KeyboardInterrupt during
+    the hold wait, or a failing release, still releases the key via the finally
+    block (auto-repeat plans only ``type`` keys, so nothing is held there).
     """
     plan = plan_key_hold(key, duration_s, rate_hz=rate_hz)
     dispatch = sink or _default_sink
     pause = sleep or time.sleep
-    for event in plan:
-        if event["op"] == "wait":
-            pause(event["seconds"])
-        else:
-            dispatch(event)
+    held: List[str] = []
+    try:
+        for event in plan:
+            if event["op"] == "wait":
+                pause(event["seconds"])
+            else:
+                _dispatch_tracking_holds(dispatch, event, held)
+    finally:
+        _release_held(dispatch, held)
     return {"ops": len(plan), "plan": plan}

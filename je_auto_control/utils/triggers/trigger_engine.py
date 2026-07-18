@@ -14,6 +14,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
@@ -50,9 +51,14 @@ class ImageAppearsTrigger(_TriggerBase):
 
     def is_fired(self) -> bool:
         from je_auto_control.wrapper.auto_control_image import locate_image_center
+        # locate_image_center raises ImageNotFoundException (an
+        # AutoControlException) whenever the template is absent — the *normal*
+        # case on most polls. Without the base in this tuple the exception
+        # escaped to _is_fired_safely, which disables the trigger for good on
+        # the first poll where the image isn't on screen yet.
         try:
             result = locate_image_center(self.image_path, self.threshold, False)
-        except (OSError, RuntimeError, ValueError):
+        except (OSError, RuntimeError, ValueError, AutoControlException):
             return False
         return result is not None
 
@@ -65,10 +71,13 @@ class WindowAppearsTrigger(_TriggerBase):
 
     def is_fired(self) -> bool:
         from je_auto_control.wrapper.auto_control_window import find_window
+        # A framework error from the window backend must read as "not present
+        # yet" (keep polling), never as a reason to permanently disable the
+        # trigger in _is_fired_safely.
         try:
             return find_window(self.title_substring,
                                case_sensitive=self.case_sensitive) is not None
-        except (OSError, RuntimeError):
+        except (OSError, RuntimeError, AutoControlException):
             return False
 
 
@@ -82,9 +91,13 @@ class PixelColorTrigger(_TriggerBase):
 
     def is_fired(self) -> bool:
         from je_auto_control.wrapper.auto_control_screen import get_pixel
+        # get_pixel can surface AutoControlScreenException from the backend;
+        # treat it as "no match this poll" instead of letting it escape and
+        # disable the trigger for good.
         try:
             raw = get_pixel(int(self.x), int(self.y))
-        except (OSError, RuntimeError, ValueError, TypeError):
+        except (OSError, RuntimeError, ValueError, TypeError,
+                AutoControlException):
             return False
         if raw is None or len(raw) < 3:
             return False
@@ -167,6 +180,15 @@ class CronTrigger(_TriggerBase):
     _expr: Optional[object] = None
     _last_minute: Optional[str] = None
 
+    def __post_init__(self) -> None:
+        # 在建構時就解析，讓錯誤的 cron 立刻在呼叫端炸出來，
+        # 而不是等到輪詢執行緒才拋。
+        # Parse eagerly so a bad expression fails at the caller (the Triggers
+        # tab passes its text field straight through) instead of surfacing
+        # later on the polling thread, where it used to kill every trigger.
+        from je_auto_control.utils.scheduler.cron import parse_cron
+        self._expr = parse_cron(self.cron)
+
     def is_fired(self) -> bool:
         import datetime as _dt
         from je_auto_control.utils.scheduler.cron import parse_cron
@@ -245,9 +267,39 @@ class TriggerEngine:
             candidates = [t for t in self._triggers.values()
                           if t.should_poll(now)]
         for trigger in candidates:
-            if not trigger.is_fired():
+            if not self._is_fired_safely(trigger):
                 continue
-            self._fire(trigger, now)
+            try:
+                self._fire(trigger, now)
+            except Exception as error:  # noqa: BLE001  # reason: see below
+                # _fire records its own execution errors, but its history
+                # bookkeeping (start_run / finish_run) sits outside that
+                # try. Nothing a single trigger does may stop the engine.
+                trigger.enabled = False
+                autocontrol_logger.error(
+                    "trigger %s disabled after _fire() raised: %r",
+                    trigger.trigger_id, error, exc_info=True,
+                )
+
+    def _is_fired_safely(self, trigger: _TriggerBase) -> bool:
+        """Evaluate one trigger; never let it take the polling thread down.
+
+        一個壞掉的 trigger 不能拖垮整個引擎。
+        is_fired() reaches out to the screen, the filesystem, the clock — any
+        of which can raise. Unguarded, one bad trigger killed the polling
+        thread and silently stopped *every* registered trigger, and stayed
+        registered so a restart died the same way. Disable the offender
+        instead: it stops re-raising each tick and is visibly off in the UI.
+        """
+        try:
+            return trigger.is_fired()
+        except Exception as error:  # noqa: BLE001  # reason: see docstring
+            trigger.enabled = False
+            autocontrol_logger.error(
+                "trigger %s disabled after is_fired() raised: %r",
+                trigger.trigger_id, error, exc_info=True,
+            )
+            return False
 
     def _fire(self, trigger: _TriggerBase, now: float) -> None:
         run_id = default_history_store.start_run(
@@ -258,7 +310,17 @@ class TriggerEngine:
         try:
             actions = read_action_json(trigger.script_path)
             self._execute(actions)
-        except (OSError, ValueError, RuntimeError) as error:
+        # 這裡刻意攔截所有例外：一個 trigger 失敗必須記錄成 STATUS_ERROR
+        # 並繼續，而不是拖垮輪詢執行緒。原本的 tuple 漏掉
+        # AutoControlJsonActionException，所以光是改名 script 檔就會讓
+        # 整個引擎永久停擺。
+        # Deliberately broad: a failing trigger must be recorded as
+        # STATUS_ERROR and the loop must go on — which the finally below
+        # already assumes. The previous tuple (OSError, ValueError,
+        # RuntimeError) missed AutoControlJsonActionException, so merely
+        # renaming a trigger's script file killed the polling thread and
+        # silently stopped every other trigger with it.
+        except Exception as error:  # noqa: BLE001  # reason: see comment above
             status = STATUS_ERROR
             error_text = repr(error)
             autocontrol_logger.error("trigger %s failed: %r",

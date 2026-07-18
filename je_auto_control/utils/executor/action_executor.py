@@ -7,7 +7,8 @@ from je_auto_control.utils.exception.exception_tags import (
 )
 from je_auto_control.utils.exception.exceptions import (
     AutoControlActionException, AutoControlAddCommandException,
-    AutoControlActionNullException
+    AutoControlActionNullException, AutoControlAssertionException,
+    AutoControlException
 )
 from je_auto_control.utils.accessibility.accessibility_api import (
     click_accessibility_element, find_accessibility_element,
@@ -52,7 +53,7 @@ from je_auto_control.utils.profiler.profiler import default_profiler
 from je_auto_control.utils.run_history.history_store import default_history_store
 from je_auto_control.utils.secrets import default_secret_manager
 from je_auto_control.utils.script_vars.interpolate import (
-    interpolate_actions, interpolate_value,
+    interpolate_value,
 )
 from je_auto_control.utils.script_vars.scope import VariableScope
 from je_auto_control.utils.http_client.http_client import http_request
@@ -4677,7 +4678,15 @@ def _expect_poll(action: Any, key: Any = None, op: str = "truthy",
     matcher = builders.get(str(op), to_be_truthy)()
 
     def getter():
-        record = executor.execute_action([list(action)])
+        try:
+            record = executor.execute_action([list(action)], raise_on_error=True)
+        except (AutoControlException, OSError, RuntimeError, ValueError,
+                LookupError):
+            # A failed polled action is "not yet satisfied", not a value.
+            # With raise_on_error=False the record would hold repr(error) — a
+            # truthy string that satisfies the default truthy matcher and ends
+            # the poll on the first attempt instead of waiting for success.
+            return None
         value = next(iter(record.values()), None)
         if key is not None and isinstance(value, dict):
             return value.get(key)
@@ -6827,8 +6836,11 @@ class Executor:
 
     # Args keys that hold nested action lists; runtime interpolation must
     # leave them untouched so each iteration re-reads current variable state.
+    # ``catch``/``finally`` belong here too: AC_try only binds ``error_var``
+    # once the body has failed, so eagerly interpolating them at dispatch
+    # would resolve ${err} before it exists.
     _DEFERRED_ARG_KEYS: frozenset = frozenset(
-        {"body", "then", "else", "branches"})
+        {"body", "then", "else", "branches", "catch", "finally"})
 
     def __init__(self):
         self._block_commands = BLOCK_COMMANDS
@@ -7705,12 +7717,14 @@ class Executor:
     def _resolve_runtime_args(self, args: Any) -> Any:
         """Interpolate ``${var}`` placeholders against the current scope.
 
-        Keys inside :attr:`_DEFERRED_ARG_KEYS` (``body``/``then``/``else``)
-        are left as-is so nested action lists keep their placeholders for
-        per-iteration evaluation.
+        Keys inside :attr:`_DEFERRED_ARG_KEYS` are left as-is so nested
+        action lists keep their placeholders for per-iteration evaluation.
+
+        An empty scope is not a reason to skip interpolation: ``${secrets.*}``
+        resolves through the vault without consulting the scope at all, and an
+        unknown ``${var}`` must raise rather than reach the automation as a
+        literal placeholder.
         """
-        if not self.variables:
-            return args
         if isinstance(args, dict):
             resolved: Dict[str, Any] = {}
             for key, value in args.items():
@@ -7802,6 +7816,15 @@ class Executor:
         """Execute a single action, recording the result or raising."""
         import time as _time
         key = "execute: " + str(action)
+        if key in record:
+            # Two byte-identical actions would otherwise share one record slot,
+            # so an earlier failure is silently overwritten by a later success.
+            # The first occurrence keeps the bare key (unchanged for callers);
+            # repeats get a numeric suffix so every outcome is preserved.
+            suffix = 2
+            while f"{key} #{suffix}" in record:
+                suffix += 1
+            key = f"{key} #{suffix}"
         action_name = action[0] if action and isinstance(action[0], str) else "<invalid>"
         started = _time.monotonic()
         try:
@@ -7810,10 +7833,22 @@ class Executor:
             _observe_executor_metrics(action_name, started, error=None)
         except (LoopBreak, LoopContinue):
             raise
-        except (AutoControlActionException, OSError, RuntimeError,
-                AttributeError, TypeError, ValueError) as error:
+        # LookupError covers the KeyError/IndexError raised by block handlers
+        # that subscript a required arg directly (``args["name"]``). Without
+        # it a merely malformed action escaped raise_on_error=False and
+        # aborted every remaining action instead of being recorded.
+        # ``AutoControlException`` is the family base: image/mouse/keyboard/
+        # screen/null-action failures all subclass it, so an incidental error
+        # is contained (recorded) here rather than aborting the whole script.
+        except (AutoControlException, OSError, RuntimeError,
+                AttributeError, TypeError, ValueError, LookupError) as error:
             _observe_executor_metrics(action_name, started, error=error)
-            if raise_on_error:
+            # A failed ``AC_assert_*`` (raise_on_fail=True) is a deliberate
+            # fail signal, not an incidental error, so it still propagates even
+            # under raise_on_error=False — otherwise the assertion would be
+            # silently neutralised. ``AC_try``/``AC_retry`` run their body with
+            # raise_on_error=True and still catch it via their own tuples.
+            if raise_on_error or isinstance(error, AutoControlAssertionException):
                 raise
             autocontrol_logger.info(
                 f"execute_action failed, action: {action}, error: {repr(error)}"
@@ -7867,12 +7902,16 @@ def execute_files(execute_files_list: list) -> List[Dict[str, str]]:
 
 def execute_action_with_vars(action_list: list, variables: dict
                              ) -> Dict[str, str]:
-    """Interpolate ``${name}`` placeholders with ``variables`` and execute.
+    """Seed ``variables`` into the runtime scope and execute.
 
-    The same mapping seeds the runtime variable scope so flow-control
-    commands (``AC_set_var``/``AC_if_var``/...) can read and mutate the
-    same values during execution.
+    Interpolation happens at dispatch time through the executor's runtime
+    resolver, which defers nested action bodies (loops/branches/try). Doing a
+    separate eager pre-pass over the whole tree here resolved deferred-body
+    placeholders (``${item}``, loop counters, ``error_var``) against the seed
+    mapping — where they do not exist yet — raising ``Unknown variable`` before
+    execution, and resolved ``${secrets.*}`` at load time so the plaintext then
+    landed in logs and record keys. Seeding the scope and letting the runtime
+    resolver interpolate per action fixes both.
     """
-    resolved = interpolate_actions(action_list, variables)
     executor.variables.update_many(variables)
-    return executor.execute_action(resolved)
+    return executor.execute_action(action_list)

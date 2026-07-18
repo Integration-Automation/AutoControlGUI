@@ -24,8 +24,10 @@ import csv
 import json
 import os
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
+from urllib.parse import quote
 
 _READ_ONLY_SQL_PREFIXES = ("select", "with")
 
@@ -86,8 +88,15 @@ def _load_sqlite(source: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Run a read-only SELECT against a SQLite file and return dict rows."""
     path = _resolve_path(source["path"])
     query = _validate_select(str(source["query"]))
-    uri = f"file:{path}?mode=ro"
-    with sqlite3.connect(uri, uri=True) as conn:
+    # SQLite treats ``?`` as the query separator and percent-decodes ``%XX`` in
+    # the path, so a raw f-string opens the wrong file when the path contains
+    # ``?``/``#``/``%``. Percent-encode those while keeping the separators and
+    # the Windows drive colon literal.
+    safe_path = quote(str(path), safe="/:\\")
+    uri = f"file:{safe_path}?mode=ro"
+    # closing(): the sqlite3 context manager commits/rolls back but never closes
+    # the connection, so the file handle leaks until GC. Close it explicitly.
+    with closing(sqlite3.connect(uri, uri=True)) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(query).fetchall()
     return [dict(row) for row in rows]

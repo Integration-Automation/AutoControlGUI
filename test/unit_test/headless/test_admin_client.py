@@ -115,3 +115,38 @@ def test_default_admin_console_is_singleton():
     a = default_admin_console()
     b = default_admin_console()
     assert a is b
+
+
+@pytest.mark.parametrize("content", [
+    "[]",            # top-level JSON is a list, not an object
+    "null",          # top-level null
+    "42",            # top-level number
+    '{"hosts": [{"label": "x", "base_url": "u", "token": "t", "BOGUS": 1}]}',
+    '{"hosts": [{"label": "x"}]}',       # entry missing required fields
+])
+def test_malformed_hosts_file_degrades_to_empty_book(tmp_path, content):
+    """A corrupt admin_hosts.json must not crash construction.
+
+    Regression: only json.loads was inside the load try/except. A non-object
+    top-level JSON made payload.get raise AttributeError, and an entry with
+    extra/missing keys made AdminHost(**entry) raise TypeError — both escaped
+    __init__. default_admin_console() caches only on success, so the admin
+    console became permanently un-constructable until the file was deleted.
+    """
+    path = tmp_path / "hosts.json"
+    path.write_text(content, encoding="utf-8")
+    made = AdminConsoleClient(persist_path=path)     # must not raise
+    assert made.list_hosts() == []
+
+
+def test_one_bad_entry_does_not_lose_the_good_ones(tmp_path):
+    path = tmp_path / "hosts.json"
+    path.write_text(
+        '{"hosts": ['
+        '{"label": "good", "base_url": "http://h", "token": "t"},'
+        '{"label": "bad", "EXTRA": 1}]}',
+        encoding="utf-8",
+    )
+    made = AdminConsoleClient(persist_path=path)
+    labels = [h.label for h in made.list_hosts()]
+    assert labels == ["good"]

@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from email.header import decode_header, make_header
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
@@ -64,8 +65,10 @@ def _decode_header_value(value: Optional[str]) -> str:
         return ""
     try:
         return str(make_header(decode_header(value)))
-    except ValueError:
-        # UnicodeDecodeError is a subclass of ValueError; one entry is enough.
+    except (ValueError, LookupError):
+        # UnicodeDecodeError is a subclass of ValueError. A header naming an
+        # unknown charset (e.g. =?not-a-charset?B?..?=) raises LookupError from
+        # the codec lookup — uncaught it would poison the whole mailbox poll.
         return str(value)
 
 
@@ -239,7 +242,18 @@ class EmailTriggerWatcher:
                 if now - last_check.get(trigger.trigger_id, 0.0) \
                         < trigger.poll_seconds:
                     continue
-                self._poll_one(trigger)
+                # 任何一個 trigger 都不該讓輪詢執行緒陣亡。
+                # Belt and braces: _poll_one now records its own IMAP errors,
+                # but nothing a single trigger does may stop the loop and take
+                # every other email trigger down with it.
+                try:
+                    self._poll_one(trigger)
+                except Exception as error:  # noqa: BLE001  # reason: see above
+                    trigger.last_error = repr(error)
+                    autocontrol_logger.error(
+                        "email trigger %s poll failed: %r",
+                        trigger.trigger_id, error, exc_info=True,
+                    )
                 last_check[trigger.trigger_id] = now
             self._stop.wait(1.0)
 
@@ -264,6 +278,16 @@ class EmailTriggerWatcher:
                 return 0
             for uid in self._iter_unprocessed_uids(client, trigger):
                 fired += self._fire_for_uid(client, trigger, uid)
+        # 只有 _connect 有防護，select / search / fetch 沒有。連線在指令
+        # 途中斷掉時 imaplib 會拋 IMAP4.abort，逸出 _run 後直接殺掉輪詢
+        # 執行緒——而這個模組的文件正說它能撐過不穩定的網路。
+        # Only _connect was guarded. imaplib raises IMAP4.abort when the
+        # connection drops mid-command (routine on a flaky network, which this
+        # module's docstring claims to survive); it escaped _run and killed the
+        # polling thread, silently stopping every email trigger for good.
+        except (OSError, imaplib.IMAP4.error) as error:
+            self._record_connect_error(trigger, error)
+            return 0
         finally:
             try:
                 client.logout()
@@ -292,9 +316,14 @@ class EmailTriggerWatcher:
             return 0
         uid_str = uid.decode("ascii", errors="replace")
         payload = _build_payload(uid_str, msg)
+        # A missing/renamed script raises AutoControlJsonActionException (an
+        # AutoControlException). Missing the base here let it escape *before*
+        # the uid was marked seen below, so the same message re-fired every
+        # poll forever. Catch the whole family: record the failure and still
+        # mark the uid processed.
         try:
             self._execute_with_history(trigger, payload)
-        except (OSError, ValueError, RuntimeError) as error:
+        except (OSError, ValueError, RuntimeError, AutoControlException) as error:
             trigger.last_error = repr(error)
             autocontrol_logger.error("imap %s fire failed: %r",
                                      trigger.trigger_id, error)
@@ -317,7 +346,10 @@ class EmailTriggerWatcher:
             try:
                 actions = read_action_json(trigger.script_path)
                 self._executor(actions, payload)
-            except (OSError, ValueError, RuntimeError) as error:
+            # Include the framework base so a bad script is recorded as
+            # STATUS_ERROR — not a bogus STATUS_OK — before re-raising.
+            except (OSError, ValueError, RuntimeError,
+                    AutoControlException) as error:
                 status = STATUS_ERROR
                 error_text = repr(error)
                 raise

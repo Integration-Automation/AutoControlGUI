@@ -1,3 +1,4 @@
+import html
 from threading import Lock
 
 from je_auto_control.utils.exception.exception_tags import html_generate_no_data_tag_error_message
@@ -107,14 +108,18 @@ def make_html_table(event_str: str, record_data: dict, table_head: str) -> str:
     :param table_head: 表頭樣式 (成功/失敗) Table head style
     :return: 更新後的 HTML 字串 Updated HTML string
     """
+    # Escape recorded values — a param/exception may contain <, >, & (e.g. an
+    # AC_write of "<script>..."), which would otherwise inject markup and
+    # produce a malformed report or stored XSS. table_head is an internal
+    # CSS-class constant, so it is not escaped.
     return "".join([
         event_str,
         _event_table.format(
             table_head_class=table_head,
-            function_name=record_data.get("function_name"),
-            param=record_data.get("local_param"),
-            time=record_data.get("time"),
-            exception=record_data.get("program_exception"),
+            function_name=html.escape(str(record_data.get("function_name"))),
+            param=html.escape(str(record_data.get("local_param"))),
+            time=html.escape(str(record_data.get("time"))),
+            exception=html.escape(str(record_data.get("program_exception"))),
         )
     ])
 

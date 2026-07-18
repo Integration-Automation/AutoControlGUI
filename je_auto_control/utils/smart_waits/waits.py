@@ -119,6 +119,13 @@ def wait_until_pixel_changes(*, x: int, y: int,
     """Return when the pixel at ``(x, y)`` changes beyond ``rgb_tolerance``."""
     if timeout_s <= 0:
         raise ValueError(_TIMEOUT_POSITIVE)
+    # 與其他 wait_* 一致:0 會讓迴圈空轉燒滿一顆核心,負數則由
+    # time.sleep 拋出無關的錯誤訊息。
+    # Matches every sibling wait_*: 0 turns the loop into a busy-spin that
+    # pegs a core (measured ~215k full-screen grabs in 0.5s), and a negative
+    # surfaces as time.sleep's own unrelated error instead of ours.
+    if poll_interval_s <= 0:
+        raise ValueError(_POLL_POSITIVE)
     grab = sampler or _default_sampler
     started = time.monotonic()
     deadline = started + float(timeout_s)
@@ -551,10 +558,26 @@ def _default_process_lister(name: str) -> List[str]:
 # --- internals -------------------------------------------------
 
 def _frame_diff(a: Frame, b: Frame) -> int:
-    """Number of bytes that differ between two frames (lower bound on px diff)."""
+    """Number of PIXELS (not bytes) that differ between two frames.
+
+    ``max_pixel_diff`` is documented and compared in *pixels*, but a single
+    changed pixel spans up to three RGB bytes; counting bytes would make a
+    one-pixel blink read as three, so ``max_pixel_diff=2`` would never settle.
+    Group the buffer into per-pixel channel runs and count differing pixels.
+    """
     if a.width != b.width or a.height != b.height:
-        return max(len(a.pixels), len(b.pixels))
-    return sum(1 for left, right in zip(a.pixels, b.pixels) if left != right)
+        return max(a.width * a.height, b.width * b.height)
+    pixel_count = a.width * a.height
+    if pixel_count == 0:
+        return 0
+    left, right = a.pixels, b.pixels
+    limit = min(len(left), len(right))
+    channels = max(1, limit // pixel_count)
+    changed = 0
+    for base in range(0, (limit // channels) * channels, channels):
+        if left[base:base + channels] != right[base:base + channels]:
+            changed += 1
+    return changed
 
 
 def _read_pixel(frame: Frame, x: int, y: int) -> Tuple[int, int, int]:

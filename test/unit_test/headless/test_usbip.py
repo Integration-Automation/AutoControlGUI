@@ -241,6 +241,34 @@ def test_server_forwards_urb_to_backend():
         server.stop()
 
 
+# --- lifecycle race --------------------------------------------------
+
+def test_rapid_start_stop_never_leaks_a_thread_exception(monkeypatch):
+    """A concurrent stop() must not blow up the accept thread.
+
+    Regression: start() published the listening socket and left the accept
+    thread to call settimeout() on it, outside any try. A stop() closing the
+    socket in that window made settimeout raise WSAENOTSOCK (WinError 10038)
+    with nothing to catch it — the accept thread died with an unhandled
+    traceback on ~18% of tight start/stop cycles. The fix sets the timeout on
+    the owning thread in start(), before publishing the socket.
+    """
+    caught: list = []
+    original = threading.excepthook
+    threading.excepthook = lambda args: caught.append(
+        (args.thread.name, type(args.exc_value).__name__))
+    try:
+        for _ in range(80):
+            server = UsbIpServer(FakeUrbBackend(devices=[_device()]),
+                                 host="127.0.0.1", port=0)
+            server.start()
+            server.stop(timeout=0.2)
+    finally:
+        threading.excepthook = original
+
+    assert caught == [], f"accept thread raised: {caught[:3]}"
+
+
 # --- helpers ---------------------------------------------------------
 
 def _recv(sock: socket.socket, n: int) -> bytes:

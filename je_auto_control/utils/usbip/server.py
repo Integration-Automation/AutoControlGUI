@@ -13,7 +13,7 @@ from je_auto_control.utils.usbip.protocol import (
     OP_REQ_DEVLIST, OP_REQ_IMPORT, USBIP_CMD_SUBMIT, USBIP_CMD_UNLINK,
     UsbIpError, decode_cmd_submit, decode_op_request,
     encode_op_rep_devlist, encode_op_rep_import, encode_ret_submit,
-    parse_op_header,
+    encode_ret_unlink, parse_op_header, peek_transfer_length,
 )
 
 _OP_HEADER_BYTES = 8  # version + command + status
@@ -21,6 +21,13 @@ _OP_IMPORT_BUSID_BYTES = 32
 _URB_HEADER_BYTES = 20
 _CMD_SUBMIT_BODY_BYTES = 28
 _LISTEN_BACKLOG = 8
+# Reject CMD_SUBMIT transfers advertising more than this so a hostile or
+# corrupt client can't drive an unbounded allocation via _recv_exact.
+# 16 MiB is generous for any real USB transfer.
+_MAX_TRANSFER_BUFFER_BYTES = 16 * 1024 * 1024
+# accept() 的輪詢間隔,用來定期檢查 _stop 旗標。
+# How long accept() blocks before re-checking the _stop flag.
+_ACCEPT_POLL_TIMEOUT_S = 0.5
 
 
 def default_port() -> int:
@@ -32,8 +39,10 @@ class UsbIpServer:
     """Thread-per-connection USB/IP server bound to ``UrbBackend``."""
 
     def __init__(self, backend: UrbBackend, *,
-                 host: str = "0.0.0.0",  # noqa: S104  # nosec B104  # NOSONAR python:S5332  # reason: USB/IP clients connect from other machines on the LAN
+                 host: str = "127.0.0.1",
                  port: int = 3240) -> None:
+        # Least-privilege default (project policy): bind localhost. Exposing the
+        # backing USB device to the LAN requires an explicit host="0.0.0.0".
         self._backend = backend
         self._host = host
         self._port = int(port)
@@ -57,6 +66,13 @@ class UsbIpServer:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self._host, self._port))
         sock.listen(_LISTEN_BACKLOG)
+        # 在發布 socket 前、於擁有者執行緒設定 timeout:交給 accept 執行緒
+        # 設定會與 stop() 關閉 socket 競態,使 settimeout 拋出 WSAENOTSOCK。
+        # Configure on the owning thread before publishing the socket. Leaving
+        # it to the accept thread races a concurrent stop() closing the socket,
+        # which makes settimeout raise WSAENOTSOCK (WinError 10038) outside any
+        # handler (reproduced at 73/400 tight start/stop cycles).
+        sock.settimeout(_ACCEPT_POLL_TIMEOUT_S)
         self._port = sock.getsockname()[1]
         self._listen_sock = sock
         self._stop.clear()
@@ -84,10 +100,11 @@ class UsbIpServer:
     # --- internals ----------------------------------------------------
 
     def _accept_loop(self) -> None:
+        # The timeout is set by start() on the owning thread before the socket
+        # is published; touching it here would reintroduce the stop() race.
         listen = self._listen_sock
         if listen is None:
             return
-        listen.settimeout(0.5)
         while not self._stop.is_set():
             try:
                 client_sock, _address = listen.accept()
@@ -150,11 +167,13 @@ class UsbIpServer:
             elif command == USBIP_CMD_UNLINK:
                 _ = _recv_exact(sock, _CMD_SUBMIT_BODY_BYTES)
                 # Unlink: we don't track in-flight URBs in the scaffold,
-                # so just acknowledge with status 0.
+                # so just acknowledge with status 0. Reply with a proper
+                # RET_UNLINK (0x4) — a RET_SUBMIT (0x3) would leave the
+                # client's URB-cancel forever pending.
                 seqnum = int.from_bytes(header[4:8], "big")
-                ret = encode_ret_submit(
+                ret = encode_ret_unlink(
                     seqnum=seqnum, devid=device.devnum,
-                    direction=0, ep=0, status=0, actual_length=0,
+                    direction=0, ep=0, status=0,
                 )
                 sock.sendall(ret)
             else:
@@ -165,25 +184,33 @@ class UsbIpServer:
     def _serve_cmd_submit(self, sock: socket.socket,
                           header: bytes) -> None:
         body = _recv_exact(sock, _CMD_SUBMIT_BODY_BYTES)
-        # Decode the header+body so we know how big the OUT buffer is.
-        partial = decode_cmd_submit(header + body)
-        if partial.direction == 0 and partial.transfer_buffer_length > 0:
-            extra = _recv_exact(sock, partial.transfer_buffer_length)
-            partial = decode_cmd_submit(header + body + extra)
+        # Two-phase: peek the length first (decode_cmd_submit would raise on
+        # an OUT transfer whose buffer isn't present yet), read the buffer,
+        # then decode the whole message.
+        direction, tlen = peek_transfer_length(header, body)
+        if tlen > _MAX_TRANSFER_BUFFER_BYTES:
+            raise UsbIpError(
+                f"CMD_SUBMIT transfer_buffer_length {tlen} exceeds "
+                f"{_MAX_TRANSFER_BUFFER_BYTES}",
+            )
+        extra = b""
+        if direction == 0 and tlen > 0:
+            extra = _recv_exact(sock, tlen)
+        submit = decode_cmd_submit(header + body + extra)
         response = self._backend.submit_urb(UrbRequest(
-            seqnum=partial.seqnum, devid=partial.devid,
-            direction=partial.direction, ep=partial.ep,
-            setup=partial.setup,
-            transfer_buffer=partial.transfer_buffer,
-            transfer_buffer_length=partial.transfer_buffer_length,
+            seqnum=submit.seqnum, devid=submit.devid,
+            direction=submit.direction, ep=submit.ep,
+            setup=submit.setup,
+            transfer_buffer=submit.transfer_buffer,
+            transfer_buffer_length=submit.transfer_buffer_length,
         ))
         ret = encode_ret_submit(
-            seqnum=partial.seqnum, devid=partial.devid,
-            direction=partial.direction, ep=partial.ep,
+            seqnum=submit.seqnum, devid=submit.devid,
+            direction=submit.direction, ep=submit.ep,
             status=response.status,
             actual_length=response.actual_length,
             data=response.data,
-            setup=partial.setup,
+            setup=submit.setup,
         )
         sock.sendall(ret)
 

@@ -21,6 +21,7 @@ from je_auto_control.gui.script_builder.step_list_view import StepTreeView
 from je_auto_control.gui.script_builder.step_model import (
     Step, actions_to_steps, steps_to_actions,
 )
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 
@@ -129,7 +130,7 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             actions = steps_to_actions(self._tree.root_steps())
             write_action_json(path, actions)
             self._result.setPlainText(f"Saved: {path}")
-        except (OSError, ValueError, TypeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _on_load(self) -> None:
@@ -143,7 +144,7 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             self._tree.load_steps(actions_to_steps(actions))
             self._form.load_step(None)
             self._result.setPlainText(f"Loaded: {path}")
-        except (OSError, ValueError, TypeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _on_run(self) -> None:
@@ -156,5 +157,6 @@ class ScriptBuilderTab(TranslatableMixin, QWidget):
             self._result.setPlainText(
                 json.dumps(result, indent=2, default=str, ensure_ascii=False)
             )
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError,
+                RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))

@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
 )
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.auto_control_keyboard import (
     type_keyboard, hotkey, write, get_keyboard_keys_table,
 )
@@ -224,7 +225,10 @@ class AutoClickTabMixin:
                 type_keyboard(key)
                 if is_double:
                     type_keyboard(key)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
+            # AutoControlMouseException / AutoControlCantFindKeyException from a
+            # throwing backend must land here — otherwise timer.stop() is
+            # skipped and the auto-click QTimer fires the failing action forever.
             self.timer.stop()
             QMessageBox.warning(self, "Error", str(error))
 
@@ -237,7 +241,7 @@ class AutoClickTabMixin:
             )
             self.cursor_x_input.setText(str(x))
             self.cursor_y_input.setText(str(y))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _send_hotkey(self):
@@ -245,7 +249,7 @@ class AutoClickTabMixin:
             keys = [k.strip() for k in self.hotkey_input.text().split(",") if k.strip()]
             if keys:
                 hotkey(keys)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _send_write(self):
@@ -253,7 +257,7 @@ class AutoClickTabMixin:
             text = self.write_input.text()
             if text:
                 write(text)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _send_scroll(self):
@@ -261,5 +265,5 @@ class AutoClickTabMixin:
             val = int(self.scroll_value_input.text() or "3")
             direction = self.scroll_dir_combo.currentText() if self.scroll_dir_combo else "scroll_down"
             mouse_scroll(val, scroll_direction=direction)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))

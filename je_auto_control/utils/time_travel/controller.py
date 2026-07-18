@@ -91,11 +91,13 @@ class TraceReplayController:
 
     def _player_actions(self) -> List[ActionEvent]:
         # The player keeps actions internally; reuse the windowed view by
-        # asking for the full range.
-        if self.total_steps == 0:
-            return list(self._player.actions_in_window(0.0, 0.0))
-        start = self._player.started_at or 0.0
-        end = self._player.stopped_at or start
+        # asking for the full range. Use the real recording window (which
+        # derives from the actions themselves when no frame manifest exists)
+        # so an actions-only recording still yields a non-empty action index.
+        start = self._player.started_at
+        end = self._player.stopped_at
+        if start is None or end is None:
+            return []
         return list(self._player.actions_in_window(start, end + 1.0))
 
 

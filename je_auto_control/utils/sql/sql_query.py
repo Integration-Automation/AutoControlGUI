@@ -8,13 +8,29 @@ parameters (never string-interpolated) to avoid SQL injection. Imports no
 ``PySide6`` so it stays fully headless.
 """
 import sqlite3
+from contextlib import closing
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from urllib.parse import quote
 
 from je_auto_control.utils.data_source.data_source import (
     _resolve_path, _validate_select,
 )
 
 _FetchResult = Union[List[Dict[str, Any]], Dict[str, Any], Any, None]
+
+
+def _read_only_uri(path: Path) -> str:
+    """Build a read-only SQLite ``file:`` URI, percent-encoding the path.
+
+    SQLite treats ``?`` as the start of the query part and decodes ``%XX`` in
+    the path, so a raw f-string opens the wrong file (or none) when the path
+    contains ``?``/``#``/``%``. Percent-encoding those — while keeping path
+    separators and the Windows drive colon literal — lets SQLite decode the
+    real filename back.
+    """
+    safe_path = quote(str(path), safe="/:\\")
+    return f"file:{safe_path}?mode=ro"
 
 
 def _shape(cursor: sqlite3.Cursor, fetch: str) -> _FetchResult:
@@ -44,8 +60,10 @@ def query_sqlite(database: str, query: str,
     """
     path = _resolve_path(database)
     statement = _validate_select(str(query))
-    uri = f"file:{path}?mode=ro"
-    with sqlite3.connect(uri, uri=True) as connection:
+    uri = _read_only_uri(path)
+    # closing(): sqlite3's own context manager only commits/rolls back the
+    # transaction, it does not close the connection (leaking the handle until GC).
+    with closing(sqlite3.connect(uri, uri=True)) as connection:
         connection.row_factory = sqlite3.Row
         cursor = connection.execute(
             statement, params if params is not None else ())

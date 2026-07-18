@@ -69,6 +69,7 @@ from je_auto_control.gui.window_tab import WindowManagerTab
 from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot, get_pixel
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_image_center, locate_and_click
 from je_auto_control.wrapper.auto_control_record import record, stop_record
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
@@ -646,7 +647,7 @@ class AutoControlGUIWidget(
             record()
             self._record_status_key = "record_recording"
             self._apply_record_status_label()
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _stop_record(self):
@@ -655,7 +656,7 @@ class AutoControlGUIWidget(
             self._record_status_key = "record_idle"
             self._apply_record_status_label()
             self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _playback_record(self):
@@ -664,7 +665,7 @@ class AutoControlGUIWidget(
                 QMessageBox.warning(self, "Warning", "No recorded data")
                 return
             execute_action(self._record_data)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _save_record(self):
@@ -675,7 +676,7 @@ class AutoControlGUIWidget(
             path, _ = QFileDialog.getSaveFileName(self, _t("save_record"), "", _JSON_FILE_FILTER)
             if path:
                 write_action_json(path, self._record_data)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _load_record(self):
@@ -684,7 +685,7 @@ class AutoControlGUIWidget(
             if path:
                 self._record_data = read_action_json(path)
                 self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     # =========================================================================
@@ -727,7 +728,7 @@ class AutoControlGUIWidget(
             try:
                 data = read_action_json(path)
                 self.script_editor.setText(json.dumps(data, indent=2, ensure_ascii=False))
-            except (OSError, ValueError, TypeError, RuntimeError) as error:
+            except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
                 self.script_result_text.setText(f"Error loading: {error}")
 
     def _execute_script(self):
@@ -738,7 +739,7 @@ class AutoControlGUIWidget(
             data = read_action_json(path)
             result = execute_action(data)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.script_result_text.setText(f"Error: {error}")
 
     def _browse_script_dir(self):
@@ -754,7 +755,7 @@ class AutoControlGUIWidget(
             files = get_dir_files_as_list(path)
             result = execute_files(files)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.script_result_text.setText(f"Error: {error}")
 
     def _execute_manual_script(self):

@@ -25,7 +25,14 @@ class StepTreeView(QTreeWidget):
         super().__init__(parent)
         self.setHeaderLabels(["Step"])
         self.setColumnCount(1)
-        self.setDragDropMode(QTreeWidget.DragDropMode.InternalMove)
+        # Item drag-drop is deliberately disabled: Qt's InternalMove reorders
+        # the QTreeWidgetItems without touching the Step model (``_roots`` and
+        # each ``Step.bodies``), so Save/Run would silently emit the pre-drag
+        # script, and a drop onto a plain step left the tree in a shape that
+        # crashed ``remove_selected``. Reordering is done through
+        # ``move_selected`` (the Up/Down commands), which keeps model and view
+        # in lock-step.
+        self.setDragDropMode(QTreeWidget.DragDropMode.NoDragDrop)
         self.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
         self._roots: List[Step] = []
         self.itemSelectionChanged.connect(self._emit_selection)
@@ -79,9 +86,13 @@ class StepTreeView(QTreeWidget):
             self.takeTopLevelItem(index)
             return
         body_key = parent.data(0, ROLE_BODY_KEY)
-        grandparent_step: Step = parent.parent().data(0, ROLE_STEP)
+        grandparent = parent.parent()
+        if grandparent is None:
+            parent.removeChild(item)
+            return
+        grandparent_step: Step = grandparent.data(0, ROLE_STEP)
         siblings = grandparent_step.bodies.get(body_key, [])
-        if step in siblings:
+        if step in siblings:  # identity match — Step uses eq=False
             siblings.remove(step)
         parent.removeChild(item)
 

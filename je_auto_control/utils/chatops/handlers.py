@@ -88,10 +88,22 @@ def cmd_status(_argv: List[str],
         return CommandResult(text="no recent runs.")
     lines = [
         f"  [{row.status}] {row.source_type}:{row.source_id} "
-        f"@ {row.started_at} ({row.duration_seconds:.1f}s)"
+        f"@ {row.started_at} ({_format_duration(row.duration_seconds)})"
         for row in rows
     ]
     return CommandResult(text="recent runs:\n" + "\n".join(lines))
+
+
+def _format_duration(duration_seconds: Any) -> str:
+    """Render a run duration, tolerating an in-flight/crashed run's ``None``.
+
+    ``duration_seconds`` is ``None`` while a run is still going or when the
+    process died before ``finish_run`` — formatting that with ``:.1f`` raised
+    an uncaught ``TypeError`` that took the whole bot poll loop down.
+    """
+    if duration_seconds is None:
+        return "in progress"
+    return f"{duration_seconds:.1f}s"
 
 
 def cmd_screenshot(argv: List[str],

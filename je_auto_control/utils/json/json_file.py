@@ -6,6 +6,7 @@ from typing import List, Dict
 
 from je_auto_control.utils.exception.exception_tags import cant_find_json_error_message, cant_save_json_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 
 _lock = Lock()
 
@@ -39,9 +40,16 @@ def write_action_json(json_save_path: str, action_json: list) -> None:
     """
     with _lock:
         try:
-            with open(json_save_path, "w+", encoding="utf-8") as file_to_write:
-                json.dump(action_json, file_to_write, indent=4, ensure_ascii=False)
-        except (OSError, TypeError, ValueError) as error:
+            payload = json.dumps(action_json, indent=4, ensure_ascii=False)
+        except (TypeError, ValueError) as error:
+            raise AutoControlJsonActionException(f"{cant_save_json_error_message}: {repr(error)}") from error
+        try:
+            atomic_write_text(json_save_path, payload)
+        except (OSError, ValueError) as error:
+            # ValueError covers UnicodeEncodeError raised when the UTF-8 write
+            # hits a lone surrogate (a socket/REST client can smuggle one in via
+            # a "\ud800" JSON escape). Without it the raw UnicodeEncodeError would
+            # escape instead of the module's promised AutoControlJsonActionException.
             raise AutoControlJsonActionException(f"{cant_save_json_error_message}: {repr(error)}") from error
 
 

@@ -11,6 +11,7 @@ Usage::
     je_auto_control fmt script.json [--check]
     je_auto_control record out.json [--duration 5]
     je_auto_control codegen script.json [--target pytest] [-o test_flow.py]
+    je_auto_control failure-bundle failure.zip [--error "message"]
     je_auto_control version
     je_auto_control list-jobs
     je_auto_control start-server --port 9938
@@ -147,11 +148,13 @@ def cmd_codegen(args: argparse.Namespace) -> int:
     from je_auto_control.utils.json.json_file import read_action_json
     if args.output:
         generate_code_file(args.script, args.output, target=args.target,
-                           name=args.name, style=args.style)
+                           name=args.name, style=args.style,
+                           failure_bundle=args.failure_bundle)
         sys.stderr.write(f"Wrote {args.target} code to {args.output}\n")
     else:
         code = generate_code(read_action_json(args.script), target=args.target,
-                             name=args.name, style=args.style)
+                             name=args.name, style=args.style,
+                             failure_bundle=args.failure_bundle)
         sys.stdout.write(code)
     return 0
 
@@ -163,6 +166,25 @@ def cmd_version(_: argparse.Namespace) -> int:
         sys.stdout.write(version("je_auto_control") + "\n")
     except PackageNotFoundError:
         sys.stdout.write("unknown\n")
+    return 0
+
+
+def cmd_failure_bundle(args: argparse.Namespace) -> int:
+    """Collect a portable, redacted diagnostic archive."""
+    from je_auto_control.utils.failure_bundle import (
+        FailureBundleOptions, create_failure_bundle,
+    )
+    context = json.loads(args.context) if args.context else {}
+    path = create_failure_bundle(
+        args.output, error=args.error, context=context,
+        options=FailureBundleOptions(
+            screenshot=not args.no_screenshot,
+            diagnostics=not args.no_diagnostics,
+            log_path=args.log,
+            attachments=tuple(args.attach or ()),
+        ),
+    )
+    sys.stdout.write(path + "\n")
     return 0
 
 
@@ -253,10 +275,25 @@ def build_parser() -> argparse.ArgumentParser:
                            default="calls")
     p_codegen.add_argument("--name", default="recorded_flow")
     p_codegen.add_argument("-o", "--output", help="Write to file instead of stdout")
+    p_codegen.add_argument(
+        "--failure-bundle", action="store_true",
+        help="Wrap generated pytest in automatic failure diagnostics")
     p_codegen.set_defaults(func=cmd_codegen)
 
     p_version = sub.add_parser("version", help="Print the installed version")
     p_version.set_defaults(func=cmd_version)
+
+    p_bundle = sub.add_parser(
+        "failure-bundle", help="Create a redacted failure diagnostic ZIP")
+    p_bundle.add_argument("output")
+    p_bundle.add_argument("--error", help="Failure summary")
+    p_bundle.add_argument("--context", help="JSON object with run context")
+    p_bundle.add_argument("--log", help="Log file whose redacted tail is included")
+    p_bundle.add_argument("--attach", action="append",
+                          help="Explicit attachment; may be repeated")
+    p_bundle.add_argument("--no-screenshot", action="store_true")
+    p_bundle.add_argument("--no-diagnostics", action="store_true")
+    p_bundle.set_defaults(func=cmd_failure_bundle)
 
     p_jobs = sub.add_parser("list-jobs", help="List scheduler jobs")
     p_jobs.set_defaults(func=cmd_list_jobs)

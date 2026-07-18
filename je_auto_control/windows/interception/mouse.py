@@ -32,6 +32,7 @@ from je_auto_control.windows.interception._dll import (
     MOUSE_WHEEL,
     default_mouse_device, load_context,
 )
+from je_auto_control.windows.core.utils.win32_vk import WIN32_WHEEL_DELTA
 from je_auto_control.windows.screen.win32_screen import size
 
 if sys.platform not in ("win32", "cygwin", "msys"):
@@ -124,9 +125,14 @@ def click_mouse(mouse_keycode: Tuple[int, int, int],
 
 
 def scroll(scroll_value: int, x: int = 0, y: int = 0) -> None:
-    """Wheel-scroll via the driver. ``x``/``y`` are kept for API parity."""
+    """Wheel-scroll via the driver. ``x``/``y`` are kept for API parity.
+
+    ``rolling`` is a raw HID wheel delta measured in ``WHEEL_DELTA`` (120)
+    units, so a notch count must be scaled — matching the SendInput
+    backend, where one notch equals one notch.
+    """
     del x, y  # Interception scroll is delivered to the focused window
-    _send_stroke(MOUSE_WHEEL, rolling=int(scroll_value))
+    _send_stroke(MOUSE_WHEEL, rolling=int(scroll_value) * WIN32_WHEEL_DELTA)
 
 
 def mouse_event(event: int, x: int, y: int, dw_data: int = 0) -> None:
@@ -134,7 +140,7 @@ def mouse_event(event: int, x: int, y: int, dw_data: int = 0) -> None:
     _send_stroke(event, x=int(x), y=int(y), rolling=int(dw_data))
 
 
-def send_mouse_event_to_window(window, mouse_keycode: int,
+def send_mouse_event_to_window(window, mouse_keycode: Tuple[int, int, int],
                                x: int = 0, y: int = 0):
     """Targeted-window injection — degraded to focused-window for the driver.
 
@@ -146,4 +152,9 @@ def send_mouse_event_to_window(window, mouse_keycode: int,
     del window
     if x or y:
         set_position(int(x), int(y))
-    _send_stroke(int(mouse_keycode))
+    # mouse_keycode is a (up, down, data) button tuple — the same shape
+    # press_mouse/release_mouse take. int() on the tuple would raise a
+    # TypeError that the wrapper silently swallows, turning the call into a
+    # no-op; perform a real press+release instead.
+    _send_stroke(mouse_keycode[1])
+    _send_stroke(mouse_keycode[0])

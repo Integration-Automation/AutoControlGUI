@@ -84,3 +84,24 @@ def test_facade_exports():
     for attr in ("expect_poll", "assert_poll", "to_equal", "to_contain",
                  "to_be_stable"):
         assert hasattr(ac, attr) and attr in ac.__all__
+
+
+@pytest.mark.parametrize("bad_interval", [0.0, -1.0])
+def test_non_positive_interval_is_rejected(bad_interval):
+    """interval_s must be positive.
+
+    Regression: it was unvalidated, so interval_s=0 spun the loop as fast as
+    possible (measured ~600k getter calls in 0.3s, pegging a core) and a
+    negative surfaced as time.sleep's own raw ValueError. This is reachable via
+    AC_expect_poll, where interval_s is user-controlled.
+    """
+    with pytest.raises(ValueError, match="interval_s must be positive"):
+        expect_poll(lambda: False, lambda v: bool(v),
+                    timeout_s=1.0, interval_s=bad_interval)
+
+
+def test_assert_poll_inherits_the_interval_guard():
+    """assert_poll delegates to expect_poll, so the guard covers it too."""
+    with pytest.raises(ValueError, match="interval_s must be positive"):
+        assert_poll(lambda: False, lambda v: bool(v),
+                    timeout_s=1.0, interval_s=0.0)

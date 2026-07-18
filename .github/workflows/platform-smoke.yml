@@ -1,0 +1,51 @@
+name: Platform smoke
+
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+    branches: ["main", "dev"]
+
+permissions:
+  contents: read
+
+jobs:
+  stable-api:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-22.04, macos-14]
+        python-version: ["3.10", "3.14"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install -e .
+      # The X11 backend connects to a display at import time, so Linux
+      # runs need a virtual one.
+      - name: Install a virtual display (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Import stable API and generate platform-neutral code
+        shell: bash
+        run: >-
+          ${{ runner.os == 'Linux' && 'xvfb-run -a' || '' }}
+          python -c "import je_auto_control.api as ac;
+          compile(ac.generate_code([['AC_screen_size']], style='actions'),
+          '<generated>', 'exec')"
+      - name: Create headless diagnostic bundle
+        shell: bash
+        run: >-
+          ${{ runner.os == 'Linux' && 'xvfb-run -a' || '' }}
+          python -c "from je_auto_control.api import
+          FailureBundleOptions, create_failure_bundle;
+          create_failure_bundle('platform-smoke.zip',
+          options=FailureBundleOptions(screenshot=False))"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: platform-smoke-${{ matrix.os }}-${{ matrix.python-version }}
+          path: platform-smoke.zip
+          if-no-files-found: warn

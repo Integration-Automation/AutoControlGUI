@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QTextEdit, QVBoxLayout, QWidget,
 )
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.generate_report.generate_html_report import generate_html_report
 from je_auto_control.utils.generate_report.generate_json_report import generate_json_report
 from je_auto_control.utils.generate_report.generate_xml_report import generate_xml_report
@@ -59,7 +60,7 @@ class ReportTabMixin:
             name = self.report_name_input.text() or "autocontrol_report"
             generate_html_report(name)
             self.report_result_text.setText(f"HTML report generated: {name}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.report_result_text.setText(f"Error: {error}")
 
     def _gen_json(self):
@@ -67,7 +68,7 @@ class ReportTabMixin:
             name = self.report_name_input.text() or "autocontrol_report"
             generate_json_report(name)
             self.report_result_text.setText(f"JSON report generated: {name}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.report_result_text.setText(f"Error: {error}")
 
     def _gen_xml(self):
@@ -75,5 +76,5 @@ class ReportTabMixin:
             name = self.report_name_input.text() or "autocontrol_report"
             generate_xml_report(name)
             self.report_result_text.setText(f"XML report generated: {name}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.report_result_text.setText(f"Error: {error}")
