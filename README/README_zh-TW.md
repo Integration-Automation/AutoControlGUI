@@ -56,7 +56,9 @@
 
 ## 本次更新
 
-所有各版本更新說明已移至 **[WHATS_NEW_zh-TW.md](WHATS_NEW_zh-TW.md)**。
+**最新（2026-07-18）— 跨平台穩定性強化。** 一次全專案執行期稽核修正了 macOS／Windows／Linux／Wayland 各後端、執行器,以及遠端桌面／USB 堆疊的執行期缺陷——包含正確的 Retina 游標座標運算、CPython 3.14 上的中繼卡死、`AC_expect_poll`／`AC_parallel` 的健全性、USB/IP 預設綁定本機,以及在 I/O 邊界保留型別化例外——每項皆有 headless 回歸測試涵蓋。無 API 變更。
+
+各版本更新說明詳見 **[WHATS_NEW.md](../WHATS_NEW.md)**。
 
 ## 功能特色
 
