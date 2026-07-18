@@ -161,7 +161,7 @@ def test_scroll_clamps_and_fills_a_partial_coordinate(monkeypatch):
 
     auto_control_mouse.mouse_scroll(5, x=99999)
 
-    assert events[:1] == [("move", 1919, 7)]
+    assert events[:1] == [("move", 1919, 7)]  # NOSONAR python:S6466  # reason: slice, not index — cannot raise IndexError
 
 
 def test_missing_coords_still_fall_back_to_the_cursor(monkeypatch):

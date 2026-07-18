@@ -6,7 +6,7 @@ straight back over the user's file.
 """
 import pytest
 
-pytest.importorskip("PySide6")
+pytest.importorskip("PySide6.QtWidgets")  # skips if Qt libs (e.g. libEGL) absent
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
