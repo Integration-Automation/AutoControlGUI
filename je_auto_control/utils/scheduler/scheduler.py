@@ -64,6 +64,15 @@ class Scheduler:
         self._tick = max(0.1, float(tick_seconds))
         self._jobs: Dict[str, ScheduledJob] = {}
         self._lock = threading.Lock()
+        # 保護 start()/stop() 互斥。兩者原本毫無互斥,交錯時 stop() 會在
+        # start() 指派 _thread 與呼叫 .start() 之間 join 尚未啟動的執行緒
+        # → RuntimeError("cannot join thread before it is started")。與
+        # _lock(工作註冊表)分開,且為最外層鎖。
+        # Serialises start() against stop(). Nothing enforced it before: an
+        # interleaved stop() joined the thread between start()'s assignment and
+        # its .start() call → "cannot join thread before it is started". Kept
+        # separate from _lock (the job registry) and taken as the outermost.
+        self._lifecycle_lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
 
@@ -124,22 +133,31 @@ class Scheduler:
 
     def start(self) -> None:
         """Start the polling thread if it is not already running."""
-        if self._thread is not None and self._thread.is_alive():
-            return
-        self._stop.clear()
-        self._thread = threading.Thread(target=self._run, daemon=True,
-                                        name="AutoControlScheduler")
-        self._thread.start()
+        with self._lifecycle_lock:
+            if self._thread is not None and self._thread.is_alive():
+                return
+            self._stop.clear()
+            self._thread = threading.Thread(target=self._run, daemon=True,
+                                            name="AutoControlScheduler")
+            self._thread.start()
 
     def stop(self, timeout: float = 2.0) -> None:
-        self._stop.set()
-        if self._thread is not None:
-            self._thread.join(timeout=timeout)
+        with self._lifecycle_lock:
+            self._stop.set()
+            thread = self._thread
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=timeout)
             self._thread = None
 
     def _run(self) -> None:
         while not self._stop.is_set():
-            self._tick_once()
+            # Outer guard: _tick_once must never let anything escape and take
+            # the scheduler thread (hence every job) down.
+            try:
+                self._tick_once()
+            except Exception as error:  # noqa: BLE001  # reason: see above
+                autocontrol_logger.error("scheduler tick failed: %r",
+                                         error, exc_info=True)
             self._stop.wait(self._tick)
 
     def _tick_once(self) -> None:
@@ -154,7 +172,17 @@ class Scheduler:
                 if deadline_now >= job.next_run_ts:
                     due.append(job)
         for job in due:
-            self._fire(job, now_mono, now_wall)
+            # _fire's run-history bookkeeping (start_run / capture_error_snapshot
+            # / finish_run) and its cron re-scheduling sit OUTSIDE its own broad
+            # except. A sqlite3.Error from the shared history DB, or an
+            # AutoControlScreenException while snapshotting, would otherwise kill
+            # this loop and stop every scheduled job. Contain per job.
+            try:
+                self._fire(job, now_mono, now_wall)
+            except Exception as error:  # noqa: BLE001  # reason: see above
+                autocontrol_logger.error("scheduler job %s bookkeeping "
+                                         "failed: %r", job.job_id, error,
+                                         exc_info=True)
 
     def _fire(self, job: ScheduledJob, now_mono: float, now_wall: float) -> None:
         run_id = default_history_store.start_run(
@@ -165,7 +193,18 @@ class Scheduler:
         try:
             actions = read_action_json(job.script_path)
             self._execute(actions)
-        except (OSError, ValueError, RuntimeError) as error:
+        # 一個排程工作失敗必須記錄為 STATUS_ERROR 並繼續輪詢,絕不能拖垮
+        # 排程執行緒。原本的 tuple 漏掉 AutoControlException——它是幾乎所有
+        # action 失敗(找不到視窗/圖片、輸入錯誤)的基底,直接繼承
+        # Exception,不屬 OSError/ValueError/RuntimeError——所以任何正常失敗
+        # 的排程工作都會讓執行緒無聲死亡,其餘所有排程從此停擺。
+        # A failing scheduled job must be recorded as STATUS_ERROR and the loop
+        # must go on — it must never kill the scheduler thread. The previous
+        # tuple missed AutoControlException, the base of nearly every action
+        # failure (window/image not found, input error) and a direct Exception
+        # subclass, so any normally-failing job killed the thread silently and
+        # every other scheduled job stopped firing forever.
+        except Exception as error:  # noqa: BLE001  # reason: see comment above
             status = STATUS_ERROR
             error_text = repr(error)
             autocontrol_logger.error("scheduler job %s failed: %r",

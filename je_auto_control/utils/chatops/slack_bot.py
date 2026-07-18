@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
 from je_auto_control.utils.chatops.router import CommandResult, CommandRouter
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -72,18 +73,21 @@ class SlackBot:
         # Slack returns newest-first; reverse so we route in chronological order.
         ordered = list(reversed(messages))
         dispatched = 0
-        latest_ts = self.last_seen_ts or "0"
         for msg in ordered:
             ts = str(msg.get("ts") or "")
             if not ts:
                 continue
-            latest_ts = max(latest_ts, ts)
+            # Commit progress *before* running the command. A command's side
+            # effects (running a script, taking a screenshot) happen exactly
+            # once inside _route_one; if the handler or the reply post then
+            # fails, the next poll must not re-execute it. Advancing last_seen_ts
+            # here (Slack's `oldest` is exclusive) guarantees at-most-once.
+            self.last_seen_ts = max(self.last_seen_ts or "0", ts)
             if self._is_self(msg):
                 continue
             text = str(msg.get("text") or "")
             if self._route_one(text, msg) is not None:
                 dispatched += 1
-        self.last_seen_ts = latest_ts
         return dispatched
 
     def run_forever(self, *, max_iterations: Optional[int] = None) -> None:
@@ -110,13 +114,16 @@ class SlackBot:
 
     def _route_one(self, text: str,
                    message: Dict[str, Any]) -> Optional[CommandResult]:
+        # The router already converts handler failures into CommandResults;
+        # this is defence in depth so a framework error surfaces as a chat
+        # reply rather than escaping poll_once and stopping run_forever.
         try:
             result = self.router.dispatch(
                 text, context={"slack_user": message.get("user"),
                                 "slack_ts": message.get("ts"),
                                 "slack_channel": self.channel_id},
             )
-        except (RuntimeError, ValueError) as error:
+        except (RuntimeError, ValueError, AutoControlException) as error:
             self.post_message(f"router error: {error}")
             return None
         if result is None:

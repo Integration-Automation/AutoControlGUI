@@ -21,6 +21,10 @@ WIN32_XUP: int = 0x0100
 WIN32_WHEEL: int = 0x0800
 WIN32_HWHEEL: int = 0x1000
 WIN32_ABSOLUTE: int = 0x8000
+# 一個滾輪刻度的單位。Win32 的 dwData 以此為單位，直接傳入刻度數會幾乎不動。
+# One wheel notch. Win32 measures mouse_event's dwData in these units, so a
+# raw notch count (e.g. 5) moves 5/120 of a notch — effectively nothing.
+WIN32_WHEEL_DELTA: int = 120
 WIN32_XBUTTON1: int = 0x0001
 WIN32_XBUTTON2: int = 0x0002
 

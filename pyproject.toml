@@ -90,8 +90,14 @@ exclude_dirs = [
 skips = ["B101"]
 
 [tool.pytest.ini_options]
-testpaths = ["test/unit_test/headless"]
+testpaths = ["test/unit_test/headless", "test/unit_test/flow_control"]
 addopts = "--strict-markers --strict-config"
+# Only test_*.py are real tests. The *_test.py files under test/unit_test/ are
+# manual demo scripts whose module bodies drive the real mouse/keyboard; pytest's
+# default python_files matches *_test.py, so collecting an explicit path (e.g.
+# `pytest test/unit_test/`) would import and execute them. testpaths does not
+# protect against this — it is ignored once a path argument is given.
+python_files = ["test_*.py"]
 
 [tool.coverage.run]
 branch = true

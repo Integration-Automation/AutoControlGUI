@@ -6,14 +6,18 @@ tools: ``initialize``, ``tools/list``, ``tools/call``, ``ping``, and
 ``notifications/initialized``. Each transport line is one JSON-RPC
 message — no Content-Length framing — matching the MCP stdio spec.
 """
+import contextlib
 import itertools
 import json
 import os
+import sqlite3
+import subprocess  # nosec B404  # reason: only its TimeoutExpired type is referenced
 import sys
 import threading
 import time
 from typing import Any, Callable, Dict, List, Optional, TextIO
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
@@ -40,6 +44,24 @@ PROTOCOL_VERSION = "2025-06-18"
 SERVER_NAME = "je_auto_control"
 SERVER_VERSION = "0.1.0"
 _TOOLS_CALL_METHOD = "tools/call"
+
+# Framework and external-library errors a tool handler may raise. They all
+# subclass ``Exception`` directly (not OSError/RuntimeError/…), so without
+# listing them here a failing tool would escape both containment layers — the
+# stdio worker thread dies and the client waits forever, or the HTTP
+# connection aborts with no JSON-RPC reply. ``AutoControlException`` is the
+# family base every ``AutoControl*Exception``/``ImageNotFoundException`` now
+# derives from.
+_FRAMEWORK_TOOL_ERRORS = (
+    AutoControlException, subprocess.TimeoutExpired, sqlite3.Error,
+)
+_BUILTIN_DISPATCH_ERRORS = (
+    OSError, RuntimeError, ValueError, TypeError, KeyError,
+)
+_DISPATCH_ERRORS = _BUILTIN_DISPATCH_ERRORS + _FRAMEWORK_TOOL_ERRORS
+_TOOL_INVOKE_ERRORS = (
+    _BUILTIN_DISPATCH_ERRORS + (AttributeError,) + _FRAMEWORK_TOOL_ERRORS
+)
 
 
 class _MCPError(Exception):
@@ -68,15 +90,27 @@ class MCPServer:
                             else default_resource_provider())
         self._prompts = (prompt_provider if prompt_provider is not None
                           else default_prompt_provider())
-        self._concurrent_tools = bool(concurrent_tools)
+        self._tools_lock = threading.Lock()
+        self._default_concurrent_tools = bool(concurrent_tools)
         self._audit = (audit_logger if audit_logger is not None
                         else AuditLogger())
         self._rate_limiter = rate_limiter
         self._log_bridge = log_bridge
         self._stop = threading.Event()
         self._initialized = False
-        self._notifier: Optional[Callable[[str, Dict[str, Any]], None]] = None
-        self._writer: Optional[Callable[[str], None]] = None
+        # Connection-scoped state. The stdio transport has exactly one peer, so
+        # a server-wide default is right for it; an HTTP transport has many, and
+        # each request runs on its own thread. Keeping the notifier/writer in
+        # thread-local storage is what stops one client's progress
+        # notifications from being emitted down another client's socket.
+        # See :meth:`connection_scope`.
+        self._default_notifier: Optional[
+            Callable[[str, Dict[str, Any]], None]] = None
+        self._default_writer: Optional[Callable[[str], None]] = None
+        self._local = threading.local()
+        # Keyed by ``(connection_id, msg_id)`` so two HTTP clients that both
+        # use msg id 1 get distinct slots instead of clobbering / cross-
+        # cancelling each other. connection_id is None for stdio (one peer).
         self._active_calls: Dict[Any, ToolCallContext] = {}
         self._calls_lock = threading.Lock()
         self._write_lock = threading.Lock()
@@ -84,9 +118,113 @@ class MCPServer:
         self._outbound_id_counter = itertools.count(1)
         self._pending_outbound: Dict[Any, Dict[str, Any]] = {}
         self._outbound_lock = threading.Lock()
-        self._client_capabilities: Dict[str, Any] = {}
+        # Client capabilities are per-connection: over HTTP each peer runs its
+        # own initialize, so a server-global copy let one client's handshake
+        # clobber another's and made the destructive-confirmation gate read the
+        # wrong peer's capabilities. stdio (one peer) uses the default slot.
+        self._default_client_capabilities: Dict[str, Any] = {}
+        self._client_caps_by_conn: Dict[Any, Dict[str, Any]] = {}
+        self._caps_lock = threading.Lock()
         self._resource_subscriptions: Dict[str, Any] = {}
         self._subscriptions_lock = threading.Lock()
+
+    # --- connection-scoped state ------------------------------------------
+    #
+    # Each property prefers a value set for the current thread (one HTTP
+    # request = one thread) and falls back to the server-wide default that
+    # stdio and set_notifier() use. A plain POST therefore sees *no* notifier
+    # rather than inheriting whichever SSE connection happens to be open —
+    # correct, since a plain POST has no stream to deliver notifications on.
+
+    @property
+    def _notifier(self) -> Optional[Callable[[str, Dict[str, Any]], None]]:
+        return getattr(self._local, "notifier", None) or self._default_notifier
+
+    @_notifier.setter
+    def _notifier(self, value) -> None:
+        self._default_notifier = value
+
+    @property
+    def _writer(self) -> Optional[Callable[[str], None]]:
+        return getattr(self._local, "writer", None) or self._default_writer
+
+    @_writer.setter
+    def _writer(self, value) -> None:
+        self._default_writer = value
+
+    @property
+    def _concurrent_tools(self) -> bool:
+        scoped = getattr(self._local, "concurrent_tools", None)
+        if scoped is None:
+            return self._default_concurrent_tools
+        return scoped
+
+    @_concurrent_tools.setter
+    def _concurrent_tools(self, value) -> None:
+        self._default_concurrent_tools = bool(value)
+
+    @property
+    def _connection_id(self) -> Any:
+        """Identity of the peer served on this thread (None for stdio)."""
+        return getattr(self._local, "connection_id", None)
+
+    @property
+    def _client_capabilities(self) -> Dict[str, Any]:
+        """Capabilities advertised by the peer served on this thread."""
+        conn = self._connection_id
+        if conn is None:
+            return self._default_client_capabilities
+        with self._caps_lock:
+            return self._client_caps_by_conn.get(conn, {})
+
+    @_client_capabilities.setter
+    def _client_capabilities(self, value: Dict[str, Any]) -> None:
+        conn = self._connection_id
+        if conn is None:
+            self._default_client_capabilities = value
+            return
+        with self._caps_lock:
+            self._client_caps_by_conn[conn] = value
+
+    @contextlib.contextmanager
+    def connection_scope(self, *, notifier=None, writer=None,
+                         concurrent_tools=None, connection_id=None):
+        """Bind notifier/writer/concurrency/identity to the calling thread only.
+
+        Transports that serve more than one peer must wrap each request in
+        this. Previously they swapped the attributes on the shared server, so
+        any concurrent request bound to the wrong peer's socket. ``connection_id``
+        scopes active-call slots and client capabilities per peer.
+        """
+        prior = (getattr(self._local, "notifier", None),
+                 getattr(self._local, "writer", None),
+                 getattr(self._local, "concurrent_tools", None),
+                 getattr(self._local, "connection_id", None))
+        self._local.notifier = notifier
+        self._local.writer = writer
+        self._local.concurrent_tools = concurrent_tools
+        self._local.connection_id = connection_id
+        try:
+            yield self
+        finally:
+            (self._local.notifier, self._local.writer,
+             self._local.concurrent_tools, self._local.connection_id) = prior
+
+    def forget_connection(self, connection_id: Any) -> None:
+        """Drop per-connection state when a transport connection closes.
+
+        HTTP connections are transient; without this their capabilities and
+        any stray active-call contexts would accumulate for the server's life.
+        """
+        if connection_id is None:
+            return
+        with self._caps_lock:
+            self._client_caps_by_conn.pop(connection_id, None)
+        with self._calls_lock:
+            stale = [key for key in self._active_calls
+                     if isinstance(key, tuple) and key[0] == connection_id]
+            for key in stale:
+                self._active_calls.pop(key, None)
 
     def register_tool(self, tool: MCPTool) -> None:
         """Add or replace a tool in the live registry.
@@ -94,14 +232,16 @@ class MCPServer:
         Emits ``notifications/tools/list_changed`` to the connected
         client so it knows to refresh its cached tool list.
         """
-        self._tools[tool.name] = tool
+        with self._tools_lock:
+            self._tools[tool.name] = tool
         self._notify_tools_list_changed()
 
     def unregister_tool(self, name: str) -> bool:
         """Remove a tool by name. Returns True if it existed."""
-        if name not in self._tools:
-            return False
-        del self._tools[name]
+        with self._tools_lock:
+            if name not in self._tools:
+                return False
+            del self._tools[name]
         self._notify_tools_list_changed()
         return True
 
@@ -147,7 +287,7 @@ class MCPServer:
                 line = line.strip()
                 if not line:
                     continue
-                response = self.handle_line(line)
+                response = self._handle_line_safely(line)
                 if response is not None:
                     self._write_message(out_stream, response)
         finally:
@@ -213,11 +353,23 @@ class MCPServer:
 
         method = message.get("method")
         msg_id = message.get("id")
-        params = message.get("params") or {}
 
         if self._is_outbound_response(method, msg_id, message):
-            self._dispatch_outbound_response(msg_id, message)
+            # An inbound reply's id is used as a dict key; a non-hashable id
+            # (e.g. a JSON array) would raise TypeError here and, with no guard
+            # in the stdio read loop, take the whole server down.
+            if _is_hashable(msg_id):
+                self._dispatch_outbound_response(msg_id, message)
+            else:
+                autocontrol_logger.warning(
+                    "MCP dropping outbound response with non-hashable id %r",
+                    msg_id,
+                )
             return None
+
+        params, params_error = _coerce_params(message.get("params"), msg_id)
+        if params_error is not None:
+            return params_error
         if msg_id is None:
             self._handle_notification(method, params)
             return None
@@ -225,6 +377,18 @@ class MCPServer:
             self._dispatch_tools_call_async(msg_id, params)
             return None
         return self._build_response(msg_id, method, params)
+
+    def _handle_line_safely(self, line: str) -> Optional[str]:
+        """Call :meth:`handle_line`, swallowing any leak so the loop survives.
+
+        handle_line already validates its input, but this final net guarantees
+        that one malformed line can never terminate the stdio read loop.
+        """
+        try:
+            return self.handle_line(line)
+        except _DISPATCH_ERRORS:
+            autocontrol_logger.exception("MCP handle_line failed; line skipped")
+            return None
 
     @staticmethod
     def _is_outbound_response(method: Optional[str], msg_id: Any,
@@ -278,7 +442,7 @@ class MCPServer:
         except OperationCancelledError as error:
             autocontrol_logger.info("MCP call %s cancelled by client", msg_id)
             return _error_response(msg_id, -32800, str(error))
-        except (OSError, RuntimeError, ValueError, TypeError, KeyError) as error:
+        except _DISPATCH_ERRORS as error:
             autocontrol_logger.exception("MCP dispatch failed")
             return _error_response(msg_id, -32603, f"Internal error: {error}")
         return _result_response(msg_id, result)
@@ -362,10 +526,11 @@ class MCPServer:
     def _cancel_active_call(self, params: Dict[str, Any]) -> None:
         """Mark the matching active tool call as cancelled, if any."""
         request_id = params.get("requestId")
-        if request_id is None:
+        if request_id is None or not _is_hashable(request_id):
             return
+        call_key = (self._connection_id, request_id)
         with self._calls_lock:
-            ctx = self._active_calls.get(request_id)
+            ctx = self._active_calls.get(call_key)
         if ctx is not None:
             ctx.cancelled_event.set()
             autocontrol_logger.info(
@@ -402,8 +567,12 @@ class MCPServer:
 
     def _handle_tools_list(self) -> Dict[str, Any]:
         """List descriptors for every registered tool."""
-        return {"tools": [tool.to_descriptor()
-                          for tool in self._tools.values()]}
+        # Snapshot under the lock: PluginWatcher re-registers tools from its
+        # own thread, and mutating the dict mid-iteration surfaced to the
+        # client as "-32603 dictionary changed size during iteration".
+        with self._tools_lock:
+            tools = list(self._tools.values())
+        return {"tools": [tool.to_descriptor() for tool in tools]}
 
     def _handle_resources_list(self) -> Dict[str, Any]:
         """List descriptors for every registered resource."""
@@ -466,15 +635,17 @@ class MCPServer:
         uri = params.get("uri")
         if not isinstance(uri, str) or not uri:
             raise _MCPError(-32602, "resources/subscribe requires 'uri'")
+        # Hold the lock across the check *and* the subscribe so two concurrent
+        # requests for the same uri cannot both create a provider handle and
+        # leak the loser (a TOCTOU that left an orphaned subscription running).
         with self._subscriptions_lock:
             if uri in self._resource_subscriptions:
                 return {}
-        handle = self._resources.subscribe(
-            uri, lambda u=uri: self._notify_resource_updated(u),
-        )
-        if handle is None:
-            raise _MCPError(-32602, f"Unsubscribable resource: {uri}")
-        with self._subscriptions_lock:
+            handle = self._resources.subscribe(
+                uri, lambda u=uri: self._notify_resource_updated(u),
+            )
+            if handle is None:
+                raise _MCPError(-32602, f"Unsubscribable resource: {uri}")
             self._resource_subscriptions[uri] = handle
         return {}
 
@@ -544,8 +715,9 @@ class MCPServer:
                            params: Dict[str, Any]) -> Dict[str, Any]:
         name, tool, arguments = self._prepare_tool_call(params)
         ctx = self._build_call_context(msg_id, params)
+        call_key = (self._connection_id, msg_id)
         with self._calls_lock:
-            self._active_calls[msg_id] = ctx
+            self._active_calls[call_key] = ctx
         started_at = time.monotonic()
         try:
             result = tool.invoke(arguments, ctx=ctx)
@@ -555,9 +727,11 @@ class MCPServer:
                 duration_seconds=time.monotonic() - started_at,
             )
             raise
-        except (OSError, RuntimeError, ValueError, TypeError,
-                AttributeError, KeyError) as error:
-            # NotImplementedError subclasses RuntimeError so it's already covered.
+        except _TOOL_INVOKE_ERRORS as error:
+            # NotImplementedError subclasses RuntimeError so it's already covered;
+            # AutoControlException / subprocess timeouts / sqlite3 errors are
+            # added via _FRAMEWORK_TOOL_ERRORS so a failing tool returns an
+            # isError result instead of killing the worker / aborting the socket.
             autocontrol_logger.warning("MCP tool %s failed: %r", name, error)
             artifact = _capture_error_screenshot(name)
             self._audit.record(
@@ -575,7 +749,7 @@ class MCPServer:
             }
         finally:
             with self._calls_lock:
-                self._active_calls.pop(msg_id, None)
+                self._active_calls.pop(call_key, None)
         self._audit.record(
             tool=name, arguments=arguments, status="ok",
             duration_seconds=time.monotonic() - started_at,
@@ -767,6 +941,31 @@ def _file_uri_to_path(uri: str) -> Optional[str]:
             len(raw_path) > 2 and raw_path[2] == ":":
         raw_path = raw_path[1:]
     return raw_path or None
+
+
+def _is_hashable(value: Any) -> bool:
+    """Return True when ``value`` can be used as a dict key."""
+    try:
+        hash(value)
+    except TypeError:
+        return False
+    return True
+
+
+def _coerce_params(raw: Any, msg_id: Any) -> tuple:
+    """Normalise JSON-RPC ``params`` to a dict.
+
+    Returns ``(params, error_line)``. Every handler here expects an object;
+    a non-object ``params`` yields a ``-32602`` error line for a request and
+    an empty dict for a notification (which cannot carry an error reply).
+    """
+    if raw is None:
+        return {}, None
+    if isinstance(raw, dict):
+        return raw, None
+    if msg_id is None:
+        return {}, None
+    return {}, _error_response(msg_id, -32602, "Invalid params: expected an object")
 
 
 def _notification_message(method: str, params: Dict[str, Any]) -> str:

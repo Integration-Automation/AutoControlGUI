@@ -215,6 +215,32 @@ def test_renewal_scheduler_swallows_renew_errors_and_calls_on_failure(tmp_path):
     assert isinstance(failures[0], RuntimeError)
 
 
+def test_renewal_survives_a_certbot_subprocess_failure(tmp_path):
+    """certbot failures must route to on_failure, not kill the renewal thread.
+
+    Regression: tick() caught only (RuntimeError, OSError, ValueError), but
+    run_certbot raises subprocess.CalledProcessError (exit != 0) and
+    TimeoutExpired — both subprocess.SubprocessError, none of them in the
+    tuple. The first certbot failure — the exact moment renewal matters — let
+    the exception escape tick(), killed the acme-renewal thread, never fired
+    on_failure, and the certificate silently expired.
+    """
+    import subprocess
+
+    failures = []
+
+    def certbot_fails():
+        raise subprocess.CalledProcessError(1, ["certbot", "renew"])
+
+    scheduler = RenewalScheduler(
+        tmp_path / "cert.pem", renew=certbot_fails,
+        threshold=timedelta(days=30), on_failure=failures.append,
+    )
+    assert scheduler.tick() is True                 # attempted, did not raise
+    assert len(failures) == 1
+    assert isinstance(failures[0], subprocess.CalledProcessError)
+
+
 def test_scheduler_start_and_stop_are_idempotent(tmp_path):
     scheduler = RenewalScheduler(
         tmp_path / "cert.pem",

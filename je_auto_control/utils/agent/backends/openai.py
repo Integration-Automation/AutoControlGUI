@@ -68,6 +68,11 @@ class OpenAIAgentBackend(AgentBackend):
                 messages=self._messages,
                 tools=self._tools,
                 tool_choice="auto",
+                # This loop executes and answers only tool_calls[0] each turn,
+                # yet the whole assistant message (with every tool_call) is
+                # replayed. Parallel calls would leave the rest unanswered and
+                # the next request would 400, ending the run.
+                parallel_tool_calls=False,
             )
         except Exception as exc:  # noqa: BLE001  rewrap to a clear backend error
             raise AgentBackendError(
@@ -114,9 +119,20 @@ class OpenAIAgentBackend(AgentBackend):
                 args = {}
             self._pending_tool_call_id = call.id
             return {"tool": fn.name, "input": args}
-        # No tool call → final answer.
+        # No tool call → final answer, unless the turn was truncated at the
+        # token cap: returning a length-cut reply as the final answer would
+        # silently end the run mid-plan.
+        _raise_if_truncated(choice)
         text = getattr(message, "content", None) or ""
         return {"stop": True, "message": text.strip() if isinstance(text, str) else ""}
+
+
+def _raise_if_truncated(choice: Any) -> None:
+    """Reject a length-truncated turn instead of returning it as final."""
+    if getattr(choice, "finish_reason", None) == "length":
+        raise AgentBackendError(
+            "openai response truncated (finish_reason='length')",
+        )
 
 
 def _build_user_content(screenshot: Optional[bytes]) -> List[Dict[str, Any]]:

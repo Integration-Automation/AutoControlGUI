@@ -203,6 +203,146 @@ def test_ac_try_exposes_error_to_var(executor_try):
     assert "boom" in str(ex.variables.get_value("err"))
 
 
+def test_ac_try_catch_resolves_error_var_with_a_populated_scope(executor_try):
+    """``catch`` must interpolate ${err} lazily, after the body has failed.
+
+    Regression: ``catch``/``finally`` were missing from the executor's
+    deferred-arg keys, so they were interpolated eagerly at dispatch — before
+    ``error_var`` was bound. That only showed up once the scope was non-empty,
+    because an empty scope skipped interpolation entirely and masked it.
+    """
+    ex, _ = executor_try
+    ex.execute_action([["AC_set_var", {"name": "unrelated", "value": 1}]])
+    ex.execute_action([["AC_try", {
+        "body": [["AC_boom"]],
+        "error_var": "err",
+        "catch": [["AC_set_var", {"name": "seen", "value": "${err}"}]],
+    }]])
+    assert "boom" in str(ex.variables.get_value("seen"))
+
+
+def test_ac_try_finally_resolves_var_set_by_body(executor_try):
+    """``finally`` must interpolate against state the body produced."""
+    ex, _ = executor_try
+    ex.execute_action([["AC_set_var", {"name": "unrelated", "value": 1}]])
+    ex.execute_action([["AC_try", {
+        "body": [["AC_set_var", {"name": "made_by_body", "value": "ok"}]],
+        "finally": [["AC_set_var", {"name": "copied",
+                                    "value": "${made_by_body}"}]],
+    }]])
+    assert ex.variables.get_value("copied") == "ok"
+
+
+def test_unknown_var_raises_even_when_scope_is_empty():
+    """An empty scope must not disable interpolation.
+
+    Regression: ``_resolve_runtime_args`` short-circuited on a falsy (empty)
+    scope, so placeholders reached the automation as literal text instead of
+    raising — the opposite of the documented fail-fast contract.
+    """
+    ex = Executor()
+    assert not ex.variables
+    with pytest.raises(ValueError, match="Unknown variable"):
+        ex.execute_action(
+            [["AC_set_var", {"name": "x", "value": "${nope}"}]],
+            raise_on_error=True,
+        )
+
+
+def test_secret_placeholder_is_never_passed_through_literally():
+    """``${secrets.*}`` resolves via the vault and never needs the scope.
+
+    With an empty scope this silently stored the literal ``${secrets.NAME}``,
+    which would have been typed/sent verbatim in place of the secret.
+    """
+    ex = Executor()
+    assert not ex.variables
+    with pytest.raises(ValueError) as caught:
+        ex.execute_action(
+            [["AC_set_var", {"name": "grabbed", "value": "${secrets.NOPE}"}]],
+            raise_on_error=True,
+        )
+    # Reaching the vault at all is the point: locked/unknown are both fine,
+    # silently storing the placeholder is not.
+    assert "secrets.NOPE" in str(caught.value)
+    assert ex.variables.get_value("grabbed") != "${secrets.NOPE}"
+
+
+def test_missing_required_arg_is_recorded_not_propagated():
+    """A malformed action must not abort the actions that follow it.
+
+    Regression: block handlers subscript required args directly, and the
+    executor's catch tuple omitted LookupError, so a missing key escaped
+    ``raise_on_error=False`` and tore down the rest of the script.
+    """
+    ex = Executor()
+    record = ex.execute_action([
+        ["AC_set_var", {"value": 1}],                    # missing "name"
+        ["AC_set_var", {"name": "later", "value": 2}],   # must still run
+    ], raise_on_error=False)
+    assert ex.variables.get_value("later") == 2
+    assert any("KeyError" in repr(v) for v in record.values())
+
+
+def test_ac_try_can_catch_a_missing_required_arg(executor_try):
+    """AC_try's catchable set must match the executor's."""
+    ex, state = executor_try
+    ex.execute_action([["AC_try", {
+        "body": [["AC_set_var", {"value": 1}]],   # KeyError: no "name"
+        "catch": [["AC_recover"]],
+    }]])
+    assert state["log"] == ["recover"]
+
+
+def test_parallel_accepts_valid_branches():
+    """Guard: ``branches`` is a list of action lists, one level deeper than
+    ``body``. Validating it as a flat list would reject every valid action."""
+    ex = Executor()
+    record = ex.execute_action([["AC_parallel", {"branches": [
+        [["AC_set_var", {"name": "a", "value": 1}]],
+        [["AC_set_var", {"name": "b", "value": 2}]],
+    ]}]], raise_on_error=True)
+    assert record[next(iter(record))]["branches"] == 2
+
+
+def test_parallel_surfaces_a_failed_branch():
+    """A crashed branch must be distinguishable from one returning None.
+
+    Regression: branches ran on bare threads with no exception handling, so a
+    failure left ``results[i] = None`` and was reported as success, with the
+    traceback going only to stderr.
+    """
+    ex = Executor()
+    with pytest.raises(AutoControlActionException, match="branch"):
+        ex.execute_action([["AC_parallel", {"branches": [
+            [["AC_set_var", {"name": "a", "value": 1}]],
+            [],                                   # empty branch raises in-thread
+        ]}]], raise_on_error=True)
+
+
+@pytest.mark.parametrize("action", [
+    ["AC_parallel", {"branches": [[[]]]}],
+    ["AC_define_macro", {"name": "m", "body": [[]]}],
+    ["AC_for_each_row", {"source": "x.csv", "body": [[]]}],
+    ["AC_assert_duration", {"body": [[]]}],
+])
+def test_nested_bodies_of_every_flow_command_are_validated(action):
+    """Commands running nested bodies must have those bodies validated.
+
+    Regression: four commands were missing from the schema map, so their
+    bodies were validated by nobody and a malformed nested action surfaced as
+    a raw IndexError at dispatch instead of a clean rejection.
+
+    Matching the message matters: AC_for_each_row would otherwise raise for an
+    unrelated reason (its ``source`` not existing) and pass without ever
+    validating the body.
+    """
+    ex = Executor()
+    with pytest.raises(AutoControlActionException,
+                       match=r"must be \[name\] or \[name, params\]"):
+        ex.execute_action([action], raise_on_error=True)
+
+
 def test_ac_try_reraise_propagates_after_finally(executor_try):
     ex, state = executor_try
     result = ex.execute_action([["AC_try", {

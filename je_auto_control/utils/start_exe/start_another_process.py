@@ -19,15 +19,19 @@ def start_exe(exe_path: str) -> None:
     exe_path_obj = Path(exe_path)
 
     if exe_path_obj.exists() and exe_path_obj.is_file():
-        try:
-            process_manager = ShellManager()
-            process_manager.exec_shell(str(exe_path_obj))
-            autocontrol_logger.info(f"Successfully started executable: {exe_path_obj}")
-        except (OSError, ValueError, RuntimeError) as error:
+        process_manager = ShellManager()
+        # Pass an argv list so the path is launched verbatim: a single string
+        # is shlex-split by ShellManager, which mangles a path containing a
+        # space ("C:\\Program Files\\...\\foo.exe") into the wrong argv.
+        process_manager.exec_shell([str(exe_path_obj)])
+        if process_manager.process is None:
+            # exec_shell swallows launch failures (OSError) internally and
+            # leaves process unset; surface it as the documented exception.
             autocontrol_logger.error(
-                f"start_exe, exe_path: {exe_path_obj}, exec_shell failed: {repr(error)}"
+                f"start_exe, exe_path: {exe_path_obj}, launch failed"
             )
-            raise AutoControlException(f"Failed to execute {exe_path_obj}: {repr(error)}") from error
+            raise AutoControlException(f"Failed to execute {exe_path_obj}")
+        autocontrol_logger.info(f"Successfully started executable: {exe_path_obj}")
     else:
         autocontrol_logger.error(
             f"start_exe, exe_path: {exe_path_obj}, failed: {can_not_find_file_error_message}"

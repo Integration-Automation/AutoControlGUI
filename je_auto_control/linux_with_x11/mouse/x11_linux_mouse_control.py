@@ -91,13 +91,17 @@ def scroll(scroll_value: int, scroll_direction: int) -> None:
     模擬滑鼠滾動
 
     :param scroll_value: number of scroll units 滾動次數
+        方向由 scroll_direction 決定，因此這裡只取絕對值。
+        Direction comes from scroll_direction, so only the magnitude is used
+        here: range() on a negative value is empty, which silently scrolled
+        nothing at all.
     :param scroll_direction: scroll direction 滾動方向
         4 = up 上
         5 = down 下
         6 = left 左
         7 = right 右
     """
-    for _ in range(scroll_value):
+    for _ in range(abs(int(scroll_value))):
         click_mouse(scroll_direction)
 
 

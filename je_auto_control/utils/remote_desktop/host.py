@@ -90,6 +90,9 @@ def _interpret_approval(result: Any) -> str:
 
 
 _AUTH_TIMEOUT_S = 60.0
+# accept() 的輪詢間隔，用來定期檢查 _shutdown 旗標。
+# How long accept() blocks before re-checking the _shutdown flag.
+_ACCEPT_POLL_TIMEOUT_S = 0.5
 _DEFAULT_QUALITY = 70
 _FILE_MSG_TYPES = frozenset({
     MessageType.FILE_BEGIN, MessageType.FILE_CHUNK, MessageType.FILE_END,
@@ -303,14 +306,11 @@ class _ClientHandler:
             self._close()
             return
         self.authenticated = True
-        # Seed the viewer with the latest cursor position so the overlay
-        # appears immediately instead of waiting for the next change.
-        self._host._send_initial_cursor(self)
-        # Phase 2.3: motion-aware capture means seq only advances on
-        # change, so a viewer that joins a static desktop would
-        # otherwise wait until the host moves. Push the latest frame
-        # immediately so the connect screen has something to show.
-        self._send_initial_frame()
+        # The initial cursor + frame are seeded from _send_loop (the
+        # per-client sender thread), not here. start() runs on the shared
+        # accept thread with the socket timeout already cleared, so sending a
+        # full-screen JPEG to a viewer that authenticates then stops reading
+        # would block every new accept until its send buffer drains.
         self._sender_thread = threading.Thread(
             target=self._send_loop, name="rd-sender", daemon=True,
         )
@@ -430,6 +430,13 @@ class _ClientHandler:
         self._channel.settimeout(None)
 
     def _send_loop(self) -> None:
+        # Seed the viewer with the latest cursor + frame on this per-client
+        # sender thread (Phase 2.3: motion-aware capture only bumps the seq on
+        # change, so a viewer joining a static desktop would otherwise sit
+        # blank until the host moves). Doing it here rather than in start()
+        # keeps a slow-reading viewer from stalling the accept thread.
+        self._host._send_initial_cursor(self)
+        self._send_initial_frame()
         last_sent = 0
         while not self._shutdown.is_set():
             with self._host._frame_cond:
@@ -718,6 +725,15 @@ class RemoteDesktopHost:
         self._accept_thread: Optional[threading.Thread] = None
         self._capture_thread: Optional[threading.Thread] = None
         self._shutdown = threading.Event()
+        # 保護 start()/stop() 互斥。類別文件承諾「start() 具冪等性、
+        # stop() 可從任何執行緒呼叫」，但兩者原本毫無互斥，交錯時
+        # stop() 會在 start() 指派與啟動執行緒之間把欄位清成 None。
+        # Serialises start() against stop(). The class contract promises
+        # "start() is idempotent and stop() can be called from any thread",
+        # but nothing enforced it: an interleaved stop() nulls _capture_thread
+        # between start()'s assignment and its .start() call. This is the
+        # outermost lock — always taken before _clients_lock, never after.
+        self._lifecycle_lock = threading.RLock()
         self._clients: List[_ClientHandler] = []
         self._clients_lock = threading.Lock()
         self._frame_cond = threading.Condition()
@@ -763,6 +779,10 @@ class RemoteDesktopHost:
 
     def start(self) -> None:
         """Bind, then launch accept + capture (+ cursor) threads."""
+        with self._lifecycle_lock:
+            self._start_locked()
+
+    def _start_locked(self) -> None:
         if self.is_running:
             return
         self._shutdown.clear()
@@ -770,6 +790,10 @@ class RemoteDesktopHost:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self._bind, self._requested_port))
         sock.listen(self._max_clients)
+        # Configure on the owning thread, before publishing the socket: leaving
+        # this to the accept thread races a concurrent stop() closing it, which
+        # makes settimeout raise WSAENOTSOCK outside any handler.
+        sock.settimeout(_ACCEPT_POLL_TIMEOUT_S)
         self._port = sock.getsockname()[1]
         self._listen_sock = sock
         self._accept_thread = threading.Thread(
@@ -789,6 +813,10 @@ class RemoteDesktopHost:
 
     def stop(self, timeout: float = 2.0) -> None:
         """Tear down accept loop, capture loop, and every connected client."""
+        with self._lifecycle_lock:
+            self._stop_locked(timeout)
+
+    def _stop_locked(self, timeout: float) -> None:
         if self._listen_sock is None:
             return
         self._shutdown.set()
@@ -807,7 +835,12 @@ class RemoteDesktopHost:
             client.stop()
         for thread in (self._accept_thread, self._capture_thread,
                        self._cursor_thread):
-            if thread is not None:
+            # is_alive() also guards the not-yet-started case: start() assigns
+            # these attributes before calling start() on them, and stop()'s
+            # guard (_listen_sock) is already set by then, so a concurrent
+            # stop() can reach a Thread that was never started. join() on one
+            # raises RuntimeError and aborts the rest of teardown.
+            if thread is not None and thread.is_alive():
                 thread.join(timeout=timeout)
         self._accept_thread = None
         self._capture_thread = None
@@ -1131,10 +1164,12 @@ class RemoteDesktopHost:
             return None
 
     def _accept_loop(self) -> None:
+        # The timeout is set by start() on the owning thread, before the socket
+        # is published: calling settimeout() here would race a concurrent
+        # stop() closing it and raise WSAENOTSOCK outside any handler.
         listen = self._listen_sock
         if listen is None:
             return
-        listen.settimeout(0.5)
         while not self._shutdown.is_set():
             try:
                 client_sock, address = listen.accept()
@@ -1152,7 +1187,27 @@ class RemoteDesktopHost:
             if channel is None:
                 continue
             handler = _ClientHandler(self, channel, address)
+            # Prune handlers whose viewer already disconnected *before* the
+            # capacity check below. Otherwise a client table filled with
+            # max_clients dead handlers rejects every new connection forever:
+            # the reject branch continues without ever reaping (the reap used
+            # to run only on the accept-success path).
+            self._reap_dead_clients()
             with self._clients_lock:
+                # Re-check under the lock. _open_channel above performs the
+                # auth/TLS handshake, which can take up to _AUTH_TIMEOUT_S; a
+                # stop() during that window sets _shutdown and then snapshots
+                # and clears _clients under this same lock. Without this check
+                # the handler is registered *after* that snapshot, so nothing
+                # ever stops it — leaving a viewer dispatching input to a host
+                # the operator has already stopped.
+                if self._shutdown.is_set():
+                    autocontrol_logger.info(
+                        "remote_desktop dropping %s: host stopped during "
+                        "handshake", address,
+                    )
+                    handler._close()
+                    return
                 if len(self._clients) >= self._max_clients:
                     autocontrol_logger.info(
                         "remote_desktop dropping %s: max_clients reached",
@@ -1162,7 +1217,6 @@ class RemoteDesktopHost:
                     continue
                 self._clients.append(handler)
             handler.start()
-            self._reap_dead_clients()
 
     def _build_channel(self, sock: socket.socket,
                        address) -> MessageChannel:

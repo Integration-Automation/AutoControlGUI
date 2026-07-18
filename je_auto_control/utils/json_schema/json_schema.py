@@ -311,15 +311,35 @@ def _resolve_ref(ref: str, root: Schema) -> Schema:
     return node
 
 
+def _resolve_ref_chain(schema: Schema, root: Schema, path: str):
+    """Follow chained ``$ref``s to a concrete schema, detecting cycles.
+
+    Returns ``(resolved_schema, None)`` normally, or ``(None, error)`` when the
+    ``$ref`` chain loops back on itself (e.g. ``{"$ref": "#"}``) so the caller
+    reports a clean schema error instead of hitting ``RecursionError``.
+    """
+    seen: set = set()
+    current = schema
+    while isinstance(current, dict) and "$ref" in current:
+        ref = current["$ref"]
+        if ref in seen:
+            return None, _err(path, "$ref", f"cyclic $ref {ref!r}")
+        seen.add(ref)
+        current = _resolve_ref(ref, root)
+    return current, None
+
+
 def _validate(instance: Any, schema: Schema, path: str, root: Schema) -> List[Dict]:
+    if isinstance(schema, dict) and "$ref" in schema:
+        schema, ref_error = _resolve_ref_chain(schema, root, path)
+        if ref_error is not None:
+            return [ref_error]
     if schema is True:
         return []
     if schema is False:
         return [_err(path, "schema", "no value is allowed here")]
     if not isinstance(schema, dict):
         return []
-    if "$ref" in schema:
-        return _validate(instance, _resolve_ref(schema["$ref"], root), path, root)
     errors: List[Dict] = []
     for checker in _CHECKERS:
         errors.extend(checker(instance, schema, path, root))

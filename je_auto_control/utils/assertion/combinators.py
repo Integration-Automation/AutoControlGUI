@@ -185,7 +185,14 @@ def assert_eventually(spec: Mapping[str, Any],
     """
     if timeout < 0:
         raise AutoControlAssertionException("timeout must be non-negative")
-    poll = max(float(interval), 0.0)
+    # timeout 有驗證,interval 卻被 max(..., 0.0) 靜默吞掉:負值或 0
+    # 會變成 sleep(0),迴圈空轉燒滿一顆核心(實測 0.4 秒內 244k 次)。
+    # timeout was validated but interval was silently clamped by
+    # max(..., 0.0), so 0 or a negative turned the loop into a busy-spin —
+    # measured at 244k attempts in 0.4s, each a real assertion evaluation.
+    if interval <= 0:
+        raise AutoControlAssertionException("interval must be positive")
+    poll = float(interval)
     deadline = time.monotonic() + float(timeout)
     attempts = 0
     last: Optional[AssertionResult] = None

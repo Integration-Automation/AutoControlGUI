@@ -51,9 +51,15 @@ class AnthropicLLMBackend(LLMBackend):
         }
         if system:
             kwargs["system"] = system
+        # Every anthropic SDK error subclasses ``anthropic.AnthropicError``
+        # (a bare ``Exception``) — none derive from OSError/ValueError/
+        # RuntimeError — so a 429/5xx/timeout would otherwise escape
+        # ``complete`` instead of honouring the base contract's empty-string
+        # degradation. Import is lazy (module never hard-depends on the SDK).
+        import anthropic
         try:
             response = self._client.messages.create(**kwargs)
-        except (OSError, ValueError, RuntimeError) as error:
+        except (anthropic.AnthropicError, OSError, ValueError, RuntimeError) as error:
             autocontrol_logger.warning(
                 "Anthropic LLM request failed: %r", error,
             )

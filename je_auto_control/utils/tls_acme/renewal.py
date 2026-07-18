@@ -83,19 +83,52 @@ class RenewalScheduler:
             return False
         try:
             self._renew()
-        except (RuntimeError, OSError, ValueError) as error:
+        # 任何續期失敗都必須路由到 on_failure 並讓輪詢繼續,絕不能拖垮
+        # 續期執行緒。原本的 tuple 漏掉 certbot 的 CalledProcessError /
+        # TimeoutExpired(都是 subprocess.SubprocessError,不屬 OSError/
+        # ValueError/RuntimeError),所以 certbot 一失敗,acme-renewal 執行緒
+        # 就無聲死亡,on_failure 從不觸發,憑證最終靜默過期。
+        # Any renewal failure must route to on_failure and let the loop keep
+        # polling — it must never kill the renewal thread. The previous tuple
+        # missed certbot's CalledProcessError / TimeoutExpired (both
+        # subprocess.SubprocessError, none an OSError/ValueError/RuntimeError),
+        # so the first certbot failure killed the acme-renewal thread silently,
+        # on_failure never fired, and the certificate eventually expired.
+        except Exception as error:  # noqa: BLE001  # reason: see comment above
             autocontrol_logger.warning(
                 "acme renewal failed for %s: %r", self._path, error,
             )
-            if self._on_failure is not None:
-                self._on_failure(error)
+            self._invoke_on_failure(error)
             return True
         autocontrol_logger.info("acme renewal completed for %s", self._path)
         return True
 
+    def _invoke_on_failure(self, error: BaseException) -> None:
+        """Run the failure hook without ever letting it escape ``tick``.
+
+        The hook is caller-supplied (alerting, ticketing, a pager). A raising
+        hook must not propagate out of ``tick`` and kill the renewal thread —
+        that would silently stop all future renewals and let the cert expire.
+        """
+        if self._on_failure is None:
+            return
+        try:
+            self._on_failure(error)
+        except Exception as hook_error:  # noqa: BLE001  # reason: see docstring
+            autocontrol_logger.error(
+                "acme renewal on_failure hook raised: %r", hook_error,
+            )
+
     def _loop(self) -> None:
         while not self._stop.is_set():
-            self.tick()
+            # Belt-and-braces: even with the hook guarded, nothing tick() might
+            # raise may be allowed to kill the renewal thread.
+            try:
+                self.tick()
+            except Exception as error:  # noqa: BLE001  # reason: see above
+                autocontrol_logger.error(
+                    "acme renewal tick raised: %r", error, exc_info=True,
+                )
             if self._stop.wait(self._check_interval_s):
                 return
 

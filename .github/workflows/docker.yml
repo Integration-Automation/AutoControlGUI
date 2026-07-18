@@ -77,7 +77,7 @@ jobs:
             autocontrol:ci -c "
               pip install --no-cache-dir -r dev_requirements.txt &&
               xvfb-run -a -s '-screen 0 1280x800x24' \
-                python -m pytest test/unit_test/headless -q --tb=short
+                python -m pytest -q --tb=short
             "
 
       - name: Smoke test the entrypoint (rest mode)

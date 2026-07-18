@@ -53,23 +53,38 @@ def _method(name: str) -> int:
     return table[name]
 
 
+def _gray_code(channels: int, is_bgr: bool) -> int:
+    """OpenCV colour-to-gray conversion code for the given channel order."""
+    import cv2
+    if channels == 4:
+        return cv2.COLOR_BGRA2GRAY if is_bgr else cv2.COLOR_RGBA2GRAY
+    return cv2.COLOR_BGR2GRAY if is_bgr else cv2.COLOR_RGB2GRAY
+
+
 def _to_gray(source: ImageSource):
-    """Load a path / ndarray / PIL image as a 2-D grayscale ndarray."""
+    """Load a path / ndarray / PIL image as a 2-D grayscale ndarray.
+
+    The channel order is tracked so luminance weights stay correct: images
+    read from disk via ``cv2.imread`` are BGR, while ndarray and PIL sources
+    (the live ``pil_screenshot`` haystack) are RGB. Converting both with BGR
+    weights would swap the R/B luminance weights, so a red template's gray
+    would disagree with the same red on screen by up to ~47/255.
+    """
     import cv2
     import numpy as np
+    is_bgr = False
     if hasattr(source, "shape"):
         array = np.asarray(source)
     elif isinstance(source, (str, bytes)) or hasattr(source, "__fspath__"):
         array = cv2.imread(str(source), cv2.IMREAD_COLOR)
         if array is None:
             raise ValueError(f"could not read image: {source!r}")
+        is_bgr = True
     else:
         array = np.asarray(source)
     if array.ndim == 2:
         return array
-    channels = array.shape[2]
-    code = cv2.COLOR_BGRA2GRAY if channels == 4 else cv2.COLOR_BGR2GRAY
-    return cv2.cvtColor(array, code)
+    return cv2.cvtColor(array, _gray_code(array.shape[2], is_bgr))
 
 
 def _grab_gray(region: Optional[Sequence[int]]):
@@ -160,6 +175,32 @@ def _nms(matches: List[Match], iou_threshold: float) -> List[Match]:
     return kept
 
 
+_NMS_CANDIDATE_FACTOR = 50
+_NMS_CANDIDATE_MIN = 200
+
+
+def _select_candidates(result, min_score: float, width: int, height: int,
+                       max_results: int) -> List[Match]:
+    """Candidate matches >= ``min_score``, capped to the top scorers.
+
+    ``best_matches`` calls ``match_template_all(min_score=-1.0)``; since
+    ``TM_CCOEFF_NORMED`` is in ``[-1, 1]`` that selects *every* score-map
+    position — ~2M for a full screen — and materialising them all before the
+    O(n·kept) Python NMS effectively hangs. Keep only the highest-scoring
+    ``max_results * 50`` positions first; ordinary thresholds select far fewer,
+    so this is a no-op for them.
+    """
+    import numpy as np
+    ys, xs = np.nonzero(result >= float(min_score))
+    scores = result[ys, xs]
+    cap = max(int(max_results) * _NMS_CANDIDATE_FACTOR, _NMS_CANDIDATE_MIN)
+    if scores.size > cap:
+        top = np.argpartition(scores, scores.size - cap)[-cap:]
+        xs, ys, scores = xs[top], ys[top], scores[top]
+    return [Match(int(x), int(y), width, height, round(float(s), 4), 1.0)
+            for x, y, s in zip(xs, ys, scores)]
+
+
 def match_template_all(template: ImageSource, *,
                        haystack: Optional[ImageSource] = None,
                        region: Optional[Sequence[int]] = None,
@@ -172,15 +213,12 @@ def match_template_all(template: ImageSource, *,
     kept. Results are ordered by score, capped at ``max_results``.
     """
     import cv2
-    import numpy as np
     tmpl = _to_gray(template)
     hay = _haystack_gray(haystack, region)
     height, width = tmpl.shape[:2]
     result = cv2.matchTemplate(hay, tmpl, cv2.TM_CCOEFF_NORMED)
-    ys, xs = np.nonzero(result >= float(min_score))
-    candidates = [Match(int(x), int(y), width, height,
-                        round(float(result[y, x]), 4), 1.0)
-                  for y, x in zip(ys, xs)]
+    candidates = _select_candidates(result, min_score, width, height,
+                                    max_results)
     return _nms(candidates, float(nms_iou))[:int(max_results)]
 
 
@@ -194,29 +232,35 @@ def best_matches(template: ImageSource, *,
 
 
 def _load_unchanged(source: ImageSource):
-    """Load a path / ndarray / PIL image keeping an alpha channel if present."""
+    """Return ``(array, is_bgr)`` keeping an alpha channel if present.
+
+    ``is_bgr`` is True only for ``cv2.imread`` paths so the caller converts to
+    gray with the correct channel order; ndarray / PIL sources are RGB.
+    """
     import cv2
     import numpy as np
     if hasattr(source, "shape"):
-        return np.asarray(source)
+        return np.asarray(source), False
     if isinstance(source, (str, bytes)) or hasattr(source, "__fspath__"):
         array = cv2.imread(str(source), cv2.IMREAD_UNCHANGED)
         if array is None:
             raise ValueError(f"could not read image: {source!r}")
-        return array
-    return np.asarray(source)
+        return array, True
+    return np.asarray(source), False
 
 
 def _template_and_mask(template: ImageSource, mask: Optional[ImageSource]):
     """Return (gray_template, uint8_mask_or_None); alpha is the implicit mask."""
     import cv2
     import numpy as np
-    array = _load_unchanged(template)
+    array, is_bgr = _load_unchanged(template)
     if array.ndim == 3 and array.shape[2] == 4:
-        gray = cv2.cvtColor(array, cv2.COLOR_BGRA2GRAY)
+        gray = cv2.cvtColor(array, _gray_code(4, is_bgr))
         implicit = array[:, :, 3]
+    elif array.ndim == 2:
+        gray, implicit = array, None
     else:
-        gray = _to_gray(array)
+        gray = cv2.cvtColor(array, _gray_code(array.shape[2], is_bgr))
         implicit = None
     chosen = _to_gray(mask) if mask is not None else implicit
     if chosen is None:
@@ -270,13 +314,10 @@ def match_masked_all(template: ImageSource, *, mask: Optional[ImageSource] = Non
                      min_score: float = 0.9, max_results: int = 20,
                      nms_iou: float = 0.3) -> List[Match]:
     """Return every masked match >= ``min_score`` with overlaps removed (NMS)."""
-    import numpy as np
     scores, tmpl = _masked_scores(template, mask, haystack, region)
     if scores is None:
         return []
     height, width = tmpl.shape[:2]
-    ys, xs = np.nonzero(scores >= float(min_score))
-    candidates = [Match(int(x), int(y), width, height,
-                        round(float(scores[y, x]), 4), 1.0)
-                  for y, x in zip(ys, xs)]
+    candidates = _select_candidates(scores, min_score, width, height,
+                                    max_results)
     return _nms(candidates, float(nms_iou))[:int(max_results)]

@@ -33,20 +33,41 @@ def plan_file_drop(paths: Sequence[str], *, point: Tuple[int, int] = (0, 0),
             "blob_size": len(blob)}
 
 
+def _declare_win32_signatures(kernel32: Any, user32: Any) -> None:
+    """Declare argtypes/restypes so 64-bit handles aren't truncated.
+
+    Without argtypes ctypes marshals every argument as a 32-bit ``int``, so a
+    64-bit ``HGLOBAL`` / ``WPARAM`` is silently truncated — ``GlobalLock`` then
+    receives a bogus handle, returns ``NULL``, and ``memmove(NULL, ...)`` faults.
+    """
+    import ctypes
+    from ctypes import wintypes
+    kernel32.GlobalAlloc.argtypes = [wintypes.UINT, ctypes.c_size_t]
+    kernel32.GlobalAlloc.restype = wintypes.HGLOBAL
+    kernel32.GlobalLock.argtypes = [wintypes.HGLOBAL]
+    kernel32.GlobalLock.restype = ctypes.c_void_p
+    kernel32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
+    kernel32.GlobalUnlock.restype = wintypes.BOOL
+    user32.PostMessageW.argtypes = [
+        wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM,
+    ]
+    user32.PostMessageW.restype = wintypes.BOOL
+
+
 def _default_driver(hwnd: int, blob: bytes, point: Tuple[int, int]) -> bool:
     """Post a real ``WM_DROPFILES`` to ``hwnd`` (Windows only)."""
     import sys
     if not sys.platform.startswith("win"):
         raise RuntimeError("drop_files is only supported on Windows")
     import ctypes
-    from ctypes import wintypes
     kernel32, user32 = ctypes.windll.kernel32, ctypes.windll.user32
-    kernel32.GlobalAlloc.restype = wintypes.HGLOBAL
-    kernel32.GlobalLock.restype = ctypes.c_void_p
+    _declare_win32_signatures(kernel32, user32)
     handle = kernel32.GlobalAlloc(_GMEM_MOVEABLE, len(blob))
     if not handle:
         raise RuntimeError("GlobalAlloc failed")
     pointer = kernel32.GlobalLock(handle)
+    if not pointer:
+        raise RuntimeError("GlobalLock failed")
     ctypes.memmove(pointer, blob, len(blob))
     kernel32.GlobalUnlock(handle)
     # The receiving window owns the memory and frees it via DragFinish.

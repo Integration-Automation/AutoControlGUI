@@ -189,6 +189,8 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         worker.finished.connect(thread.quit)
         worker.failed.connect(thread.quit)
         thread.finished.connect(self._on_poll_thread_done)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
         self._poll_thread = thread
         thread.start()
 
@@ -237,6 +239,10 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         worker.finished.connect(self._apply_thumbnails)
         worker.finished.connect(thread.quit)
         thread.finished.connect(self._on_thumb_thread_done)
+        # Without deleteLater the QThread (parented to self) and its worker
+        # accumulate one per poll tick — a fresh handle leak every interval.
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
         self._thumb_thread = thread
         thread.start()
 

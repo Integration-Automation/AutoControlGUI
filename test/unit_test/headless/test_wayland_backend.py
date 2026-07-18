@@ -252,6 +252,69 @@ def test_screenshot_passes_screen_region():
     ]]
 
 
+@pytest.mark.parametrize("direction_name, expected_axis, expected_amount", [
+    ("wayland_scroll_direction_down", "-y", "-5"),
+    ("wayland_scroll_direction_up", "-y", "5"),
+    ("wayland_scroll_direction_left", "-x", "-5"),
+    ("wayland_scroll_direction_right", "-x", "5"),
+])
+def test_scroll_honours_direction(direction_name, expected_axis,
+                                  expected_amount):
+    """Regression: scroll's signature was ``(direction, x, y)`` while the
+    wrapper calls ``scroll(scroll_value, scroll_direction)``. The direction
+    bound to ``x`` and was then dropped, so every direction scrolled the same
+    way — up and down emitted byte-identical argv.
+    """
+    captured: list = []
+    direction = getattr(wayland_mouse, direction_name)
+    with patch.object(wayland_mouse, "binary_path",
+                      return_value="/usr/bin/ydotool"), \
+         patch.object(wayland_mouse.subprocess, "run",
+                      side_effect=_fake_run(captured)):
+        wayland_mouse.scroll(5, direction)
+    assert captured[0][1:] == [
+        "mousemove", "--wheel", expected_axis, expected_amount,
+    ]
+
+
+def test_scroll_opposite_directions_are_not_identical():
+    """The sharpest form of the regression: up and down must differ."""
+    captured: list = []
+    with patch.object(wayland_mouse, "binary_path",
+                      return_value="/usr/bin/ydotool"), \
+         patch.object(wayland_mouse.subprocess, "run",
+                      side_effect=_fake_run(captured)):
+        wayland_mouse.scroll(5, wayland_mouse.wayland_scroll_direction_down)
+        wayland_mouse.scroll(5, wayland_mouse.wayland_scroll_direction_up)
+    assert captured[0] != captured[1]
+
+
+def test_get_pixel_grabs_a_one_by_one_region_at_the_point():
+    """The wrapper calls ``screen.get_pixel``; Wayland had no such function
+    at all, so every get_pixel raised AttributeError on Wayland."""
+    png = _one_pixel_png((10, 20, 30))
+    captured: list = []
+
+    def _run(argv, **_kwargs):
+        captured.append(argv)
+        return subprocess.CompletedProcess(argv, 0, png, b"")  # nosemgrep
+
+    with patch.object(wayland_screen, "binary_path",
+                      return_value="/usr/bin/grim"), \
+         patch.object(wayland_screen.subprocess, "run", side_effect=_run):
+        assert wayland_screen.get_pixel(7, 9) == (10, 20, 30)
+    assert "-g" in captured[0] and "7,9 1x1" in captured[0]
+
+
+def _one_pixel_png(rgb) -> bytes:
+    from io import BytesIO
+
+    from PIL import Image
+    buffer = BytesIO()
+    Image.new("RGB", (1, 1), rgb).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
 def test_screen_size_uses_wlr_randr_when_available():
     with patch.object(wayland_screen, "binary_path",
                       side_effect=lambda name: "/usr/bin/" + name), \
@@ -261,7 +324,7 @@ def test_screen_size_uses_wlr_randr_when_available():
                 ["wlr-randr"], 0, b" HDMI-A-1 1920x1080@60.000Hz\n", b"",
             ),
         ):
-        assert wayland_screen.screen_size() == (1920, 1080)
+        assert wayland_screen.size() == (1920, 1080)
 
 
 def test_screenshot_raises_when_grim_missing():

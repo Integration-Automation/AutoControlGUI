@@ -110,6 +110,8 @@ class _PanelSignals(QObject):
     # Viewer-side file browser: list and op result.
     inbox_listing = Signal(object)  # list[dict]
     inbox_op = Signal(str, bool, object)  # name, ok, error
+    # Viewer-side: a file finished transferring (fired from the asyncio thread).
+    file_received = Signal(object)  # path
     # Host-side: incoming viewer-shared screen frame
     viewer_video_frame = Signal(QImage)
     # Host-side: incoming annotation event from viewer
@@ -1328,6 +1330,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         self._signals.stats.connect(self._on_stats)
         self._signals.inbox_listing.connect(self._on_inbox_listing)
         self._signals.inbox_op.connect(self._on_inbox_op_result)
+        self._signals.file_received.connect(self._on_file_received_ui)
         self._build_ui()
         self._refresh_address_book()
         self._update_availability()
@@ -2386,11 +2389,14 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         return viewer
 
     def _on_received_file(self, path) -> None:
-        # Called from the asyncio thread; marshal to Qt via a status update.
-        QTimer.singleShot(
-            0, lambda: self._status_label.setText(
-                _t("rd_webrtc_file_received").format(name=str(path)),
-            ),
+        # Called from the asyncio thread, which has no Qt event loop:
+        # QTimer.singleShot would never fire. Emit a signal — Qt queues the
+        # status update onto the GUI thread.
+        self._signals.file_received.emit(path)
+
+    def _on_file_received_ui(self, path) -> None:
+        self._status_label.setText(
+            _t("rd_webrtc_file_received").format(name=str(path)),
         )
 
     def _stop_viewer_if_any(self) -> None:

@@ -18,6 +18,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 import je_auto_control as ac
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.quarantine import (
     auto_quarantine_from_flakiness, default_quarantine_store,
 )
@@ -85,14 +86,22 @@ class TestSuiteTab(TranslatableMixin, QWidget):
 
     def _on_load_file(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, _t("suite_load_file"))
-        if path:
+        if not path:
+            return
+        try:
             with open(path, encoding="utf-8") as handle:
                 self._spec.setPlainText(handle.read())
+        except (OSError, ValueError) as err:
+            # ValueError covers UnicodeDecodeError on a non-UTF-8 file; OSError
+            # covers unreadable/permission errors. Surface instead of escaping
+            # the Actions slot into the Qt event loop.
+            self._summary.setText(_t("suite_error").replace("{error}", str(err)))
 
     def _on_run(self) -> None:
         try:
             result = ac.run_suite(self._parse_spec())
-        except (ValueError, OSError, RuntimeError) as err:
+        except (AutoControlException, ValueError, TypeError,
+                OSError, RuntimeError) as err:
             self._summary.setText(_t("suite_error").replace("{error}", str(err)))
             return
         self._last_result = result

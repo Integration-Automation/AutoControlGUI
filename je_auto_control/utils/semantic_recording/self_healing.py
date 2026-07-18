@@ -21,6 +21,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 
 _CLICK_ACTIONS = frozenset({
     "mouse_press", "mouse_release", "mouse_click",
@@ -101,7 +103,10 @@ class SelfHealingReplayer:
                         attempts=attempts, healed=healed,
                     )
                 last_error = "verify_step returned False"
-            except (RuntimeError, OSError, ValueError) as error:
+            except (AutoControlException, LookupError,
+                    RuntimeError, OSError, ValueError) as error:
+                # A framework failure (locate / assert / action) is a step
+                # failure to be retried and healed, not an escape from replay().
                 last_error = f"{type(error).__name__}: {error}"
             if attempts > self._max_retries:
                 break

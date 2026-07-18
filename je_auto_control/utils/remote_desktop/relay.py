@@ -33,6 +33,9 @@ _ROLE_HOST = 0x01
 _ROLE_VIEWER = 0x02
 _BUFFER_SIZE = 64 * 1024
 _HANDSHAKE_TIMEOUT_S = 30.0
+# accept() 的輪詢間隔，用來定期檢查 _shutdown 旗標。
+# How long accept() blocks before re-checking the _shutdown flag.
+_ACCEPT_POLL_TIMEOUT_S = 0.5
 
 
 class RelayError(RuntimeError):
@@ -63,6 +66,15 @@ def _pipe(src: socket.socket, dst: socket.socket,
         pass
     finally:
         stop_event.set()
+        # Wake the opposite pipe thread: it is parked in a blocking recv()
+        # on ``dst`` (its src), which the ``stop`` flag alone cannot
+        # interrupt. Shutting ``dst`` down makes that recv() return EOF so
+        # its join() completes instead of hanging forever and leaking the
+        # thread plus both sockets.
+        try:
+            dst.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
 
 
 def _pair_and_pump(host_sock: socket.socket,
@@ -124,6 +136,13 @@ class RelayServer:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self._bind, self._requested_port))
         sock.listen(self._max_pending)
+        # 在發布 socket 前就設好 timeout：若留給 accept 執行緒自己設定，
+        # stop() 可能搶先關閉 socket，導致 settimeout 拋出 WSAENOTSOCK。
+        # Configure the socket here, on the owning thread, before publishing it.
+        # Leaving this to the accept thread races with stop(): a close() landing
+        # first makes settimeout raise WSAENOTSOCK (WinError 10038) outside any
+        # handler, killing the thread with an unhandled exception.
+        sock.settimeout(_ACCEPT_POLL_TIMEOUT_S)
         self._port = sock.getsockname()[1]
         self._listen_sock = sock
         self._accept_thread = threading.Thread(
@@ -152,10 +171,11 @@ class RelayServer:
             self._accept_thread = None
 
     def _accept_loop(self) -> None:
+        # The timeout is already set by start(); touching the socket here would
+        # reintroduce the shutdown race this loop is meant to survive.
         listen = self._listen_sock
         if listen is None:
             return
-        listen.settimeout(0.5)
         while not self._shutdown.is_set():
             try:
                 client_sock, _address = listen.accept()

@@ -22,6 +22,7 @@ from je_auto_control.utils.remote_desktop.protocol import (
 from je_auto_control.utils.remote_desktop.transport import (
     MessageChannel, TcpMessageChannel,
 )
+from je_auto_control.utils.remote_desktop.ws_protocol import WsProtocolError
 
 FrameCallback = Callable[[bytes], None]
 AudioCallback = Callable[[bytes], None]
@@ -200,7 +201,11 @@ class RemoteDesktopViewer:
             sock = self._maybe_wrap_tls(raw_sock)
             channel = self._build_channel(sock)
             self._handshake(channel)
-        except (AuthenticationError, ProtocolError, OSError):
+        except (AuthenticationError, ProtocolError, OSError,
+                WsProtocolError):
+            # WsProtocolError (a RuntimeError subclass) is raised by the
+            # WebSocket handshake in the WS viewer subclass; without it here
+            # the raw socket / TLS fd would leak on a failed WS upgrade.
             try:
                 raw_sock.close()
             except OSError:
@@ -242,7 +247,13 @@ class RemoteDesktopViewer:
         self._sock = None
         self._channel = None
         receiver = self._receiver
-        if receiver is not None:
+        # Skip the join when disconnect() is invoked from inside an
+        # on_frame / on_error callback: those run on the receiver thread, and
+        # a thread cannot join itself — the RuntimeError would abort the rest
+        # of teardown and leave the viewer half-closed. The recv loop already
+        # exits on the _shutdown flag we set above.
+        if (receiver is not None
+                and receiver is not threading.current_thread()):
             receiver.join(timeout=timeout)
         self._receiver = None
         self._connected = False

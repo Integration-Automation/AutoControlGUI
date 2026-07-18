@@ -734,9 +734,13 @@ class LanBrowseDialog(QDialog):
     """
 
     chosen = Signal(dict)
+    # Emitted from the zeroconf thread; a queued connection marshals the
+    # payload back onto the GUI thread (see _update_services).
+    _services_changed = Signal(dict)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
+        self._services_changed.connect(self._on_services_changed)
         self.setWindowTitle(_t("rd_webrtc_lan_title"))
         self.setMinimumSize(620, 260)
         self._services: dict = {}
@@ -791,11 +795,14 @@ class LanBrowseDialog(QDialog):
             self._browser = None
 
     def _update_services(self, services: dict) -> None:
-        # Called from zeroconf thread; marshal to GUI thread via signal-free
-        # workaround: invokeMethod is overkill here, just store + post.
-        self._services = dict(services)
-        from PySide6.QtCore import QTimer as _QTimer
-        _QTimer.singleShot(0, self._refresh)
+        # Called from the zeroconf browser thread, which has no Qt event loop:
+        # QTimer.singleShot would create a timer with that thread's affinity and
+        # never fire. Emit a signal instead — Qt queues it onto the GUI thread.
+        self._services_changed.emit(dict(services))
+
+    def _on_services_changed(self, services: dict) -> None:
+        self._services = services
+        self._refresh()
 
     def _refresh(self) -> None:
         items = sorted(self._services.values(), key=lambda s: s.get("host_id", ""))

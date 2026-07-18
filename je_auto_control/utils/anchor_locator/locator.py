@@ -17,6 +17,16 @@ import math
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
+
+# Errors a backend adapter treats as "simply not on screen" and turns into an
+# empty result. ``AutoControlException`` covers ``ImageNotFoundException`` (from
+# locate_image_center / locate_all_image) and ``AutoControlActionException``
+# (from locate_text_center) — without it a plain not-found would crash the
+# whole anchor locate instead of returning found=False.
+_LOCATE_ERRORS = (OSError, RuntimeError, ValueError, AutoControlException)
+
 
 # Spatial relations the wrapper understands.
 REL_ABOVE = "above"
@@ -262,6 +272,10 @@ def _ranked(anchor_point: Tuple[int, int],
         if not _matches_relation(anchor_point, bbox, relation):
             continue
         distance = _euclid(anchor_point, bbox.center)
+        # max_distance is a proximity radius for REL_NEAR only; directional
+        # relations ("the 3rd row below the header") intentionally return
+        # matches at any distance, sorted by distance, so ordinal selection and
+        # long-table row picking keep working past the default radius.
         if relation == REL_NEAR and distance > max_distance:
             continue
         matches.append((bbox.center, distance))
@@ -305,7 +319,7 @@ def _image_center(locator: Locator) -> Optional[Tuple[int, int]]:
             locator.template_path,
             detect_threshold=locator.detect_threshold,
         )
-    except (OSError, RuntimeError, ValueError):
+    except _LOCATE_ERRORS:
         return None
 
 
@@ -318,7 +332,7 @@ def _image_candidates(locator: Locator) -> List[_Bbox]:
             locator.template_path,
             detect_threshold=locator.detect_threshold,
         )
-    except (OSError, RuntimeError, ValueError):
+    except _LOCATE_ERRORS:
         return []
     return [_Bbox(*map(int, row[:4])) for row in rows
             if isinstance(row, (list, tuple)) and len(row) >= 4]
@@ -332,7 +346,7 @@ def _ocr_center(locator: Locator) -> Optional[Tuple[int, int]]:
             region=list(locator.region) if locator.region else None,
             min_confidence=locator.min_confidence,
         )
-    except (OSError, RuntimeError, ValueError):
+    except _LOCATE_ERRORS:
         return None
 
 
@@ -344,7 +358,7 @@ def _ocr_candidates(locator: Locator) -> List[_Bbox]:
             region=list(locator.region) if locator.region else None,
             min_confidence=locator.min_confidence,
         )
-    except (OSError, RuntimeError, ValueError):
+    except _LOCATE_ERRORS:
         return []
     return [_Bbox(x1=m.x, y1=m.y, x2=m.x + m.width, y2=m.y + m.height)
             for m in matches]
@@ -356,7 +370,7 @@ def _vlm_point(locator: Locator) -> Optional[Tuple[int, int]]:
         return locate_by_description(
             locator.description, model=locator.model,
         )
-    except (OSError, RuntimeError, ValueError):
+    except _LOCATE_ERRORS:
         return None
 
 
@@ -368,7 +382,7 @@ def _a11y_point(locator: Locator) -> Optional[Tuple[int, int]]:
         element = find_accessibility_element(
             name=locator.name, role=locator.role, app_name=locator.app_name,
         )
-    except (OSError, RuntimeError, ValueError):
+    except _LOCATE_ERRORS:
         return None
     if element is None:
         return None

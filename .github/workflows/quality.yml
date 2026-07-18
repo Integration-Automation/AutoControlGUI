@@ -92,9 +92,12 @@ jobs:
           pip install -e .
           pip install ruff==0.15.14 bandit==1.9.4 pytest==9.0.3 pytest-timeout==2.4.0 pytest-rerunfailures==15.1 pytest-cov==7.0.0 PySide6==6.11.1
 
+      # Paths come from `testpaths` in pyproject.toml. Do NOT pass an explicit
+      # path here: an argument overrides testpaths, which previously meant the
+      # flow_control tests were configured to run but silently never did.
       - name: Run headless pytest suite
         run: >-
-          pytest test/unit_test/headless/ -v --tb=short --timeout=120
+          pytest -v --tb=short --timeout=120
           --cov=je_auto_control --cov-report=term-missing
           --cov-report=xml --cov-fail-under=35
 

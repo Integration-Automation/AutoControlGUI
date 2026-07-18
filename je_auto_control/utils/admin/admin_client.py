@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 import threading
 import time
 import urllib.request
@@ -234,27 +235,71 @@ class AdminConsoleClient:
             autocontrol_logger.warning("admin: load %s failed: %r",
                                        self._path, error)
             return
+        # 一個損毀的檔案必須退化成空簿,而不是讓 __init__ 崩潰。原本只有
+        # json.loads 在 try 內:非物件的頂層 JSON(如 [] / null)會讓
+        # payload.get 拋 AttributeError,而多/缺鍵的 entry 會讓
+        # AdminHost(**entry) 拋 TypeError,兩者都逸出建構子;而
+        # default_admin_console() 只在成功時快取,所以會每次重拋。
+        # A corrupt file must degrade to an empty book, not crash __init__.
+        # Only json.loads was inside the try: a non-object top-level JSON
+        # (e.g. [] or null) makes payload.get raise AttributeError, and an
+        # entry with extra/missing keys makes AdminHost(**entry) raise
+        # TypeError — both escaped the constructor, and default_admin_console()
+        # caches only on success, so it re-raised on every later call.
+        if not isinstance(payload, dict):
+            autocontrol_logger.warning(
+                "admin: %s is not a JSON object; ignoring", self._path)
+            return
+        hosts: Dict[str, AdminHost] = {}
+        for entry in payload.get("hosts", []):
+            if not (isinstance(entry, dict) and entry.get("label")):
+                continue
+            try:
+                hosts[entry["label"]] = AdminHost(**entry)
+            except TypeError as error:
+                # Skip a malformed entry (extra/missing field) but keep the
+                # rest of the book usable.
+                autocontrol_logger.warning(
+                    "admin: skipping malformed host %r in %s: %r",
+                    entry.get("label"), self._path, error)
         with self._lock:
-            self._hosts = {
-                entry["label"]: AdminHost(**entry)
-                for entry in payload.get("hosts", [])
-                if isinstance(entry, dict) and entry.get("label")
-            }
+            self._hosts = hosts
 
     def _save(self) -> None:
+        # Snapshot and write under the same lock. Splitting them let a stale
+        # snapshot from one add_host overwrite a newer write from a concurrent
+        # add_host, silently losing a host. The write itself is atomic (temp +
+        # os.replace) so a crash mid-write can never truncate the token file.
         with self._lock:
             payload = {"hosts": [asdict(h) for h in self._hosts.values()]}
+            try:
+                self._write_atomic(payload)
+            except OSError as error:
+                autocontrol_logger.warning("admin: save %s failed: %r",
+                                           self._path, error)
+
+    def _write_atomic(self, payload: Dict[str, Any]) -> None:
+        """Write ``payload`` as JSON to ``self._path`` atomically and 0o600."""
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        data = json.dumps(payload, indent=2, ensure_ascii=False)
+        # mkstemp creates the file 0o600 on POSIX, so the tokens are never
+        # briefly world-readable in the gap before os.replace.
+        fd, tmp_name = tempfile.mkstemp(
+            prefix=".admin_hosts_", suffix=".tmp",
+            dir=str(self._path.parent),
+        )
         try:
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-            self._path.write_text(
-                json.dumps(payload, indent=2, ensure_ascii=False),
-                encoding="utf-8",
-            )
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(data)
+            os.replace(tmp_name, self._path)
             if os.name == "posix":
                 os.chmod(self._path, 0o600)
-        except OSError as error:
-            autocontrol_logger.warning("admin: save %s failed: %r",
-                                       self._path, error)
+        except OSError:
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+            raise
 
 
 _default_console: Optional[AdminConsoleClient] = None

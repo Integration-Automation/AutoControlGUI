@@ -7,7 +7,7 @@ features — ``type``, ``properties``, ``required``, ``items``,
 returns the first violation it finds rather than collecting them
 all, which keeps the JSON-RPC error message short.
 """
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 _TYPE_CHECKS = {
     "object": lambda value: isinstance(value, dict),
@@ -31,12 +31,9 @@ def validate_arguments(schema: Dict[str, Any],
 
 def _validate(schema: Dict[str, Any], value: Any, path: str) -> Optional[str]:
     expected = schema.get("type")
-    if expected is not None:
-        check = _TYPE_CHECKS.get(expected)
-        if check is None:
-            return None  # unknown type — nothing we can check
-        if not check(value):
-            return f"{path}: expected {expected}, got {type(value).__name__}"
+    type_error = _check_type(expected, value, path)
+    if type_error is not None:
+        return type_error
     enum = schema.get("enum")
     if enum is not None and value not in enum:
         return f"{path}: must be one of {enum!r}"
@@ -45,6 +42,36 @@ def _validate(schema: Dict[str, Any], value: Any, path: str) -> Optional[str]:
     if expected == "array":
         return _validate_array(schema, value, path)
     return None
+
+
+def _check_type(expected: Any, value: Any, path: str) -> Optional[str]:
+    """Validate ``value`` against ``expected``, which may be a union list.
+
+    JSON Schema allows ``"type"`` to be a list of names (e.g.
+    ``["string", "array"]``); the value is valid when it matches ANY
+    listed type. ``None`` / unknown type names are treated as "no check".
+    """
+    if expected is None:
+        return None
+    if isinstance(expected, list):
+        return _check_union(expected, value, path)
+    check = _TYPE_CHECKS.get(expected)
+    if check is None:
+        return None  # unknown type — nothing we can check
+    if not check(value):
+        return f"{path}: expected {expected}, got {type(value).__name__}"
+    return None
+
+
+def _check_union(expected: List[Any], value: Any, path: str) -> Optional[str]:
+    """Return ``None`` when ``value`` matches any type in the union list."""
+    checks = [_TYPE_CHECKS[name] for name in expected if name in _TYPE_CHECKS]
+    if not checks:
+        return None  # only unknown type names — nothing we can check
+    if any(check(value) for check in checks):
+        return None
+    return (f"{path}: expected one of {expected!r}, "
+            f"got {type(value).__name__}")
 
 
 def _validate_object(schema: Dict[str, Any], value: Dict[str, Any],

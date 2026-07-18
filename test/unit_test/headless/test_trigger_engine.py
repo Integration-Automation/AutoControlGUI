@@ -149,6 +149,8 @@ def test_cron_trigger_skips_when_minute_mismatches():
 
 
 def test_cron_trigger_rejects_invalid_expression():
-    trig = CronTrigger(trigger_id="c", script_path="s.json", cron="not-cron")
+    # Rejected at construction, not deferred to is_fired(). Validating on the
+    # polling thread was the bug: the ValueError escaped _poll_once and killed
+    # the engine, taking every other trigger with it.
     with pytest.raises(ValueError):
-        trig.is_fired()
+        CronTrigger(trigger_id="c", script_path="s.json", cron="not-cron")

@@ -3,7 +3,7 @@ from typing import Any, Callable
 # utils cv2_utils
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
 from je_auto_control.utils.exception.exception_tags import get_bad_trigger_method_error_message, get_bad_trigger_function_error_message
-from je_auto_control.utils.exception.exceptions import CallbackExecutorException
+from je_auto_control.utils.exception.exceptions import AutoControlException, CallbackExecutorException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 # executor
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
@@ -151,34 +151,48 @@ class CallbackFunctionExecutor:
         :param callback_function_param: 回呼函式的參數 (dict 或 list)
         :param callback_param_method: 回呼函式參數傳遞方式 ("kwargs" 或 "args")
         :param kwargs: 傳給 trigger_function 的參數
-        :return: trigger_function 的回傳值
+        :return: trigger_function 的回傳值 (若 trigger 失敗則為 None)
         """
         try:
             if trigger_function_name not in self.event_dict:
                 raise CallbackExecutorException(get_bad_trigger_function_error_message)
-
-            # 執行 trigger function
-            execute_return_value = self.event_dict[trigger_function_name](**kwargs)
-
-            # 呼叫 callback function
-            if callback_function_param is not None:
-                if callback_param_method not in ["kwargs", "args"]:
-                    raise CallbackExecutorException(get_bad_trigger_method_error_message)
-                if callback_param_method == "kwargs":
-                    callback_function(**callback_function_param)
-                else:
-                    callback_function(*callback_function_param)
-            else:
-                callback_function()
-
-            return execute_return_value
-
+            if (callback_function_param is not None
+                    and callback_param_method not in ("kwargs", "args")):
+                raise CallbackExecutorException(get_bad_trigger_method_error_message)
         except CallbackExecutorException as error:
             autocontrol_logger.error("callback_function config error: %r", error)
             return None
-        except (TypeError, ValueError, RuntimeError) as error:
-            autocontrol_logger.error("callback_function execution failed: %r", error)
+
+        # Run the trigger in its own scope: a trigger failure (including the
+        # framework family — mouse / image / assertion errors) returns None and
+        # is never confused with a later callback failure.
+        try:
+            execute_return_value = self.event_dict[trigger_function_name](**kwargs)
+        except (AutoControlException, TypeError, ValueError, RuntimeError) as error:
+            autocontrol_logger.error("callback_function trigger failed: %r", error)
             return None
+
+        # Run the callback in its own scope: a callback failure must not discard
+        # the already-computed trigger result.
+        try:
+            self._invoke_callback(
+                callback_function, callback_function_param, callback_param_method)
+        except (AutoControlException, TypeError, ValueError, RuntimeError) as error:
+            autocontrol_logger.error("callback_function callback failed: %r", error)
+
+        return execute_return_value
+
+    @staticmethod
+    def _invoke_callback(callback_function: Callable,
+                         callback_function_param: dict | None,
+                         callback_param_method: str) -> None:
+        """Invoke ``callback_function`` with the configured parameter passing."""
+        if callback_function_param is None:
+            callback_function()
+        elif callback_param_method == "kwargs":
+            callback_function(**callback_function_param)
+        else:
+            callback_function(*callback_function_param)
 
 
 # === 全域 Callback Executor 實例 Global Instance ===

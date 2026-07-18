@@ -47,6 +47,10 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
 
         self._user_font_pt: int = 0  # 0 means auto-detect from screen
         self.apply_stylesheet(self, "dark_amber.xml")
+        # qt_material writes the theme into this window's stylesheet; capture it
+        # so _apply_font_pt can append the font rule instead of replacing (and
+        # thereby wiping) the theme.
+        self._theme_stylesheet: str = self.styleSheet()
         self._apply_font_pt(self._user_font_pt)
 
         self.setWindowTitle(_t("application_name", "AutoControlGUI"))
@@ -170,8 +174,15 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
         return 12
 
     def _apply_font_pt(self, pt: int) -> None:
+        """Apply the font size on top of the active theme stylesheet.
+
+        The theme lives in this window's stylesheet, so the font rule is
+        appended rather than assigned — assigning would replace (and wipe) the
+        qt_material theme on startup and on every text-size change.
+        """
         effective = pt if pt > 0 else self._detect_auto_font_pt()
-        self.setStyleSheet(f"font-size: {effective}pt; font-family: 'Lato';")
+        font_rule = f"* {{ font-size: {effective}pt; font-family: 'Lato'; }}"
+        self.setStyleSheet(f"{self._theme_stylesheet}\n{font_rule}")
 
     def _on_text_size_selected(self) -> None:
         action = self.sender()

@@ -34,6 +34,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.http_headers import (
+    INVALID_CONTENT_LENGTH, parse_content_length,
+)
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
@@ -113,7 +117,14 @@ class _WebhookHandler(BaseHTTPRequestHandler):
     # pylint: enable=redefined-builtin
 
     def _read_body(self) -> str:
-        length = int(self.headers.get("Content-Length") or 0)
+        length = parse_content_length(self.headers)
+        if length == INVALID_CONTENT_LENGTH:
+            # A malformed header is a client error and must be answered.
+            # Don't fall into the `length <= 0` branch below: that returns an
+            # empty body silently, and _dispatch would then close the
+            # connection without ever sending a response.
+            self.send_error(HTTPStatus.BAD_REQUEST, "invalid Content-Length")
+            return ""
         if length <= 0:
             return ""
         if length > _MAX_BODY_BYTES:
@@ -137,7 +148,7 @@ class _WebhookHandler(BaseHTTPRequestHandler):
         the response, masking the 4xx status.
         """
         self.send_error(status, message)
-        cap = min(int(length), _MAX_BODY_BYTES * _DRAIN_CAP_MULTIPLE)
+        cap = min(max(int(length), 0), _MAX_BODY_BYTES * _DRAIN_CAP_MULTIPLE)
         remaining = cap
         while remaining > 0:
             chunk = self.rfile.read(min(remaining, _DRAIN_CHUNK_BYTES))
@@ -159,7 +170,7 @@ class _WebhookHandler(BaseHTTPRequestHandler):
     def _dispatch(self, method: str) -> None:
         registry: WebhookTriggerServer = self.server.webhook_owner  # type: ignore[attr-defined]
         parsed = urlparse(self.path)
-        declared_length = int(self.headers.get("Content-Length") or 0)
+        declared_length = parse_content_length(self.headers)
         trigger = registry.match(parsed.path, method)
         if trigger is None:
             self._reject_with_drain(
@@ -172,7 +183,7 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             )
             return
         body = self._read_body()
-        if body == "" and int(self.headers.get("Content-Length") or 0) > 0:
+        if body == "" and parse_content_length(self.headers) != 0:
             return  # _read_body already wrote an error response
         payload = {
             "webhook.method": method,
@@ -300,10 +311,16 @@ class WebhookTriggerServer:
             )
             status = STATUS_OK
             error_text: Optional[str] = None
+            # Missing the framework base let a bad/renamed script escape fire()
+            # and propagate out of the HTTP handler: the run was recorded as a
+            # bogus STATUS_OK and the client's connection was dropped with no
+            # response. Catch the whole family so the fire is recorded as an
+            # error and _dispatch still answers the request.
             try:
                 actions = read_action_json(trigger.script_path)
                 self._executor(actions, payload)
-            except (OSError, ValueError, RuntimeError) as error:
+            except (OSError, ValueError, RuntimeError,
+                    AutoControlException) as error:
                 status = STATUS_ERROR
                 error_text = repr(error)
                 autocontrol_logger.error("webhook %s failed: %r",
