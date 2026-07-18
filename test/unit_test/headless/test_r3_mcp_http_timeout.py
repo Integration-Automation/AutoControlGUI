@@ -61,7 +61,7 @@ def _server_ssl_context(tmp_path: Path) -> ssl.SSLContext:
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption(),
     ))
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)  # NOSONAR python:S4423  # reason: loopback test server; PROTOCOL_TLS_SERVER negotiates modern TLS
     ctx.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
     return ctx
 

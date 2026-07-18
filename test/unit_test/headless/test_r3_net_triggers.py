@@ -100,7 +100,7 @@ def test_decode_header_unknown_charset_does_not_raise():
     # Prove the input genuinely triggers the LookupError path the old
     # `except ValueError` could not catch.
     with pytest.raises(LookupError):
-        str(make_header(decode_header(poisoned)))
+        str(make_header(decode_header(poisoned)))  # NOSONAR python:S2201  # reason: called for its raising side effect (proves the LookupError path)
     # The helper must swallow it and fall back to the raw value.
     assert et._decode_header_value(poisoned) == poisoned
 

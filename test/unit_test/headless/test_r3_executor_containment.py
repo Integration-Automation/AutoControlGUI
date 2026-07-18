@@ -61,7 +61,7 @@ def test_empty_loop_body_is_noop():
 def test_shell_to_var_timeout_is_contained(monkeypatch):
     """A shell timeout is converted to a contained framework error."""
     def _timeout(*_args, **kwargs):
-        raise subprocess.TimeoutExpired(cmd="x", timeout=kwargs.get("timeout", 1))
+        raise subprocess.TimeoutExpired(cmd="x", timeout=kwargs.get("timeout", 1))  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: raising the TimeoutExpired exception class, not spawning a subprocess
 
     monkeypatch.setattr(subprocess, "run", _timeout)
     engine = Executor()

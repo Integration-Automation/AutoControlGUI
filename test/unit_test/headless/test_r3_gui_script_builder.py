@@ -49,7 +49,7 @@ def _command_with_body_key():
 def test_step_uses_identity_equality():
     a = Step(command="AC_ok")
     b = Step(command="AC_ok")  # structurally identical, distinct object
-    assert a == a
+    assert a == a  # NOSONAR python:S1764  # reason: verifies identity-equality reflexivity (a is a)
     assert a != b
     steps = [a, b]
     steps.remove(b)

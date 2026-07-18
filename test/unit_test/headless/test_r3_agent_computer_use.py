@@ -85,11 +85,11 @@ def test_left_mouse_down_passes_coordinate_when_present():
 # --- finding 1c: an explicit 0 must be honoured ------------------------
 
 def test_wait_honours_explicit_zero_duration():
-    assert _action_wait({"duration": 0})["input"]["seconds"] == 0.0
+    assert _action_wait({"duration": 0})["input"]["seconds"] == pytest.approx(0.0)
 
 
 def test_wait_defaults_when_duration_absent():
-    assert _action_wait({})["input"]["seconds"] == 1.0
+    assert _action_wait({})["input"]["seconds"] == pytest.approx(1.0)
 
 
 def test_scroll_honours_explicit_zero_amount():

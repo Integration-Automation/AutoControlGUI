@@ -27,7 +27,7 @@ def test_save_writes_under_lock(tmp_path):
         return original(payload)
 
     client._write_atomic = spy
-    client.add_host("x", "http://x", "tok")
+    client.add_host("x", "https://x", "tok")
 
     assert observed["held"] is True
 
@@ -36,14 +36,14 @@ def test_write_is_atomic_and_cleans_up_on_failure(tmp_path, monkeypatch):
     """A failed replace must leave the prior file intact and drop the temp."""
     path = tmp_path / "hosts.json"
     client = AdminConsoleClient(persist_path=path)
-    client.add_host("keep", "http://k", "tok-keep")
+    client.add_host("keep", "https://k", "tok-keep")
     good = path.read_text(encoding="utf-8")
 
     def boom_replace(_src, _dst):
         raise OSError("disk full")
 
     monkeypatch.setattr(os, "replace", boom_replace)
-    client.add_host("second", "http://s", "tok-2")  # save fails atomically
+    client.add_host("second", "https://s", "tok-2")  # save fails atomically
 
     assert path.read_text(encoding="utf-8") == good  # not truncated
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -59,7 +59,7 @@ def test_concurrent_add_host_does_not_lose_hosts(tmp_path):
     client = AdminConsoleClient(persist_path=path)
 
     def add(index: int) -> None:
-        client.add_host(f"host{index}", f"http://h{index}", f"tok{index}")
+        client.add_host(f"host{index}", f"https://h{index}", f"tok{index}")
 
     threads = [threading.Thread(target=add, args=(i,)) for i in range(20)]
     for thread in threads:

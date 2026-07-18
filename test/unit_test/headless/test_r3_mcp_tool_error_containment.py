@@ -40,7 +40,7 @@ def _call(server: MCPServer, name: str) -> Dict[str, Any]:
 
 @pytest.mark.parametrize("exc", [
     ImageNotFoundException("not on screen"),
-    subprocess.TimeoutExpired(cmd="sleep", timeout=1.0),
+    subprocess.TimeoutExpired(cmd="sleep", timeout=1.0),  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: exception instance for parametrize, not a subprocess call
     sqlite3.OperationalError("no such table"),
 ])
 def test_framework_and_external_errors_become_iserror_result(exc):
