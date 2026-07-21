@@ -15,7 +15,7 @@ requires-python = ">=3.10"
 license-files = ["LICENSE"]
 dependencies = [
     "je_open_cv==0.0.22",
-    "pillow==12.2.0",
+    "pillow==12.3.0",
     "pyobjc-core==12.1;platform_system=='Darwin'",
     "pyobjc==12.1;platform_system=='Darwin'",
     "python-Xlib==0.33;platform_system=='Linux'",
