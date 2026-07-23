@@ -1,4 +1,7 @@
-je_auto_control
+# Floor, not a pin: releases before 0.0.216 resolve pillow==12.2.0, which
+# carries 13 CVEs fixed in 12.3.0. A floor keeps the dependency graph honest
+# without needing a bump here on every release.
+je_auto_control>=0.0.216
 qt-material==2.17
 mss==10.2.0
 PySide6==6.11.1
