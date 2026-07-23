@@ -56,7 +56,7 @@ COPY README.md ./
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
     && pip install --no-cache-dir --only-binary :all: --no-index \
-       --find-links=/wheels je_auto_control \
+       --find-links=/wheels /wheels/je_auto_control-*.whl \
     && rm -rf /wheels
 
 ENV DISPLAY=:99 \
