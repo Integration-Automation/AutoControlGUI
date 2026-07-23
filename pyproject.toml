@@ -15,9 +15,12 @@ requires-python = ">=3.10"
 license-files = ["LICENSE"]
 dependencies = [
     "je_open_cv==0.0.22",
-    "pillow==12.2.0",
-    "pyobjc-core==12.1;platform_system=='Darwin'",
-    "pyobjc==12.1;platform_system=='Darwin'",
+    # je_open_cv leaves opencv-python unpinned; bound the major so a new
+    # OpenCV release cannot silently change cv2 return shapes under us.
+    "opencv-python>=4.8,<6",
+    "pillow==12.3.0",
+    "pyobjc-core==12.2.1;platform_system=='Darwin'",
+    "pyobjc==12.2.1;platform_system=='Darwin'",
     "python-Xlib==0.33;platform_system=='Linux'",
     "mss==10.2.0",
     "defusedxml==0.7.1",

@@ -14,7 +14,7 @@ import sys
 
 import pytest
 
-pytest.importorskip("PySide6.QtWidgets")
+pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
 _PROBE = r"""
 import json

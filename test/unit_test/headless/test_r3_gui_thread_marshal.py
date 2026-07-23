@@ -17,7 +17,7 @@ import time
 import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-pytest.importorskip("PySide6.QtWidgets")
+pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
 import shiboken6  # noqa: E402
 from PySide6.QtCore import QEvent, QObject, QThread  # noqa: E402

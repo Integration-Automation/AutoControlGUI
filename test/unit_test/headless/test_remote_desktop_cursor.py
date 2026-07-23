@@ -135,7 +135,7 @@ def test_frame_display_paints_cursor_overlay():
     """Setting the remote cursor must mutate state + trigger update."""
     import os
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    pytest.importorskip("PySide6.QtWidgets")
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
     from PySide6.QtWidgets import QApplication
     if QApplication.instance() is None:
         QApplication([])

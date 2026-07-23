@@ -8,7 +8,7 @@ import os
 
 import pytest
 
-pytest.importorskip("PySide6.QtWidgets")
+pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
 # Force a headless Qt platform before any QApplication is created.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
