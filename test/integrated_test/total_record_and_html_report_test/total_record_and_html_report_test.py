@@ -12,13 +12,19 @@ try:
     print(keyboard_keys_table.keys())
     press_keyboard_key("shift")
     write("123456789")
-    assert write("abcdefghijklmnopqrstuvwxyz") == "abcdefghijklmnopqrstuvwxyz"  # noqa: S101  # reason: integration test
+    # SystemExit is not an Exception, so a mismatch escapes the enclosing
+    # try block instead of being swallowed by its handler.
+    if write("abcdefghijklmnopqrstuvwxyz") != "abcdefghijklmnopqrstuvwxyz":
+        sys.exit("shift + write did not round-trip the alphabet")
     release_keyboard_key("shift")
     # this write will print one error -> keyboard write error can't find key : Ѓ and write remain string
     try:
-        assert write("?123456789") == "123456789"  # noqa: S101  # reason: integration test
+        written = write("?123456789")
     except Exception as error:
         print(repr(error), file=sys.stderr)
+    else:
+        if written != "123456789":
+            print(f"Unexpected write result: {written!r}", file=sys.stderr)
     try:
         write("!#@L@#{@#PL#{!@#L{!#{|##PO}!@#O@!O#P!)KI#O_!K")
     except Exception as error:
