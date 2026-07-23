@@ -35,9 +35,17 @@ jobs:
       - run: python -m twine check dist/*
       - name: Smoke-test the built wheel
         run: |
+          # The X11 backend opens a display at import time, so the runner
+          # needs a virtual one. Import from outside the checkout as well:
+          # the repo root shadows site-packages on sys.path, so running this
+          # here would test the source tree instead of the built wheel.
+          sudo apt-get update && sudo apt-get install -y xvfb
           python -m venv /tmp/wheel-test
           /tmp/wheel-test/bin/pip install dist/*.whl
-          /tmp/wheel-test/bin/python -c "import je_auto_control.api"
+          cd /tmp && xvfb-run -a /tmp/wheel-test/bin/python -c "
+          import je_auto_control, je_auto_control.api
+          print('imported', je_auto_control.__file__)
+          "
       - uses: actions/attest-build-provenance@v2
         with:
           subject-path: "dist/*"
