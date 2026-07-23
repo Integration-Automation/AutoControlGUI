@@ -134,7 +134,7 @@ Features that are inherently interactive (e.g. region picking with the mouse, te
 ## Commit Conventions
 
 - Write concise commit messages focused on **why**, not what.
-- **Do not mention any AI tools, assistants, or models in commit messages** — no "Co-Authored-By" AI attributions, no references to AI-generated code.
+- **No AI attribution anywhere.** Not in commit messages, pull request titles or bodies, issue and review comments, release notes, code comments, or documentation. Specifically forbidden: `Co-Authored-By:` lines naming an assistant, "Generated with …" / "Created by …" footers, tool badges, links to assistant products, emoji markers standing in for the same thing, and any statement that code was AI-generated. Everything published under this repo reads as the author's own work.
 - Use imperative mood: "Add feature", "Fix bug", "Remove unused code".
 - Examples:
   - `Add image threshold parameter validation`
