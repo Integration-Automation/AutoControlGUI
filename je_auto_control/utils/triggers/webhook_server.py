@@ -50,6 +50,10 @@ from je_auto_control.utils.run_history.history_store import (
 
 _DEFAULT_BIND = "127.0.0.1"
 _MAX_BODY_BYTES = 1 << 20  # 1 MiB cap
+# Automation is serialised (one script drives the shared input devices at a
+# time). Bound how long a concurrent webhook waits for the running script so a
+# long/stuck one can't pile up handler threads indefinitely — reject as busy.
+_FIRE_LOCK_TIMEOUT_S = 120.0
 # Cap how much we'll drain from a rejected request so a hostile client
 # can't make us spin reading a multi-GiB body. 4× the body cap covers
 # typical "client sent slightly too much" cases; beyond that we close
@@ -106,6 +110,9 @@ class _WebhookHandler(BaseHTTPRequestHandler):
     """HTTP handler dispatched by :class:`WebhookTriggerServer`."""
 
     server_version = "AutoControlWebhook/1.0"
+    # Bound every read so a stalled client (valid Content-Length then dribble)
+    # can't pin a worker thread forever.
+    timeout = 30.0
 
     # Signature must mirror BaseHTTPRequestHandler.log_message exactly,
     # including the parameter name 'format' — pylint W0221 trips on
@@ -196,6 +203,12 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             ),
         }
         run_id = registry.fire(trigger, payload)
+        if run_id is None:
+            self._send_json(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                {"fired": False, "error": "automation busy, retry later"},
+            )
+            return
         self._send_json(HTTPStatus.OK, {"run_id": run_id, "fired": True})
 
     def do_GET(self) -> None:  # noqa: N802 - http.server contract
@@ -303,8 +316,19 @@ class WebhookTriggerServer:
 
     def fire(self, trigger: WebhookTrigger,
              payload: Dict[str, Any]) -> Optional[int]:
-        """Run the trigger's script with ``payload`` seeded into variables."""
-        with self._fire_lock:
+        """Run the trigger's script with ``payload`` seeded into variables.
+
+        Returns the run id, or ``None`` if the automation stayed busy past
+        :data:`_FIRE_LOCK_TIMEOUT_S` (the caller answers 503 rather than
+        blocking this handler thread forever).
+        """
+        if not self._fire_lock.acquire(timeout=_FIRE_LOCK_TIMEOUT_S):
+            autocontrol_logger.warning(
+                "webhook %s rejected: automation busy for >%.0fs",
+                trigger.webhook_id, _FIRE_LOCK_TIMEOUT_S,
+            )
+            return None
+        try:
             run_id = default_history_store.start_run(
                 SOURCE_TRIGGER, f"webhook:{trigger.webhook_id}",
                 trigger.script_path,
@@ -337,6 +361,8 @@ class WebhookTriggerServer:
                     live.fired += 1
                     live.last_status = 200 if status == STATUS_OK else 500
             return run_id
+        finally:
+            self._fire_lock.release()
 
     def start(self, host: str = _DEFAULT_BIND, port: int = 0) -> Tuple[str, int]:
         """Start the HTTP server; idempotent if already running."""

@@ -93,6 +93,10 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
     """Stdlib request handler — delegates to gate + route table."""
 
     server_version = "AutoControlREST/2.0"
+    # socketserver applies this to the connection socket in setup(); it bounds
+    # every read (the body is read before the auth gate) so a client that
+    # declares a Content-Length then stalls cannot pin a worker thread forever.
+    timeout = 30.0
 
     def log_message(self, format, *args) -> None:  # noqa: A002  # pylint: disable=redefined-builtin  # reason: stdlib BaseHTTPRequestHandler override
         autocontrol_logger.info("rest-api %s - %s",

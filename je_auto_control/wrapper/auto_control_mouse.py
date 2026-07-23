@@ -58,6 +58,15 @@ def mouse_preprocess(mouse_keycode: Union[int, str], x: int, y: int) -> Tuple[in
             raise AutoControlMouseException(
                 mouse_get_position_error_message + " " + repr(error)) from error
 
+    # Coerce coordinates to int before they reach a native input call. A float
+    # x/y (from a computed/random variable or a JSON literal like {"x": 100.5})
+    # would hit an un-prototyped SetCursorPos / Xlib fake_input and raise
+    # ctypes.ArgumentError / struct.error — which escapes the executor and
+    # aborts the whole run instead of clicking at the rounded point.
+    if x is not None:
+        x = int(x)
+    if y is not None:
+        y = int(y)
     return mouse_keycode, x, y
 
 
@@ -92,6 +101,10 @@ def set_mouse_position(x: int, y: int) -> tuple[int, int] | None:
     autocontrol_logger.info(f"set_mouse_position, x={x}, y={y}")
     param = {"x": x, "y": y}
     try:
+        # int coercion: a float coord would reach an un-prototyped native call
+        # (SetCursorPos / Xlib fake_input) and raise ctypes.ArgumentError /
+        # struct.error, which escapes the executor and aborts the whole run.
+        x, y = int(x), int(y)
         mouse.set_position(x=x, y=y)
         record_action_to_list("set_mouse_position", param)
         return x, y

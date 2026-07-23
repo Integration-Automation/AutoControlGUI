@@ -26,7 +26,11 @@ EVENT_CHANGE = "change"
 _ALL_EVENTS = (EVENT_APPEAR, EVENT_VANISH, EVENT_CHANGE)
 
 # Errors a predicate/handler may raise that must not kill the poll loop.
+# LookupError/StopIteration/ArithmeticError cover user callbacks that index a
+# dict/list, exhaust an iterator, or divide — an uncaught one kills the daemon
+# thread and silently stops every rule.
 _RULE_ERRORS = (OSError, RuntimeError, ValueError, AttributeError, TypeError,
+                LookupError, StopIteration, ArithmeticError,
                 AutoControlException)
 _UNSET = object()
 

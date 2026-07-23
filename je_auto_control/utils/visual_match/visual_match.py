@@ -12,12 +12,34 @@ is unit-testable on synthetic arrays without a real screen; only the default
 (grab the screen) is device-bound. OpenCV + NumPy come in via the project's
 ``je_open_cv`` dependency and are imported lazily. Imports no ``PySide6``.
 """
+import functools
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Sequence
+
+from je_auto_control.utils.exception.exceptions import AutoControlScreenException
 
 # cv2 method name -> the OpenCV constant is resolved lazily in _method().
 _METHOD_NAMES = ("ccoeff_normed", "ccorr_normed", "sqdiff_normed")
 ImageSource = Any
+
+
+def _contain_cv2_error(fn):
+    """Convert OpenCV's ``cv2.error`` into a contained AutoControlScreenException.
+
+    A degenerate template/mask makes ``cv2.matchTemplate``/``minMaxLoc`` raise
+    ``cv2.error`` — a bare ``Exception`` subclass that is NOT in the executor's
+    containment tuple, so it would escape and abort the whole automation run
+    instead of being recorded as a failed match step.
+    """
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        import cv2
+        try:
+            return fn(*args, **kwargs)
+        except cv2.error as error:
+            raise AutoControlScreenException(
+                f"{fn.__name__} failed: {error}") from error
+    return wrapper
 
 
 @dataclass(frozen=True)
@@ -107,6 +129,7 @@ def _resize(template, scale: float):
     return cv2.resize(template, new_size)
 
 
+@_contain_cv2_error
 def _score_map(template: ImageSource, haystack: Optional[ImageSource] = None, *,
                region: Optional[Sequence[int]] = None,
                method: str = "ccoeff_normed", scale: float = 1.0):
@@ -128,6 +151,7 @@ def _score_map(template: ImageSource, haystack: Optional[ImageSource] = None, *,
     return result, tmpl
 
 
+@_contain_cv2_error
 def match_template(template: ImageSource, *, haystack: Optional[ImageSource] = None,
                    region: Optional[Sequence[int]] = None,
                    scales: Sequence[float] = (1.0,), min_score: float = 0.8,
@@ -201,6 +225,7 @@ def _select_candidates(result, min_score: float, width: int, height: int,
             for x, y, s in zip(xs, ys, scores)]
 
 
+@_contain_cv2_error
 def match_template_all(template: ImageSource, *,
                        haystack: Optional[ImageSource] = None,
                        region: Optional[Sequence[int]] = None,
@@ -285,6 +310,7 @@ def _masked_scores(template: ImageSource, mask: Optional[ImageSource],
     return np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0), tmpl
 
 
+@_contain_cv2_error
 def match_masked(template: ImageSource, *, mask: Optional[ImageSource] = None,
                  haystack: Optional[ImageSource] = None,
                  region: Optional[Sequence[int]] = None,
@@ -308,6 +334,7 @@ def match_masked(template: ImageSource, *, mask: Optional[ImageSource] = None,
                  round(float(max_val), 4), 1.0)
 
 
+@_contain_cv2_error
 def match_masked_all(template: ImageSource, *, mask: Optional[ImageSource] = None,
                      haystack: Optional[ImageSource] = None,
                      region: Optional[Sequence[int]] = None,

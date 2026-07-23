@@ -116,6 +116,10 @@ class UsbIpServer:
                 target=self._handle_client, args=(client_sock,),
                 name="usbip-client", daemon=True,
             )
+            # Drop finished workers so the list doesn't grow without bound over
+            # a long session with many short-lived connections (each dead Thread
+            # object would otherwise be retained until stop()).
+            self._workers[:] = [w for w in self._workers if w.is_alive()]
             self._workers.append(worker)
             worker.start()
 

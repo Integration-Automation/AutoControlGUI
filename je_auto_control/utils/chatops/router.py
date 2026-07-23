@@ -144,8 +144,8 @@ class CommandRouter:
             return spec.handler(rest, context)
         except ChatOpsError as error:
             return CommandResult(text=f"{name}: {error}", succeeded=False)
-        except (RuntimeError, OSError, ValueError, TypeError,
-                AutoControlException, sqlite3.Error) as error:
+        except (RuntimeError, OSError, ValueError, TypeError, LookupError,
+                AttributeError, AutoControlException, sqlite3.Error) as error:
             return CommandResult(
                 text=f"{name} failed: {type(error).__name__}: {error}",
                 succeeded=False,

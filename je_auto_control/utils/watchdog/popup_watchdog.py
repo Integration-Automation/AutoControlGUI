@@ -22,8 +22,11 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 # Errors a rule's matcher/action may raise that must not kill the guard loop
-# (e.g. find_window raising AutoControlException off Windows).
+# (e.g. find_window raising AutoControlException off Windows). LookupError/
+# StopIteration/ArithmeticError cover user callbacks that index/iterate/divide;
+# an uncaught one kills the daemon thread and silently stops every rule.
 _RULE_ERRORS = (OSError, RuntimeError, ValueError, AttributeError, TypeError,
+                LookupError, StopIteration, ArithmeticError,
                 AutoControlException)
 
 

@@ -56,10 +56,20 @@ def _close_server_async(server: socketserver.TCPServer) -> None:
                      daemon=True).start()
 
 
+_HANDLER_TIMEOUT_S = 30.0
+
+
 class TCPServerHandler(socketserver.BaseRequestHandler):
 
     def handle(self) -> None:
-        command_string = _read_command(self.request)
+        try:
+            self.request.settimeout(_HANDLER_TIMEOUT_S)
+            command_string = _read_command(self.request)
+        except OSError as error:
+            # A client that connects and never sends a terminator would
+            # otherwise block this handler thread forever; the timeout drops it.
+            autocontrol_logger.info("socket command read dropped: %r", error)
+            return
         socket = self.request
         autocontrol_logger.info("command is: %s", command_string)
         if command_string == "quit_server":
@@ -93,11 +103,17 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
 class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     """Threaded TCP command server for AutoControl.
 
+    ``daemon_threads`` so a stalled handler thread never blocks interpreter
+    exit (and, with the per-handler read timeout, stalled clients are dropped
+    rather than accumulating non-daemon threads).
+
     ``close_flag`` used to live here. It was written on quit_server and read
     by nobody in the tree — a dead flag standing in for the ``server_close()``
     that was actually missing. Ask the socket instead: ``server.socket``
     is closed once quit_server has run.
     """
+
+    daemon_threads = True
 
 
 def start_autocontrol_socket_server(host: str = "127.0.0.1", port: int = 9938) -> TCPServer:
