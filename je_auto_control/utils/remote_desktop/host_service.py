@@ -135,13 +135,13 @@ def run_daemon(config: HostServiceConfig) -> None:
                 session_id, multi.session_count(),
             )
             time.sleep(config.poll_interval_s)
-        except (signaling_client.SignalingError, OSError, RuntimeError) as error:
-            autocontrol_logger.warning("host_service loop: %r", error)
-            time.sleep(min(30.0, config.poll_interval_s * 5))
         except KeyboardInterrupt:
             autocontrol_logger.info("host_service: shutting down")
             multi.stop_all()
             return
+        except Exception as error:  # noqa: BLE001  # reason: a daemon must survive ANY transient error (signaling/aiortc/av/ValueError) and retry, not exit the loop
+            autocontrol_logger.warning("host_service loop: %r", error)
+            time.sleep(min(30.0, config.poll_interval_s * 5))
 
 
 # --- service installation helpers ----------------------------------------

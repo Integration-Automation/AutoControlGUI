@@ -5,7 +5,7 @@ from typing import Optional
 from PySide6.QtCore import QTimer, Signal, QObject
 from PySide6.QtGui import QIntValidator, QDoubleValidator, QKeyEvent, Qt
 from PySide6.QtWidgets import (
-    QWidget, QLineEdit, QPushButton, QVBoxLayout, QLabel,
+    QWidget, QLineEdit, QVBoxLayout, QLabel,
     QGridLayout, QHBoxLayout, QMessageBox,
     QTabWidget, QTextEdit, QFileDialog, QCheckBox, QGroupBox
 )
@@ -69,6 +69,7 @@ from je_auto_control.gui.window_tab import WindowManagerTab
 from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot, get_pixel
 from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_image_center, locate_and_click
 from je_auto_control.wrapper.auto_control_record import record, stop_record
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.executor.action_executor import execute_action, execute_files
 from je_auto_control.utils.json.json_file import read_action_json, write_action_json
 from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
@@ -94,6 +95,7 @@ class _TabEntry:
     widget: QWidget
     category: str = "core"
     default_visible: bool = False
+    actions: tuple = ()
 
 
 # =============================================================================
@@ -105,6 +107,7 @@ class AutoControlGUIWidget(
     """Owns the QTabWidget and exposes show/hide/list APIs for the menu bar."""
 
     tabs_changed = Signal()
+    current_tab_changed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -123,19 +126,50 @@ class AutoControlGUIWidget(
         # core tabs (auto_click / screenshot / image_detect) are still
         # registered and reachable from the View menu's "show tab" list.
         self._add_tab("auto_click", "tab_auto_click", self._build_auto_click_tab(),
-                      category="core")
+                      category="core", actions=(
+                          ("start", self._start_auto_click),
+                          ("stop", self._stop_auto_click),
+                          ("get_position", self._get_mouse_pos),
+                          ("hotkey_send", self._send_hotkey),
+                          ("write_send", self._send_write),
+                          ("scroll_send", self._send_scroll),
+                      ))
         self._add_tab("screenshot", "tab_screenshot", self._build_screenshot_tab(),
-                      category="core")
+                      category="core", actions=(
+                          ("take_screenshot", self._take_screenshot),
+                          ("browse", self._browse_ss_path),
+                          ("pick_region", self._pick_ss_region),
+                          ("get_screen_size", self._get_screen_size),
+                          ("get_pixel_label", self._get_pixel_color),
+                      ))
         self._add_tab("image_detect", "tab_image_detect", self._build_image_detect_tab(),
-                      category="core")
+                      category="core", actions=(
+                          ("browse", self._browse_img),
+                          ("crop_template", self._crop_template),
+                          ("locate_image", self._locate_image),
+                          ("locate_all", self._locate_all),
+                          ("locate_click", self._locate_click),
+                      ))
         self._add_tab("record", "tab_record", self._build_record_tab(),
-                      category="core", default_visible=True)
+                      category="core", default_visible=True, actions=(
+                          ("start_record", self._start_record),
+                          ("stop_record", self._stop_record),
+                          ("playback", self._playback_record),
+                          ("save_record", self._save_record),
+                          ("load_record", self._load_record),
+                      ))
         self._add_tab("script_builder", "tab_script_builder", ScriptBuilderTab(),
                       category="core", default_visible=True)
         self._add_tab("flow_editor", "tab_flow_editor", FlowEditorTab(),
                       category="editing")
         self._add_tab("script", "tab_script", self._build_script_tab(),
-                      category="editing")
+                      category="editing", actions=(
+                          ("load_script", self._browse_script),
+                          ("execute_script", self._execute_script),
+                          ("menu_choose_script_dir", self._browse_script_dir),
+                          ("execute_dir", self._execute_dir),
+                          ("execute_editor_script", self._execute_manual_script),
+                      ))
         self._add_tab("recording_editor", "tab_recording_editor", RecordingEditorTab(),
                       category="editing")
         self._add_tab("variables", "tab_variables", VariablesTab(),
@@ -220,10 +254,18 @@ class AutoControlGUIWidget(
         self._add_tab("diagnostics", "tab_diagnostics", DiagnosticsTab(),
                       category="system")
         self._add_tab("report", "tab_report", self._build_report_tab(),
-                      category="system")
+                      category="system", actions=(
+                          ("enable_test_record", self._enable_test_record),
+                          ("disable_test_record", self._disable_test_record),
+                          ("generate_html_report", self._gen_html),
+                          ("generate_json_report", self._gen_json),
+                          ("generate_xml_report", self._gen_xml),
+                      ))
         layout.addWidget(self.tabs)
 
         self.setLayout(layout)
+
+        self.tabs.currentChanged.connect(self._on_current_tab_changed)
 
         self.timer = QTimer()
         self.repeat_count = 0
@@ -255,13 +297,39 @@ class AutoControlGUIWidget(
     def _add_tab(
             self, key: str, title_key: str, widget: QWidget,
             category: str = "core", default_visible: bool = False,
+            actions: tuple = (),
     ) -> None:
         self._tab_entries.append(_TabEntry(
             key=key, title_key=title_key, widget=widget,
             category=category, default_visible=default_visible,
+            actions=actions,
         ))
         if default_visible:
             self.tabs.addTab(widget, language_wrapper.translate(title_key, title_key))
+
+    def _on_current_tab_changed(self, _index: int) -> None:
+        self.current_tab_changed.emit()
+
+    def current_tab_menu_actions(self) -> list:
+        """Return ``[(label_key, callable), ...]`` for the active tab.
+
+        Core tabs declare their actions at registration time; feature tabs
+        may instead expose a ``menu_actions()`` method returning the same
+        shape. The menu bar renders these under the Actions menu so tabs
+        stay button-free.
+        """
+        widget = self.tabs.currentWidget()
+        if widget is None:
+            return []
+        for entry in self._tab_entries:
+            if entry.widget is widget:
+                if entry.actions:
+                    return list(entry.actions)
+                provider = getattr(widget, "menu_actions", None)
+                if callable(provider):
+                    return list(provider())
+                return []
+        return []
 
     def _find_entry(self, key: str):
         for entry in self._tab_entries:
@@ -363,44 +431,29 @@ class AutoControlGUIWidget(
         tab = QWidget()
         layout = QVBoxLayout()
 
-        # Screen size
+        # Screen size (read via Actions menu -> Get Screen Size)
         size_group = self._tr(QGroupBox(), "screen_size_label")
         sg = QHBoxLayout()
         self.screen_size_label = QLabel("--")
-        self.screen_size_btn = self._tr(QPushButton(), "get_screen_size")
-        self.screen_size_btn.clicked.connect(self._get_screen_size)
         sg.addWidget(self.screen_size_label)
-        sg.addWidget(self.screen_size_btn)
         size_group.setLayout(sg)
         layout.addWidget(size_group)
 
-        # Screenshot
+        # Screenshot inputs; capture runs from the Actions menu.
         ss_group = self._tr(QGroupBox(), "take_screenshot")
         ss_grid = QGridLayout()
         ss_grid.addWidget(self._tr(QLabel(), "file_path_label"), 0, 0)
         self.ss_path_input = QLineEdit()
         ss_grid.addWidget(self.ss_path_input, 0, 1)
-        self.ss_browse_btn = self._tr(QPushButton(), "browse")
-        self.ss_browse_btn.clicked.connect(self._browse_ss_path)
-        ss_grid.addWidget(self.ss_browse_btn, 0, 2)
 
         ss_grid.addWidget(self._tr(QLabel(), "region_label"), 1, 0)
         self.ss_region_input = QLineEdit()
         self.ss_region_input.setPlaceholderText("0, 0, 800, 600")
         ss_grid.addWidget(self.ss_region_input, 1, 1)
-        self.ss_pick_region_btn = self._tr(QPushButton(), "pick_region")
-        self.ss_pick_region_btn.clicked.connect(self._pick_ss_region)
-        ss_grid.addWidget(self.ss_pick_region_btn, 1, 2)
-
-        btn_h = QHBoxLayout()
-        self.ss_take_btn = self._tr(QPushButton(), "take_screenshot")
-        self.ss_take_btn.clicked.connect(self._take_screenshot)
-        btn_h.addWidget(self.ss_take_btn)
-        ss_grid.addLayout(btn_h, 2, 0, 1, 3)
         ss_group.setLayout(ss_grid)
         layout.addWidget(ss_group)
 
-        # Get pixel
+        # Pixel probe inputs; lookup runs from the Actions menu.
         px_group = self._tr(QGroupBox(), "get_pixel_label")
         px_grid = QGridLayout()
         px_grid.addWidget(self._tr(QLabel(), "pixel_x"), 0, 0)
@@ -411,15 +464,12 @@ class AutoControlGUIWidget(
         self.pixel_y_input = QLineEdit("0")
         self.pixel_y_input.setValidator(QIntValidator())
         px_grid.addWidget(self.pixel_y_input, 0, 3)
-        self.pixel_btn = self._tr(QPushButton(), "get_pixel_label")
-        self.pixel_btn.clicked.connect(self._get_pixel_color)
-        px_grid.addWidget(self.pixel_btn, 1, 0, 1, 2)
         self.pixel_result_label = QLabel()
         self._pixel_result_suffix = " --"
         self.pixel_result_label.setText(
             self._translate("pixel_result") + self._pixel_result_suffix,
         )
-        px_grid.addWidget(self.pixel_result_label, 1, 2, 1, 2)
+        px_grid.addWidget(self.pixel_result_label, 1, 0, 1, 4)
         px_group.setLayout(px_grid)
         layout.addWidget(px_group)
 
@@ -487,16 +537,11 @@ class AutoControlGUIWidget(
         tab = QWidget()
         layout = QVBoxLayout()
 
+        # Detection inputs; locate/crop commands run from the Actions menu.
         grid = QGridLayout()
         grid.addWidget(self._tr(QLabel(), "template_image"), 0, 0)
         self.img_path_input = QLineEdit()
         grid.addWidget(self.img_path_input, 0, 1)
-        self.img_browse_btn = self._tr(QPushButton(), "browse")
-        self.img_browse_btn.clicked.connect(self._browse_img)
-        grid.addWidget(self.img_browse_btn, 0, 2)
-        self.img_crop_btn = self._tr(QPushButton(), "crop_template")
-        self.img_crop_btn.clicked.connect(self._crop_template)
-        grid.addWidget(self.img_crop_btn, 0, 3)
 
         grid.addWidget(self._tr(QLabel(), "threshold_label"), 1, 0)
         self.threshold_input = QLineEdit("0.8")
@@ -506,18 +551,6 @@ class AutoControlGUIWidget(
         grid.addWidget(self.draw_check, 1, 2)
 
         layout.addLayout(grid)
-
-        btn_h = QHBoxLayout()
-        self.locate_btn = self._tr(QPushButton(), "locate_image")
-        self.locate_btn.clicked.connect(self._locate_image)
-        self.locate_all_btn = self._tr(QPushButton(), "locate_all")
-        self.locate_all_btn.clicked.connect(self._locate_all)
-        self.locate_click_btn = self._tr(QPushButton(), "locate_click")
-        self.locate_click_btn.clicked.connect(self._locate_click)
-        btn_h.addWidget(self.locate_btn)
-        btn_h.addWidget(self.locate_all_btn)
-        btn_h.addWidget(self.locate_click_btn)
-        layout.addLayout(btn_h)
 
         layout.addWidget(self._tr(QLabel(), "detection_result"))
         self.detect_result_text = QTextEdit()
@@ -586,31 +619,11 @@ class AutoControlGUIWidget(
         tab = QWidget()
         layout = QVBoxLayout()
 
+        # Record/playback/save/load all run from the Actions menu.
         self._record_status_key = "record_idle"
         self.record_status_label = QLabel()
         self._apply_record_status_label()
         layout.addWidget(self.record_status_label)
-
-        btn_h = QHBoxLayout()
-        self.rec_start_btn = self._tr(QPushButton(), "start_record")
-        self.rec_start_btn.clicked.connect(self._start_record)
-        self.rec_stop_btn = self._tr(QPushButton(), "stop_record")
-        self.rec_stop_btn.clicked.connect(self._stop_record)
-        self.rec_play_btn = self._tr(QPushButton(), "playback")
-        self.rec_play_btn.clicked.connect(self._playback_record)
-        btn_h.addWidget(self.rec_start_btn)
-        btn_h.addWidget(self.rec_stop_btn)
-        btn_h.addWidget(self.rec_play_btn)
-        layout.addLayout(btn_h)
-
-        btn_h2 = QHBoxLayout()
-        self.rec_save_btn = self._tr(QPushButton(), "save_record")
-        self.rec_save_btn.clicked.connect(self._save_record)
-        self.rec_load_btn = self._tr(QPushButton(), "load_record")
-        self.rec_load_btn.clicked.connect(self._load_record)
-        btn_h2.addWidget(self.rec_save_btn)
-        btn_h2.addWidget(self.rec_load_btn)
-        layout.addLayout(btn_h2)
 
         layout.addWidget(self._tr(QLabel(), "record_list_label"))
         self.record_list_text = QTextEdit()
@@ -634,7 +647,7 @@ class AutoControlGUIWidget(
             record()
             self._record_status_key = "record_recording"
             self._apply_record_status_label()
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _stop_record(self):
@@ -643,7 +656,7 @@ class AutoControlGUIWidget(
             self._record_status_key = "record_idle"
             self._apply_record_status_label()
             self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _playback_record(self):
@@ -652,7 +665,7 @@ class AutoControlGUIWidget(
                 QMessageBox.warning(self, "Warning", "No recorded data")
                 return
             execute_action(self._record_data)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _save_record(self):
@@ -663,7 +676,7 @@ class AutoControlGUIWidget(
             path, _ = QFileDialog.getSaveFileName(self, _t("save_record"), "", _JSON_FILE_FILTER)
             if path:
                 write_action_json(path, self._record_data)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _load_record(self):
@@ -672,7 +685,7 @@ class AutoControlGUIWidget(
             if path:
                 self._record_data = read_action_json(path)
                 self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     # =========================================================================
@@ -682,36 +695,24 @@ class AutoControlGUIWidget(
         tab = QWidget()
         layout = QVBoxLayout()
 
+        # Load/execute commands run from the Actions menu; the tab keeps
+        # only the path inputs, the editor, and the result view.
         file_h = QHBoxLayout()
+        file_h.addWidget(self._tr(QLabel(), "file_path_label"))
         self.script_path_input = QLineEdit()
-        self.script_browse_btn = self._tr(QPushButton(), "load_script")
-        self.script_browse_btn.clicked.connect(self._browse_script)
-        self.script_exec_btn = self._tr(QPushButton(), "execute_script")
-        self.script_exec_btn.clicked.connect(self._execute_script)
         file_h.addWidget(self.script_path_input)
-        file_h.addWidget(self.script_browse_btn)
-        file_h.addWidget(self.script_exec_btn)
         layout.addLayout(file_h)
 
         dir_h = QHBoxLayout()
+        dir_h.addWidget(self._tr(QLabel(), "execute_dir_label"))
         self.script_dir_input = QLineEdit()
-        self.script_dir_browse_btn = self._tr(QPushButton(), "execute_dir_label")
-        self.script_dir_browse_btn.clicked.connect(self._browse_script_dir)
-        self.script_dir_exec_btn = self._tr(QPushButton(), "execute_dir")
-        self.script_dir_exec_btn.clicked.connect(self._execute_dir)
         dir_h.addWidget(self.script_dir_input)
-        dir_h.addWidget(self.script_dir_browse_btn)
-        dir_h.addWidget(self.script_dir_exec_btn)
         layout.addLayout(dir_h)
 
         layout.addWidget(self._tr(QLabel(), "script_content"))
         self.script_editor = QTextEdit()
         self.script_editor.setPlaceholderText('[["AC_type_keyboard", {"keycode": "a"}]]')
         layout.addWidget(self.script_editor)
-
-        exec_btn = self._tr(QPushButton(), "execute_script")
-        exec_btn.clicked.connect(self._execute_manual_script)
-        layout.addWidget(exec_btn)
 
         layout.addWidget(self._tr(QLabel(), "execution_result"))
         self.script_result_text = QTextEdit()
@@ -727,7 +728,7 @@ class AutoControlGUIWidget(
             try:
                 data = read_action_json(path)
                 self.script_editor.setText(json.dumps(data, indent=2, ensure_ascii=False))
-            except (OSError, ValueError, TypeError, RuntimeError) as error:
+            except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
                 self.script_result_text.setText(f"Error loading: {error}")
 
     def _execute_script(self):
@@ -738,7 +739,7 @@ class AutoControlGUIWidget(
             data = read_action_json(path)
             result = execute_action(data)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.script_result_text.setText(f"Error: {error}")
 
     def _browse_script_dir(self):
@@ -754,7 +755,7 @@ class AutoControlGUIWidget(
             files = get_dir_files_as_list(path)
             result = execute_files(files)
             self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             self.script_result_text.setText(f"Error: {error}")
 
     def _execute_manual_script(self):

@@ -72,14 +72,24 @@ def _body(actions: Sequence, style: str) -> str:
     raise ValueError(f"unknown codegen style: {style!r}")
 
 
-def _render_pytest(actions: Sequence, name: str, style: str) -> str:
-    body = textwrap.indent(_body(actions, style), "    ")
+def _render_pytest(actions: Sequence, name: str, style: str,
+                   failure_bundle: bool = False) -> str:
+    raw_body = _body(actions, style)
+    if failure_bundle:
+        body = ("    with ac.failure_bundle_on_error(\n"
+                f"            {(_slug(name) + '-failure.zip')!r},\n"
+                f"            context={{'generated_test': {_slug(name)!r}}}):\n"
+                + textwrap.indent(raw_body, "        "))
+    else:
+        body = textwrap.indent(raw_body, "    ")
     return (f'"""{_HEADER}"""\n'
-            "import je_auto_control as ac\n\n\n"
-            f"def test_{_slug(name)}():\n{body}\n")
+            + ("import je_auto_control.api as ac\n\n\n" if failure_bundle
+               else "import je_auto_control as ac\n\n\n")
+            + f"def test_{_slug(name)}():\n{body}\n")
 
 
-def _render_python(actions: Sequence, name: str, style: str) -> str:
+def _render_python(actions: Sequence, name: str, style: str,
+                   _failure_bundle: bool = False) -> str:
     slug = _slug(name)
     body = textwrap.indent(_body(actions, style), "    ")
     return (f'"""{_HEADER}"""\n'
@@ -89,7 +99,8 @@ def _render_python(actions: Sequence, name: str, style: str) -> str:
             f"    {slug}()\n")
 
 
-def _render_robot(actions: Sequence, name: str, _style: str) -> str:
+def _render_robot(actions: Sequence, name: str, _style: str,
+                  _failure_bundle: bool = False) -> str:
     payload = json.dumps([list(action) for action in actions],
                          ensure_ascii=False)
     test_name = name.replace("_", " ").strip().title() or "Recorded Flow"
@@ -113,22 +124,27 @@ _RENDERERS = {
 
 
 def generate_code(actions: Sequence, target: str = "pytest",
-                  name: str = "recorded_flow", style: str = "calls") -> str:
+                  name: str = "recorded_flow", style: str = "calls",
+                  failure_bundle: bool = False) -> str:
     """Render ``actions`` as source code for ``target`` (pytest/python/robot)."""
     if not isinstance(actions, list) or not actions:
         raise ValueError("actions must be a non-empty list")
     renderer = _RENDERERS.get(target)
     if renderer is None:
         raise ValueError(f"unknown codegen target: {target!r}")
-    return renderer(actions, name, style)
+    if failure_bundle and target != "pytest":
+        raise ValueError("failure_bundle is currently supported for pytest only")
+    return renderer(actions, name, style, failure_bundle)
 
 
 def generate_code_file(source, output_path: str, target: str = "pytest",
-                       name: str = "recorded_flow", style: str = "calls") -> str:
+                       name: str = "recorded_flow", style: str = "calls",
+                       failure_bundle: bool = False) -> str:
     """Generate code from a list or JSON action-file path; write and return it."""
     actions = source if isinstance(source, list) else read_action_json(
         os.path.realpath(source))
-    code = generate_code(actions, target=target, name=name, style=style)
+    code = generate_code(actions, target=target, name=name, style=style,
+                         failure_bundle=failure_bundle)
     with open(os.path.realpath(output_path), "w", encoding="utf-8") as handle:
         handle.write(code)
     return code

@@ -7,7 +7,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QCheckBox, QDoubleSpinBox, QFileDialog, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QVBoxLayout, QWidget,
+    QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -47,6 +47,8 @@ class MediaChecksTab(TranslatableMixin, QWidget):
         self._build_layout()
 
     def _build_layout(self) -> None:
+        # Audio/video check and browse commands run from the Actions menu;
+        # the tab keeps only the inputs and the result label.
         root = QVBoxLayout(self)
         root.addWidget(QLabel(_t("media_audio_label")))
         arow = QHBoxLayout()
@@ -55,9 +57,6 @@ class MediaChecksTab(TranslatableMixin, QWidget):
         arow.addWidget(QLabel(_t("media_audio_threshold")))
         arow.addWidget(self._audio_threshold)
         arow.addWidget(self._audio_expect)
-        audio_btn = self._tr(QPushButton(), "media_audio_run")
-        audio_btn.clicked.connect(self._on_audio)
-        arow.addWidget(audio_btn)
         arow.addStretch()
         root.addLayout(arow)
 
@@ -65,22 +64,24 @@ class MediaChecksTab(TranslatableMixin, QWidget):
         vrow = QHBoxLayout()
         vrow.addWidget(QLabel(_t("media_video_path")))
         vrow.addWidget(self._video_path, stretch=1)
-        browse_btn = self._tr(QPushButton(), "media_video_browse")
-        browse_btn.clicked.connect(self._on_browse)
-        vrow.addWidget(browse_btn)
         root.addLayout(vrow)
         vrow2 = QHBoxLayout()
         vrow2.addWidget(QLabel(_t("media_video_threshold")))
         vrow2.addWidget(self._video_threshold)
         vrow2.addWidget(self._video_expect)
-        video_btn = self._tr(QPushButton(), "media_video_run")
-        video_btn.clicked.connect(self._on_video)
-        vrow2.addWidget(video_btn)
         vrow2.addStretch()
         root.addLayout(vrow2)
 
         root.addWidget(self._result)
         root.addStretch()
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("media_audio_run", self._on_audio),
+            ("media_video_browse", self._on_browse),
+            ("media_video_run", self._on_video),
+        ]
 
     def _on_browse(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, _t("media_video_browse"))

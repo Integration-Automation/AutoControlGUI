@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+import sqlite3
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -18,6 +19,7 @@ from typing import Any, Callable, Dict, Optional, Tuple
 from urllib.parse import urlparse
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.http_headers import parse_content_length
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.rest_api.rest_auth import RestAuthGate, generate_token
 from je_auto_control.utils.rest_api.rest_handlers import (
@@ -91,6 +93,10 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
     """Stdlib request handler — delegates to gate + route table."""
 
     server_version = "AutoControlREST/2.0"
+    # socketserver applies this to the connection socket in setup(); it bounds
+    # every read (the body is read before the auth gate) so a client that
+    # declares a Content-Length then stalls cannot pin a worker thread forever.
+    timeout = 30.0
 
     def log_message(self, format, *args) -> None:  # noqa: A002  # pylint: disable=redefined-builtin  # reason: stdlib BaseHTTPRequestHandler override
         autocontrol_logger.info("rest-api %s - %s",
@@ -184,8 +190,12 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         ctx = RouteContext(query=parsed.query, body=body, client_ip=client_ip)
         try:
             status, payload = handler(ctx)
+        # AutoControlException is the family base (every framework error derives
+        # from it). sqlite3.Error is separate: handlers such as /history read the
+        # shared run-history DB, and a locked/corrupt DB otherwise escaped the
+        # handler thread and dropped the connection with no response.
         except (OSError, RuntimeError, ValueError, TypeError,
-                AutoControlException) as error:
+                AutoControlException, sqlite3.Error) as error:
             autocontrol_logger.error(
                 "rest-api %s %s handler raised: %r", method, parsed.path, error,
             )
@@ -227,7 +237,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "unauthorized"}, status=401)
 
     def _read_json_body(self) -> Any:
-        length = int(self.headers.get("Content-Length", "0") or "0")
+        length = parse_content_length(self.headers)
         if length <= 0 or length > _MAX_BODY_BYTES:
             self._send_json({"error": "invalid Content-Length"}, status=400)
             return _BODY_ERROR_SENT

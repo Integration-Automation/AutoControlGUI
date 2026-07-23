@@ -110,13 +110,25 @@ class ShellManager:
         self.still_run_shell = False
 
         if self.process is not None:
-            self.process.terminate()
-            autocontrol_logger.info(
-                f"Shell command exit with code {self.process.returncode}"
-            )
+            self._terminate_and_reap(self.process)
             self.process = None
 
         self.log_and_clear_queue()
+
+    def _terminate_and_reap(self, process: subprocess.Popen) -> None:
+        """Terminate ``process``, wait for the real exit code, and reap it."""
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                autocontrol_logger.error("Shell command did not exit after kill")
+        autocontrol_logger.info(
+            f"Shell command exit with code {process.returncode}"
+        )
 
     def log_and_clear_queue(self) -> None:
         """

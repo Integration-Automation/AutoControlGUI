@@ -1,5 +1,39 @@
 # What's New — AutoControl
 
+## What's new (2026-07-18)
+
+### Cross-Platform Reliability Hardening
+
+A full-project runtime audit swept every platform backend and utility for execution-time defects and unexpected behaviour, adding a headless regression test for each fix. There are **no API changes** — existing scripts keep working, they just fail less and behave correctly in more places.
+
+- **macOS (Retina / HiDPI)**: mouse-position reads and omitted-coordinate clicks now land at the correct point. The cursor y-flip used a *pixel*-based display height against a *point*-based cursor, offsetting every implicit click on a 2× display.
+- **Remote-desktop relay**: fixed a hang on **Linux + CPython 3.14** where a paired pipe never exited after one peer disconnected — a cross-thread `shutdown()` no longer reliably wakes a blocked `recv()` there, so the pump now polls readability with `select()` and always re-checks its stop flag.
+- **USB/IP server** now binds `127.0.0.1` by default (least-privilege); export the device to the LAN with an explicit `host="0.0.0.0"`.
+- **Executor**: `AC_expect_poll` no longer crashes on a not-ready value (missing result key or a transiently-failing action) and keeps polling; `AC_parallel` branches are properly variable-scope-isolated, so a nested `AC_execute_action` can't race on the parent's scope; a malformed `run_suite` spec reports a clean error instead of aborting the run.
+- **Windows Interception backend**: send-to-window click now performs a real press/release instead of silently no-opping on the button tuple.
+- **Wayland**: a partial-coordinate `mouse_scroll` degrades gracefully instead of raising `NotImplementedError`.
+- **Typed exceptions preserved at boundaries**: saving an action file with non-encodable text raises `AutoControlJsonActionException` (not a raw `UnicodeEncodeError`); a non-ASCII USB/IP busid no longer kills the client worker thread; SQLite data-source / query connections are always closed; USB ACL rule removal is case-insensitive to match the (case-insensitive) rule matching.
+- Builds on the round-3 sweep that reparented the exception family under `AutoControlException` (assertions still propagate under `raise_on_error=False`) and hardened thread-safety across the socket server, scheduler, triggers, and MCP server.
+
+## What's new (2026-07-03)
+
+### Stable API, Failure Bundles, and Release Engineering
+
+A versioned entry point for new integrations, a portable failure-diagnostics format, and a hardened release pipeline. Full reference: [`docs/API_LIFECYCLE.md`](docs/API_LIFECYCLE.md) and [`docs/CAPABILITY_MATRIX.md`](docs/CAPABILITY_MATRIX.md).
+
+- **Stable `je_auto_control.api` façade**: small, lazy, typed namespace (`execute_action`, `execute_action_with_vars`, `generate_code`, `run_diagnostics`, failure bundles) so new consumers can import core automation without eagerly loading hundreds of optional integrations. Governed by a written lifecycle policy — stable removals need a deprecation warning plus two minor releases — with `utils/deprecation.deprecated` supplying consistent, metadata-carrying warnings. CI type-checks this surface with mypy and smoke-imports it on a Windows/Ubuntu/macOS × Python 3.10/3.14 matrix.
+- **Failure bundles** (`create_failure_bundle` / `failure_bundle_on_error`, CLI `je_auto_control failure-bundle out.zip`): one atomic, self-contained `autocontrol.failure-bundle/v1` ZIP for diagnosing a failed run — manifest with runtime info, redacted error/context/events, redacted log tail, optional screenshot and diagnostics report, opt-in attachments. Collectors are best-effort: a broken screen grab or diagnostics probe is recorded in `collector_failures` instead of losing the bundle. `codegen --failure-bundle` wraps generated pytest flows so every generated test archives its own failure evidence. Secret redaction now also masks explicit `key=value` / `Authorization: Bearer` credential syntax regardless of entropy.
+- **Release engineering**: publishing moves from push-to-main to immutable `v*` tags — the new `release.yml` verifies the tag matches the package version, builds, smoke-tests the wheel, attests build provenance, and publishes via PyPI Trusted Publishing. `quality.yml` gains dependency review, a coverage floor (fail-under 35, branch coverage), and a mypy gate on the stable API; a new platform-smoke workflow exercises the stable API on all three OSes.
+- **Project docs**: new [`SECURITY.md`](SECURITY.md) (private-advisory reporting, response targets, operational defaults), [`CHANGELOG.md`](CHANGELOG.md) (Keep-a-Changelog compatibility record), API lifecycle policy, and a capability/platform support matrix. The Sphinx indexes catch up on v182–v223 feature docs in both languages.
+
+## What's new (2026-07-02)
+
+### Menu-Driven GUI: the Actions Menu Replaces In-Tab Buttons
+
+Every tab's commands now live in one predictable place. The window menu bar gains a dynamic **Actions** menu that rebuilds for the active tab; tabs keep only their inputs, tables, and result/status views instead of rows of buttons. Full reference: [`docs/source/Eng/doc/new_features/v223_features_doc.rst`](docs/source/Eng/doc/new_features/v223_features_doc.rst).
+
+- **Window-level Actions menu**: core tabs declare their commands at registration; feature tabs expose a `menu_actions()` hook returning `(label_key, handler)` pairs. 46 of 48 registered tabs now surface their commands this way — Script Builder and Remote Desktop intentionally keep their interactive panel layouts, and the menu shows a placeholder there. Buttons a window-level menu cannot replace stay in place (per-page browse buttons inside stacked trigger forms, the visibility-toggled data-source browse button, stateful auto-refresh checkboxes). A headless regression test guards the contract so no tab can silently lose its commands.
+
 ## What's new (2026-06-26)
 
 ### Trial and Force Action Modes (Playwright-style)

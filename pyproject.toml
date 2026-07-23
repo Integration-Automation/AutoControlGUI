@@ -15,9 +15,12 @@ requires-python = ">=3.10"
 license-files = ["LICENSE"]
 dependencies = [
     "je_open_cv==0.0.22",
-    "pillow==12.2.0",
-    "pyobjc-core==12.1;platform_system=='Darwin'",
-    "pyobjc==12.1;platform_system=='Darwin'",
+    # je_open_cv leaves opencv-python unpinned; bound the major so a new
+    # OpenCV release cannot silently change cv2 return shapes under us.
+    "opencv-python>=4.8,<6",
+    "pillow==12.3.0",
+    "pyobjc-core==12.2.1;platform_system=='Darwin'",
+    "pyobjc==12.2.1;platform_system=='Darwin'",
     "python-Xlib==0.33;platform_system=='Linux'",
     "mss==10.2.0",
     "defusedxml==0.7.1",
@@ -88,3 +91,51 @@ exclude_dirs = [
 # B101 (use of assert) — pytest test code intentionally uses assert.
 # Library code is enforced by CLAUDE.md (no assert in non-test code).
 skips = ["B101"]
+
+[tool.pytest.ini_options]
+testpaths = ["test/unit_test/headless", "test/unit_test/flow_control"]
+addopts = "--strict-markers --strict-config"
+# Only test_*.py are real tests. The *_test.py files under test/unit_test/ are
+# manual demo scripts whose module bodies drive the real mouse/keyboard; pytest's
+# default python_files matches *_test.py, so collecting an explicit path (e.g.
+# `pytest test/unit_test/`) would import and execute them. testpaths does not
+# protect against this — it is ignored once a path argument is given.
+python_files = ["test_*.py"]
+
+[tool.coverage.run]
+branch = true
+source = ["je_auto_control"]
+omit = ["*/gui/*", "*/language_wrapper/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+# Initial measured repository baseline. Raise toward 70 as legacy modules are
+# brought under the stable API contract; CI enforces that it cannot regress.
+fail_under = 35
+
+[tool.mypy]
+python_version = "3.10"
+warn_redundant_casts = true
+check_untyped_defs = true
+no_implicit_optional = true
+# CI type-checks only the stable API surface; followed legacy modules are
+# analysed for signatures but not reported until they join the contract.
+follow_imports = "silent"
+exclude = "(^test/|^docs/|^build/)"
+
+[[tool.mypy.overrides]]
+module = ["cv2.*", "Xlib.*", "PySide6.*", "objc.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# numpy's stubs use `type` statements, which mypy rejects while parsing under
+# python_version 3.10 — skip them; the stable API does not expose numpy types.
+# The top-level `numpy` module must be listed explicitly: `numpy.*` only matches
+# submodules, so numpy>=2.5's PEP 695 statements in numpy/__init__.pyi would leak.
+# `follow_imports_for_stubs` is required — otherwise `follow_imports = skip` is
+# ignored for .pyi files and mypy parses (and chokes on) the numpy stub anyway.
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
+ignore_missing_imports = true

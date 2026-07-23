@@ -31,7 +31,13 @@ def wma(values: Sequence[float], weights: Sequence[float]) -> List[float]:
     for i in range(len(values)):
         chunk = values[max(0, i - len(weight_list) + 1):i + 1]
         applied = weight_list[-len(chunk):]
-        out.append(sum(x * w for x, w in zip(chunk, applied)) / sum(applied))
+        total = sum(applied)
+        if total == 0:
+            # A zero-sum window (e.g. the warm-up tail of weights=[1, 0]) has no
+            # weighted mean; fall back to the plain average of the chunk.
+            out.append(sum(chunk) / len(chunk))
+        else:
+            out.append(sum(x * w for x, w in zip(chunk, applied)) / total)
     return out
 
 

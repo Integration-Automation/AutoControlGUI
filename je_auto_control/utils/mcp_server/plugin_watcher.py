@@ -90,24 +90,18 @@ class PluginWatcher:
         autocontrol_logger.info("plugin watcher stopped")
 
     def _reload_file(self, path: str, mtime: float) -> None:
-        from je_auto_control.utils.plugin_loader.plugin_loader import (
-            load_plugin_file,
-        )
         previous = self._known.get(path)
+        tools = self._build_tools(path, previous, mtime)
+        if tools is None:
+            return
+        # Build succeeded — only now swap the live registry. Doing the
+        # unregister *after* a successful build means a broken edit leaves the
+        # file's existing tools in place instead of vanishing them.
         if previous is not None:
             for tool_name in previous[1]:
                 self._server.unregister_tool(tool_name)
-        try:
-            commands = load_plugin_file(path)
-        except (OSError, ImportError, SyntaxError) as error:
-            autocontrol_logger.warning(
-                "plugin %s reload failed: %r", path, error,
-            )
-            self._known[path] = (mtime, [])
-            return
         registered: List[str] = []
-        for raw_name, handler in commands.items():
-            tool = make_plugin_tool(raw_name, handler)
+        for tool in tools:
             self._server.register_tool(tool)
             registered.append(tool.name)
         self._known[path] = (mtime, registered)
@@ -115,6 +109,30 @@ class PluginWatcher:
             "plugin %s reloaded → %d tools", os.path.basename(path),
             len(registered),
         )
+
+    def _build_tools(self, path: str, previous: Optional[tuple],
+                     mtime: float) -> Optional[List[Any]]:
+        """Load ``path`` and build its tools, or ``None`` on any failure.
+
+        Plugin files run arbitrary user code, so loading or tool construction
+        may raise anything (NameError, ValueError, …). We catch broadly to keep
+        the watcher thread alive; on failure the previously-registered tools
+        are retained and the mtime is recorded so we don't rebuild every poll.
+        """
+        from je_auto_control.utils.plugin_loader.plugin_loader import (
+            load_plugin_file,
+        )
+        try:
+            commands = load_plugin_file(path)
+            return [make_plugin_tool(raw_name, handler)
+                    for raw_name, handler in commands.items()]
+        except Exception as error:  # pylint: disable=broad-exception-caught  # reason: plugin code is untrusted and may raise anything
+            autocontrol_logger.warning(
+                "plugin %s reload failed, keeping previous tools: %r",
+                path, error,
+            )
+            self._known[path] = (mtime, previous[1] if previous else [])
+            return None
 
     def _unregister_file(self, path: str) -> None:
         previous = self._known.pop(path, None)

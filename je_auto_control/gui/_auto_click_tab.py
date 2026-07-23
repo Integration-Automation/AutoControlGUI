@@ -1,10 +1,11 @@
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
-    QWidget, QLineEdit, QComboBox, QPushButton, QVBoxLayout, QLabel,
+    QWidget, QLineEdit, QComboBox, QVBoxLayout, QLabel,
     QGridLayout, QHBoxLayout, QRadioButton, QButtonGroup, QMessageBox,
     QGroupBox,
 )
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.auto_control_keyboard import (
     type_keyboard, hotkey, write, get_keyboard_keys_table,
 )
@@ -100,29 +101,18 @@ class AutoClickTabMixin:
         rh.addWidget(self.repeat_count_input)
         grid.addLayout(rh, row, 0, 1, 2)
 
-        row += 1
-        btn_h = QHBoxLayout()
-        self.start_button = self._tr(QPushButton(), "start")
-        self.start_button.clicked.connect(self._start_auto_click)
-        self.stop_button = self._tr(QPushButton(), "stop")
-        self.stop_button.clicked.connect(self._stop_auto_click)
-        btn_h.addWidget(self.start_button)
-        btn_h.addWidget(self.stop_button)
-        grid.addLayout(btn_h, row, 0, 1, 2)
-
         click_group.setLayout(grid)
         outer.addWidget(click_group)
 
+        # Start/stop, position probe, hotkey, write, and scroll commands all
+        # run from the Actions menu; the tab keeps only their inputs.
         pos_group = self._tr(QGroupBox(), "get_position")
         pos_layout = QHBoxLayout()
-        self.pos_btn = self._tr(QPushButton(), "get_position")
-        self.pos_btn.clicked.connect(self._get_mouse_pos)
         self.pos_label = QLabel()
         self._pos_label_suffix = " --"
         self.pos_label.setText(
             self._translate("current_position") + self._pos_label_suffix,
         )
-        pos_layout.addWidget(self.pos_btn)
         pos_layout.addWidget(self.pos_label)
         pos_group.setLayout(pos_layout)
         outer.addWidget(pos_group)
@@ -131,20 +121,14 @@ class AutoClickTabMixin:
         hk_layout = QHBoxLayout()
         self.hotkey_input = QLineEdit()
         self.hotkey_input.setPlaceholderText("ctrl,a")
-        self.hotkey_btn = self._tr(QPushButton(), "hotkey_send")
-        self.hotkey_btn.clicked.connect(self._send_hotkey)
         hk_layout.addWidget(self.hotkey_input)
-        hk_layout.addWidget(self.hotkey_btn)
         hotkey_group.setLayout(hk_layout)
         outer.addWidget(hotkey_group)
 
         write_group = self._tr(QGroupBox(), "write_label")
         wr_layout = QHBoxLayout()
         self.write_input = QLineEdit()
-        self.write_btn = self._tr(QPushButton(), "write_send")
-        self.write_btn.clicked.connect(self._send_write)
         wr_layout.addWidget(self.write_input)
-        wr_layout.addWidget(self.write_btn)
         write_group.setLayout(wr_layout)
         outer.addWidget(write_group)
 
@@ -160,9 +144,6 @@ class AutoClickTabMixin:
             sc_layout.addWidget(self.scroll_dir_combo)
         else:
             self.scroll_dir_combo = None
-        self.scroll_btn = self._tr(QPushButton(), "scroll_send")
-        self.scroll_btn.clicked.connect(self._send_scroll)
-        sc_layout.addWidget(self.scroll_btn)
         scroll_group.setLayout(sc_layout)
         outer.addWidget(scroll_group)
 
@@ -244,7 +225,10 @@ class AutoClickTabMixin:
                 type_keyboard(key)
                 if is_double:
                     type_keyboard(key)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
+            # AutoControlMouseException / AutoControlCantFindKeyException from a
+            # throwing backend must land here — otherwise timer.stop() is
+            # skipped and the auto-click QTimer fires the failing action forever.
             self.timer.stop()
             QMessageBox.warning(self, "Error", str(error))
 
@@ -257,7 +241,7 @@ class AutoClickTabMixin:
             )
             self.cursor_x_input.setText(str(x))
             self.cursor_y_input.setText(str(y))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _send_hotkey(self):
@@ -265,7 +249,7 @@ class AutoClickTabMixin:
             keys = [k.strip() for k in self.hotkey_input.text().split(",") if k.strip()]
             if keys:
                 hotkey(keys)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _send_write(self):
@@ -273,7 +257,7 @@ class AutoClickTabMixin:
             text = self.write_input.text()
             if text:
                 write(text)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))
 
     def _send_scroll(self):
@@ -281,5 +265,5 @@ class AutoClickTabMixin:
             val = int(self.scroll_value_input.text() or "3")
             direction = self.scroll_dir_combo.currentText() if self.scroll_dir_combo else "scroll_down"
             mouse_scroll(val, scroll_direction=direction)
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
+        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
             QMessageBox.warning(self, "Error", str(error))

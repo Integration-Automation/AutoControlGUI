@@ -5,6 +5,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 
 @dataclass
 class AgentBudget:
@@ -158,7 +160,12 @@ class AgentLoop:
         ):
             try:
                 step.result = self._tool_runner(tool, args)
-            except (ValueError, RuntimeError, OSError) as error:
+            # A failing AC_* tool raises AutoControl*Exception (all subclass
+            # AutoControlException), and a hallucinated kwarg raises TypeError.
+            # Record the error per-step so the loop keeps going instead of
+            # crashing the whole run.
+            except (AutoControlException, TypeError,
+                    ValueError, RuntimeError, OSError) as error:
                 step.error = f"{type(error).__name__}: {error}"
         return step
 

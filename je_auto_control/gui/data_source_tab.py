@@ -45,6 +45,8 @@ class DataSourceTab(TranslatableMixin, QWidget):
         self._sync_visibility(self._kind.currentText())
 
     def _build_layout(self) -> None:
+        # The load command runs from the Actions menu; the tab keeps the
+        # source form (with its kind-synced browse button) and the table.
         root = QVBoxLayout(self)
         row1 = QHBoxLayout()
         row1.addWidget(QLabel(_t("ds_kind")))
@@ -72,14 +74,17 @@ class DataSourceTab(TranslatableMixin, QWidget):
         row2 = QHBoxLayout()
         row2.addWidget(QLabel(_t("ds_limit")))
         row2.addWidget(self._limit)
-        load_btn = self._tr(QPushButton(), "ds_load")
-        load_btn.clicked.connect(self._on_load)
-        row2.addWidget(load_btn)
         row2.addStretch()
         root.addLayout(row2)
 
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._status)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("ds_load", self._on_load),
+        ]
 
     def _sync_visibility(self, kind: str) -> None:
         is_file = kind in ("csv", "json", "sqlite", "excel")

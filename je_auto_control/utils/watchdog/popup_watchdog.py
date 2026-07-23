@@ -22,8 +22,11 @@ from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 # Errors a rule's matcher/action may raise that must not kill the guard loop
-# (e.g. find_window raising AutoControlException off Windows).
+# (e.g. find_window raising AutoControlException off Windows). LookupError/
+# StopIteration/ArithmeticError cover user callbacks that index/iterate/divide;
+# an uncaught one kills the daemon thread and silently stops every rule.
 _RULE_ERRORS = (OSError, RuntimeError, ValueError, AttributeError, TypeError,
+                LookupError, StopIteration, ArithmeticError,
                 AutoControlException)
 
 
@@ -42,6 +45,12 @@ class PopupWatchdog:
         self._poll = max(0.05, float(poll_interval_s))
         self._rules: List[WatchdogRule] = []
         self._lock = threading.Lock()
+        # 序列化 start()/stop():兩者原本無互斥,交錯的 stop() 會在 start()
+        # 指派 _thread 與 .start() 之間 join 未啟動的執行緒 → RuntimeError。
+        # Serialises start()/stop(): without it, a concurrent stop() joins the
+        # thread between start()'s assignment and its .start() call →
+        # "cannot join thread before it is started".
+        self._lifecycle_lock = threading.RLock()
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
         self._hits: List[Dict[str, Any]] = []
@@ -86,20 +95,22 @@ class PopupWatchdog:
 
     def start(self) -> None:
         """Start the guard thread (idempotent)."""
-        if self.running:
-            return
-        self._stop.clear()
-        self._thread = threading.Thread(
-            target=self._loop, name="rd-popup-watchdog", daemon=True)
-        self._thread.start()
+        with self._lifecycle_lock:
+            if self.running:
+                return
+            self._stop.clear()
+            self._thread = threading.Thread(
+                target=self._loop, name="rd-popup-watchdog", daemon=True)
+            self._thread.start()
 
     def stop(self, timeout: float = 2.0) -> None:
         """Signal the guard thread to stop and join it."""
-        self._stop.set()
-        thread = self._thread
-        if thread is not None:
-            thread.join(timeout=float(timeout))
-        self._thread = None
+        with self._lifecycle_lock:
+            self._stop.set()
+            thread = self._thread
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=float(timeout))
+            self._thread = None
 
     def check_once(self) -> int:
         """Run one detection pass; return the number of popups dismissed."""

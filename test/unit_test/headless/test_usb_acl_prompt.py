@@ -8,7 +8,7 @@ import pytest
 # Force offscreen so the dialog never tries to draw on a real display.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-pyside = pytest.importorskip("PySide6.QtWidgets")
+pyside = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 # gui/__init__.py eagerly loads main_window → webrtc_panel → aiortc.
 # The dialog itself only needs Qt, but we have to satisfy the chain
 # to import anything from je_auto_control.gui.
@@ -69,10 +69,23 @@ def test_dialog_remember_reflects_checkbox(qapp):
 # ---------------------------------------------------------------------------
 
 
+# A retry chain must be bounded. An unbounded self-rescheduling singleShot
+# outlives the test that started it: the qapp fixture below reuses
+# QApplication.instance(), which in a full-suite run was created by an earlier
+# module and lives for the whole session. An orphaned chain therefore keeps
+# scanning topLevelWidgets() indefinitely and can press accept()/reject() on a
+# later test's prompt. 2s of retries comfortably covers the 3s decide()
+# timeout these tests use.
+_DIALOG_RETRY_INTERVAL_MS = 20
+_DIALOG_MAX_ATTEMPTS = 100
+
+
 def _drive_dialog_when_visible(action: str) -> None:
-    """Schedule a one-shot Qt timer that finds the modal dialog and
+    """Schedule a bounded Qt timer chain that finds the modal dialog and
     presses Allow / Deny / cancel on it.
     """
+    remaining = {"attempts": _DIALOG_MAX_ATTEMPTS}
+
     def attempt():
         for widget in QApplication.topLevelWidgets():
             if isinstance(widget, UsbPassthroughPromptDialog) and widget.isVisible():
@@ -86,8 +99,11 @@ def _drive_dialog_when_visible(action: str) -> None:
                 else:
                     widget.reject()
                 return
-        # Try again shortly if the dialog hasn't appeared yet.
-        QTimer.singleShot(20, attempt)
+        # Try again shortly if the dialog hasn't appeared yet — but give up
+        # rather than outlive this test.
+        remaining["attempts"] -= 1
+        if remaining["attempts"] > 0:
+            QTimer.singleShot(_DIALOG_RETRY_INTERVAL_MS, attempt)
     QTimer.singleShot(50, attempt)
 
 
@@ -95,13 +111,17 @@ def _close_dialog_after(ms: int) -> None:
     """Reject the prompt once it is up — used by the timeout case so the
     GUI thread's modal loop unwinds after ``decide`` has already given up.
     """
+    remaining = {"attempts": _DIALOG_MAX_ATTEMPTS}
+
     def shut():
         for widget in QApplication.topLevelWidgets():
             if (isinstance(widget, UsbPassthroughPromptDialog)
                     and widget.isVisible()):
                 widget.reject()
                 return
-        QTimer.singleShot(20, shut)
+        remaining["attempts"] -= 1
+        if remaining["attempts"] > 0:
+            QTimer.singleShot(_DIALOG_RETRY_INTERVAL_MS, shut)
     QTimer.singleShot(ms, shut)
 
 

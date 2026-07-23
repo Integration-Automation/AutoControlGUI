@@ -34,6 +34,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.http_headers import (
+    INVALID_CONTENT_LENGTH, parse_content_length,
+)
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
@@ -46,6 +50,10 @@ from je_auto_control.utils.run_history.history_store import (
 
 _DEFAULT_BIND = "127.0.0.1"
 _MAX_BODY_BYTES = 1 << 20  # 1 MiB cap
+# Automation is serialised (one script drives the shared input devices at a
+# time). Bound how long a concurrent webhook waits for the running script so a
+# long/stuck one can't pile up handler threads indefinitely — reject as busy.
+_FIRE_LOCK_TIMEOUT_S = 120.0
 # Cap how much we'll drain from a rejected request so a hostile client
 # can't make us spin reading a multi-GiB body. 4× the body cap covers
 # typical "client sent slightly too much" cases; beyond that we close
@@ -102,6 +110,9 @@ class _WebhookHandler(BaseHTTPRequestHandler):
     """HTTP handler dispatched by :class:`WebhookTriggerServer`."""
 
     server_version = "AutoControlWebhook/1.0"
+    # Bound every read so a stalled client (valid Content-Length then dribble)
+    # can't pin a worker thread forever.
+    timeout = 30.0
 
     # Signature must mirror BaseHTTPRequestHandler.log_message exactly,
     # including the parameter name 'format' — pylint W0221 trips on
@@ -113,7 +124,14 @@ class _WebhookHandler(BaseHTTPRequestHandler):
     # pylint: enable=redefined-builtin
 
     def _read_body(self) -> str:
-        length = int(self.headers.get("Content-Length") or 0)
+        length = parse_content_length(self.headers)
+        if length == INVALID_CONTENT_LENGTH:
+            # A malformed header is a client error and must be answered.
+            # Don't fall into the `length <= 0` branch below: that returns an
+            # empty body silently, and _dispatch would then close the
+            # connection without ever sending a response.
+            self.send_error(HTTPStatus.BAD_REQUEST, "invalid Content-Length")
+            return ""
         if length <= 0:
             return ""
         if length > _MAX_BODY_BYTES:
@@ -137,7 +155,7 @@ class _WebhookHandler(BaseHTTPRequestHandler):
         the response, masking the 4xx status.
         """
         self.send_error(status, message)
-        cap = min(int(length), _MAX_BODY_BYTES * _DRAIN_CAP_MULTIPLE)
+        cap = min(max(int(length), 0), _MAX_BODY_BYTES * _DRAIN_CAP_MULTIPLE)
         remaining = cap
         while remaining > 0:
             chunk = self.rfile.read(min(remaining, _DRAIN_CHUNK_BYTES))
@@ -159,7 +177,7 @@ class _WebhookHandler(BaseHTTPRequestHandler):
     def _dispatch(self, method: str) -> None:
         registry: WebhookTriggerServer = self.server.webhook_owner  # type: ignore[attr-defined]
         parsed = urlparse(self.path)
-        declared_length = int(self.headers.get("Content-Length") or 0)
+        declared_length = parse_content_length(self.headers)
         trigger = registry.match(parsed.path, method)
         if trigger is None:
             self._reject_with_drain(
@@ -172,7 +190,7 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             )
             return
         body = self._read_body()
-        if body == "" and int(self.headers.get("Content-Length") or 0) > 0:
+        if body == "" and parse_content_length(self.headers) != 0:
             return  # _read_body already wrote an error response
         payload = {
             "webhook.method": method,
@@ -185,6 +203,12 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             ),
         }
         run_id = registry.fire(trigger, payload)
+        if run_id is None:
+            self._send_json(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                {"fired": False, "error": "automation busy, retry later"},
+            )
+            return
         self._send_json(HTTPStatus.OK, {"run_id": run_id, "fired": True})
 
     def do_GET(self) -> None:  # noqa: N802 - http.server contract
@@ -292,18 +316,35 @@ class WebhookTriggerServer:
 
     def fire(self, trigger: WebhookTrigger,
              payload: Dict[str, Any]) -> Optional[int]:
-        """Run the trigger's script with ``payload`` seeded into variables."""
-        with self._fire_lock:
+        """Run the trigger's script with ``payload`` seeded into variables.
+
+        Returns the run id, or ``None`` if the automation stayed busy past
+        :data:`_FIRE_LOCK_TIMEOUT_S` (the caller answers 503 rather than
+        blocking this handler thread forever).
+        """
+        if not self._fire_lock.acquire(timeout=_FIRE_LOCK_TIMEOUT_S):
+            autocontrol_logger.warning(
+                "webhook %s rejected: automation busy for >%.0fs",
+                trigger.webhook_id, _FIRE_LOCK_TIMEOUT_S,
+            )
+            return None
+        try:
             run_id = default_history_store.start_run(
                 SOURCE_TRIGGER, f"webhook:{trigger.webhook_id}",
                 trigger.script_path,
             )
             status = STATUS_OK
             error_text: Optional[str] = None
+            # Missing the framework base let a bad/renamed script escape fire()
+            # and propagate out of the HTTP handler: the run was recorded as a
+            # bogus STATUS_OK and the client's connection was dropped with no
+            # response. Catch the whole family so the fire is recorded as an
+            # error and _dispatch still answers the request.
             try:
                 actions = read_action_json(trigger.script_path)
                 self._executor(actions, payload)
-            except (OSError, ValueError, RuntimeError) as error:
+            except (OSError, ValueError, RuntimeError,
+                    AutoControlException) as error:
                 status = STATUS_ERROR
                 error_text = repr(error)
                 autocontrol_logger.error("webhook %s failed: %r",
@@ -320,6 +361,8 @@ class WebhookTriggerServer:
                     live.fired += 1
                     live.last_status = 200 if status == STATUS_OK else 500
             return run_id
+        finally:
+            self._fire_lock.release()
 
     def start(self, host: str = _DEFAULT_BIND, port: int = 0) -> Tuple[str, int]:
         """Start the HTTP server; idempotent if already running."""

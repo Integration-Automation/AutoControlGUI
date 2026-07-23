@@ -6,7 +6,7 @@ from PySide6.QtCore import QObject, QSize, QThread, QTimer, Qt, Signal
 from PySide6.QtGui import QIcon, QImage, QPixmap
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QMessageBox, QPushButton, QSpinBox, QTableWidget,
+    QListWidgetItem, QMessageBox, QSpinBox, QTableWidget,
     QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
 )
 
@@ -106,12 +106,23 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         self._apply_thumb_interval()
 
     def _build_layout(self) -> None:
+        # Add/remove/refresh/thumbnail/broadcast commands run from the
+        # Actions menu; the tab keeps only the inputs, tables, and output.
         root = QVBoxLayout(self)
         root.addWidget(self._build_add_group())
         root.addWidget(self._table, stretch=1)
-        root.addLayout(self._build_button_row())
         root.addWidget(self._build_thumbnails_group(), stretch=1)
         root.addWidget(self._build_broadcast_group(), stretch=1)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("admin_add", self._on_add),
+            ("admin_remove", self._on_remove),
+            ("admin_refresh", self._on_refresh),
+            ("admin_thumb_refresh_now", self._refresh_thumbnails),
+            ("admin_broadcast_run", self._on_broadcast),
+        ]
 
     def _build_thumbnails_group(self) -> QGroupBox:
         group = self._tr(QGroupBox(), "admin_thumb_group")
@@ -119,9 +130,6 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         controls = QHBoxLayout()
         controls.addWidget(self._tr(QLabel(), "admin_thumb_interval"))
         controls.addWidget(self._thumb_interval)
-        refresh = self._tr(QPushButton(), "admin_thumb_refresh_now")
-        refresh.clicked.connect(self._refresh_thumbnails)
-        controls.addWidget(refresh)
         controls.addStretch(1)
         layout.addLayout(controls)
         layout.addWidget(self._thumbnails, stretch=1)
@@ -136,31 +144,13 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         form.addWidget(self._url_input, stretch=1)
         form.addWidget(self._tr(QLabel(), "admin_token"))
         form.addWidget(self._token_input)
-        add = self._tr(QPushButton(), "admin_add")
-        add.clicked.connect(self._on_add)
-        form.addWidget(add)
         return group
-
-    def _build_button_row(self) -> QHBoxLayout:
-        row = QHBoxLayout()
-        for key, handler in (
-            ("admin_remove", self._on_remove),
-            ("admin_refresh", self._on_refresh),
-        ):
-            btn = self._tr(QPushButton(), key)
-            btn.clicked.connect(handler)
-            row.addWidget(btn)
-        row.addStretch(1)
-        return row
 
     def _build_broadcast_group(self) -> QGroupBox:
         group = self._tr(QGroupBox(), "admin_broadcast_group")
         form = QVBoxLayout(group)
         form.addWidget(self._tr(QLabel(), "admin_actions_label"))
         form.addWidget(self._actions_input)
-        run = self._tr(QPushButton(), "admin_broadcast_run")
-        run.clicked.connect(self._on_broadcast)
-        form.addWidget(run)
         form.addWidget(self._tr(QLabel(), "admin_results_label"))
         form.addWidget(self._broadcast_output, stretch=1)
         return group
@@ -199,6 +189,8 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         worker.finished.connect(thread.quit)
         worker.failed.connect(thread.quit)
         thread.finished.connect(self._on_poll_thread_done)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
         self._poll_thread = thread
         thread.start()
 
@@ -247,6 +239,10 @@ class AdminConsoleTab(TranslatableMixin, QWidget):
         worker.finished.connect(self._apply_thumbnails)
         worker.finished.connect(thread.quit)
         thread.finished.connect(self._on_thumb_thread_done)
+        # Without deleteLater the QThread (parented to self) and its worker
+        # accumulate one per poll tick — a fresh handle leak every interval.
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
         self._thumb_thread = thread
         thread.start()
 

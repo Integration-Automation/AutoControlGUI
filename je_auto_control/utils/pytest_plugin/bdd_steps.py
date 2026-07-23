@@ -19,7 +19,7 @@ Or use :func:`register_pytest_bdd_steps` to register every step in one call.
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from je_auto_control.utils.pytest_plugin.keywords import (
     keyword_click_image, keyword_press_key, keyword_screen_size,
@@ -103,6 +103,19 @@ def register_pytest_bdd_steps(pytest_bdd_module: Any) -> None:
     )
 
 
+def _behave_wrap(func: Callable[..., Any]) -> Callable[..., Any]:
+    """Adapt a plain step callable to behave's ``(context, **params)`` contract.
+
+    behave invokes each step as ``func(context, **parsed_params)``. The raw step
+    helpers take no ``context`` parameter, so without this adapter behave binds
+    its context positionally onto the first real argument (``text``/``path``/…)
+    and collides with the same keyword — a ``TypeError`` on every step.
+    """
+    def _step(context: Any, **params: Any) -> Any:  # noqa: ARG001  # reason: behave passes its context positionally; these steps ignore it
+        return func(**params)
+    return _step
+
+
 def register_behave_steps(context: Optional[Any] = None) -> None:
     """Register every step against the global ``behave`` registry.
 
@@ -113,14 +126,15 @@ def register_behave_steps(context: Optional[Any] = None) -> None:
         from behave import given, when, then
     except ImportError:
         return
-    given(u"AutoControl is ready")(given_autocontrol_ready)
-    when(u'I type "{text}"')(when_type_text)
-    when(u'I press "{keycode}"')(when_press_key)
-    when(u'I click on image "{path}"')(when_click_image)
-    when(u'I take a screenshot to "{path}"')(when_take_screenshot)
-    then(u'I see image "{path}"')(then_see_image)
-    then(u'I see text "{text}"')(then_see_text)
-    then(u'the screen size is {width:d}x{height:d}')(then_screen_size_equals)
+    given(u"AutoControl is ready")(_behave_wrap(given_autocontrol_ready))
+    when(u'I type "{text}"')(_behave_wrap(when_type_text))
+    when(u'I press "{keycode}"')(_behave_wrap(when_press_key))
+    when(u'I click on image "{path}"')(_behave_wrap(when_click_image))
+    when(u'I take a screenshot to "{path}"')(_behave_wrap(when_take_screenshot))
+    then(u'I see image "{path}"')(_behave_wrap(then_see_image))
+    then(u'I see text "{text}"')(_behave_wrap(then_see_text))
+    then(u'the screen size is {width:d}x{height:d}')(
+        _behave_wrap(then_screen_size_equals))
 
 
 __all__ = [

@@ -7,9 +7,9 @@ table auto-refreshes when the registry notifies of a change.
 """
 from typing import Optional
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
-    QHBoxLayout, QHeaderView, QLabel, QPushButton, QTableWidget,
+    QHeaderView, QLabel, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -33,6 +33,10 @@ def _t(key: str) -> str:
 class PresenceTab(TranslatableMixin, QWidget):
     """Roster view + role controls for the multi-viewer presence registry."""
 
+    # Emitted from the registry listener (which runs off the Qt thread); a
+    # queued connection bounces the refresh onto the GUI thread.
+    _registry_changed = Signal()
+
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._tr_init()
@@ -40,6 +44,7 @@ class PresenceTab(TranslatableMixin, QWidget):
         self._table = QTableWidget(0, len(_COLUMNS))
         self._status = QLabel()
         self._build_layout()
+        self._registry_changed.connect(self.refresh)
         # Listener fires on every change; the timer is a belt-and-braces
         # refresh in case a listener exception drops us off.
         self._registry.add_listener(self._on_registry_event)
@@ -56,32 +61,25 @@ class PresenceTab(TranslatableMixin, QWidget):
     # --- layout ----------------------------------------------------
 
     def _build_layout(self) -> None:
+        # Refresh/promote/demote/kick commands run from the Actions menu;
+        # the tab keeps only the roster table and the status line.
         root = QVBoxLayout(self)
-        controls = QHBoxLayout()
-        for key, slot in (
-                ("presence_refresh_btn", self.refresh),
-                ("presence_promote_btn", self._on_promote),
-                ("presence_demote_btn", self._on_demote),
-                ("presence_kick_btn", self._on_kick),
-        ):
-            btn = QPushButton()
-            btn.setObjectName(key)
-            btn.clicked.connect(slot)
-            controls.addWidget(btn)
-        controls.addStretch()
-        root.addLayout(controls)
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._status)
         header = self._table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
         self._apply_translations()
 
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("presence_refresh_btn", self.refresh),
+            ("presence_promote_btn", self._on_promote),
+            ("presence_demote_btn", self._on_demote),
+            ("presence_kick_btn", self._on_kick),
+        ]
+
     def _apply_translations(self) -> None:
-        for key in ("presence_refresh_btn", "presence_promote_btn",
-                     "presence_demote_btn", "presence_kick_btn"):
-            btn = self.findChild(QPushButton, key)
-            if btn is not None:
-                btn.setText(_t(key))
         self._table.setHorizontalHeaderLabels(
             [_t(f"presence_col_{col}") for col in _COLUMNS],
         )
@@ -110,8 +108,10 @@ class PresenceTab(TranslatableMixin, QWidget):
 
     def _on_registry_event(self, _viewer_id: str,
                             _row: Optional[ViewerPresence]) -> None:
-        # Listener runs off the Qt thread; bounce onto the GUI loop.
-        QTimer.singleShot(0, self.refresh)
+        # Listener runs off the Qt thread, which has no event loop, so
+        # QTimer.singleShot would never fire. Emit a signal — Qt queues the
+        # refresh onto the GUI thread.
+        self._registry_changed.emit()
 
     def _selected_viewer_id(self) -> Optional[str]:
         row = self._table.currentRow()

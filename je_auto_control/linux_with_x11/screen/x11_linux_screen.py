@@ -13,6 +13,22 @@ from Xlib import X
 from je_auto_control.linux_with_x11.core.utils.x11_linux_display import display
 
 
+def _decode_pixel(data: bytes) -> Tuple[int, int, int]:
+    """Decode a little-endian TrueColor pixel buffer into ``(R, G, B)``.
+
+    ``root.get_image`` returns the pixel in the server's native byte
+    order; on the dominant little-endian TrueColor visual the bytes are
+    laid out blue, green, red(, unused), so the first three must be
+    reversed to yield true RGB — matching the windows / osx backends,
+    which all return ``(R, G, B)``.
+
+    :param data: raw ZPixmap bytes (at least three: B, G, R)
+    :return: (R, G, B)
+    """
+    blue, green, red = data[0], data[1], data[2]
+    return red, green, blue
+
+
 def size() -> Tuple[int, int]:
     """
     Get screen size
@@ -23,10 +39,14 @@ def size() -> Tuple[int, int]:
     return display.screen().width_in_pixels, display.screen().height_in_pixels
 
 
-def get_pixel_rgb(x: int, y: int) -> Tuple[int, int, int]:
+def get_pixel(x: int, y: int) -> Tuple[int, int, int]:
     """
     Get RGB value of pixel at given coordinates
     取得指定座標的像素 RGB 值
+
+    名稱需與 wrapper 呼叫的 ``screen.get_pixel`` 一致。
+    Named to match the backend contract the wrapper calls
+    (``screen.get_pixel``), as the windows / osx backends do.
 
     :param x: X coordinate X 座標
     :param y: Y coordinate Y 座標
@@ -38,6 +58,5 @@ def get_pixel_rgb(x: int, y: int) -> Tuple[int, int, int]:
     # 取得影像資料 Get image data
     raw = root.get_image(x, y, 1, 1, X.ZPixmap, 0xffffffff)
 
-    # raw.data 是 bytes，需要轉換成 RGB
-    pixel = tuple(raw.data[:3])  # (R, G, B)
-    return pixel
+    # raw.data 是 little-endian BGR(X) 位元組，需轉成 RGB
+    return _decode_pixel(raw.data)

@@ -14,6 +14,8 @@ through an injectable ``sink``. Imports no ``PySide6``.
 import contextlib
 from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence
 
+from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+
 Sink = Callable[[Dict[str, Any]], None]
 
 
@@ -48,10 +50,21 @@ def hold_modifiers(modifiers: Sequence[str], *,
     """
     dispatch = sink or _default_sink
     mods = list(modifiers)
-    for mod in mods:
-        dispatch({"op": "press", "key": mod})
+    pressed: List[str] = []
     try:
+        # Presses live inside the try so a failure part-way through still
+        # releases whatever was already pressed. ``pressed`` records the ones
+        # that actually went down, so a mid-press exception can never leak a
+        # held modifier.
+        for mod in mods:
+            dispatch({"op": "press", "key": mod})
+            pressed.append(mod)
         yield mods
     finally:
-        for mod in reversed(mods):
-            dispatch({"op": "release", "key": mod})
+        for mod in reversed(pressed):
+            try:
+                dispatch({"op": "release", "key": mod})
+            except Exception:  # noqa: BLE001  # reason: best-effort release — one failing release must not skip the rest or mask the body error
+                autocontrol_logger.exception(
+                    "hold_modifiers release failed for %r", mod,
+                )

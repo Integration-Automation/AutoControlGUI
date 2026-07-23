@@ -7,7 +7,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QAbstractItemView, QComboBox, QHBoxLayout, QHeaderView, QLabel, QPushButton,
+    QAbstractItemView, QComboBox, QHBoxLayout, QHeaderView, QLabel,
     QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -64,6 +64,8 @@ class FlakinessTab(TranslatableMixin, QWidget):
         self._table.setHorizontalHeaderLabels([_t(k) for k in _COLUMN_KEYS])
 
     def _build_layout(self) -> None:
+        # The refresh command runs from the Actions menu; the tab keeps
+        # only the filter inputs, the table, and the status line.
         root = QVBoxLayout(self)
         controls = QHBoxLayout()
         controls.addWidget(QLabel(_t("flaky_limit")))
@@ -72,13 +74,16 @@ class FlakinessTab(TranslatableMixin, QWidget):
         controls.addWidget(self._min_runs)
         controls.addWidget(QLabel(_t("flaky_group_by")))
         controls.addWidget(self._group_by)
-        refresh_btn = self._tr(QPushButton(), "flaky_refresh")
-        refresh_btn.clicked.connect(self._refresh)
-        controls.addWidget(refresh_btn)
         controls.addStretch()
         root.addLayout(controls)
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._status)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("flaky_refresh", self._refresh),
+        ]
 
     def _refresh(self) -> None:
         report = analyze_flakiness(

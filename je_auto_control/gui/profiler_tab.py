@@ -3,8 +3,8 @@ from typing import List, Optional
 
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import (
-    QAbstractItemView, QHBoxLayout, QHeaderView, QLabel, QProgressBar,
-    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QAbstractItemView, QHeaderView, QLabel, QProgressBar,
+    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -69,22 +69,20 @@ class ProfilerTab(TranslatableMixin, QWidget):
         ])
 
     def _build_layout(self) -> None:
+        # Enable/reset/refresh commands run from the Actions menu; the tab
+        # keeps only the table, the total bar, and the status line.
         root = QVBoxLayout(self)
-        controls = QHBoxLayout()
-        self._enable_btn = self._tr(QPushButton(), "prof_enable")
-        self._enable_btn.clicked.connect(self._toggle_enable)
-        controls.addWidget(self._enable_btn)
-        reset_btn = self._tr(QPushButton(), "prof_reset")
-        reset_btn.clicked.connect(self._on_reset)
-        controls.addWidget(reset_btn)
-        refresh_btn = self._tr(QPushButton(), "prof_refresh")
-        refresh_btn.clicked.connect(self._refresh)
-        controls.addWidget(refresh_btn)
-        controls.addStretch()
-        root.addLayout(controls)
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._totalbar)
         root.addWidget(self._status)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("prof_enable", self._toggle_enable),
+            ("prof_reset", self._on_reset),
+            ("prof_refresh", self._refresh),
+        ]
 
     def _toggle_enable(self) -> None:
         if default_profiler.enabled:
@@ -115,10 +113,6 @@ class ProfilerTab(TranslatableMixin, QWidget):
         running_text = _t("prof_running") if default_profiler.enabled \
             else _t("prof_paused")
         self._status.setText(running_text)
-        self._enable_btn.setText(
-            _t("prof_disable") if default_profiler.enabled
-            else _t("prof_enable"),
-        )
 
     def _set_row(self, row: int, stats: ActionStats, share: float) -> None:
         values = (

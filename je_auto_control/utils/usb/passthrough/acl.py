@@ -94,7 +94,12 @@ class AclRule:
 
     def matches(self, *, vendor_id: str, product_id: str,
                 serial: Optional[str]) -> bool:
-        if self.vendor_id != vendor_id or self.product_id != product_id:
+        # vid/pid are hex strings; compare case-insensitively so an
+        # uppercase-hex rule still matches a lowercase device id (and vice
+        # versa). A case mismatch would silently skip the rule — bypassing a
+        # DENY rule when the default policy is "allow".
+        if (self.vendor_id.lower() != vendor_id.lower()
+                or self.product_id.lower() != product_id.lower()):
             return False
         if self.serial is None:
             return True
@@ -172,10 +177,15 @@ class UsbAcl:
                     serial: Optional[str] = None,
                     persist: bool = True) -> bool:
         with self._lock:
+            # Compare vid/pid case-insensitively to mirror matches(); otherwise a
+            # rule a device matches (case-insensitively) could fail to be removed
+            # when the caller passes a different hex case.
+            vid = vendor_id.lower()
+            pid = product_id.lower()
             new_rules = [
                 r for r in self._state.rules
-                if not (r.vendor_id == vendor_id
-                        and r.product_id == product_id
+                if not (r.vendor_id.lower() == vid
+                        and r.product_id.lower() == pid
                         and r.serial == serial)
             ]
             removed = len(new_rules) != len(self._state.rules)

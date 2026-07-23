@@ -27,7 +27,7 @@ import time
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 from je_auto_control.utils.exception.exceptions import (
-    AutoControlActionException, AutoControlAssertionException,
+    AutoControlAssertionException, AutoControlException,
 )
 from je_auto_control.utils.test_suite.result import (
     STATUS_ERROR, STATUS_FAILED, STATUS_PASSED, STATUS_SKIPPED,
@@ -88,8 +88,11 @@ def _run_actions(executor: Any, actions: List[Any]) -> Tuple[str, str]:
         return STATUS_PASSED, ""
     except AutoControlAssertionException as error:
         return STATUS_FAILED, str(error)
-    except (AutoControlActionException, OSError, RuntimeError,
-            TypeError, ValueError) as error:
+    except (AutoControlException, LookupError, AttributeError,
+            OSError, RuntimeError, TypeError, ValueError) as error:
+        # Mirrors the executor's raise_on_error re-raise set: the framework
+        # family (incl. AutoControlActionNullException), plus LookupError /
+        # AttributeError from block handlers subscripting a bad action.
         return STATUS_ERROR, repr(error)
 
 
@@ -134,9 +137,13 @@ def run_suite(spec: Dict[str, Any],
     started = time.monotonic()
     setup_error = _run_setup(runner, spec.get("setup"))
     result.setup_error = setup_error
-    if setup_error is None:
-        _run_all_cases(runner, spec, wanted, quarantined, result)
-    _run_teardown(runner, spec.get("teardown"))
+    try:
+        if setup_error is None:
+            _run_all_cases(runner, spec, wanted, quarantined, result)
+    finally:
+        # Teardown is "always run after": it must fire even if case execution
+        # raises unexpectedly, and prior case results are preserved.
+        _run_teardown(runner, spec.get("teardown"))
     result.duration_s = time.monotonic() - started
     return result
 
@@ -159,10 +166,43 @@ def _run_all_cases(executor: Any, spec: Dict[str, Any],
                    wanted: Optional[Set[str]], quarantined: Set[str],
                    result: TestSuiteResult) -> None:
     """Expand, filter, and run every case into ``result``."""
-    for case_spec in spec.get("cases", []):
+    cases = spec.get("cases", [])
+    if not isinstance(cases, list):
+        raise ValueError("suite 'cases' must be a list")
+    for case_spec in cases:
+        # A non-dict case would raise AttributeError on .get below (escaping the
+        # per-case containment in _run_case_spec); score it as an error instead.
+        if not isinstance(case_spec, dict):
+            result.cases.append(_error_case_result(
+                {"name": "case"},
+                TypeError(f"case spec must be a dict, got "
+                          f"{type(case_spec).__name__}")))
+            continue
         if not _tags_match(case_spec.get("tags", []), wanted):
             continue
-        for name, sub_spec, binding in _expand_cases(case_spec):
-            result.cases.append(
-                _run_one_case(executor, name, sub_spec, binding, quarantined),
-            )
+        _run_case_spec(executor, case_spec, quarantined, result)
+
+
+def _run_case_spec(executor: Any, case_spec: Dict[str, Any],
+                   quarantined: Set[str], result: TestSuiteResult) -> None:
+    """Expand and run one case spec; a bad case scores *error*, never aborts."""
+    try:
+        expanded = _expand_cases(case_spec)
+    except (AutoControlException, OSError, LookupError,
+            RuntimeError, TypeError, ValueError) as error:
+        result.cases.append(_error_case_result(case_spec, error))
+        return
+    for name, sub_spec, binding in expanded:
+        result.cases.append(
+            _run_one_case(executor, name, sub_spec, binding, quarantined),
+        )
+
+
+def _error_case_result(case_spec: Dict[str, Any],
+                       error: Exception) -> TestCaseResult:
+    """Build an *error* result for a case that failed to even expand."""
+    return TestCaseResult(
+        name=str(case_spec.get("name", "case")), status=STATUS_ERROR,
+        message=repr(error),
+        tags=[str(tag) for tag in case_spec.get("tags", [])],
+    )

@@ -140,6 +140,15 @@ class ComputerUseAgentBackend(AgentBackend):
                 tools=[self._tool_schema],
                 messages=self._conversation,
                 max_tokens=self._max_tokens,
+                # This loop answers exactly one tool_use per turn, so parallel
+                # tool use must stay off: a response with two computer tool_use
+                # blocks would leave the second unanswered and the next
+                # create() would 400 on the dangling tool_use id, aborting the
+                # run. Mirror AnthropicAgentBackend's fix.
+                tool_choice={
+                    "type": "auto",
+                    "disable_parallel_tool_use": True,
+                },
             )
         except Exception as exc:  # noqa: BLE001  rewrap to backend error
             raise AgentBackendError(
@@ -161,7 +170,10 @@ class ComputerUseAgentBackend(AgentBackend):
             payload = _attr(block, "input") or {}
             self._pending_tool_use_id = _attr(block, "id")
             return _decision_from_computer_action(payload)
-        # No tool_use → final answer + stop.
+        # No tool_use → final answer + stop, unless the turn was cut short
+        # (default max_tokens can be hit mid-plan, or the model may refuse):
+        # a truncated reply must not be reported as a successful final answer.
+        _raise_if_truncated(response)
         text_parts: List[str] = [
             _attr(b, "text") or ""
             for b in content if _block_type(b) == "text"
@@ -221,10 +233,10 @@ def _action_type(payload):
 
 
 def _action_wait(payload):
-    return {
-        "tool": "AC_sleep",
-        "input": {"seconds": float(payload.get("duration") or 1.0)},
-    }
+    duration = payload.get("duration")
+    # An explicit 0 is a valid "don't wait" — only fall back when unset.
+    seconds = float(duration) if duration is not None else 1.0
+    return {"tool": "AC_sleep", "input": {"seconds": seconds}}
 
 
 _CLICK_ACTIONS = frozenset({
@@ -277,7 +289,9 @@ def _drag_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 def _scroll_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
     direction = str(payload.get("scroll_direction") or "down").lower()
-    amount = int(payload.get("scroll_amount") or 3)
+    raw_amount = payload.get("scroll_amount")
+    # An explicit 0 means "no scroll" — only default when the key is absent.
+    amount = int(raw_amount) if raw_amount is not None else 3
     delta = amount if direction == "up" else -amount
     return {"tool": "AC_mouse_scroll", "input": {"scroll_value": delta}}
 
@@ -303,6 +317,23 @@ def _hold_key_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _mouse_button_decision(tool: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Map a bare press/release verb to an ``AC_press/release_mouse`` call."""
+    inputs: Dict[str, Any] = {"mouse_keycode": "mouse_left"}
+    coordinate = payload.get("coordinate")
+    if coordinate is not None:
+        inputs["x"], inputs["y"] = _xy(coordinate)
+    return {"tool": tool, "input": inputs}
+
+
+def _mouse_down_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return _mouse_button_decision("AC_press_mouse", payload)
+
+
+def _mouse_up_decision(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return _mouse_button_decision("AC_release_mouse", payload)
+
+
 # Dispatch table — populated after every handler is defined so the
 # table reads its targets at module load time.
 _ACTION_HANDLERS: Dict[str, Callable[[Dict[str, Any]], Dict[str, Any]]] = {
@@ -315,7 +346,25 @@ _ACTION_HANDLERS: Dict[str, Callable[[Dict[str, Any]], Dict[str, Any]]] = {
     "scroll": _scroll_decision,
     "key": _key_decision,
     "hold_key": _hold_key_decision,
+    # computer_20250124 press/release verbs — without these an otherwise
+    # valid action raised AgentBackendError outside the create() try and
+    # aborted the run.
+    "left_mouse_down": _mouse_down_decision,
+    "left_mouse_up": _mouse_up_decision,
 }
+
+
+_TRUNCATION_STOP_REASONS = frozenset({"max_tokens", "refusal"})
+
+
+def _raise_if_truncated(response: Any) -> None:
+    """Reject an incomplete turn instead of treating it as a final answer."""
+    stop_reason = _attr(response, "stop_reason")
+    if stop_reason in _TRUNCATION_STOP_REASONS:
+        raise AgentBackendError(
+            "anthropic computer-use response was incomplete "
+            f"(stop_reason={stop_reason!r})",
+        )
 
 
 # --- helpers --------------------------------------------------------

@@ -3,7 +3,7 @@ from typing import Optional
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
-    QGroupBox, QHBoxLayout, QLabel, QPushButton, QTextEdit, QVBoxLayout, QWidget,
+    QGroupBox, QLabel, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -48,6 +48,8 @@ class LiveHUDTab(TranslatableMixin, QWidget):
         self._apply_position_labels()
 
     def _build_layout(self) -> None:
+        # Start/stop/clear commands run from the Actions menu; the tab
+        # keeps only the watcher labels and the log view.
         root = QVBoxLayout(self)
         status_group = self._tr(QGroupBox(), "hud_watchers_group")
         status_layout = QVBoxLayout()
@@ -56,20 +58,16 @@ class LiveHUDTab(TranslatableMixin, QWidget):
         status_group.setLayout(status_layout)
         root.addWidget(status_group)
 
-        ctl = QHBoxLayout()
-        start_btn = self._tr(QPushButton(), "hud_start")
-        start_btn.clicked.connect(self._start)
-        stop_btn = self._tr(QPushButton(), "hud_stop")
-        stop_btn.clicked.connect(self._stop)
-        clear_btn = self._tr(QPushButton(), "hud_clear")
-        clear_btn.clicked.connect(self._log_view.clear)
-        for btn in (start_btn, stop_btn, clear_btn):
-            ctl.addWidget(btn)
-        ctl.addStretch()
-        root.addLayout(ctl)
-
         root.addWidget(self._tr(QLabel(), "hud_recent_log"))
         root.addWidget(self._log_view, stretch=1)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("hud_start", self._start),
+            ("hud_stop", self._stop),
+            ("hud_clear", self._log_view.clear),
+        ]
 
     def _start(self) -> None:
         self._log_tail.attach(autocontrol_logger)

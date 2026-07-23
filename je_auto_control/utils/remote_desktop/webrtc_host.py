@@ -24,9 +24,7 @@ from je_auto_control.utils.remote_desktop.audit_log import default_audit_log
 from je_auto_control.utils.remote_desktop.fingerprint import (
     load_or_create_host_fingerprint,
 )
-from je_auto_control.utils.remote_desktop.input_dispatch import (
-    InputDispatchError, dispatch_input,
-)
+from je_auto_control.utils.remote_desktop.input_dispatch import dispatch_input
 from je_auto_control.utils.remote_desktop.permissions import SessionPermissions
 from je_auto_control.utils.remote_desktop.rate_limit import (
     RateLimitConfig, RateLimiter,
@@ -976,7 +974,7 @@ class WebRTCDesktopHost:
             return
         try:
             self._dispatch(payload)
-        except InputDispatchError as error:
+        except Exception as error:  # noqa: BLE001  # reason: isolation boundary — a malformed/failing remote input must not kill the channel bridge (dispatch can raise AutoControl*/OSError, not just InputDispatchError)
             autocontrol_logger.warning("input dispatch: %r", error)
 
     def _send_ctrl(self, payload: Mapping[str, Any]) -> None:

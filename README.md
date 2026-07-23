@@ -57,7 +57,9 @@
 
 ## What's New
 
-All per-release notes have moved to **[WHATS_NEW.md](WHATS_NEW.md)**.
+**Latest (2026-07-18) — cross-platform reliability hardening.** A full-project runtime audit fixed execution-time defects across the macOS / Windows / Linux / Wayland backends, the executor, and the remote-desktop / USB stacks — correct Retina cursor math, a relay hang on CPython 3.14, `AC_expect_poll` / `AC_parallel` robustness, localhost-by-default USB/IP, and typed exceptions preserved at I/O boundaries — each covered by a headless regression test. No API changes.
+
+All per-release notes are in **[WHATS_NEW.md](WHATS_NEW.md)**.
 
 ## Features
 
@@ -99,9 +101,10 @@ All per-release notes have moved to **[WHATS_NEW.md](WHATS_NEW.md)**.
 - **WebRTC Packet Inspector** — process-global rolling window of `StatsSnapshot` samples (default 600 / ~10 min @ 1Hz) fed by the existing WebRTC stats pollers. Per-metric `last/min/max/avg/p95` for RTT, FPS, bitrate, packet loss, jitter
 - **USB Device Enumeration** — read-only cross-platform device listing. Tries pyusb (libusb) first; falls back to platform-specific (Windows `Get-PnpDevice`, macOS `system_profiler`, Linux `/sys/bus/usb/devices`). Phase 2 passthrough builds on this (see below)
 - **System Diagnostics** — single-command "is everything OK?" probe across platform, optional deps, executor command count, audit chain, screenshot, mouse, disk space, REST registry. CLI exits 0 if all green / 1 otherwise; REST `/diagnose`; severity-tagged GUI tab
+- **Stable API & Failure Bundles** — versioned, lazy `je_auto_control.api` façade for new integrations (`execute_action`, `generate_code`, `run_diagnostics`, failure bundles) with a documented [lifecycle policy](docs/API_LIFECYCLE.md). Portable `autocontrol.failure-bundle/v1` diagnostic ZIPs: manifest + redacted context/events/log tail, optional screenshot and diagnostics, best-effort collectors, atomic write. CLI `je_auto_control failure-bundle out.zip`; `codegen --failure-bundle` wraps generated pytest in automatic failure diagnostics
 - **USB Hotplug Events** — polling-based hotplug watcher (`UsbHotplugWatcher`) with bounded ring buffer + sequence-numbered events; `GET /usb/events?since=N` lets late subscribers catch up. GUI auto-refresh toggle on the USB tab.
 - **OpenAPI 3.1 + Swagger UI** — `GET /openapi.json` (auth-gated, generated from the live route table) + `GET /docs` (browser Swagger UI with bearer token bar). Drift test in CI catches new routes added without metadata.
-- **Configuration Bundle** — single-file JSON export/import of user config (admin hosts, address book, trusted viewers, known hosts, host service, IDs). Atomic write with `<name>.bak.<timestamp>` backups; CLI `python -m je_auto_control.utils.config_bundle export|import`; `POST /config/{export,import}`; GUI buttons on the REST API tab.
+- **Configuration Bundle** — single-file JSON export/import of user config (admin hosts, address book, trusted viewers, known hosts, host service, IDs). Atomic write with `<name>.bak.<timestamp>` backups; CLI `python -m je_auto_control.utils.config_bundle export|import`; `POST /config/{export,import}`; export/import commands on the REST API tab's Actions menu.
 - **USB Passthrough (opt-in)** — let a remote viewer use a USB device physically attached to the host, over a WebRTC `usb` DataChannel. Wire-level protocol (11 opcodes incl. `RESUME`, CREDIT-based flow control, 16 KiB payload cap with EOF fragmentation for oversize transfers). All eight original open questions resolved: reliable-ordered channel, LIST-over-channel (ACL-filtered), per-claim credits, Linux kernel-driver detach/reattach, and ACL **HMAC-SHA256 integrity** (fail-closed on tamper; pluggable key — Windows DPAPI or passphrase vault). **Backends:** `LibusbBackend` (production), `WinusbBackend` (ctypes) and `IokitBackend` (native IOKit enumeration + libusb transfers) — Windows/macOS *hardware-unverified*; `default_passthrough_backend()` picks per-OS. Viewer-side blocking client (`control/bulk/interrupt_transfer`, `list_devices`, `resume`); in-process `UsbLoopback` so one machine can share + use a device through the full stack. **Wired into WebRTC** host/viewer (`viewer.usb_client()`) plus claim **resume tokens** that survive a reconnect. Persistent ACL (default deny, mode 0600) with host-side prompt dialog, abuse **rate-limit / lockout**, and tamper-evident audit integration. Five driving surfaces: AnyDesk-style **GUI panel** (share + ACL allow/block + local/remote use), `AC_usb_*` executor commands (JSON / socket / scheduler), **REST** `/usb/...`, first-class **MCP** `ac_usb_*` tools, and the Python API. Default off — opt-in via `enable_usb_passthrough(True)` or `JE_AUTOCONTROL_USB_PASSTHROUGH=1`; default-on still pending Phase 2e external security sign-off + real-hardware verification.
 - **Observability (Prometheus + OpenTelemetry)** — stdlib-only `Counter` / `Gauge` / `Histogram` registry with a tiny built-in HTTP exporter on `/metrics`, plus an OpenTelemetry-compatible tracer that upgrades to real OTel spans when the SDK is installed. The executor and agent loop emit `autocontrol_action_calls_total{action,outcome}`, `autocontrol_action_duration_seconds`, and `autocontrol_agent_steps_total{tool,outcome}` automatically — drop the URL into a Prometheus scrape config and you have a Grafana dashboard with zero per-script wiring.
 
@@ -546,8 +549,8 @@ ac.run_from_description("open Notepad and type hello", executor=executor)
 | `AUTOCONTROL_LLM_BACKEND` | `anthropic` to force a backend |
 | `AUTOCONTROL_LLM_MODEL` | Override the default model (e.g. `claude-opus-4-7`) |
 
-GUI: **LLM Planner** tab — description box, `QThread`-backed *Plan*
-button, action-list preview, and a *Run plan* button.
+GUI: **LLM Planner** tab — description box and action-list preview;
+*Plan* (`QThread`-backed) and *Run plan* live in the window's Actions menu.
 
 ### Runtime Variables & Control Flow
 
@@ -575,7 +578,8 @@ commands, scripts can drive themselves from data without Python glue:
 
 `AC_if_var` operators: `eq`, `ne`, `lt`, `le`, `gt`, `ge`, `contains`,
 `startswith`, `endswith`. GUI: **Variables** tab — live view of
-`executor.variables` with single-set, JSON seed, and clear-all controls.
+`executor.variables`; single-set, JSON seed, and clear-all run from the
+window's Actions menu.
 
 ### Remote Desktop
 
@@ -1099,8 +1103,9 @@ for run in default_history_store.list_runs(limit=20):
     print(run.id, run.source, run.status, run.artifact_path)
 ```
 
-The GUI **Run History** tab exposes filter/refresh/clear and
-double-click-to-open on the artifact column.
+The GUI **Run History** tab shows the runs table with
+double-click-to-open on the artifact column; filter, refresh, and
+clear run from the window's Actions menu.
 
 ### Report Generation
 
@@ -1357,6 +1362,16 @@ Or from the command line:
 python -m je_auto_control
 ```
 
+The main window is menu-driven: tabs hold only their inputs, tables,
+and result views, and every tab's commands live in the window-level
+**Actions** menu, which rebuilds for the active tab. **View → Tabs**
+shows or hides any of the ~48 registered tabs, grouped by category
+(Core / Editing / Detection & Vision / Automation Engines / System);
+the default layout opens with just Record, Script Builder, and Remote
+Desktop. **View → Text Size** offers auto/preset font scaling, and the
+**Language** menu (English / 繁體中文 / 简体中文 / 日本語) retranslates
+the whole window live.
+
 ---
 
 ## Command-Line Interface
@@ -1437,6 +1452,11 @@ python -m pytest test/integrated_test/
 ```
 
 ### Project Links
+
+- [Capability and platform matrix](docs/CAPABILITY_MATRIX.md)
+- [Public API lifecycle and deprecation policy](docs/API_LIFECYCLE.md)
+- [Security policy](SECURITY.md)
+- [Compatibility changelog](CHANGELOG.md)
 
 - **Homepage**: https://github.com/Intergration-Automation-Testing/AutoControl
 - **Documentation**: https://autocontrol.readthedocs.io/en/latest/

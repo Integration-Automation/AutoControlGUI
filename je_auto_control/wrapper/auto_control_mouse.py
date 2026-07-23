@@ -42,16 +42,31 @@ def mouse_preprocess(mouse_keycode: Union[int, str], x: int, y: int) -> Tuple[in
     except AutoControlCantFindKeyException as error:
         raise AutoControlCantFindKeyException(table_cant_find_key_error_message) from error
 
-    try:
-        now_x, now_y = get_mouse_position()
-        if x is None:
-            x = now_x
-        if y is None:
-            y = now_y
-    except AutoControlMouseException as error:
-        raise AutoControlMouseException(
-            mouse_get_position_error_message + " " + repr(error)) from error
+    # 只有在座標缺漏時才查詢游標位置。
+    # Only query the cursor when a coordinate is actually missing: backends
+    # that cannot report the cursor (Wayland raises NotImplementedError by
+    # design) must still accept an explicit x/y, which is what lets scripts
+    # replay the same effect headlessly.
+    if x is None or y is None:
+        try:
+            now_x, now_y = get_mouse_position()
+            if x is None:
+                x = now_x
+            if y is None:
+                y = now_y
+        except AutoControlMouseException as error:
+            raise AutoControlMouseException(
+                mouse_get_position_error_message + " " + repr(error)) from error
 
+    # Coerce coordinates to int before they reach a native input call. A float
+    # x/y (from a computed/random variable or a JSON literal like {"x": 100.5})
+    # would hit an un-prototyped SetCursorPos / Xlib fake_input and raise
+    # ctypes.ArgumentError / struct.error — which escapes the executor and
+    # aborts the whole run instead of clicking at the rounded point.
+    if x is not None:
+        x = int(x)
+    if y is not None:
+        y = int(y)
     return mouse_keycode, x, y
 
 
@@ -86,6 +101,10 @@ def set_mouse_position(x: int, y: int) -> tuple[int, int] | None:
     autocontrol_logger.info(f"set_mouse_position, x={x}, y={y}")
     param = {"x": x, "y": y}
     try:
+        # int coercion: a float coord would reach an un-prototyped native call
+        # (SetCursorPos / Xlib fake_input) and raise ctypes.ArgumentError /
+        # struct.error, which escapes the executor and aborts the whole run.
+        x, y = int(x), int(y)
         mouse.set_position(x=x, y=y)
         record_action_to_list("set_mouse_position", param)
         return x, y
@@ -167,13 +186,53 @@ def click_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) ->
     param = {"keycode": mouse_keycode, "x": x, "y": y}
     try:
         mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
-        mouse.click_mouse(mouse_keycode, x, y)
+        # macOS orders its mouse backend as (x, y, button) — same convention as
+        # press_mouse/release_mouse above. Without this branch the arguments
+        # bind as x=<keycode>, y=<x>, button=<y>; the osx button table holds
+        # strings, so the int never matches any branch and the click is
+        # silently dropped with no exception.
+        if sys.platform == "darwin":
+            mouse.click_mouse(x, y, mouse_keycode)
+        else:
+            mouse.click_mouse(mouse_keycode, x, y)
         record_action_to_list("click_mouse", param)
         return mouse_keycode, x, y
     except AutoControlMouseException as error:
         record_action_to_list("click_mouse", param, repr(error))
         autocontrol_logger.error(f"click_mouse failed: {repr(error)}")
         raise AutoControlMouseException(mouse_click_mouse_error_message + " " + repr(error)) from error
+
+
+def _scroll_to(x: int, y: int) -> None:
+    """
+    將游標移到滾動位置，缺漏的座標沿用目前位置並做邊界檢查。
+    Move the cursor to the requested scroll point, filling in whichever
+    coordinate was omitted from the current position and clamping to screen.
+
+    只有在有座標缺漏時才查詢游標位置：兩個座標都給定時，不需要（也不應該）
+    查詢游標，否則無法回報游標的後端（如 Wayland）會誤拋例外。
+    Query the cursor only when a coordinate is missing: when both are
+    supplied the current position is never needed, so backends that cannot
+    report it (e.g. Wayland) must not be forced to raise.
+    """
+    width, height = screen_size()
+    if x is None or y is None:
+        try:
+            now_x, now_y = get_mouse_position()
+        except (AutoControlMouseException, NotImplementedError, OSError):
+            # 後端無法回報游標(如 Wayland 會拋 NotImplementedError)時,無法
+            # 補上缺漏的座標軸,直接略過預先移動,讓滾動發生在目前游標處,
+            # 而非讓例外逸出 API 承諾的降級行為。
+            # Backend can't report the cursor (Wayland raises NotImplementedError);
+            # without it the omitted axis can't be filled, so skip the pre-move and
+            # scroll at the current cursor instead of escaping the documented
+            # graceful degradation.
+            return
+    else:
+        now_x, now_y = (None, None)
+    target_x = now_x if x is None else max(0, min(x, width - 1))
+    target_y = now_y if y is None else max(0, min(y, height - 1))
+    set_mouse_position(target_x, target_y)
 
 
 def mouse_scroll(scroll_value: int, x: int = None, y: int = None,
@@ -183,23 +242,26 @@ def mouse_scroll(scroll_value: int, x: int = None, y: int = None,
     Simulate mouse scroll
 
     :param scroll_value: 滾動數值 Scroll value
-    :param x: X 座標 X position
-    :param y: Y 座標 Y position
+    :param x: X 座標，指定時會先將游標移到該處 X position; the cursor moves here first
+    :param y: Y 座標，指定時會先將游標移到該處 Y position; the cursor moves here first
     :param scroll_direction: 滾動方向 (Linux only) Scroll direction
     :return: (scroll_value, scroll_direction)
     """
     autocontrol_logger.info(f"mouse_scroll, value={scroll_value}, x={x}, y={y}, direction={scroll_direction}")
     param = {"scroll_value": scroll_value, "x": x, "y": y, "direction": scroll_direction}
     try:
-        now_x, now_y = get_mouse_position()
-        width, height = screen_size()
-
-        # 邊界檢查 Boundary check
-        x = now_x if x is None else max(0, min(x, width - 1))
-        y = now_y if y is None else max(0, min(y, height - 1))
+        # 只有在呼叫端指定座標時才移動游標。
+        # Only move when the caller asked for a point. Every backend ignored
+        # the x/y it was handed (Win32 needs MOVE|ABSOLUTE alongside WHEEL,
+        # and the mac/linux backends were never passed them), so scrolling
+        # always happened at the cursor despite the documented API. Querying
+        # the cursor unconditionally also broke backends that cannot report
+        # it, e.g. Wayland.
+        if x is not None or y is not None:
+            _scroll_to(x, y)
 
         if sys.platform in ["win32", "cygwin", "msys"]:
-            mouse.scroll(scroll_value, x, y)
+            mouse.scroll(scroll_value)
         elif sys.platform == "darwin":
             mouse.scroll(scroll_value)
         elif sys.platform in ["linux", "linux2"]:

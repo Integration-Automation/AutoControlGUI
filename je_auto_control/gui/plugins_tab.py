@@ -3,7 +3,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QLabel, QLineEdit, QListWidget, QMessageBox,
-    QPushButton, QVBoxLayout, QWidget,
+    QVBoxLayout, QWidget,
 )
 
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
@@ -33,20 +33,23 @@ class PluginsTab(TranslatableMixin, QWidget):
         self._build_layout()
 
     def _build_layout(self) -> None:
+        # Browse/load commands run from the Actions menu; the tab keeps
+        # only the directory input, the command list, and the status.
         root = QVBoxLayout(self)
         form = QHBoxLayout()
         form.addWidget(self._tr(QLabel(), "pl_dir_label"))
         form.addWidget(self._dir_input, stretch=1)
-        browse = self._tr(QPushButton(), "browse")
-        browse.clicked.connect(self._browse)
-        form.addWidget(browse)
-        load = self._tr(QPushButton(), "pl_load")
-        load.clicked.connect(self._on_load)
-        form.addWidget(load)
         root.addLayout(form)
         root.addWidget(self._tr(QLabel(), "pl_registered_label"))
         root.addWidget(self._list, stretch=1)
         root.addWidget(self._status)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("browse", self._browse),
+            ("pl_load", self._on_load),
+        ]
 
     def retranslate(self) -> None:
         TranslatableMixin.retranslate(self)

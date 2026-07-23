@@ -3,7 +3,7 @@ from typing import Optional
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
-    QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QTableWidget,
+    QHBoxLayout, QLabel, QLineEdit, QMessageBox, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -58,25 +58,22 @@ class WindowManagerTab(TranslatableMixin, QWidget):
         self._apply_status()
 
     def _build_layout(self) -> None:
+        # Refresh/focus/close commands run from the Actions menu; the tab
+        # keeps only the filter input, the window table, and the status.
         root = QVBoxLayout(self)
         top = QHBoxLayout()
-        refresh = self._tr(QPushButton(), "win_refresh")
-        refresh.clicked.connect(self.refresh)
-        top.addWidget(refresh)
         top.addWidget(self._filter, stretch=1)
         root.addLayout(top)
         root.addWidget(self._table, stretch=1)
-        actions = QHBoxLayout()
-        for key, handler in (
+        root.addWidget(self._status)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("win_refresh", self.refresh),
             ("win_focus_selected", self._on_focus),
             ("win_close_selected", self._on_close),
-        ):
-            btn = self._tr(QPushButton(), key)
-            btn.clicked.connect(handler)
-            actions.addWidget(btn)
-        actions.addStretch()
-        root.addLayout(actions)
-        root.addWidget(self._status)
+        ]
 
     def refresh(self) -> None:
         try:

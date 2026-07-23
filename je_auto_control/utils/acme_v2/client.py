@@ -20,6 +20,7 @@ LETSENCRYPT_STAGING = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
 _USER_AGENT = "autocontrol-acme/1.0"
 _JOSE_CONTENT_TYPE = "application/jose+json"
+_BAD_NONCE_ERROR = "urn:ietf:params:acme:error:badNonce"
 
 
 class AcmeError(RuntimeError):
@@ -266,6 +267,22 @@ class AcmeClient:
                      *, use_jwk: bool = False,
                      accept: Optional[str] = None,
                      ) -> tuple:
+        status, parsed, headers = self._post_once(
+            url, payload, use_jwk=use_jwk, accept=accept,
+        )
+        if _is_bad_nonce(status, parsed):
+            # RFC 8555 §6.5: a badNonce rejection is retryable. The error
+            # response carried a fresh Replay-Nonce (already cached by
+            # _post_once), so retry exactly once with it.
+            status, parsed, headers = self._post_once(
+                url, payload, use_jwk=use_jwk, accept=accept,
+            )
+        return status, parsed, headers
+
+    def _post_once(self, url: str,
+                   payload: Optional[Mapping[str, Any]],
+                   *, use_jwk: bool, accept: Optional[str]) -> tuple:
+        """Sign and POST once; cache the server's next Replay-Nonce."""
         nonce = self._nonce or self._fresh_nonce()
         self._nonce = None
         try:
@@ -325,6 +342,12 @@ class AcmeClient:
             except (UnicodeDecodeError, json.JSONDecodeError):
                 body_value = raw
         return status, body_value, resp_headers
+
+
+def _is_bad_nonce(status: int, parsed: Any) -> bool:
+    """Whether an ACME response is a retryable badNonce error (RFC 8555 §6.5)."""
+    return (status >= 400 and isinstance(parsed, Mapping)
+            and parsed.get("type") == _BAD_NONCE_ERROR)
 
 
 def _build_authorization(url: str, body: Mapping[str, Any]

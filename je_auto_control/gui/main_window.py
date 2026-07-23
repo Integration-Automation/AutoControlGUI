@@ -47,6 +47,10 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
 
         self._user_font_pt: int = 0  # 0 means auto-detect from screen
         self.apply_stylesheet(self, "dark_amber.xml")
+        # qt_material writes the theme into this window's stylesheet; capture it
+        # so _apply_font_pt can append the font rule instead of replacing (and
+        # thereby wiping) the theme.
+        self._theme_stylesheet: str = self.styleSheet()
         self._apply_font_pt(self._user_font_pt)
 
         self.setWindowTitle(_t("application_name", "AutoControlGUI"))
@@ -56,9 +60,14 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
         self.setCentralWidget(self.auto_control_gui_widget)
 
         self._view_menu: QMenu = None
+        self._actions_menu: QMenu = None
         self._tab_actions: list = []
         self._build_menu_bar()
         self.auto_control_gui_widget.tabs_changed.connect(self._rebuild_tabs_menu)
+        self.auto_control_gui_widget.tabs_changed.connect(self._rebuild_actions_menu)
+        self.auto_control_gui_widget.current_tab_changed.connect(
+            self._rebuild_actions_menu,
+        )
         language_wrapper.add_listener(self._on_language_changed)
 
     # --- menu construction ---------------------------------------------------
@@ -67,10 +76,33 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
         bar = self.menuBar()
         bar.clear()
         bar.addMenu(self._build_file_menu())
+        bar.addMenu(self._build_actions_menu())
         bar.addMenu(self._build_view_menu())
         bar.addMenu(self._build_tools_menu())
         bar.addMenu(self._build_language_menu())
         bar.addMenu(self._build_help_menu())
+
+    def _build_actions_menu(self) -> QMenu:
+        """Per-tab command menu: the active tab's operations live here
+        instead of as buttons inside the tab."""
+        self._actions_menu = QMenu(_t("menu_actions", "Actions"), self)
+        self._rebuild_actions_menu()
+        return self._actions_menu
+
+    def _rebuild_actions_menu(self) -> None:
+        if self._actions_menu is None:
+            return
+        self._actions_menu.clear()
+        entries = self.auto_control_gui_widget.current_tab_menu_actions()
+        if not entries:
+            placeholder = QAction(
+                _t("menu_actions_none", "(No actions on this tab)"), self,
+            )
+            placeholder.setEnabled(False)
+            self._actions_menu.addAction(placeholder)
+            return
+        for label_key, handler in entries:
+            self._actions_menu.addAction(_t(label_key, label_key), handler)
 
     def _build_file_menu(self) -> QMenu:
         menu = QMenu(_t("menu_file", "File"), self)
@@ -142,8 +174,15 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
         return 12
 
     def _apply_font_pt(self, pt: int) -> None:
+        """Apply the font size on top of the active theme stylesheet.
+
+        The theme lives in this window's stylesheet, so the font rule is
+        appended rather than assigned — assigning would replace (and wipe) the
+        qt_material theme on startup and on every text-size change.
+        """
         effective = pt if pt > 0 else self._detect_auto_font_pt()
-        self.setStyleSheet(f"font-size: {effective}pt; font-family: 'Lato';")
+        font_rule = f"* {{ font-size: {effective}pt; font-family: 'Lato'; }}"
+        self.setStyleSheet(f"{self._theme_stylesheet}\n{font_rule}")
 
     def _on_text_size_selected(self) -> None:
         action = self.sender()

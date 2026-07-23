@@ -1,5 +1,6 @@
 """Phase 3.3: tests for the in-process TCP relay."""
 import socket
+import threading
 import time
 
 import pytest
@@ -118,3 +119,27 @@ def test_relay_stops_cleanly():
     assert server.is_running
     server.stop(timeout=1.0)
     assert not server.is_running
+
+
+def test_rapid_start_stop_never_leaks_a_thread_exception(monkeypatch):
+    """Stopping must not blow up the accept thread.
+
+    Regression: start() published the listening socket and left the *new*
+    thread to call settimeout() on it. A stop() landing in that window closed
+    the socket first, so settimeout raised WSAENOTSOCK (WinError 10038) outside
+    any handler and the accept thread died with an unhandled exception —
+    reproducibly, on ~45% of tight start/stop cycles.
+
+    test_relay_stops_cleanly above cannot catch this: it only asserts the
+    is_running flags, which are correct whether or not the thread survived.
+    """
+    caught: list = []
+    monkeypatch.setattr(threading, "excepthook",
+                        lambda args: caught.append(args.exc_value))
+
+    for _ in range(50):
+        server = RelayServer(bind="127.0.0.1", port=0)
+        server.start()
+        server.stop(timeout=1.0)   # no sleep: keep the race window wide
+
+    assert caught == [], f"accept thread raised: {caught[:3]}"

@@ -8,6 +8,7 @@ top-level MCP server boot cheap.
 import base64
 import io
 import os
+import threading
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.mcp_server.tools._base import MCPContent
@@ -2038,12 +2039,23 @@ def jwt_decode(token, key, algorithms=None, audience=None, leeway=0.0):
 
 
 _RATE_LIMITERS = {}
+_RATE_LIMITERS_LOCK = threading.Lock()
 
 
 def rate_limit(name, rate=1.0, capacity=1.0, n=1.0):
     from je_auto_control.utils.rate_limit import TokenBucket
-    bucket = _RATE_LIMITERS.setdefault(
-        name, TokenBucket(float(rate), float(capacity)))
+    rate = float(rate)
+    capacity = float(capacity)
+    with _RATE_LIMITERS_LOCK:
+        existing = _RATE_LIMITERS.get(name)
+        # setdefault silently ignored a changed rate/capacity for a reused
+        # name; rebuild the bucket when either parameter differs so the caller
+        # actually gets the limit they asked for.
+        if existing is None or existing[0] != rate or existing[1] != capacity:
+            bucket = TokenBucket(rate, capacity)
+            _RATE_LIMITERS[name] = (rate, capacity, bucket)
+        else:
+            bucket = existing[2]
     acquired = bucket.try_acquire(float(n))
     return {"acquired": acquired, "tokens": round(bucket.tokens, 4),
             "wait": round(bucket.time_until_available(float(n)), 4)}

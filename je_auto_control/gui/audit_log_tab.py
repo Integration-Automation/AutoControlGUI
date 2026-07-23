@@ -4,7 +4,7 @@ from typing import List, Optional, Sequence
 
 from PySide6.QtWidgets import (
     QComboBox, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem,
+    QMessageBox, QSpinBox, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget,
 )
 
@@ -72,11 +72,20 @@ class AuditLogTab(TranslatableMixin, QWidget):
         self._refresh()
 
     def _build_layout(self) -> None:
+        # Refresh/verify/clear commands run from the Actions menu; the
+        # tab keeps only the filter inputs, the table, and the status.
         root = QVBoxLayout(self)
         root.addWidget(self._build_filter_group())
         root.addWidget(self._table, stretch=1)
-        root.addLayout(self._build_button_row())
         root.addWidget(self._verify_status)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("audit_refresh", self._refresh),
+            ("audit_verify", self._verify),
+            ("audit_clear", self._clear),
+        ]
 
     def _build_filter_group(self) -> QGroupBox:
         group = self._tr(QGroupBox(), "audit_filter_group")
@@ -88,19 +97,6 @@ class AuditLogTab(TranslatableMixin, QWidget):
         row.addWidget(self._tr(QLabel(), "audit_filter_limit"))
         row.addWidget(self._limit_input)
         return group
-
-    def _build_button_row(self) -> QHBoxLayout:
-        row = QHBoxLayout()
-        for key, handler in (
-            ("audit_refresh", self._refresh),
-            ("audit_verify", self._verify),
-            ("audit_clear", self._clear),
-        ):
-            btn = self._tr(QPushButton(), key)
-            btn.clicked.connect(handler)
-            row.addWidget(btn)
-        row.addStretch(1)
-        return row
 
     def _refresh(self) -> None:
         self._apply_table_headers()

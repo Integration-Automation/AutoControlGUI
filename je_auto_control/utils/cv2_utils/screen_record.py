@@ -33,13 +33,15 @@ class ScreenRecorder:
         :param frame_per_sec: 每秒幀數
         :param resolution: 解析度 (寬, 高)
         """
-        record_thread = ScreenRecordThread(path_and_filename, codec, frame_per_sec, resolution)
-
-        # 如果已有同名錄影器，先停止舊的
-        old_record = self.running_recorder.get(recorder_name)
+        # 先停止並等待舊的同名錄影器,避免兩個 VideoWriter 同時寫入同一檔案。
+        # Stop (and wait for) any existing recorder first so we never open a
+        # second VideoWriter on the same file before the old one releases it.
+        old_record = self.running_recorder.pop(recorder_name, None)
         if old_record is not None:
             old_record.stop()
+            old_record.join(timeout=5.0)
 
+        record_thread = ScreenRecordThread(path_and_filename, codec, frame_per_sec, resolution)
         record_thread.daemon = True
         record_thread.start()
         self.running_recorder[recorder_name] = record_thread
@@ -49,9 +51,13 @@ class ScreenRecorder:
         Stop a specific recorder
         停止指定的錄影器
         """
-        if recorder_name in self.running_recorder:
-            self.running_recorder[recorder_name].stop()
-            del self.running_recorder[recorder_name]
+        record_thread = self.running_recorder.pop(recorder_name, None)
+        if record_thread is not None:
+            # Join after stopping so the VideoWriter is released (its run()
+            # finally) before we return — otherwise the .avi may still be
+            # unflushed when the caller reads/uploads it.
+            record_thread.stop()
+            record_thread.join(timeout=5.0)
 
 
 class ScreenRecordThread(threading.Thread):
@@ -65,13 +71,16 @@ class ScreenRecordThread(threading.Thread):
         super().__init__()
         self.fourcc = cv2.VideoWriter.fourcc(*codec)
         self.video_writer = cv2.VideoWriter(path_and_filename, self.fourcc, frame_per_sec, resolution)
-        self.record_flag = False
+        # 用 Event 而非布林旗標:run() 之前呼叫 stop() 也能被遵守,不會被覆寫。
+        # An Event, not a bool flag, so a stop() that lands before run() starts
+        # is honoured instead of being overwritten by run() (which would leave
+        # the recorder unstoppable and the VideoWriter never released).
+        self._stop_event = threading.Event()
         self.resolution = resolution
 
     def run(self) -> None:
-        self.record_flag = True
         try:
-            while self.record_flag:
+            while not self._stop_event.is_set():
                 # 擷取螢幕畫面 Capture screen frame
                 image = screenshot()
 
@@ -89,4 +98,4 @@ class ScreenRecordThread(threading.Thread):
         Stop recording
         停止錄影
         """
-        self.record_flag = False
+        self._stop_event.set()

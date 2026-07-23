@@ -33,6 +33,14 @@ class StepFormView(QWidget):
         super().__init__(parent)
         self._step: Optional[Step] = None
         self._editors: Dict[str, QWidget] = {}
+        # 填表期間必須抑制 commit。編輯器在建立時就接上 textChanged，
+        # 而 _populate_from_step 是一格一格填的，每填一格都會觸發
+        # _commit_field，讀到的是還沒填完的表單。
+        # Suppresses commits while populating. Editors are wired to
+        # textChanged/toggled at build time, and _populate_from_step fills them
+        # one at a time — so without this each setText() commits a half-filled
+        # form, overwriting params from fields that have not been set yet.
+        self._populating = False
         self._layout = QFormLayout(self)
         self._title = QLabel(_t("sb_no_step_selected"))
         self._layout.addRow(self._title)
@@ -60,7 +68,11 @@ class StepFormView(QWidget):
             editor = self._build_editor(field_spec)
             self._editors[field_spec.name] = editor
             self._layout.addRow(self._field_label(field_spec), editor)
-        self._populate_from_step(spec, step)
+        self._populating = True
+        try:
+            self._populate_from_step(spec, step)
+        finally:
+            self._populating = False
 
     def _clear(self) -> None:
         while self._layout.rowCount() > 1:
@@ -149,18 +161,33 @@ class StepFormView(QWidget):
             _set_editor_value(editor, field_spec, value)
 
     def _commit_field(self) -> None:
-        if self._step is None:
+        if self._step is None or self._populating:
             return
         spec = COMMAND_SPECS.get(self._step.command)
         if spec is None:
             return
-        new_params: Dict[str, Any] = {}
+        # 以現有參數為基礎，只更新這張表單管得到的欄位。
+        # Start from the params the step already has and update only the fields
+        # this form owns. Rebuilding from scratch silently dropped anything the
+        # schema has no field for — and a hand-authored action legitimately
+        # carries such params (nested `actions` lists, structural dicts). The
+        # drop fired merely on selecting a step, and builder_tab then wrote the
+        # truncated version straight back over the user's file.
+        new_params: Dict[str, Any] = dict(self._step.params)
         for field_spec in spec.fields:
             editor = self._editors.get(field_spec.name)
             if editor is None:
                 continue
-            value = _read_editor_value(editor, field_spec)
+            ok, value = _read_field_value(editor, field_spec)
+            if not ok:
+                # Transient unparseable input (mid-typing, or a loaded "100.0"
+                # in an int field): keep this field's existing param instead of
+                # aborting the whole commit, which would freeze every edit.
+                continue
             if value is None and field_spec.optional:
+                # An emptied optional field means "no value" — drop the key
+                # rather than leaving the previous one behind.
+                new_params.pop(field_spec.name, None)
                 continue
             new_params[field_spec.name] = value
         self._step.params = new_params
@@ -247,6 +274,18 @@ _READERS = {
 def _read_editor_value(editor: QWidget, spec: FieldSpec) -> Any:
     reader = _READERS.get(spec.field_type)
     return reader(editor) if reader is not None else None
+
+
+def _read_field_value(editor: QWidget, spec: FieldSpec) -> tuple[bool, Any]:
+    """Read one field, returning ``(ok, value)``.
+
+    ``ok`` is ``False`` when the current text cannot be parsed (int/float/rgb
+    fields), so the caller can skip that field instead of aborting the commit.
+    """
+    try:
+        return True, _read_editor_value(editor, spec)
+    except (ValueError, TypeError):
+        return False, None
 
 
 _EDITOR_BUILDERS = {

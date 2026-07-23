@@ -1,5 +1,20 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-07-03) — 稳定 API、失败诊断包与发布工程
+
+给新集成用的版本化入口点、便携式失败诊断格式,以及强化后的发布管线。完整参考:[`docs/API_LIFECYCLE.md`](../docs/API_LIFECYCLE.md) 与 [`docs/CAPABILITY_MATRIX.md`](../docs/CAPABILITY_MATRIX.md)。
+
+- **稳定 `je_auto_control.api` 门面**:小巧、延迟加载、有类型的命名空间(`execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、failure bundles),新的使用者导入核心自动化时不必连带加载数百个可选集成。受书面生命周期政策管辖——移除稳定 API 需要弃用警告加两个 minor 版本——并由 `utils/deprecation.deprecated` 提供一致、带元数据的警告。CI 以 mypy 检查此接口类型,并在 Windows/Ubuntu/macOS × Python 3.10/3.14 矩阵上冒烟测试导入。
+- **失败诊断包**(`create_failure_bundle` / `failure_bundle_on_error`,CLI `je_auto_control failure-bundle out.zip`):一个原子写入、自足的 `autocontrol.failure-bundle/v1` ZIP,用于诊断失败的运行——含运行环境信息的 manifest、已脱敏的 error/context/events、已脱敏的 log 尾段、可选截图与诊断报告、opt-in 附件。收集器为 best-effort:截图或诊断探测坏掉会记进 `collector_failures` 而不是丢失整个诊断包。`codegen --failure-bundle` 让生成的 pytest 流程自动封存自己的失败证据。秘密脱敏现在也会掩蔽明确的 `key=value` / `Authorization: Bearer` 凭证语法,不论其熵值高低。
+- **发布工程**:发布从 push-to-main 改为不可变的 `v*` 标签——新的 `release.yml` 验证标签与包版本一致、构建、冒烟测试 wheel、附上构建来源证明(provenance attestation),并经 PyPI Trusted Publishing 发布。`quality.yml` 新增 dependency review、覆盖率下限(fail-under 35,分支覆盖)与稳定 API 的 mypy 关卡;新的 platform-smoke workflow 在三个操作系统上演练稳定 API。
+- **项目文档**:新增 [`SECURITY.md`](../SECURITY.md)(私密安全通报、响应时限、操作默认值)、[`CHANGELOG.md`](../CHANGELOG.md)(Keep-a-Changelog 兼容性记录)、API 生命周期政策与能力/平台支持矩阵。Sphinx 索引补齐 v182–v223 两种语言的功能文档。
+
+## 本次更新 (2026-07-02) — 菜单驱动 GUI:Actions 菜单取代标签页内按钮
+
+每个标签页的命令现在集中在一个可预期的位置。窗口菜单栏新增动态 **Actions** 菜单,会随当前标签页重建;标签页只保留输入字段、表格与结果/状态视图,不再是一排排按钮。完整参考:[`docs/source/Zh/doc/new_features/v223_features_doc.rst`](../docs/source/Zh/doc/new_features/v223_features_doc.rst)。
+
+- **窗口级 Actions 菜单**:核心标签页在注册时声明命令;功能标签页提供 `menu_actions()` 挂钩,返回 `(label_key, handler)` 配对。48 个已注册标签页中有 46 个以此方式呈现命令——Script Builder 与 Remote Desktop 刻意保留交互式面板布局,菜单在该处显示占位信息。窗口级菜单无法取代的按钮维持原位(堆叠触发器表单内的逐页浏览按钮、随可见性切换的数据源浏览按钮、有状态的自动刷新复选框)。无头回归测试守护此契约,标签页不可能默默失去其命令。
+
 ## 本次更新 (2026-06-24) — 扩充 UIA 控制模式(展开 / 选取 / 范围 / 滚动)
 
 以原生模式驱动树节点、列表/下拉项目、滑块与滚动,而非像素猜测。完整参考:[`docs/source/Zh/doc/new_features/v181_features_doc.rst`](../docs/source/Zh/doc/new_features/v181_features_doc.rst)。

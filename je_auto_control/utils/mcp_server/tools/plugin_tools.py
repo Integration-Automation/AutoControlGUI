@@ -27,7 +27,10 @@ def make_plugin_tool(name: str,
     properties, required = _properties_from_signature(handler)
     tool_name = f"plugin_{name.lower()}" if not name.lower().startswith(
         "plugin_") else name.lower()
-    docstring = (handler.__doc__ or "").strip().splitlines()[0] if handler.__doc__ else ""
+    # A whitespace-only docstring strips to "" whose .splitlines() is empty,
+    # so index [0] would raise IndexError — guard on the stripped text.
+    stripped_doc = (handler.__doc__ or "").strip()
+    docstring = stripped_doc.splitlines()[0] if stripped_doc else ""
     desc = description or docstring or f"Plugin command {name!r}."
     return MCPTool(
         name=tool_name,

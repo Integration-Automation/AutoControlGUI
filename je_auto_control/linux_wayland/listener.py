@@ -28,4 +28,21 @@ def hook_keyboard(*_args, **_kwargs):
     )
 
 
-__all__ = ["check_key_press", "hook_keyboard"]
+def check_key_is_press(keycode: int | None = None) -> bool:
+    """Best-effort key-state query; on Wayland this always reports ``False``.
+
+    Every other backend exposes ``check_key_is_press`` and the wrapper's
+    critical-exit watcher calls it on a timer. Wayland cannot read the
+    global key state from an unprivileged client, so rather than omitting
+    the name (which would ``AttributeError`` and kill the critical-exit
+    thread) this reports ``False`` — the panic key is inert on Wayland,
+    but callers degrade gracefully instead of crashing.
+
+    :param keycode: key to query; ignored because no query is possible.
+    :return: always ``False``.
+    """
+    del keycode
+    return False
+
+
+__all__ = ["check_key_is_press", "check_key_press", "hook_keyboard"]

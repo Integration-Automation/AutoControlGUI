@@ -24,10 +24,26 @@ def position() -> Tuple[int, int]:
     Get current mouse position
     取得目前滑鼠座標位置
 
-    :return: (x, y) 滑鼠座標
+    NSEvent.mouseLocation() 的原點在左下角，但本模組送出的 CGEvent 事件
+    以左上角為原點，因此必須翻轉 y。未翻轉時，未指定座標的點擊會落在
+    垂直鏡像的位置（只有游標剛好在畫面正中央時才正確）。
+    NSEvent.mouseLocation() has a bottom-left origin, while the CGEvents this
+    module posts use a top-left origin — as do the windows and x11 backends.
+    Without flipping y, a coordinate read here and fed back into press/click
+    (which is exactly what mouse_preprocess does when x/y are omitted) lands
+    at the vertically mirrored point.
+
+    :return: (x, y) 滑鼠座標，原點為左上角 top-left origin
     """
     loc = Quartz.NSEvent.mouseLocation()
-    return int(loc.x), int(loc.y)
+    # 用點(point)為單位的顯示高度翻轉 y。CGDisplayPixelsHigh 回傳的是像素
+    # 高度,在 Retina/HiDPI 螢幕上是點高度的 2 倍,會讓翻轉後的 y 落在錯誤位置。
+    # mouseLocation() 與這裡送出的 CGEvent 都以點為單位。
+    # Flip y using the point-based display height. CGDisplayPixelsHigh returns
+    # pixels (2x the point height on Retina/HiDPI), which would offset the
+    # flipped y; mouseLocation() and the posted CGEvents are both in points.
+    height = Quartz.CGDisplayBounds(Quartz.CGMainDisplayID()).size.height
+    return int(loc.x), int(height - loc.y)
 
 
 def mouse_event(event: int, x: int, y: int, mouse_button: int) -> None:

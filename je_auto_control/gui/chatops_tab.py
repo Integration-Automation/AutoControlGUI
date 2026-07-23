@@ -2,7 +2,7 @@
 from typing import Optional
 
 from PySide6.QtWidgets import (
-    QFileDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTextEdit,
+    QFileDialog, QHBoxLayout, QLabel, QLineEdit, QTextEdit,
     QVBoxLayout, QWidget,
 )
 
@@ -39,26 +39,19 @@ class ChatOpsTab(TranslatableMixin, QWidget):
         self._apply_translations()
 
     def _build_layout(self) -> None:
+        # Browse/send commands run from the Actions menu; the tab keeps
+        # only the root/command inputs and the output log.
         root = QVBoxLayout(self)
         root_row = QHBoxLayout()
-        root_row.addWidget(QLabel(), stretch=0)
         self._root_label = QLabel()
         root_row.addWidget(self._root_label)
         root_row.addWidget(self._script_root, stretch=1)
-        browse = QPushButton()
-        browse.setObjectName("chatops_browse_btn")
-        browse.clicked.connect(self._on_browse)
-        root_row.addWidget(browse)
         root.addLayout(root_row)
 
         cmd_row = QHBoxLayout()
         self._cmd_label = QLabel()
         cmd_row.addWidget(self._cmd_label)
         cmd_row.addWidget(self._command_input, stretch=1)
-        send = QPushButton()
-        send.setObjectName("chatops_send_btn")
-        send.clicked.connect(self._on_send)
-        cmd_row.addWidget(send)
         root.addLayout(cmd_row)
 
         self._output_label = QLabel()
@@ -66,14 +59,17 @@ class ChatOpsTab(TranslatableMixin, QWidget):
         root.addWidget(self._output, stretch=1)
         self._apply_translations()
 
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("chatops_browse_btn", self._on_browse),
+            ("chatops_send_btn", self._on_send),
+        ]
+
     def _apply_translations(self) -> None:
         self._root_label.setText(_t("chatops_root_label"))
         self._cmd_label.setText(_t("chatops_cmd_label"))
         self._output_label.setText(_t("chatops_output_label"))
-        for key in ("chatops_browse_btn", "chatops_send_btn"):
-            widget = self.findChild(QPushButton, key)
-            if widget is not None:
-                widget.setText(_t(key))
         self._script_root.setPlaceholderText(_t("chatops_root_placeholder"))
         self._command_input.setPlaceholderText(
             _t("chatops_cmd_placeholder"),

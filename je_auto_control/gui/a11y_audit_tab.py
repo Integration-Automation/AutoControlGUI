@@ -7,7 +7,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QAbstractItemView, QHBoxLayout, QLabel, QLineEdit, QPushButton,
+    QAbstractItemView, QHBoxLayout, QLabel, QLineEdit,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -55,24 +55,27 @@ class A11yAuditTab(TranslatableMixin, QWidget):
         self._table.setHorizontalHeaderLabels([_t(k) for k in _COLS])
 
     def _build_layout(self) -> None:
+        # Audit/contrast commands run from the Actions menu; the tab keeps
+        # only the inputs, the issue table, and the summary line.
         root = QVBoxLayout(self)
         row = QHBoxLayout()
         row.addWidget(QLabel(_t("audit_app")))
         row.addWidget(self._app, stretch=1)
-        run_btn = self._tr(QPushButton(), "audit_run")
-        run_btn.clicked.connect(self._on_run)
-        row.addWidget(run_btn)
         root.addLayout(row)
         crow = QHBoxLayout()
         crow.addWidget(QLabel(_t("audit_contrast_label")))
         crow.addWidget(self._fg)
         crow.addWidget(self._bg)
-        contrast_btn = self._tr(QPushButton(), "audit_contrast_run")
-        contrast_btn.clicked.connect(self._on_contrast)
-        crow.addWidget(contrast_btn)
         root.addLayout(crow)
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._summary)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("audit_run", self._on_run),
+            ("audit_contrast_run", self._on_contrast),
+        ]
 
     def _on_run(self) -> None:
         app = self._app.text().strip() or None

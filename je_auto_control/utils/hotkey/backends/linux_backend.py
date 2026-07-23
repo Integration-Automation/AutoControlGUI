@@ -132,6 +132,7 @@ class LinuxHotkeyBackend(HotkeyBackend):
                      mask: int, keycode: int) -> bool:
         from Xlib import X
 
+        grabbed: List[int] = []
         for extra_mask in _lock_mask_variants():
             try:
                 root.grab_key(
@@ -142,7 +143,16 @@ class LinuxHotkeyBackend(HotkeyBackend):
                 autocontrol_logger.error(
                     "XGrabKey failed for %s: %r", binding.combo, error,
                 )
+                # Roll back the lock-variant grabs that already succeeded;
+                # leaving them held (with _registered never updated) leaks
+                # the grab and spams BadAccess on every following poll.
+                for done_mask in grabbed:
+                    try:
+                        root.ungrab_key(keycode, mask | done_mask)
+                    except Exception:  # nosec B110  # noqa: BLE001  # reason: X11 ungrab races are non-fatal
+                        pass
                 return False
+            grabbed.append(extra_mask)
         return True
 
     def _drain(self, disp, fire: "callable") -> None:

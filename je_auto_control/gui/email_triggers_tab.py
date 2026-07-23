@@ -4,7 +4,7 @@ from typing import Optional
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QFileDialog, QGroupBox, QHBoxLayout,
-    QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton,
+    QHeaderView, QLabel, QLineEdit, QMessageBox,
     QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -80,19 +80,13 @@ class EmailTriggersTab(TranslatableMixin, QWidget):
         ])
 
     def _build_layout(self) -> None:
+        # Start/stop/poll/browse/register/remove commands run from the
+        # Actions menu; the tab keeps only the inputs, the table, and the
+        # status line.
         root = QVBoxLayout(self)
 
         engine_box = self._tr(QGroupBox(), "eml_engine_group")
         engine_layout = QHBoxLayout(engine_box)
-        start_btn = self._tr(QPushButton(), "eml_start")
-        start_btn.clicked.connect(self._on_start)
-        engine_layout.addWidget(start_btn)
-        stop_btn = self._tr(QPushButton(), "eml_stop")
-        stop_btn.clicked.connect(self._on_stop)
-        engine_layout.addWidget(stop_btn)
-        poll_btn = self._tr(QPushButton(), "eml_poll_now")
-        poll_btn.clicked.connect(self._on_poll_now)
-        engine_layout.addWidget(poll_btn)
         engine_layout.addWidget(self._status_label)
         engine_layout.addStretch()
         root.addWidget(engine_box)
@@ -127,22 +121,21 @@ class EmailTriggersTab(TranslatableMixin, QWidget):
         script_row = QHBoxLayout()
         script_row.addWidget(self._tr(QLabel(), "eml_script_label"))
         script_row.addWidget(self._script_input)
-        browse_btn = self._tr(QPushButton(), "eml_browse")
-        browse_btn.clicked.connect(self._on_browse)
-        script_row.addWidget(browse_btn)
-        register_btn = self._tr(QPushButton(), "eml_register")
-        register_btn.clicked.connect(self._on_register)
-        script_row.addWidget(register_btn)
         add_layout.addLayout(script_row)
         root.addWidget(add_box)
 
         root.addWidget(self._table, stretch=1)
-        action_row = QHBoxLayout()
-        remove_btn = self._tr(QPushButton(), "eml_remove")
-        remove_btn.clicked.connect(self._on_remove)
-        action_row.addWidget(remove_btn)
-        action_row.addStretch()
-        root.addLayout(action_row)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("eml_start", self._on_start),
+            ("eml_stop", self._on_stop),
+            ("eml_poll_now", self._on_poll_now),
+            ("eml_browse", self._on_browse),
+            ("eml_register", self._on_register),
+            ("eml_remove", self._on_remove),
+        ]
 
     def _on_start(self) -> None:
         default_email_trigger_watcher.start()

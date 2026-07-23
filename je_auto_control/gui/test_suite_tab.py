@@ -8,8 +8,8 @@ from typing import Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QAbstractItemView, QFileDialog, QHBoxLayout, QLabel, QListWidget,
-    QPlainTextEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout,
+    QAbstractItemView, QFileDialog, QLabel, QListWidget,
+    QPlainTextEdit, QTableWidget, QTableWidgetItem, QVBoxLayout,
     QWidget,
 )
 
@@ -18,6 +18,7 @@ from je_auto_control.gui.language_wrapper.multi_language_wrapper import (
     language_wrapper,
 )
 import je_auto_control as ac
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.quarantine import (
     auto_quarantine_from_flakiness, default_quarantine_store,
 )
@@ -58,51 +59,49 @@ class TestSuiteTab(TranslatableMixin, QWidget):
         self._table.setHorizontalHeaderLabels([_t(k) for k in _COLS])
 
     def _build_layout(self) -> None:
+        # Load/run/export and quarantine commands run from the Actions
+        # menu; the tab keeps only the spec editor, tables, and summary.
         root = QVBoxLayout(self)
         root.addWidget(QLabel(_t("suite_spec_label")))
         root.addWidget(self._spec, stretch=1)
-        controls = QHBoxLayout()
-        load_btn = self._tr(QPushButton(), "suite_load_file")
-        load_btn.clicked.connect(self._on_load_file)
-        run_btn = self._tr(QPushButton(), "suite_run")
-        run_btn.clicked.connect(self._on_run)
-        junit_btn = self._tr(QPushButton(), "suite_junit")
-        junit_btn.clicked.connect(self._on_junit)
-        allure_btn = self._tr(QPushButton(), "suite_allure")
-        allure_btn.clicked.connect(self._on_allure)
-        for btn in (load_btn, run_btn, junit_btn, allure_btn):
-            controls.addWidget(btn)
-        controls.addStretch()
-        root.addLayout(controls)
         root.addWidget(self._table, stretch=2)
         root.addWidget(self._summary)
         root.addWidget(QLabel(_t("suite_q_label")))
         root.addWidget(self._quarantine)
-        qrow = QHBoxLayout()
-        auto_btn = self._tr(QPushButton(), "suite_q_auto")
-        auto_btn.clicked.connect(self._on_auto_quarantine)
-        remove_btn = self._tr(QPushButton(), "suite_q_remove")
-        remove_btn.clicked.connect(self._on_release_selected)
-        clear_btn = self._tr(QPushButton(), "suite_q_clear")
-        clear_btn.clicked.connect(self._on_clear_quarantine)
-        for btn in (auto_btn, remove_btn, clear_btn):
-            qrow.addWidget(btn)
-        qrow.addStretch()
-        root.addLayout(qrow)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("suite_load_file", self._on_load_file),
+            ("suite_run", self._on_run),
+            ("suite_junit", self._on_junit),
+            ("suite_allure", self._on_allure),
+            ("suite_q_auto", self._on_auto_quarantine),
+            ("suite_q_remove", self._on_release_selected),
+            ("suite_q_clear", self._on_clear_quarantine),
+        ]
 
     def _parse_spec(self):
         return json.loads(self._spec.toPlainText() or "{}")
 
     def _on_load_file(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, _t("suite_load_file"))
-        if path:
+        if not path:
+            return
+        try:
             with open(path, encoding="utf-8") as handle:
                 self._spec.setPlainText(handle.read())
+        except (OSError, ValueError) as err:
+            # ValueError covers UnicodeDecodeError on a non-UTF-8 file; OSError
+            # covers unreadable/permission errors. Surface instead of escaping
+            # the Actions slot into the Qt event loop.
+            self._summary.setText(_t("suite_error").replace("{error}", str(err)))
 
     def _on_run(self) -> None:
         try:
             result = ac.run_suite(self._parse_spec())
-        except (ValueError, OSError, RuntimeError) as err:
+        except (AutoControlException, ValueError, TypeError,
+                OSError, RuntimeError) as err:
             self._summary.setText(_t("suite_error").replace("{error}", str(err)))
             return
         self._last_result = result

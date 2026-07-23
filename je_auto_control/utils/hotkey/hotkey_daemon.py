@@ -16,6 +16,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Callable, Dict, FrozenSet, List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
@@ -186,7 +187,11 @@ class HotkeyDaemon:
         try:
             actions = read_action_json(match.script_path)
             self._execute(actions)
-        except (OSError, ValueError, RuntimeError) as error:
+        except (OSError, ValueError, RuntimeError, AutoControlException) as error:
+            # AutoControlException covers the common cases — a missing/renamed
+            # script (AutoControlJsonActionException) or an action that raises
+            # (image/window not found). Without it the exception escaped the
+            # backend run-loop and silently killed the whole hotkey daemon.
             status = STATUS_ERROR
             error_text = repr(error)
             autocontrol_logger.error("hotkey %s failed: %r",

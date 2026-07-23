@@ -3,7 +3,7 @@ from typing import Optional
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
-    QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QPushButton,
+    QFormLayout, QGroupBox, QHeaderView, QLabel,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -48,11 +48,19 @@ class InspectorTab(TranslatableMixin, QWidget):
         self._timer.start()
 
     def _build_layout(self) -> None:
+        # Refresh/reset commands run from the Actions menu; the tab keeps
+        # only the summary, the metrics group, and the samples table.
         root = QVBoxLayout(self)
         root.addWidget(self._summary_label)
         root.addWidget(self._build_metrics_group())
-        root.addLayout(self._build_button_row())
         root.addWidget(self._table, stretch=1)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("inspector_refresh", self._refresh),
+            ("inspector_reset", self._reset),
+        ]
 
     def _build_metrics_group(self) -> QGroupBox:
         group = self._tr(QGroupBox(), "inspector_metrics_group")
@@ -63,18 +71,6 @@ class InspectorTab(TranslatableMixin, QWidget):
             self._metric_labels[key] = value_widget
             form.addRow(label_widget, value_widget)
         return group
-
-    def _build_button_row(self) -> QHBoxLayout:
-        row = QHBoxLayout()
-        for key, handler in (
-            ("inspector_refresh", self._refresh),
-            ("inspector_reset", self._reset),
-        ):
-            btn = self._tr(QPushButton(), key)
-            btn.clicked.connect(handler)
-            row.addWidget(btn)
-        row.addStretch(1)
-        return row
 
     def _apply_table_headers(self) -> None:
         self._table.setHorizontalHeaderLabels([

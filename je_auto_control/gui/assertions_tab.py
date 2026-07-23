@@ -7,7 +7,7 @@ outcome instead of crashing the tab.
 from typing import Any, Dict, Optional
 
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QHBoxLayout, QLabel, QLineEdit, QPushButton,
+    QCheckBox, QComboBox, QHBoxLayout, QLabel, QLineEdit,
     QVBoxLayout, QWidget,
 )
 
@@ -51,6 +51,8 @@ class AssertionsTab(TranslatableMixin, QWidget):
         self._sync_visibility()
 
     def _build_layout(self) -> None:
+        # The run command runs from the Actions menu; the tab keeps only
+        # the assertion form and the result label.
         root = QVBoxLayout(self)
         krow = QHBoxLayout()
         krow.addWidget(QLabel(_t("assert_kind")))
@@ -71,11 +73,14 @@ class AssertionsTab(TranslatableMixin, QWidget):
 
         root.addWidget(self._expect)
         root.addWidget(self._regex)
-        run_btn = self._tr(QPushButton(), "assert_run")
-        run_btn.clicked.connect(self._on_run)
-        root.addWidget(run_btn)
         root.addWidget(self._result)
         root.addStretch()
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("assert_run", self._on_run),
+        ]
 
     def _current_kind(self) -> str:
         return _KINDS[self._kind.currentIndex()]

@@ -56,9 +56,13 @@ _URB_HEADER_SIZE = struct.calcsize(_URB_HEADER_FMT)
 # number_of_packets, interval, setup[8]
 _CMD_SUBMIT_FMT = "!IIiII8s"
 _CMD_SUBMIT_SIZE = struct.calcsize(_CMD_SUBMIT_FMT)
-_RET_SUBMIT_FMT = "!IIiII8s"  # status, actual_length, start_frame,
-                              # number_of_packets, error_count, setup[8]
+_RET_SUBMIT_FMT = "!iIiII8s"  # status (__s32, signed), actual_length,
+                              # start_frame, number_of_packets, error_count,
+                              # setup[8]
 _RET_SUBMIT_SIZE = struct.calcsize(_RET_SUBMIT_FMT)
+# RET_UNLINK body: __s32 status + padding to fill the 28-byte body union.
+_RET_UNLINK_FMT = "!i24x"
+_RET_UNLINK_SIZE = struct.calcsize(_RET_UNLINK_FMT)
 
 
 class UsbIpError(ValueError):
@@ -146,7 +150,11 @@ def decode_op_request(raw: bytes) -> OpRequest:
         if len(raw) < _OP_HEADER_SIZE + 32:
             raise UsbIpError("OP_REQ_IMPORT missing busid")
         busid_bytes = raw[_OP_HEADER_SIZE:_OP_HEADER_SIZE + 32]
-        request.busid = busid_bytes.rstrip(b"\x00").decode("ascii")
+        # errors="replace": a non-ASCII byte in the busid must not raise
+        # UnicodeDecodeError (a ValueError, outside the server's
+        # (OSError, UsbIpError) catch) and kill the client worker thread.
+        # A mangled busid simply won't match any device -> clean not-found.
+        request.busid = busid_bytes.rstrip(b"\x00").decode("ascii", errors="replace")
     elif command != OP_REQ_DEVLIST:
         raise UsbIpError(f"unknown OP command 0x{command:04x}")
     return request
@@ -230,6 +238,33 @@ def decode_cmd_submit(raw: bytes) -> CmdSubmit:
     )
 
 
+def peek_transfer_length(header: bytes, body: bytes) -> Tuple[int, int]:
+    """Return ``(direction, transfer_buffer_length)`` from a CMD_SUBMIT.
+
+    Lets a server learn how many transfer-buffer bytes to read *before*
+    calling :func:`decode_cmd_submit`, which requires the OUT buffer to
+    already be present. ``header`` is the 20-byte URB header, ``body``
+    the 28-byte CMD_SUBMIT body.
+    """
+    if len(header) < _URB_HEADER_SIZE:
+        raise UsbIpError(
+            f"CMD_SUBMIT header needs {_URB_HEADER_SIZE} bytes, "
+            f"got {len(header)}",
+        )
+    if len(body) < _CMD_SUBMIT_SIZE:
+        raise UsbIpError(
+            f"CMD_SUBMIT body needs {_CMD_SUBMIT_SIZE} bytes, "
+            f"got {len(body)}",
+        )
+    _cmd, _seqnum, _devid, direction, _ep = struct.unpack(
+        _URB_HEADER_FMT, header[:_URB_HEADER_SIZE],
+    )
+    _flags, tlen, _sframe, _npkt, _interval, _setup = struct.unpack(
+        _CMD_SUBMIT_FMT, body[:_CMD_SUBMIT_SIZE],
+    )
+    return direction, tlen
+
+
 # --- URB response encoder ------------------------------------------
 
 def encode_ret_submit(*, seqnum: int, devid: int, direction: int,
@@ -258,6 +293,22 @@ def encode_ret_submit(*, seqnum: int, devid: int, direction: int,
     return header + body + bytes(data)
 
 
+def encode_ret_unlink(*, seqnum: int, devid: int, direction: int,
+                      ep: int, status: int) -> bytes:
+    """Serialize a USBIP_RET_UNLINK (URB-cancel completion).
+
+    Sent in reply to USBIP_CMD_UNLINK. ``status`` is 0 when the target
+    URB was found and unlinked, negative errno otherwise (kernel
+    convention, so the field is signed). The body is a single ``__s32``
+    status padded out to the 28-byte URB body union.
+    """
+    header = struct.pack(
+        _URB_HEADER_FMT,
+        USBIP_RET_UNLINK, seqnum, devid, direction, ep,
+    )
+    return header + struct.pack(_RET_UNLINK_FMT, status)
+
+
 def parse_op_header(raw: bytes) -> Tuple[int, int, int]:
     """Lower-level helper: return ``(version, command, status)``."""
     if len(raw) < _OP_HEADER_SIZE:
@@ -273,7 +324,7 @@ __all__ = [
     "USBIP_RET_SUBMIT", "USBIP_RET_UNLINK",
     "UsbIpDevice", "UsbIpInterface", "UsbIpError", "OpRequest",
     "CmdSubmit",
-    "decode_op_request", "decode_cmd_submit",
+    "decode_op_request", "decode_cmd_submit", "peek_transfer_length",
     "encode_op_rep_devlist", "encode_op_rep_import", "encode_ret_submit",
-    "parse_op_header",
+    "encode_ret_unlink", "parse_op_header",
 ]

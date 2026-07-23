@@ -51,10 +51,6 @@ from je_auto_control.windows.core.utils.win32_vk import (
 )
 from je_auto_control.windows.keyboard import win32_ctype_keyboard_control
 from je_auto_control.windows.mouse import win32_ctype_mouse_control
-from je_auto_control.windows.mouse.win32_ctype_mouse_control import (
-    win32_mouse_left, win32_mouse_middle, win32_mouse_right,
-    win32_mouse_x1, win32_mouse_x2,
-)
 from je_auto_control.windows.record.win32_record import win32_recorder
 from je_auto_control.windows.screen import win32_screen
 
@@ -94,16 +90,28 @@ def _select_input_backend():
         )
         return win32_ctype_keyboard_control, win32_ctype_mouse_control
     autocontrol_logger.info("Win32 input backend: Interception driver")
-    # Refresh the mouse-button tuples to use Interception flag bits
-    # so the wrapper's mouse_keys_table dispatches correctly.
-    global win32_mouse_left, win32_mouse_middle, win32_mouse_right
-    global win32_mouse_x1, win32_mouse_x2
-    win32_mouse_left = interception_mouse.win32_mouse_left
-    win32_mouse_middle = interception_mouse.win32_mouse_middle
-    win32_mouse_right = interception_mouse.win32_mouse_right
-    win32_mouse_x1 = interception_mouse.win32_mouse_x1
-    win32_mouse_x2 = interception_mouse.win32_mouse_x2
     return interception_keyboard, interception_mouse
+
+
+def _build_mouse_keys_table(mouse_module) -> dict:
+    """Map logical button names to the *selected* backend's flag tuples.
+
+    The table must be built from the module ``_select_input_backend``
+    returns, not the import-time SendInput globals: with the Interception
+    backend active those globals still hold SendInput dwFlags, so every
+    button action would send the wrong bitmask (a press would register as
+    a release, etc.).
+
+    :param mouse_module: the active mouse backend (SendInput or Interception)
+    :return: mapping of button names to ``(up, down, data)`` flag tuples
+    """
+    return {
+        "mouse_left": mouse_module.win32_mouse_left,
+        "mouse_middle": mouse_module.win32_mouse_middle,
+        "mouse_right": mouse_module.win32_mouse_right,
+        "mouse_x1": mouse_module.win32_mouse_x1,
+        "mouse_x2": mouse_module.win32_mouse_x2,
+    }
 
 
 autocontrol_logger.info("Load Windows Setting")
@@ -303,16 +311,12 @@ keyboard_keys_table = {
     "z": WIN32_keyZ,
 }
 
-mouse_keys_table = {
-    "mouse_left": win32_mouse_left,
-    "mouse_middle": win32_mouse_middle,
-    "mouse_right": win32_mouse_right,
-    "mouse_x1": win32_mouse_x1,
-    "mouse_x2": win32_mouse_x2,
-}
-
 special_mouse_keys_table = None
 keyboard, mouse = _select_input_backend()
+# 必須在挑選後端後才建表，否則 Interception 後端會拿到 SendInput 的旗標。
+# Build the table only after the backend is chosen; otherwise the
+# Interception backend would inherit SendInput's flag tuples.
+mouse_keys_table = _build_mouse_keys_table(mouse)
 keyboard_check = win32_keypress_check
 screen = win32_screen
 recorder = win32_recorder

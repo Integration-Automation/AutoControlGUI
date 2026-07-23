@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.history_store import (
     HistoryStore, default_history_store,
@@ -39,7 +40,11 @@ def capture_error_snapshot(run_id: int,
         target_dir.mkdir(parents=True, exist_ok=True)
         from je_auto_control.wrapper.auto_control_screen import screenshot
         screenshot(str(target))
-    except (OSError, ValueError, RuntimeError) as error:
+    # ``screenshot`` raises AutoControlScreenException (an AutoControlException,
+    # not OSError/ValueError/RuntimeError) when the capture fails on a locked or
+    # headless session — exactly when this snapshot runs — so it must be caught
+    # here, or it would mask the original failure the caller is recording.
+    except (AutoControlException, OSError, ValueError, RuntimeError) as error:
         autocontrol_logger.warning(
             "error-snapshot for run %d failed: %r", int(run_id), error,
         )

@@ -10,7 +10,7 @@ import pytest
 # webrtc_panel → aiortc). Only the helper function in the same module
 # is pure; gate the whole module on Qt + the webrtc extra to keep the
 # import chain happy.
-pytest.importorskip("PySide6.QtWidgets")
+pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 pytest.importorskip("av")
 pytest.importorskip("aiortc")
 

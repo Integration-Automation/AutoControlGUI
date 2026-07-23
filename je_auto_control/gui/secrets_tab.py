@@ -3,7 +3,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QAbstractItemView, QGroupBox, QHBoxLayout, QInputDialog, QLabel,
-    QLineEdit, QListWidget, QListWidgetItem, QMessageBox, QPushButton,
+    QLineEdit, QListWidget, QListWidgetItem, QMessageBox,
     QVBoxLayout, QWidget,
 )
 
@@ -39,41 +39,34 @@ class SecretsTab(TranslatableMixin, QWidget):
         self._refresh_status()
 
     def _build_layout(self) -> None:
+        # Vault commands (init/unlock/lock/add/remove/change passphrase)
+        # run from the Actions menu; the tab keeps only passphrase input,
+        # the entry list, and the status line.
         root = QVBoxLayout(self)
         unlock_box = self._tr(QGroupBox(), "secret_unlock_group")
         unlock_layout = QHBoxLayout(unlock_box)
         unlock_layout.addWidget(self._tr(QLabel(), "secret_passphrase_label"))
         self._passphrase.setPlaceholderText(_t("secret_passphrase_placeholder"))
         unlock_layout.addWidget(self._passphrase)
-        init_btn = self._tr(QPushButton(), "secret_init")
-        init_btn.clicked.connect(self._on_init)
-        unlock_layout.addWidget(init_btn)
-        unlock_btn = self._tr(QPushButton(), "secret_unlock")
-        unlock_btn.clicked.connect(self._on_unlock)
-        unlock_layout.addWidget(unlock_btn)
-        lock_btn = self._tr(QPushButton(), "secret_lock")
-        lock_btn.clicked.connect(self._on_lock)
-        unlock_layout.addWidget(lock_btn)
         root.addWidget(unlock_box)
 
         manage_box = self._tr(QGroupBox(), "secret_manage_group")
         manage_layout = QVBoxLayout(manage_box)
         manage_layout.addWidget(self._list)
-        button_row = QHBoxLayout()
-        add_btn = self._tr(QPushButton(), "secret_add")
-        add_btn.clicked.connect(self._on_add)
-        button_row.addWidget(add_btn)
-        remove_btn = self._tr(QPushButton(), "secret_remove")
-        remove_btn.clicked.connect(self._on_remove)
-        button_row.addWidget(remove_btn)
-        change_btn = self._tr(QPushButton(), "secret_change_passphrase")
-        change_btn.clicked.connect(self._on_change_passphrase)
-        button_row.addWidget(change_btn)
-        button_row.addStretch()
-        manage_layout.addLayout(button_row)
         root.addWidget(manage_box, stretch=1)
 
         root.addWidget(self._status_label)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("secret_unlock", self._on_unlock),
+            ("secret_lock", self._on_lock),
+            ("secret_add", self._on_add),
+            ("secret_remove", self._on_remove),
+            ("secret_init", self._on_init),
+            ("secret_change_passphrase", self._on_change_passphrase),
+        ]
 
     def _refresh_status(self) -> None:
         manager = default_secret_manager

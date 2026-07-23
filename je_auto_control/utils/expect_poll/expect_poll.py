@@ -37,12 +37,16 @@ def to_equal(expected: Any) -> Matcher:
 
 def to_contain(item: Any) -> Matcher:
     """Match when ``item`` is contained in the value."""
-    return lambda value: item in value
+    # A getter returning None means "not ready yet" (e.g. a missing result key or
+    # a transiently-failing polled action). Treat it as not-matched so the poll
+    # keeps retrying instead of crashing with `item in None` -> TypeError.
+    return lambda value: value is not None and item in value
 
 
 def to_be_greater_than(threshold: Any) -> Matcher:
     """Match when the value is greater than ``threshold``."""
-    return lambda value: value > threshold
+    # See to_contain: None is the not-ready sentinel; `None > x` would raise.
+    return lambda value: value is not None and value > threshold
 
 
 def to_match_regex(pattern: str) -> Matcher:
@@ -80,7 +84,18 @@ def expect_poll(getter: Callable[[], Any], matcher: Matcher, *,
 
     Returns a :class:`PollResult` with the final value, attempt count and elapsed
     time. ``clock`` / ``sleep`` are injectable for deterministic tests.
+
+    :raises ValueError: if ``interval_s`` is not positive.
     """
+    # interval_s 必須為正。0 會讓迴圈以最快速度重跑 getter(實測 0.3 秒
+    # 內 60 萬次),負值則由 time.sleep 拋出無關的錯誤訊息。此函式經
+    # AC_expect_poll 暴露,interval_s 由使用者控制。
+    # interval_s must be positive. 0 re-runs getter as fast as possible
+    # (measured ~600k iterations in 0.3s, pegging a core); a negative surfaces
+    # as time.sleep's own error. This is reachable via AC_expect_poll, where
+    # interval_s is user-controlled.
+    if interval_s <= 0:
+        raise ValueError("interval_s must be positive")
     start = clock()
     deadline = start + float(timeout_s)
     attempts = 0
@@ -94,7 +109,10 @@ def expect_poll(getter: Callable[[], Any], matcher: Matcher, *,
         if clock() >= deadline:
             return PollResult(False, value, attempts, round(clock() - start, 4),
                               describe(value))
-        sleep(float(interval_s))
+        # Clamp the wait to the time left so a large interval_s cannot overshoot
+        # timeout_s (and run an extra getter well past the deadline).
+        remaining = deadline - clock()
+        sleep(min(float(interval_s), max(remaining, 0.0)))
 
 
 def assert_poll(getter: Callable[[], Any], matcher: Matcher, *,

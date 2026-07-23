@@ -8,7 +8,7 @@ from typing import Optional
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox, QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox,
-    QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,
+    QLabel, QLineEdit, QMessageBox,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -53,9 +53,10 @@ class SelfHealingTab(TranslatableMixin, QWidget):
     # --- layout ----------------------------------------------------
 
     def _build_layout(self) -> None:
+        # Browse/locate/click/refresh/clear commands run from the Actions
+        # menu; the tab keeps only the inputs, the log table, and the status.
         root = QVBoxLayout(self)
         root.addWidget(self._build_form_group())
-        root.addLayout(self._build_log_controls())
         root.addWidget(self._table, stretch=1)
         root.addWidget(self._status)
         self._apply_translations()
@@ -64,42 +65,22 @@ class SelfHealingTab(TranslatableMixin, QWidget):
     def _build_form_group(self) -> QGroupBox:
         group = QGroupBox()
         form = QFormLayout(group)
-        template_row = QHBoxLayout()
-        template_row.addWidget(self._template_input, stretch=1)
-        browse = QPushButton()
-        browse.setObjectName("self_heal_browse_btn")
-        browse.clicked.connect(self._on_browse_template)
-        template_row.addWidget(browse)
-        form.addRow(QLabel(), template_row)
+        form.addRow(QLabel(), self._template_input)
         form.addRow(QLabel(), self._description_input)
         form.addRow(QLabel(), self._threshold)
         form.addRow(QLabel(), self._click_check)
-        run_row = QHBoxLayout()
-        locate_btn = QPushButton()
-        locate_btn.setObjectName("self_heal_locate_btn")
-        locate_btn.clicked.connect(self._on_locate)
-        run_btn = QPushButton()
-        run_btn.setObjectName("self_heal_click_btn")
-        run_btn.clicked.connect(self._on_click)
-        run_row.addWidget(locate_btn)
-        run_row.addWidget(run_btn)
-        run_row.addStretch()
-        form.addRow(QLabel(), run_row)
         self._group_box = group
         return group
 
-    def _build_log_controls(self) -> QHBoxLayout:
-        row = QHBoxLayout()
-        refresh = QPushButton()
-        refresh.setObjectName("self_heal_refresh_btn")
-        refresh.clicked.connect(self.refresh_log)
-        clear = QPushButton()
-        clear.setObjectName("self_heal_clear_btn")
-        clear.clicked.connect(self._on_clear_log)
-        row.addWidget(refresh)
-        row.addWidget(clear)
-        row.addStretch()
-        return row
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("self_heal_browse", self._on_browse_template),
+            ("self_heal_locate_btn", self._on_locate),
+            ("self_heal_click_btn", self._on_click),
+            ("self_heal_refresh", self.refresh_log),
+            ("self_heal_clear", self._on_clear_log),
+        ]
 
     # --- translation -----------------------------------------------
 
@@ -113,24 +94,13 @@ class SelfHealingTab(TranslatableMixin, QWidget):
             labels = (
                 "self_heal_template_label", "self_heal_desc_label",
                 "self_heal_threshold_label", "",
-                "",
             )
             for row, key in enumerate(labels):
                 item = layout.itemAt(row, QFormLayout.LabelRole)
                 if item is not None and isinstance(item.widget(), QLabel):
                     item.widget().setText(_t(key) if key else "")
-        self._set_button_text("self_heal_browse_btn", "self_heal_browse")
-        self._set_button_text("self_heal_locate_btn", "self_heal_locate_btn")
-        self._set_button_text("self_heal_click_btn", "self_heal_click_btn")
-        self._set_button_text("self_heal_refresh_btn", "self_heal_refresh")
-        self._set_button_text("self_heal_clear_btn", "self_heal_clear")
         headers = [_t(f"self_heal_col_{name}") for name in _COLUMNS]
         self._table.setHorizontalHeaderLabels(headers)
-
-    def _set_button_text(self, object_name: str, translation_key: str) -> None:
-        widget = self.findChild(QPushButton, object_name)
-        if widget is not None:
-            widget.setText(_t(translation_key))
 
     # --- actions ---------------------------------------------------
 

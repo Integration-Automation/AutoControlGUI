@@ -16,7 +16,14 @@ from je_auto_control.linux_wayland._detect import WAYLAND_YDOTOOL, binary_path
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
-# ydotool ``click`` accepts hex bitmasks. Hold-bit (0x40) | press (0x00).
+# ydotool ``click`` accepts hex bitmasks: the low nibble selects the
+# button (0 left, 1 right, 2 middle) and the high bits toggle the edge —
+# ``0x40`` press-down, ``0x80`` release-up. The constants below carry both
+# edges set (a full down+up click); ``_press_code`` / ``_release_code``
+# isolate a single edge so a press+move+release drag actually holds.
+_YDOTOOL_DOWN_BIT = 0x40
+_YDOTOOL_UP_BIT = 0x80
+
 wayland_mouse_left = 0xC0
 wayland_mouse_middle = 0xC2
 wayland_mouse_right = 0xC1
@@ -92,16 +99,26 @@ def _try_libei():
         return None
 
 
+def _press_code(mouse_keycode: int) -> int:
+    """Button-down only: set the down-bit, clear the up-bit."""
+    return (int(mouse_keycode) | _YDOTOOL_DOWN_BIT) & ~_YDOTOOL_UP_BIT
+
+
+def _release_code(mouse_keycode: int) -> int:
+    """Button-up only: set the up-bit, clear the down-bit."""
+    return (int(mouse_keycode) | _YDOTOOL_UP_BIT) & ~_YDOTOOL_DOWN_BIT
+
+
 def press_mouse(mouse_keycode: int) -> None:
-    """Press a mouse button (hold)."""
+    """Press a mouse button and hold it (down edge only)."""
     time.sleep(0.01)
-    _run([_require_ydotool(), "click", f"{int(mouse_keycode) | 0x40:#x}"])
+    _run([_require_ydotool(), "click", f"{_press_code(mouse_keycode):#x}"])
 
 
 def release_mouse(mouse_keycode: int) -> None:
-    """Release a held mouse button."""
+    """Release a held mouse button (up edge only)."""
     time.sleep(0.01)
-    _run([_require_ydotool(), "click", f"{int(mouse_keycode) & ~0x40:#x}"])
+    _run([_require_ydotool(), "click", f"{_release_code(mouse_keycode):#x}"])
 
 
 def click_mouse(mouse_keycode: int, x: Optional[int] = None,
@@ -113,13 +130,23 @@ def click_mouse(mouse_keycode: int, x: Optional[int] = None,
     _run([_require_ydotool(), "click", f"{int(mouse_keycode):#x}"])
 
 
-def scroll(direction: int, x: Optional[int] = None,
-           y: Optional[int] = None) -> None:
-    """Scroll by ``direction`` notches (positive = up, negative = down)."""
-    if x is not None and y is not None:
-        set_position(int(x), int(y))
-    _run([_require_ydotool(), "mousemove", "--wheel",
-          "-y", str(int(direction))])
+def scroll(scroll_value: int,
+           scroll_direction: int = wayland_scroll_direction_down) -> None:
+    """Scroll ``scroll_value`` notches in ``scroll_direction``.
+
+    The signature mirrors the x11 backend's ``scroll(scroll_value,
+    scroll_direction)`` because the wrapper treats every Linux backend
+    uniformly — it cannot tell Wayland from X11 by ``sys.platform``. The
+    previous ``(direction, x, y)`` shape silently bound the wrapper's
+    direction to ``x`` and then dropped it, so every scroll went the same way.
+
+    ``scroll_direction`` carries axis and sign, per this module's
+    ``wayland_scroll_direction_*`` constants: +-1 vertical, +-2 horizontal.
+    """
+    direction = int(scroll_direction)
+    axis = "-y" if abs(direction) == 1 else "-x"
+    amount = abs(int(scroll_value)) * (1 if direction > 0 else -1)
+    _run([_require_ydotool(), "mousemove", "--wheel", axis, str(amount)])
 
 
 def send_mouse_event_to_window(*_args, **_kwargs) -> None:

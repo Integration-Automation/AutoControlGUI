@@ -83,9 +83,11 @@ def enrich_action(action: Mapping[str, Any],
     Only mouse press/release/click actions carrying coordinates get
     anchored — every other action is passed through unchanged.
     """
-    out = dict(action)
     if not isinstance(action, Mapping):
-        return out
+        # Guard before dict() so a non-mapping entry passes through instead of
+        # raising and aborting enrich_recording over the whole recording.
+        return action
+    out = dict(action)
     name = action.get("action")
     if name not in _CLICK_ACTIONS:
         return out

@@ -4,7 +4,7 @@ from typing import Optional
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QFileDialog, QGroupBox, QHBoxLayout,
-    QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QSpinBox,
+    QHeaderView, QLabel, QLineEdit, QMessageBox, QSpinBox,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -73,6 +73,8 @@ class WebhooksTab(TranslatableMixin, QWidget):
         ])
 
     def _build_layout(self) -> None:
+        # Start/stop/browse/register/remove commands run from the Actions
+        # menu; the tab keeps only the inputs, the table, and the status.
         root = QVBoxLayout(self)
 
         server_box = self._tr(QGroupBox(), "wh_server_group")
@@ -81,12 +83,6 @@ class WebhooksTab(TranslatableMixin, QWidget):
         server_layout.addWidget(self._host_input)
         server_layout.addWidget(self._tr(QLabel(), "wh_port_label"))
         server_layout.addWidget(self._port_input)
-        start_btn = self._tr(QPushButton(), "wh_start")
-        start_btn.clicked.connect(self._on_start)
-        server_layout.addWidget(start_btn)
-        stop_btn = self._tr(QPushButton(), "wh_stop")
-        stop_btn.clicked.connect(self._on_stop)
-        server_layout.addWidget(stop_btn)
         server_layout.addStretch()
         root.addWidget(server_box)
         root.addWidget(self._status_label)
@@ -100,9 +96,6 @@ class WebhooksTab(TranslatableMixin, QWidget):
         script_row = QHBoxLayout()
         script_row.addWidget(self._tr(QLabel(), "wh_script_label"))
         script_row.addWidget(self._script_input)
-        browse_btn = self._tr(QPushButton(), "wh_browse")
-        browse_btn.clicked.connect(self._on_browse)
-        script_row.addWidget(browse_btn)
         add_layout.addLayout(script_row)
         method_row = QHBoxLayout()
         method_row.addWidget(self._tr(QLabel(), "wh_methods_label"))
@@ -114,19 +107,20 @@ class WebhooksTab(TranslatableMixin, QWidget):
         token_row.addWidget(self._tr(QLabel(), "wh_token_label"))
         self._token_input.setPlaceholderText(_t("wh_token_placeholder"))
         token_row.addWidget(self._token_input)
-        register_btn = self._tr(QPushButton(), "wh_register")
-        register_btn.clicked.connect(self._on_register)
-        token_row.addWidget(register_btn)
         add_layout.addLayout(token_row)
         root.addWidget(add_box)
 
         root.addWidget(self._table, stretch=1)
-        action_row = QHBoxLayout()
-        remove_btn = self._tr(QPushButton(), "wh_remove")
-        remove_btn.clicked.connect(self._on_remove)
-        action_row.addWidget(remove_btn)
-        action_row.addStretch()
-        root.addLayout(action_row)
+
+    def menu_actions(self) -> list:
+        """Expose tab commands to the window-level Actions menu."""
+        return [
+            ("wh_start", self._on_start),
+            ("wh_stop", self._on_stop),
+            ("wh_browse", self._on_browse),
+            ("wh_register", self._on_register),
+            ("wh_remove", self._on_remove),
+        ]
 
     def _on_start(self) -> None:
         host = self._host_input.text().strip() or "127.0.0.1"

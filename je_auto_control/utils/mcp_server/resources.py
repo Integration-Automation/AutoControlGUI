@@ -253,10 +253,14 @@ class LiveScreenProvider(ResourceProvider):
             self._next_handle += 1
             self._subscribers[handle] = on_update
             if self._thread is None or not self._thread.is_alive():
-                self._stop.clear()
+                # Give each broadcast thread its own stop event. Reusing (and
+                # .clear()-ing) one shared event let a quick unsubscribe→
+                # subscribe restart a second thread while the first was still
+                # looping, doubling the notifications.
+                self._stop = threading.Event()
                 self._thread = threading.Thread(
-                    target=self._broadcast_loop, daemon=True,
-                    name="MCPLiveScreen",
+                    target=self._broadcast_loop, args=(self._stop,),
+                    daemon=True, name="MCPLiveScreen",
                 )
                 self._thread.start()
         return handle
@@ -270,8 +274,8 @@ class LiveScreenProvider(ResourceProvider):
                 self._stop.set()
                 self._thread = None
 
-    def _broadcast_loop(self) -> None:
-        while not self._stop.is_set():
+    def _broadcast_loop(self, stop: threading.Event) -> None:
+        while not stop.is_set():
             with self._lock:
                 callbacks = list(self._subscribers.values())
             for callback in callbacks:
@@ -279,7 +283,7 @@ class LiveScreenProvider(ResourceProvider):
                     callback()
                 except (OSError, RuntimeError, ValueError):
                     pass
-            self._stop.wait(self._poll_seconds)
+            stop.wait(self._poll_seconds)
 
 
 def default_resource_provider(root: str = ".") -> ResourceProvider:
