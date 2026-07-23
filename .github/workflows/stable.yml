@@ -118,8 +118,12 @@ jobs:
 
   publish:
     needs: test
-    # Publishing moved to release.yml: immutable v* tags + Trusted Publishing.
-    if: ${{ false }}
+    # Releases ride on merges to main: this job bumps the patch version,
+    # uploads to PyPI with the PYPI_API_TOKEN secret, then pushes the bump
+    # commit (marked [skip ci]) and its v* tag. The guard is what keeps it
+    # off pull requests and the nightly schedule, which the same workflow
+    # also triggers on — without it every PR would cut a release.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write

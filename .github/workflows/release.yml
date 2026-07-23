@@ -56,6 +56,14 @@ jobs:
 
   publish:
     needs: build
+    # Publishing happens on merge to main (stable.yml), so this path stays
+    # off: the tags stable.yml pushes would otherwise start a second upload
+    # of a version PyPI already has. The build job above still runs on every
+    # v* tag — it verifies the tag matches pyproject, smoke-tests the wheel
+    # and attests provenance. To go back to tag-driven releases, register a
+    # PyPI trusted publisher for release.yml, drop this condition, and put
+    # stable.yml's publish job back behind `if: ${{ false }}`.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     environment:
       name: pypi
