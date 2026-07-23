@@ -5,6 +5,20 @@
 # Build:   docker build -f docker/Dockerfile -t autocontrol:latest .
 # Run:     docker run --rm -p 9939:9939 -p 9940:9940 autocontrol:latest
 
+# Build every wheel — the project and its dependencies — in a throwaway
+# stage. The runtime image then installs binaries only, so no dependency
+# gets to execute a setup script there and the resolved set is fixed at
+# build time instead of being re-resolved against PyPI.
+FROM python:3.12-slim AS builder
+
+WORKDIR /src
+COPY pyproject.toml README.md ./
+COPY je_auto_control ./je_auto_control
+COPY autocontrol-lsp ./autocontrol-lsp
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip wheel --no-cache-dir --wheel-dir /wheels .
+
+
 FROM python:3.12-slim AS runtime
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -37,11 +51,13 @@ COPY je_auto_control ./je_auto_control
 COPY autocontrol-lsp ./autocontrol-lsp
 COPY README.md ./
 
-# Install the package + the [webrtc] extra so the optional WebRTC host
-# also works inside the container. Pin pip first to keep layer churn
-# minimal across CI rebuilds.
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -e .
+# Install from the wheels built above: pinned pip, wheels only, and no
+# index lookup, so the runtime layer cannot pull anything new from PyPI.
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip install --no-cache-dir --only-binary :all: --no-index \
+       --find-links=/wheels /wheels/je_auto_control-*.whl \
+    && rm -rf /wheels
 
 ENV DISPLAY=:99 \
     PYTHONUNBUFFERED=1 \

@@ -89,6 +89,11 @@
   #screen { max-width: 100%; max-height: 100%; cursor: crosshair;
             display: block; }
   #placeholder { color: #555; font-size: 14px; padding: 24px; text-align: center; }
+  /* Off-screen but still announced by screen readers and reachable by
+     `for=` association, for controls whose purpose is shown elsewhere. */
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px;
+             padding: 0; overflow: hidden; clip: rect(0 0 0 0);
+             white-space: nowrap; border: 0; }
 </style>
 </head>
 <body>
@@ -108,7 +113,9 @@
   <button id="opus-mic" disabled data-i18n="btn_opus_off">Opus Off</button>
   <button id="share-screen" disabled data-i18n="btn_share_off">Share Off</button>
   <button id="send-file" disabled data-i18n="btn_send_file">Send file...</button>
+  <label class="sr-only" for="file-input">Select file to send</label>
   <input type="file" id="file-input" hidden aria-label="Select file to send" />
+  <label class="sr-only" for="lang-select">Language</label>
   <select id="lang-select" title="Language" aria-label="Language">
     <option value="auto">Auto</option>
     <option value="en">English</option>

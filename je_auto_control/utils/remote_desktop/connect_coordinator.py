@@ -30,7 +30,9 @@ from je_auto_control.utils.remote_desktop.host_id import (
 )
 
 _TCP_SCHEMES = ("tcp://",)
-_WS_SCHEME = "ws://"
+# Recognised, never defaulted to: a target is classified as ``ws`` only when
+# the operator typed the scheme. ``wss://`` is matched first.
+_WS_SCHEME = "ws://"  # NOSONAR python:S5332  # reason: prefix used to parse operator input, not to open a connection
 _WSS_SCHEME = "wss://"
 _DIGIT_GROUP_PATTERN = re.compile(r"^[\d\s\-_]+$")
 _MIN_PORT = 1

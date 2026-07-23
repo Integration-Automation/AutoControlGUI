@@ -57,9 +57,11 @@ def test_reset_clears_history():
 
 
 def test_digest_result_stable_and_bytes():
-    assert digest_result(b"abc") == digest_result(b"abc")
-    assert digest_result({"a": 1}) == digest_result({"a": 1})
-    assert digest_result(b"abc") != digest_result(b"abd")
+    first_bytes, second_bytes = digest_result(b"abc"), digest_result(b"abc")
+    first_dict, second_dict = digest_result({"a": 1}), digest_result({"a": 1})
+    assert first_bytes == second_bytes
+    assert first_dict == second_dict
+    assert first_bytes != digest_result(b"abd")
 
 
 # --- wiring ---------------------------------------------------------------

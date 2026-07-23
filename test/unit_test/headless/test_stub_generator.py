@@ -90,7 +90,8 @@ def test_render_pyi_emits_ellipsis_when_no_docstring():
 
 def test_render_pyi_deterministic():
     sigs = collect_signatures()
-    assert render_pyi(sigs) == render_pyi(sigs)
+    first, second = render_pyi(sigs), render_pyi(sigs)
+    assert first == second
 
 
 # === write_pyi ===========================================================

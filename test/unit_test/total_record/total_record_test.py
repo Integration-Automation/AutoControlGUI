@@ -15,9 +15,12 @@ release_keyboard_key("shift")
 
 # this write will raise an error for unsupported character
 try:
-    assert (write("?123456789") == "123456789")
+    written = write("?123456789")
 except Exception as error:
     print(f"Expected error for special character: {repr(error)}", file=sys.stderr)
+else:
+    if written != "123456789":
+        print(f"Unexpected write result: {written!r}", file=sys.stderr)
 
 try:
     write("!#@L@#{@#PL#{!@#L{!#{|##PO}!@#O@!O#P!)KI#O_!K")

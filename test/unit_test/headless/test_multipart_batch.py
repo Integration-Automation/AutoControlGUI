@@ -42,7 +42,8 @@ def test_field_list_form():
 
 
 def test_new_boundary_is_unique():
-    assert new_boundary() != new_boundary()
+    first, second = new_boundary(), new_boundary()
+    assert first != second
 
 
 def test_parse_requires_boundary():

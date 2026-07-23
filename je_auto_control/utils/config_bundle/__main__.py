@@ -11,6 +11,9 @@ from je_auto_control.utils.config_bundle.config_bundle import (
     ConfigBundleError, default_bundle_root, export_config_bundle,
     import_config_bundle,
 )
+from je_auto_control.utils.path_guard.path_guard import (
+    PathNotAllowedError, validate_path,
+)
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
@@ -38,19 +41,21 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[list] = None) -> int:
     args = _build_arg_parser().parse_args(argv)
-    if args.action == "export":
-        return _do_export(args.output, args.root)
-    return _do_import(args.input, args.root, args.dry_run)
+    try:
+        if args.action == "export":
+            return _do_export(validate_path(args.output), args.root)
+        return _do_import(validate_path(args.input, must_exist=True),
+                          args.root, args.dry_run)
+    except PathNotAllowedError as error:
+        print(f"refusing to use that path: {error}", file=sys.stderr)
+        return 2
 
 
 def _do_export(output: Path, root: Optional[Path]) -> int:
     bundle = export_config_bundle(root=root)
     output.parent.mkdir(parents=True, exist_ok=True)
-    # The output path comes from argv on a CLI entry point. The operator
-    # running ``python -m ... export <file>`` is the trust boundary;
-    # restricting where they can write would break the documented
-    # export workflow.
-    output.write_text(  # NOSONAR — operator-controlled CLI argument by design (see comment above)
+    # ``output`` was canonicalised and bounded by validate_path() in main().
+    output.write_text(
         json.dumps(bundle, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
@@ -64,8 +69,8 @@ def _do_export(output: Path, root: Optional[Path]) -> int:
 
 def _do_import(source: Path, root: Optional[Path], dry_run: bool) -> int:
     try:
-        # source is an operator-supplied CLI path, not remote input
-        bundle = json.loads(source.read_text(encoding="utf-8"))  # NOSONAR
+        # ``source`` was canonicalised and bounded by validate_path() in main().
+        bundle = json.loads(source.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
         print(f"failed to read {source}: {error}", file=sys.stderr)
         return 2

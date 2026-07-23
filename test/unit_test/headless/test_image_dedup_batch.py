@@ -42,7 +42,7 @@ def test_real_pillow_hashing(tmp_path):
 
     h_black = average_hash(str(black))
     assert isinstance(h_black, str) and h_black
-    assert average_hash(str(black)) == average_hash(str(black))   # stable
+    assert average_hash(str(black)) == h_black                    # stable
     assert isinstance(dhash(str(black)), str)
 
     # two solid-but-different images dedupe down by perceptual hash
