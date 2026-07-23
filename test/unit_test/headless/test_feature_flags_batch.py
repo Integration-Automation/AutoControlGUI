@@ -63,13 +63,15 @@ def test_is_enabled_shortcut():
 
 
 def test_bucket_is_deterministic_and_in_range():
-    assert percentage_bucket("f", "u1") == percentage_bucket("f", "u1")
-    assert 0 <= percentage_bucket("f", "u1") < 100
+    first, second = percentage_bucket("f", "u1"), percentage_bucket("f", "u1")
+    assert first == second
+    assert 0 <= first < 100
 
 
 def test_assign_variant_sticky_and_distributed():
-    assert assign_variant("f", {"on": 50, "off": 50}, "stable") == \
-        assign_variant("f", {"on": 50, "off": 50}, "stable")
+    first = assign_variant("f", {"on": 50, "off": 50}, "stable")
+    second = assign_variant("f", {"on": 50, "off": 50}, "stable")
+    assert first == second
     on = sum(1 for i in range(2000)
              if assign_variant("f", {"on": 50, "off": 50}, f"u{i}") == "on")
     assert 850 < on < 1150          # ~50%

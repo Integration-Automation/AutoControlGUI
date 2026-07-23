@@ -38,10 +38,13 @@ COPY autocontrol-lsp ./autocontrol-lsp
 COPY README.md ./
 
 # Install the package + the [webrtc] extra so the optional WebRTC host
-# also works inside the container. Pin pip first to keep layer churn
-# minimal across CI rebuilds.
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -e .
+# also works inside the container. pip itself is pinned so a rebuild
+# resolves the same installer, and only wheels are accepted so no
+# dependency gets to run a setup script during the build.
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1"
+# The editable install targets the source tree copied in above; there is
+# no upstream version to lock and the project's own build must run.
+RUN pip install --no-cache-dir -e .  # NOSONAR docker:S8541,docker:S8544
 
 ENV DISPLAY=:99 \
     PYTHONUNBUFFERED=1 \

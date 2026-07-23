@@ -39,8 +39,10 @@ COPY je_auto_control ./je_auto_control
 COPY autocontrol-lsp ./autocontrol-lsp
 COPY README.md ./
 
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1"
+# The editable install targets the source tree copied in above; there is
+# no upstream version to lock and the project's own build must run.
+RUN pip install --no-cache-dir -e .  # NOSONAR docker:S8541,docker:S8544
 
 ENV DISPLAY=:99 \
     PYTHONUNBUFFERED=1 \

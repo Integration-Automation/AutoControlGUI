@@ -28,6 +28,9 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from je_auto_control.utils.path_guard.path_guard import (
+    PathNotAllowedError, validate_path,
+)
 
 _DEFAULT_PORT = 3478
 _DEFAULT_TLS_PORT = 5349
@@ -142,8 +145,8 @@ def write_bundle(output_dir: Path, *, realm: str, user: str,
                  secret: str, listen_port: int, tls_port: int,
                  tls_cert: Optional[str], tls_key: Optional[str],
                  external_ip: Optional[str]) -> None:
-    # output_dir is an operator-supplied CLI path, not remote input
-    output_dir.mkdir(parents=True, exist_ok=True)  # NOSONAR
+    # CLI callers reach this through main(), which bounds the path first.
+    output_dir.mkdir(parents=True, exist_ok=True)
     conf_path = output_dir / "turnserver.conf"
     conf_path.write_text(render_turnserver_conf(
         realm=realm, listen_port=listen_port, tls_port=tls_port,
@@ -197,9 +200,14 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[list] = None) -> int:
     args = _build_arg_parser().parse_args(argv)
+    try:
+        output_dir = validate_path(args.output_dir)
+    except PathNotAllowedError as error:
+        print(f"refusing to write there: {error}", file=sys.stderr)
+        return 2
     secret = args.secret or secrets.token_urlsafe(24)
     write_bundle(
-        args.output_dir,
+        output_dir,
         realm=args.realm, user=args.user, secret=secret,
         listen_port=args.listen, tls_port=args.tls_port,
         tls_cert=args.tls_cert, tls_key=args.tls_key,
