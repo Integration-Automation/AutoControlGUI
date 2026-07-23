@@ -17,7 +17,7 @@ import types
 import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-pytest.importorskip("PySide6.QtWidgets")
+pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
 from je_auto_control.utils.exception.exceptions import (  # noqa: E402
     AutoControlExecuteActionException, AutoControlHTMLException,

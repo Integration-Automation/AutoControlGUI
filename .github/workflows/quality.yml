@@ -110,7 +110,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # NOSONAR githubactions:S8544  # reason: installs the checked-out project itself, there is no upstream version to lock
-      - run: pip install -e .
+      - run: pip install -e .  # NOSONAR githubactions:S8541,githubactions:S8544  # reason: installs the checked-out project itself, there is no upstream version to lock and the build must run
       - run: "pip install --only-binary :all: mypy==2.3.0"
       - run: mypy je_auto_control/api je_auto_control/utils/failure_bundle

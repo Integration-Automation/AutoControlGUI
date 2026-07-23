@@ -10,7 +10,7 @@ import os
 import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-pytest.importorskip("PySide6.QtWidgets")
+pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 # main_window imports qt_material (the theme); the headless CI job installs
 # PySide6 but not the GUI theme extra, so skip cleanly there rather than erroring
 # out collection for the whole suite.

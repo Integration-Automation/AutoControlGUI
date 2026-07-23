@@ -8,7 +8,7 @@ import pytest
 # Force offscreen so the dialog never tries to draw on a real display.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-pyside = pytest.importorskip("PySide6.QtWidgets")
+pyside = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 # gui/__init__.py eagerly loads main_window → webrtc_panel → aiortc.
 # The dialog itself only needs Qt, but we have to satisfy the chain
 # to import anything from je_auto_control.gui.

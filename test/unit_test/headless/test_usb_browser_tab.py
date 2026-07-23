@@ -6,7 +6,7 @@ import pytest
 # fetch_remote_devices is pure, but it lives next to a Qt widget that
 # transitively pulls aiortc via gui/__init__.py. Skip the whole file
 # unless the webrtc extra is installed.
-pytest.importorskip("PySide6.QtWidgets")
+pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 pytest.importorskip("av")
 pytest.importorskip("aiortc")
 
