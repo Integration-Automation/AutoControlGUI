@@ -1037,7 +1037,7 @@ def test_clipboard_image_tools_present_in_default_registry():
 def test_get_clipboard_image_returns_text_block_when_empty(monkeypatch):
     """When the clipboard has no image, return a clear text fallback."""
     import je_auto_control.utils.mcp_server.tools._handlers as handlers
-    import je_auto_control.utils.clipboard.clipboard_image as image_clip
+    import je_auto_control.utils.clipboard.clipboard as image_clip
     monkeypatch.setattr(image_clip, "get_clipboard_image", lambda: None)
     result = handlers.get_clipboard_image()
     assert result[0].type == "text"
@@ -1046,7 +1046,7 @@ def test_get_clipboard_image_returns_text_block_when_empty(monkeypatch):
 
 def test_get_clipboard_image_returns_image_block_when_set(monkeypatch):
     import je_auto_control.utils.mcp_server.tools._handlers as handlers
-    import je_auto_control.utils.clipboard.clipboard_image as image_clip
+    import je_auto_control.utils.clipboard.clipboard as image_clip
     monkeypatch.setattr(image_clip, "get_clipboard_image",
                          lambda: b"\x89PNG\r\n\x1a\n")
     result = handlers.get_clipboard_image()

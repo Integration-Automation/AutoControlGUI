@@ -872,7 +872,7 @@ def set_clipboard(text: str) -> str:
 
 def get_clipboard_image() -> List[MCPContent]:
     """Return the clipboard image as a base64 PNG content block."""
-    from je_auto_control.utils.clipboard.clipboard_image import (
+    from je_auto_control.utils.clipboard.clipboard import (
         get_clipboard_image as _read,
     )
     payload = _read()
@@ -883,11 +883,10 @@ def get_clipboard_image() -> List[MCPContent]:
 
 
 def set_clipboard_image(image_path: str) -> str:
-    from je_auto_control.utils.clipboard.clipboard_image import (
+    from je_auto_control.utils.clipboard.clipboard import (
         set_clipboard_image as _write,
     )
-    safe_path = os.path.realpath(os.fspath(image_path))
-    _write(safe_path)
+    _write(os.path.realpath(os.fspath(image_path)))
     return "ok"
 
 

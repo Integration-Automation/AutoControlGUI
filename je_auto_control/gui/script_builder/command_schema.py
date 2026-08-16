@@ -1873,6 +1873,17 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Enumerate + classify the clipboard's formats (Windows).",
     ))
     specs.append(CommandSpec(
+        "AC_clipboard_get_image", "Data", "Clipboard: Save Image",
+        fields=(FieldSpec("path", FieldType.FILE_PATH,
+                          placeholder="clipboard.png"),),
+        description="Save the clipboard's image to a PNG file, if it has one.",
+    ))
+    specs.append(CommandSpec(
+        "AC_clipboard_set_image", "Data", "Clipboard: Set Image",
+        fields=(FieldSpec("path", FieldType.FILE_PATH),),
+        description="Put an image file onto the clipboard.",
+    ))
+    specs.append(CommandSpec(
         "AC_classify_formats", "Data", "Classify Clipboard Formats",
         fields=(FieldSpec("formats", FieldType.STRING,
                           placeholder='[1, 13, {"id": 49161, "name": "Csv"}]'),),

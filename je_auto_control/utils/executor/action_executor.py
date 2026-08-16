@@ -6622,6 +6622,26 @@ def _dedupe_images(paths: Any, max_distance: int = 5) -> Dict[str, Any]:
                                     max_distance=max_distance)}
 
 
+def _clipboard_get_image(path: str) -> Dict[str, Any]:
+    """Adapter: save the clipboard's image to ``path``. ``{saved: bool}``."""
+    import os
+    from je_auto_control.utils.clipboard.clipboard import get_clipboard_image
+    payload = get_clipboard_image()
+    if not payload:
+        return {"saved": False, "path": None}
+    safe_path = os.path.realpath(os.fspath(path))
+    with open(safe_path, "wb") as handle:
+        handle.write(payload)
+    return {"saved": True, "path": safe_path}
+
+
+def _clipboard_set_image(path: str) -> Dict[str, Any]:
+    """Adapter: put an image file on the clipboard."""
+    from je_auto_control.utils.clipboard.clipboard import set_clipboard_image
+    set_clipboard_image(path)
+    return {"ok": True}
+
+
 def _foreground_window() -> Dict[str, Any]:
     """Adapter: the window the user is currently working in."""
     hit = foreground_window()
@@ -7049,6 +7069,8 @@ class Executor:
             # Clipboard
             "AC_clipboard_get": get_clipboard,
             "AC_clipboard_set": set_clipboard,
+            "AC_clipboard_get_image": _clipboard_get_image,
+            "AC_clipboard_set_image": _clipboard_set_image,
 
             # Run history
             "AC_history_list": _history_list_as_dicts,

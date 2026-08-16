@@ -20,7 +20,7 @@
 
 - **一套 API，六个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 765 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 767 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -128,7 +128,7 @@ python -m je_auto_control          # 或：je_auto_control.start_autocontrol_gui
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 765 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 767 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -137,7 +137,7 @@ python -m je_auto_control          # 或：je_auto_control.start_autocontrol_gui
 | 全局热键 | `default_hotkey_daemon` | — | Hotkeys |
 | 事件触发 | `default_trigger_engine` | `AC_email_trigger_add` | Triggers、Webhooks、Email |
 | 窗口管理 *(仅 Windows)* | `list_windows`、`focus_window` | `AC_focus_window`、`AC_snap_window` | Window Manager |
-| 剪贴板 | `get_clipboard`、`set_clipboard` | `AC_clipboard_get`、`AC_clipboard_set` | — |
+| 剪贴板（文本 + 图片） | `get_clipboard`、`set_clipboard`、`get_clipboard_image`、`set_clipboard_image` | `AC_clipboard_get`、`AC_clipboard_set`、`AC_clipboard_get_image`、`AC_clipboard_set_image` | — |
 | 远程桌面 | `RemoteDesktopHost`、`RemoteDesktopViewer` | `AC_start_remote_host`、`AC_remote_connect` | Remote Desktop |
 | USB 枚举与直通 | `list_usb_devices`、`enable_usb_passthrough` | `AC_usb_*`（16 个命令） | USB Devices、USB Share |
 | 密钥保险库 | `default_secret_manager` | `AC_secret_set` + `${secrets.NAME}` | Secrets |
@@ -185,6 +185,41 @@ je_auto_control version
 | **远程桌面** | `RemoteDesktopHost` 或 GUI | TCP、WebSocket 或 WebRTC；TOTP、信任列表、TURN 配置、文件／剪贴板／音频同步。 |
 
 除非明确指定，所有服务器都绑定在 `127.0.0.1`。
+
+### 远程桌面的线路协议
+
+把主机开放出去之前值得先了解，而且这一段在其他文档里都没有写。默认传输是**裸
+TCP 上的长度前缀分帧**（不需要额外依赖），连接一开始就是 **HMAC-SHA256 的
+challenge／response 握手**：认证不通过的观看端在拿到任何一帧之前就会被断开。
+JPEG 帧按配置的 FPS 与质量编码，再通过一个共享的**最新帧槽**发给已认证的观看
+端——所以慢的观看端是**丢帧**，不会把其他人一起卡住。观看端发来的输入是 JSON，
+会先比对**动作允许列表**才交给既有的输入包装层执行，观看端无法自己发明新的操作。
+
+```python
+# 让别人连进来——启动一个主机，把 token 与 port 给对方
+from je_auto_control import RemoteDesktopHost
+host = RemoteDesktopHost(token="hunter2", bind="127.0.0.1",
+                         port=0, fps=10, quality=70)
+host.start()
+print("listening on", host.port, "viewers:", host.connected_clients)
+```
+
+```python
+# 控制另一台机器——连上去并发送输入
+from je_auto_control import RemoteDesktopViewer
+viewer = RemoteDesktopViewer(host="10.0.0.5", port=51234, token="hunter2",
+                             on_frame=lambda jpeg: ...)
+viewer.connect()
+viewer.send_input({"action": "mouse_move", "x": 100, "y": 200})
+viewer.disconnect()
+```
+
+也可以用 IP 允许列表（CIDR 网段或具体地址）限制谁能连进来，列表外的对端在握手
+阶段就会被拒绝：
+
+```python
+RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
+```
 
 ---
 

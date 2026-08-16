@@ -233,7 +233,7 @@ from je_auto_control.utils.webrunner_bridge import (
 )
 # Clipboard (headless)
 from je_auto_control.utils.clipboard.clipboard import (
-    get_clipboard, set_clipboard,
+    get_clipboard, get_clipboard_image, set_clipboard, set_clipboard_image,
 )
 # Hotkey daemon (headless)
 from je_auto_control.utils.hotkey.hotkey_daemon import (
@@ -1332,6 +1332,7 @@ __all__ = [
     "move_window_by_title",
     # Clipboard
     "get_clipboard", "set_clipboard",
+    "get_clipboard_image", "set_clipboard_image",
     # Hotkey daemon
     "HotkeyDaemon", "HotkeyBinding", "default_hotkey_daemon",
     "PopupWatchdog", "WatchdogRule", "default_popup_watchdog",

@@ -21,7 +21,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, six platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 765 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 767 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -134,7 +134,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 765 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 767 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -143,7 +143,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Global hotkeys | `default_hotkey_daemon` | — | Hotkeys |
 | Event triggers | `default_trigger_engine` | `AC_email_trigger_add` | Triggers, Webhooks, Email |
 | Window management *(Windows)* | `list_windows`, `focus_window` | `AC_focus_window`, `AC_snap_window` | Window Manager |
-| Clipboard | `get_clipboard`, `set_clipboard` | `AC_clipboard_get`, `AC_clipboard_set` | — |
+| Clipboard (text + image) | `get_clipboard`, `set_clipboard`, `get_clipboard_image`, `set_clipboard_image` | `AC_clipboard_get`, `AC_clipboard_set`, `AC_clipboard_get_image`, `AC_clipboard_set_image` | — |
 | Remote desktop | `RemoteDesktopHost`, `RemoteDesktopViewer` | `AC_start_remote_host`, `AC_remote_connect` | Remote Desktop |
 | USB enumeration & passthrough | `list_usb_devices`, `enable_usb_passthrough` | `AC_usb_*` (16 commands) | USB Devices, USB Share |
 | Secrets vault | `default_secret_manager` | `AC_secret_set` + `${secrets.NAME}` | Secrets |
@@ -193,6 +193,44 @@ entry point still works.
 | **Remote desktop** | `RemoteDesktopHost` / GUI | TCP, WebSocket, or WebRTC; TOTP, trust list, TURN config, file/clipboard/audio sync. |
 
 All servers bind to `127.0.0.1` unless you opt in explicitly.
+
+### How the remote-desktop wire protocol works
+
+Worth knowing before you expose a host, and described nowhere else in the
+docs. The default transport is length-prefixed framing over raw TCP — no extra
+dependencies — and it opens with an **HMAC-SHA256 challenge/response
+handshake**: a viewer that fails auth is dropped before it is sent a single
+frame. JPEG frames are encoded at the configured FPS and quality and handed to
+authenticated viewers through a shared *latest-frame slot*, so a slow viewer
+drops frames instead of stalling the rest. Viewer input arrives as JSON and is
+**validated against an allow-list** of actions before being applied through the
+ordinary input wrappers, so a viewer cannot invent new operations.
+
+```python
+# Be remoted — start a host and hand the token + port to whoever views you
+from je_auto_control import RemoteDesktopHost
+host = RemoteDesktopHost(token="hunter2", bind="127.0.0.1",
+                         port=0, fps=10, quality=70)
+host.start()
+print("listening on", host.port, "viewers:", host.connected_clients)
+```
+
+```python
+# Control another machine — connect a viewer and send input
+from je_auto_control import RemoteDesktopViewer
+viewer = RemoteDesktopViewer(host="10.0.0.5", port=51234, token="hunter2",
+                             on_frame=lambda jpeg: ...)
+viewer.connect()
+viewer.send_input({"action": "mouse_move", "x": 100, "y": 200})
+viewer.disconnect()
+```
+
+Narrow who may connect at all with an IP allow-list (CIDR ranges or exact
+addresses); peers outside it are rejected during the handshake:
+
+```python
+RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
+```
 
 ---
 

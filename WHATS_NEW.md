@@ -160,6 +160,22 @@ and only translates **after** recording — `ToUnicodeEx` mutates dead-key
 composition state, so calling it mid-typing corrupts the character being
 composed.
 
+### One Clipboard Image API Instead of Two
+
+`utils/clipboard` carried two `get_clipboard_image` / `set_clipboard_image`
+pairs under identical names — one in `clipboard.py` taking PNG bytes, one in
+`clipboard_image.py` taking a file path. Both had live callers, so importing
+the wrong module failed at runtime, and only for whichever argument type you
+passed. There is one pair now: `set_clipboard_image` accepts **either** PNG
+bytes or a path, `clipboard_image.py` is gone, and both functions are exported
+from the subpackage and the facade with `AC_clipboard_get_image` /
+`AC_clipboard_set_image` commands — previously they were reachable only from
+MCP and the GUI, never from `execute_action`.
+
+`windows/listener/` went with it: `Win32KeyboardListener` and
+`Win32MouseListener` had no callers left once recording moved to
+`win32_input_hook.py`.
+
 ### Window Handles You Can Actually Use
 
 Window management listed windows but could not really operate on them.

@@ -55,8 +55,27 @@ only when documented here with a migration path.
   `AC_urls_equal`, the matching `ac_*` MCP tools, and three Script Builder
   specs. The module and its tests already existed; only the wiring is new.
 
+### Removed
+
+- **Breaking — `je_auto_control.windows.listener` is gone**, with its
+  `Win32KeyboardListener` and `Win32MouseListener` classes. Recording moved to
+  `windows/record/win32_input_hook.py`, after which nothing in the package or
+  the test suite referenced them.
+- **Breaking — `je_auto_control.utils.clipboard.clipboard_image` is gone.** Its
+  two functions were duplicates of the ones in
+  `je_auto_control.utils.clipboard.clipboard`, under identical names but with a
+  different `set_clipboard_image` signature, so importing the wrong module
+  failed at runtime and only for one of the two argument types. Import from
+  `je_auto_control.utils.clipboard` (or the top-level facade) instead; the
+  surviving function accepts both PNG bytes and a file path.
+
 ### Changed
 
+- `set_clipboard_image` accepts PNG bytes **or** a path to any Pillow-readable
+  image, and `get_clipboard_image` / `set_clipboard_image` are now exported
+  from `je_auto_control.utils.clipboard` and the top-level facade, with
+  `AC_clipboard_get_image` / `AC_clipboard_set_image` commands. They were
+  previously reachable only through MCP and the GUI, not `execute_action`.
 - **Breaking — `close_window_by_title` / `AC_close_window` / `ac_close_window`
   now actually close the window** (they post `WM_CLOSE`). They previously
   *minimised* it: the Win32 call underneath is named `CloseWindow` but
