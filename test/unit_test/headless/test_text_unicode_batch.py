@@ -102,9 +102,19 @@ def test_write_sends_newline_and_tab_as_keys_not_characters():
     assert kb.WRITE_CONTROL_KEYS["\n"] == "return"
     assert kb.WRITE_CONTROL_KEYS["\r"] == "return"
     assert kb.WRITE_CONTROL_KEYS["\t"] == "tab"
-    # and the names must exist in the real table, or the branch never fires
-    for name in set(kb.WRITE_CONTROL_KEYS.values()):
-        assert name in kb.keyboard_keys_table
+    # Each control character needs *some* key route on this platform, or write()
+    # falls through to the space fallback and silently turns a newline into a
+    # space. Asserting one spelling is wrong: Windows names backspace "back",
+    # X11 names it "backspace" and maps the raw "\b" instead — and write()
+    # already copes, because it checks the name against the table before using
+    # it. So assert the property that matters, not the spelling.
+    for char, name in kb.WRITE_CONTROL_KEYS.items():
+        assert (name in kb.keyboard_keys_table
+                or char in kb.keyboard_keys_table), (
+            f"{char!r} has no key route on this platform: neither {name!r} nor "
+            f"the raw character is in keyboard_keys_table, so write() would "
+            f"fall through to the space fallback"
+        )
 
 
 def test_write_reports_no_unicode_route_when_the_backend_lacks_one():

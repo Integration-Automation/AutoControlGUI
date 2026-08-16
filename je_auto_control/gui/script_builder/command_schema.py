@@ -2310,10 +2310,14 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_urls_equal", "Data", "URL: Compare",
         fields=(
+            # https, because nothing in this example depends on the scheme —
+            # it shows that query order and the fragment are ignored. The
+            # canonicalize placeholder above keeps http on purpose: it needs
+            # port 80 to demonstrate default-port removal.
             FieldSpec("first", FieldType.STRING,
-                      placeholder="http://x.com/a?b=1&a=2"),
+                      placeholder="https://x.com/a?b=1&a=2"),
             FieldSpec("second", FieldType.STRING,
-                      placeholder="http://x.com/a?a=2&b=1#top"),
+                      placeholder="https://x.com/a?a=2&b=1#top"),
         ),
         description="Whether two URLs are equivalent after canonicalisation.",
     ))
