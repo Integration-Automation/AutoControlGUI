@@ -14,30 +14,6 @@
 
 ---
 
-## [TODO] 還有六個測試檔呼叫 `deleteLater()` 而沒有沖掉
-
-`deleteLater()` 要有事件迴圈在跑才會生效。測試模組通常不跑事件迴圈，於是物件（連同它
-建構時起的輔助執行緒與計時器）會一路活到後面某個**會**推事件的測試，然後在那支不相干的
-測試裡被銷毀。`test_admin_console_thumbnails_gui.py` 就是這樣讓整個直譯器以
-`__fastfail`（rc 3221226505）死掉的，已修；同一個模式還留在：
-
-- `test/unit_test/headless/test_r3_gui_main_window.py`（2 處）
-- `test/unit_test/headless/test_r3_gui_thread_marshal.py`（3 處）
-- `test/unit_test/headless/test_remote_desktop_cursor.py`（1 處）
-- `test/unit_test/headless/test_remote_desktop_quick_connect.py`（9 處）
-- `test/unit_test/headless/test_usb_passthrough_panel.py`（8 處）
-
-- **現況**：套件目前全綠（4,364 passed／19 skipped，打亂順序重跑亦同），所以這幾處還沒
-  咬人，但差一次順序或新測試就可能再炸一次，而且崩潰時沒有 traceback、`faulthandler`
-  也攔不到，極難查。
-- **做法**：比照已修的那支，收尾補
-  `QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)` + `processEvents()`。
-  規則已寫進 `CLAUDE.md` §Testing。
-- **另一個選項**：改在 `test/unit_test/headless/conftest.py` 放一個 autouse fixture 統一沖，
-  一處到位，但目前整個 `test/` 底下還沒有任何 `conftest.py`，等於新增結構，要先拍板。
-
----
-
 ## [DECIDE] `utils/clipboard/` 有兩份同名但不同簽章的圖片 API
 
 同一個子套件裡有兩個 `get_clipboard_image` / `set_clipboard_image`：
@@ -82,19 +58,16 @@
 
 ---
 
-## [DECIDE] 文件數字漂移要不要設 CI 守門
+## [TODO] 文件數字守門還沒涵蓋 GUI 分頁數
 
-CLAUDE.md 現在要求每次變更同步更新 `architecture_explore.md`，README 三份也引用同一批數字
-（指令數、子套件數、GUI 分頁、MCP 工具、範例數），但**沒有任何機制強制**，純靠人與 agent 自律。
+`test/unit_test/headless/test_doc_counts.py` 已經擋住指令數、MCP 工具數、`utils/`
+子套件數與 `examples/` 檔數（16 處引用，硬性失敗）。**還缺 GUI 分頁數（README 三份都寫
+48）**：要數 `_add_tab` 得先建 `AutoControlGUIWidget`，也就是要 Qt，而這一包是無頭套件。
 
-- **已經發生過**：`url_canon` 佈線那次加了 3 個指令與 3 個 MCP 工具，`architecture_explore.md`
-  與三份 README 的數字全部沒跟著改（758／664 對實際的 761／667），`CLAUDE.md` 的子套件數也
-  停在 306 對實際的 308。是事後對數字才抓到的，不是任何檢查擋下來的。
-- **提案**：加一個 headless 測試，實測 `known_commands()`、`__all__`、`_add_tab` 數量、
-  `build_default_tool_registry()`、`examples/` 檔數，與文件中的數字比對，不一致就紅燈 —
-  作法比照既有的 `test/unit_test/headless/test_actions_menu_gui.py`
-- **代價**：文件與程式碼必須同一個 commit 更新，否則 CI 會擋
-- **待決**：要不要做；若要，是硬性失敗還是只發警告
+- **做法**：比照 `test_actions_menu_gui.py`，丟到子行程用 offscreen 平台跑起來數，
+  結尾 `os._exit(0)` 跳過 Qt 收尾。
+- **成本**：那支探針啟動一次要好幾秒，只為了一個數字。也可以接受這個數字不設守門，
+  但要明講。
 
 ---
 

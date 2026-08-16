@@ -66,6 +66,7 @@ The map is only useful while it matches the tree, so **update it in the same cha
 - A new subsystem over ~1,000 lines also needs a file-level table in §5.4.17.
 - Keep the header's scan date, version, and branch current.
 - `README.md` and both translations under `README/` cite the same figures (command / subpackage / tab / MCP-tool / example counts) — update all three alongside the map.
+- **`test/unit_test/headless/test_doc_counts.py` enforces this and fails CI on a mismatch.** It re-measures the command, MCP-tool, `utils/` subpackage and `examples/` counts and compares them against every place the four documents quote them, so code and docs have to move in the same commit. If you reword a sentence that holds one of those numbers, update the test's pattern — it fails loudly when a citation disappears rather than passing on a document it can no longer read. (GUI tab count is not covered yet; counting tabs needs Qt. See `Progress.md`.)
 
 ### Outstanding work goes in `Progress.md`
 
@@ -126,20 +127,20 @@ Suppressions need an inline justification — `# noqa: <code>  # reason: <why>` 
 - `test/integrated_test/` — cross-module workflows. `test/gui_test/` — PySide6 interface. `test/manual_test/` — human verification.
 - No `time.sleep` > 1s in unit tests; use fakes or event signals. Tests must not depend on execution order.
 - All tests pass before merging; keep cross-platform compatibility.
-- **A Qt test that calls `deleteLater()` MUST flush it before the test ends**
-  (`QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)`, then
-  `processEvents()`). `deleteLater()` is a no-op until an event loop runs, and
-  most GUI test modules never run one — so the widget, plus any helper thread
-  or timer it started at construction, survives until some *later* test pumps
-  events and is destroyed inside that unrelated test. This is not theoretical:
-  `test_admin_console_thumbnails_gui.py` leaked seven `AdminConsoleTab`s this
-  way, and they detonated inside the nested modal `exec()` of
-  `test_usb_acl_prompt.py`, killing the interpreter with rc 3221226505
-  (0xC0000409) — a `__fastfail`, so no traceback, no faulthandler output, and
-  nothing after it in the suite ran. Note the failure is invisible to CI:
-  `test_usb_acl_prompt.py` needs the optional `webrtc` extra (`av`, `aiortc`),
-  which CI does not install, so CI skips it and only developers with that
-  extra installed see the crash.
+- **Queued Qt `deleteLater()` work is flushed after every test** by the autouse
+  fixture in `test/unit_test/headless/conftest.py`. Do not remove it, and keep
+  any new Qt test directory covered the same way. `deleteLater()` is a no-op
+  until an event loop runs, and most GUI test modules never run one — so the
+  widget, plus any helper thread or timer it started at construction, survives
+  until some *later* test pumps events and is destroyed inside that unrelated
+  test. This is not theoretical: `test_admin_console_thumbnails_gui.py` leaked
+  seven `AdminConsoleTab`s this way, and they detonated inside the nested modal
+  `exec()` of `test_usb_acl_prompt.py`, killing the interpreter with rc
+  3221226505 (0xC0000409) — a `__fastfail`, so no traceback, no faulthandler
+  output, and nothing after it in the suite ran. Note the failure is invisible
+  to CI: `test_usb_acl_prompt.py` needs the optional `webrtc` extra (`av`,
+  `aiortc`), which CI does not install, so CI skips it and only developers with
+  that extra installed see the crash.
 
 ## Key Conventions
 

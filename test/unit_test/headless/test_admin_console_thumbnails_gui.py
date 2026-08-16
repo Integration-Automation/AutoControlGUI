@@ -8,7 +8,6 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
-from PySide6.QtCore import QCoreApplication, QEvent  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 
@@ -39,16 +38,9 @@ def populated_admin_tab(qapp, tmp_path, monkeypatch):
     from je_auto_control.gui.admin_console_tab import AdminConsoleTab
     tab = AdminConsoleTab()
     yield tab, client
+    # The queued deletion is flushed by the autouse fixture in conftest.py —
+    # see there for why leaving it queued once killed the interpreter.
     tab.deleteLater()
-    # deleteLater() only takes effect while an event loop runs, and nothing in
-    # this module ever runs one. Left queued, every tab built here — and the
-    # helper timers/threads AdminConsoleTab starts at construction — survives
-    # until some later test pumps events, and is then destroyed inside *that*
-    # test. When the first pumper turned out to be a modal dialog's nested
-    # exec() on a worker-driven test, the interpreter died with no traceback
-    # (0xC0000409). Flush the deletion here, where it belongs.
-    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
-    qapp.processEvents()
 
 
 def test_thumbnail_widget_present_and_default_interval(populated_admin_tab):
