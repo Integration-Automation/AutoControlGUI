@@ -58,19 +58,6 @@
 
 ---
 
-## [TODO] 文件數字守門還沒涵蓋 GUI 分頁數
-
-`test/unit_test/headless/test_doc_counts.py` 已經擋住指令數、MCP 工具數、`utils/`
-子套件數與 `examples/` 檔數（16 處引用，硬性失敗）。**還缺 GUI 分頁數（README 三份都寫
-48）**：要數 `_add_tab` 得先建 `AutoControlGUIWidget`，也就是要 Qt，而這一包是無頭套件。
-
-- **做法**：比照 `test_actions_menu_gui.py`，丟到子行程用 offscreen 平台跑起來數，
-  結尾 `os._exit(0)` 跳過 Qt 收尾。
-- **成本**：那支探針啟動一次要好幾秒，只為了一個數字。也可以接受這個數字不設守門，
-  但要明講。
-
----
-
 ## [DECIDE] README 精簡後移除的深度內容是否部分回收
 
 README 由 1,471 行重寫為 267 行（三語同步），移除約 30 段 Quick Start 程式範例與

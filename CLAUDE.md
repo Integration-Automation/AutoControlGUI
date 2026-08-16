@@ -66,7 +66,7 @@ The map is only useful while it matches the tree, so **update it in the same cha
 - A new subsystem over ~1,000 lines also needs a file-level table in §5.4.17.
 - Keep the header's scan date, version, and branch current.
 - `README.md` and both translations under `README/` cite the same figures (command / subpackage / tab / MCP-tool / example counts) — update all three alongside the map.
-- **`test/unit_test/headless/test_doc_counts.py` enforces this and fails CI on a mismatch.** It re-measures the command, MCP-tool, `utils/` subpackage and `examples/` counts and compares them against every place the four documents quote them, so code and docs have to move in the same commit. If you reword a sentence that holds one of those numbers, update the test's pattern — it fails loudly when a citation disappears rather than passing on a document it can no longer read. (GUI tab count is not covered yet; counting tabs needs Qt. See `Progress.md`.)
+- **`test/unit_test/headless/test_doc_counts.py` enforces this and fails CI on a mismatch.** It re-measures the command, MCP-tool, `utils/` subpackage and `examples/` counts and compares them against every place the four documents quote them, so code and docs have to move in the same commit. If you reword a sentence that holds one of those numbers, update the test's pattern — it fails loudly when a citation disappears rather than passing on a document it can no longer read. The GUI tab count is guarded the same way but from `test_actions_menu_gui.py`, whose subprocess probe already builds the widget that count needs.
 
 ### Outstanding work goes in `Progress.md`
 
