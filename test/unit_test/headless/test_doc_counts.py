@@ -26,7 +26,11 @@ def _commands() -> int:
 
 def _mcp_tools() -> int:
     from je_auto_control.utils.mcp_server.tools import build_default_tool_registry
-    return len(build_default_tool_registry())
+    # Pinned, not defaulted: the registry consults
+    # JE_AUTOCONTROL_MCP_READONLY and JE_AUTOCONTROL_MCP_ALIASES, so a
+    # developer with either set in their shell would otherwise see this guard
+    # fail on a documentation file that is perfectly correct.
+    return len(build_default_tool_registry(read_only=False, aliases=True))
 
 
 def _utils_subpackages() -> int:
