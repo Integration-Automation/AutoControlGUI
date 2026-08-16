@@ -42,6 +42,11 @@ only when documented here with a migration path.
 - `utils/keyboard_layout`: `char_table`, `layout_char_table`, `vk_to_char`,
   `foreground_keyboard_layout` — which character each key produces on the
   active layout, with a US fallback.
+- `utils/url_canon` reaches its delivery surfaces: `canonicalize_url`,
+  `normalize_url`, `urls_equal`, `build_query` and `parse_query` are exported
+  from the facade, with `AC_canonicalize_url` / `AC_normalize_url` /
+  `AC_urls_equal`, the matching `ac_*` MCP tools, and three Script Builder
+  specs. The module and its tests already existed; only the wiring is new.
 
 ### Changed
 

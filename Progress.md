@@ -14,47 +14,62 @@
 
 ---
 
-## [WIP] `utils/url_canon/` 尚未完成三面交付
+## [TODO] 還有六個測試檔呼叫 `deleteLater()` 而沒有沖掉
 
-RFC 3986 URL 正規化模組已有無頭核心與測試，但不符合 CLAUDE.md 的交付規則，目前只能從
-Python 直接匯入子模組使用。
+`deleteLater()` 要有事件迴圈在跑才會生效。測試模組通常不跑事件迴圈，於是物件（連同它
+建構時起的輔助執行緒與計時器）會一路活到後面某個**會**推事件的測試，然後在那支不相干的
+測試裡被銷毀。`test_admin_console_thumbnails_gui.py` 就是這樣讓整個直譯器以
+`__fastfail`（rc 3221226505）死掉的，已修；同一個模式還留在：
 
-- **已完成**：`je_auto_control/utils/url_canon/url_canon.py`（117 行，
-  `canonicalize_url`／`normalize_url`／`urls_equal`／`parse_query`／`build_query`）；
-  `test/unit_test/headless/test_url_canon_batch.py`
-- **缺**：
-  1. 門面再匯出 — 五個公開函式都不在 `je_auto_control.__all__` 裡
-  2. `AC_*` 指令 — 執行器沒有對應命令（現有的 `AC_next_url`／`AC_web_current_url` 是分頁與
-     WebRunner 用途，無關）
-  3. GUI 介面 — 沒有分頁或既有分頁的操作入口
-  4. `architecture_explore.md` §5.4.11 沒有這個套件的列
-- **另外**：兩個檔案都還是 untracked，尚未進版控
+- `test/unit_test/headless/test_r3_gui_main_window.py`（2 處）
+- `test/unit_test/headless/test_r3_gui_thread_marshal.py`（3 處）
+- `test/unit_test/headless/test_remote_desktop_cursor.py`（1 處）
+- `test/unit_test/headless/test_remote_desktop_quick_connect.py`（9 處）
+- `test/unit_test/headless/test_usb_passthrough_panel.py`（8 處）
+
+- **現況**：套件目前全綠（4,364 passed／19 skipped，打亂順序重跑亦同），所以這幾處還沒
+  咬人，但差一次順序或新測試就可能再炸一次，而且崩潰時沒有 traceback、`faulthandler`
+  也攔不到，極難查。
+- **做法**：比照已修的那支，收尾補
+  `QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)` + `processEvents()`。
+  規則已寫進 `CLAUDE.md` §Testing。
+- **另一個選項**：改在 `test/unit_test/headless/conftest.py` 放一個 autouse fixture 統一沖，
+  一處到位，但目前整個 `test/` 底下還沒有任何 `conftest.py`，等於新增結構，要先拍板。
 
 ---
 
-## [TODO] headless 全套件跑到 `test_usb_acl_prompt.py` 會讓直譯器整個掛掉
+## [DECIDE] `windows/listener/` 兩個模組已無呼叫端
 
-`python -m pytest test/unit_test/headless` 跑到約 87%（`test_usb_acl_prompt.py` 的第三個
-測試附近）時，行程**沒有 traceback、沒有結尾摘要就直接結束** —— 是原生層的崩潰，不是測試
-失敗。單獨跑 `pytest test/unit_test/headless/test_usb_acl_prompt.py` 九個測試全過，所以是
-跨檔案累積出來的狀態（COM／執行緒／原生資源）才觸發。
+`win32_keyboard_listener.py`（118 行）與 `win32_mouse_listener.py`（127 行）在
+`je_auto_control/` 與 `test/` 底下**沒有任何引用**——錄製改走
+`record/win32_input_hook.py` 之後就沒人用了。
 
-- **影響**：CI 那一關實際上跑不完，後面約 500 個測試從來沒有被執行過，而輸出看起來只是
-  「中斷了」，不會紅燈得很明顯
-- **與新功能無關**：把 2026-08-15 的 Unicode／OCR／DPI 變更 stash 掉之後，同一個位置一樣
-  崩潰，所以是既有問題
-- **繞法**：`--ignore test/unit_test/headless/test_usb_acl_prompt.py` 之後全套 4,300 通過
-- **下一步**：用 `-p no:randomly` 固定順序後二分找出前置的加害者測試（優先看會開 COM、
-  起執行緒或掛 hook 的那幾支）
+- **待決**：兩者都是公開類別，刪掉算破壞性變更。要刪（下一個主版本）、標記
+  deprecated，還是就留著？
+- 在 `architecture_explore.md` 的 Windows 後端表已標注「已無任何呼叫端」。
+
+---
+
+## [TODO] `windows_backend.py` 915 行，超過 750 行上限
+
+`je_auto_control/utils/accessibility/backends/windows_backend.py` 目前 915 行，超出
+`CLAUDE.md` §Limits 的 750 行。拆出 `windows_query.py`（170）與 `windows_state.py`（98）之後
+仍然超標——這個檔在拆之前就已經是 772 行，後續補視窗限定搜尋與控制項模式又長回來。
+
+- **注意**：目前**沒有任何 CI job 在檢查行數與複雜度**（`quality.yml` 只有 ruff 與 bandit），
+  所以這條上限實際上靠自律；`action_executor.py` 8,021 行、`_factories.py` 8,866 行同樣超標。
+- **待決**：是要真的拆這個檔、把上限改成符合現況的數字，還是把這條規則的適用範圍寫清楚。
 
 ---
 
 ## [DECIDE] 文件數字漂移要不要設 CI 守門
 
 CLAUDE.md 現在要求每次變更同步更新 `architecture_explore.md`，README 三份也引用同一批數字
-（指令數 754、子套件數 306、GUI 分頁 48、MCP 工具 660、範例 27），但**沒有任何機制強制**，
-純靠人與 agent 自律。
+（指令數、子套件數、GUI 分頁、MCP 工具、範例數），但**沒有任何機制強制**，純靠人與 agent 自律。
 
+- **已經發生過**：`url_canon` 佈線那次加了 3 個指令與 3 個 MCP 工具，`architecture_explore.md`
+  與三份 README 的數字全部沒跟著改（758／664 對實際的 761／667），`CLAUDE.md` 的子套件數也
+  停在 306 對實際的 308。是事後對數字才抓到的，不是任何檢查擋下來的。
 - **提案**：加一個 headless 測試，實測 `known_commands()`、`__all__`、`_add_tab` 數量、
   `build_default_tool_registry()`、`examples/` 檔數，與文件中的數字比對，不一致就紅燈 —
   作法比照既有的 `test/unit_test/headless/test_actions_menu_gui.py`

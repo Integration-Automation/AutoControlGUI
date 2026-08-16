@@ -160,6 +160,25 @@ and only translates **after** recording — `ToUnicodeEx` mutates dead-key
 composition state, so calling it mid-typing corrupts the character being
 composed.
 
+### URL Canonicalisation, Reachable From Every Surface
+
+`utils/url_canon` (RFC 3986 canonicalisation, normalisation and query helpers)
+had a working headless core and passing tests, but none of its delivery
+surfaces were connected, so it could only be reached by importing the submodule
+directly.
+
+- **`canonicalize_url`, `normalize_url`, `urls_equal`, `build_query`,
+  `parse_query`** are now re-exported from the facade and listed in `__all__`.
+- **`AC_canonicalize_url`, `AC_normalize_url`, `AC_urls_equal`** wire the same
+  functions into the executor, so they work from JSON action files, the socket
+  server, the scheduler and the Script Builder without Python glue; the
+  matching **`ac_canonicalize_url` / `ac_normalize_url` / `ac_urls_equal`** MCP
+  tools and three Script Builder `CommandSpec`s come with them.
+
+Comparing two URLs for "the same page" is the actual use: `urls_equal` ignores
+query order and the fragment, so `?b=1&a=2` and `?a=2&b=1#top` match, which is
+what a navigation assertion needs and what plain string comparison gets wrong.
+
 ## What's new (2026-07-18)
 
 ### Cross-Platform Reliability Hardening
