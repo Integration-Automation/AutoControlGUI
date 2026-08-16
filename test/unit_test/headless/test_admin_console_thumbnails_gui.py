@@ -38,6 +38,8 @@ def populated_admin_tab(qapp, tmp_path, monkeypatch):
     from je_auto_control.gui.admin_console_tab import AdminConsoleTab
     tab = AdminConsoleTab()
     yield tab, client
+    # The queued deletion is flushed by the autouse fixture in conftest.py —
+    # see there for why leaving it queued once killed the interpreter.
     tab.deleteLater()
 
 

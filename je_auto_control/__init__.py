@@ -30,6 +30,8 @@ from je_auto_control.utils.exception.exceptions import \
     AutoControlRecordException
 from je_auto_control.utils.exception.exceptions import \
     AutoControlScreenException
+from je_auto_control.utils.exception.exceptions import \
+    AutoControlFlatTemplateException
 from je_auto_control.utils.exception.exceptions import ImageNotFoundException
 from je_auto_control.utils.executor.action_executor import \
     add_command_to_executor
@@ -41,12 +43,13 @@ from je_auto_control.utils.executor.action_executor import execute_files
 from je_auto_control.utils.executor.action_executor import executor
 # Accessibility (headless)
 from je_auto_control.utils.accessibility import (
-    AccessibilityElement, AccessibilityNotAvailableError,
+    AccessibilityElement, accessibility_status, AccessibilityNotAvailableError,
     AccessibilityRecorder, AXRecorderEvent, AXTreeNode,
-    click_accessibility_element, control_get_value, control_invoke,
+    click_accessibility_element, control_get_state, control_get_value,
+    control_invoke,
     control_set_value, control_toggle, dump_accessibility_tree,
-    find_accessibility_element, list_accessibility_elements,
-    read_control_table,
+    find_accessibility_element, find_accessibility_elements,
+    list_accessibility_elements, read_control_table,
 )
 # Extended UIA control patterns (Expand / Select / Range / Scroll)
 from je_auto_control.utils.control_patterns import (
@@ -230,7 +233,7 @@ from je_auto_control.utils.webrunner_bridge import (
 )
 # Clipboard (headless)
 from je_auto_control.utils.clipboard.clipboard import (
-    get_clipboard, set_clipboard,
+    get_clipboard, get_clipboard_image, set_clipboard, set_clipboard_image,
 )
 # Hotkey daemon (headless)
 from je_auto_control.utils.hotkey.hotkey_daemon import (
@@ -402,9 +405,10 @@ from je_auto_control.utils.key_hold import hold_key, plan_key_hold
 from je_auto_control.utils.mouse_relative import (
     move_mouse_relative, relative_target,
 )
-# Type arbitrary Unicode (emoji / CJK) via the clipboard
+# Type arbitrary Unicode (emoji / CJK) by key injection or the clipboard
 from je_auto_control.utils.text_unicode import (
-    plan_paste, type_unicode, unicode_code_units,
+    plan_paste, plan_unicode_keys, type_unicode, type_unicode_keys,
+    type_unicode_text, unicode_code_units, unicode_keys_supported,
 )
 # Hold modifier keys across a group of actions (release-on-error)
 from je_auto_control.utils.modifier_state import (
@@ -532,7 +536,8 @@ from je_auto_control.utils.preprocess import (
 )
 # Multi-monitor / virtual-desktop geometry (which monitor, where, remapping)
 from je_auto_control.utils.monitor_layout import (
-    Monitor, enumerate_monitors, monitor_at_point, monitor_for_window,
+    Monitor, enumerate_monitors, grab_logical, logical_scale,
+    logical_virtual_rect, monitor_at_point, monitor_for_window, needs_rescale,
     primary_monitor, remap_point, to_local, to_virtual, virtual_bounds,
 )
 # Pre-action readiness gate (visible + stable + enabled + not-occluded)
@@ -694,6 +699,10 @@ from je_auto_control.utils.artifact_store import (
 # Perceptual-hash image dedupe (Pillow aHash/dHash)
 from je_auto_control.utils.image_dedup import (
     average_hash, dedupe_images, dhash, hamming_distance, images_similar,
+)
+# RFC 3986 URL canonicalisation / normalisation and query helpers
+from je_auto_control.utils.url_canon import (
+    build_query, canonicalize_url, normalize_url, parse_query, urls_equal,
 )
 # Locale-aware number/currency/date parsing & formatting (optional babel)
 from je_auto_control.utils.locale_parse import (
@@ -917,6 +926,16 @@ from je_auto_control.utils.ocr.ocr_engine import (
     TextMatch, click_text, find_text_matches, find_text_regex,
     locate_text_center, read_text_in_region, set_tesseract_cmd,
     wait_for_text,
+)
+# Group OCR word boxes into lines / runs (engines box one word at a time)
+from je_auto_control.utils.ocr.text_span import find_spans, group_lines
+# Whether input this process sends can actually arrive
+from je_auto_control.utils.input_reach import (
+    input_desktop_available, input_reaches_system,
+)
+# What character each key produces on the active keyboard layout
+from je_auto_control.utils.keyboard_layout import (
+    char_table, foreground_keyboard_layout, layout_char_table, vk_to_char,
 )
 # LLM action planner (headless)
 from je_auto_control.utils.llm import (
@@ -1241,6 +1260,7 @@ from je_auto_control.utils.humanize.typing import (
 # record
 from je_auto_control.wrapper.auto_control_record import record
 from je_auto_control.wrapper.auto_control_record import stop_record
+from je_auto_control.wrapper.auto_control_record import stop_record_timeline
 from je_auto_control.wrapper.auto_control_record import record_to_json
 # Screen wrappers
 from je_auto_control.wrapper.auto_control_screen import screen_size
@@ -1248,8 +1268,9 @@ from je_auto_control.wrapper.auto_control_screen import screenshot
 from je_auto_control.wrapper.auto_control_screen import get_pixel
 # Cross-platform window manager (headless)
 from je_auto_control.wrapper.auto_control_window import (
-    close_window_by_title, find_window, focus_window, list_windows,
-    show_window_by_title, wait_for_window,
+    close_window_by_title, find_window, focus_window, foreground_window,
+    list_windows, minimize_window_by_title, move_window_by_title,
+    show_window_by_title, wait_for_window, window_rect,
 )
 # Windows-only modules (ctypes.WINFUNCTYPE / Win32 API) — gated so
 # ``import je_auto_control`` keeps working on macOS / Linux. Kept last
@@ -1277,9 +1298,11 @@ __all__ = [
     "screen_size", "screenshot", "locate_all_image", "locate_image_center", "locate_and_click",
     "CriticalExit", "AutoControlException", "AutoControlKeyboardException",
     "AutoControlMouseException", "AutoControlCantFindKeyException",
-    "AutoControlScreenException", "ImageNotFoundException", "AutoControlJsonActionException",
+    "AutoControlScreenException", "AutoControlFlatTemplateException",
+    "ImageNotFoundException", "AutoControlJsonActionException",
     "AutoControlRecordException", "AutoControlActionNullException", "AutoControlActionException", "record",
-    "stop_record", "read_action_json", "write_action_json", "format_action_json",
+    "stop_record", "stop_record_timeline",
+    "read_action_json", "write_action_json", "format_action_json",
     "execute_action", "execute_files", "executor",
     "execute_action_with_vars", "record_to_json",
     "generate_code", "generate_code_file", "http_request", "query_sqlite",
@@ -1289,7 +1312,9 @@ __all__ = [
     # OCR
     "TextMatch", "find_text_matches", "locate_text_center", "wait_for_text",
     "click_text", "set_tesseract_cmd", "read_text_in_region",
-    "find_text_regex",
+    "find_text_regex", "find_spans", "group_lines",
+    "char_table", "foreground_keyboard_layout", "layout_char_table",
+    "vk_to_char", "input_desktop_available", "input_reaches_system",
     # Recording editor
     "trim_actions", "insert_action", "remove_action", "filter_actions",
     "adjust_delays", "scale_coordinates", "dedupe_moves", "merge_sleeps",
@@ -1303,8 +1328,11 @@ __all__ = [
     # Window manager
     "list_windows", "find_window", "focus_window", "wait_for_window",
     "close_window_by_title", "show_window_by_title",
+    "minimize_window_by_title", "foreground_window", "window_rect",
+    "move_window_by_title",
     # Clipboard
     "get_clipboard", "set_clipboard",
+    "get_clipboard_image", "set_clipboard_image",
     # Hotkey daemon
     "HotkeyDaemon", "HotkeyBinding", "default_hotkey_daemon",
     "PopupWatchdog", "WatchdogRule", "default_popup_watchdog",
@@ -1401,8 +1429,12 @@ __all__ = [
     "move_mouse_relative",
     "relative_target",
     "type_unicode",
+    "type_unicode_keys",
+    "type_unicode_text",
     "plan_paste",
+    "plan_unicode_keys",
     "unicode_code_units",
+    "unicode_keys_supported",
     "hold_modifiers",
     "plan_with_modifiers",
     "cluster_grid",
@@ -1512,6 +1544,10 @@ __all__ = [
     "to_local",
     "to_virtual",
     "virtual_bounds",
+    "grab_logical",
+    "logical_virtual_rect",
+    "logical_scale",
+    "needs_rescale",
     "wait_actionable",
     "act_when_ready",
     "ActionabilityReport",
@@ -1612,6 +1648,8 @@ __all__ = [
     "set_default_store",
     "average_hash", "dedupe_images", "dhash", "hamming_distance",
     "images_similar",
+    "build_query", "canonicalize_url", "normalize_url", "parse_query",
+    "urls_equal",
     "format_currency", "format_date", "format_decimal", "parse_decimal",
     "parse_number",
     "VoiceCommand", "VoiceRouter", "default_voice_router",
@@ -1743,11 +1781,13 @@ __all__ = [
     "HistoryStore", "RunRecord", "default_history_store",
     # Accessibility
     "AccessibilityElement", "AccessibilityNotAvailableError",
+    "accessibility_status",
     "AccessibilityRecorder", "AXRecorderEvent", "AXTreeNode",
     "click_accessibility_element", "dump_accessibility_tree",
-    "find_accessibility_element", "list_accessibility_elements",
-    "control_get_value", "control_set_value", "control_invoke",
-    "control_toggle", "read_control_table",
+    "find_accessibility_element", "find_accessibility_elements",
+    "list_accessibility_elements",
+    "control_get_state", "control_get_value", "control_set_value",
+    "control_invoke", "control_toggle", "read_control_table",
     "expand_control", "collapse_control", "control_expand_state",
     "select_control_item", "control_range", "set_control_range",
     "scroll_control_into_view",

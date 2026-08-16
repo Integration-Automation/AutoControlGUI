@@ -34,7 +34,12 @@ class MacOSAccessibilityBackend(AccessibilityBackend):
 
     def list_elements(self, app_name: Optional[str] = None,
                       max_results: int = 200,
+                      window_title: Optional[str] = None,
                       ) -> List[AccessibilityElement]:
+        # Accepted for signature parity and ignored: this AX walk is already
+        # per-application, and returning nothing would be worse than returning
+        # the application's elements unscoped.
+        del window_title
         if not self.available:
             raise AccessibilityNotAvailableError(
                 "pyobjc (ApplicationServices, AppKit) is required for "

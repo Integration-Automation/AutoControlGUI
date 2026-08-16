@@ -205,6 +205,24 @@ def _add_keyboard_specs(specs: List[CommandSpec]) -> None:
         description="Enter any Unicode text via clipboard paste (write can't).",
     ))
     specs.append(CommandSpec(
+        "AC_type_unicode_keys", "Keyboard", "Type Unicode (key events)",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="café 🚀 値"),
+        ),
+        description="Enter any Unicode text as key events; leaves the clipboard "
+                    "untouched. Needs a backend that supports it (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_type_unicode_text", "Keyboard", "Type Unicode (best route)",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="café 🚀 値"),
+            FieldSpec("modifier", FieldType.STRING, optional=True,
+                      default="ctrl", placeholder="ctrl | command"),
+        ),
+        description="Enter any Unicode text: key events where available, "
+                    "clipboard paste otherwise.",
+    ))
+    specs.append(CommandSpec(
         "AC_with_modifiers", "Keyboard", "With Modifiers Held",
         fields=(
             FieldSpec("modifiers", FieldType.STRING, placeholder="ctrl+shift"),
@@ -1063,6 +1081,32 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_close_window", "Window", "Close Window",
         fields=(FieldSpec("title_substring", FieldType.STRING),),
+        description="Ask the first matching window to close (posts WM_CLOSE).",
+    ))
+    specs.append(CommandSpec(
+        "AC_minimize_window", "Window", "Minimize Window",
+        fields=(FieldSpec("title_substring", FieldType.STRING),),
+        description="Minimise the first matching window.",
+    ))
+    specs.append(CommandSpec(
+        "AC_foreground_window", "Window", "Foreground Window",
+        description="The window the user is currently working in.",
+    ))
+    specs.append(CommandSpec(
+        "AC_window_rect", "Window", "Window Rectangle",
+        fields=(FieldSpec("title_substring", FieldType.STRING),),
+        description="Screen rectangle (left, top, right, bottom) of a window.",
+    ))
+    specs.append(CommandSpec(
+        "AC_move_window", "Window", "Move Window by Title",
+        fields=(
+            FieldSpec("title_substring", FieldType.STRING),
+            FieldSpec("x", FieldType.INT),
+            FieldSpec("y", FieldType.INT),
+            FieldSpec("width", FieldType.INT, optional=True),
+            FieldSpec("height", FieldType.INT, optional=True),
+        ),
+        description="Move, and optionally resize, the first matching window.",
     ))
     specs.append(CommandSpec(
         "AC_drop_files", "Window", "Drop Files onto Window",
@@ -1829,6 +1873,17 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
         description="Enumerate + classify the clipboard's formats (Windows).",
     ))
     specs.append(CommandSpec(
+        "AC_clipboard_get_image", "Data", "Clipboard: Save Image",
+        fields=(FieldSpec("path", FieldType.FILE_PATH,
+                          placeholder="clipboard.png"),),
+        description="Save the clipboard's image to a PNG file, if it has one.",
+    ))
+    specs.append(CommandSpec(
+        "AC_clipboard_set_image", "Data", "Clipboard: Set Image",
+        fields=(FieldSpec("path", FieldType.FILE_PATH),),
+        description="Put an image file onto the clipboard.",
+    ))
+    specs.append(CommandSpec(
         "AC_classify_formats", "Data", "Classify Clipboard Formats",
         fields=(FieldSpec("formats", FieldType.STRING,
                           placeholder='[1, 13, {"id": 49161, "name": "Csv"}]'),),
@@ -2231,6 +2286,40 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("max_distance", FieldType.INT, optional=True, default=5),
         ),
         description="Collapse near-duplicate images by perceptual hash.",
+    ))
+    specs.append(CommandSpec(
+        "AC_canonicalize_url", "Data", "URL: Canonicalize",
+        fields=(
+            FieldSpec("url", FieldType.STRING,
+                      placeholder="HTTP://Example.COM:80/a/../b?b=2&a=1#frag"),
+        ),
+        description="Canonical form of a URL, for equality and de-duplication.",
+    ))
+    specs.append(CommandSpec(
+        "AC_normalize_url", "Data", "URL: Normalize",
+        fields=(
+            FieldSpec("url", FieldType.STRING,
+                      placeholder="https://EXAMPLE.com:443/p%2fx/"),
+            FieldSpec("sort_query", FieldType.BOOL, optional=True,
+                      default=False),
+            FieldSpec("drop_fragment", FieldType.BOOL, optional=True,
+                      default=False),
+        ),
+        description="RFC 3986 syntax-based normalisation of a URL.",
+    ))
+    specs.append(CommandSpec(
+        "AC_urls_equal", "Data", "URL: Compare",
+        fields=(
+            # https, because nothing in this example depends on the scheme —
+            # it shows that query order and the fragment are ignored. The
+            # canonicalize placeholder above keeps http on purpose: it needs
+            # port 80 to demonstrate default-port removal.
+            FieldSpec("first", FieldType.STRING,
+                      placeholder="https://x.com/a?b=1&a=2"),
+            FieldSpec("second", FieldType.STRING,
+                      placeholder="https://x.com/a?a=2&b=1#top"),
+        ),
+        description="Whether two URLs are equivalent after canonicalisation.",
     ))
     specs.append(CommandSpec(
         "AC_parse_decimal", "Data", "Locale: Parse Decimal",

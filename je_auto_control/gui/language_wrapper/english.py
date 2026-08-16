@@ -952,6 +952,8 @@ english_word_dict = {
     # Accessibility Tab
     "a11y_app_label": "App:",
     "a11y_app_placeholder": "e.g. Calculator",
+    "a11y_window_label": "Window:",
+    "a11y_window_placeholder": "part of the window title",
     "a11y_name_label": "Name contains:",
     "a11y_name_placeholder": "partial match",
     "a11y_refresh": "Refresh",

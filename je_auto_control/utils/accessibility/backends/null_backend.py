@@ -20,5 +20,6 @@ class NullAccessibilityBackend(AccessibilityBackend):
 
     def list_elements(self, app_name: Optional[str] = None,
                       max_results: int = 200,
+                      window_title: Optional[str] = None,
                       ) -> List[AccessibilityElement]:
         raise AccessibilityNotAvailableError(self._reason)

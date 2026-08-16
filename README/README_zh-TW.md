@@ -3,1339 +3,290 @@
 [![PyPI](https://img.shields.io/pypi/v/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![Python](https://img.shields.io/pypi/pyversions/je_auto_control)](https://pypi.org/project/je_auto_control/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
+[![Documentation](https://readthedocs.org/projects/autocontrol/badge/?version=latest)](https://autocontrol.readthedocs.io/en/latest/?badge=latest)
 
-**AutoControl** 是一個跨平台的 Python GUI 自動化框架，提供滑鼠控制、鍵盤輸入、圖像辨識、螢幕擷取、腳本執行與報告產生等功能 — 透過統一的 API 在 Windows、macOS 和 Linux (X11) 上運作。
+**AutoControl** 是一套跨平台的 Python GUI 自動化框架。它能驅動滑鼠與鍵盤、在畫面上找到目標
+（樣板比對、OCR、作業系統無障礙樹，或視覺模型）、錄製與重播操作流程，並以 JSON 動作檔執行——
+支援 Windows、macOS、Linux（X11 與 Wayland）、Android 與 iOS。
 
-**[English](../README.md)** | **[简体中文](README_zh-CN.md)**
+每項能力都以三種形式提供：**Python API**、可在 JSON 檔／CLI／伺服器使用的 **`AC_*` 動作指令**，
+以及 **GUI 分頁**。沒有任何功能只存在於 GUI。
 
----
-
-## 目錄
-
-- [本次更新](#本次更新)
-- [功能特色](#功能特色)
-- [架構](#架構)
-- [安裝](#安裝)
-- [系統需求](#系統需求)
-- [快速開始](#快速開始)
-  - [滑鼠控制](#滑鼠控制)
-  - [鍵盤控制](#鍵盤控制)
-  - [圖像辨識](#圖像辨識)
-  - [Accessibility 元件搜尋](#accessibility-元件搜尋)
-  - [AI 元件定位（VLM）](#ai-元件定位vlm)
-  - [OCR 螢幕文字辨識](#ocr-螢幕文字辨識)
-  - [LLM 動作規劃器](#llm-動作規劃器)
-  - [執行期變數與流程控制](#執行期變數與流程控制)
-  - [遠端桌面](#遠端桌面)
-  - [剪貼簿](#剪貼簿)
-  - [截圖](#截圖)
-  - [動作錄製與回放](#動作錄製與回放)
-  - [JSON 腳本執行器](#json-腳本執行器)
-  - [MCP 伺服器（讓 Claude 使用 AutoControl）](#mcp-伺服器讓-claude-使用-autocontrol)
-  - [排程器（Interval & Cron）](#排程器interval--cron)
-  - [全域熱鍵](#全域熱鍵)
-  - [事件觸發器](#事件觸發器)
-  - [執行歷史](#執行歷史)
-  - [報告產生](#報告產生)
-  - [可觀測性（Prometheus / OpenTelemetry）](#可觀測性prometheus--opentelemetry)
-  - [遠端自動化（Socket / REST）](#遠端自動化socket--rest)
-  - [外掛載入器](#外掛載入器)
-  - [Shell 命令執行](#shell-命令執行)
-  - [螢幕錄製](#螢幕錄製)
-  - [回呼執行器](#回呼執行器)
-  - [套件管理器](#套件管理器)
-  - [專案管理](#專案管理)
-  - [視窗管理](#視窗管理)
-  - [GUI 應用程式](#gui-應用程式)
-- [命令列介面](#命令列介面)
-- [平台支援](#平台支援)
-- [開發](#開發)
-- [授權條款](#授權條款)
+**[English](../README.md)** · **[简体中文](README_zh-CN.md)**
 
 ---
 
-## 本次更新
+## 為什麼選擇 AutoControl
 
-**最新（2026-07-18）— 跨平台穩定性強化。** 一次全專案執行期稽核修正了 macOS／Windows／Linux／Wayland 各後端、執行器,以及遠端桌面／USB 堆疊的執行期缺陷——包含正確的 Retina 游標座標運算、CPython 3.14 上的中繼卡死、`AC_expect_poll`／`AC_parallel` 的健全性、USB/IP 預設綁定本機,以及在 I/O 邊界保留型別化例外——每項皆有 headless 回歸測試涵蓋。無 API 變更。
-
-各版本更新說明詳見 **[WHATS_NEW.md](../WHATS_NEW.md)**。
-
-## 功能特色
-
-- **QA / 測試框架** — 斷言 DSL（`assert_text` / `_image` / `_pixel` / `_window` / `_clipboard` / `_process` / `_file` / `_http` 加上音訊/影片斷言,以及 `assert_all` / `assert_any` / `assert_eventually` 組合器）、資料驅動執行（CSV / JSON / SQLite / Excel → `AC_for_each_row`）、具 setup/teardown/標籤的計分 `run_suite`、JUnit + Allure 報告輸出、不穩定測試偵測與自動隔離、無障礙 / i18n 稽核（缺漏標籤、WCAG 對比度、截斷），以及並行的行動裝置矩陣。詳見 [本次更新 (2026-06)](WHATS_NEW_zh-TW.md)
-- **滑鼠自動化** — 移動、點擊、按下、釋放、拖曳、滾動，支援精確座標控制
-- **鍵盤自動化** — 按下/釋放單一按鍵、輸入字串、組合鍵、按鍵狀態偵測
-- **圖像辨識** — 使用 OpenCV 模板匹配在螢幕上定位 UI 元素，支援可設定的偵測閾值
-- **Accessibility 元件搜尋** — 透過作業系統無障礙樹（Windows UIA / macOS AX）依名稱/角色定位按鈕、選單、控制項
-- **AI 元件定位（VLM）** — 用自然語言描述 UI 元素，交由視覺語言模型（Anthropic / OpenAI）取得螢幕座標
-- **OCR** — 三個可插拔後端（Tesseract 用於 ASCII、EasyOCR 不需外部執行檔且支援 CJK、PaddleOCR 中／日／韓品質最佳），統一 API 與標準語言代碼；後端由 `backend=` 參數、`AUTOCONTROL_OCR_BACKEND` 環境變數或自動偵測決定。可搜尋、點擊或等待文字出現；支援 regex 搜尋與整塊區域 dump
-- **LLM 動作規劃器** — 用 Claude 把自然語言描述翻譯成驗證過的 `AC_*` 動作清單
-- **執行期變數與流程控制** — 執行時 `${var}` 取代，加上 `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_while_var` / `AC_retry` / `AC_try` 讓腳本資料驅動。`AC_while_var` 在變數比較成立時持續迴圈（每輪重新判斷，`max_iter` 安全上限）；`AC_try` 提供 try/catch/finally：`body` 失敗時改走 `catch` 復原分支而非中止、`finally` 必定執行、錯誤透過 `error_var` 暴露、可在清理後 `reraise`（迴圈 `break`/`continue` 仍能穿透）
-- **遠端桌面** — 用 token 認證的 TCP 協定串流本機畫面並接收輸入，**或** 連線到他機觀看與控制（host + viewer GUI 皆內建）。可選 TLS（HTTPS 級加密）、WebSocket 傳輸（``ws://`` + ``wss://``，穿牆／瀏覽器友善）、持久化 9 位數 Host ID、host→viewer 音訊串流、雙向剪貼簿同步（文字 + 圖片）、分塊檔案傳輸（拖放 + 進度條；任意目的路徑；無大小上限）。另含資料夾同步（增量鏡像 — 本地刪除不會傳出去）與自架 coturn TURN 設定包產生器（turnserver.conf + systemd unit + docker-compose + README）。**AnyDesk 風格彈出視窗**：viewer 認證成功後遠端桌面會開在獨立的可調整大小頂層視窗，控制面板維持簡潔；Remote Desktop 子分頁外層包了 `QScrollArea`，小視窗下可捲動、4K 螢幕下會延展到整寬。同時可由 headless API 與 MCP 工具（`ac_remote_*`）直接驅動
-- **驅動層輸入後端（可選）** — 針對忽略 SendInput（Win）或 XTest（Linux）的遊戲／應用:**Interception driver 後端**(Windows,HID 層鍵鼠注入,使用 Oblita WHQL-signed driver,以 `JE_AUTOCONTROL_WIN32_BACKEND=interception` 啟用)、**uinput 後端**(Linux,kernel `/dev/uinput` 合成 HID 裝置,以 `JE_AUTOCONTROL_LINUX_BACKEND=uinput` 啟用),以及 **ViGEm 虛擬手把**(Windows,針對只認手把的遊戲,提供虛擬 Xbox 360 手把 + 友善的 button / dpad / stick / trigger API,並暴露為 `AC_gamepad_*` 執行器指令與 `ac_gamepad_*` MCP 工具)。三者在 driver 沒裝時都會優雅 fallback,不影響既有部署
-- **剪貼簿** — 於 Windows / macOS / Linux 讀寫系統剪貼簿文字
-- **截圖與螢幕錄製** — 擷取全螢幕或指定區域為圖片，錄製螢幕為影片（AVI/MP4）
-- **動作錄製與回放** — 錄製滑鼠/鍵盤事件並重新播放
-- **JSON 腳本執行** — 使用 JSON 動作檔案定義並執行自動化流程（支援 dry-run 與逐步除錯）
-- **排程器** — 以 interval 或 cron 表示式執行腳本，interval 與 cron job 可同時存在
-- **全域熱鍵** — 跨平台綁定 OS 熱鍵到 action 腳本：Windows (`RegisterHotKey`)、macOS (`CGEventTap`，需 Accessibility 權限)、Linux X11 (`XGrabKey`，含 NumLock / CapsLock 變體遮罩)。Wayland 不支援。三個平台共用同一個 API；`backends/` 在 `start()` 時自動挑後端
-- **事件觸發器** — 偵測到影像出現、視窗出現、像素變化或檔案變動時自動執行腳本
-- **執行歷史** — 以 SQLite 紀錄 scheduler / triggers / hotkeys / REST 的執行結果；錯誤時自動附上截圖
-- **報告產生** — 將測試紀錄匯出為 HTML、JSON 或 XML 報告，包含成功/失敗狀態
-- **MCP 伺服器** — JSON-RPC 2.0 Model Context Protocol 服務（stdio + HTTP/SSE），讓 Claude Desktop / Claude Code / 自訂 tool-use 迴圈直接驅動 AutoControl。約 100 個工具,完整協定支援(resources、prompts、sampling、roots、logging、progress、cancellation、elicitation),Bearer token 驗證 + TLS、稽核 log、rate limit、plugin 熱重載、CI fake backend。**本次新增** `ac_remote_host_start` / `ac_remote_host_stop` / `ac_remote_host_status` / `ac_remote_viewer_connect` / `ac_remote_viewer_disconnect` / `ac_remote_viewer_status` / `ac_remote_viewer_send_input` 包裝 GUI 遠端桌面分頁所用的 process-global registry,模型可以直接啟動 host、連線 viewer、轉送 mouse／keyboard／type／hotkey 動作
-- **遠端自動化** — TCP Socket 伺服器 **加上** 強化版 REST API：bearer token 認證、per-IP 速率限制 + 失敗鎖定、SQLite 稽核 hook、Prometheus `/metrics`、完整端點清單（`/health`、`/screen_size`、`/sessions`、`/screenshot`、`/execute`、`/audit/list`、`/audit/verify`、`/inspector/recent`、`/usb/devices`、`/diagnose`、…），以及 vanilla-JS 的瀏覽器 dashboard `/dashboard`（任何能 HTTP 連到主機的手機都能監看）
-- **外掛載入器** — 將定義 `AC_*` 可呼叫物的 `.py` 檔放入目錄，執行時即可註冊成 executor 指令
-- **Shell 整合** — 在自動化流程中執行 Shell 命令，支援非同步輸出擷取
-- **回呼執行器** — 觸發自動化函式後自動呼叫回呼函式，實現操作串接
-- **動態套件載入** — 在執行時匯入外部 Python 套件，擴充執行器功能
-- **專案與範本管理** — 快速建立包含 keyword/executor 目錄結構的自動化專案
-- **視窗管理** — 直接將鍵盤/滑鼠事件送至指定視窗（Windows/Linux）
-- **GUI 應用程式** — 內建 PySide6 圖形介面，支援即時切換語系（English / 繁體中文 / 简体中文 / 日本語）
-- **CLI 執行介面** — `python -m je_auto_control.cli run|list-jobs|start-server|start-rest`
-- **跨平台** — 統一 API，支援 Windows、macOS、Linux（X11 + Wayland）、Android（adb + uiautomator2）、iOS（WebDriverAgent / facebook-wda）
-- **截圖 PII 遮罩** — `RedactionEngine` 在截圖上傳 VLM、寫入 audit log 或經由 REST 回傳前，把 email / 信用卡號 / SSN / 電話 / secure-text 欄位 / 強制區域模糊掉。透過環境變數 `JE_AUTOCONTROL_REDACTION=off|moderate|strict` 或逐次呼叫指定政策
-- **多主機管理主控台** — 在一份通訊錄中註冊 N 個遠端 AutoControl REST 端點，並行輪詢 health/sessions/jobs，把同一份動作清單廣播給全部主機。儲存於 `~/.je_auto_control/admin_hosts.json`（POSIX 上模式 0600）。Token 錯誤的主機會以實際 HTTP 錯誤呈現為不健康
-- **可偵測竄改的稽核紀錄** — SQLite events 表加上 SHA-256 雜湊鏈（每筆紀錄含 `prev_hash` + `row_hash`）；修改任何過去紀錄都會打斷雜湊鏈。`verify_chain()` 由上往下走訪並回報第一個斷點。既有資料表會在啟動時回填（「初次使用即信任」）
-- **WebRTC 封包監測** — 由既有 WebRTC stats 輪詢餵入的程序級 `StatsSnapshot` 滾動視窗（預設 600 筆 / 1 Hz 約 10 分鐘）。對 RTT、FPS、bitrate、封包遺失、jitter 各回 `last/min/max/avg/p95`
-- **USB 裝置列舉** — 唯讀的跨平台 USB 裝置列舉。優先嘗試 pyusb（libusb）；若無則退回平台特定指令（Windows `Get-PnpDevice`、macOS `system_profiler`、Linux `/sys/bus/usb/devices`）。第二階段 passthrough 建構於此（見下）
-- **系統診斷** — 一鍵「目前正常嗎？」探測：平台、選用相依套件、executor 指令數、稽核鏈、截圖、滑鼠、硬碟空間、REST registry。CLI 全綠 exit 0／否則 1；REST `/diagnose`；依嚴重度上色的 GUI 分頁
-- **穩定 API 與失敗診斷包** — 給新整合用的版本化、延遲載入 `je_auto_control.api` 門面(`execute_action`、`generate_code`、`run_diagnostics`、failure bundles),附[生命週期政策](../docs/API_LIFECYCLE.md)。可攜式 `autocontrol.failure-bundle/v1` 診斷 ZIP:manifest + 已遮罩的 context/events/log 尾段、可選截圖與診斷、best-effort 收集器、原子寫入。CLI `je_auto_control failure-bundle out.zip`;`codegen --failure-bundle` 讓產生的 pytest 自動包上失敗診斷
-- **USB Hotplug 事件** — 輪詢式 hotplug 監測（`UsbHotplugWatcher`），含 bounded ring buffer 與帶序號的事件；`GET /usb/events?since=N` 讓晚加入的訂閱者補上進度。USB 分頁有自動更新切換鈕。
-- **OpenAPI 3.1 + Swagger UI** — `GET /openapi.json`（auth-gated，從活的路由表生成）+ `GET /docs`（瀏覽器版 Swagger UI 含 bearer token 列）。CI 上有 drift 測試，新加路由忘記寫 metadata 會被擋下。
-- **設定包匯出／匯入** — 單一 JSON 檔，匯出／匯入使用者設定（admin hosts、address book、trusted viewers、known hosts、host service、IDs）。原子寫入加 `<name>.bak.<時間戳>` 備份；CLI `python -m je_auto_control.utils.config_bundle export|import`；`POST /config/{export,import}`；REST API 分頁的匯出／匯入指令位於視窗的 Actions 選單。
-- **USB Passthrough（需主動啟用）** — 讓遠端 viewer 使用實體插在 host 上的 USB 裝置，走 WebRTC `usb` DataChannel。Wire-level 協定（11 個 opcode 含 `RESUME`、CREDIT 流量控制、16 KiB payload 上限，超量傳輸以 EOF 分片）。八個原始未決問題全部解決：可靠有序 channel、LIST 走 channel（ACL 過濾）、per-claim credit、Linux kernel driver detach/reattach、ACL **HMAC-SHA256 完整性**（竄改 fail-closed；金鑰可插拔 — Windows DPAPI 或 passphrase vault）。**Backend：**`LibusbBackend`（production）、`WinusbBackend`（ctypes）、`IokitBackend`（原生 IOKit 列舉 + libusb 傳輸）— Windows/macOS *硬體未驗證*；`default_passthrough_backend()` 依 OS 自動挑。Viewer 端阻塞式 client（`control/bulk/interrupt_transfer`、`list_devices`、`resume`）；in-process `UsbLoopback` 讓同機可走完整堆疊 share+use。**已接入 WebRTC** host/viewer（`viewer.usb_client()`）並含斷線可續租的 **resume token**。持久化 ACL（預設 deny、mode 0600），含 host 端 prompt 對話框、濫用 **rate-limit / lockout** 與可偵測竄改稽核整合。五個驅動面：AnyDesk 風 **GUI 面板**（分享 + ACL 允許/封鎖 + 本機/遠端使用）、`AC_usb_*` executor 指令（JSON / socket / 排程器）、**REST** `/usb/...`、一級 **MCP** `ac_usb_*` 工具、以及 Python API。預設 off — 用 `enable_usb_passthrough(True)` 或 `JE_AUTOCONTROL_USB_PASSTHROUGH=1` 開啟；預設啟用仍待 Phase 2e 外部安全簽核 + 實機硬體驗證。
-
----
-
-## 架構
-
-執行階段是分層的：**客戶端介面**(CLI、GUI、MCP/REST/Socket 伺服
-器)位於最上層,底下是**無頭 API**(`wrapper/` + `utils/`),最後
-解析到 `wrapper/platform_wrapper.py` 在 import 時挑選的**作業系統
-後端**。套件 façade(`je_auto_control/__init__.py`)會 re-export 所
-有公開名稱,使用者只需要 `import je_auto_control`,不論用哪個介面或
-後端都一樣。
-
-```mermaid
-flowchart LR
-    subgraph Clients["客戶端介面"]
-        direction TB
-        Claude[["Claude Desktop /<br/>Claude Code"]]
-        APIUser[["自訂 Anthropic /<br/>OpenAI tool-use 迴圈"]]
-        HTTPClient[["HTTP / SSE clients"]]
-        TCPClient[["Socket / REST clients"]]
-        Browser[["瀏覽器<br/>(/dashboard · /docs)"]]
-        GUIUser[["PySide6 GUI"]]
-        CLIUser[["python -m<br/>je_auto_control[.cli]"]]
-        Library[["Library 使用者<br/>(import je_auto_control)"]]
-    end
-
-    subgraph Transports["傳輸與伺服器"]
-        direction TB
-        Stdio["MCP stdio<br/>JSON-RPC 2.0"]
-        HTTPMCP["MCP HTTP /<br/>SSE + auth + TLS"]
-        REST["REST 伺服器 :9939<br/>bearer auth · rate-limit ·<br/>OpenAPI · /metrics · /dashboard"]
-        Socket["Socket 伺服器<br/>:9938"]
-        WebRTC["WebRTC sessions<br/>(遠端桌面 ·<br/>檔案 · 音訊 · USB)"]
-    end
-
-    subgraph MCP["mcp_server/"]
-        direction TB
-        Dispatcher["MCPServer<br/>(JSON-RPC dispatcher)"]
-        Tools["tools/<br/>~90 ac_* + 別名"]
-        Resources["resources/<br/>files · history ·<br/>commands · screen-live"]
-        Prompts["prompts/<br/>內建範本"]
-        Context["context · audit ·<br/>rate-limit · log-bridge"]
-        FakeBE["fake_backend<br/>(CI 煙霧測試)"]
-    end
-
-    subgraph Core["無頭核心 (wrapper/ + utils/)"]
-        direction TB
-        Wrapper["wrapper/<br/>滑鼠 · 鍵盤 · 螢幕 ·<br/>影像 · 錄製 · 視窗"]
-        Executor["executor/<br/>AC_* JSON 動作引擎"]
-        Vision["vision/ · ocr/ ·<br/>accessibility/"]
-        Recorder["scheduler/ · triggers/ ·<br/>hotkey/ · plugin_loader/<br/>run_history/"]
-        IOUtils["clipboard/ · cv2_utils/ ·<br/>shell_process/ · json/"]
-    end
-
-    subgraph Ops["維運層 (utils/)"]
-        direction TB
-        Admin["admin/<br/>多主機輪詢 +<br/>廣播"]
-        Audit["remote_desktop/<br/>audit_log<br/>(SHA-256 鏈)"]
-        Inspector["remote_desktop/<br/>webrtc_inspector"]
-        Diag["diagnostics/<br/>自我診斷"]
-        ConfigB["config_bundle/<br/>匯出/匯入"]
-    end
-
-    subgraph USB["USB"]
-        direction TB
-        UsbEnum["usb/<br/>列舉 + hotplug"]
-        UsbPass["usb/passthrough/<br/>session · client · ACL(HMAC) ·<br/>libusb · WinUSB · IOKit ·<br/>loopback · webrtc channel · commands"]
-    end
-
-    subgraph Remote["遠端桌面 (utils/remote_desktop/)"]
-        direction TB
-        RDHost["host · webrtc_host ·<br/>signaling · multi_viewer"]
-        RDFiles["webrtc_files · file_sync ·<br/>clipboard_sync · audio"]
-        RDTrust["trust_list · fingerprint ·<br/>turn_config · lan_discovery"]
-    end
-
-    subgraph Backends["作業系統後端"]
-        direction TB
-        Win["windows/<br/>Win32 ctypes"]
-        Mac["osx/<br/>pyobjc · Quartz"]
-        X11["linux_with_x11/<br/>python-Xlib"]
-    end
-
-    Claude --> Stdio
-    APIUser --> Stdio
-    HTTPClient --> HTTPMCP
-    TCPClient --> Socket
-    TCPClient --> REST
-    Browser --> REST
-
-    Stdio --> Dispatcher
-    HTTPMCP --> Dispatcher
-    Dispatcher --> Tools
-    Dispatcher --> Resources
-    Dispatcher --> Prompts
-    Dispatcher -.- Context
-    Tools -.選用.-> FakeBE
-
-    Tools --> Wrapper
-    Tools --> Executor
-    Tools --> Vision
-    Tools --> Recorder
-    Tools --> IOUtils
-    Resources --> Recorder
-    Resources --> Wrapper
-
-    REST --> Executor
-    REST --> Ops
-    REST --> USB
-    Socket --> Executor
-    WebRTC --> Remote
-    WebRTC --> UsbPass
-
-    GUIUser --> Wrapper
-    GUIUser --> Recorder
-    GUIUser --> Ops
-    GUIUser --> USB
-    GUIUser --> Remote
-    CLIUser --> Executor
-    Library --> Wrapper
-    Library --> Executor
-    Library --> Ops
-
-    Admin --> REST
-    Inspector -.- WebRTC
-    Audit -.- REST
-    Audit -.- USB
-    UsbPass --> Backends
-
-    Wrapper --> Backends
-    Vision -.- Wrapper
-    Recorder -.- Executor
-```
-
-```
-je_auto_control/
-├── wrapper/                    # 平台無關 API 層
-│   ├── platform_wrapper.py     # 自動偵測作業系統並載入對應後端
-│   ├── auto_control_mouse.py   # 滑鼠操作
-│   ├── auto_control_keyboard.py# 鍵盤操作
-│   ├── auto_control_image.py   # 圖像辨識（OpenCV 模板匹配）
-│   ├── auto_control_screen.py  # 截圖、螢幕大小、像素顏色
-│   ├── auto_control_window.py  # 跨平台視窗管理 facade
-│   └── auto_control_record.py  # 動作錄製/回放
-├── windows/                    # Windows 專用後端（Win32 API / ctypes）
-├── osx/                        # macOS 專用後端（pyobjc / Quartz）
-├── linux_with_x11/             # Linux 專用後端（python-Xlib）
-├── gui/                        # PySide6 GUI 應用程式
-└── utils/
-    ├── mcp_server/             # MCP 伺服器（stdio + HTTP/SSE）— server / tools / resources / prompts / audit / rate_limit / fake_backend / plugin_watcher
-    ├── executor/               # JSON 動作執行引擎
-    ├── callback/               # 回呼函式執行器
-    ├── cv2_utils/              # OpenCV 截圖、模板匹配、影片錄製
-    ├── accessibility/          # UIA (Windows) / AX (macOS) 元件搜尋
-    ├── vision/                 # VLM 元件定位（Anthropic / OpenAI）
-    ├── ocr/                    # Tesseract 文字定位
-    ├── clipboard/              # 跨平台剪貼簿（文字 + 圖像）
-    ├── llm/                    # 自然語言 → AC_* 動作規劃器
-    ├── scheduler/              # Interval + cron 排程器
-    ├── hotkey/                 # 全域熱鍵守護程序
-    ├── triggers/               # 影像/視窗/像素/檔案 觸發器
-    ├── run_history/            # SQLite 執行紀錄 + 錯誤截圖
-    ├── rest_api/               # 純 stdlib HTTP/REST 伺服器 — auth · audit · rate-limit · OpenAPI · /metrics · dashboard · Swagger UI
-    ├── admin/                  # 多主機 AdminConsoleClient（輪詢 + 廣播）
-    ├── diagnostics/            # 系統自我診斷 + CLI
-    ├── config_bundle/          # 單檔使用者設定匯出／匯入
-    ├── usb/                    # 跨平台列舉、hotplug 事件、passthrough/{protocol, session, viewer client, loopback, webrtc channel, ACL+HMAC, descriptor, key providers, commands, libusb / WinUSB / IOKit}
-    ├── remote_desktop/         # WebRTC host + viewer、signalling、multi-viewer、檔案／剪貼簿／音訊同步、稽核紀錄（雜湊鏈）、信任清單、TURN 設定、mDNS 發現、WebRTC stats inspector
-    ├── plugin_loader/          # 動態 AC_* 外掛搜尋與註冊
-    ├── socket_server/          # TCP Socket 伺服器（遠端自動化）
-    ├── shell_process/          # Shell 命令管理器
-    ├── generate_report/        # HTML / JSON / XML 報告產生器
-    ├── test_record/            # 測試動作紀錄
-    ├── script_vars/            # 腳本變數插值
-    ├── watcher/                # 滑鼠 / 像素 / log 監看器（Live HUD）
-    ├── recording_edit/         # 錄製內容的修剪、過濾、縮放
-    ├── json/                   # JSON 動作檔案讀寫
-    ├── project/                # 專案建立與範本
-    ├── package_manager/        # 動態套件載入
-    ├── logging/                # 日誌紀錄
-    └── exception/              # 自訂例外類別
-```
-
-`platform_wrapper.py` 模組會自動偵測目前的作業系統並匯入對應的後端，因此所有 wrapper 函式在不同平台上的行為完全一致。
+- **一套 API，六個平台。** `wrapper/platform_wrapper.py` 在匯入時挑選後端；同一份腳本在
+  Windows、macOS、X11 與 Wayland 上都不需要改寫。
+- **不寫 Python 也能腳本化。** 767 個 `AC_*` 指令涵蓋全部功能，因此一個 JSON 檔能做到函式庫
+  能做的任何事——包含迴圈、分支、try/catch、巨集與變數。
+- **預設無頭執行。** `import je_auto_control` 絕不會載入 Qt。GUI 是選用套件，包在同一個無頭核心之外。
+- **四種定位方式。** 樣板比對、OCR、無障礙樹、視覺語言模型——可透過錨點定位器與自癒後備串接組合。
+- **相依基線輕薄。** REST 伺服器、JSON Schema 驗證、JWT、TOTP、WebSocket 框架、ACME 用戶端、
+  USB/IP 協定與 Prometheus 指標全部以標準庫實作；較重的相依都是選用。
 
 ---
 
 ## 安裝
 
-### 基本安裝
-
 ```bash
-pip install je_auto_control
+pip install je_auto_control            # 核心
+pip install je_auto_control[gui]       # 加上 PySide6 桌面應用程式
 ```
 
-### 安裝 GUI 支援（PySide6）
+需要時才安裝的選用套件：
 
-```bash
-pip install je_auto_control[gui]
-```
+| Extra | 啟用的功能 |
+|---|---|
+| `gui` | PySide6 桌面應用程式（48 個分頁） |
+| `webrtc` | WebRTC 遠端桌面、USB 直通（`aiortc`、`av`） |
+| `signaling` | 獨立的訊令／rendezvous 伺服器（`fastapi`、`uvicorn`） |
+| `discovery` | mDNS / Zeroconf 區網主機探索 |
+| `pdf` / `office` | PDF 與 Excel／Word／PowerPoint 讀取 |
+| `fuzzy` / `locale` | `rapidfuzz` 模糊比對、`babel` 地區解析 |
+| `s3` / `audio` | S3 產出物儲存、系統音量控制 |
 
-### Linux 前置需求
-
-在 Linux 上安裝前，請先安裝以下系統套件：
+**系統需求：** Python ≥ 3.10。Linux 請先安裝建置前置套件：
 
 ```bash
 sudo apt-get install cmake libssl-dev
 ```
 
----
-
-## 系統需求
-
-- **Python** >= 3.10
-- **pip** >= 19.3
-
-### 相依套件
-
-| 套件 | 用途 |
-|---|---|
-| `je_open_cv` | 圖像辨識（OpenCV 模板匹配） |
-| `pillow` | 截圖擷取 |
-| `mss` | 快速多螢幕截圖 |
-| `pyobjc` | macOS 後端（在 macOS 上自動安裝） |
-| `python-Xlib` | Linux X11 後端（在 Linux 上自動安裝） |
-| `PySide6` | GUI 應用程式（選用，使用 `[gui]` 安裝） |
-| `qt-material` | GUI 主題（選用，使用 `[gui]` 安裝） |
-| `uiautomation` | Windows Accessibility 後端（選用，首次使用時載入） |
-| `pytesseract` + Tesseract | OCR 文字辨識（選用，首次使用時載入） |
-| `anthropic` | VLM 定位 — Anthropic 後端（選用，首次使用時載入） |
-| `openai` | VLM 定位 — OpenAI 後端（選用，首次使用時載入） |
-
-完整第三方相依套件與授權資訊請見 [Third_Party_License.md](../Third_Party_License.md)。
+OCR、VLM 與 LLM 後端（`pytesseract`、`easyocr`、`paddleocr`、`anthropic`、`openai`）
+都是按需載入——只裝你實際會用到的。
 
 ---
 
-## 快速開始
+## 60 秒上手
 
-想要可以直接複製貼上的完整腳本而不只是 API 片段？
-[`examples/`](../examples/) 資料夾收錄 17 支獨立範例：截圖+點擊、OCR、
-排程器、遠端桌面、agent loop、可觀測性、錄製/回放、執行期變數、
-視窗管理、熱鍵、影像觸發、HTML 報告、MCP stdio bridge、REST API、
-secret vault，以及外掛載入。
-
-### 滑鼠控制
-
-```python
-import je_auto_control
-
-# 取得目前滑鼠位置
-x, y = je_auto_control.get_mouse_position()
-print(f"滑鼠位置: ({x}, {y})")
-
-# 移動滑鼠到指定座標
-je_auto_control.set_mouse_position(500, 300)
-
-# 在目前位置左鍵點擊（使用按鍵名稱）
-je_auto_control.click_mouse("mouse_left")
-
-# 在指定座標右鍵點擊
-je_auto_control.click_mouse("mouse_right", x=800, y=400)
-
-# 向下滾動
-je_auto_control.mouse_scroll(scroll_value=5)
-```
-
-### 鍵盤控制
-
-```python
-import je_auto_control
-
-# 按下並釋放單一按鍵
-je_auto_control.type_keyboard("a")
-
-# 逐字輸入整個字串
-je_auto_control.write("Hello World")
-
-# 組合鍵（例如 Ctrl+C）
-je_auto_control.hotkey(["ctrl_l", "c"])
-
-# 檢查某個按鍵是否正在被按下
-is_pressed = je_auto_control.check_key_is_press("shift_l")
-```
-
-### 圖像辨識
-
-```python
-import je_auto_control
-
-# 在螢幕上找出所有符合的圖像
-positions = je_auto_control.locate_all_image("button.png", detect_threshold=0.9)
-# 回傳: [[x1, y1, x2, y2], ...]
-
-# 找出單一圖像並取得其中心座標
-cx, cy = je_auto_control.locate_image_center("icon.png", detect_threshold=0.85)
-print(f"找到位置: ({cx}, {cy})")
-
-# 找出圖像並自動點擊
-je_auto_control.locate_and_click("submit_button.png", mouse_keycode="mouse_left")
-```
-
-### Accessibility 元件搜尋
-
-透過作業系統無障礙樹依名稱/角色/App 搜尋控制項（Windows UIA，via
-`uiautomation`；macOS AX）。
-
-```python
-import je_auto_control
-
-# 列出 Calculator 中所有可見按鈕
-elements = je_auto_control.list_accessibility_elements(app_name="Calculator")
-
-# 搜尋特定元件
-ok = je_auto_control.find_accessibility_element(name="OK", role="Button")
-if ok is not None:
-    print(ok.bounds, ok.center)
-
-# 一步定位並點擊
-je_auto_control.click_accessibility_element(name="OK", app_name="Calculator")
-```
-
-若當前平台無可用後端，會拋出 `AccessibilityNotAvailableError`。
-
-### AI 元件定位（VLM）
-
-當模板匹配與 Accessibility 都失效時，可用自然語言描述元件，交給視覺
-語言模型取得座標。
-
-```python
-import je_auto_control
-
-# 預設偏好 Anthropic（若有設定 ANTHROPIC_API_KEY），否則用 OpenAI
-x, y = je_auto_control.locate_by_description("綠色的 Submit 按鈕")
-
-# 一次定位並點擊
-je_auto_control.click_by_description(
-    "Cookie 橫幅中的『全部接受』按鈕",
-    screen_region=[0, 800, 1920, 1080],   # 可選：只在此區域找
-)
-```
-
-設定（僅從環境變數讀取 — 金鑰不會被寫入程式碼或日誌）：
-
-| 變數 | 作用 |
-|---|---|
-| `ANTHROPIC_API_KEY` | 啟用 Anthropic 後端 |
-| `OPENAI_API_KEY` | 啟用 OpenAI 後端 |
-| `AUTOCONTROL_VLM_BACKEND` | 強制指定 `anthropic` 或 `openai` |
-| `AUTOCONTROL_VLM_MODEL` | 覆寫預設模型（如 `claude-opus-4-7`、`gpt-4o-mini`） |
-
-若兩個 SDK 皆未安裝或未設定 API key，會拋出 `VLMNotAvailableError`。
-
-### OCR 螢幕文字辨識
+**1. 當成 Python 函式庫**
 
 ```python
 import je_auto_control as ac
 
-# 找出所有吻合的文字位置
-matches = ac.find_text_matches("Submit")
+ac.set_mouse_position(500, 300)
+ac.click_mouse("mouse_left")
+ac.write("Hello World")
+ac.hotkey(["ctrl_l", "s"])
 
-# 取得第一個吻合位置的中心座標（找不到則回傳 None）
-cx, cy = ac.locate_text_center("Submit")
-
-# 一步定位並點擊
-ac.click_text("Submit")
-
-# 等待文字出現（或 timeout）
-ac.wait_for_text("載入完成", timeout=15.0)
+x, y = ac.locate_image_center("save_button.png", detect_threshold=0.9)
+ac.click_text("Submit")                       # OCR
+ac.click_accessibility_element(name="OK")     # 無障礙樹
+ac.click_by_description("the green Submit button")   # 視覺模型
+ac.screenshot("shot.png", screen_region=[0, 0, 800, 600])
 ```
 
-選擇後端 — 設定 ``AUTOCONTROL_OCR_BACKEND=tesseract|easyocr|paddleocr``
-或在呼叫時傳入 ``backend=``；都不設定時會自動挑第一個 import 成功的：
-
-```python
-ac.find_text_matches("登入", lang="chi_tra", backend="easyocr")
-ac.click_text("Sign in", backend="tesseract")
-```
-
-若 Tesseract 不在 `PATH` 中，可手動指定路徑：
-
-```python
-ac.set_tesseract_cmd(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
-```
-
-各後端安裝路徑與標準語言代碼表見
-[docs/source/Eng/doc/ocr_backends/ocr_backends_doc.rst](../docs/source/Eng/doc/ocr_backends/ocr_backends_doc.rst)
-或[繁體中文版本](../docs/source/Zh/doc/ocr_backends/ocr_backends_doc.rst)。
-
-把區域（或整螢幕）內所有辨識到的文字 dump 出來，或用 regex 搜尋變動內容：
-
-```python
-import je_auto_control as ac
-
-# TextMatch 列表，含文字、邊界框、信心度
-for match in ac.read_text_in_region(region=[0, 0, 800, 600]):
-    print(match.text, match.center, match.confidence)
-
-# Regex（接受字串或 compiled re.Pattern）
-for match in ac.find_text_regex(r"Order#\d+"):
-    print(match.text, match.center)
-```
-
-GUI：**OCR Reader** 分頁。
-
-### LLM 動作規劃器
-
-把自然語言描述交給 LLM（預設 Anthropic Claude），翻譯成驗證過的 `AC_*` 動作清單。輸出採寬鬆解析（會剝 code fence、從散文中抽出第一個 JSON array），再用 executor 同樣的 schema 驗證，所以結果可以直接餵給 `execute_action`：
-
-```python
-import je_auto_control as ac
-from je_auto_control.utils.executor.action_executor import executor
-
-actions = ac.plan_actions(
-    "點擊 Submit 按鈕，然後輸入 'done' 並儲存",
-    known_commands=executor.known_commands(),
-)
-executor.execute_action(actions)
-
-# 或者一行做完：
-ac.run_from_description("開記事本，輸入 hello", executor=executor)
-```
-
-| 變數 | 效果 |
-|---|---|
-| `ANTHROPIC_API_KEY` | 啟用 Anthropic 後端 |
-| `AUTOCONTROL_LLM_BACKEND` | 強制指定 `anthropic` |
-| `AUTOCONTROL_LLM_MODEL` | 覆寫預設模型（如 `claude-opus-4-7`） |
-
-GUI：**LLM Planner** 分頁 — 描述輸入框與指令清單預覽；*Plan*（`QThread` 背景執行）與 *Run plan* 位於視窗的 Actions 選單。
-
-### 執行期變數與流程控制
-
-executor 改成「每次呼叫」才解析 `${var}` placeholder（不會事先攤平），所以巢狀的 `body` / `then` / `else` 清單會保留 placeholder，每次重複執行時重新繫結。搭配新的變數修改指令，腳本可以資料驅動而不需要 Python 黏合：
+**2. 當成 JSON 動作檔** — `flow.json`
 
 ```json
 [
-    ["AC_set_var", {"name": "items", "value": ["alpha", "beta"]}],
-    ["AC_set_var", {"name": "i", "value": 0}],
-    ["AC_for_each", {
-        "items": "${items}", "as": "name",
-        "body": [
-            ["AC_inc_var", {"name": "i"}],
-            ["AC_if_var", {
-                "name": "i", "op": "ge", "value": 2,
-                "then": [["AC_break"]], "else": []
-            }]
-        ]
-    }]
+    ["AC_set_var", {"name": "user", "value": "alice"}],
+    ["AC_locate_and_click", {"image": "login.png", "mouse_keycode": "mouse_left"}],
+    ["AC_write", {"write_string": "${user}"}],
+    ["AC_retry", {"max_attempts": 3, "body": [
+        ["AC_wait_text", {"target": "Welcome", "timeout": 10}]
+    ]}],
+    ["AC_assert_text", {"text": "Welcome"}],
+    ["AC_generate_html_report", {"html_name": "report"}]
 ]
 ```
 
-`AC_if_var` 比較運算子：`eq`、`ne`、`lt`、`le`、`gt`、`ge`、`contains`、`startswith`、`endswith`。GUI：**Variables** 分頁 — 即時檢視 `executor.variables`，可單筆設定、JSON 整批 seed、清空。
-
-### 遠端桌面
-
-把本機畫面串流給別人看／控制，**或** 觀看並控制別人的機器。協定是 raw TCP 上的長度前綴框架（沒有額外相依），先做一輪 HMAC-SHA256 challenge / response 認證；認證失敗的 viewer 在看到任何畫面前就被踢掉。JPEG frame 依設定的 FPS / 品質產生，透過共享 latest-frame slot 廣播給通過認證的 viewers，慢的 viewer 只會掉 frame 而不會卡其他人。Viewer 輸入訊息是 JSON，host 端用允許清單驗證後才透過既有 wrapper 派送。
-
-```python
-# 被遠端 — 啟動 host 把 token + port 給對方
-from je_auto_control import RemoteDesktopHost
-host = RemoteDesktopHost(token="hunter2", bind="127.0.0.1",
-                          port=0, fps=10, quality=70)
-host.start()
-print("listening on", host.port, "viewers:", host.connected_clients)
+```bash
+je_auto_control run flow.json --var user=bob
+je_auto_control run flow.json --dry-run     # 只列出步驟，不會真的動滑鼠
 ```
 
-```python
-# 控制他機 — 連線 viewer 並送出輸入
-from je_auto_control import RemoteDesktopViewer
-viewer = RemoteDesktopViewer(host="10.0.0.5", port=51234, token="hunter2",
-                              on_frame=lambda jpeg: ...)
-viewer.connect()
-viewer.send_input({"action": "mouse_move", "x": 100, "y": 200})
-viewer.send_input({"action": "type", "text": "hello"})
-viewer.disconnect()
-```
-
-GUI：**Remote Desktop** 分頁預設打開的是 **快速連線**（AnyDesk 風格）— 一邊是超大本機 Host ID，另一邊是一個輸入框接受 `host:port`、`ws://`、`wss://` 或 9 位數 Host ID，搭配 *連線* 與 *開始被遠端* 兩個主要按鈕。近期連線會跨 session 記住。進階的逐傳輸子分頁（既有 TCP / WS host + viewer、WebRTC host + viewer 含手動 SDP / 自訂編碼器 / TLS pinning）仍只差一個 click。WebRTC 子分頁採延遲載入，沒裝 `[webrtc]` extra 也能正常開啟整個分頁。
-
-> ⚠️ 取得 host:port 與 token 的人，等同擁有本機完整滑鼠 / 鍵盤控制權。預設只綁 `127.0.0.1`；要對外暴露請務必搭配 SSH tunnel 或 TLS 前端。Token 是唯一防線 — 請當作密碼來保管。
-
-**快速連線的 headless API**。撐起 GUI 輸入框的 transport coordinator 也對外開放，腳本可以走同樣的解析路徑：
-
-```python
-from je_auto_control import parse_remote_desktop_target
-parse_remote_desktop_target("192.168.1.10:5555")
-# ConnectTarget(kind='tcp', host='192.168.1.10', port=5555, ...)
-parse_remote_desktop_target("ws://hub:8765/desk")
-# ConnectTarget(kind='ws', host='hub', port=8765, path='/desk')
-parse_remote_desktop_target("123-456-789")
-# ConnectTarget(kind='webrtc_id', host_id='123456789')
-```
-
-**連線審批 + 僅檢視模式**。可選的 callback 守住每一個 incoming session，AnyDesk 風格。回傳 `"view_only"` admit 但丟掉 viewer 的 `INPUT`；回傳 falsy（或 raise）就送 `AUTH_FAIL "rejected by host"`：
-
-```python
-from je_auto_control import RemoteDesktopHost, PendingViewer
-
-def gate(p: PendingViewer) -> str:
-    if p.address[0].startswith("10."):
-        return "view_only"
-    return "full"  # 或 True
-
-host = RemoteDesktopHost(token="tok", on_pending_viewer=gate)
-```
-
-**IP 白名單（CIDR + 單一 IP）**。在 TLS / auth 之前就拒絕範圍外的對端，攻擊者連探測都不行：
-
-```python
-host = RemoteDesktopHost(
-    token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"],
-)
-```
-
-**一次性分享碼** — 額外的 token，認證成功一次後自毀；客服支援流程很好用：
-
-```python
-host = RemoteDesktopHost(token="tok", single_use_tokens=["abc123"])
-host.add_single_use_token("9k4ndx")    # 運行時加
-host.revoke_single_use_token("abc123") # 還沒被用就先撤銷
-```
-
-**TOTP 2FA（RFC 6238，純 stdlib）**。在 token 之上加一層 6 位數 OTP；host 接受 ±1 時間步的 clock drift：
-
-```python
-from je_auto_control.utils.remote_desktop.totp import (
-    generate_secret, generate_code, provisioning_uri,
-)
-secret = generate_secret()
-print(provisioning_uri(secret, account="alice"))  # 給 QR code 用的 otpauth:// URI
-
-host = RemoteDesktopHost(token="tok", totp_secret=secret)
-viewer = RemoteDesktopViewer(
-    host=..., token="tok", totp_code=generate_code(secret),
-)
-```
-
-**多螢幕選擇**。指定某一個螢幕擷取，而非合併虛擬桌面：
-
-```python
-from je_auto_control import list_host_monitors, RemoteDesktopHost
-print(list_host_monitors())
-# [{'index': 0, 'is_combined': True, ...},
-#  {'index': 1, ...},
-#  {'index': 2, ...}]
-host = RemoteDesktopHost(token="tok", monitor_index=1)
-```
-
-**遠端游標 overlay**。host 每秒 30 Hz 廣播 cursor 位置（靜止桌面去重）；viewer 的彈出視窗會在 JPEG 串流上疊一個箭頭，看得到 host 滑鼠位置。可用 `enable_cursor_broadcast=False` 關掉。
-
-**多 viewer 協作游標 + 文字 chat**。兩個新 message type（`CHAT` 與 `CURSOR` 帶 `viewer_id`）。搭配 `MultiViewerHost` 把一個 viewer 的指標 echo 給其他人；chat channel 給操作者之間臨時對話用：
-
-```python
-host = RemoteDesktopHost(
-    token="tok", on_chat=lambda sender, text: print(sender, ":", text),
-)
-host.broadcast_chat("session starts in 30s")
-host.broadcast_viewer_cursor("alice", 200, 300)
-
-viewer = RemoteDesktopViewer(
-    host=..., on_chat=lambda s, t: ...,
-    on_viewer_cursor=lambda vid, x, y: ...,
-)
-viewer.send_chat("ack")
-```
-
-**相對滑鼠模式（FPS / CAD）**。新輸入 action 送 delta 而非絕對座標：
-
-```python
-viewer.send_input({"action": "mouse_move_relative", "dx": 5, "dy": -3})
-```
-
-**動態擷取**。capture loop 會 hash 每張編碼後的 JPEG；重複 frame 直接跳過，所以靜止桌面幾乎零頻寬。新 viewer 在 auth 後立即拿到最新 frame，不會看到一片黑。
-
-**即時統計**（FPS / kbps / 累計 — 3 秒滑動視窗）：
-
-```python
-viewer.stats()
-# {'fps': 24.3, 'kbps': 4801.2, 'frames': 720.0, 'bytes': 1.8e7, 'uptime': 30.2}
-```
-
-**JPEG 序列錄影（不需要 PyAV）**。TCP path 的 session 錄影：每張 frame 寫到磁碟，再加一份 `manifest.json` 讓播放器可以原速重放：
-
-```python
-from je_auto_control.utils.remote_desktop.jpeg_recorder import (
-    JpegSequenceRecorder,
-)
-rec = JpegSequenceRecorder("~/recordings/2026-05-23")
-rec.start()
-viewer = RemoteDesktopViewer(host=..., on_frame=rec.record_frame)
-# ... session ...
-rec.stop()  # 在 .jpg 旁邊寫出 manifest.json
-```
-
-**TCP relay（WebRTC fallback）**。當 P2P 失敗（嚴格 NAT、行動電信 CGNAT、旅館 Wi-Fi）兩端都向 relay 主動連線、交換一個 32-byte session ID，relay 在中間互轉 bytes。同一模組附 `encode_handshake(role, session_id)` 給 client 用：
-
-```python
-from je_auto_control.utils.remote_desktop.relay import RelayServer
-relay = RelayServer(bind="0.0.0.0", port=9000)  # NOSONAR  # 對外 relay
-relay.start()
-```
-
-**服務安裝器（無人值守 host）**。`python -m je_auto_control.utils.remote_desktop.host_service ...` 提供 `configure` / `init` / `run`，以及每個平台的安裝指令：`install-windows-service` / `uninstall-windows-service`（需 pywin32）、`generate-launchd` / `uninstall-launchd`、`generate-systemd` / `uninstall-systemd`。
-
-**加密傳輸與替代協定**：傳 `ssl_context` 給 `RemoteDesktopHost` 或 `RemoteDesktopViewer` 即套上 TLS。要穿牆／給瀏覽器接，用內建的 WebSocket 版本（無額外相依），加 `ssl_context` 就變 `wss://`：
-
-```python
-from je_auto_control import (
-    WebSocketDesktopHost, WebSocketDesktopViewer,
-)
-host = WebSocketDesktopHost(token="hunter2", ssl_context=server_ctx)
-viewer = WebSocketDesktopViewer(
-    host="example.com", port=443, token="hunter2",
-    ssl_context=client_ctx, expected_host_id="123456789",
-)
-```
-
-**持久化 Host ID**：每台 host 有穩定的 9 位數字 ID（存在 `~/.je_auto_control/remote_host_id`），在 `AUTH_OK` 中宣告，viewer 透過 `expected_host_id` 驗證：
-
-```python
-print(host.host_id)            # 例如 "123456789"
-viewer = RemoteDesktopViewer(
-    host=..., port=..., token=...,
-    expected_host_id="123456789",   # 不一致就拋 AuthenticationError
-)
-```
-
-**音訊串流（host → viewer）**：選用 `sounddevice` 相依；host 用 `AudioCaptureConfig` 開啟，viewer 端接 `AudioPlayer`（或自己的 callback）：
-
-```python
-from je_auto_control.utils.remote_desktop import AudioCaptureConfig
-host = RemoteDesktopHost(
-    token="tok",
-    audio_config=AudioCaptureConfig(enabled=True),    # 預設 mic
-)
-# 或指定 loopback / monitor 裝置：
-# audio_config=AudioCaptureConfig(enabled=True, device=12)
-
-from je_auto_control.utils.remote_desktop import AudioPlayer
-player = AudioPlayer(); player.start()
-viewer = RemoteDesktopViewer(host=..., on_audio=player.play)
-```
-
-**剪貼簿同步（文字 + 圖片，雙向）**：明確呼叫，沒有自動 polling 迴圈。圖片剪貼簿在 Windows（CF_DIB via ctypes）跟 Linux（`xclip -t image/png`）支援；macOS get 走 Pillow ImageGrab、set 暫時需要 PyObjC。
-
-```python
-viewer.send_clipboard_text("hello")
-viewer.send_clipboard_image(open("logo.png", "rb").read())
-host.broadcast_clipboard_text("greetings")
-```
-
-**檔案傳輸 + 進度**：雙向、分塊、目的路徑任意、無大小上限；GUI viewer 還可以拖放：
-
-```python
-viewer.send_file(
-    "local.bin", "/tmp/uploaded.bin",
-    on_progress=lambda tid, done, total: print(done, total),
-)
-host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
-```
-
-> ⚠️ 路徑無限制、大小無上限。任何拿到 token 的人都能把任意檔案寫到任意位置，也能塞滿磁碟 — 必須等同信任 token 持有者，或自己繼承 `FileReceiver` 在 `handle_begin` 內驗證 dest_path。
-
-### 剪貼簿
-
-```python
-import je_auto_control as ac
-ac.set_clipboard("hello")
-text = ac.get_clipboard()
-```
-
-後端：Windows（Win32 + ctypes）、macOS（`pbcopy`/`pbpaste`）、Linux
-（`xclip` 或 `xsel`）。
-
-### 截圖
-
-```python
-import je_auto_control
-
-# 擷取全螢幕截圖並儲存
-je_auto_control.pil_screenshot("screenshot.png")
-
-# 擷取指定區域的截圖 [x1, y1, x2, y2]
-je_auto_control.pil_screenshot("region.png", screen_region=[100, 100, 500, 400])
-
-# 取得螢幕解析度
-width, height = je_auto_control.screen_size()
-
-# 取得指定座標的像素顏色
-color = je_auto_control.get_pixel(500, 300)
-```
-
-### 動作錄製與回放
-
-```python
-import je_auto_control
-import time
-
-# 開始錄製滑鼠和鍵盤事件
-je_auto_control.record()
-
-time.sleep(10)  # 錄製 10 秒
-
-# 停止錄製並取得動作列表
-actions = je_auto_control.stop_record()
-
-# 回放前先清理錄製內容：把連續的滑鼠移動取樣壓縮成最後位置
-#（通常能把原始錄製縮小一個數量級，且不改變回放行為）
-actions = je_auto_control.dedupe_moves(actions)
-
-# 重新播放錄製的動作
-je_auto_control.execute_action(actions)
-```
-
-> 非破壞式錄製編輯器（皆回傳新的 list）：`dedupe_moves`（壓縮滑鼠移動）、`merge_sleeps`（合併連續 `AC_sleep`）、`trim_actions`、`insert_action`、`remove_action`、`filter_actions`、`adjust_delays`（縮放 `AC_sleep` 延遲）、`scale_coordinates`（以不同解析度回放）。透過 MCP 暴露為 `ac_dedupe_moves` / `ac_merge_sleeps` / `ac_trim_actions` / `ac_adjust_delays` / `ac_scale_coordinates`。
-
-### JSON 腳本執行器
-
-建立 JSON 動作檔案（`actions.json`）：
-
-```json
-[
-    ["AC_set_mouse_position", {"x": 500, "y": 300}],
-    ["AC_click_mouse", {"mouse_keycode": "mouse_left"}],
-    ["AC_write", {"write_string": "Hello from AutoControl"}],
-    ["AC_screenshot", {"file_path": "result.png"}],
-    ["AC_hotkey", {"key_code_list": ["ctrl_l", "s"]}]
-]
-```
-
-執行方式：
-
-```python
-import je_auto_control
-
-# 從檔案執行
-je_auto_control.execute_action(je_auto_control.read_action_json("actions.json"))
-
-# 或直接從列表執行
-je_auto_control.execute_action([
-    ["AC_set_mouse_position", {"x": 100, "y": 200}],
-    ["AC_click_mouse", {"mouse_keycode": "mouse_left"}]
-])
-```
-
-**可用的動作命令：**
-
-| 類別 | 命令 |
-|---|---|
-| 滑鼠 | `AC_click_mouse`, `AC_set_mouse_position`, `AC_get_mouse_position`, `AC_get_mouse_table`, `AC_press_mouse`, `AC_release_mouse`, `AC_mouse_scroll`, `AC_mouse_left`, `AC_mouse_right`, `AC_mouse_middle` |
-| 鍵盤 | `AC_type_keyboard`, `AC_press_keyboard_key`, `AC_release_keyboard_key`, `AC_write`, `AC_hotkey`, `AC_check_key_is_press`, `AC_get_keyboard_keys_table` |
-| 圖像 | `AC_locate_all_image`, `AC_locate_image_center`, `AC_locate_and_click` |
-| 螢幕 | `AC_screen_size`, `AC_screenshot` |
-| Accessibility | `AC_a11y_list`, `AC_a11y_find`, `AC_a11y_click` |
-| VLM（AI 定位） | `AC_vlm_locate`, `AC_vlm_click` |
-| OCR | `AC_locate_text`, `AC_click_text`, `AC_wait_text`, `AC_read_text_in_region`, `AC_find_text_regex` |
-| LLM 規劃器 | `AC_llm_plan`, `AC_llm_run` |
-| 剪貼簿 | `AC_clipboard_get`, `AC_clipboard_set` |
-| 視窗 | `AC_list_windows`, `AC_focus_window`, `AC_wait_window`, `AC_close_window` |
-| 流程控制 | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_if_var`, `AC_while_image`, `AC_while_var`, `AC_for_each`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry`, `AC_try` |
-| 變數 | `AC_set_var`, `AC_get_var`, `AC_inc_var` |
-| 遠端桌面 | `AC_start_remote_host`, `AC_stop_remote_host`, `AC_remote_host_status`, `AC_remote_connect`, `AC_remote_disconnect`, `AC_remote_viewer_status`, `AC_remote_send_input` |
-| 錄製 | `AC_record`, `AC_stop_record`, `AC_set_record_enable` |
-| 報告 | `AC_generate_html`, `AC_generate_json`, `AC_generate_xml`, `AC_generate_html_report`, `AC_generate_json_report`, `AC_generate_xml_report` |
-| 執行紀錄 | `AC_history_list`, `AC_history_clear` |
-| 專案 | `AC_create_project` |
-| Shell | `AC_shell_command` |
-| 程序 | `AC_execute_process` |
-| 執行器 | `AC_execute_action`, `AC_execute_files`, `AC_add_package_to_executor`, `AC_add_package_to_callback_executor` |
-| MCP 伺服器 | `AC_start_mcp_server`, `AC_start_mcp_http_server` |
-
-### MCP 伺服器（讓 Claude 使用 AutoControl）
-
-把 AutoControl 包裝成 Model Context Protocol 服務,任何支援 MCP 的
-client(Claude Desktop、Claude Code、自訂 Anthropic / OpenAI tool-use
-迴圈)都能驅動本機桌面。純 stdlib — JSON-RPC 2.0 走 stdio 或 HTTP+
-SSE。
-
-**註冊到 Claude Code:**
+**3. 當成桌面應用程式**
 
 ```bash
-claude mcp add autocontrol -- python -m je_auto_control.utils.mcp_server
+pip install je_auto_control[gui]
+python -m je_auto_control          # 或：je_auto_control.start_autocontrol_gui()
 ```
 
-**註冊到 Claude Desktop**(`claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "autocontrol": {
-      "command": "python",
-      "args": ["-m", "je_auto_control.utils.mcp_server"]
-    }
-  }
-}
-```
-
-**程式啟動:**
-
-```python
-import je_auto_control as ac
-
-# Stdio(會阻塞直到 stdin 關閉)
-ac.start_mcp_stdio_server()
-
-# 或 HTTP / SSE,含 Bearer token 驗證 + 可選 TLS
-ac.start_mcp_http_server(host="127.0.0.1", port=9940,
-                         auth_token="hunter2")
-```
-
-**不啟動伺服器、只看目錄:**
-
-```bash
-je_auto_control_mcp --list-tools
-je_auto_control_mcp --list-tools --read-only
-je_auto_control_mcp --list-resources
-je_auto_control_mcp --list-prompts
-```
-
-**功能總覽:**
-
-| 面向 | 涵蓋 |
-|---|---|
-| 工具(約 90 個) | 滑鼠 · 鍵盤 · drag · 螢幕 / 多螢幕 · 截圖回 image · diff · OCR · 影像 · 視窗(move/min/max/restore/...) · 剪貼簿文字+圖像 · 程序 / shell · 動作錄製 · 螢幕錄影 · scheduler / triggers / hotkeys · accessibility tree · VLM · executor · history |
-| 別名 | `click`、`type`、`screenshot`、`find_image`、`drag`、`shell`、`wait_image`...,以 `JE_AUTOCONTROL_MCP_ALIASES=0` 關閉 |
-| Resources | `autocontrol://files/<name>`、`autocontrol://history`、`autocontrol://commands`、`autocontrol://screen/live`(支援 `resources/subscribe`)|
-| Prompts | `automate_ui_task`、`record_and_generalize`、`compare_screenshots`、`find_widget`、`explain_action_file` |
-| 協定 | tools / resources / prompts / sampling / roots / logging / progress / cancellation / list_changed / elicitation |
-| 傳輸 | stdio、HTTP `POST /mcp`、`Accept: text/event-stream` 時走 SSE 串流 |
-| 安全 | 工具註記 · `JE_AUTOCONTROL_MCP_READONLY` · `JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE` · 稽核 log · token-bucket rate limiter · 工具失敗自動截圖 |
-| 部署 | Bearer token 驗證 · 透過 `ssl_context` 啟用 TLS · `PluginWatcher` 熱重載 · `JE_AUTOCONTROL_FAKE_BACKEND=1` 給 CI |
-
-完整參考請見 [docs/source/Zh/doc/mcp_server/mcp_server_doc.rst](../docs/source/Zh/doc/mcp_server/mcp_server_doc.rst)
-(英文版本在 [docs/source/Eng/doc/mcp_server/mcp_server_doc.rst](../docs/source/Eng/doc/mcp_server/mcp_server_doc.rst))。
-
-> ⚠️ MCP 伺服器可以移動滑鼠、送鍵盤事件、截圖、執行任意 `AC_*` 動
-> 作。請只註冊給可信任的 client。HTTP 預設綁 `127.0.0.1`,要對外
-> 必須要有明確理由,**並且**搭配 `auth_token` 與 `ssl_context`。
-
-### 排程器（Interval & Cron）
-
-```python
-import je_auto_control as ac
-
-# Interval：每 30 秒執行一次
-job = ac.default_scheduler.add_job(
-    script_path="scripts/poll.json", interval_seconds=30, repeat=True,
-)
-
-# Cron：週一到週五 09:00（欄位為 minute hour dom month dow）
-cron_job = ac.default_scheduler.add_cron_job(
-    script_path="scripts/daily.json", cron_expression="0 9 * * 1-5",
-)
-
-ac.default_scheduler.start()
-```
-
-兩種排程可同時存在，可由 `job.is_cron` 判斷類型。
-
-### 全域熱鍵
-
-將 OS 熱鍵綁定到 action JSON 腳本。跨平台 — Windows 用
-`RegisterHotKey`、macOS 用 `CGEventTap`（需要 Accessibility 權限）、
-Linux X11 用 `XGrabKey`（不支援 Wayland）。呼叫端三個平台一樣，
-daemon 在 `start()` 時自動挑後端。
-
-```python
-from je_auto_control import default_hotkey_daemon
-
-default_hotkey_daemon.bind("ctrl+alt+1", "scripts/greet.json")
-default_hotkey_daemon.start()
-```
-
-### 事件觸發器
-
-輪詢式觸發器，偵測到條件成立時自動執行腳本：
-
-```python
-from je_auto_control import (
-    default_trigger_engine, ImageAppearsTrigger,
-    WindowAppearsTrigger, PixelColorTrigger, FilePathTrigger,
-)
-
-default_trigger_engine.add(ImageAppearsTrigger(
-    trigger_id="", script_path="scripts/click_ok.json",
-    image_path="templates/ok_button.png", threshold=0.85, repeat=True,
-))
-default_trigger_engine.start()
-```
-
-### 執行歷史
-
-排程器、觸發器、熱鍵、REST API 與 GUI 手動回放的每一次執行都會被寫入
-`~/.je_auto_control/history.db`。錯誤時會自動在
-`~/.je_auto_control/artifacts/run_{id}_{ms}.png` 附上截圖以便除錯。
-
-```python
-from je_auto_control import default_history_store
-
-for run in default_history_store.list_runs(limit=20):
-    print(run.id, run.source, run.status, run.artifact_path)
-```
-
-GUI **執行歷史** 分頁顯示執行紀錄表格，可雙擊截圖欄位開啟附件；篩選 /
-更新 / 清除指令位於視窗的 Actions 選單。
-
-### 報告產生
-
-```python
-import je_auto_control
-
-# 先啟用測試紀錄
-je_auto_control.test_record_instance.set_record_enable(True)
-
-# ... 執行自動化動作 ...
-je_auto_control.set_mouse_position(100, 200)
-je_auto_control.click_mouse("mouse_left")
-
-# 產生報告
-je_auto_control.generate_html_report("test_report")   # -> test_report.html
-je_auto_control.generate_json_report("test_report")   # -> test_report.json
-je_auto_control.generate_xml_report("test_report")    # -> test_report.xml
-
-# 或取得報告內容為字串
-html_string = je_auto_control.generate_html()
-json_string = je_auto_control.generate_json()
-xml_string = je_auto_control.generate_xml()
-```
-
-報告內容包含：每個紀錄動作的函式名稱、參數、時間戳記及例外資訊（如有）。HTML 報告中成功的動作以青色顯示，失敗的動作以紅色顯示。
-
-### 可觀測性（Prometheus / OpenTelemetry）
-
-純標準函式庫的 metric 元件加上 OpenTelemetry 相容 tracer，
-executor 與 agent loop 都會自動發送呼叫次數與延遲分布 metric，
-不用手動 instrument。
-
-```python
-import je_auto_control as ac
-
-# 在 http://127.0.0.1:9090 開放 /metrics，給 Prometheus scrape。
-exporter = ac.default_metrics_exporter()
-exporter.start()
-
-# 自訂 metric — 形狀與 prometheus_client 相同。
-counter = ac.default_metric_registry().register(ac.MetricCounter(
-    "myapp_widgets_built_total", "widgets built",
-    label_names=("kind",),
-))
-counter.inc(labels={"kind": "blue"})
-
-# 把 callable 包進 span — 未安裝 opentelemetry-api 時為 no-op。
-@ac.traced("my_pipeline.process_one")
-def process_one(item): ...
-```
-
-內建 metric 清單見
-[docs/source/Eng/doc/observability/observability_doc.rst](../docs/source/Eng/doc/observability/observability_doc.rst)
-或[繁體中文版本](../docs/source/Zh/doc/observability/observability_doc.rst)。
-
-### 遠端自動化（Socket / REST）
-
-提供兩種伺服器：原始 TCP socket 與純 stdlib HTTP/REST。預設均綁定
-`127.0.0.1`，綁定到 `0.0.0.0` 須明確指定。
-
-```python
-import je_auto_control as ac
-
-# TCP Socket 伺服器（預設：127.0.0.1:9938）
-ac.start_autocontrol_socket_server(host="127.0.0.1", port=9938)
-
-# REST API 伺服器（預設：127.0.0.1:9939）
-ac.start_rest_api_server(host="127.0.0.1", port=9939)
-# 端點：
-#   GET  /health           存活檢查
-#   GET  /jobs             列出排程工作
-#   POST /execute          body: {"actions": [...]}
-```
-
-### 外掛載入器
-
-將定義頂層 `AC_*` 可呼叫物的 `.py` 檔放進一個目錄，執行時即可註冊成
-executor 指令：
-
-```python
-from je_auto_control import (
-    load_plugin_directory, register_plugin_commands,
-)
-
-commands = load_plugin_directory("./my_plugins")
-register_plugin_commands(commands)
-
-# 之後任何 JSON 腳本都能使用：
-# [["AC_greet", {"name": "world"}]]
-```
-
-> **警告：** 外掛檔案會直接執行任意 Python，請僅載入自己信任的目錄。
-
-### Shell 命令執行
-
-```python
-import je_auto_control
-
-# 使用預設的 Shell 管理器
-je_auto_control.default_shell_manager.exec_shell("echo Hello")
-je_auto_control.default_shell_manager.pull_text()  # 輸出擷取的結果
-
-# 或建立自訂的 ShellManager
-shell = je_auto_control.ShellManager(shell_encoding="utf-8")
-shell.exec_shell("ls -la")
-shell.pull_text()
-shell.exit_program()
-```
-
-### 螢幕錄製
-
-```python
-import je_auto_control
-import time
-
-# 方法一：ScreenRecorder（管理多個錄影）
-recorder = je_auto_control.ScreenRecorder()
-recorder.start_new_record(
-    recorder_name="my_recording",
-    path_and_filename="output.avi",
-    codec="XVID",
-    frame_per_sec=30,
-    resolution=(1920, 1080)
-)
-time.sleep(10)
-recorder.stop_record("my_recording")
-
-# 方法二：RecordingThread（簡易單一錄影，輸出 MP4）
-recording = je_auto_control.RecordingThread(video_name="my_video", fps=20)
-recording.start()
-time.sleep(10)
-recording.stop()
-```
-
-### 回呼執行器
-
-執行自動化函式後自動觸發回呼函式：
-
-```python
-import je_auto_control
-
-def my_callback():
-    print("動作完成！")
-
-# 執行 set_mouse_position 後呼叫 my_callback
-je_auto_control.callback_executor.callback_function(
-    trigger_function_name="AC_set_mouse_position",
-    callback_function=my_callback,
-    x=500, y=300
-)
-
-# 帶有參數的回呼
-def on_done(message):
-    print(f"完成: {message}")
-
-je_auto_control.callback_executor.callback_function(
-    trigger_function_name="AC_click_mouse",
-    callback_function=on_done,
-    callback_function_param={"message": "點擊完成"},
-    callback_param_method="kwargs",
-    mouse_keycode="mouse_left"
-)
-```
-
-### 套件管理器
-
-在執行時動態載入外部 Python 套件到執行器中：
-
-```python
-import je_auto_control
-
-# 將套件的所有函式/類別加入執行器
-je_auto_control.package_manager.add_package_to_executor("os")
-
-# 現在可以在 JSON 動作腳本中使用 os 函式：
-# ["os_getcwd", {}]
-# ["os_listdir", {"path": "."}]
-```
-
-### 專案管理
-
-快速建立包含範本檔案的專案目錄結構：
-
-```python
-import je_auto_control
-
-# 建立專案結構
-je_auto_control.create_project_dir(project_path="./my_project", parent_name="AutoControl")
-
-# 會建立以下結構：
-# my_project/
-# └── AutoControl/
-#     ├── keyword/
-#     │   ├── keyword1.json        # 範本動作檔案
-#     │   ├── keyword2.json        # 範本動作檔案
-#     │   └── bad_keyword_1.json   # 錯誤處理範本
-#     └── executor/
-#         ├── executor_one_file.py  # 執行單一檔案範例
-#         ├── executor_folder.py    # 執行資料夾範例
-#         └── executor_bad_file.py  # 錯誤處理範例
-```
-
-### 視窗管理
-
-直接將事件送至指定視窗（僅限 Windows 和 Linux）：
-
-```python
-import je_auto_control
-
-# 透過視窗標題送出鍵盤事件
-je_auto_control.send_key_event_to_window("Notepad", keycode="a")
-
-# 透過視窗 handle 送出滑鼠事件
-je_auto_control.send_mouse_event_to_window(window_handle, mouse_keycode="mouse_left", x=100, y=50)
-```
-
-### GUI 應用程式
-
-啟動內建圖形介面（需安裝 `[gui]` 擴充）：
-
-```python
-import je_auto_control
-je_auto_control.start_autocontrol_gui()
-```
-
-或透過命令列：
-
-```bash
-python -m je_auto_control
-```
-
-主視窗採選單驅動設計：分頁只保留輸入欄位、表格與結果檢視，每個分頁的
-指令都集中在視窗層級的 **Actions** 選單，會隨當前分頁動態重建。
-**View → Tabs** 可依分類（核心 / 編輯 / 偵測與視覺 / 自動化引擎 / 系統）
-顯示或隱藏約 48 個已註冊分頁；預設版面只開啟錄製、腳本建構器與遠端桌面
-三個分頁。**View → Text Size** 提供自動／預設字級，**Language** 選單
-（English / 繁體中文 / 简体中文 / 日本語）可即時切換整個視窗的語系。
+錄製一段流程、在視覺化 Script Builder 裡編輯，然後存成 CLI 能直接執行的同一種 JSON 格式。
+
+---
+
+## 能力總覽
+
+每一列都能無頭執行。「GUI 分頁」是同一功能在桌面應用中的位置；分頁的指令都放在視窗的
+**Actions** 選單裡。
+
+| 能力 | Python API | `AC_*` 指令 | GUI 分頁 |
+|---|---|---|---|
+| 滑鼠 | `click_mouse`、`set_mouse_position`、`mouse_scroll` | `AC_click_mouse` | Auto Click |
+| 鍵盤 | `write`、`hotkey`、`type_keyboard` | `AC_write`、`AC_hotkey` | Auto Click |
+| 螢幕與像素 | `screenshot`、`screen_size`、`get_pixel` | `AC_screenshot` | Screenshot |
+| 影像比對 | `locate_image_center`、`locate_and_click` | `AC_locate_and_click` | Image Detect |
+| OCR 文字 | `click_text`、`wait_for_text`、`read_text_in_region` | `AC_click_text`、`AC_wait_text` | OCR Reader |
+| 無障礙樹 | `find_accessibility_element`、`click_accessibility_element` | `AC_a11y_find`、`AC_a11y_click` | Accessibility |
+| 視覺模型定位 | `locate_by_description`、`click_by_description` | `AC_vlm_locate`、`AC_vlm_click` | VLM |
+| 錨點定位 | — | `AC_anchor_click`、`AC_anchor_locate` | — |
+| 自癒定位器 | `self_heal_click`、`self_heal_locate` | `AC_self_heal_click` | Self-Healing |
+| 自然語言規劃 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
+| Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
+| 錄製與重播 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
+| JSON 腳本 | `execute_action`、`execute_files` | 全部 767 個指令 | Script、Script Builder |
+| 變數與流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
+| 資料驅動執行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
+| 斷言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 個 | Assertions |
+| 測試套件 | `run_suite` | `AC_run_suite` | Test Suites |
+| 排程（間隔 + cron） | `default_scheduler` | — | Scheduler |
+| 全域熱鍵 | `default_hotkey_daemon` | — | Hotkeys |
+| 事件觸發 | `default_trigger_engine` | `AC_email_trigger_add` | Triggers、Webhooks、Email |
+| 視窗管理 *(僅 Windows)* | `list_windows`、`focus_window` | `AC_focus_window`、`AC_snap_window` | Window Manager |
+| 剪貼簿（文字 + 影像） | `get_clipboard`、`set_clipboard`、`get_clipboard_image`、`set_clipboard_image` | `AC_clipboard_get`、`AC_clipboard_set`、`AC_clipboard_get_image`、`AC_clipboard_set_image` | — |
+| 遠端桌面 | `RemoteDesktopHost`、`RemoteDesktopViewer` | `AC_start_remote_host`、`AC_remote_connect` | Remote Desktop |
+| USB 列舉與直通 | `list_usb_devices`、`enable_usb_passthrough` | `AC_usb_*`（16 個指令） | USB Devices、USB Share |
+| 機密保險庫 | `default_secret_manager` | `AC_secret_set` + `${secrets.NAME}` | Secrets |
+| 報表（HTML／JSON／XML） | `generate_html_report` | `AC_generate_html_report` | Report |
+| 執行歷史 | — | — | Run History |
+| 指標與追蹤 | `default_metric_registry`、`render_metrics_text` | — | — |
+| 系統診斷 | `run_diagnostics` | `AC_diagnose` | Diagnostics |
+| 測試碼產生 | `generate_code` | — | — |
+
+除了這張表，`utils/` 底下還有 308 個無頭套件，涵蓋斷言、韌性、資料品質、i18n 稽核、遮蔽、
+治理、可觀測性等等。完整的逐模組地圖在 **[architecture_explore.md](../architecture_explore.md)**。
 
 ---
 
 ## 命令列介面
 
-AutoControl 可直接從命令列使用：
-
 ```bash
-# 執行單一動作檔案
-python -m je_auto_control -e actions.json
-
-# 執行目錄中所有動作檔案
-python -m je_auto_control -d ./action_files/
-
-# 直接執行 JSON 字串
-python -m je_auto_control --execute_str '[["AC_screenshot", {"file_path": "test.png"}]]'
-
-# 建立專案範本
-python -m je_auto_control -c ./my_project
+je_auto_control run script.json [--var name=value] [--dry-run]
+je_auto_control validate script.json          # 別名：lint
+je_auto_control fmt script.json [--check]
+je_auto_control list-commands [--filter mouse] [--json]
+je_auto_control record out.json [--duration 5]
+je_auto_control codegen script.json --target pytest -o test_flow.py
+je_auto_control failure-bundle failure.zip --error "login timed out"
+je_auto_control list-jobs
+je_auto_control start-server --port 9938      # TCP socket 伺服器
+je_auto_control start-rest   --port 9939      # REST API
+je_auto_control version
 ```
 
-另外還有以 headless API 為基礎的子命令 CLI：
+`--var name=value` 會盡量以 JSON 解析（`count=10` 會變成整數），否則視為字串。
+舊版 `python -m je_auto_control -e file.json` 進入點仍然可用。
 
-```bash
-# 執行腳本（可帶變數或 dry-run）
-python -m je_auto_control.cli run script.json
-python -m je_auto_control.cli run script.json --var name=alice --dry-run
+---
 
-# 列出排程工作
-python -m je_auto_control.cli list-jobs
+## 伺服器與整合
 
-# 啟動 Socket / REST 伺服器
-python -m je_auto_control.cli start-server --port 9938
-python -m je_auto_control.cli start-rest   --port 9939
+| 介面 | 啟動方式 | 說明 |
+|---|---|---|
+| **MCP 伺服器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 670 個工具，供 Claude Desktop／Claude Code／自訂 tool loop 使用。Bearer 驗證、TLS、稽核記錄、限流、外掛熱重載、CI 假後端。 |
+| **REST API** | `je_auto_control start-rest` | Bearer token、逐 IP 限流與鎖定、SQLite 稽核 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
+| **TCP socket 伺服器** | `je_auto_control start-server` | 以換行分隔的 JSON 動作清單。預設綁 `127.0.0.1`。 |
+| **pytest 外掛** | 安裝後自動生效 | 提供 fixture 與供 pytest-bdd／behave 使用的 Gherkin step library。 |
+| **語言伺服器** | `python -m autocontrol_lsp.server` | 為 `AC_*` 動作 JSON 提供補全與診斷，指令清單直接取自執行期的指令表。 |
+| **遠端桌面** | `RemoteDesktopHost` 或 GUI | TCP、WebSocket 或 WebRTC；TOTP、信任清單、TURN 設定、檔案／剪貼簿／音訊同步。 |
+
+除非明確指定，所有伺服器都綁在 `127.0.0.1`。
+
+### 遠端桌面的線路協定
+
+把主機開出去之前值得先知道，而且這段在其他文件裡都沒有寫。預設傳輸是**裸 TCP
+上的長度前綴分幀**（不需要額外相依），連線一開始就是 **HMAC-SHA256 的
+challenge／response 握手**：驗證沒過的觀看端在拿到任何一張畫面之前就會被斷掉。
+JPEG 影格依設定的 FPS 與品質編碼，再透過一個共用的**最新影格槽**發給已驗證的
+觀看端——所以慢的觀看端是**掉影格**，不會把其他人一起卡住。觀看端送來的輸入是
+JSON，會先比對**動作允許清單**才交給既有的輸入包裝層執行，觀看端無法自己發明
+新的操作。
+
+```python
+# 讓別人連進來——開一個主機，把 token 與 port 給對方
+from je_auto_control import RemoteDesktopHost
+host = RemoteDesktopHost(token="hunter2", bind="127.0.0.1",
+                         port=0, fps=10, quality=70)
+host.start()
+print("listening on", host.port, "viewers:", host.connected_clients)
 ```
 
-`--var name=value` 會優先以 JSON 解析（`count=10` 會變成 int），失敗
-則視為字串。
+```python
+# 控制另一台機器——連上去並送輸入
+from je_auto_control import RemoteDesktopViewer
+viewer = RemoteDesktopViewer(host="10.0.0.5", port=51234, token="hunter2",
+                             on_frame=lambda jpeg: ...)
+viewer.connect()
+viewer.send_input({"action": "mouse_move", "x": 100, "y": 200})
+viewer.disconnect()
+```
+
+也可以用 IP 允許清單（CIDR 網段或個別位址）限制誰連得進來，清單外的對端在握手
+階段就會被拒絕：
+
+```python
+RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
+```
 
 ---
 
 ## 平台支援
 
-| 平台 | 狀態 | 後端 | 備註 |
-|---|---|---|---|
-| Windows 10 / 11 | 支援 | Win32 API (ctypes) | 完整功能支援 |
-| macOS 10.15+ | 支援 | pyobjc / Quartz | 不支援動作錄製；不支援 `send_key_event_to_window` / `send_mouse_event_to_window` |
-| Linux（X11） | 支援 | python-Xlib | 完整功能支援 |
-| Linux（Wayland） | 尚未支援 | — | 未來版本可能加入支援 |
-| Raspberry Pi 3B / 4B | 支援 | python-Xlib | 在 X11 上運行 |
+| 平台 | 後端 | 輸入 | 螢幕擷取 | 錄製 | 視窗管理 |
+|---|---|:---:|:---:|:---:|:---:|
+| Windows 10 / 11 | Win32 ctypes（可選 Interception 驅動） | ✅ | ✅ | ✅ | ✅ |
+| macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ❌ | ❌ |
+| Linux X11 | python-Xlib（可選 `uinput`） | ✅ | ✅ | ✅ | ❌ |
+| Linux Wayland | libei，或 ydotool／wtype／grim | ✅ | ✅ | ❌ | ❌ |
+| Android | adb + uiautomator2 | ✅ | ✅ | — | — |
+| iOS | WebDriverAgent / facebook-wda | ✅ | ✅ | — | — |
+
+Wayland 禁止非特權用戶端進行全域輸入錄製——若要錄製，請設定
+`JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` 並在 X11 session 下執行。視窗管理目前僅
+Windows 有實作，其他平台會拋出明確的 `NotImplementedError`。對於會忽略合成輸入的應用程式，
+可選用驅動層後端（`JE_AUTOCONTROL_WIN32_BACKEND=interception`、
+`JE_AUTOCONTROL_LINUX_BACKEND=uinput`、ViGEm 虛擬手把）；驅動未安裝時會自動退回原本行為。
+
+---
+
+## 文件與範例
+
+| 資源 | 內容 |
+|---|---|
+| [`examples/`](../examples/) | 27 個自足腳本：截圖點擊、OCR、排程器、遠端桌面、agent loop、可觀測性、錄製、變數、熱鍵、觸發器、報表、MCP、REST、機密、外掛、computer use、Wayland、跨主機 DAG、chat-ops、pytest/BDD、錨點定位。 |
+| [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | 完整 API 參考，含英文與中文。 |
+| [architecture_explore.md](../architecture_explore.md) | 逐層記錄每個模組的職責。 |
+| [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台對照矩陣。 |
+| [docs/API_LIFECYCLE.md](../docs/API_LIFECYCLE.md) | 穩定 API 與棄用政策。 |
+| [WHATS_NEW.md](../WHATS_NEW.md) | 各版本更新說明。 |
+| [CHANGELOG.md](../CHANGELOG.md) | 相容性變更記錄。 |
+| [SECURITY.md](../SECURITY.md) | 安全政策與回報方式。 |
 
 ---
 
 ## 開發
 
-### 環境設定
-
 ```bash
 git clone https://github.com/Intergration-Automation-Testing/AutoControl.git
 cd AutoControl
 pip install -r dev_requirements.txt
+uv sync                 # 或：以已提交的 uv.lock 做可重現安裝
 ```
-
-可重現的安裝走已 commit 的 `uv.lock`：
 
 ```bash
-uv sync               # 依鎖檔同步整條相依鏈
-uv lock --upgrade     # 編輯 pyproject.toml 後重新鎖
+python -m pytest test/unit_test/headless      # 無頭單元測試
+python -m pytest test/integrated_test/        # 跨模組流程測試
+
+ruff check je_auto_control/
+pylint je_auto_control/
+bandit -c pyproject.toml -r je_auto_control/
 ```
 
-### 執行測試
-
-```bash
-# 單元測試
-python -m pytest test/unit_test/
-
-# 整合測試
-python -m pytest test/integrated_test/
-```
-
-### 專案連結
-
-- **首頁**: https://github.com/Intergration-Automation-Testing/AutoControl
-- **文件**: https://autocontrol.readthedocs.io/en/latest/
-- **PyPI**: https://pypi.org/project/je_auto_control/
+歡迎貢獻——請見 [CONTRIBUTING.md](../CONTRIBUTING.md) 與
+[CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)。CI 會強制兩條規則：`import je_auto_control`
+絕不能載入 PySide6；每個功能都必須同時具備無頭 API 與 GUI 介面。
 
 ---
 
-## 授權條款
+## 授權
 
 [MIT License](../LICENSE) © JE-Chen。
-第三方相依套件之授權請見
-[Third_Party_License.md](../Third_Party_License.md)。
+內含與選用第三方元件的授權請見 [Third_Party_License.md](../Third_Party_License.md)。
+
+- **首頁**：https://github.com/Intergration-Automation-Testing/AutoControl
+- **PyPI**：https://pypi.org/project/je_auto_control/
+- **文件**：https://autocontrol.readthedocs.io/en/latest/

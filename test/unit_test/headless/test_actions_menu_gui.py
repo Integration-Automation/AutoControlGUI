@@ -9,6 +9,8 @@ headless suite deterministic.
 """
 import json
 import os
+import pathlib
+import re
 import subprocess
 import sys
 
@@ -48,6 +50,9 @@ report = {
     "record_menu_matches": False,
     "variables_menu_matches": False,
     "variables_has_actions": False,
+    # Reported from here because this probe already pays for the Qt startup
+    # the count needs; a second subprocess just to count tabs is not worth it.
+    "tab_count": len(widget._tab_entries),
 }
 
 for entry in widget._tab_entries:
@@ -121,3 +126,30 @@ def test_hook_tab_actions_reach_the_menu(report):
     assert report["variables_has_actions"], (
         "hook-based tab should surface its actions"
     )
+
+
+# The other documented counts are guarded by test_doc_counts.py. The tab count
+# lives here instead because counting tabs means constructing the widget, which
+# means Qt — and this module already runs it in a subprocess for that reason.
+TAB_CITATIONS = (
+    ("README.md", r"\((\d+) tabs\)"),
+    ("README/README_zh-CN.md", r"（(\d+) 个标签页）"),
+    ("README/README_zh-TW.md", r"（(\d+) 個分頁）"),
+)
+
+
+@pytest.mark.parametrize("doc,pattern", TAB_CITATIONS)
+def test_documented_tab_count_matches_the_widget(report, doc, pattern):
+    root = pathlib.Path(__file__).resolve().parents[3]
+    text = (root / doc).read_text(encoding="utf-8")
+    found = re.findall(pattern, text)
+    assert found, (
+        f"{doc}: no longer states the tab count in the expected form "
+        f"({pattern!r}). If the wording changed on purpose, update this "
+        f"pattern; the count itself must stay in the document."
+    )
+    for quoted in found:
+        assert int(quoted) == report["tab_count"], (
+            f"{doc} says {quoted} GUI tabs, the widget builds "
+            f"{report['tab_count']}. Update all three READMEs."
+        )

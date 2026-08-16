@@ -67,6 +67,70 @@ def test_to_dict_has_center():
     assert data["center"] == [60, 40] and data["score"] == pytest.approx(1.0)
 
 
+# --- screen coordinates ----------------------------------------------------
+
+def _stub_grab(monkeypatch, image, origin):
+    """Replace the screen grab with a fixed frame at a fixed screen origin."""
+    from je_auto_control.utils.visual_match import visual_match as vm
+    monkeypatch.setattr(vm, "_grab_gray_with_origin",
+                        lambda region: (image, origin[0], origin[1]))
+
+
+def test_grabbed_matches_are_translated_to_screen_coordinates(monkeypatch):
+    # The virtual desktop starts at a negative origin whenever a monitor sits
+    # left of or above the primary one; an untranslated hit is unclickable.
+    _stub_grab(monkeypatch, _haystack(), (-100, -164))
+    match = match_template(_patch(), min_score=0.9)
+    assert (match.x, match.y) == (50 - 100, 30 - 164)
+    assert match.center == [60 - 100, 40 - 164]
+
+
+def test_match_all_translates_every_hit(monkeypatch):
+    _stub_grab(monkeypatch, _haystack(), (10, 20))
+    hits = match_template_all(_patch(), min_score=0.9)
+    assert sorted((m.x, m.y) for m in hits) == [(60, 50), (130, 50)]
+
+
+def test_supplied_haystack_keeps_its_own_coordinates(monkeypatch):
+    # An injected image is its own space — adding a screen origin to it would
+    # be wrong, and would break every synthetic-array test above.
+    _stub_grab(monkeypatch, _haystack(), (999, 999))
+    match = match_template(_patch(), haystack=_haystack(), min_score=0.9)
+    assert (match.x, match.y) == (50, 30)
+
+
+# --- degenerate templates --------------------------------------------------
+
+def test_flat_template_is_refused_rather_than_matched_anywhere():
+    # Normalised correlation divides by the template's variance, so a single
+    # colour saturates the whole score map at 1.0 and "finds" the target at an
+    # arbitrary position — worse than failing, because the caller clicks there.
+    flat = np.full((20, 20), 128, dtype=np.uint8)
+    with pytest.raises(ac.AutoControlScreenException):
+        match_template(flat, haystack=_haystack())
+    with pytest.raises(ac.AutoControlScreenException):
+        match_template_all(flat, haystack=_haystack())
+
+
+def test_template_larger_than_haystack_finds_nothing():
+    big = np.tile(np.arange(0, 250, 1, dtype=np.uint8), (250, 1))
+    assert match_template_all(big, haystack=_haystack()) == []
+
+
+# --- file loading ----------------------------------------------------------
+
+def test_template_loads_from_a_non_ascii_path(tmp_path):
+    # cv2.imread goes through the C locale on Windows and returns None for a
+    # path with non-ASCII characters — indistinguishable from a corrupt file.
+    import cv2
+    ascii_path = tmp_path / "ascii.png"
+    cv2.imwrite(str(ascii_path), _patch())
+    target = tmp_path / "樣板圖.png"
+    target.write_bytes(ascii_path.read_bytes())
+    match = match_template(str(target), haystack=_haystack(), min_score=0.9)
+    assert match is not None and (match.x, match.y) == (50, 30)
+
+
 # --- wiring ---------------------------------------------------------------
 
 def test_wiring():

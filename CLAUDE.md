@@ -2,236 +2,149 @@
 
 ## Project Overview
 
-AutoControl (`je_auto_control`) is a cross-platform Python GUI automation framework supporting Windows (Win32 API), macOS (pyobjc/Quartz), and Linux (X11). It provides mouse/keyboard control, image recognition, screen capture, action scripting, and report generation through a unified API.
+AutoControl (`je_auto_control`) is a cross-platform GUI automation framework: mouse and keyboard control, image recognition, OCR, accessibility-tree and VLM element location, action scripting, and report generation behind one API. Backends: Windows (Win32 ctypes), macOS (pyobjc/Quartz), Linux X11 (python-Xlib), Linux Wayland (libei / ydotool), Android (adb), iOS (WebDriverAgent).
 
-- **Package name**: `je_auto_control`
-- **Python**: >= 3.10
-- **License**: MIT
-- **Author**: JE-Chen
+- **Package**: `je_auto_control` · **Python** ≥ 3.10 · **License**: MIT · **Author**: JE-Chen
+- **[architecture_explore.md](architecture_explore.md)** is the per-module map — read it before changing structure; it lists all 308 `utils/` subpackages, every GUI tab, and file-level tables for the large subsystems.
 
-## Architecture & Design Patterns
+## Architecture
 
-### Strategy Pattern — Platform Abstraction
+| Pattern | Where | Contract |
+| --- | --- | --- |
+| Strategy | `wrapper/platform_wrapper.py` | Detects the OS and imports exactly one backend. New platform = new backend package, no wrapper change. |
+| Facade | `je_auto_control/__init__.py` | Re-exports every public name. `api/core.py` is the small versioned façade for new integrations. |
+| Command | `utils/executor/action_executor.py` | `event_dict` maps `AC_*` names to callables; `flow_control.py` adds block commands (loop / branch / try / macro / variables). |
+| Observer | `utils/callback/`, `utils/observer/`, `utils/triggers/` | Post-action callbacks; screen- and event-driven firing. |
+| Template Method | `utils/generate_report/` | HTML / JSON / XML share collect → format → write. |
+| Backend seam | `backends/` under `accessibility`, `ocr`, `vision`, `llm`, `agent`, `hotkey`, `usb`, `usbip` | Abstract base + concrete impls + null fallback, so dependency-free environments still import. |
 
-`wrapper/platform_wrapper.py` auto-detects the OS and loads the correct backend. All wrapper modules (`auto_control_mouse.py`, `auto_control_keyboard.py`, etc.) delegate to the platform-specific implementation. New platform support is added by implementing the backend interface — no wrapper changes needed.
-
-### Facade Pattern — Unified API Surface
-
-`je_auto_control/__init__.py` re-exports all public functions from wrapper and utility modules, providing a single entry point. Users import only `je_auto_control` and access all features.
-
-### Command Pattern — JSON Action Executor
-
-`utils/executor/action_executor.py` maps string command names (e.g., `AC_click_mouse`) to callable functions. JSON action files define sequences of commands with parameters, enabling recording, serialization, and replay of automation flows.
-
-### Observer Pattern — Callback Executor
-
-`utils/callback/callback_function_executor.py` allows registering callback functions that fire after automation actions complete, supporting event-driven chaining.
-
-### Template Method — Report Generation
-
-`utils/generate_report/` provides HTML, JSON, and XML report generators sharing a common structure: collect test records, format output, write file. Each format implements its own rendering.
-
-## Directory Structure
-
-```
-je_auto_control/
-├── wrapper/              # Platform-agnostic API (Strategy consumers)
-├── windows/              # Win32 backend (ctypes)
-├── osx/                  # macOS backend (pyobjc/Quartz)
-├── linux_with_x11/       # Linux X11 backend (python-Xlib)
-├── gui/                  # PySide6 GUI application
-└── utils/
-    ├── executor/         # JSON action executor (Command pattern)
-    ├── callback/         # Callback executor (Observer pattern)
-    ├── cv2_utils/        # OpenCV: screenshot, template matching, video
-    ├── socket_server/    # TCP server for remote automation
-    ├── shell_process/    # Shell command manager
-    ├── generate_report/  # HTML/JSON/XML report generators
-    ├── test_record/      # Test action recording
-    ├── json/             # JSON action file I/O
-    ├── project/          # Project scaffolding
-    ├── package_manager/  # Dynamic package loading
-    ├── logging/          # Logging
-    └── exception/        # Custom exceptions
-```
+Layering: entry points (`cli.py`, `gui/`, socket / REST / MCP servers) → executor → `utils/` (308 headless subpackages) → `wrapper/` → per-OS backend.
 
 ## Development Commands
 
 ```bash
-# Install dependencies
-pip install -r dev_requirements.txt
-
-# Install with GUI support
-pip install -e .[gui]
-
-# Run unit tests
-python -m pytest test/unit_test/
-
-# Run integration tests
-python -m pytest test/integrated_test/
-
-# Build package
-python -m build
+pip install -r dev_requirements.txt         # dev deps
+pip install -e .[gui]                       # + GUI extra
+python -m pytest test/unit_test/headless    # headless unit tests
+python -m pytest test/integrated_test/      # cross-module workflows
+python -m build                             # build
 ```
+
+`pyproject.toml` pins `python_files = ["test_*.py"]` on purpose: the `*_test.py` files under `test/unit_test/` are manual demo scripts whose module bodies drive the real mouse and keyboard on import. Never loosen that setting.
 
 ## Feature Delivery Rules
 
-### Every feature must ship both a headless API and a GUI surface
+### Every feature ships both a headless API and a GUI surface
 
-No feature is complete unless it can be driven entirely without the GUI **and** has a corresponding GUI affordance. Concretely:
+No feature is complete unless it can be driven entirely without the GUI **and** has a GUI affordance:
 
-- **Headless core in `utils/` or `wrapper/`**: all business logic lives in a module with zero `PySide6` imports. Users must be able to `import je_auto_control` and call the feature without ever instantiating a Qt class.
-- **Re-export from the package facade**: add the public functions / classes to `je_auto_control/__init__.py` and its `__all__` so `import je_auto_control as ac; ac.<feature>(...)` works out of the box.
-- **Executor command coverage**: wire an `AC_*` command into `utils/executor/action_executor.py` so the feature is usable from JSON action files, the socket server, the scheduler, and the visual script builder — all without Python glue.
-- **GUI tab or control is a thin wrapper**: the Qt widget must only translate user input into calls on the headless core. It must not contain business logic that would be unreachable headlessly.
-- **Tab commands live in the Actions menu, not in-tab buttons**: the main window is menu-driven. A tab keeps only its inputs, tables, and result/status views; its commands surface through the window-level **Actions** menu. Core tabs declare `(label_key, handler)` pairs at registration in `gui/main_widget.py`; feature tabs expose a `menu_actions()` method returning the same shape. Script Builder and Remote Desktop are the only exempt tabs (interactive panel layouts). `test/unit_test/headless/test_actions_menu_gui.py` guards this contract — a new tab without registry actions or a `menu_actions()` hook fails CI.
-- **The top-level package stays Qt-free**: `import je_auto_control` MUST NOT import `PySide6`. The GUI entry point is loaded lazily inside `start_autocontrol_gui()`. Verify with:
+- **Headless core in `utils/` or `wrapper/`** — all business logic in a module with zero `PySide6` imports.
+- **Re-export from the facade** — add public names to `je_auto_control/__init__.py` and its `__all__`.
+- **Executor command** — wire an `AC_*` command into `utils/executor/action_executor.py`, so the feature works from JSON action files, the socket server, the scheduler, and the script builder without Python glue.
+- **GUI tab is a thin wrapper** — the Qt widget only translates user input into calls on the headless core; no business logic that would be unreachable headlessly.
+- **Tab commands live in the Actions menu, not in-tab buttons** — a tab keeps only inputs, tables, and result views. Core tabs declare `(label_key, handler)` pairs at registration in `gui/main_widget.py`; feature tabs expose `menu_actions()` returning the same shape. Script Builder and Remote Desktop are exempt (interactive panels). `test/unit_test/headless/test_actions_menu_gui.py` fails CI for a tab without either hook.
+- **The top-level package stays Qt-free** — `import je_auto_control` MUST NOT import `PySide6`; the GUI loads lazily inside `start_autocontrol_gui()`. Verify: `import sys, je_auto_control; assert not any("PySide6" in m for m in sys.modules)`.
+- **Tests cover the headless path** — at least one test in `test/unit_test/` exercising the non-GUI API with no Qt imports.
 
-  ```python
-  import sys, je_auto_control  # noqa
-  assert not any("PySide6" in m for m in sys.modules)
+Inherently interactive features (region picking, template cropping) may stay GUI-only, but must accept programmatic equivalents (e.g. `screenshot(screen_region=[...])`) so scripts replay the same effect headlessly.
+
+### `architecture_explore.md` is updated with every change
+
+The map is only useful while it matches the tree, so **update it in the same change that moves the code**. Required when you add / remove / rename / move a module or subpackage, change what a module is responsible for (the map quotes the docstring's first line — update both), or add or remove an `AC_*` command, GUI tab, platform backend, entry point, extension point, server surface, or `__all__` name.
+
+- **Measure, never estimate** — every count in the document is measured. Re-run rather than adjust by hand:
+
+  ```bash
+  python -c "from je_auto_control.utils.executor.action_executor import executor as e; print(len(e.known_commands()))"  # AC_* commands
+  python -c "import je_auto_control as ac; print(len(ac.__all__))"                                                      # public API
+  python -c "from je_auto_control.utils.mcp_server.tools import build_default_tool_registry as b; print(len(b()))"      # MCP tools
   ```
 
-- **Tests cover the headless path**: at least one unit test in `test/unit_test/` must exercise the feature through its non-GUI API with no Qt imports.
+  Module and line counts come from walking the tree with `ast`; recompute §1, the affected §5.4 theme totals, and the §8 size appendix together so they stay consistent.
 
-Features that are inherently interactive (e.g. region picking with the mouse, template cropping) still count as GUI-only — but they must accept programmatic equivalents (e.g. `screenshot(screen_region=[...])` with explicit coordinates) so scripts can replay the same effect headlessly.
+- A new `utils/` subpackage needs a row in **exactly one** §5.4 theme table — the tables partition all 308 subpackages; appearing twice or not at all is a defect.
+- A new subsystem over ~1,000 lines also needs a file-level table in §5.4.17.
+- Keep the header's scan date, version, and branch current.
+- `README.md` and both translations under `README/` cite the same figures (command / subpackage / tab / MCP-tool / example counts) — update all three alongside the map.
+- **`test/unit_test/headless/test_doc_counts.py` enforces this and fails CI on a mismatch.** It re-measures the command, MCP-tool, `utils/` subpackage and `examples/` counts and compares them against every place the four documents quote them, so code and docs have to move in the same commit. If you reword a sentence that holds one of those numbers, update the test's pattern — it fails loudly when a citation disappears rather than passing on a document it can no longer read. The GUI tab count is guarded the same way but from `test_actions_menu_gui.py`, whose subprocess probe already builds the widget that count needs.
+
+### Outstanding work goes in `Progress.md`
+
+Anything agreed but not done — deferred follow-ups, known gaps, half-delivered features, decisions waiting on the maintainer — is recorded in [Progress.md](Progress.md), not left in chat history or buried in a commit message.
+
+- **Write the entry when you defer the work**, in the same change that created the gap. Each entry states its status (`TODO` / `WIP` / `BLOCKED` / `DECIDE`), what is missing, and where in the tree.
+- **Open items only.** Delete the entry when the work lands; shipped work is described in `WHATS_NEW.md` and compatibility changes in `CHANGELOG.md`. `Progress.md` is not a changelog.
+- A feature that reaches only some of the delivery surfaces above belongs here until the rest land.
 
 ## Coding Standards
 
-### Security First
+### Project-specific rules
 
-- **Input validation**: Validate all external inputs (user input, file content, network data, JSON action commands) at system boundaries. Sanitize file paths to prevent path traversal. Never trust data from TCP socket clients without validation.
-- **Injection prevention**: When executing shell commands (`shell_process`), never construct command strings from unsanitized input. Use parameterized approaches or allowlists.
-- **Deserialization safety**: JSON action files and socket server payloads must be validated against expected schemas before execution. Reject unknown command names.
-- **No secrets in code**: Never commit credentials, API keys, tokens, or `.env` files. Keep secrets out of logs and reports.
-- **Principle of least privilege**: Socket server should bind to localhost by default. Document security implications of exposing to network.
-- **Dependency awareness**: Pin dependency versions. Review transitive dependencies for known vulnerabilities.
+- **Exception hierarchy is flat by design** — every framework error derives from `AutoControlException` so containment boundaries (executor, background poll loops, request handlers, GUI slots) can catch the family in one `except`. Never add a sibling inheriting `Exception` directly; it silently escapes every boundary. Assertion failures (`AutoControlAssertionException`) must keep propagating through `raise_on_error=False`.
+- **Fail fast** — raise the specific typed exception at the point of failure; do not swallow errors.
+- **Validate at boundaries** — user input, file content, network data, and JSON action commands. Reject unknown command names; `realpath` and bound user-supplied paths.
+- **Least privilege** — servers bind `127.0.0.1` by default; `0.0.0.0` needs an explicit, documented opt-in.
+- **No `print()` in library code** (`je_auto_control/` outside `gui/` stdout tooling) — use `autocontrol_logger`.
+- **No `assert` for runtime checks** outside tests — it is stripped under `-O`.
+- **Lazy imports for optional and platform-specific dependencies** — never import all backends unconditionally.
+- **Release platform resources** (GDI handles, Quartz event sources, X display, OpenCV writers) in `finally` / `__exit__`; use `with` everywhere it applies.
+- **Thread safety** — state shared between the socket server, recording threads, and the callback executor is guarded by `threading.Lock` / `queue.Queue`.
+- **Reuse screen captures** when running several searches against the same frame; avoid per-event allocations in mouse/keyboard dispatch.
+- **Action lists and loaded config are read-only** once loaded.
+- **Pin dependency versions**, including transitive ones that can change return shapes (`opencv-python` is bounded `<6` for exactly this reason). Review new dependencies for known vulnerabilities.
+- Common logic belongs in `wrapper/` or `utils/`, never duplicated across platform backends.
 
-### Performance Best Practices
+### Limits enforced by CI
 
-- **Lazy imports**: Platform-specific backends are loaded only for the current OS — do not import all backends unconditionally.
-- **Avoid redundant screenshots**: Image recognition operations should reuse screen captures when performing multiple searches on the same frame.
-- **Buffer management**: Screen recording and video capture must properly release resources (file handles, codec buffers) in `finally` blocks or context managers.
-- **Thread safety**: Socket server and recording threads must use proper synchronization. Avoid shared mutable state without locks.
-- **Minimize allocations in hot paths**: Mouse/keyboard event dispatch should avoid unnecessary object creation per event.
+Cyclomatic complexity ≤ 10 · cognitive complexity ≤ 15 · function ≤ 75 lines · parameters ≤ 7 · nesting ≤ 4 · file ≤ 750 lines · line ≤ 120 chars · no duplicated block ≥ 10 lines.
 
-### Software Engineering Principles
+Docstrings on every public module, class, and function (one-line summary minimum; type hints replace parameter-type prose). Type hints on all public signatures. Import order stdlib → third-party → first-party; no wildcard imports outside the `__init__.py` façade.
 
-- **SOLID**: Each module has a single responsibility. Platform backends are open for extension (new OS) without modifying wrappers. Depend on abstractions (wrapper API), not concrete implementations (Win32/X11/Quartz).
-- **DRY**: Common logic belongs in `wrapper/` or `utils/`, not duplicated across platform backends.
-- **YAGNI**: Do not add speculative features. Implement what is needed now.
-- **Fail fast**: Raise clear, specific exceptions (`AutoControlMouseException`, `AutoControlKeyboardException`, etc.) at the point of failure. Do not silently swallow errors.
-- **Immutable data where possible**: Action lists and configuration should be treated as read-only once loaded.
+### Automated verification
 
-### Code Style
-
-- Follow PEP 8.
-- Use type hints for all public function signatures.
-- Keep functions focused and short — one function, one task.
-- Prefer composition over inheritance for extending functionality.
-- Remove dead code immediately — no commented-out blocks, no unused imports, no unreachable branches.
-
-## Commit Conventions
-
-- Write concise commit messages focused on **why**, not what.
-- **No AI attribution anywhere.** Not in commit messages, pull request titles or bodies, issue and review comments, release notes, code comments, or documentation. Specifically forbidden: `Co-Authored-By:` lines naming an assistant, "Generated with …" / "Created by …" footers, tool badges, links to assistant products, emoji markers standing in for the same thing, and any statement that code was AI-generated. Everything published under this repo reads as the author's own work.
-- Use imperative mood: "Add feature", "Fix bug", "Remove unused code".
-- Examples:
-  - `Add image threshold parameter validation`
-  - `Fix mouse scroll direction on macOS`
-  - `Remove deprecated screen capture fallback`
-
-## Testing
-
-- **Unit tests**: `test/unit_test/` — test individual functions in isolation.
-- **Integration tests**: `test/integrated_test/` — test cross-module workflows.
-- **Manual tests**: `test/manual_test/` — require human verification (GUI, visual).
-- **GUI tests**: `test/gui_test/` — PySide6 interface tests.
-- All tests must pass before merging. Ensure cross-platform compatibility.
-
-## Key Conventions
-
-- All public API functions are exported from `je_auto_control/__init__.py` and listed in `__all__`.
-- JSON action command names use `AC_` prefix (e.g., `AC_click_mouse`).
-- Platform backends follow naming: `{platform}_{function}.py` (e.g., `win32_ctype_mouse_control.py`).
-- Virtual key mappings are in `core/utils/*_vk.py` per platform.
-
-## Static Analysis Compliance (SonarQube / Codacy / Pylint / Bandit)
-
-All code must satisfy the following rules so automated scanners (SonarQube, Codacy, Pylint, Bandit, Radon, Prospector) report zero new issues.
-
-### Complexity & Size Limits
-
-- **Cyclomatic complexity** per function ≤ 10. Refactor with early returns, extracted helpers, or lookup dicts when exceeded.
-- **Cognitive complexity** per function ≤ 15 (SonarQube `python:S3776`).
-- **Function length** ≤ 75 lines. Long procedural flows must be split into named helpers.
-- **Parameter count** ≤ 7 (`python:S107`). Group related parameters into a dataclass or config object when exceeded.
-- **Nesting depth** ≤ 4 (`python:S134`). Flatten with guard clauses.
-- **File length** ≤ 750 lines. Split large modules along responsibility lines.
-- **Identical branches**: `if`/`elif`/`else` branches must not have identical bodies (`python:S3923`).
-- **Duplicated code**: no duplicated blocks ≥ 10 lines across the project (Sonar default). Extract to a shared helper.
-
-### Bug & Correctness Rules
-
-- **No bare `except:`** — always catch a specific exception type (`python:S5754`, Bandit `B001`).
-- **No empty `except` blocks** (`python:S2737`). At minimum log the error or re-raise.
-- **Preserve exception chain**: inside `except`, raising a new exception must use `raise NewError(...) from exc` (`python:S5655`).
-- **No mutable default arguments** (`python:S5727`): never use `def f(x=[])` or `{}`. Use `None` + lazy init.
-- **No unused imports, variables, parameters, or assignments** (`python:S1481`, `S1854`, `S1172`). Remove them; do not rename to `_unused`.
-- **No dead / unreachable code** (`python:S1763`).
-- **No commented-out code blocks** (`python:S125`) — delete instead; git history preserves it.
-- **No `TODO`/`FIXME`/`XXX`** without an issue-tracker reference in the same comment (`python:S1135`).
-- **No `print()`** in library code (`je_auto_control/` outside `gui/` stdout tooling). Use the project logger.
-- **No `assert` for runtime checks** in non-test code (Bandit `B101`) — `assert` is stripped with `-O`. Raise explicit exceptions.
-- **String formatting**: prefer f-strings over `%` or `.format()` for readability; never interpolate untrusted data into shell/SQL.
-- **Equality with `None`/`True`/`False`**: use `is` / `is not`, never `==` (`python:S2589`).
-- **Boolean simplification**: no `if cond: return True else: return False` — return the expression directly (`python:S1126`).
-- **Identical expressions on both sides** of `and`/`or`/`==`/`!=` are forbidden (`python:S1764`).
-
-### Security Rules (Bandit / Sonar Security Hotspots)
-
-- **No `eval`, `exec`, `compile`** on any runtime-sourced string (Bandit `B307`, `B102`).
-- **No `pickle`, `marshal`, `shelve`, `dill`** on data from disk, network, or user input (Bandit `B301`, `B302`). Use JSON with schema validation.
-- **No `subprocess` with `shell=True`** or string-built command lines (Bandit `B602`, `B605`). Pass argv lists and validate against allowlists.
-- **No `os.system`, `os.popen`, `commands.*`** (Bandit `B605`, `B607`).
-- **No insecure hash** (`md5`, `sha1`) for security purposes (Bandit `B303`, `B324`). Use `hashlib.sha256` or better.
-- **No `tempfile.mktemp`** — use `NamedTemporaryFile` / `mkstemp` (Bandit `B306`).
-- **No hardcoded passwords, tokens, or secrets** (Bandit `B105`–`B107`, `python:S2068`).
-- **No `yaml.load`** without `SafeLoader` (Bandit `B506`).
-- **`requests`/`urllib` calls** must set explicit `timeout=` (`python:S5332`, Bandit `B113`).
-- **No `ssl._create_unverified_context` / `verify=False`** (Bandit `B501`).
-- **Path traversal**: validate and `os.path.realpath` user-supplied paths before I/O.
-- **Socket binds** must default to `127.0.0.1`; `0.0.0.0` requires an explicit, documented opt-in.
-
-### Resource & Concurrency
-
-- **Always use `with`** for files, sockets, locks, and OpenCV `VideoCapture`/`VideoWriter` (`python:S5720`). No manual `close()` in normal flow.
-- **Release platform resources** (GDI handles, Quartz event sources, X display) in `finally` or `__exit__`.
-- **Thread-safety**: shared mutable state between the socket server, recording thread, and callback executor must be guarded by `threading.Lock` / `queue.Queue`.
-
-### Style & Naming
-
-- **snake_case** for functions, methods, variables, modules; **PascalCase** for classes; **UPPER_SNAKE_CASE** for module-level constants (`python:S117`, Pylint `C0103`).
-- **Max line length**: 120 chars (`python:S103`).
-- **Docstrings** on every public module, class, and function (`python:S1720`, Pylint `C0114`–`C0116`) — one-line summary minimum; type hints replace parameter-type prose.
-- **Import order**: stdlib → third-party → first-party, separated by blank lines; no wildcard imports except in `__init__.py` façade (`python:S2208`).
-- **No `global`** statements outside module initialization (`python:S2208`).
-
-### Test Hygiene
-
-- Tests must avoid `assert` against object identity of mutable literals and must not depend on execution order (Pylint / Sonar `python:S5914`).
-- No `time.sleep` > 1s in unit tests; use fakes / event signals.
-
-### Automated Verification
-
-Run before every commit; fix all new findings:
+Run before every commit and fix all new findings:
 
 ```bash
 pip install ruff pylint bandit radon
 ruff check je_auto_control/
 pylint je_auto_control/
 bandit -c pyproject.toml -r je_auto_control/   # uses [tool.bandit] excludes/skips
-radon cc je_auto_control/ -a -nc   # flags functions with CC >= C (>10)
+radon cc je_auto_control/ -a -nc               # flags functions with CC >= C (>10)
 ```
 
-If a rule must be suppressed, add an inline justification: `# noqa: <code>  # reason: <why>` or `# nosec B404  # reason: <why>`. Blanket suppressions at file/module level are forbidden.
+These tools own the generic rules (bare `except`, mutable defaults, unused names, dead code, `eval`/`exec`, `shell=True`, `pickle` on untrusted data, weak hashes, missing `timeout=`, hardcoded secrets, naming). Fix what they report rather than restating them here.
+
+Suppressions need an inline justification — `# noqa: <code>  # reason: <why>` or `# nosec B404  # reason: <why>`. Blanket file- or module-level suppressions are forbidden.
+
+## Commit Conventions
+
+- Concise messages focused on **why**, not what. Imperative mood: `Add image threshold parameter validation`, `Fix mouse scroll direction on macOS`, `Remove deprecated screen capture fallback`.
+- **No AI attribution anywhere.** Not in commit messages, pull request titles or bodies, issue and review comments, release notes, code comments, or documentation. Specifically forbidden: `Co-Authored-By:` lines naming an assistant, "Generated with …" / "Created by …" footers, tool badges, links to assistant products, emoji markers standing in for the same thing, and any statement that code was AI-generated. Everything published under this repo reads as the author's own work.
+
+## Testing
+
+- `test/unit_test/headless/` — headless unit tests, the CI gate. `test/unit_test/flow_control/` — executor flow control.
+- `test/integrated_test/` — cross-module workflows. `test/gui_test/` — PySide6 interface. `test/manual_test/` — human verification.
+- No `time.sleep` > 1s in unit tests; use fakes or event signals. Tests must not depend on execution order.
+- All tests pass before merging; keep cross-platform compatibility.
+- **Queued Qt `deleteLater()` work is flushed after every test** by the autouse
+  fixture in `test/unit_test/headless/conftest.py`. Do not remove it, and keep
+  any new Qt test directory covered the same way. `deleteLater()` is a no-op
+  until an event loop runs, and most GUI test modules never run one — so the
+  widget, plus any helper thread or timer it started at construction, survives
+  until some *later* test pumps events and is destroyed inside that unrelated
+  test. This is not theoretical: `test_admin_console_thumbnails_gui.py` leaked
+  seven `AdminConsoleTab`s this way, and they detonated inside the nested modal
+  `exec()` of `test_usb_acl_prompt.py`, killing the interpreter with rc
+  3221226505 (0xC0000409) — a `__fastfail`, so no traceback, no faulthandler
+  output, and nothing after it in the suite ran. Note the failure is invisible
+  to CI: `test_usb_acl_prompt.py` needs the optional `webrtc` extra (`av`,
+  `aiortc`), which CI does not install, so CI skips it and only developers with
+  that extra installed see the crash.
+
+## Key Conventions
+
+- Public API is exported from `je_auto_control/__init__.py` and listed in `__all__`.
+- JSON action command names use the `AC_` prefix (e.g. `AC_click_mouse`); MCP tools use `ac_`.
+- Platform backends are named `{platform}_{function}.py` (e.g. `win32_ctype_mouse_control.py`).
+- Virtual key mappings live in `core/utils/*_vk.py` per platform.

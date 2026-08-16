@@ -10,11 +10,12 @@ images.
 All functions raise ``RuntimeError`` if the platform backend is missing so
 callers can degrade gracefully.
 """
+import os
 import shutil
 import subprocess  # nosec B404  # reason: required for pbcopy/pbpaste/xclip/xsel
 import sys
 from io import BytesIO
-from typing import Optional
+from typing import Optional, Union
 
 _OPEN_CLIPBOARD_FAILED = "OpenClipboard failed"
 
@@ -50,19 +51,48 @@ def get_clipboard_image() -> Optional[bytes]:
     return _linux_get_image()
 
 
-def set_clipboard_image(png_bytes: bytes) -> None:
-    """Place a PNG image (as bytes) onto the clipboard."""
-    if not isinstance(png_bytes, (bytes, bytearray)):
-        raise TypeError("set_clipboard_image expects bytes")
-    if not png_bytes:
-        raise ValueError("png_bytes is empty")
+def _as_png_bytes(image: Union[bytes, bytearray, str, os.PathLike]) -> bytes:
+    """PNG bytes for either raw bytes or a path to any Pillow-readable file."""
+    if isinstance(image, (bytes, bytearray)):
+        if not image:
+            raise ValueError("image bytes are empty")
+        return bytes(image)
+    if isinstance(image, (str, os.PathLike)):
+        safe_path = os.path.realpath(os.fspath(image))
+        if not os.path.isfile(safe_path):
+            raise FileNotFoundError(f"image not found: {safe_path}")
+        try:
+            from PIL import Image  # noqa: PLC0415  lazy import
+        except ImportError as error:
+            raise RuntimeError(
+                "Pillow is required for clipboard image support"
+            ) from error
+        buffer = BytesIO()
+        with Image.open(safe_path) as opened:
+            opened.convert("RGB").save(buffer, format="PNG")
+        return buffer.getvalue()
+    raise TypeError("set_clipboard_image expects PNG bytes or a file path")
+
+
+def set_clipboard_image(
+        image: Union[bytes, bytearray, str, os.PathLike]) -> None:
+    """Place an image on the clipboard, from PNG bytes **or** a file path.
+
+    Both are accepted because both callers are real: the remote-desktop viewer
+    already holds decoded bytes, while the MCP tool and script callers name a
+    file. This package used to carry two different ``set_clipboard_image``
+    functions under the same name — one per signature, in this module and in
+    ``clipboard_image.py`` — so importing the wrong one failed at runtime, and
+    only for whichever argument type you happened to pass.
+    """
+    png_bytes = _as_png_bytes(image)
     if sys.platform.startswith("win"):
-        _win_set_image(bytes(png_bytes))
+        _win_set_image(png_bytes)
         return
     if sys.platform == "darwin":
-        _mac_set_image(bytes(png_bytes))
+        _mac_set_image(png_bytes)
         return
-    _linux_set_image(bytes(png_bytes))
+    _linux_set_image(png_bytes)
 
 
 # === Windows backend =========================================================

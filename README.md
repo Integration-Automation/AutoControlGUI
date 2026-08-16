@@ -5,599 +5,212 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Documentation](https://readthedocs.org/projects/autocontrol/badge/?version=latest)](https://autocontrol.readthedocs.io/en/latest/?badge=latest)
 
-**AutoControl** is a cross-platform Python GUI automation framework providing mouse control, keyboard input, image recognition, screen capture, action scripting, and report generation — all through a unified API that works on Windows, macOS, and Linux (X11).
+**AutoControl** is a cross-platform GUI automation framework for Python. It drives the
+mouse and keyboard, finds things on screen (template matching, OCR, the OS accessibility
+tree, or a vision model), records and replays flows, and runs them from JSON action
+files — on Windows, macOS, Linux (X11 and Wayland), Android, and iOS.
 
-**[繁體中文](README/README_zh-TW.md)** | **[简体中文](README/README_zh-CN.md)**
+Every capability ships three ways: a **Python API**, an **`AC_*` action command** usable
+from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
----
-
-## Table of Contents
-
-- [What's New](#whats-new)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Installation](#installation)
-- [Requirements](#requirements)
-- [Quick Start](#quick-start)
-  - [Mouse Control](#mouse-control)
-  - [Keyboard Control](#keyboard-control)
-  - [Image Recognition](#image-recognition)
-  - [Accessibility Element Finder](#accessibility-element-finder)
-  - [AI Element Locator (VLM)](#ai-element-locator-vlm)
-  - [OCR (Text on Screen)](#ocr-text-on-screen)
-  - [LLM Action Planner](#llm-action-planner)
-  - [Runtime Variables & Control Flow](#runtime-variables--control-flow)
-  - [Remote Desktop](#remote-desktop)
-  - [Clipboard](#clipboard)
-  - [Screenshot](#screenshot)
-  - [Action Recording & Playback](#action-recording--playback)
-  - [JSON Action Scripting](#json-action-scripting)
-  - [MCP Server (Use AutoControl from Claude)](#mcp-server-use-autocontrol-from-claude)
-  - [Scheduler (Interval & Cron)](#scheduler-interval--cron)
-  - [Global Hotkey Daemon](#global-hotkey-daemon)
-  - [Event Triggers](#event-triggers)
-  - [Run History](#run-history)
-  - [Report Generation](#report-generation)
-  - [Observability (Prometheus / OpenTelemetry)](#observability-prometheus--opentelemetry)
-  - [Remote Automation (Socket / REST)](#remote-automation-socket--rest)
-  - [Plugin Loader](#plugin-loader)
-  - [Shell Command Execution](#shell-command-execution)
-  - [Screen Recording](#screen-recording)
-  - [Callback Executor](#callback-executor)
-  - [Package Manager](#package-manager)
-  - [Project Management](#project-management)
-  - [Window Management](#window-management)
-  - [GUI Application](#gui-application)
-- [Command-Line Interface](#command-line-interface)
-- [Platform Support](#platform-support)
-- [Development](#development)
-- [License](#license)
+**[繁體中文](README/README_zh-TW.md)** · **[简体中文](README/README_zh-CN.md)**
 
 ---
 
-## What's New
+## Why AutoControl
 
-**Latest (2026-07-18) — cross-platform reliability hardening.** A full-project runtime audit fixed execution-time defects across the macOS / Windows / Linux / Wayland backends, the executor, and the remote-desktop / USB stacks — correct Retina cursor math, a relay hang on CPython 3.14, `AC_expect_poll` / `AC_parallel` robustness, localhost-by-default USB/IP, and typed exceptions preserved at I/O boundaries — each covered by a headless regression test. No API changes.
-
-All per-release notes are in **[WHATS_NEW.md](WHATS_NEW.md)**.
-
-## Features
-
-- **QA / Test Framework** — assertion DSL (`assert_text` / `_image` / `_pixel` / `_window` + audio/video assertions), data-driven execution (CSV / JSON / SQLite / Excel → `AC_for_each_row`), a scored `run_suite` with setup/teardown/tags, JUnit + Allure report output, flaky-test detection with auto-quarantine, accessibility / i18n auditing (missing labels, WCAG contrast, truncation), and a parallel mobile device matrix. See [What's new (2026-06)](WHATS_NEW.md)
-- **Automation toolkit** — human-like mouse motion + typing, VLM / variable / duration assertions, reusable macros + in-process parallel blocks, composite + cron triggers, read-into-a-variable commands (OCR / shell / file / HTTP / time / random), variable transforms, scroll-to-find, region colour stats, QR reading, per-window capture / layout save-restore / snap, screenshot annotation, desktop notifications, action-file signing + encryption, recoverable (recycle-bin) deletion, and Recording-Editor undo. See [What's new (2026-06-17)](WHATS_NEW.md)
-- **Mouse Automation** — move, click, press, release, drag, and scroll with precise coordinate control
-- **Keyboard Automation** — press/release individual keys, type strings, hotkey combinations, key state detection
-- **Image Recognition** — locate UI elements on screen using OpenCV template matching with configurable threshold
-- **Accessibility Element Finder** — query the OS accessibility tree (Windows UIA / macOS AX) to locate buttons, menus, and controls by name/role
-- **AI Element Locator (VLM)** — describe a UI element in plain language and let a vision-language model (Anthropic / OpenAI) find its screen coordinates
-- **OCR** — extract text from screen regions through three pluggable backends (Tesseract for ASCII, EasyOCR for CJK without an external binary, PaddleOCR for highest-quality Chinese / Japanese / Korean). Single unified API + canonical language codes; backend chosen by `backend=` kwarg, `AUTOCONTROL_OCR_BACKEND` env var, or auto-detection. Wait for, click, or locate rendered text; regex search and full-region dump
-- **LLM Action Planner** — translate a plain-language description into a validated `AC_*` action list using Claude
-- **Runtime Variables & Control Flow** — `${var}` substitution at execution time, plus `AC_set_var` / `AC_inc_var` / `AC_if_var` / `AC_for_each` / `AC_loop` / `AC_while_var` / `AC_retry` / `AC_try` for data-driven scripts. `AC_while_var` loops while a variable comparison holds (re-checked each iteration, `max_iter` safety cap). `AC_try` adds try/catch/finally: when `body` fails it runs the `catch` recovery branch instead of aborting, always runs `finally`, exposes the error to `error_var`, and can `reraise` after cleanup (loop `break`/`continue` still propagate through it)
-- **Remote Desktop** — stream this machine's screen and accept remote input over a token-authenticated TCP protocol, *or* connect to another machine and view + control it (host + viewer GUIs included). Optional TLS (HTTPS-grade encryption), WebSocket transport (ws:// + wss:// for browser / firewall-friendly clients), persistent 9-digit Host ID, host→viewer audio streaming, bidirectional clipboard sync (text + image), and chunked file transfer (drag-drop + progress bar; arbitrary destination path; no size cap). Plus folder sync (additive mirror — local deletions never propagate) and a self-hosted coturn TURN config bundle generator (turnserver.conf + systemd unit + docker-compose + README). **AnyDesk-style popout**: when the viewer authenticates, the live remote desktop opens in its own resizable top-level window so the control panel stays uncluttered. The Remote Desktop tabs are wrapped in `QScrollArea` so the panel stays usable on small windows and stretches edge-to-edge on 4K displays. Driveable headlessly via `je_auto_control` and over MCP through the new `ac_remote_*` tools
-- **Driver-level input backends (opt-in)** — for games / apps that ignore SendInput (Win) or XTest (Linux): **Interception driver backend** for Windows (HID-layer keyboard / mouse injection via Oblita's WHQL-signed driver, opt-in via `JE_AUTOCONTROL_WIN32_BACKEND=interception`), **uinput backend** for Linux (kernel `/dev/uinput` synthetic HID device, opt-in via `JE_AUTOCONTROL_LINUX_BACKEND=uinput`), and **ViGEm virtual gamepad** for Windows games that read controllers (virtual Xbox 360 pad with friendly button / dpad / stick / trigger API, exposed as `AC_gamepad_*` executor commands and `ac_gamepad_*` MCP tools). All three fall back gracefully when the driver isn't installed, so existing deployments keep working unchanged
-- **Clipboard** — read/write system clipboard text on Windows, macOS, and Linux
-- **Screenshot & Screen Recording** — capture full screen or regions as images, record screen to video (AVI/MP4)
-- **Action Recording & Playback** — record mouse/keyboard events and replay them
-- **JSON-Based Action Scripting** — define and execute automation flows using JSON action files (dry-run + step debug)
-- **Scheduler** — run scripts on an interval or cron expression; jobs persist across restarts
-- **Global Hotkey Daemon** — bind OS-level hotkeys to action scripts on all three desktops: Windows (`RegisterHotKey`), macOS (`CGEventTap`, needs Accessibility permission), and Linux X11 (`XGrabKey` with NumLock / CapsLock variant masking). Wayland hotkeys are still compositor-dependent (each session bus exposes a different shortcut portal); a Wayland session can still drive AutoControl via the new Wayland input backend (see [What's new (2026-05)](WHATS_NEW.md)). Same `bind()` / `start()` API across platforms; the Strategy-pattern dispatch in `backends/` auto-picks the right backend at start time
-- **Event Triggers** — fire scripts when an image appears, a window opens, a pixel changes, or a file is modified
-- **Run History** — SQLite-backed run log across scheduler / triggers / hotkeys / REST with auto error-screenshot artifacts
-- **Report Generation** — export test records as HTML, JSON, or XML reports with success/failure status
-- **MCP Server** — JSON-RPC 2.0 Model Context Protocol server (stdio + HTTP/SSE) so Claude Desktop / Claude Code / custom tool-use loops can drive AutoControl. ~100 tools, full protocol coverage (resources, prompts, sampling, roots, logging, progress, cancellation, elicitation), bearer-token auth + TLS, audit log, rate limit, plugin hot-reload, CI fake backend. New in this release: `ac_remote_host_start` / `ac_remote_host_stop` / `ac_remote_host_status` / `ac_remote_viewer_connect` / `ac_remote_viewer_disconnect` / `ac_remote_viewer_status` / `ac_remote_viewer_send_input` wrap the same singleton remote-desktop registry the GUI uses, so a model can spin up a host, open a viewer to another machine, and forward mouse / keyboard / type / hotkey actions through the active session
-- **Remote Automation** — TCP socket server **and** hardened REST API: bearer-token auth, per-IP rate limit + lockout, SQLite audit hook, Prometheus `/metrics`, OpenAPI-style endpoint table (`/health`, `/screen_size`, `/sessions`, `/screenshot`, `/execute`, `/audit/list`, `/audit/verify`, `/inspector/recent`, `/usb/devices`, `/diagnose`, ...), and a vanilla-JS browser dashboard at `/dashboard` (any phone with HTTP reach can monitor the host)
-- **Plugin Loader** — drop `.py` files exposing `AC_*` callables into a directory and register them as executor commands at runtime
-- **Shell Integration** — execute shell commands within automation workflows with async output capture
-- **Callback Executor** — trigger automation functions with callback hooks for chaining operations
-- **Dynamic Package Loading** — extend the executor at runtime by importing external Python packages
-- **Project & Template Management** — scaffold automation projects with keyword/executor directory structure
-- **Window Management** — send keyboard/mouse events directly to specific windows (Windows/Linux)
-- **GUI Application** — built-in PySide6 graphical interface with live language switching (English / 繁體中文 / 简体中文 / 日本語)
-- **CLI Runner** — `python -m je_auto_control.cli run|list-jobs|start-server|start-rest`
-- **Cross-Platform** — unified API across Windows, macOS, Linux (X11 + Wayland), Android (adb + uiautomator2), and iOS (WebDriverAgent / facebook-wda)
-- **Screenshot PII redaction** — `RedactionEngine` blurs emails / credit cards / SSNs / phones / secure-text fields / forced regions before screenshots leave the host (VLM upload, audit log, REST). Policy via env var `JE_AUTOCONTROL_REDACTION=off|moderate|strict` or per-call
-- **Multi-Host Admin Console** — register N AutoControl REST endpoints in one address book, poll them in parallel for health/sessions/jobs, broadcast actions to all of them. Persisted to `~/.je_auto_control/admin_hosts.json` (mode 0600 on POSIX). Bad-token hosts surface as unhealthy with the actual HTTP error
-- **Tamper-Evident Audit Log** — SQLite events table with SHA-256 hash chain (`prev_hash` + `row_hash` per row); editing any past row breaks the chain. `verify_chain()` walks rows top-down and reports the first broken link. Legacy tables get backfilled at startup ("trust on first use")
-- **WebRTC Packet Inspector** — process-global rolling window of `StatsSnapshot` samples (default 600 / ~10 min @ 1Hz) fed by the existing WebRTC stats pollers. Per-metric `last/min/max/avg/p95` for RTT, FPS, bitrate, packet loss, jitter
-- **USB Device Enumeration** — read-only cross-platform device listing. Tries pyusb (libusb) first; falls back to platform-specific (Windows `Get-PnpDevice`, macOS `system_profiler`, Linux `/sys/bus/usb/devices`). Phase 2 passthrough builds on this (see below)
-- **System Diagnostics** — single-command "is everything OK?" probe across platform, optional deps, executor command count, audit chain, screenshot, mouse, disk space, REST registry. CLI exits 0 if all green / 1 otherwise; REST `/diagnose`; severity-tagged GUI tab
-- **Stable API & Failure Bundles** — versioned, lazy `je_auto_control.api` façade for new integrations (`execute_action`, `generate_code`, `run_diagnostics`, failure bundles) with a documented [lifecycle policy](docs/API_LIFECYCLE.md). Portable `autocontrol.failure-bundle/v1` diagnostic ZIPs: manifest + redacted context/events/log tail, optional screenshot and diagnostics, best-effort collectors, atomic write. CLI `je_auto_control failure-bundle out.zip`; `codegen --failure-bundle` wraps generated pytest in automatic failure diagnostics
-- **USB Hotplug Events** — polling-based hotplug watcher (`UsbHotplugWatcher`) with bounded ring buffer + sequence-numbered events; `GET /usb/events?since=N` lets late subscribers catch up. GUI auto-refresh toggle on the USB tab.
-- **OpenAPI 3.1 + Swagger UI** — `GET /openapi.json` (auth-gated, generated from the live route table) + `GET /docs` (browser Swagger UI with bearer token bar). Drift test in CI catches new routes added without metadata.
-- **Configuration Bundle** — single-file JSON export/import of user config (admin hosts, address book, trusted viewers, known hosts, host service, IDs). Atomic write with `<name>.bak.<timestamp>` backups; CLI `python -m je_auto_control.utils.config_bundle export|import`; `POST /config/{export,import}`; export/import commands on the REST API tab's Actions menu.
-- **USB Passthrough (opt-in)** — let a remote viewer use a USB device physically attached to the host, over a WebRTC `usb` DataChannel. Wire-level protocol (11 opcodes incl. `RESUME`, CREDIT-based flow control, 16 KiB payload cap with EOF fragmentation for oversize transfers). All eight original open questions resolved: reliable-ordered channel, LIST-over-channel (ACL-filtered), per-claim credits, Linux kernel-driver detach/reattach, and ACL **HMAC-SHA256 integrity** (fail-closed on tamper; pluggable key — Windows DPAPI or passphrase vault). **Backends:** `LibusbBackend` (production), `WinusbBackend` (ctypes) and `IokitBackend` (native IOKit enumeration + libusb transfers) — Windows/macOS *hardware-unverified*; `default_passthrough_backend()` picks per-OS. Viewer-side blocking client (`control/bulk/interrupt_transfer`, `list_devices`, `resume`); in-process `UsbLoopback` so one machine can share + use a device through the full stack. **Wired into WebRTC** host/viewer (`viewer.usb_client()`) plus claim **resume tokens** that survive a reconnect. Persistent ACL (default deny, mode 0600) with host-side prompt dialog, abuse **rate-limit / lockout**, and tamper-evident audit integration. Five driving surfaces: AnyDesk-style **GUI panel** (share + ACL allow/block + local/remote use), `AC_usb_*` executor commands (JSON / socket / scheduler), **REST** `/usb/...`, first-class **MCP** `ac_usb_*` tools, and the Python API. Default off — opt-in via `enable_usb_passthrough(True)` or `JE_AUTOCONTROL_USB_PASSTHROUGH=1`; default-on still pending Phase 2e external security sign-off + real-hardware verification.
-- **Observability (Prometheus + OpenTelemetry)** — stdlib-only `Counter` / `Gauge` / `Histogram` registry with a tiny built-in HTTP exporter on `/metrics`, plus an OpenTelemetry-compatible tracer that upgrades to real OTel spans when the SDK is installed. The executor and agent loop emit `autocontrol_action_calls_total{action,outcome}`, `autocontrol_action_duration_seconds`, and `autocontrol_agent_steps_total{tool,outcome}` automatically — drop the URL into a Prometheus scrape config and you have a Grafana dashboard with zero per-script wiring.
-
----
-
-## Architecture
-
-The runtime is layered: **client surfaces** (CLI, GUI, MCP/REST/socket
-servers) sit on top of the **headless API** (`wrapper/` + `utils/`),
-which resolves to a **per-OS backend** chosen at import time by
-`wrapper/platform_wrapper.py`. The package façade
-(`je_auto_control/__init__.py`) re-exports every public name so users
-need only `import je_auto_control` regardless of which surface or
-backend they hit.
-
-```mermaid
-flowchart LR
-    subgraph Clients["Client Surfaces"]
-        direction TB
-        Claude[["Claude Desktop /<br/>Claude Code"]]
-        APIUser[["Custom Anthropic /<br/>OpenAI tool loops"]]
-        HTTPClient[["HTTP / SSE clients"]]
-        TCPClient[["Socket / REST clients"]]
-        Browser[["Browser<br/>(/dashboard · /docs)"]]
-        GUIUser[["PySide6 GUI"]]
-        CLIUser[["python -m<br/>je_auto_control[.cli]"]]
-        Library[["Library users<br/>(import je_auto_control)"]]
-    end
-
-    subgraph Transports["Transports & Servers"]
-        direction TB
-        Stdio["MCP stdio<br/>JSON-RPC 2.0"]
-        HTTPMCP["MCP HTTP /<br/>SSE + auth + TLS"]
-        REST["REST server :9939<br/>bearer auth · rate-limit ·<br/>OpenAPI · /metrics · /dashboard"]
-        Socket["Socket server<br/>:9938"]
-        WebRTC["WebRTC sessions<br/>(remote desktop ·<br/>files · audio · USB)"]
-    end
-
-    subgraph MCP["mcp_server/"]
-        direction TB
-        Dispatcher["MCPServer<br/>(JSON-RPC dispatcher)"]
-        Tools["tools/<br/>~90 ac_* + aliases"]
-        Resources["resources/<br/>files · history ·<br/>commands · screen-live"]
-        Prompts["prompts/<br/>built-in templates"]
-        Context["context · audit ·<br/>rate-limit · log-bridge"]
-        FakeBE["fake_backend<br/>(CI smoke)"]
-    end
-
-    subgraph Core["Headless Core (wrapper/ + utils/)"]
-        direction TB
-        Wrapper["wrapper/<br/>mouse · keyboard · screen ·<br/>image · record · window"]
-        Executor["executor/<br/>AC_* JSON action engine"]
-        Vision["vision/ · ocr/ ·<br/>accessibility/"]
-        Recorder["scheduler/ · triggers/ ·<br/>hotkey/ · plugin_loader/<br/>run_history/"]
-        IOUtils["clipboard/ · cv2_utils/ ·<br/>shell_process/ · json/"]
-    end
-
-    subgraph Ops["Operations Layer (utils/)"]
-        direction TB
-        Admin["admin/<br/>multi-host poll +<br/>broadcast"]
-        Audit["remote_desktop/<br/>audit_log<br/>(SHA-256 chain)"]
-        Inspector["remote_desktop/<br/>webrtc_inspector"]
-        Diag["diagnostics/<br/>self-test"]
-        ConfigB["config_bundle/<br/>export/import"]
-    end
-
-    subgraph USB["USB"]
-        direction TB
-        UsbEnum["usb/<br/>list + hotplug events"]
-        UsbPass["usb/passthrough/<br/>session · client · ACL(HMAC) ·<br/>libusb · WinUSB · IOKit ·<br/>loopback · webrtc channel · commands"]
-    end
-
-    subgraph Remote["Remote Desktop (utils/remote_desktop/)"]
-        direction TB
-        RDHost["host · webrtc_host ·<br/>signaling · multi_viewer"]
-        RDFiles["webrtc_files · file_sync ·<br/>clipboard_sync · audio"]
-        RDTrust["trust_list · fingerprint ·<br/>turn_config · lan_discovery"]
-    end
-
-    subgraph Backends["Per-OS Backends"]
-        direction TB
-        Win["windows/<br/>Win32 ctypes"]
-        Mac["osx/<br/>pyobjc · Quartz"]
-        X11["linux_with_x11/<br/>python-Xlib"]
-    end
-
-    Claude --> Stdio
-    APIUser --> Stdio
-    HTTPClient --> HTTPMCP
-    TCPClient --> Socket
-    TCPClient --> REST
-    Browser --> REST
-
-    Stdio --> Dispatcher
-    HTTPMCP --> Dispatcher
-    Dispatcher --> Tools
-    Dispatcher --> Resources
-    Dispatcher --> Prompts
-    Dispatcher -.- Context
-    Tools -.optional.-> FakeBE
-
-    Tools --> Wrapper
-    Tools --> Executor
-    Tools --> Vision
-    Tools --> Recorder
-    Tools --> IOUtils
-    Resources --> Recorder
-    Resources --> Wrapper
-
-    REST --> Executor
-    REST --> Ops
-    REST --> USB
-    Socket --> Executor
-    WebRTC --> Remote
-    WebRTC --> UsbPass
-
-    GUIUser --> Wrapper
-    GUIUser --> Recorder
-    GUIUser --> Ops
-    GUIUser --> USB
-    GUIUser --> Remote
-    CLIUser --> Executor
-    Library --> Wrapper
-    Library --> Executor
-    Library --> Ops
-
-    Admin --> REST
-    Inspector -.- WebRTC
-    Audit -.- REST
-    Audit -.- USB
-    UsbPass --> Backends
-
-    Wrapper --> Backends
-    Vision -.- Wrapper
-    Recorder -.- Executor
-```
-
-```
-je_auto_control/
-├── wrapper/                    # Platform-agnostic API layer
-│   ├── platform_wrapper.py     # Auto-detects OS and loads the correct backend
-│   ├── auto_control_mouse.py   # Mouse operations
-│   ├── auto_control_keyboard.py# Keyboard operations
-│   ├── auto_control_image.py   # Image recognition (OpenCV template matching)
-│   ├── auto_control_screen.py  # Screenshot, screen size, pixel color
-│   ├── auto_control_window.py  # Cross-platform window manager facade
-│   └── auto_control_record.py  # Action recording/playback
-├── windows/                    # Windows-specific backend (Win32 API / ctypes)
-├── osx/                        # macOS-specific backend (pyobjc / Quartz)
-├── linux_with_x11/             # Linux-specific backend (python-Xlib)
-├── gui/                        # PySide6 GUI application
-└── utils/
-    ├── mcp_server/             # MCP server (stdio + HTTP/SSE) — server, tools/, resources, prompts, audit, rate_limit, fake_backend, plugin_watcher
-    ├── executor/               # JSON action executor engine
-    ├── callback/               # Callback function executor
-    ├── cv2_utils/              # OpenCV screenshot, template matching, video recording
-    ├── accessibility/          # UIA (Windows) / AX (macOS) element finder
-    ├── vision/                 # VLM-based locator (Anthropic / OpenAI backends)
-    ├── ocr/                    # Tesseract-backed text locator
-    ├── clipboard/              # Cross-platform clipboard (text + image)
-    ├── llm/                    # Plain-language → AC_* action planner
-    ├── scheduler/              # Interval + cron scheduler
-    ├── hotkey/                 # Global hotkey daemon
-    ├── triggers/               # Image/window/pixel/file triggers
-    ├── run_history/            # SQLite run log + error-screenshot artifacts
-    ├── rest_api/               # Stdlib HTTP/REST server — auth · audit · rate-limit · OpenAPI · /metrics · dashboard · Swagger UI
-    ├── admin/                  # Multi-host AdminConsoleClient (poll + broadcast)
-    ├── diagnostics/            # System self-test runner + CLI
-    ├── config_bundle/          # Single-file user-config export / import
-    ├── usb/                    # Cross-platform enumeration, hotplug events, passthrough/{protocol, session, viewer client, loopback, webrtc channel, ACL+HMAC, descriptor, key providers, commands, libusb / WinUSB / IOKit}
-    ├── remote_desktop/         # WebRTC host + viewer, signalling, multi-viewer, file/clipboard/audio sync, audit log (hash chain), trust list, TURN config, mDNS discovery, WebRTC stats inspector
-    ├── plugin_loader/          # Dynamic AC_* plugin discovery
-    ├── socket_server/          # TCP socket server for remote automation
-    ├── shell_process/          # Shell command manager
-    ├── generate_report/        # HTML / JSON / XML report generators
-    ├── test_record/            # Test action recording
-    ├── script_vars/            # Script variable interpolation
-    ├── watcher/                # Mouse / pixel / log watchers (Live HUD)
-    ├── recording_edit/         # Trim, filter, re-scale recorded actions
-    ├── json/                   # JSON action file read/write
-    ├── project/                # Project scaffolding & templates
-    ├── package_manager/        # Dynamic package loading
-    ├── logging/                # Logging
-    └── exception/              # Custom exception classes
-```
-
-The `platform_wrapper.py` module automatically detects the current operating system and imports the corresponding backend, so all wrapper functions work identically regardless of platform.
+- **One API, six platforms.** `wrapper/platform_wrapper.py` picks the backend at import
+  time; your script does not change between Windows, macOS, X11, and Wayland.
+- **Scriptable without Python.** 767 `AC_*` commands cover the whole feature set, so a
+  JSON file can do anything the library can — including loops, branches, try/catch,
+  macros, and variables.
+- **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
+  optional extra that wraps the same headless core.
+- **Locate things four ways.** Template matching, OCR, the accessibility tree, and a
+  vision-language model — composable through anchor locators and self-healing fallbacks.
+- **Light dependency floor.** The REST server, JSON Schema validator, JWT, TOTP,
+  WebSocket framing, ACME client, USB/IP protocol, and Prometheus metrics are all
+  standard-library implementations. Heavy things are opt-in extras.
 
 ---
 
 ## Installation
 
-### Basic Installation
-
 ```bash
-pip install je_auto_control
+pip install je_auto_control            # core
+pip install je_auto_control[gui]       # + PySide6 desktop app
 ```
 
-### With GUI Support (PySide6)
+Optional extras, installed only when you need them:
 
-```bash
-pip install je_auto_control[gui]
-```
+| Extra | Enables |
+|---|---|
+| `gui` | PySide6 desktop application (48 tabs) |
+| `webrtc` | WebRTC remote desktop, USB passthrough (`aiortc`, `av`) |
+| `signaling` | Standalone signaling / rendezvous server (`fastapi`, `uvicorn`) |
+| `discovery` | mDNS / Zeroconf LAN host discovery |
+| `pdf` / `office` | PDF and Excel / Word / PowerPoint reading |
+| `fuzzy` / `locale` | `rapidfuzz` matching, `babel` locale parsing |
+| `s3` / `audio` | S3 artifact store, system volume control |
 
-### Linux Prerequisites
-
-On Linux, install the following system packages before installing:
+**Requirements:** Python ≥ 3.10. On Linux, install build prerequisites first:
 
 ```bash
 sudo apt-get install cmake libssl-dev
 ```
 
----
-
-## Requirements
-
-- **Python** >= 3.10
-- **pip** >= 19.3
-
-### Dependencies
-
-| Package | Purpose |
-|---|---|
-| `je_open_cv` | Image recognition (OpenCV template matching) |
-| `pillow` | Screenshot capture |
-| `mss` | Fast multi-monitor screenshot |
-| `pyobjc` | macOS backend (auto-installed on macOS) |
-| `python-Xlib` | Linux X11 backend (auto-installed on Linux) |
-| `PySide6` | GUI application (optional, install with `[gui]`) |
-| `qt-material` | GUI theme (optional, install with `[gui]`) |
-| `uiautomation` | Windows accessibility backend (optional, loaded on demand) |
-| `pytesseract` + Tesseract | OCR engine (optional, loaded on demand) |
-| `anthropic` | VLM locator — Anthropic backend (optional, loaded on demand) |
-| `openai` | VLM locator — OpenAI backend (optional, loaded on demand) |
-
-See [Third_Party_License.md](Third_Party_License.md) for a full list of
-third-party components and their licenses.
+OCR, VLM, and LLM backends (`pytesseract`, `easyocr`, `paddleocr`, `anthropic`,
+`openai`) are loaded on demand — install whichever you actually use.
 
 ---
 
-## Quick Start
+## 60-second quick start
 
-Looking for copy-pasteable end-to-end scripts instead of API snippets?
-The [`examples/`](examples/) directory has 17 self-contained programs
-covering screenshot + click, OCR, the headless scheduler, remote
-desktop, the agent loop, observability, recording / replay, runtime
-variables, window management, hotkeys, image triggers, HTML reports,
-the MCP stdio bridge, the REST API, the secrets vault, and plugin
-loading.
-
-### Mouse Control
-
-```python
-import je_auto_control
-
-# Get current mouse position
-x, y = je_auto_control.get_mouse_position()
-print(f"Mouse at: ({x}, {y})")
-
-# Move mouse to coordinates
-je_auto_control.set_mouse_position(500, 300)
-
-# Left click at current position (use key name)
-je_auto_control.click_mouse("mouse_left")
-
-# Right click at specific coordinates
-je_auto_control.click_mouse("mouse_right", x=800, y=400)
-
-# Scroll down
-je_auto_control.mouse_scroll(scroll_value=5)
-```
-
-### Keyboard Control
-
-```python
-import je_auto_control
-
-# Press and release a single key
-je_auto_control.type_keyboard("a")
-
-# Type a whole string character by character
-je_auto_control.write("Hello World")
-
-# Hotkey combination (e.g., Ctrl+C)
-je_auto_control.hotkey(["ctrl_l", "c"])
-
-# Check if a key is currently pressed
-is_pressed = je_auto_control.check_key_is_press("shift_l")
-```
-
-### Image Recognition
-
-```python
-import je_auto_control
-
-# Find all occurrences of an image on screen
-positions = je_auto_control.locate_all_image("button.png", detect_threshold=0.9)
-# Returns: [[x1, y1, x2, y2], ...]
-
-# Find a single image and get its center coordinates
-cx, cy = je_auto_control.locate_image_center("icon.png", detect_threshold=0.85)
-print(f"Found at: ({cx}, {cy})")
-
-# Find an image and automatically click it
-je_auto_control.locate_and_click("submit_button.png", mouse_keycode="mouse_left")
-```
-
-### Accessibility Element Finder
-
-Query the OS accessibility tree to locate controls by name, role, or app.
-Works on Windows (UIA, via `uiautomation`) and macOS (AX).
-
-```python
-import je_auto_control
-
-# List all visible buttons in the Calculator app
-elements = je_auto_control.list_accessibility_elements(app_name="Calculator")
-
-# Find a specific element
-ok = je_auto_control.find_accessibility_element(name="OK", role="Button")
-if ok is not None:
-    print(ok.bounds, ok.center)
-
-# Click it directly
-je_auto_control.click_accessibility_element(name="OK", app_name="Calculator")
-```
-
-Raises `AccessibilityNotAvailableError` if no accessibility backend is
-installed for the current platform.
-
-### AI Element Locator (VLM)
-
-When template matching and accessibility both fail, describe the element
-in plain language and let a vision-language model find its coordinates.
-
-```python
-import je_auto_control
-
-# Uses Anthropic by default if ANTHROPIC_API_KEY is set, else OpenAI.
-x, y = je_auto_control.locate_by_description("the green Submit button")
-
-# Or click it in one shot
-je_auto_control.click_by_description(
-    "the cookie-banner 'Accept all' button",
-    screen_region=[0, 800, 1920, 1080],   # optional crop
-)
-```
-
-Configuration (environment variables only — keys are never persisted or
-logged):
-
-| Variable | Effect |
-|---|---|
-| `ANTHROPIC_API_KEY` | Enables the Anthropic backend |
-| `OPENAI_API_KEY` | Enables the OpenAI backend |
-| `AUTOCONTROL_VLM_BACKEND` | `anthropic` or `openai` to force a backend |
-| `AUTOCONTROL_VLM_MODEL` | Override the default model (e.g. `claude-opus-4-7`, `gpt-4o-mini`) |
-
-Raises `VLMNotAvailableError` if neither SDK is installed or no API key
-is set.
-
-### OCR (Text on Screen)
+**1. As a Python library**
 
 ```python
 import je_auto_control as ac
 
-# Locate all matches of a piece of text
-matches = ac.find_text_matches("Submit")
+ac.set_mouse_position(500, 300)
+ac.click_mouse("mouse_left")
+ac.write("Hello World")
+ac.hotkey(["ctrl_l", "s"])
 
-# Center of the first match, or None
-cx, cy = ac.locate_text_center("Submit")
-
-# Click text in one call
-ac.click_text("Submit")
-
-# Block until text appears (or timeout)
-ac.wait_for_text("Loading complete", timeout=15.0)
+x, y = ac.locate_image_center("save_button.png", detect_threshold=0.9)
+ac.click_text("Submit")                       # OCR
+ac.click_accessibility_element(name="OK")     # accessibility tree
+ac.click_by_description("the green Submit button")   # vision model
+ac.screenshot("shot.png", screen_region=[0, 0, 800, 600])
 ```
 
-Backend selection — set ``AUTOCONTROL_OCR_BACKEND=tesseract|easyocr|paddleocr``
-or pass ``backend=`` per call; otherwise auto-detection picks the first
-one that imports:
-
-```python
-ac.find_text_matches("登入", lang="chi_tra", backend="easyocr")
-ac.click_text("Sign in", backend="tesseract")
-```
-
-If Tesseract is not on `PATH`, point at it explicitly:
-
-```python
-ac.set_tesseract_cmd(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
-```
-
-Backend install paths and the canonical lang-code table are in
-[docs/source/Eng/doc/ocr_backends/ocr_backends_doc.rst](docs/source/Eng/doc/ocr_backends/ocr_backends_doc.rst)
-(or the [繁體中文](docs/source/Zh/doc/ocr_backends/ocr_backends_doc.rst)
-version).
-
-Dump every recognised text record in a region (or full screen), or
-search by regex when the text varies:
-
-```python
-import je_auto_control as ac
-
-# Every hit in a region as TextMatch records (text, bounding box, confidence)
-for match in ac.read_text_in_region(region=[0, 0, 800, 600]):
-    print(match.text, match.center, match.confidence)
-
-# Regex — accepts a pattern string or a compiled re.Pattern
-for match in ac.find_text_regex(r"Order#\d+"):
-    print(match.text, match.center)
-```
-
-GUI: **OCR Reader** tab.
-
-### LLM Action Planner
-
-Translate plain-language descriptions into validated `AC_*` action lists
-using an LLM (Anthropic Claude by default). Output is leniently parsed
-(strips code fences, extracts the first JSON array from prose) and then
-validated by the same schema the executor uses, so the result can be
-piped straight into `execute_action`:
-
-```python
-import je_auto_control as ac
-from je_auto_control.utils.executor.action_executor import executor
-
-actions = ac.plan_actions(
-    "click the Submit button, then type 'done' and save",
-    known_commands=executor.known_commands(),
-)
-executor.execute_action(actions)
-
-# Or in a single call:
-ac.run_from_description("open Notepad and type hello", executor=executor)
-```
-
-| Variable | Effect |
-|---|---|
-| `ANTHROPIC_API_KEY` | Enables the Anthropic backend |
-| `AUTOCONTROL_LLM_BACKEND` | `anthropic` to force a backend |
-| `AUTOCONTROL_LLM_MODEL` | Override the default model (e.g. `claude-opus-4-7`) |
-
-GUI: **LLM Planner** tab — description box and action-list preview;
-*Plan* (`QThread`-backed) and *Run plan* live in the window's Actions menu.
-
-### Runtime Variables & Control Flow
-
-The executor resolves `${var}` placeholders **per command call** rather
-than pre-flattening, so nested `body` / `then` / `else` lists keep their
-placeholders and re-bind on every iteration. Combined with new mutation
-commands, scripts can drive themselves from data without Python glue:
+**2. As a JSON action file** — `flow.json`
 
 ```json
 [
-    ["AC_set_var", {"name": "items", "value": ["alpha", "beta"]}],
-    ["AC_set_var", {"name": "i", "value": 0}],
-    ["AC_for_each", {
-        "items": "${items}", "as": "name",
-        "body": [
-            ["AC_inc_var", {"name": "i"}],
-            ["AC_if_var", {
-                "name": "i", "op": "ge", "value": 2,
-                "then": [["AC_break"]], "else": []
-            }]
-        ]
-    }]
+    ["AC_set_var", {"name": "user", "value": "alice"}],
+    ["AC_locate_and_click", {"image": "login.png", "mouse_keycode": "mouse_left"}],
+    ["AC_write", {"write_string": "${user}"}],
+    ["AC_retry", {"max_attempts": 3, "body": [
+        ["AC_wait_text", {"target": "Welcome", "timeout": 10}]
+    ]}],
+    ["AC_assert_text", {"text": "Welcome"}],
+    ["AC_generate_html_report", {"html_name": "report"}]
 ]
 ```
 
-`AC_if_var` operators: `eq`, `ne`, `lt`, `le`, `gt`, `ge`, `contains`,
-`startswith`, `endswith`. GUI: **Variables** tab — live view of
-`executor.variables`; single-set, JSON seed, and clear-all run from the
-window's Actions menu.
+```bash
+je_auto_control run flow.json --var user=bob
+je_auto_control run flow.json --dry-run     # list the steps without touching the mouse
+```
 
-### Remote Desktop
+**3. As a desktop app**
 
-Stream this machine's screen and accept remote input, **or** view and
-control another machine. The wire format is a length-prefixed framing
-on raw TCP (no extra deps), starting with an HMAC-SHA256
-challenge / response handshake; viewers that fail auth are dropped
-before they can see a frame. JPEG frames are produced at the configured
-FPS / quality and broadcast to authenticated viewers via a shared
-latest-frame slot, so a slow viewer drops frames instead of blocking
-the rest. Viewer input is JSON, validated against an allowlist, and
-applied through the existing wrappers.
+```bash
+pip install je_auto_control[gui]
+python -m je_auto_control          # or: je_auto_control.start_autocontrol_gui()
+```
+
+Record a flow, edit it in the visual Script Builder, and save it as the same JSON
+format the CLI runs.
+
+---
+
+## Capability overview
+
+Every row works headlessly. "GUI tab" is where the same feature surfaces in the
+desktop app; tab commands live in the window's **Actions** menu.
+
+| Capability | Python API | `AC_*` command | GUI tab |
+|---|---|---|---|
+| Mouse | `click_mouse`, `set_mouse_position`, `mouse_scroll` | `AC_click_mouse` | Auto Click |
+| Keyboard | `write`, `hotkey`, `type_keyboard` | `AC_write`, `AC_hotkey` | Auto Click |
+| Screen & pixels | `screenshot`, `screen_size`, `get_pixel` | `AC_screenshot` | Screenshot |
+| Image matching | `locate_image_center`, `locate_and_click` | `AC_locate_and_click` | Image Detect |
+| OCR text | `click_text`, `wait_for_text`, `read_text_in_region` | `AC_click_text`, `AC_wait_text` | OCR Reader |
+| Accessibility tree | `find_accessibility_element`, `click_accessibility_element` | `AC_a11y_find`, `AC_a11y_click` | Accessibility |
+| Vision-model locator | `locate_by_description`, `click_by_description` | `AC_vlm_locate`, `AC_vlm_click` | VLM |
+| Anchor locator | — | `AC_anchor_click`, `AC_anchor_locate` | — |
+| Self-healing locators | `self_heal_click`, `self_heal_locate` | `AC_self_heal_click` | Self-Healing |
+| Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
+| Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
+| Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
+| JSON scripting | `execute_action`, `execute_files` | all 767 commands | Script, Script Builder |
+| Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
+| Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
+| Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
+| Test suites | `run_suite` | `AC_run_suite` | Test Suites |
+| Scheduler (interval + cron) | `default_scheduler` | — | Scheduler |
+| Global hotkeys | `default_hotkey_daemon` | — | Hotkeys |
+| Event triggers | `default_trigger_engine` | `AC_email_trigger_add` | Triggers, Webhooks, Email |
+| Window management *(Windows)* | `list_windows`, `focus_window` | `AC_focus_window`, `AC_snap_window` | Window Manager |
+| Clipboard (text + image) | `get_clipboard`, `set_clipboard`, `get_clipboard_image`, `set_clipboard_image` | `AC_clipboard_get`, `AC_clipboard_set`, `AC_clipboard_get_image`, `AC_clipboard_set_image` | — |
+| Remote desktop | `RemoteDesktopHost`, `RemoteDesktopViewer` | `AC_start_remote_host`, `AC_remote_connect` | Remote Desktop |
+| USB enumeration & passthrough | `list_usb_devices`, `enable_usb_passthrough` | `AC_usb_*` (16 commands) | USB Devices, USB Share |
+| Secrets vault | `default_secret_manager` | `AC_secret_set` + `${secrets.NAME}` | Secrets |
+| Reports (HTML / JSON / XML) | `generate_html_report` | `AC_generate_html_report` | Report |
+| Run history | — | — | Run History |
+| Metrics & tracing | `default_metric_registry`, `render_metrics_text` | — | — |
+| Diagnostics | `run_diagnostics` | `AC_diagnose` | Diagnostics |
+| Test-code generation | `generate_code` | — | — |
+
+Beyond this table, `utils/` holds 308 headless packages covering assertions, resilience,
+data quality, i18n auditing, redaction, governance, observability, and more. The full
+per-module map is in **[architecture_explore.md](architecture_explore.md)**.
+
+---
+
+## Command-line interface
+
+```bash
+je_auto_control run script.json [--var name=value] [--dry-run]
+je_auto_control validate script.json          # alias: lint
+je_auto_control fmt script.json [--check]
+je_auto_control list-commands [--filter mouse] [--json]
+je_auto_control record out.json [--duration 5]
+je_auto_control codegen script.json --target pytest -o test_flow.py
+je_auto_control failure-bundle failure.zip --error "login timed out"
+je_auto_control list-jobs
+je_auto_control start-server --port 9938      # TCP socket server
+je_auto_control start-rest   --port 9939      # REST API
+je_auto_control version
+```
+
+`--var name=value` is parsed as JSON when possible (`count=10` becomes an int),
+otherwise kept as a string. The legacy `python -m je_auto_control -e file.json`
+entry point still works.
+
+---
+
+## Servers and integrations
+
+| Surface | Start it with | Notes |
+|---|---|---|
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 670 tools for Claude Desktop / Claude Code / custom tool loops. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
+| **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
+| **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |
+| **Language server** | `python -m autocontrol_lsp.server` | Completion and diagnostics for `AC_*` action JSON, generated from the live command table. |
+| **Remote desktop** | `RemoteDesktopHost` / GUI | TCP, WebSocket, or WebRTC; TOTP, trust list, TURN config, file/clipboard/audio sync. |
+
+All servers bind to `127.0.0.1` unless you opt in explicitly.
+
+### How the remote-desktop wire protocol works
+
+Worth knowing before you expose a host, and described nowhere else in the
+docs. The default transport is length-prefixed framing over raw TCP — no extra
+dependencies — and it opens with an **HMAC-SHA256 challenge/response
+handshake**: a viewer that fails auth is dropped before it is sent a single
+frame. JPEG frames are encoded at the configured FPS and quality and handed to
+authenticated viewers through a shared *latest-frame slot*, so a slow viewer
+drops frames instead of stalling the rest. Viewer input arrives as JSON and is
+**validated against an allow-list** of actions before being applied through the
+ordinary input wrappers, so a viewer cannot invent new operations.
 
 ```python
 # Be remoted — start a host and hand the token + port to whoever views you
 from je_auto_control import RemoteDesktopHost
 host = RemoteDesktopHost(token="hunter2", bind="127.0.0.1",
-                          port=0, fps=10, quality=70)
+                         port=0, fps=10, quality=70)
 host.start()
 print("listening on", host.port, "viewers:", host.connected_clients)
 ```
@@ -606,866 +219,87 @@ print("listening on", host.port, "viewers:", host.connected_clients)
 # Control another machine — connect a viewer and send input
 from je_auto_control import RemoteDesktopViewer
 viewer = RemoteDesktopViewer(host="10.0.0.5", port=51234, token="hunter2",
-                              on_frame=lambda jpeg: ...)
+                             on_frame=lambda jpeg: ...)
 viewer.connect()
 viewer.send_input({"action": "mouse_move", "x": 100, "y": 200})
-viewer.send_input({"action": "type", "text": "hello"})
 viewer.disconnect()
 ```
 
-GUI: **Remote Desktop** tab opens to the **Quick Connect** screen
-(AnyDesk-style) by default — huge Host ID on one side, a single input
-that accepts `host:port`, `ws://`, `wss://`, or a 9-digit Host ID on
-the other, with *Connect* and *Start hosting* as the two primary
-buttons. Recent connections are remembered across sessions. Advanced
-per-transport sub-tabs (legacy TCP / WS host + viewer, WebRTC host +
-viewer with manual SDP / custom codecs / TLS pinning) stay one click
-away. WebRTC sub-tabs lazy-load so a stock install without the
-`[webrtc]` extra still opens the tab.
-
-> ⚠️ Anyone with the host:port and token gets full mouse / keyboard
-> control of the host machine. Default bind is `127.0.0.1`; expose
-> externally only via SSH tunnel or TLS front-end. The token is the
-> only line of defence — treat it like a password.
-
-**Quick Connect headless API.** The transport coordinator that backs
-the GUI input box is also exported, so scripts can dispatch the same
-way:
+Narrow who may connect at all with an IP allow-list (CIDR ranges or exact
+addresses); peers outside it are rejected during the handshake:
 
 ```python
-from je_auto_control import parse_remote_desktop_target
-parse_remote_desktop_target("192.168.1.10:5555")
-# ConnectTarget(kind='tcp', host='192.168.1.10', port=5555, ...)
-parse_remote_desktop_target("ws://hub:8765/desk")
-# ConnectTarget(kind='ws', host='hub', port=8765, path='/desk')
-parse_remote_desktop_target("123-456-789")
-# ConnectTarget(kind='webrtc_id', host_id='123456789')
+RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
 ```
-
-**Connection approval + view-only mode.** Optional callback gates
-every incoming session AnyDesk-style. Returning `"view_only"` admits
-the viewer but drops their `INPUT` messages; returning a falsy value
-(or raising) sends `AUTH_FAIL` "rejected by host":
-
-```python
-from je_auto_control import RemoteDesktopHost, PendingViewer
-
-def gate(p: PendingViewer) -> str:
-    if p.address[0].startswith("10."):
-        return "view_only"
-    return "full"  # or True
-
-host = RemoteDesktopHost(token="tok", on_pending_viewer=gate)
-```
-
-**IP allowlist (CIDR + exact IPs).** Reject peers outside the
-configured ranges *before* TLS / auth runs, so attackers can't probe
-further:
-
-```python
-host = RemoteDesktopHost(
-    token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"],
-)
-```
-
-**One-time share codes** — extra tokens that self-destruct on first
-successful auth, ideal for client-support workflows:
-
-```python
-host = RemoteDesktopHost(token="tok", single_use_tokens=["abc123"])
-host.add_single_use_token("9k4ndx")    # rotate at runtime
-host.revoke_single_use_token("abc123") # cancel before it's used
-```
-
-**TOTP 2FA (RFC 6238, stdlib only).** Layer a 6-digit OTP on top of
-the token; host accepts ±1 step of clock drift:
-
-```python
-from je_auto_control.utils.remote_desktop.totp import (
-    generate_secret, generate_code, provisioning_uri,
-)
-secret = generate_secret()
-print(provisioning_uri(secret, account="alice"))  # otpauth:// URI for QR
-
-host = RemoteDesktopHost(token="tok", totp_secret=secret)
-viewer = RemoteDesktopViewer(
-    host=..., token="tok", totp_code=generate_code(secret),
-)
-```
-
-**Multi-monitor selection.** Capture one specific monitor instead of
-the combined virtual desktop:
-
-```python
-from je_auto_control import list_host_monitors, RemoteDesktopHost
-print(list_host_monitors())
-# [{'index': 0, 'is_combined': True, ...},
-#  {'index': 1, 'left': 0,   'top': 0, ...},
-#  {'index': 2, 'left': 1920, ...}]
-host = RemoteDesktopHost(token="tok", monitor_index=1)
-```
-
-**Remote cursor overlay.** Host broadcasts cursor position at 30 Hz
-(deduped on still desktops); the viewer's popup window draws an arrow
-on top of the JPEG stream so you can see exactly where the host's
-pointer is. Disable via `enable_cursor_broadcast=False`.
-
-**Multi-viewer collaborative cursors + chat.** Two new message types
-(`CHAT` and `CURSOR` with `viewer_id`). Use a `MultiViewerHost` to
-relay one viewer's pointer to the others; pair with the chat channel
-for ad-hoc text between operators:
-
-```python
-host = RemoteDesktopHost(
-    token="tok", on_chat=lambda sender, text: print(sender, ":", text),
-)
-host.broadcast_chat("session starts in 30s")
-host.broadcast_viewer_cursor("alice", 200, 300)
-
-viewer = RemoteDesktopViewer(
-    host=..., on_chat=lambda s, t: ...,
-    on_viewer_cursor=lambda vid, x, y: ...,
-)
-viewer.send_chat("ack")
-```
-
-**Relative mouse mode (FPS / CAD).** New input action that sends
-deltas instead of absolute coordinates:
-
-```python
-viewer.send_input({"action": "mouse_move_relative", "dx": 5, "dy": -3})
-```
-
-**Motion-aware capture.** The capture loop now hashes each encoded
-JPEG; identical frames are skipped, so a static desktop produces
-~zero bandwidth. New viewers are seeded with the latest frame on auth
-so they never see a black popup.
-
-**Live stats** (FPS / kbps / totals over a 3-second window):
-
-```python
-viewer.stats()
-# {'fps': 24.3, 'kbps': 4801.2, 'frames': 720.0, 'bytes': 1.8e7, 'uptime': 30.2}
-```
-
-**JPEG sequence recorder (no PyAV needed).** TCP-path session
-capture: each frame written to disk plus `manifest.json` so it can
-be replayed at original cadence:
-
-```python
-from je_auto_control.utils.remote_desktop.jpeg_recorder import (
-    JpegSequenceRecorder,
-)
-rec = JpegSequenceRecorder("~/recordings/2026-05-23")
-rec.start()
-viewer = RemoteDesktopViewer(host=..., on_frame=rec.record_frame)
-# ... session ...
-rec.stop()  # writes manifest.json next to the .jpg files
-```
-
-**TCP relay (WebRTC fallback).** When P2P fails (strict NAT, mobile
-CGNAT, hotel Wi-Fi), both peers connect outbound to a relay and
-exchange a shared 32-byte session ID; the relay pipes bytes between
-them. Same module ships an `encode_handshake(role, session_id)`
-helper for clients:
-
-```python
-from je_auto_control.utils.remote_desktop.relay import RelayServer
-relay = RelayServer(bind="0.0.0.0", port=9000)  # NOSONAR  # public relay
-relay.start()
-```
-
-**Service installer (unattended host).** `python -m
-je_auto_control.utils.remote_desktop.host_service ...`
-exposes `configure` / `init` / `run` plus per-platform installers:
-`install-windows-service` / `uninstall-windows-service` (pywin32),
-`generate-launchd` / `uninstall-launchd`, `generate-systemd` /
-`uninstall-systemd`.
-
-**Encrypted transports + alternate protocols.** Pass an `ssl_context`
-to either `RemoteDesktopHost` or `RemoteDesktopViewer` to wrap every
-connection in TLS. For firewall-friendly access, use the in-tree
-WebSocket variants (no extra deps) — same protocol, RFC 6455 framing,
-and `wss://` if you also pass `ssl_context`:
-
-```python
-from je_auto_control import (
-    WebSocketDesktopHost, WebSocketDesktopViewer,
-)
-host = WebSocketDesktopHost(token="hunter2", ssl_context=server_ctx)
-viewer = WebSocketDesktopViewer(
-    host="example.com", port=443, token="hunter2",
-    ssl_context=client_ctx, expected_host_id="123456789",
-)
-```
-
-**Persistent Host ID.** Every host owns a stable 9-digit numeric ID
-(persisted at `~/.je_auto_control/remote_host_id`), announced in
-`AUTH_OK` and verifiable via the viewer's `expected_host_id`:
-
-```python
-print(host.host_id)            # e.g. "123456789"
-viewer = RemoteDesktopViewer(
-    host=..., port=..., token=...,
-    expected_host_id="123456789",   # AuthenticationError on mismatch
-)
-```
-
-**Audio streaming (host → viewer).** Optional `sounddevice` dep; opt
-in with an `AudioCaptureConfig` on the host, attach an `AudioPlayer`
-(or your own callback) on the viewer:
-
-```python
-from je_auto_control.utils.remote_desktop import AudioCaptureConfig
-host = RemoteDesktopHost(
-    token="tok",
-    audio_config=AudioCaptureConfig(enabled=True),    # default mic
-)
-# Or pick a loopback / monitor device:
-# audio_config=AudioCaptureConfig(enabled=True, device=12)
-
-from je_auto_control.utils.remote_desktop import AudioPlayer
-player = AudioPlayer(); player.start()
-viewer = RemoteDesktopViewer(host=..., on_audio=player.play)
-```
-
-**Clipboard sync (text + image, bidirectional).** Explicit per-call —
-no auto-poll loops. Image clipboard works on Windows (CF_DIB via
-ctypes) and Linux (`xclip -t image/png`); macOS get is supported via
-Pillow ImageGrab, set requires PyObjC.
-
-```python
-viewer.send_clipboard_text("hello")
-viewer.send_clipboard_image(open("logo.png", "rb").read())
-host.broadcast_clipboard_text("greetings")
-```
-
-**File transfer with progress.** Bidirectional, chunked, arbitrary
-destination path, no size cap; the GUI viewer also accepts drag-drop:
-
-```python
-viewer.send_file(
-    "local.bin", "/tmp/uploaded.bin",
-    on_progress=lambda tid, done, total: print(done, total),
-)
-host.send_file_to_viewers("local.bin", "/tmp/from_host.bin")
-```
-
-> ⚠️ Path is unrestricted and there is no aggregate size limit.
-> Anyone with the token can write any file to any location and can
-> fill the disk — keep "trusted token holders == trusted users" in
-> mind, or wrap with your own `FileReceiver` subclass that vets
-> destination paths.
-
-### Clipboard
-
-```python
-import je_auto_control as ac
-ac.set_clipboard("hello")
-text = ac.get_clipboard()
-```
-
-Backends: Windows (Win32 via `ctypes`), macOS (`pbcopy`/`pbpaste`),
-Linux (`xclip` or `xsel`).
-
-### Screenshot
-
-```python
-import je_auto_control
-
-# Take a full-screen screenshot and save to file
-je_auto_control.pil_screenshot("screenshot.png")
-
-# Take a screenshot of a specific region [x1, y1, x2, y2]
-je_auto_control.pil_screenshot("region.png", screen_region=[100, 100, 500, 400])
-
-# Get screen resolution
-width, height = je_auto_control.screen_size()
-
-# Get pixel color at coordinates
-color = je_auto_control.get_pixel(500, 300)
-```
-
-### Action Recording & Playback
-
-```python
-import je_auto_control
-import time
-
-# Start recording mouse and keyboard events
-je_auto_control.record()
-
-time.sleep(10)  # Record for 10 seconds
-
-# Stop recording and get the action list
-actions = je_auto_control.stop_record()
-
-# Clean up the recording before replay: collapse runs of consecutive
-# mouse-move samples into their final position (often shrinks a raw
-# recording by an order of magnitude without changing replay behaviour)
-actions = je_auto_control.dedupe_moves(actions)
-
-# Replay the recorded actions
-je_auto_control.execute_action(actions)
-```
-
-> Non-destructive recording editors (all return a new list): `dedupe_moves` (collapse mouse-move runs), `merge_sleeps` (sum consecutive `AC_sleep` runs), `trim_actions`, `insert_action`, `remove_action`, `filter_actions`, `adjust_delays` (scale `AC_sleep` delays), `scale_coordinates` (replay at a different resolution). Exposed over MCP as `ac_dedupe_moves` / `ac_merge_sleeps` / `ac_trim_actions` / `ac_adjust_delays` / `ac_scale_coordinates`.
-
-### JSON Action Scripting
-
-Create a JSON action file (`actions.json`):
-
-```json
-[
-    ["AC_set_mouse_position", {"x": 500, "y": 300}],
-    ["AC_click_mouse", {"mouse_keycode": "mouse_left"}],
-    ["AC_write", {"write_string": "Hello from AutoControl"}],
-    ["AC_screenshot", {"file_path": "result.png"}],
-    ["AC_hotkey", {"key_code_list": ["ctrl_l", "s"]}]
-]
-```
-
-Execute it:
-
-```python
-import je_auto_control
-
-# Execute from file
-je_auto_control.execute_action(je_auto_control.read_action_json("actions.json"))
-
-# Or execute from a list directly
-je_auto_control.execute_action([
-    ["AC_set_mouse_position", {"x": 100, "y": 200}],
-    ["AC_click_mouse", {"mouse_keycode": "mouse_left"}]
-])
-```
-
-**Available action commands:**
-
-| Category | Commands |
-|---|---|
-| Mouse | `AC_click_mouse`, `AC_set_mouse_position`, `AC_get_mouse_position`, `AC_get_mouse_table`, `AC_press_mouse`, `AC_release_mouse`, `AC_mouse_scroll`, `AC_mouse_left`, `AC_mouse_right`, `AC_mouse_middle` |
-| Keyboard | `AC_type_keyboard`, `AC_press_keyboard_key`, `AC_release_keyboard_key`, `AC_write`, `AC_hotkey`, `AC_check_key_is_press`, `AC_get_keyboard_keys_table` |
-| Image | `AC_locate_all_image`, `AC_locate_image_center`, `AC_locate_and_click` |
-| Screen | `AC_screen_size`, `AC_screenshot` |
-| Accessibility | `AC_a11y_list`, `AC_a11y_find`, `AC_a11y_click` |
-| VLM (AI Locator) | `AC_vlm_locate`, `AC_vlm_click` |
-| OCR | `AC_locate_text`, `AC_click_text`, `AC_wait_text`, `AC_read_text_in_region`, `AC_find_text_regex` |
-| LLM planner | `AC_llm_plan`, `AC_llm_run` |
-| Clipboard | `AC_clipboard_get`, `AC_clipboard_set` |
-| Window | `AC_list_windows`, `AC_focus_window`, `AC_wait_window`, `AC_close_window` |
-| Flow control | `AC_loop`, `AC_break`, `AC_continue`, `AC_if_image_found`, `AC_if_pixel`, `AC_if_var`, `AC_while_image`, `AC_while_var`, `AC_for_each`, `AC_wait_image`, `AC_wait_pixel`, `AC_sleep`, `AC_retry`, `AC_try` |
-| Variables | `AC_set_var`, `AC_get_var`, `AC_inc_var` |
-| Remote desktop | `AC_start_remote_host`, `AC_stop_remote_host`, `AC_remote_host_status`, `AC_remote_connect`, `AC_remote_disconnect`, `AC_remote_viewer_status`, `AC_remote_send_input` |
-| Record | `AC_record`, `AC_stop_record`, `AC_set_record_enable` |
-| Report | `AC_generate_html`, `AC_generate_json`, `AC_generate_xml`, `AC_generate_html_report`, `AC_generate_json_report`, `AC_generate_xml_report` |
-| Run history | `AC_history_list`, `AC_history_clear` |
-| Project | `AC_create_project` |
-| Shell | `AC_shell_command` |
-| Process | `AC_execute_process` |
-| Executor | `AC_execute_action`, `AC_execute_files`, `AC_add_package_to_executor`, `AC_add_package_to_callback_executor` |
-| MCP server | `AC_start_mcp_server`, `AC_start_mcp_http_server` |
-
-### MCP Server (Use AutoControl from Claude)
-
-Expose AutoControl as a Model Context Protocol server so any
-MCP-compatible client (Claude Desktop, Claude Code, custom Anthropic
-/ OpenAI tool-use loops) can drive the host machine. Stdlib-only —
-JSON-RPC 2.0 over stdio or HTTP+SSE.
-
-**Register with Claude Code:**
-
-```bash
-claude mcp add autocontrol -- python -m je_auto_control.utils.mcp_server
-```
-
-**Register with Claude Desktop** (`claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "autocontrol": {
-      "command": "python",
-      "args": ["-m", "je_auto_control.utils.mcp_server"]
-    }
-  }
-}
-```
-
-**Start programmatically:**
-
-```python
-import je_auto_control as ac
-
-# Stdio (blocks until stdin closes)
-ac.start_mcp_stdio_server()
-
-# Or HTTP / SSE with bearer-token auth + optional TLS
-ac.start_mcp_http_server(host="127.0.0.1", port=9940,
-                         auth_token="hunter2")
-```
-
-**Inspect the catalogue without starting the server:**
-
-```bash
-je_auto_control_mcp --list-tools
-je_auto_control_mcp --list-tools --read-only
-je_auto_control_mcp --list-resources
-je_auto_control_mcp --list-prompts
-```
-
-**What ships:**
-
-| Surface | Coverage |
-|---|---|
-| Tools (~90) | mouse · keyboard · drag · screen / multi-monitor · screenshot-as-image · diff · OCR · image · windows (move/min/max/restore/...) · clipboard text+image · process / shell · recording · screen recording · scheduler / triggers / hotkeys · accessibility tree · VLM locator · executor · history |
-| Aliases | `click`, `type`, `screenshot`, `find_image`, `drag`, `shell`, `wait_image`, ... — toggle with `JE_AUTOCONTROL_MCP_ALIASES=0` |
-| Resources | `autocontrol://files/<name>`, `autocontrol://history`, `autocontrol://commands`, `autocontrol://screen/live` (with `resources/subscribe`) |
-| Prompts | `automate_ui_task`, `record_and_generalize`, `compare_screenshots`, `find_widget`, `explain_action_file` |
-| Protocol | tools / resources / prompts / sampling / roots / logging / progress / cancellation / list_changed / elicitation |
-| Transports | stdio, HTTP `POST /mcp`, SSE streaming when `Accept: text/event-stream` |
-| Safety | tool annotations · `JE_AUTOCONTROL_MCP_READONLY` · `JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE` · audit log · token-bucket rate limiter · auto-screenshot on error |
-| Ops | bearer-token auth · TLS via `ssl_context` · `PluginWatcher` hot-reload · `JE_AUTOCONTROL_FAKE_BACKEND=1` for CI |
-
-See [docs/source/Eng/doc/mcp_server/mcp_server_doc.rst](docs/source/Eng/doc/mcp_server/mcp_server_doc.rst)
-for the full reference (or the
-[繁體中文](docs/source/Zh/doc/mcp_server/mcp_server_doc.rst) version).
-
-> ⚠️ The MCP server can move the mouse, send keystrokes, capture the
-> screen, and execute arbitrary `AC_*` actions. Only register it with
-> MCP clients you trust. HTTP defaults to `127.0.0.1`; binding to
-> `0.0.0.0` requires explicit reason and **must** be paired with
-> `auth_token` plus `ssl_context`.
-
-### Scheduler (Interval & Cron)
-
-```python
-import je_auto_control as ac
-
-# Interval job — run every 30 seconds
-job = ac.default_scheduler.add_job(
-    script_path="scripts/poll.json", interval_seconds=30, repeat=True,
-)
-
-# Cron job — 09:00 on weekdays (minute hour dom month dow)
-cron_job = ac.default_scheduler.add_cron_job(
-    script_path="scripts/daily.json", cron_expression="0 9 * * 1-5",
-)
-
-ac.default_scheduler.start()
-```
-
-Both flavours coexist; `job.is_cron` tells them apart.
-
-### Global Hotkey Daemon
-
-Bind OS-level hotkeys to action JSON scripts. Cross-platform — Windows
-uses `RegisterHotKey`, macOS uses `CGEventTap` (requires Accessibility
-permission), Linux X11 uses `XGrabKey` (Wayland not supported). The
-same call sites work everywhere; the daemon picks the backend at
-`start()` time.
-
-```python
-from je_auto_control import default_hotkey_daemon
-
-default_hotkey_daemon.bind("ctrl+alt+1", "scripts/greet.json")
-default_hotkey_daemon.start()
-```
-
-### Event Triggers
-
-Poll-based triggers that fire a script when a condition becomes true:
-
-```python
-from je_auto_control import (
-    default_trigger_engine, ImageAppearsTrigger,
-    WindowAppearsTrigger, PixelColorTrigger, FilePathTrigger,
-)
-
-default_trigger_engine.add(ImageAppearsTrigger(
-    trigger_id="", script_path="scripts/click_ok.json",
-    image_path="templates/ok_button.png", threshold=0.85, repeat=True,
-))
-default_trigger_engine.start()
-```
-
-### Run History
-
-Every run from the scheduler, trigger engine, hotkey daemon, REST API,
-and manual GUI replay is recorded to `~/.je_auto_control/history.db`.
-Errors automatically attach a screenshot under
-`~/.je_auto_control/artifacts/run_{id}_{ms}.png` for post-mortem.
-
-```python
-from je_auto_control import default_history_store
-
-for run in default_history_store.list_runs(limit=20):
-    print(run.id, run.source, run.status, run.artifact_path)
-```
-
-The GUI **Run History** tab shows the runs table with
-double-click-to-open on the artifact column; filter, refresh, and
-clear run from the window's Actions menu.
-
-### Report Generation
-
-```python
-import je_auto_control
-
-# Enable test recording first
-je_auto_control.test_record_instance.set_record_enable(True)
-
-# ... perform automation actions ...
-je_auto_control.set_mouse_position(100, 200)
-je_auto_control.click_mouse("mouse_left")
-
-# Generate reports
-je_auto_control.generate_html_report("test_report")   # -> test_report.html
-je_auto_control.generate_json_report("test_report")   # -> test_report.json
-je_auto_control.generate_xml_report("test_report")    # -> test_report.xml
-
-# Or get report content as string
-html_string = je_auto_control.generate_html()
-json_string = je_auto_control.generate_json()
-xml_string = je_auto_control.generate_xml()
-```
-
-Reports include: function name, parameters, timestamp, and exception info (if any) for each recorded action. HTML reports display successful actions in cyan and failed actions in red.
-
-### Observability (Prometheus / OpenTelemetry)
-
-Stdlib-only metric primitives plus an OpenTelemetry-compatible tracer
-fallback. The executor and agent loop emit call counts and latency
-histograms automatically — no per-script wiring required.
-
-```python
-import je_auto_control as ac
-
-# Expose /metrics on http://127.0.0.1:9090 for Prometheus to scrape.
-exporter = ac.default_metrics_exporter()
-exporter.start()
-
-# Add your own metric — same shapes as prometheus_client.
-counter = ac.default_metric_registry().register(ac.MetricCounter(
-    "myapp_widgets_built_total", "widgets built",
-    label_names=("kind",),
-))
-counter.inc(labels={"kind": "blue"})
-
-# Wrap a callable in a span — no-op until opentelemetry-api is installed.
-@ac.traced("my_pipeline.process_one")
-def process_one(item): ...
-```
-
-Built-in metrics are listed in
-[docs/source/Eng/doc/observability/observability_doc.rst](docs/source/Eng/doc/observability/observability_doc.rst)
-(or the [繁體中文](docs/source/Zh/doc/observability/observability_doc.rst)
-version).
-
-### Remote Automation (Socket / REST)
-
-Two servers are available — a raw TCP socket and a stdlib HTTP/REST
-server. Both default to `127.0.0.1`; binding to `0.0.0.0` is an explicit,
-documented opt-in.
-
-```python
-import je_auto_control as ac
-
-# TCP socket server (default: 127.0.0.1:9938)
-ac.start_autocontrol_socket_server(host="127.0.0.1", port=9938)
-
-# REST API server (default: 127.0.0.1:9939)
-ac.start_rest_api_server(host="127.0.0.1", port=9939)
-# Endpoints:
-#   GET  /health           liveness probe
-#   GET  /jobs             scheduler job list
-#   POST /execute          body: {"actions": [...]}
-```
-
-Client example:
-
-```python
-import socket
-import json
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(("localhost", 9938))
-
-# Send an automation command
-command = json.dumps([
-    ["AC_set_mouse_position", {"x": 500, "y": 300}],
-    ["AC_click_mouse", {"mouse_keycode": "mouse_left"}]
-])
-sock.sendall(command.encode("utf-8"))
-
-# Receive response
-response = sock.recv(8192).decode("utf-8")
-print(response)
-sock.close()
-```
-
-### Plugin Loader
-
-Drop `.py` files defining top-level `AC_*` callables into a directory,
-then register them as executor commands at runtime:
-
-```python
-from je_auto_control import (
-    load_plugin_directory, register_plugin_commands,
-)
-
-commands = load_plugin_directory("./my_plugins")
-register_plugin_commands(commands)
-
-# Now usable from any JSON action script:
-# [["AC_greet", {"name": "world"}]]
-```
-
-> **Warning:** Plugin files execute arbitrary Python on load. Only load
-> from directories you control.
-
-### Shell Command Execution
-
-```python
-import je_auto_control
-
-# Using the default shell manager
-je_auto_control.default_shell_manager.exec_shell("echo Hello")
-je_auto_control.default_shell_manager.pull_text()  # Print captured output
-
-# Or create a custom ShellManager
-shell = je_auto_control.ShellManager(shell_encoding="utf-8")
-shell.exec_shell("ls -la")
-shell.pull_text()
-shell.exit_program()
-```
-
-### Screen Recording
-
-```python
-import je_auto_control
-import time
-
-# Method 1: ScreenRecorder (manages multiple recordings)
-recorder = je_auto_control.ScreenRecorder()
-recorder.start_new_record(
-    recorder_name="my_recording",
-    path_and_filename="output.avi",
-    codec="XVID",
-    frame_per_sec=30,
-    resolution=(1920, 1080)
-)
-time.sleep(10)
-recorder.stop_record("my_recording")
-
-# Method 2: RecordingThread (simple single recording, outputs MP4)
-recording = je_auto_control.RecordingThread(video_name="my_video", fps=20)
-recording.start()
-time.sleep(10)
-recording.stop()
-```
-
-### Callback Executor
-
-Execute an automation function and trigger a callback upon completion:
-
-```python
-import je_auto_control
-
-def my_callback():
-    print("Action completed!")
-
-# Execute set_mouse_position then call my_callback
-je_auto_control.callback_executor.callback_function(
-    trigger_function_name="AC_set_mouse_position",
-    callback_function=my_callback,
-    x=500, y=300
-)
-
-# With callback parameters
-def on_done(message):
-    print(f"Done: {message}")
-
-je_auto_control.callback_executor.callback_function(
-    trigger_function_name="AC_click_mouse",
-    callback_function=on_done,
-    callback_function_param={"message": "Click finished"},
-    callback_param_method="kwargs",
-    mouse_keycode="mouse_left"
-)
-```
-
-### Package Manager
-
-Dynamically load external Python packages into the executor at runtime:
-
-```python
-import je_auto_control
-
-# Add all functions/classes from a package to the executor
-je_auto_control.package_manager.add_package_to_executor("os")
-
-# Now you can use os functions in JSON action scripts:
-# ["os_getcwd", {}]
-# ["os_listdir", {"path": "."}]
-```
-
-### Project Management
-
-Scaffold a project directory structure with template files:
-
-```python
-import je_auto_control
-
-# Create a project structure
-je_auto_control.create_project_dir(project_path="./my_project", parent_name="AutoControl")
-
-# This creates:
-# my_project/
-# └── AutoControl/
-#     ├── keyword/
-#     │   ├── keyword1.json        # Template action file
-#     │   ├── keyword2.json        # Template action file
-#     │   └── bad_keyword_1.json   # Error handling template
-#     └── executor/
-#         ├── executor_one_file.py  # Execute single file example
-#         ├── executor_folder.py    # Execute folder example
-#         └── executor_bad_file.py  # Error handling example
-```
-
-### Window Management
-
-Send events directly to specific windows (Windows and Linux only):
-
-```python
-import je_auto_control
-
-# Send keyboard event to a window by title
-je_auto_control.send_key_event_to_window("Notepad", keycode="a")
-
-# Send mouse event to a window handle
-je_auto_control.send_mouse_event_to_window(window_handle, mouse_keycode="mouse_left", x=100, y=50)
-```
-
-### GUI Application
-
-Launch the built-in graphical interface (requires `[gui]` extra):
-
-```python
-import je_auto_control
-je_auto_control.start_autocontrol_gui()
-```
-
-Or from the command line:
-
-```bash
-python -m je_auto_control
-```
-
-The main window is menu-driven: tabs hold only their inputs, tables,
-and result views, and every tab's commands live in the window-level
-**Actions** menu, which rebuilds for the active tab. **View → Tabs**
-shows or hides any of the ~48 registered tabs, grouped by category
-(Core / Editing / Detection & Vision / Automation Engines / System);
-the default layout opens with just Record, Script Builder, and Remote
-Desktop. **View → Text Size** offers auto/preset font scaling, and the
-**Language** menu (English / 繁體中文 / 简体中文 / 日本語) retranslates
-the whole window live.
 
 ---
 
-## Command-Line Interface
+## Platform support
 
-AutoControl can be used directly from the command line:
+| Platform | Backend | Input | Screen capture | Recording | Window management |
+|---|---|:---:|:---:|:---:|:---:|
+| Windows 10 / 11 | Win32 ctypes (+ optional Interception driver) | ✅ | ✅ | ✅ | ✅ |
+| macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ❌ | ❌ |
+| Linux X11 | python-Xlib (+ optional `uinput`) | ✅ | ✅ | ✅ | ❌ |
+| Linux Wayland | libei, or ydotool / wtype / grim | ✅ | ✅ | ❌ | ❌ |
+| Android | adb + uiautomator2 | ✅ | ✅ | — | — |
+| iOS | WebDriverAgent / facebook-wda | ✅ | ✅ | — | — |
 
-```bash
-# Execute a single action file
-python -m je_auto_control -e actions.json
-
-# Execute all action files in a directory
-python -m je_auto_control -d ./action_files/
-
-# Execute a JSON string directly
-python -m je_auto_control --execute_str '[["AC_screenshot", {"file_path": "test.png"}]]'
-
-# Create a project template
-python -m je_auto_control -c ./my_project
-```
-
-A richer subcommand CLI built on the headless APIs:
-
-```bash
-# Run a script, optionally with variables, and/or a dry-run
-python -m je_auto_control.cli run script.json
-python -m je_auto_control.cli run script.json --var name=alice --dry-run
-
-# List scheduler jobs
-python -m je_auto_control.cli list-jobs
-
-# Start the socket or REST server
-python -m je_auto_control.cli start-server --port 9938
-python -m je_auto_control.cli start-rest   --port 9939
-```
-
-`--var name=value` is parsed as JSON when possible (so `count=10` becomes
-an int), otherwise treated as a string.
+Wayland forbids global input recording for unprivileged clients — set
+`JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` to record on an X11 session. Window
+management is currently Windows-only and raises a clear `NotImplementedError`
+elsewhere. Opt-in driver-level backends (`JE_AUTOCONTROL_WIN32_BACKEND=interception`,
+`JE_AUTOCONTROL_LINUX_BACKEND=uinput`, ViGEm virtual gamepad) exist for apps that
+ignore synthetic input, and fall back silently when the driver is absent.
 
 ---
 
-## Platform Support
+## Documentation and examples
 
-| Platform | Status | Backend | Notes |
-|---|---|---|---|
-| Windows 10 / 11 | Supported | Win32 API (ctypes) | Full feature support |
-| macOS 10.15+ | Supported | pyobjc / Quartz | Action recording not available; `send_key_event_to_window` / `send_mouse_event_to_window` not supported |
-| Linux (X11) | Supported | python-Xlib | Full feature support |
-| Linux (Wayland) | Not supported | — | May be added in a future release |
-| Raspberry Pi 3B / 4B | Supported | python-Xlib | Runs on X11 |
+| Resource | What's in it |
+|---|---|
+| [`examples/`](examples/) | 27 self-contained scripts: screenshot + click, OCR, scheduler, remote desktop, agent loop, observability, recording, variables, hotkeys, triggers, reports, MCP, REST, secrets, plugins, computer use, Wayland, cross-host DAGs, chat-ops, pytest/BDD, anchor locators. |
+| [Read the Docs](https://autocontrol.readthedocs.io/en/latest/) | Full API reference, English and 中文. |
+| [architecture_explore.md](architecture_explore.md) | Every module's responsibility, layer by layer. |
+| [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md) | Capability × platform matrix. |
+| [docs/API_LIFECYCLE.md](docs/API_LIFECYCLE.md) | Stable-API and deprecation policy. |
+| [WHATS_NEW.md](WHATS_NEW.md) | Per-release notes. |
+| [CHANGELOG.md](CHANGELOG.md) | Compatibility changelog. |
+| [SECURITY.md](SECURITY.md) | Security policy and reporting. |
 
 ---
 
 ## Development
 
-### Setting Up
-
 ```bash
 git clone https://github.com/Intergration-Automation-Testing/AutoControl.git
 cd AutoControl
 pip install -r dev_requirements.txt
+uv sync                 # or: reproducible install from the committed uv.lock
 ```
-
-Reproducible installs use the committed `uv.lock`:
 
 ```bash
-uv sync               # install pinned versions across the whole dep tree
-uv lock --upgrade     # refresh after editing pyproject.toml
+python -m pytest test/unit_test/headless      # headless unit tests
+python -m pytest test/integrated_test/        # cross-module workflows
+
+ruff check je_auto_control/
+pylint je_auto_control/
+bandit -c pyproject.toml -r je_auto_control/
 ```
 
-### Running Tests
-
-```bash
-# Unit tests
-python -m pytest test/unit_test/
-
-# Integration tests
-python -m pytest test/integrated_test/
-```
-
-### Project Links
-
-- [Capability and platform matrix](docs/CAPABILITY_MATRIX.md)
-- [Public API lifecycle and deprecation policy](docs/API_LIFECYCLE.md)
-- [Security policy](SECURITY.md)
-- [Compatibility changelog](CHANGELOG.md)
-
-- **Homepage**: https://github.com/Intergration-Automation-Testing/AutoControl
-- **Documentation**: https://autocontrol.readthedocs.io/en/latest/
-- **PyPI**: https://pypi.org/project/je_auto_control/
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Two rules the CI enforces: `import
+je_auto_control` must never pull in PySide6, and every feature needs both a headless
+API and a GUI surface.
 
 ---
 
 ## License
 
 [MIT License](LICENSE) © JE-Chen.
-See [Third_Party_License.md](Third_Party_License.md) for the licenses of
-bundled and optional third-party dependencies.
+See [Third_Party_License.md](Third_Party_License.md) for the licenses of bundled and
+optional third-party components.
+
+- **Homepage**: https://github.com/Intergration-Automation-Testing/AutoControl
+- **PyPI**: https://pypi.org/project/je_auto_control/
+- **Documentation**: https://autocontrol.readthedocs.io/en/latest/

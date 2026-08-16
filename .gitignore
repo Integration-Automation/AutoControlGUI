@@ -116,16 +116,13 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Pycharm
-.idea
-.idea/*
-.idea/AutoControl.iml
-.idea/misc.xml
-.idea/workspace.xml
+# Pycharm — the rule is `.idea/` at the top of this file. Five more spellings
+# accumulated here because the files were already tracked, and .gitignore has
+# no effect on a tracked file however many ways you name it. They were
+# untracked with `git rm --cached -r .idea`, so one rule is enough now.
 .claude/settings.local.json
 /.claude/
 /.claude
-/.idea
 
 # Local test/smoke artifacts
 .test-tmp/

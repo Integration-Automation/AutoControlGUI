@@ -830,6 +830,8 @@ simplified_chinese_word_dict = {
     # Accessibility Tab
     "a11y_app_label": "应用:",
     "a11y_app_placeholder": "例如：计算器",
+    "a11y_window_label": "窗口：",
+    "a11y_window_placeholder": "窗口标题的一部分",
     "a11y_name_label": "名称包含:",
     "a11y_name_placeholder": "部分匹配",
     "a11y_refresh": "刷新",

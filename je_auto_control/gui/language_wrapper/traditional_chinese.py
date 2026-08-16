@@ -831,6 +831,8 @@ traditional_chinese_word_dict = {
     # Accessibility Tab
     "a11y_app_label": "應用程式：",
     "a11y_app_placeholder": "例如：小算盤",
+    "a11y_window_label": "視窗：",
+    "a11y_window_placeholder": "視窗標題的一部分",
     "a11y_name_label": "名稱包含：",
     "a11y_name_placeholder": "部分比對",
     "a11y_refresh": "重新整理",
