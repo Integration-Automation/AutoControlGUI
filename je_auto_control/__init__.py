@@ -1268,8 +1268,9 @@ from je_auto_control.wrapper.auto_control_screen import screenshot
 from je_auto_control.wrapper.auto_control_screen import get_pixel
 # Cross-platform window manager (headless)
 from je_auto_control.wrapper.auto_control_window import (
-    close_window_by_title, find_window, focus_window, list_windows,
-    show_window_by_title, wait_for_window,
+    close_window_by_title, find_window, focus_window, foreground_window,
+    list_windows, minimize_window_by_title, move_window_by_title,
+    show_window_by_title, wait_for_window, window_rect,
 )
 # Windows-only modules (ctypes.WINFUNCTYPE / Win32 API) — gated so
 # ``import je_auto_control`` keeps working on macOS / Linux. Kept last
@@ -1327,6 +1328,8 @@ __all__ = [
     # Window manager
     "list_windows", "find_window", "focus_window", "wait_for_window",
     "close_window_by_title", "show_window_by_title",
+    "minimize_window_by_title", "foreground_window", "window_rect",
+    "move_window_by_title",
     # Clipboard
     "get_clipboard", "set_clipboard",
     # Hotkey daemon

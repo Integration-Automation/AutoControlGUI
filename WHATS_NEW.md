@@ -160,6 +160,32 @@ and only translates **after** recording — `ToUnicodeEx` mutates dead-key
 composition state, so calling it mid-typing corrupts the character being
 composed.
 
+### Window Handles You Can Actually Use
+
+Window management listed windows but could not really operate on them.
+
+- **Handles are integers again.** The `EnumWindows` callback declared its hwnd
+  as `POINTER(c_int)`, so every handle came back as an `LP_c_long` object;
+  `int(hwnd)` on one raises `ValueError`. The list was readable and otherwise
+  useless — you could not focus, move or measure anything it returned, and the
+  `ac_list_windows` MCP tool raised outright because its handler called
+  `int(hwnd)`. Every Win32 prototype in `windows_window_manage` now declares
+  `argtypes` / `restype`, which also stops a 64-bit handle being truncated to
+  32 bits.
+- **`close_window_by_title` closes.** It used to minimise, because Win32's
+  `CloseWindow()` minimises despite its name and the wrapper passed that
+  through. It now posts `WM_CLOSE` — the same thing the window's own close
+  button does, so the application still gets to run its save prompts.
+  `minimize_window_by_title` keeps the old behaviour under an honest name.
+- **New primitives**: `foreground_window` (what the user is working in),
+  `window_rect` (screen rectangle, negative coordinates and all),
+  `move_window_by_title` (omit width/height to reposition without resizing) and
+  `list_windows(titled_only=True)` — on this desktop that is 17 windows rather
+  than 34, the rest being shell and helper surfaces.
+- **`focus_window` restores a minimised window** before raising it; focusing a
+  minimised window previously did nothing you could see. A maximised window
+  stays maximised.
+
 ### URL Canonicalisation, Reachable From Every Surface
 
 `utils/url_canon` (RFC 3986 canonicalisation, normalisation and query helpers)

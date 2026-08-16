@@ -1081,6 +1081,32 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
     specs.append(CommandSpec(
         "AC_close_window", "Window", "Close Window",
         fields=(FieldSpec("title_substring", FieldType.STRING),),
+        description="Ask the first matching window to close (posts WM_CLOSE).",
+    ))
+    specs.append(CommandSpec(
+        "AC_minimize_window", "Window", "Minimize Window",
+        fields=(FieldSpec("title_substring", FieldType.STRING),),
+        description="Minimise the first matching window.",
+    ))
+    specs.append(CommandSpec(
+        "AC_foreground_window", "Window", "Foreground Window",
+        description="The window the user is currently working in.",
+    ))
+    specs.append(CommandSpec(
+        "AC_window_rect", "Window", "Window Rectangle",
+        fields=(FieldSpec("title_substring", FieldType.STRING),),
+        description="Screen rectangle (left, top, right, bottom) of a window.",
+    ))
+    specs.append(CommandSpec(
+        "AC_move_window", "Window", "Move Window by Title",
+        fields=(
+            FieldSpec("title_substring", FieldType.STRING),
+            FieldSpec("x", FieldType.INT),
+            FieldSpec("y", FieldType.INT),
+            FieldSpec("width", FieldType.INT, optional=True),
+            FieldSpec("height", FieldType.INT, optional=True),
+        ),
+        description="Move, and optionally resize, the first matching window.",
     ))
     specs.append(CommandSpec(
         "AC_drop_files", "Window", "Drop Files onto Window",

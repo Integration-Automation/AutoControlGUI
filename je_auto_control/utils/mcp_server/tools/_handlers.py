@@ -424,6 +424,33 @@ def close_window(title_substring: str,
                                        case_sensitive=case_sensitive))
 
 
+def minimize_window(title_substring: str,
+                    case_sensitive: bool = False) -> bool:
+    from je_auto_control.wrapper.auto_control_window import (
+        minimize_window_by_title,
+    )
+    return bool(minimize_window_by_title(title_substring,
+                                         case_sensitive=case_sensitive))
+
+
+def foreground_window() -> Dict[str, Any]:
+    from je_auto_control.wrapper.auto_control_window import (
+        foreground_window as _front,
+    )
+    hit = _front()
+    return {"hwnd": 0, "title": ""} if hit is None else {"hwnd": hit[0],
+                                                         "title": hit[1]}
+
+
+def window_rect(title_substring: str,
+                case_sensitive: bool = False) -> Dict[str, Any]:
+    from je_auto_control.wrapper.auto_control_window import (
+        window_rect as _rect,
+    )
+    rect = _rect(title_substring, case_sensitive=case_sensitive)
+    return {"rect": list(rect) if rect is not None else None}
+
+
 def _resolve_window_hwnd(title_substring: str,
                          case_sensitive: bool) -> int:
     from je_auto_control.wrapper.auto_control_window import find_window

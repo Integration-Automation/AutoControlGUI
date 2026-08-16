@@ -280,13 +280,45 @@ def window_tools() -> List[MCPTool]:
         ),
         MCPTool(
             name="ac_close_window",
-            description="Minimise the first window matching title_substring.",
+            description=("Ask the first window matching title_substring to "
+                         "close (posts WM_CLOSE). Use ac_minimize_window to "
+                         "only minimise it."),
             input_schema=schema({
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
             handler=h.close_window,
             annotations=DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_minimize_window",
+            description="Minimise the first window matching title_substring.",
+            input_schema=schema({
+                "title_substring": {"type": "string"},
+                "case_sensitive": {"type": "boolean"},
+            }, required=["title_substring"]),
+            handler=h.minimize_window,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_foreground_window",
+            description=("The window the user is currently working in, as "
+                         "{hwnd, title}; hwnd is 0 when there is none."),
+            input_schema=schema({}),
+            handler=h.foreground_window,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_window_rect",
+            description=("Screen rectangle of the first matching window as "
+                         "{rect: [left, top, right, bottom]}, or {rect: null}. "
+                         "Values can be negative on a multi-monitor desktop."),
+            input_schema=schema({
+                "title_substring": {"type": "string"},
+                "case_sensitive": {"type": "boolean"},
+            }, required=["title_substring"]),
+            handler=h.window_rect,
+            annotations=READ_ONLY,
         ),
         MCPTool(
             name="ac_window_move",

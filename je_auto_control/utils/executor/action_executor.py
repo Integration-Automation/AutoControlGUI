@@ -81,7 +81,9 @@ from je_auto_control.wrapper.auto_control_mouse import (
 from je_auto_control.wrapper.auto_control_record import record, stop_record
 from je_auto_control.wrapper.auto_control_screen import screenshot, screen_size
 from je_auto_control.wrapper.auto_control_window import (
-    close_window_by_title, focus_window, list_windows, wait_for_window,
+    close_window_by_title, focus_window, foreground_window, list_windows,
+    minimize_window_by_title, move_window_by_title, wait_for_window,
+    window_rect,
 )
 
 
@@ -6620,6 +6622,21 @@ def _dedupe_images(paths: Any, max_distance: int = 5) -> Dict[str, Any]:
                                     max_distance=max_distance)}
 
 
+def _foreground_window() -> Dict[str, Any]:
+    """Adapter: the window the user is currently working in."""
+    hit = foreground_window()
+    if hit is None:
+        return {"hwnd": 0, "title": ""}
+    return {"hwnd": hit[0], "title": hit[1]}
+
+
+def _window_rect(title_substring: str,
+                 case_sensitive: bool = False) -> Dict[str, Any]:
+    """Adapter: a window's screen rectangle as ``{rect: [l, t, r, b]}``."""
+    rect = window_rect(title_substring, bool(case_sensitive))
+    return {"rect": list(rect) if rect is not None else None}
+
+
 def _canonicalize_url(url: str) -> Dict[str, Any]:
     """Adapter: opinionated canonical form of a URL, for equality checks."""
     from je_auto_control.utils.url_canon import canonicalize_url
@@ -7024,6 +7041,10 @@ class Executor:
             "AC_focus_window": focus_window,
             "AC_wait_window": wait_for_window,
             "AC_close_window": close_window_by_title,
+            "AC_minimize_window": minimize_window_by_title,
+            "AC_foreground_window": _foreground_window,
+            "AC_window_rect": _window_rect,
+            "AC_move_window": move_window_by_title,
 
             # Clipboard
             "AC_clipboard_get": get_clipboard,

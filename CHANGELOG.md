@@ -42,6 +42,13 @@ only when documented here with a migration path.
 - `utils/keyboard_layout`: `char_table`, `layout_char_table`, `vk_to_char`,
   `foreground_keyboard_layout` — which character each key produces on the
   active layout, with a US fallback.
+- Window management gains the primitives it was missing:
+  `minimize_window_by_title`, `foreground_window`, `window_rect` and
+  `move_window_by_title` (`AC_minimize_window`, `AC_foreground_window`,
+  `AC_window_rect`, `AC_move_window`; `ac_minimize_window`,
+  `ac_foreground_window`, `ac_window_rect`). `list_windows` takes
+  `titled_only`, and `move_window_by_title` keeps the window's current size
+  when width/height are omitted.
 - `utils/url_canon` reaches its delivery surfaces: `canonicalize_url`,
   `normalize_url`, `urls_equal`, `build_query` and `parse_query` are exported
   from the facade, with `AC_canonicalize_url` / `AC_normalize_url` /
@@ -50,6 +57,18 @@ only when documented here with a migration path.
 
 ### Changed
 
+- **Breaking — `close_window_by_title` / `AC_close_window` / `ac_close_window`
+  now actually close the window** (they post `WM_CLOSE`). They previously
+  *minimised* it: the Win32 call underneath is named `CloseWindow` but
+  minimises, and the wrapper inherited both the call and the wrong promise, so
+  every caller asking to close a window silently got a minimise instead. The
+  old behaviour is available unchanged as `minimize_window_by_title` /
+  `AC_minimize_window` / `ac_minimize_window`.
+- `focus_window` restores a window that is minimised before bringing it to the
+  front — focusing a minimised window used to do nothing visible. A maximised
+  window is left maximised (`SW_RESTORE` would have un-maximised it).
+- `show_window_by_title` no longer calls `SetForegroundWindow` after `SW_HIDE`;
+  hiding a window and then pulling it forward are contradictory.
 - Releases are prepared from version tags and use PyPI Trusted Publishing.
 - The USB/IP server binds `127.0.0.1` by default (least-privilege). Exporting
   the attached device to the LAN now requires an explicit `host="0.0.0.0"`.
@@ -108,6 +127,13 @@ only when documented here with a migration path.
   desktop (measured ~116 px) and by the virtual-desktop origin.
 - Template images failing to load from a path containing non-ASCII characters
   (`cv2.imread` returns `None` there, which surfaced as "could not read image").
+- `list_windows` handing back `LP_c_long` pointer objects instead of integer
+  hwnds, so `int(hwnd)` raised `ValueError` and a listed window could not be
+  used in any follow-up Win32 call. The `EnumWindows` callback declared its
+  hwnd as `POINTER(c_int)`; it is now `HWND`, and every Win32 prototype in
+  `windows_window_manage` declares `argtypes`/`restype` so a 64-bit handle is
+  not truncated to 32 bits. This also un-breaks the `ac_list_windows` MCP tool,
+  whose handler called `int(hwnd)`.
 - Accessibility listing truncating to `max_results` *before* filtering, so an
   element past the cap could never be found however specific the filter.
 - `control_get_value` returning a password field's value when a custom-drawn

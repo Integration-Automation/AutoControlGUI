@@ -38,6 +38,26 @@
 
 ---
 
+## [DECIDE] `utils/clipboard/` 有兩份同名但不同簽章的圖片 API
+
+同一個子套件裡有兩個 `get_clipboard_image` / `set_clipboard_image`：
+
+- `clipboard/clipboard.py`：`set_clipboard_image(png_bytes: bytes)`，跨平台
+  （Windows／macOS／Linux）。呼叫端是 `gui/remote_desktop/viewer_panel.py`。
+- `clipboard/clipboard_image.py`：`set_clipboard_image(image_path: str)`，寫入
+  只支援 Windows。呼叫端是 MCP 的 `ac_set_clipboard_image`。
+
+兩邊都有真實呼叫端，所以不能單方面刪掉任何一份。名字一樣、參數型別卻一個是 bytes
+一個是路徑，`from ... import set_clipboard_image` 匯錯來源會在執行期才炸。
+
+- **另外**：兩份都**沒有**從 `utils/clipboard/__init__.py` 或門面匯出
+  （`__init__.py` 的 `__all__` 只有 `get_clipboard` / `set_clipboard`），也沒有
+  `AC_*` 指令，等於只有 MCP 與 GUI 走得到，`execute_action` 走不到。
+- **待決**：合併成一支（例如同時吃 bytes 與路徑）並補上門面匯出與 `AC_*` 指令，
+  還是明確拆成兩個不同名字。
+
+---
+
 ## [DECIDE] `windows/listener/` 兩個模組已無呼叫端
 
 `win32_keyboard_listener.py`（118 行）與 `win32_mouse_listener.py`（127 行）在
