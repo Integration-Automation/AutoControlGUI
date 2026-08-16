@@ -841,6 +841,8 @@ japanese_word_dict = {
     # Accessibility Tab
     "a11y_app_label": "アプリ:",
     "a11y_app_placeholder": "例: 電卓",
+    "a11y_window_label": "ウィンドウ:",
+    "a11y_window_placeholder": "ウィンドウタイトルの一部",
     "a11y_name_label": "名前に含む:",
     "a11y_name_placeholder": "部分一致",
     "a11y_refresh": "更新",

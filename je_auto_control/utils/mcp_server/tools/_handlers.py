@@ -912,6 +912,13 @@ def record_stop() -> List[Any]:
     return stop_record() or []
 
 
+def record_stop_timeline() -> List[Any]:
+    from je_auto_control.wrapper.auto_control_record import (
+        stop_record_timeline,
+    )
+    return stop_record_timeline() or []
+
+
 def read_action_file(file_path: str) -> List[Any]:
     from je_auto_control.utils.json.json_file import read_action_json
     safe_path = os.path.realpath(os.fspath(file_path))
@@ -962,25 +969,42 @@ def merge_sleeps(actions: List[Any]) -> List[Any]:
 # === Semantic locators (a11y / VLM) =========================================
 
 def a11y_list(app_name: Optional[str] = None,
-              max_results: int = 100) -> List[Dict[str, Any]]:
+              max_results: int = 100,
+              window_title: Optional[str] = None) -> List[Dict[str, Any]]:
     from je_auto_control.utils.accessibility.accessibility_api import (
         list_accessibility_elements,
     )
     return [element.to_dict()
             for element in list_accessibility_elements(
                 app_name=app_name, max_results=int(max_results),
+                window_title=window_title,
             )]
 
 
 def a11y_find(name: Optional[str] = None,
               role: Optional[str] = None,
-              app_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    from je_auto_control.utils.accessibility.accessibility_api import (
-        find_accessibility_element,
-    )
-    element = find_accessibility_element(name=name, role=role,
-                                          app_name=app_name)
+              app_name: Optional[str] = None,
+              window_title: Optional[str] = None,
+              contains: bool = False) -> Optional[Dict[str, Any]]:
+    from je_auto_control.utils.accessibility import accessibility_api as api
+    element = api.find_accessibility_element(
+        name=name, role=role, app_name=app_name, window_title=window_title,
+        contains=bool(contains))
     return None if element is None else element.to_dict()
+
+
+def a11y_find_all(name: Optional[str] = None,
+                  role: Optional[str] = None,
+                  app_name: Optional[str] = None,
+                  window_title: Optional[str] = None,
+                  contains: bool = False,
+                  max_results: int = 50,
+                  scan_limit: int = 1500) -> List[Dict[str, Any]]:
+    from je_auto_control.utils.accessibility import accessibility_api as api
+    return [element.to_dict() for element in api.find_accessibility_elements(
+        name=name, role=role, app_name=app_name, window_title=window_title,
+        contains=bool(contains), max_results=int(max_results),
+        scan_limit=int(scan_limit))]
 
 
 def a11y_click(name: Optional[str] = None,
@@ -996,6 +1020,13 @@ def a11y_click(name: Optional[str] = None,
 def control_get_value(name=None, role=None, app_name=None,
                       automation_id=None):
     from je_auto_control.utils.accessibility import control_get_value as _g
+    return _g(name=name, role=role, app_name=app_name,
+              automation_id=automation_id)
+
+
+def control_get_state(name=None, role=None, app_name=None,
+                      automation_id=None):
+    from je_auto_control.utils.accessibility import control_get_state as _g
     return _g(name=name, role=role, app_name=app_name,
               automation_id=automation_id)
 
@@ -1862,6 +1893,22 @@ def dedupe_images(paths, max_distance=5):
     return {"unique": _dedupe(paths, max_distance=max_distance)}
 
 
+def canonicalize_url(url):
+    from je_auto_control.utils.url_canon import canonicalize_url as _canon
+    return {"url": _canon(url)}
+
+
+def normalize_url(url, sort_query=False, drop_fragment=False):
+    from je_auto_control.utils.url_canon import normalize_url as _norm
+    return {"url": _norm(url, sort_query=bool(sort_query),
+                         drop_fragment=bool(drop_fragment))}
+
+
+def urls_equal(first, second):
+    from je_auto_control.utils.url_canon import urls_equal as _equal
+    return {"equal": _equal(first, second)}
+
+
 def parse_decimal(text, locale="en_US"):
     from je_auto_control.utils.locale_parse import parse_decimal as _parse
     return {"value": _parse(text, locale)}
@@ -2503,9 +2550,26 @@ def move_mouse_relative(dx, dy):
     return _move_mouse_relative(dx, dy)
 
 
+def input_reachable():
+    from je_auto_control.utils.executor.action_executor import (
+        _input_reachable,
+    )
+    return _input_reachable()
+
+
 def type_unicode(text, modifier="ctrl"):
     from je_auto_control.utils.executor.action_executor import _type_unicode
     return _type_unicode(text, modifier)
+
+
+def type_unicode_keys(text):
+    from je_auto_control.utils.executor.action_executor import _type_unicode_keys
+    return _type_unicode_keys(text)
+
+
+def type_unicode_text(text, modifier="ctrl"):
+    from je_auto_control.utils.executor.action_executor import _type_unicode_text
+    return _type_unicode_text(text, modifier)
 
 
 def with_modifiers(modifiers, actions):

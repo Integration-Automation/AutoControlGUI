@@ -13,6 +13,7 @@ from je_auto_control.windows.core.utils.win32_ctype_input import KeyboardInput
 from je_auto_control.windows.core.utils.win32_ctype_input import SendInput
 from je_auto_control.windows.core.utils.win32_ctype_input import ctypes
 from je_auto_control.windows.core.utils.win32_vk import WIN32_EventF_KEYUP
+from je_auto_control.windows.core.utils.win32_vk import WIN32_EventF_UNICODE
 
 
 def press_key(keycode: int) -> None:
@@ -35,6 +36,48 @@ def release_key(keycode: int) -> None:
     """
     keyboard = Input(type=Keyboard, ki=KeyboardInput(wVk=keycode, dwFlags=WIN32_EventF_KEYUP))
     SendInput(1, ctypes.byref(keyboard), ctypes.sizeof(keyboard))
+
+
+def press_unicode(code_unit: int) -> None:
+    """
+    送出一個 UTF-16 碼位的按下事件（與鍵盤配置無關）
+    Send a key-down carrying one UTF-16 code unit, independent of the layout
+
+    ``KEYEVENTF_UNICODE`` makes ``wScan`` a character rather than a scan code, so
+    this reaches characters with no key on the current layout — punctuation the
+    virtual-key table omits, CJK, accented letters, emoji. ``KeyboardInput``
+    leaves ``wScan`` untouched when the flag is set.
+
+    :param code_unit: UTF-16 碼位 UTF-16 code unit (surrogates sent separately)
+    """
+    keyboard = Input(type=Keyboard,
+                     ki=KeyboardInput(wVk=0, wScan=code_unit,
+                                      dwFlags=WIN32_EventF_UNICODE))
+    SendInput(1, ctypes.byref(keyboard), ctypes.sizeof(keyboard))
+
+
+def release_unicode(code_unit: int) -> None:
+    """
+    送出一個 UTF-16 碼位的放開事件
+    Send the matching key-up for one UTF-16 code unit
+
+    :param code_unit: UTF-16 碼位 UTF-16 code unit
+    """
+    keyboard = Input(type=Keyboard,
+                     ki=KeyboardInput(wVk=0, wScan=code_unit,
+                                      dwFlags=WIN32_EventF_UNICODE | WIN32_EventF_KEYUP))
+    SendInput(1, ctypes.byref(keyboard), ctypes.sizeof(keyboard))
+
+
+def type_unicode_unit(code_unit: int) -> None:
+    """
+    送出一個 UTF-16 碼位（按下再放開）
+    Type one UTF-16 code unit (press then release)
+
+    :param code_unit: UTF-16 碼位 UTF-16 code unit
+    """
+    press_unicode(code_unit)
+    release_unicode(code_unit)
 
 
 def send_key_event_to_window(window: str, keycode: int) -> None:

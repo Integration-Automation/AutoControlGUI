@@ -16,9 +16,11 @@ from typing import List, Optional, Pattern, Sequence, Tuple, Union
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
 from je_auto_control.utils.ocr.backends import (
     OCRBackend, OCRBackendNotAvailableError, get_backend,
 )
+from je_auto_control.utils.ocr.text_span import find_spans
 
 
 _image_grab = None
@@ -66,36 +68,15 @@ def set_tesseract_cmd(path: str) -> None:
         backend.set_cmd(path)
 
 
-def _virtual_screen_origin() -> Tuple[int, int]:
-    """Return (x, y) origin of the virtual desktop in screen coordinates.
-
-    On Windows with multiple monitors, the virtual screen can start at
-    negative coordinates (e.g. a monitor positioned above or to the left
-    of the primary). ``ImageGrab.grab(all_screens=True)`` captures the
-    full virtual screen with its top-left at (0, 0) of the captured
-    image — meaning image-local coords differ from screen coords by the
-    virtual-screen origin. Without compensating, OCR-derived
-    coordinates can't be clicked on directly.
-    """
-    try:
-        import ctypes
-        user32 = ctypes.windll.user32
-        return int(user32.GetSystemMetrics(76)), int(user32.GetSystemMetrics(77))
-    except Exception:
-        return 0, 0
-
-
 def _grab(region: Optional[Sequence[int]]):
-    image_grab = _load_image_grab()
-    if region is None:
-        # Full virtual screen capture — origin may be negative on
-        # multi-monitor setups, so report it as the coord offset to add
-        # to image-local matches.
-        vx, vy = _virtual_screen_origin()
-        return image_grab.grab(all_screens=True), vx, vy
-    x, y, w, h = region
-    bbox = (int(x), int(y), int(x) + int(w), int(y) + int(h))
-    return image_grab.grab(bbox=bbox, all_screens=True), int(x), int(y)
+    """Capture in mouse-coordinate space; returns ``(image, offset_x, offset_y)``.
+
+    Delegated to :func:`monitor_layout.grab_logical` so the OCR and template
+    paths cannot drift apart: it handles both the negative virtual-desktop
+    origin and the physical-vs-logical pixel mismatch on a mixed-DPI desktop,
+    either of which silently shifts every coordinate this module reports.
+    """
+    return grab_logical(region, grabber=_load_image_grab())
 
 
 def _resolve(backend: Optional[Union[str, OCRBackend]]) -> OCRBackend:
@@ -125,11 +106,27 @@ def find_text_matches(target: str,
         text=m.text, x=m.x + offset_x, y=m.y + offset_y,
         width=m.width, height=m.height, confidence=m.confidence,
     ) for m in matches]
+    # Engines box one *word* at a time, so a target crossing a word boundary
+    # ("Save As", "另存新檔") has no single box to match against. Search runs of
+    # consecutive boxes on a line; a run of one is the old per-box behaviour.
+    spans = find_spans(shifted, target, case_sensitive=case_sensitive)
+    return [_merge_span(span) for span in spans]
 
-    needle = target if case_sensitive else target.lower()
-    return [m for m in shifted
-            if (m.text if case_sensitive else m.text.lower()) == needle
-            or needle in (m.text if case_sensitive else m.text.lower())]
+
+def _merge_span(span: List[TextMatch]) -> TextMatch:
+    """Collapse a run of word boxes into the single box they cover."""
+    if len(span) == 1:
+        return span[0]
+    left = min(m.x for m in span)
+    top = min(m.y for m in span)
+    right = max(m.x + m.width for m in span)
+    bottom = max(m.y + m.height for m in span)
+    return TextMatch(
+        text=" ".join(m.text for m in span),
+        x=left, y=top, width=right - left, height=bottom - top,
+        # The weakest word bounds how much the whole reading can be trusted.
+        confidence=min(m.confidence for m in span),
+    )
 
 
 def read_text_in_region(region: Optional[Sequence[int]] = None,

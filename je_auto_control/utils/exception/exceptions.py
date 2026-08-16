@@ -38,6 +38,16 @@ class ImageNotFoundException(AutoControlException):
     pass
 
 
+class AutoControlFlatTemplateException(AutoControlScreenException):
+    """Template has (almost) no variation, so normalised correlation degenerates.
+
+    A subclass rather than a sibling, so existing ``except
+    AutoControlScreenException`` handlers keep catching it; callers that want to
+    tell the user what to do about it (crop something with a pattern in it) can
+    catch this one specifically.
+    """
+
+
 # Record
 
 

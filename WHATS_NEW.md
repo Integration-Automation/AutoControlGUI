@@ -1,5 +1,165 @@
 # What's New — AutoControl
 
+## What's new (2026-08-15)
+
+### Text Entry and On-Screen Location That Match What You See
+
+Three defects that made automation miss silently rather than fail loudly: text
+that could not be typed, targets that could not be found, and coordinates that
+were subtly wrong. All three produced "sometimes it works" behaviour, which is
+harder to diagnose than a crash.
+
+- **Type anything, without the clipboard** (`type_unicode_keys`,
+  `type_unicode_text`, `AC_type_unicode_keys`, `AC_type_unicode_text`,
+  `ac_type_unicode_keys`, `ac_type_unicode_text`): `write` typed through the
+  192-entry virtual-key table and *raised* on the first character outside it —
+  which on a US layout means `, . / : ? ! _ + @ %` as well as all CJK, so a URL
+  or a Chinese sentence failed as a whole string. The Windows backend gains
+  `press_unicode` / `release_unicode` / `type_unicode_unit` built on the
+  `KEYEVENTF_UNICODE` flag its `KeyboardInput` already understood, and `write`
+  now falls back to that route per character instead of raising. The existing
+  clipboard-paste `type_unicode` stays, but is no longer the only option: it
+  overwrites the user's clipboard and is refused by inputs that block paste, so
+  key injection is the default where a backend supports it.
+- **Find text the engine split across boxes** (`find_spans`, `group_lines`): OCR
+  backends box one *word* at a time, so `Save As` and `另存新檔` had no single
+  box to compare against and `find_text_matches` reported nothing for text
+  plainly on screen. Matching now scans runs of consecutive boxes on a line —
+  grouped by vertical overlap, so it also works for backends that report no line
+  ids — and returns the shortest run that spells the target, with the union
+  rectangle and the weakest word's confidence. A one-box run is the old
+  behaviour, so nothing that matched before stops matching.
+- **Capture in the coordinate space the mouse uses** (`grab_logical`,
+  `logical_virtual_rect`, `logical_scale`, `needs_rescale`): `find_image` and
+  `find_image_multi` captured through `ImageGrab.grab()`, which sees only the
+  primary monitor — a target on a second display could never be found. The
+  full-desktop capture has the opposite problem: it returns *physical* pixels
+  while a DPI-unaware process clicks in *logical* ones, so on a mixed-DPI
+  desktop (3840 physical against 3456 logical) a point read off the frame lands
+  up to ~116 px away. `monitor_layout.grab_logical` is now the single capture
+  primitive behind both OCR and template matching: it covers every monitor,
+  rescales into logical pixels, and reports the virtual-desktop origin to add to
+  a hit — which is negative whenever a monitor sits left of or above the
+  primary. Template matches are translated by that origin, so a located box is
+  directly clickable. `find_image` / `find_image_multi` also gained
+  `all_screens` and `screen_region`.
+- **`visual_match` reports coordinates you can act on.** The scored matcher had
+  the same three problems plus one of its own: it captured through
+  `pil_screenshot` (primary monitor, physical pixels), and a hit found inside a
+  `region` was returned in *region-local* coordinates — so clicking a match was
+  wrong by the region's own offset. It now grabs through `grab_logical` and adds
+  the origin to every hit; a caller-supplied `haystack` is still its own
+  coordinate space, as it must be. Two more traps closed: a template that is
+  almost a single colour now raises `AutoControlFlatTemplateException` instead
+  of saturating the score map at 1.0 and "finding" the target at an arbitrary
+  position, and templates load through `imdecode` so a **non-ASCII path** no
+  longer reads as a corrupt file. Everything downstream of `_haystack_gray`
+  (`barcode`, `edge_lines`, `edge_match`) inherits the corrected capture.
+- **Accessibility search that can actually find the control** (`window_title`
+  on `list_accessibility_elements` / `find_accessibility_element`, new
+  `find_accessibility_elements`, `contains`, `accessibility_status`,
+  `control_get_state`; commands `AC_a11y_find_all` / `AC_control_get_state`,
+  MCP `ac_a11y_find_all` / `ac_control_get_state`). Four things stood between
+  the API and a real target: the name had to match **exactly**, so a label
+  carrying an accelerator (`Save(&S)`) or trailing padding never matched;
+  `role="button"` never matched either, because the Windows backend reports the
+  raw `ControlType_50000` and nothing translated it; `max_results` truncated the
+  list *before* filtering, so an element past the cap could not be found however
+  specific the filter; and there was no way to search one window. Scoping is the
+  one that matters most for speed — measured on a busy desktop, walking
+  everything is 2,085 elements in **61 s** against 135 elements in **0.14 s** for
+  a single window. `contains` matching ranks an exact name first, so "OK" offers
+  the `OK` button before `OK and close`. `control_get_state` answers what pixels
+  cannot — a field's text scrolled out of view, a checkbox's true state, a
+  slider's exact number — in one call, with an absent key meaning "no such
+  state" rather than "empty"; password fields report only that they are password
+  fields, on both `get_value` and `get_state`, because UIA's masking is a
+  convention a custom-drawn control can ignore. Elements now also carry
+  `enabled`: a disabled control looks clickable and silently swallows the click.
+  Conversion cost is gone too — properties come back through one
+  `FindAllBuildCache` call instead of one cross-process read per property, and
+  the per-element `OpenProcess` for the app name is cached (converting 500
+  elements: 0.02 s).
+
+  **A desktop-wide search went from 61 s to about 2 s**, which took three
+  separate fixes because there were three separate causes:
+
+  1. *The root.* One `FindAll` from the desktop walks every window's subtree and
+     cannot be interrupted. An unscoped listing now takes **one top-level window
+     at a time in z-order**, so it can stop as soon as it has enough — and the
+     window the user is looking at is searched first.
+  2. *The walk.* Even per window, `FindAll` is atomic: one 34,507-element window
+     took 10.3 s to answer a request for 200. The walk is now node by node
+     through `ControlViewWalker` with a cache request, so asking for 200
+     elements costs 200 elements of work (0.036 s for 50, 0.114 s for 200,
+     0.486 s for 1,000).
+  3. *The provider.* UIA waits on the application itself. A full-screen game
+     that never answers made a single `ElementFromHandle` block for **60 s** —
+     and it was not detectable in advance: the window pumps messages, replies to
+     `WM_GETOBJECT`, and `IsHungAppWindow` says it is fine. The automation object
+     now comes from `CUIAutomation8` as `IUIAutomation2` with
+     `ConnectionTimeout` bounded, which brings that same call to 1.0 s.
+
+  Measured end to end afterwards: 50 elements 0.20 s, 200 in 1.29 s, 1,000 in
+  1.90 s, 3,000 in 3.87 s. Naming a window is still an order of magnitude
+  better (0.03 s) and remains the advice.
+
+  `find_*` also separates `max_results` (how many matches to return) from
+  `scan_limit` (how many elements to examine) — one number cannot mean both, and
+  conflating them turns "up to 40 buttons" into "only look at the first 40
+  elements on the desktop".
+
+### Telling You When Your Input Is Going Nowhere
+
+Sent input can be discarded before it reaches anything while the send call still
+reports success — the caller is told "clicked (500, 300)", nothing happens, and
+no error exists anywhere. `utils/input_reach` (`input_desktop_available`,
+`input_reaches_system`, `AC_input_reachable`, `ac_input_reachable`) answers the
+question directly.
+
+Two causes needing two checks. A locked workstation is detectable for free by
+asking for the input desktop. Input *filtering* is not: measured on a machine
+with an anti-cheat game in front, `SendInput` succeeds, `GetAsyncKeyState` never
+sees the key, `OpenInputDesktop` reports everything fine, and the game's
+integrity level is the same *Medium* as ours — so neither a privilege comparison
+nor any cheap query can tell. The only honest test is to send a key and look,
+which is why that probe is a diagnostic (it presses F13, which nothing binds)
+rather than a gate in front of every action.
+
+### A Recording That Can Actually Be Replayed
+
+`record` captured presses and nothing else, which is not enough to reproduce a
+session — and the gap was silent, because the recording looked fine until it was
+played back. Three things were missing and one was leaking:
+
+- **Releases.** A press-only log cannot tell a drag from a click, and a modifier
+  held across several actions cannot be reconstructed. Verified before the
+  change: five press-and-release pairs produced five events.
+- **The wheel.** `WM_MOUSEWHEEL` was not handled at all, so scrolling vanished.
+  Its `mouseData` high word is a *signed* notch count — read unsigned, a scroll
+  down becomes a scroll up by 65,534 notches.
+- **Timing.** Without timestamps every step replays at once and no real
+  interface keeps up. `utils/input_macro` already had `replay_timeline` waiting
+  for `delta_ms` events that nothing produced.
+- **A leaked thread per recording.** The listener pumped `GetMessage` once and
+  `stop_record` never woke it, so each record cycle left a thread blocked
+  forever. Verified: the thread was still alive after `stop_record` returned.
+
+`Win32InputHook` replaces both listeners with one hook that records press *and*
+release, wheel deltas and a monotonic timestamp, pumps messages properly, and
+exits on `WM_QUIT` when stopped. `stop_record_timeline` (`AC_stop_record_timeline`,
+`ac_record_stop_timeline`) returns those events with `delta_ms`, ready for
+`replay_timeline`. `stop_record` is untouched and still returns the historical
+press-only queue, so existing callers keep working.
+
+New `utils/keyboard_layout` answers the other half: which character a key
+produces. Punctuation differs per layout, so a hard-coded US table mislabels
+every punctuation key on a German or Nordic keyboard. It asks the **foreground
+window's** layout (the user types into what is in front, not into this process)
+and only translates **after** recording — `ToUnicodeEx` mutates dead-key
+composition state, so calling it mid-typing corrupts the character being
+composed.
+
 ## What's new (2026-07-18)
 
 ### Cross-Platform Reliability Hardening

@@ -14,12 +14,77 @@ only when documented here with a migration path.
 - Portable `autocontrol.failure-bundle/v1` diagnostic archives and CLI command.
 - Public API lifecycle, capability matrix, security policy, coverage and type
   checking configuration.
+- Unicode text entry by key injection: `type_unicode_keys`, `type_unicode_text`,
+  `plan_unicode_keys`, `unicode_keys_supported` (commands
+  `AC_type_unicode_keys` / `AC_type_unicode_text`, MCP tools
+  `ac_type_unicode_keys` / `ac_type_unicode_text`), on Windows backend
+  primitives `press_unicode` / `release_unicode` / `type_unicode_unit`.
+- Cross-word OCR matching helpers `find_spans` / `group_lines`.
+- `monitor_layout.grab_logical` / `logical_virtual_rect` / `logical_scale` /
+  `needs_rescale` — screen capture in the coordinate space the mouse uses.
+- `find_image` / `find_image_multi` accept `all_screens` and `screen_region`.
+- `AutoControlFlatTemplateException` (a subclass of `AutoControlScreenException`)
+  for a template with too little variation to locate.
+- Accessibility search scoping and matching: `window_title` on
+  `list_accessibility_elements` / `find_accessibility_element` /
+  `click_accessibility_element` / `control_get_state`, a `contains` substring
+  mode with exact-name ranking, `find_accessibility_elements`,
+  `accessibility_status`, `control_get_state`, and `rank_by_name` (commands
+  `AC_a11y_find_all` / `AC_control_get_state`, MCP `ac_a11y_find_all` /
+  `ac_control_get_state`). The accessibility GUI tab gains a window filter.
+- `AccessibilityElement.enabled`.
+- `stop_record_timeline` (`AC_stop_record_timeline`,
+  `ac_record_stop_timeline`): the recording as press *and* release, wheel
+  movement and `delta_ms`, ready for `replay_timeline`.
+- `utils/input_reach`: `input_desktop_available`, `input_reaches_system`
+  (`AC_input_reachable`, `ac_input_reachable`) — whether input this process
+  sends can actually arrive. The second probe presses F13 to find out.
+- `utils/keyboard_layout`: `char_table`, `layout_char_table`, `vk_to_char`,
+  `foreground_keyboard_layout` — which character each key produces on the
+  active layout, with a US fallback.
 
 ### Changed
 
 - Releases are prepared from version tags and use PyPI Trusted Publishing.
 - The USB/IP server binds `127.0.0.1` by default (least-privilege). Exporting
   the attached device to the LAN now requires an explicit `host="0.0.0.0"`.
+- `write` no longer raises on a character missing from the virtual-key table
+  where the backend can inject Unicode; it types that character instead.
+- `find_text_matches` returns runs of consecutive word boxes, so a target split
+  across boxes now matches. Results are merged boxes covering the whole run
+  (union rectangle, minimum confidence) rather than one box per word.
+- `find_image` / `find_image_multi` search every monitor by default and return
+  virtual-desktop coordinates, which are negative when a monitor sits left of or
+  above the primary. Pass `all_screens=False` for the previous primary-only
+  behaviour.
+- `match_template` / `match_template_all` capture every monitor and return
+  screen coordinates. A hit found inside a `region` previously came back in
+  region-local coordinates; it is now offset by the region's origin. Matches
+  against a caller-supplied `haystack` are unchanged (image-local).
+- `match_template` / `match_template_all` refuse an almost-single-colour
+  template instead of returning an arbitrary position.
+- `element_matches` accepts a friendly role name (`"button"`) as well as the
+  raw `"ControlType_50000"` the Windows backend reports.
+- `AccessibilityBackend.list_elements` takes `window_title`; in-tree backends
+  accept it, and the facade only forwards it when set, so an out-of-tree
+  backend keeps working until someone asks for scoping.
+- `AccessibilityElement.to_dict()` gains an `enabled` key.
+- The Windows recorder captures through one low-level hook
+  (`Win32InputHook`) instead of the two listeners. `record` / `stop_record`
+  keep their behaviour and return shape.
+- An unscoped `list_accessibility_elements` walks one top-level window at a
+  time in z-order, node by node, and stops at `max_results`, instead of one
+  uninterruptible `FindAll` over the whole desktop. Results are therefore
+  ordered front-most window first, and a small `max_results` no longer
+  reaches windows further back.
+- The UIAutomation object is created from `CUIAutomation8` as
+  `IUIAutomation2` with a bounded `ConnectionTimeout` where available, so an
+  application that never answers UIA can no longer stall a search for a
+  minute. Falls back to `CUIAutomation` / `IUIAutomation` otherwise.
+- `find_accessibility_elements` / `AC_a11y_find_all` / `ac_a11y_find_all`:
+  `max_results` now caps the matches returned (default 50) and the new
+  `scan_limit` caps how many elements are examined (default 1500). Callers
+  that passed `max_results` expecting a scan bound should pass `scan_limit`.
 
 ### Deprecated
 
@@ -28,6 +93,23 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- `write` failing a whole string on the first character outside the 192-entry
+  virtual-key table — on a US layout that includes `, . / : ? ! _ + @ %` and
+  every CJK character, so URLs and non-English text could not be typed at all.
+- OCR locating text that the engine split across word boxes (`Save As`,
+  `另存新檔`), which previously reported "not found" for text plainly on screen.
+- Template matching never finding a target on a second monitor, and returning
+  coordinates offset by the physical-vs-logical pixel difference on a mixed-DPI
+  desktop (measured ~116 px) and by the virtual-desktop origin.
+- Template images failing to load from a path containing non-ASCII characters
+  (`cv2.imread` returns `None` there, which surfaced as "could not read image").
+- Accessibility listing truncating to `max_results` *before* filtering, so an
+  element past the cap could never be found however specific the filter.
+- `control_get_value` returning a password field's value when a custom-drawn
+  control puts plaintext in ValuePattern instead of masking it.
+- The recorder leaking one thread per session: its listener pumped
+  `GetMessage` once and `stop_record` never woke it, so the thread stayed
+  blocked forever.
 - macOS cursor position and omitted-coordinate clicks on Retina / HiDPI
   displays (pixel-vs-point display-height mismatch).
 - Remote-desktop relay hang on Linux + CPython 3.14 when one paired peer

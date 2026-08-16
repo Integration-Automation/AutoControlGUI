@@ -85,8 +85,21 @@ from je_auto_control.wrapper.auto_control_window import (
 )
 
 
+def _as_bool(value: Any) -> bool:
+    """Coerce a JSON-action flag to bool, accepting the usual string spellings.
+
+    A value read from a JSON action file, a CLI argument or an MCP call can
+    arrive as the string ``"false"``, which is truthy — so a plain ``bool()``
+    would turn "off" into "on".
+    """
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "on")
+    return bool(value)
+
+
 def _a11y_list_as_dicts(app_name: Optional[str] = None,
-                        max_results: int = 200) -> List[dict]:
+                        max_results: int = 200,
+                        window_title: Optional[str] = None) -> List[dict]:
     """Executor adapter: list accessibility elements as plain dicts."""
     from je_auto_control.utils.accessibility.accessibility_api import (
         list_accessibility_elements,
@@ -95,18 +108,40 @@ def _a11y_list_as_dicts(app_name: Optional[str] = None,
         element.to_dict()
         for element in list_accessibility_elements(
             app_name=app_name, max_results=int(max_results),
+            window_title=window_title,
         )
     ]
 
 
 def _a11y_find_as_dict(name: Optional[str] = None,
                        role: Optional[str] = None,
-                       app_name: Optional[str] = None) -> Optional[dict]:
+                       app_name: Optional[str] = None,
+                       window_title: Optional[str] = None,
+                       contains: Any = False) -> Optional[dict]:
     """Executor adapter: find an accessibility element, return its dict."""
     element = find_accessibility_element(
-        name=name, role=role, app_name=app_name,
+        name=name, role=role, app_name=app_name, window_title=window_title,
+        contains=_as_bool(contains),
     )
     return None if element is None else element.to_dict()
+
+
+def _a11y_find_all_as_dicts(name: Optional[str] = None,
+                            role: Optional[str] = None,
+                            app_name: Optional[str] = None,
+                            window_title: Optional[str] = None,
+                            contains: Any = False,
+                            max_results: int = 50,
+                            scan_limit: int = 1500) -> List[dict]:
+    """Executor adapter: every matching accessibility element, best match first."""
+    from je_auto_control.utils.accessibility.accessibility_api import (
+        find_accessibility_elements,
+    )
+    return [element.to_dict() for element in find_accessibility_elements(
+        name=name, role=role, app_name=app_name, window_title=window_title,
+        contains=_as_bool(contains), max_results=int(max_results),
+        scan_limit=int(scan_limit),
+    )]
 
 
 def _vlm_locate_as_list(description: str,
@@ -2373,6 +2408,15 @@ def _control_get_value(name: Optional[str] = None, role: Optional[str] = None,
                              automation_id=automation_id)
 
 
+def _control_get_state(name: Optional[str] = None, role: Optional[str] = None,
+                       app_name: Optional[str] = None,
+                       automation_id: Optional[str] = None) -> Optional[dict]:
+    """Adapter: read everything a native control currently holds, in one call."""
+    from je_auto_control.utils.accessibility import control_get_state
+    return control_get_state(name=name, role=role, app_name=app_name,
+                             automation_id=automation_id)
+
+
 def _control_set_value(value: str, name: Optional[str] = None,
                        role: Optional[str] = None, app_name: Optional[str] = None,
                        automation_id: Optional[str] = None) -> bool:
@@ -3916,10 +3960,41 @@ def _move_mouse_relative(dx: Any, dy: Any) -> Dict[str, Any]:
     return move_mouse_relative(int(dx), int(dy))
 
 
+def _stop_record_timeline() -> List[dict]:
+    """Adapter: stop recording and return the full replayable timeline."""
+    from je_auto_control.wrapper.auto_control_record import (
+        stop_record_timeline,
+    )
+    return stop_record_timeline()
+
+
+def _input_reachable() -> Dict[str, Any]:
+    """Adapter: can this process actually drive the machine right now?"""
+    from je_auto_control.utils.input_reach import (
+        input_desktop_available, input_reaches_system,
+    )
+    desktop = input_desktop_available()
+    # Only worth sending the probe key when the desktop can take it.
+    return {"desktop_available": desktop,
+            "reaches_system": input_reaches_system() if desktop else False}
+
+
 def _type_unicode(text: str, modifier: str = "ctrl") -> Dict[str, Any]:
     """Adapter: enter arbitrary Unicode text via clipboard paste."""
     from je_auto_control.utils.text_unicode import type_unicode
     return type_unicode(text, modifier=modifier)
+
+
+def _type_unicode_keys(text: str) -> Dict[str, Any]:
+    """Adapter: enter arbitrary Unicode text as key events, sparing the clipboard."""
+    from je_auto_control.utils.text_unicode import type_unicode_keys
+    return type_unicode_keys(text)
+
+
+def _type_unicode_text(text: str, modifier: str = "ctrl") -> Dict[str, Any]:
+    """Adapter: enter arbitrary Unicode text by the best route this platform has."""
+    from je_auto_control.utils.text_unicode import type_unicode_text
+    return type_unicode_text(text, modifier=modifier)
 
 
 def _grid_cell(boxes: Any, row: Any, col: Any,
@@ -6545,6 +6620,26 @@ def _dedupe_images(paths: Any, max_distance: int = 5) -> Dict[str, Any]:
                                     max_distance=max_distance)}
 
 
+def _canonicalize_url(url: str) -> Dict[str, Any]:
+    """Adapter: opinionated canonical form of a URL, for equality checks."""
+    from je_auto_control.utils.url_canon import canonicalize_url
+    return {"url": canonicalize_url(url)}
+
+
+def _normalize_url(url: str, sort_query: bool = False,
+                   drop_fragment: bool = False) -> Dict[str, Any]:
+    """Adapter: RFC 3986 syntax-based normalisation of a URL."""
+    from je_auto_control.utils.url_canon import normalize_url
+    return {"url": normalize_url(url, sort_query=bool(sort_query),
+                                 drop_fragment=bool(drop_fragment))}
+
+
+def _urls_equal(first: str, second: str) -> Dict[str, Any]:
+    """Adapter: whether two URLs are equivalent after canonicalisation."""
+    from je_auto_control.utils.url_canon import urls_equal
+    return {"equal": urls_equal(first, second)}
+
+
 def _parse_decimal(text: str, locale: str = "en_US") -> Dict[str, Any]:
     """Adapter: parse a locale-formatted decimal string to a float."""
     from je_auto_control.utils.locale_parse import parse_decimal
@@ -6900,6 +6995,7 @@ class Executor:
             # Record 錄製
             "AC_record": record,
             "AC_stop_record": stop_record,
+            "AC_stop_record_timeline": _stop_record_timeline,
 
             # Executor 執行器
             "AC_execute_action": self.execute_action,
@@ -6972,6 +7068,7 @@ class Executor:
             # Accessibility-tree widget location
             "AC_a11y_list": _a11y_list_as_dicts,
             "AC_a11y_find": _a11y_find_as_dict,
+            "AC_a11y_find_all": _a11y_find_all_as_dicts,
             "AC_a11y_click": click_accessibility_element,
             "AC_a11y_dump": _a11y_dump,
             "AC_walk_tree": _walk_tree,
@@ -6980,6 +7077,7 @@ class Executor:
             "AC_audit_focus_order": _audit_focus_order,
             "AC_focus_control": _focus_control,
             "AC_control_get_value": _control_get_value,
+            "AC_control_get_state": _control_get_state,
             "AC_control_set_value": _control_set_value,
             "AC_control_invoke": _control_invoke,
             "AC_control_toggle": _control_toggle,
@@ -7224,7 +7322,10 @@ class Executor:
             "AC_set_field_text": _set_field_text,
             "AC_hold_key": _hold_key,
             "AC_move_mouse_relative": _move_mouse_relative,
+            "AC_input_reachable": _input_reachable,
             "AC_type_unicode": _type_unicode,
+            "AC_type_unicode_keys": _type_unicode_keys,
+            "AC_type_unicode_text": _type_unicode_text,
             "AC_with_modifiers": _with_modifiers,
             "AC_grid_cell": _grid_cell,
             "AC_match_template": _match_template,
@@ -7389,6 +7490,9 @@ class Executor:
             "AC_s3_delete": _s3_delete,
             "AC_image_hash": _image_hash,
             "AC_dedupe_images": _dedupe_images,
+            "AC_canonicalize_url": _canonicalize_url,
+            "AC_normalize_url": _normalize_url,
+            "AC_urls_equal": _urls_equal,
             "AC_parse_decimal": _parse_decimal,
             "AC_parse_number": _parse_number,
             "AC_format_decimal": _format_decimal,

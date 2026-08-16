@@ -10,6 +10,7 @@ from je_auto_control.utils.exception.exceptions import (
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
+from je_auto_control.utils.text_unicode.text_unicode import unicode_code_units
 from je_auto_control.wrapper.platform_wrapper import keyboard, keyboard_keys_table, keyboard_check
 
 def get_keyboard_keys_table() -> dict:
@@ -128,10 +129,39 @@ def check_key_is_press(keycode: Union[int, str]) -> Optional[bool]:
         return None
 
 
+# Whitespace that means a *key*, not a character. Sent as a Unicode code point
+# these are silently dropped by most applications — a newline especially, which
+# turns a multi-line `write` into one run-on line with nothing reported.
+WRITE_CONTROL_KEYS = {"\n": "return", "\r": "return", "\t": "tab",
+                      "\b": "back"}
+
+
+def _write_char_via_unicode(single_char: str) -> bool:
+    """
+    以 Unicode 事件輸入單一字元 (鍵盤對應表沒有的字元)
+    Type one character the virtual-key table has no entry for
+
+    :param single_char: 單一字元 One character
+    :return: 是否成功送出 Whether the backend could send it
+    """
+    type_unicode_unit = getattr(keyboard, "type_unicode_unit", None)
+    if not callable(type_unicode_unit):
+        return False
+    for unit in unicode_code_units(single_char):
+        type_unicode_unit(unit)
+    return True
+
+
 def write(write_string: str, is_shift: bool = False) -> Optional[str]:
     """
     模擬輸入整個字串
     Type a whole string
+
+    The virtual-key table covers barely 192 keys, so a literal reading of it
+    cannot type ``, . / : ? ! _ + @ %`` on a US layout, nor any CJK or accented
+    character. Characters it lacks fall back to Unicode key events where the
+    backend supports them, and only raise where it does not — otherwise a single
+    comma fails the whole string.
 
     :param write_string: 要輸入的字串 String to type
     :param is_shift: 是否同時按下 Shift
@@ -142,15 +172,21 @@ def write(write_string: str, is_shift: bool = False) -> Optional[str]:
         record_write_chars = []
         for single_char in write_string:
             key = keyboard_keys_table.get(single_char)
-            if key is not None:
+            control_key = WRITE_CONTROL_KEYS.get(single_char)
+            if control_key is not None and control_key in keyboard_keys_table:
+                # Before the table lookup: a newline must press Enter, not type
+                # U+000A and not fall through to the space fallback below.
+                type_keyboard(control_key, is_shift, skip_record=True)
+            elif key is not None:
                 type_keyboard(key, is_shift, skip_record=True)
-                record_write_chars.append(single_char)
+            elif _write_char_via_unicode(single_char):
+                pass
             elif single_char.isspace():
                 type_keyboard("space", is_shift, skip_record=True)
-                record_write_chars.append(single_char)
             else:
                 autocontrol_logger.error(f"write failed: {keyboard_write_cant_find_error_message}, char={single_char}")
                 raise AutoControlKeyboardException(keyboard_write_cant_find_error_message)
+            record_write_chars.append(single_char)
 
         result = "".join(record_write_chars)
         record_action_to_list("write", {"write_string": write_string, "is_shift": is_shift})

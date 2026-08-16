@@ -33,6 +33,7 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         super().__init__(parent)
         self._tr_init()
         self._app_filter = QLineEdit()
+        self._window_filter = QLineEdit()
         self._name_filter = QLineEdit()
         self._table = QTableWidget(0, _COLUMN_COUNT)
         self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -49,6 +50,7 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         TranslatableMixin.retranslate(self)
         self._apply_table_headers()
         self._app_filter.setPlaceholderText(_t("a11y_app_placeholder"))
+        self._window_filter.setPlaceholderText(_t("a11y_window_placeholder"))
         self._name_filter.setPlaceholderText(_t("a11y_name_placeholder"))
 
     def _apply_table_headers(self) -> None:
@@ -66,6 +68,9 @@ class AccessibilityTab(TranslatableMixin, QWidget):
         row.addWidget(self._tr(QLabel(), "a11y_app_label"))
         self._app_filter.setPlaceholderText(_t("a11y_app_placeholder"))
         row.addWidget(self._app_filter, stretch=1)
+        row.addWidget(self._tr(QLabel(), "a11y_window_label"))
+        self._window_filter.setPlaceholderText(_t("a11y_window_placeholder"))
+        row.addWidget(self._window_filter, stretch=1)
         row.addWidget(self._tr(QLabel(), "a11y_name_label"))
         self._name_filter.setPlaceholderText(_t("a11y_name_placeholder"))
         row.addWidget(self._name_filter, stretch=1)
@@ -82,8 +87,13 @@ class AccessibilityTab(TranslatableMixin, QWidget):
 
     def _refresh(self) -> None:
         app = self._app_filter.text().strip() or None
+        window = self._window_filter.text().strip() or None
         try:
-            elements = list_accessibility_elements(app_name=app)
+            # Scoping to one window is not just a filter: the desktop tree is
+            # orders of magnitude larger, so this is both faster and less
+            # ambiguous than listing everything and filtering by name.
+            elements = list_accessibility_elements(app_name=app,
+                                                   window_title=window)
         except AccessibilityNotAvailableError as error:
             self._status.setText(str(error))
             self._table.setRowCount(0)

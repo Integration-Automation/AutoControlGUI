@@ -52,6 +52,37 @@ def stop_record() -> list:
         autocontrol_logger.error(f"stop_record, failed: {repr(error)}")
 
 
+def stop_record_timeline() -> list:
+    """
+    停止錄製並回傳含放開、滾輪與間隔時間的完整事件
+    Stop recording and return press *and* release, wheel, and ``delta_ms``
+
+    :func:`stop_record` reports only what was pressed, which is not enough to
+    reproduce a session: a drag looks like a click, scrolling is missing, and
+    every step replays at once. These events feed
+    :func:`je_auto_control.utils.input_macro.replay_timeline` directly.
+
+    Returns an empty list on a platform whose recorder cannot supply it.
+    """
+    autocontrol_logger.info("stop_record_timeline")
+    try:
+        if sys.platform == "darwin":
+            raise AutoControlException(macos_record_error_message)
+        collect = getattr(recorder, "stop_record_timeline", None)
+        if collect is None:
+            autocontrol_logger.error(
+                "stop_record_timeline: this recorder has no timeline support")
+            return []
+        events = collect()
+        record_action_to_list("stop_record_timeline", None)
+        return list(events)
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError,
+            AutoControlException) as error:
+        record_action_to_list("stop_record_timeline", None, repr(error))
+        autocontrol_logger.error(f"stop_record_timeline, failed: {repr(error)}")
+        return []
+
+
 def record_to_json(output_path: str, *, stop_event: threading.Event,
                    timeout: Optional[float] = None) -> list:
     """

@@ -20,15 +20,30 @@ class AccessibilityBackend:
 
     def list_elements(self, app_name: Optional[str] = None,
                       max_results: int = 200,
+                      window_title: Optional[str] = None,
                       ) -> List[AccessibilityElement]:
+        """Flat list of elements, optionally scoped.
+
+        ``window_title`` is a case-insensitive substring of a window's title.
+        Scoping to one window is not just filtering: the desktop tree holds
+        orders of magnitude more nodes, so searching a single window is both
+        much faster and much less ambiguous. Backends that cannot scope may
+        ignore it.
+        """
         raise NotImplementedError
 
     # --- control patterns (object-level actions) ---------------------------
 
     def get_value(self, name: Optional[str] = None, role: Optional[str] = None,
                   app_name: Optional[str] = None,
-                  automation_id: Optional[str] = None) -> Optional[str]:
-        """Return the matched control's value text, or None if not found."""
+                  automation_id: Optional[str] = None,
+                  window_title: Optional[str] = None,
+                  contains: bool = False) -> Optional[str]:
+        """Return the matched control's value text, or None if not found.
+
+        ``window_title`` / ``contains`` narrow which control is meant, the
+        same way :meth:`get_state` does — the two reads stay a pair.
+        """
         self._unsupported("get_value", name, role, app_name, automation_id)
 
     def set_value(self, value: str, name: Optional[str] = None,
@@ -183,6 +198,21 @@ class AccessibilityBackend:
         ``accelerator_key`` / ``access_key`` / ``orientation``.
         """
         self._unsupported("get_properties", name, role, app_name, automation_id)
+
+    def get_state(self, name: Optional[str] = None,
+                  role: Optional[str] = None, app_name: Optional[str] = None,
+                  automation_id: Optional[str] = None,
+                  window_title: Optional[str] = None,
+                  contains: bool = False,
+                  ) -> Optional[Dict[str, Any]]:
+        """Return what the matched control currently holds, or None.
+
+        The keys present depend on the control: ``value`` (+ ``read_only``),
+        ``toggle`` (``on`` / ``off`` / ``mixed``), ``selected``, ``number``. A
+        key is absent when the control does not support it — distinct from the
+        value being empty. A password field reports only ``{"password": True}``.
+        """
+        self._unsupported("get_state", name, role, app_name, automation_id)
 
     # --- table headers + cell addressing (TablePattern / GridItemPattern) ---
 

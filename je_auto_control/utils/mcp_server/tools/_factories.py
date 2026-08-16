@@ -473,6 +473,19 @@ def recording_tools() -> List[MCPTool]:
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
+            name="ac_record_stop_timeline",
+            description=("Stop the active recorder and return the full "
+                         "event timeline: presses *and* releases, wheel "
+                         "movement, and the real gap before each event as "
+                         "delta_ms. ac_record_stop reports presses only, "
+                         "which cannot reproduce a drag, a scroll, or the "
+                         "original pacing. Feed these to "
+                         "ac_replay_timeline."),
+            input_schema=schema({}),
+            handler=h.record_stop_timeline,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
             name="ac_read_action_file",
             description="Read a JSON action file from disk and return its parsed contents.",
             input_schema=schema({"file_path": {"type": "string"}},
@@ -610,6 +623,7 @@ def semantic_locator_tools() -> List[MCPTool]:
             input_schema=schema({
                 "app_name": {"type": "string"},
                 "max_results": {"type": "integer"},
+                "window_title": {"type": "string"},
             }),
             handler=h.a11y_list,
             annotations=READ_ONLY,
@@ -617,13 +631,42 @@ def semantic_locator_tools() -> List[MCPTool]:
         MCPTool(
             name="ac_a11y_find",
             description=("Find the first accessibility element matching name "
-                         "/ role / app_name. Returns null when nothing matches."),
+                         "/ role / app_name. 'window_title' scopes the search "
+                         "to one window (substring of its title), which is "
+                         "much faster and less ambiguous than the whole "
+                         "desktop. 'contains' matches the name as a "
+                         "case-insensitive substring, ranking an exact name "
+                         "first — real labels carry accelerators like "
+                         "'Save(&S)'. Returns null when nothing matches."),
             input_schema=schema({
                 "name": {"type": "string"},
                 "role": {"type": "string"},
                 "app_name": {"type": "string"},
+                "window_title": {"type": "string"},
+                "contains": {"type": "boolean"},
             }),
             handler=h.a11y_find,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_a11y_find_all",
+            description=("Every accessibility element matching the filters, "
+                         "best name match first. Same options as "
+                         "ac_a11y_find, plus 'max_results' (how many "
+                         "matches to return) and 'scan_limit' (how many "
+                         "elements to examine looking for them) — without "
+                         "a window_title the scan covers the front-most "
+                         "windows only."),
+            input_schema=schema({
+                "name": {"type": "string"},
+                "role": {"type": "string"},
+                "app_name": {"type": "string"},
+                "window_title": {"type": "string"},
+                "contains": {"type": "boolean"},
+                "max_results": {"type": "integer"},
+                "scan_limit": {"type": "integer"},
+            }),
+            handler=h.a11y_find_all,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -1061,6 +1104,18 @@ def a11y_control_tools() -> List[MCPTool]:
                          "Returns the value string or null."),
             input_schema=schema(dict(_M)),
             handler=h.control_get_value,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_control_get_state",
+            description=("Read everything a native control currently holds "
+                         "in one call: value (+read_only), toggle "
+                         "(on/off/mixed), selected, number. A key is absent "
+                         "when the control has no such state, which is not "
+                         "the same as the value being empty. Password "
+                         "fields report only {password: true}."),
+            input_schema=schema(dict(_M)),
+            handler=h.control_get_state,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -5262,6 +5317,40 @@ def text_unicode_tools() -> List[MCPTool]:
             handler=h.type_unicode,
             annotations=SIDE_EFFECT_ONLY,
         ),
+        MCPTool(
+            name="ac_input_reachable",
+            description=("Check whether input this process sends can arrive: "
+                         "{desktop_available, reaches_system}. A locked "
+                         "workstation, or anti-cheat filtering in a "
+                         "foreground game, makes every click and keystroke "
+                         "silently do nothing while still reporting success. "
+                         "Sends one inert keystroke (F13) to find out."),
+            input_schema=schema({}),
+            handler=h.input_reachable,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_type_unicode_keys",
+            description=("Enter arbitrary Unicode 'text' as character-carrying "
+                         "key events, leaving the clipboard untouched. Needs a "
+                         "backend that supports it (Windows). "
+                         "Returns {ops, plan, method, code_units}."),
+            input_schema=schema({"text": {"type": "string"}}, required=["text"]),
+            handler=h.type_unicode_keys,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
+        MCPTool(
+            name="ac_type_unicode_text",
+            description=("Enter arbitrary Unicode 'text' by the best route this "
+                         "platform offers: key events where available, clipboard "
+                         "paste otherwise. 'modifier' is the paste key used by "
+                         "the fallback. Returns {ops, plan, method, code_units}."),
+            input_schema=schema(
+                {"text": {"type": "string"}, "modifier": {"type": "string"}},
+                required=["text"]),
+            handler=h.type_unicode_text,
+            annotations=SIDE_EFFECT_ONLY,
+        ),
     ]
 
 
@@ -5752,6 +5841,44 @@ def image_dedup_tools() -> List[MCPTool]:
                 {"paths": {"type": "array", "items": {"type": "string"}},
                  "max_distance": {"type": "integer"}}, ["paths"]),
             handler=h.dedupe_images,
+            annotations=READ_ONLY,
+        ),
+    ]
+
+
+def url_canon_tools() -> List[MCPTool]:
+    _URL = {"type": "string"}
+    return [
+        MCPTool(
+            name="ac_canonicalize_url",
+            description=("Canonical form of a URL for equality / de-duplication "
+                         "(lower-cases scheme and host, drops a default port "
+                         "and the fragment, collapses '.'/'..', sorts the "
+                         "query). Returns {url}."),
+            input_schema=schema({"url": _URL}, ["url"]),
+            handler=h.canonicalize_url,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_normalize_url",
+            description=("RFC 3986 syntax-based normalisation of a URL, "
+                         "preserving query order and fragment unless asked "
+                         "otherwise. Returns {url}."),
+            input_schema=schema(
+                {"url": _URL,
+                 "sort_query": {"type": "boolean"},
+                 "drop_fragment": {"type": "boolean"}}, ["url"]),
+            handler=h.normalize_url,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_urls_equal",
+            description=("Whether two URLs are equivalent after "
+                         "canonicalisation (query order and fragment are "
+                         "ignored). Returns {equal}."),
+            input_schema=schema({"first": _URL, "second": _URL},
+                                ["first", "second"]),
+            handler=h.urls_equal,
             annotations=READ_ONLY,
         ),
     ]
@@ -8707,6 +8834,7 @@ ALL_FACTORIES = (
     credential_lease_tools, egress_tools, approval_testing_tools,
     trajectory_eval_tools, compliance_tools, agent_trace_tools,
     video_report_tools, fuzzy_tools, artifact_store_tools, image_dedup_tools,
+    url_canon_tools,
     locale_tools, voice_tools, coordinate_space_tools, loop_guard_tools,
     process_mining_tools, asset_tools, events_tools, notify_channel_tools,
     jsonpath_tools, json_schema_tools, vuln_scan_tools, vex_tools,

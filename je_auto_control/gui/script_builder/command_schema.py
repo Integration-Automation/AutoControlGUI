@@ -205,6 +205,24 @@ def _add_keyboard_specs(specs: List[CommandSpec]) -> None:
         description="Enter any Unicode text via clipboard paste (write can't).",
     ))
     specs.append(CommandSpec(
+        "AC_type_unicode_keys", "Keyboard", "Type Unicode (key events)",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="café 🚀 値"),
+        ),
+        description="Enter any Unicode text as key events; leaves the clipboard "
+                    "untouched. Needs a backend that supports it (Windows).",
+    ))
+    specs.append(CommandSpec(
+        "AC_type_unicode_text", "Keyboard", "Type Unicode (best route)",
+        fields=(
+            FieldSpec("text", FieldType.STRING, placeholder="café 🚀 値"),
+            FieldSpec("modifier", FieldType.STRING, optional=True,
+                      default="ctrl", placeholder="ctrl | command"),
+        ),
+        description="Enter any Unicode text: key events where available, "
+                    "clipboard paste otherwise.",
+    ))
+    specs.append(CommandSpec(
         "AC_with_modifiers", "Keyboard", "With Modifiers Held",
         fields=(
             FieldSpec("modifiers", FieldType.STRING, placeholder="ctrl+shift"),
@@ -2231,6 +2249,36 @@ def _add_misc_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("max_distance", FieldType.INT, optional=True, default=5),
         ),
         description="Collapse near-duplicate images by perceptual hash.",
+    ))
+    specs.append(CommandSpec(
+        "AC_canonicalize_url", "Data", "URL: Canonicalize",
+        fields=(
+            FieldSpec("url", FieldType.STRING,
+                      placeholder="HTTP://Example.COM:80/a/../b?b=2&a=1#frag"),
+        ),
+        description="Canonical form of a URL, for equality and de-duplication.",
+    ))
+    specs.append(CommandSpec(
+        "AC_normalize_url", "Data", "URL: Normalize",
+        fields=(
+            FieldSpec("url", FieldType.STRING,
+                      placeholder="https://EXAMPLE.com:443/p%2fx/"),
+            FieldSpec("sort_query", FieldType.BOOL, optional=True,
+                      default=False),
+            FieldSpec("drop_fragment", FieldType.BOOL, optional=True,
+                      default=False),
+        ),
+        description="RFC 3986 syntax-based normalisation of a URL.",
+    ))
+    specs.append(CommandSpec(
+        "AC_urls_equal", "Data", "URL: Compare",
+        fields=(
+            FieldSpec("first", FieldType.STRING,
+                      placeholder="http://x.com/a?b=1&a=2"),
+            FieldSpec("second", FieldType.STRING,
+                      placeholder="http://x.com/a?a=2&b=1#top"),
+        ),
+        description="Whether two URLs are equivalent after canonicalisation.",
     ))
     specs.append(CommandSpec(
         "AC_parse_decimal", "Data", "Locale: Parse Decimal",
