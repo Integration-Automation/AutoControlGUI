@@ -115,8 +115,11 @@ def list_clipboard_formats() -> List[Dict[str, Any]]:
     import sys
     if not sys.platform.startswith("win"):
         raise RuntimeError("list_clipboard_formats is only supported on Windows")
-    import ctypes
-    user32 = ctypes.windll.user32
+    # Prototypes come from the shared module, on a *private* handle: declaring
+    # them on the process-wide ``ctypes.windll.user32`` would leak into every
+    # other caller in this process.
+    from je_auto_control.utils.clipboard.win32_clipboard_api import clipboard_api
+    user32, _kernel32 = clipboard_api()
     if not user32.OpenClipboard(None):
         raise RuntimeError("OpenClipboard failed")
     try:

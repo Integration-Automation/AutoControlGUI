@@ -91,52 +91,34 @@ def get_clipboard_html() -> Optional[str]:
 
 
 def _html_format_id():
-    import ctypes
-    return ctypes.windll.user32.RegisterClipboardFormatW(_HTML_FORMAT_NAME)
+    from je_auto_control.utils.clipboard.win32_clipboard_api import register_format
+    return register_format(_HTML_FORMAT_NAME)
 
 
 def _win_set_html(cf_html: bytes, fragment_plaintext: Optional[str]) -> None:
-    import ctypes
-    from ctypes import wintypes
+    """Put CF_HTML on the clipboard, optionally seeding a plain-text fallback.
+
+    The Win32 dance (prototypes, alloc, lock, open) lives in
+    ``utils/clipboard/win32_clipboard_api.py``; this module only decides *what*
+    bytes go on the clipboard. It used to hand-roll those calls with ``restype``
+    but no ``argtypes``, so every call raised ``OverflowError`` on 64-bit
+    Windows — the function had never worked.
+    """
     from je_auto_control.utils.clipboard.clipboard import set_clipboard
-    user32, kernel32 = ctypes.windll.user32, ctypes.windll.kernel32
-    kernel32.GlobalAlloc.restype = wintypes.HGLOBAL
-    kernel32.GlobalLock.restype = ctypes.c_void_p
+    from je_auto_control.utils.clipboard.win32_clipboard_api import (
+        set_clipboard_format,
+    )
     if fragment_plaintext is not None:
         set_clipboard(fragment_plaintext)            # seeds CF_UNICODETEXT first
-    if not user32.OpenClipboard(None):
-        raise RuntimeError("OpenClipboard failed")
-    try:
-        if fragment_plaintext is None:
-            user32.EmptyClipboard()
-        handle = kernel32.GlobalAlloc(0x0002, len(cf_html) + 1)
-        if not handle:
-            raise RuntimeError("GlobalAlloc failed")
-        pointer = kernel32.GlobalLock(handle)
-        ctypes.memmove(pointer, cf_html + b"\x00", len(cf_html) + 1)
-        kernel32.GlobalUnlock(handle)
-        if not user32.SetClipboardData(_html_format_id(), handle):
-            raise RuntimeError("SetClipboardData(CF_HTML) failed")
-    finally:
-        user32.CloseClipboard()
+    # Keep that seed when there is one: emptying the clipboard here would throw
+    # the plain-text fallback away again.
+    set_clipboard_format(_html_format_id(), cf_html + b"\x00",
+                         empty_first=fragment_plaintext is None)
 
 
 def _win_get_html() -> Optional[bytes]:
-    import ctypes
-    from ctypes import wintypes
-    user32, kernel32 = ctypes.windll.user32, ctypes.windll.kernel32
-    user32.GetClipboardData.restype = wintypes.HANDLE
-    kernel32.GlobalLock.restype = ctypes.c_void_p
-    if not user32.OpenClipboard(None):
-        raise RuntimeError("OpenClipboard failed")
-    try:
-        handle = user32.GetClipboardData(_html_format_id())
-        if not handle:
-            return None
-        pointer = kernel32.GlobalLock(handle)
-        size = kernel32.GlobalSize(handle)
-        data = ctypes.string_at(pointer, size)
-        kernel32.GlobalUnlock(handle)
-        return data.split(b"\x00", 1)[0]
-    finally:
-        user32.CloseClipboard()
+    from je_auto_control.utils.clipboard.win32_clipboard_api import (
+        get_clipboard_format,
+    )
+    data = get_clipboard_format(_html_format_id())
+    return None if data is None else data.split(b"\x00", 1)[0]
