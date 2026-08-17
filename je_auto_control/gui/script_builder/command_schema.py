@@ -1098,6 +1098,45 @@ def _add_window_specs(specs: List[CommandSpec]) -> None:
         description="Screen rectangle (left, top, right, bottom) of a window.",
     ))
     specs.append(CommandSpec(
+        "AC_foreground_window_pid", "Window", "Foreground Window PID",
+        description="PID owning the foreground window (0 when unavailable).",
+    ))
+    specs.append(CommandSpec(
+        "AC_windows_for_pid", "Window", "Windows by Process ID",
+        fields=(FieldSpec("pid", FieldType.INT),),
+        description="Visible top-level windows owned by a process.",
+    ))
+    specs.append(CommandSpec(
+        "AC_minimize_windows_for_pid", "Window", "Minimize Windows by PID",
+        fields=(FieldSpec("pid", FieldType.INT),),
+        description="Minimise every window a process owns.",
+    ))
+    specs.append(CommandSpec(
+        "AC_post_key_to_window", "Window", "Post Key to Window",
+        fields=(
+            FieldSpec("title_substring", FieldType.STRING),
+            FieldSpec("key", FieldType.STRING),
+        ),
+        description="Type one key into a window without focusing it "
+                    "(best effort: some applications ignore posted input).",
+    ))
+    specs.append(CommandSpec(
+        "AC_post_click_to_window", "Window", "Post Click to Window",
+        fields=(
+            FieldSpec("title_substring", FieldType.STRING),
+            FieldSpec("button", FieldType.STRING, optional=True),
+            FieldSpec("x", FieldType.INT, optional=True),
+            FieldSpec("y", FieldType.INT, optional=True),
+        ),
+        description="Click inside a window without focusing it; x / y are "
+                    "relative to the window's top-left corner.",
+    ))
+    specs.append(CommandSpec(
+        "AC_window_pid", "Window", "Window PID by Title",
+        fields=(FieldSpec("title_substring", FieldType.STRING),),
+        description="PID owning the first matching window (0 when none).",
+    ))
+    specs.append(CommandSpec(
         "AC_move_window", "Window", "Move Window by Title",
         fields=(
             FieldSpec("title_substring", FieldType.STRING),
