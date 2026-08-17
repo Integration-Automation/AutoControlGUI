@@ -115,3 +115,37 @@ def test_snap_window_unknown_position_raises():
     with pytest.raises(ValueError):
         snap_window("E", "diagonal", screen_size=lambda: (1000, 800),
                     mover=lambda *a: True)
+
+
+def test_default_lister_only_offers_windows_restore_can_address(monkeypatch):
+    """Saving an untitled window is a promise the restore side cannot keep.
+
+    ``restore_window_layout`` finds a window by title and skips blank ones, so
+    an untitled entry inflates the saved count without ever being restored —
+    on a real desktop that was 28 saved against 15 restorable.
+    """
+    from je_auto_control.utils.window_capture import window_capture as wc
+
+    seen = {}
+
+    def _fake_list_windows(titled_only=False):
+        seen["titled_only"] = titled_only
+        return [(1, "Editor"), (2, "   "), (3, "")]
+
+    import je_auto_control.wrapper.auto_control_window as window_api
+    monkeypatch.setattr(window_api, "list_windows", _fake_list_windows)
+    assert wc._default_lister() == [(1, "Editor"), (2, "   "), (3, "")]
+    assert seen["titled_only"] is True
+
+
+def test_saved_entries_are_all_restorable():
+    """Round-trip: every entry save produces must survive restore."""
+    layout = save_window_layout(
+        lister=lambda: [(1, "Editor"), (2, "Browser")],
+        geometry=lambda title: (0, 0, 100, 100),
+    )
+    moved = []
+    restored = restore_window_layout(
+        layout, mover=lambda title, *rect: moved.append(title) or True)
+    assert restored == len(layout) == 2
+    assert moved == ["Editor", "Browser"]
