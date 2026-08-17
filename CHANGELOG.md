@@ -49,6 +49,34 @@ only when documented here with a migration path.
   `ac_foreground_window`, `ac_window_rect`). `list_windows` takes
   `titled_only`, and `move_window_by_title` keeps the window's current size
   when width/height are omitted.
+- Window ownership: `foreground_window_process_id` and `window_process_id`
+  (`AC_foreground_window_pid`, `AC_window_pid`; `ac_foreground_window_pid`,
+  `ac_window_pid`; two Script Builder specs), on the Windows backend
+  `get_window_process_id`. A title is whatever the application decides to
+  display, so it cannot answer "which program is the user actually in front
+  of" — the process id can. Unavailable reads as `None` (`{"pid": 0}` on the
+  JSON surfaces) rather than a bare `0`, which a caller could otherwise match
+  against a process list and hit the System Idle Process.
+- Windows by owning process: `windows_for_process_id` and
+  `minimize_windows_for_process` (`AC_windows_for_pid`,
+  `AC_minimize_windows_for_pid`; `ac_windows_for_pid`,
+  `ac_minimize_windows_for_pid`; two Script Builder specs). A multi-process
+  application cannot be addressed by title — its windows are named after
+  whatever they display and several of its processes have no window at all —
+  so ownership is the stable key.
+- Input posted to a window without focusing it: `post_key_to_window` and
+  `post_click_to_window` (`AC_post_key_to_window`, `AC_post_click_to_window`;
+  `ac_post_key_to_window`, `ac_post_click_to_window`; two Script Builder specs),
+  on the Windows backend `get_focused_control`, `deepest_child_at`, `post_key`
+  and `post_click`. They resolve the window by title *substring* like every
+  other function here, and post to the control that actually has keyboard
+  focus — or, for a click, to the deepest child under the point, in that
+  child's client coordinates. Posting to the top-level frame (what the older
+  `send_key_event_to_window` does) types nothing in any application with child
+  controls: measured on Character Map, the frame swallowed the key while the
+  focused edit accepted it. Both return whether the messages were queued, and
+  posting remains best effort — applications reading raw input or checking the
+  foreground ignore posted messages.
 - `utils/url_canon` reaches its delivery surfaces: `canonicalize_url`,
   `normalize_url`, `urls_equal`, `build_query` and `parse_query` are exported
   from the facade, with `AC_canonicalize_url` / `AC_normalize_url` /
@@ -71,6 +99,19 @@ only when documented here with a migration path.
 
 ### Changed
 
+- **`send_key_event_to_window` / `send_mouse_event_to_window` now actually
+  reach the target.** They posted to the top-level frame, but keyboard messages
+  go to the control that *has focus* and a click belongs to the child under the
+  point in that child's client coordinates — so for any window with child
+  controls they did nothing at all while still reporting success. They delegate
+  to `post_key_to_window` / `post_click_to_window`. Two visible consequences:
+  the key sender now matches the window title as a *substring* (it required an
+  exact title before, via `FindWindowW`), and the mouse sender accepts a title
+  string as well as the hwnd it always took.
+- `save_window_layout` now snapshots only titled windows (its documented
+  behaviour). Untitled entries could never be restored — `restore_window_layout`
+  addresses a window by title and skips blank ones — so they only inflated the
+  saved count, by roughly half on a real desktop.
 - `set_clipboard_image` accepts PNG bytes **or** a path to any Pillow-readable
   image, and `get_clipboard_image` / `set_clipboard_image` are now exported
   from `je_auto_control.utils.clipboard` and the top-level facade, with
@@ -131,10 +172,27 @@ only when documented here with a migration path.
 
 ### Deprecated
 
+- `send_key_event_to_window` and `send_mouse_event_to_window` — use
+  `post_key_to_window` / `post_click_to_window`. Both now emit a
+  `DeprecationWarning` and delegate to the working implementation; see Changed
+  for the behaviour that changes.
+
 - New integrations should avoid the eager, historical top-level import surface
   and import stable entry points from `je_auto_control.api`.
 
 ### Fixed
+
+- **Four clipboard writers never worked on 64-bit Windows**:
+  `set_clipboard_files`, `set_clipboard_html`, `set_clipboard_rtf` and
+  `set_clipboard_csv` all raised `OverflowError: int too long to convert` on
+  every call, and the matching readers failed whenever that format was actually
+  present. Each module declared `restype` but not `argtypes`, so ctypes passed
+  the pointer-width memory handle as `c_int`. The prototypes and the
+  open/alloc/lock dance now live once in
+  `je_auto_control/utils/clipboard/win32_clipboard_api.py`, on private `WinDLL`
+  handles so the declarations cannot leak into other user32 callers, and
+  `rich_clipboard`, `clipboard_rich_formats`, `clipboard_files` and
+  `clipboard_formats` all go through it.
 
 - `write` failing a whole string on the first character outside the 192-entry
   virtual-key table — on a US layout that includes `, . / : ? ! _ + @ %` and

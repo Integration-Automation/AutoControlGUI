@@ -1,5 +1,63 @@
 # What's New — AutoControl
 
+## What's new (2026-08-17)
+
+### Which Program Owns That Window
+
+- **`foreground_window_process_id` / `window_process_id`** (`AC_foreground_window_pid`,
+  `AC_window_pid`, `ac_foreground_window_pid`, `ac_window_pid`, two Script Builder
+  specs; Windows backend `get_window_process_id`): a window title is whatever the
+  application decides to display, and unrelated programs share titles like
+  `Settings`, so "which program is the user in front of" had no reliable answer.
+  It does now, and callers can join it against a process list. Unavailable reads
+  as `None` — never a bare `0`, which would match the System Idle Process.
+- **The two older window-input functions are deprecated and now work.**
+  `send_key_event_to_window` / `send_mouse_event_to_window` posted to the frame,
+  which reaches nothing in a window with child controls; they delegate to the
+  new pair, warn once, and keep their old argument types working.
+- **`get_pixel` no longer risks a truncated device context.** The Windows screen
+  backend declared no prototypes, so an HDC — pointer-width — came back through
+  ctypes' default `c_int`, and the same truncated value was passed on to
+  `GetPixel` and `ReleaseDC`. Every prototype is declared and the module owns
+  private DLL handles, so the declarations cannot leak into other callers.
+- **Act on a process's windows, not on a title**
+  (`windows_for_process_id`, `minimize_windows_for_process`): a browser names
+  its windows after the page they show and runs a dozen processes without any
+  window, so "minimise that application" was previously hand-rolled Win32 in
+  every caller — enumerate windows, ask each one which process owns it, filter,
+  minimise. That loop now lives here once.
+- **Typing into a window without stealing focus actually works now**
+  (`post_key_to_window`, `post_click_to_window`, `AC_post_key_to_window`,
+  `AC_post_click_to_window`, `ac_post_key_to_window`, `ac_post_click_to_window`).
+  The existing `send_key_event_to_window` posted to the top-level frame, and
+  keyboard messages go to the control that *has focus* — so it silently did
+  nothing in any application with child controls while still reporting success.
+  Measured on Character Map: posting to the frame typed nothing, posting to the
+  focused edit typed the character; on Windows 11 Notepad the new path types
+  into a background window while the foreground window keeps focus. Clicks
+  resolve the deepest child under the point and convert to its client
+  coordinates. This is still best effort by nature — games and anything reading
+  raw input ignore posted messages — so both functions return whether the
+  messages were queued rather than claiming the application acted.
+- **Half the clipboard was broken on 64-bit Windows, and nothing noticed.**
+  `set_clipboard_files`, `set_clipboard_html`, `set_clipboard_rtf` and
+  `set_clipboard_csv` raised `OverflowError` on every call — four writers that
+  had never once worked. Each module declared `restype` but not `argtypes`, so
+  a pointer-width memory handle went through ctypes' default `c_int`. The
+  pure-function tests could not see it (the byte packing was always right) and
+  nothing exercised the Win32 half. The prototypes now live once in
+  `utils/clipboard/win32_clipboard_api.py`, every clipboard module goes through
+  it, and a new test round-trips text, HTML, RTF, CSV and file lists through the
+  real clipboard — plus a static check that no module hand-rolls those calls
+  without declaring prototypes again.
+- **`save_window_layout` no longer records windows it cannot restore.** Its
+  docstring promised titled windows; the default lister returned all of them,
+  while `restore_window_layout` addresses a window by title and skips blank ones.
+  On a real desktop that was 28 entries saved against 15 restorable — a caller
+  reporting the saved count was over-promising by a factor of two. The lister now
+  passes `titled_only=True`, and a round-trip test pins save and restore to the
+  same set.
+
 ## What's new (2026-08-15)
 
 ### Text Entry and On-Screen Location That Match What You See

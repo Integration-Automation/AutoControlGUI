@@ -22,10 +22,10 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | Python 模組總數（含周邊子專案） | 998 |
 | 程式碼總行數 | 133,534 |
 | `je_auto_control/utils/` 子套件數 | 308 |
-| `AC_*` 動作指令數（`known_commands()` 實測） | 767 |
+| `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,221 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
-| MCP 工具數（`build_default_tool_registry()` 實測） | 670 |
+| MCP 工具數（`build_default_tool_registry()` 實測） | 676 |
 | `test_*.py` 測試檔／測試函式 | 458 / 4,319 |
 | 範例腳本 | 27 |
 
@@ -49,7 +49,7 @@ USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
                                 │  全部只呼叫下面這一層，不含業務邏輯
 ┌───────────────────────────────▼──────────────────────────────────────────┐
 │  執行核心 Execution Core                                                  │
-│  utils/executor/action_executor.py  ── Executor.event_dict（767 個 AC_*） │
+│  utils/executor/action_executor.py  ── Executor.event_dict（773 個 AC_*） │
 │  utils/executor/flow_control.py     ── 34 個區塊指令（迴圈/分支/try/巨集） │
 │  utils/script_vars ── ${var} 插值   │ utils/json ── action 檔 I/O          │
 └───────────────────────────────┬──────────────────────────────────────────┘
@@ -170,12 +170,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `wrapper/_platform_osx.py` | 150 | macOS 後端組裝（Quartz 事件 + osx 虛擬鍵表）。 |
 | `wrapper/_platform_linux.py` | 268 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
 | `wrapper/_platform_wayland.py` | 58 | Wayland 後端組裝（libei／ydotool／grim）。 |
-| `wrapper/auto_control_mouse.py` | 304 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
-| `wrapper/auto_control_keyboard.py` | 228 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。 |
+| `wrapper/auto_control_mouse.py` | 346 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
+| `wrapper/auto_control_keyboard.py` | 273 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。 |
 | `wrapper/auto_control_screen.py` | 98 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
 | `wrapper/auto_control_image.py` | 83 | 影像 API：`locate_all_image`、`locate_image_center`、`locate_and_click`。 |
 | `wrapper/auto_control_record.py` | 76 | 錄製 API：`record`／`stop_record`／`record_to_json`（支援 stop event 與逾時）。 |
-| `wrapper/auto_control_window.py` | 94 | 視窗管理門面：列舉、尋找、聚焦、等待、關閉、顯示狀態（目前僅 Windows 實作）。 |
+| `wrapper/auto_control_window.py` | 293 | 視窗管理門面：列舉、尋找、聚焦、等待、關閉、顯示狀態、幾何、所屬行程 PID、依行程列舉／最小化視窗、不搶焦點的投遞式輸入（目前僅 Windows 實作）。 |
 
 ### 5.3 平台後端
 
@@ -190,14 +190,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `keyboard/win32_ctype_keyboard_control.py` | 55 | 鍵盤事件產生。 |
 | `record/win32_input_hook.py` | 223 | 單一一組低階鍵鼠 hook（`WH_KEYBOARD_LL`／`WH_MOUSE_LL`）＋訊息迴圈，產生帶時間戳的事件時間軸；停止時以 `PostThreadMessageW(WM_QUIT)` 收掉執行緒，不會每錄一次就漏一條。 |
 | `record/win32_record.py` | 126 | 把 `win32_input_hook` 的時間軸轉成 action list（含按鍵放開、滾輪與間隔）。 |
-| `screen/win32_screen.py` | 53 | 螢幕尺寸與像素讀取。 |
-| `window/windows_window_manage.py` | 208 | 視窗列舉／聚焦／關閉／最小化／幾何（`auto_control_window` 的實作）。**每支 Win32 函式都明寫 argtypes/restype**，並持有自己的 user32 handle，避免把原型外溢到別的模組；hwnd 一律是 int。 |
+| `screen/win32_screen.py` | 89 | 螢幕尺寸與像素讀取。**每支 Win32 函式都明寫 argtypes/restype**（HDC 是指標寬度，走預設的 c_int 會截斷，錯誤會沉默地擴散到 GetPixel／ReleaseDC），並持有自己的 user32／gdi32 handle。import 時呼叫 `SetProcessDPIAware()`——**行程層級且不可還原**，實體↔邏輯座標換算請走 `utils/monitor_layout`。 |
+| `window/windows_window_manage.py` | 366 | 視窗列舉／聚焦／關閉／最小化／幾何／所屬行程 PID／投遞式輸入（`auto_control_window` 的實作）。**每支 Win32 函式都明寫 argtypes/restype**，並持有自己的 user32 handle，避免把原型外溢到別的模組；hwnd 一律是 int。 |
 | `message/window_message.py` | 97 | 直接對視窗送 `WM_*` 訊息（背景輸入）。 |
 | `interception/_dll.py` | 231 | `interception.dll` 的延遲 ctypes 載入與結構定義。 |
 | `interception/keyboard.py` | 71 | 經 Interception 驅動的鍵盤輸入（繞過部分反自動化偵測）。 |
 | `interception/mouse.py` | 161 | 經 Interception 驅動的滑鼠輸入。 |
 
-#### macOS（`osx/`，17 檔／771 行）
+#### macOS（`osx/`，17 檔／773 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -268,7 +268,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/dag/` | 478 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 105 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
 | `utils/deterministic/` | 98 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
-| `utils/executor/` | 8,931 | **核心**。`Executor` 指令分派表（767 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
+| `utils/executor/` | 8,931 | **核心**。`Executor` 指令分派表（773 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 138 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 129 | 定時輸入事件重播與宣告式輸入序列 DSL |
 | `utils/json/` | 75 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
@@ -490,7 +490,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 129 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 363 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 94 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 16,441 | **無頭 MCP 伺服器**（16K LOC，預設註冊 670 個工具＝651 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 16,441 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 182 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 108 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 456 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -658,7 +658,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/clipboard/` | 353 | 跨平台無頭剪貼簿存取（文字 + 影像）。`set_clipboard_image` 同時接受 PNG 位元組與檔案路徑——先前這個名字在本子套件裡有**兩份不同簽章的實作**（`clipboard.py` 吃 bytes、`clipboard_image.py` 吃路徑），匯錯來源只會在執行期才炸，已合併成一支 |
+| `utils/clipboard/` | 468 | 跨平台無頭剪貼簿存取（文字 + 影像）＋ `win32_clipboard_api.py`：**所有剪貼簿格式共用的 Win32 原型與 open/alloc/lock 流程**（`argtypes` 只宣告一半曾讓四支 writer 在 64 位元上必然丟 `OverflowError`，見 CHANGELOG）。`set_clipboard_image` 同時接受 PNG 位元組與檔案路徑——先前這個名字在本子套件裡有**兩份不同簽章的實作**（`clipboard.py` 吃 bytes、`clipboard_image.py` 吃路徑），匯錯來源只會在執行期才炸，已合併成一支 |
 | `utils/clipboard_files/` | 119 | 剪貼簿檔案清單（CF_HDROP）：純 DROPFILES 封裝 + Win32 存取 |
 | `utils/clipboard_formats/` | 152 | 檢視與分類剪貼簿可用格式（純分類／差異 + Win32 列舉） |
 | `utils/clipboard_history/` | 111 | 剪貼簿歷史：環形緩衝 + 背景輪詢器 |
@@ -683,12 +683,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `action_executor.py` | 8,042 | `Executor` 類別與 `event_dict` 分派表（767 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
+| `action_executor.py` | 8,042 | `Executor` 類別與 `event_dict` 分派表（773 個指令），另含數百個把 utils 能力接成指令的 adapter 函式；全域單例 `executor` 與 `add_command_to_executor()` 擴充點。 |
 | `flow_control.py` | 757 | 34 個區塊指令：`AC_loop`／`AC_for_each`／`AC_while_*`／`AC_if_*`／`AC_try`／`AC_retry`／`AC_parallel`／`AC_define_macro`／`AC_call_macro`／變數指令（`AC_set_var`、`AC_*_to_var`）／`AC_assert_var`。`LoopBreak`／`LoopContinue` 以例外實作。 |
 | `action_schema.py` | 94 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。 |
 | `mouse_aliases.py` | 40 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
-#### `utils/mcp_server/`（16,441 行，670 個工具）— 最大子系統
+#### `utils/mcp_server/`（16,441 行，676 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1011,7 +1011,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/ocr/` | 9 | 1,105 |
 | `utils/usbip/` | 5 | 925 |
 | `utils/assertion/` | 3 | 866 |
-| `osx/` | 17 | 771 |
+| `osx/` | 17 | 773 |
 | `autocontrol-lsp/` | 8 | 752 |
 | `utils/hotkey/` | 7 | 734 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 667 | 46,047 |
