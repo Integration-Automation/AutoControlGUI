@@ -14,8 +14,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2022, ubuntu-22.04, macos-14]
+        # arm64 is not a rounding error on the desktop any more, and the
+        # dependency set is where it shows: opencv, pillow and cryptography
+        # all ship native wheels, and a missing arm64 wheel means a source
+        # build that either takes an hour or fails. macos-14 is already
+        # arm64; these add the other two.
+        os: [windows-2022, ubuntu-22.04, macos-14, ubuntu-22.04-arm,
+             windows-11-arm]
         python-version: ["3.10", "3.14"]
+        exclude:
+          # windows-11-arm has no 3.10 build available through setup-python.
+          - os: windows-11-arm
+            python-version: "3.10"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +59,72 @@ jobs:
           name: platform-smoke-${{ matrix.os }}-${{ matrix.python-version }}
           path: platform-smoke.zip
           if-no-files-found: warn
+
+  freebsd:
+    name: The X11 backend's platform guards on a real FreeBSD
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The X11 backend was gated on sys.platform being linux/linux2, so it
+      # refused to import on a FreeBSD desktop that runs the same X server,
+      # the same python-Xlib and the same code. Relaxing that guard is only
+      # worth anything if something actually runs it on a BSD, and no hosted
+      # runner is one — so this boots a real FreeBSD VM inside the runner.
+      #
+      # What it checks is the platform layer, not the whole package: the
+      # heavy dependencies (opencv in particular) have no FreeBSD wheels, so
+      # a full install would build from source for an hour or fail. The
+      # guards and the wrapper's routing are the change; they are what runs.
+      # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+      - uses: vmactions/freebsd-vm@v1  # NOSONAR githubactions:S7637
+        with:
+          release: "14.2"
+          usesh: true
+          prepare: |
+            pkg install -y python311 py311-pip py311-xlib xorg-vfbserver xauth
+          run: |
+            set -eu
+            echo "uname: $(uname -a)"
+            python3.11 - <<'PROBE'
+            import sys
+            sys.path.insert(0, ".")
+            from je_auto_control.utils.platform_id import (
+                current_family, is_bsd, is_x11_unix,
+            )
+            print("sys.platform:", sys.platform)
+            assert sys.platform.startswith("freebsd"), sys.platform
+            assert is_bsd(), "FreeBSD is not recognised as a BSD"
+            assert is_x11_unix(), "FreeBSD is not recognised as an X11 unix"
+            assert current_family() == "bsd", current_family()
+            print("platform_id: OK")
+            PROBE
+            # The guards are what refused to load here. Import the X11
+            # modules directly, under a real X server, without dragging in
+            # the package's heavy dependencies.
+            Xvfb :99 -screen 0 1280x800x24 &
+            sleep 3
+            DISPLAY=:99 python3.11 - <<'BACKEND'
+            import sys
+            sys.path.insert(0, ".")
+            from je_auto_control.linux_with_x11.core.utils import (
+                x11_linux_display, x11_linux_vk,
+            )
+            from je_auto_control.linux_with_x11.mouse import (
+                x11_linux_mouse_control as mouse,
+            )
+            from je_auto_control.linux_with_x11.screen import (
+                x11_linux_screen as screen,
+            )
+            print("display:", x11_linux_display.display)
+            print("screen size:", screen.size())
+            mouse.set_position(321, 123)
+            landed = mouse.position()
+            assert landed == (321, 123), landed
+            print("pointer round-trip on FreeBSD:", landed)
+            print("keycode for 'a':", x11_linux_vk.x11_linux_key_a)
+            BACKEND
 
   macos-capabilities:
     name: What a real macOS runner permits

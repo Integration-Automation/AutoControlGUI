@@ -1,13 +1,16 @@
-import sys
 from queue import Queue
 from threading import Thread
 
 from je_auto_control.utils.exception.exception_tags import linux_import_error_message, listener_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.platform_id import is_x11_unix
 
 # === 平台檢查 Platform Check ===
 # 僅允許在 Linux 環境執行，否則拋出例外
-if sys.platform not in ["linux", "linux2"]:
+# Not "is this Linux" but "is this an X11 unix": a FreeBSD, OpenBSD or
+# NetBSD desktop runs the same X server and the same python-Xlib, and
+# nothing below is Linux-specific.
+if not is_x11_unix():
     raise AutoControlException(linux_import_error_message)
 
 from Xlib.display import Display

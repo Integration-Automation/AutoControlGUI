@@ -147,7 +147,7 @@ python -m je_auto_control          # 或：je_auto_control.start_autocontrol_gui
 | 系统诊断 | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | 测试代码生成 | `generate_code` | — | — |
 
-除了这张表，`utils/` 下还有 309 个无头包，覆盖断言、韧性、数据质量、i18n 审计、脱敏、
+除了这张表，`utils/` 下还有 310 个无头包，覆盖断言、韧性、数据质量、i18n 审计、脱敏、
 治理、可观测性等等。完整的逐模块地图在 **[architecture_explore.md](../architecture_explore.md)**。
 
 ---

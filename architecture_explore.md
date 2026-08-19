@@ -19,9 +19,9 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,025 |
-| 程式碼總行數 | 139,017 |
-| `je_auto_control/utils/` 子套件數 | 309 |
+| Python 模組總數（含周邊子專案） | 1,026 |
+| 程式碼總行數 | 139,114 |
+| `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
@@ -55,7 +55,7 @@ USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
 └───────────────────────────────┬──────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼──────────────────────────────────────────┐
-│  能力層 utils/（309 個子套件，全部無 Qt 相依）                             │
+│  能力層 utils/（310 個子套件，全部無 Qt 相依）                             │
 │  影像辨識 │ OCR │ 無障礙樹 │ 定位自癒 │ AI/Agent │ 遠端桌面 │ USB         │
 │  報表觀測 │ 資料 │ 安全 │ 韌性 │ 系統整合 │ 排程觸發 │ 網路協定           │
 └───────────────────────────────┬──────────────────────────────────────────┘
@@ -166,7 +166,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `wrapper/platform_wrapper.py` | 59 | **Strategy 樞紐**。依 `sys.platform` 匯入唯一後端並匯出 `keyboard`、`keyboard_check`、`keyboard_keys_table`、`mouse`、`mouse_keys_table`、`special_mouse_keys_table`、`screen`、`recorder`；載入失敗直接拋 `AutoControlException`（fail fast）。 |
+| `wrapper/platform_wrapper.py` | 73 | **Strategy 樞紐**。依 `sys.platform` 匯入唯一後端並匯出 `keyboard`、`keyboard_check`、`keyboard_keys_table`、`mouse`、`mouse_keys_table`、`special_mouse_keys_table`、`screen`、`recorder`；載入失敗直接拋 `AutoControlException`（fail fast）。 |
 | `wrapper/_platform_windows.py` | 325 | Windows 後端組裝：Win32 ctypes 模組 + 虛擬鍵表 + 選用 Interception 驅動。 |
 | `wrapper/_platform_osx.py` | 155 | macOS 後端組裝（Quartz 事件 + osx 虛擬鍵表）。 |
 | `wrapper/_platform_linux.py` | 267 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
@@ -211,7 +211,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `screen/osx_screen.py` | 143 | 螢幕擷取與尺寸（含 Retina 座標處理）。 |
 | `pid/pid_control.py` | 64 | 以 PID 操作應用程式。 |
 
-#### Linux X11（`linux_with_x11/`，19 檔／1,175 行）
+#### Linux X11（`linux_with_x11/`，19 檔／1,196 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -258,7 +258,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `ios/input.py` | 46 | iOS 觸控與按鍵原語。 |
 | `ios/screen.py` | 32 | iOS 裝置螢幕擷取與尺寸。 |
 
-### 5.4 能力層 `utils/`（309 個子套件）
+### 5.4 能力層 `utils/`（310 個子套件）
 
 以下依主題分組。每個子套件都是獨立可匯入的無頭模組，不含任何 Qt 相依。
 
@@ -296,7 +296,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 13 個套件、約 2,575 行。
+> 14 個套件、約 2,637 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -311,6 +311,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/logging/` | 71 | `autocontrol_logger` 單例 + 輪替檔案 handler |
 | `utils/package_manager/` | 98 | 動態載入套件並把 executor 注入其中 |
 | `utils/path_guard/` | 99 | 命令列傳入路徑的正規化與邊界檢查（防路徑穿越） |
+| `utils/platform_id/` | 62 | 作業系統家族的單一判定點。`sys.platform` 原本在一百多處跟字面清單比對，而那些清單都沒有 BSD；`is_x11_unix()` 問的是「這是不是 X11 unix」，這才是守衛一直想問的問題 |
 | `utils/shell_process/` | 159 | `ShellManager`：以 argv list 執行外部命令（禁用 `shell=True`） |
 | `utils/start_exe/` | 39 | 啟動另一個執行檔行程 |
 
@@ -920,7 +921,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | audit_log | `audit_log_tab.py` | 192 | 瀏覽並驗證防竄改雜湊鏈。 |
 | inspector | `inspector_tab.py` | 121 | WebRTC 檢測器：即時摘要與近期統計取樣。 |
 | usb_devices | `usb_devices_tab.py` | 121 | 唯讀列舉 + 熱插拔監看控制。 |
-| usb_browser | `usb_browser_tab.py` | 309 | 檢視端 USB 裝置瀏覽器。 |
+| usb_browser | `usb_browser_tab.py` | 310 | 檢視端 USB 裝置瀏覽器。 |
 | usb_share | `usb_passthrough_panel.py` + `usb_passthrough_prompt.py` | 704 | AnyDesk 風格 USB 直通面板與主機端 ACL 授權對話框。 |
 | diagnostics | `diagnostics_tab.py` | 91 | 執行子系統檢查並顯示結果。 |
 | report | `_report_tab.py` | 81 | 產生 HTML／JSON／XML 報表。 |
@@ -1023,11 +1024,11 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/usb/` | 17 | 4,247 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,366 |
 | `utils/accessibility/` | 13 | 2,818 |
-| `wrapper/` | 3,026 | 3,013 新增 `window_backends/`：視窗管理的平台縫（`base` / `windows_backend` / `x11_backend` / `macos_backend` / `null_backend`）。放在 `wrapper/` 而不是 `utils/`，因為它必須 import `windows/`、`linux_with_x11/`、`osx/`，而 `utils/` 在分層上在那三者之上。 |
+| `wrapper/` | 3,040 | 3,013 新增 `window_backends/`：視窗管理的平台縫（`base` / `windows_backend` / `x11_backend` / `macos_backend` / `null_backend`）。放在 `wrapper/` 而不是 `utils/`，因為它必須 import `windows/`、`linux_with_x11/`、`osx/`，而 `utils/` 在分層上在那三者之上。 |
 | `windows/` | 23 | 1,995 |
 | `utils/rest_api/` | 8 | 1,738 |
 | `utils/agent/` | 8 | 1,250 |
-| `linux_with_x11/` | 19 | 1,175 |
+| `linux_with_x11/` | 19 | 1,196 |
 | `linux_wayland/` | 17 | 2,830 |
 | `utils/triggers/` | 4 | 1,146 |
 | `utils/ocr/` | 9 | 1,112 |
@@ -1036,6 +1037,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 761 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 727 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 687 | 49,958 |
-| **總計** | **1,019** | **138,952** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 688 | 50,034 |
+| **總計** | **1,020** | **139,049** |
 

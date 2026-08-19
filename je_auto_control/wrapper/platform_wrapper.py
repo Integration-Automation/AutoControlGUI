@@ -1,20 +1,21 @@
 import sys
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.platform_id import is_bsd, is_macos, is_windows
 
-if sys.platform in ["win32", "cygwin", "msys"]:
+if is_windows():
     from je_auto_control.wrapper._platform_windows import (  # noqa: F401  # reason: facade re-export
         keyboard, keyboard_check, keyboard_keys_table,
         mouse, mouse_keys_table, special_mouse_keys_table,
         screen, recorder,
     )
-elif sys.platform == "darwin":
+elif is_macos():
     from je_auto_control.wrapper._platform_osx import (  # noqa: F401  # reason: facade re-export
         keyboard, keyboard_check, keyboard_keys_table,
         mouse, mouse_keys_table, special_mouse_keys_table,
         screen, recorder,
     )
-elif sys.platform in ["linux", "linux2"]:
+elif sys.platform.startswith("linux"):
     from je_auto_control.linux_wayland import select_display_server
     from je_auto_control.utils.logging.logging_instance import (
         autocontrol_logger,
@@ -45,8 +46,21 @@ elif sys.platform in ["linux", "linux2"]:
             mouse, mouse_keys_table, special_mouse_keys_table,
             screen, recorder,
         )
+elif is_bsd():
+    # A FreeBSD, OpenBSD or NetBSD desktop is an ordinary X11 desktop: the
+    # same X server, the same python-Xlib, the same backend. There is no
+    # Wayland branch here because the Wayland backend's fast path is libei,
+    # whose socket and portal are Linux desktop infrastructure; a BSD running
+    # Wayland reaches this through XWayland like any other X11 client.
+    from je_auto_control.wrapper._platform_linux import (  # noqa: F401  # reason: facade re-export
+        keyboard, keyboard_check, keyboard_keys_table,
+        mouse, mouse_keys_table, special_mouse_keys_table,
+        screen, recorder,
+    )
 else:
-    raise AutoControlException("unknown operating system")
+    raise AutoControlException(
+        f"unknown operating system: {sys.platform!r}. Windows, macOS, Linux "
+        f"and the BSDs are supported.")
 
 if None in [keyboard_keys_table, mouse_keys_table, keyboard, mouse, screen]:
     raise AutoControlException("Can't init auto control")

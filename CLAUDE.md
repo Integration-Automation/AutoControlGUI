@@ -5,7 +5,7 @@
 AutoControl (`je_auto_control`) is a cross-platform GUI automation framework: mouse and keyboard control, image recognition, OCR, accessibility-tree and VLM element location, action scripting, and report generation behind one API. Backends: Windows (Win32 ctypes), macOS (pyobjc/Quartz), Linux X11 (python-Xlib), Linux Wayland (libei / ydotool), Android (adb), iOS (WebDriverAgent).
 
 - **Package**: `je_auto_control` · **Python** ≥ 3.10 · **License**: MIT · **Author**: JE-Chen
-- **[architecture_explore.md](architecture_explore.md)** is the per-module map — read it before changing structure; it lists all 309 `utils/` subpackages, every GUI tab, and file-level tables for the large subsystems.
+- **[architecture_explore.md](architecture_explore.md)** is the per-module map — read it before changing structure; it lists all 310 `utils/` subpackages, every GUI tab, and file-level tables for the large subsystems.
 
 ## Architecture
 
@@ -18,7 +18,7 @@ AutoControl (`je_auto_control`) is a cross-platform GUI automation framework: mo
 | Template Method | `utils/generate_report/` | HTML / JSON / XML share collect → format → write. |
 | Backend seam | `backends/` under `accessibility`, `ocr`, `vision`, `llm`, `agent`, `hotkey`, `usb`, `usbip` | Abstract base + concrete impls + null fallback, so dependency-free environments still import. |
 
-Layering: entry points (`cli.py`, `gui/`, socket / REST / MCP servers) → executor → `utils/` (309 headless subpackages) → `wrapper/` → per-OS backend.
+Layering: entry points (`cli.py`, `gui/`, socket / REST / MCP servers) → executor → `utils/` (310 headless subpackages) → `wrapper/` → per-OS backend.
 
 ## Development Commands
 
@@ -68,7 +68,7 @@ The map is only useful while it matches the tree, so **update it in the same cha
 
   Never adjust one by hand: the counts are `len(text.splitlines())` (what `wc -l` reports), and hand-editing is how the document ended up quoting the same subsystem at two sizes at once — most tables had been counting a phantom trailing line per file while §1 and §8 counted correctly.
 
-- A new `utils/` subpackage needs a row in **exactly one** §5.4 theme table — the tables partition all 309 subpackages; appearing twice or not at all is a defect.
+- A new `utils/` subpackage needs a row in **exactly one** §5.4 theme table — the tables partition all 310 subpackages; appearing twice or not at all is a defect.
 - A new subsystem over ~1,000 lines also needs a file-level table in §5.4.17.
 - Keep the header's scan date, version, and branch current.
 - `README.md` and both translations under `README/` cite the same figures (command / subpackage / tab / MCP-tool / example counts) — update all three alongside the map.

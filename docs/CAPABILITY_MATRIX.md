@@ -65,6 +65,28 @@ primary one, where the compositor's plane starts at a negative coordinate and
 a size, a crop or a located hit that assumes `(0, 0)` is wrong by the width of
 that monitor.
 
+The table has four columns because those are the four desktops with their own
+backend, not because they are the only supported systems. Two more axes now
+have CI behind them:
+
+**The BSDs.** `platform_wrapper` refused to start on anything that was not
+win32/cygwin/msys, darwin or linux/linux2, and every X11 backend module
+carried its own copy of the same Linux-only guard — so a FreeBSD, OpenBSD or
+NetBSD desktop, which runs the same X server and the same `python-Xlib` as
+Linux, could not import the package at all. `python-Xlib` was pinned to
+`platform_system=='Linux'` too, so even relaxing the guards would have left
+the backend without its one dependency. The guards now ask
+`utils/platform_id.is_x11_unix()` — "is this an X11 unix", which is the
+question they were always trying to ask — and the `freebsd` job boots a real
+FreeBSD 14 VM to run them, moving the pointer and reading it back. It checks
+the platform layer rather than the whole package: opencv has no FreeBSD
+wheel, and a source build would take an hour or fail.
+
+**arm64.** `macos-14` was already arm64; `ubuntu-22.04-arm` and
+`windows-11-arm` join the smoke matrix. The dependency set is where the
+architecture shows — opencv, pillow and cryptography all ship native wheels,
+and a missing one means a source build rather than a clean failure.
+
 The accessibility row said `backend tests` for Linux X11 and meant nothing by
 it: there was no Linux backend at all, and `_build_backend()` fell straight
 through to the null one. There is one now, over **AT-SPI2** — which is a D-Bus

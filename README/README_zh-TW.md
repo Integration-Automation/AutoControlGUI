@@ -147,7 +147,7 @@ python -m je_auto_control          # 或：je_auto_control.start_autocontrol_gui
 | 系統診斷 | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | 測試碼產生 | `generate_code` | — | — |
 
-除了這張表，`utils/` 底下還有 309 個無頭套件，涵蓋斷言、韌性、資料品質、i18n 稽核、遮蔽、
+除了這張表，`utils/` 底下還有 310 個無頭套件，涵蓋斷言、韌性、資料品質、i18n 稽核、遮蔽、
 治理、可觀測性等等。完整的逐模組地圖在 **[architecture_explore.md](../architecture_explore.md)**。
 
 ---
