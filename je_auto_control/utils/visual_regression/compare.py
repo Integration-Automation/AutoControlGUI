@@ -89,13 +89,14 @@ def take_golden(path,
 
 
 def _grab(region: Optional[Sequence[int]]) -> Image.Image:
-    """Screen capture via PIL.ImageGrab; raises if not available."""
-    from PIL import ImageGrab
+    """Screen capture via the platform's grabber; raises if not available."""
+    from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
+    grabber = image_grabber()
     if region is not None:
         x, y, width, height = (int(v) for v in region)
-        return ImageGrab.grab(bbox=(x, y, x + width, y + height),
-                              all_screens=True)
-    return ImageGrab.grab(all_screens=True)
+        return grabber.grab(bbox=(x, y, x + width, y + height),
+                            all_screens=True)
+    return grabber.grab(all_screens=True)
 
 
 def image_difference(actual: Image.Image, expected: Image.Image,

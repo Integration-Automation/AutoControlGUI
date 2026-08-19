@@ -1,6 +1,7 @@
-from PIL import ImageGrab, Image
+from PIL import Image
 from typing import List, Optional
 
+from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException
 
 
@@ -31,8 +32,14 @@ def _validate_region(screen_region: List[int]) -> None:
 
 def pil_screenshot(file_path: Optional[str] = None, screen_region: Optional[List[int]] = None) -> Image.Image:
     """
-    Take a screenshot using PIL (Pillow).
-    使用 PIL (Pillow) 擷取螢幕畫面
+    Take a screenshot through the platform's capture backend.
+    透過平台擷取後端擷取螢幕畫面
+
+    Kept named ``pil_screenshot`` (and still returning a Pillow image)
+    because it is public API, but the grabber is now chosen per platform:
+    Pillow's ``ImageGrab`` reads the X11 root window, which under Wayland
+    belongs to XWayland and holds none of the native Wayland windows. See
+    :mod:`je_auto_control.utils.cv2_utils.screen_grabber`.
 
     :param file_path: (str | None) Path to save the screenshot. If None, do not save.
                       螢幕截圖的存檔路徑，若為 None 則不存檔
@@ -41,11 +48,12 @@ def pil_screenshot(file_path: Optional[str] = None, screen_region: Optional[List
     :return: PIL.Image.Image object 擷取到的影像物件
     """
     # 擷取螢幕畫面 Capture screen
+    grabber = image_grabber()
     if screen_region is not None:
         _validate_region(screen_region)
-        image = ImageGrab.grab(bbox=screen_region)
+        image = grabber.grab(bbox=screen_region)
     else:
-        image = ImageGrab.grab()
+        image = grabber.grab()
 
     # 如果指定了存檔路徑，則存檔 Save if file_path is provided.
     # Fail fast: a swallowed save error would leave the caller believing the

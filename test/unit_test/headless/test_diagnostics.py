@@ -1,6 +1,7 @@
 """Tests for the system diagnostics runner (round 28)."""
 import subprocess
 import sys
+from unittest.mock import patch
 
 from je_auto_control.utils.diagnostics.diagnostics import (
     Check, DiagnosticsReport, run_diagnostics,
@@ -52,3 +53,38 @@ def test_cli_exits_zero_when_all_green():
     # cleanly with one of those codes and emit the summary line.
     assert completed.returncode in (0, 1), completed.returncode
     assert "Summary:" in completed.stdout
+
+
+def _wayland_capture_check(tool="grim"):
+    """Run the capture check with the Wayland grabber and ``tool`` present."""
+    from je_auto_control.linux_wayland import capture
+    from je_auto_control.utils.cv2_utils import screen_grabber
+    from je_auto_control.utils.diagnostics import diagnostics
+    with patch.object(screen_grabber, "backend_grab_image",
+                      return_value=lambda *a, **k: None),          patch.object(capture, "available_tool", return_value=tool):
+        return diagnostics._check_screen_capture()
+
+
+def test_wayland_capture_reports_the_tool_it_found():
+    check = _wayland_capture_check()
+    assert check.ok is True
+    assert check.extra["grabber"] == "wayland"
+    assert check.extra["tool"] == "grim"
+
+
+def test_wayland_capture_warns_that_the_pointer_may_be_in_the_image():
+    """wlroots composites a software cursor into the buffer screencopy hands
+    back, so a locator can find a pointer-shaped hole in its target. The
+    bundle that explains that failure has to carry the fact."""
+    check = _wayland_capture_check()
+    assert check.extra["cursor_may_be_captured"] is True
+    assert "pointer" in check.detail
+
+
+def test_the_generic_grabber_says_nothing_about_the_pointer():
+    """BitBlt and Pillow/mss never include it; only Wayland does."""
+    from je_auto_control.utils.cv2_utils import screen_grabber
+    from je_auto_control.utils.diagnostics import diagnostics
+    with patch.object(screen_grabber, "backend_grab_image", return_value=None):
+        check = diagnostics._check_screen_capture()
+    assert check.extra == {"grabber": "generic"}

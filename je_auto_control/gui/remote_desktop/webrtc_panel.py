@@ -620,8 +620,8 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
 
     def _populate_monitor_combo(self) -> None:
         try:
-            import mss
-            with mss.mss() as sct:
+            from je_auto_control.utils.cv2_utils.screen_grabber import mss_grabber
+            with mss_grabber() as sct:
                 monitors = sct.monitors
             for idx, mon in enumerate(monitors):
                 if idx == 0:

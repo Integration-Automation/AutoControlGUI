@@ -145,8 +145,8 @@ def screenshot(file_path: Optional[str] = None,
 
 def list_monitors() -> List[Dict[str, Any]]:
     """Return every monitor's geometry. Index 0 spans all monitors."""
-    import mss
-    with mss.mss() as sct:
+    from je_auto_control.utils.cv2_utils.screen_grabber import mss_grabber
+    with mss_grabber() as sct:
         return [
             {
                 "index": index, "left": int(monitor["left"]),
@@ -160,10 +160,10 @@ def list_monitors() -> List[Dict[str, Any]]:
 
 
 def _grab_monitor(index: int):
-    """Capture a single monitor via ``mss`` and return a PIL Image."""
-    import mss
+    """Capture a single monitor through the platform grabber; returns a PIL Image."""
+    from je_auto_control.utils.cv2_utils.screen_grabber import mss_grabber
     from PIL import Image
-    with mss.mss() as sct:
+    with mss_grabber() as sct:
         if index < 0 or index >= len(sct.monitors):
             raise ValueError(
                 f"monitor index {index} out of range "

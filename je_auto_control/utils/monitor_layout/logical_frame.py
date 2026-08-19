@@ -19,6 +19,14 @@ into the logical space, reporting the origin to add to any hit — the virtual
 desktop starts at negative coordinates whenever a monitor sits left of or above
 the primary one.
 
+Wayland has the same requirement without the DPI half: its capture spans the
+compositor's whole output layout, and that layout starts at a negative
+coordinate whenever an output sits left of or above the origin. There is no
+``GetSystemMetrics`` to ask, so the origin comes from the backend itself
+(``screen_grabber.backend_layout_rect``) — without it a hit found in the frame
+is reported 1920 px (or whatever the left-hand monitor is wide) to the right of
+where it was matched.
+
 The arithmetic (:func:`needs_rescale`, :func:`logical_scale`) is pure and
 unit-testable; the OS reader and the grabber are both injectable. Imports no
 ``PySide6``.
@@ -72,10 +80,29 @@ def needs_rescale(physical: Tuple[int, int], logical: Tuple[int, int]) -> bool:
     return bool(logical[0] and logical[1]) and tuple(physical) != tuple(logical)
 
 
+def _backend_frame_origin() -> Tuple[int, int]:
+    """Where a self-capturing backend's frame starts, ``(0, 0)`` by default.
+
+    ``logical_virtual_rect`` reads ``GetSystemMetrics``, so off Windows it
+    has nothing to say — but the Wayland backend captures the compositor's
+    whole output layout, and that layout starts at a negative coordinate
+    whenever an output sits left of or above the origin. Treating the frame
+    as starting at ``(0, 0)`` there offsets every located hit by the origin,
+    which reads as "the click lands on the wrong monitor" rather than as a
+    failure to find.
+    """
+    from je_auto_control.utils.cv2_utils.screen_grabber import backend_layout_origin
+    return backend_layout_origin()
+
+
 def _load_image_grab():
-    """Import Pillow's ``ImageGrab`` lazily (optional dependency at runtime)."""
-    from PIL import ImageGrab
-    return ImageGrab
+    """Load the platform's ``ImageGrab``-shaped grabber lazily.
+
+    Pillow off Wayland, the compositor's capture tool on it — see
+    :mod:`je_auto_control.utils.cv2_utils.screen_grabber`.
+    """
+    from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
+    return image_grabber()
 
 
 def _resample():
@@ -105,7 +132,7 @@ def grab_logical(region: Optional[Sequence[int]] = None, *,
 
     image = image_grab.grab(all_screens=True)
     rect = logical_virtual_rect(metrics)
-    origin_x, origin_y = (rect[0], rect[1]) if rect else (0, 0)
+    origin_x, origin_y = (rect[0], rect[1]) if rect else _backend_frame_origin()
     if rect and needs_rescale((image.width, image.height), (rect[2], rect[3])):
         image = image.resize((rect[2], rect[3]), _resample())
     if region is None:

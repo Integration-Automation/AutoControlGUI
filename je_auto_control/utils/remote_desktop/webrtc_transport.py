@@ -30,9 +30,13 @@ except ImportError as exc:  # pragma: no cover - optional dependency
     ) from exc
 
 try:
-    import mss  # type: ignore
+    import mss  # type: ignore  # noqa: F401  # reason: annotations + install probe
 except ImportError as exc:  # pragma: no cover - mss is a base dep
     raise ImportError("mss is required for screen capture") from exc
+
+# Frames come from the platform grabber rather than mss directly: on Wayland
+# mss reads the XWayland root, which holds none of the native Wayland windows.
+from je_auto_control.utils.cv2_utils.screen_grabber import mss_grabber
 
 
 _DEFAULT_STUN = "stun:stun.l.google.com:19302"
@@ -215,7 +219,7 @@ def _resolve_monitor(sct: "mss.base.MSSBase", index: int) -> dict:
 def _capture_frame(monitor: dict) -> "np.ndarray":
     sct = getattr(_capture_local, "sct", None)
     if sct is None:
-        sct = mss.mss()
+        sct = mss_grabber()
         _capture_local.sct = sct
     img = sct.grab(monitor)
     arr = np.frombuffer(img.bgra, dtype=np.uint8).reshape(
@@ -279,7 +283,7 @@ class ScreenVideoTrack(VideoStreamTrack):
         else:
             sct = getattr(_capture_local, "sct", None)
             if sct is None:
-                sct = mss.mss()
+                sct = mss_grabber()
                 _capture_local.sct = sct
             self._monitor = _resolve_monitor(sct, self._monitor_index)
         return self._monitor
