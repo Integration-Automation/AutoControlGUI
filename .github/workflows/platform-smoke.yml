@@ -118,25 +118,39 @@ jobs:
             # the package's heavy dependencies.
             Xvfb :99 -screen 0 1280x800x24 &
             sleep 3
+            # The display, keymap, mouse and keyboard modules are the ones
+            # that carried the Linux-only guard, and python-Xlib is all they
+            # need. The screen module is deliberately not imported here: it
+            # pulls in Pillow, which is one of the heavy dependencies this
+            # job does not install, and its guard is the same one.
             DISPLAY=:99 python3.11 - <<'BACKEND'
             import sys
             sys.path.insert(0, ".")
             from je_auto_control.linux_with_x11.core.utils import (
                 x11_linux_display, x11_linux_vk,
             )
+            from je_auto_control.linux_with_x11.keyboard import (
+                x11_linux_keyboard_control as keyboard,
+            )
             from je_auto_control.linux_with_x11.mouse import (
                 x11_linux_mouse_control as mouse,
             )
-            from je_auto_control.linux_with_x11.screen import (
-                x11_linux_screen as screen,
-            )
             print("display:", x11_linux_display.display)
-            print("screen size:", screen.size())
+            print("keycode for 'a':", x11_linux_vk.x11_linux_key_a)
+            assert x11_linux_vk.x11_linux_key_a > 0, "no keymap on FreeBSD"
+
+            # A real pointer move on a real X server, read back from the
+            # server. This is the whole claim: the X11 backend works here.
             mouse.set_position(321, 123)
             landed = mouse.position()
             assert landed == (321, 123), landed
             print("pointer round-trip on FreeBSD:", landed)
-            print("keycode for 'a':", x11_linux_vk.x11_linux_key_a)
+
+            # Press and release a key: nothing has focus, so what is checked
+            # is that XTest accepts the call on this platform at all.
+            keyboard.press_key(x11_linux_vk.x11_linux_key_a)
+            keyboard.release_key(x11_linux_vk.x11_linux_key_a)
+            print("XTest key injection accepted on FreeBSD")
             BACKEND
 
   macos-capabilities:
