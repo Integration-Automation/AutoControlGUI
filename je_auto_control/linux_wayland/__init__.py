@@ -7,9 +7,16 @@ session AutoControl has to talk to one of the bridges:
 * **wtype** — keyboard input via the ``wlr-virtual-keyboard-v1``
   protocol (works on wlroots compositors: sway, hyprland, river);
 * **ydotool** — keyboard + mouse via ``/dev/uinput`` (works on
-  GNOME / KDE / wlroots, but the daemon needs uinput permission);
+  GNOME / KDE / wlroots, but the daemon needs uinput permission, and
+  it must be **1.0 or newer**: 0.1.x answers this backend's argv with
+  exit code 0 and no events, so ``_ydotool_cli`` refuses it);
+* **libei** — the compositor's own input-emulation protocol, reached
+  through the ``RemoteDesktop`` desktop portal (see ``libei`` and
+  ``oeffis``). Preferred where it comes up, since it emits without
+  spawning a process per keystroke; falls back to ydotool otherwise;
 * **grim** — screenshot via the ``wlr-screencopy`` protocol (wlroots);
-  ``gnome-screenshot`` is used as a fallback on GNOME / KDE.
+  ``gnome-screenshot``, ``spectacle`` and the desktop portal back it up
+  (see ``capture`` and ``portal``).
 
 Each helper module probes for the matching binary lazily, so importing
 this package on a non-Linux host (e.g. CI on Windows / macOS) does not
@@ -24,17 +31,18 @@ from je_auto_control.linux_wayland._detect import (
     select_display_server,
 )
 from je_auto_control.linux_wayland._select_input import (
-    select_input_backend,
+    active_backend, select_input_backend,
 )
 from je_auto_control.linux_wayland.libei import (
-    LibeiBackend, LibeiUnavailable, get_default_backend,
+    LibeiBackend, LibeiUnavailable, connected_backend, get_default_backend,
 )
 
 
 __all__ = [
     "LibeiBackend", "LibeiUnavailable",
     "WAYLAND_GRIM", "WAYLAND_WTYPE", "WAYLAND_YDOTOOL",
-    "binary_path", "get_default_backend", "is_wayland_session",
+    "active_backend", "binary_path", "connected_backend",
+    "get_default_backend", "is_wayland_session",
     "missing_dependencies", "select_display_server",
     "select_input_backend",
 ]

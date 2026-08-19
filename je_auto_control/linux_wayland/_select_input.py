@@ -46,4 +46,40 @@ def _libei_loadable() -> bool:
         return False
 
 
-__all__ = ["select_input_backend"]
+def active_backend():
+    """Return a connected libei backend, or None to use the ydotool CLI.
+
+    The single entry point ``keyboard`` and ``mouse`` use. It lives here
+    rather than in :mod:`libei` so the dependency runs one way — this module
+    decides which input path is wanted, :mod:`libei` only knows how to bring
+    one up. None is the answer on any host where libei is absent, the
+    portal declines, or the handshake does not complete.
+    """
+    try:
+        if select_input_backend() != "libei":
+            return None
+        from je_auto_control.linux_wayland.libei import connected_backend
+        return connected_backend()
+    except (ImportError, OSError, RuntimeError):
+        return None
+
+
+def emitted(backend, send) -> bool:
+    """Run one emission on ``backend``; False means the CLI has to take it.
+
+    A backend that finished its handshake can still refuse a single
+    emission: the compositor pauses a device, or the session ends between
+    two calls. :mod:`libei` is documented as the fast path and never the
+    only one, so a refusal falls through to the ``ydotool`` / ``wtype``
+    shims here rather than reaching the caller — and if those are missing
+    too, *they* raise. Nothing is swallowed; the failure just changes hands.
+    """
+    from je_auto_control.linux_wayland.libei import LibeiUnavailable
+    try:
+        send(backend)
+    except LibeiUnavailable:
+        return False
+    return True
+
+
+__all__ = ["active_backend", "emitted", "select_input_backend"]

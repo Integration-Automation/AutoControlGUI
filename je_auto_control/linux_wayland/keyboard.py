@@ -20,6 +20,8 @@ from typing import Iterable
 from je_auto_control.linux_wayland._detect import (
     WAYLAND_WTYPE, WAYLAND_YDOTOOL, binary_path,
 )
+from je_auto_control.linux_wayland._select_input import emitted
+from je_auto_control.linux_wayland._ydotool_cli import reject_legacy_cli
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
@@ -28,9 +30,11 @@ _INSTALL_HINT_WTYPE = (
     "Install with your package manager (e.g. `apt install wtype`)."
 )
 _INSTALL_HINT_YDOTOOL = (
-    "ydotool is required for Wayland key events. "
-    "Install with your package manager (e.g. `apt install ydotool`) "
-    "and ensure ydotoold is running with /dev/uinput permission."
+    "ydotool 1.0 or newer is required for Wayland key events. "
+    "Install it with your package manager (Arch: `pacman -S ydotool`; "
+    "Fedora: `dnf install ydotool`; Debian: from unstable — trixie ships no "
+    "package and bookworm's 0.1.8 is too old) and ensure ydotoold is running "
+    "with /dev/uinput permission."
 )
 
 
@@ -39,6 +43,11 @@ def _require(name: str, hint: str) -> str:
     if path is None:
         raise AutoControlException(hint)
     return path
+
+
+def _require_ydotool() -> str:
+    """Resolve ydotool, refusing the 0.1.x CLI that fails silently."""
+    return reject_legacy_cli(_require(WAYLAND_YDOTOOL, _INSTALL_HINT_YDOTOOL))
 
 
 def _run(argv: list, *, timeout: float = 5.0) -> None:
@@ -64,38 +73,29 @@ def press_key(keycode: int) -> None:
     """Press one evdev key code. Uses libei when available, ydotool otherwise."""
     _validate_keycode(keycode)
     libei = _try_libei()
-    if libei is not None:
-        libei.press_key(int(keycode))
+    if libei is not None and emitted(
+            libei, lambda device: device.press_key(int(keycode))):
         return
     time.sleep(0.01)
-    _run([_require(WAYLAND_YDOTOOL, _INSTALL_HINT_YDOTOOL),
-          "key", f"{int(keycode)}:1"])
+    _run([_require_ydotool(), "key", f"{int(keycode)}:1"])
 
 
 def release_key(keycode: int) -> None:
     """Release one evdev key code. Uses libei when available, ydotool otherwise."""
     _validate_keycode(keycode)
     libei = _try_libei()
-    if libei is not None:
-        libei.release_key(int(keycode))
+    if libei is not None and emitted(
+            libei, lambda device: device.release_key(int(keycode))):
         return
     time.sleep(0.01)
-    _run([_require(WAYLAND_YDOTOOL, _INSTALL_HINT_YDOTOOL),
-          "key", f"{int(keycode)}:0"])
+    _run([_require_ydotool(), "key", f"{int(keycode)}:0"])
 
 
 def _try_libei():
     """Return a connected :class:`LibeiBackend`, or None when CLI should win."""
     try:
-        from je_auto_control.linux_wayland import select_input_backend
-        if select_input_backend() != "libei":
-            return None
-        from je_auto_control.linux_wayland.libei import get_default_backend
-        backend = get_default_backend()
-        if backend is None:
-            return None
-        backend.connect()
-        return backend
+        from je_auto_control.linux_wayland._select_input import active_backend
+        return active_backend()
     except (ImportError, RuntimeError, OSError):
         return None
 
@@ -111,10 +111,35 @@ def hotkey(keycodes: Iterable[int]) -> None:
     codes = [int(code) for code in keycodes]
     if not codes:
         raise ValueError("hotkey requires at least one keycode")
-    args = [_require(WAYLAND_YDOTOOL, _INSTALL_HINT_YDOTOOL), "key"]
+    libei = _try_libei()
+    if libei is not None and _libei_chord(libei, codes):
+        return
+    args = [_require_ydotool(), "key"]
     args.extend(f"{code}:1" for code in codes)
     args.extend(f"{code}:0" for code in reversed(codes))
     _run(args)
+
+
+def _libei_chord(libei, codes: list) -> bool:
+    """Send a whole chord through libei; False means the CLI has to redo it.
+
+    Whatever went down is released in reverse before giving up, so a refusal
+    part-way through cannot leave a modifier held. The CLI then replays the
+    chord from a clean state — and if it was a *release* that was refused,
+    replaying is also what unsticks the key.
+    """
+    pressed = []
+    taken = True
+    for code in codes:
+        if not emitted(libei, lambda device, key=code: device.press_key(key)):
+            taken = False
+            break
+        pressed.append(code)
+    for code in reversed(pressed):
+        if not emitted(libei,
+                       lambda device, key=code: device.release_key(key)):
+            taken = False
+    return taken
 
 
 def write(text: str) -> None:
