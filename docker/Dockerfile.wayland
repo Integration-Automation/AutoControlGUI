@@ -1,0 +1,88 @@
+# AutoControl Wayland verification image — a real wlroots compositor, headless.
+#
+# The Wayland backend's CLI argv, the wlr-randr output format and the whole
+# screenshot -> screen_grabber -> capture -> grab_image chain had only ever
+# been exercised against mocks: no CI runner offers a Wayland session, and a
+# developer machine running Windows cannot provide one either. sway's headless
+# backend needs no GPU, no seat and no display, so it runs in a container and
+# answers those questions for real.
+#
+# The entrypoint runs the verification over two output layouts: the outputs
+# side by side from the origin, and the left-hand one moved to x=-1280. sway
+# accepts a negative `position` and grim accepts a negative `-g`, so the
+# negative-origin layout every multi-monitor desktop has is a real compositor
+# answering rather than a second mock.
+#
+# What this image CANNOT answer, and why:
+#   * ydotool — needs /dev/uinput, and sway's headless backend consumes no
+#     libinput devices, so an injected event would have nowhere to arrive.
+#     Arriving turned out not to be what needed checking: docker/
+#     Dockerfile.ydotool reads the events back off the kernel device ydotoold
+#     creates, with no compositor and no seat involved.
+#   * libei / the RemoteDesktop portal — xdg-desktop-portal-wlr implements
+#     ScreenCast and Screenshot but not RemoteDesktop, so there is no
+#     ConnectToEIS here. That was read as needing a GNOME (mutter) session,
+#     and it does not: the protocol half is docker/Dockerfile.eis and the
+#     portal half is docker/Dockerfile.portal, which owns the well-known
+#     D-Bus name itself rather than waiting for a desktop to provide one.
+#
+# Build:  docker build -f docker/Dockerfile.wayland -t autocontrol-wayland:latest .
+# Run:    docker run --rm autocontrol-wayland:latest
+
+# Build every wheel in a throwaway stage, as docker/Dockerfile does, so the
+# runtime layer installs binaries only and the dependency set is fixed here
+# rather than re-resolved against PyPI at run time.
+FROM python:3.12-slim AS builder
+
+WORKDIR /src
+COPY pyproject.toml README.md ./
+COPY je_auto_control ./je_auto_control
+COPY autocontrol-lsp ./autocontrol-lsp
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip wheel --no-cache-dir --wheel-dir /wheels .
+
+
+FROM python:3.12-slim AS runtime
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# - sway: the wlroots compositor. WLR_BACKENDS=headless gives it a virtual
+#   output with no DRM device and no seat.
+# - grim / wtype / wlr-randr: the three wlroots-protocol helpers the Wayland
+#   backend shells out to, and the actual subjects of this verification.
+# - libgl1 + libglib2.0-0: opencv-python hard-requires libGL.so.1 and
+#   libgthread-2.0.so.0 at import, so the package cannot even load without them.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        sway grim wtype wlr-randr \
+        libei1 \
+        libgl1 libglib2.0-0 \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip install --no-cache-dir --only-binary :all: --no-index \
+       --find-links=/wheels /wheels/je_auto_control-*.whl \
+    && rm -rf /wheels
+
+COPY docker/wayland_verify.py /opt/verify/wayland_verify.py
+COPY docker/libei_verify.py /opt/verify/libei_verify.py
+COPY docker/entrypoint-wayland.sh /usr/local/bin/autocontrol-wayland-verify
+RUN chmod +x /usr/local/bin/autocontrol-wayland-verify
+
+# Runs as root on purpose: this image exists to run one verification and
+# exit, and root removes the XDG_RUNTIME_DIR ownership fiddling that would
+# otherwise be the only thing standing between here and an answer. It is not
+# a deployable service image — docker/Dockerfile is.
+ENV PYTHONUNBUFFERED=1 \
+    XDG_RUNTIME_DIR=/tmp/xdg \
+    XDG_SESSION_TYPE=wayland \
+    WLR_BACKENDS=headless \
+    WLR_LIBINPUT_NO_DEVICES=1 \
+    WLR_RENDERER=pixman \
+    WLR_HEADLESS_OUTPUTS=2
+
+ENTRYPOINT ["/usr/local/bin/autocontrol-wayland-verify"]

@@ -1,0 +1,118 @@
+# AutoControl seat verification image — a wlroots compositor that really
+# consumes the ydotool device.
+#
+# The four images before this one each stop at the same wall.
+# docker/Dockerfile.wayland runs a real compositor but sets
+# WLR_LIBINPUT_NO_DEVICES=1, so nothing is injected into it;
+# docker/Dockerfile.ydotool reads ydotool's events off the kernel with no
+# compositor at all. Between them, what `mousemove --absolute` puts on the
+# wire is settled and what a compositor does with it was not — and that was
+# recorded in Progress.md as needing a VM running a desktop that consumes
+# libinput devices.
+#
+# It does not. A "seat that consumes libinput devices" is three environment
+# variables away from the same headless sway the capture image already runs:
+#
+#   WLR_BACKENDS=headless,libinput   virtual outputs, real input backend
+#   LIBSEAT_BACKEND=builtin          open the devices directly, no logind
+#   SEATD_VTBOUND=0                  and without reaching for a VT
+#
+# udev is the fourth requirement and the one that is easy to miss: libinput
+# enumerates devices through udev, not through /dev, so udevd has to be
+# running before ydotoold creates its uinput device. The entrypoint starts
+# them in that order and fails loudly if `libinput list-devices` cannot see
+# the result, rather than letting sway come up with an empty seat and every
+# measurement below silently become a measurement of nothing.
+#
+# What it then answers, in layout coordinates read back from pixels the
+# compositor painted (`grim -c` composites the cursor):
+#   * that --absolute counts from the top-left corner of the output layout,
+#     which is layout (0, 0) only while no monitor sits left of or above the
+#     primary one — the translation je_auto_control/linux_wayland/mouse.py
+#     now applies, measured rather than assumed;
+#   * that the displacement is relative motion and so is scaled by the
+#     compositor's pointer acceleration, which is what ydotool's own --help
+#     means by "You need to disable mouse speed acceleration for correct
+#     absolute movement";
+#   * that with that acceleration off, AutoControl's own set_position lands
+#     on the layout pixel it was given, on both outputs, and that get_pixel
+#     reads the same pixel back.
+#
+# Build:  docker build -f docker/Dockerfile.seat -t autocontrol-seat:latest .
+# Run:    modprobe uinput evdev
+#         docker run --rm --device /dev/uinput \
+#                    --device-cgroup-rule 'c 13:* rmw' autocontrol-seat:latest
+
+FROM python:3.12-slim AS builder
+
+WORKDIR /src
+COPY pyproject.toml README.md ./
+COPY je_auto_control ./je_auto_control
+COPY autocontrol-lsp ./autocontrol-lsp
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip wheel --no-cache-dir --wheel-dir /wheels .
+
+
+FROM python:3.12-slim AS runtime
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# ydotool 1.0.4 comes from unstable for the reason docker/Dockerfile.ydotool
+# gives: trixie ships none and bookworm's 0.1.8 answers this argv with exit
+# code 0 and no events. The pin keeps every other package on trixie.
+#
+# - sway + wlr-randr + grim: the compositor and the two tools this reads it
+#   with. grim's -c is what draws the cursor into the capture.
+# - udev: systemd-udevd, so libinput can enumerate the device at all.
+# - libinput-tools: the entrypoint's own precondition check, before sway.
+# - dmz-cursor-theme: a cursor that is certain to be drawn. libwayland has a
+#   built-in fallback, but a theme on disk makes the pixels this measures the
+#   compositor's decision rather than a fallback's.
+# - wtype: unused here, but the Wayland backend refuses to import without it
+#   and `import je_auto_control` then falls back to X11 and dies on DISPLAY.
+# - libgl1 + libglib2.0-0: opencv-python's hard import-time requirements.
+RUN printf 'deb http://deb.debian.org/debian sid main\n' \
+        > /etc/apt/sources.list.d/sid.list \
+    && printf 'Package: *\nPin: release a=unstable\nPin-Priority: 100\n' \
+        > /etc/apt/preferences.d/no-sid-by-default \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends -t sid ydotool \
+    && apt-get install -y --no-install-recommends \
+        sway grim wtype wlr-randr \
+        udev libinput-tools dmz-cursor-theme \
+        libgl1 libglib2.0-0 \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip install --no-cache-dir --only-binary :all: --no-index \
+       --find-links=/wheels /wheels/je_auto_control-*.whl \
+    && rm -rf /wheels
+
+COPY docker/seat_verify.py /opt/verify/seat_verify.py
+COPY docker/entrypoint-seat.sh /usr/local/bin/autocontrol-seat-verify
+RUN chmod +x /usr/local/bin/autocontrol-seat-verify
+
+# Runs as root on purpose: creating the input node, opening it as a seat
+# device and writing to /dev/uinput all need it, and this image exists to run
+# one verification and exit. It is not a deployable service image —
+# docker/Dockerfile is.
+#
+# The CLI input path is forced: libei would otherwise be preferred, and this
+# image is entirely about the ydotool fallback.
+ENV PYTHONUNBUFFERED=1 \
+    XDG_RUNTIME_DIR=/tmp/xdg \
+    XDG_SESSION_TYPE=wayland \
+    YDOTOOL_SOCKET=/tmp/.ydotool_socket \
+    JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli \
+    WLR_BACKENDS=headless,libinput \
+    WLR_LIBINPUT_NO_DEVICES=1 \
+    WLR_RENDERER=pixman \
+    WLR_HEADLESS_OUTPUTS=2 \
+    LIBSEAT_BACKEND=builtin \
+    SEATD_VTBOUND=0
+
+ENTRYPOINT ["/usr/local/bin/autocontrol-seat-verify"]
