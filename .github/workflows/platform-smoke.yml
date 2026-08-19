@@ -82,8 +82,13 @@ jobs:
         with:
           release: "14.2"
           usesh: true
+          # Only the interpreter and an X server come from pkg. The flavoured
+          # port names (py311-pip, py311-xlib) depend on which Python
+          # flavour the release defaults to and were not in 14.2's
+          # repository at all; python-Xlib is pure Python, so pip is both
+          # simpler and version-exact.
           prepare: |
-            pkg install -y python311 py311-pip py311-xlib xorg-vfbserver xauth
+            pkg install -y python311 xorg-vfbserver xauth
           run: |
             set -eu
             echo "uname: $(uname -a)"
@@ -100,6 +105,13 @@ jobs:
             assert current_family() == "bsd", current_family()
             print("platform_id: OK")
             PROBE
+            # python-Xlib is the X11 backend's one dependency and is pure
+            # Python, so pip installs it here without a compiler. Failing
+            # loudly matters: without it the import below would fail for a
+            # reason that has nothing to do with the platform guards.
+            python3.11 -m ensurepip --upgrade
+            python3.11 -m pip install --quiet "python-Xlib==0.33"
+
             # The guards are what refused to load here. Import the X11
             # modules directly, under a real X server, without dragging in
             # the package's heavy dependencies.
