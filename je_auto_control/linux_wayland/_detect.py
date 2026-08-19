@@ -13,7 +13,18 @@ from typing import Iterable, List, Optional
 
 WAYLAND_WTYPE = "wtype"
 WAYLAND_YDOTOOL = "ydotool"
+
+# Screen capture is the one place where no single tool covers Wayland:
+# grim speaks wlr-screencopy (sway / Hyprland / river), GNOME answers
+# through gnome-screenshot and KDE through spectacle. See
+# :mod:`je_auto_control.linux_wayland.capture` for the order they are tried in.
 WAYLAND_GRIM = "grim"
+WAYLAND_GNOME_SCREENSHOT = "gnome-screenshot"
+WAYLAND_SPECTACLE = "spectacle"
+WAYLAND_WLR_RANDR = "wlr-randr"
+# xdg-desktop-portal needs no binary at all: je_auto_control.linux_wayland.
+# portal speaks D-Bus itself, because the portal's answer is directed at the
+# connection that asked and no separate CLI process can be that connection.
 
 _ENV_OVERRIDE = "JE_AUTOCONTROL_LINUX_DISPLAY_SERVER"
 
@@ -59,7 +70,8 @@ def missing_dependencies(required: Iterable[str]) -> List[str]:
 
 
 __all__ = [
-    "WAYLAND_GRIM", "WAYLAND_WTYPE", "WAYLAND_YDOTOOL",
-    "binary_path", "is_wayland_session", "missing_dependencies",
-    "select_display_server",
+    "WAYLAND_GNOME_SCREENSHOT", "WAYLAND_GRIM",
+    "WAYLAND_SPECTACLE", "WAYLAND_WLR_RANDR", "WAYLAND_WTYPE",
+    "WAYLAND_YDOTOOL", "binary_path", "is_wayland_session",
+    "missing_dependencies", "select_display_server",
 ]
