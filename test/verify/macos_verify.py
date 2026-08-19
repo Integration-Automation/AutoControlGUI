@@ -10,20 +10,23 @@ Two of the capabilities here are gated by TCC — macOS asks the *user* to
 grant Screen Recording and Accessibility, and a headless CI runner has no
 user to ask. Which of them a runner grants by default is not something to
 guess at, and guessing is how the Wayland work lost time twice by recording a
-desktop's refusal as a container's limitation. So this has two modes:
+desktop's refusal as a container's limitation. So this was measured first,
+and the measurement was a surprise: **a macos-14 runner grants both**, and
+every probe below passes on one. See :data:`EXPECTED`.
 
 ``--measure``
     Run every probe, print what happened, and exit 0. Nothing is asserted;
-    the output is the measurement.
+    the output is the measurement. This is how :data:`EXPECTED` is
+    (re)populated when a runner image changes.
 
 default
     Assert :data:`EXPECTED` — what the measurement showed the runner permits.
     Exit status is the number of checks that did not match, so a capability
-    that appears or disappears turns CI red and says which one.
+    appearing or disappearing turns CI red and names it. This is what the
+    workflow runs.
 
-The second mode is only honest once the first has run, which is why
-:data:`EXPECTED` starts empty and is filled in from a real run rather than
-from what the APIs are documented to do.
+Assert mode refuses to pass while :data:`EXPECTED` is empty, because a gate
+that asserts nothing reads as coverage that does not exist.
 """
 from __future__ import annotations
 
@@ -33,13 +36,32 @@ import sys
 import traceback
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-#: What a ``macos-14`` runner was measured to permit. Keys are probe names;
-#: values are ``True`` (works), ``False`` (silently does nothing or is
-#: refused), or a string naming the exception type it raises.
+#: What a ``macos-14`` runner was measured to permit, on 2026-08-19. Keys are
+#: probe names; values are ``True`` (works), ``False`` (silently does nothing
+#: or is refused), or a string naming the exception type it raises.
 #:
-#: Empty until the first ``--measure`` run fills it in. An empty table makes
-#: the assert mode fail loudly rather than pass vacuously.
-EXPECTED: Dict[str, Any] = {}
+#: The measurement was a surprise worth writing down: **a GitHub macOS runner
+#: grants both Screen Recording and Accessibility to the interpreter**, so
+#: every capability here works. Capture returns real pixels rather than the
+#: black rectangle a refusal produces, ``CGEventPost`` moves the cursor and
+#: the move reads back exactly, and the AX walk returns real elements. The
+#: usual assumption — that CI cannot exercise a TCC-gated macOS API — is
+#: wrong for this runner, which is why this is measured and not reasoned
+#: about.
+#:
+#: If a future runner image tightens any of that, the mismatch turns this job
+#: red and names the capability that changed, which is the point.
+EXPECTED: Dict[str, Any] = {
+    "backend-selection": True,
+    "screen-size": True,
+    "screenshot": True,
+    "get-pixel": True,
+    "mouse-position": True,
+    "mouse-move": True,
+    "keyboard-post": True,
+    "accessibility-tree": True,
+    "recorder-absent": True,
+}
 
 _results: List[Tuple[str, bool, str]] = []
 

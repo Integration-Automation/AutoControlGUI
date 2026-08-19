@@ -73,9 +73,16 @@ jobs:
       # and guessing is how the Wayland work twice recorded a desktop's
       # refusal as a container's limitation.
       #
-      # So this runs in --measure mode: it reports what the runner permits
-      # and asserts nothing. Once the measurement is in, EXPECTED in the
-      # script is filled from it and the flag comes off, at which point a
-      # capability appearing or disappearing turns this red and says which.
-      - name: Measure the macOS backend against a real window server
-        run: python test/verify/macos_verify.py --measure
+      # Measured first, in --measure mode, and the answer was a surprise: a
+      # macos-14 runner grants BOTH Screen Recording and Accessibility, so
+      # every capability works — capture returns real pixels rather than the
+      # black rectangle a refusal produces, CGEventPost moves the cursor and
+      # the move reads back exactly, and the AX walk returns real elements.
+      # The usual assumption that CI cannot exercise a TCC-gated macOS API is
+      # simply wrong for this runner.
+      #
+      # So the flag is off and this is a gate now: EXPECTED in the script
+      # holds what was measured, and a capability appearing or disappearing
+      # turns this red and names which one.
+      - name: Verify the macOS backend against a real window server
+        run: python test/verify/macos_verify.py
