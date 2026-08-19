@@ -447,7 +447,7 @@ def _check_regions_are_read_back(backend, libei) -> str:
 
 
 def _check_offset_region_takes_absolute_coordinates(backend, server,
-                                                    libei) -> str:
+                                                    _libei) -> str:
     """A region at x=1280 takes 1380 for a point 100 pixels into it."""
     before = len(server.recording.absolute_motions)
     backend.set_position(1380, 100)
@@ -511,7 +511,9 @@ def _check_negative_origin_is_normalised(backend, server, libei,
     which no region covers — so it has to arrive as ``(0, 0)``.
     """
     before = len(server.recording.absolute_motions)
-    with monkey(libei, "_layout_origin", lambda: (-1280, 0)):
+    # The name bound inside ``libei`` by its ``from _layout import
+    # layout_origin``, which is what ``_region_point`` actually calls.
+    with monkey(libei, "layout_origin", lambda: (-1280, 0)):
         backend.set_position(-1280, 10)
     _wait_for(lambda: len(server.recording.absolute_motions) > before, 2.0,
               "the normalised motion")
