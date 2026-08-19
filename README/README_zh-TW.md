@@ -231,9 +231,51 @@ RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
 | Windows 10 / 11 | Win32 ctypes（可選 Interception 驅動） | ✅ | ✅ | ✅ | ✅ |
 | macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ❌ | ❌ |
 | Linux X11 | python-Xlib（可選 `uinput`） | ✅ | ✅ | ✅ | ❌ |
-| Linux Wayland | libei，或 ydotool／wtype／grim | ✅ | ✅ | ❌ | ❌ |
+| Linux Wayland | 經桌面 portal 的 libei，或 ydotool／wtype ＋ 擷取工具 | ✅ | ✅ | ❌ | ❌ |
 | Android | adb + uiautomator2 | ✅ | ✅ | — | — |
 | iOS | WebDriverAgent / facebook-wda | ✅ | ✅ | — | — |
+
+Wayland 的輸入在 libei 走不通時會退回 `ydotool` CLI，而這條退路需要
+**ydotool 1.0 以上**。AutoControl 送的每一個參數都是那一版才有的；0.1.x
+（Debian bookworm 與目前所有 Ubuntu 仍以這個名字提供，Debian trixie 則根本沒有）
+對同一批參數回傳 0 卻不送出任何事件。AutoControl 會偵測並直接拒絕，
+而不是為根本沒送出的輸入回報成功。Arch、Fedora 與 Debian unstable 提供的是 1.0。
+
+這條退路要能**準確定位**，還有一個前提:合成器的指標加速度必須是關的。
+`ydotool mousemove --absolute` 並不送任何絕對事件——它先把游標推到合成器夾取的
+那個角落，再送相對位移，所以這段位移會被合成器加速。對真的 wlroots session 量到的是:
+libinput 的預設 profile 讓游標走的距離正好是要求的兩倍。ydotool 自己的 `--help`
+也是這樣寫的；AutoControl 每個行程會記一次警告，而不是安靜地把點擊放到錯的地方。
+請對 ydotoold 的裝置關掉加速度（sway:`input type:pointer accel_profile flat`
+加上 `pointer_accel 0`），或是裝上 `liboeffis`，改走協定層本來就是絕對座標的 libei。
+
+倍率是合成器自己的設定，用戶端讀不回來，所以只有你知道它關了沒有：
+`JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL=flat` 表示已經關掉，移動就不再出聲；
+`=strict` 則寧可拒絕這次移動，也不讓點擊落在別的地方；不設定就維持
+「警告一次後照樣移動」的預設。
+
+Wayland 的螢幕擷取需要合成器對應的工具，因為沒有單一工具能涵蓋全部：wlroots 系
+（sway、Hyprland、river）用 `grim`，GNOME 用 `gnome-screenshot`，KDE 用 `spectacle`。
+裝好其中一個之後，所有擷取路徑——截圖、影像與錨點定位、OCR、螢幕錄影、遠端桌面——都會
+經由它。三個都沒裝也還有 `gdbus`：最後會嘗試 `xdg-desktop-portal`，只是第一次可能會跳
+同意對話框。再不行，擷取會帶著安裝提示明確失敗，而不是回傳空白的 XWayland root；
+`je_auto_control.api.run_diagnostics()`（以及 GUI 的 Diagnostics 分頁）的 `screen_capture`
+檢查會回報目前使用哪一層。
+
+有一件只在 Wayland 出現、需要事先規劃的事：**擷取回來的圖裡可能有滑鼠游標。**
+這裡沒有任何一條擷取要求游標，但只要 backend 沒有游標平面（包含任何以
+`WLR_NO_HARDWARE_CURSORS=1` 執行的 session），wlroots 就會畫**軟體游標**並把它
+合成進輸出緩衝區，而擷取交回來的正是那一份。Windows 與 X11 都不含游標，所以
+「定位器、樣板比對或 OCR 在目標中間看到一個游標形狀的洞」只會在這裡發生。
+Wayland 不讓用戶端讀游標位置，所以沒有東西可以可靠地遮或閃避：請在擷取之前
+把指標移離要拍的區域。`screen_capture` 檢查會以 `cursor_may_be_captured` 回報這件事。
+
+如果以上都不適用你的環境，可以直接指定自己的指令——它優先於所有偵測，`{output}` 會被
+換成暫存 PNG 路徑：
+
+```bash
+export JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND="mycapture --png {output}"
+```
 
 Wayland 禁止非特權用戶端進行全域輸入錄製——若要錄製，請設定
 `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` 並在 X11 session 下執行。視窗管理目前僅

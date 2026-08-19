@@ -241,9 +241,62 @@ RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
 | Windows 10 / 11 | Win32 ctypes (+ optional Interception driver) | ✅ | ✅ | ✅ | ✅ |
 | macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ❌ | ❌ |
 | Linux X11 | python-Xlib (+ optional `uinput`) | ✅ | ✅ | ✅ | ❌ |
-| Linux Wayland | libei, or ydotool / wtype / grim | ✅ | ✅ | ❌ | ❌ |
+| Linux Wayland | libei via the desktop portal, or ydotool / wtype + a capture tool | ✅ | ✅ | ❌ | ❌ |
 | Android | adb + uiautomator2 | ✅ | ✅ | — | — |
 | iOS | WebDriverAgent / facebook-wda | ✅ | ✅ | — | — |
+
+Wayland input falls back to the `ydotool` CLI wherever libei is not
+reachable, and that fallback needs **ydotool 1.0 or newer**. Every argument
+AutoControl builds arrived in that release; 0.1.x — which is what Debian
+bookworm and every current Ubuntu still ship under that name, and Debian
+trixie ships not at all — answers the same arguments with exit code 0 and no
+events. AutoControl detects it and refuses rather than reporting success for
+input it never sent. Arch, Fedora and Debian unstable package 1.0.
+
+That fallback also positions the pointer accurately **only where the
+compositor's pointer acceleration is off**. `ydotool mousemove --absolute`
+sends no absolute event: it drives the cursor into the corner the compositor
+clamps to and then moves relative to it, so the compositor accelerates the
+move — measured against a real wlroots session, libinput's default profile
+travels exactly twice the distance asked for. ydotool's own `--help` says the
+same; AutoControl logs it once per process rather than mispositioning in
+silence. Turn acceleration off for the ydotoold device (sway: `input
+type:pointer accel_profile flat` and `pointer_accel 0`), or install
+`liboeffis` so the libei path — absolute at the protocol level — is used.
+
+The factor is the compositor's own setting and no client can read it back, so
+only you know whether it is off. `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL=flat`
+says it is, and moves silently; `=strict` refuses the move rather than let a
+click land somewhere else; leaving it unset keeps the warn-and-move default.
+
+Wayland screen capture needs the tool your compositor supports, because no
+single one covers them all: `grim` on wlroots compositors (sway, Hyprland,
+river), `gnome-screenshot` on GNOME, `spectacle` on KDE. Install one and every
+capture path — screenshots, image and anchor locators, OCR, screen recording,
+remote desktop — goes through it. With none of them installed, `gdbus` is
+enough: `xdg-desktop-portal` is tried last, though it may ask for consent the
+first time. Failing that, capture fails loudly with an install hint rather than
+returning the blank XWayland root. The `screen_capture` check in
+`je_auto_control.api.run_diagnostics()` (and the GUI Diagnostics tab) reports
+which tier is in use.
+
+One Wayland-only difference to plan around: **a capture may contain the mouse
+cursor.** Nothing here asks for it, but wlroots composites a *software* cursor
+into the output buffer whenever the backend has no cursor plane — which
+includes any session run with `WLR_NO_HARDWARE_CURSORS=1` — and that buffer is
+what screen capture hands back. Windows and X11 never include the pointer, so a
+locator, a template match or an OCR read can find a pointer-shaped hole in the
+middle of its target here and nowhere else. Wayland does not let a client read
+the cursor position, so there is nothing to reliably mask or move around it:
+park the pointer away from what you are about to capture. The `screen_capture`
+check reports this as `cursor_may_be_captured`.
+
+For a setup none of that fits, name your own command — it wins over every
+detected tool, and `{output}` is replaced with a temporary PNG path:
+
+```bash
+export JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND="mycapture --png {output}"
+```
 
 Wayland forbids global input recording for unprivileged clients — set
 `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` to record on an X11 session. Window

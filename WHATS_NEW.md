@@ -1,6 +1,682 @@
 # What's New — AutoControl
 
+## What's new (2026-08-19)
+
+### Two Wayland Judgement Calls, Settled
+
+Two items had been sitting in `Progress.md` marked `DECIDE`: not missing work,
+missing decisions. They turned out to be the same problem twice — a compositor
+setting the library can *measure* but cannot *read*, and therefore must stop
+pretending to know.
+
+- **Pointer acceleration is now something the operator declares, and the
+  library believes.** The measurement stands: `ydotool mousemove --absolute`
+  sends relative motion, libinput's default adaptive profile doubles it, and no
+  client can read the factor back. What was undecided was what to do about it —
+  keep warning and move anyway, refuse outright, or let the operator say.
+  Refusing outright would have taken `set_position` away from every Wayland
+  machine without `liboeffis`, so the answer is a declaration:
+  `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL=flat` means acceleration is off for the
+  ydotoold device, and the move goes out silently and exactly; `=strict` means
+  refuse the move rather than let a click land somewhere else; unset keeps
+  today's warn-once-then-move, so nothing that works now stops working. An
+  unrecognised value falls back to the warning *and says that it did* — a typo
+  in a shell profile must not quietly promote a move to trusted-exact. The
+  whole gate is on the ydotool path; libei is absolute at the protocol level.
+- **The software cursor in a Wayland capture is documented, not worked
+  around.** `seat-verification` measured it in passing: no capture in this
+  project passes `grim -c`, so none asks for the pointer, and the pointer is in
+  the image anyway. The reason is not ours — wlroots draws a *software* cursor
+  whenever the backend has no cursor plane, and a software cursor is composited
+  into the output buffer, which is exactly the buffer `wlr-screencopy` hands
+  back. Headless is permanently in that state; so is any real desktop running
+  `WLR_NO_HARDWARE_CURSORS=1`. Windows' BitBlt and the X11 path never include
+  the pointer, so this is a Wayland-only inconsistency, and with the pointer
+  resting on its target a locator, a template match or an OCR read sees a
+  pointer-shaped hole in the middle of it. Both ways out — move the pointer
+  away and back, or mask around it — need to know where the pointer is, and
+  Wayland does not let a client read that; an in-process guess goes stale the
+  moment the user touches their own mouse, and masking the wrong place is worse
+  than a visible cursor. So it is written down instead: in the capability
+  matrix, in all three READMEs, and in the diagnostics bundle, where the
+  `screen_capture` check now carries `cursor_may_be_captured` so the report
+  that explains a failed locator names the reason. `seat-verification` asserts
+  the behaviour as measured, so if wlroots ever honours `overlay_cursor` for
+  software cursors, CI goes red and tells us.
+
+### A Compositor That Consumes Input Was Three Environment Variables Away
+
+`ydotool mousemove --absolute` is not absolute. It emits no absolute event:
+it sends `INT32_MIN` on both axes to drive the cursor into whatever corner the
+compositor clamps to, then sends the target as a relative displacement. What
+that corner *is*, and what the compositor does to the displacement on the way,
+were the last two open questions on the Wayland input path — and both were
+recorded as needing a VM running a desktop that consumes libinput devices.
+
+- **They needed no VM.** wlroots takes `WLR_BACKENDS=headless,libinput`: the
+  outputs stay virtual while the input half is the real libinput backend.
+  libseat's builtin backend opens the devices without logind, and
+  `SEATD_VTBOUND=0` stops it reaching for a VT no container owns. The fourth
+  requirement is the one that is easy to miss — libinput enumerates through
+  udev rather than through `/dev`, so `systemd-udevd` has to be running before
+  ydotoold creates its device. With those four in place, ydotoold's uinput
+  device is an ordinary seat device, and `grim -c` composites the cursor into
+  a screenshot, so the compositor answers in layout coordinates.
+- **The corner is the layout's top-left, not layout `(0, 0)`.** Those are the
+  same point only while every output sits at a non-negative position. On the
+  layout every desktop with a monitor left of the primary one has, they differ
+  by the layout origin — so on a `-1280` layout an untranslated request for
+  layout `(0, 0)` put the cursor on the *other monitor*, 1,280 pixels away.
+  `mouse.set_position` now subtracts `layout_origin()` before handing the
+  coordinate to ydotool, which is the same correction the capture path already
+  applies; the lookup both input paths share moved into
+  `linux_wayland/_layout.py` so libei and ydotool cannot drift apart on it.
+- **And pointer acceleration scales the rest.** The displacement is relative
+  motion, so libinput accelerates it: measured against a real wlroots session,
+  the default adaptive profile lands the cursor exactly twice as far from that
+  corner as asked, because `--absolute` sends both of its events in one frame
+  and the velocity saturates the profile. With `accel_profile flat` and
+  `pointer_accel 0` the same call is pixel-exact. ydotool's own `--help` has
+  said "You need to disable mouse speed acceleration for correct absolute
+  movement" all along; the backend now logs that caveat once per process
+  instead of letting a click land silently in the wrong place. Nothing else
+  can be done from inside the library — the factor is the compositor's
+  setting, not something a caller can read back.
+- **A new `seat-verification` job holds all of it.** `docker/Dockerfile.seat`
+  runs the two layouts the capture image runs, and 14 checks each: that sway
+  really is holding the ydotool device, that `--absolute (0, 0)` draws the
+  cursor flush into the layout's first pixel, that with acceleration off the
+  move is one pixel per pixel, that an untranslated `(0, 0)` misses the
+  monitor it names, that `set_position` subtracts exactly the origin and lands
+  on the pixel it was given on both monitors, and that the acceleration factor
+  is the 2x this was measured at. Nothing in it depends on the cursor theme:
+  every claim is a difference between two captures, which the image's offset
+  from its hotspot cancels out of.
+- **One thing it found on the way.** On this compositor a `grim` capture that
+  asks for no cursor overlay contains one anyway, because wlroots draws a
+  *software* cursor whenever the backend has no cursor plane — always on
+  headless, and on any session where the driver refuses one or the user set
+  `WLR_NO_HARDWARE_CURSORS=1`. Every locator, template match and OCR read goes
+  through that capture, so the pointer punches a pointer-shaped hole in
+  whatever it is sitting on. The check records the behaviour as measured, and
+  what to do about it is an open item in `Progress.md`.
+
+### The Screen-Capture Portal Could Never Have Worked, and a Real Bus Said So
+
+- **`xdg-desktop-portal` answers with a signal directed at the connection that
+  called it.** `Screenshot` returns a *request handle*, not an image; the image
+  arrives later as `org.freedesktop.portal.Request::Response`, addressed to the
+  caller's unique bus name. The bus routes a directed message to its
+  destination and nowhere else, so no match rule on any other connection can
+  make it arrive somewhere else.
+- **The old implementation was two connections.** It started `gdbus monitor` in
+  one subprocess, made the call from a second `gdbus` invocation, and read the
+  monitor's stdout with a pair of regular expressions. Each `gdbus` invocation
+  opens its own connection under its own unique name, so the process listening
+  was never the process addressed. Measured against a real `dbus-daemon`: the
+  monitor sees the call go past and prints nothing else, and the capture runs
+  out its full 30-second timeout, every time. The only listener that can see a
+  directed signal is a full bus monitor — `dbus-monitor`, which asks the bus
+  for `BecomeMonitor` — and needing permission to observe every message on the
+  user's session bus is a poor price for a fallback screenshot.
+- **The tier now speaks D-Bus itself, on one connection.**
+  `linux_wayland/_dbus_client.py` is a session-bus client in the standard
+  library alone: connect, SASL EXTERNAL authentication, `Hello`, `AddMatch`,
+  one method call, then read until the matching signal arrives. It is
+  deliberately not a general binding — no properties, no introspection, no
+  object export, no descriptor passing (liboeffis still does the one call that
+  needs that). `portal.py` subscribes to the request path it predicts from its
+  own unique name *before* it calls, and follows the returned handle as well
+  when a portal ignores `handle_token`.
+- **Which also removes a dependency rather than adding one.** The tier used to
+  need `gdbus` (glib2) installed; it now needs nothing but a session bus, so
+  the last-resort capture path is available on strictly more desktops than
+  before. The install hint and the diagnostics check say so.
+- **Verified end to end on a real bus.** A new `portal-verification` job runs a
+  real `dbus-daemon`, a real portal implementation and the real client: the
+  capture comes back as PNG bytes that decode to the pixels the portal painted,
+  at a percent-escaped path with a space in it, and the portal's file is gone
+  afterwards. Every way a portal ends without an image is driven too — a
+  dismissed dialog, a dialog left open, a success carrying no URI, a URI that
+  is not a local file — and each has to fail closed on AutoControl's own clock.
+
+### The RemoteDesktop Portal Handshake Never Needed a GNOME VM Either
+
+- **The portal is a D-Bus interface, not a compositor feature.** Reaching libei
+  on GNOME and KDE means `CreateSession` → `SelectDevices` → `Start` →
+  `ConnectToEIS`, ending in an EIS file descriptor passed over the bus. That
+  was recorded as unverifiable without a GNOME VM because
+  `xdg-desktop-portal-wlr` implements ScreenCast and Screenshot but not
+  RemoteDesktop — which confuses "no container ships one" with "no container
+  can host one". Whatever owns `org.freedesktop.portal.Desktop` and answers
+  those four calls *is* the portal, as far as `liboeffis` is concerned.
+- **So the verification owns the name itself.** `docker/portal_server.py` is a
+  real D-Bus service on a private session bus, and its `ConnectToEIS` hands
+  back a live connection to the same real `libeis` server the `eis` image uses.
+  The real `liboeffis` runs the real handshake; the descriptor that comes out
+  carries a real EI session; and the key presses, absolute motion and button
+  edges emitted through it are recorded by an independent implementation at the
+  far end.
+- **What it settles.** That the four calls arrive in the prescribed order at the
+  request paths the client predicted; that `SelectDevices` is asked for keyboard
+  and pointer and nothing wider, so the grant a user consents to is the one this
+  backend needs and `OEFFIS_DEVICE_DEFAULT` is not the `= 0` all-devices
+  sentinel; that the descriptor is a live socket the caller owns and must close,
+  which is what makes handing it to `ei_setup_backend_fd` — a function that
+  takes ownership — correct rather than a double close.
+- **And every refusal.** A dismissed consent dialog, a dialog left open, a
+  withheld descriptor, a session the portal closes, a portal too old to have
+  `ConnectToEIS` at all, and no portal on the bus: each has to come back as a
+  refusal on this project's own clock rather than a hang or a silent downgrade.
+  The `OEFFIS_EVENT_CLOSED` branch had never had a peer able to drive it; it
+  does now.
+- **What is still not claimed.** The consent dialog as a dialog. Nobody
+  dismisses anything in CI, so what a real mutter dialog looks like, and how
+  long a real person leaves it open, stays mutter's business. What a dialog
+  *produces* — a grant, a refusal, silence — is all exercised.
+
+### One Packaging Fact That Was Recorded Wrong
+
+- **Debian trixie does ship `liboeffis`.** `Progress.md` said it did not, and
+  concluded that the libei fast path was effectively off across Debian and
+  Ubuntu. Measured: `liboeffis1` 1.3.901-1 is in trixie/main, providing
+  `liboeffis.so.1`. What is true, and what actually matters to a user, is that
+  it is a *separate binary package* which `libei1` does not depend on — so
+  installing libei alone still leaves the portal route off and `connect()`
+  falls back to the `eis-0` socket that GNOME and KDE do not open. Install
+  `liboeffis` to get the fast path.
+
+### A Monitor Left of the Primary Broke Every Wayland Capture Path
+
+- **Wayland has no per-monitor screen, and the one it does have need not start
+  at `(0, 0)`.** The compositor lays every output out on a single plane, and
+  that plane starts at a negative coordinate the moment an output sits left of
+  or above the origin — which is what "my second monitor is on the left" means
+  to a compositor. sway's headless backend accepts `output HEADLESS-1 position
+  -1280 0`, so this is now a layout CI can stand up: two 1280x720 outputs, one
+  2560x720 capture, top-left pixel at x=-1280.
+- **`screen.size()` was returning the layout's right edge, not its width.** It
+  computed `max(x + width)` over the outputs, which is 1280 on that layout
+  while `grab_image()` returns a frame 2560 wide. Everything that composes the
+  two believed the smaller number: the mss-shaped shim's monitor list (and so
+  `enumerate_monitors`), the screen recorder, the WebRTC host and the MCP
+  monitor grab all asked for a rectangle half the size of the desktop and
+  reported it as the whole screen.
+- **The crop for the tiers that cannot take a region cropped in the wrong
+  space.** Only grim accepts a geometry; gnome-screenshot, spectacle, the
+  portal and `JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND` all hand back the whole
+  layout and AutoControl crops afterwards. That crop used layout coordinates
+  against an image whose origin is the layout origin, so asking for
+  `[-1275, 5, -1175, 55]` — a rectangle on the left-hand monitor — asked
+  Pillow for a box 1275 px left of the frame and got black padding.
+- **And a match found on that monitor was reported on the wrong one.**
+  `grab_logical`, the capture behind template search, OCR and visual match,
+  reads its origin from `GetSystemMetrics`, which says nothing off Windows —
+  so it returned `(0, 0)` and every hit came back 1280 px to the right of
+  where it was seen. That reads as "the click lands on the wrong screen"
+  rather than as a failure to find, which is the worse of the two.
+- **Fixed at the seam, not at the call sites.** The Wayland backend publishes
+  `layout_origin()`; `size()` returns the bounding box's *size*; `grab_image`
+  subtracts the origin before cropping; and
+  `screen_grabber.backend_layout_origin()` is what `grab_logical` and the mss
+  shim ask, so a backend that captures its own screen can say where that
+  capture starts. Backends the generic libraries can already see (Windows,
+  macOS, X11) publish nothing and are unchanged — the origin is only ever
+  asked for, never guessed.
+- **Verified against a real compositor, both ways round.** The
+  `wayland-verification` job now runs its 27 checks twice: once with the
+  outputs side by side from the origin, once with the left-hand one at
+  x=-1280. The second run is what pins the negative case end to end — grim's
+  negative `-g`, the reported size, `layout_origin()`, the mss shim's monitor
+  rectangle, `grab_logical`'s origin, and the fallback crop driven through the
+  operator override pointed at grim so a *real* whole-layout PNG goes through
+  the code path that has to shift it.
+
+### The Same Layout Problem, on the Input Side — a Move libei Was Dropping in Silence
+
+- **libei discards an absolute motion that lands in no region, and reports
+  nothing about it.** No return code, no event, no error the caller can see —
+  `ei_device_pointer_motion_absolute` simply does not put the event on the
+  wire. `set_position` then returned as though the pointer had moved. Measured
+  against a real EIS peer, not inferred: with the device offering one
+  `(0, 0, 1920, 1080)` region, `(1919, 1079)` arrives and `(1920, 1080)`
+  produces no server-side event at all.
+- **And the space those regions live in need not be the layout's.** A region's
+  offset is a `uint32`, so no compositor *can* advertise one left of or above
+  the origin — while this project's layout space starts at `layout_origin()`
+  and goes negative the moment a monitor sits left of the primary. That is the
+  exact desktop the capture half was just fixed for. The two halves therefore
+  disagreed by the origin, which is the case where `get_pixel(x, y)` and
+  `set_position(x, y)` name different pixels — and the pointer that would have
+  gone to the wrong monitor instead went nowhere, quietly.
+- **`LibeiBackend` now reads the device's regions and maps the point into
+  them.** `ei_device_get_region` and the four `ei_region_get_*` getters are
+  bound; `_region_point` sends a covered coordinate unchanged, retries an
+  uncovered one normalised by the layout origin, and refuses what neither
+  covers. A device that declared no region accepts anything and is passed
+  through untouched, which is measured too — that is the common single-monitor
+  case, and it costs nothing.
+- **A refusal is the useful outcome, not a failure.** It is a
+  `LibeiUnavailable`, so `_select_input.emitted` hands the move to the ydotool
+  path exactly as it already does for a paused device. libei is documented as
+  the fast path and never the only one; the bug was that a dropped move never
+  reached the fallback because nothing knew it had been dropped. The frame is
+  not sent on a refusal either — nothing was buffered, and a frame there would
+  commit whatever the previous emission left on the device.
+- **The layout origin is only consulted when a point misses.** It costs a
+  `wlr-randr` subprocess, so it stays off the path every ordinary mouse move
+  takes, and it answers `(0, 0)` on GNOME and KDE — which is the right answer
+  there rather than a fallback, because those compositors normalise the layout
+  themselves.
+- **Five new checks in the `eis-verification` job, against the real
+  protocol.** That the client reads back the offsets the compositor
+  advertised; that a region at `x=1280` takes `1380` for a point 100 px into
+  it rather than `100`; that libei still drops an out-of-region motion without
+  a word — the measurement the whole guard rests on, so a future libei that
+  clamps instead says so; that AutoControl refuses such a move rather than
+  losing it; and that `(-1280, 10)` on a layout starting at `-1280` reaches
+  the server as `(0, 10)`. The job now runs 20 checks.
+- **What this does not settle.** ydotool's `mousemove --absolute` has an
+  origin of its own — it clamps to the compositor's top-left corner and sends
+  the target as a relative delta — and whether that corner is the layout
+  origin still needs a compositor that consumes libinput devices. It stays
+  open in `Progress.md` rather than being changed on a guess.
+
+### The ydotool Path Was Reporting Success While Doing Nothing
+
+- **`apt install ydotool` — the hint this backend printed — installs a
+  version whose command line cannot run it, and which says so by exiting
+  zero.** ydotool 1.0 replaced the whole CLI, and every argument the Wayland
+  backend builds arrived in that release: `mousemove --absolute`, `mousemove
+  --wheel`, hex `click` bitmasks (which is what lets a press and a release be
+  sent separately, and therefore what makes drag possible), and `key
+  CODE:STATE` taking numeric evdev codes. Debian bookworm, Ubuntu 22.04 and
+  Ubuntu 24.04 all still ship 0.1.8 under that name. Measured against a real
+  uinput device, 0.1.8 answers `click 0x40` with **no events and exit code
+  0**, and answers `mousemove --absolute` with `unrecognised option` — also
+  **exit code 0**. The backend runs ydotool with `check=True`, so a non-zero
+  status was the only thing that would have raised. On those distributions a
+  script clicked nothing, typed nothing and moved nothing, and every call
+  reported success.
+- **The legacy CLI is now refused before anything is sent.**
+  `linux_wayland/_ydotool_cli.py` classifies the installed ydotool once per
+  process — mouse and key dispatch cannot afford a subprocess per event — and
+  raises with the three routes out: a 1.0+ package, a source build, or
+  `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11`. Neither series implements
+  `--version` and 1.x will not answer `--help` without its daemon running, so
+  the probe reads the one thing both print with no daemon and no side
+  effects: the no-argument command list. A version it does not recognise is
+  allowed through rather than blocked, so a future release that changes that
+  banner cannot be locked out by a stale detector.
+- **Both install hints were wrong in a second way.** Debian trixie ships no
+  `ydotool` package at all. The hints now name the distributions that do.
+
+### ydotool Never Needed a Desktop to Verify — Only a Reader
+
+- **The gap both verification images recorded turned out to be the wrong
+  gap.** `Dockerfile.wayland` and `Dockerfile.eis` each closed by saying
+  ydotool "needs /dev/uinput and a seat that consumes it", and `Progress.md`
+  filed that behind building a GNOME VM. A seat is what makes an injected
+  event *arrive somewhere*. It is not what makes one *observable*: ydotoold
+  creates an ordinary uinput device, the kernel publishes it as
+  `/dev/input/eventN`, and reading that node returns the exact `input_event`
+  structs ydotool wrote. No compositor, no session, no VM.
+- **`docker/Dockerfile.ydotool` and `docker/ydotool_verify.py` do that, in
+  CI, in twelve checks.** They settle what had only ever been asserted
+  against mocks: `0xc0` / `0xc1` / `0xc2` really are BTN_LEFT / BTN_RIGHT /
+  BTN_MIDDLE; the split edges `0x40` and `0x80` really do send a press with
+  no release and a release with no press, which is the entire basis of
+  `press_mouse` and drag; `key 30:1 30:0` really does carry numeric evdev
+  codes; and **the wheel signs are measured rather than assumed** — `-y 1`
+  reaches the kernel as `REL_WHEEL +1`, `-y -1` as `-1`, and `-x 2` as
+  `REL_HWHEEL +2` with the axes not swapped. That last one is the assumption
+  `Progress.md` had flagged as untested since the scroll work landed.
+- **The twelfth check drives the backend's own functions rather than a
+  hand-written argv**, so "what ydotool does with this command line" and
+  "what AutoControl sends" are joined rather than merely adjacent.
+- **`mousemove --absolute` does not emit absolute events**, which is worth
+  knowing before trusting it. ydotool 1.x has no ABS axes on its device: it
+  sends `INT32_MIN` on both relative axes first, relies on the compositor
+  clamping that to the top-left corner, and then sends the target as a
+  relative delta. So `set_position` lands on the requested pixel *because of
+  that clamp*. The kernel side is now pinned; the clamp is the compositor's
+  behaviour and stays open.
+- **The container gets `/dev/uinput` and character major 13, not
+  `--privileged`.** ydotoold creates its input node *after* the container
+  starts, which `--device` cannot cover, so the job grants
+  `--device-cgroup-rule 'c 13:* rmw'` and nothing else.
+
+### Scrolling on Wayland Stops Needing a uinput Daemon
+
+Motion, buttons and keys had already moved onto libei. Scroll was the one
+input left shelling out to `ydotool` for every notch, and `Progress.md` said
+why: the sign was a guess, and a scroll that goes the wrong way fails
+silently. It is wired now, and the guess has been replaced with two
+independent readings plus a measurement.
+
+- **The two paths count wheel detents in opposite directions.** This
+  repository's `wayland_scroll_direction_*` constants are in the kernel's
+  `REL_WHEEL` frame, because that is what ydotool writes into `/dev/uinput`:
+  positive is up. libei is in the `wl_pointer` / libinput frame, where
+  positive is down — libinput's own evdev reader negates `REL_WHEEL` to get
+  there, and the other libei sender that documents its sign (enigo) passes a
+  "positive scrolls down" value straight through to `scroll_discrete`.
+  Horizontal needs no flip: `REL_HWHEEL` and libinput both count right as
+  positive. So the vertical axis is negated on the way to libei and the
+  horizontal one is not, which is the decision `Progress.md` was waiting on.
+- **The flip is checked against the real EIS server, negative value and
+  all.** A fifteenth check in `docker/eis_verify.py` drives the *public*
+  `mouse.scroll()` — not the backend method the earlier check drives — and
+  reads back `(0, -120)` for up, `(0, 120)` for down and `(120, 0)` for
+  right. It is also the only place a negative discrete value reaches the
+  wire; the earlier check only ever sent a positive one, so a marshalling
+  fault on the sign had nowhere to show up.
+- **A refused emission now falls back to the CLI, which is what the code
+  always claimed.** `libei`'s module docstring says every failure raises
+  `LibeiUnavailable`, "which `keyboard` / `mouse` already treat as *use the
+  ydotool CLI*". Only the *connection* was treated that way. Once a backend
+  was handed over, a compositor that paused a device — or a session that
+  ended between two calls — raised straight out of `set_position`,
+  `press_key` or `hotkey`. Routing scroll through libei would have added a
+  fourth way for a script to die on a path that has a working fallback
+  sitting next to it, so the fallback was made real: a chord refused
+  part-way releases what it already pressed before handing over, so no
+  modifier is left held, and a button whose *release* is refused is released
+  by ydotool rather than staying down for the rest of the session.
+- **`LibeiUnavailable` was escaping every containment boundary.** It
+  inherited `RuntimeError` alone, and `CLAUDE.md` is explicit that a
+  framework error which is not an `AutoControlException` "silently escapes
+  every boundary" — the executor, the background poll loops, the request
+  handlers, the GUI slots. It now inherits both, so the probes that catch
+  `RuntimeError` keep working and the boundaries finally see it.
+
+## What's new (2026-08-18)
+
+### The libei Input Path Now Has Something to Talk To
+
+The Wayland capture path was verified against a real compositor; the *input*
+path was not, and was recorded as needing a GNOME VM. It does not. libeis is
+the server side of libei's own protocol, Debian packages it, and the two
+libraries will talk to each other over a plain Unix socket — so
+`docker/eis_server.py` runs a real EIS implementation and
+`docker/eis_verify.py` drives AutoControl's real sender against it. No
+compositor, no desktop session, 14 checks, wired into CI.
+
+- **Discrete scroll was off by a factor of 120.** libei measures discrete
+  scroll in 120ths of a wheel click — the same convention as Windows'
+  `WHEEL_DELTA` — and `scroll()` was passing raw detent counts, so one click
+  asked for 1/120th of a scroll. libei says so at runtime ("suspicious
+  discrete event value 1, did you mean 120?"), which no mock was ever going to
+  print. `scroll(0, 1)` now arrives at the server as `(0, 120)`: one click,
+  right axis, right sign. This was the path `Progress.md` left deliberately
+  unwired because the *sign* was a guess; the sign turned out to be the
+  smaller half of the question.
+- **The teardown no longer leaks a context per process.** `ei_unref`
+  segfaults on libei 1.3.901 — but only on a context whose backend opened and
+  whose handshake never progressed. With a peer to complete a handshake
+  against, the live case is finally testable, and it is safe. Teardown now
+  releases the devices and the context normally and abandons only the state
+  that actually crashes, instead of abandoning every opened backend on the
+  suspicion that it might.
+- **The values a mock cannot check are checked.** The server offers six
+  capabilities and reads back what the client actually bound: exactly the four
+  AutoControl asks for, so both the `EI_DEVICE_CAP_*` bitmask and the variadic
+  `ei_seat_bind_capabilities` marshalling are right. Key codes, absolute
+  coordinates and button codes are read off the wire and compared. Every
+  emission is confirmed to carry a frame, and every device to open an
+  emulation transaction first — libei drops events from one that has not.
+- **Two things measured but not ours to fix**, recorded rather than papered
+  over: `eis_device_pause()` puts nothing on the wire for a sender client on
+  libeis 1.3.901, so the client's `DEVICE_PAUSED` handling still has no peer
+  to exercise it; and the `start_emulating` sequence number does not survive
+  the trip (an explicit 4242 reads back as 0), so AutoControl's counter cannot
+  be checked from the far side. The check is written so that a libeis which
+  starts sending pauses will fail loudly if the client ignores them.
+
+### The Architecture Map's Line Counts Are Measured Again
+
+- **The map quoted the same subsystem at two different sizes.** `CLAUDE.md`
+  says every figure in `architecture_explore.md` is measured, but nothing
+  checked it, and two counting conventions had grown up side by side: the §5.4
+  theme tables and the §5.4.17 file tables counted a phantom trailing line —
+  `len(text.split("\n"))` reports one line more than a file that ends in a
+  newline actually has, and one more *per file* for a package — while §1's
+  totals and the §8 appendix counted correctly. So `utils/executor/` was 8,811
+  lines in one section and 9,001 in another, and the §8 column did not add up
+  to its own total. On top of that about fifty rows were simply stale, several
+  `####` headings were hundreds of lines out (`linux_wayland/` was still
+  quoted at 10 files / 1,093 lines against a real 14 / 2,235), and one theme
+  table had gained two subpackages its summary line never heard about.
+- **413 figures re-measured** on one convention — `len(text.splitlines())`,
+  what `wc -l` reports and what `CLAUDE.md`'s own over-750-lines snippet
+  counts. §5.4, §5.4.17 and §8 now agree with each other for every subsystem,
+  and §8's rows sum to its stated total.
+- **`test_doc_line_counts.py` is both the gate and the fix.** It fails CI when
+  any quoted line count stops matching the tree, naming the offending lines,
+  and rewrites all of them in place with `--fix`. The line counts were the one
+  part of the map with no gate — the command, MCP-tool, subpackage and example
+  counts already had `test_doc_counts.py` — which is exactly why they were the
+  part that drifted.
+
+### The Clipboard No Longer Fails Because Another Application Was Copying
+
+- **One process at a time may hold the Windows clipboard open, and every
+  clipboard call in AutoControl gave up the instant one did.** Explorer,
+  Office and every browser own the clipboard for a few milliseconds at a time
+  while they copy; `OpenClipboard` returns false for that whole window and all
+  six call sites — text, image, HTML, RTF, CSV, file drops, format
+  enumeration — turned it straight into `RuntimeError: OpenClipboard failed`.
+  Measured on a live desktop with a second process copying in a loop: about
+  one open in a thousand failed, which is a script that dies for no reason the
+  operator can see or reproduce. Win32 documents this as the condition to
+  retry, and a library whose job is driving a machine that other applications
+  are busy on cannot treat "somebody else was copying" as an error.
+- **`win32_clipboard_api.open_clipboard()` is now the single place that opens
+  it**, waiting out a busy clipboard for roughly 200 ms before reporting
+  failure, and closing it however the block ends. The three modules that
+  hand-rolled the open/close pair — including the two that predated the shared
+  module — go through it, so the retry cannot be forgotten at a new call site.
+- **The clipboard round-trip tests no longer depend on what the rest of the
+  machine is doing.** They exercise the real Win32 calls, which is the only
+  place the four historical writer bugs could ever be seen, so faking the
+  backend would have deleted the coverage instead of stabilising it. They now
+  read the Win32 clipboard sequence number instead: unchanged between the
+  write and the read means nothing else wrote in that window, so the assertion
+  is about AutoControl's code and nothing else. Verified against a process
+  making 4,112 competing clipboard writes during the run.
+
+### A Misspelled Command Name Is a 400, Not a 500
+
+- **`POST /execute` answered `500 {"error": "execute_action failed"}` for an
+  `AC_*` name that does not exist**, which is the same answer it gives when
+  the server itself breaks. A client could not tell a typo in its own request
+  from an outage, and the message did not say which name was unrecognised.
+- **Every command name is now checked before anything runs**, and an
+  unrecognised one comes back as `400` listing *all* of them in
+  `unknown_commands` — nested flow-control bodies included — so a client fixes
+  every typo in one round trip. `POST /execute_file` answers the same way for
+  a file that is unreadable, is not an action list, or names an unknown
+  command. The OpenAPI spec documents both, and states that a rejected request
+  executed nothing.
+- Validation and collection share one traversal in `action_schema`, so there
+  is still exactly one definition of where a nested action list may hide.
+
+### A Segfault in the libei Teardown, and the Binding Checked Against the Real Library
+
+- **`ei_unref` crashes the process on libei 1.3.901 once a backend is open,
+  and the fallback path ran straight into it.** Every failure mode of the
+  libei handshake ends in `_teardown()`, so on any host where libei is
+  installed and the handshake does not complete, AutoControl died with
+  SIGSEGV instead of quietly using ydotool — the exact opposite of the
+  fail-closed promise. Measured one call at a time against the real library:
+  `ei_unref` is safe with no backend set up and safe after a *failed* setup,
+  and segfaults after a successful one. `ei_disconnect` crashes in the same
+  state, so it is not a refcounting mistake here; the header documents
+  `ei_unref` as correct for both outcomes, which makes this an upstream bug.
+  An opened backend is now abandoned rather than unreffed — a bounded leak of
+  one context per process, against a crash in a library that drives a desktop.
+  A sentinel in the verification re-checks the upstream state on every run and
+  says so when the workaround can go.
+- **Every entry point the binding names is now resolved against the real
+  `libei.so`.** A misspelled symbol or a wrong `argtypes` sails past a mocked
+  symbol table and only surfaces on a user's machine; all 22 prototypes plus
+  the variadic `ei_seat_bind_capabilities` are checked for real.
+- **The whole fail-closed chain runs end to end**: connect to a socket that
+  speaks no EI → handshake times out → `LibeiUnavailable` → `active_backend()`
+  returns None → `press_key` falls through to the ydotool CLI.
+- **`liboeffis` is not packaged everywhere.** Arch and Fedora ship it; Debian
+  trixie does not. Without it there is no portal route, so `connect()` falls
+  back to the well-known EIS socket — which GNOME and KDE do not create. The
+  libei fast path is therefore unavailable on those systems, and says so
+  rather than looking mysteriously idle.
+
+### The Wayland Capture Path Now Meets a Real Compositor
+
+- **`screen.size()` reported one monitor while `grab_image()` returned the
+  whole layout.** The `wlr-randr` parser took the first `WxH` anywhere in the
+  document, which is the first output's current mode. On a two-monitor layout
+  that is half the screen — and the two are composed by the mss-shaped shim,
+  so the recorder, WebRTC and MCP monitor paths asked for a region half the
+  size of the screen and got it. `size()` is now the layout bounding box, from
+  a parser that reads every enabled output's mode *and* position. Found by
+  running against a real compositor; no mock had a second monitor.
+- **`docker/Dockerfile.wayland` runs the backend under headless sway.** The
+  wlroots headless backend needs no GPU, no seat and no display, so a genuine
+  Wayland session fits in a container — and now in CI, as the
+  `wayland-verification` job. Two outputs are painted different solid colours,
+  because on a uniform screen a region grab cannot be caught reading the wrong
+  rectangle, and a red/blue swap cannot be caught at all.
+- **21 checks that were previously mock-only now run against pixels the
+  compositor painted**: grim's argv and `-g` geometry, RGB channel order,
+  `wlr-randr`'s undocumented output format, `size()` / `grab_image()` /
+  `get_pixel()` / `screenshot()`, `je_auto_control.screenshot()`'s BGR output,
+  `grab_logical()` (the locator and OCR path), the mss shim, and `wtype`.
+- **What the container cannot answer is stated rather than glossed over.**
+  ydotool needs `/dev/uinput` and headless sway consumes no libinput devices;
+  `xdg-desktop-portal-wlr` implements no RemoteDesktop, so there is no
+  `ConnectToEIS` to test. Both remain open in `Progress.md`.
+
+### libei Input, End to End
+
+- **The full portal handshake is implemented.** libei is not a
+  call-a-function-and-a-key-is-pressed library: a sender has to open an EIS
+  backend, bind a seat's capabilities, take a device *out of an event*, start
+  emulating on it, and follow every emission with `ei_device_frame` or nothing
+  is delivered. All of that now happens, so `press_key`, `set_position` and the
+  mouse buttons can emit without spawning a process per event.
+- **The EIS socket comes from the desktop portal.** On GNOME and KDE it is not
+  a path on disk — it is a file descriptor handed over D-Bus by
+  `org.freedesktop.portal.RemoteDesktop.ConnectToEIS`, after a three-call
+  asynchronous session dance. No command-line tool can pass a file descriptor
+  into this process, so the `gdbus` route used for screenshots cannot work
+  here; `liboeffis` (which ships with libei for exactly this) does the dance.
+  Where liboeffis is absent, the well-known `$XDG_RUNTIME_DIR/eis-0` socket is
+  still tried.
+- **Devices come from events, never from the context.** The previous binding
+  passed the `struct ei *` context to entry points that take a
+  `struct ei_device *` — pointer type confusion in a C library. That is now
+  impossible by construction.
+- **A failed probe is paid once, not per keystroke.** The handshake involves a
+  portal round trip and possibly a consent dialog. The result is cached for the
+  process, so a host where libei is installed but unusable does not re-attempt
+  it on every key press.
+- **Everything still falls back to ydotool.** Missing library, declined
+  consent, a partial capability grant, a paused device, a handshake that does
+  not complete — each raises `LibeiUnavailable`, which the keyboard and mouse
+  modules already treat as "use the CLI". Scroll deliberately stays on ydotool:
+  its direction convention is pinned by tests, and a wrong sign would fail
+  silently rather than loudly.
+- **The ABI constants were checked against the upstream headers**, not
+  guessed. Three were wrong. `enum ei_device_capability` is a *bitmask*, so
+  `EI_DEVICE_CAP_KEYBOARD` is `1 << 2`, not 3; `OEFFIS_EVENT_CLOSED` comes
+  *before* `OEFFIS_EVENT_DISCONNECTED`; and `OEFFIS_DEVICE_ALL_DEVICES` is a
+  `= 0` sentinel rather than the OR of the device bits. The capability error
+  was the expensive one — no device would ever have reported the capability,
+  so every session would have timed out and silently used the CLI. The
+  verified values are now pinned by tests. The session also asks only for the
+  keyboard and pointer it actually drives, so the consent dialog does not
+  request a touchscreen grant nothing uses.
+
+### Wayland Capture Has a Floor Under It
+
+- **`xdg-desktop-portal` backs up the three CLI helpers.** None of `grim`,
+  `gnome-screenshot` or `spectacle` is guaranteed to be installed — GNOME has
+  not shipped `gnome-screenshot` by default since 42 — so
+  `org.freedesktop.portal.Screenshot` is tried last through `gdbus` rather than
+  giving up. It is awkward by nature: the portal returns a request handle and
+  answers later with a signal, so the listener starts before the call is made,
+  and the wait is bounded (30s) because a consent dialog can sit in front of it.
+- **An operator can name their own capture command.**
+  `JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND="mycap --png {output}"` wins over
+  every detected tool. `{output}` becomes a temporary PNG path, substituted per
+  argument after `shlex.split` and run without a shell, so a path with spaces
+  stays one argument. This is the escape hatch for a setup none of the built-in
+  tiers fit — including one where our argv guess for a helper turns out wrong.
+- **libei refuses a connection it cannot emit through.** The binding only ever
+  holds an `ei` context, while every device entry point takes an `ei_device`,
+  and it runs none of libei's seat / device / `start_emulating` / `frame`
+  handshake — so it could not deliver input, but *could* pass the wrong pointer
+  into a C library on a host that opens `$XDG_RUNTIME_DIR/eis-0`. It now stops
+  at `connect()` with an explanation. Callers already treated that as "use the
+  ydotool CLI", which is what every real desktop was doing anyway.
+- **The portal listener cannot wedge on shutdown.** Its pipe is closed only
+  after the reader thread lets go of it; closing a stream out from under a
+  blocked `read()` can hang on the buffer lock, which would have turned a
+  timed-out capture into the hang the timeout exists to prevent.
+
+### The Container Image Builds and Starts From a Windows Checkout
+
+- **Every container built on a Windows clone died on startup.** `.gitattributes`
+  said `* text=auto`, so `docker/entrypoint.sh` and `docker/entrypoint-xfce.sh`
+  were checked out with CRLF. The shebang then reads `#!/bin/sh<CR>`, the kernel
+  looks for an interpreter whose name ends in a carriage return, and the image
+  builds perfectly and then exits with `exec /usr/local/bin/autocontrol-entrypoint:
+  no such file or directory` — a message that names the file it just failed to
+  find. CI never saw it: a Linux runner checks the same file out with LF.
+  `*.sh text eol=lf` now pins it, and a test asserts no entrypoint carries CRLF.
+- **`.dockerignore` was in `docker/`, where Docker does not look.** Docker reads
+  it from the build *context* root, and every documented build passes the
+  repository root (`docker build -f docker/Dockerfile .`), so the exclusions did
+  nothing: `.git`, `.venv`, `test/` and the caches were all being shipped to the
+  daemon on every build. Moved to the root, where it takes effect.
+- **The `mss` shim test measured the host's monitor, not its own fake.**
+  `test_screen_grabber.py` patched `backend_grab_image` but left
+  `_backend_screen_size` reading the real `platform_wrapper.screen`, so
+  `monitors[0]` reported whatever display the developer had. It passed on a
+  1920x1080 desktop and failed under a 1280x800 Xvfb, for reasons unrelated to
+  the code under test. The fake now owns both halves of the seam.
+
 ## What's new (2026-08-17)
+
+### Wayland Sees the Screen
+
+- **Every capture path now goes through the platform backend.** `screenshot()`,
+  the image and anchor locators, OCR, smart waits, visual regression, screen
+  recording, the MCP monitor tools and remote desktop each reached for
+  `PIL.ImageGrab` or `mss` directly. Both read the X11 root window on Linux,
+  which under Wayland belongs to XWayland and does not composite native Wayland
+  windows. Pillow does fall back to `gnome-screenshot` / `grim` / `spectacle`,
+  but only inside `except OSError` around its X11 grab — so it fires when there
+  is no X display at all, and *not* while XWayland is up, which is the default
+  on GNOME, KDE and sway. `mss` has no fallback in any configuration.
+  `utils/cv2_utils/screen_grabber.py` is now the one place that decides how
+  pixels are read: a backend that publishes `grab_image` gets wrapped in
+  whichever library shape the caller already uses. Windows, macOS and Linux X11
+  publish nothing and keep the real libraries, so their behaviour is
+  byte-for-byte unchanged.
+- **Wayland capture covers three compositor families, not one.** `grim` only
+  speaks `wlr-screencopy`, which GNOME and KDE do not implement — so
+  `linux_wayland/capture.py` tries `grim` (sway, Hyprland, river), then
+  `gnome-screenshot`, then `spectacle`, and reports which one it used. Only
+  `grim` can take a region itself; the others capture the screen and the region
+  is cropped from it.
+- **A missing capture tool fails loudly.** It raises with the install command
+  for each compositor rather than handing back an empty XWayland grab that
+  reads downstream as "template not found". The new `screen_capture`
+  diagnostics check names the tool in use before anything has to fail.
+- **`screen.size()` and `get_pixel` work off GNOME/KDE too.** Resolution falls
+  back from `wlr-randr` to measuring a capture, and `get_pixel` crops a 1x1
+  region from whichever capture path is available.
 
 ### Which Program Owns That Window
 
