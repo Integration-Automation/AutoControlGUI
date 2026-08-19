@@ -15,11 +15,24 @@ declarations into every other user32 caller in the process.
 """
 import ctypes
 import sys
+import time
+from contextlib import contextmanager
 from ctypes import wintypes
-from typing import Optional, Tuple
+from typing import Iterator, Optional, Tuple
 
 GMEM_MOVEABLE = 0x0002
 _OPEN_FAILED = "OpenClipboard failed"
+
+# Only one process may hold the clipboard open at a time, so OpenClipboard
+# fails outright whenever another application is mid-copy — Explorer, Office
+# and every browser own it for a few milliseconds at a time. Reporting that as
+# the caller's failure is wrong twice over: Win32 documents it as the condition
+# to retry, and a library whose job is driving machines that are busy by
+# definition cannot treat "somebody else was copying" as an error. Roughly
+# 200 ms of waiting covers the transient owners without hanging a script
+# behind one that keeps the clipboard for real.
+_OPEN_ATTEMPTS = 10
+_OPEN_RETRY_SECONDS = 0.02
 
 
 def _require_windows() -> None:
@@ -61,6 +74,28 @@ def clipboard_api() -> Tuple[object, object]:
     return user32, kernel32
 
 
+@contextmanager
+def open_clipboard(user32: Optional[object] = None) -> Iterator[object]:
+    """Own the clipboard for the block, waiting out a transiently busy one.
+
+    Pass the ``user32`` handle you already prototyped to keep the declarations
+    private to your module; omit it and one is built here. The clipboard is
+    closed on the way out however the block ends — leaving it open locks every
+    other process on the desktop out of it.
+    """
+    api = clipboard_api()[0] if user32 is None else user32
+    for attempt in range(_OPEN_ATTEMPTS):
+        if api.OpenClipboard(None):
+            break
+        if attempt == _OPEN_ATTEMPTS - 1:
+            raise RuntimeError(_OPEN_FAILED)
+        time.sleep(_OPEN_RETRY_SECONDS)
+    try:
+        yield api
+    finally:
+        api.CloseClipboard()
+
+
 def register_format(name: str) -> int:
     """Register (or look up) a named clipboard format id."""
     user32, _kernel32 = clipboard_api()
@@ -84,23 +119,17 @@ def set_clipboard_format(format_id: int, payload: bytes, *,
         raise RuntimeError("GlobalLock failed")
     ctypes.memmove(pointer, payload, len(payload))
     kernel32.GlobalUnlock(handle)
-    if not user32.OpenClipboard(None):
-        raise RuntimeError(_OPEN_FAILED)
-    try:
+    with open_clipboard(user32):
         if empty_first:
             user32.EmptyClipboard()
         if not user32.SetClipboardData(int(format_id), handle):
             raise RuntimeError(f"SetClipboardData({format_id}) failed")
-    finally:
-        user32.CloseClipboard()
 
 
 def get_clipboard_format(format_id: int) -> Optional[bytes]:
     """Read the clipboard's ``format_id`` payload, or ``None`` when absent."""
     user32, kernel32 = clipboard_api()
-    if not user32.OpenClipboard(None):
-        raise RuntimeError(_OPEN_FAILED)
-    try:
+    with open_clipboard(user32):
         handle = user32.GetClipboardData(int(format_id))
         if not handle:
             return None
@@ -111,5 +140,3 @@ def get_clipboard_format(format_id: int) -> Optional[bytes]:
             return ctypes.string_at(pointer, kernel32.GlobalSize(handle))
         finally:
             kernel32.GlobalUnlock(handle)
-    finally:
-        user32.CloseClipboard()

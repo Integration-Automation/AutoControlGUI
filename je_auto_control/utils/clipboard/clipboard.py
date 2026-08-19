@@ -17,8 +17,6 @@ import sys
 from io import BytesIO
 from typing import Optional, Union
 
-_OPEN_CLIPBOARD_FAILED = "OpenClipboard failed"
-
 
 def get_clipboard() -> str:
     """Return the current clipboard text (empty string if empty)."""
@@ -101,6 +99,8 @@ def _win_get() -> str:
     import ctypes
     from ctypes import wintypes
 
+    from je_auto_control.utils.clipboard.win32_clipboard_api import open_clipboard
+
     user32 = ctypes.WinDLL("user32", use_last_error=True)
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     cf_unicodetext = 13
@@ -114,9 +114,7 @@ def _win_get() -> str:
     kernel32.GlobalLock.restype = ctypes.c_void_p
     kernel32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
 
-    if not user32.OpenClipboard(None):
-        raise RuntimeError(_OPEN_CLIPBOARD_FAILED)
-    try:
+    with open_clipboard(user32):
         handle = user32.GetClipboardData(cf_unicodetext)
         if not handle:
             return ""
@@ -127,13 +125,13 @@ def _win_get() -> str:
             return ctypes.wstring_at(pointer)
         finally:
             kernel32.GlobalUnlock(handle)
-    finally:
-        user32.CloseClipboard()
 
 
 def _win_set(text: str) -> None:
     import ctypes
     from ctypes import wintypes
+
+    from je_auto_control.utils.clipboard.win32_clipboard_api import open_clipboard
 
     user32 = ctypes.WinDLL("user32", use_last_error=True)
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -162,14 +160,10 @@ def _win_set(text: str) -> None:
         raise RuntimeError("GlobalLock failed")
     ctypes.memmove(pointer, ctypes.addressof(data), size)  # NOSONAR S5655 false positive — Array is accepted by addressof
     kernel32.GlobalUnlock(handle)
-    if not user32.OpenClipboard(None):
-        raise RuntimeError(_OPEN_CLIPBOARD_FAILED)
-    try:
+    with open_clipboard(user32):
         user32.EmptyClipboard()
         if not user32.SetClipboardData(cf_unicodetext, handle):
             raise RuntimeError("SetClipboardData failed")
-    finally:
-        user32.CloseClipboard()
 
 
 # === macOS backend ===========================================================
@@ -262,6 +256,10 @@ def _win_set_image(png_bytes: bytes) -> None:
     import ctypes  # noqa: PLC0415
     from ctypes import wintypes  # noqa: PLC0415
 
+    from je_auto_control.utils.clipboard.win32_clipboard_api import (  # noqa: PLC0415
+        open_clipboard,
+    )
+
     user32 = ctypes.WinDLL("user32", use_last_error=True)
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     cf_dib = 8
@@ -287,14 +285,10 @@ def _win_set_image(png_bytes: bytes) -> None:
         raise RuntimeError("GlobalLock failed")
     ctypes.memmove(pointer, dib, len(dib))
     kernel32.GlobalUnlock(handle)
-    if not user32.OpenClipboard(None):
-        raise RuntimeError(_OPEN_CLIPBOARD_FAILED)
-    try:
+    with open_clipboard(user32):
         user32.EmptyClipboard()
         if not user32.SetClipboardData(cf_dib, handle):
             raise RuntimeError("SetClipboardData(CF_DIB) failed")
-    finally:
-        user32.CloseClipboard()
 
 
 def _mac_get_image() -> Optional[bytes]:

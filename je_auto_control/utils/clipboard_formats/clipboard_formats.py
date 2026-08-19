@@ -118,11 +118,11 @@ def list_clipboard_formats() -> List[Dict[str, Any]]:
     # Prototypes come from the shared module, on a *private* handle: declaring
     # them on the process-wide ``ctypes.windll.user32`` would leak into every
     # other caller in this process.
-    from je_auto_control.utils.clipboard.win32_clipboard_api import clipboard_api
+    from je_auto_control.utils.clipboard.win32_clipboard_api import (
+        clipboard_api, open_clipboard,
+    )
     user32, _kernel32 = clipboard_api()
-    if not user32.OpenClipboard(None):
-        raise RuntimeError("OpenClipboard failed")
-    try:
+    with open_clipboard(user32):
         formats: List[Dict[str, Any]] = []
         format_id = user32.EnumClipboardFormats(0)
         while format_id:
@@ -130,8 +130,6 @@ def list_clipboard_formats() -> List[Dict[str, Any]]:
                             "name": _format_name(user32, format_id)})
             format_id = user32.EnumClipboardFormats(format_id)
         return formats
-    finally:
-        user32.CloseClipboard()
 
 
 def clipboard_formats() -> Dict[str, Any]:

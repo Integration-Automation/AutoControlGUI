@@ -12,6 +12,13 @@ So this file tests the half that was untested: the actual clipboard. It skips
 when the clipboard cannot be opened at all — a locked workstation, a session
 without a window station, or a non-Windows CI runner — rather than reporting a
 failure the environment made inevitable.
+
+That real clipboard is machine-global, which used to make these tests depend on
+what every *other* process on the box was doing: one write from anything else
+between our write and our read failed the run, and during a parallel Docker
+build one did. :func:`_round_trip` closes that hole without giving up the real
+Win32 calls — see its docstring for why faking the backend instead would delete
+the only coverage this file has.
 """
 import sys
 
@@ -19,6 +26,9 @@ import pytest
 
 _WINDOWS = sys.platform.startswith("win")
 pytestmark = pytest.mark.skipif(not _WINDOWS, reason="Windows clipboard only")
+
+# How many times a stolen round-trip is worth re-running before giving up.
+_ATTEMPTS = 4
 
 
 def _clipboard_available() -> bool:
@@ -28,6 +38,50 @@ def _clipboard_available() -> bool:
         return True
     except Exception:  # noqa: BLE001 - locked desktop / no window station
         return False
+
+
+def _sequence_number() -> int:
+    """Win32's clipboard change counter for this window station.
+
+    It moves on every *modification*, by any process, and never on a read —
+    which is precisely the signal needed to tell "somebody stole my clipboard"
+    from "my writer is broken".
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    user32.GetClipboardSequenceNumber.argtypes = []
+    user32.GetClipboardSequenceNumber.restype = wintypes.DWORD
+    return int(user32.GetClipboardSequenceNumber())
+
+
+def _round_trip(write, read):
+    """Run ``write`` then ``read`` as one uninterrupted pair; return the value.
+
+    Faking the clipboard backend would make this file deterministic by
+    deleting the only thing it tests — the Win32 half, which is where all four
+    historical bugs were and which no pure-function test could reach. So the
+    calls stay real and the *interference* is detected instead: if the
+    sequence number has not moved between the end of our write and the end of
+    our read, nothing else wrote in that window, so the bytes we read are the
+    bytes we wrote and the assertion that follows is about our code alone.
+
+    Nothing that looks like a bug is retried away: ``write`` raising is the
+    exact shape of the regression this file exists to catch, so it propagates
+    on the first attempt. The other half of the race — a clipboard another
+    process is holding *open* — is not handled here at all, because
+    ``win32_clipboard_api.open_clipboard`` waits that out for every caller of
+    the library, not just for this test.
+    """
+    for _attempt in range(_ATTEMPTS):
+        write()
+        stamp = _sequence_number()
+        value = read()
+        if _sequence_number() == stamp:
+            return value
+    pytest.skip("another process kept overwriting the clipboard")
+    return None  # unreachable; keeps the return type honest for linters
 
 
 @pytest.fixture()
@@ -52,32 +106,38 @@ def test_text_round_trip(clipboard):
     from je_auto_control.utils.clipboard.clipboard import (
         get_clipboard, set_clipboard,
     )
-    set_clipboard("round-trip probe")
-    assert get_clipboard() == "round-trip probe"
+    read_back = _round_trip(lambda: set_clipboard("round-trip probe"),
+                            get_clipboard)
+    assert read_back == "round-trip probe"
 
 
 def test_html_round_trip(clipboard):
     from je_auto_control.utils.rich_clipboard.rich_clipboard import (
         get_clipboard_html, set_clipboard_html,
     )
-    set_clipboard_html("<b>hi</b>")
-    assert "hi" in (get_clipboard_html() or "")
+    read_back = _round_trip(lambda: set_clipboard_html("<b>hi</b>"),
+                            get_clipboard_html)
+    assert "hi" in (read_back or "")
 
 
 def test_rtf_round_trip(clipboard):
     from je_auto_control.utils.clipboard_rich_formats.clipboard_rich_formats import (
         build_rtf, get_clipboard_rtf, set_clipboard_rtf,
     )
-    set_clipboard_rtf(build_rtf("hello"))
-    assert "hello" in (get_clipboard_rtf() or "")
+    read_back = _round_trip(lambda: set_clipboard_rtf(build_rtf("hello")),
+                            get_clipboard_rtf)
+    assert "hello" in (read_back or "")
 
 
 def test_csv_round_trip(clipboard):
     from je_auto_control.utils.clipboard_rich_formats.clipboard_rich_formats import (
         get_clipboard_csv, set_clipboard_csv,
     )
-    set_clipboard_csv([["a", "b"], ["c", "d"]])
-    assert get_clipboard_csv() == [["a", "b"], ["c", "d"]]
+    read_back = _round_trip(
+        lambda: set_clipboard_csv([["a", "b"], ["c", "d"]]),
+        get_clipboard_csv,
+    )
+    assert read_back == [["a", "b"], ["c", "d"]]
 
 
 def test_file_list_round_trip(clipboard, tmp_path):
@@ -86,8 +146,9 @@ def test_file_list_round_trip(clipboard, tmp_path):
     )
     one = tmp_path / "one.png"
     one.write_bytes(b"x")
-    set_clipboard_files([str(one)])
-    assert get_clipboard_files() == [str(one)]
+    read_back = _round_trip(lambda: set_clipboard_files([str(one)]),
+                            get_clipboard_files)
+    assert read_back == [str(one)]
 
 
 def test_format_enumeration_sees_what_was_written(clipboard):
@@ -95,8 +156,7 @@ def test_format_enumeration_sees_what_was_written(clipboard):
     from je_auto_control.utils.clipboard_formats.clipboard_formats import (
         clipboard_formats,
     )
-    set_clipboard("text only")
-    summary = clipboard_formats()
+    summary = _round_trip(lambda: set_clipboard("text only"), clipboard_formats)
     assert summary["has_text"] is True
     assert summary["has_files"] is False
 
