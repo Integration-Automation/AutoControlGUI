@@ -50,6 +50,33 @@
 
 ---
 
+## BSD 上只驗了「判定」，沒驗到「真的驅動輸入」
+
+`TODO` — `.github/workflows/platform-smoke.yml` 的 `freebsd` job
+
+`freebsd` job 在 runner 裡開真的 FreeBSD 14 VM，驗的是
+`utils/platform_id`：`sys.platform` 真的長成 `freebsd14`、
+`is_x11_unix()` 在上面回 True——也就是每個放寬後的守衛
+現在問的那個問題，而這件事只有 BSD 能回答。
+
+**沒驗到的是：X11 backend 在 BSD 上真的移滑鼠、真的送
+按鍵。** 原因是量出來的，不是懶：import 任何
+`je_auto_control` 底下的東西都會跑門面，而門面在
+module scope import OpenCV 與 cryptography。這兩個都沒發 FreeBSD
+wheel，改用 ports 裝（`py311-opencv`）拉出來的相依樹跑了
+**五十分鐘還沒裝完**，只好取消。一個 smoke job 不能
+花一小時。
+
+要補這塊，需要的是一台已經裝好相依套件的真
+FreeBSD（或者一個預先烤好依賴的自訂映像），而不是
+另一個 CI 小技巧。跑的時候把下面這段跑完就算驗到：
+
+```python
+from je_auto_control.linux_with_x11.mouse import x11_linux_mouse_control as m
+m.set_position(321, 123)
+assert m.position() == (321, 123)
+```
+
 ## Windows arm64 裝不起來，卡在 opencv-python
 
 `BLOCKED` — 上游（opencv-python 沒有 win_arm64 wheel）

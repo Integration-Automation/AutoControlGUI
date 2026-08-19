@@ -78,9 +78,15 @@ Linux, could not import the package at all. `python-Xlib` was pinned to
 the backend without its one dependency. The guards now ask
 `utils/platform_id.is_x11_unix()` — "is this an X11 unix", which is the
 question they were always trying to ask — and the `freebsd` job boots a real
-FreeBSD 14 VM to run them, moving the pointer and reading it back. It checks
-the platform layer rather than the whole package: opencv has no FreeBSD
-wheel, and a source build would take an hour or fail.
+FreeBSD 14 VM to run that decision on a system that is genuinely one.
+
+It checks the decision and not the backend, for a measured reason: importing
+anything under `je_auto_control` runs the package facade, which imports
+OpenCV and cryptography at module scope, and neither publishes a FreeBSD
+wheel. Installing them from ports pulled a dependency tree that had not
+finished after fifty minutes. So `utils/platform_id` is loaded by file path,
+and what a BSD is uniquely needed to answer is what runs. Driving real input
+on a BSD is still uncovered and is recorded in `Progress.md`.
 
 **arm64.** `macos-14` was already arm64; `ubuntu-22.04-arm` joins the
 smoke matrix and passes. `windows-11-arm` was tried and removed, on

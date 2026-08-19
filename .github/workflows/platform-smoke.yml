@@ -62,53 +62,42 @@ jobs:
           if-no-files-found: warn
 
   freebsd:
-    name: The X11 backend's platform guards on a real FreeBSD
+    name: The BSD platform decision on a real FreeBSD
     runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
 
       # The X11 backend was gated on sys.platform being linux/linux2, so it
-      # refused to import on a FreeBSD desktop that runs the same X server,
-      # the same python-Xlib and the same code. Relaxing that guard is only
-      # worth anything if something actually runs it on a BSD, and no hosted
-      # runner is one — so this boots a real FreeBSD VM inside the runner.
+      # refused to load on a FreeBSD desktop that runs the same X server, the
+      # same python-Xlib and the same code. Relaxing that guard is only worth
+      # something if a BSD actually runs the decision, and no hosted runner
+      # is one — so this boots a real FreeBSD VM inside the runner.
       #
-      # What it checks is the platform layer, not the whole package: the
-      # heavy dependencies (opencv in particular) have no FreeBSD wheels, so
-      # a full install would build from source for an hour or fail. The
-      # guards and the wrapper's routing are the change; they are what runs.
+      # It checks the *decision*, not the whole backend, and the reason is
+      # measured rather than assumed: importing anything under
+      # je_auto_control runs the package facade, which imports OpenCV and
+      # cryptography at module scope. Neither publishes a FreeBSD wheel, and
+      # installing them from ports pulled in a dependency tree that had not
+      # finished after fifty minutes. So utils/platform_id is loaded by file
+      # path — it imports nothing but sys, which is the point of it being one
+      # small module — and what a BSD is uniquely needed for is exactly what
+      # runs here: that sys.platform really looks like this, and that the
+      # classification every guard now asks answers correctly on it.
+      #
+      # What that leaves uncovered is the backend actually driving input on a
+      # BSD. See Progress.md; it needs a machine with the dependency set on
+      # it, not a different CI trick.
       # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
       - uses: vmactions/freebsd-vm@v1  # NOSONAR githubactions:S7637
         with:
           release: "14.2"
           usesh: true
-          # Importing anything under je_auto_control runs the package
-          # facade, which imports Pillow and OpenCV at module scope — so
-          # "just the platform layer" is not a thing the import system will
-          # give us, and the heavy dependencies have to be present. They
-          # come from FreeBSD's own repository rather than from pip: neither
-          # publishes a FreeBSD wheel, and building OpenCV from source in a
-          # CI VM is not a thing that finishes.
-          #
-          # Each package is installed on its own line so a name that is not
-          # in the repository names itself in the log instead of taking the
-          # whole step down with it. Nothing is skipped quietly: whatever is
-          # genuinely missing surfaces as an ImportError below.
           prepare: |
-            pkg install -y python311 xorg-vfbserver xauth
-            pkg install -y py311-xlib || echo "MISSING PACKAGE: py311-xlib"
-            pkg install -y py311-pillow || echo "MISSING PACKAGE: py311-pillow"
-            pkg install -y py311-numpy || echo "MISSING PACKAGE: py311-numpy"
-            pkg install -y py311-opencv || echo "MISSING PACKAGE: py311-opencv"
-            pkg install -y py311-sqlite3 || echo "MISSING PACKAGE: py311-sqlite3"
-            pkg info | grep -iE "py3.*(xlib|pillow|numpy|opencv)" || true
+            pkg install -y python311
           run: |
             set -eu
             echo "uname: $(uname -a)"
-            # Loaded by file path rather than imported: the classification is
-            # what decides which backend a BSD gets, and it should be
-            # checkable without dragging the whole facade (and OpenCV) in.
             python3.11 - <<'PROBE'
             import importlib.util
             import sys
@@ -117,64 +106,28 @@ jobs:
                 "platform_id", "je_auto_control/utils/platform_id/__init__.py")
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
-            current_family = module.current_family
-            is_bsd = module.is_bsd
-            is_x11_unix = module.is_x11_unix
+
             print("sys.platform:", sys.platform)
             assert sys.platform.startswith("freebsd"), sys.platform
-            assert is_bsd(), "FreeBSD is not recognised as a BSD"
-            assert is_x11_unix(), "FreeBSD is not recognised as an X11 unix"
-            assert current_family() == "bsd", current_family()
-            print("platform_id: OK")
+
+            # The four questions every relaxed guard now asks. Before this
+            # change the answer to the third was False on exactly this
+            # platform, and the package refused to import at all.
+            assert module.is_bsd(), "FreeBSD is not recognised as a BSD"
+            assert module.is_x11_unix(), "FreeBSD is not an X11 unix"
+            assert not module.is_windows(), "FreeBSD claimed to be Windows"
+            assert not module.is_macos(), "FreeBSD claimed to be macOS"
+            assert module.current_family() == "bsd", module.current_family()
+
+            # The version suffix is the trap: sys.platform is freebsd14 here,
+            # never a bare "freebsd", so an equality check would match no
+            # real system at all.
+            assert sys.platform != "freebsd", (
+                "this release stopped carrying a version suffix; the prefix "
+                "match still works, but the comment explaining why it exists "
+                "no longer describes reality")
+            print("platform_id on FreeBSD: OK")
             PROBE
-            # python-Xlib is pure Python, so pip is the reliable route to it
-            # whatever the port is called. --break-system-packages because
-            # FreeBSD marks the interpreter's site-packages as externally
-            # managed, and this VM exists for exactly one run.
-            python3.11 -m ensurepip --upgrade
-            python3.11 -m pip install --quiet --break-system-packages \
-                "python-Xlib==0.33" || \
-                python3.11 -m pip install --quiet "python-Xlib==0.33"
-
-            # The guards are what refused to load here. Import the X11
-            # modules directly, under a real X server, without dragging in
-            # the package's heavy dependencies.
-            Xvfb :99 -screen 0 1280x800x24 &
-            sleep 3
-            # The display, keymap, mouse and keyboard modules are the ones
-            # that carried the Linux-only guard, and python-Xlib is all they
-            # need. The screen module is deliberately not imported here: it
-            # pulls in Pillow, which is one of the heavy dependencies this
-            # job does not install, and its guard is the same one.
-            DISPLAY=:99 python3.11 - <<'BACKEND'
-            import sys
-            sys.path.insert(0, ".")
-            from je_auto_control.linux_with_x11.core.utils import (
-                x11_linux_display, x11_linux_vk,
-            )
-            from je_auto_control.linux_with_x11.keyboard import (
-                x11_linux_keyboard_control as keyboard,
-            )
-            from je_auto_control.linux_with_x11.mouse import (
-                x11_linux_mouse_control as mouse,
-            )
-            print("display:", x11_linux_display.display)
-            print("keycode for 'a':", x11_linux_vk.x11_linux_key_a)
-            assert x11_linux_vk.x11_linux_key_a > 0, "no keymap on FreeBSD"
-
-            # A real pointer move on a real X server, read back from the
-            # server. This is the whole claim: the X11 backend works here.
-            mouse.set_position(321, 123)
-            landed = mouse.position()
-            assert landed == (321, 123), landed
-            print("pointer round-trip on FreeBSD:", landed)
-
-            # Press and release a key: nothing has focus, so what is checked
-            # is that XTest accepts the call on this platform at all.
-            keyboard.press_key(x11_linux_vk.x11_linux_key_a)
-            keyboard.release_key(x11_linux_vk.x11_linux_key_a)
-            print("XTest key injection accepted on FreeBSD")
-            BACKEND
 
   macos-capabilities:
     name: What a real macOS runner permits
