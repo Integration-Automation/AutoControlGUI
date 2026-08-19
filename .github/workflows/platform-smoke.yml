@@ -83,22 +83,43 @@ jobs:
         with:
           release: "14.2"
           usesh: true
-          # Only the interpreter and an X server come from pkg. The flavoured
-          # port names (py311-pip, py311-xlib) depend on which Python
-          # flavour the release defaults to and were not in 14.2's
-          # repository at all; python-Xlib is pure Python, so pip is both
-          # simpler and version-exact.
+          # Importing anything under je_auto_control runs the package
+          # facade, which imports Pillow and OpenCV at module scope — so
+          # "just the platform layer" is not a thing the import system will
+          # give us, and the heavy dependencies have to be present. They
+          # come from FreeBSD's own repository rather than from pip: neither
+          # publishes a FreeBSD wheel, and building OpenCV from source in a
+          # CI VM is not a thing that finishes.
+          #
+          # Each package is installed on its own line so a name that is not
+          # in the repository names itself in the log instead of taking the
+          # whole step down with it. Nothing is skipped quietly: whatever is
+          # genuinely missing surfaces as an ImportError below.
           prepare: |
             pkg install -y python311 xorg-vfbserver xauth
+            pkg install -y py311-xlib || echo "MISSING PACKAGE: py311-xlib"
+            pkg install -y py311-pillow || echo "MISSING PACKAGE: py311-pillow"
+            pkg install -y py311-numpy || echo "MISSING PACKAGE: py311-numpy"
+            pkg install -y py311-opencv || echo "MISSING PACKAGE: py311-opencv"
+            pkg install -y py311-sqlite3 || echo "MISSING PACKAGE: py311-sqlite3"
+            pkg info | grep -iE "py3.*(xlib|pillow|numpy|opencv)" || true
           run: |
             set -eu
             echo "uname: $(uname -a)"
+            # Loaded by file path rather than imported: the classification is
+            # what decides which backend a BSD gets, and it should be
+            # checkable without dragging the whole facade (and OpenCV) in.
             python3.11 - <<'PROBE'
+            import importlib.util
             import sys
-            sys.path.insert(0, ".")
-            from je_auto_control.utils.platform_id import (
-                current_family, is_bsd, is_x11_unix,
-            )
+
+            spec = importlib.util.spec_from_file_location(
+                "platform_id", "je_auto_control/utils/platform_id/__init__.py")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            current_family = module.current_family
+            is_bsd = module.is_bsd
+            is_x11_unix = module.is_x11_unix
             print("sys.platform:", sys.platform)
             assert sys.platform.startswith("freebsd"), sys.platform
             assert is_bsd(), "FreeBSD is not recognised as a BSD"
@@ -106,12 +127,14 @@ jobs:
             assert current_family() == "bsd", current_family()
             print("platform_id: OK")
             PROBE
-            # python-Xlib is the X11 backend's one dependency and is pure
-            # Python, so pip installs it here without a compiler. Failing
-            # loudly matters: without it the import below would fail for a
-            # reason that has nothing to do with the platform guards.
+            # python-Xlib is pure Python, so pip is the reliable route to it
+            # whatever the port is called. --break-system-packages because
+            # FreeBSD marks the interpreter's site-packages as externally
+            # managed, and this VM exists for exactly one run.
             python3.11 -m ensurepip --upgrade
-            python3.11 -m pip install --quiet "python-Xlib==0.33"
+            python3.11 -m pip install --quiet --break-system-packages \
+                "python-Xlib==0.33" || \
+                python3.11 -m pip install --quiet "python-Xlib==0.33"
 
             # The guards are what refused to load here. Import the X11
             # modules directly, under a real X server, without dragging in
