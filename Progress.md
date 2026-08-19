@@ -50,6 +50,26 @@
 
 ---
 
+## `mouse_scroll` 的方向在三個平台上不是同一回事
+
+`DECIDE` — `wrapper/auto_control_mouse.py::mouse_scroll`
+
+Windows 與 macOS 用 `scroll_value` 的**正負號**決定捲動方向；Linux 不看正負號,
+方向來自 `scroll_direction` 參數,值只取 `abs()`。後者是刻意的:負值以前會讓
+`range()` 變空,結果是靜靜地什麼都不捲。
+
+**問題在於:照 Windows 寫法寫出來的可攜程式碼,在 Linux 上不會往上捲,而是往下捲
+同樣的次數。**沒有例外、沒有警告,方向就是反的——和 macOS 那個 `write("\b")`
+變成打空白是同一類缺陷:靜靜地做了跟要求相反的事。
+
+`x11-verification` job 現在把**實測到的**行為釘住了（四個方向各一項,外加
+「負號不決定方向」一項）,所以哪天行為變了 CI 會當場說。要不要讓三個平台一致,
+以及一致成哪一種,是相容性決定,需要維護者拍板:
+
+- 讓 Linux 也認正負號 → 修好可攜性,但會改掉 `scroll_direction` 已文件化的語意;
+- 維持現狀 → 就得在 `mouse_scroll` 的 docstring 與 README 明講這個平台差異;
+- 折衷:正負號在三個平台都認,`scroll_direction` 只在 Linux 當預設方向。
+
 ## Wayland:剩下的都不是「缺一台機器」
 
 這一項曾經三度寫成「要一台 VM」——先是 portal 交握,再是 ydotool 的絕對移動落點,

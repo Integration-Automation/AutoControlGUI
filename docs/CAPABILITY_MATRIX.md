@@ -6,7 +6,7 @@ without a compatibility window.
 
 | Capability | Status | Windows | Linux X11 | Linux Wayland | macOS |
 |---|---|---:|---:|---:|---:|
-| Mouse, keyboard, screenshot | stable | CI | CI/Xvfb | CI/sway + libeis | implementation |
+| Mouse, keyboard, screenshot | stable | CI | CI/Xvfb + xev | CI/sway + libeis | implementation |
 | JSON executor and variables | stable | CI | CI | CI | platform-neutral |
 | Image and anchor locators | beta | CI | CI | implementation | implementation |
 | Accessibility locator | beta | CI | backend tests | unavailable | backend tests |
@@ -24,6 +24,31 @@ Hardware-backed results and known limitations should be attached to releases.
 
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
+
+Linux X11 said `CI/Xvfb` for a long time on the strength of a job that
+imported the package under `xvfb-run` and generated two lines of code. Nothing
+moved a pointer, and every X11 assertion in the suite is made against a mock
+of `python-Xlib`, so the questions that matter went unanswered: does an
+injected event reach a client at all, does it arrive as *real* input, and is a
+captured pixel the pixel on screen. The `x11-verification` job answers them
+against a real Xvfb server with a real window manager, and it takes its ground
+truth from other codebases than the one under test — `xev`, a real X client
+that prints every event delivered to its window; ImageMagick's `import`, an
+independent grabber, against a root window painted two asymmetric colours so a
+wrong rectangle cannot look right; and `xdotool` / `xdpyinfo`, the server
+answering for itself. It runs twice, over one monitor and then two.
+
+One assertion there is worth naming, because losing it would be silent:
+XTest-injected events must arrive with `synthetic NO`. `XSendEvent` traffic
+arrives with `synthetic YES` and is discarded by most toolkits, so a backend
+that quietly stopped driving real input would still pass every check that only
+counted events.
+
+There is deliberately no negative-origin X11 pass. On X11 the root window is
+the union of every monitor and always begins at `(0, 0)`: a monitor placed to
+the left shifts the others right rather than moving the origin. The Wayland
+job's second layout has no analogue here — a protocol difference, not an
+untested case.
 
 Screen capture runs through the compositor's own tool (`grim` on wlroots,
 `gnome-screenshot` on GNOME, `spectacle` on KDE), falling back to
