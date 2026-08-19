@@ -267,10 +267,13 @@ class MockPortal:
                         invocation: Gio.DBusMethodInvocation) -> None:
         print(f"portal: {method}{parameters}", flush=True)
         handler = getattr(self, f"_do_{method}", None)
-        if handler is None:
+        if not callable(handler):
             invocation.return_error_literal(
                 Gio.dbus_error_quark(), Gio.DBusError.UNKNOWN_METHOD, method)
             return
+        # pylint: disable=not-callable
+        # reason: callable() above is the guard; pylint infers the type of a
+        # dynamic getattr from its default and cannot narrow past the check.
         handler(sender, parameters, invocation)
 
     def _request_path(self, sender: str, options: Dict[str, Any]) -> str:
