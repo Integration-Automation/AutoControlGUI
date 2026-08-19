@@ -64,7 +64,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 # line of this verification can run.
 #
 # libgl1 and libglib2.0-0 are opencv-python's hard import-time requirements.
-RUN printf 'deb http://deb.debian.org/debian sid main\n' \
+RUN printf 'deb https://deb.debian.org/debian sid main\n' \
         > /etc/apt/sources.list.d/sid.list \
     && printf 'Package: *\nPin: release a=unstable\nPin-Priority: 100\n' \
         > /etc/apt/preferences.d/no-sid-by-default \
