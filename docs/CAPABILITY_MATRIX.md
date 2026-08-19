@@ -82,10 +82,13 @@ FreeBSD 14 VM to run them, moving the pointer and reading it back. It checks
 the platform layer rather than the whole package: opencv has no FreeBSD
 wheel, and a source build would take an hour or fail.
 
-**arm64.** `macos-14` was already arm64; `ubuntu-22.04-arm` and
-`windows-11-arm` join the smoke matrix. The dependency set is where the
-architecture shows — opencv, pillow and cryptography all ship native wheels,
-and a missing one means a source build rather than a clean failure.
+**arm64.** `macos-14` was already arm64; `ubuntu-22.04-arm` joins the
+smoke matrix and passes. `windows-11-arm` was tried and removed, on
+measurement rather than assumption: **opencv-python publishes no `win_arm64`
+wheel**, so pip falls back to building it from source and CMake cannot
+configure for ARM64. That is not a CI problem to work around — the package
+genuinely cannot be installed on Windows arm64 today, which is recorded in
+`Progress.md` with the runner ready to add back when the wheel exists.
 
 The accessibility row said `backend tests` for Linux X11 and meant nothing by
 it: there was no Linux backend at all, and `_build_backend()` fell straight

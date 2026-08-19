@@ -50,6 +50,25 @@
 
 ---
 
+## Windows arm64 裝不起來，卡在 opencv-python
+
+`BLOCKED` — 上游（opencv-python 沒有 win_arm64 wheel）
+
+`windows-11-arm` 加進 `platform-smoke.yml` 的矩陣跑了一次，
+結果是實測而不是推測：**opencv-python 並沒有發
+win_arm64 wheel**，pip 回退到從原碼建，CMake 在 ARM64 上
+configure 不起來，花了十二分鐘失敗。cryptography
+也在同一輪裡被拉去建。
+
+這不是 CI 設定問題，是**這個套件今天在
+Windows arm64 上裝不起來**。所以那一格已從矩陣
+移除，並把原因寫在 workflow 的註解裡；哪天上游
+發了 wheel，把 runner 加回去就好。
+
+**Linux arm64 是好的**——`ubuntu-22.04-arm` 兩個 Python 版本
+都綠，macOS 本來就是 arm64。所以卡住的只有 Windows
+這一個組合。
+
 ## macOS 的錄製器寫了，但接不上去
 
 `TODO` — `osx/record/osx_record.py`、`osx/listener/osx_listener.py`

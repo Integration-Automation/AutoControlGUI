@@ -103,8 +103,10 @@ A `freebsd` job boots a real FreeBSD 14 VM inside the runner, imports the X11
 modules under a real X server, and moves the pointer and reads it back. It
 covers the platform layer rather than the whole package, because opencv has no
 FreeBSD wheel — a limit stated in the job rather than left to be discovered.
-`ubuntu-22.04-arm` and `windows-11-arm` join the smoke matrix; `macos-14` was
-already arm64.
+`ubuntu-22.04-arm` joins the smoke matrix and passes; `macos-14` was already
+arm64. `windows-11-arm` was tried and removed: opencv-python publishes no
+`win_arm64` wheel, so the package cannot be installed there at all today —
+measured, not assumed, and recorded in `Progress.md`.
 
 
 ## What's new (2026-08-19)

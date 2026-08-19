@@ -15,17 +15,18 @@ jobs:
       fail-fast: false
       matrix:
         # arm64 is not a rounding error on the desktop any more, and the
-        # dependency set is where it shows: opencv, pillow and cryptography
-        # all ship native wheels, and a missing arm64 wheel means a source
-        # build that either takes an hour or fails. macos-14 is already
-        # arm64; these add the other two.
-        os: [windows-2022, ubuntu-22.04, macos-14, ubuntu-22.04-arm,
-             windows-11-arm]
+        # dependency set is where it shows. macos-14 is already arm64;
+        # ubuntu-22.04-arm adds Linux, and it passes.
+        #
+        # windows-11-arm is deliberately absent, and it was measured rather
+        # than assumed: opencv-python publishes no win_arm64 wheel, so pip
+        # falls back to building it from source and CMake cannot configure
+        # for ARM64. The job spent twelve minutes failing at that, which is
+        # not a CI problem to work around — the package genuinely cannot be
+        # installed on Windows arm64 today. Recorded in Progress.md; add the
+        # runner back when the wheel exists.
+        os: [windows-2022, ubuntu-22.04, macos-14, ubuntu-22.04-arm]
         python-version: ["3.10", "3.14"]
-        exclude:
-          # windows-11-arm has no 3.10 build available through setup-python.
-          - os: windows-11-arm
-            python-version: "3.10"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

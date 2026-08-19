@@ -61,7 +61,7 @@ AX 樹也走得出真的元素。這是先量再斷言的，而且探針在期�
 system」，七個 X11 後端模組又各自帶一份同樣的 Linux 專屬守衛。
 新的 `utils/platform_id` 是唯一的判定點，`freebsd` job 在 runner 裡開
 真的 FreeBSD 14 VM，在真的 X server 上 import X11 模組並把游標移完讀回。
-`ubuntu-22.04-arm` 與 `windows-11-arm` 加進 smoke 矩陣。
+`ubuntu-22.04-arm` 加進 smoke 矩陣且全綠。`windows-11-arm` 試過後拿掉了：opencv-python 根本沒發 `win_arm64` wheel，這個套件今天在 Windows arm64 上裝不起來——是量出來的，已記在 `Progress.md`。
 
 
 ## 本次更新 (2026-08-19) — Wayland 兩個等人拍板的取捨,拍板了
