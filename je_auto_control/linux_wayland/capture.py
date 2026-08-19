@@ -80,10 +80,10 @@ def run_tool(argv: List[str], *, timeout: float = CAPTURE_TIMEOUT) -> bytes:
     # spectacle / wlr-randr resolved through shutil.which), never user
     # input; no shell=True.
     try:
-        completed = subprocess.run(  # nosec B603  # nosemgrep
-            argv, check=True, timeout=timeout,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        )
+        completed = subprocess.run(argv, check=True,  # nosec B603  # nosemgrep
+                                   timeout=timeout,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
     except subprocess.CalledProcessError as error:
         message = (error.stderr or b"").decode("utf-8", errors="replace")
         raise AutoControlScreenException(

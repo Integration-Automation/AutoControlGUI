@@ -408,8 +408,9 @@ def _live_teardown_sentinel(path: str) -> str:
         "sym.ei_unref(b._ei);"
         "print('survived')"
     )
-    finished = subprocess.run(  # nosec B603  # reason: this interpreter, fixed argv
-        [sys.executable, "-c", program], capture_output=True, timeout=60)
+    # This interpreter, running a program built from literals above; no shell.
+    finished = subprocess.run([sys.executable, "-c", program],  # nosec B603  # nosemgrep
+                              capture_output=True, timeout=60)
     if finished.returncode == 0:
         return ("safe, which is what _teardown now relies on to release a "
                 "completed session instead of leaking its context")

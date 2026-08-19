@@ -320,7 +320,7 @@ def _start_daemon() -> subprocess.Popen:
     runtime_dir = os.environ.get("XDG_RUNTIME_DIR")
     if runtime_dir:
         os.makedirs(runtime_dir, mode=0o700, exist_ok=True)
-        os.chmod(runtime_dir, 0o700)
+        os.chmod(runtime_dir, 0o700)  # nosemgrep  # reason: owner-only is the least ydotoold needs
     daemon = subprocess.Popen(  # nosec B603 B607  # nosemgrep
         ["ydotoold"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
     )

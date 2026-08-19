@@ -49,7 +49,7 @@ def _clear_probe_cache():
 
 
 def _fake_run(stdout=b"", stderr=b"", returncode=0):
-    completed = subprocess.CompletedProcess(
+    completed = subprocess.CompletedProcess(  # nosemgrep  # reason: a result object, not a launch
         args=["ydotool"], returncode=returncode, stdout=stdout, stderr=stderr)
     return mock.Mock(return_value=completed)
 
@@ -99,7 +99,8 @@ def test_probe_failure_is_unknown_rather_than_an_accusation():
 def test_probe_timeout_is_unknown():
     with mock.patch.object(
             subprocess, "run",
-            side_effect=subprocess.TimeoutExpired(cmd="ydotool", timeout=5.0)):
+            side_effect=subprocess.TimeoutExpired(  # nosemgrep  # reason: an exception object, not a launch
+                cmd="ydotool", timeout=5.0)):
         assert _ydotool_cli.cli_generation("/usr/bin/ydotool") == \
             _ydotool_cli.UNKNOWN
 

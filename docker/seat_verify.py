@@ -124,10 +124,11 @@ def _require(condition: bool, message: str) -> None:
 
 def _run(argv: List[str], *, timeout: float = 10.0) -> str:
     """Run a tool from this image and return its stdout."""
-    completed = subprocess.run(  # nosec B603  # reason: fixed argv, no shell
-        argv, check=True, timeout=timeout,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-    )
+    # argv is assembled from literals in this file; no shell, no user input.
+    completed = subprocess.run(argv, check=True,  # nosec B603  # nosemgrep
+                               timeout=timeout,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
     return completed.stdout.decode("utf-8", errors="replace")
 
 

@@ -182,7 +182,8 @@ def _check_unref_sentinel(socket_path: str) -> str:
         "assert rc == 0, rc;"
         "lib.ei_unref(h)"
     )
-    finished = subprocess.run([sys.executable, "-c", program],  # nosec B603
+    # This interpreter, running a program built from literals above; no shell.
+    finished = subprocess.run([sys.executable, "-c", program],  # nosec B603  # nosemgrep
                               capture_output=True)
     if finished.returncode == -11:
         return ("still segfaults (rc=-11), so the abandon-on-teardown "
