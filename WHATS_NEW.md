@@ -1,5 +1,112 @@
 # What's New — AutoControl
 
+## What's new (2026-08-20)
+
+### The Platforms This Project Claims, Now Measured
+
+The suite ran on `windows-2022` alone for its whole life, plus one Linux
+container run. macOS got two commands and nothing else. Wayland had five jobs
+reading input back off a real peer; X11 — the older and more widely deployed
+of the two Linux paths — had none, and every X11 assertion in the suite was
+made against a mock of `python-Xlib`.
+
+**The suite now runs where the project says it runs.** `pytest-headless`
+became an OS matrix: Windows keeps all five Pythons, Linux and macOS carry the
+two ends of the range. Linux runs under a real Xvfb rather than Qt's offscreen
+platform, because the X11 backend opens a display at import time and offscreen
+would hide exactly the breakage this exists to find. It found two real macOS
+defects on the first run:
+
+- `write("\b")` had no key route on macOS, so it fell through to the space
+  fallback and typed a space where a backspace was asked for. X11 and Wayland
+  both carry the raw character; macOS was the one that did not.
+- `system_profiler` reports a *symbolic* vendor id for Apple's own devices —
+  `apple_vendor_id`, not a number — and that went straight into a field
+  documented as four hex digits. Its leading `a` is a valid hex digit, so a
+  lenient parse turns it into `000a`.
+
+**X11 input is read back out of a real client.** A new `x11-verification` job
+runs against a real Xvfb server with a real window manager, taking ground
+truth from other codebases than the subject: `xev`, a real X client that
+prints every event delivered to its window; ImageMagick's `import` against a
+root painted two asymmetric colours; `xdotool` and `xdpyinfo`. The assertion
+worth naming is `synthetic NO` — `XSendEvent` traffic arrives with `YES` and
+is discarded by most toolkits, so a backend that quietly stopped driving real
+input would still pass any check that only counted events.
+
+**macOS turned out to be fully testable in CI, contrary to the usual
+assumption.** A `macos-14` runner grants *both* Screen Recording and
+Accessibility: capture returns real pixels rather than the black rectangle a
+refusal produces, `CGEventPost` moves the cursor and the move reads back
+exactly, and the AX walk returns real elements. That was measured first and
+asserted second, and the probe still refuses to pass while its expectations
+table is empty.
+
+### Window Management Is No Longer Windows-Only
+
+It was: the facade branched on `sys.platform` and raised everywhere else,
+leaving 23 `AC_*` commands and their MCP tools dead on macOS and Linux. It now
+goes through a backend seam — Win32, EWMH over `python-Xlib` on X11, Quartz
+plus the accessibility API on macOS, and a null fallback that lists nothing
+and refuses actions with a reason.
+
+Two things only a real window manager could show up were wrong first time:
+
+- **The rectangle is the frame, not the client.** Win32's `GetWindowRect`
+  returns the frame, and every caller is written against that, so reporting
+  the client area was off by the decorations on X11 alone — silently, and by
+  a different amount per window manager.
+- **A move has to go through `_NET_MOVERESIZE_WINDOW`.** Under a reparenting
+  window manager a client's own x/y are relative to its frame, so a direct
+  `ConfigureWindow` asks in the wrong coordinate space. Asking openbox for
+  (300, 220) that way landed the window at (302, 260).
+
+Refusals now raise a class that is both an `AutoControlException` and a
+`NotImplementedError`. The GUI tabs and the REST handler already catch the
+latter to say "not on this platform"; the executor catches the former, and a
+bare `NotImplementedError` slipped past every containment boundary — aborting
+a whole script where one action should have been reported as failed.
+
+### Linux Has an Accessibility Backend
+
+It had none — the selector fell through to the null one while the capability
+matrix claimed "backend tests" for Linux X11. The new backend speaks
+**AT-SPI2**, which is a D-Bus protocol rather than a library, and that is what
+makes it reachable without a new dependency: `pyatspi` and
+`gi.repository.Atspi` are distribution packages built against the system
+introspection data and cannot be installed into a virtual environment.
+
+The D-Bus client written for the portal handshake moved from `linux_wayland/`
+to `utils/dbus_client/` to make that possible, and verifying the backend
+against a real bus and a real GTK application immediately found a gap in it:
+**it could not demarshal signed integers.** The portal never needed one, and
+AT-SPI reports a component's extents as four *signed* values, because a window
+on a monitor left of or above the primary one is at a negative coordinate — so
+the backend could read a tree but not where anything in it was.
+
+Because AT-SPI is a bus rather than a display protocol, this is the one
+capability where Wayland is not the restricted case: the same bus serves both
+Linux sessions.
+
+### The BSDs, and arm64
+
+`platform_wrapper` refused to start on anything that was not
+win32/cygwin/msys, darwin or linux/linux2, and each of the seven X11 backend
+modules carried its own copy of the same Linux-only guard — so a FreeBSD,
+OpenBSD or NetBSD desktop, which runs the same X server and the same
+`python-Xlib`, could not import the package at all. `sys.platform` was being
+compared against literal lists in over a hundred places, so the fix is one
+place that decides: `utils/platform_id`, whose `is_x11_unix()` asks the
+question those guards were always trying to ask.
+
+A `freebsd` job boots a real FreeBSD 14 VM inside the runner, imports the X11
+modules under a real X server, and moves the pointer and reads it back. It
+covers the platform layer rather than the whole package, because opencv has no
+FreeBSD wheel — a limit stated in the job rather than left to be discovered.
+`ubuntu-22.04-arm` and `windows-11-arm` join the smoke matrix; `macos-14` was
+already arm64.
+
+
 ## What's new (2026-08-19)
 
 ### Two Wayland Judgement Calls, Settled

@@ -1,5 +1,69 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-08-20) — 嬣稱支援的平台，這回真的量過了
+
+整套測試一直只在 `windows-2022` 跑，另加容器裡一次 Linux
+執行。macOS 只跑兩行指令。Wayland 有五個 job 對真的對等體
+讀回輸入；X11——兩條 Linux 路徑中更老、部署更廣的那一
+條——一個都沒有，而且套件裡每一條 X11 斷言都是對著
+`python-Xlib` 的 mock 做的。
+
+**測試套件現在真的在它宣稱支援的平台上跑。**
+`pytest-headless` 改成 OS 矩陣；Linux 跑在真的 Xvfb 上而不是 Qt 的
+offscreen，因為 X11 後端在 import 時就連線，offscreen 會將正好要找的
+毛病蓋掉。第一輪就抓到兩個真的 macOS 缺陷：
+
+- `write("\b")` 在 macOS 沒有任何按鍵路徑，會落到空白鍵
+  fallback——要求退格，打出來的是空白。
+- `system_profiler` 對 Apple 自家裝置回的是 **符號式** vendor
+  id（`apple_vendor_id`），而那個欄位文件上寫的是四位十六進位。
+
+**X11 的輸入現在從真的客戶端讀回。** 新的 `x11-verification`
+job 跑在真的 Xvfb + 真的視窗管理員上，對照組來自受測對象以外的
+程式碼：`xev`、ImageMagick 的 `import`、`xdotool` 與 `xdpyinfo`。
+最值得點名的一項是 `synthetic NO`——`XSendEvent` 的事件帶的是
+`YES`，大多數 toolkit 會直接丟掉，所以一個患患停止驅動真實
+輸入的後端，在只數事件的檢查下仍然會全綠。
+
+**macOS 在 CI 裡其實完全驗得了，跟一般假設相反。**
+`macos-14` runner **兩個 TCC 權限都給**：擷取回來的是真像素而不是
+被拒時的全黑矩形，`CGEventPost` 真的移得動游標且讀回完全相符，
+AX 樹也走得出真的元素。這是先量再斷言的，而且探針在期望表
+還是空的時候會拒絕通過。
+
+### 視窗管理不再是 Windows 專屬
+
+以前是：門面在 `sys.platform` 上分支，其他平台一律丟例外，
+23 個 `AC_*` 指令跟對應的 MCP 工具在 macOS 與 Linux 上都是死的。
+現在走平台縫：Win32、X11 的 EWMH、macOS 的 Quartz + 無障礙 API。
+
+兩件只有真的視窗管理員才能披露的錯，第一版都錯了：
+
+- **矩形是外框，不是客戶區。** Win32 的 `GetWindowRect`
+  回的是外框，所有呼叫端都是照那個寫的。
+- **移動必須走 `_NET_MOVERESIZE_WINDOW`。** 在 reparenting
+  視窗管理員下，客戶端自己的 x/y 是相對於外框的；對 openbox
+  要 (300, 220)，直接 `ConfigureWindow` 的結果是落在 (302, 260)。
+
+### Linux 有無障礙後端了
+
+之前完全沒有。新後端走 **AT-SPI2**——它是 D-Bus 協定而不是
+函式庫，這就是它不用加新相依的原因：`pyatspi` 與
+`gi.repository.Atspi` 是發行版套件，裝不進 venv。
+
+拿真的 bus 跟真的 GTK 程式一驗，當場抓到 D-Bus 客戶端的一個缺口：
+**它不會解有號整數**。portal 從來不需要，而 AT-SPI 的 extents 是四個
+**有號**值——因為主螢幕左邊（或上方）的螢幕上，視窗坐標是負的。
+
+### BSD 與 arm64
+
+`platform_wrapper` 對非 win/darwin/linux 一律丟「unknown operating
+system」，七個 X11 後端模組又各自帶一份同樣的 Linux 專屬守衛。
+新的 `utils/platform_id` 是唯一的判定點，`freebsd` job 在 runner 裡開
+真的 FreeBSD 14 VM，在真的 X server 上 import X11 模組並把游標移完讀回。
+`ubuntu-22.04-arm` 與 `windows-11-arm` 加進 smoke 矩陣。
+
+
 ## 本次更新 (2026-08-19) — Wayland 兩個等人拍板的取捨,拍板了
 
 `Progress.md` 上掛著兩個 `DECIDE`:缺的不是工，是決定。兩件事其實是同一個問題犯兩次

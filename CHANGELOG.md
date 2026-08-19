@@ -10,6 +10,25 @@ only when documented here with a migration path.
 
 ### Added
 
+- Cross-platform window management. The 23 `AC_*` window commands and their
+  MCP tools now work on macOS and Linux/X11 as well as Windows, through a
+  backend seam (`je_auto_control.wrapper.window_backends`). Wayland remains
+  unsupported: the protocol does not let a client enumerate or move another
+  application's windows.
+- Linux accessibility backend over AT-SPI2
+  (`je_auto_control.utils.accessibility.backends.linux_backend`), with no new
+  dependency. Serves both X11 and Wayland sessions.
+- `je_auto_control.utils.platform_id` — one place that classifies the
+  operating system family, and the BSDs are now one of them. FreeBSD, OpenBSD,
+  NetBSD and DragonFly route to the X11 backend instead of raising "unknown
+  operating system".
+- `AutoControlUnsupportedOperationException`, raised when a platform backend
+  cannot perform an operation. It subclasses both `AutoControlException` and
+  `NotImplementedError`, so existing `except NotImplementedError` handlers are
+  unaffected while the executor's containment boundaries now catch it.
+- `je_auto_control.utils.dbus_client` — the D-Bus client, moved out of
+  `linux_wayland/` so `utils/` can use it. The old path re-exports it.
+
 - Stable, headless `je_auto_control.api` façade.
 - Portable `autocontrol.failure-bundle/v1` diagnostic archives and CLI command.
 - Public API lifecycle, capability matrix, security policy, coverage and type
@@ -246,6 +265,19 @@ only when documented here with a migration path.
   and import stable entry points from `je_auto_control.api`.
 
 ### Fixed
+
+- macOS: `write()` typed a space instead of a backspace, because `"\b"` had
+  no route in the macOS key table and fell through to the space fallback.
+- macOS: USB enumeration returned `apple_vendor_id` in `vendor_id`, a field
+  documented as a four-hex-digit string. A value that is not a hex id is now
+  `None`; the device is still listed and `manufacturer` still names the vendor.
+- Linux/X11: `window_rect` returned the client area rather than the frame,
+  disagreeing with Win32's `GetWindowRect` by the window decorations.
+- Linux/X11: `move_window_by_title` configured the client window directly,
+  which under a reparenting window manager positions it in the wrong
+  coordinate space. It now goes through `_NET_MOVERESIZE_WINDOW`.
+- The D-Bus client could not marshal or demarshal signed integers, so any
+  protocol using them (AT-SPI extents among them) failed to decode.
 
 - **Wayland: an absolute mouse move through the ydotool fallback counted from
   the wrong origin.** `ydotool mousemove --absolute` emits no absolute event —

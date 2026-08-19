@@ -50,6 +50,21 @@
 
 ---
 
+## macOS 的錄製器寫了，但接不上去
+
+`TODO` — `osx/record/osx_record.py`、`osx/listener/osx_listener.py`
+
+`OSXRecorder` 是完整實作，但 `wrapper/_platform_osx.py` 裡寫的是
+`recorder = None`，所以它永遠不會被選到。這不是疏失：
+`osx_listener.py` 在 **import 時**就呼叫 `NSApplication.sharedApplication()`，
+而停止錄製要靠 `AppHelper.runEventLoop()`，那是一個會卡住呼叫緒的
+事件迴圈。直接接上去會把這兩件事都搬進 `import je_auto_control`
+的路徑上，那是回歸而不是修好。
+
+要接上去得先把 listener 改成：不在 import 時建立 NSApplication，
+且把 run loop 放到自己的執行緒。`docs/CAPABILITY_MATRIX.md` 的 Recorder
+macOS 格寫的是 `unavailable`，跟現狀一致。
+
 ## `mouse_scroll` 的方向在三個平台上不是同一回事
 
 `DECIDE` — `wrapper/auto_control_mouse.py::mouse_scroll`
