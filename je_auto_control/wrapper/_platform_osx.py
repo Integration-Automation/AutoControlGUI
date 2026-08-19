@@ -97,6 +97,12 @@ keyboard_keys_table = {
     "enter": osx_key_enter,
     "tab": osx_key_tab,
     "backspace": osx_key_backspace,
+    # write() routes a control character by name first and by the raw
+    # character second. Without this entry "\b" matched neither, so
+    # write() fell through to its space fallback and silently typed a
+    # space where a backspace was asked for. X11 and Wayland both
+    # carry the raw character; macOS was the one that did not.
+    "\b": osx_key_backspace,
     "esc": osx_key_esc,
     "command": osx_key_command,
     "shift": osx_key_shift,
