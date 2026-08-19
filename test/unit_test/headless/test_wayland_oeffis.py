@@ -145,8 +145,9 @@ def test_a_null_context_is_reported():
         def oeffis_new(self, _user_data):
             return 0
 
+    symbols = _NoContext()
     with pytest.raises(oeffis_mod.OeffisUnavailable, match="NULL"):
-        oeffis_mod.connect_eis_fd(symbols=_NoContext())
+        oeffis_mod.connect_eis_fd(symbols=symbols)
 
 
 def test_missing_library_reads_as_unavailable():

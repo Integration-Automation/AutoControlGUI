@@ -307,7 +307,7 @@ def _read_array(reader: _Reader, signature: _SignatureReader) -> Any:
         reader.align(_ALIGNMENT.get(element[0], 1))
         items.append(_read_value(reader, _SignatureReader(element)))
     if element.startswith("{"):
-        return {key: value for key, value in items}
+        return dict(items)
     return items
 
 
@@ -377,9 +377,10 @@ def _socket_target(address: str) -> Tuple[str, bool]:
     for candidate in address.split(";"):
         if not candidate.startswith("unix:"):
             continue
-        options = dict(
-            part.split("=", 1) for part in candidate[len("unix:"):].split(",")
-            if "=" in part)
+        fields = [part.split("=", 1)
+                  for part in candidate[len("unix:"):].split(",")
+                  if "=" in part]
+        options = dict(fields)
         if "path" in options:
             return options["path"], False
         if "abstract" in options:

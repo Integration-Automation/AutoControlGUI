@@ -69,9 +69,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 # libgl1 and libglib2.0-0 are opencv-python's hard import-time requirements.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        liboeffis1 libei1 libeis1 \
-        dbus python3-gi gir1.2-glib-2.0 \
-        grim wtype wlr-randr \
+        libei1 libeis1 liboeffis1 \
+        dbus gir1.2-glib-2.0 python3-gi \
+        grim wlr-randr wtype \
         libgl1 libglib2.0-0 \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*

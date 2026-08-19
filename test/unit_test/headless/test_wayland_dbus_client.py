@@ -153,13 +153,15 @@ def test_an_array_of_structs_survives_the_alignment_it_forces():
 
 
 def test_a_signature_that_wants_more_members_than_it_was_given_is_rejected():
+    writer = _Writer()
     with pytest.raises(DBusError):
-        _Writer().value("(us)", (7,))
+        writer.value("(us)", (7,))
 
 
 def test_a_type_this_does_not_marshal_says_so():
+    writer = _Writer()
     with pytest.raises(DBusError, match="cannot marshal"):
-        _Writer().value("d", 1.5)
+        writer.value("d", 1.5)
 
 
 # === Whole messages ========================================================
@@ -218,15 +220,17 @@ def test_serials_rise_so_a_reply_can_be_matched_to_its_call():
 
 
 def test_more_arguments_than_the_signature_declares_is_rejected():
+    bus = _bus()
     with pytest.raises(DBusError, match="more arguments"):
-        _bus().send(_dbus_client.SIGNAL,
-                    {_dbus_client.FIELD_MEMBER: ("s", "X")}, "s", ["a", "b"])
+        bus.send(_dbus_client.SIGNAL,
+                 {_dbus_client.FIELD_MEMBER: ("s", "X")}, "s", ["a", "b"])
 
 
 def test_fewer_arguments_than_the_signature_declares_is_rejected():
+    bus = _bus()
     with pytest.raises(DBusError, match="fewer arguments"):
-        _bus().send(_dbus_client.SIGNAL,
-                    {_dbus_client.FIELD_MEMBER: ("s", "X")}, "ss", ["a"])
+        bus.send(_dbus_client.SIGNAL,
+                 {_dbus_client.FIELD_MEMBER: ("s", "X")}, "ss", ["a"])
 
 
 def test_an_implausibly_large_message_is_refused_before_it_is_buffered():
@@ -234,16 +238,18 @@ def test_an_implausibly_large_message_is_refused_before_it_is_buffered():
     bus = _bus()
     bus._socket.readable = struct.pack(
         "<BBBBIII", ord("l"), _dbus_client.SIGNAL, 0, 1, 2 ** 31, 1, 0)
+    deadline = _never()
     with pytest.raises(DBusError, match="implausibly large"):
-        bus.read_message(deadline=_never())
+        bus.read_message(deadline=deadline)
 
 
 def test_a_big_endian_message_is_named_rather_than_misread():
     bus = _bus()
     bus._socket.readable = struct.pack(
         ">BBBBIII", ord("B"), _dbus_client.SIGNAL, 0, 1, 0, 1, 0)
+    deadline = _never()
     with pytest.raises(DBusError, match="big-endian"):
-        bus.read_message(deadline=_never())
+        bus.read_message(deadline=deadline)
 
 
 # === Addresses =============================================================
@@ -273,8 +279,9 @@ def test_availability_follows_the_environment(monkeypatch):
 
 def test_connecting_without_an_address_says_which_variable_is_missing(monkeypatch):
     monkeypatch.delenv("DBUS_SESSION_BUS_ADDRESS", raising=False)
+    bus = SessionBus()
     with pytest.raises(DBusError, match="DBUS_SESSION_BUS_ADDRESS"):
-        SessionBus().connect()
+        bus.connect()
 
 
 def test_the_sender_token_is_the_unique_name_as_a_path_element():

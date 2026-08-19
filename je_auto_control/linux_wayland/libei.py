@@ -399,9 +399,9 @@ class LibeiBackend:
         if not device:
             return
         self._emulating.pop(device, None)
-        for cap, known in list(self._devices.items()):
-            if known == device:
-                del self._devices[cap]
+        stale = [cap for cap, known in self._devices.items() if known == device]
+        for cap in stale:
+            del self._devices[cap]
         self._symbols.ei_device_unref(device)
 
     def _has_required_devices(self) -> bool:

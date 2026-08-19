@@ -129,20 +129,30 @@ class VirtualDevice:
 
     def drain(self) -> List[Tuple[int, int, int]]:
         """Return every pending ``(type, code, value)``, SYN frames dropped."""
-        events = []
+        events: List[Tuple[int, int, int]] = []
         for fd in self._fds.values():
-            while True:
-                try:
-                    data = os.read(fd, _EVENT_SIZE)
-                except BlockingIOError:
-                    break
-                except OSError:
-                    break
-                if not data or len(data) < _EVENT_SIZE:
-                    break
-                _, _, etype, code, value = struct.unpack(_EVENT_FORMAT, data)
-                if etype != EV_SYN:
-                    events.append((etype, code, value))
+            events.extend(self._drain_one(fd))
+        return events
+
+    @staticmethod
+    def _drain_one(fd: int) -> List[Tuple[int, int, int]]:
+        """Read one input node dry.
+
+        One OSError branch covers both endings: BlockingIOError is a subclass
+        of it and means nothing more is queued, and anything else means the
+        node went away — either way this descriptor is done for now.
+        """
+        events: List[Tuple[int, int, int]] = []
+        while True:
+            try:
+                data = os.read(fd, _EVENT_SIZE)
+            except OSError:
+                break
+            if not data or len(data) < _EVENT_SIZE:
+                break
+            _, _, etype, code, value = struct.unpack(_EVENT_FORMAT, data)
+            if etype != EV_SYN:
+                events.append((etype, code, value))
         return events
 
     def close(self) -> None:

@@ -72,7 +72,8 @@ def test_the_warning_names_the_way_out():
     """A warning nobody can act on is noise: it must name the variable."""
     _, warned = _move()
     assert wayland_mouse.POINTER_ACCEL_ENV in warned[0]
-    assert "flat" in warned[0] and "strict" in warned[0]
+    assert "flat" in warned[0]
+    assert "strict" in warned[0]
 
 
 def test_warn_does_not_repeat_on_every_move():

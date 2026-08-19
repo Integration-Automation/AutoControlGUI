@@ -71,6 +71,13 @@ EXPECTED_CALLS = ("CreateSession", "SelectDevices", "Start", "ConnectToEIS")
 SHOT_SIZE = (4, 3)
 SHOT_RGB = (0, 128, 255)
 
+#: The file name the mock writes into the ``--shot-dir`` it is given. Both
+#: halves of the capture path are therefore this script's own, so the
+#: cleanup check below never has to build a path out of what came back over
+#: the bus; the equality assertion there is what fails loudly if
+#: ``portal_server.SCREENSHOT_NAME`` and this ever drift apart.
+SHOT_NAME = "autocontrol portal shot.png"
+
 #: Long enough for a portal that is going to answer; short enough that the
 #: ones written not to answer do not hold the image up.
 GRANT_TIMEOUT = 10.0
@@ -211,7 +218,9 @@ class Portal:
         """Wait until the portal owns the name, not merely until it started."""
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
-            if any("owns " in line for line in list(self.lines)):
+            # Snapshot: the reader thread appends to this list as we read.
+            seen = list(self.lines)
+            if any("owns " in line for line in seen):
                 return
             if self._process is not None and self._process.poll() is not None:
                 raise RuntimeError(
@@ -432,10 +441,13 @@ def _check_capture_returns_the_portal_bytes(wayland_portal, portal: Portal) -> s
              f"the first pixel is {decoded[0][0]}, not {SHOT_RGB[::-1]}")
     shot = portal.recorded().get("shot_path", "")
     _require(bool(shot), "the portal never recorded where it wrote the capture")
-    _require(not os.path.exists(shot),
-             f"the portal's file at {shot!r} was left behind")
+    expected = os.path.join(_runtime_dir(), SHOT_NAME)
+    _require(shot == expected,
+             f"the portal wrote {shot!r}, not the {expected!r} it was told to")
+    _require(not os.path.exists(expected),
+             f"the portal's file at {expected!r} was left behind")
     return (f"{len(payload)} bytes, decoded {width}x{height}, "
-            f"and {os.path.basename(shot)!r} was cleaned up")
+            f"and {SHOT_NAME!r} was cleaned up")
 
 
 def _check_capture_refused(wayland_portal, needle: str,

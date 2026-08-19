@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 from io import BytesIO
-from typing import List, Optional, Sequence, Tuple
+from typing import List, NamedTuple, Optional, Sequence, Tuple
 
 from PIL import Image
 
@@ -168,6 +168,34 @@ def screenshot(file_path: Optional[str] = None,
     return file_path
 
 
+class _OutputBlock(NamedTuple):
+    """One ``wlr-randr`` output block while its fields are being read."""
+
+    mode: Optional[Tuple[int, int]] = None
+    position: Optional[Tuple[int, int]] = None
+    enabled: bool = True
+
+
+def _read_field(block: _OutputBlock, line: str) -> _OutputBlock:
+    """Fold one indented ``wlr-randr`` field line into the block it belongs to.
+
+    Lines that name none of the three fields leave the block untouched, which
+    is most of them — modes other than the current one, refresh rates, scale.
+    """
+    enabled_match = _ENABLED_RE.match(line)
+    if enabled_match:
+        return block._replace(enabled=enabled_match.group(1).lower() == "yes")
+    position_match = _POSITION_RE.match(line)
+    if position_match:
+        return block._replace(position=(int(position_match.group(1)),
+                                        int(position_match.group(2))))
+    mode_match = _MODE_RE.search(line) if "current" in line else None
+    if mode_match:
+        return block._replace(mode=(int(mode_match.group(1)),
+                                    int(mode_match.group(2))))
+    return block
+
+
 def parse_wlr_randr(text: str) -> List[Tuple[int, int, int, int]]:
     """Parse ``wlr-randr`` into ``(x, y, width, height)`` per enabled output.
 
@@ -186,34 +214,20 @@ def parse_wlr_randr(text: str) -> List[Tuple[int, int, int, int]]:
     the whole layout, and the two are composed by the mss-shaped shim.
     """
     rects: List[Tuple[int, int, int, int]] = []
-    mode: Optional[Tuple[int, int]] = None
-    position: Optional[Tuple[int, int]] = None
-    enabled = True
+    block = _OutputBlock()
 
-    def flush() -> None:
-        if enabled and mode is not None:
-            x, y = position if position is not None else (0, 0)
-            rects.append((x, y, mode[0], mode[1]))
+    def flush(finished: _OutputBlock) -> None:
+        if finished.enabled and finished.mode is not None:
+            x, y = finished.position or (0, 0)
+            rects.append((x, y, finished.mode[0], finished.mode[1]))
 
     for line in text.splitlines():
         if line and not line[0].isspace():
-            flush()
-            mode, position, enabled = None, None, True
+            flush(block)
+            block = _OutputBlock()
             continue
-        enabled_match = _ENABLED_RE.match(line)
-        if enabled_match:
-            enabled = enabled_match.group(1).lower() == "yes"
-            continue
-        position_match = _POSITION_RE.match(line)
-        if position_match:
-            position = (int(position_match.group(1)),
-                        int(position_match.group(2)))
-            continue
-        if "current" in line:
-            mode_match = _MODE_RE.search(line)
-            if mode_match:
-                mode = (int(mode_match.group(1)), int(mode_match.group(2)))
-    flush()
+        block = _read_field(block, line)
+    flush(block)
     return rects
 
 

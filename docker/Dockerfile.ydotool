@@ -71,7 +71,7 @@ RUN printf 'deb http://deb.debian.org/debian sid main\n' \
     && apt-get update \
     && apt-get install -y --no-install-recommends -t sid ydotool \
     && apt-get install -y --no-install-recommends \
-        grim wtype wlr-randr \
+        grim wlr-randr wtype \
         libgl1 libglib2.0-0 \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*

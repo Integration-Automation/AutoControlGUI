@@ -54,7 +54,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 #   libgthread-2.0.so.0 at import, so the package cannot even load without them.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        sway grim wtype wlr-randr \
+        grim sway wlr-randr wtype \
         libei1 \
         libgl1 libglib2.0-0 \
         ca-certificates \

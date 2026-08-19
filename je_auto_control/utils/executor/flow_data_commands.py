@@ -119,8 +119,13 @@ def exec_sql_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     return {"var": var_name, "fetch": fetch}
 
 
-def exec_assert_db(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
-    """Assert a scalar SQLite query result satisfies a condition."""
+def exec_assert_db(_executor: Any,
+                   args: Mapping[str, Any]) -> Dict[str, Any]:
+    """Assert a scalar SQLite query result satisfies a condition.
+
+    Takes the executor every ``BLOCK_COMMANDS`` entry is called with and
+    does not need it: this command asserts on the query, storing nothing.
+    """
     from je_auto_control.utils.assertion import assert_variable
     from je_auto_control.utils.sql.sql_query import query_sqlite
     value = query_sqlite(args["database"], args["query"],

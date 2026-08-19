@@ -78,6 +78,153 @@ def serve_silent_socket(path: str) -> socket.socket:
     return server
 
 
+def _check_every_entry_point_resolves() -> str:
+    """The check a mock structurally cannot make: does the .so have these?"""
+    from je_auto_control.linux_wayland import libei
+    symbols = libei._load_symbols()
+    if symbols is None:
+        raise AssertionError(
+            "not one prototype resolved — either libei.so is absent or a "
+            "name in _PROTOTYPES does not exist in it")
+    missing = [name for name, _, _ in libei._PROTOTYPES
+               if not hasattr(symbols, name)]
+    if missing:
+        raise AssertionError(f"unresolved entry points: {missing}")
+    # The variadic one is bound separately, without argtypes.
+    if not hasattr(symbols, "ei_seat_bind_capabilities"):
+        raise AssertionError("ei_seat_bind_capabilities did not resolve")
+    return f"{len(libei._PROTOTYPES)} prototypes + 1 variadic, all resolved"
+
+
+def _check_each_call_in_isolation(socket_path: str) -> str:
+    """Walk connect()'s library calls by hand, printing as it goes.
+
+    connect() is half a dozen calls deep; walking them with flushed output
+    means a crash names the call that caused it rather than the function
+    that contained it.
+    """
+    from je_auto_control.linux_wayland import libei
+    symbols = libei._load_symbols()
+
+    def step(message: str) -> None:
+        print(f"        · {message}", flush=True)
+
+    step("ei_new_sender(None) ...")
+    handle = symbols.ei_new_sender(None)
+    step(f"  -> {handle!r}")
+    if not handle:
+        raise AssertionError("ei_new_sender returned NULL")
+
+    step(f"ei_setup_backend_socket(handle, {socket_path!r}) ...")
+    code = symbols.ei_setup_backend_socket(
+        handle, socket_path.encode("utf-8"))
+    step(f"  -> {code}")
+
+    step("ei_get_fd(handle) ...")
+    poll_fd = symbols.ei_get_fd(handle)
+    step(f"  -> {poll_fd}")
+
+    step("ei_dispatch(handle) ...")
+    symbols.ei_dispatch(handle)
+    step("  -> returned")
+
+    step("ei_get_event(handle) ...")
+    event = symbols.ei_get_event(handle)
+    step(f"  -> {event!r}")
+    while event:
+        kind = symbols.ei_event_get_type(event)
+        step(f"  event type {kind}")
+        symbols.ei_event_unref(event)
+        event = symbols.ei_get_event(handle)
+        step(f"  next -> {event!r}")
+
+    # ei_unref is NOT called here: on this libei it segfaults once the
+    # backend is open. The sentinel below establishes that separately,
+    # in a subprocess, so it cannot take this run down with it.
+    step("(context abandoned — see the ei_unref sentinel)")
+    return "every call up to teardown behaves"
+
+
+def _check_unref_sentinel(socket_path: str) -> str:
+    """Is the upstream ei_unref crash this binding works around still there?"""
+    import subprocess  # nosec B404  # reason: argv list, no shell
+    program = (
+        "import ctypes, ctypes.util, os, socket, threading;"
+        "lib = ctypes.CDLL(ctypes.util.find_library('ei'));"
+        "lib.ei_new_sender.restype = ctypes.c_void_p;"
+        "lib.ei_new_sender.argtypes = (ctypes.c_void_p,);"
+        "lib.ei_setup_backend_socket.restype = ctypes.c_int;"
+        "lib.ei_setup_backend_socket.argtypes = "
+        "(ctypes.c_void_p, ctypes.c_char_p);"
+        "lib.ei_unref.restype = ctypes.c_void_p;"
+        "lib.ei_unref.argtypes = (ctypes.c_void_p,);"
+        f"p = {socket_path!r};"
+        "s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM);"
+        "s.connect(p);"
+        "h = lib.ei_new_sender(None);"
+        "rc = lib.ei_setup_backend_socket(h, p.encode());"
+        "assert rc == 0, rc;"
+        "lib.ei_unref(h)"
+    )
+    finished = subprocess.run([sys.executable, "-c", program],  # nosec B603
+                              capture_output=True)
+    if finished.returncode == -11:
+        return ("still segfaults (rc=-11), so the abandon-on-teardown "
+                "workaround in libei.py::_teardown is still required")
+    print()
+    print("      *** REVISIT ***  ei_unref no longer crashes on this")
+    print("      libei (rc=%s). The workaround in LibeiBackend._teardown"
+          % finished.returncode)
+    print("      can probably go; see Progress.md.")
+    print()
+    return f"no longer crashes (rc={finished.returncode}) — see above"
+
+
+def _check_connect_fails_closed(socket_path: str) -> str:
+    """A peer that sends nothing must not be reported as a live session."""
+    from je_auto_control.linux_wayland import libei
+    backend = libei.LibeiBackend()
+    try:
+        backend.connect(timeout=1.0,
+                        socket_path=socket_path.encode("utf-8"))
+    except libei.LibeiUnavailable as error:
+        return f"LibeiUnavailable: {str(error)[:90]}"
+    raise AssertionError(
+        "connect() reported success against a peer that sent nothing, so "
+        "the handshake is not actually gating on a live device")
+
+
+def _check_teardown_survives(socket_path: str) -> str:
+    """disconnect() has to be safe after a failed connect, and idempotent."""
+    from je_auto_control.linux_wayland import libei
+    backend = libei.LibeiBackend()
+    try:
+        backend.connect(timeout=0.5,
+                        socket_path=socket_path.encode("utf-8"))
+    except libei.LibeiUnavailable:
+        pass
+    backend.disconnect()          # must be safe after a failed connect
+    backend.disconnect()          # and idempotent
+    return "teardown survived a failed connect, twice"
+
+
+def _check_keyboard_falls_back() -> str:
+    """With no libei and no ydotool, the CLI path must surface its hint.
+
+    ydotool is deliberately not installed in this image, so what comes back
+    must be the install hint — not a libei error and not a silent no-op.
+    """
+    from je_auto_control.linux_wayland import keyboard as wl_keyboard
+    try:
+        wl_keyboard.press_key(30)
+    except Exception as error:  # noqa: BLE001  # reason: any type is informative
+        if "ydotool" in str(error):
+            return f"{type(error).__name__}: {str(error)[:60]}"
+        raise
+    raise AssertionError("press_key claimed success with no libei and no "
+                         "ydotool")
+
+
 def main() -> int:
     print("=" * 72)
     print("AutoControl libei binding — against the real libei.so")
@@ -89,24 +236,15 @@ def main() -> int:
     print("-" * 72)
 
     from je_auto_control.linux_wayland import _select_input, libei, oeffis
-    from je_auto_control.linux_wayland import keyboard as wl_keyboard
 
-    # --- the check the mocks structurally cannot make --------------------
-    def _symbols():
-        symbols = libei._load_symbols()
-        if symbols is None:
-            raise AssertionError(
-                "not one prototype resolved — either libei.so is absent or a "
-                "name in _PROTOTYPES does not exist in it")
-        missing = [name for name, _, _ in libei._PROTOTYPES
-                   if not hasattr(symbols, name)]
-        if missing:
-            raise AssertionError(f"unresolved entry points: {missing}")
-        # The variadic one is bound separately, without argtypes.
-        if not hasattr(symbols, "ei_seat_bind_capabilities"):
-            raise AssertionError("ei_seat_bind_capabilities did not resolve")
-        return f"{len(libei._PROTOTYPES)} prototypes + 1 variadic, all resolved"
-    check("every libei entry point this binding names exists", _symbols)
+    # --- a real sender against a socket that speaks no EI ----------------
+    runtime = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+    socket_path = os.path.join(runtime, "eis-0")
+    server = serve_silent_socket(socket_path)
+    print(f"      silent EIS stand-in listening at {socket_path}")
+
+    check("every libei entry point this binding names exists",
+          _check_every_entry_point_resolves)
 
     check("LibeiBackend reports the library as available",
           lambda: _assert_true(libei.LibeiBackend().is_available,
@@ -125,116 +263,14 @@ def main() -> int:
         print("       which is exactly the path exercised below. The portal")
         print("       route itself is covered by docker/portal_verify.py.)")
 
-    # --- a real sender against a socket that speaks no EI ----------------
-    runtime = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
-    socket_path = os.path.join(runtime, "eis-0")
-    server = serve_silent_socket(socket_path)
-    print(f"      silent EIS stand-in listening at {socket_path}")
-
-    # --- raw, one call at a time -----------------------------------------
-    # connect() is half a dozen library calls deep. Walking them by hand with
-    # flushed output means a crash names the call that caused it instead of
-    # just the function that contained it.
-    def _raw_walk():
-        symbols = libei._load_symbols()
-        step = lambda msg: print(f"        · {msg}", flush=True)  # noqa: E731
-
-        step("ei_new_sender(None) ...")
-        handle = symbols.ei_new_sender(None)
-        step(f"  -> {handle!r}")
-        if not handle:
-            raise AssertionError("ei_new_sender returned NULL")
-
-        step(f"ei_setup_backend_socket(handle, {socket_path!r}) ...")
-        code = symbols.ei_setup_backend_socket(
-            handle, socket_path.encode("utf-8"))
-        step(f"  -> {code}")
-
-        step("ei_get_fd(handle) ...")
-        poll_fd = symbols.ei_get_fd(handle)
-        step(f"  -> {poll_fd}")
-
-        step("ei_dispatch(handle) ...")
-        symbols.ei_dispatch(handle)
-        step("  -> returned")
-
-        step("ei_get_event(handle) ...")
-        event = symbols.ei_get_event(handle)
-        step(f"  -> {event!r}")
-        while event:
-            kind = symbols.ei_event_get_type(event)
-            step(f"  event type {kind}")
-            symbols.ei_event_unref(event)
-            event = symbols.ei_get_event(handle)
-            step(f"  next -> {event!r}")
-
-        # ei_unref is NOT called here: on this libei it segfaults once the
-        # backend is open. The sentinel below establishes that separately,
-        # in a subprocess, so it cannot take this run down with it.
-        step("(context abandoned — see the ei_unref sentinel)")
-        return "every call up to teardown behaves"
-    check("each libei call in isolation", _raw_walk)
-
-    # --- the upstream defect this binding works around -------------------
-    def _unref_sentinel():
-        import subprocess
-        program = (
-            "import ctypes, ctypes.util, os, socket, threading;"
-            "lib = ctypes.CDLL(ctypes.util.find_library('ei'));"
-            "lib.ei_new_sender.restype = ctypes.c_void_p;"
-            "lib.ei_new_sender.argtypes = (ctypes.c_void_p,);"
-            "lib.ei_setup_backend_socket.restype = ctypes.c_int;"
-            "lib.ei_setup_backend_socket.argtypes = "
-            "(ctypes.c_void_p, ctypes.c_char_p);"
-            "lib.ei_unref.restype = ctypes.c_void_p;"
-            "lib.ei_unref.argtypes = (ctypes.c_void_p,);"
-            f"p = {socket_path!r};"
-            "s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM);"
-            "s.connect(p);"
-            "h = lib.ei_new_sender(None);"
-            "rc = lib.ei_setup_backend_socket(h, p.encode());"
-            "assert rc == 0, rc;"
-            "lib.ei_unref(h)"
-        )
-        finished = subprocess.run([sys.executable, "-c", program],
-                                  capture_output=True)
-        if finished.returncode == -11:
-            return ("still segfaults (rc=-11), so the abandon-on-teardown "
-                    "workaround in libei.py::_teardown is still required")
-        print()
-        print("      *** REVISIT ***  ei_unref no longer crashes on this")
-        print("      libei (rc=%s). The workaround in LibeiBackend._teardown"
-              % finished.returncode)
-        print("      can probably go; see Progress.md.")
-        print()
-        return f"no longer crashes (rc={finished.returncode}) — see above"
-    check("ei_unref after a successful setup — upstream state", _unref_sentinel)
-
-    def _connect_fails_closed():
-        backend = libei.LibeiBackend()
-        try:
-            backend.connect(timeout=1.0,
-                            socket_path=socket_path.encode("utf-8"))
-        except libei.LibeiUnavailable as error:
-            return f"LibeiUnavailable: {str(error)[:90]}"
-        raise AssertionError(
-            "connect() reported success against a peer that sent nothing, so "
-            "the handshake is not actually gating on a live device")
+    check("each libei call in isolation",
+          lambda: _check_each_call_in_isolation(socket_path))
+    check("ei_unref after a successful setup — upstream state",
+          lambda: _check_unref_sentinel(socket_path))
     check("connect() against a silent peer fails closed, not open",
-          _connect_fails_closed)
-
-    def _no_crash_on_teardown():
-        backend = libei.LibeiBackend()
-        try:
-            backend.connect(timeout=0.5,
-                            socket_path=socket_path.encode("utf-8"))
-        except libei.LibeiUnavailable:
-            pass
-        backend.disconnect()          # must be safe after a failed connect
-        backend.disconnect()          # and idempotent
-        return "teardown survived a failed connect, twice"
+          lambda: _check_connect_fails_closed(socket_path))
     check("teardown after a failed handshake does not crash the process",
-          _no_crash_on_teardown)
+          lambda: _check_teardown_survives(socket_path))
 
     # --- the fallback the whole design rests on --------------------------
     libei.reset_default_backend()
@@ -242,21 +278,8 @@ def main() -> int:
           lambda: _assert_true(_select_input.active_backend() is None,
                                "active_backend() returned a backend that "
                                "cannot emit"))
-
-    def _keyboard_falls_back():
-        # ydotool is deliberately not installed in this image, so the CLI
-        # path must surface its install hint — not a libei error and not a
-        # silent no-op.
-        try:
-            wl_keyboard.press_key(30)
-        except Exception as error:  # noqa: BLE001  # reason: any type is informative
-            if "ydotool" in str(error):
-                return f"{type(error).__name__}: {str(error)[:60]}"
-            raise
-        raise AssertionError("press_key claimed success with no libei and no "
-                             "ydotool")
     check("press_key falls through to the ydotool CLI path",
-          _keyboard_falls_back)
+          _check_keyboard_falls_back)
 
     server.close()
 

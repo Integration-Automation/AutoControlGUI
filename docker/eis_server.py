@@ -269,7 +269,7 @@ class RecordingEisServer:
                     continue
                 self._symbols.eis_dispatch(self._eis)
                 self._drain()
-        except BaseException as error:  # noqa: BLE001  # reason: a fixture thread must report, not vanish
+        except Exception as error:  # noqa: BLE001  # reason: a fixture thread must report, not vanish
             self._error = error
 
     def _run_pending(self) -> None:

@@ -72,11 +72,10 @@ def test_backend_grab_image_is_none_without_a_publishing_backend():
         def size(self):
             return (1920, 1080)
 
+    stub = type(sys)("stub")
+    stub.screen = _PlainScreen()
     with patch.dict(sys.modules,
-                    {"je_auto_control.wrapper.platform_wrapper":
-                     type(sys)("stub")}):
-        sys.modules["je_auto_control.wrapper.platform_wrapper"].screen = \
-            _PlainScreen()
+                    {"je_auto_control.wrapper.platform_wrapper": stub}):
         assert screen_grabber.backend_grab_image() is None
 
 
@@ -183,20 +182,19 @@ def test_backend_layout_origin_is_the_origin_without_a_publishing_backend():
         def size(self):
             return (1920, 1080)
 
+    stub = type(sys)("stub")
+    stub.screen = _PlainScreen()
     with patch.dict(sys.modules,
-                    {"je_auto_control.wrapper.platform_wrapper":
-                     type(sys)("stub")}):
-        sys.modules["je_auto_control.wrapper.platform_wrapper"].screen = \
-            _PlainScreen()
+                    {"je_auto_control.wrapper.platform_wrapper": stub}):
         assert screen_grabber.backend_layout_origin() == (0, 0)
 
 
 def test_backend_layout_origin_reads_a_publishing_backend():
     backend = _FakeBackendScreen(size=(2560, 720), origin=(-1280, -200))
+    stub = type(sys)("stub")
+    stub.screen = backend
     with patch.dict(sys.modules,
-                    {"je_auto_control.wrapper.platform_wrapper":
-                     type(sys)("stub")}):
-        sys.modules["je_auto_control.wrapper.platform_wrapper"].screen = backend
+                    {"je_auto_control.wrapper.platform_wrapper": stub}):
         assert screen_grabber.backend_layout_origin() == (-1280, -200)
 
 

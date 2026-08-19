@@ -84,7 +84,7 @@ def _round_trip(write, read):
     return None  # unreachable; keeps the return type honest for linters
 
 
-@pytest.fixture()
+@pytest.fixture
 def clipboard():
     """Skip when unusable, and put the user's clipboard back afterwards."""
     if not _clipboard_available():
