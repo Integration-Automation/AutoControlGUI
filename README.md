@@ -21,7 +21,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 - **One API, six platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
-- **Scriptable without Python.** 767 `AC_*` commands cover the whole feature set, so a
+- **Scriptable without Python.** 773 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
   macros, and variables.
 - **Headless by default.** `import je_auto_control` never loads Qt. The GUI is an
@@ -134,7 +134,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Natural-language planner | `plan_actions`, `run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`, `run_agent` | `AC_run_agent` | Computer Use |
 | Record & replay | `record`, `stop_record` | `AC_record`, `AC_stop_record` | Record |
-| JSON scripting | `execute_action`, `execute_files` | all 767 commands | Script, Script Builder |
+| JSON scripting | `execute_action`, `execute_files` | all 773 commands | Script, Script Builder |
 | Variables & flow control | `execute_action_with_vars` | `AC_set_var`, `AC_loop`, `AC_for_each`, `AC_try`, `AC_retry` | Variables |
 | Data-driven runs | — | `AC_for_each_row` (CSV / JSON / SQLite / Excel) | Data Sources |
 | Assertions | `assert_text`, `assert_image` | `AC_assert_text` + 20 more | Assertions |
@@ -185,7 +185,7 @@ entry point still works.
 
 | Surface | Start it with | Notes |
 |---|---|---|
-| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 670 tools for Claude Desktop / Claude Code / custom tool loops. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
+| **MCP server** | `je_auto_control_mcp` (stdio) or `AC_start_mcp_http_server` | 676 tools for Claude Desktop / Claude Code / custom tool loops. Bearer auth, TLS, audit log, rate limit, plugin hot-reload, CI fake backend. |
 | **REST API** | `je_auto_control start-rest` | Bearer token, per-IP rate limit + lockout, SQLite audit hook, `/metrics`, `/openapi.json`, `/docs` Swagger UI, `/dashboard`. |
 | **TCP socket server** | `je_auto_control start-server` | Newline-framed JSON action lists. Binds `127.0.0.1` by default. |
 | **pytest plugin** | installed automatically | Fixtures plus a Gherkin step library for pytest-bdd / behave. |
@@ -241,9 +241,62 @@ RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
 | Windows 10 / 11 | Win32 ctypes (+ optional Interception driver) | ✅ | ✅ | ✅ | ✅ |
 | macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ❌ | ❌ |
 | Linux X11 | python-Xlib (+ optional `uinput`) | ✅ | ✅ | ✅ | ❌ |
-| Linux Wayland | libei, or ydotool / wtype / grim | ✅ | ✅ | ❌ | ❌ |
+| Linux Wayland | libei via the desktop portal, or ydotool / wtype + a capture tool | ✅ | ✅ | ❌ | ❌ |
 | Android | adb + uiautomator2 | ✅ | ✅ | — | — |
 | iOS | WebDriverAgent / facebook-wda | ✅ | ✅ | — | — |
+
+Wayland input falls back to the `ydotool` CLI wherever libei is not
+reachable, and that fallback needs **ydotool 1.0 or newer**. Every argument
+AutoControl builds arrived in that release; 0.1.x — which is what Debian
+bookworm and every current Ubuntu still ship under that name, and Debian
+trixie ships not at all — answers the same arguments with exit code 0 and no
+events. AutoControl detects it and refuses rather than reporting success for
+input it never sent. Arch, Fedora and Debian unstable package 1.0.
+
+That fallback also positions the pointer accurately **only where the
+compositor's pointer acceleration is off**. `ydotool mousemove --absolute`
+sends no absolute event: it drives the cursor into the corner the compositor
+clamps to and then moves relative to it, so the compositor accelerates the
+move — measured against a real wlroots session, libinput's default profile
+travels exactly twice the distance asked for. ydotool's own `--help` says the
+same; AutoControl logs it once per process rather than mispositioning in
+silence. Turn acceleration off for the ydotoold device (sway: `input
+type:pointer accel_profile flat` and `pointer_accel 0`), or install
+`liboeffis` so the libei path — absolute at the protocol level — is used.
+
+The factor is the compositor's own setting and no client can read it back, so
+only you know whether it is off. `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL=flat`
+says it is, and moves silently; `=strict` refuses the move rather than let a
+click land somewhere else; leaving it unset keeps the warn-and-move default.
+
+Wayland screen capture needs the tool your compositor supports, because no
+single one covers them all: `grim` on wlroots compositors (sway, Hyprland,
+river), `gnome-screenshot` on GNOME, `spectacle` on KDE. Install one and every
+capture path — screenshots, image and anchor locators, OCR, screen recording,
+remote desktop — goes through it. With none of them installed, `gdbus` is
+enough: `xdg-desktop-portal` is tried last, though it may ask for consent the
+first time. Failing that, capture fails loudly with an install hint rather than
+returning the blank XWayland root. The `screen_capture` check in
+`je_auto_control.api.run_diagnostics()` (and the GUI Diagnostics tab) reports
+which tier is in use.
+
+One Wayland-only difference to plan around: **a capture may contain the mouse
+cursor.** Nothing here asks for it, but wlroots composites a *software* cursor
+into the output buffer whenever the backend has no cursor plane — which
+includes any session run with `WLR_NO_HARDWARE_CURSORS=1` — and that buffer is
+what screen capture hands back. Windows and X11 never include the pointer, so a
+locator, a template match or an OCR read can find a pointer-shaped hole in the
+middle of its target here and nowhere else. Wayland does not let a client read
+the cursor position, so there is nothing to reliably mask or move around it:
+park the pointer away from what you are about to capture. The `screen_capture`
+check reports this as `cursor_may_be_captured`.
+
+For a setup none of that fits, name your own command — it wins over every
+detected tool, and `{output}` is replaced with a temporary PNG path:
+
+```bash
+export JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND="mycapture --png {output}"
+```
 
 Wayland forbids global input recording for unprivileged clients — set
 `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` to record on an X11 session. Window

@@ -166,53 +166,30 @@ def csv_to_rows(text: str, *, delimiter: str = ",") -> List[List[str]]:
 # --- Win32 clipboard I/O ---------------------------------------------------
 
 def _format_id(name: str) -> int:
-    import ctypes
-    return ctypes.windll.user32.RegisterClipboardFormatW(name)
+    from je_auto_control.utils.clipboard.win32_clipboard_api import register_format
+    return register_format(name)
 
 
 def _win_set_format(format_id: int, payload: bytes, *,
                     empty_first: bool = True) -> None:
-    import ctypes
-    from ctypes import wintypes
-    user32, kernel32 = ctypes.windll.user32, ctypes.windll.kernel32
-    kernel32.GlobalAlloc.restype = wintypes.HGLOBAL
-    kernel32.GlobalLock.restype = ctypes.c_void_p
-    if not user32.OpenClipboard(None):
-        raise RuntimeError("OpenClipboard failed")
-    try:
-        if empty_first:
-            user32.EmptyClipboard()
-        handle = kernel32.GlobalAlloc(_GMEM_MOVEABLE, len(payload))
-        if not handle:
-            raise RuntimeError("GlobalAlloc failed")
-        pointer = kernel32.GlobalLock(handle)
-        ctypes.memmove(pointer, payload, len(payload))
-        kernel32.GlobalUnlock(handle)
-        if not user32.SetClipboardData(format_id, handle):
-            raise RuntimeError("SetClipboardData failed")
-    finally:
-        user32.CloseClipboard()
+    """Delegates to the one place that declares the Win32 prototypes.
+
+    This used to hand-roll the calls with ``restype`` but no ``argtypes``, so
+    ``GlobalLock`` raised ``OverflowError`` on 64-bit Windows and
+    ``set_clipboard_rtf`` / ``set_clipboard_csv`` had never worked.
+    """
+    from je_auto_control.utils.clipboard.win32_clipboard_api import (
+        set_clipboard_format,
+    )
+    set_clipboard_format(format_id, payload, empty_first=empty_first)
 
 
 def _win_get_format(format_id: int) -> Optional[bytes]:
-    import ctypes
-    from ctypes import wintypes
-    user32, kernel32 = ctypes.windll.user32, ctypes.windll.kernel32
-    user32.GetClipboardData.restype = wintypes.HANDLE
-    kernel32.GlobalLock.restype = ctypes.c_void_p
-    if not user32.OpenClipboard(None):
-        raise RuntimeError("OpenClipboard failed")
-    try:
-        handle = user32.GetClipboardData(format_id)
-        if not handle:
-            return None
-        pointer = kernel32.GlobalLock(handle)
-        size = kernel32.GlobalSize(handle)
-        data = ctypes.string_at(pointer, size)
-        kernel32.GlobalUnlock(handle)
-        return data.split(b"\x00", 1)[0]
-    finally:
-        user32.CloseClipboard()
+    from je_auto_control.utils.clipboard.win32_clipboard_api import (
+        get_clipboard_format,
+    )
+    data = get_clipboard_format(format_id)
+    return None if data is None else data.split(b"\x00", 1)[0]
 
 
 def _seed_plaintext(text: str) -> None:

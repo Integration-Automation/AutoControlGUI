@@ -14,7 +14,7 @@ import time
 from je_auto_control.utils.remote_desktop import (
     RemoteDesktopHost, RemoteDesktopViewer,
 )
-from je_auto_control.utils.remote_desktop.host import _ClientHandler
+from je_auto_control.utils.remote_desktop.host_client import _ClientHandler
 
 
 def _wait_until(predicate, timeout: float = 5.0,

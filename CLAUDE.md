@@ -60,13 +60,20 @@ The map is only useful while it matches the tree, so **update it in the same cha
   python -c "from je_auto_control.utils.mcp_server.tools import build_default_tool_registry as b; print(len(b()))"      # MCP tools
   ```
 
-  Module and line counts come from walking the tree with `ast`; recompute §1, the affected §5.4 theme totals, and the §8 size appendix together so they stay consistent.
+  Every line count in the map — §1's totals, the §5.4 theme tables, the §5.4.17 file tables, the `####` headings and the §8 appendix — is rewritten in one pass by:
+
+  ```bash
+  python test/unit_test/headless/test_doc_line_counts.py --fix   # then review the diff
+  ```
+
+  Never adjust one by hand: the counts are `len(text.splitlines())` (what `wc -l` reports), and hand-editing is how the document ended up quoting the same subsystem at two sizes at once — most tables had been counting a phantom trailing line per file while §1 and §8 counted correctly.
 
 - A new `utils/` subpackage needs a row in **exactly one** §5.4 theme table — the tables partition all 308 subpackages; appearing twice or not at all is a defect.
 - A new subsystem over ~1,000 lines also needs a file-level table in §5.4.17.
 - Keep the header's scan date, version, and branch current.
 - `README.md` and both translations under `README/` cite the same figures (command / subpackage / tab / MCP-tool / example counts) — update all three alongside the map.
 - **`test/unit_test/headless/test_doc_counts.py` enforces this and fails CI on a mismatch.** It re-measures the command, MCP-tool, `utils/` subpackage and `examples/` counts and compares them against every place the four documents quote them, so code and docs have to move in the same commit. If you reword a sentence that holds one of those numbers, update the test's pattern — it fails loudly when a citation disappears rather than passing on a document it can no longer read. The GUI tab count is guarded the same way but from `test_actions_menu_gui.py`, whose subprocess probe already builds the widget that count needs.
+- **`test_doc_line_counts.py` does the same for every line count**, and is also the `--fix` tool above — so any change in module size reddens CI until the map is re-measured, and re-measuring is one command.
 
 ### Outstanding work goes in `Progress.md`
 
@@ -94,9 +101,27 @@ Anything agreed but not done — deferred follow-ups, known gaps, half-delivered
 - **Pin dependency versions**, including transitive ones that can change return shapes (`opencv-python` is bounded `<6` for exactly this reason). Review new dependencies for known vulnerabilities.
 - Common logic belongs in `wrapper/` or `utils/`, never duplicated across platform backends.
 
-### Limits enforced by CI
+### Size and complexity limits
 
 Cyclomatic complexity ≤ 10 · cognitive complexity ≤ 15 · function ≤ 75 lines · parameters ≤ 7 · nesting ≤ 4 · file ≤ 750 lines · line ≤ 120 chars · no duplicated block ≥ 10 lines.
+
+**What actually enforces these.** `quality.yml` runs ruff and bandit only, so line length is the only limit a CI job rejects. Complexity is measured by `radon cc -nc` in the pre-commit list below and read by a human. The file-length limit is enforced by nobody — treat this section as a review standard, not a gate, and do not describe it as CI-enforced.
+
+**Scope of the file-length limit.** It applies to:
+
+- every **new** file, without exception — if it does not fit in 750 lines it is more than one module;
+- any existing file being **substantially rewritten** — reorganising is the moment to split;
+- any existing file that would **grow**: an over-limit file may be edited and may shrink, but a change that pushes it further over needs the split to come first, or a `Progress.md` entry saying why not.
+
+It does not apply to **flat data tables**: a file that is one mapping or list of entries, with no branching logic, where splitting would fragment a single lookup structure. Today that means the `AC_*` dispatch table, the MCP tool registry, the Script Builder command schema, the façade's re-exports, and the per-language string catalogues. The test is structural, not a label — if a file has to be *read* as a table, it is one. Logic that grew alongside a table does not inherit the exemption.
+
+Everything else currently over the limit is **grandfathered and listed in `Progress.md`**, which is the only place a standing exception may live. An over-limit file with no entry there is a defect, and the list is measured, not remembered:
+
+```bash
+find je_auto_control -name '*.py' -not -path '*__pycache__*' -exec awk 'END{if(NR>750)print NR"\t"FILENAME}' {} \; | sort -rn
+```
+
+Adding a file to that list is a last resort, not a routine escape.
 
 Docstrings on every public module, class, and function (one-line summary minimum; type hints replace parameter-type prose). Type hints on all public signatures. Import order stdlib → third-party → first-party; no wildcard imports outside the `__init__.py` façade.
 

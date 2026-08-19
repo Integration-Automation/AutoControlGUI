@@ -62,6 +62,9 @@ _user32.MoveWindow.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_int,
 _user32.MoveWindow.restype = wintypes.BOOL
 _user32.IsIconic.argtypes = [wintypes.HWND]
 _user32.IsIconic.restype = wintypes.BOOL
+_user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND,
+                                             ctypes.POINTER(wintypes.DWORD)]
+_user32.GetWindowThreadProcessId.restype = wintypes.DWORD
 
 WM_CLOSE = 0x0010
 SW_RESTORE = 9
@@ -120,6 +123,27 @@ def get_window_rect(hwnd: int) -> Optional[Tuple[int, int, int, int]]:
     if not _user32.GetWindowRect(hwnd, byref(rect)):
         return None
     return (int(rect.left), int(rect.top), int(rect.right), int(rect.bottom))
+
+
+def get_window_process_id(hwnd: int) -> int:
+    """
+    視窗所屬行程的 PID，查不到回 0
+    The PID of the process owning the window, or 0 when unavailable
+
+    這是「畫面上那個視窗是哪個程式」的唯一可靠答案：視窗標題會被程式自己改成
+    任何字串，行程名不會。有了它，呼叫端才能把前景視窗接到 psutil 之類的行程
+    資訊上。
+
+    This is the only reliable answer to "which program owns that window": a
+    title is whatever the application decides to display, a process is not.
+    """
+    pid = wintypes.DWORD(0)
+    # 回傳值是 thread id（0 代表失敗）；pid 由 out 參數帶回來。
+    # The return value is the thread id (0 on failure); the pid comes back
+    # through the out parameter.
+    if not _user32.GetWindowThreadProcessId(hwnd, byref(pid)):
+        return 0
+    return int(pid.value)
 
 
 def is_window_minimized(hwnd: int) -> bool:
@@ -206,3 +230,137 @@ def move_window(hwnd: int, x: int, y: int, width: int, height: int,
     return bool(_user32.MoveWindow(int(hwnd), int(x), int(y),
                                    int(width), int(height),
                                    bool(repaint)))
+
+
+# --- Posting input to a window without focusing it --------------------------
+#
+# Keyboard and mouse messages are delivered to the *control that has focus*, not
+# to the top-level window. Posting to the top-level handle is therefore a no-op
+# for anything with child controls — measured on Character Map: posting to the
+# frame typed nothing, posting to the focused edit typed the character. The
+# helpers below resolve that target before posting.
+
+
+class _GUIThreadInfo(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", wintypes.DWORD),
+        ("flags", wintypes.DWORD),
+        ("hwndActive", wintypes.HWND),
+        ("hwndFocus", wintypes.HWND),
+        ("hwndCapture", wintypes.HWND),
+        ("hwndMenuOwner", wintypes.HWND),
+        ("hwndMoveSize", wintypes.HWND),
+        ("hwndCaret", wintypes.HWND),
+        ("rcCaret", wintypes.RECT),
+    ]
+
+
+_user32.GetGUIThreadInfo.argtypes = [wintypes.DWORD,
+                                     ctypes.POINTER(_GUIThreadInfo)]
+_user32.GetGUIThreadInfo.restype = wintypes.BOOL
+_user32.ChildWindowFromPointEx.argtypes = [wintypes.HWND, wintypes.POINT,
+                                           wintypes.UINT]
+_user32.ChildWindowFromPointEx.restype = wintypes.HWND
+_user32.ScreenToClient.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.POINT)]
+_user32.ScreenToClient.restype = wintypes.BOOL
+_user32.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.POINT)]
+_user32.ClientToScreen.restype = wintypes.BOOL
+
+WM_KEYDOWN = 0x0100
+WM_KEYUP = 0x0101
+WM_CHAR = 0x0102
+_CWP_SKIPINVISIBLE = 0x0001
+_CWP_SKIPTRANSPARENT = 0x0004
+_MOUSE_MESSAGES = {
+    "left": (0x0201, 0x0202, 0x0001),        # WM_LBUTTONDOWN / UP / MK_LBUTTON
+    "right": (0x0204, 0x0205, 0x0002),       # WM_RBUTTON*   / MK_RBUTTON
+    "middle": (0x0207, 0x0208, 0x0010),      # WM_MBUTTON*   / MK_MBUTTON
+}
+
+
+def get_focused_control(hwnd: int) -> int:
+    """
+    視窗執行緒目前的焦點控制項，問不到就回原本的 hwnd
+    The control with keyboard focus in the window's thread, else ``hwnd``
+
+    走 `GetGUIThreadInfo` 而不是 `AttachThreadInput` + `GetFocus`：後者會把兩個
+    執行緒的輸入狀態接在一起，附帶影響前景與焦點——那正是這條路徑要避免的。
+
+    Uses ``GetGUIThreadInfo`` rather than ``AttachThreadInput`` + ``GetFocus``:
+    attaching joins two threads' input state and disturbs focus, which is the
+    one thing this code path exists to avoid.
+    """
+    thread_id = _user32.GetWindowThreadProcessId(hwnd, None)
+    if not thread_id:
+        return int(hwnd)
+    info = _GUIThreadInfo()
+    info.cbSize = ctypes.sizeof(_GUIThreadInfo)
+    if _user32.GetGUIThreadInfo(thread_id, byref(info)) and info.hwndFocus:
+        return int(info.hwndFocus)
+    return int(hwnd)
+
+
+def deepest_child_at(hwnd: int, x: int, y: int) -> int:
+    """
+    視窗內某個點底下最深的子控制項（座標是相對視窗左上角）
+    The deepest child control under a window-relative point
+
+    只走 `hwnd` 自己的子樹，所以目標視窗被別的程式蓋住也一樣正確——
+    `WindowFromPoint` 會回到最上層那個視窗，對背景操作是錯的答案。
+    """
+    rect = get_window_rect(hwnd)
+    if rect is None:
+        return int(hwnd)
+    screen = wintypes.POINT(rect[0] + int(x), rect[1] + int(y))
+    current = int(hwnd)
+    for _depth in range(8):          # 巢狀控制項的合理上限，兼作迴圈保險
+        point = wintypes.POINT(screen.x, screen.y)
+        _user32.ScreenToClient(current, byref(point))
+        child = _user32.ChildWindowFromPointEx(
+            current, point, _CWP_SKIPINVISIBLE | _CWP_SKIPTRANSPARENT)
+        if not child or int(child) == current:
+            return current
+        current = int(child)
+    return current
+
+
+def post_key(hwnd: int, keycode: int, character: str = "") -> bool:
+    """
+    把一次按鍵投遞給視窗（不搶焦點）；回傳訊息是否都排進佇列
+    Post one key press to a window without focusing it
+
+    可列印字元要送 `WM_CHAR`：控制項是靠它拿到文字的，只送 `WM_KEYDOWN` 對多數
+    編輯控制項不會產生任何字。
+
+    A printable character also needs ``WM_CHAR``: edit controls take their text
+    from that message, so ``WM_KEYDOWN`` alone types nothing in most of them.
+    """
+    target = get_focused_control(hwnd)
+    posted = bool(_user32.PostMessageW(target, WM_KEYDOWN, int(keycode), 0))
+    if character:
+        posted = bool(_user32.PostMessageW(
+            target, WM_CHAR, ord(character[0]), 0)) and posted
+    posted = bool(_user32.PostMessageW(target, WM_KEYUP, int(keycode), 0)) and posted
+    return posted
+
+
+def post_click(hwnd: int, button: str, x: int, y: int) -> bool:
+    """
+    把一次點擊投遞給視窗內 `(x, y)` 的控制項（座標相對視窗左上角，不搶焦點）
+    Post one click at a window-relative point without focusing the window
+    """
+    key = str(button).lower()
+    if key not in _MOUSE_MESSAGES:
+        raise ValueError(
+            f"unknown mouse button {button!r}; expected one of "
+            f"{sorted(_MOUSE_MESSAGES)}")
+    down, up, flag = _MOUSE_MESSAGES[key]
+    rect = get_window_rect(hwnd)
+    if rect is None:
+        return False
+    target = deepest_child_at(hwnd, x, y)
+    point = wintypes.POINT(rect[0] + int(x), rect[1] + int(y))
+    _user32.ScreenToClient(target, byref(point))
+    l_param = ((int(point.y) & 0xFFFF) << 16) | (int(point.x) & 0xFFFF)
+    posted = bool(_user32.PostMessageW(target, down, flag, l_param))
+    return bool(_user32.PostMessageW(target, up, 0, l_param)) and posted

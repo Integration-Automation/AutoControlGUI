@@ -146,3 +146,44 @@ class _CollapsibleSection(QGroupBox):
 
     def set_body_layout(self, layout) -> None:
         self._body.setLayout(layout)
+
+
+def _short_fp(fp: Optional[str]) -> str:
+    if not fp:
+        return ""
+    return fp[:16] + ("..." if len(fp) > 16 else "")
+
+
+def _iso_to_epoch(value: Optional[str]) -> float:
+    """Parse ISO; return Unix epoch (or 0 if invalid)."""
+    if not value:
+        return 0.0
+    from datetime import datetime
+    try:
+        return datetime.fromisoformat(value).timestamp()
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _format_short_time(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    from datetime import datetime
+    try:
+        dt = datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return ""
+    return dt.astimezone().strftime("%m-%d %H:%M")
+
+
+def _format_last_seen(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    # Stored as ISO 8601 (UTC); render as local-readable "YYYY-MM-DD HH:MM"
+    from datetime import datetime
+    try:
+        dt = datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return value
+    return dt.astimezone().strftime("%Y-%m-%d %H:%M")
+

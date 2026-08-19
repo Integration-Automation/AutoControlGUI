@@ -55,11 +55,12 @@ def test_builder_run_slot_surfaces_autocontrol_exception(monkeypatch):
 
 def test_playback_record_slot_surfaces_autocontrol_exception(monkeypatch):
     import je_auto_control.gui.main_widget as mw
+    import je_auto_control.gui._record_tab as rt
     warned = {}
-    monkeypatch.setattr(mw.QMessageBox, "warning",
+    monkeypatch.setattr(rt.QMessageBox, "warning",
                         lambda *a, **k: warned.setdefault("hit", True))
     monkeypatch.setattr(
-        mw, "execute_action",
+        rt, "execute_action",
         _raiser(AutoControlExecuteActionException("boom")),
     )
     stub = types.SimpleNamespace(_record_data=[["AC_ok"]])
@@ -70,10 +71,11 @@ def test_playback_record_slot_surfaces_autocontrol_exception(monkeypatch):
 
 def test_execute_script_slot_surfaces_autocontrol_exception(monkeypatch):
     import je_auto_control.gui.main_widget as mw
+    import je_auto_control.gui._script_tab as st
     captured = {}
-    monkeypatch.setattr(mw, "read_action_json", lambda _p: [["AC_ok"]])
+    monkeypatch.setattr(st, "read_action_json", lambda _p: [["AC_ok"]])
     monkeypatch.setattr(
-        mw, "execute_action",
+        st, "execute_action",
         _raiser(AutoControlExecuteActionException("boom")),
     )
     editor = types.SimpleNamespace(text=lambda: "some.json")

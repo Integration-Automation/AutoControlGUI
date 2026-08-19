@@ -136,6 +136,48 @@ def _check_audit_chain() -> Check:
     )
 
 
+def _check_screen_capture() -> Check:
+    """Report which grabber reads the screen, and on Wayland which tool.
+
+    A Wayland session with no capture helper installed is the one case where
+    the framework can still move the mouse but sees nothing, so it is worth
+    naming before a locator fails with "template not found".
+
+    The Wayland answer also carries ``cursor_may_be_captured``. wlroots
+    composites a *software* cursor into the output buffer whenever the
+    backend has no cursor plane, and that buffer is what ``wlr-screencopy``
+    hands back, so the pointer can appear in a capture that never asked for
+    it — unlike BitBlt on Windows or Pillow/mss on X11. A pointer resting on
+    a target puts a pointer-shaped hole in the middle of it, and the bundle
+    that explains a failed locator should say so.
+    """
+    from je_auto_control.utils.cv2_utils.screen_grabber import backend_grab_image
+    if backend_grab_image() is None:
+        return Check(
+            name="screen_capture", ok=True, severity=_SEVERITY_INFO,
+            detail="generic capture (Pillow / mss)",
+            extra={"grabber": "generic"},
+        )
+    from je_auto_control.linux_wayland.capture import available_tool
+    tool = available_tool()
+    if tool is None:
+        return Check(
+            name="screen_capture", ok=False, severity=_SEVERITY_ERROR,
+            detail="Wayland session with no capture tool and no session "
+                   "bus: install grim (wlroots), gnome-screenshot (GNOME) or "
+                   "spectacle (KDE); the xdg-desktop-portal fallback needs "
+                   "DBUS_SESSION_BUS_ADDRESS set",
+            extra={"grabber": "wayland", "tool": None},
+        )
+    return Check(
+        name="screen_capture", ok=True, severity=_SEVERITY_INFO,
+        detail=f"Wayland capture via {tool}; the pointer may be composited "
+               "into the image, so park it away from the target",
+        extra={"grabber": "wayland", "tool": tool,
+               "cursor_may_be_captured": True},
+    )
+
+
 def _check_screenshot() -> Check:
     from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
     image = pil_screenshot()
@@ -218,6 +260,7 @@ _ALL_CHECKS: Tuple[CheckFn, ...] = (
     _check_optional_deps,
     _check_executor,
     _check_audit_chain,
+    _check_screen_capture,
     _check_screenshot,
     _check_mouse,
     _check_disk_space,

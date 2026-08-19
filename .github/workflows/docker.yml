@@ -108,3 +108,257 @@ jobs:
             echo "REST health probe never succeeded" >&2
             exit 1
           fi
+
+  wayland-verification:
+    name: Wayland backend against a real compositor
+    needs: build-image
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+
+      - name: Build the Wayland verification image
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        with:
+          context: .
+          file: docker/Dockerfile.wayland
+          tags: autocontrol-wayland:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Two halves, both of which mocks structurally cannot cover.
+      #
+      # Capture: sway's headless backend needs no GPU, no seat and no display,
+      # so a plain ubuntu runner can host a genuine wlroots session. grim's
+      # argv and -g geometry, wlr-randr's undocumented output format, and the
+      # whole screenshot -> screen_grabber -> capture -> grab_image chain are
+      # checked against pixels the compositor actually painted. Twice: once
+      # with the outputs side by side from the origin, and once with the
+      # left-hand one at x=-1280, which is the layout of any desktop with a
+      # monitor left of the primary. The whole-screen capture then starts at
+      # a negative coordinate, and a size, a crop or a located hit that
+      # assumes (0, 0) is wrong by the width of that monitor.
+      #
+      # libei: every entry point the ctypes binding names is resolved against
+      # the real libei.so — a misspelled symbol passes every mock and fails
+      # only on a user's machine — and the fail-closed chain is driven end to
+      # end. It also re-checks whether ei_unref still segfaults upstream, so
+      # the workaround in LibeiBackend._teardown gets removed once it can be.
+      #
+      # The container exits with the number of failed checks.
+      - name: Verify against headless sway and the real libei
+        run: docker run --rm autocontrol-wayland:ci
+
+  eis-verification:
+    name: libei sender against a real EIS server
+    needs: build-image
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+
+      - name: Build the EIS verification image
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        with:
+          context: .
+          file: docker/Dockerfile.eis
+          tags: autocontrol-eis:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The other half of the input path, and the half no mock can reach: a
+      # wrong capability value, a mis-marshalled variadic bind or a wrong
+      # scroll unit is *accepted* by a fake symbol table and only rejected by
+      # something that speaks the protocol. libeis is that something — the
+      # server side of libei's own protocol, packaged by Debian — so
+      # docker/eis_server.py runs a real EIS implementation on a Unix socket
+      # and records what AutoControl's real sender does to it. No compositor
+      # and no desktop session are involved.
+      #
+      # It also re-checks whether ei_unref is still safe on a live context,
+      # which is what lets _teardown release instead of leaking.
+      #
+      # The container exits with the number of failed checks.
+      - name: Verify the libei sender against libeis
+        run: docker run --rm autocontrol-eis:ci
+
+  portal-verification:
+    name: RemoteDesktop portal handshake against a real liboeffis
+    needs: build-image
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+
+      - name: Build the portal verification image
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        with:
+          context: .
+          file: docker/Dockerfile.portal
+          tags: autocontrol-portal:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # How a client gets an EIS socket on GNOME and KDE: not a path on disk
+      # but a file descriptor handed over D-Bus at the end of the
+      # org.freedesktop.portal.RemoteDesktop dance. That was recorded as
+      # needing a GNOME VM because xdg-desktop-portal-wlr has no RemoteDesktop
+      # interface — but the portal is a D-Bus interface, not a compositor
+      # feature, so docker/portal_server.py owns the well-known name on a
+      # private session bus and answers the four calls for real.
+      #
+      # Its ConnectToEIS hands back a live connection to the same real libeis
+      # server the eis job uses, so the whole chain is checked at once: the
+      # call order and predicted request paths, the device mask the user would
+      # be consenting to, that the descriptor carries a real EI session, and
+      # that input emitted through it is recorded by an independent
+      # implementation.
+      #
+      # And every way a portal says no — a dismissed dialog, a dialog left
+      # open, a withheld descriptor, a closed session, a portal too old to
+      # have ConnectToEIS, no portal at all — has to come back as a refusal on
+      # this project's own clock rather than a hang or a silent downgrade.
+      #
+      # The container exits with the number of failed checks.
+      - name: Verify the portal handshake against liboeffis
+        run: docker run --rm autocontrol-portal:ci
+
+  seat-verification:
+    name: ydotool absolute move against a seat that consumes it
+    needs: build-image
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+
+      - name: Build the seat verification image
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        with:
+          context: .
+          file: docker/Dockerfile.seat
+          tags: autocontrol-seat:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Load the uinput and evdev kernel modules
+        run: |
+          sudo modprobe uinput
+          sudo modprobe evdev || true
+          test -e /dev/uinput || {
+            echo "::error::/dev/uinput is missing after modprobe; this runner's"
+            echo "::error::kernel cannot host the seat verification."
+            exit 1
+          }
+
+      # The join between the two images above, and the one every earlier note
+      # in this file said needed a VM. The wayland job runs a compositor that
+      # consumes no input; the ydotool job reads ydotool's events off the
+      # kernel with no compositor. Neither can say where the cursor ends up.
+      #
+      # wlroots can: WLR_BACKENDS=headless,libinput keeps the outputs virtual
+      # while running the real libinput backend, libseat's builtin backend
+      # opens the device without logind, and SEATD_VTBOUND=0 stops it
+      # reaching for a VT no container owns. ydotoold's device is then an
+      # ordinary seat device, and grim -c draws the cursor into a screenshot.
+      #
+      # That settles what --absolute is absolute *to* — the top-left of the
+      # output layout, not layout (0, 0), which is the translation
+      # linux_wayland/mouse.py now applies — and what pointer acceleration
+      # does to it, which is double the distance asked for under libinput's
+      # default profile. It runs over the same two layouts as the wayland
+      # job, and the negative-origin one is where an untranslated request
+      # lands on the wrong monitor entirely.
+      #
+      # The container exits with the number of failed checks.
+      - name: Verify the absolute move against a real seat
+        run: |
+          docker run --rm             --device /dev/uinput             --device-cgroup-rule 'c 13:* rmw'             autocontrol-seat:ci
+
+  ydotool-verification:
+    name: ydotool argv against a real uinput device
+    needs: build-image
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+
+      - name: Build the ydotool verification image
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        with:
+          context: .
+          file: docker/Dockerfile.ydotool
+          tags: autocontrol-ydotool:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # uinput is what ydotoold writes into; evdev is the handler that turns
+      # the device it creates into the /dev/input/eventN this verification
+      # reads back. Both ship with the runner's kernel as modules. The
+      # explicit check is here so a kernel without them fails saying so,
+      # rather than the container reporting an empty device list.
+      - name: Load the uinput and evdev kernel modules
+        run: |
+          sudo modprobe uinput
+          sudo modprobe evdev || true
+          test -e /dev/uinput || {
+            echo "::error::/dev/uinput is missing after modprobe; this runner's"
+            echo "::error::kernel cannot host the ydotool verification."
+            exit 1
+          }
+          ls -l /dev/uinput
+
+      # The half neither other image can reach. sway's headless backend
+      # consumes no libinput devices, so an injected event has nowhere to
+      # arrive there — but arriving is not what is being checked. ydotoold
+      # creates an ordinary uinput device and the kernel publishes it as an
+      # evdev node, so reading that node returns the exact input_event structs
+      # ydotool wrote, with no compositor and no seat in the picture.
+      #
+      # That settles the click bitmasks, the split press / release edges drag
+      # depends on, what --absolute really puts on the wire, and the wheel
+      # signs this project had assumed from the kernel's REL_WHEEL convention
+      # and never measured. The last check drives the backend's own functions
+      # rather than a hand-written argv, so the two halves meet.
+      #
+      # --device covers /dev/uinput, which exists before the container starts.
+      # The input node does not — ydotoold creates it afterwards — so the
+      # cgroup rule grants character major 13 and nothing else, which is much
+      # narrower than --privileged.
+      #
+      # The container exits with the number of failed checks.
+      - name: Verify the ydotool argv against the kernel
+        run: |
+          docker run --rm \
+            --device /dev/uinput \
+            --device-cgroup-rule 'c 13:* rmw' \
+            autocontrol-ydotool:ci

@@ -1,0 +1,98 @@
+# AutoControl portal verification image — the RemoteDesktop D-Bus handshake.
+#
+# Three images already answer three quarters of the Linux input and capture
+# story: docker/Dockerfile.wayland (a real wlroots compositor),
+# docker/Dockerfile.eis (a real libeis peer) and docker/Dockerfile.ydotool (a
+# real uinput device). All three close by naming the same remaining gap in the
+# same words — "the portal consent dialog and the EIS fd handover — that is
+# xdg-desktop-portal + GNOME/mutter, not the EI protocol itself" — and it was
+# recorded as needing a GNOME VM.
+#
+# It does not. The portal is a *D-Bus interface*, not a compositor feature:
+# whatever owns org.freedesktop.portal.Desktop and answers CreateSession ->
+# SelectDevices -> Start -> ConnectToEIS is a portal as far as liboeffis is
+# concerned. docker/portal_server.py is that, on a private session bus, and
+# its ConnectToEIS hands back a live connection to the same real EIS server
+# the eis image uses. So the real liboeffis runs the real handshake, the
+# descriptor it produces carries a real EI session, and the input emitted
+# through it is recorded by an independent implementation.
+#
+# The one thing it still does not claim is the consent dialog itself — no user
+# dismisses anything here. What a dialog produces is a Response code or
+# silence, and docker/portal_verify.py drives a grant, a refusal, a dialog
+# left open, a withheld descriptor, a closed session, a portal too old to have
+# ConnectToEIS, and no portal at all.
+#
+# Two interpreters on purpose. Debian's python3 has GDBus, which is what can
+# pass a file descriptor over D-Bus from Python; the image's own python3.12
+# has AutoControl. The portal has to be a separate process from its client in
+# any case, so the split costs nothing.
+#
+# Build:  docker build -f docker/Dockerfile.portal -t autocontrol-portal:latest .
+# Run:    docker run --rm autocontrol-portal:latest
+
+FROM python:3.12-slim AS builder
+
+WORKDIR /src
+COPY pyproject.toml README.md ./
+COPY je_auto_control ./je_auto_control
+COPY autocontrol-lsp ./autocontrol-lsp
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip wheel --no-cache-dir --wheel-dir /wheels .
+
+
+FROM python:3.12-slim AS runtime
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# liboeffis1 is the subject: the portal half of the libei handshake, and the
+# library je_auto_control/linux_wayland/oeffis.py binds. Note it is a separate
+# binary package that libei1 does not depend on — it is packaged on trixie,
+# but installing libei1 alone does not bring it, which is the difference
+# between the portal fast path being available and being quietly off.
+#
+# libei1 / libeis1 are the two ends of the EI protocol the descriptor carries.
+# dbus supplies dbus-daemon, and python3-gi supplies the GDBus bindings the
+# mock portal needs to put a file descriptor on the bus.
+#
+# Note what is deliberately NOT installed: gdbus. The Screenshot tier used to
+# shell out to it, which could never work — the portal's answer is a signal
+# directed at the connection that asked, and two gdbus processes are two
+# connections. portal.py speaks D-Bus itself now, so this image is also the
+# proof that the tier needs no binary beyond a session bus.
+#
+# grim / wtype / wlr-randr are not used by anything below, but the Wayland
+# backend refuses to import without them and `import je_auto_control` then
+# falls back to the X11 backend — which dies reaching for DISPLAY=:0 before a
+# line of this verification can run.
+#
+# libgl1 and libglib2.0-0 are opencv-python's hard import-time requirements.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libei1 libeis1 liboeffis1 \
+        dbus gir1.2-glib-2.0 python3-gi \
+        grim wlr-randr wtype \
+        libgl1 libglib2.0-0 \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip install --no-cache-dir --only-binary :all: --no-index \
+       --find-links=/wheels /wheels/je_auto_control-*.whl \
+    && rm -rf /wheels
+
+COPY docker/eis_server.py /opt/verify/eis_server.py
+COPY docker/portal_server.py /opt/verify/portal_server.py
+COPY docker/portal_verify.py /opt/verify/portal_verify.py
+
+# Runs as root on purpose: one verification, then exit. Not a service image.
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/opt/verify \
+    XDG_RUNTIME_DIR=/tmp/xdg \
+    XDG_SESSION_TYPE=wayland \
+    JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=wayland
+
+ENTRYPOINT ["python", "/opt/verify/portal_verify.py"]

@@ -1,6 +1,6 @@
 """Tests for AC_ocr_to_var (OCR a region into a flow variable)."""
 from je_auto_control.utils.executor.action_executor import Executor
-from je_auto_control.utils.executor.flow_control import exec_ocr_to_var
+from je_auto_control.utils.executor.flow_data_commands import exec_ocr_to_var
 
 
 class _Match:

@@ -2,7 +2,7 @@
 import sys
 
 from je_auto_control.utils.executor.action_executor import Executor
-from je_auto_control.utils.executor.flow_control import exec_shell_to_var
+from je_auto_control.utils.executor.flow_data_commands import exec_shell_to_var
 
 
 def test_shell_to_var_captures_stdout():

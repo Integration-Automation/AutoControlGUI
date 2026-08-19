@@ -27,17 +27,24 @@ _image_grab = None
 
 
 def _load_image_grab():
+    """Cache the platform's ``ImageGrab``-shaped grabber.
+
+    Not Pillow directly: under Wayland the screen has to come from the
+    compositor's own capture tool, or OCR reads a blank XWayland root.
+    """
     global _image_grab
     if _image_grab is not None:
         return _image_grab
+    from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
     try:
-        from PIL import ImageGrab
+        # image_grabber imports Pillow lazily, so a missing Pillow surfaces
+        # here rather than on the import above.
+        _image_grab = image_grabber()
     except ImportError as error:
         raise RuntimeError(
             "OCR requires Pillow for screen capture. Install with: pip install Pillow"
         ) from error
-    _image_grab = ImageGrab
-    return ImageGrab
+    return _image_grab
 
 
 @dataclass(frozen=True)

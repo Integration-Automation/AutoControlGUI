@@ -20,9 +20,10 @@ from typing import Any, Optional, Tuple
 
 from je_auto_control.utils.http_headers import parse_content_length
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.utils.mcp_server.server import (
-    MCPServer, _notification_message,
+from je_auto_control.utils.mcp_server._protocol import (
+    _notification_message,
 )
+from je_auto_control.utils.mcp_server.server import MCPServer
 
 DEFAULT_PATH = "/mcp"
 _MAX_BODY = 1_000_000

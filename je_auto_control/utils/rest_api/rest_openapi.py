@@ -218,6 +218,13 @@ _ENDPOINT_METADATA: Dict[Tuple[str, str], Dict[str, Any]] = {
                 },
             },
         },
+        "errors": {
+            "400": ("Malformed body, or a command name the executor does "
+                    "not know. The whole list is checked before anything "
+                    "runs, so nothing was executed; 'unknown_commands' "
+                    "lists every unrecognised name."),
+            "500": "The action list was valid but the run failed.",
+        },
     },
     ("POST", "/execute_file"): {
         "summary": "Run a JSON action file by absolute path.",
@@ -228,6 +235,11 @@ _ENDPOINT_METADATA: Dict[Tuple[str, str], Dict[str, Any]] = {
             "properties": {
                 "path": {"type": "string"},
             },
+        },
+        "errors": {
+            "400": ("Missing 'path', or the file is unreadable, is not a "
+                    "valid action list, or names an unknown command."),
+            "500": "The action file was valid but the run failed.",
         },
     },
     ("POST", "/config/export"): {
@@ -365,6 +377,11 @@ def _build_responses(meta: Dict[str, Any]) -> Dict[str, Any]:
     if meta.get("request_body"):
         responses["400"] = {
             "description": "Bad request body.",
+            "content": {_JSON_MEDIA_TYPE: {"schema": _error_schema()}},
+        }
+    for code, description in meta.get("errors", {}).items():
+        responses[code] = {
+            "description": description,
             "content": {_JSON_MEDIA_TYPE: {"schema": _error_schema()}},
         }
     return responses

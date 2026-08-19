@@ -9,7 +9,10 @@ from je_auto_control.utils.exception.exceptions import (
 )
 from je_auto_control.utils.executor.action_executor import Executor
 from je_auto_control.utils.executor.flow_control import (
-    exec_assert_duration, exec_call_macro, exec_parallel,
+    exec_call_macro, exec_parallel,
+)
+from je_auto_control.utils.executor.flow_data_commands import (
+    exec_assert_duration,
 )
 
 

@@ -145,8 +145,8 @@ def screenshot(file_path: Optional[str] = None,
 
 def list_monitors() -> List[Dict[str, Any]]:
     """Return every monitor's geometry. Index 0 spans all monitors."""
-    import mss
-    with mss.mss() as sct:
+    from je_auto_control.utils.cv2_utils.screen_grabber import mss_grabber
+    with mss_grabber() as sct:
         return [
             {
                 "index": index, "left": int(monitor["left"]),
@@ -160,10 +160,10 @@ def list_monitors() -> List[Dict[str, Any]]:
 
 
 def _grab_monitor(index: int):
-    """Capture a single monitor via ``mss`` and return a PIL Image."""
-    import mss
+    """Capture a single monitor through the platform grabber; returns a PIL Image."""
+    from je_auto_control.utils.cv2_utils.screen_grabber import mss_grabber
     from PIL import Image
-    with mss.mss() as sct:
+    with mss_grabber() as sct:
         if index < 0 or index >= len(sct.monitors):
             raise ValueError(
                 f"monitor index {index} out of range "
@@ -449,6 +449,55 @@ def window_rect(title_substring: str,
     )
     rect = _rect(title_substring, case_sensitive=case_sensitive)
     return {"rect": list(rect) if rect is not None else None}
+
+
+def foreground_window_pid() -> Dict[str, Any]:
+    from je_auto_control.wrapper.auto_control_window import (
+        foreground_window_process_id as _pid,
+    )
+    return {"pid": _pid() or 0}
+
+
+def window_pid(title_substring: str,
+               case_sensitive: bool = False) -> Dict[str, Any]:
+    from je_auto_control.wrapper.auto_control_window import (
+        window_process_id as _pid,
+    )
+    return {"pid": _pid(title_substring, case_sensitive=case_sensitive) or 0}
+
+
+def windows_for_pid(pid: int, titled_only: bool = False) -> Dict[str, Any]:
+    from je_auto_control.wrapper.auto_control_window import (
+        windows_for_process_id as _windows,
+    )
+    return {"windows": [{"hwnd": hwnd, "title": title}
+                        for hwnd, title in _windows(int(pid), titled_only)]}
+
+
+def minimize_windows_for_pid(pid: int) -> Dict[str, Any]:
+    from je_auto_control.wrapper.auto_control_window import (
+        minimize_windows_for_process as _minimize,
+    )
+    return {"minimized": _minimize(int(pid))}
+
+
+def post_key_to_window(title_substring: str, key: str,
+                       case_sensitive: bool = False) -> Dict[str, Any]:
+    from je_auto_control.wrapper.auto_control_window import (
+        post_key_to_window as _post,
+    )
+    return {"posted": bool(_post(title_substring, key,
+                                 case_sensitive=case_sensitive))}
+
+
+def post_click_to_window(title_substring: str, button: str = "left",
+                         x: int = 0, y: int = 0,
+                         case_sensitive: bool = False) -> Dict[str, Any]:
+    from je_auto_control.wrapper.auto_control_window import (
+        post_click_to_window as _post,
+    )
+    return {"posted": bool(_post(title_substring, button, int(x), int(y),
+                                 case_sensitive=case_sensitive))}
 
 
 def _resolve_window_hwnd(title_substring: str,

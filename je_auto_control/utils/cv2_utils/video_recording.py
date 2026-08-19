@@ -1,8 +1,8 @@
 import threading
 import cv2
 import numpy as np
-from mss import mss
 
+from je_auto_control.utils.cv2_utils.screen_grabber import mss_grabber
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -10,7 +10,7 @@ class RecordingThread(threading.Thread):
     """
     RecordingThread
     螢幕錄影執行緒
-    - 使用 mss 擷取螢幕畫面
+    - 透過平台擷取後端取得畫面 (mss，Wayland 則走合成器的擷取工具)
     - 使用 OpenCV VideoWriter 寫入影片檔案
     """
 
@@ -44,7 +44,7 @@ class RecordingThread(threading.Thread):
         執行錄影迴圈
         Run recording loop
         """
-        with mss() as sct:
+        with mss_grabber() as sct:
             resolution = sct.monitors[0]
             output_file = self.video_name + ".mp4"
 

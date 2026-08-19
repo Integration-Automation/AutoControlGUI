@@ -130,8 +130,8 @@ def remap_point(src: Monitor, dst: Monitor, local_x: int,
 
 
 def _mss_rows() -> List[Dict[str, Any]]:
-    import mss
-    with mss.mss() as screen:
+    from je_auto_control.utils.cv2_utils.screen_grabber import mss_grabber
+    with mss_grabber() as screen:
         monitors = screen.monitors
     return [{"x": int(m["left"]), "y": int(m["top"]),
              "width": int(m["width"]), "height": int(m["height"])}

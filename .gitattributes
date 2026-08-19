@@ -1,2 +1,8 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Shell scripts keep LF whatever the checkout platform. They are executed by
+# /bin/sh inside a Linux container, and a CRLF shebang makes the kernel look
+# for an interpreter literally named "/bin/sh\r": the image builds, then every
+# container dies with "no such file or directory" on the entrypoint.
+*.sh text eol=lf

@@ -20,7 +20,7 @@
 
 - **一套 API，六个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
-- **不写 Python 也能脚本化。** 767 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
+- **不写 Python 也能脚本化。** 773 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
 - **默认无头运行。** `import je_auto_control` 绝不会加载 Qt。GUI 是可选包，包在同一个无头内核之外。
 - **四种定位方式。** 模板匹配、OCR、无障碍树、视觉语言模型——可通过锚点定位器与自愈回退串接组合。
@@ -128,7 +128,7 @@ python -m je_auto_control          # 或：je_auto_control.start_autocontrol_gui
 | 自然语言规划 | `plan_actions`、`run_from_description` | `AC_llm_plan` | LLM Planner |
 | Computer-use agent | `AgentLoop`、`run_agent` | `AC_run_agent` | Computer Use |
 | 录制与回放 | `record`、`stop_record` | `AC_record`、`AC_stop_record` | Record |
-| JSON 脚本 | `execute_action`、`execute_files` | 全部 767 个命令 | Script、Script Builder |
+| JSON 脚本 | `execute_action`、`execute_files` | 全部 773 个命令 | Script、Script Builder |
 | 变量与流程控制 | `execute_action_with_vars` | `AC_set_var`、`AC_loop`、`AC_for_each`、`AC_try`、`AC_retry` | Variables |
 | 数据驱动执行 | — | `AC_for_each_row`（CSV／JSON／SQLite／Excel） | Data Sources |
 | 断言 | `assert_text`、`assert_image` | `AC_assert_text` 等 21 个 | Assertions |
@@ -177,7 +177,7 @@ je_auto_control version
 
 | 接口 | 启动方式 | 说明 |
 |---|---|---|
-| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 670 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
+| **MCP 服务器** | `je_auto_control_mcp`（stdio）或 `AC_start_mcp_http_server` | 676 个工具，供 Claude Desktop／Claude Code／自定义 tool loop 使用。Bearer 认证、TLS、审计日志、限流、插件热重载、CI 假后端。 |
 | **REST API** | `je_auto_control start-rest` | Bearer token、按 IP 限流与锁定、SQLite 审计 hook、`/metrics`、`/openapi.json`、`/docs` Swagger UI、`/dashboard`。 |
 | **TCP socket 服务器** | `je_auto_control start-server` | 以换行分隔的 JSON 动作列表。默认绑定 `127.0.0.1`。 |
 | **pytest 插件** | 安装后自动生效 | 提供 fixture 与供 pytest-bdd／behave 使用的 Gherkin step library。 |
@@ -230,9 +230,51 @@ RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
 | Windows 10 / 11 | Win32 ctypes（可选 Interception 驱动） | ✅ | ✅ | ✅ | ✅ |
 | macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ❌ | ❌ |
 | Linux X11 | python-Xlib（可选 `uinput`） | ✅ | ✅ | ✅ | ❌ |
-| Linux Wayland | libei，或 ydotool／wtype／grim | ✅ | ✅ | ❌ | ❌ |
+| Linux Wayland | 经桌面 portal 的 libei，或 ydotool／wtype ＋ 截图工具 | ✅ | ✅ | ❌ | ❌ |
 | Android | adb + uiautomator2 | ✅ | ✅ | — | — |
 | iOS | WebDriverAgent / facebook-wda | ✅ | ✅ | — | — |
+
+Wayland 的输入在 libei 走不通时会退回 `ydotool` CLI，而这条退路需要
+**ydotool 1.0 以上**。AutoControl 送的每一个参数都是那一版才有的；0.1.x
+（Debian bookworm 与目前所有 Ubuntu 仍以这个名字提供，Debian trixie 则根本没有）
+对同一批参数返回 0 却不送出任何事件。AutoControl 会检测并直接拒绝，
+而不是为根本没送出的输入回报成功。Arch、Fedora 与 Debian unstable 提供的是 1.0。
+
+这条退路要能**准确定位**，还有一个前提:合成器的指针加速度必须是关的。
+`ydotool mousemove --absolute` 并不发任何绝对事件——它先把光标推到合成器夹取的
+那个角落，再发相对位移，所以这段位移会被合成器加速。对真的 wlroots session 量到的是:
+libinput 的默认 profile 让光标走的距离正好是请求的两倍。ydotool 自己的 `--help`
+也是这样写的；AutoControl 每个进程会记一次警告，而不是安静地把点击放到错的地方。
+请对 ydotoold 的设备关掉加速度（sway:`input type:pointer accel_profile flat`
+加上 `pointer_accel 0`），或者装上 `liboeffis`，改走协议层本来就是绝对坐标的 libei。
+
+倍率是合成器自己的设置，客户端读不回来，所以只有你知道它关了没有：
+`JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL=flat` 表示已经关掉，移动就不再出声；
+`=strict` 则宁可拒绝这次移动，也不让点击落在别的地方；不设置就维持
+“警告一次后照样移动”的默认。
+
+Wayland 的屏幕截取需要合成器对应的工具，因为没有单一工具能覆盖全部：wlroots 系
+（sway、Hyprland、river）用 `grim`，GNOME 用 `gnome-screenshot`，KDE 用 `spectacle`。
+装好其中一个之后，所有截取路径——截图、图像与锚点定位、OCR、屏幕录制、远程桌面——都会
+经由它。三个都没装也还有 `gdbus`：最后会尝试 `xdg-desktop-portal`，只是第一次可能会弹
+同意对话框。再不行，截取会带着安装提示明确失败，而不是返回空白的 XWayland root；
+`je_auto_control.api.run_diagnostics()`（以及 GUI 的 Diagnostics 标签页）的 `screen_capture`
+检查会报告当前使用的是哪一层。
+
+有一件只在 Wayland 出现、需要事先规划的事：**截取回来的图里可能有鼠标光标。**
+这里没有任何一条截取请求光标，但只要 backend 没有光标平面（包含任何以
+`WLR_NO_HARDWARE_CURSORS=1` 运行的 session），wlroots 就会画**软件光标**并把它
+合成进输出缓冲区，而截取交回来的正是那一份。Windows 与 X11 都不含光标，所以
+“定位器、模板匹配或 OCR 在目标中间看到一个光标形状的洞”只会在这里发生。
+Wayland 不让客户端读光标位置，所以没有东西可以可靠地遮或避开：请在截取之前
+把指针移离要拍的区域。`screen_capture` 检查会以 `cursor_may_be_captured` 报告这件事。
+
+如果以上都不适用你的环境，可以直接指定自己的命令——它优先于所有检测，`{output}` 会被
+换成临时 PNG 路径：
+
+```bash
+export JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND="mycapture --png {output}"
+```
 
 Wayland 禁止非特权客户端进行全局输入录制——若要录制，请设置
 `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` 并在 X11 会话下运行。窗口管理目前仅

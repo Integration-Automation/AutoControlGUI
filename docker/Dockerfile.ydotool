@@ -1,0 +1,102 @@
+# AutoControl ydotool verification image — real /dev/uinput, no compositor.
+#
+# The Wayland image (docker/Dockerfile.wayland) answers the capture half and
+# the EIS image (docker/Dockerfile.eis) answers libei's. Both close by naming
+# the same remaining gap in the same words — ydotool "needs /dev/uinput and a
+# seat that consumes it" — and that was recorded as needing a GNOME VM.
+#
+# It does not. A seat is what makes an injected event *arrive somewhere*; it
+# is not what makes it *observable*. ydotoold creates an ordinary uinput
+# device, the kernel publishes it as /dev/input/eventN, and reading that node
+# returns the exact input_event structs ydotool wrote. So this image runs
+# AutoControl's real mouse and keyboard backends and reads back what the
+# kernel got: the click bitmasks, the split press / release edges that drag
+# depends on, what --absolute actually puts on the wire, the wheel signs this
+# project had only ever assumed, and numeric key codes.
+#
+# Why ydotool comes from unstable: 1.0 replaced the entire command line, and
+# every argument this backend builds arrived in it. Trixie ships no ydotool
+# at all and bookworm ships 0.1.8, which answers this argv with exit code 0
+# and no events — see je_auto_control/linux_wayland/_ydotool_cli.py. Pulling
+# one package from sid, pinned so nothing else follows it, is what gets the
+# CLI under test onto the same Debian base as the other two images.
+#
+# What this image still cannot answer, and why:
+#   * whether a compositor clamps the INT32_MIN reset that --absolute relies
+#     on. The kernel side of that is checked here; the clamp is the
+#     compositor's behaviour, and it remains open in Progress.md rather than
+#     being quietly claimed.
+# The portal consent dialog and the EIS fd handover used to be listed here
+# too. They are xdg-desktop-portal's, not ydotool's, and they are now covered
+# by docker/Dockerfile.portal against the real liboeffis.
+#
+# Build:  docker build -f docker/Dockerfile.ydotool -t autocontrol-ydotool:latest .
+# Run:    modprobe uinput evdev
+#         docker run --rm --device /dev/uinput \
+#                    --device-cgroup-rule 'c 13:* rmw' autocontrol-ydotool:latest
+#
+# The cgroup rule is what lets the container open the input node ydotoold
+# creates *after* it starts, which --device cannot cover because the node does
+# not exist yet at run time. It grants character major 13 (input) and nothing
+# else, which is a good deal narrower than --privileged.
+
+FROM python:3.12-slim AS builder
+
+WORKDIR /src
+COPY pyproject.toml README.md ./
+COPY je_auto_control ./je_auto_control
+COPY autocontrol-lsp ./autocontrol-lsp
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip wheel --no-cache-dir --wheel-dir /wheels .
+
+
+FROM python:3.12-slim AS runtime
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# ydotool 1.0.4 comes from unstable; the pin keeps every other package on
+# trixie, so this is one binary and its already-satisfied dependencies rather
+# than a half-upgraded base.
+#
+# grim / wtype / wlr-randr are not used by anything below, but the Wayland
+# backend refuses to import without them and `import je_auto_control` then
+# falls back to the X11 backend — which dies reaching for DISPLAY=:0 before a
+# line of this verification can run.
+#
+# libgl1 and libglib2.0-0 are opencv-python's hard import-time requirements.
+RUN printf 'deb https://deb.debian.org/debian sid main\n' \
+        > /etc/apt/sources.list.d/sid.list \
+    && printf 'Package: *\nPin: release a=unstable\nPin-Priority: 100\n' \
+        > /etc/apt/preferences.d/no-sid-by-default \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends -t sid ydotool \
+    && apt-get install -y --no-install-recommends \
+        grim wlr-randr wtype \
+        libgl1 libglib2.0-0 \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip install --no-cache-dir --only-binary :all: --no-index \
+       --find-links=/wheels /wheels/je_auto_control-*.whl \
+    && rm -rf /wheels
+
+COPY docker/ydotool_verify.py /opt/verify/ydotool_verify.py
+
+# Runs as root on purpose: writing to /dev/uinput and creating the input node
+# both need it, and this image exists to run one verification and exit. It is
+# not a deployable service image — docker/Dockerfile is.
+#
+# The Wayland backend is selected by XDG_SESSION_TYPE alone here: there is no
+# compositor, and none is needed, because every function under test shells out
+# to ydotool rather than talking to a Wayland socket. The CLI path is forced
+# because libei would otherwise win and this image is about the fallback.
+ENV PYTHONUNBUFFERED=1 \
+    XDG_RUNTIME_DIR=/tmp/xdg \
+    XDG_SESSION_TYPE=wayland \
+    JE_AUTOCONTROL_WAYLAND_INPUT_BACKEND=cli
+
+ENTRYPOINT ["python3", "/opt/verify/ydotool_verify.py"]

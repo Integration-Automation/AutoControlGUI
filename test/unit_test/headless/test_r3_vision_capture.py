@@ -126,7 +126,9 @@ class _FakeGrab:
 
 def test_screenshot_save_failure_raises(monkeypatch, tmp_path):
     pytest.importorskip("PIL")
-    monkeypatch.setattr(ss, "ImageGrab", _FakeGrab)
+    # pil_screenshot now asks the platform layer for its grabber rather than
+    # importing ImageGrab itself, so Wayland gets the compositor's capture.
+    monkeypatch.setattr(ss, "image_grabber", lambda: _FakeGrab)
     bad_path = str(tmp_path / "no_such_dir" / "shot.png")   # parent missing
     with pytest.raises(AutoControlScreenException):
         ss.pil_screenshot(file_path=bad_path)

@@ -4,7 +4,6 @@ from typing import Optional, Tuple
 
 import cv2
 import numpy as np
-from PIL import ImageGrab
 from PySide6.QtWidgets import QWidget
 
 from je_auto_control.gui.selector.region_selector import open_region_selector
@@ -13,8 +12,9 @@ from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 def _capture_region(region: Tuple[int, int, int, int]) -> np.ndarray:
     """Grab the given (x, y, w, h) region as a BGR numpy array."""
+    from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
     x, y, w, h = region
-    pil_image = ImageGrab.grab(bbox=(x, y, x + w, y + h), all_screens=True)
+    pil_image = image_grabber().grab(bbox=(x, y, x + w, y + h), all_screens=True)
     return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
 

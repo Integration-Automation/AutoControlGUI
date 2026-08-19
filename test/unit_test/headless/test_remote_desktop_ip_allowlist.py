@@ -5,8 +5,9 @@ from io import BytesIO
 
 import pytest
 
-from je_auto_control.utils.remote_desktop.host import (
-    RemoteDesktopHost, _compile_ip_allowlist, _ip_in_allowlist,
+from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
+from je_auto_control.utils.remote_desktop.host_access import (
+    _compile_ip_allowlist, _ip_in_allowlist,
 )
 from je_auto_control.utils.remote_desktop.viewer import RemoteDesktopViewer
 

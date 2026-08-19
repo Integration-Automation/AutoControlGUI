@@ -66,43 +66,22 @@ def get_clipboard_files() -> Optional[List[str]]:
 
 
 def _win_set_hdrop(blob: bytes) -> None:
-    import ctypes
-    from ctypes import wintypes
-    user32, kernel32 = ctypes.windll.user32, ctypes.windll.kernel32
-    kernel32.GlobalAlloc.restype = wintypes.HGLOBAL
-    kernel32.GlobalLock.restype = ctypes.c_void_p
-    if not user32.OpenClipboard(None):
-        raise RuntimeError("OpenClipboard failed")
-    try:
-        user32.EmptyClipboard()
-        handle = kernel32.GlobalAlloc(_GMEM_MOVEABLE, len(blob))
-        if not handle:
-            raise RuntimeError("GlobalAlloc failed")
-        pointer = kernel32.GlobalLock(handle)
-        ctypes.memmove(pointer, blob, len(blob))
-        kernel32.GlobalUnlock(handle)
-        if not user32.SetClipboardData(_CF_HDROP, handle):
-            raise RuntimeError("SetClipboardData(CF_HDROP) failed")
-    finally:
-        user32.CloseClipboard()
+    """Delegates to the one place that declares the Win32 prototypes.
+
+    This module used to hand-roll the calls with ``restype`` but no
+    ``argtypes``: a memory handle is pointer-width, ctypes defaults an
+    undeclared parameter to ``c_int``, and so ``GlobalLock(handle)`` raised
+    ``OverflowError: int too long to convert`` on 64-bit Windows —
+    ``set_clipboard_files`` failed on every call.
+    """
+    from je_auto_control.utils.clipboard.win32_clipboard_api import (
+        set_clipboard_format,
+    )
+    set_clipboard_format(_CF_HDROP, blob)
 
 
 def _win_get_hdrop() -> Optional[bytes]:
-    import ctypes
-    from ctypes import wintypes
-    user32, kernel32 = ctypes.windll.user32, ctypes.windll.kernel32
-    user32.GetClipboardData.restype = wintypes.HANDLE
-    kernel32.GlobalLock.restype = ctypes.c_void_p
-    if not user32.OpenClipboard(None):
-        raise RuntimeError("OpenClipboard failed")
-    try:
-        handle = user32.GetClipboardData(_CF_HDROP)
-        if not handle:
-            return None
-        pointer = kernel32.GlobalLock(handle)
-        size = kernel32.GlobalSize(handle)
-        data = ctypes.string_at(pointer, size)
-        kernel32.GlobalUnlock(handle)
-        return data
-    finally:
-        user32.CloseClipboard()
+    from je_auto_control.utils.clipboard.win32_clipboard_api import (
+        get_clipboard_format,
+    )
+    return get_clipboard_format(_CF_HDROP)

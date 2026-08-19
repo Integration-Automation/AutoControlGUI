@@ -49,14 +49,53 @@ only when documented here with a migration path.
   `ac_foreground_window`, `ac_window_rect`). `list_windows` takes
   `titled_only`, and `move_window_by_title` keeps the window's current size
   when width/height are omitted.
+- Window ownership: `foreground_window_process_id` and `window_process_id`
+  (`AC_foreground_window_pid`, `AC_window_pid`; `ac_foreground_window_pid`,
+  `ac_window_pid`; two Script Builder specs), on the Windows backend
+  `get_window_process_id`. A title is whatever the application decides to
+  display, so it cannot answer "which program is the user actually in front
+  of" — the process id can. Unavailable reads as `None` (`{"pid": 0}` on the
+  JSON surfaces) rather than a bare `0`, which a caller could otherwise match
+  against a process list and hit the System Idle Process.
+- Windows by owning process: `windows_for_process_id` and
+  `minimize_windows_for_process` (`AC_windows_for_pid`,
+  `AC_minimize_windows_for_pid`; `ac_windows_for_pid`,
+  `ac_minimize_windows_for_pid`; two Script Builder specs). A multi-process
+  application cannot be addressed by title — its windows are named after
+  whatever they display and several of its processes have no window at all —
+  so ownership is the stable key.
+- Input posted to a window without focusing it: `post_key_to_window` and
+  `post_click_to_window` (`AC_post_key_to_window`, `AC_post_click_to_window`;
+  `ac_post_key_to_window`, `ac_post_click_to_window`; two Script Builder specs),
+  on the Windows backend `get_focused_control`, `deepest_child_at`, `post_key`
+  and `post_click`. They resolve the window by title *substring* like every
+  other function here, and post to the control that actually has keyboard
+  focus — or, for a click, to the deepest child under the point, in that
+  child's client coordinates. Posting to the top-level frame (what the older
+  `send_key_event_to_window` does) types nothing in any application with child
+  controls: measured on Character Map, the frame swallowed the key while the
+  focused edit accepted it. Both return whether the messages were queued, and
+  posting remains best effort — applications reading raw input or checking the
+  foreground ignore posted messages.
 - `utils/url_canon` reaches its delivery surfaces: `canonicalize_url`,
   `normalize_url`, `urls_equal`, `build_query` and `parse_query` are exported
   from the facade, with `AC_canonicalize_url` / `AC_normalize_url` /
   `AC_urls_equal`, the matching `ac_*` MCP tools, and three Script Builder
   specs. The module and its tests already existed; only the wiring is new.
+- `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL` — how an operator declares what the
+  library cannot read back. `flat` says pointer acceleration is off for the
+  ydotoold device, so an absolute move through the ydotool fallback is exact
+  and needs no warning; `strict` refuses that move instead of letting a click
+  land somewhere else; unset (or any unrecognised value, which says so and
+  falls back) keeps the existing warn-once-and-move behaviour. The libei path
+  is absolute at the protocol level and is not affected either way.
 
 ### Removed
 
+- `je_auto_control.linux_wayland._detect.WAYLAND_GDBUS` is gone, along with the
+  `gdbus` probe it named: the desktop-portal capture tier no longer shells out
+  to any binary. `_detect` is a private module and nothing else referenced the
+  constant.
 - **Breaking — `je_auto_control.windows.listener` is gone**, with its
   `Win32KeyboardListener` and `Win32MouseListener` classes. Recording moved to
   `windows/record/win32_input_hook.py`, after which nothing in the package or
@@ -71,6 +110,73 @@ only when documented here with a migration path.
 
 ### Changed
 
+- **The `xdg-desktop-portal` capture tier no longer needs `gdbus` installed.**
+  It speaks D-Bus directly, so `linux_wayland.portal.is_available()` now
+  reports whether a session bus address is set rather than whether the `gdbus`
+  binary is on `PATH`. This widens where the last-resort tier runs; the install
+  hint in the "no capture tool found" error and the `screen_capture`
+  diagnostics check were reworded to match.
+- **`LibeiBackend.scroll()` sends whole wheel clicks, not raw detent counts.**
+  libei measures discrete scroll in 120ths of a click, so the previous call
+  asked for 1/120th of the scroll requested and libei logged it as a client
+  bug. Measured against a real EIS server (`docker/eis_verify.py`).
+- **Wayland `mouse.scroll()` goes through libei where libei is up, instead of
+  always shelling out to ydotool.** Motion, buttons and keys already did;
+  scroll was held back because its sign was a guess. The two paths count
+  wheel detents in opposite directions — this repository's
+  `wayland_scroll_direction_*` constants are in the kernel's `REL_WHEEL`
+  frame, which is what ydotool writes (positive is up), and libei is in the
+  `wl_pointer` frame (positive is down) — so the vertical axis is negated on
+  the way to libei and the horizontal one is not. No API change: scrolling on
+  a libei host no longer needs ydotool or a uinput daemon at all.
+- **A libei emission that a live backend refuses now falls back to the CLI,
+  as `libei`'s own docstring already claimed it did.** Only the *connection*
+  degraded; a compositor that paused a device, or a session that ended
+  between two calls, raised out of `set_position` / `press_key` / `hotkey`
+  instead of reaching ydotool. A chord refused part-way releases the keys it
+  already pressed before handing over, so no modifier is left held.
+- **`LibeiUnavailable` derives from `AutoControlException`** (as well as
+  `RuntimeError`, which existing probes catch). It was a bare `RuntimeError`,
+  so it escaped every `except AutoControlException` containment boundary —
+  the executor, the poll loops, the request handlers and the GUI slots.
+- **A libei session that completed its handshake is released instead of
+  abandoned.** `ei_unref` segfaults on libei 1.3.901 only for a context whose
+  backend opened and whose handshake never progressed; with an EIS peer to
+  test against, the live case is measurably safe. Teardown no longer leaks a
+  context and a file descriptor per process.
+
+- **`POST /execute` and `POST /execute_file` answer `400`, not `500`, for a
+  command name the executor does not know.** Both used to funnel every
+  executor failure into `500 {"error": "execute_action failed"}`, so a client
+  could not tell a typo in its own request from a broken server. Every name in
+  the list — nested flow-control bodies included — is now checked before
+  anything runs; an unrecognised one comes back as
+  `400 {"error": ..., "unknown_commands": [...]}` naming all of them, and
+  nothing was executed. `/execute_file` answers the same way for a path that
+  is unreadable or holds something that is not an action list. A client that
+  keyed off `500` to detect a bad request must key off `400` instead.
+- **Windows clipboard calls wait out a clipboard another process is holding
+  open** instead of failing immediately. Only one process may have it open at
+  a time, so `RuntimeError: OpenClipboard failed` used to escape whenever
+  anything else was mid-copy — roughly one call in a thousand on a live
+  desktop. `win32_clipboard_api.open_clipboard()` is the one place that opens
+  it now, retrying for about 200 ms; the failure is still raised after that.
+  Callers that relied on an immediate failure will see a call take up to
+  200 ms longer in the contended case.
+
+- **`send_key_event_to_window` / `send_mouse_event_to_window` now actually
+  reach the target.** They posted to the top-level frame, but keyboard messages
+  go to the control that *has focus* and a click belongs to the child under the
+  point in that child's client coordinates — so for any window with child
+  controls they did nothing at all while still reporting success. They delegate
+  to `post_key_to_window` / `post_click_to_window`. Two visible consequences:
+  the key sender now matches the window title as a *substring* (it required an
+  exact title before, via `FindWindowW`), and the mouse sender accepts a title
+  string as well as the hwnd it always took.
+- `save_window_layout` now snapshots only titled windows (its documented
+  behaviour). Untitled entries could never be restored — `restore_window_layout`
+  addresses a window by title and skips blank ones — so they only inflated the
+  saved count, by roughly half on a real desktop.
 - `set_clipboard_image` accepts PNG bytes **or** a path to any Pillow-readable
   image, and `get_clipboard_image` / `set_clipboard_image` are now exported
   from `je_auto_control.utils.clipboard` and the top-level facade, with
@@ -131,10 +237,120 @@ only when documented here with a migration path.
 
 ### Deprecated
 
+- `send_key_event_to_window` and `send_mouse_event_to_window` — use
+  `post_key_to_window` / `post_click_to_window`. Both now emit a
+  `DeprecationWarning` and delegate to the working implementation; see Changed
+  for the behaviour that changes.
+
 - New integrations should avoid the eager, historical top-level import surface
   and import stable entry points from `je_auto_control.api`.
 
 ### Fixed
+
+- **Wayland: an absolute mouse move through the ydotool fallback counted from
+  the wrong origin.** `ydotool mousemove --absolute` emits no absolute event —
+  it drives the cursor into the corner the compositor clamps to and then moves
+  relative to it, and that corner is the top-left of the output layout rather
+  than layout `(0, 0)`. On a layout with a monitor left of the primary one the
+  two differ by the layout origin, so `set_position(x, y)` landed a monitor's
+  width away from the coordinate the capture path had located. It now
+  subtracts `layout_origin()`, the same correction `grab_image` applies.
+  Measured against a real wlroots session consuming the real ydotool device
+  (`docker/Dockerfile.seat`, the new `seat-verification` job). Layouts whose
+  outputs all sit at non-negative positions are unaffected.
+- **Wayland: the same call is only pixel-accurate where pointer acceleration
+  is off.** The displacement ydotool sends is relative motion, so the
+  compositor accelerates it — libinput's default adaptive profile moves the
+  cursor exactly twice as far as asked. This cannot be corrected from inside
+  the library, because the factor is the compositor's setting; the backend now
+  logs the caveat once per process rather than mispositioning in silence.
+  Disable acceleration for the ydotoold device (sway: `input type:pointer
+  accel_profile flat` and `pointer_accel 0`), or install `liboeffis` so the
+  libei path — absolute at the protocol level — is used instead. Once it is
+  off, `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL=flat` silences the warning, and
+  `=strict` refuses the move rather than warn about it.
+
+- **The Wayland `xdg-desktop-portal` screen-capture tier could never have
+  succeeded.** `org.freedesktop.portal.Screenshot` returns a request handle and
+  delivers the image later as a `Response` signal **directed at the connection
+  that made the call**; the bus routes a directed message to its destination
+  and nowhere else. The implementation listened on a `gdbus monitor`
+  subprocess and called from a separate `gdbus` invocation — two connections,
+  so the listener was never the addressee. Against a real `dbus-daemon` the
+  capture ran out its full 30-second timeout every time. The tier now speaks
+  D-Bus itself on a single connection, subscribing to the request path it
+  predicts before it calls. No API changed; a path that always failed now
+  works.
+- **On Wayland, a monitor placed left of or above the primary one made every
+  capture path read the wrong pixels.** The compositor lays its outputs out on
+  one plane, and that plane starts at a negative coordinate as soon as an
+  output sits left of (or above) the origin — a `-1280,0` + `0,0` pair is one
+  2560x720 layout whose top-left pixel is at x=-1280. Three places assumed the
+  layout began at `(0, 0)`: `screen.size()` returned `max(x + width)`, the
+  layout's *right edge* (1280) rather than its width (2560), so everything
+  that composes size with a capture — the mss-shaped shim's monitor list,
+  `enumerate_monitors`, the recorder, the WebRTC host, the MCP monitor grab —
+  asked for half the desktop and called it the whole screen; the region crop
+  taken when the capture tier cannot apply one itself (gnome-screenshot,
+  spectacle, the portal, an operator's own command) cropped in layout
+  coordinates on a layout-origin image, which returns black padding instead of
+  the left-hand monitor; and `grab_logical` reported an origin of `(0, 0)`, so
+  a template or OCR match found on that monitor was reported 1280 px to the
+  right of where it was seen and the click landed on the wrong screen. The
+  Wayland backend now publishes `layout_origin()`, `size()` returns the
+  bounding box's size, the crop subtracts the origin, and the generic capture
+  layer exposes `screen_grabber.backend_layout_origin()` for the paths that
+  map a pixel back to a screen coordinate. Verified against a real headless
+  sway session laid out that way — the `wayland-verification` job now runs its
+  27 checks over both layouts.
+
+- **On Wayland, `set_position` could move nothing at all and report success.**
+  libei accepts absolute motion only inside the regions the compositor
+  advertises for the pointer, and it discards a point outside every one of
+  them without a return code, an event or an error — so the move was lost in
+  silence and never reached the ydotool fallback that could have made it.
+  Region offsets are `uint32`, so no compositor can advertise a region left of
+  or above the origin, while the layout space this project addresses starts at
+  `layout_origin()` and goes negative on the same "monitor left of the primary"
+  desktop fixed above: on such a layout the input and capture halves named
+  different pixels, and the pointer went nowhere rather than to the wrong
+  screen. The libei sender now reads the device's regions, sends a covered
+  coordinate unchanged, retries an uncovered one normalised by the layout
+  origin, and refuses what neither covers so `_select_input` hands the move to
+  ydotool. A device that advertises no region is unaffected. Verified against a
+  real EIS peer — the `eis-verification` job now runs 20 checks, five of them
+  on this coordinate space. The ydotool path's own origin remains unverified
+  and unchanged; see `Progress.md`.
+
+- **The Wayland ydotool fallback reported success while sending nothing on
+  Debian and Ubuntu.** ydotool 1.0 replaced its entire command line, and every
+  argument this backend builds arrived in that release (`mousemove
+  --absolute`, `mousemove --wheel`, hex `click` bitmasks, `key CODE:STATE`).
+  Debian bookworm, Ubuntu 22.04 and Ubuntu 24.04 all ship 0.1.8 under the name
+  `ydotool`, and 0.1.8 exits **0** for those arguments while emitting no
+  events at all — including for the ones it rejects with `unrecognised
+  option`. Since the backend runs ydotool with `check=True`, nothing raised:
+  clicks, keystrokes and cursor moves silently did nothing and every call
+  reported success. AutoControl now classifies the installed ydotool once per
+  process and raises `AutoControlException` naming the fix instead of
+  emitting. **Migration**: install ydotool 1.0+ (Arch, Fedora and Debian
+  unstable package it; Debian trixie packages none at all), or set
+  `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` to drive XWayland. A version the
+  probe does not recognise is allowed through, so this cannot block a future
+  release. The two `ydotool` install hints no longer suggest `apt install
+  ydotool`, which is what produced the broken version.
+
+- **Four clipboard writers never worked on 64-bit Windows**:
+  `set_clipboard_files`, `set_clipboard_html`, `set_clipboard_rtf` and
+  `set_clipboard_csv` all raised `OverflowError: int too long to convert` on
+  every call, and the matching readers failed whenever that format was actually
+  present. Each module declared `restype` but not `argtypes`, so ctypes passed
+  the pointer-width memory handle as `c_int`. The prototypes and the
+  open/alloc/lock dance now live once in
+  `je_auto_control/utils/clipboard/win32_clipboard_api.py`, on private `WinDLL`
+  handles so the declarations cannot leak into other user32 callers, and
+  `rich_clipboard`, `clipboard_rich_formats`, `clipboard_files` and
+  `clipboard_formats` all go through it.
 
 - `write` failing a whole string on the first character outside the 192-entry
   virtual-key table — on a US layout that includes `, . / : ? ! _ + @ %` and

@@ -54,15 +54,16 @@ class Frame:
 
 
 def _default_sampler(region: Optional[Sequence[int]]) -> Frame:
-    """Use PIL ImageGrab to snapshot once. Fails closed on missing dep."""
+    """Snapshot once through the platform's grabber. Fails closed on missing dep."""
+    from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
     try:
-        from PIL import ImageGrab
+        grabber = image_grabber()
     except ImportError as error:
         raise RuntimeError(
             "Smart waits require Pillow for screen capture.",
         ) from error
     bbox = tuple(int(v) for v in region) if region else None
-    image = ImageGrab.grab(bbox=bbox).convert("RGB")
+    image = grabber.grab(bbox=bbox).convert("RGB")
     return Frame(width=image.width, height=image.height,
                   pixels=image.tobytes())
 

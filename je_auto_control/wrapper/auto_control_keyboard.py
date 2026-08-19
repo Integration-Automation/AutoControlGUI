@@ -1,4 +1,5 @@
 import sys
+import warnings
 from typing import Optional, Union, Tuple
 
 from je_auto_control.utils.exception.exception_tags import (
@@ -231,33 +232,41 @@ def hotkey(key_code_list: list, is_shift: bool = False) -> Optional[Tuple[str, s
 
 def send_key_event_to_window(window_title: str, keycode: Union[int, str]) -> None:
     """
-    將鍵盤事件送到指定視窗
-    Send a key event to a specific window
+    將鍵盤事件送到指定視窗（**已棄用**，改用 ``post_key_to_window``）
+    Send a key event to a specific window. **Deprecated** — use
+    ``je_auto_control.post_key_to_window``.
 
-    :param window_title: 視窗標題 Window title
+    這支原本把訊息投遞給**頂層視窗**，但鍵盤訊息是送給**有焦點的子控制項**的，
+    所以對任何有子控制項的程式都等於什麼都沒做——而且照樣回報成功。實測（字元
+    對應表）：投遞給外框，一個字都沒進去；投遞給焦點控制項，字就進去了。現在
+    轉呼叫 ``post_key_to_window``，行為因此**改變**（會真的作用），並發出
+    ``DeprecationWarning``。視窗標題也跟著改成**片段比對**，與其餘視窗函式一致。
+
+    This posted to the top-level frame, but keyboard messages go to the control
+    that *has focus*: it silently did nothing in any application with child
+    controls while still reporting success. It now delegates to
+    ``post_key_to_window``, so the behaviour changes — it works — and the title
+    is matched as a substring like every other window function.
+
+    :param window_title: 視窗標題片段 Window title substring
     :param keycode: 鍵盤代碼或字串 Keycode or string
     """
+    warnings.warn(
+        "send_key_event_to_window is deprecated; use post_key_to_window. The "
+        "old implementation posted to the top-level frame and silently did "
+        "nothing for windows with child controls.",
+        DeprecationWarning, stacklevel=2,
+    )
     autocontrol_logger.info(f"send_key_event_to_window, window={window_title}, keycode={keycode}")
+    if sys.platform == "darwin":
+        return
+    from je_auto_control.wrapper.auto_control_window import post_key_to_window
     try:
-        # macOS 不支援直接送鍵盤事件
-        if sys.platform == "darwin":
-            return
-
-        # 解析 keycode Resolve keycode
-        if isinstance(keycode, int):
-            get_key_code = keycode
-        else:
-            get_key_code = keyboard_keys_table.get(keycode)
-            if get_key_code is None:
-                raise AutoControlKeyboardException(f"Key not found: {keycode}")
-
-        # 呼叫底層 API Send event
-        keyboard.send_key_event_to_window(window_title, keycode=get_key_code)
-
-        # 紀錄動作 Record action
-        record_action_to_list("send_key_event_to_window", {"window_title": window_title, "keycode": get_key_code})
-
-    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
+        posted = post_key_to_window(window_title, keycode)
+        record_action_to_list(
+            "send_key_event_to_window",
+            {"window_title": window_title, "keycode": keycode, "posted": posted})
+    except Exception as error:  # noqa: BLE001 - preserved contract: never raises
         record_action_to_list("send_key_event_to_window", {"window_title": window_title, "keycode": keycode}, repr(error))
         autocontrol_logger.error(
             f"send_key_event_to_window failed, window={window_title}, keycode={keycode}, error={repr(error)}"

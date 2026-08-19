@@ -1,5 +1,490 @@
 # 本次更新 — AutoControl
 
+## 本次更新 (2026-08-19) — Wayland 两个等人拍板的取舍,拍板了
+
+`Progress.md` 上挂着两个 `DECIDE`:缺的不是活，是决定。两件事其实是同一个问题犯两次
+——一个合成器的设置,库**量得到**却**读不回来**,所以它必须停止假装自己知道。
+
+- **指针加速度改成由操作者声明,库照信。** 量到的事实不变:
+  `ydotool mousemove --absolute` 发的是相对移动,libinput 默认的 adaptive profile 会
+  把它加成两倍,而倍率没有任何客户端读得回来。没拍板的是「那要怎么办」——继续警告后
+  照发、直接拒绝、还是让操作者自己讲。直接拒绝会让每一台没有 `liboeffis` 的 Wayland
+  机器整条 `set_position` 不能用,所以答案是声明:
+  `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL=flat` 表示 ydotoold 的设备已经关掉加速度,
+  移动就静静地、准确地发出去;`=strict` 表示宁可拒绝这次移动,也不让点击落在别的地方;
+  不设置就维持现在的「警告一次后照样移动」,所以今天能跑的东西明天照样能跑。
+  值打错会退回警告模式,**而且会讲出来**——shell profile 里的一个错字,不可以静静地
+  把一次移动升级成「可信赖的精确」。整个判断只挂在 ydotool 这条路上;libei 在协议层
+  本来就是绝对坐标。
+- **Wayland 截取里的软件光标,写进文档,不绕过。** 这是 `seat-verification` 顺手量到
+  的:项目里没有任何一条截取带 `-c`,也就是没有人请求光标,而光标还是在图里。原因不在
+  我们这边——只要 backend 没有光标平面,wlroots 就会画**软件光标**,而软件光标是合成进
+  输出缓冲区的,`wlr-screencopy` 交出来的正是那一份。headless 永远处在这个状态;
+  真桌面上只要跑 `WLR_NO_HARDWARE_CURSORS=1` 也一样。Windows 的 BitBlt 与 X11 那条路
+  都不含光标,所以这是**只在 Wayland 出现的不一致**;指针压在目标上的时候,定位器、
+  模板匹配与 OCR 看到的就是目标中间有一个光标形状的洞。两条绕法——截取前把指针挪开再
+  挪回来、或匹配时把指针周围遮掉——都得先知道指针在哪,而 Wayland 不让客户端读光标
+  位置;靠进程内的记录去猜,用户一动实体鼠标就过期,而遮错位置比看得见光标更糟。
+  所以改成写下来:写进 capability matrix、三份 README,以及诊断包——`screen_capture`
+  检查现在会带 `cursor_may_be_captured`,让那份「解释定位器为何失败」的报告自己说出
+  原因。检查本身照量到的样子断言,哪天 wlroots 开始尊重 `overlay_cursor`,CI 会当场
+  红掉来通知我们。
+
+## 本次更新 (2026-08-19) — 「会吃 libinput 设备的合成器」只差三个环境变量
+
+`ydotool mousemove --absolute` 不是绝对移动。它不发任何 ABS 事件:先在两轴各发一次
+`INT32_MIN` 的相对移动,把光标推到合成器夹取的那个角落,再把目标当成相对位移发出去。
+**那个角落到底在哪**、以及**位移在路上被合成器做了什么**,是 Wayland 输入路径最后
+两个没有答案的问题——而且两个都被记成「需要一台跑真桌面、会吃 libinput 设备的 VM」。
+
+- **两个都不需要 VM。** wlroots 吃 `WLR_BACKENDS=headless,libinput`:输出保持虚拟,
+  输入那一半是真的 libinput backend。libseat 的 builtin backend 不靠 logind 就能打开
+  设备,而 `SEATD_VTBOUND=0` 让它不要去抢一个容器根本没有的 VT。第四个条件最容易漏:
+  libinput 是通过 udev 枚举设备,不是通过 `/dev`,所以 `systemd-udevd` 必须在 ydotoold
+  创建设备**之前**就已经在跑。四个都到位之后,ydotoold 的 uinput 设备就是一个普通的
+  seat 设备,`grim -c` 会把光标合成进截图里,合成器就能用布局坐标回答问题。
+- **那个角落是布局的左上角,不是布局坐标的 `(0, 0)`。** 只有在所有输出都在非负位置时
+  这两点才是同一点。任何「主屏左边还有一台显示器」的桌面,两者就差一个布局原点——所以
+  在原点为 `-1280` 的布局上,没有转换的「布局 `(0, 0)`」会把光标送到**隔壁那台屏幕**,
+  差 1,280 像素。`mouse.set_position` 现在会先减掉 `layout_origin()` 再交给 ydotool,
+  这正是抓图路径早就在做的同一个修正;两条输入路径共用的那个查询搬进了
+  `linux_wayland/_layout.py`,libei 与 ydotool 不会再对「原点是什么」各说各话。
+- **剩下的距离则被指针加速度放大。** 发出去的位移是相对移动,所以 libinput 会加速它:
+  对着真的 wlroots session 量到的是,默认的 adaptive profile 让光标离那个角落的距离
+  正好是请求的**两倍**——因为 `--absolute` 的两个事件发在同一个 frame 里,速度直接把
+  profile 打到上限。把 `accel_profile flat` 加上 `pointer_accel 0` 之后,同一个调用
+  就精确到像素。ydotool 自己的 `--help` 一直都写着「You need to disable mouse speed
+  acceleration for correct absolute movement」;后端现在会每个进程记一次这个警告,而不是
+  让点击安静地落在错的地方。库这一侧再多做不了什么——那个倍率是合成器的设置,
+  调用端读不回来。
+- **新的 `seat-verification` job 把这些全部钉住。** `docker/Dockerfile.seat` 跑的是
+  抓图镜像的同两种布局,每种 14 项:sway 真的握着 ydotool 设备、`--absolute (0, 0)`
+  会把光标画在布局的第一个像素上、关掉加速度后移动是一像素对一像素、没转换的
+  `(0, 0)` 会打不中它指名的那台屏幕、`set_position` 减掉的正好是原点而且在两台屏幕上
+  都落在指定的像素、以及加速倍率就是量到的 2 倍。里面没有任何一项依赖光标主题:每个
+  主张都是两张截图之间的差,光标图片相对于热点的偏移会自己抵消掉。
+- **顺手抓到的一件事。** 在这台合成器上,`grim` 明明没有要求叠上光标,截回来的图里
+  还是有光标——因为只要 backend 没有光标平面,wlroots 就会画**软件光标**(headless
+  永远如此,任何驱动不给平面、或用户设了 `WLR_NO_HARDWARE_CURSORS=1` 的 session
+  也是)。所有定位器、模板匹配与 OCR 都走同一条抓图,所以指针会在它压着的东西上挖出
+  一个指针形状的洞。该检查照量到的样子记下这个行为,要怎么处理则列进 `Progress.md`。
+
+## 本次更新 (2026-08-19) — 抓图用的 portal 本来就不可能成功,真的 bus 讲出来了
+
+- **`xdg-desktop-portal` 的回答是「指名发给发出调用的那条连接」的信号。**
+  `Screenshot` 返回的是一个 *request handle*,不是图;图稍后才以
+  `org.freedesktop.portal.Request::Response` 送达,收件人是调用者的 unique bus name。
+  bus 对指名消息只发给收件人,所以别的连接再怎么加 match rule 也收不到。
+- **旧的做法是两条连接。** 先起一个 `gdbus monitor` 子进程,再用第二次 `gdbus`
+  调用发请求,然后拿两条正则去读 monitor 的 stdout。每次 `gdbus` 都会用自己的
+  unique name 开一条自己的连接,所以在听的那个进程从来就不是收件的那个。在真的
+  `dbus-daemon` 上量到的:monitor 看得到调用经过,之后什么都不再打印,抓图每次都走完
+  整整 30 秒超时。唯一看得到指名信号的是完整的 bus monitor（`dbus-monitor`,它会向
+  bus 要 `BecomeMonitor`）——为了一张兜底截图去换「观察用户 session bus 上每一条
+  消息」的权限,不划算。
+- **这一层现在自己讲 D-Bus,而且只用一条连接。** `linux_wayland/_dbus_client.py`
+  是只用标准库写的 session bus 客户端:连接、SASL EXTERNAL 认证、`Hello`、
+  `AddMatch`、一次方法调用,然后读到对得上的信号为止。它刻意不是通用绑定——没有
+  property、没有 introspection、不导出对象、不传文件描述符（需要那一项的那一个调用
+  仍然交给 liboeffis）。`portal.py` 会**先**用自己的 unique name 推算出 request path
+  并订阅,再发调用;portal 若不理会 `handle_token`,返回的 handle 也会一起跟。
+- **而且这是拿掉一个依赖,不是加一个。** 这一层原本需要装 `gdbus`（glib2),现在只要
+  有 session bus 就行,所以这条最后兜底的抓图路径能用的桌面比以前**更多**。安装提示
+  与诊断检查都改成这么说了。
+- **在真的 bus 上整条验过。** 新的 `portal-verification` job 跑真的 `dbus-daemon`、
+  真的 portal 实现与真的 client:抓回来的 PNG 字节解得开,而且就是 portal 画的
+  那几个像素,路径是含空格、percent-escape 过的,读完之后 portal 那个文件不见了。
+  portal 没能交出图的每一种收场也都跑过——对话框被关掉、对话框一直开着、成功但没有
+  URI、URI 不是本机文件——每一种都必须在 AutoControl 自己的时限内 fail closed。
+
+## 本次更新 (2026-08-19) — RemoteDesktop portal 握手也从来不需要 GNOME VM
+
+- **portal 是 D-Bus 接口,不是合成器功能。** 在 GNOME 与 KDE 上要接到 libei,得跑
+  `CreateSession` → `SelectDevices` → `Start` → `ConnectToEIS`,最后由 bus 交出一个
+  EIS 文件描述符。这件事本来被记成「没有 GNOME VM 就验不到」,理由是
+  `xdg-desktop-portal-wlr` 只做 ScreenCast 与 Screenshot、没有 RemoteDesktop——那是把
+  「没有容器附一个」当成了「没有容器当得了一个」。对 `liboeffis` 而言,谁占住
+  `org.freedesktop.portal.Desktop`、谁回答那四个调用,谁就**是** portal。
+- **所以验证自己去占那个名字。** `docker/portal_server.py` 是一个跑在私有 session bus
+  上的真 D-Bus 服务,它的 `ConnectToEIS` 交回去的是连到 `eis` 那个镜像用的同一台真
+  `libeis` server 的活连接。真的 `liboeffis` 跑完真的握手;出来的描述符承载得起一个
+  真的 EI session;通过它发出的按键、绝对移动与按钮边沿,由对面一个独立实现记录下来。
+- **它确定了什么。** 四个调用按规范的顺序、发到 client 自己推算出来的 request path;
+  `SelectDevices` 要到的是键盘与指针、不多要——所以用户被要求同意的范围就是这个后端
+  真正需要的范围,`OEFFIS_DEVICE_DEFAULT` 也不是那个 `= 0` 的 all-devices 哨兵值;
+  交回来的描述符是一个活的、由调用端持有并负责关闭的 socket——这正是把它交给
+  `ei_setup_backend_fd`（一个会接管所有权的函数）之所以正确、而不是双重关闭的原因。
+- **以及每一种拒绝。** 同意对话框被关掉、对话框一直开着、描述符被扣住、portal 把
+  session 关掉、portal 旧到根本没有 `ConnectToEIS`、bus 上根本没有 portal:每一种都
+  必须在本项目自己的时限内变成拒绝,而不是卡住或悄悄降级。`OEFFIS_EVENT_CLOSED` 这条
+  分支从来没有 peer 驱动得了,现在有了。
+- **仍然没有宣称的是什么。** 同意对话框作为「对话框」本身。CI 里没有人去按它,所以
+  真的 mutter 对话框长什么样、真人会让它开着多久,那仍然是 mutter 的事。对话框
+  *产生的东西*——准、拒、沉默——三种都跑过了。
+
+## 本次更新 (2026-08-19) — 一件记错了的打包事实
+
+- **Debian trixie 有 `liboeffis`。** `Progress.md` 原本写没有,并据此推论 libei 快速
+  路径在 Debian／Ubuntu 上等于是关的。实测:`liboeffis1` 1.3.901-1 就在 trixie/main,
+  提供 `liboeffis.so.1`。真正成立、而且对用户真正有影响的是另一件事:它是**独立的
+  二进制包**,`libei1` 并不依赖它——所以只装 libei 的机器上 portal 这条路仍然是关
+  的,`connect()` 会退回 GNOME 与 KDE 都不会开的 `eis-0` socket。要走快速路径,
+  `liboeffis` 得自己装。
+
+## 本次更新 (2026-08-19) — 主屏幕左边多一块屏幕,Wayland 的抓取整条都读错
+
+- **Wayland 没有「单块屏幕」这回事,而唯一那个平面也不一定从 `(0, 0)` 开始。**
+  合成器把所有 output 排在同一个平面上,只要有一块在原点的左边或上面,这个平面的
+  原点就是负的——那正是「我的第二块屏幕在左边」对合成器的意思。sway 的 headless
+  backend 收 `output HEADLESS-1 position -1280 0`,所以这是 CI 立得起来的布局:
+  两个 1280x720 的 output、一张 2560x720 的抓取、左上角那个像素在 x=-1280。
+- **`size()` 返回的是布局的右缘,不是宽度。** 它算的是各 output 的 `max(x + width)`,
+  在上面那个布局是 1280,而 `grab_image()` 回来的画面宽 2560。凡是把这两者兜在一起
+  的人都信了小的那个:mss shim 的 monitor 列表（连带 `enumerate_monitors`）、屏幕
+  录制、WebRTC host、MCP 的 monitor 抓取,全都去要了一块只有桌面一半大的矩形,
+  然后当成整个画面回报。
+- **不能自己套区域的层级,裁切裁在错的坐标空间。** 只有 grim 吃几何参数;
+  gnome-screenshot、spectacle、portal 与 `JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND`
+  都是把整个布局交回来、由 AutoControl 事后裁切。那个裁切用的是布局坐标,而图的
+  (0,0) 是布局原点,所以要 `[-1275, 5, -1175, 55]`（左边那块屏幕上的一块）等于向
+  Pillow 要一个在画面左外侧 1275 px 的方框,拿回来的是黑色填充。
+- **而且比对到的东西会被回报在错的屏幕上。** `grab_logical()`——模板搜索、OCR 与
+  visual match 背后的那个抓取——的原点是读 `GetSystemMetrics` 的,在 Windows 以外
+  无话可说,于是一律返回 `(0, 0)`,每个命中都被回报在实际位置的右边 1280 px 处。
+  这种错的表现是「点到别块屏幕」,比「找不到」更难查。
+- **修在接缝上,不是修在每个调用端。** Wayland backend 发布 `layout_origin()`;
+  `size()` 返回 bounding box 的**大小**;`grab_image` 裁切前先扣掉原点;
+  `screen_grabber.backend_layout_origin()` 则是 `grab_logical` 与 mss shim 去问的
+  那一个,让「自己抓取屏幕的后端」有办法说出这张画面从哪里开始。通用库本来就
+  看得见的后端（Windows／macOS／X11）什么都不用发布,行为完全不变——原点只会被
+  问到,不会被猜。
+- **对真的合成器两种布局都验过。** `wayland-verification` job 现在把那 27 项检查
+  跑两遍:一遍是两个 output 从原点并排,一遍是左边那个在 x=-1280。第二遍才是把
+  负原点整条钉死的那一遍——grim 的负 `-g`、回报的尺寸、`layout_origin()`、
+  mss shim 的 monitor 矩形、`grab_logical()` 的原点,以及把操作者自定义指令指向 grim
+  之后、让一张**真的**整布局 PNG 走过那条必须位移的裁切路径。
+
+## 本次更新 (2026-08-19) — 同一个布局问题的输入侧:libei 把移动悄悄丢掉了
+
+- **落在所有 region 之外的绝对移动,libei 会直接丢掉,而且什么都不说。**
+  没有返回码、没有事件、调用方看不到任何错误——`ei_device_pointer_motion_absolute`
+  就是不把这个事件送上线。`set_position` 于是像光标真的移动过一样正常返回。
+  这是对真的 EIS 对端量出来的,不是推论:设备只提供一个 `(0, 0, 1920, 1080)`
+  的 region 时,`(1919, 1079)` 会到,`(1920, 1080)` 在 server 端连一个事件都没有。
+- **而那些 region 所在的坐标空间,不一定就是布局的坐标空间。** region 的 offset
+  是 `uint32`,所以没有任何合成器**能**声明一个在原点左边或上面的 region——但本项目
+  的布局空间是从 `layout_origin()` 开始的,只要有一块屏幕在主屏幕左边就会变成负的。
+  那正是抓取那一半刚修好的同一种桌面。于是两半差了整整一个原点,也就是
+  `get_pixel(x, y)` 与 `set_position(x, y)` 指向不同像素的那个情况——而本来会跑到
+  隔壁屏幕的光标,实际上是安安静静地哪里都没去。
+- **`LibeiBackend` 现在会读设备的 region,再把坐标映射进去。** 绑上了
+  `ei_device_get_region` 与四个 `ei_region_get_*`;`_region_point` 对有覆盖的坐标
+  原样送出,对没覆盖的改用减掉布局原点后的坐标再试一次,两者都不覆盖就拒绝。
+  没有声明任何 region 的设备接受任何坐标,原样通过——这一点同样是量出来的,而那
+  就是单屏幕的常见情况,一分钱都不多花。
+- **拒绝是有用的结果,不是失败。** 它是 `LibeiUnavailable`,所以
+  `_select_input.emitted` 会像处理「设备被暂停」那样,把这次移动交给 ydotool 那条路。
+  libei 一直被写成快速路径而非唯一路径;这个 bug 的真正问题是:被丢掉的移动从来
+  到不了后备路径,因为没有人知道它被丢掉了。拒绝时也不会送 frame——什么都没有被
+  缓冲,那里送一个 frame 只会把上一次发送留在设备上的东西提交出去。
+- **布局原点只在坐标没中的时候才会去问。** 它要花一个 `wlr-randr` 子进程,所以不会
+  出现在每一次普通鼠标移动的路径上;在 GNOME 与 KDE 上它返回 `(0, 0)`——那在那里是
+  正确答案而不是退路,因为那些合成器自己就会把布局归一化。
+- **`eis-verification` job 多了五项对真协议的检查。** client 读回来的 offset 就是
+  合成器声明的那个;位于 `x=1280` 的 region,往内 100 px 的点要送 `1380` 而不是
+  `100`;libei 到今天仍然一声不吭地丢掉 region 外的移动——这是整个防护所依据的测量,
+  所以哪天 libei 改成夹取,这项会当场说出来;AutoControl 会拒绝这种移动而不是弄丢它;
+  以及在原点为 `-1280` 的布局上,`(-1280, 10)` 到达 server 时是 `(0, 10)`。
+  这个 job 现在跑 20 项。
+- **这件事没有解决的部分。** ydotool 的 `mousemove --absolute` 有它自己的原点——
+  它夹到合成器的左上角,再把目标当成相对位移送出——那个角落是不是布局原点,仍然需要
+  一台真的会吃 libinput 设备的合成器才验得到。它继续留在 `Progress.md`,不会靠猜测
+  去改。
+
+## 本次更新 (2026-08-19) — ydotool 一直回报成功,其实什么都没做
+
+- **`apt install ydotool`——这个 backend 自己打印的安装提示——装到的版本跑不动它送的
+  命令行,而且是用「返回 0」来表达的。** ydotool 1.0 把整套 CLI 换掉了,而 Wayland
+  backend 送的每一个参数都是那一版才有的:`mousemove --absolute`、`mousemove
+  --wheel`、`click` 的十六进制位掩码（拆得开 press 与 release,拖拽整个建立在
+  这上面）、以及吃数字 evdev 码的 `key CODE:STATE`。Debian bookworm、Ubuntu 22.04
+  与 24.04 到今天都还是把 0.1.8 叫做 `ydotool`。对真的 uinput 设备实测:0.1.8 收到
+  `click 0x40` **什么事件都不送,返回 0**;收到 `mousemove --absolute` 打印
+  `unrecognised option`,**一样返回 0**。而 backend 是用 `check=True` 判断成败的,
+  只有非零才会抛。所以在这些发行版上,脚本没点到、没打到、没移动,而每一次调用都回报成功。
+- **旧版 CLI 现在在送出任何东西之前就被挡下。** `linux_wayland/_ydotool_cli.py`
+  每个进程只判定一次（鼠标与按键派送付不起每个事件一次 subprocess）,并在错误信息里
+  给出三条路:装 1.0+ 的包、自己编、或 `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11`。
+  两个版本都没有 `--version`,而 1.x 不启 daemon 连 `--help` 都不回答,所以探测读的是
+  两边都会打印、不需要 daemon、也没有副作用的那一样东西:无参数时的命令清单。认不出来的
+  版本一律放行而不是挡掉,免得将来改了字样的新版被过期的检测器锁在门外。
+- **两处安装提示还错在第二件事上**:Debian trixie 根本没有 `ydotool` 包。
+  提示已改成点名真的有的发行版。
+
+## 本次更新 (2026-08-19) — 验 ydotool 从来不需要桌面,只需要一个读取端
+
+- **两个验证镜像记下来的那个缺口,记错了。** `Dockerfile.wayland` 与 `Dockerfile.eis`
+  结尾都写 ydotool「需要 /dev/uinput 以及一个会消费它的 seat」,而 `Progress.md` 把它
+  排在「先建一台 GNOME VM」后面。seat 决定的是注入的事件**会不会送达某处**,不是它
+  **能不能被观察**:ydotoold 建的是普通的 uinput 设备,kernel 会挂成
+  `/dev/input/eventN`,读那个节点就拿得回 ydotool 写进去的 `input_event`。
+  不需要合成器,不需要桌面 session,不需要 VM。
+- **`docker/Dockerfile.ydotool` 与 `docker/ydotool_verify.py` 就是在 CI 里做这件事,
+  12 项检查。** 过去只对着 mock 断言的东西现在有答案了:`0xc0`／`0xc1`／`0xc2` 真的是
+  BTN_LEFT／BTN_RIGHT／BTN_MIDDLE;拆边的 `0x40` 与 `0x80` 真的只送 press 或只送
+  release(`press_mouse` 与拖拽整个建立在这上面);`key 30:1 30:0` 真的带的是数字
+  evdev 码;而**滚动正负号是量出来的,不再是假设的**——`-y 1` 到 kernel 是
+  `REL_WHEEL +1`、`-y -1` 是 `-1`、`-x 2` 是 `REL_HWHEEL +2`,而且轴没有互换。
+  最后这一项正是滚动那次改动之后,`Progress.md` 一直标着「未实测」的假设。
+- **第 12 项检查驱动的是 backend 自己的函数,不是手写 argv**,所以「ydotool 拿到这串
+  命令行会做什么」与「AutoControl 送的是什么」是接起来的,不只是并排。
+- **`mousemove --absolute` 送的并不是绝对事件**,这件事在信任它之前值得知道。
+  ydotool 1.x 的设备上没有 ABS 轴:它先在两条相对轴上送 `INT32_MIN`,靠合成器把它夹到
+  左上角,再把目标当成相对位移送出去。所以 `set_position` 会落在你要的像素,**是因为
+  那个夹取**。kernel 这一侧现在钉住了;夹取本身是合成器的行为,仍然是开放项。
+- **容器拿到的是 `/dev/uinput` 加字符主号 13,不是 `--privileged`。** ydotoold 是在
+  容器起来**之后**才建输入节点,`--device` 覆盖不到,所以那个 job 只授予
+  `--device-cgroup-rule 'c 13:* rmw'`,别的都没有。
+
+## 本次更新 (2026-08-19) — Wayland 的滚动不再需要 uinput 常驻程序
+
+光标移动、按键、按钮早就走 libei 了,只剩滚动每一格都还要 fork 一次 `ydotool`,
+而 `Progress.md` 也写了原因:正负号是猜的,而滚错方向不会报错,只会安静地错。
+现在接上了,猜测也换成了两份独立佐证加一次实测。
+
+- **两条路径对「一格」的正负号定义相反。** 本项目的 `wayland_scroll_direction_*`
+  常数是 kernel `REL_WHEEL` 那一套,因为 ydotool 写进 `/dev/uinput` 的就是它:正值为上。
+  libei 是 `wl_pointer`／libinput 那一套,正值为下——libinput 自己的 evdev 读取端
+  就是把 `REL_WHEEL` 取负号换过去的,而另一个有写明正负号的 libei sender（enigo）
+  则是把「正值往下滚」的值原封不动送进 `scroll_discrete`。水平轴不用翻:
+  `REL_HWHEEL` 与 libinput 都以右为正。所以送往 libei 时垂直轴取负、水平轴不动——
+  这就是 `Progress.md` 在等的那个决定。
+- **这个翻转有对着真的 EIS server 验证,连负值一起。** `docker/eis_verify.py` 多了第 15 项
+  检查,驱动的是**公开的** `mouse.scroll()`（不是上一项检查驱动的 backend 方法）,
+  从 server 端读回来:上是 `(0, -120)`、下是 `(0, 120)`、右是 `(120, 0)`。这也是唯一
+  一次把**负的**离散值送上线;先前那项检查只送过正值,正负号的 marshalling 若有毛病
+  根本没有地方会现形。
+- **被拒绝的发送现在会退回 CLI,也就是代码一直宣称的行为。** `libei` 的模块
+  docstring 写着每个失败都抛 `LibeiUnavailable`,「`keyboard`／`mouse` 已经把它当成
+  *改用 ydotool CLI*」。实际上只有**连接**是这样处理的。backend 交出去之后,合成器
+  暂停了设备、或 session 在两次调用之间结束,都会直接从 `set_position`、`press_key`、
+  `hotkey` 抛出去。把滚动也接上 libei 等于再多一条「明明旁边就有可用后备却让脚本死掉」
+  的路,所以这个后备被补成真的:和弦中途被拒会先把已经按下的键反序放开,不会留下卡住的
+  修饰键;按钮的**放开**被拒则改由 ydotool 放开,不会整个 session 都按着。
+- **`LibeiUnavailable` 原本会穿过所有的拦截边界。** 它只继承 `RuntimeError`,而
+  `CLAUDE.md` 写得很明白:不是 `AutoControlException` 的框架错误「会安静地逃出每一个
+  边界」——executor、后台轮询循环、请求处理器、GUI slot。现在两个都继承,原本接
+  `RuntimeError` 的探测照旧能用,边界也终于看得到它。
+
+## 本次更新 (2026-08-18) — libei 输入路径终于有对手可以说话了
+
+Wayland 的**撷取**路径已经对着真的合成器验过;**输入**路径没有,而且被记成「需要一台
+GNOME VM」。其实不需要。libeis 就是 libei 自己那套协议的 server 端,Debian 有打包,
+两个库可以直接在一条 Unix socket 上对话——所以 `docker/eis_server.py` 起一个真的 EIS
+实作,`docker/eis_verify.py` 把 AutoControl 真正的 sender 对着它跑。不需要合成器,
+不需要桌面 session,14 项检查,已接进 CI。
+
+- **离散捲动差了 120 倍。** libei 的离散捲动以「一格的 120 分之一」为单位——跟 Windows
+  `WHEEL_DELTA` 同一套惯例——而 `scroll()` 直接送格数,等于一格只送了 1/120 的捲动量。
+  libei 自己在执行期就会讲（`suspicious discrete event value 1, did you mean 120?`）,
+  而这句话 mock 永远不会印出来。现在 `scroll(0, 1)` 到对面是 `(0, 120)`:一格、正确的轴、
+  正确的正负号。这条路径原本因为「正负号是猜的」而刻意没接线,结果正负号是这题里比较小的一半。
+- **拆除不再每个行程漏一个 context。** `ei_unref` 在 libei 1.3.901 会 segfault——但只在
+  「backend 开了、握手从未推进」那个状态。有了可以完成握手的对手,live 的情况终于测得到,
+  而它是安全的。现在拆除会正常释放 device 与 context,只有真的会炸的那个状态才放弃。
+- **mock 检查不到的值都检查了。** server 端 offer 六个 capability,再把 client 真正绑定的
+  读回来:正好是 AutoControl 要的那四个,所以 `EI_DEVICE_CAP_*` 位元遮罩与 variadic
+  `ei_seat_bind_capabilities` 的编组都是对的。keycode、绝对座标、按键码都从线上读回来比对。
+  每次发送都确认有 frame,每个 device 都确认有先开 emulation transaction——没开的话
+  libei 会把事件丢掉。
+- **两件量到但不是我们能修的事**,如实记下而不是含混带过:libeis 1.3.901 的
+  `eis_device_pause()` 对 sender client 没有送出任何东西,所以 client 的 `DEVICE_PAUSED`
+  处理仍然没有对手可以驱动;`start_emulating` 的 sequence number 也没有被送到对面
+  （刻意送 4242,读回来是 0）。检查写成「要嘛有反应,要嘛根本没被通知」,
+  哪天 libeis 开始送了而 client 忽略它,就会当场失败。
+
+## 本次更新 (2026-08-18) — 架构地图的行数重新变成实测值
+
+- **同一个子系统在地图里被写成两个不同的大小。** `CLAUDE.md` 规定
+  `architecture_explore.md` 的每个数字都是实测的,但没有任何东西在检查,于是长出了
+  两套并存的计数惯例:§5.4 主题表与 §5.4.17 档案表数了一行不存在的结尾行——
+  `len(text.split("\n"))` 会比以换行结尾的档案实际行数多一行,套件则是每个档案多一行
+  ——而 §1 的总计与 §8 附录数的是对的。结果 `utils/executor/` 在一节里是 8,811 行、
+  在另一节里是 9,001 行,而 §8 那一栏加起来也不等于它自己的总计。除此之外还有大约
+  五十列根本是旧的,好几个 `####` 标题差了几百行（`linux_wayland/` 还写着
+  10 档／1,093 行,实际是 14／2,235）,而且有一张主题表多了两个子套件,它的摘要行
+  完全不知情。
+- **413 个数字用同一套惯例重新实测**——`len(text.splitlines())`,也就是 `wc -l` 的
+  结果,以及 `CLAUDE.md` 自己那段「超过 750 行」判断所用的算法。§5.4、§5.4.17 与 §8
+  现在对每个子系统都一致,§8 各列加起来也等于它写的总计。
+- **`test_doc_line_counts.py` 既是闸门也是修复工具。** 任何被引用的行数跟树上对不上
+  就让 CI 失败,并指出是哪几行;加 `--fix` 就一次全部就地改写。行数是地图里唯一没有
+  闸门的部分——指令、MCP 工具、子套件与范例数早就有 `test_doc_counts.py` 在管——
+  这正是它会漂掉的原因。
+
+## 本次更新 (2026-08-18) — 剪贴板不再因为别的程序正在复制而失败
+
+- **Windows 剪贴板同一时间只允许一个进程打开,而 AutoControl 的每一个剪贴板调用
+  在别人打开时都立刻放弃。** 资源管理器、Office 和每个浏览器复制时都会占住剪贴板
+  几毫秒,这段时间里 `OpenClipboard` 一律返回 false,而六个调用点——文字、图片、
+  HTML、RTF、CSV、文件拖放、格式枚举——都把它直接翻成
+  `RuntimeError: OpenClipboard failed`。在真实桌面上开一个进程循环复制实测:大约
+  千分之一的打开会失败,也就是脚本会因为操作者既看不见也复现不了的原因直接死掉。
+  Win32 文档明写这种情况应该重试,而一个专门用来驱动「别的程序本来就很忙」的机器
+  的库,不能把「别人正在复制」当成错误。
+- **`win32_clipboard_api.open_clipboard()` 现在是唯一打开剪贴板的地方**,忙碌时会
+  等约 200 毫秒才报错,而且不论区块怎么结束都会关闭。三个自己手写 open/close 的
+  模块——包括两个比共享模块更早写的——都改走它,所以新的调用点不可能漏掉重试。
+- **剪贴板 round-trip 测试不再依赖机器上其他进程在做什么。** 这些测试跑的是真实的
+  Win32 调用,而那正是四个历史 writer bug 唯一能被看见的地方,所以换成假的后端等于
+  删掉覆盖率,而不是让它稳定。改成读 Win32 剪贴板序号:写入与读回之间序号没变,就
+  代表这段时间没有别人写过,断言测的就只有 AutoControl 自己的代码。已在另一个进程
+  于测试期间写入 4,112 次剪贴板的情况下验证通过。
+
+## 本次更新 (2026-08-18) — 打错指令名字回 400,不是 500
+
+- **`POST /execute` 对不存在的 `AC_*` 名字回 `500 {"error": "execute_action failed"}`**,
+  跟伺服器自己坏掉时的回应一模一样。调用端无法区分「我自己打错字」和「服务挂了」,
+  错误讯息也没说是哪个名字不认得。
+- **所有指令名字现在都在执行前先校验**,不认得的回 `400`,并在 `unknown_commands`
+  里列出**全部**——包含嵌在流程控制区块里的——让调用端一次改完所有拼错的名字。
+  `POST /execute_file` 对读不到的档案、不是动作清单的内容、以及不认得的指令名,
+  用同样的方式回应。OpenAPI 规格两者都写明了,并说明被拒绝的请求没有执行任何动作。
+- 校验与收集共用同一次走访,所以「嵌套动作清单可能藏在哪里」仍然只有一份定义。
+
+## 本次更新 (2026-08-18) — libei 拆除时的 segfault,以及对真实库的核对
+
+- **`ei_unref` 在 libei 1.3.901 上,只要 backend 已打开就会让进程崩溃,而我们的
+  fallback 路径正好一头撞进去。** libei 握手的每一种失败都会走到 `_teardown()`,
+  所以在任何装了 libei 而握手没完成的机器上,AutoControl 会直接 SIGSEGV,而不是
+  安静地改用 ydotool——跟 fail-closed 的承诺完全相反。逐个调用实测的结果:没有
+  setup backend 时 `ei_unref` 安全、setup **失败**后安全、setup **成功**后必炸。
+  `ei_disconnect` 在同样状态也炸,所以不是我们 refcount 用错;而头文件明写两种结果
+  都该用 `ei_unref`,因此这是上游的 bug。现在已打开的 backend 会被**放弃**而不是
+  unref——代价是每个进程漏一个 context,换掉一个会驱动用户桌面的库直接崩溃。
+  验证程序里有一个哨兵会每次重新确认上游状态,修好时会提示可以移除 workaround。
+- **绑定里每一个入口点现在都对真的 `libei.so` 解析过。** 拼错的符号或错的 `argtypes`
+  会毫无阻碍地通过假的符号表,只在用户的机器上才爆——22 个 prototype 加上 variadic
+  的 `ei_seat_bind_capabilities` 现在都是真的验过。
+- **整条 fail-closed 链端到端跑过**:连到一个不说 EI 的 socket → 握手超时 →
+  `LibeiUnavailable` → `active_backend()` 返回 None → `press_key` 落到 ydotool CLI。
+- **`liboeffis` 不是每个发行版都有。** Arch 与 Fedora 有包,**Debian trixie 没有**。
+  没有它就没有 portal 路径,`connect()` 会退到众所周知的 EIS socket——而 GNOME 与 KDE
+  根本不开那个 socket。所以在那些系统上 libei 快速路径是关闭的,而且会讲出来,不会
+  看起来莫名其妙地没作用。
+
+## 本次更新 (2026-08-18) — Wayland 截取路径对上真的合成器了
+
+- **`screen.size()` 报单一屏幕,`grab_image()` 却返回整个布局。** `wlr-randr` 的
+  parser 抓文档里第一个 `WxH`,也就是第一个 output 的当前模式。双屏布局下那只有
+  半个画面——而 mss shim 正是把这两者组起来用的,所以录制、WebRTC 与 MCP 的屏幕路径
+  会去要一个只有半个画面大的区域,而且真的拿到了。`size()` 现在返回布局的 bounding
+  box,parser 会读每个启用中 output 的模式**与位置**。这个 bug 是跑真机才发现的:
+  没有任何 mock 有第二块屏幕。
+- **`docker/Dockerfile.wayland` 让后端在 headless sway 下跑。** wlroots 的 headless
+  backend 不需要 GPU、seat 或显示器,所以一个真正的 Wayland session 塞得进容器——现在
+  也进了 CI,就是 `wayland-verification` job。两个 output 涂上不同纯色,因为在单一颜色
+  的画面上,区域抓错位置抓不出来,红蓝通道对调更是完全抓不出来。
+- **21 项此前只能对 mock 验的检查,现在对的是合成器真的画出来的像素**:grim 的 argv
+  与 `-g` 几何、RGB 通道顺序、`wlr-randr` 没有文档记载的输出格式、
+  `size()`／`grab_image()`／`get_pixel()`／`screenshot()`、
+  `je_auto_control.screenshot()` 的 BGR 输出、`grab_logical()`(定位器与 OCR 路径)、
+  mss shim、以及 `wtype`。
+- **容器答不了的部分直接写明,不含糊带过。** ydotool 需要 `/dev/uinput`,而 headless
+  sway 不吃 libinput 设备;`xdg-desktop-portal-wlr` 没有实现 RemoteDesktop,所以根本
+  没有 `ConnectToEIS` 可测。两者都留在 `Progress.md`。
+
+## 本次更新 (2026-08-18) — libei 输入,整条打通
+
+- **完整的 portal 握手做完了。** libei 不是“调用一个函数就按下一个键”的库:
+  sender 必须打开 EIS backend、绑定 seat 的能力、**从事件里**取得 device、在其上
+  `start_emulating`,而且每次发送之后都要 `ei_device_frame`,否则什么都不会送达。
+  这些现在全部有了,所以 `press_key`、`set_position` 与鼠标按键不再需要每个事件
+  spawn 一次进程。
+- **EIS socket 来自桌面 portal。** 在 GNOME 与 KDE 上它不是磁盘上的路径,而是由
+  `org.freedesktop.portal.RemoteDesktop.ConnectToEIS` 经 D-Bus 交出的 file
+  descriptor,前面还有三次异步的 session 调用。**没有任何命令行工具能把 fd 交进
+  这个进程**,所以截图那条 `gdbus` 路在这里走不通;改用 `liboeffis`(libei 项目正是
+  为此附上它)。liboeffis 不存在时,仍会尝试众所周知的 `$XDG_RUNTIME_DIR/eis-0`。
+- **device 一律来自事件,不再由 context 冒充。** 先前的绑定把 `struct ei *` context
+  传给收 `struct ei_device *` 的入口点——C 库里的指针类型混淆。现在从结构上
+  不可能发生。
+- **探测失败只付一次代价,不是每次按键。** 握手包含一次 portal 往返,可能还有同意
+  对话框。结果会在进程内缓存,所以“装了 libei 但不可用”的机器不会每次按键重试。
+- **所有情况都仍会回退到 ydotool。** 库缺失、用户拒绝、能力只给一半、device 被
+  暂停、握手没完成——每一种都抛 `LibeiUnavailable`,而 keyboard／mouse 本来就把它
+  当成“改用 CLI”。scroll 刻意留在 ydotool:它的方向约定有测试钉住,而 libei 的正负号
+  一旦猜错是**静默**的错误行为,不是明确的失败。
+- **ABI 常量是对过上游头文件的,不是猜的。** 对完发现三个错:
+  `enum ei_device_capability` 是**位掩码**,所以 `EI_DEVICE_CAP_KEYBOARD` 是
+  `1 << 2` 而不是 3;`OEFFIS_EVENT_CLOSED` 排在 `OEFFIS_EVENT_DISCONNECTED`
+  **之前**;`OEFFIS_DEVICE_ALL_DEVICES` 是 `= 0` 的哨兵值,不是各设备位的 OR。
+  第一个代价最大——没有 device 会报告那个能力,所以每次连接都会超时然后静默改用 CLI。
+  核对过的值现在有测试钉住。另外 session 只申请实际会用到的键盘与指针,同意对话框
+  不会再要一个没人用的触摸屏授权。
+
+## 本次更新 (2026-08-18) — Wayland 截取有了兜底
+
+- **`xdg-desktop-portal` 为三个 CLI 工具兜底。** `grim`／`gnome-screenshot`／`spectacle`
+  没有任何一个保证会装（GNOME 自 42 起不再默认安装 `gnome-screenshot`），所以最后会经由
+  `gdbus` 尝试 `org.freedesktop.portal.Screenshot`，而不是直接放弃。它天生麻烦：portal
+  返回的是 request handle、结果之后才以 signal 送达，所以监听必须在调用**之前**启动；
+  而且同意对话框可能挡在前面，因此等待有 30 秒上限。
+- **操作者可以指定自己的截取命令。**
+  `JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND="mycap --png {output}"` 优先于所有检测。
+  `{output}` 会换成临时 PNG 路径，在 `shlex.split` 之后逐个参数替换、不经过 shell，
+  所以含空格的路径仍然是单个参数。这是给内置分层都不适用的环境用的逃生门——包含我们对
+  某个工具的 argv 猜错的情况。
+- **libei 主动拒绝它根本送不出输入的连接。** 这个绑定从头到尾只持有 `ei` context，
+  但每个 device 入口点收的都是 `ei_device`，而且完全没有跑 libei 的 seat／device／
+  `start_emulating`／`frame` 握手——所以它送不出输入，却**可能**在会开
+  `$XDG_RUNTIME_DIR/eis-0` 的机器上把错误的指针传进 C 库。现在它会在 `connect()`
+  就停下并说明原因。调用端本来就把这个情况当成“改用 ydotool CLI”，而那正是所有真实
+  桌面环境一直在做的事。
+- **portal 监听器不会在收尾时卡死。** 它的 pipe 只在读取线程放手之后才关闭；在有线程
+  仍阻塞在 `read()` 时关闭流可能卡在 buffer lock 上，那会让“超时”变成它本来要防止的
+  “卡住”。
+
+## 本次更新 (2026-08-18) — 容器镜像在 Windows 签出下也能构建、能启动
+
+- **在 Windows 上 clone 再 build 出来的容器，一启动就死。** `.gitattributes` 只写了
+  `* text=auto`，于是 `docker/entrypoint.sh` 与 `docker/entrypoint-xfce.sh` 被签出成 CRLF。
+  shebang 就变成 `#!/bin/sh<CR>`，kernel 去找一个名字末尾带回车的解释器，镜像 build 得完全正常，
+  一跑就抛出 `exec /usr/local/bin/autocontrol-entrypoint: no such file or directory`——
+  而那个文件明明就在。CI 永远看不到：Linux runner 签出来就是 LF。现在以
+  `*.sh text eol=lf` 钉住，并有测试确认没有任何 entrypoint 带 CRLF。
+- **`.dockerignore` 放在 `docker/`，Docker 根本不会去那里读。** Docker 只读 build *context*
+  根目录的那一份，而文档里每一条 build 指令都以仓库根目录为 context
+  （`docker build -f docker/Dockerfile .`），所以那些排除规则一条都没生效：`.git`、
+  `.venv`、`test/` 跟各种缓存每次都被丢给 daemon。已移到根目录。
+- **`mss` 垫片的测试量的是开发机的屏幕，不是它自己的假件。**
+  `test_screen_grabber.py` 只换掉 `backend_grab_image`，`_backend_screen_size` 还是读真的
+  `platform_wrapper.screen`，所以 `monitors[0]` 报的是开发者手边那台屏幕。在 1920x1080
+  的桌面上会过，在 1280x800 的 Xvfb 下就失败，而这跟被测代码无关。现在假件同时接管接缝的两半。
+
+## 本次更新 (2026-08-17) — Wayland 看得见屏幕了
+
+- **所有截取路径改走平台后端。** `screenshot()`、图像与锚点定位、OCR、smart waits、
+  视觉回归、屏幕录制、MCP 屏幕工具与远程桌面，此前各自直接调用 `PIL.ImageGrab` 或
+  `mss`。这两者在 Linux 都是读 X11 root window——在 Wayland 下那个 root 属于 XWayland，
+  不会合成原生 Wayland 窗口。Pillow 确实有回退到 `gnome-screenshot`／`grim`／`spectacle`
+  的路径，但它只在 X11 截取**抛出异常**时才走（`except OSError`）——也就是根本没有 X
+  display 的情况；只要 XWayland 在跑（GNOME、KDE、sway 的默认）就不会触发。`mss` 则是
+  任何情况下都没有兜底。现在 `utils/cv2_utils/screen_grabber.py` 是唯一决定“这台机器怎么
+  读屏幕”的地方：后端若发布 `grab_image`，就把它包成调用端已在用的形状。Windows、
+  macOS 与 Linux X11 不发布任何东西，仍然使用真正的库，行为完全不变。
+- **Wayland 截取覆盖三种合成器家族，而不只一种。** `grim` 只会说 `wlr-screencopy`，
+  GNOME 与 KDE 都没有实现——所以 `linux_wayland/capture.py` 依次尝试 `grim`
+  （sway、Hyprland、river）、`gnome-screenshot`、`spectacle`，并报告用了哪一个。只有
+  `grim` 能自己接受区域参数，其余的截取整个屏幕后再裁剪。
+- **没有任何截取工具时明确失败。** 错误信息会列出各合成器该装什么，而不是返回空白的
+  XWayland 截取——后者在下游只会表现成“找不到模板”。新的 `screen_capture` 诊断检查
+  会在任何失败发生前先说清楚当前用的是哪一个工具。
+- **`screen.size()` 与 `get_pixel` 在 GNOME／KDE 也能用。** 分辨率从 `wlr-randr` 回退
+  到以截取结果测量；`get_pixel` 从可用的截取路径裁出 1x1 区域。
+
+**仍未完成**：libei 原生输入路径与 Wayland 真机验证，见 [Progress.md](../Progress.md)。
+
 ## 本次更新 (2026-07-03) — 稳定 API、失败诊断包与发布工程
 
 给新集成用的版本化入口点、便携式失败诊断格式,以及强化后的发布管线。完整参考:[`docs/API_LIFECYCLE.md`](../docs/API_LIFECYCLE.md) 与 [`docs/CAPABILITY_MATRIX.md`](../docs/CAPABILITY_MATRIX.md)。

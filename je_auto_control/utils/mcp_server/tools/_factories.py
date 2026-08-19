@@ -321,6 +321,76 @@ def window_tools() -> List[MCPTool]:
             annotations=READ_ONLY,
         ),
         MCPTool(
+            name="ac_foreground_window_pid",
+            description=("PID of the process owning the foreground window as "
+                         "{pid}; 0 when unavailable. Titles are not identity — "
+                         "use this to tell which program is in front."),
+            input_schema=schema({}),
+            handler=h.foreground_window_pid,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_windows_for_pid",
+            description=("Visible top-level windows owned by a process, as "
+                         "{windows: [{hwnd, title}]}. Titles cannot address a "
+                         "multi-process application; ownership can."),
+            input_schema=schema({
+                "pid": {"type": "integer"},
+                "titled_only": {"type": "boolean"},
+            }, required=["pid"]),
+            handler=h.windows_for_pid,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
+            name="ac_minimize_windows_for_pid",
+            description=("Minimise every window a process owns, as "
+                         "{minimized}."),
+            input_schema=schema({"pid": {"type": "integer"}}, required=["pid"]),
+            handler=h.minimize_windows_for_pid,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_post_key_to_window",
+            description=("Post one key to a window without focusing it, as "
+                         "{posted}. Goes to the control that has keyboard "
+                         "focus. Best effort: applications reading raw input "
+                         "or checking the foreground ignore posted messages."),
+            input_schema=schema({
+                "title_substring": {"type": "string"},
+                "key": {"type": "string"},
+                "case_sensitive": {"type": "boolean"},
+            }, required=["title_substring", "key"]),
+            handler=h.post_key_to_window,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_post_click_to_window",
+            description=("Post one click into a window without focusing it, "
+                         "as {posted}. x / y are relative to the window's "
+                         "top-left corner. Same best-effort caveat as "
+                         "ac_post_key_to_window."),
+            input_schema=schema({
+                "title_substring": {"type": "string"},
+                "button": {"type": "string"},
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "case_sensitive": {"type": "boolean"},
+            }, required=["title_substring"]),
+            handler=h.post_click_to_window,
+            annotations=NON_DESTRUCTIVE,
+        ),
+        MCPTool(
+            name="ac_window_pid",
+            description=("PID of the process owning the first matching window "
+                         "as {pid}; 0 when nothing matched."),
+            input_schema=schema({
+                "title_substring": {"type": "string"},
+                "case_sensitive": {"type": "boolean"},
+            }, required=["title_substring"]),
+            handler=h.window_pid,
+            annotations=READ_ONLY,
+        ),
+        MCPTool(
             name="ac_window_move",
             description=("Move and resize the first matching window to "
                          "(x, y) with dimensions (width, height). "

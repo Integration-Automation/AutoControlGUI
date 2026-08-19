@@ -10,7 +10,11 @@ from pathlib import Path
 import pytest
 
 
-_DOCKER_DIR = Path(__file__).resolve().parents[3] / "docker"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_DOCKER_DIR = _REPO_ROOT / "docker"
+#: Spelled from ``chr`` so this file stays byte-identical under any
+#: checkout normalisation that might rewrite a literal in it.
+CRLF = (chr(13) + chr(10)).encode()
 
 
 def test_dockerfile_exists_and_uses_python_base():
@@ -43,11 +47,45 @@ def test_compose_file_declares_three_services():
     assert "8765:8765" in raw
 
 
+def test_dockerignore_sits_at_the_build_context_root():
+    """Docker reads ``.dockerignore`` from the build *context* root only.
+
+    Every documented build passes the repository root as the context
+    (``docker build -f docker/Dockerfile .``), so a copy next to the
+    Dockerfile is never read: the whole tree -- .git, .venv, test/ -- is
+    shipped to the daemon and the exclusions do nothing.
+    """
+    assert (_REPO_ROOT / ".dockerignore").is_file(), (
+        ".dockerignore must live at the repository root, not in docker/")
+    assert not (_DOCKER_DIR / ".dockerignore").exists(), (
+        "a docker/.dockerignore is dead weight; Docker never reads it")
+
+
 def test_dockerignore_keeps_build_context_lean():
-    raw = (_DOCKER_DIR / ".dockerignore").read_text(encoding="utf-8")
+    raw = (_REPO_ROOT / ".dockerignore").read_text(encoding="utf-8")
     # The biggest space-wasters should all be excluded.
     for line in ("test/", "docs/", "__pycache__", "*.egg-info"):
         assert line in raw, f".dockerignore missing {line}"
+
+
+@pytest.mark.parametrize("script", [
+    "entrypoint.sh", "entrypoint-xfce.sh", "entrypoint-wayland.sh",
+    "entrypoint-seat.sh",
+])
+def test_entrypoints_keep_unix_line_endings(script):
+    """A CRLF shebang makes an image that builds and then cannot start.
+
+    A carriage return at the end of the shebang sends the kernel looking
+    for an interpreter whose name ends in one, and every container dies
+    with the useless ``exec ...: no such file or directory``.
+    ``.gitattributes`` pins ``*.sh text eol=lf`` so a Windows checkout
+    cannot reintroduce it; this fails if that pin is ever dropped.
+    """
+    path = _DOCKER_DIR / script
+    if not path.exists():  # optional variants stay optional
+        pytest.skip(f"{script} not present")
+    assert CRLF not in path.read_bytes(), (
+        f"{script} has CRLF line endings; its container cannot exec /bin/sh")
 
 
 @pytest.mark.parametrize("expected_port", ["9939", "9940", "8765"])
@@ -92,6 +130,113 @@ def test_github_actions_docker_workflow_exists():
     assert "headless-tests" in raw
     # Workflow must execute pytest, not just build the image.
     assert "pytest" in raw
+
+
+def test_ydotool_verification_image_and_script_exist():
+    """The ydotool path is only verified while these two files are wired up."""
+    dockerfile = (_DOCKER_DIR / "Dockerfile.ydotool").read_text(
+        encoding="utf-8")
+    # ydotool 1.0 replaced the CLI; trixie ships none and bookworm ships
+    # 0.1.8, so the image has to pull the one under test from unstable.
+    assert "sid" in dockerfile
+    assert "ydotool" in dockerfile
+    assert "ydotool_verify.py" in dockerfile
+
+    script = (_DOCKER_DIR / "ydotool_verify.py").read_text(encoding="utf-8")
+    # Reading the kernel device back is the whole point; a version that only
+    # checks exit codes would pass against the CLI that exits 0 and emits
+    # nothing, which is the bug this exists for.
+    assert "/dev/input" in script
+    assert "input_event" in script
+
+
+def test_ydotool_verification_job_grants_uinput_and_the_input_cgroup():
+    """--device cannot cover a node ydotoold creates after the container starts."""
+    raw = (_REPO_ROOT / ".github" / "workflows" / "docker.yml").read_text(
+        encoding="utf-8",
+    )
+    assert "ydotool-verification" in raw
+    assert "modprobe uinput" in raw
+    assert "--device /dev/uinput" in raw
+    assert "c 13:* rmw" in raw
+
+
+def test_seat_verification_image_and_script_exist():
+    """The one image where an injected event reaches a compositor.
+
+    The other two Wayland images each hold one half still: the capture image
+    runs a compositor that consumes no input, the ydotool image reads the
+    kernel with no compositor. This one needs all four of the settings that
+    join them, and dropping any of them turns the verification into a
+    measurement of an empty seat that still passes.
+    """
+    dockerfile = (_DOCKER_DIR / "Dockerfile.seat").read_text(encoding="utf-8")
+    for setting in ("WLR_BACKENDS=headless,libinput",
+                    "LIBSEAT_BACKEND=builtin",
+                    "SEATD_VTBOUND=0"):
+        assert setting in dockerfile, f"Dockerfile.seat missing {setting}"
+    # libinput enumerates through udev, not through /dev, so udevd has to be
+    # in the image or sway comes up holding nothing.
+    assert "udev" in dockerfile
+    assert "seat_verify.py" in dockerfile
+
+    entrypoint = (_DOCKER_DIR / "entrypoint-seat.sh").read_text(
+        encoding="utf-8")
+    # Coming up with an empty seat must fail here rather than downstream.
+    assert "libinput list-devices" in entrypoint
+    # Both layouts, as the capture image does: the negative-origin one is the
+    # only one where the layout corner and layout (0, 0) differ.
+    assert "-1280 0" in entrypoint
+
+    script = (_DOCKER_DIR / "seat_verify.py").read_text(encoding="utf-8")
+    # grim -c is what makes the cursor visible to a screenshot at all.
+    assert '"-c"' in script
+    # And the two findings the image exists to hold.
+    assert "layout corner" in script
+    assert "acceleration" in script
+
+
+def test_seat_verification_job_grants_uinput_and_the_input_cgroup():
+    raw = (_REPO_ROOT / ".github" / "workflows" / "docker.yml").read_text(
+        encoding="utf-8",
+    )
+    assert "seat-verification" in raw
+    assert "docker/Dockerfile.seat" in raw
+    assert "autocontrol-seat:ci" in raw
+
+
+def test_portal_verification_image_and_scripts_exist():
+    """The portal path is only verified while these three files are wired up."""
+    dockerfile = (_DOCKER_DIR / "Dockerfile.portal").read_text(encoding="utf-8")
+    # liboeffis is a separate binary package that libei1 does not depend on,
+    # so installing libei alone leaves the portal route quietly off.
+    assert "liboeffis1" in dockerfile
+    assert "portal_verify.py" in dockerfile
+    assert "portal_server.py" in dockerfile
+    # gdbus must stay out: the Screenshot tier speaks D-Bus itself now, and
+    # this image is the proof that it needs no binary beyond a session bus.
+    assert "libglib2.0-bin" not in dockerfile
+
+    server = (_DOCKER_DIR / "portal_server.py").read_text(encoding="utf-8")
+    # A portal that answers only CreateSession is not a portal; the fd handover
+    # at the end of the dance is the whole point.
+    for method in ("CreateSession", "SelectDevices", "Start", "ConnectToEIS"):
+        assert method in server, f"mock portal missing {method}"
+    assert "UnixFDList" in server, "the mock must really pass a descriptor"
+
+    verify = (_DOCKER_DIR / "portal_verify.py").read_text(encoding="utf-8")
+    # Refusals are half the value: a portal that says no must fail closed.
+    for behaviour in ("deny", "stall", "no-fd", "close"):
+        assert f'"{behaviour}"' in verify, f"no scenario drives {behaviour}"
+
+
+def test_portal_verification_job_runs_the_image():
+    raw = (_REPO_ROOT / ".github" / "workflows" / "docker.yml").read_text(
+        encoding="utf-8",
+    )
+    assert "portal-verification" in raw
+    assert "docker/Dockerfile.portal" in raw
+    assert "autocontrol-portal:ci" in raw
 
 
 def test_gitlab_template_covers_build_test_smoke_stages():

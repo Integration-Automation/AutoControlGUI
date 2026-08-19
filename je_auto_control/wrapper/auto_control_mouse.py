@@ -1,5 +1,6 @@
 import ctypes
 import sys
+import warnings
 from typing import Tuple, Union
 
 from je_auto_control.utils.exception.exception_tags import (
@@ -279,25 +280,67 @@ def mouse_scroll(scroll_value: int, x: int = None, y: int = None,
 def send_mouse_event_to_window(window, mouse_keycode: Union[int, str],
                                x: int = None, y: int = None) -> None:
     """
-    將滑鼠事件送到指定視窗
-    Send mouse event to a specific window
+    將滑鼠事件送到指定視窗（**已棄用**，改用 ``post_click_to_window``）
+    Send mouse event to a specific window. **Deprecated** — use
+    ``je_auto_control.post_click_to_window``.
 
-    :param window: 視窗 handle Window handle
+    原本把訊息投遞給傳進來的那個 handle，也就是**頂層視窗**；但點擊要送給座標
+    底下的**子控制項**、而且座標要換算成那個控制項的 client 座標，否則點不到
+    任何東西。這支現在轉呼叫修好的路徑：`window` 傳字串就當**標題片段**（與其餘
+    視窗函式一致），傳整數仍當 hwnd（維持舊呼叫端的型別）。
+
+    Posted to whatever handle it was given — the top-level frame — but a click
+    belongs to the child control under the point, in that control's client
+    coordinates. It now delegates to the fixed path: a string ``window`` is a
+    title substring (consistent with every other window function), an int is
+    still an hwnd.
+
+    :param window: 視窗 handle 或標題片段 Window handle or title substring
     :param mouse_keycode: 滑鼠按鍵代碼 Mouse keycode
-    :param x: X 座標 X position
+    :param x: X 座標（相對視窗左上角）X position, relative to the window
     :param y: Y 座標 Y position
     """
+    warnings.warn(
+        "send_mouse_event_to_window is deprecated; use post_click_to_window. "
+        "The old implementation posted to the top-level frame, so the click "
+        "landed on nothing in any window with child controls.",
+        DeprecationWarning, stacklevel=2,
+    )
     autocontrol_logger.info(f"send_mouse_event_to_window, window={window}, keycode={mouse_keycode}, x={x}, y={y}")
     param = {"window": window, "keycode": mouse_keycode, "x": x, "y": y}
+    if sys.platform == "darwin":
+        autocontrol_logger.warning("send_mouse_event_to_window not supported on macOS")
+        return
     try:
-        if sys.platform == "darwin":
-            autocontrol_logger.warning("send_mouse_event_to_window not supported on macOS")
-            return
+        button = _button_name_for_post(mouse_keycode)
+        if isinstance(window, str):
+            from je_auto_control.wrapper.auto_control_window import (
+                post_click_to_window,
+            )
+            posted = post_click_to_window(window, button, int(x or 0), int(y or 0))
+        else:
+            from je_auto_control.windows.window import windows_window_manage as wm
+            posted = wm.post_click(int(window), button, int(x or 0), int(y or 0))
+        record_action_to_list("send_mouse_event_to_window", {**param, "posted": posted})
 
-        mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
-        mouse.send_mouse_event_to_window(window, mouse_keycode=mouse_keycode, x=x, y=y)
-        record_action_to_list("send_mouse_event_to_window", param)
-
-    except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
+    except Exception as error:  # noqa: BLE001 - preserved contract: never raises
         record_action_to_list("send_mouse_event_to_window", param, repr(error))
         autocontrol_logger.error(f"send_mouse_event_to_window failed: {repr(error)}")
+
+
+def _button_name_for_post(mouse_keycode: Union[int, str]) -> str:
+    """把舊介面收的按鍵代碼轉成投遞路徑用的按鍵名。
+
+    舊介面同時吃名稱（``mouse_left``）與底層代碼元組；後者反查回名稱，查不到就
+    當左鍵並記一筆——這條是相容路徑，不值得為了它讓呼叫端爆掉。
+    """
+    if isinstance(mouse_keycode, str):
+        name = mouse_keycode.lower()
+        return name[len("mouse_"):] if name.startswith("mouse_") else name
+    for name, code in mouse_keys_table.items():
+        if code == mouse_keycode:
+            return name[len("mouse_"):]
+    autocontrol_logger.warning(
+        "send_mouse_event_to_window: unknown keycode %r, assuming left",
+        mouse_keycode)
+    return "left"

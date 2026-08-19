@@ -1,0 +1,83 @@
+# AutoControl EIS verification image — libei talking to libeis, no desktop.
+#
+# The Wayland image (docker/Dockerfile.wayland) answers the capture half and
+# closes by listing what it cannot: the libei *input* path needs a peer that
+# speaks the EI protocol, and xdg-desktop-portal-wlr has no RemoteDesktop
+# interface to provide one. That was recorded as needing a GNOME VM.
+#
+# It does not. libeis is the server side of the same protocol, Debian packages
+# it, and the two libraries will talk to each other over a plain Unix socket.
+# So this image runs a real EIS server (docker/eis_server.py) and drives
+# AutoControl's real sender against it — which settles the capability and
+# event-type enum values, the variadic ei_seat_bind_capabilities call, seat
+# grants, device pause/resume, whether start_emulating -> frame actually puts
+# events on the wire, the discrete-scroll sign, and the absolute pointer's
+# coordinate space: that region offsets are part of the coordinate, and that
+# libei drops a motion landing outside every region without saying a word.
+#
+# What it does not cover, and where that lives instead:
+#   * how a client *gets* this socket on GNOME and KDE — a file descriptor
+#     handed over D-Bus by org.freedesktop.portal.RemoteDesktop rather than a
+#     path. That was recorded here as needing a GNOME VM too; it does not,
+#     because the portal is a D-Bus interface rather than a compositor
+#     feature. docker/Dockerfile.portal owns the well-known name and runs the
+#     real liboeffis through the real handshake, ending in a live connection
+#     to this same server.
+#
+# ydotool used to be listed here too, as needing /dev/uinput "and a seat that
+# consumes it". The seat was never the requirement: docker/Dockerfile.ydotool
+# reads the injected events straight off the kernel device.
+#
+# Build:  docker build -f docker/Dockerfile.eis -t autocontrol-eis:latest .
+# Run:    docker run --rm autocontrol-eis:latest
+
+FROM python:3.12-slim AS builder
+
+WORKDIR /src
+COPY pyproject.toml README.md ./
+COPY je_auto_control ./je_auto_control
+COPY autocontrol-lsp ./autocontrol-lsp
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip wheel --no-cache-dir --wheel-dir /wheels .
+
+
+FROM python:3.12-slim AS runtime
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# libei1 is the client this project binds; libeis1 is the server side of the
+# same protocol and the whole reason this image exists.
+#
+# grim / wtype / wlr-randr are not used by anything below, but the Wayland
+# backend refuses to import without them and `import je_auto_control` then
+# falls back to the X11 backend — which dies reaching for DISPLAY=:0 before a
+# line of this verification can run.
+#
+# libgl1 and libglib2.0-0 are opencv-python's hard import-time requirements.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libei1 libeis1 \
+        grim wlr-randr wtype \
+        libgl1 libglib2.0-0 \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip install --no-cache-dir --only-binary :all: --no-index \
+       --find-links=/wheels /wheels/je_auto_control-*.whl \
+    && rm -rf /wheels
+
+COPY docker/eis_server.py /opt/verify/eis_server.py
+COPY docker/eis_verify.py /opt/verify/eis_verify.py
+
+# Runs as root on purpose: one verification, then exit. Not a service image.
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/opt/verify \
+    XDG_RUNTIME_DIR=/tmp/xdg \
+    XDG_SESSION_TYPE=wayland \
+    JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=wayland
+
+ENTRYPOINT ["python", "/opt/verify/eis_verify.py"]

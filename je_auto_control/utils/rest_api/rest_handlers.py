@@ -13,6 +13,10 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs
 
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlActionException, AutoControlActionNullException,
+    AutoControlException, AutoControlJsonActionException,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -138,12 +142,37 @@ def handle_commands(_ctx: RouteContext) -> HandlerResult:
     return 200, {"commands": names, "count": len(names)}
 
 
+def _reject_bad_action_list(actions: Any) -> Optional[HandlerResult]:
+    """Return a 4xx result if ``actions`` is not dispatchable, else ``None``.
+
+    A misspelt ``AC_*`` name is the caller's mistake, so it has to come back
+    as a 400 naming the command rather than the blanket 500 that any other
+    executor failure produces — otherwise a client cannot tell a typo from a
+    broken server. The whole list is checked before anything runs, which is
+    also what keeps a half-executed action list from being possible here.
+    """
+    from je_auto_control.utils.executor.action_executor import executor
+    try:
+        unknown = executor.unknown_commands_in(actions)
+    except AutoControlException as error:
+        return 400, {"error": str(error)}
+    if unknown:
+        return 400, {
+            "error": "unknown command name(s): " + ", ".join(unknown),
+            "unknown_commands": unknown,
+        }
+    return None
+
+
 def handle_execute(ctx: RouteContext) -> HandlerResult:
     if not isinstance(ctx.body, dict):
         return 400, {"error": "body must be JSON object"}
     actions = ctx.body.get("actions")
     if actions is None:
         return 400, {"error": "missing 'actions' field"}
+    rejection = _reject_bad_action_list(actions)
+    if rejection is not None:
+        return rejection
     try:
         from je_auto_control.utils.executor.action_executor import execute_action
         result = execute_action(actions)
@@ -162,6 +191,13 @@ def handle_execute_file(ctx: RouteContext) -> HandlerResult:
     try:
         from je_auto_control.utils.executor.action_executor import execute_files
         result = execute_files([path])
+    except (AutoControlActionException, AutoControlActionNullException,
+            AutoControlJsonActionException) as error:
+        # The caller chose the path, so an unreadable file or an action list
+        # naming a command that does not exist is their input being wrong —
+        # same reasoning as _reject_bad_action_list, reported the same way.
+        autocontrol_logger.info("rest execute_file rejected: %r", error)
+        return 400, {"error": str(error)}
     except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: REST boundary must always return JSON, never drop the HTTP response
         autocontrol_logger.error("rest execute_file failed: %r", error)
         return 500, {"error": "execute_files failed"}

@@ -24,7 +24,9 @@ from je_auto_control.utils.vision.vlm_api import (
 from je_auto_control.utils.clipboard.clipboard import (
     get_clipboard, set_clipboard,
 )
-from je_auto_control.utils.executor.action_schema import validate_actions
+from je_auto_control.utils.executor.action_schema import (
+    unknown_command_names, validate_actions,
+)
 from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue,
 )
@@ -81,9 +83,11 @@ from je_auto_control.wrapper.auto_control_mouse import (
 from je_auto_control.wrapper.auto_control_record import record, stop_record
 from je_auto_control.wrapper.auto_control_screen import screenshot, screen_size
 from je_auto_control.wrapper.auto_control_window import (
-    close_window_by_title, focus_window, foreground_window, list_windows,
-    minimize_window_by_title, move_window_by_title, wait_for_window,
-    window_rect,
+    close_window_by_title, focus_window, foreground_window,
+    foreground_window_process_id, list_windows, minimize_window_by_title,
+    minimize_windows_for_process, move_window_by_title, post_click_to_window,
+    post_key_to_window, wait_for_window, window_process_id, window_rect,
+    windows_for_process_id,
 )
 
 
@@ -6657,6 +6661,46 @@ def _window_rect(title_substring: str,
     return {"rect": list(rect) if rect is not None else None}
 
 
+def _foreground_window_process_id() -> Dict[str, Any]:
+    """Adapter: the PID owning the foreground window (``0`` when unknown)."""
+    return {"pid": foreground_window_process_id() or 0}
+
+
+def _window_process_id(title_substring: str,
+                       case_sensitive: bool = False) -> Dict[str, Any]:
+    """Adapter: the PID owning the first matching window (``0`` when none)."""
+    return {"pid": window_process_id(title_substring, bool(case_sensitive)) or 0}
+
+
+def _windows_for_process_id(pid: int,
+                            titled_only: bool = False) -> Dict[str, Any]:
+    """Adapter: every visible top-level window owned by a process."""
+    found = windows_for_process_id(int(pid), bool(titled_only))
+    return {"windows": [{"hwnd": hwnd, "title": title}
+                        for hwnd, title in found]}
+
+
+def _minimize_windows_for_process(pid: int) -> Dict[str, Any]:
+    """Adapter: minimise every window a process owns."""
+    return {"minimized": minimize_windows_for_process(int(pid))}
+
+
+def _post_key_to_window(title_substring: str, key: str,
+                        case_sensitive: bool = False) -> Dict[str, Any]:
+    """Adapter: post one key to a window without focusing it."""
+    return {"posted": bool(post_key_to_window(title_substring, key,
+                                              bool(case_sensitive)))}
+
+
+def _post_click_to_window(title_substring: str, button: str = "left",
+                          x: int = 0, y: int = 0,
+                          case_sensitive: bool = False) -> Dict[str, Any]:
+    """Adapter: post one click into a window without focusing it."""
+    return {"posted": bool(post_click_to_window(title_substring, button,
+                                                int(x), int(y),
+                                                bool(case_sensitive)))}
+
+
 def _canonicalize_url(url: str) -> Dict[str, Any]:
     """Adapter: opinionated canonical form of a URL, for equality checks."""
     from je_auto_control.utils.url_canon import canonicalize_url
@@ -7063,6 +7107,12 @@ class Executor:
             "AC_close_window": close_window_by_title,
             "AC_minimize_window": minimize_window_by_title,
             "AC_foreground_window": _foreground_window,
+            "AC_foreground_window_pid": _foreground_window_process_id,
+            "AC_window_pid": _window_process_id,
+            "AC_windows_for_pid": _windows_for_process_id,
+            "AC_minimize_windows_for_pid": _minimize_windows_for_process,
+            "AC_post_key_to_window": _post_key_to_window,
+            "AC_post_click_to_window": _post_click_to_window,
             "AC_window_rect": _window_rect,
             "AC_move_window": move_window_by_title,
 
@@ -7860,6 +7910,17 @@ class Executor:
     def known_commands(self) -> set:
         """Return the set of all command names the executor recognises."""
         return set(self.event_dict.keys()) | set(self._block_commands.keys())
+
+    def unknown_commands_in(self, action_list: Union[list, dict]) -> List[str]:
+        """Return the unrecognised command names in ``action_list``, in order.
+
+        Nothing is executed. Structural problems raise exactly as
+        :meth:`execute_action` would, so a caller-facing boundary can tell
+        "you named a command that does not exist" apart from "the run
+        failed" *before* the first action moves anything.
+        """
+        return unknown_command_names(self._unwrap_action_list(action_list),
+                                     self.known_commands())
 
     def _resolve_runtime_args(self, args: Any) -> Any:
         """Interpolate ``${var}`` placeholders against the current scope.
