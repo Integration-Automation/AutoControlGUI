@@ -50,6 +50,7 @@ import json
 import os
 import subprocess  # nosec B404  # reason: argv-list, fixed tool names, no shell
 import sys
+import tempfile
 import time
 import traceback
 from typing import Any, Callable, List, Optional, Tuple
@@ -84,7 +85,22 @@ _CURSOR_IMAGE_SLACK = 2
 #: frame, so the velocity saturates the profile and the factor lands here.
 _ADAPTIVE_MAX_FACTOR = 2
 
-CAPTURE = "/tmp/seat-capture.png"  # nosec B108  # reason: container-only scratch
+
+def _scratch_dir() -> str:
+    """A private directory for the capture, created 0700 if it is not there.
+
+    The image sets ``XDG_RUNTIME_DIR``; without it — running this by hand —
+    a fresh ``mkdtemp``, rather than a predictable name under the ``/tmp``
+    root that any user on the host can create entries in.
+    """
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if runtime:
+        os.makedirs(runtime, mode=0o700, exist_ok=True)
+        return runtime
+    return tempfile.mkdtemp(prefix="autocontrol-seat-verify-")
+
+
+CAPTURE = os.path.join(_scratch_dir(), "seat-capture.png")
 
 
 def check(name: str, fn: Callable[[], Any]) -> Any:

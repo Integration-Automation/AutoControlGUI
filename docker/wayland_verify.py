@@ -32,6 +32,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import traceback
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Tuple
@@ -222,7 +223,10 @@ def check_public_paths(modules: Dict[str, Any], layout: Layout) -> None:
 
     def _screenshot_file():
         from PIL import Image
-        path = "/tmp/shot.png"
+        path = os.path.join(
+            os.environ.get("XDG_RUNTIME_DIR")
+            or tempfile.mkdtemp(prefix="autocontrol-wayland-verify-"),
+            "shot.png")
         returned = screen.screenshot(path)
         _assert_eq(returned, path)
         with Image.open(path) as saved:

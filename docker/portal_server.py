@@ -39,6 +39,7 @@ import os
 import socket
 import struct
 import sys
+import tempfile
 import zlib
 from typing import Any, Dict, Optional
 
@@ -190,13 +191,16 @@ class MockPortal:
 
     def __init__(self, eis_socket: str, behaviour: str, record_path: str,
                  version: int = 2, screenshot: str = "grant",
-                 shot_dir: str = "/tmp") -> None:  # nosec B108  # reason: container default, overridden by the driver
+                 shot_dir: Optional[str] = None) -> None:
         self.eis_socket = eis_socket
         self.behaviour = behaviour
         self.record_path = record_path
         self.version = version
         self.screenshot = screenshot
-        self.shot_dir = shot_dir
+        # The driver always passes one; without it, a private
+        # directory rather than the world-writable /tmp root.
+        self.shot_dir = shot_dir or tempfile.mkdtemp(
+            prefix="autocontrol-portal-")
         self.record: Dict[str, Any] = {
             "calls": [], "device_types": None, "properties": [],
             "session_closed_by_client": False, "shot_path": "",
@@ -440,7 +444,7 @@ def main() -> int:
                         help="RemoteDesktop interface version to advertise")
     parser.add_argument("--screenshot", default="grant",
                         choices=SCREENSHOT_BEHAVIOURS)
-    parser.add_argument("--shot-dir", default="/tmp",  # nosec B108  # reason: container default
+    parser.add_argument("--shot-dir", default=None,
                         help="directory the mock writes its capture into")
     arguments = parser.parse_args()
     os.umask(0o077)

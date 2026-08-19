@@ -27,6 +27,7 @@ import faulthandler
 import os
 import socket
 import sys
+import tempfile
 import threading
 import traceback
 from typing import Any, Callable, List, Tuple
@@ -37,6 +38,21 @@ from typing import Any, Callable, List, Tuple
 faulthandler.enable()
 
 _results: List[Tuple[str, bool]] = []
+
+
+def _scratch_dir() -> str:
+    """A private directory to write into, created 0700 if it is not there.
+
+    The images set ``XDG_RUNTIME_DIR``, so that is what this returns inside
+    one. Run this script by hand without it and the answer is a fresh
+    ``mkdtemp`` rather than the ``/tmp`` root itself, which any user on the
+    host can create entries in.
+    """
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if runtime:
+        os.makedirs(runtime, mode=0o700, exist_ok=True)
+        return runtime
+    return tempfile.mkdtemp(prefix="autocontrol-verify-")
 
 
 def check(name: str, fn: Callable[[], Any]) -> Any:
@@ -238,7 +254,7 @@ def main() -> int:
     from je_auto_control.linux_wayland import _select_input, libei, oeffis
 
     # --- a real sender against a socket that speaks no EI ----------------
-    runtime = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+    runtime = _scratch_dir()
     socket_path = os.path.join(runtime, "eis-0")
     server = serve_silent_socket(socket_path)
     print(f"      silent EIS stand-in listening at {socket_path}")

@@ -45,6 +45,7 @@ import shutil
 import stat
 import subprocess  # nosec B404  # reason: launches dbus-daemon and the mock portal, argv lists, no shell
 import sys
+import tempfile
 import threading
 import time
 import traceback
@@ -105,9 +106,18 @@ def _require(condition: bool, message: str) -> None:
 
 
 def _runtime_dir() -> str:
-    runtime = os.environ.get("XDG_RUNTIME_DIR", "/tmp")  # nosec B108  # reason: container fallback only
-    os.makedirs(runtime, exist_ok=True)
-    return runtime
+    """A private directory for the sockets and the capture, created 0700.
+
+    The image sets ``XDG_RUNTIME_DIR``, so that is what this returns inside
+    one. Run this by hand without it and the answer is a fresh ``mkdtemp``
+    rather than the ``/tmp`` root itself, which any user can create entries
+    in — including the socket names this script predicts.
+    """
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if runtime:
+        os.makedirs(runtime, mode=0o700, exist_ok=True)
+        return runtime
+    return tempfile.mkdtemp(prefix="autocontrol-portal-verify-")
 
 
 def _fresh_socket_path(name: str) -> str:

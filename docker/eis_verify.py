@@ -38,6 +38,7 @@ import faulthandler
 import os
 import subprocess  # nosec B404  # reason: runs this interpreter to isolate a known segfault
 import sys
+import tempfile
 import time
 import traceback
 from typing import Any, Callable, List, Tuple
@@ -51,6 +52,21 @@ _results: List[Tuple[str, bool]] = []
 KEY_A = 30
 BTN_LEFT = 272
 TARGET_POSITION = (640, 400)
+
+
+def _scratch_dir() -> str:
+    """A private directory to write into, created 0700 if it is not there.
+
+    The images set ``XDG_RUNTIME_DIR``, so that is what this returns inside
+    one. Run this script by hand without it and the answer is a fresh
+    ``mkdtemp`` rather than the ``/tmp`` root itself, which any user on the
+    host can create entries in.
+    """
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if runtime:
+        os.makedirs(runtime, mode=0o700, exist_ok=True)
+        return runtime
+    return tempfile.mkdtemp(prefix="autocontrol-verify-")
 
 
 def check(name: str, fn: Callable[[], Any]) -> Any:
@@ -85,7 +101,7 @@ def _wait_for(predicate: Callable[[], bool], timeout: float,
 
 
 def _socket_path() -> str:
-    runtime = os.environ.get("XDG_RUNTIME_DIR", "/tmp")  # nosec B108  # reason: container fallback only
+    runtime = _scratch_dir()
     os.makedirs(runtime, exist_ok=True)
     path = os.path.join(runtime, "eis-verify")
     if os.path.exists(path):
