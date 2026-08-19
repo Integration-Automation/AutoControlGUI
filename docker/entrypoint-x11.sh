@@ -19,6 +19,14 @@
 # or the monitor layout cannot be brought up, this says so and fails.
 set -eu
 
+# AT-SPI is a D-Bus protocol: without a session bus there is no accessibility
+# bus to activate, and the backend would correctly report itself unavailable
+# for a reason that is this container's fault rather than the code's. Re-exec
+# under one, once.
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    exec dbus-run-session -- "$0" "$@"
+fi
+
 GEOMETRY="${SCREEN_GEOMETRY:-1280x800x24}"
 DISPLAY_NUM="${DISPLAY:-:99}"
 
@@ -117,6 +125,12 @@ echo "========================================================================"
 echo "window management against a real window manager"
 echo "========================================================================"
 python3 /opt/verify/x11_window_verify.py || total=$((total + $?))
+
+echo
+echo "========================================================================"
+echo "accessibility against a real AT-SPI bus"
+echo "========================================================================"
+python3 /opt/verify/x11_atspi_verify.py || total=$((total + $?))
 
 echo
 echo "========================================================================"

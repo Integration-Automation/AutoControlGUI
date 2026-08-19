@@ -153,7 +153,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Diagnostics | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | Test-code generation | `generate_code` | — | — |
 
-Beyond this table, `utils/` holds 308 headless packages covering assertions, resilience,
+Beyond this table, `utils/` holds 309 headless packages covering assertions, resilience,
 data quality, i18n auditing, redaction, governance, observability, and more. The full
 per-module map is in **[architecture_explore.md](architecture_explore.md)**.
 

@@ -62,12 +62,18 @@ ARG DEBIAN_FRONTEND=noninteractive
 # - imagemagick: `import -window root`, an independent grabber.
 # - openbox: a real EWMH window manager, without a desktop over the root.
 # - xterm: a real client to own a real window.
+# - at-spi2-core + dbus-x11: the accessibility bus. AT-SPI is a D-Bus
+#   protocol, so the backend needs a session bus and the two services
+#   D-Bus activates on it (org.a11y.Bus and the registry).
+# - zenity: a real GTK application, so there is an actual accessible
+#   tree to walk. xterm exposes none — it is not a toolkit application.
 # - libgl1 + libglib2.0-0: opencv-python hard-requires libGL.so.1 and
 #   libgthread-2.0.so.0 at import, so the package cannot even load without them.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         xvfb xauth x11-utils x11-xserver-utils xdotool \
         imagemagick openbox xterm \
+        at-spi2-core dbus-x11 zenity \
         libgl1 libglib2.0-0 \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -82,6 +88,7 @@ RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
 
 COPY docker/x11_verify.py /opt/verify/x11_verify.py
 COPY docker/x11_window_verify.py /opt/verify/x11_window_verify.py
+COPY docker/x11_atspi_verify.py /opt/verify/x11_atspi_verify.py
 COPY docker/entrypoint-x11.sh /usr/local/bin/autocontrol-x11-verify
 RUN chmod +x /usr/local/bin/autocontrol-x11-verify
 
@@ -97,7 +104,12 @@ RUN useradd --create-home --shell /bin/sh verify \
     && chown -R verify:verify /app
 USER verify
 
+# GTK3 only loads the accessibility bridge when it is asked to, and
+# what normally asks is a desktop setting this container has no
+# store for. Naming the module directly is what bridges the app.
 ENV HOME=/home/verify \
+    GTK_MODULES=gail:atk-bridge \
+    NO_AT_BRIDGE=0 \
     PYTHONUNBUFFERED=1 \
     DISPLAY=:99 \
     XDG_SESSION_TYPE=x11 \

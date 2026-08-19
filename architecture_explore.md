@@ -19,9 +19,9 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,022 |
-| 程式碼總行數 | 138,510 |
-| `je_auto_control/utils/` 子套件數 | 308 |
+| Python 模組總數（含周邊子專案） | 1,025 |
+| 程式碼總行數 | 139,017 |
+| `je_auto_control/utils/` 子套件數 | 309 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
@@ -55,7 +55,7 @@ USB/IP 協定、Prometheus 指標），以維持這條輕相依基線。
 └───────────────────────────────┬──────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼──────────────────────────────────────────┐
-│  能力層 utils/（308 個子套件，全部無 Qt 相依）                             │
+│  能力層 utils/（309 個子套件，全部無 Qt 相依）                             │
 │  影像辨識 │ OCR │ 無障礙樹 │ 定位自癒 │ AI/Agent │ 遠端桌面 │ USB         │
 │  報表觀測 │ 資料 │ 安全 │ 韌性 │ 系統整合 │ 排程觸發 │ 網路協定           │
 └───────────────────────────────┬──────────────────────────────────────────┘
@@ -226,14 +226,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `uinput/keyboard.py` | 33 | uinput 鍵盤後端，介面與 X11 版一致。 |
 | `uinput/mouse.py` | 116 | uinput 滑鼠後端。 |
 
-#### Linux Wayland（`linux_wayland/`，17 檔／3,431 行）
+#### Linux Wayland（`linux_wayland/`，17 檔／2,830 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `_detect.py` | 77 | Wayland session 偵測與 CLI 工具探測。 |
 | `_ydotool_cli.py` | 134 | 判定安裝的是哪一代 ydotool 命令列，擋掉會靜默失效的 0.1.x（對本專案送的 argv 回傳 0 卻不送任何事件）。 |
 | `_ctypes_bind.py` | 75 | libei／liboeffis 共用的 ctypes 載入與 prototype 綁定。 |
-| `_dbus_client.py` | 625 | 只用標準函式庫的 D-Bus session bus 客戶端（連線／認證／`Hello`／`AddMatch`／一次方法呼叫／等訊號）。portal 的回應是**指名送給發出呼叫的那條連線**,所以訂閱與呼叫必須同一條連線——這是 `gdbus monitor` + `gdbus call` 兩個行程做不到的事。 |
+| `_dbus_client.py` | 24 | 只用標準函式庫的 D-Bus session bus 客戶端（連線／認證／`Hello`／`AddMatch`／一次方法呼叫／等訊號）。portal 的回應是**指名送給發出呼叫的那條連線**,所以訂閱與呼叫必須同一條連線——這是 `gdbus monitor` + `gdbus call` 兩個行程做不到的事。 |
 | `_select_input.py` | 85 | 決定使用原生 libei 或 CLI shim；`active_backend()` 是 keyboard／mouse 的唯一入口，`emitted()` 讓被拒絕的單次發送退回 CLI。 |
 | `_layout.py` | 83 | 版面原點的共用查詢。擷取與輸入不是同一個座標空間,差的就是這個原點:libei 的 region offset 是 `uint32`（描述不了負原點）,`ydotool mousemove --absolute` 的原點是合成器夾取的那個角落——兩條路都要減掉它,所以放在這裡而不是各自複製。讀數快取一秒——擷取那一側刻意不快取,但 ydotool 每次絕對移動都會問,不快取等於每次移動多開一個 `wlr-randr` 行程。 |
 | `oeffis.py` | 196 | liboeffis 綁定：跑完 RemoteDesktop portal 交握，交出 EIS fd。 |
@@ -258,7 +258,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `ios/input.py` | 46 | iOS 觸控與按鍵原語。 |
 | `ios/screen.py` | 32 | iOS 裝置螢幕擷取與尺寸。 |
 
-### 5.4 能力層 `utils/`（308 個子套件）
+### 5.4 能力層 `utils/`（309 個子套件）
 
 以下依主題分組。每個子套件都是獨立可匯入的無頭模組，不含任何 Qt 相依。
 
@@ -296,7 +296,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 12 個套件、約 1,895 行。
+> 13 個套件、約 2,575 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -304,6 +304,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_bundle/` | 399 | 使用者設定的單檔匯出／匯入 |
 | `utils/critical_exit/` | 97 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
 | `utils/diagnostics/` | 312 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
+| `utils/dbus_client/` | 680 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
 | `utils/exception/` | 208 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
 | `utils/failure_bundle/` | 187 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
 | `utils/file_process/` | 26 | 目錄檔案列舉（`execute_dir` 的後端） |
@@ -432,12 +433,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.7 無障礙樹與原生控制項
 
-> 16 個套件、約 3,851 行。
+> 16 個套件、約 4,279 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a11y_audit/` | 355 | 以無障礙樹 + OCR 進行無障礙與 i18n 稽核 |
-| `utils/accessibility/` | 2,390 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
+| `utils/accessibility/` | 2,818 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
 | `utils/ax_events/` | 29 | 反應式 UIA 事件等待（focus-changed） |
 | `utils/ax_props/` | 44 | 讀取豐富 UIA 屬性（enabled／offscreen／help／status／快捷鍵） |
 | `utils/ax_text/` | 102 | 透過 UIA TextPattern 取得原生文字（讀取／尋找／選取／屬性） |
@@ -1021,13 +1022,13 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/executor/` | 6 | 9,075 |
 | `utils/usb/` | 17 | 4,247 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,366 |
-| `utils/accessibility/` | 12 | 2,390 |
+| `utils/accessibility/` | 13 | 2,818 |
 | `wrapper/` | 3,026 | 3,013 新增 `window_backends/`：視窗管理的平台縫（`base` / `windows_backend` / `x11_backend` / `macos_backend` / `null_backend`）。放在 `wrapper/` 而不是 `utils/`，因為它必須 import `windows/`、`linux_with_x11/`、`osx/`，而 `utils/` 在分層上在那三者之上。 |
 | `windows/` | 23 | 1,995 |
 | `utils/rest_api/` | 8 | 1,738 |
 | `utils/agent/` | 8 | 1,250 |
 | `linux_with_x11/` | 19 | 1,175 |
-| `linux_wayland/` | 17 | 3,431 |
+| `linux_wayland/` | 17 | 2,830 |
 | `utils/triggers/` | 4 | 1,146 |
 | `utils/ocr/` | 9 | 1,112 |
 | `utils/usbip/` | 5 | 920 |
@@ -1035,6 +1036,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 761 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 727 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 685 | 49,278 |
-| **總計** | **1,016** | **138,445** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 687 | 49,958 |
+| **總計** | **1,019** | **138,952** |
 

@@ -9,7 +9,7 @@ without a compatibility window.
 | Mouse, keyboard, screenshot | stable | CI | CI/Xvfb + xev | CI/sway + libeis | implementation |
 | JSON executor and variables | stable | CI | CI | CI | platform-neutral |
 | Image and anchor locators | beta | CI | CI | implementation | implementation |
-| Accessibility locator | beta | CI | backend tests | unavailable | backend tests |
+| Accessibility locator | beta | CI | CI/AT-SPI | CI/AT-SPI | CI (tree read) |
 | Window management | beta | CI | CI/openbox | unavailable | CI (listing) |
 | Recorder | beta | CI | implementation | unavailable | unavailable |
 | Reports, trace, failure bundle | stable | CI | CI | CI | platform-neutral |
@@ -64,6 +64,36 @@ output at x=-1280 — the layout of any desktop with a monitor left of the
 primary one, where the compositor's plane starts at a negative coordinate and
 a size, a crop or a located hit that assumes `(0, 0)` is wrong by the width of
 that monitor.
+
+The accessibility row said `backend tests` for Linux X11 and meant nothing by
+it: there was no Linux backend at all, and `_build_backend()` fell straight
+through to the null one. There is one now, over **AT-SPI2** — which is a D-Bus
+protocol rather than a library, and that is what makes it reachable without a
+new dependency. The usual bindings (`pyatspi`, `gi.repository.Atspi`) are
+distribution packages built against the system introspection data and cannot
+be installed into a virtual environment, so depending on them would be
+depending on something most users cannot get. The client written for the XDG
+portal handshake already spoke enough D-Bus.
+
+It is exercised by the `x11-verification` job against a real accessibility bus
+and a real GTK application (`zenity`), because neither half can be mocked
+usefully: the bus is D-Bus-activated rather than started by hand, an
+application only appears on it if its toolkit bridge loaded, and the tree's
+shape is the toolkit's business.
+
+That job immediately found a gap in the shared D-Bus client: **it could not
+demarshal signed integers.** The portal handshake never needed one, and
+AT-SPI reports a component's extents as four *signed* values — because a
+window on a monitor left of or above the primary one is at a negative
+coordinate. Without it the backend could read a tree but not where anything
+was. The client now handles the whole fixed-width numeric set except `h`
+(UNIX_FD), which stays an error on purpose: it is an index into a descriptor
+array this client does not receive, so returning it would hand a caller a
+number that addresses nothing.
+
+Because AT-SPI is a bus rather than a display protocol, this row is `CI/AT-SPI`
+for **both** Linux entries: a Wayland session runs the same accessibility bus,
+so this is the one capability where Wayland is not the restricted case.
 
 Window management had no row here at all until it had more than one platform.
 It was Windows-only for the project's whole life — the facade branched on

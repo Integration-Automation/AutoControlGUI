@@ -266,6 +266,27 @@ def test_x11_verification_image_and_script_exist():
     assert "--setmonitor" in entrypoint
 
 
+def test_x11_image_can_reach_an_accessibility_bus():
+    """AT-SPI is a bus, so the image needs one and something bridged to it."""
+    dockerfile = (_DOCKER_DIR / "Dockerfile.x11").read_text(encoding="utf-8")
+    # at-spi2-core provides the services D-Bus activates; dbus-x11 provides
+    # the session bus to activate them on; zenity is a real GTK application,
+    # which xterm is not — it exposes no accessible tree at all.
+    for package in ("at-spi2-core", "dbus-x11", "zenity"):
+        assert package in dockerfile, f"Dockerfile.x11 missing {package}"
+    # GTK3 only loads its bridge when asked, and what normally asks is a
+    # desktop setting this container has no store for.
+    assert "atk-bridge" in dockerfile
+
+    entrypoint = (_DOCKER_DIR / "entrypoint-x11.sh").read_text(encoding="utf-8")
+    assert "dbus-run-session" in entrypoint
+
+    verify = (_DOCKER_DIR / "x11_atspi_verify.py").read_text(encoding="utf-8")
+    # Extents are the check that caught the signed-integer gap in the D-Bus
+    # client; losing it would let that regress silently.
+    assert "GetExtents" in verify
+
+
 def test_x11_verification_refuses_to_skip_a_missing_layout():
     """A layout that cannot be declared is a failure, not a reason to skip.
 
