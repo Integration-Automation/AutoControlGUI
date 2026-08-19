@@ -68,17 +68,87 @@ def test_execute_rejects_missing_actions(rest_server):
     assert "actions" in payload.get("error", "")
 
 
+def test_execute_rejects_unknown_command_with_400(rest_server):
+    """A misspelt AC_* name is the caller's error, so 4xx and not 500."""
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        _request(rest_server, "/execute", method="POST",
+                 body={"actions": [["AC_bogus_command"]]},
+                 token=rest_server.token)
+    assert exc_info.value.code == 400
+    payload = json.loads(exc_info.value.read().decode("utf-8"))
+    assert payload.get("unknown_commands") == ["AC_bogus_command"]
+    assert "AC_bogus_command" in payload.get("error", "")
+
+
+def test_execute_lists_every_unknown_command(rest_server):
+    """All bad names come back at once, including ones nested in a body."""
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        _request(rest_server, "/execute", method="POST",
+                 body={"actions": [
+                     ["AC_typo_one"],
+                     ["AC_loop", {"times": 1, "body": [["AC_typo_two"]]}],
+                 ]},
+                 token=rest_server.token)
+    assert exc_info.value.code == 400
+    payload = json.loads(exc_info.value.read().decode("utf-8"))
+    assert payload.get("unknown_commands") == ["AC_typo_one", "AC_typo_two"]
+
+
+def test_execute_rejects_empty_action_list_with_400(rest_server):
+    """An empty list is bad input, not a server fault."""
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        _request(rest_server, "/execute", method="POST",
+                 body={"actions": []}, token=rest_server.token)
+    assert exc_info.value.code == 400
+    payload = json.loads(exc_info.value.read().decode("utf-8"))
+    assert "error" in payload
+
+
+def test_execute_file_rejects_missing_file_with_400(rest_server, tmp_path):
+    """The caller named the path, so an unreadable file is their error."""
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        _request(rest_server, "/execute_file", method="POST",
+                 body={"path": str(tmp_path / "does_not_exist.json")},
+                 token=rest_server.token)
+    assert exc_info.value.code == 400
+    payload = json.loads(exc_info.value.read().decode("utf-8"))
+    assert "error" in payload
+
+
+def test_execute_file_rejects_unknown_command_with_400(rest_server, tmp_path):
+    action_file = tmp_path / "actions.json"
+    action_file.write_text(json.dumps([["AC_bogus_command"]]), encoding="utf-8")
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        _request(rest_server, "/execute_file", method="POST",
+                 body={"path": str(action_file)}, token=rest_server.token)
+    assert exc_info.value.code == 400
+    payload = json.loads(exc_info.value.read().decode("utf-8"))
+    assert "AC_bogus_command" in payload.get("error", "")
+
+
 def test_unknown_path_returns_404(rest_server):
     with pytest.raises(urllib.error.HTTPError) as exc_info:
         _request(rest_server, "/nope", token=rest_server.token)
     assert exc_info.value.code == 404
 
 
-def test_handler_crash_returns_500_not_dropped(rest_server):
-    """Sending an action list that raises must produce JSON, not RST."""
+def test_handler_crash_returns_500_not_dropped(rest_server, monkeypatch):
+    """A genuine server-side failure must produce JSON, not RST.
+
+    The action list is valid, so the 400 gate lets it through and the crash
+    comes from the run itself — which is exactly the 500 that misspelt
+    command names used to be lumped in with.
+    """
+    from je_auto_control.utils.executor import action_executor
+
+    def _boom(_action_list):
+        raise MemoryError("simulated executor crash")
+
+    monkeypatch.setattr(action_executor, "execute_action", _boom)
     with pytest.raises(urllib.error.HTTPError) as exc_info:
         _request(rest_server, "/execute", method="POST",
-                 body={"actions": []}, token=rest_server.token)
+                 body={"actions": [["AC_sleep", {"seconds": 0}]]},
+                 token=rest_server.token)
     assert exc_info.value.code == 500
     payload = json.loads(exc_info.value.read().decode("utf-8"))
     assert "error" in payload

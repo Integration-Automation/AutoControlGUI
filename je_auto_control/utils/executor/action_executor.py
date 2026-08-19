@@ -24,7 +24,9 @@ from je_auto_control.utils.vision.vlm_api import (
 from je_auto_control.utils.clipboard.clipboard import (
     get_clipboard, set_clipboard,
 )
-from je_auto_control.utils.executor.action_schema import validate_actions
+from je_auto_control.utils.executor.action_schema import (
+    unknown_command_names, validate_actions,
+)
 from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue,
 )
@@ -7908,6 +7910,17 @@ class Executor:
     def known_commands(self) -> set:
         """Return the set of all command names the executor recognises."""
         return set(self.event_dict.keys()) | set(self._block_commands.keys())
+
+    def unknown_commands_in(self, action_list: Union[list, dict]) -> List[str]:
+        """Return the unrecognised command names in ``action_list``, in order.
+
+        Nothing is executed. Structural problems raise exactly as
+        :meth:`execute_action` would, so a caller-facing boundary can tell
+        "you named a command that does not exist" apart from "the run
+        failed" *before* the first action moves anything.
+        """
+        return unknown_command_names(self._unwrap_action_list(action_list),
+                                     self.known_commands())
 
     def _resolve_runtime_args(self, args: Any) -> Any:
         """Interpolate ``${var}`` placeholders against the current scope.
