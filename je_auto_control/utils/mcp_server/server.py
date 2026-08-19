@@ -45,6 +45,10 @@ from je_auto_control.utils.mcp_server._protocol import (
     _TOOL_INVOKE_ERRORS, _TOOLS_CALL_METHOD,
 )
 
+#: How long a transport waits for in-flight tool replies before it gives up
+#: and shuts down anyway.
+WORKER_DRAIN_TIMEOUT = 10.0
+
 
 class MCPServer(ClientRequestMixin):
     """JSON-RPC 2.0 MCP server with a configurable tool registry."""
@@ -71,6 +75,12 @@ class MCPServer(ClientRequestMixin):
         self._log_bridge = log_bridge
         self._stop = threading.Event()
         self._initialized = False
+        # tools/call runs on a worker thread under the stdio transport, so a
+        # reply can still be in flight when the loop reaches EOF. Tracking the
+        # workers is what lets the transport wait for them instead of pulling
+        # the writer out from under them.
+        self._workers: List[threading.Thread] = []
+        self._workers_lock = threading.Lock()
         # Connection-scoped state. The stdio transport has exactly one peer, so
         # a server-wide default is right for it; an HTTP transport has many, and
         # each request runs on its own thread. Keeping the notifier/writer in
@@ -264,6 +274,10 @@ class MCPServer(ClientRequestMixin):
                 if response is not None:
                     self._write_message(out_stream, response)
         finally:
+            # Before anything is restored: a tools/call dispatched just before
+            # EOF is still running, and its reply has nowhere to go once the
+            # writer is swapped back.
+            self._join_workers()
             self._detach_log_bridge_if_configured()
             self._notifier = prior_notifier
             self._writer = prior_writer
@@ -366,18 +380,48 @@ class MCPServer(ClientRequestMixin):
     def _dispatch_tools_call_async(self, msg_id: Any,
                                    params: Dict[str, Any]) -> None:
         """Run a tools/call on a worker thread; the worker writes the reply."""
+        # Captured here rather than read inside the worker. The worker may not
+        # reach its write until after the transport's `finally` has restored
+        # the previous writer, and then the reply would go down the previous
+        # connection or be dropped as "no writer" — a reply belongs to the
+        # transport that accepted the request.
+        writer = self._writer
+
         def worker() -> None:
             payload = self._build_response(msg_id, _TOOLS_CALL_METHOD, params)
-            writer = self._writer
             if writer is None:
                 autocontrol_logger.warning(
                     "MCP async tool reply with no writer; dropping %s", msg_id,
                 )
                 return
             writer(payload)
-        threading.Thread(
+        thread = threading.Thread(
             target=worker, daemon=True, name=f"MCPCall-{msg_id}",
-        ).start()
+        )
+        with self._workers_lock:
+            self._workers = [live for live in self._workers if live.is_alive()]
+            self._workers.append(thread)
+        thread.start()
+
+    def _join_workers(self, timeout: float = WORKER_DRAIN_TIMEOUT) -> None:
+        """Wait for in-flight tool replies before the transport goes away.
+
+        Bounded: a handler that never returns must not keep the process from
+        shutting down, so this says which worker outstayed its welcome and
+        gives up rather than hanging.
+        """
+        deadline = time.monotonic() + timeout
+        with self._workers_lock:
+            pending = [live for live in self._workers if live.is_alive()]
+        for thread in pending:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                autocontrol_logger.warning(
+                    "MCP shutdown: %s is still running; its reply is lost",
+                    thread.name,
+                )
+                continue
+            thread.join(remaining)
 
     def _build_response(self, msg_id: Any, method: Optional[str],
                         params: Dict[str, Any]) -> str:

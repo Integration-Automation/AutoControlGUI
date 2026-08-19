@@ -1751,3 +1751,109 @@ def test_default_registry_lists_core_automation_tools():
         "ac_execute_actions", "ac_list_action_commands",
     }
     assert expected.issubset(names)
+
+
+# --- shutdown while a tool reply is in flight ------------------------------
+
+
+def test_a_slow_tool_reply_is_not_lost_at_eof():
+    """serve_stdio must not return while a reply is still being written.
+
+    tools/call runs on a worker thread under stdio, and the loop's `finally`
+    restores the previous writer. A worker that had not reached its write yet
+    then found ``self._writer`` already swapped back — so the reply went to
+    the previous transport or was dropped as "no writer". Windows CI caught it
+    as one response where two were expected; the sleep here makes the window
+    wide enough to catch every time.
+    """
+    import threading
+    import time as _time
+
+    started = threading.Event()
+
+    def slow_handler():
+        started.set()
+        _time.sleep(0.5)
+        return "pong"
+
+    tool = MCPTool(name="slow_tool", description="slow",
+                   input_schema={"type": "object", "properties": {}},
+                   handler=slow_handler)
+    server = MCPServer(tools=[tool])
+    stdin = io.StringIO(
+        _request("initialize", msg_id=1, params={"protocolVersion": "x"})
+        + "\n"
+        + _request("tools/call", msg_id=2,
+                   params={"name": "slow_tool", "arguments": {}})
+        + "\n")
+    stdout = io.StringIO()
+    server.serve_stdio(stdin=stdin, stdout=stdout)
+
+    assert started.is_set(), "the tool never ran"
+    responses = [_decode(line) for line in stdout.getvalue().splitlines()
+                 if line and '"id":' in line and '"method"' not in line]
+    assert len(responses) == 2, [response.get("id") for response in responses]
+    assert responses[-1]["result"]["content"][0]["text"] == "pong"
+
+
+def test_a_reply_goes_to_the_transport_that_accepted_the_request():
+    """The writer is captured at dispatch, not read when the worker finishes.
+
+    Reading it later is what let a late reply land on whatever writer the
+    server had by then — the next connection's, or none at all.
+    """
+    import threading
+
+    release = threading.Event()
+    delivered = []
+
+    def blocking_handler():
+        release.wait(timeout=5)
+        return "late"
+
+    tool = MCPTool(name="late_tool", description="late",
+                   input_schema={"type": "object", "properties": {}},
+                   handler=blocking_handler)
+    server = MCPServer(tools=[tool])
+    server.set_notifier(None)
+    server._writer = delivered.append
+    server._dispatch_tools_call_async(
+        7, {"name": "late_tool", "arguments": {}})
+
+    # The transport goes away while the tool is still running.
+    server._writer = None
+    release.set()
+    server._join_workers(timeout=5)
+
+    assert len(delivered) == 1, delivered
+    assert '"id": 7' in delivered[0] or '"id":7' in delivered[0]
+
+
+def test_shutdown_does_not_wait_forever_for_a_stuck_tool():
+    """A handler that never returns must not keep the transport alive.
+
+    The drain is bounded and says which worker outstayed its welcome, rather
+    than hanging on one bad tool.
+    """
+    import threading
+    import time as _time
+
+    release = threading.Event()
+
+    def stuck_handler():
+        release.wait(timeout=30)
+        return "eventually"
+
+    tool = MCPTool(name="stuck_tool", description="stuck",
+                   input_schema={"type": "object", "properties": {}},
+                   handler=stuck_handler)
+    server = MCPServer(tools=[tool])
+    server._writer = lambda payload: None
+    server._dispatch_tools_call_async(
+        1, {"name": "stuck_tool", "arguments": {}})
+    try:
+        started = _time.monotonic()
+        server._join_workers(timeout=0.2)
+        assert _time.monotonic() - started < 5
+    finally:
+        release.set()
