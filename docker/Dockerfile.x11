@@ -84,9 +84,20 @@ COPY docker/x11_verify.py /opt/verify/x11_verify.py
 COPY docker/entrypoint-x11.sh /usr/local/bin/autocontrol-x11-verify
 RUN chmod +x /usr/local/bin/autocontrol-x11-verify
 
-# Runs as root on purpose: this image exists to run one verification and
-# exit. It is not a deployable service image — docker/Dockerfile is.
-ENV PYTHONUNBUFFERED=1 \
+# Unprivileged, unlike the Wayland verification image. That one runs as root
+# because XDG_RUNTIME_DIR ownership would otherwise be the only thing
+# standing between it and an answer; X11 has no such requirement — the
+# server's socket lives in /tmp and its auth file in $HOME, both of which an
+# ordinary user owns. Running as a normal user is also one less difference
+# between this container and the desktop it stands in for.
+# /app is the working directory, and the library opens its log file in the
+# cwd at import, so the verifying user has to own it.
+RUN useradd --create-home --shell /bin/sh verify \
+    && chown -R verify:verify /app
+USER verify
+
+ENV HOME=/home/verify \
+    PYTHONUNBUFFERED=1 \
     DISPLAY=:99 \
     XDG_SESSION_TYPE=x11 \
     JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11 \

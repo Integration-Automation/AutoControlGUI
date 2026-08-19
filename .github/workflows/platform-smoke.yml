@@ -49,3 +49,33 @@ jobs:
           name: platform-smoke-${{ matrix.os }}-${{ matrix.python-version }}
           path: platform-smoke.zip
           if-no-files-found: warn
+
+  macos-capabilities:
+    name: What a real macOS runner permits
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install -e .  # NOSONAR githubactions:S8544  # reason: installs the checked-out project itself, there is no upstream version to lock
+
+      # macOS is the one supported platform with no container to put it in,
+      # and every macOS row in docs/CAPABILITY_MATRIX.md said
+      # "implementation": the code was there and nothing had run it on a Mac.
+      #
+      # Two of these capabilities are gated by TCC — macOS asks a *user* to
+      # grant Screen Recording and Accessibility, and a CI runner has no user
+      # to ask. Which of them a runner grants is not something to guess at,
+      # and guessing is how the Wayland work twice recorded a desktop's
+      # refusal as a container's limitation.
+      #
+      # So this runs in --measure mode: it reports what the runner permits
+      # and asserts nothing. Once the measurement is in, EXPECTED in the
+      # script is filled from it and the flag comes off, at which point a
+      # capability appearing or disappearing turns this red and says which.
+      - name: Measure the macOS backend against a real window server
+        run: python test/verify/macos_verify.py --measure
