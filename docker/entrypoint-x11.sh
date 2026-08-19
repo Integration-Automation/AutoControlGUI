@@ -73,6 +73,10 @@ if [ "$wm" -ne 1 ]; then
 fi
 echo "openbox is managing ${DISPLAY_NUM}"
 
+# x11_window_verify imports the harness from x11_verify, so the directory
+# holding both has to be on the import path.
+export PYTHONPATH=/opt/verify
+
 # Runs one pass over one monitor layout; echoes the number of failed checks.
 run_pass() {
     label="$1"
@@ -106,9 +110,17 @@ fi
 
 run_pass "two monitors side by side" || total=$((total + $?))
 
+# Window management does not depend on the monitor layout — it is about what
+# the window manager agrees to — so it runs once, after both layout passes.
 echo
 echo "========================================================================"
-echo "total failed checks across both layouts: ${total}"
+echo "window management against a real window manager"
+echo "========================================================================"
+python3 /opt/verify/x11_window_verify.py || total=$((total + $?))
+
+echo
+echo "========================================================================"
+echo "total failed checks: ${total}"
 echo "========================================================================"
 
 kill "$OPENBOX_PID" 2>/dev/null || true

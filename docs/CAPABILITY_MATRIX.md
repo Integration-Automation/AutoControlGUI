@@ -10,6 +10,7 @@ without a compatibility window.
 | JSON executor and variables | stable | CI | CI | CI | platform-neutral |
 | Image and anchor locators | beta | CI | CI | implementation | implementation |
 | Accessibility locator | beta | CI | backend tests | unavailable | backend tests |
+| Window management | beta | CI | CI/openbox | unavailable | CI (listing) |
 | Recorder | beta | CI | implementation | unavailable | unavailable |
 | Reports, trace, failure bundle | stable | CI | CI | CI | platform-neutral |
 | REST, MCP, scheduler | beta | CI | CI | CI | platform-neutral |
@@ -63,6 +64,40 @@ output at x=-1280 — the layout of any desktop with a monitor left of the
 primary one, where the compositor's plane starts at a negative coordinate and
 a size, a crop or a located hit that assumes `(0, 0)` is wrong by the width of
 that monitor.
+
+Window management had no row here at all until it had more than one platform.
+It was Windows-only for the project's whole life — the facade branched on
+`sys.platform` and raised everywhere else — which left 23 `AC_*` commands and
+their MCP tools dead on macOS and Linux. It now goes through a backend seam:
+Win32, EWMH over python-Xlib on X11, and Quartz plus the accessibility API on
+macOS.
+
+The X11 half is exercised by the `x11-verification` job against a real
+`openbox` session, driving the public facade and taking ground truth from
+`xwininfo` and `xprop`. Two things only a real window manager could have
+shown up came out of it, and both were wrong in the first implementation:
+
+* **The rectangle is the frame, not the client.** Win32's `GetWindowRect`
+  returns the frame — border and title bar included — and every caller here is
+  written against that. Reporting the client area was off by the decorations
+  on X11 alone, silently, and by a different amount per window manager.
+* **A move must go through `_NET_MOVERESIZE_WINDOW`.** Under a reparenting
+  window manager a client's own x/y are relative to its frame, so a direct
+  `ConfigureWindow` asks for a position in the wrong coordinate space.
+  Measured against openbox, asking for (300, 220) that way landed the window
+  at (302, 260).
+
+`post_key_to_window` and `post_click_to_window` work on X11 and are asserted
+to arrive *flagged synthetic*, because that is what they are: `XSendEvent`
+traffic, which GTK and Qt discard by design. They are the X11 counterpart of
+Win32's `PostMessage`, which carries the same best-effort caveat. macOS has no
+equivalent at all — an event goes to whatever has focus — so the backend
+refuses rather than reporting a success that went somewhere else.
+
+Wayland is `unavailable` and will stay that way: the protocol does not let a
+client enumerate or move another application's windows. That is a design
+decision upstream, not a gap here, and the backend selector says so instead of
+looking broken.
 
 One cross-platform difference falls out of the same job, and it is not one this
 project can fix: **a Wayland capture may contain the mouse cursor.** No capture

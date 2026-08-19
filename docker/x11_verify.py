@@ -666,6 +666,15 @@ def main() -> int:
     note("  to grant. docker/ydotool_verify.py reads those events back off")
     note("  the kernel device instead.")
 
+    return summarise()
+
+
+def summarise() -> int:
+    """Print the tally and return the number of failed checks.
+
+    Shared with ``x11_window_verify.py``, which runs in the same session and
+    reports through the same harness.
+    """
     failed = [name for name, ok, _ in _results if not ok]
     print("=" * 72)
     print(f"{len(_results) - len(failed)}/{len(_results)} checks passed")

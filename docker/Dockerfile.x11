@@ -81,6 +81,7 @@ RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
     && rm -rf /wheels
 
 COPY docker/x11_verify.py /opt/verify/x11_verify.py
+COPY docker/x11_window_verify.py /opt/verify/x11_window_verify.py
 COPY docker/entrypoint-x11.sh /usr/local/bin/autocontrol-x11-verify
 RUN chmod +x /usr/local/bin/autocontrol-x11-verify
 

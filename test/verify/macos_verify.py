@@ -212,6 +212,30 @@ def probe_recorder() -> Outcome:
                    f"recorder is {platform_wrapper.recorder!r}")
 
 
+def probe_window_management() -> Outcome:
+    """Quartz lists windows without a grant; acting on one needs Accessibility.
+
+    Listing is what this measures, because it is the half that has to work
+    before any of the rest means anything — and because a runner with no
+    windows at all would make every window command untestable here.
+    """
+    import je_auto_control as ac
+    from je_auto_control.wrapper.window_backends import get_backend
+
+    backend = get_backend()
+    if not backend.available:
+        return Outcome(False, f"backend {backend.name!r} reports unavailable")
+    windows = ac.list_windows()
+    if not windows:
+        return Outcome(False, f"backend {backend.name!r} listed no windows")
+    window_id, title = windows[0]
+    rect = backend.window_rect(window_id)
+    pid = backend.window_process_id(window_id)
+    return Outcome(rect is not None and pid > 0,
+                   f"{len(windows)} window(s); first {title!r} "
+                   f"rect={rect} pid={pid}")
+
+
 PROBES: List[Tuple[str, Callable[[], Outcome]]] = [
     ("backend-selection", probe_backend),
     ("screen-size", probe_screen_size),
@@ -222,6 +246,7 @@ PROBES: List[Tuple[str, Callable[[], Outcome]]] = [
     ("keyboard-post", probe_keyboard),
     ("accessibility-tree", probe_accessibility),
     ("recorder-absent", probe_recorder),
+    ("window-management", probe_window_management),
 ]
 
 

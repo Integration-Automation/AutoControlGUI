@@ -84,5 +84,8 @@ jobs:
       # So the flag is off and this is a gate now: EXPECTED in the script
       # holds what was measured, and a capability appearing or disappearing
       # turns this red and names which one.
-      - name: Verify the macOS backend against a real window server
-        run: python test/verify/macos_verify.py
+      # Back in --measure for one round: the window-management probe is new
+      # and its value is not in EXPECTED yet. Asserting a value nobody has
+      # measured would be the guess this whole script exists to avoid.
+      - name: Measure the macOS backend against a real window server
+        run: python test/verify/macos_verify.py --measure
