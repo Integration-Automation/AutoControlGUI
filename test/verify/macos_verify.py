@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import platform
 import sys
+import time
 import traceback
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -61,11 +62,15 @@ EXPECTED: Dict[str, Any] = {
     "keyboard-post": True,
     "accessibility-tree": True,
     "recorder-absent": True,
-    # True means "the code answered", not "the runner had windows": a
-    # macos-14 runner was measured to have none at the application layer, so
+    # True means "the code answered", not "the runner had windows". Measured:
+    # Quartz reports 5 on-screen windows on a macos-14 runner and *none* of
+    # them is at the application layer — they are menu bar and system UI. So
     # the count is reported and not asserted.
     "window-management": True,
 }
+
+#: How long the window server is given to reflect a posted modifier.
+KEY_STATE_TIMEOUT = 3.0
 
 _results: List[Tuple[str, bool, str]] = []
 
@@ -177,17 +182,31 @@ def probe_mouse_move() -> Outcome:
 def probe_keyboard() -> Outcome:
     """Key posting is the most restricted of all; measure, do not assume.
 
-    Nothing here has focus, so what is being measured is whether the post is
+    Nothing here has focus, so what is measured is whether the post is
     accepted and the modifier state changes — not where the character went.
+
+    The read is polled rather than taken once. Measured on a macos-14 runner,
+    an immediate ``check_key_is_press`` after the post returned True on one
+    run and False on the next: ``CGEventSourceKeyState`` reflects the window
+    server's state, and the posted event has to reach it first. Reading once
+    makes this probe a coin toss, and a gate that is a coin toss is worse
+    than no gate.
     """
     from je_auto_control import check_key_is_press, press_keyboard_key, release_keyboard_key
 
     press_keyboard_key("shift")
     try:
-        held = check_key_is_press("shift")
+        deadline = time.monotonic() + KEY_STATE_TIMEOUT
+        held = False
+        while time.monotonic() < deadline:
+            held = bool(check_key_is_press("shift"))
+            if held:
+                break
+            time.sleep(0.05)
     finally:
         release_keyboard_key("shift")
-    return Outcome(bool(held), f"check_key_is_press('shift') returned {held!r}")
+    return Outcome(held, f"check_key_is_press('shift') became {held!r} within "
+                         f"{KEY_STATE_TIMEOUT}s")
 
 
 def probe_accessibility() -> Outcome:
