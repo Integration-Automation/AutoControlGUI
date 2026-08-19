@@ -75,15 +75,14 @@
   *產生的東西*:准（Response 0）、拒（Response 1）、以及一直不回答。三種我們都在真的
   bus 上跑過,三種都得在自己的時限內收斂。至於真的 mutter 對話框長什麼樣、真人猶豫
   三十秒會不會撞到別的東西,那是 mutter 的事,CI 裡沒有人可以去按它。
-- **`ydotool-verification` 與 `seat-verification` 兩個 job 在 GitHub runner 上能不能
-  `modprobe uinput evdev`。** 本機（Docker Desktop 的 WSL2 kernel,
-  `CONFIG_INPUT_EVDEV=m`）兩個都確認跑得完,runner 上還沒跑過;job 寫成模組載不起來
-  就明講失敗,不會靜默跳過。`seat-verification` 還多一個前提:它要 `systemd-udevd`
-  在容器裡收得到 kernel uevent。本機收得到（非網路裝置的 uevent 會廣播到所有
-  network namespace),runner 上同理但未驗;收不到的話 entrypoint 會在
-  `libinput list-devices` 那一步就明講失敗。
 
 ### 已經有答案的（都在 CI 裡,做法見 WHATS_NEW）
+
+五個 job 都在 GitHub runner 上跑過了（2026-08-19,PR #481）。`modprobe uinput evdev`
+在 runner 上載得起來,`systemd-udevd` 在容器裡也收得到 kernel uevent——這兩件事原本
+只在本機（Docker Desktop 的 WSL2 kernel）驗過,曾經記在上面當待辦,現在有答案了。
+job 一律寫成模組載不起來就明講失敗,不會靜默跳過,所以哪天 runner 的 kernel 變了會
+當場紅掉。
 
 | 面向 | 怎麼驗的 | job |
 | --- | --- | --- |
