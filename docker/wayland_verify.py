@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
+import subprocess  # nosec B404  # reason: argv-list, fixed tool names, no shell
 import sys
 import tempfile
 import traceback
@@ -108,8 +108,9 @@ def note(message: str) -> None:
 
 def sway_outputs() -> List[dict]:
     """The compositor's own description of its outputs."""
-    raw = subprocess.run(["swaymsg", "-t", "get_outputs", "-r"],
-                         check=True, stdout=subprocess.PIPE).stdout
+    raw = subprocess.run(  # nosec B603 B607  # nosemgrep
+        ["swaymsg", "-t", "get_outputs", "-r"],
+        check=True, stdout=subprocess.PIPE).stdout
     return json.loads(raw)
 
 
@@ -157,8 +158,9 @@ def check_detection(modules: Dict[str, Any]) -> None:
 def check_geometry(screen: Any, layout: Layout) -> None:
     """wlr-randr's format, the reported size and the origin it implies."""
     def _wlr_randr_raw():
-        raw = subprocess.run(["wlr-randr"], check=True,
-                             stdout=subprocess.PIPE).stdout.decode()
+        raw = subprocess.run(  # nosec B603 B607  # nosemgrep
+            ["wlr-randr"], check=True,
+            stdout=subprocess.PIPE).stdout.decode()
         print("      wlr-randr prints:")
         for line in raw.splitlines()[:8]:
             print(f"        | {line}")
