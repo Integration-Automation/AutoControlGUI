@@ -9,15 +9,11 @@ message — no Content-Length framing — matching the MCP stdio spec.
 import contextlib
 import itertools
 import json
-import os
-import sqlite3
-import subprocess  # nosec B404  # reason: only its TimeoutExpired type is referenced
 import sys
 import threading
 import time
 from typing import Any, Callable, Dict, List, Optional, TextIO
 
-from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.audit import AuditLogger
 from je_auto_control.utils.mcp_server.context import (
@@ -34,46 +30,23 @@ from je_auto_control.utils.mcp_server.resources import (
     ResourceProvider, default_resource_provider,
 )
 from je_auto_control.utils.mcp_server.tools import (
-    MCPContent, MCPTool, build_default_tool_registry,
+    MCPTool, build_default_tool_registry,
 )
 from je_auto_control.utils.mcp_server.tools._validation import (
     validate_arguments,
 )
-
-PROTOCOL_VERSION = "2025-06-18"
-SERVER_NAME = "je_auto_control"
-SERVER_VERSION = "0.1.0"
-_TOOLS_CALL_METHOD = "tools/call"
-
-# Framework and external-library errors a tool handler may raise. They all
-# subclass ``Exception`` directly (not OSError/RuntimeError/…), so without
-# listing them here a failing tool would escape both containment layers — the
-# stdio worker thread dies and the client waits forever, or the HTTP
-# connection aborts with no JSON-RPC reply. ``AutoControlException`` is the
-# family base every ``AutoControl*Exception``/``ImageNotFoundException`` now
-# derives from.
-_FRAMEWORK_TOOL_ERRORS = (
-    AutoControlException, subprocess.TimeoutExpired, sqlite3.Error,
+from je_auto_control.utils.mcp_server._client_requests import (
+    ClientRequestMixin,
 )
-_BUILTIN_DISPATCH_ERRORS = (
-    OSError, RuntimeError, ValueError, TypeError, KeyError,
-)
-_DISPATCH_ERRORS = _BUILTIN_DISPATCH_ERRORS + _FRAMEWORK_TOOL_ERRORS
-_TOOL_INVOKE_ERRORS = (
-    _BUILTIN_DISPATCH_ERRORS + (AttributeError,) + _FRAMEWORK_TOOL_ERRORS
+from je_auto_control.utils.mcp_server._protocol import (
+    PROTOCOL_VERSION, SERVER_NAME, SERVER_VERSION, _capture_error_screenshot,
+    _coerce_params, _DISPATCH_ERRORS, _error_response, _is_hashable,
+    _MCPError, _notification_message, _result_response, _to_content_blocks,
+    _TOOL_INVOKE_ERRORS, _TOOLS_CALL_METHOD,
 )
 
 
-class _MCPError(Exception):
-    """Raised inside the dispatcher to surface a JSON-RPC error response."""
-
-    def __init__(self, code: int, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
-
-
-class MCPServer:
+class MCPServer(ClientRequestMixin):
     """JSON-RPC 2.0 MCP server with a configurable tool registry."""
 
     def __init__(self, tools: Optional[List[MCPTool]] = None,
@@ -390,32 +363,6 @@ class MCPServer:
             autocontrol_logger.exception("MCP handle_line failed; line skipped")
             return None
 
-    @staticmethod
-    def _is_outbound_response(method: Optional[str], msg_id: Any,
-                             message: Dict[str, Any]) -> bool:
-        """True when ``message`` is a reply to a server-initiated request."""
-        return (
-            method is None
-            and msg_id is not None
-            and ("result" in message or "error" in message)
-        )
-
-    def _dispatch_outbound_response(self, msg_id: Any,
-                                    message: Dict[str, Any]) -> None:
-        """Route a JSON-RPC response to the matching pending request."""
-        with self._outbound_lock:
-            slot = self._pending_outbound.get(msg_id)
-        if slot is None:
-            autocontrol_logger.debug(
-                "MCP outbound response for unknown id %r", msg_id,
-            )
-            return
-        if "error" in message:
-            slot["error"] = message["error"]
-        else:
-            slot["result"] = message.get("result")
-        slot["event"].set()
-
     def _dispatch_tools_call_async(self, msg_id: Any,
                                    params: Dict[str, Any]) -> None:
         """Run a tools/call on a worker thread; the worker writes the reply."""
@@ -462,66 +409,6 @@ class MCPServer:
             self._maybe_request_roots_async()
             return
         autocontrol_logger.debug("MCP notification ignored: %s", method)
-
-    def _maybe_request_roots_async(self) -> None:
-        """Fire a roots/list request when the client supports it."""
-        if "roots" not in self._client_capabilities:
-            return
-        if self._writer is None:
-            return
-        threading.Thread(
-            target=self._refresh_roots_safely, daemon=True,
-            name="MCPRootsRefresh",
-        ).start()
-
-    def _refresh_roots_safely(self) -> None:
-        try:
-            self.refresh_roots(timeout=5.0)
-        except (RuntimeError, TimeoutError) as error:
-            autocontrol_logger.info("MCP roots refresh skipped: %r", error)
-
-    def refresh_roots(self, timeout: float = 10.0) -> List[Dict[str, Any]]:
-        """Send ``roots/list`` to the client and apply the first root."""
-        result = self._send_outbound_request(
-            "roots/list", params={}, timeout=timeout,
-        )
-        roots_list = (result or {}).get("roots") or []
-        if not isinstance(roots_list, list) or not roots_list:
-            return []
-        first_uri = roots_list[0].get("uri") if isinstance(roots_list[0],
-                                                            dict) else None
-        if isinstance(first_uri, str):
-            local_path = _file_uri_to_path(first_uri)
-            if local_path:
-                self._resources.set_workspace_root(local_path)
-                autocontrol_logger.info("MCP workspace root → %s", local_path)
-        return roots_list
-
-    def _send_outbound_request(self, method: str,
-                               params: Dict[str, Any],
-                               timeout: float = 10.0) -> Dict[str, Any]:
-        """Send a server-initiated request and wait for the response."""
-        writer = self._writer
-        if writer is None:
-            raise RuntimeError(f"{method} requires an outbound writer")
-        request_id = f"srv-{next(self._outbound_id_counter)}"
-        slot = {"event": threading.Event()}
-        with self._outbound_lock:
-            self._pending_outbound[request_id] = slot
-        envelope = json.dumps({
-            "jsonrpc": "2.0", "id": request_id,
-            "method": method, "params": params,
-        }, ensure_ascii=False, default=str)
-        try:
-            writer(envelope)
-            if not slot["event"].wait(timeout=timeout):
-                raise TimeoutError(f"{method} timed out after {timeout}s")
-        finally:
-            with self._outbound_lock:
-                self._pending_outbound.pop(request_id, None)
-        if "error" in slot:
-            raise RuntimeError(f"{method} failed: {slot['error']}")
-        return slot.get("result") or {}
 
     def _cancel_active_call(self, params: Dict[str, Any]) -> None:
         """Mark the matching active tool call as cancelled, if any."""
@@ -764,107 +651,6 @@ class MCPServer:
             response["structuredContent"] = result
         return response
 
-    def request_elicitation(self, message: str,
-                            requested_schema: Optional[Dict[str, Any]] = None,
-                            timeout: float = 60.0) -> Dict[str, Any]:
-        """Ask the connected client to elicit a response from the user.
-
-        Returns the raw payload (typically ``{"action": "accept" | "decline" | "cancel", ...}``).
-        Requires the client to advertise the ``elicitation`` capability.
-        """
-        params: Dict[str, Any] = {"message": str(message)}
-        if requested_schema is not None:
-            params["requestedSchema"] = requested_schema
-        return self._send_outbound_request(
-            "elicitation/create", params=params, timeout=timeout,
-        )
-
-    def request_sampling(self, messages: List[Dict[str, Any]],
-                         system_prompt: Optional[str] = None,
-                         max_tokens: int = 1024,
-                         model_preferences: Optional[Dict[str, Any]] = None,
-                         timeout: float = 120.0) -> Dict[str, Any]:
-        """Ask the connected client to run an LLM sampling request.
-
-        Tools that need the model's help (e.g. an OCR fallback that
-        wants the model to identify a UI element from a screenshot)
-        can call this and receive the assistant's reply. Requires the
-        server to be running in concurrent mode with an outbound
-        writer set — typically meaning ``serve_stdio`` or the HTTP
-        SSE transport.
-        """
-        writer = self._writer
-        if writer is None:
-            raise RuntimeError(
-                "request_sampling requires an outbound writer; "
-                "start serve_stdio or call set_writer() first",
-            )
-        request_id = f"sampling-{next(self._sampling_id_counter)}"
-        params: Dict[str, Any] = {
-            "messages": list(messages),
-            "maxTokens": int(max_tokens),
-        }
-        if system_prompt is not None:
-            params["systemPrompt"] = str(system_prompt)
-        if model_preferences is not None:
-            params["modelPreferences"] = dict(model_preferences)
-        slot = {"event": threading.Event()}
-        with self._outbound_lock:
-            self._pending_outbound[request_id] = slot
-        envelope = json.dumps({
-            "jsonrpc": "2.0", "id": request_id,
-            "method": "sampling/createMessage", "params": params,
-        }, ensure_ascii=False, default=str)
-        try:
-            writer(envelope)
-            if not slot["event"].wait(timeout=timeout):
-                raise TimeoutError(
-                    f"sampling request {request_id} timed out after {timeout}s"
-                )
-        finally:
-            with self._outbound_lock:
-                self._pending_outbound.pop(request_id, None)
-        if "error" in slot:
-            raise RuntimeError(f"sampling failed: {slot['error']}")
-        return slot.get("result") or {}
-
-    def _maybe_confirm_destructive(self, name: str, tool: MCPTool,
-                                    arguments: Dict[str, Any]) -> None:
-        """Ask the client to confirm before running a destructive tool."""
-        if not _confirm_destructive_enabled():
-            return
-        annotations = tool.annotations
-        if annotations.read_only or not annotations.destructive:
-            return
-        if "elicitation" not in self._client_capabilities:
-            autocontrol_logger.info(
-                "MCP confirmation requested for %s but client lacks "
-                "elicitation capability — proceeding without prompt", name,
-            )
-            return
-        if self._writer is None:
-            return
-        prompt = (f"AutoControl is about to run a destructive tool "
-                  f"'{name}'. Continue?")
-        try:
-            response = self.request_elicitation(
-                message=prompt, requested_schema={"type": "object",
-                                                    "properties": {}},
-                timeout=60.0,
-            )
-        except (RuntimeError, TimeoutError) as error:
-            autocontrol_logger.info(
-                "MCP elicitation for %s failed (%r) — refusing call",
-                name, error,
-            )
-            raise _MCPError(
-                -32000, f"User confirmation unavailable for {name}",
-            ) from error
-        action = response.get("action") if isinstance(response, dict) else None
-        if action != "accept":
-            raise _MCPError(-32000, f"User declined to run {name}: action={action!r}")
-        del arguments  # available for future per-arg confirmation policies
-
     def _build_call_context(self, msg_id: Any,
                             params: Dict[str, Any]) -> ToolCallContext:
         meta = params.get("_meta") if isinstance(params.get("_meta"),
@@ -874,117 +660,6 @@ class MCPServer:
             request_id=msg_id, progress_token=progress_token,
             notifier=self._notifier,
         )
-
-
-def _to_content_blocks(result: Any) -> List[Dict[str, Any]]:
-    """Normalise a tool's return value into MCP ``content`` blocks."""
-    if isinstance(result, MCPContent):
-        return [result.to_dict()]
-    if isinstance(result, list) and result and \
-            all(isinstance(item, MCPContent) for item in result):
-        return [item.to_dict() for item in result]
-    return [{"type": "text", "text": _stringify_result(result)}]
-
-
-def _stringify_result(value: Any) -> str:
-    """Convert a tool return value into a model-readable string."""
-    if isinstance(value, str):
-        return value
-    try:
-        return json.dumps(value, ensure_ascii=False, default=str)
-    except (TypeError, ValueError):
-        return repr(value)
-
-
-def _confirm_destructive_enabled() -> bool:
-    """Return True when the operator wants destructive tools gated on user OK."""
-    raw = os.environ.get("JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "")
-    return raw.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _capture_error_screenshot(tool_name: str) -> Optional[str]:
-    """Save a debug screenshot when JE_AUTOCONTROL_MCP_ERROR_SHOTS is set."""
-    debug_dir = os.environ.get("JE_AUTOCONTROL_MCP_ERROR_SHOTS")
-    if not debug_dir:
-        return None
-    target_dir = os.path.realpath(os.fspath(debug_dir))
-    try:
-        os.makedirs(target_dir, exist_ok=True)
-    except OSError as error:
-        autocontrol_logger.info(
-            "MCP error-screenshot dir unavailable: %r", error,
-        )
-        return None
-    filename = f"{tool_name}_{int(time.time() * 1000)}.png"
-    path = os.path.join(target_dir, filename)
-    try:
-        from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-        pil_screenshot(file_path=path)
-    except (OSError, RuntimeError, ValueError, AttributeError,
-            ImportError) as error:
-        autocontrol_logger.info(
-            "MCP failed to capture error screenshot: %r", error,
-        )
-        return None
-    return path
-
-
-def _file_uri_to_path(uri: str) -> Optional[str]:
-    """Convert a ``file://`` URI to a local filesystem path; ``None`` otherwise."""
-    if not isinstance(uri, str) or not uri.startswith("file://"):
-        return None
-    from urllib.parse import unquote, urlparse
-    parsed = urlparse(uri)
-    raw_path = unquote(parsed.path)
-    # Windows: file:///C:/foo strips the leading slash before the drive letter.
-    if sys.platform.startswith("win") and raw_path.startswith("/") and \
-            len(raw_path) > 2 and raw_path[2] == ":":
-        raw_path = raw_path[1:]
-    return raw_path or None
-
-
-def _is_hashable(value: Any) -> bool:
-    """Return True when ``value`` can be used as a dict key."""
-    try:
-        hash(value)
-    except TypeError:
-        return False
-    return True
-
-
-def _coerce_params(raw: Any, msg_id: Any) -> tuple:
-    """Normalise JSON-RPC ``params`` to a dict.
-
-    Returns ``(params, error_line)``. Every handler here expects an object;
-    a non-object ``params`` yields a ``-32602`` error line for a request and
-    an empty dict for a notification (which cannot carry an error reply).
-    """
-    if raw is None:
-        return {}, None
-    if isinstance(raw, dict):
-        return raw, None
-    if msg_id is None:
-        return {}, None
-    return {}, _error_response(msg_id, -32602, "Invalid params: expected an object")
-
-
-def _notification_message(method: str, params: Dict[str, Any]) -> str:
-    return json.dumps({"jsonrpc": "2.0", "method": method, "params": params},
-                      ensure_ascii=False, default=str)
-
-
-def _result_response(msg_id: Any, result: Any) -> str:
-    return json.dumps(
-        {"jsonrpc": "2.0", "id": msg_id, "result": result},
-        ensure_ascii=False, default=str,
-    )
-
-
-def _error_response(msg_id: Any, code: int, message: str) -> str:
-    return json.dumps({
-        "jsonrpc": "2.0", "id": msg_id,
-        "error": {"code": code, "message": message},
-    }, ensure_ascii=False)
 
 
 def start_mcp_stdio_server() -> MCPServer:

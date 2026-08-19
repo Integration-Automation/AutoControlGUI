@@ -3,15 +3,17 @@ from dataclasses import dataclass
 from typing import Optional
 
 from PySide6.QtCore import QTimer, Signal, QObject
-from PySide6.QtGui import QIntValidator, QDoubleValidator, QKeyEvent, Qt
+from PySide6.QtGui import QKeyEvent, Qt
 from PySide6.QtWidgets import (
-    QWidget, QLineEdit, QVBoxLayout, QLabel,
-    QGridLayout, QHBoxLayout, QMessageBox,
-    QTabWidget, QTextEdit, QFileDialog, QCheckBox, QGroupBox
+    QWidget, QVBoxLayout, QLabel, QTabWidget,
 )
 
 from je_auto_control.gui._auto_click_tab import AutoClickTabMixin
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
+from je_auto_control.gui._image_detect_tab import ImageDetectTabMixin
+from je_auto_control.gui._record_tab import RecordTabMixin
+from je_auto_control.gui._screenshot_tab import ScreenshotTabMixin
+from je_auto_control.gui._script_tab import ScriptTabMixin
 from je_auto_control.gui.accessibility_tab import AccessibilityTab
 from je_auto_control.gui.assertions_tab import AssertionsTab
 from je_auto_control.gui.data_source_tab import DataSourceTab
@@ -58,7 +60,6 @@ from je_auto_control.gui.scheduler_tab import SchedulerTab
 from je_auto_control.gui.flow_editor import FlowEditorTab
 from je_auto_control.gui.script_builder import ScriptBuilderTab
 from je_auto_control.gui.self_healing_tab import SelfHealingTab
-from je_auto_control.gui.selector import crop_template_to_file, open_region_selector
 from je_auto_control.gui.triggers_tab import TriggersTab
 from je_auto_control.gui.webhooks_tab import WebhooksTab
 from je_auto_control.gui.email_triggers_tab import EmailTriggersTab
@@ -66,21 +67,7 @@ from je_auto_control.gui.variables_tab import VariablesTab
 from je_auto_control.gui.vlm_tab import VLMTab
 from je_auto_control.gui.webrunner_tab import WebRunnerTab
 from je_auto_control.gui.window_tab import WindowManagerTab
-from je_auto_control.wrapper.auto_control_screen import screen_size, screenshot, get_pixel
-from je_auto_control.wrapper.auto_control_image import locate_all_image, locate_image_center, locate_and_click
-from je_auto_control.wrapper.auto_control_record import record, stop_record
-from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.executor.action_executor import execute_action, execute_files
-from je_auto_control.utils.json.json_file import read_action_json, write_action_json
-from je_auto_control.utils.file_process.get_dir_file_list import get_dir_files_as_list
-
-
-_JSON_FILE_FILTER = "JSON (*.json)"
-
-
-def _t(key: str) -> str:
-    """language_wrapper shorthand"""
-    return language_wrapper.translate(key, key)
+from je_auto_control.utils.json.json_file import read_action_json
 
 
 class _WorkerSignals(QObject):
@@ -102,7 +89,9 @@ class _TabEntry:
 # Main Widget
 # =============================================================================
 class AutoControlGUIWidget(
-    TranslatableMixin, AutoClickTabMixin, ReportTabMixin, QWidget,
+    TranslatableMixin, AutoClickTabMixin, ScreenshotTabMixin,
+    ImageDetectTabMixin, RecordTabMixin, ScriptTabMixin, ReportTabMixin,
+    QWidget,
 ):
     """Owns the QTabWidget and exposes show/hide/list APIs for the menu bar."""
 
@@ -423,351 +412,6 @@ class AutoControlGUIWidget(
             return
         if entry is not None:
             self.tabs.setCurrentWidget(entry.widget)
-
-    # =========================================================================
-    # Tab 2: Screenshot
-    # =========================================================================
-    def _build_screenshot_tab(self) -> QWidget:
-        tab = QWidget()
-        layout = QVBoxLayout()
-
-        # Screen size (read via Actions menu -> Get Screen Size)
-        size_group = self._tr(QGroupBox(), "screen_size_label")
-        sg = QHBoxLayout()
-        self.screen_size_label = QLabel("--")
-        sg.addWidget(self.screen_size_label)
-        size_group.setLayout(sg)
-        layout.addWidget(size_group)
-
-        # Screenshot inputs; capture runs from the Actions menu.
-        ss_group = self._tr(QGroupBox(), "take_screenshot")
-        ss_grid = QGridLayout()
-        ss_grid.addWidget(self._tr(QLabel(), "file_path_label"), 0, 0)
-        self.ss_path_input = QLineEdit()
-        ss_grid.addWidget(self.ss_path_input, 0, 1)
-
-        ss_grid.addWidget(self._tr(QLabel(), "region_label"), 1, 0)
-        self.ss_region_input = QLineEdit()
-        self.ss_region_input.setPlaceholderText("0, 0, 800, 600")
-        ss_grid.addWidget(self.ss_region_input, 1, 1)
-        ss_group.setLayout(ss_grid)
-        layout.addWidget(ss_group)
-
-        # Pixel probe inputs; lookup runs from the Actions menu.
-        px_group = self._tr(QGroupBox(), "get_pixel_label")
-        px_grid = QGridLayout()
-        px_grid.addWidget(self._tr(QLabel(), "pixel_x"), 0, 0)
-        self.pixel_x_input = QLineEdit("0")
-        self.pixel_x_input.setValidator(QIntValidator())
-        px_grid.addWidget(self.pixel_x_input, 0, 1)
-        px_grid.addWidget(self._tr(QLabel(), "pixel_y"), 0, 2)
-        self.pixel_y_input = QLineEdit("0")
-        self.pixel_y_input.setValidator(QIntValidator())
-        px_grid.addWidget(self.pixel_y_input, 0, 3)
-        self.pixel_result_label = QLabel()
-        self._pixel_result_suffix = " --"
-        self.pixel_result_label.setText(
-            self._translate("pixel_result") + self._pixel_result_suffix,
-        )
-        px_grid.addWidget(self.pixel_result_label, 1, 0, 1, 4)
-        px_group.setLayout(px_grid)
-        layout.addWidget(px_group)
-
-        self.ss_result_text = QTextEdit()
-        self.ss_result_text.setReadOnly(True)
-        self.ss_result_text.setMaximumHeight(100)
-        layout.addWidget(self.ss_result_text)
-        layout.addStretch()
-        tab.setLayout(layout)
-        return tab
-
-    def _get_screen_size(self):
-        try:
-            w, h = screen_size()
-            self.screen_size_label.setText(f"{w} x {h}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
-
-    def _browse_ss_path(self):
-        path, _ = QFileDialog.getSaveFileName(self, _t("save_screenshot"), "", "PNG (*.png);;All (*)")
-        if path:
-            self.ss_path_input.setText(path)
-
-    def _pick_ss_region(self):
-        region = open_region_selector(self)
-        if region is None:
-            return
-        x, y, w, h = region
-        self.ss_region_input.setText(f"{x}, {y}, {x + w}, {y + h}")
-
-    def _take_screenshot(self):
-        try:
-            path = self.ss_path_input.text() or None
-            region_text = self.ss_region_input.text().strip()
-            region = None
-            if region_text:
-                region = [int(x.strip()) for x in region_text.split(",")]
-            screenshot(file_path=path, screen_region=region)
-            self.ss_result_text.setText(f"Screenshot saved: {path or '(not saved)'}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
-            self.ss_result_text.setText(f"Error: {error}")
-
-    def _get_pixel_color(self):
-        try:
-            x = int(self.pixel_x_input.text())
-            y = int(self.pixel_y_input.text())
-            color = get_pixel(x, y)
-            self._pixel_result_suffix = f" {color}"
-            self.pixel_result_label.setText(
-                self._translate("pixel_result") + self._pixel_result_suffix,
-            )
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
-            self.pixel_result_label.setText(f"Error: {error}")
-
-    def _screenshot_retranslate(self) -> None:
-        if hasattr(self, "pixel_result_label"):
-            self.pixel_result_label.setText(
-                self._translate("pixel_result") + self._pixel_result_suffix,
-            )
-
-    # =========================================================================
-    # Tab 3: Image Detection
-    # =========================================================================
-    def _build_image_detect_tab(self) -> QWidget:
-        tab = QWidget()
-        layout = QVBoxLayout()
-
-        # Detection inputs; locate/crop commands run from the Actions menu.
-        grid = QGridLayout()
-        grid.addWidget(self._tr(QLabel(), "template_image"), 0, 0)
-        self.img_path_input = QLineEdit()
-        grid.addWidget(self.img_path_input, 0, 1)
-
-        grid.addWidget(self._tr(QLabel(), "threshold_label"), 1, 0)
-        self.threshold_input = QLineEdit("0.8")
-        self.threshold_input.setValidator(QDoubleValidator(0.0, 1.0, 2))
-        grid.addWidget(self.threshold_input, 1, 1)
-        self.draw_check = self._tr(QCheckBox(), "draw_image_check")
-        grid.addWidget(self.draw_check, 1, 2)
-
-        layout.addLayout(grid)
-
-        layout.addWidget(self._tr(QLabel(), "detection_result"))
-        self.detect_result_text = QTextEdit()
-        self.detect_result_text.setReadOnly(True)
-        layout.addWidget(self.detect_result_text)
-        tab.setLayout(layout)
-        return tab
-
-    def _browse_img(self):
-        path, _ = QFileDialog.getOpenFileName(self, _t("template_image"), "", "Images (*.png *.jpg *.bmp);;All (*)")
-        if path:
-            self.img_path_input.setText(path)
-
-    def _crop_template(self):
-        save_path, _ = QFileDialog.getSaveFileName(
-            self, _t("crop_template"), "", "PNG (*.png)"
-        )
-        if not save_path:
-            return
-        try:
-            region = crop_template_to_file(save_path, self)
-            if region is None:
-                return
-            self.img_path_input.setText(save_path)
-            self.detect_result_text.setText(f"Template saved: {save_path} region={region}")
-        except (OSError, ValueError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
-
-    def _get_detect_params(self):
-        path = self.img_path_input.text()
-        if not path:
-            raise ValueError("Template image path is empty")
-        threshold = float(self.threshold_input.text() or "0.8")
-        draw = self.draw_check.isChecked()
-        return path, threshold, draw
-
-    def _locate_image(self):
-        try:
-            path, th, draw = self._get_detect_params()
-            result = locate_image_center(path, th, draw)
-            self.detect_result_text.setText(f"Center: {result}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
-            self.detect_result_text.setText(f"Error: {error}")
-
-    def _locate_all(self):
-        try:
-            path, th, draw = self._get_detect_params()
-            result = locate_all_image(path, th, draw)
-            self.detect_result_text.setText(f"Found {len(result)} matches:\n{result}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
-            self.detect_result_text.setText(f"Error: {error}")
-
-    def _locate_click(self):
-        try:
-            path, th, draw = self._get_detect_params()
-            btn = self.mouse_button_combo.currentText() if hasattr(self, "mouse_button_combo") else "mouse_left"
-            result = locate_and_click(path, btn, th, draw)
-            self.detect_result_text.setText(f"Clicked at: {result}")
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
-            self.detect_result_text.setText(f"Error: {error}")
-
-    # =========================================================================
-    # Tab 4: Record / Playback
-    # =========================================================================
-    def _build_record_tab(self) -> QWidget:
-        tab = QWidget()
-        layout = QVBoxLayout()
-
-        # Record/playback/save/load all run from the Actions menu.
-        self._record_status_key = "record_idle"
-        self.record_status_label = QLabel()
-        self._apply_record_status_label()
-        layout.addWidget(self.record_status_label)
-
-        layout.addWidget(self._tr(QLabel(), "record_list_label"))
-        self.record_list_text = QTextEdit()
-        self.record_list_text.setReadOnly(True)
-        layout.addWidget(self.record_list_text)
-        tab.setLayout(layout)
-        return tab
-
-    def _apply_record_status_label(self) -> None:
-        if hasattr(self, "record_status_label"):
-            self.record_status_label.setText(
-                self._translate("record_status") + " "
-                + self._translate(self._record_status_key),
-            )
-
-    def _record_retranslate(self) -> None:
-        self._apply_record_status_label()
-
-    def _start_record(self):
-        try:
-            record()
-            self._record_status_key = "record_recording"
-            self._apply_record_status_label()
-        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
-
-    def _stop_record(self):
-        try:
-            self._record_data = stop_record() or []
-            self._record_status_key = "record_idle"
-            self._apply_record_status_label()
-            self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
-        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
-
-    def _playback_record(self):
-        try:
-            if not self._record_data:
-                QMessageBox.warning(self, "Warning", "No recorded data")
-                return
-            execute_action(self._record_data)
-        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
-
-    def _save_record(self):
-        try:
-            if not self._record_data:
-                QMessageBox.warning(self, "Warning", "No recorded data")
-                return
-            path, _ = QFileDialog.getSaveFileName(self, _t("save_record"), "", _JSON_FILE_FILTER)
-            if path:
-                write_action_json(path, self._record_data)
-        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
-
-    def _load_record(self):
-        try:
-            path, _ = QFileDialog.getOpenFileName(self, _t("load_record"), "", _JSON_FILE_FILTER)
-            if path:
-                self._record_data = read_action_json(path)
-                self.record_list_text.setText(json.dumps(self._record_data, indent=2, ensure_ascii=False))
-        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            QMessageBox.warning(self, "Error", str(error))
-
-    # =========================================================================
-    # Tab 5: Script Executor
-    # =========================================================================
-    def _build_script_tab(self) -> QWidget:
-        tab = QWidget()
-        layout = QVBoxLayout()
-
-        # Load/execute commands run from the Actions menu; the tab keeps
-        # only the path inputs, the editor, and the result view.
-        file_h = QHBoxLayout()
-        file_h.addWidget(self._tr(QLabel(), "file_path_label"))
-        self.script_path_input = QLineEdit()
-        file_h.addWidget(self.script_path_input)
-        layout.addLayout(file_h)
-
-        dir_h = QHBoxLayout()
-        dir_h.addWidget(self._tr(QLabel(), "execute_dir_label"))
-        self.script_dir_input = QLineEdit()
-        dir_h.addWidget(self.script_dir_input)
-        layout.addLayout(dir_h)
-
-        layout.addWidget(self._tr(QLabel(), "script_content"))
-        self.script_editor = QTextEdit()
-        self.script_editor.setPlaceholderText('[["AC_type_keyboard", {"keycode": "a"}]]')
-        layout.addWidget(self.script_editor)
-
-        layout.addWidget(self._tr(QLabel(), "execution_result"))
-        self.script_result_text = QTextEdit()
-        self.script_result_text.setReadOnly(True)
-        layout.addWidget(self.script_result_text)
-        tab.setLayout(layout)
-        return tab
-
-    def _browse_script(self):
-        path, _ = QFileDialog.getOpenFileName(self, _t("load_script"), "", _JSON_FILE_FILTER)
-        if path:
-            self.script_path_input.setText(path)
-            try:
-                data = read_action_json(path)
-                self.script_editor.setText(json.dumps(data, indent=2, ensure_ascii=False))
-            except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-                self.script_result_text.setText(f"Error loading: {error}")
-
-    def _execute_script(self):
-        try:
-            path = self.script_path_input.text()
-            if not path:
-                return
-            data = read_action_json(path)
-            result = execute_action(data)
-            self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            self.script_result_text.setText(f"Error: {error}")
-
-    def _browse_script_dir(self):
-        path = QFileDialog.getExistingDirectory(self, _t("execute_dir_label"))
-        if path:
-            self.script_dir_input.setText(path)
-
-    def _execute_dir(self):
-        try:
-            path = self.script_dir_input.text()
-            if not path:
-                return
-            files = get_dir_files_as_list(path)
-            result = execute_files(files)
-            self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except (AutoControlException, OSError, ValueError, TypeError, RuntimeError) as error:
-            self.script_result_text.setText(f"Error: {error}")
-
-    def _execute_manual_script(self):
-        try:
-            text = self.script_editor.toPlainText().strip()
-            if not text:
-                return
-            data = json.loads(text)
-            result = execute_action(data)
-            self.script_result_text.setText(json.dumps(result, indent=2, default=str, ensure_ascii=False))
-        except (OSError, ValueError, TypeError, RuntimeError) as error:
-            self.script_result_text.setText(f"Error: {error}")
 
     # =========================================================================
     # Global keyboard shortcut: Ctrl+4 to stop

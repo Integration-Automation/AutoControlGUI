@@ -21,9 +21,6 @@ from typing import Any, Callable, Mapping, Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.audit_log import default_audit_log
-from je_auto_control.utils.remote_desktop.fingerprint import (
-    load_or_create_host_fingerprint,
-)
 from je_auto_control.utils.remote_desktop.input_dispatch import dispatch_input
 from je_auto_control.utils.remote_desktop.permissions import SessionPermissions
 from je_auto_control.utils.remote_desktop.rate_limit import (
@@ -33,6 +30,12 @@ from je_auto_control.utils.remote_desktop.trust_list import TrustList
 from je_auto_control.utils.remote_desktop.webrtc_transport import (
     RTCPeerConnection, RTCSessionDescription, ScreenVideoTrack, WebRTCConfig,
     get_bridge, wait_for_ice_gathering,
+)
+from je_auto_control.utils.remote_desktop.webrtc_host_auth import (
+    ViewerAuthMixin,
+)
+from je_auto_control.utils.remote_desktop.webrtc_host_media import (
+    MediaNegotiationMixin,
 )
 
 
@@ -45,7 +48,7 @@ StateCallback = Callable[[str], None]
 ConsentCallback = Callable[[str], bool]
 
 
-class WebRTCDesktopHost:
+class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
     """Single-viewer WebRTC host with manual SDP signaling.
 
     Multiple simultaneous viewers would require one ``RTCPeerConnection``
@@ -559,155 +562,6 @@ class WebRTCDesktopHost:
         self._maybe_resubscribe_viewer_video()
         self._maybe_resubscribe_viewer_audio()
 
-    def _maybe_resubscribe_viewer_video(self) -> None:
-        if not (self._config.accept_viewer_video
-                and self._viewer_video_task is None
-                and self._pc is not None):
-            return
-        video_ts = [
-            t for t in self._pc.getTransceivers() if t.kind == "video"
-        ]
-        for transceiver in video_ts[1:]:  # skip our outbound slot
-            track = self._receiver_track(transceiver)
-            if track is None:
-                continue
-            self._viewer_video_task = self._spawn_bg(
-                self._consume_viewer_video(track),
-            )
-            autocontrol_logger.info(
-                "webrtc host: re-spawned viewer video consume task",
-            )
-            return
-
-    def _maybe_resubscribe_viewer_audio(self) -> None:
-        if not (self._config.accept_viewer_audio_opus
-                and self._opus_audio_receiver is None
-                and self._pc is not None):
-            return
-        for transceiver in self._pc.getTransceivers():
-            if transceiver.kind != "audio":
-                continue
-            track = self._receiver_track(transceiver)
-            if track is None:
-                continue
-            self._start_opus_audio_receive(track)
-            return
-
-    @staticmethod
-    def _receiver_track(transceiver):
-        receiver = transceiver.receiver
-        return receiver.track if receiver is not None else None
-
-    async def _async_renegotiate(self) -> None:
-        """Host-initiated renegotiation: new offer → viewer over ctrl channel."""
-        if self._pc is None:
-            return
-        try:
-            offer = await self._pc.createOffer()
-            await self._pc.setLocalDescription(offer)
-            await wait_for_ice_gathering(self._pc)
-        except (RuntimeError, OSError) as error:
-            autocontrol_logger.warning("renegotiate offer: %r", error)
-            return
-        self._send_ctrl({
-            "type": "renegotiate_offer",
-            "sdp": self._pc.localDescription.sdp,
-        })
-        autocontrol_logger.info("webrtc host: sent renegotiate offer")
-
-    def request_renegotiation(self) -> None:
-        """Public sync entry: kick off a fresh SDP exchange over ctrl channel."""
-        if self._pc is None:
-            return
-        get_bridge().call_soon(
-            lambda: self._spawn_bg(self._async_renegotiate()),
-        )
-
-    def enable_accept_viewer_video(self) -> None:
-        """Live-add a recvonly video transceiver and renegotiate.
-
-        ``enable_*`` only adds capacity — aiortc has no ``removeTransceiver``,
-        so disabling needs a reconnect (or set the transceiver to inactive).
-        """
-        if self._pc is None:
-            return
-        self._config.accept_viewer_video = True
-        get_bridge().call_soon(self._add_recvonly_video_and_renegotiate)
-
-    def enable_accept_viewer_audio_opus(self) -> None:
-        """Live-add a recvonly audio transceiver and renegotiate."""
-        if self._pc is None:
-            return
-        self._config.accept_viewer_audio_opus = True
-        get_bridge().call_soon(self._add_recvonly_audio_and_renegotiate)
-
-    def _add_recvonly_video_and_renegotiate(self) -> None:
-        if self._pc is None:
-            return
-        already = sum(
-            1 for t in self._pc.getTransceivers() if t.kind == "video"
-        )
-        if already < 2:
-            self._pc.addTransceiver("video", direction="recvonly")
-        self._spawn_bg(self._async_renegotiate())
-
-    def _add_recvonly_audio_and_renegotiate(self) -> None:
-        if self._pc is None:
-            return
-        already = sum(
-            1 for t in self._pc.getTransceivers() if t.kind == "audio"
-        )
-        if already < 1:
-            self._pc.addTransceiver("audio", direction="recvonly")
-        self._spawn_bg(self._async_renegotiate())
-
-    def disable_accept_viewer_video(self) -> None:
-        """Mark the recvonly video slot inactive + stop the consume task."""
-        if self._pc is None:
-            return
-        self._config.accept_viewer_video = False
-        get_bridge().call_soon(self._deactivate_recvonly_video)
-
-    def disable_accept_viewer_audio_opus(self) -> None:
-        """Mark the recvonly audio slot inactive + stop the Opus receiver."""
-        if self._pc is None:
-            return
-        self._config.accept_viewer_audio_opus = False
-        get_bridge().call_soon(self._deactivate_recvonly_audio)
-
-    def _deactivate_recvonly_video(self) -> None:
-        if self._pc is None:
-            return
-        # Find the second video transceiver (the recvonly one); first is our
-        # outbound screen track.
-        video_ts = [t for t in self._pc.getTransceivers() if t.kind == "video"]
-        if len(video_ts) >= 2:
-            try:
-                video_ts[1].direction = "inactive"
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("inactivate video: %r", error)
-        if self._viewer_video_task is not None:
-            self._viewer_video_task.cancel()
-            self._viewer_video_task = None
-        self._spawn_bg(self._async_renegotiate())
-
-    def _deactivate_recvonly_audio(self) -> None:
-        if self._pc is None:
-            return
-        audio_ts = [t for t in self._pc.getTransceivers() if t.kind == "audio"]
-        if audio_ts:
-            try:
-                audio_ts[0].direction = "inactive"
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("inactivate audio: %r", error)
-        if self._opus_audio_receiver is not None:
-            try:
-                self._opus_audio_receiver.stop()
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("opus receiver stop: %r", error)
-            self._opus_audio_receiver = None
-        self._spawn_bg(self._async_renegotiate())
-
     def _ensure_files_receiver(self):
         from je_auto_control.utils.remote_desktop.webrtc_files import (
             FileTransferReceiver,
@@ -802,172 +656,6 @@ class WebRTCDesktopHost:
     @property
     def permissions(self) -> SessionPermissions:
         return self._permissions
-
-    def _handle_send_sas(self) -> None:
-        try:
-            from je_auto_control.utils.remote_desktop.session_actions import (
-                send_secure_attention_sequence,
-            )
-            send_secure_attention_sequence()
-            self._send_ctrl({"type": "sas_ok"})
-        except (RuntimeError, OSError) as error:
-            autocontrol_logger.warning("SendSAS: %r", error)
-            self._send_ctrl({"type": "sas_fail", "error": str(error)})
-
-    def _handle_auth(self, data: Mapping[str, Any]) -> None:
-        token = data.get("token")
-        if not isinstance(token, str) or token != self._token:
-            self._reject_auth(data)
-            return
-        viewer_id = data.get("viewer_id")
-        self._pending_viewer_id = (
-            viewer_id if isinstance(viewer_id, str) else None
-        )
-        if self._auto_approve_via_trust():
-            return
-        if self._auto_approve_via_whitelist():
-            return
-        if self._on_pending_viewer is None:
-            self._approve_pending_viewer()
-            return
-        self._has_pending_viewer = True
-        try:
-            self._on_pending_viewer()
-        except (RuntimeError, OSError) as error:
-            autocontrol_logger.warning("pending viewer cb: %r", error)
-
-    def _reject_auth(self, data: Mapping[str, Any]) -> None:
-        self._send_ctrl({"type": "auth_fail"})
-        try:
-            default_audit_log().log(
-                "auth_fail",
-                viewer_id=str(data.get("viewer_id", "")) or None,
-                detail=f"remote_ip={self._remote_ip}",
-            )
-        except (RuntimeError, OSError) as error:
-            autocontrol_logger.debug("audit log auth_fail: %r", error)
-        get_bridge().call_soon(self._schedule_close_after_fail)
-
-    def _auto_approve_via_trust(self) -> bool:
-        if not self._is_trusted_viewer(self._pending_viewer_id):
-            return False
-        autocontrol_logger.info(
-            "webrtc host: viewer_id %s is trusted; auto-approving",
-            self._pending_viewer_id,
-        )
-        if self._trust_list is not None:
-            try:
-                self._trust_list.touch(self._pending_viewer_id)
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.debug("trust touch: %r", error)
-        self._approve_pending_viewer()
-        return True
-
-    def _auto_approve_via_whitelist(self) -> bool:
-        if not self._is_ip_whitelisted(self._remote_ip):
-            return False
-        autocontrol_logger.info(
-            "webrtc host: remote ip %s matches whitelist; auto-approving",
-            self._remote_ip,
-        )
-        self._approve_pending_viewer()
-        return True
-
-    def _is_ip_whitelisted(self, ip: Optional[str]) -> bool:
-        if not ip or not self._ip_whitelist:
-            return False
-        import ipaddress
-        try:
-            addr = ipaddress.ip_address(ip)
-        except ValueError:
-            return False
-        for cidr in self._ip_whitelist:
-            try:
-                if addr in ipaddress.ip_network(cidr.strip(), strict=False):
-                    return True
-            except ValueError:
-                continue
-        return False
-
-    def _is_trusted_viewer(self, viewer_id: Optional[str]) -> bool:
-        if self._trust_list is None or not viewer_id:
-            return False
-        try:
-            return self._trust_list.is_trusted(viewer_id)
-        except (OSError, RuntimeError) as error:
-            autocontrol_logger.warning("trust list check: %r", error)
-            return False
-
-    def trust_pending_viewer(self, label: str = "") -> None:
-        """Add the current pending viewer to the trust list, then approve."""
-        viewer_id = self._pending_viewer_id
-        if self._trust_list is not None and viewer_id:
-            try:
-                self._trust_list.add(viewer_id, label=label)
-            except (OSError, ValueError, RuntimeError) as error:
-                autocontrol_logger.warning("trust list add: %r", error)
-        self.approve_pending_viewer()
-
-    @property
-    def pending_viewer_id(self) -> Optional[str]:
-        return self._pending_viewer_id
-
-    def approve_pending_viewer(self) -> None:
-        """Thread-safe accept; call from GUI when user clicks Accept."""
-        get_bridge().call_soon(self._approve_pending_viewer)
-
-    def reject_pending_viewer(self) -> None:
-        """Thread-safe reject; call from GUI when user clicks Reject."""
-        get_bridge().call_soon(self._reject_pending_viewer)
-
-    def _approve_pending_viewer(self) -> None:
-        if not self._has_pending_viewer and self._authenticated:
-            return
-        self._has_pending_viewer = False
-        self._authenticated = True
-        self._send_ctrl({
-            "type": "auth_ok",
-            "read_only": not self._permissions.allow_input,
-            "permissions": self._permissions.to_dict(),
-            "fingerprint": load_or_create_host_fingerprint(),
-        })
-        try:
-            default_audit_log().log(
-                "auth_ok",
-                viewer_id=self._pending_viewer_id,
-                detail=f"remote_ip={self._remote_ip}",
-            )
-        except (RuntimeError, OSError) as error:
-            autocontrol_logger.debug("audit log auth_ok: %r", error)
-        if self._auth_deadline_handle is not None:
-            self._auth_deadline_handle.cancel()
-            self._auth_deadline_handle = None
-        if self._on_authenticated is not None:
-            try:
-                self._on_authenticated()
-            except (RuntimeError, OSError) as error:
-                autocontrol_logger.warning("auth cb: %r", error)
-
-    def _reject_pending_viewer(self) -> None:
-        self._has_pending_viewer = False
-        self._send_ctrl({"type": "auth_fail"})
-        get_bridge().call_soon(self._schedule_close_after_fail)
-
-    @property
-    def has_pending_viewer(self) -> bool:
-        return self._has_pending_viewer
-
-    def _schedule_close_after_fail(self) -> None:
-        loop = asyncio.get_event_loop()
-        loop.call_later(0.5, lambda: self._spawn_bg(self._async_stop()))
-
-    def _enforce_auth_deadline(self) -> None:
-        if self._authenticated:
-            return
-        autocontrol_logger.warning(
-            "webrtc host: viewer failed to authenticate within grace period",
-        )
-        self._spawn_bg(self._async_stop())
 
     def _dispatch_input_safely(self, payload: Any) -> None:
         if not isinstance(payload, dict):

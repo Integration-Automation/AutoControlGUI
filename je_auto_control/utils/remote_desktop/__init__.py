@@ -19,8 +19,11 @@ from je_auto_control.utils.remote_desktop.clipboard_sync import (
 from je_auto_control.utils.remote_desktop.file_transfer import (
     FileReceiver, FileSendResult, FileTransferError, send_file,
 )
-from je_auto_control.utils.remote_desktop.host import (
-    PendingViewer, PendingViewerCallback, RemoteDesktopHost,
+from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
+from je_auto_control.utils.remote_desktop.host_access import (
+    PendingViewer, PendingViewerCallback,
+)
+from je_auto_control.utils.remote_desktop.host_capture import (
     list_host_monitors,
 )
 from je_auto_control.utils.remote_desktop.host_id import (

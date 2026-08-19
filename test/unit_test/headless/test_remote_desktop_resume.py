@@ -4,9 +4,8 @@ from io import BytesIO
 
 import pytest
 
-from je_auto_control.utils.remote_desktop.host import (
-    PendingViewer, RemoteDesktopHost,
-)
+from je_auto_control.utils.remote_desktop.host import RemoteDesktopHost
+from je_auto_control.utils.remote_desktop.host_access import PendingViewer
 from je_auto_control.utils.remote_desktop.resume_tokens import (
     ResumeTokenStore,
 )

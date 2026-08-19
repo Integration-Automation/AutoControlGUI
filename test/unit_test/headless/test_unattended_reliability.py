@@ -23,7 +23,7 @@ def test_generate_totp_deterministic_and_verifies():
 
 def test_otp_to_var_command():
     from je_auto_control.utils.executor.action_executor import Executor
-    from je_auto_control.utils.executor.flow_control import exec_otp_to_var
+    from je_auto_control.utils.executor.flow_data_commands import exec_otp_to_var
     executor = Executor()
     result = exec_otp_to_var(
         executor, {"secret": ac.generate_secret(), "var": "code"})

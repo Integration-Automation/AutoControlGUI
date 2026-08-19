@@ -7,9 +7,9 @@ import pytest
 from je_auto_control.utils.exception.exceptions import (
     AutoControlAssertionException,
 )
-from je_auto_control.utils.executor import flow_control
+from je_auto_control.utils.executor import flow_data_commands
 from je_auto_control.utils.executor.action_executor import Executor
-from je_auto_control.utils.executor.flow_control import (
+from je_auto_control.utils.executor.flow_data_commands import (
     exec_assert_var, exec_http_to_var, exec_now_to_var, exec_random_to_var,
     exec_read_file_to_var, exec_transform_var,
 )
@@ -76,7 +76,7 @@ def test_transform_var_replace_and_slice():
 
 
 def test_now_to_var_formats_injected_clock(monkeypatch):
-    monkeypatch.setattr(flow_control, "_now",
+    monkeypatch.setattr(flow_data_commands, "_now",
                         lambda: datetime.datetime(2026, 1, 2, 3, 4, 5))
     executor = Executor()
     result = exec_now_to_var(executor, {"format": "%Y-%m-%d", "var": "d"})
