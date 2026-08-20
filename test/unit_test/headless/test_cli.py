@@ -120,12 +120,9 @@ def test_record_subcommand_delegates_to_helper(tmp_path, monkeypatch):
         fake_record_to_json)
     out = str(tmp_path / "rec.json")
     rc = main(["record", out, "--duration", "0"])
-    if sys.platform == "darwin":
-        assert rc == 1
-    else:
-        assert rc == 0
-        assert captured["output"] == out
-        assert captured["timeout"] == pytest.approx(0.0)
+    assert rc == 0
+    assert captured["output"] == out
+    assert captured["timeout"] == pytest.approx(0.0)
 
 
 def test_record_to_json_helper_writes_file(tmp_path, monkeypatch):
