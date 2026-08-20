@@ -16,6 +16,7 @@ import os
 import pathlib
 import subprocess  # nosec B404  # reason: fixed argv, sys.executable, no shell
 import sys
+import tempfile
 
 import pytest
 
@@ -87,3 +88,31 @@ def test_the_lazy_modules_still_work_when_the_wheels_are_there():
     stats = region_color_stats(image)
     assert stats.average_rgb == (10, 20, 30)
     assert stats.dominant_rgb == (10, 20, 30)
+
+
+def test_importing_the_facade_writes_nothing_to_the_users_home():
+    """Importing must not create files, only make the names available.
+
+    `default_history_store` used to open its SQLite database in its
+    constructor, and that constructor runs while the facade is importing — so
+    `import je_auto_control` created `~/.je_auto_control/run_history.sqlite`
+    whether or not the caller ever recorded a run. Any module-level singleton
+    that opens a file puts that back, which is why this reads the whole home
+    directory rather than naming that one path.
+    """
+    with tempfile.TemporaryDirectory(prefix="ac-home-") as raw_home:
+        home = pathlib.Path(raw_home)
+        env = dict(os.environ, PYTHONPATH=str(REPO_ROOT),
+                   HOME=str(home), USERPROFILE=str(home))
+        env.pop("HOMEDRIVE", None)
+        env.pop("HOMEPATH", None)
+        # argv is this interpreter plus a literal statement. No shell.
+        result = subprocess.run(  # nosec B603  # nosemgrep  # reason: literal argv, no shell
+            [sys.executable, "-c", "import je_auto_control"],
+            capture_output=True, text=True, timeout=180, check=False, env=env)
+        assert result.returncode == 0, result.stderr
+
+        created = sorted(p.relative_to(home).as_posix() for p in home.rglob("*"))
+        assert not created, (
+            "importing je_auto_control created these under the user's home: "
+            f"{created}")
