@@ -102,11 +102,18 @@ jobs:
 
             # pip comes from ensurepip, not from pkg: FreeBSD 14.2's repository
             # has no py311-pip (the flavoured port names are not dependable
-            # here, while python311 itself is). The two dependencies are the
-            # only ones the facade still needs, both pure Python, at the
-            # versions pyproject pins and by their PyPI names.
+            # here, while python311 itself is). These are the only dependencies
+            # the facade still needs, all pure Python, at the versions
+            # pyproject pins and by their PyPI names.
+            #
+            # --no-deps is the point of this job rather than a detail: it is
+            # what proves nothing heavy is being dragged in behind the
+            # verification. six is therefore named explicitly — python-Xlib
+            # 0.33 imports it from Xlib.display, and with --no-deps nothing
+            # else would install it.
             python3.11 -m ensurepip --upgrade
-            python3.11 -m pip install --no-deps python-xlib==0.33 defusedxml==0.7.1
+            python3.11 -m pip install --no-deps \
+              python-xlib==0.33 six defusedxml==0.7.1
 
             # The backend connects to a display at import time, so the server
             # has to be up first. 1280x1024 because the verification drives the
