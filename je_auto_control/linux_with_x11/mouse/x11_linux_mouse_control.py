@@ -26,6 +26,17 @@ x11_linux_scroll_direction_down = 5
 x11_linux_scroll_direction_left = 6
 x11_linux_scroll_direction_right = 7
 
+#: Each scroll direction and the one a negative count turns it into.
+#: Windows and macOS have always read the direction off the sign of
+#: the count; X11 encodes direction as a *button*, so the sign has to
+#: be turned back into one here rather than handed to the server.
+_OPPOSITE_SCROLL_DIRECTION = {
+    x11_linux_scroll_direction_up: x11_linux_scroll_direction_down,
+    x11_linux_scroll_direction_down: x11_linux_scroll_direction_up,
+    x11_linux_scroll_direction_left: x11_linux_scroll_direction_right,
+    x11_linux_scroll_direction_right: x11_linux_scroll_direction_left,
+}
+
 
 def position() -> Tuple[int, int]:
     """
@@ -94,17 +105,25 @@ def scroll(scroll_value: int, scroll_direction: int) -> None:
     模擬滑鼠滾動
 
     :param scroll_value: number of scroll units 滾動次數
-        方向由 scroll_direction 決定，因此這裡只取絕對值。
-        Direction comes from scroll_direction, so only the magnitude is used
-        here: range() on a negative value is empty, which silently scrolled
-        nothing at all.
-    :param scroll_direction: scroll direction 滾動方向
+        負數會反轉方向，與 Windows／macOS 一致；絕對值是滾動次數。
+        A negative count reverses ``scroll_direction``, which is what
+        Windows and macOS have always done with the sign; the magnitude
+        is the number of notches. (It used to be discarded, so portable
+        code written against the Windows convention scrolled the *named*
+        direction instead of the opposite one — silently, and only on
+        this backend.)
+    :param scroll_direction: 未帶負號時的預設方向 The direction a
+        positive count scrolls in
         4 = up 上
         5 = down 下
         6 = left 左
         7 = right 右
     """
-    for _ in range(abs(int(scroll_value))):
+    scroll_value = int(scroll_value)
+    if scroll_value < 0:
+        scroll_direction = _OPPOSITE_SCROLL_DIRECTION.get(
+            scroll_direction, scroll_direction)
+    for _ in range(abs(scroll_value)):
         click_mouse(scroll_direction)
 
 

@@ -6,7 +6,7 @@
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-08-19　**版本**：`pyproject.toml` version `0.0.218`　**分支**：`fix/clipboard-handles-and-window-input`
+> **掃描時間**：2026-08-20　**版本**：`pyproject.toml` version `0.0.219`　**分支**：`feat/cross-platform-verification`
 
 ---
 
@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,027 |
-| 程式碼總行數 | 139,420 |
+| 程式碼總行數 | 139,499 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -171,9 +171,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `wrapper/_platform_osx.py` | 156 | macOS 後端組裝（Quartz 事件 + osx 虛擬鍵表）。 |
 | `wrapper/_platform_linux.py` | 267 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
 | `wrapper/_platform_wayland.py` | 57 | Wayland 後端組裝（libei／ydotool／grim）。 |
-| `wrapper/auto_control_mouse.py` | 346 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
+| `wrapper/auto_control_mouse.py` | 366 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
 | `wrapper/auto_control_keyboard.py` | 273 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。 |
-| `wrapper/auto_control_screen.py` | 97 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
+| `wrapper/auto_control_screen.py` | 100 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
 | `wrapper/auto_control_image.py` | 83 | 影像 API：`locate_all_image`、`locate_image_center`、`locate_and_click`。 |
 | `wrapper/auto_control_record.py` | 107 | 錄製 API：`record`／`stop_record`／`record_to_json`（支援 stop event 與逾時）。 |
 | `wrapper/auto_control_window.py` | 278 | 視窗管理門面：列舉、尋找、聚焦、等待、關閉、顯示狀態、幾何、所屬行程 PID、依行程列舉／最小化視窗、不搶焦點的投遞式輸入（目前僅 Windows 實作）。 |
@@ -211,7 +211,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `screen/osx_screen.py` | 143 | 螢幕擷取與尺寸（含 Retina 座標處理）。 |
 | `pid/pid_control.py` | 64 | 以 PID 操作應用程式。 |
 
-#### Linux X11（`linux_with_x11/`，19 檔／1,196 行）
+#### Linux X11（`linux_with_x11/`，19 檔／1,215 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -226,7 +226,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `uinput/keyboard.py` | 33 | uinput 鍵盤後端，介面與 X11 版一致。 |
 | `uinput/mouse.py` | 116 | uinput 滑鼠後端。 |
 
-#### Linux Wayland（`linux_wayland/`，17 檔／2,830 行）
+#### Linux Wayland（`linux_wayland/`，17 檔／2,835 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -238,7 +238,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `_layout.py` | 83 | 版面原點的共用查詢。擷取與輸入不是同一個座標空間,差的就是這個原點:libei 的 region offset 是 `uint32`（描述不了負原點）,`ydotool mousemove --absolute` 的原點是合成器夾取的那個角落——兩條路都要減掉它,所以放在這裡而不是各自複製。讀數快取一秒——擷取那一側刻意不快取,但 ydotool 每次絕對移動都會問,不快取等於每次移動多開一個 `wlr-randr` 行程。 |
 | `oeffis.py` | 196 | liboeffis 綁定：跑完 RemoteDesktop portal 交握，交出 EIS fd。 |
 | `libei.py` | 610 | libei 綁定與完整握手（seat 綁定能力 → 由事件取得 device → start_emulating → 每次發送後 frame）。另負責絕對指標的座標空間:讀回裝置的 region,把版面座標映射進去,沒有任何 region 涵蓋就拒絕（libei 對這種移動是靜靜丟掉的）。 |
-| `mouse.py` | 379 | 滑鼠後端：移動、按鈕與捲動都 libei 優先，退回 ydotool；送往 libei 時垂直捲動軸取負（kernel `REL_WHEEL` 與 `wl_pointer` 正負號相反）。退到 ydotool 的絕對移動會先減掉版面原點（`--absolute` 是相對於版面左上角,不是版面座標的 `(0, 0)`),並依 `pointer_accel_mode()` 處理指標加速度——倍率讀不回來,只有操作者知道,所以由 `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL` 宣告:未設定＝每個行程警告一次後照送、`flat`＝已關掉加速度故靜靜送出、`strict`＝拒絕這次移動。 |
+| `mouse.py` | 384 | 滑鼠後端：移動、按鈕與捲動都 libei 優先，退回 ydotool；送往 libei 時垂直捲動軸取負（kernel `REL_WHEEL` 與 `wl_pointer` 正負號相反）。退到 ydotool 的絕對移動會先減掉版面原點（`--absolute` 是相對於版面左上角,不是版面座標的 `(0, 0)`),並依 `pointer_accel_mode()` 處理指標加速度——倍率讀不回來,只有操作者知道,所以由 `JE_AUTOCONTROL_WAYLAND_POINTER_ACCEL` 宣告:未設定＝每個行程警告一次後照送、`flat`＝已關掉加速度故靜靜送出、`strict`＝拒絕這次移動。 |
 | `keyboard.py` | 173 | 鍵盤後端：libei 優先，退回 ydotool／wtype。 |
 | `keymap.py` | 155 | 友善鍵名 → evdev key code。 |
 | `capture.py` | 236 | 擷取分層：操作者自訂指令 → grim → gnome-screenshot → spectacle → portal。 |
@@ -265,12 +265,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 12,870 行。
+> 24 個套件、約 12,871 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/action_lint/` | 328 | action 檔 linter 與 JSON Schema 產生器（CI 用 `python -m` 進入點） |
-| `utils/action_signing/` | 229 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
+| `utils/action_signing/` | 230 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 115 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 157 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
 | `utils/dag/` | 475 | 跨主機 DAG 編排器（圖模型 + runner） |
@@ -364,17 +364,17 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 4,999 行。
+> 37 個套件、約 5,027 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/annotate/` | 107 | 截圖標註：畫框、highlight、箭頭、標籤 |
+| `utils/annotate/` | 114 | 截圖標註：畫框、highlight、箭頭、標籤 |
 | `utils/barcode/` | 53 | 一維條碼（EAN／UPC）解碼，解碼器可注入 |
 | `utils/color_match/` | 103 | 在 HSV 通道上做顏色感知的樣板比對 |
 | `utils/color_region/` | 79 | 以顏色定位畫面區域（遮罩 + 連通元件） |
-| `utils/color_stats/` | 89 | 區域顏色統計：平均色與主色 |
+| `utils/color_stats/` | 95 | 區域顏色統計：平均色與主色 |
 | `utils/coordinate_space/` | 84 | 模型網格座標與實體像素之間的座標空間對映 |
-| `utils/cv2_utils/` | 592 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製、連通元件 |
+| `utils/cv2_utils/` | 597 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製、連通元件 |
 | `utils/edge_lines/` | 120 | 以 Hough 轉換偵測線條／格線／分隔線 |
 | `utils/edge_match/` | 112 | 邊緣形狀（Chamfer／距離轉換）樣板比對 |
 | `utils/feature_match/` | 129 | ORB 特徵比對：在旋轉／縮放／主題變更下定位樣板 |
@@ -392,7 +392,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/motion_regions/` | 73 | 兩影格間的局部變化／活動偵測（absdiff） |
 | `utils/perceptual_diff/` | 100 | 感知式（YIQ）影像差異，抑制反鋸齒邊緣誤報 |
 | `utils/preprocess/` | 185 | OCR／比對前的影像前處理（灰階、二值化、去傾斜…） |
-| `utils/qr/` | 53 | 從影像或螢幕區域解碼 QR code（OpenCV） |
+| `utils/qr/` | 59 | 從影像或螢幕區域解碼 QR code（OpenCV） |
 | `utils/rotated_match/` | 145 | 容忍旋轉與縮放的樣板比對（尺度空間 × 角度掃描） |
 | `utils/saliency/` | 107 | 頻譜殘差視覺顯著性：顯著圖與排序後的顯著區域 |
 | `utils/scale_detect/` | 84 | 偵測樣板實際渲染的顯示縮放／視覺 DPI |
@@ -404,7 +404,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/theme_normalize/` | 92 | 主題無關的影像正規化，讓亮色樣板能配對深色模式 |
 | `utils/video_report/` | 133 | 影片步驟疊圖報告：把截圖加字幕串成操作導覽影片 |
 | `utils/visual_match/` | 427 | 會回傳信心值的樣板比對（分數、多尺度、find-all + NMS）；擷取走 `grab_logical`，命中座標已加回虛擬桌面原點，單色樣板直接拒收 |
-| `utils/visual_regression/` | 217 | 桌面 GUI 的視覺回歸測試（黃金圖比對） |
+| `utils/visual_regression/` | 221 | 桌面 GUI 的視覺回歸測試（黃金圖比對） |
 
 ### 5.4.6 OCR 與文字理解
 
@@ -487,7 +487,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 20,177 行。
+> 13 個套件、約 20,180 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -500,7 +500,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 127 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 357 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 92 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 16,895 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 16,898 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 180 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 106 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 448 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -699,7 +699,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `action_schema.py` | 128 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
-#### `utils/mcp_server/`（16,895 行，676 個工具）— 最大子系統
+#### `utils/mcp_server/`（16,898 行，676 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1018,18 +1018,18 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 89 | 26,542 |
-| `utils/mcp_server/` | 20 | 16,895 |
+| `utils/mcp_server/` | 20 | 16,898 |
 | `utils/remote_desktop/` | 56 | 11,835 |
 | `utils/executor/` | 6 | 9,075 |
 | `utils/usb/` | 17 | 4,247 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,363 |
 | `utils/accessibility/` | 13 | 2,818 |
-| `wrapper/` | 3,042 | 3,013 新增 `window_backends/`：視窗管理的平台縫（`base` / `windows_backend` / `x11_backend` / `macos_backend` / `null_backend`）。放在 `wrapper/` 而不是 `utils/`，因為它必須 import `windows/`、`linux_with_x11/`、`osx/`，而 `utils/` 在分層上在那三者之上。 |
+| `wrapper/` | 3,065 | 3,013 新增 `window_backends/`：視窗管理的平台縫（`base` / `windows_backend` / `x11_backend` / `macos_backend` / `null_backend`）。放在 `wrapper/` 而不是 `utils/`，因為它必須 import `windows/`、`linux_with_x11/`、`osx/`，而 `utils/` 在分層上在那三者之上。 |
 | `windows/` | 23 | 1,894 |
 | `utils/rest_api/` | 8 | 1,738 |
 | `utils/agent/` | 8 | 1,250 |
-| `linux_with_x11/` | 19 | 1,196 |
-| `linux_wayland/` | 17 | 2,830 |
+| `linux_with_x11/` | 19 | 1,215 |
+| `linux_wayland/` | 17 | 2,835 |
 | `utils/triggers/` | 4 | 1,146 |
 | `utils/ocr/` | 9 | 1,112 |
 | `utils/usbip/` | 5 | 920 |
@@ -1037,6 +1037,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 907 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 727 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 689 | 50,253 |
-| **總計** | **1,021** | **139,355** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 689 | 50,305 |
+| **總計** | **1,021** | **139,434** |
 

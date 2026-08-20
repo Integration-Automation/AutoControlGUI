@@ -564,13 +564,12 @@ def check_button_events(tester: EventTester) -> None:
 def check_scroll_events(tester: EventTester) -> None:
     """X11 encodes scrolling as buttons 4-7; the direction must pick correctly.
 
-    On Linux the direction comes from the ``scroll_direction`` argument and
-    the *sign of the value is discarded* — ``mouse_scroll`` takes ``abs()``
-    on purpose, because a negative count used to make ``range()`` empty and
-    scroll nothing at all. Windows and macOS read the direction off that same
-    sign instead. The checks below pin the behaviour as measured rather than
-    as one platform spells it; see Progress.md, where the difference is
-    recorded as a decision for the maintainer.
+    ``scroll_direction`` names the direction a *positive* count scrolls in,
+    and a negative count reverses it — the same rule on all three platforms
+    since the maintainer settled it. X11 used to discard the sign, so code
+    written against the Windows convention scrolled the opposite way here,
+    silently. The last check is that regression: it fails if the sign ever
+    stops being read.
     """
     from je_auto_control import mouse_scroll, set_mouse_position
 
@@ -594,18 +593,26 @@ def check_scroll_events(tester: EventTester) -> None:
     check("scroll_direction='scroll_right' arrives as button 7",
           lambda: _scroll(1, "scroll_right", 7))
 
-    def _sign_is_ignored() -> str:
+    def _negative_reverses(direction: str, expected_button: int) -> str:
         set_mouse_position(*target)
         tester.flush()
         # Portable code written against the Windows sign convention lands
-        # here. It does not scroll up; it scrolls down. That is the measured
-        # contract, and this is what would go red if it ever changed.
-        mouse_scroll(-2, scroll_direction="scroll_down")
+        # here, and now gets the direction it asked for.
+        mouse_scroll(-2, scroll_direction=direction)
         presses = tester.collect("ButtonPress", 2)
-        _assert_eq({event["button"] for event in presses}, {5})
-        return "a negative count scrolls the named direction, not the opposite"
-    check("the sign of the count does not pick the direction on Linux",
-          _sign_is_ignored)
+        _assert_eq({event["button"] for event in presses},
+                   {expected_button})
+        return (f"-2 with {direction} arrived as button "
+                f"{expected_button}")
+
+    check("a negative count reverses scroll_down into button 4",
+          lambda: _negative_reverses("scroll_down", 4))
+    check("a negative count reverses scroll_up into button 5",
+          lambda: _negative_reverses("scroll_up", 5))
+    check("a negative count reverses scroll_left into button 7",
+          lambda: _negative_reverses("scroll_left", 7))
+    check("a negative count reverses scroll_right into button 6",
+          lambda: _negative_reverses("scroll_right", 6))
 
 
 def check_key_events(tester: EventTester) -> None:

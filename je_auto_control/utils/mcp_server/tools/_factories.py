@@ -49,8 +49,11 @@ def mouse_tools() -> List[MCPTool]:
         ),
         MCPTool(
             name="ac_mouse_scroll",
-            description=("Scroll the mouse wheel by scroll_value units. "
-                         "scroll_direction is Linux-only: scroll_up | scroll_down."),
+            description=("Scroll the mouse wheel by scroll_value units; "
+                         "a negative scroll_value reverses the direction. "
+                         "scroll_direction names the direction a positive "
+                         "value takes and is read on X11/Wayland only: "
+                         "scroll_up | scroll_down | scroll_left | scroll_right."),
             input_schema=schema({
                 "scroll_value": {"type": "integer"},
                 "x": {"type": "integer"},

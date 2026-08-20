@@ -4,9 +4,10 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple
 
-from PIL import Image, ImageChops, ImageDraw
+if TYPE_CHECKING:  # pragma: no cover - annotations only
+    from PIL import Image
 
 
 @dataclass(frozen=True)
@@ -60,6 +61,7 @@ def _expand_path(path) -> Path:
 def _apply_masks(image: Image.Image,
                  masks: Sequence[MaskRegion]) -> Image.Image:
     """Black out the masked regions on a *copy* so the input stays intact."""
+    from PIL import ImageDraw
     if not masks:
         return image
     result = image.copy()
@@ -110,6 +112,7 @@ def image_difference(actual: Image.Image, expected: Image.Image,
     the comparison). ``masks`` blacks out those regions on *both* sides
     before comparing.
     """
+    from PIL import ImageChops, ImageDraw
     if actual.size != expected.size:
         raise ValueError(
             f"image sizes differ: actual={actual.size}, "
@@ -151,6 +154,7 @@ def compare_to_golden(golden_path,
     a tiny rendering wobble doesn't fail every CI run). Defaults to
     ``0.0`` for strictest comparison.
     """
+    from PIL import Image
     target = _expand_path(golden_path)
     if not target.exists():
         raise FileNotFoundError(f"golden image not found: {target}")

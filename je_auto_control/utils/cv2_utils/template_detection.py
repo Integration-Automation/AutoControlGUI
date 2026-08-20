@@ -8,8 +8,6 @@ pixels, so a hit read off it can be clicked directly on a mixed-DPI desktop.
 """
 from typing import Any, List, Optional, Sequence, Tuple
 
-from je_open_cv import template_detection
-
 from je_auto_control.utils.monitor_layout.logical_frame import grab_logical
 
 
@@ -54,6 +52,7 @@ def find_image(image: Any, detect_threshold: float = 1.0,
     :param screen_region: Limit the search to (x, y, width, height) 限定搜尋範圍
     :return: [found, [x1, y1, x2, y2]] 座標為螢幕座標
     """
+    from je_open_cv import template_detection
     grab_image, origin_x, origin_y = grab_logical(
         screen_region, all_screens=all_screens)
     result = template_detection.find_object(
@@ -80,6 +79,7 @@ def find_image_multi(image: Any, detect_threshold: float = 1.0,
     :param screen_region: Limit the search to (x, y, width, height) 限定搜尋範圍
     :return: [found, [[x1, y1, x2, y2], ...]] 座標為螢幕座標
     """
+    from je_open_cv import template_detection
     grab_image, origin_x, origin_y = grab_logical(
         screen_region, all_screens=all_screens)
     result = template_detection.find_multi_object(

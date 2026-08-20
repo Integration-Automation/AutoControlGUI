@@ -1,6 +1,4 @@
 import threading
-import cv2
-import numpy as np
 
 from je_auto_control.utils.cv2_utils.screen_grabber import mss_grabber
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -44,6 +42,8 @@ class RecordingThread(threading.Thread):
         執行錄影迴圈
         Run recording loop
         """
+        import cv2
+        import numpy as np
         with mss_grabber() as sct:
             resolution = sct.monitors[0]
             output_file = self.video_name + ".mp4"

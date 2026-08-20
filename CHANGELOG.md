@@ -145,6 +145,28 @@ only when documented here with a migration path.
 
 ### Changed
 
+- **The sign of `scroll_value` picks the scroll direction on every platform.**
+  Windows and macOS have always read it that way; X11 and Wayland took the
+  direction from `scroll_direction` alone and used `abs(scroll_value)`, so
+  `mouse_scroll(-3)` — code written and tested against the Windows convention —
+  scrolled *down* three notches on Linux instead of up, with no exception and
+  no warning. `scroll_direction` now names the direction a **positive** count
+  takes, and a negative count reverses it, on all four backends.
+
+  *Migration.* Code that passed a negative `scroll_value` to Linux or Wayland
+  and relied on the magnitude alone now scrolls the opposite way. Take
+  `abs()` at the call site to keep the old behaviour:
+  `mouse_scroll(abs(value), scroll_direction="scroll_down")`. Code that passed
+  a positive count is unaffected, as is every Windows and macOS caller.
+- **`import je_auto_control` no longer imports OpenCV, NumPy, Pillow,
+  `je_open_cv` or `cryptography`.** They are imported by the functions that use
+  them. The facade pulled all five in at module scope, so a platform without
+  wheels for them — a FreeBSD desktop, for one — could not use the input
+  automation half of the package at all, though it needs none of them. Nothing
+  moves in the public API and the packages remain hard dependencies; what
+  changes is *when* a missing one is reported, which is now at the first image
+  or encryption call rather than at import. `test_facade_import_is_light.py`
+  keeps it that way.
 - **`macos_record_error_message` now names a permission, not a platform.** It
   read "Cannot use recorder on macOS", which described a limitation that no
   longer exists; it now names the Accessibility grant that recording actually
@@ -286,6 +308,12 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **`mouse_scroll` did nothing at all on the BSDs.** It matched Windows, then
+  macOS, then a literal `["linux", "linux2"]`, so a FreeBSD, OpenBSD, NetBSD or
+  DragonFly caller fell off the end of the chain: no backend call, no
+  exception, no log line. It asks `platform_id.is_x11_unix()` now, and an
+  unrecognised platform raises `AutoControlMouseException` instead of returning
+  as though it had scrolled.
 - **A recorded timeline replayed nothing.** `replay_timeline`'s dispatch table
   held the `run_sequence` DSL's vocabulary (`press` / `click` / `key`) and the
   recorders emit their own (`key_down` / `mouse_up` / `scroll`), and the two

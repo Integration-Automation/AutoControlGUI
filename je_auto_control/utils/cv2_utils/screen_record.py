@@ -1,6 +1,5 @@
 import threading
 from typing import Dict, Tuple
-import cv2
 
 from je_auto_control.wrapper.auto_control_screen import screenshot
 
@@ -69,6 +68,7 @@ class ScreenRecordThread(threading.Thread):
 
     def __init__(self, path_and_filename, codec, frame_per_sec, resolution: Tuple[int, int]):
         super().__init__()
+        import cv2
         self.fourcc = cv2.VideoWriter.fourcc(*codec)
         self.video_writer = cv2.VideoWriter(path_and_filename, self.fourcc, frame_per_sec, resolution)
         # 用 Event 而非布林旗標:run() 之前呼叫 stop() 也能被遵守,不會被覆寫。
@@ -79,6 +79,7 @@ class ScreenRecordThread(threading.Thread):
         self.resolution = resolution
 
     def run(self) -> None:
+        import cv2
         try:
             while not self._stop_event.is_set():
                 # 擷取螢幕畫面 Capture screen frame

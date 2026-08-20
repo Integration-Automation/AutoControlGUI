@@ -50,33 +50,6 @@
 
 ---
 
-## BSD 上只驗了「判定」，沒驗到「真的驅動輸入」
-
-`TODO` — `.github/workflows/platform-smoke.yml` 的 `freebsd` job
-
-`freebsd` job 在 runner 裡開真的 FreeBSD 14 VM，驗的是
-`utils/platform_id`：`sys.platform` 真的長成 `freebsd14`、
-`is_x11_unix()` 在上面回 True——也就是每個放寬後的守衛
-現在問的那個問題，而這件事只有 BSD 能回答。
-
-**沒驗到的是：X11 backend 在 BSD 上真的移滑鼠、真的送
-按鍵。** 原因是量出來的，不是懶：import 任何
-`je_auto_control` 底下的東西都會跑門面，而門面在
-module scope import OpenCV 與 cryptography。這兩個都沒發 FreeBSD
-wheel，改用 ports 裝（`py311-opencv`）拉出來的相依樹跑了
-**五十分鐘還沒裝完**，只好取消。一個 smoke job 不能
-花一小時。
-
-要補這塊，需要的是一台已經裝好相依套件的真
-FreeBSD（或者一個預先烤好依賴的自訂映像），而不是
-另一個 CI 小技巧。跑的時候把下面這段跑完就算驗到：
-
-```python
-from je_auto_control.linux_with_x11.mouse import x11_linux_mouse_control as m
-m.set_position(321, 123)
-assert m.position() == (321, 123)
-```
-
 ## Windows arm64 裝不起來，卡在 opencv-python
 
 `BLOCKED` — 上游（opencv-python 沒有 win_arm64 wheel）
@@ -92,29 +65,17 @@ Windows arm64 上裝不起來**。所以那一格已從矩陣
 移除，並把原因寫在 workflow 的註解裡；哪天上游
 發了 wheel，把 runner 加回去就好。
 
+門面已經不在 module scope import OpenCV 了（見
+[WHATS_NEW.md](WHATS_NEW.md)），但這裡卡的不是 import
+而是 **pip 裝不起來**:`opencv-python` 仍列在
+`pyproject.toml` 的 `dependencies`,`pip install -e .`
+第一步就會去建它。要讓 arm64 只裝輸入的部分,得先決定
+把 OpenCV／Pillow 移到 optional extra——那是相容性決定,
+沒有人要求之前不做。
+
 **Linux arm64 是好的**——`ubuntu-22.04-arm` 兩個 Python 版本
 都綠，macOS 本來就是 arm64。所以卡住的只有 Windows
 這一個組合。
-
-## `mouse_scroll` 的方向在三個平台上不是同一回事
-
-`DECIDE` — `wrapper/auto_control_mouse.py::mouse_scroll`
-
-Windows 與 macOS 用 `scroll_value` 的**正負號**決定捲動方向；Linux 不看正負號,
-方向來自 `scroll_direction` 參數,值只取 `abs()`。後者是刻意的:負值以前會讓
-`range()` 變空,結果是靜靜地什麼都不捲。
-
-**問題在於:照 Windows 寫法寫出來的可攜程式碼,在 Linux 上不會往上捲,而是往下捲
-同樣的次數。**沒有例外、沒有警告,方向就是反的——和 macOS 那個 `write("\b")`
-變成打空白是同一類缺陷:靜靜地做了跟要求相反的事。
-
-`x11-verification` job 現在把**實測到的**行為釘住了（四個方向各一項,外加
-「負號不決定方向」一項）,所以哪天行為變了 CI 會當場說。要不要讓三個平台一致,
-以及一致成哪一種,是相容性決定,需要維護者拍板:
-
-- 讓 Linux 也認正負號 → 修好可攜性,但會改掉 `scroll_direction` 已文件化的語意;
-- 維持現狀 → 就得在 `mouse_scroll` 的 docstring 與 README 明講這個平台差異;
-- 折衷:正負號在三個平台都認,`scroll_direction` 只在 Linux 當預設方向。
 
 ## Wayland:剩下的都不是「缺一台機器」
 

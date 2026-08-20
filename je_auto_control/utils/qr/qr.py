@@ -4,18 +4,24 @@ OpenCV's ``QRCodeDetector`` ships with ``je_open_cv`` (already a
 dependency), so no extra package is needed. The decoder is injectable so
 the wrapper is unit-testable without a real QR image. GUI-free.
 """
+from __future__ import annotations
+
 import io
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Sequence, Union
+from typing import (
+    TYPE_CHECKING, Any, Callable, List, Optional, Sequence, Union,
+)
 
-from PIL import Image
+if TYPE_CHECKING:  # pragma: no cover - annotations only
+    from PIL import Image
 
-ImageSource = Union[str, Path, bytes, Image.Image]
+ImageSource = Union[str, Path, bytes, "Image.Image"]
 QRDecoder = Callable[[Any], List[str]]
 
 
 def _load_np(source: ImageSource, region: Optional[Sequence[int]]):
     import numpy as np
+    from PIL import Image
     if isinstance(source, Image.Image):
         image = source
     elif isinstance(source, bytes):

@@ -163,14 +163,89 @@ compared against literal lists in over a hundred places, so the fix is one
 place that decides: `utils/platform_id`, whose `is_x11_unix()` asks the
 question those guards were always trying to ask.
 
-A `freebsd` job boots a real FreeBSD 14 VM inside the runner, imports the X11
-modules under a real X server, and moves the pointer and reads it back. It
-covers the platform layer rather than the whole package, because opencv has no
-FreeBSD wheel — a limit stated in the job rather than left to be discovered.
+A `freebsd` job boots a real FreeBSD 14 VM inside the runner. It could at
+first only check the *decision* — that `sys.platform` really reads `freebsd14`,
+and that the classification every relaxed guard asks answers correctly on it —
+because importing anything under `je_auto_control` ran the facade, and the
+facade imported OpenCV and cryptography at module scope. `utils/platform_id`
+had to be loaded by file path to get even that far. See below: that turned out
+to be the wrong thing to work around, and the job now drives the whole backend.
+
 `ubuntu-22.04-arm` joins the smoke matrix and passes; `macos-14` was already
 arm64. `windows-11-arm` was tried and removed: opencv-python publishes no
 `win_arm64` wheel, so the package cannot be installed there at all today —
 measured, not assumed, and recorded in `Progress.md`.
+
+### The Facade Insisted on OpenCV to Move a Mouse
+
+`Progress.md` recorded the missing BSD coverage as needing "a machine with the
+dependency set on it, not a different CI trick". That entry was making the
+mistake its own Wayland section warns about three lines further up: **asking
+what the environment could not do, instead of asking who actually could not do
+it.** It was not FreeBSD that could not run the X11 backend. It was this
+package, which imported five image and crypto wheels before it would let you
+move a pointer.
+
+The measurement was small. Ten modules on the facade's import path pulled in
+OpenCV, NumPy, Pillow, `je_open_cv` or `cryptography` at module scope, across
+about sixty call sites — while most of `utils/` had been importing OpenCV
+lazily all along, with the docstrings to say so. Those ten now do the same. The
+type annotations that referenced Pillow moved under `TYPE_CHECKING`, and the
+two public `ImageSource` aliases keep Pillow in the union as a forward
+reference, so nothing changes for a caller or a type checker.
+
+What `import je_auto_control` needs now is `defusedxml`, plus `python-Xlib` on
+an X11 platform. Both are pure Python. The heavy five are still hard
+dependencies and still install by default; the difference is that a platform
+with no wheel for them can now use the half of the package that never needed
+them. `test/unit_test/headless/test_facade_import_is_light.py` blocks all five
+in a subprocess and imports the facade anyway, because this is a property one
+convenience import silently undoes and every runner with wheels keeps passing.
+
+### The BSD Job Drives Real Input Now, and Found the Defect That Was Waiting
+
+With the facade light, the FreeBSD VM needs python-Xlib, defusedxml and an X
+server — an install measured in seconds, where the ports build for OpenCV had
+not finished after fifty minutes. So `test/verify/freebsd_verify.py` runs the
+backend rather than the guard, and takes its ground truth from the X server
+answering for itself: `query_pointer` for where the cursor is, its button mask
+for which buttons the server believes are down, and `query_keymap` — the bitmap
+of every physically-held key — for whether an injected key press really landed.
+That last one is why no second process is needed here; the Linux
+`x11-verification` job already reads events back out of `xev`, and what a BSD is
+uniquely needed to answer is whether this code drives the same server on a
+different kernel.
+
+It also maps a real X window that has asked for button events, because one
+defect could not be caught any other way: **`mouse_scroll` did nothing at all
+on a BSD.** It matched Windows, then macOS, then a literal
+`["linux", "linux2"]` — one of the hundred-odd hand-written platform lists
+`platform_id` exists to replace, and one that had been missed — so a BSD caller
+fell off the end of the chain with no backend call, no exception and no log
+line. A wheel event never shows up in the pointer mask, since X11 delivers a
+scroll as a press *and* release of button 4/5/6/7 too fast to sample, so only a
+client reading the event queue can see it happen or not happen.
+
+### `mouse_scroll` Means the Same Thing on Every Platform
+
+This had been sitting in `Progress.md` as a `DECIDE`, and the maintainer
+settled it: **the sign of `scroll_value` reverses the direction everywhere, and
+`scroll_direction` names the direction a positive count takes.**
+
+Windows and macOS had always read the sign. X11 encodes direction as a button
+rather than a signed delta, so it took the direction from `scroll_direction`
+and discarded the sign — deliberately, because a negative count used to make
+`range()` empty and scroll nothing at all. The cost was portability with no
+symptom to debug: `mouse_scroll(-3)`, written and tested on Windows, scrolled
+three notches *down* on Linux instead of up. Wayland had the same `abs()` in
+`_wheel_deltas` and the same result.
+
+Both now turn a negative count back into the opposite direction — a button swap
+on X11, a sign on the Wayland delta. `docker/x11_verify.py` pins it against a
+real X server through `xev`, `freebsd_verify.py` pins it on a BSD, and
+`test_scroll_sign_is_portable.py` pins it on every runner without needing a
+display. The migration note for anyone who was relying on the magnitude alone
+is in `CHANGELOG.md`.
 
 
 ## What's new (2026-08-19)

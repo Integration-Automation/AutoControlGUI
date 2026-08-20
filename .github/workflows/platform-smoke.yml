@@ -62,8 +62,9 @@ jobs:
           if-no-files-found: warn
 
   freebsd:
-    name: The BSD platform decision on a real FreeBSD
+    name: The X11 backend driving input on a real FreeBSD
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -71,64 +72,61 @@ jobs:
       # The X11 backend was gated on sys.platform being linux/linux2, so it
       # refused to load on a FreeBSD desktop that runs the same X server, the
       # same python-Xlib and the same code. Relaxing that guard is only worth
-      # something if a BSD actually runs the decision, and no hosted runner
-      # is one — so this boots a real FreeBSD VM inside the runner.
+      # something if a BSD actually runs it, and no hosted runner is one — so
+      # this boots a real FreeBSD VM inside the runner.
       #
-      # It checks the *decision*, not the whole backend, and the reason is
-      # measured rather than assumed: importing anything under
-      # je_auto_control runs the package facade, which imports OpenCV and
-      # cryptography at module scope. Neither publishes a FreeBSD wheel, and
-      # installing them from ports pulled in a dependency tree that had not
-      # finished after fifty minutes. So utils/platform_id is loaded by file
-      # path — it imports nothing but sys, which is the point of it being one
-      # small module — and what a BSD is uniquely needed for is exactly what
-      # runs here: that sys.platform really looks like this, and that the
-      # classification every guard now asks answers correctly on it.
+      # For a while it could only check the *decision*, because importing
+      # anything under je_auto_control ran the facade and the facade imported
+      # OpenCV and cryptography at module scope. Neither publishes a FreeBSD
+      # wheel and building them from ports had not finished after fifty
+      # minutes, so utils/platform_id was loaded by file path and the backend
+      # itself went untested.
       #
-      # What that leaves uncovered is the backend actually driving input on a
-      # BSD. See Progress.md; it needs a machine with the dependency set on
-      # it, not a different CI trick.
+      # That was the wrong thing to work around. Moving a mouse needs neither
+      # package, and the facade no longer insists on them — they are imported
+      # by the functions that use them, which test_facade_import_is_light.py
+      # keeps true. What is left for this VM is python-Xlib and defusedxml,
+      # both pure Python, plus an X server. So the whole backend runs here now
+      # and the reads come back off the server itself: query_pointer for the
+      # cursor, its button mask for the buttons, query_keymap for the keys.
       # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
       - uses: vmactions/freebsd-vm@v1  # NOSONAR githubactions:S7637
         with:
           release: "14.2"
           usesh: true
           prepare: |
-            pkg install -y python311
+            pkg install -y python311 py311-pip xorg-vfbserver
           run: |
             set -eu
             echo "uname: $(uname -a)"
-            python3.11 - <<'PROBE'
-            import importlib.util
-            import sys
 
-            spec = importlib.util.spec_from_file_location(
-                "platform_id", "je_auto_control/utils/platform_id/__init__.py")
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            # The two pure-Python dependencies the facade still needs, at the
+            # versions pyproject pins, by their PyPI names. FreeBSD does not
+            # mark its system Python externally-managed today; if that changes
+            # the retry says so in the log rather than the job failing on a
+            # pip policy error.
+            python3.11 -m pip install --no-deps python-xlib==0.33 defusedxml==0.7.1 \
+              || { echo "pip refused the system environment; retrying opted-in"; \
+                   python3.11 -m pip install --break-system-packages --no-deps \
+                     python-xlib==0.33 defusedxml==0.7.1; }
 
-            print("sys.platform:", sys.platform)
-            assert sys.platform.startswith("freebsd"), sys.platform
+            # The backend connects to a display at import time, so the server
+            # has to be up first. 1280x1024 because the verification drives the
+            # cursor to the far corner and reads it back.
+            Xvfb :99 -screen 0 1280x1024x24 &
+            xvfb_pid=$!
+            trap 'kill "$xvfb_pid" 2>/dev/null || true' EXIT
+            waited=0
+            while [ ! -e /tmp/.X11-unix/X99 ]; do
+              waited=$((waited + 1))
+              if [ "$waited" -gt 100 ]; then
+                echo "Xvfb never created /tmp/.X11-unix/X99" >&2
+                exit 1
+              fi
+              sleep 0.1
+            done
 
-            # The four questions every relaxed guard now asks. Before this
-            # change the answer to the third was False on exactly this
-            # platform, and the package refused to import at all.
-            assert module.is_bsd(), "FreeBSD is not recognised as a BSD"
-            assert module.is_x11_unix(), "FreeBSD is not an X11 unix"
-            assert not module.is_windows(), "FreeBSD claimed to be Windows"
-            assert not module.is_macos(), "FreeBSD claimed to be macOS"
-            assert module.current_family() == "bsd", module.current_family()
-
-            # The version suffix is the trap: sys.platform is freebsd14 here,
-            # never a bare "freebsd", so an equality check would match no
-            # real system at all.
-            assert sys.platform != "freebsd", (
-                "this release stopped carrying a version suffix; the prefix "
-                "match still works, but the comment explaining why it exists "
-                "no longer describes reality")
-            print("platform_id on FreeBSD: OK")
-            PROBE
-
+            DISPLAY=:99 PYTHONPATH="$(pwd)" python3.11 test/verify/freebsd_verify.py
   macos-capabilities:
     name: What a real macOS runner permits
     runs-on: macos-14

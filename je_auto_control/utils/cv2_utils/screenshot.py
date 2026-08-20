@@ -1,5 +1,9 @@
-from PIL import Image
-from typing import List, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, List, Optional
+
+if TYPE_CHECKING:  # pragma: no cover - annotations only
+    from PIL import Image
 
 from je_auto_control.utils.cv2_utils.screen_grabber import image_grabber
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException

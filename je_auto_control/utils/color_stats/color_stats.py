@@ -7,15 +7,20 @@ the busiest bucket, then averaging the real pixels in it for an accurate
 representative. Pure Pillow — no Qt, no screen capture — so it is fully
 unit-testable.
 """
+from __future__ import annotations
+
 import io
 from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import (
+    TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple, Union,
+)
 
-from PIL import Image
+if TYPE_CHECKING:  # pragma: no cover - annotations only
+    from PIL import Image
 
-ImageSource = Union[str, Path, bytes, Image.Image]
+ImageSource = Union[str, Path, bytes, "Image.Image"]
 RGB = Tuple[int, int, int]
 
 
@@ -32,7 +37,8 @@ class ColorStats:
         return asdict(self)
 
 
-def _load_rgb(source: ImageSource) -> Image.Image:
+def _load_rgb(source: ImageSource) -> "Image.Image":
+    from PIL import Image
     if isinstance(source, Image.Image):
         return source.convert("RGB")
     if isinstance(source, bytes):

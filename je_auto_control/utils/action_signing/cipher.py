@@ -14,8 +14,6 @@ import os
 from pathlib import Path
 from typing import Optional, Union
 
-from cryptography.fernet import Fernet, InvalidToken
-
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
@@ -27,6 +25,7 @@ KeyType = Optional[Union[bytes, str]]
 
 def _persistent_key() -> bytes:
     """Read the per-user Fernet key, creating it (0600) on first use."""
+    from cryptography.fernet import Fernet
     if _DEFAULT_KEY_PATH.exists():
         return _DEFAULT_KEY_PATH.read_bytes()
     _DEFAULT_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -49,6 +48,7 @@ def _fernet_key(key: KeyType) -> bytes:
 
 def encrypt_action_file(path: Union[str, Path], key: KeyType = None) -> str:
     """Encrypt the file at ``path`` to ``<path>.enc``; return the enc path."""
+    from cryptography.fernet import Fernet
     target = Path(path)
     token = Fernet(_fernet_key(key)).encrypt(target.read_bytes())
     enc_path = target.with_name(target.name + _ENC_SUFFIX)
@@ -65,6 +65,7 @@ def decrypt_action_file(enc_path: Union[str, Path], key: KeyType = None,
     dropped. Raises :class:`AutoControlException` on a wrong key or a
     tampered file.
     """
+    from cryptography.fernet import Fernet, InvalidToken
     enc = Path(enc_path)
     try:
         plaintext = Fernet(_fernet_key(key)).decrypt(enc.read_bytes())

@@ -106,13 +106,23 @@ the backend without its one dependency. The guards now ask
 question they were always trying to ask — and the `freebsd` job boots a real
 FreeBSD 14 VM to run that decision on a system that is genuinely one.
 
-It checks the decision and not the backend, for a measured reason: importing
-anything under `je_auto_control` runs the package facade, which imports
-OpenCV and cryptography at module scope, and neither publishes a FreeBSD
-wheel. Installing them from ports pulled a dependency tree that had not
-finished after fifty minutes. So `utils/platform_id` is loaded by file path,
-and what a BSD is uniquely needed to answer is what runs. Driving real input
-on a BSD is still uncovered and is recorded in `Progress.md`.
+For a while it checked that decision and nothing else, for a measured reason:
+importing anything under `je_auto_control` ran the package facade, which
+imported OpenCV and cryptography at module scope, and neither publishes a
+FreeBSD wheel — installing them from ports pulled a dependency tree that had
+not finished after fifty minutes.
+
+That was the wrong thing to work around. Moving a pointer needs neither
+package, so the facade stopped importing them (and NumPy, Pillow and
+`je_open_cv`) at module scope; they belong to the functions that use them.
+What the VM installs now is `python-Xlib`, `defusedxml` and an X server, all
+of which take seconds, and `test/verify/freebsd_verify.py` drives the whole
+backend on it. The reads come off the X server rather than out of this
+codebase: `query_pointer` for the cursor and the button mask, `query_keymap`
+for whether an injected key really went down, and a mapped X window that has
+asked for button events for the wheel — which is what caught `mouse_scroll`
+matching a literal `["linux", "linux2"]` and therefore doing nothing at all,
+silently, on every BSD.
 
 **arm64.** `macos-14` was already arm64; `ubuntu-22.04-arm` joins the
 smoke matrix and passes. `windows-11-arm` was tried and removed, on
