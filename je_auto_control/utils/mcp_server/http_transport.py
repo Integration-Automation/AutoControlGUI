@@ -1,14 +1,22 @@
 """HTTP transport for the MCP server.
 
-Implements a minimal Streamable HTTP transport (JSON-only, no SSE
-streaming) so MCP clients that prefer HTTP — or that need to reach
-the server from another process / container — can talk to the same
-:class:`MCPServer` dispatcher already used by the stdio transport.
+Implements a Streamable HTTP transport so MCP clients that prefer HTTP — or
+that need to reach the server from another process / container — can talk to
+the same :class:`MCPServer` dispatcher already used by the stdio transport.
 
 Notifications are answered with ``202 Accepted`` per the MCP spec;
 ordinary requests return their JSON-RPC response with
 ``Content-Type: application/json``. The default bind is
 ``127.0.0.1`` to honour the project's least-privilege policy.
+
+**Sessions.** ``initialize`` mints an ``Mcp-Session-Id`` and returns it as a
+response header; a client that echoes it back keeps one dispatcher scope
+across every connection it makes, and may open a standing server-to-client
+SSE stream with ``GET``. That stream is what lets the server ask the client
+something mid-call — the ``elicitation/create`` behind the destructive-action
+confirmation gate. A client that ignores the header still works exactly as
+before, scoped to its TCP connection, but cannot be prompted: there is no
+channel to carry the question. See :mod:`.http_sessions`.
 """
 import hmac
 import json
@@ -16,12 +24,15 @@ import os
 import ssl
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 from je_auto_control.utils.http_headers import parse_content_length
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server._protocol import (
     _notification_message,
+)
+from je_auto_control.utils.mcp_server.http_sessions import (
+    HttpSession, SESSION_HEADER, SessionRegistry, session_id_from_headers,
 )
 from je_auto_control.utils.mcp_server.server import MCPServer
 
@@ -37,12 +48,37 @@ _REQUEST_TIMEOUT = 30.0
 # Bound the TLS handshake so one silent client can't wedge the single accept
 # thread waiting for a ClientHello that never arrives.
 _HANDSHAKE_TIMEOUT = 10.0
+# How often a standing GET stream writes an SSE comment. It keeps the session
+# off the idle sweep and turns a client that vanished without a FIN into a
+# write error instead of a thread parked forever.
+_STREAM_HEARTBEAT = 15.0
+
+
+def _is_initialize(line: str) -> bool:
+    """True when ``line`` is an ``initialize`` request; tolerant of junk."""
+    try:
+        message = json.loads(line)
+    except ValueError:
+        return False
+    return isinstance(message, dict) and message.get("method") == "initialize"
+
+
+def _notifier_for(writer: Optional[Callable[[str], None]]):
+    """Wrap a raw writer as a (method, params) notifier, or ``None``."""
+    if writer is None:
+        return None
+    return lambda method, params: writer(
+        _notification_message(method, params),
+    )
 
 
 class _MCPHttpHandler(BaseHTTPRequestHandler):
     """Bridges HTTP requests onto :meth:`MCPServer.handle_line`."""
 
     server_version = "AutoControlMCP/1.0"
+    # Set once this request's body has been read off the socket, so a later
+    # error response knows there is nothing left to drain.
+    _body_consumed = False
     # socketserver applies this to the connection socket in setup(); it bounds
     # every read (headers *and* body) so a stalled request cannot pin a worker.
     timeout = _REQUEST_TIMEOUT
@@ -62,23 +98,60 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         if line is None:
             return
         bridge: MCPServer = self.server.mcp  # type: ignore[attr-defined]
-        conn_id = id(self)
-        if self._client_accepts_sse():
-            self._dispatch_sse(bridge, line, conn_id)
+        session, resolved = self._resolve_session(line)
+        if not resolved:
             return
-        # Scope this connection's identity so active-call slots and client
-        # capabilities don't collide with another peer that reuses the same
-        # JSON-RPC ids. No notifier/writer: a plain POST has no stream.
-        with bridge.connection_scope(connection_id=conn_id):
+        # Prefer the session's identity over the socket's: a client that
+        # echoes Mcp-Session-Id keeps one scope — and so keeps the
+        # capabilities it advertised at initialize — across connections.
+        conn_id = session.id if session is not None else id(self)
+        extra = {SESSION_HEADER: session.id} if session is not None else None
+        if self._client_accepts_sse():
+            self._dispatch_sse(bridge, line, conn_id, extra)
+            return
+        # A plain POST has no stream of its own, but a session may have a
+        # standing GET stream; server-initiated traffic belongs on it. Absent
+        # one there is no writer, rather than whichever other peer's socket
+        # happens to be open.
+        writer = session.stream_writer if session is not None else None
+        with bridge.connection_scope(connection_id=conn_id, writer=writer,
+                                      notifier=_notifier_for(writer)):
             response = bridge.handle_line(line)
         if response is None:
             # MCP notification — no body, ack with 202.
             self._send_blank(status=202)
             return
-        self._send_raw_json(response)
+        self._send_raw_json(response, extra_headers=extra)
+
+    def _resolve_session(self, line: str) -> Tuple[Optional[HttpSession],
+                                                    bool]:
+        """Resolve this request's session; False means a reply was sent.
+
+        A request carrying an unknown or expired id is refused with 404
+        rather than silently served under a fresh scope — the client has
+        state we do not, and it needs to know to re-initialize.
+        """
+        registry: SessionRegistry = self.server.sessions  # type: ignore[attr-defined]
+        header_id = session_id_from_headers(self.headers)
+        if header_id is not None:
+            session = registry.get(header_id)
+            if session is None:
+                self._send_json(
+                    {"error": "unknown or expired session"}, status=404,
+                )
+                return None, False
+            return session, True
+        if _is_initialize(line):
+            return registry.create(), True
+        return None, True
 
     def finish(self) -> None:
-        """Release this connection's per-peer server state, then close."""
+        """Release this connection's per-peer server state, then close.
+
+        Only the anonymous, connection-keyed scope is dropped here. State
+        held under a session id outlives the socket by design and is
+        released when the session is terminated, swept or evicted.
+        """
         try:
             super().finish()
         finally:
@@ -106,7 +179,8 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         return _SSE_MEDIA_TYPE in accept
 
     def _dispatch_sse(self, bridge: MCPServer, line: str,
-                      conn_id: int) -> None:
+                      conn_id: Any,
+                      extra_headers: Optional[Dict[str, str]] = None) -> None:
         """Stream progress notifications + the final response as SSE events."""
         # Force connection close so the client gets EOF after the last event.
         self.close_connection = True
@@ -115,6 +189,8 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
                           f"{_SSE_MEDIA_TYPE}; charset=utf-8")
         self.send_header("Cache-Control", "no-cache")
         self.send_header("Connection", "close")
+        for name, value in (extra_headers or {}).items():
+            self.send_header(name, value)
         self.end_headers()
         send_lock = threading.Lock()
 
@@ -144,15 +220,97 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
                 emit(response)
 
     def do_GET(self) -> None:  # noqa: N802  # reason: stdlib API
+        """Open the session's standing server→client SSE stream."""
         if not self._authorize():
             return
-        # MCP optionally allows server→client SSE on GET; not used here.
-        self._send_json({"error": "GET stream not supported"}, status=405)
+        if self.path != DEFAULT_PATH:
+            self._send_json({"error": "unknown path"}, status=404)
+            return
+        if not self._client_accepts_sse():
+            self._send_json(
+                {"error": f"GET requires Accept: {_SSE_MEDIA_TYPE}"},
+                status=405,
+            )
+            return
+        registry: SessionRegistry = self.server.sessions  # type: ignore[attr-defined]
+        session = registry.get(session_id_from_headers(self.headers))
+        if session is None:
+            self._send_json(
+                {"error": "unknown or expired session"}, status=404,
+            )
+            return
+        self._stream_session(registry, session)
+
+    def _stream_session(self, registry: SessionRegistry,
+                        session: HttpSession) -> None:
+        """Hold this socket open as the session's outbound channel."""
+        self.close_connection = True
+        send_lock = threading.Lock()
+
+        def emit(payload: str) -> None:
+            with send_lock:
+                self.wfile.write(b"data: ")
+                self.wfile.write(payload.encode("utf-8"))
+                self.wfile.write(b"\n\n")
+                self.wfile.flush()
+
+        # Claim the slot before writing headers, and write them under the
+        # same lock, so an elicitation racing the handshake cannot land in
+        # front of the status line.
+        if not session.attach_stream(emit):
+            self._send_json(
+                {"error": "session already has an open stream"}, status=409,
+            )
+            return
+        try:
+            with send_lock:
+                self.send_response(200)
+                self.send_header("Content-Type",
+                                  f"{_SSE_MEDIA_TYPE}; charset=utf-8")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Connection", "close")
+                self.send_header(SESSION_HEADER, session.id)
+                self.end_headers()
+                self.wfile.flush()
+            self._heartbeat_until_closed(registry, session, send_lock)
+        except OSError as error:
+            # The client went away, or stopped reading long enough for the
+            # send to time out. Either way this stream is over.
+            autocontrol_logger.info(
+                "MCP session stream %s ended: %r", session.id, error,
+            )
+        finally:
+            session.detach_stream(emit)
+
+    def _heartbeat_until_closed(self, registry: SessionRegistry,
+                                session: HttpSession,
+                                send_lock: threading.Lock) -> None:
+        """Write an SSE comment periodically until the session ends."""
+        while not session.closed.wait(timeout=_STREAM_HEARTBEAT):
+            # Touching through the registry both keeps this session off the
+            # idle sweep and tells us when it has already been dropped.
+            if registry.get(session.id) is None:
+                return
+            with send_lock:
+                self.wfile.write(b": keep-alive\n\n")
+                self.wfile.flush()
 
     def do_DELETE(self) -> None:  # noqa: N802  # reason: stdlib API
+        """Terminate the session named by the header, if there is one."""
         if not self._authorize():
             return
-        # Sessionless server — accept the terminate so clients can cleanup.
+        registry: SessionRegistry = self.server.sessions  # type: ignore[attr-defined]
+        header_id = session_id_from_headers(self.headers)
+        if header_id is None:
+            # No session to drop — accept it so sessionless clients can
+            # still run their cleanup unchanged.
+            self._send_json({"status": "session terminated"})
+            return
+        if registry.terminate(header_id) is None:
+            self._send_json(
+                {"error": "unknown or expired session"}, status=404,
+            )
+            return
         self._send_json({"status": "session terminated"})
 
     # --- helpers -------------------------------------------------------------
@@ -163,15 +321,21 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "invalid Content-Length"}, status=400)
             return None
         raw = self.rfile.read(length)
+        # From here the body is gone from the socket. Any 4xx we send later
+        # must not try to drain it again: there is nothing left to read, so
+        # the drain would block on the next request's bytes until the socket
+        # timeout and pin this worker for thirty seconds.
+        self._body_consumed = True
         try:
             return raw.decode("utf-8").strip()
         except UnicodeDecodeError:
             self._send_json({"error": "body must be UTF-8"}, status=400)
             return None
 
-    def _send_json(self, payload: Any, status: int = 200) -> None:
+    def _send_json(self, payload: Any, status: int = 200,
+                   extra_headers: Optional[Dict[str, str]] = None) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        self._write_headers(status, body)
+        self._write_headers(status, body, extra_headers)
         self.wfile.write(body)
         if status >= 400:
             # Drain any unread request body before the socket closes.
@@ -181,20 +345,29 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
             self._drain_body()
 
     def _drain_body(self) -> None:
+        if self._body_consumed:
+            return
         declared = parse_content_length(self.headers)
         if declared <= 0:
             return
         cap = min(declared, _MAX_BODY * _DRAIN_CAP_MULTIPLE)
         remaining = cap
-        while remaining > 0:
-            chunk = self.rfile.read(min(remaining, _DRAIN_CHUNK))
-            if not chunk:
-                break
-            remaining -= len(chunk)
+        try:
+            while remaining > 0:
+                chunk = self.rfile.read(min(remaining, _DRAIN_CHUNK))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+        except OSError as error:
+            # Draining is a courtesy to the client's read of our 4xx. If the
+            # peer has already gone, there is nothing left to be courteous
+            # about — and letting this escape logs a whole traceback for it.
+            autocontrol_logger.debug("MCP drain aborted: %r", error)
 
-    def _send_raw_json(self, raw_json: str) -> None:
+    def _send_raw_json(self, raw_json: str,
+                       extra_headers: Optional[Dict[str, str]] = None) -> None:
         body = raw_json.encode("utf-8")
-        self._write_headers(200, body)
+        self._write_headers(200, body, extra_headers)
         self.wfile.write(body)
 
     def _send_blank(self, status: int) -> None:
@@ -202,10 +375,14 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", "0")
         self.end_headers()
 
-    def _write_headers(self, status: int, body: bytes) -> None:
+    def _write_headers(self, status: int, body: bytes,
+                       extra_headers: Optional[Dict[str, str]] = None,
+                       ) -> None:
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        for name, value in (extra_headers or {}).items():
+            self.send_header(name, value)
         self.end_headers()
 
 
@@ -218,6 +395,12 @@ class _MCPHttpServer(ThreadingHTTPServer):
         super().__init__(server_address, _MCPHttpHandler)
         self.mcp = mcp
         self.auth_token = auth_token
+        # Dropping a session releases the dispatcher state scoped to its id —
+        # the same release a closing socket used to perform, moved to the
+        # identity that actually owns that state.
+        self.sessions = SessionRegistry(
+            on_drop=lambda session: mcp.forget_connection(session.id),
+        )
         # No sse_lock: SSE requests used to swap server-wide notifier/writer
         # state and needed serialising. They now bind that state to their own
         # thread via MCPServer.connection_scope, so concurrent SSE streams no
@@ -271,6 +454,11 @@ class HttpMCPServer:
     def mcp(self) -> MCPServer:
         return self._mcp
 
+    @property
+    def sessions(self) -> Optional[SessionRegistry]:
+        """The live session registry, or ``None`` before :meth:`start`."""
+        return self._server.sessions if self._server is not None else None
+
     def start(self) -> None:
         """Bind the socket and begin serving on a background thread."""
         if self._server is not None:
@@ -298,6 +486,9 @@ class HttpMCPServer:
     def stop(self, timeout: float = 2.0) -> None:
         if self._server is None:
             return
+        # Close the sessions first: a standing GET stream parks a worker on
+        # its heartbeat, and terminating releases it without waiting one out.
+        self._server.sessions.terminate_all()
         self._server.shutdown()
         self._server.server_close()
         if self._thread is not None:

@@ -253,6 +253,38 @@ box), start the same dispatcher behind HTTP:
 
 Bearer token can also come from ``JE_AUTOCONTROL_MCP_TOKEN``.
 
+Sessions
+========
+
+``initialize`` mints a session and returns it in an
+``Mcp-Session-Id`` response header. Echo that header on every later
+request and the server keeps one scope for you — the capabilities
+you advertised, and the slots your in-flight calls occupy — no
+matter how many TCP connections you use. Without it each request is
+scoped to its own connection, which is all the transport used to
+offer.
+
+- ``GET /mcp`` with ``Accept: text/event-stream`` and a valid
+  ``Mcp-Session-Id`` opens the **standing server-to-client stream**.
+  Server-initiated traffic that is not a reply to a specific request
+  travels down it: progress notifications, and the
+  ``elicitation/create`` behind the confirmation gate below. One
+  stream per session; a second ``GET`` gets 409. The stream carries
+  an SSE comment as a heartbeat so an abandoned socket surfaces as a
+  write error rather than a parked thread.
+- Answer a server request by ``POST``\ ing an ordinary JSON-RPC
+  response — with the session header — on any connection. It is
+  matched to the waiting call by id, and acked with 202.
+- ``DELETE /mcp`` with the header terminates the session and
+  releases everything scoped to it. Without the header it is
+  accepted as a no-op, so sessionless clients keep working.
+- An unknown or expired id is refused with **404**, not served under
+  a fresh scope: the client holds state the server does not, and
+  needs to know to re-initialize.
+- Sessions are bounded. They are swept after ten minutes untouched
+  (a standing stream keeps its own session fresh), and the registry
+  evicts the least recently seen once it holds 128.
+
 Read-only / safe mode
 =====================
 
@@ -283,19 +315,31 @@ error to the model without running the action. Requires the client
 to advertise the ``elicitation`` capability — older clients fall
 through with a logged warning.
 
+The prompt is a question the server asks *between* receiving a call
+and answering it, so it needs a channel the client is listening on
+at that moment. What that means per transport:
+
+- **stdio** — always available; the client is on the other end of
+  the same pipe.
+- **HTTP** — available to a client that echoes ``Mcp-Session-Id``
+  (see `Sessions`_) and gives the server somewhere to send the
+  question. Either channel does: the standing ``GET`` stream, or an
+  SSE ``POST``, whose own response stream carries the
+  ``elicitation/create`` before the result. Either way the answer
+  comes back as a separate ``POST`` — the client is busy reading the
+  stream it asked on.
+
 .. warning::
 
-   **This gate is effective on the stdio transport only.** Over the
-   HTTP transport it never fires: the prompt needs a server→client
-   channel bound to the same connection scope that received
-   ``initialize``, and the HTTP transport is deliberately sessionless
-   — a plain ``POST`` has no such channel at all, and an SSE ``POST``
-   closes its connection after the final event, so no later
-   ``tools/call`` can reach the capabilities the client advertised.
-   Destructive tools therefore run **unprompted** over HTTP even with
-   this variable set. Do not rely on it as the only control on an
-   HTTP-exposed server; use the bearer token and bind to
-   ``127.0.0.1``.
+   A client that ignores ``Mcp-Session-Id``, or that only ever sends
+   plain JSON ``POST``\ s with no stream open, has given the server
+   nowhere to ask — so
+   destructive tools run **unprompted**, exactly as they do for a
+   stdio client that never advertised ``elicitation``. That fallback
+   is logged, but it is a fallback: on an HTTP-exposed server treat
+   the bearer token, the ``127.0.0.1`` bind and
+   ``JE_AUTOCONTROL_MCP_READONLY`` as the controls that do not
+   depend on the client behaving.
 
 Audit log
 =========

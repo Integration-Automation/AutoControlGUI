@@ -124,6 +124,26 @@ only when documented here with a migration path.
   land somewhere else; unset (or any unrecognised value, which says so and
   falls back) keeps the existing warn-once-and-move behaviour. The libei path
   is absolute at the protocol level and is not affected either way.
+- **MCP sessions over HTTP.** `initialize` now mints an `Mcp-Session-Id` and
+  returns it as a response header. A client that echoes it keeps one
+  dispatcher scope — the capabilities it advertised, and the slots its
+  in-flight calls occupy — across every connection it opens, instead of one
+  scope per TCP connection. `GET /mcp` with `Accept: text/event-stream` and a
+  valid session id opens the standing server-to-client SSE stream (one per
+  session; a second gets 409), `DELETE /mcp` with the id terminates the
+  session, and a server request is answered by `POST`ing an ordinary JSON-RPC
+  response on any connection. Sessions are swept after ten minutes untouched
+  and capped at 128. `je_auto_control.utils.mcp_server.http_sessions` holds
+  the registry.
+- **`JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1` now works over HTTP** — for a
+  client that echoes `Mcp-Session-Id` and holds the `GET` stream open. It
+  previously fired only on stdio: the prompt needs a server-to-client channel
+  bound to the scope that received `initialize`, and a connection-keyed scope
+  never survived to the `tools/call`. A client that does neither still cannot
+  be prompted and its destructive calls still proceed, exactly as for a stdio
+  client that never advertised `elicitation`; that fallback is documented and
+  is not a substitute for the bearer token, the `127.0.0.1` bind or
+  `JE_AUTOCONTROL_MCP_READONLY`.
 
 ### Removed
 
@@ -145,6 +165,15 @@ only when documented here with a migration path.
 
 ### Changed
 
+- The MCP HTTP transport answers `GET /mcp` differently. It used to return
+  `405` with `{"error": "GET stream not supported"}` for every request; it now
+  serves the session's SSE stream when the request carries
+  `Accept: text/event-stream` and a valid `Mcp-Session-Id`, and still returns
+  `405` when the `Accept` header does not ask for a stream. A request — of any
+  method — carrying an `Mcp-Session-Id` the server does not know is refused
+  with `404` rather than served under a fresh scope, which is the signal to
+  re-run `initialize`. `DELETE /mcp` without a session header is still
+  accepted as a no-op, so clients that never adopt sessions are unaffected.
 - The default run-history database is created when it is first written to,
   not while `je_auto_control` is being imported. `HistoryStore` opens its
   connection (and makes its parent directory) on first use, so merely
@@ -315,6 +344,15 @@ only when documented here with a migration path.
   and import stable entry points from `je_auto_control.api`.
 
 ### Fixed
+
+- The MCP HTTP transport no longer tries to drain a request body it has
+  already read. Any `4xx` decided *after* the body was parsed — the new
+  unknown-session `404` and duplicate-stream `409`, and the pre-existing
+  "body must be UTF-8" `400` — called `_drain_body()`, which then blocked
+  reading bytes that were gone until the 30-second socket timeout, pinning
+  that worker and logging a `ConnectionAbortedError` traceback when the peer
+  closed first. The drain is now skipped once the body is consumed, and a
+  peer that has already vanished ends it quietly instead of raising.
 
 - **A rejected config bundle aborted the rest of the script.** Five
   framework errors still inherited `Exception` directly —

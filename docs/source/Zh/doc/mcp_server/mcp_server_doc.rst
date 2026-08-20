@@ -240,6 +240,31 @@ HTTP 傳輸(含 SSE / Auth / TLS)
 
 Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
 
+Session
+=======
+
+``initialize`` 會產生一個 session,並用 ``Mcp-Session-Id`` 回應標頭
+交給 client。之後每個請求都帶上這個標頭,伺服器就會把它們視為同一個
+scope——包含你在 ``initialize`` 聲明的能力,以及進行中呼叫佔用的槽位
+——不管你開了幾條 TCP 連線。不帶這個標頭時,每個請求只以自己的連線
+為範圍,也就是這條傳輸從前唯一的行為。
+
+- ``GET /mcp`` 帶 ``Accept: text/event-stream`` 與有效的
+  ``Mcp-Session-Id``,會開啟**常駐的 server→client 串流**。凡是不
+  屬於某個特定請求之回覆的伺服器主動訊息都走這條:進度通知,以及
+  下面確認關卡要送的 ``elicitation/create``。一個 session 只能有一
+  條串流,第二個 ``GET`` 會收到 409。串流會定期送出 SSE 註解當作
+  心跳,好讓斷掉的 socket 變成一個寫入錯誤,而不是一條卡住的執行緒。
+- 要回答伺服器的請求,就在任何一條連線上 ``POST`` 一個普通的
+  JSON-RPC response(同樣帶 session 標頭)。伺服器會依 id 對回正在
+  等待的那個呼叫,並以 202 回覆。
+- ``DELETE /mcp`` 帶標頭會終止 session,並釋放掛在它底下的所有狀態;
+  不帶標頭時照舊接受,不影響沒有 session 概念的 client。
+- 未知或已過期的 id 一律回 **404**,不會改用一個新的 scope 服務它:
+  client 手上有伺服器沒有的狀態,它需要知道自己該重新 initialize。
+- session 有上下界。十分鐘沒被碰過就會被掃掉(常駐串流會讓自己的
+  session 保持新鮮),而註冊表滿 128 個時,最久沒動的那個會被淘汰。
+
 唯讀 / 安全模式
 ===============
 
@@ -268,17 +293,25 @@ Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
 使用者拒絕時模型會收到乾淨的錯誤,不會執行動作。需要 client 自己
 聲明 ``elicitation`` 能力;舊 client 會留下 warning log 後繼續執行。
 
+這個提示是伺服器在「收到呼叫」與「回答呼叫」**之間**問出去的問題,
+所以它需要一條 client 當下正在聽的通道。各傳輸的情況:
+
+- **stdio** — 一定有;client 就在同一條 pipe 的另一端。
+- **HTTP** — 只要 client 回送 ``Mcp-Session-Id``(見 `Session`_),
+  並且給伺服器一條送問題的通道就有。兩種通道都算:常駐的 ``GET``
+  串流,或是一個 SSE ``POST``——它自己的回應串流會在結果之前先送出
+  ``elicitation/create``。兩種情況下,答案都要用另一個 ``POST`` 送
+  回來,因為 client 正忙著讀它問過去的那條串流。
+
 .. warning::
 
-   **這道關卡目前只在 stdio transport 上有效。** 走 HTTP transport 時
-   它一次都不會觸發:送出提示需要一條與收到 ``initialize`` 的同一個
-   connection scope 綁在一起的 server→client 通道,而 HTTP transport
-   是刻意設計成 sessionless 的——普通 ``POST`` 根本沒有這種通道,
-   SSE ``POST`` 則在送完最後一個事件後就關掉連線,所以後續的
-   ``tools/call`` 拿不到 client 當初聲明的能力。也就是說,即使設了這個
-   環境變數,destructive 工具在 HTTP 上仍然會**不經詢問直接執行**。
-   不要把它當成 HTTP 服務的唯一控制手段;請改用 bearer token 並綁在
-   ``127.0.0.1``。
+   如果 client 不回送 ``Mcp-Session-Id``,或是自始至終只送普通的
+   JSON ``POST``、一條串流都沒開,伺服器就沒有地方可問——這時
+   destructive 工具會**不經詢問直接執行**,和一個從未聲明
+   ``elicitation`` 的 stdio client 完全一樣。
+   這條退路會留下 log,但它終究是退路:對外開放的 HTTP 服務,請把
+   bearer token、綁定 ``127.0.0.1`` 與 ``JE_AUTOCONTROL_MCP_READONLY``
+   當成真正的控制手段,它們不需要 client 配合。
 
 稽核 Log
 ========

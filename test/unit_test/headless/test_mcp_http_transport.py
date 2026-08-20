@@ -293,18 +293,21 @@ def _post_with_accept(server, body, accept):
 
 
 @pytest.mark.parametrize("accept", ["application/json", "text/event-stream"])
-def test_destructive_confirm_gate_never_fires_over_http(monkeypatch, accept):
-    """Pin the known gap: JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE is stdio-only.
+def test_destructive_confirm_gate_needs_a_session_the_client_keeps(
+        monkeypatch, accept):
+    """A client that ignores Mcp-Session-Id cannot be prompted, by construction.
 
-    The elicitation prompt needs a server->client channel bound to the same
-    connection scope that received ``initialize``. A plain POST has no such
-    channel, and an SSE POST closes its connection after the final event, so
-    the capabilities the client advertised are gone by the next ``tools/call``.
-    Destructive tools therefore run unprompted over HTTP even with the gate on.
+    The prompt is an ``elicitation/create`` the server has to send *between*
+    receiving a call and answering it, so it needs a channel the client is
+    listening on. A client that neither echoes the session id nor opens the
+    standing GET stream has given the server nowhere to ask, and the call
+    proceeds — the same fallback a stdio client without the ``elicitation``
+    capability takes.
 
-    This is recorded in ``Progress.md`` and warned about in the MCP docs. When
-    the transport grows real session identity, this test fails -- that is the
-    point: update the docs warning and the Progress.md entry in the same change.
+    A client that does echo the id and open the stream is prompted for real;
+    that is ``test_mcp_http_sessions.py``. This test pins the other side of
+    that line so the fallback stays deliberate rather than becoming the only
+    behaviour again.
     """
     from je_auto_control.utils.mcp_server.tools import (
         MCPTool, MCPToolAnnotations,
@@ -332,6 +335,7 @@ def test_destructive_confirm_gate_never_fires_over_http(monkeypatch, accept):
                 "clientInfo": {"name": "probe", "version": "1"},
             },
         }, accept)
+        # No Mcp-Session-Id echoed back, and no GET stream opened.
         call_body = _post_with_accept(server, {
             "jsonrpc": "2.0", "id": 2, "method": "tools/call",
             "params": {"name": "zap_probe", "arguments": {}},
@@ -341,5 +345,5 @@ def test_destructive_confirm_gate_never_fires_over_http(monkeypatch, accept):
 
     assert "elicitation/create" not in init_body
     assert "elicitation/create" not in call_body
-    assert ran == [1], "gate did not fire, so the tool should have run"
+    assert ran == [1], "with nowhere to ask, the call proceeds"
     assert '"isError": false' in call_body

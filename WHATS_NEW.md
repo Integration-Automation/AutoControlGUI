@@ -320,34 +320,76 @@ real X server through `xev`, `freebsd_verify.py` pins it on a BSD, and
 display. The migration note for anyone who was relying on the magnitude alone
 is in `CHANGELOG.md`.
 
-### The Destructive-Action Prompt Was Documented as Covering a Transport It Never Reached
+### The Destructive-Action Prompt Reached Only One of the Two Transports
 
 `JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1` is documented as gating *every*
 destructive MCP tool behind a confirmation prompt, with one stated caveat: the
 client has to advertise the `elicitation` capability. Measured against a real
-`HttpMCPServer` with a real destructive tool, the gate fires on stdio and
-**never fires over HTTP** — not in any of the four combinations of plain POST
+`HttpMCPServer` with a real destructive tool, the gate fired on stdio and
+**never fired over HTTP** — not in any of the four combinations of plain POST
 or SSE, one connection or two.
 
-Two independent reasons, and the second one is why keeping the connection open
-does not help. A plain `POST` is one request and one response, so its
-connection scope has no server→client channel and the prompt has nothing to
-travel down. An SSE `POST` does have one, but `_dispatch_sse` sets
-`close_connection`, so the scope keyed on that TCP connection is forgotten
-before the next request — and the `elicitation` capability the client
-advertised at `initialize` goes with it. The call then takes the "client
-cannot be prompted" branch, logs one INFO line, and runs the tool.
+Two independent reasons, and the second is why keeping the connection open did
+not help. A plain `POST` is one request and one response, so its connection
+scope had no server→client channel and the prompt had nothing to travel down.
+An SSE `POST` did have one, but `_dispatch_sse` sets `close_connection`, so the
+scope keyed on that TCP connection was forgotten before the next request — and
+the `elicitation` capability advertised at `initialize` went with it. The call
+then took the "client cannot be prompted" branch, logged one INFO line, and ran
+the tool. An operator who set that variable on an HTTP-exposed server was
+getting no confirmation at all.
 
-An operator who sets that variable on an HTTP-exposed server is getting no
-confirmation at all. Both `mcp_server_doc.rst` translations now say so, and
-point at the bearer token and the `127.0.0.1` bind as the controls that do
-work there. `test_destructive_confirm_gate_never_fires_over_http` pins the
-current behaviour for both content types, so whoever closes the gap gets a red
-test telling them to update the warning in the same change. Which of the two
-fixes to take — refuse when the prompt is impossible, or give the transport
-real session identity — is a behaviour change either way and is written up in
-`Progress.md`.
+**The transport now has the identity MCP actually specifies.** `initialize`
+mints an `Mcp-Session-Id` and returns it as a response header; a client that
+echoes it keeps one dispatcher scope across every connection it opens. `GET`
+with `Accept: text/event-stream` opens the standing server→client stream that
+server-initiated traffic belongs on, and answering a server request is an
+ordinary `POST` matched back to the waiting call by id. `DELETE` terminates.
+The dispatcher itself needed no change — it already scoped capabilities and
+active-call slots on an opaque `connection_id`, so a session id simply takes
+that slot, and the per-connection isolation guarded by
+`test_r3_mcp_connection_isolation` is preserved verbatim: a session is just an
+identity that outlives a socket.
 
+So the confirmation now round-trips over HTTP, and the test that proves it uses
+four separate connections — one that initialized, one holding the stream, one
+carrying the `tools/call`, one carrying the decline — none of which shared a
+socket with the handshake. Declining blocks the tool; accepting runs it.
+
+Measuring it turned up a second way through that was worth pinning: an SSE
+`POST` carrying a session id needs no standing stream at all, because its own
+response stream is already a server-to-client channel. The `elicitation/create`
+goes out ahead of the result on the same socket the call arrived on. Both paths
+now have a test.
+
+What did *not* change is the fallback: a client that ignores the session header,
+or that only ever sends plain JSON `POST`s with no stream open, has given the
+server nowhere to ask, and its destructive calls still proceed — exactly as they
+do for a stdio client that never advertised `elicitation`. That is now a
+documented boundary with a test on each side of it rather than an accident — but
+it is still a boundary, so the bearer token, the `127.0.0.1` bind and
+`JE_AUTOCONTROL_MCP_READONLY` remain the controls that do not depend on the
+client behaving.
+
+Sessions are bounded in both directions: swept after ten minutes untouched, and
+the registry evicts the least recently seen once it holds 128. Dropping a
+session — however it goes — releases the dispatcher state held under its id,
+which is the same release a closing socket used to perform, moved to the
+identity that actually owns that state. Because every `initialize` mints a
+session, including for the many clients that ignore the header and never come
+back, evicting one that was never used after its handshake is logged as routine;
+the warning is saved for evicting a session someone was holding, which is the
+one that means the cap is too low.
+
+The new refusals also exposed an old assumption in the transport. Every `4xx`
+runs `_drain_body()` first, so the client can read the response before the
+socket closes — but the new unknown-session `404` and duplicate-stream `409` are
+decided *after* the body has been parsed, and so was the pre-existing "body must
+be UTF-8" `400`. The drain then went looking for bytes that were already gone
+and blocked until the thirty-second read timeout, pinning that worker and
+printing a `ConnectionAbortedError` traceback whenever the peer closed first.
+It now skips the drain once the body is consumed, and treats a peer that has
+already vanished as nothing left to be courteous to.
 
 ## What's new (2026-08-19)
 
