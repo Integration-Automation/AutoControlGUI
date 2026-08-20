@@ -24,7 +24,7 @@ changes wheel-compatibility tags — so a local dry-run cannot prove any of
 this. Evaluating the marker directly can, and does not need the runner.
 """
 import pathlib
-import tomllib
+import re
 from typing import Dict, List
 
 import pytest
@@ -66,9 +66,23 @@ ENVIRONMENTS: Dict[str, Dict[str, str]] = {
 
 
 def _dependencies() -> List[str]:
-    """Return the project's required dependencies, verbatim."""
-    data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    return list(data["project"]["dependencies"])
+    """Return the project's required dependencies, verbatim.
+
+    Read with a small regex rather than `tomllib`, which is 3.11+ while this
+    project supports 3.10 back to the floor. A guard that cannot run on the
+    oldest supported interpreter is not a guard, and using `tomllib` here
+    took the whole 3.10 collection down with it.
+    """
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    block = re.search(r"^dependencies = \[(.*?)^\]", text, re.S | re.M)
+    assert block is not None, "pyproject.toml has no top-level dependencies array"
+    found: List[str] = []
+    for line in block.group(1).splitlines():
+        quoted = re.match(r'"([^"]+)"', line.strip())
+        if quoted is not None:
+            found.append(quoted.group(1))
+    assert found, "parsed no dependencies; the array format must have changed"
+    return found
 
 
 def _requirement(name: str) -> str:

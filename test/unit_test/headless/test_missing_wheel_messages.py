@@ -133,7 +133,9 @@ else:
 def test_a_module_scope_importer_explains_itself() -> None:
     """tls_acme.keys re-raises with the reason, following webrtc_transport."""
     env = dict(os.environ, PYTHONPATH=str(REPO_ROOT))
-    finished = subprocess.run(
+    # argv is this interpreter plus a module-level literal probe, with no
+    # interpolation at all. No shell.
+    finished = subprocess.run(  # nosec B603  # nosemgrep  # reason: literal argv, no shell
         [sys.executable, "-c", _PROBE],
         capture_output=True, text=True, timeout=120, env=env, check=False,
     )
