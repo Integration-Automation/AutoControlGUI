@@ -62,6 +62,11 @@ jobs:
         run: python ./test/unit_test/keyboard/hotkey_test.py
 
       # Mouse tests
+      # These three drive the real mouse and the real exit path on a hosted
+      # runner with no desk in front of it, so a failure says more about the
+      # runner's session than about the change under test. They are demo
+      # scripts (CLAUDE.md: the *_test.py files run on import), not the CI
+      # gate -- that is pytest-headless in quality.yml.
       - name: Test Mouse Module
         run: python ./test/unit_test/mouse/mouse_test.py
         continue-on-error: true

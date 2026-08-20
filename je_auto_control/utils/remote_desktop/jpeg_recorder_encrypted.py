@@ -22,7 +22,13 @@ from base64 import b64encode
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+try:
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+except ImportError as exc:  # pragma: no cover - platform-dependent wheel
+    raise ImportError(
+        "Encrypted recording requires cryptography, which publishes no "
+        "Windows arm64 wheel: pip install cryptography"
+    ) from exc
 
 _MANIFEST_FILENAME = "manifest.json"
 _KEY_BYTES = 32  # AES-256

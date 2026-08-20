@@ -35,6 +35,24 @@ _KEY_ITERATIONS = 600_000
 _SALT_BYTES = 16
 
 
+def _fernet_types() -> tuple:
+    """Return ``(Fernet, InvalidToken)``, or explain why the vault cannot open.
+
+    ``cryptography`` publishes no ``win_arm64`` wheel, so on Windows arm64 it
+    is absent by design rather than by accident -- see ``pyproject.toml``. A
+    bare ``ModuleNotFoundError`` there reads like a broken install, so name
+    what is missing and what it costs.
+    """
+    try:
+        from cryptography.fernet import Fernet, InvalidToken
+    except ImportError as error:
+        raise RuntimeError(
+            "The secret vault requires cryptography (pip install cryptography). "
+            "It has no Windows arm64 wheel, so the vault is unavailable there."
+        ) from error
+    return Fernet, InvalidToken
+
+
 class SecretStoreError(RuntimeError):
     """Raised when the vault file is corrupt or a passphrase is wrong."""
 
@@ -115,10 +133,10 @@ class SecretManager:
         with self._lock:
             if self._path.exists():
                 raise SecretStoreError("vault already exists")
-            from cryptography.fernet import Fernet
+            fernet_cls, _ = _fernet_types()
             salt = os.urandom(_SALT_BYTES)
             key = _derive_key(passphrase, salt, _KEY_ITERATIONS)
-            fernet = Fernet(key)
+            fernet = fernet_cls(key)
             verifier = fernet.encrypt(_VERIFIER_PLAINTEXT).decode("ascii")
             payload = {
                 "version": 1,
@@ -137,16 +155,16 @@ class SecretManager:
             data = _load_vault(self._path)
             if data is None:
                 raise SecretStoreError("vault does not exist")
-            from cryptography.fernet import Fernet, InvalidToken
+            fernet_cls, invalid_token = _fernet_types()
             salt = base64.b64decode(data["salt"])
             iterations = int(data.get("iterations", _KEY_ITERATIONS))
             key = _derive_key(passphrase, salt, iterations)
-            fernet = Fernet(key)
+            fernet = fernet_cls(key)
             try:
                 if fernet.decrypt(data["verifier"].encode("ascii")) \
                         != _VERIFIER_PLAINTEXT:
                     return False
-            except InvalidToken:
+            except invalid_token:
                 return False
             self._fernet = fernet
             self._vault = data
@@ -177,10 +195,10 @@ class SecretManager:
             token = self._vault["items"].get(name)  # type: ignore[index]
             if token is None:
                 return None
-            from cryptography.fernet import InvalidToken
+            _, invalid_token = _fernet_types()
             try:
                 return self._fernet.decrypt(token.encode("ascii")).decode("utf-8")
-            except InvalidToken as error:
+            except invalid_token as error:
                 raise SecretStoreError(
                     f"secret {name!r} failed integrity check"
                 ) from error

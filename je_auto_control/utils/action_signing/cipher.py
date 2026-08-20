@@ -23,13 +23,31 @@ _ENC_SUFFIX = ".enc"
 KeyType = Optional[Union[bytes, str]]
 
 
+def _fernet_types() -> tuple:
+    """Return ``(Fernet, InvalidToken)``, or explain why encryption is off.
+
+    ``cryptography`` publishes no ``win_arm64`` wheel, so on Windows arm64 it
+    is absent by design rather than by accident -- see ``pyproject.toml``. A
+    bare ``ModuleNotFoundError`` there reads like a broken install, so name
+    what is missing and what it costs.
+    """
+    try:
+        from cryptography.fernet import Fernet, InvalidToken
+    except ImportError as error:
+        raise RuntimeError(
+            "Action-file encryption requires cryptography (pip install cryptography). "
+            "It has no Windows arm64 wheel, so encryption is unavailable there."
+        ) from error
+    return Fernet, InvalidToken
+
+
 def _persistent_key() -> bytes:
     """Read the per-user Fernet key, creating it (0600) on first use."""
-    from cryptography.fernet import Fernet
+    fernet_cls, _ = _fernet_types()
     if _DEFAULT_KEY_PATH.exists():
         return _DEFAULT_KEY_PATH.read_bytes()
     _DEFAULT_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    generated = Fernet.generate_key()
+    generated = fernet_cls.generate_key()
     _DEFAULT_KEY_PATH.write_bytes(generated)
     try:
         os.chmod(_DEFAULT_KEY_PATH, 0o600)
@@ -48,9 +66,9 @@ def _fernet_key(key: KeyType) -> bytes:
 
 def encrypt_action_file(path: Union[str, Path], key: KeyType = None) -> str:
     """Encrypt the file at ``path`` to ``<path>.enc``; return the enc path."""
-    from cryptography.fernet import Fernet
+    fernet_cls, _ = _fernet_types()
     target = Path(path)
-    token = Fernet(_fernet_key(key)).encrypt(target.read_bytes())
+    token = fernet_cls(_fernet_key(key)).encrypt(target.read_bytes())
     enc_path = target.with_name(target.name + _ENC_SUFFIX)
     enc_path.write_bytes(token)
     autocontrol_logger.info("encrypted action file %s", target)
@@ -65,11 +83,11 @@ def decrypt_action_file(enc_path: Union[str, Path], key: KeyType = None,
     dropped. Raises :class:`AutoControlException` on a wrong key or a
     tampered file.
     """
-    from cryptography.fernet import Fernet, InvalidToken
+    fernet_cls, invalid_token = _fernet_types()
     enc = Path(enc_path)
     try:
-        plaintext = Fernet(_fernet_key(key)).decrypt(enc.read_bytes())
-    except InvalidToken as error:
+        plaintext = fernet_cls(_fernet_key(key)).decrypt(enc.read_bytes())
+    except invalid_token as error:
         raise AutoControlException(
             f"cannot decrypt {enc_path!r}: wrong key or tampered file",
         ) from error

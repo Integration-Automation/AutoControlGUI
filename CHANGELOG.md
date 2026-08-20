@@ -10,6 +10,18 @@ only when documented here with a migration path.
 
 ### Added
 
+- **Windows on arm64 installs.** `opencv-python`, `cryptography` and
+  `je_open_cv` now carry the environment marker
+  `sys_platform != 'win32' or platform_machine != 'ARM64'`, because none of
+  the three publishes a `win_arm64` wheel and `pip install je_auto_control`
+  therefore failed on that platform before any of this code ran. Every other
+  platform resolves exactly the same dependency set as before. On Windows
+  arm64, the features that need those wheels — `find_image*`, the OpenCV
+  `screenshot()`, the secret vault, action-file encryption, ACME/TLS and
+  encrypted recording — raise a `RuntimeError` or `ImportError` naming the
+  missing wheel rather than a bare `ModuleNotFoundError`. Python 3.11 is the
+  floor there, since CPython publishes no official Windows arm64 build for
+  3.10.
 - **The macOS recorder works.** `record()`, `stop_record()`,
   `stop_record_timeline()`, the `AC_record*` commands, the `ac_record_*` MCP
   tools and `je_auto_control record` all run on macOS now; they used to refuse

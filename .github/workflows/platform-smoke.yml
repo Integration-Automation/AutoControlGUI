@@ -16,30 +16,38 @@ jobs:
       matrix:
         # arm64 is not a rounding error on the desktop any more, and the
         # dependency set is where it shows. macos-14 is already arm64;
-        # ubuntu-22.04-arm adds Linux, and it passes.
+        # ubuntu-22.04-arm adds Linux, and windows-11-arm is back.
         #
-        # windows-11-arm is deliberately absent, and it was measured rather
-        # than assumed. Two dependencies have no win_arm64 wheel, and both
-        # have to go before the runner is worth adding back:
+        # windows-11-arm installs a smaller dependency set than every other
+        # square, and that is deliberate rather than accidental. Two packages
+        # publish no win_arm64 wheel, so pyproject.toml marks them off this
+        # one platform:
         #
-        #   opencv-python  — no win_arm64 wheel in any version, so pip falls
-        #                    back to building from source and CMake cannot
+        #   opencv-python  — no win_arm64 wheel in any version, so pip fell
+        #                    back to building from source and CMake could not
         #                    configure for ARM64. Twelve minutes, then failure.
         #   cryptography   — wheels stop at 46.0.3; 46.0.4 onwards ship none.
         #                    Our floor is >=48.0.1 and that is a security floor
         #                    (GHSA-537c-gmf6-5ccf), so it cannot be lowered.
         #
-        # Neither is a CI problem to work around — the package genuinely
-        # cannot be installed on Windows arm64 today. Re-check without a
-        # runner, in about ten seconds:
+        # Nothing in the package imports either one at import time, so what
+        # this square proves is real: the install succeeds and the stable API
+        # works. Image matching, action signing, ACME and encrypted recording
+        # do not work there, and Progress.md says so. Re-check upstream in
+        # about ten seconds, no runner required:
         #
         #   pip install --dry-run --only-binary=:all: --platform win_arm64 \
         #       --python-version 3.12 --target /tmp/probe \
         #       'opencv-python>=4.8,<6' 'cryptography>=48.0.1'
         #
-        # Recorded in Progress.md; add the runner back when both resolve.
-        os: [windows-2022, ubuntu-22.04, macos-14, ubuntu-22.04-arm]
+        # When both resolve, drop the markers from pyproject.toml.
+        os: [windows-2022, ubuntu-22.04, macos-14, ubuntu-22.04-arm, windows-11-arm]
         python-version: ["3.10", "3.14"]
+        exclude:
+          # CPython's official Windows arm64 builds start at 3.11, so
+          # setup-python has no 3.10 interpreter to fetch on this runner.
+          - os: windows-11-arm
+            python-version: "3.10"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
