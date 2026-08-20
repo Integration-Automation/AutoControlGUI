@@ -143,7 +143,7 @@ jobs:
           ${{ runner.os == 'Linux' && 'xvfb-run -a -s "-screen 0 1280x800x24"' || '' }}
           pytest -v --tb=short --timeout=120
           --cov=je_auto_control --cov-report=term-missing
-          --cov-report=xml --cov-fail-under=35
+          --cov-report=xml --cov-fail-under=50
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -151,6 +151,12 @@ jobs:
           name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
           path: coverage.xml
 
+  # The job id is still `typing-stable-api` because it is a required check and
+  # renaming it silently drops the requirement, but the scope is no longer the
+  # stable API alone: mypy now checks the whole package, minus the shrink-only
+  # list in `test/verify/typing_contract_exempt.txt`. The verify script also
+  # runs the three target platforms mypy can be pointed at, so the Windows and
+  # macOS backends are checked from this Ubuntu runner rather than skipped.
   typing-stable-api:
     runs-on: ubuntu-latest
     steps:
@@ -160,4 +166,8 @@ jobs:
           python-version: "3.12"
       - run: pip install -e .  # NOSONAR githubactions:S8541,githubactions:S8544  # reason: installs the checked-out project itself, there is no upstream version to lock and the build must run
       - run: "pip install --only-binary :all: mypy==2.3.0"
-      - run: mypy je_auto_control/api je_auto_control/utils/failure_bundle
+      # Deliberately NOT installing the optional extras: the contract forces
+      # every non-base third-party module to `Any` so the result cannot depend
+      # on what is installed, and installing them here would only hide a
+      # regression in that arrangement.
+      - run: python test/verify/typing_contract_verify.py

@@ -1,5 +1,62 @@
 # What's New — AutoControl
 
+## What's new (2026-08-21)
+
+### Two Quality Gates That Had Been Standing Still
+
+`Progress.md` carried an entry called "two thresholds we agreed to climb and
+never did". Both were promises that lived only in a `pyproject.toml` comment,
+with nothing anywhere that would ever move them. Both now have a mechanism.
+
+**Coverage: the floor was 15 points below what the tests already earn.**
+`fail_under = 35` was the first measured baseline and then never moved while the
+suite grew past it. Every square of the nine-way matrix is over 50% — measured
+on the run for PR #484, from 50.26% (ubuntu-22.04 / 3.10) to 51.69%
+(windows-2022 / 3.14) — so CI would have passed a change that deleted a third of
+the tests without a word. The floor is now **50**, taken from the lowest square
+rather than from one machine, and the comment states the rule that was missing:
+this is a ratchet, raised whenever the suite has earned it, not a target to
+admire. 70 is still the destination.
+
+**mypy: the scope was two directories, and could only ever grow by hand.**
+The job checked `je_auto_control/api` and `je_auto_control/utils/failure_bundle`
+— 4 files — while a comment promised the rest would join "the contract" later.
+A scope written as a path list never grows on its own, and every new module
+lands outside it by default.
+
+So the scope is inverted. mypy now checks **the whole package**, and the modules
+that do not pass yet are named in `test/verify/typing_contract_exempt.txt`.
+**862 of 1,017 files are inside the contract today**, a new module is inside it
+the moment it is written, and the list may only shrink:
+`test/verify/typing_contract_verify.py` fails just as loudly when a listed
+module starts passing (delete the line) as when an unlisted one stops. Both
+directions were checked by breaking them.
+
+**And it checks three platforms, not one.** mypy resolves `sys.platform`
+branches against a single target, so the Ubuntu-only job never looked inside
+the Windows, macOS or platform-gated code — three of the four backends. That
+blind spot was real and is now measured: 13 modules fail only when the target is
+Linux, 3 only when it is Windows. The script runs `win32`, `linux` and `darwin`
+and unions the results, so the Windows and macOS backends are type-checked from
+the Ubuntu runner.
+
+**The part that took the work: the gate has to mean one thing.** A first
+measurement taken on a dev checkout disagreed with a bare `pip install -e .`
+about **38 modules** — 36 Qt modules that pass only because PySide6 is *absent*,
+and 2 that fail only because `babel` and `pytest` are. Committing that list
+would have reddened CI on arrival and mis-listed the other 36. A gate that flips
+on `pip install` is not a gate, so every third-party module outside the base
+dependency set is now forced to `Any`. `ignore_missing_imports` alone was not
+enough — it still lets mypy read the real package when it *is* installed — and
+neither was `follow_imports = "skip"`, which is silently ignored for `.pyi`
+files: PySide6 ships inline stubs, so `follow_imports_for_stubs` was required
+too. That is the same trap the numpy override in `pyproject.toml` had already
+paid for and written down. A dev checkout with `[gui]` and `[webrtc]` and a
+clean base install now produce identical results.
+
+The remaining 155 modules cluster — `utils/remote_desktop` (13), `gui` (11),
+`wrapper` (5) — and `Progress.md` records clearing them one cluster at a time.
+
 ## What's new (2026-08-20)
 
 ### Three Tests That Had Been Skipped Since They Were Written

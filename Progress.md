@@ -219,15 +219,42 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 
 ---
 
-## 兩個講好要爬、還沒爬的門檻
+## 兩個門檻：機制已經有了，剩下的是把數字往前推
 
-`TODO` — 兩者都寫在 `pyproject.toml` 的註解裡，但不在任何待辦清單上
+`TODO` — 兩者都已經從「講好要爬」變成「有棘輪在擋」，但都還沒到目的地
 
-- **覆蓋率**：`fail_under = 35`，註解寫著「Raise toward 70 as legacy modules are
-  brought under the stable API contract」。目標是 70，今天是 35，中間沒有計畫。
-- **mypy 範圍**：CI 只型別檢查兩條路徑（`quality.yml` 的
-  `mypy je_auto_control/api je_auto_control/utils/failure_bundle`）。註解寫著
-  「followed legacy modules are analysed for signatures but not reported until they
-  join the contract」——同樣是講好要擴、還沒擴。
+原本這一條記的是兩個只存在於 `pyproject.toml` 註解裡、沒有任何機制的承諾。
+2026-08-21 把**機制**補上了（做法見 [WHATS_NEW.md](WHATS_NEW.md)），所以這裡改記
+還差多少、以及下一步怎麼走。
 
-兩者都不是一次做得完的事，但放在這裡至少讓「下一步是什麼」有一個地方可寫。
+### 覆蓋率：地板 50，目標 70
+
+`fail_under` 從 35 提到 **50**。35 是第一次實測的基線，之後測試長大了它卻沒動，
+於是有 15 個百分點是白讓的：九宮格矩陣每一格都在 50% 以上，而 CI 會放行一個
+把三分之一測試刪掉的改動。現在的地板取自矩陣**最低**的那一格
+（ubuntu-22.04／3.10，50.26%；最高的是 windows-2022／3.14，51.69%）。
+
+規則寫進註解了：**這是棘輪，不是目標**——測試賺到了就把地板提上去。
+往 70 的路上還差 20 點，而覆蓋率排除了 `gui/` 與 `language_wrapper/`，
+所以剩下的缺口都在 `utils/` 的無頭模組裡。**下一步**是找出跌破平均的大模組
+（`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
+而不是齊頭式地補測試。
+
+### mypy：整包把關，155 個模組還沒過
+
+範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
+（`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
+新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 862 個已經過關。
+
+剩下 155 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
+`arg-type`／`union-attr`／`assignment`，成群集中在
+`utils/remote_desktop`（13）、`gui`（11）、`wrapper`（5）、
+`utils/usb/passthrough`／`utils/mcp_server`／`utils/accessibility/backends`／`linux_wayland`（各 4）。
+**下一步**是一次清一個群集，清完把行從清單刪掉——
+`python test/verify/typing_contract_verify.py --fix` 會替你改，CI 會在你忘了刪的時候紅掉。
+
+有一件事別再踩：**這個閘門的判定不能隨環境浮動**。裝了 `[gui]`／`[webrtc]` 的開發機
+與乾淨的 `pip install -e .` 曾經對 38 個模組看法不同（36 個 Qt 模組只在 PySide6
+*不在*時才過關，2 個只在 babel／pytest 不在時才失敗）。修法是把所有非基礎相依的
+第三方模組壓成 `Any`；其中 `follow_imports = "skip"` 對 `.pyi` 無效、必須同時開
+`follow_imports_for_stubs`，正是 numpy 那條註解早就寫過的坑。

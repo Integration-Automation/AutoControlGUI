@@ -156,7 +156,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `je_auto_control/__main__.py` | 70 | 舊版 argparse 進入點：`-e` 執行單檔、`-d` 執行整個目錄、`--execute_str` 執行 JSON 字串、`-c` 建立專案。 |
 | `je_auto_control/cli.py` | 323 | **主 CLI**（`je_auto_control` console script）。子命令：`run`（含 `--var`／`--dry-run`）、`validate`／`lint`、`list-commands`、`fmt`、`record`、`codegen`、`failure-bundle`、`list-jobs`、`start-server`、`start-rest`、`version`。所有子命令延遲匯入，確保不碰 Qt。 |
 | `je_auto_control/api/__init__.py` | 22 | 版本化整合進入點。 |
-| `je_auto_control/api/core.py` | 19 | **穩定無頭 API 門面**：只暴露 `execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、`create_failure_bundle`、`failure_bundle_on_error`、`FailureBundleOptions`。mypy 型別契約只針對這一面。 |
+| `je_auto_control/api/core.py` | 19 | **穩定無頭 API 門面**：只暴露 `execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、`create_failure_bundle`、`failure_bundle_on_error`、`FailureBundleOptions`。mypy 型別契約以此為起點，現已擴到整包（見「設定基線」）。 |
 | `je_auto_control/utils/deprecation.py` | 35 | 公開 API 的一致性棄用警告。 |
 | `je_auto_control/utils/http_headers.py` | 32 | 入站 HTTP 標頭的共用防禦式解析。 |
 | `je_auto_control/utils/sqlite_support.py` | 56 | 選用標準函式庫 `sqlite3` 的取用點：`require_sqlite3()`／`sqlite3_available()`／`SQLITE_ERRORS`。十個以 SQLite 存放狀態的子系統都經由這裡，所以 FreeBSD 這種把 `sqlite3` 另外包成 `databases/py-sqlite3` 的 Python 仍然 import 得起門面。 |
@@ -1000,8 +1000,11 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 **設定基線**（`pyproject.toml`）：
 
 - **pytest**：`testpaths` 限定 `test/unit_test/headless` 與 `test/unit_test/flow_control`；`--strict-markers --strict-config`。
-- **coverage**：`fail_under = 35`（實測基線，CI 只確保不退步），排除 `gui/` 與 `language_wrapper/`。
-- **mypy**：只對穩定 API 面把關；`follow_imports = "silent"`，numpy stub 以 `follow_imports_for_stubs` 略過。
+- **coverage**：`fail_under = 50`（棘輪：實測九宮格矩陣最低的一格是 50.26%，取整數當地板），排除 `gui/` 與 `language_wrapper/`。
+- **mypy**：對**整包**把關，尚未過關的模組列在 `test/verify/typing_contract_exempt.txt`（155 個，只准變少）；
+  `test/verify/typing_contract_verify.py` 會分別以 `win32`／`linux`／`darwin` 三個目標平台各跑一次並取聯集，
+  所以 Windows 與 macOS 後端在 Ubuntu runner 上也被檢查。非基礎相依的第三方模組一律以
+  `follow_imports = "skip"` + `follow_imports_for_stubs` 壓成 `Any`，閘門才不會因為裝了哪個 extra 而改變判定。
 - **bandit**：排除 `test`／`docs`／`language_wrapper`（翻譯字典會誤觸 B105），只跳過 B101。
 
 **程式碼硬約束**（CLAUDE.md）：循環複雜度 ≤ 10、認知複雜度 ≤ 15、函式 ≤ 75 行、參數 ≤ 7、
