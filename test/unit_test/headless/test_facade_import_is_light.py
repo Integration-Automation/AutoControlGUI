@@ -58,7 +58,9 @@ print("ok", len(je_auto_control.__all__))
 def test_facade_imports_without_the_heavy_wheels():
     """The facade imports with OpenCV / Pillow / cryptography absent."""
     env = dict(os.environ, PYTHONPATH=str(REPO_ROOT))
-    result = subprocess.run(  # nosec B603  # reason: fixed argv, no shell
+    # argv is this interpreter plus a module-level literal probe; the only
+    # interpolation is the blocked-module tuple, also a literal. No shell.
+    result = subprocess.run(  # nosec B603  # nosemgrep  # reason: literal argv, no shell
         [sys.executable, "-c", _PROBE.format(blocked=HEAVY)],
         capture_output=True, text=True, timeout=180, check=False, env=env)
     assert result.returncode == 0, (

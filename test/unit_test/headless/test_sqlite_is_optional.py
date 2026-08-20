@@ -24,8 +24,8 @@ import pytest
 from je_auto_control.utils.exception.exceptions import (
     AutoControlException, AutoControlUnsupportedOperationException,
 )
-from je_auto_control.utils.run_history.history_store import HistoryStore
 from je_auto_control.utils import sqlite_support
+from je_auto_control.utils.run_history.history_store import HistoryStore
 
 #: The working tree, so the subprocess tests the checkout rather than whatever
 #: version of the package happens to be installed in site-packages.
@@ -82,7 +82,8 @@ def test_facade_imports_without_sqlite3(tmp_path):
                HOME=str(home), USERPROFILE=str(home))
     env.pop("HOMEDRIVE", None)
     env.pop("HOMEPATH", None)
-    result = subprocess.run(  # nosec B603  # reason: fixed argv, no shell
+    # argv is this interpreter plus a module-level literal probe. No shell.
+    result = subprocess.run(  # nosec B603  # nosemgrep  # reason: literal argv, no shell
         [sys.executable, "-c", _PROBE],
         capture_output=True, text=True, timeout=180, check=False, env=env)
     assert result.returncode == 0, (
