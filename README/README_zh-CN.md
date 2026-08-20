@@ -7,7 +7,7 @@
 
 **AutoControl** 是一套跨平台的 Python GUI 自动化框架。它能驱动鼠标与键盘、在画面上找到目标
 （模板匹配、OCR、操作系统无障碍树，或视觉模型）、录制与回放操作流程，并以 JSON 动作文件执行——
-支持 Windows、macOS、Linux（X11 与 Wayland）、Android 与 iOS。
+支持 Windows、macOS、Linux（X11 与 Wayland）、BSD、Android 与 iOS。
 
 每项能力都以三种形式提供：**Python API**、可在 JSON 文件／CLI／服务器使用的 **`AC_*` 动作命令**，
 以及 **GUI 标签页**。没有任何功能只存在于 GUI。
@@ -18,7 +18,7 @@
 
 ## 为什么选择 AutoControl
 
-- **一套 API，六个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
+- **一套 API，七个平台。** `wrapper/platform_wrapper.py` 在导入时挑选后端；同一份脚本在
   Windows、macOS、X11 与 Wayland 上都不需要改写。
 - **不写 Python 也能脚本化。** 773 个 `AC_*` 命令覆盖全部功能，因此一个 JSON 文件能做到库
   能做的任何事——包含循环、分支、try/catch、宏与变量。
@@ -147,7 +147,7 @@ python -m je_auto_control          # 或：je_auto_control.start_autocontrol_gui
 | 系统诊断 | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | 测试代码生成 | `generate_code` | — | — |
 
-除了这张表，`utils/` 下还有 308 个无头包，覆盖断言、韧性、数据质量、i18n 审计、脱敏、
+除了这张表，`utils/` 下还有 310 个无头包，覆盖断言、韧性、数据质量、i18n 审计、脱敏、
 治理、可观测性等等。完整的逐模块地图在 **[architecture_explore.md](../architecture_explore.md)**。
 
 ---
@@ -228,11 +228,24 @@ RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
 | 平台 | 后端 | 输入 | 屏幕捕获 | 录制 | 窗口管理 |
 |---|---|:---:|:---:|:---:|:---:|
 | Windows 10 / 11 | Win32 ctypes（可选 Interception 驱动） | ✅ | ✅ | ✅ | ✅ |
-| macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ❌ | ❌ |
-| Linux X11 | python-Xlib（可选 `uinput`） | ✅ | ✅ | ✅ | ❌ |
+| macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ✅¹ | ✅ |
+| Linux X11 | python-Xlib（可选 `uinput`） | ✅ | ✅ | ✅ | ✅ |
 | Linux Wayland | 经桌面 portal 的 libei，或 ydotool／wtype ＋ 截图工具 | ✅ | ✅ | ❌ | ❌ |
+| FreeBSD／OpenBSD／NetBSD | python-Xlib，与 Linux 同一套 X11 后端 | ✅² | ⚠️² | ✅² | ✅² |
 | Android | adb + uiautomator2 | ✅ | ✅ | — | — |
 | iOS | WebDriverAgent / facebook-wda | ✅ | ✅ | — | — |
+
+¹ macOS 的录制走 Quartz event tap，需要**辅助功能**权限
+（系统设置 → 隐私与安全性 → 辅助功能）。没有授权时会直接抛出并指名
+缺的是哪个权限，而不是安静地录到一个空的 session。
+
+² BSD 直接跑同一套 X11 后端——同一个 X server、同一个 `python-Xlib`，而输入、
+录制与窗口管理就只依赖这一个包。`freebsd` CI job 在真的 FreeBSD 14 上驱动真的
+输入，再从 X server 读回来；OpenBSD 与 NetBSD 走同一条代码路径，只是没有 CI
+runner。唯一的例外是屏幕截取，卡住的是打包而不是平台：它走 Pillow／mss 与
+OpenCV，而 `opencv-python`、`pillow`、`cryptography` 都没有发 FreeBSD wheel。
+从 ports 构建之后，截取、图像匹配、OCR 与动作加密也都能用——
+`import je_auto_control` 本身已经不需要它们任何一个。
 
 Wayland 的输入在 libei 走不通时会退回 `ydotool` CLI，而这条退路需要
 **ydotool 1.0 以上**。AutoControl 送的每一个参数都是那一版才有的；0.1.x

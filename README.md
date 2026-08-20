@@ -8,7 +8,8 @@
 **AutoControl** is a cross-platform GUI automation framework for Python. It drives the
 mouse and keyboard, finds things on screen (template matching, OCR, the OS accessibility
 tree, or a vision model), records and replays flows, and runs them from JSON action
-files — on Windows, macOS, Linux (X11 and Wayland), Android, and iOS.
+files — on Windows, macOS, Linux (X11 and Wayland), the BSDs, Android,
+and iOS.
 
 Every capability ships three ways: a **Python API**, an **`AC_*` action command** usable
 from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
@@ -19,7 +20,7 @@ from JSON files / CLI / servers, and a **GUI tab**. Nothing is GUI-only.
 
 ## Why AutoControl
 
-- **One API, six platforms.** `wrapper/platform_wrapper.py` picks the backend at import
+- **One API, seven platforms.** `wrapper/platform_wrapper.py` picks the backend at import
   time; your script does not change between Windows, macOS, X11, and Wayland.
 - **Scriptable without Python.** 773 `AC_*` commands cover the whole feature set, so a
   JSON file can do anything the library can — including loops, branches, try/catch,
@@ -153,7 +154,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Diagnostics | `run_diagnostics` | `AC_diagnose` | Diagnostics |
 | Test-code generation | `generate_code` | — | — |
 
-Beyond this table, `utils/` holds 308 headless packages covering assertions, resilience,
+Beyond this table, `utils/` holds 310 headless packages covering assertions, resilience,
 data quality, i18n auditing, redaction, governance, observability, and more. The full
 per-module map is in **[architecture_explore.md](architecture_explore.md)**.
 
@@ -239,11 +240,27 @@ RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
 | Platform | Backend | Input | Screen capture | Recording | Window management |
 |---|---|:---:|:---:|:---:|:---:|
 | Windows 10 / 11 | Win32 ctypes (+ optional Interception driver) | ✅ | ✅ | ✅ | ✅ |
-| macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ❌ | ❌ |
-| Linux X11 | python-Xlib (+ optional `uinput`) | ✅ | ✅ | ✅ | ❌ |
+| macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ✅¹ | ✅ |
+| Linux X11 | python-Xlib (+ optional `uinput`) | ✅ | ✅ | ✅ | ✅ |
 | Linux Wayland | libei via the desktop portal, or ydotool / wtype + a capture tool | ✅ | ✅ | ❌ | ❌ |
+| FreeBSD / OpenBSD / NetBSD | python-Xlib, the same X11 backend as Linux | ✅² | ⚠️² | ✅² | ✅² |
 | Android | adb + uiautomator2 | ✅ | ✅ | — | — |
 | iOS | WebDriverAgent / facebook-wda | ✅ | ✅ | — | — |
+
+¹ macOS recording captures through a Quartz event tap and needs
+**Accessibility** permission (System Settings → Privacy & Security →
+Accessibility). Without it recording raises and names the permission
+rather than returning an empty session.
+
+² The BSDs run the X11 backend unchanged — the same X server, the same
+`python-Xlib`, which is the only dependency input, recording and window
+management have. A `freebsd` CI job drives real input on a real FreeBSD 14 and
+reads it back off the X server; OpenBSD and NetBSD take the same code path but
+have no CI runner. Screen capture is the exception, and the reason is
+packaging rather than the platform: it goes through Pillow/mss and OpenCV, and
+`opencv-python`, `pillow` and `cryptography` publish no FreeBSD wheels. Build
+those from ports and capture, image matching, OCR and action encryption work
+too — `import je_auto_control` no longer requires any of them.
 
 Wayland input falls back to the `ydotool` CLI wherever libei is not
 reachable, and that fallback needs **ydotool 1.0 or newer**. Every argument

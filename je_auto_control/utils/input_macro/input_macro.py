@@ -33,7 +33,12 @@ def _sink_click(event: Dict[str, Any]) -> None:
 
 def _sink_scroll(event: Dict[str, Any]) -> None:
     from je_auto_control.wrapper.auto_control_mouse import mouse_scroll
-    mouse_scroll(int(event.get("value", 1)))
+    # ``value`` is the DSL's name for it, ``delta`` the recorder's. The sign
+    # is kept: it is what decides the direction on Windows and macOS. Linux
+    # takes its direction from `scroll_direction` instead, which is an open
+    # cross-platform decision recorded in Progress.md, not something to
+    # settle here.
+    mouse_scroll(int(event.get("value", event.get("delta", 1))))
 
 
 def _sink_press(event: Dict[str, Any]) -> None:
@@ -52,9 +57,46 @@ def _sink_key(event: Dict[str, Any]) -> None:
     type_keyboard(event["key"])
 
 
+# The recorder names a button "left"; the input API names it "mouse_left".
+_RECORDED_BUTTON = {"left": "mouse_left", "right": "mouse_right",
+                    "middle": "mouse_middle"}
+
+
+def _sink_key_down(event: Dict[str, Any]) -> None:
+    from je_auto_control.wrapper.auto_control_keyboard import press_keyboard_key
+    press_keyboard_key(event["vk"])
+
+
+def _sink_key_up(event: Dict[str, Any]) -> None:
+    from je_auto_control.wrapper.auto_control_keyboard import (
+        release_keyboard_key)
+    release_keyboard_key(event["vk"])
+
+
+def _sink_mouse_down(event: Dict[str, Any]) -> None:
+    from je_auto_control.wrapper.auto_control_mouse import press_mouse
+    press_mouse(_RECORDED_BUTTON.get(event.get("button", ""), "mouse_left"),
+                int(event.get("x", 0)), int(event.get("y", 0)))
+
+
+def _sink_mouse_up(event: Dict[str, Any]) -> None:
+    from je_auto_control.wrapper.auto_control_mouse import release_mouse
+    release_mouse(_RECORDED_BUTTON.get(event.get("button", ""), "mouse_left"),
+                  int(event.get("x", 0)), int(event.get("y", 0)))
+
+
+#: Two vocabularies reach this table and both have to work. The `run_sequence`
+#: DSL writes ``press`` / ``click`` / ``key``; the recorders write
+#: ``key_down`` / ``mouse_up`` and so on. They used to be disjoint, so feeding
+#: ``stop_record_timeline()`` to :func:`replay_timeline` — the pipeline the
+#: docstrings and the ``ac_record_stop_timeline`` tool both prescribe —
+#: matched nothing and replayed an empty session while reporting the full
+#: event count as played.
 _SINKS: Dict[str, Callable[[Dict[str, Any]], None]] = {
     "move": _sink_move, "click": _sink_click, "scroll": _sink_scroll,
     "press": _sink_press, "release": _sink_release, "key": _sink_key,
+    "key_down": _sink_key_down, "key_up": _sink_key_up,
+    "mouse_down": _sink_mouse_down, "mouse_up": _sink_mouse_up,
 }
 
 

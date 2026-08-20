@@ -38,6 +38,7 @@ import threading
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.usb.passthrough.protocol import (
     FLAG_EOF, Frame, Opcode,
@@ -50,7 +51,7 @@ _INITIAL_CREDIT_GUESS = 16
 _CLIENT_SHUT_DOWN_MSG = "client is shut down"
 
 
-class UsbClientError(Exception):
+class UsbClientError(AutoControlException):
     """The host reported a transfer or open failure."""
 
 

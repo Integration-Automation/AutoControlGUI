@@ -114,3 +114,17 @@ class XMLTypeException(AutoControlException):
 # Execute callback
 class CallbackExecutorException(AutoControlException):
     pass
+
+
+# Platform capability
+class AutoControlUnsupportedOperationException(
+        AutoControlException, NotImplementedError):
+    """An operation the current platform's backend cannot perform.
+
+    Inherits both on purpose. ``NotImplementedError`` is what the GUI tabs and
+    the REST handler already catch to say "not on this platform", and that
+    behaviour is kept; ``AutoControlException`` is what the executor and the
+    other containment boundaries catch, and a bare ``NotImplementedError``
+    slipped straight past all of them — aborting a whole script where a single
+    action should have been reported as failed.
+    """

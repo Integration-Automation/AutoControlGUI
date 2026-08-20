@@ -242,16 +242,25 @@ def _hex4(value: Any) -> Optional[str]:
 
 
 def _hex4_from_macos(value: Any) -> Optional[str]:
+    """Parse ``system_profiler``'s vendor/product id into hex, or None.
+
+    Apple's own devices report a *symbolic* id — ``apple_vendor_id``
+    rather than a number — and other entries append the vendor name
+    after it (``0x05ac  (Apple Inc.)``). Only a real hex id can satisfy
+    the 4-hex-digit shape this field documents, so anything else is
+    None: passing a symbolic name through a field callers parse as hex
+    is worse than admitting there is no id. The device is still listed,
+    and its ``manufacturer`` still names the vendor.
+    """
     if value is None:
         return None
     text = str(value).strip()
-    match = re.match(r"0x([0-9A-Fa-f]+)", text)
-    if match:
-        try:
-            return f"{int(match.group(1), 16):04x}"
-        except ValueError:
-            return None
-    return text or None
+    # The lookahead is what rejects "apple_vendor_id": its leading "a"
+    # is a valid hex digit, so without it the id would parse as 000a.
+    match = re.match(r"(?:0x)?([0-9A-Fa-f]{1,4})(?![0-9A-Za-z_])", text)
+    if match is None:
+        return None
+    return f"{int(match.group(1), 16):04x}"
 
 
 def _strip_or_none(value: Any) -> Optional[str]:

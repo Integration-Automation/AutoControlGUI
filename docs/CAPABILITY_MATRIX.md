@@ -6,11 +6,12 @@ without a compatibility window.
 
 | Capability | Status | Windows | Linux X11 | Linux Wayland | macOS |
 |---|---|---:|---:|---:|---:|
-| Mouse, keyboard, screenshot | stable | CI | CI/Xvfb | CI/sway + libeis | implementation |
+| Mouse, keyboard, screenshot | stable | CI | CI/Xvfb + xev | CI/sway + libeis | implementation |
 | JSON executor and variables | stable | CI | CI | CI | platform-neutral |
 | Image and anchor locators | beta | CI | CI | implementation | implementation |
-| Accessibility locator | beta | CI | backend tests | unavailable | backend tests |
-| Recorder | beta | CI | implementation | unavailable | unavailable |
+| Accessibility locator | beta | CI | CI/AT-SPI | CI/AT-SPI | CI (tree read) |
+| Window management | beta | CI | CI/openbox | unavailable | CI (listing) |
+| Recorder | beta | CI | implementation | unavailable | CI |
 | Reports, trace, failure bundle | stable | CI | CI | CI | platform-neutral |
 | REST, MCP, scheduler | beta | CI | CI | CI | platform-neutral |
 | Remote desktop / WebRTC | beta | tests | tests | tests | tests |
@@ -25,6 +26,31 @@ Hardware-backed results and known limitations should be attached to releases.
 Linux Wayland is split: **capture is exercised by CI against a real
 compositor; input is exercised by CI against a real EI peer and a real portal.**
 
+Linux X11 said `CI/Xvfb` for a long time on the strength of a job that
+imported the package under `xvfb-run` and generated two lines of code. Nothing
+moved a pointer, and every X11 assertion in the suite is made against a mock
+of `python-Xlib`, so the questions that matter went unanswered: does an
+injected event reach a client at all, does it arrive as *real* input, and is a
+captured pixel the pixel on screen. The `x11-verification` job answers them
+against a real Xvfb server with a real window manager, and it takes its ground
+truth from other codebases than the one under test — `xev`, a real X client
+that prints every event delivered to its window; ImageMagick's `import`, an
+independent grabber, against a root window painted two asymmetric colours so a
+wrong rectangle cannot look right; and `xdotool` / `xdpyinfo`, the server
+answering for itself. It runs twice, over one monitor and then two.
+
+One assertion there is worth naming, because losing it would be silent:
+XTest-injected events must arrive with `synthetic NO`. `XSendEvent` traffic
+arrives with `synthetic YES` and is discarded by most toolkits, so a backend
+that quietly stopped driving real input would still pass every check that only
+counted events.
+
+There is deliberately no negative-origin X11 pass. On X11 the root window is
+the union of every monitor and always begins at `(0, 0)`: a monitor placed to
+the left shifts the others right rather than moving the origin. The Wayland
+job's second layout has no analogue here — a protocol difference, not an
+untested case.
+
 Screen capture runs through the compositor's own tool (`grim` on wlroots,
 `gnome-screenshot` on GNOME, `spectacle` on KDE), falling back to
 `xdg-desktop-portal` over the session bus, instead of the X11-only Pillow/mss
@@ -38,6 +64,141 @@ output at x=-1280 — the layout of any desktop with a monitor left of the
 primary one, where the compositor's plane starts at a negative coordinate and
 a size, a crop or a located hit that assumes `(0, 0)` is wrong by the width of
 that monitor.
+
+The recorder row said `unavailable` for macOS while the code for one sat in
+the tree unused, and the reason was real rather than an oversight: the old
+listener built an `NSApplication` at import time and stopped recording with
+`AppHelper.runEventLoop()`, a loop that never returns to its caller. Wiring
+that up would have put both on the path of `import je_auto_control`, so
+`wrapper/_platform_osx.py` set `recorder = None` instead.
+
+Neither was necessary. A `CGEventTap` needs a **run loop**, not an
+application: the tap is created on a dedicated thread, its source is added to
+that thread's run loop, and the loop is pumped in short `CFRunLoopRunInMode`
+slices so a stop flag is honoured between them — the same shape the macOS
+hotkey backend already used. The tap is listen-only, because a recorder that
+consumed events would swallow the input it is recording. This row says `CI`
+because the `macos-capabilities` job records a real session on a real window
+server: it posts a move, a click and a keypress through the public API and
+asserts they come back out of the tap with the release and the coordinates
+they were posted at.
+
+Two defects were in that code and only a Mac could show them. Coordinates came
+from `NSEvent.mouseLocation()`, whose origin is the **bottom-left** of the
+display, while every replay posts into the top-left space `osx_mouse` uses —
+so a click recorded near the top of the screen replayed near the bottom. And
+modifiers were not recorded at all: macOS sends no key-down for Shift,
+Control, Option or Command, only a `flagsChanged` event carrying the new flag
+set, so a recording could not say a modifier was held across what followed.
+
+The table has four columns because those are the four desktops with their own
+backend, not because they are the only supported systems. Two more axes now
+have CI behind them:
+
+**The BSDs.** `platform_wrapper` refused to start on anything that was not
+win32/cygwin/msys, darwin or linux/linux2, and every X11 backend module
+carried its own copy of the same Linux-only guard — so a FreeBSD, OpenBSD or
+NetBSD desktop, which runs the same X server and the same `python-Xlib` as
+Linux, could not import the package at all. `python-Xlib` was pinned to
+`platform_system=='Linux'` too, so even relaxing the guards would have left
+the backend without its one dependency. The guards now ask
+`utils/platform_id.is_x11_unix()` — "is this an X11 unix", which is the
+question they were always trying to ask — and the `freebsd` job boots a real
+FreeBSD 14 VM to run that decision on a system that is genuinely one.
+
+For a while it checked that decision and nothing else, for a measured reason:
+importing anything under `je_auto_control` ran the package facade, which
+imported OpenCV and cryptography at module scope, and neither publishes a
+FreeBSD wheel — installing them from ports pulled a dependency tree that had
+not finished after fifty minutes.
+
+That was the wrong thing to work around. Moving a pointer needs neither
+package, so the facade stopped importing them (and NumPy, Pillow and
+`je_open_cv`) at module scope; they belong to the functions that use them.
+What the VM installs now is `python-Xlib`, `defusedxml` and an X server, all
+of which take seconds, and `test/verify/freebsd_verify.py` drives the whole
+backend on it. The reads come off the X server rather than out of this
+codebase: `query_pointer` for the cursor and the button mask, `query_keymap`
+for whether an injected key really went down, and a mapped X window that has
+asked for button events for the wheel — which is what caught `mouse_scroll`
+matching a literal `["linux", "linux2"]` and therefore doing nothing at all,
+silently, on every BSD.
+
+**arm64.** `macos-14` was already arm64; `ubuntu-22.04-arm` joins the
+smoke matrix and passes. `windows-11-arm` was tried and removed, on
+measurement rather than assumption, and **two** dependencies are why:
+**opencv-python publishes no `win_arm64` wheel** in any version, so pip falls
+back to building from source and CMake cannot configure for ARM64; and
+**cryptography stopped publishing one after 46.0.3**, while this project's
+floor is `>=48.0.1` — a security floor (GHSA-537c-gmf6-5ccf) that cannot be
+lowered to reach a wheel. Neither is a CI problem to work around: the package
+genuinely cannot be installed on Windows arm64 today. `Progress.md` records
+both, alongside a `pip --dry-run --platform win_arm64` command that re-checks
+them in seconds without an arm64 machine.
+
+The accessibility row said `backend tests` for Linux X11 and meant nothing by
+it: there was no Linux backend at all, and `_build_backend()` fell straight
+through to the null one. There is one now, over **AT-SPI2** — which is a D-Bus
+protocol rather than a library, and that is what makes it reachable without a
+new dependency. The usual bindings (`pyatspi`, `gi.repository.Atspi`) are
+distribution packages built against the system introspection data and cannot
+be installed into a virtual environment, so depending on them would be
+depending on something most users cannot get. The client written for the XDG
+portal handshake already spoke enough D-Bus.
+
+It is exercised by the `x11-verification` job against a real accessibility bus
+and a real GTK application (`zenity`), because neither half can be mocked
+usefully: the bus is D-Bus-activated rather than started by hand, an
+application only appears on it if its toolkit bridge loaded, and the tree's
+shape is the toolkit's business.
+
+That job immediately found a gap in the shared D-Bus client: **it could not
+demarshal signed integers.** The portal handshake never needed one, and
+AT-SPI reports a component's extents as four *signed* values — because a
+window on a monitor left of or above the primary one is at a negative
+coordinate. Without it the backend could read a tree but not where anything
+was. The client now handles the whole fixed-width numeric set except `h`
+(UNIX_FD), which stays an error on purpose: it is an index into a descriptor
+array this client does not receive, so returning it would hand a caller a
+number that addresses nothing.
+
+Because AT-SPI is a bus rather than a display protocol, this row is `CI/AT-SPI`
+for **both** Linux entries: a Wayland session runs the same accessibility bus,
+so this is the one capability where Wayland is not the restricted case.
+
+Window management had no row here at all until it had more than one platform.
+It was Windows-only for the project's whole life — the facade branched on
+`sys.platform` and raised everywhere else — which left 23 `AC_*` commands and
+their MCP tools dead on macOS and Linux. It now goes through a backend seam:
+Win32, EWMH over python-Xlib on X11, and Quartz plus the accessibility API on
+macOS.
+
+The X11 half is exercised by the `x11-verification` job against a real
+`openbox` session, driving the public facade and taking ground truth from
+`xwininfo` and `xprop`. Two things only a real window manager could have
+shown up came out of it, and both were wrong in the first implementation:
+
+* **The rectangle is the frame, not the client.** Win32's `GetWindowRect`
+  returns the frame — border and title bar included — and every caller here is
+  written against that. Reporting the client area was off by the decorations
+  on X11 alone, silently, and by a different amount per window manager.
+* **A move must go through `_NET_MOVERESIZE_WINDOW`.** Under a reparenting
+  window manager a client's own x/y are relative to its frame, so a direct
+  `ConfigureWindow` asks for a position in the wrong coordinate space.
+  Measured against openbox, asking for (300, 220) that way landed the window
+  at (302, 260).
+
+`post_key_to_window` and `post_click_to_window` work on X11 and are asserted
+to arrive *flagged synthetic*, because that is what they are: `XSendEvent`
+traffic, which GTK and Qt discard by design. They are the X11 counterpart of
+Win32's `PostMessage`, which carries the same best-effort caveat. macOS has no
+equivalent at all — an event goes to whatever has focus — so the backend
+refuses rather than reporting a success that went somewhere else.
+
+Wayland is `unavailable` and will stay that way: the protocol does not let a
+client enumerate or move another application's windows. That is a design
+decision upstream, not a gap here, and the backend selector says so instead of
+looking broken.
 
 One cross-platform difference falls out of the same job, and it is not one this
 project can fix: **a Wayland capture may contain the mouse cursor.** No capture

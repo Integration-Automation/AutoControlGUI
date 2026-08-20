@@ -16,10 +16,15 @@ Two failure kinds, mirroring REFramework:
 Pure standard library (``sqlite3``); imports no ``PySide6``.
 """
 import json
-import sqlite3
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.sqlite_support import require_sqlite3
+
+if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
+    import sqlite3
 
 STATUS_NEW = "new"
 STATUS_IN_PROGRESS = "in_progress"
@@ -27,7 +32,7 @@ STATUS_SUCCESS = "success"
 STATUS_FAILED = "failed"
 
 
-class BusinessError(Exception):
+class BusinessError(AutoControlException):
     """A non-retryable, data-level failure of a work item."""
 
 
@@ -51,10 +56,11 @@ class WorkQueue:
         self._name = name
         self._ensure_schema()
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self._db_path, timeout=30.0,
-                               isolation_level=None)
-        conn.row_factory = sqlite3.Row
+    def _connect(self) -> "sqlite3.Connection":
+        driver = require_sqlite3()
+        conn = driver.connect(self._db_path, timeout=30.0,
+                              isolation_level=None)
+        conn.row_factory = driver.Row
         return conn
 
     def _ensure_schema(self) -> None:
@@ -79,7 +85,7 @@ class WorkQueue:
                  time.time()))
             return int(cur.lastrowid)
 
-    def _has_pending(self, conn: sqlite3.Connection, reference: str) -> bool:
+    def _has_pending(self, conn: "sqlite3.Connection", reference: str) -> bool:
         row = conn.execute(
             "SELECT 1 FROM work_items WHERE queue=? AND reference=? AND "
             "status IN (?, ?) LIMIT 1",

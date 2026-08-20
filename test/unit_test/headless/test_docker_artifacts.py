@@ -70,7 +70,7 @@ def test_dockerignore_keeps_build_context_lean():
 
 @pytest.mark.parametrize("script", [
     "entrypoint.sh", "entrypoint-xfce.sh", "entrypoint-wayland.sh",
-    "entrypoint-seat.sh",
+    "entrypoint-seat.sh", "entrypoint-x11.sh",
 ])
 def test_entrypoints_keep_unix_line_endings(script):
     """A CRLF shebang makes an image that builds and then cannot start.
@@ -237,6 +237,74 @@ def test_portal_verification_job_runs_the_image():
     assert "portal-verification" in raw
     assert "docker/Dockerfile.portal" in raw
     assert "autocontrol-portal:ci" in raw
+
+
+def test_x11_verification_image_and_script_exist():
+    """The X11 path is only verified while these three files are wired up."""
+    dockerfile = (_DOCKER_DIR / "Dockerfile.x11").read_text(encoding="utf-8")
+    # Each tool is ground truth from a different codebase than the subject:
+    # xev reads events back out of a real client, `import` is an independent
+    # grabber, xdotool/xdpyinfo are the server answering for itself.
+    for tool in ("xvfb", "x11-utils", "xdotool", "imagemagick", "openbox"):
+        assert tool in dockerfile, f"Dockerfile.x11 missing {tool}"
+    assert "x11_verify.py" in dockerfile
+    assert "entrypoint-x11.sh" in dockerfile
+
+    verify = (_DOCKER_DIR / "x11_verify.py").read_text(encoding="utf-8")
+    # XSendEvent traffic arrives with `synthetic YES` and is discarded by most
+    # toolkits. Losing this assertion would let the backend quietly stop
+    # driving real input while every other check still passed.
+    assert "synthetic" in verify
+    # The three readers have to be checked against each other, not just run.
+    for reader in ("get_pixel", "screenshot", "truth_capture"):
+        assert reader in verify, f"x11_verify.py never exercises {reader}"
+
+    entrypoint = (_DOCKER_DIR / "entrypoint-x11.sh").read_text(encoding="utf-8")
+    # A pass with no window manager tests nothing that reads _NET_*, and a
+    # skipped second layout would silently drop the dual-monitor geometry.
+    assert "openbox" in entrypoint
+    assert "--setmonitor" in entrypoint
+
+
+def test_x11_image_can_reach_an_accessibility_bus():
+    """AT-SPI is a bus, so the image needs one and something bridged to it."""
+    dockerfile = (_DOCKER_DIR / "Dockerfile.x11").read_text(encoding="utf-8")
+    # at-spi2-core provides the services D-Bus activates; dbus-x11 provides
+    # the session bus to activate them on; zenity is a real GTK application,
+    # which xterm is not — it exposes no accessible tree at all.
+    for package in ("at-spi2-core", "dbus-x11", "zenity"):
+        assert package in dockerfile, f"Dockerfile.x11 missing {package}"
+    # GTK3 only loads its bridge when asked, and what normally asks is a
+    # desktop setting this container has no store for.
+    assert "atk-bridge" in dockerfile
+
+    entrypoint = (_DOCKER_DIR / "entrypoint-x11.sh").read_text(encoding="utf-8")
+    assert "dbus-run-session" in entrypoint
+
+    verify = (_DOCKER_DIR / "x11_atspi_verify.py").read_text(encoding="utf-8")
+    # Extents are the check that caught the signed-integer gap in the D-Bus
+    # client; losing it would let that regress silently.
+    assert "GetExtents" in verify
+
+
+def test_x11_verification_refuses_to_skip_a_missing_layout():
+    """A layout that cannot be declared is a failure, not a reason to skip.
+
+    Every other verification job in docker/ fails loudly when its
+    precondition is absent; a quiet skip reads as coverage that is not there.
+    """
+    entrypoint = (_DOCKER_DIR / "entrypoint-x11.sh").read_text(encoding="utf-8")
+    assert "exit 1" in entrypoint
+    assert "not a reason to skip" in entrypoint
+
+
+def test_x11_verification_job_runs_the_image():
+    raw = (_REPO_ROOT / ".github" / "workflows" / "docker.yml").read_text(
+        encoding="utf-8",
+    )
+    assert "x11-verification" in raw
+    assert "docker/Dockerfile.x11" in raw
+    assert "autocontrol-x11:ci" in raw
 
 
 def test_gitlab_template_covers_build_test_smoke_stages():

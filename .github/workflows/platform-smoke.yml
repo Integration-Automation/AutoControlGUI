@@ -14,7 +14,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2022, ubuntu-22.04, macos-14]
+        # arm64 is not a rounding error on the desktop any more, and the
+        # dependency set is where it shows. macos-14 is already arm64;
+        # ubuntu-22.04-arm adds Linux, and it passes.
+        #
+        # windows-11-arm is deliberately absent, and it was measured rather
+        # than assumed. Two dependencies have no win_arm64 wheel, and both
+        # have to go before the runner is worth adding back:
+        #
+        #   opencv-python  — no win_arm64 wheel in any version, so pip falls
+        #                    back to building from source and CMake cannot
+        #                    configure for ARM64. Twelve minutes, then failure.
+        #   cryptography   — wheels stop at 46.0.3; 46.0.4 onwards ship none.
+        #                    Our floor is >=48.0.1 and that is a security floor
+        #                    (GHSA-537c-gmf6-5ccf), so it cannot be lowered.
+        #
+        # Neither is a CI problem to work around — the package genuinely
+        # cannot be installed on Windows arm64 today. Re-check without a
+        # runner, in about ten seconds:
+        #
+        #   pip install --dry-run --only-binary=:all: --platform win_arm64 \
+        #       --python-version 3.12 --target /tmp/probe \
+        #       'opencv-python>=4.8,<6' 'cryptography>=48.0.1'
+        #
+        # Recorded in Progress.md; add the runner back when both resolve.
+        os: [windows-2022, ubuntu-22.04, macos-14, ubuntu-22.04-arm]
         python-version: ["3.10", "3.14"]
     runs-on: ${{ matrix.os }}
     steps:
@@ -49,3 +73,118 @@ jobs:
           name: platform-smoke-${{ matrix.os }}-${{ matrix.python-version }}
           path: platform-smoke.zip
           if-no-files-found: warn
+
+  freebsd:
+    name: The X11 backend driving input on a real FreeBSD
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The X11 backend was gated on sys.platform being linux/linux2, so it
+      # refused to load on a FreeBSD desktop that runs the same X server, the
+      # same python-Xlib and the same code. Relaxing that guard is only worth
+      # something if a BSD actually runs it, and no hosted runner is one — so
+      # this boots a real FreeBSD VM inside the runner.
+      #
+      # For a while it could only check the *decision*, because importing
+      # anything under je_auto_control ran the facade and the facade imported
+      # OpenCV and cryptography at module scope. Neither publishes a FreeBSD
+      # wheel and building them from ports had not finished after fifty
+      # minutes, so utils/platform_id was loaded by file path and the backend
+      # itself went untested.
+      #
+      # That was the wrong thing to work around. Moving a mouse needs neither
+      # package, and the facade no longer insists on them — they are imported
+      # by the functions that use them, which test_facade_import_is_light.py
+      # keeps true. What is left for this VM is python-Xlib and defusedxml,
+      # both pure Python, plus an X server. So the whole backend runs here now
+      # and the reads come back off the server itself: query_pointer for the
+      # cursor, its button mask for the buttons, query_keymap for the keys.
+      # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+      - uses: vmactions/freebsd-vm@v1  # NOSONAR githubactions:S7637
+        with:
+          release: "14.2"
+          usesh: true
+          prepare: |
+            pkg install -y python311 xorg-vfbserver
+          run: |
+            set -eu
+            echo "uname: $(uname -a)"
+
+            # pip comes from ensurepip, not from pkg: FreeBSD 14.2's repository
+            # has no py311-pip (the flavoured port names are not dependable
+            # here, while python311 itself is). These are the only dependencies
+            # the facade still needs, all pure Python, at the versions
+            # pyproject pins and by their PyPI names.
+            #
+            # --no-deps is the point of this job rather than a detail: it is
+            # what proves nothing heavy is being dragged in behind the
+            # verification. six is therefore named explicitly — python-Xlib
+            # 0.33 imports it from Xlib.display, and with --no-deps nothing
+            # else would install it.
+            #
+            # py311-sqlite3 is deliberately not installed either. FreeBSD
+            # packages sqlite3 apart from python311, this VM is the only
+            # machine in CI that does, and it is what caught ten subsystems
+            # importing it at module scope — which made `import
+            # je_auto_control` fail outright on a stock FreeBSD. Adding the
+            # package here would make that regression invisible again.
+            python3.11 -m ensurepip --upgrade
+            python3.11 -m pip install --no-deps \
+              python-xlib==0.33 six defusedxml==0.7.1
+
+            # The backend connects to a display at import time, so the server
+            # has to be up first. 1280x1024 because the verification drives the
+            # cursor to the far corner and reads it back.
+            Xvfb :99 -screen 0 1280x1024x24 &
+            xvfb_pid=$!
+            trap 'kill "$xvfb_pid" 2>/dev/null || true' EXIT
+            waited=0
+            while [ ! -e /tmp/.X11-unix/X99 ]; do
+              waited=$((waited + 1))
+              if [ "$waited" -gt 100 ]; then
+                echo "Xvfb never created /tmp/.X11-unix/X99" >&2
+                exit 1
+              fi
+              sleep 0.1
+            done
+
+            DISPLAY=:99 PYTHONPATH="$(pwd)" python3.11 test/verify/freebsd_verify.py
+  macos-capabilities:
+    name: What a real macOS runner permits
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install -e .  # NOSONAR githubactions:S8544  # reason: installs the checked-out project itself, there is no upstream version to lock
+
+      # macOS is the one supported platform with no container to put it in,
+      # and every macOS row in docs/CAPABILITY_MATRIX.md said
+      # "implementation": the code was there and nothing had run it on a Mac.
+      #
+      # Two of these capabilities are gated by TCC — macOS asks a *user* to
+      # grant Screen Recording and Accessibility, and a CI runner has no user
+      # to ask. Which of them a runner grants is not something to guess at,
+      # and guessing is how the Wayland work twice recorded a desktop's
+      # refusal as a container's limitation.
+      #
+      # Measured first, in --measure mode, and the answer was a surprise: a
+      # macos-14 runner grants BOTH Screen Recording and Accessibility, so
+      # every capability works — capture returns real pixels rather than the
+      # black rectangle a refusal produces, CGEventPost moves the cursor and
+      # the move reads back exactly, and the AX walk returns real elements.
+      # The usual assumption that CI cannot exercise a TCC-gated macOS API is
+      # simply wrong for this runner.
+      #
+      # So the flag is off and this is a gate now: EXPECTED in the script
+      # holds what was measured, and a capability appearing or disappearing
+      # turns this red and names which one.
+      - name: Verify the macOS backend against a real window server
+        run: python test/verify/macos_verify.py

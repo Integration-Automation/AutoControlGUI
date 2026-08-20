@@ -241,6 +241,54 @@ jobs:
       - name: Verify the portal handshake against liboeffis
         run: docker run --rm autocontrol-portal:ci
 
+  x11-verification:
+    name: X11 backend against a real X server
+    needs: build-image
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/setup-buildx-action@v3  # NOSONAR githubactions:S7637
+
+      - name: Build the X11 verification image
+        # nosemgrep: yaml.github-actions.security.third-party-action-not-pinned-to-commit-sha.third-party-action-not-pinned-to-commit-sha
+        uses: docker/build-push-action@v5  # NOSONAR githubactions:S7637
+        with:
+          context: .
+          file: docker/Dockerfile.x11
+          tags: autocontrol-x11:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Wayland ended up with five jobs that read back what reached a real
+      # peer. X11 — the older and more widely deployed of the two Linux
+      # paths — had none: every X11 assertion in the suite is made against a
+      # mock of python-Xlib, so nothing had confirmed that an injected event
+      # reaches a client at all.
+      #
+      # Ground truth deliberately comes from other codebases than the one
+      # under test. xev is a real X client that prints every event delivered
+      # to its window, so a click is read back the way the ydotool job reads
+      # its events off /dev/input/eventN — including `synthetic NO`, which is
+      # what separates real server input from XSendEvent traffic that
+      # toolkits discard. ImageMagick's `import` is an independent grabber,
+      # in the role grim plays for Wayland, against a root window painted two
+      # asymmetric colours so a wrong rectangle cannot look right.
+      #
+      # It runs twice: one monitor over the whole screen, then two RANDR
+      # monitors side by side. There is deliberately no negative-origin pass
+      # — on X11 the root window is the union of every monitor and always
+      # starts at (0, 0), so the Wayland job's second layout has no analogue
+      # here. That is a protocol difference, not an untested case.
+      #
+      # The container exits with the number of failed checks.
+      - name: Verify the X11 backend against a real X server
+        run: docker run --rm autocontrol-x11:ci
+
   seat-verification:
     name: ydotool absolute move against a seat that consumes it
     needs: build-image

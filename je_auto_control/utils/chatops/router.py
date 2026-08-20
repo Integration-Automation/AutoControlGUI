@@ -10,12 +10,12 @@ handling.
 from __future__ import annotations
 
 import shlex
-import sqlite3
 import threading
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
 
 
 # Built-in commands always available even when the operator only
@@ -138,14 +138,14 @@ class CommandRouter:
             )
         # The router is the containment boundary for handler failures: a bad
         # script (AutoControlException) or a run-history read error
-        # (sqlite3.Error) must come back as a chat reply, not escape and kill
+        # (a sqlite3 error) must come back as a chat reply, not escape and kill
         # the transport's poll loop.
         try:
             return spec.handler(rest, context)
         except ChatOpsError as error:
             return CommandResult(text=f"{name}: {error}", succeeded=False)
         except (RuntimeError, OSError, ValueError, TypeError, LookupError,
-                AttributeError, AutoControlException, sqlite3.Error) as error:
+                AttributeError, AutoControlException, *SQLITE_ERRORS) as error:
             return CommandResult(
                 text=f"{name} failed: {type(error).__name__}: {error}",
                 succeeded=False,

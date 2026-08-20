@@ -12,6 +12,9 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlCantFindKeyException, AutoControlMouseException
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.platform_id import (
+    is_macos, is_windows, is_x11_unix
+)
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.auto_control_screen import screen_size
 from je_auto_control.wrapper.platform_wrapper import mouse, mouse_keys_table, special_mouse_keys_table
@@ -242,10 +245,19 @@ def mouse_scroll(scroll_value: int, x: int = None, y: int = None,
     模擬滑鼠滾輪操作
     Simulate mouse scroll
 
-    :param scroll_value: 滾動數值 Scroll value
+    每個平台的規則相同：``scroll_value`` 為負就反向，絕對值是滾動格數。
+    The sign of ``scroll_value`` reverses the direction on every platform, so a
+    call written on one works on the others. X11 and Wayland used to discard it
+    and always scroll ``scroll_direction``, which meant portable code scrolled
+    the opposite way there with no error and no warning.
+
+    :param scroll_value: 滾動數值，負數代表反向 Scroll value; negative reverses
     :param x: X 座標，指定時會先將游標移到該處 X position; the cursor moves here first
     :param y: Y 座標，指定時會先將游標移到該處 Y position; the cursor moves here first
-    :param scroll_direction: 滾動方向 (Linux only) Scroll direction
+    :param scroll_direction: 未帶負號時的方向，只有 X11／Wayland 後端會讀。
+        The direction a *positive* count scrolls in. Only the X11 and Wayland
+        backends read it — Windows and macOS have a single wheel axis and take
+        the direction from the sign alone.
     :return: (scroll_value, scroll_direction)
     """
     autocontrol_logger.info(f"mouse_scroll, value={scroll_value}, x={x}, y={y}, direction={scroll_direction}")
@@ -261,13 +273,21 @@ def mouse_scroll(scroll_value: int, x: int = None, y: int = None,
         if x is not None or y is not None:
             _scroll_to(x, y)
 
-        if sys.platform in ["win32", "cygwin", "msys"]:
+        # 用 platform_id 問「哪一種輸入堆疊」，而不是再列一次 OS 名單：
+        # 原本的 ["linux", "linux2"] 把 BSD 漏在所有分支之外，滾動在
+        # FreeBSD 上不會報錯，只是什麼都不做。
+        # Ask platform_id which input stack this is rather than spelling out
+        # another list of OS names: the ["linux", "linux2"] one left the BSDs
+        # outside every branch, so scrolling on FreeBSD raised nothing and
+        # did nothing.
+        if is_windows() or is_macos():
             mouse.scroll(scroll_value)
-        elif sys.platform == "darwin":
-            mouse.scroll(scroll_value)
-        elif sys.platform in ["linux", "linux2"]:
+        elif is_x11_unix():
             scroll_direction = special_mouse_keys_table.get(scroll_direction, scroll_direction)
             mouse.scroll(scroll_value, scroll_direction)
+        else:
+            raise AutoControlMouseException(
+                f"mouse_scroll: no backend for {sys.platform!r}")
 
         record_action_to_list("mouse_scroll", param)
         return scroll_value, scroll_direction

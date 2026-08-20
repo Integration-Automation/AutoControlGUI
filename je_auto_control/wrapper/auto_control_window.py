@@ -1,23 +1,23 @@
 """Cross-platform window management facade.
 
-On Windows, delegates to ``windows_window_manage`` (Win32 API).
-On macOS / Linux, operations raise a clear ``NotImplementedError``.
+Delegates to whichever backend :mod:`je_auto_control.wrapper.window_backends`
+selects — Win32 on Windows, EWMH over python-Xlib on X11, Quartz plus the
+accessibility API on macOS — and keeps here everything that is not
+platform-specific: substring matching, waiting, and the compositions like
+"move without restating the size".
+
+This was Windows-only for the project's whole life, which left these
+functions, their 23 ``AC_*`` commands and their MCP tools dead on the two
+other supported platforms. A platform with no backend still gets a null one
+that lists nothing and refuses actions with a reason, so importing never
+fails and callers get an answer rather than an ``ImportError``.
 """
-import sys
 import time
 from typing import List, Optional, Tuple, Union
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-
-_IS_WINDOWS = sys.platform in ("win32", "cygwin", "msys")
-
-
-def _require_windows() -> None:
-    if not _IS_WINDOWS:
-        raise NotImplementedError(
-            f"Window management is only implemented on Windows (got {sys.platform})"
-        )
+from je_auto_control.wrapper.window_backends import get_backend
 
 
 def list_windows(titled_only: bool = False) -> List[Tuple[int, str]]:
@@ -28,9 +28,8 @@ def list_windows(titled_only: bool = False) -> List[Tuple[int, str]]:
     Most visible windows have no title (shell and helper surfaces); pass
     ``titled_only`` for just the ones a user would recognise.
     """
-    _require_windows()
-    from je_auto_control.windows.window import windows_window_manage as wm
-    found = wm.get_all_window_hwnd()
+    backend = get_backend()
+    found = backend.list_windows()
     if titled_only:
         return [(hwnd, title) for hwnd, title in found if title.strip()]
     return found
@@ -49,20 +48,19 @@ def find_window(title_substring: str,
 
 def focus_window(title_substring: str, case_sensitive: bool = False) -> int:
     """Bring the first matching window to the foreground; return its hwnd."""
-    _require_windows()
     hit = find_window(title_substring, case_sensitive)
     if hit is None:
         raise AutoControlActionException(
             f"focus_window: no window matches {title_substring!r}"
         )
     hwnd, title = hit
-    from je_auto_control.windows.window import windows_window_manage as wm
+    backend = get_backend()
     # A minimized window stays invisible however often you foreground it, so
     # restore it first — but only when it really is minimized: SW_RESTORE on a
     # maximized window un-maximizes it, which is not what "focus" should do.
-    if wm.is_window_minimized(hwnd):
-        wm.show_window(hwnd, wm.SW_RESTORE)
-    wm.set_foreground_window(hwnd)
+    if backend.is_minimized(hwnd):
+        backend.restore(hwnd)
+    backend.set_foreground(hwnd)
     autocontrol_logger.info("focused window hwnd=%s title=%r", hwnd, title)
     return hwnd
 
@@ -72,7 +70,6 @@ def wait_for_window(title_substring: str,
                     poll: float = 0.5,
                     case_sensitive: bool = False) -> int:
     """Poll until a window with the given title appears; return its hwnd."""
-    _require_windows()
     poll = max(0.05, float(poll))
     deadline = time.monotonic() + float(timeout)
     while time.monotonic() < deadline:
@@ -92,33 +89,30 @@ def close_window_by_title(title_substring: str, case_sensitive: bool = False) ->
     call underneath is named ``CloseWindow`` but minimises. Use
     :func:`minimize_window_by_title` for the old behaviour.
     """
-    _require_windows()
     hit = find_window(title_substring, case_sensitive)
     if hit is None:
         return False
-    from je_auto_control.windows.window import windows_window_manage as wm
-    return wm.close_window(hit[0])
+    backend = get_backend()
+    return backend.close(hit[0])
 
 
 def minimize_window_by_title(title_substring: str,
                              case_sensitive: bool = False) -> bool:
     """Minimise the first matching window. ``False`` if nothing matched."""
-    _require_windows()
     hit = find_window(title_substring, case_sensitive)
     if hit is None:
         return False
-    from je_auto_control.windows.window import windows_window_manage as wm
-    return wm.minimize_window(hit[0])
+    backend = get_backend()
+    return backend.minimize(hit[0])
 
 
 def foreground_window() -> Optional[Tuple[int, str]]:
     """The window the user is currently working in, or ``None``."""
-    _require_windows()
-    from je_auto_control.windows.window import windows_window_manage as wm
-    hwnd = wm.get_foreground_window()
+    backend = get_backend()
+    hwnd = backend.foreground_window()
     if not hwnd:
         return None
-    titles = dict(wm.get_all_window_hwnd())
+    titles = dict(backend.list_windows())
     return hwnd, titles.get(hwnd, "")
 
 
@@ -139,13 +133,12 @@ def post_key_to_window(title_substring: str, key: Union[int, str],
     the foreground all ignore posted messages. Callers must say so rather than
     reporting success.
     """
-    _require_windows()
     hit = find_window(title_substring, case_sensitive)
     if hit is None:
         return False
-    from je_auto_control.windows.window import windows_window_manage as wm
+    backend = get_backend()
     keycode, character = _resolve_key(key)
-    return wm.post_key(hit[0], keycode, character)
+    return backend.post_key(hit[0], keycode, character)
 
 
 def post_click_to_window(title_substring: str, button: str = "left",
@@ -158,12 +151,11 @@ def post_click_to_window(title_substring: str, button: str = "left",
     client coordinates — a click posted to the frame lands nowhere. Same
     best-effort caveat as :func:`post_key_to_window`.
     """
-    _require_windows()
     hit = find_window(title_substring, case_sensitive)
     if hit is None:
         return False
-    from je_auto_control.windows.window import windows_window_manage as wm
-    return wm.post_click(hit[0], _mouse_button_name(button), int(x), int(y))
+    backend = get_backend()
+    return backend.post_click(hit[0], _mouse_button_name(button), int(x), int(y))
 
 
 def _resolve_key(key: Union[int, str]) -> Tuple[int, str]:
@@ -196,23 +188,21 @@ def foreground_window_process_id() -> Optional[int]:
     activity probes, "is my automation target focused" — have to go through the
     process id.
     """
-    _require_windows()
-    from je_auto_control.windows.window import windows_window_manage as wm
-    hwnd = wm.get_foreground_window()
+    backend = get_backend()
+    hwnd = backend.foreground_window()
     if not hwnd:
         return None
-    return wm.get_window_process_id(hwnd) or None
+    return backend.window_process_id(hwnd) or None
 
 
 def window_process_id(title_substring: str,
                       case_sensitive: bool = False) -> Optional[int]:
     """The PID owning the first window whose title contains the substring."""
-    _require_windows()
     hit = find_window(title_substring, case_sensitive)
     if hit is None:
         return None
-    from je_auto_control.windows.window import windows_window_manage as wm
-    return wm.get_window_process_id(hit[0]) or None
+    backend = get_backend()
+    return backend.window_process_id(hit[0]) or None
 
 
 def windows_for_process_id(pid: int,
@@ -223,20 +213,18 @@ def windows_for_process_id(pid: int,
     named after whatever page they show, and several of its processes have no
     window at all. Ownership is the stable key.
     """
-    _require_windows()
-    from je_auto_control.windows.window import windows_window_manage as wm
+    backend = get_backend()
     target = int(pid)
     return [(hwnd, title) for hwnd, title in list_windows(titled_only)
-            if wm.get_window_process_id(hwnd) == target]
+            if backend.window_process_id(hwnd) == target]
 
 
 def minimize_windows_for_process(pid: int) -> int:
     """Minimise every visible top-level window owned by ``pid``; return the count."""
-    _require_windows()
-    from je_auto_control.windows.window import windows_window_manage as wm
+    backend = get_backend()
     minimized = 0
     for hwnd, _title in windows_for_process_id(pid):
-        if wm.minimize_window(hwnd):
+        if backend.minimize(hwnd):
             minimized += 1
     return minimized
 
@@ -249,12 +237,11 @@ def window_rect(title_substring: str,
     Screen coordinates, so on a multi-monitor desktop the values can be
     negative for a monitor left of or above the primary one.
     """
-    _require_windows()
     hit = find_window(title_substring, case_sensitive)
     if hit is None:
         return None
-    from je_auto_control.windows.window import windows_window_manage as wm
-    return wm.get_window_rect(hit[0])
+    backend = get_backend()
+    return backend.window_rect(hit[0])
 
 
 def move_window_by_title(title_substring: str, x: int, y: int,
@@ -266,28 +253,26 @@ def move_window_by_title(title_substring: str, x: int, y: int,
     Omitting ``width`` / ``height`` keeps the window's current size, so a plain
     reposition does not have to restate dimensions the caller has to look up.
     """
-    _require_windows()
     hit = find_window(title_substring, case_sensitive)
     if hit is None:
         return False
-    from je_auto_control.windows.window import windows_window_manage as wm
+    backend = get_backend()
     if width is None or height is None:
-        rect = wm.get_window_rect(hit[0])
+        rect = backend.window_rect(hit[0])
         if rect is None:
             return False
         left, top, right, bottom = rect
         width = right - left if width is None else width
         height = bottom - top if height is None else height
-    return wm.move_window(hit[0], int(x), int(y), int(width), int(height))
+    return backend.move(hit[0], int(x), int(y), int(width), int(height))
 
 
 def show_window_by_title(title_substring: str, cmd_show: int = 1,
                          case_sensitive: bool = False) -> bool:
     """Show or restore a window (``cmd_show`` follows Win32 ShowWindow)."""
-    _require_windows()
     hit = find_window(title_substring, case_sensitive)
     if hit is None:
         return False
-    from je_auto_control.windows.window import windows_window_manage as wm
-    wm.show_window(hit[0], int(cmd_show))
+    backend = get_backend()
+    backend.show(hit[0], int(cmd_show))
     return True

@@ -37,6 +37,7 @@ from je_auto_control.osx.core.utils.osx_vk import (
 )
 from je_auto_control.osx.keyboard import osx_keyboard, osx_keyboard_check
 from je_auto_control.osx.mouse import osx_mouse
+from je_auto_control.osx.record.osx_record import osx_recorder
 from je_auto_control.osx.screen import osx_screen
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -97,6 +98,12 @@ keyboard_keys_table = {
     "enter": osx_key_enter,
     "tab": osx_key_tab,
     "backspace": osx_key_backspace,
+    # write() routes a control character by name first and by the raw
+    # character second. Without this entry "\b" matched neither, so
+    # write() fell through to its space fallback and silently typed a
+    # space where a backspace was asked for. X11 and Wayland both
+    # carry the raw character; macOS was the one that did not.
+    "\b": osx_key_backspace,
     "esc": osx_key_esc,
     "command": osx_key_command,
     "shift": osx_key_shift,
@@ -143,7 +150,7 @@ keyboard = osx_keyboard
 keyboard_check = osx_keyboard_check
 mouse = osx_mouse
 screen = osx_screen
-recorder = None
+recorder = osx_recorder
 
-if None in [keyboard_keys_table, mouse_keys_table, keyboard_check, keyboard, mouse, screen]:
+if None in [keyboard_keys_table, mouse_keys_table, keyboard_check, keyboard, mouse, screen, recorder]:
     raise AutoControlException("Can't init auto control")

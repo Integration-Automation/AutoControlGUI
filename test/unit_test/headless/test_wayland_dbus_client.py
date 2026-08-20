@@ -20,8 +20,12 @@ import struct
 
 import pytest
 
-from je_auto_control.linux_wayland import _dbus_client
-from je_auto_control.linux_wayland._dbus_client import (
+# These exercise the marshalling internals, so they import the client
+# where it lives rather than through the Wayland package's re-export:
+# a shim that forwarded private names too would be a second copy of
+# the module's surface to keep in step.
+from je_auto_control.utils.dbus_client import session_bus as _dbus_client
+from je_auto_control.utils.dbus_client.session_bus import (
     DBusError, SessionBus, Variant, _Reader, _SignatureReader, _Writer,
 )
 
@@ -159,9 +163,38 @@ def test_a_signature_that_wants_more_members_than_it_was_given_is_rejected():
 
 
 def test_a_type_this_does_not_marshal_says_so():
+    """``h`` is the one fixed-width type this refuses, and it refuses on purpose.
+
+    A UNIX_FD is a 32-bit index into a descriptor array carried in the
+    message's control data, which this client does not receive. Marshalling
+    the index alone would hand a caller a number that addresses nothing.
+    """
     writer = _Writer()
     with pytest.raises(DBusError, match="cannot marshal"):
-        writer.value("d", 1.5)
+        writer.value("h", 0)
+
+
+def test_signed_and_wide_numbers_round_trip():
+    """AT-SPI reports extents as signed integers, because coordinates can be.
+
+    A monitor left of or above the primary one puts a window at a negative
+    coordinate, so reading these as unsigned would turn -1280 into
+    4293967296 and send every click to the wrong screen.
+    """
+    for signature, value in (("i", -1280), ("i", 42), ("n", -5), ("q", 5),
+                             ("x", -(2 ** 40)), ("t", 2 ** 40), ("d", 1.5)):
+        writer = _Writer()
+        writer.value(signature, value)
+        reader = _dbus_client._Reader(writer.data)
+        assert reader.value(signature) == value, signature
+
+
+def test_a_struct_of_signed_integers_round_trips():
+    """The exact shape AT-SPI's Component.GetExtents returns."""
+    writer = _Writer()
+    writer.value("(iiii)", [-1280, 0, 640, 480])
+    reader = _dbus_client._Reader(writer.data)
+    assert reader.value("(iiii)") == (-1280, 0, 640, 480)
 
 
 # === Whole messages ========================================================

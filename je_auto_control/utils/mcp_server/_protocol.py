@@ -10,7 +10,6 @@ starting a server.
 """
 import json
 import os
-import sqlite3
 import subprocess  # nosec B404  # reason: only its TimeoutExpired type is referenced
 import sys
 import time
@@ -19,6 +18,7 @@ from typing import Any, Dict, List, Optional
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server.tools import MCPContent
+from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
 
 
 PROTOCOL_VERSION = "2025-06-18"
@@ -34,7 +34,7 @@ _TOOLS_CALL_METHOD = "tools/call"
 # family base every ``AutoControl*Exception``/``ImageNotFoundException`` now
 # derives from.
 _FRAMEWORK_TOOL_ERRORS = (
-    AutoControlException, subprocess.TimeoutExpired, sqlite3.Error,
+    AutoControlException, subprocess.TimeoutExpired, *SQLITE_ERRORS,
 )
 _BUILTIN_DISPATCH_ERRORS = (
     OSError, RuntimeError, ValueError, TypeError, KeyError,

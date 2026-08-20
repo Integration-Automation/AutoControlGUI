@@ -48,6 +48,20 @@ def _build_backend() -> AccessibilityBackend:
         return NullAccessibilityBackend(
             "pyobjc (ApplicationServices, AppKit) is required on macOS",
         )
+    if sys.platform.startswith("linux"):
+        from je_auto_control.utils.accessibility.backends.linux_backend import (
+            LinuxAccessibilityBackend,
+        )
+        backend = LinuxAccessibilityBackend()
+        if backend.available:
+            return backend
+        # AT-SPI is a bus, not a library, so "not installed" and "installed
+        # but nothing is bridged to it" look the same from here. Name both.
+        return NullAccessibilityBackend(
+            "no AT-SPI accessibility bus. Install and start at-spi2-core, and "
+            "enable the toolkit bridge (GTK_MODULES=gail:atk-bridge, "
+            "QT_ACCESSIBILITY=1)",
+        )
     return NullAccessibilityBackend(
         f"no accessibility backend for platform {sys.platform!r}",
     )

@@ -16,10 +16,14 @@ Pure standard library (``sqlite3`` / ``json`` / ``re``); imports no
 """
 import json
 import re
-import sqlite3
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+from je_auto_control.utils.sqlite_support import require_sqlite3
+
+if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
+    import sqlite3
 
 _TOKEN = re.compile(r"[a-z0-9]+")
 
@@ -40,7 +44,7 @@ def _tokens(text: str) -> List[str]:
     return _TOKEN.findall((text or "").lower())
 
 
-def _row_to_episode(row: sqlite3.Row, score: float = 0.0) -> Episode:
+def _row_to_episode(row: "sqlite3.Row", score: float = 0.0) -> Episode:
     return Episode(
         id=int(row["id"]), goal=row["goal"],
         steps=json.loads(row["steps"] or "[]"),
@@ -55,10 +59,11 @@ class AgentMemory:
         self._db_path = db_path
         self._ensure_schema()
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self._db_path, timeout=30.0,
-                               isolation_level=None)
-        conn.row_factory = sqlite3.Row
+    def _connect(self) -> "sqlite3.Connection":
+        driver = require_sqlite3()
+        conn = driver.connect(self._db_path, timeout=30.0,
+                              isolation_level=None)
+        conn.row_factory = driver.Row
         return conn
 
     def _ensure_schema(self) -> None:
@@ -131,7 +136,7 @@ class AgentMemory:
         return {"episodes": int(row["c"])}
 
 
-def _relevance(row: sqlite3.Row, terms: List[str]) -> float:
+def _relevance(row: "sqlite3.Row", terms: List[str]) -> float:
     haystack = " ".join([row["goal"] or "", row["outcome"] or "",
                          " ".join(json.loads(row["tags"] or "[]"))])
     counts = _tokens(haystack)

@@ -10,6 +10,41 @@ only when documented here with a migration path.
 
 ### Added
 
+- **The macOS recorder works.** `record()`, `stop_record()`,
+  `stop_record_timeline()`, the `AC_record*` commands, the `ac_record_*` MCP
+  tools and `je_auto_control record` all run on macOS now; they used to refuse
+  outright with "Cannot use recorder on macOS". Capture goes through a
+  listen-only Quartz `CGEventTap` on its own thread
+  (`je_auto_control.osx.listener.osx_listener.OSXInputTap`), so it records
+  presses, releases, the wheel and per-event timing, exactly as the Windows
+  hook does. Requires Accessibility permission; without it the tap raises
+  `AutoControlRecordException` naming the permission — where the facade's
+  `record()` logs it, as it does every other backend's start failure — rather
+  than starting a session that silently records nothing.
+- `je_auto_control.utils.input_macro.recorder_base` — the platform-neutral
+  half of recording: `timeline()`, `legacy_action_queue()` and the
+  `InputRecorder` base the Windows and macOS recorders now share.
+  `timeline` keeps working when imported from
+  `je_auto_control.windows.record.win32_input_hook`, where it used to live.
+- Cross-platform window management. The 23 `AC_*` window commands and their
+  MCP tools now work on macOS and Linux/X11 as well as Windows, through a
+  backend seam (`je_auto_control.wrapper.window_backends`). Wayland remains
+  unsupported: the protocol does not let a client enumerate or move another
+  application's windows.
+- Linux accessibility backend over AT-SPI2
+  (`je_auto_control.utils.accessibility.backends.linux_backend`), with no new
+  dependency. Serves both X11 and Wayland sessions.
+- `je_auto_control.utils.platform_id` — one place that classifies the
+  operating system family, and the BSDs are now one of them. FreeBSD, OpenBSD,
+  NetBSD and DragonFly route to the X11 backend instead of raising "unknown
+  operating system".
+- `AutoControlUnsupportedOperationException`, raised when a platform backend
+  cannot perform an operation. It subclasses both `AutoControlException` and
+  `NotImplementedError`, so existing `except NotImplementedError` handlers are
+  unaffected while the executor's containment boundaries now catch it.
+- `je_auto_control.utils.dbus_client` — the D-Bus client, moved out of
+  `linux_wayland/` so `utils/` can use it. The old path re-exports it.
+
 - Stable, headless `je_auto_control.api` façade.
 - Portable `autocontrol.failure-bundle/v1` diagnostic archives and CLI command.
 - Public API lifecycle, capability matrix, security policy, coverage and type
@@ -89,6 +124,26 @@ only when documented here with a migration path.
   land somewhere else; unset (or any unrecognised value, which says so and
   falls back) keeps the existing warn-once-and-move behaviour. The libei path
   is absolute at the protocol level and is not affected either way.
+- **MCP sessions over HTTP.** `initialize` now mints an `Mcp-Session-Id` and
+  returns it as a response header. A client that echoes it keeps one
+  dispatcher scope — the capabilities it advertised, and the slots its
+  in-flight calls occupy — across every connection it opens, instead of one
+  scope per TCP connection. `GET /mcp` with `Accept: text/event-stream` and a
+  valid session id opens the standing server-to-client SSE stream (one per
+  session; a second gets 409), `DELETE /mcp` with the id terminates the
+  session, and a server request is answered by `POST`ing an ordinary JSON-RPC
+  response on any connection. Sessions are swept after ten minutes untouched
+  and capped at 128. `je_auto_control.utils.mcp_server.http_sessions` holds
+  the registry.
+- **`JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1` now works over HTTP** — for a
+  client that echoes `Mcp-Session-Id` and holds the `GET` stream open. It
+  previously fired only on stdio: the prompt needs a server-to-client channel
+  bound to the scope that received `initialize`, and a connection-keyed scope
+  never survived to the `tools/call`. A client that does neither still cannot
+  be prompted and its destructive calls still proceed, exactly as for a stdio
+  client that never advertised `elicitation`; that fallback is documented and
+  is not a substitute for the bearer token, the `127.0.0.1` bind or
+  `JE_AUTOCONTROL_MCP_READONLY`.
 
 ### Removed
 
@@ -110,6 +165,49 @@ only when documented here with a migration path.
 
 ### Changed
 
+- The MCP HTTP transport answers `GET /mcp` differently. It used to return
+  `405` with `{"error": "GET stream not supported"}` for every request; it now
+  serves the session's SSE stream when the request carries
+  `Accept: text/event-stream` and a valid `Mcp-Session-Id`, and still returns
+  `405` when the `Accept` header does not ask for a stream. A request — of any
+  method — carrying an `Mcp-Session-Id` the server does not know is refused
+  with `404` rather than served under a fresh scope, which is the signal to
+  re-run `initialize`. `DELETE /mcp` without a session header is still
+  accepted as a no-op, so clients that never adopt sessions are unaffected.
+- The default run-history database is created when it is first written to,
+  not while `je_auto_control` is being imported. `HistoryStore` opens its
+  connection (and makes its parent directory) on first use, so merely
+  importing the package no longer creates
+  `~/.je_auto_control/run_history.sqlite`. Every method behaves as before;
+  a store that was never used and then closed simply never touched the
+  disk.
+
+- **The sign of `scroll_value` picks the scroll direction on every platform.**
+  Windows and macOS have always read it that way; X11 and Wayland took the
+  direction from `scroll_direction` alone and used `abs(scroll_value)`, so
+  `mouse_scroll(-3)` — code written and tested against the Windows convention —
+  scrolled *down* three notches on Linux instead of up, with no exception and
+  no warning. `scroll_direction` now names the direction a **positive** count
+  takes, and a negative count reverses it, on all four backends.
+
+  *Migration.* Code that passed a negative `scroll_value` to Linux or Wayland
+  and relied on the magnitude alone now scrolls the opposite way. Take
+  `abs()` at the call site to keep the old behaviour:
+  `mouse_scroll(abs(value), scroll_direction="scroll_down")`. Code that passed
+  a positive count is unaffected, as is every Windows and macOS caller.
+- **`import je_auto_control` no longer imports OpenCV, NumPy, Pillow,
+  `je_open_cv` or `cryptography`.** They are imported by the functions that use
+  them. The facade pulled all five in at module scope, so a platform without
+  wheels for them — a FreeBSD desktop, for one — could not use the input
+  automation half of the package at all, though it needs none of them. Nothing
+  moves in the public API and the packages remain hard dependencies; what
+  changes is *when* a missing one is reported, which is now at the first image
+  or encryption call rather than at import. `test_facade_import_is_light.py`
+  keeps it that way.
+- **`macos_record_error_message` now names a permission, not a platform.** It
+  read "Cannot use recorder on macOS", which described a limitation that no
+  longer exists; it now names the Accessibility grant that recording actually
+  needs, and is raised from the event tap rather than from the wrapper.
 - **The `xdg-desktop-portal` capture tier no longer needs `gdbus` installed.**
   It speaks D-Bus directly, so `linux_wayland.portal.is_available()` now
   reports whether a session bus address is set rather than whether the `gdbus`
@@ -246,6 +344,84 @@ only when documented here with a migration path.
   and import stable entry points from `je_auto_control.api`.
 
 ### Fixed
+
+- The MCP HTTP transport no longer tries to drain a request body it has
+  already read. Any `4xx` decided *after* the body was parsed — the new
+  unknown-session `404` and duplicate-stream `409`, and the pre-existing
+  "body must be UTF-8" `400` — called `_drain_body()`, which then blocked
+  reading bytes that were gone until the 30-second socket timeout, pinning
+  that worker and logging a `ConnectionAbortedError` traceback when the peer
+  closed first. The drain is now skipped once the body is consumed, and a
+  peer that has already vanished ends it quietly instead of raising.
+
+- **A rejected config bundle aborted the rest of the script.** Five
+  framework errors still inherited `Exception` directly —
+  `ConfigBundleError`, the USB passthrough `ProtocolError`,
+  `SessionError` and `UsbClientError`, and the work queue's
+  `BusinessError` — and the containment boundaries all catch the
+  `AutoControlException` family, so none of them caught these. A
+  malformed bundle passed to `AC_config_import` therefore raised straight
+  past the executor's per-action boundary and killed every remaining
+  action, even under `raise_on_error=False`; `AC_usb_remote_devices` and
+  `AC_usb_remote_open` had the same path through `UsbClientError`. All
+  five derive from `AutoControlException` now, so they are recorded as a
+  failed action like every other framework error. `LoopBreak`,
+  `LoopContinue` and the MCP dispatcher's private error carrier stay
+  outside the family deliberately — they are control flow, not failure.
+- **`import je_auto_control` needed a Python built with `sqlite3`, and
+  FreeBSD's is not.** `sqlite3` is in the standard library but not in every
+  build of it: CPython links it against a system library, and FreeBSD ships
+  the result as the separate `databases/py-sqlite3` package. Ten subsystems
+  imported it at module scope — run history, checkpoints, the work queue,
+  agent memory, the remote-desktop audit log, SQL data sources, and the
+  error tuples in the REST, chat-ops and MCP containment boundaries — and
+  all ten are reachable from the facade, so the whole package failed to
+  import on a stock FreeBSD, mouse and keyboard included. They go through
+  `je_auto_control.utils.sqlite_support` now, which fails at the first call
+  that opens a database rather than at import, and raises
+  `AutoControlUnsupportedOperationException` — the type the GUI tabs, the
+  REST handler and the executor already report as "not available here" —
+  instead of an `ImportError` none of them catch. `run_diagnostics()` lists
+  `sqlite3` among the optional dependencies, so the gap is visible without
+  reading a traceback.
+- **`mouse_scroll` did nothing at all on the BSDs.** It matched Windows, then
+  macOS, then a literal `["linux", "linux2"]`, so a FreeBSD, OpenBSD, NetBSD or
+  DragonFly caller fell off the end of the chain: no backend call, no
+  exception, no log line. It asks `platform_id.is_x11_unix()` now, and an
+  unrecognised platform raises `AutoControlMouseException` instead of returning
+  as though it had scrolled.
+- **A recorded timeline replayed nothing.** `replay_timeline`'s dispatch table
+  held the `run_sequence` DSL's vocabulary (`press` / `click` / `key`) and the
+  recorders emit their own (`key_down` / `mouse_up` / `scroll`), and the two
+  were disjoint — so `stop_record_timeline()` fed to `replay_timeline()`, the
+  pipeline both the docstrings and the `ac_record_stop_timeline` tool
+  prescribe, matched no handler, replayed an empty session, and still returned
+  every event as played. The recorder ops dispatch now, and the wheel reads
+  `delta` as well as `value` (reading only `value` fell back to the default of
+  one notch, so a three-notch scroll down replayed as one notch the other
+  way). Affects every platform, not only macOS.
+- macOS: recorded mouse coordinates were mirrored vertically. The listener
+  read `NSEvent.mouseLocation()`, whose origin is the bottom-left of the
+  display, while every replay posts into the top-left space `osx_mouse` uses —
+  so a click recorded near the top of the screen replayed near the bottom. It
+  now reads `CGEventGetLocation`, which is already in the space the replay
+  posts into.
+- macOS: modifier keys were not recorded at all. macOS sends no key-down for
+  Shift, Control, Option or Command, only a `flagsChanged` event carrying the
+  new flag set, so a recording could not say a modifier was held across the
+  actions that followed. They are reconstructed from the flags now.
+- macOS: `write()` typed a space instead of a backspace, because `"\b"` had
+  no route in the macOS key table and fell through to the space fallback.
+- macOS: USB enumeration returned `apple_vendor_id` in `vendor_id`, a field
+  documented as a four-hex-digit string. A value that is not a hex id is now
+  `None`; the device is still listed and `manufacturer` still names the vendor.
+- Linux/X11: `window_rect` returned the client area rather than the frame,
+  disagreeing with Win32's `GetWindowRect` by the window decorations.
+- Linux/X11: `move_window_by_title` configured the client window directly,
+  which under a reparenting window manager positions it in the wrong
+  coordinate space. It now goes through `_NET_MOVERESIZE_WINDOW`.
+- The D-Bus client could not marshal or demarshal signed integers, so any
+  protocol using them (AT-SPI extents among them) failed to decode.
 
 - **Wayland: an absolute mouse move through the ydotool fallback counted from
   the wrong origin.** `ydotool mousemove --absolute` emits no absolute event —

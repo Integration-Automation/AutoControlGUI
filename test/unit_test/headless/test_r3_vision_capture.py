@@ -12,7 +12,7 @@ Covers:
 import pytest
 
 np = pytest.importorskip("numpy")
-pytest.importorskip("cv2")
+cv2 = pytest.importorskip("cv2")
 
 from je_auto_control.utils.cv2_utils import screen_record as sr    # noqa: E402
 from je_auto_control.utils.cv2_utils import screenshot as ss       # noqa: E402
@@ -43,7 +43,7 @@ class _FakeVideoWriter:
 # --- finding 2: recorder stop honoured + writer released -----------------
 
 def test_stop_before_run_is_honored(monkeypatch):
-    monkeypatch.setattr(sr.cv2, "VideoWriter", _FakeVideoWriter)
+    monkeypatch.setattr(cv2, "VideoWriter", _FakeVideoWriter)
     thread = sr.ScreenRecordThread("out.avi", "XVID", 30, (4, 4))
     frame = np.zeros((4, 4, 3), dtype=np.uint8)
 
@@ -64,7 +64,7 @@ def test_stop_before_run_is_honored(monkeypatch):
 
 
 def test_normal_run_writes_frames_and_releases(monkeypatch):
-    monkeypatch.setattr(sr.cv2, "VideoWriter", _FakeVideoWriter)
+    monkeypatch.setattr(cv2, "VideoWriter", _FakeVideoWriter)
     thread = sr.ScreenRecordThread("out.avi", "XVID", 30, (4, 4))
     frame = np.zeros((4, 4, 3), dtype=np.uint8)
     calls = {"n": 0}

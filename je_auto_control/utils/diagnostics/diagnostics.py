@@ -99,6 +99,7 @@ def _check_optional_deps() -> Check:
         ("pytesseract", "OCR engine"),
         ("cv2", "image recognition"),
         ("PySide6", "GUI"),
+        ("sqlite3", "run history / checkpoints / work queue / SQL sources"),
     )
     available, missing = [], []
     for module_name, purpose in optional_modules:
@@ -122,6 +123,15 @@ def _check_optional_deps() -> Check:
 
 def _check_audit_chain() -> Check:
     from je_auto_control.utils.remote_desktop.audit_log import default_audit_log
+    from je_auto_control.utils.sqlite_support import sqlite3_available
+
+    # Without sqlite3 there is no chain to verify. Reporting that as a
+    # broken chain would be a false alarm about tampering.
+    if not sqlite3_available():
+        return Check(
+            name="audit_chain", ok=True, severity=_SEVERITY_WARN,
+            detail="no audit log on this Python: it has no sqlite3",
+        )
     result = default_audit_log().verify_chain()
     if result.ok:
         return Check(

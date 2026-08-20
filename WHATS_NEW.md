@@ -1,5 +1,396 @@
 # What's New — AutoControl
 
+## What's new (2026-08-20)
+
+### The Platforms This Project Claims, Now Measured
+
+The suite ran on `windows-2022` alone for its whole life, plus one Linux
+container run. macOS got two commands and nothing else. Wayland had five jobs
+reading input back off a real peer; X11 — the older and more widely deployed
+of the two Linux paths — had none, and every X11 assertion in the suite was
+made against a mock of `python-Xlib`.
+
+**The suite now runs where the project says it runs.** `pytest-headless`
+became an OS matrix: Windows keeps all five Pythons, Linux and macOS carry the
+two ends of the range. Linux runs under a real Xvfb rather than Qt's offscreen
+platform, because the X11 backend opens a display at import time and offscreen
+would hide exactly the breakage this exists to find. It found two real macOS
+defects on the first run:
+
+- `write("\b")` had no key route on macOS, so it fell through to the space
+  fallback and typed a space where a backspace was asked for. X11 and Wayland
+  both carry the raw character; macOS was the one that did not.
+- `system_profiler` reports a *symbolic* vendor id for Apple's own devices —
+  `apple_vendor_id`, not a number — and that went straight into a field
+  documented as four hex digits. Its leading `a` is a valid hex digit, so a
+  lenient parse turns it into `000a`.
+
+**X11 input is read back out of a real client.** A new `x11-verification` job
+runs against a real Xvfb server with a real window manager, taking ground
+truth from other codebases than the subject: `xev`, a real X client that
+prints every event delivered to its window; ImageMagick's `import` against a
+root painted two asymmetric colours; `xdotool` and `xdpyinfo`. The assertion
+worth naming is `synthetic NO` — `XSendEvent` traffic arrives with `YES` and
+is discarded by most toolkits, so a backend that quietly stopped driving real
+input would still pass any check that only counted events.
+
+**macOS turned out to be fully testable in CI, contrary to the usual
+assumption.** A `macos-14` runner grants *both* Screen Recording and
+Accessibility: capture returns real pixels rather than the black rectangle a
+refusal produces, `CGEventPost` moves the cursor and the move reads back
+exactly, and the AX walk returns real elements. That was measured first and
+asserted second, and the probe still refuses to pass while its expectations
+table is empty.
+
+### Five Errors That Every Boundary Missed
+
+The exception hierarchy is flat so that the executor, the poll loops, the
+request handlers and the GUI slots can each contain the whole family in one
+`except`. Round 3 reparented the family for that reason; five classes were
+missed, and one of them was reachable from an action list.
+
+`AC_config_import` with a malformed bundle raised `ConfigBundleError`, which
+inherits `Exception` directly, so the executor's per-action clause — which
+lists `AutoControlException` and the builtins — did not catch it. The error
+went past the boundary and took every remaining action with it, under
+`raise_on_error=False`, where the contract is that a failed action is
+*recorded*. Measured, not reasoned: a two-action list lost its second action.
+`AC_usb_remote_devices` and `AC_usb_remote_open` had the same path through
+`UsbClientError`.
+
+All five now derive from `AutoControlException`. What keeps the next one out is
+not a list of the five: `test_exception_family_is_flat.py` walks the package
+with `ast` and fails on *any* class inheriting `Exception` directly, against a
+three-entry allowlist that has to state why. `LoopBreak` and `LoopContinue` are
+on it because they are control flow — a family handler swallowing a `break`
+would be the mirror-image bug — and the MCP dispatcher's private error carrier
+because it never leaves the dispatcher that raised it. The allowlist is checked
+in both directions, so a stale entry fails too.
+
+### A BSD Found the Same Mistake in a Second Place
+
+The FreeBSD VM was added to prove the X11 backend drives a real BSD. It failed
+before it got there, and what it failed on was not a wheel: **FreeBSD's
+`python311` has no `sqlite3`.** The module is in the standard library but not
+in every build of it — CPython links it against a system library, and FreeBSD
+packages the result separately as `databases/py-sqlite3`.
+
+Ten subsystems imported it at module scope: run history, checkpoints, the work
+queue, agent memory, the remote-desktop audit log, SQL data sources, and the
+`except` tuples that keep a database error from killing the REST handler
+thread, the chat-ops poll loop and the MCP transport. Every one of them is
+reachable from the facade, so `import je_auto_control` failed outright — on a
+machine where moving a mouse needs no database at all. This is the same shape
+as the OpenCV/Pillow finding one commit earlier, from a source that reasoning
+about wheels would never reach: the standard library is not the same size on
+every platform.
+
+**The ten now go through `je_auto_control/utils/sqlite_support.py`.**
+`require_sqlite3()` returns the module or raises
+`AutoControlUnsupportedOperationException` — deliberately the type the platform
+backends already raise for something they cannot do, so the GUI tabs, the REST
+handler and the executor report "not available here" instead of dying on an
+`ImportError` that none of them catch. `SQLITE_ERRORS` and
+`SQLITE_OPERATIONAL_ERRORS` are tuples rather than classes, so
+`except (ValueError, *SQLITE_ERRORS)` stays a valid handler that catches
+exactly the right amount — nothing — where nothing can raise them.
+
+That left one thing still opening a database during import: `HistoryStore`
+connected in its constructor, and `default_history_store` is built while the
+facade is importing. It connects on first use now, which is also why
+`import je_auto_control` no longer creates `~/.je_auto_control/` as a side
+effect of being imported.
+
+Three things keep it fixed. `test_sqlite_is_optional.py` blocks `_sqlite3` in a
+subprocess — exactly what FreeBSD reports — and requires the facade to import
+anyway, with the error tuples empty. The FreeBSD job asserts the module is
+*absent* on the VM, so a future image that happens to ship `py311-sqlite3`
+turns the job red rather than quietly retiring the property it was added to
+test. And `run_diagnostics()` lists `sqlite3` among the optional dependencies,
+so an operator sees the gap as a line in a report instead of a traceback.
+
+### The macOS Recorder Was Written, Unreachable, and Wrong
+
+`OSXRecorder` had been a complete implementation for as long as
+`wrapper/_platform_osx.py` had said `recorder = None`, and that was not an
+oversight. The listener called `NSApplication.sharedApplication()` **at import
+time**, and stopping a recording meant `AppHelper.runEventLoop()` — a loop
+that never returns to its caller. Wiring it up would have put both on the path
+of `import je_auto_control`, which is a regression, not a fix. So `record()`,
+`stop_record()` and `je_auto_control record` all refused on macOS with
+"Cannot use recorder on macOS", and the capability matrix said `unavailable`.
+
+**The premise was wrong: a `CGEventTap` needs a run loop, not an
+application.** Create the tap on a dedicated thread, add its source to *that*
+thread's run loop, and pump the loop in short `CFRunLoopRunInMode` slices so a
+stop flag is honoured between them. Nothing touches AppKit, nothing runs at
+import, and `record()` returns immediately. The macOS hotkey backend had been
+driving a tap exactly this way in the same tree the whole time.
+
+The tap is **listen-only**, which is load-bearing rather than a detail: a
+recorder that consumed events would swallow the very input it is recording, so
+the user's clicks would stop working the moment recording started.
+
+Two defects were sitting in that code, and only a Mac could show either:
+
+- **Recorded clicks were mirrored vertically.** Coordinates came from
+  `NSEvent.mouseLocation()`, whose origin is the **bottom-left** of the
+  display, while every replay posts into the top-left space `osx_mouse` uses.
+  A click recorded near the top of the screen replayed near the bottom, with
+  no error anywhere — the same silent shape as `write("\b")` typing a space.
+  It reads `CGEventGetLocation` now, which is already the replay's space.
+- **Modifiers were not recorded at all.** macOS sends no key-down for Shift,
+  Control, Option or Command; it sends one `flagsChanged` event carrying the
+  new flag set. A recording therefore could not say a modifier was held across
+  the actions that followed — which is one of the two reasons the timeline
+  exists. They are reconstructed from the flag bits now.
+
+**The half that is not platform-specific stopped being copied.** Everything
+after the capture — the down-events-only queue the executor is handed, the
+`delta_ms` timeline a replay consumes, the mouse-only and keyboard-only
+filters — is one implementation in
+`utils/input_macro/recorder_base.py`, and both backends subclass it. A second
+hand-written copy of that shaping would have diverged silently, and the way it
+would surface is a recording made on one OS replaying wrongly on the other.
+
+**And the recording had nowhere to go.** Verifying the new backend end to end
+turned up a defect that was never macOS-specific: `replay_timeline`'s dispatch
+table held the `run_sequence` DSL's vocabulary — `press`, `click`, `key` —
+while every recorder emits its own — `key_down`, `mouse_up`, `scroll`. The two
+sets were **disjoint**. So `stop_record_timeline()` handed to
+`replay_timeline()`, which is the pipeline the docstrings and the
+`ac_record_stop_timeline` tool description both prescribe, matched no handler
+at all: it replayed an empty session and returned the full event count as
+played. The one op that did match, `scroll`, read a key the recorder does not
+write, so it fell back to a single notch in the default direction. Both are
+fixed, on every platform.
+
+**It is verified on a real window server, not against a fake.** The
+`macos-capabilities` job posts a move, a click and a keypress through the
+public API while recording, and asserts they come back out of the tap with the
+release and with the coordinates they were posted at. Decoding is unit-tested
+separately against genuine `CGEventCreate*` events, which needs no
+Accessibility grant — so the parts that can be tested without a permission
+are, and the one part that cannot is where the permission is measured.
+
+### Window Management Is No Longer Windows-Only
+
+It was: the facade branched on `sys.platform` and raised everywhere else,
+leaving 23 `AC_*` commands and their MCP tools dead on macOS and Linux. It now
+goes through a backend seam — Win32, EWMH over `python-Xlib` on X11, Quartz
+plus the accessibility API on macOS, and a null fallback that lists nothing
+and refuses actions with a reason.
+
+Two things only a real window manager could show up were wrong first time:
+
+- **The rectangle is the frame, not the client.** Win32's `GetWindowRect`
+  returns the frame, and every caller is written against that, so reporting
+  the client area was off by the decorations on X11 alone — silently, and by
+  a different amount per window manager.
+- **A move has to go through `_NET_MOVERESIZE_WINDOW`.** Under a reparenting
+  window manager a client's own x/y are relative to its frame, so a direct
+  `ConfigureWindow` asks in the wrong coordinate space. Asking openbox for
+  (300, 220) that way landed the window at (302, 260).
+
+Refusals now raise a class that is both an `AutoControlException` and a
+`NotImplementedError`. The GUI tabs and the REST handler already catch the
+latter to say "not on this platform"; the executor catches the former, and a
+bare `NotImplementedError` slipped past every containment boundary — aborting
+a whole script where one action should have been reported as failed.
+
+### Linux Has an Accessibility Backend
+
+It had none — the selector fell through to the null one while the capability
+matrix claimed "backend tests" for Linux X11. The new backend speaks
+**AT-SPI2**, which is a D-Bus protocol rather than a library, and that is what
+makes it reachable without a new dependency: `pyatspi` and
+`gi.repository.Atspi` are distribution packages built against the system
+introspection data and cannot be installed into a virtual environment.
+
+The D-Bus client written for the portal handshake moved from `linux_wayland/`
+to `utils/dbus_client/` to make that possible, and verifying the backend
+against a real bus and a real GTK application immediately found a gap in it:
+**it could not demarshal signed integers.** The portal never needed one, and
+AT-SPI reports a component's extents as four *signed* values, because a window
+on a monitor left of or above the primary one is at a negative coordinate — so
+the backend could read a tree but not where anything in it was.
+
+Because AT-SPI is a bus rather than a display protocol, this is the one
+capability where Wayland is not the restricted case: the same bus serves both
+Linux sessions.
+
+### The BSDs, and arm64
+
+`platform_wrapper` refused to start on anything that was not
+win32/cygwin/msys, darwin or linux/linux2, and each of the seven X11 backend
+modules carried its own copy of the same Linux-only guard — so a FreeBSD,
+OpenBSD or NetBSD desktop, which runs the same X server and the same
+`python-Xlib`, could not import the package at all. `sys.platform` was being
+compared against literal lists in over a hundred places, so the fix is one
+place that decides: `utils/platform_id`, whose `is_x11_unix()` asks the
+question those guards were always trying to ask.
+
+A `freebsd` job boots a real FreeBSD 14 VM inside the runner. It could at
+first only check the *decision* — that `sys.platform` really reads `freebsd14`,
+and that the classification every relaxed guard asks answers correctly on it —
+because importing anything under `je_auto_control` ran the facade, and the
+facade imported OpenCV and cryptography at module scope. `utils/platform_id`
+had to be loaded by file path to get even that far. See below: that turned out
+to be the wrong thing to work around, and the job now drives the whole backend.
+
+`ubuntu-22.04-arm` joins the smoke matrix and passes; `macos-14` was already
+arm64. `windows-11-arm` was tried and removed, and re-measuring turned up a
+**second** blocker the first pass had missed: opencv-python publishes no
+`win_arm64` wheel in any version, and cryptography stopped publishing one after
+46.0.3 — while this project's floor is `>=48.0.1`, a security floor
+(GHSA-537c-gmf6-5ccf) that cannot be lowered to reach a wheel. Pillow, named
+alongside OpenCV in the original entry, ships `win_arm64` wheels and was never
+part of the problem. None of that needs an arm64 machine to check: `pip
+install --dry-run --only-binary=:all: --platform win_arm64` answers it in
+seconds, and `Progress.md` records the command next to the finding.
+
+### The Facade Insisted on OpenCV to Move a Mouse
+
+`Progress.md` recorded the missing BSD coverage as needing "a machine with the
+dependency set on it, not a different CI trick". That entry was making the
+mistake its own Wayland section warns about three lines further up: **asking
+what the environment could not do, instead of asking who actually could not do
+it.** It was not FreeBSD that could not run the X11 backend. It was this
+package, which imported five image and crypto wheels before it would let you
+move a pointer.
+
+The measurement was small. Ten modules on the facade's import path pulled in
+OpenCV, NumPy, Pillow, `je_open_cv` or `cryptography` at module scope, across
+about sixty call sites — while most of `utils/` had been importing OpenCV
+lazily all along, with the docstrings to say so. Those ten now do the same. The
+type annotations that referenced Pillow moved under `TYPE_CHECKING`, and the
+two public `ImageSource` aliases keep Pillow in the union as a forward
+reference, so nothing changes for a caller or a type checker.
+
+What `import je_auto_control` needs now is `defusedxml`, plus `python-Xlib` on
+an X11 platform. Both are pure Python. The heavy five are still hard
+dependencies and still install by default; the difference is that a platform
+with no wheel for them can now use the half of the package that never needed
+them. `test/unit_test/headless/test_facade_import_is_light.py` blocks all five
+in a subprocess and imports the facade anyway, because this is a property one
+convenience import silently undoes and every runner with wheels keeps passing.
+
+### The BSD Job Drives Real Input Now, and Found the Defect That Was Waiting
+
+With the facade light, the FreeBSD VM needs python-Xlib, defusedxml and an X
+server — an install measured in seconds, where the ports build for OpenCV had
+not finished after fifty minutes. So `test/verify/freebsd_verify.py` runs the
+backend rather than the guard, and takes its ground truth from the X server
+answering for itself: `query_pointer` for where the cursor is, its button mask
+for which buttons the server believes are down, and `query_keymap` — the bitmap
+of every physically-held key — for whether an injected key press really landed.
+That last one is why no second process is needed here; the Linux
+`x11-verification` job already reads events back out of `xev`, and what a BSD is
+uniquely needed to answer is whether this code drives the same server on a
+different kernel.
+
+It also maps a real X window that has asked for button events, because one
+defect could not be caught any other way: **`mouse_scroll` did nothing at all
+on a BSD.** It matched Windows, then macOS, then a literal
+`["linux", "linux2"]` — one of the hundred-odd hand-written platform lists
+`platform_id` exists to replace, and one that had been missed — so a BSD caller
+fell off the end of the chain with no backend call, no exception and no log
+line. A wheel event never shows up in the pointer mask, since X11 delivers a
+scroll as a press *and* release of button 4/5/6/7 too fast to sample, so only a
+client reading the event queue can see it happen or not happen.
+
+### `mouse_scroll` Means the Same Thing on Every Platform
+
+This had been sitting in `Progress.md` as a `DECIDE`, and the maintainer
+settled it: **the sign of `scroll_value` reverses the direction everywhere, and
+`scroll_direction` names the direction a positive count takes.**
+
+Windows and macOS had always read the sign. X11 encodes direction as a button
+rather than a signed delta, so it took the direction from `scroll_direction`
+and discarded the sign — deliberately, because a negative count used to make
+`range()` empty and scroll nothing at all. The cost was portability with no
+symptom to debug: `mouse_scroll(-3)`, written and tested on Windows, scrolled
+three notches *down* on Linux instead of up. Wayland had the same `abs()` in
+`_wheel_deltas` and the same result.
+
+Both now turn a negative count back into the opposite direction — a button swap
+on X11, a sign on the Wayland delta. `docker/x11_verify.py` pins it against a
+real X server through `xev`, `freebsd_verify.py` pins it on a BSD, and
+`test_scroll_sign_is_portable.py` pins it on every runner without needing a
+display. The migration note for anyone who was relying on the magnitude alone
+is in `CHANGELOG.md`.
+
+### The Destructive-Action Prompt Reached Only One of the Two Transports
+
+`JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1` is documented as gating *every*
+destructive MCP tool behind a confirmation prompt, with one stated caveat: the
+client has to advertise the `elicitation` capability. Measured against a real
+`HttpMCPServer` with a real destructive tool, the gate fired on stdio and
+**never fired over HTTP** — not in any of the four combinations of plain POST
+or SSE, one connection or two.
+
+Two independent reasons, and the second is why keeping the connection open did
+not help. A plain `POST` is one request and one response, so its connection
+scope had no server→client channel and the prompt had nothing to travel down.
+An SSE `POST` did have one, but `_dispatch_sse` sets `close_connection`, so the
+scope keyed on that TCP connection was forgotten before the next request — and
+the `elicitation` capability advertised at `initialize` went with it. The call
+then took the "client cannot be prompted" branch, logged one INFO line, and ran
+the tool. An operator who set that variable on an HTTP-exposed server was
+getting no confirmation at all.
+
+**The transport now has the identity MCP actually specifies.** `initialize`
+mints an `Mcp-Session-Id` and returns it as a response header; a client that
+echoes it keeps one dispatcher scope across every connection it opens. `GET`
+with `Accept: text/event-stream` opens the standing server→client stream that
+server-initiated traffic belongs on, and answering a server request is an
+ordinary `POST` matched back to the waiting call by id. `DELETE` terminates.
+The dispatcher itself needed no change — it already scoped capabilities and
+active-call slots on an opaque `connection_id`, so a session id simply takes
+that slot, and the per-connection isolation guarded by
+`test_r3_mcp_connection_isolation` is preserved verbatim: a session is just an
+identity that outlives a socket.
+
+So the confirmation now round-trips over HTTP, and the test that proves it uses
+four separate connections — one that initialized, one holding the stream, one
+carrying the `tools/call`, one carrying the decline — none of which shared a
+socket with the handshake. Declining blocks the tool; accepting runs it.
+
+Measuring it turned up a second way through that was worth pinning: an SSE
+`POST` carrying a session id needs no standing stream at all, because its own
+response stream is already a server-to-client channel. The `elicitation/create`
+goes out ahead of the result on the same socket the call arrived on. Both paths
+now have a test.
+
+What did *not* change is the fallback: a client that ignores the session header,
+or that only ever sends plain JSON `POST`s with no stream open, has given the
+server nowhere to ask, and its destructive calls still proceed — exactly as they
+do for a stdio client that never advertised `elicitation`. That is now a
+documented boundary with a test on each side of it rather than an accident — but
+it is still a boundary, so the bearer token, the `127.0.0.1` bind and
+`JE_AUTOCONTROL_MCP_READONLY` remain the controls that do not depend on the
+client behaving.
+
+Sessions are bounded in both directions: swept after ten minutes untouched, and
+the registry evicts the least recently seen once it holds 128. Dropping a
+session — however it goes — releases the dispatcher state held under its id,
+which is the same release a closing socket used to perform, moved to the
+identity that actually owns that state. Because every `initialize` mints a
+session, including for the many clients that ignore the header and never come
+back, evicting one that was never used after its handshake is logged as routine;
+the warning is saved for evicting a session someone was holding, which is the
+one that means the cap is too low.
+
+The new refusals also exposed an old assumption in the transport. Every `4xx`
+runs `_drain_body()` first, so the client can read the response before the
+socket closes — but the new unknown-session `404` and duplicate-stream `409` are
+decided *after* the body has been parsed, and so was the pre-existing "body must
+be UTF-8" `400`. The drain then went looking for bytes that were already gone
+and blocked until the thirty-second read timeout, pinning that worker and
+printing a `ConnectionAbortedError` traceback whenever the peer closed first.
+It now skips the drain once the body is consumed, and treats a peer that has
+already vanished as nothing left to be courteous to.
+
 ## What's new (2026-08-19)
 
 ### Two Wayland Judgement Calls, Settled

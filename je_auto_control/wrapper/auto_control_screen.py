@@ -1,9 +1,6 @@
 import sys
 from typing import Tuple, List
 
-import cv2
-import numpy as np
-
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
 from je_auto_control.utils.exception.exception_tags import screen_get_size_error_message
 from je_auto_control.utils.exception.exception_tags import screen_screenshot_error_message
@@ -40,7 +37,13 @@ def screenshot(file_path: str = None, screen_region: list = None) -> List[int]:
     :param screen_region: screenshot region 截圖區域
     """
     autocontrol_logger.info(f"screenshot, file_path: {file_path}, screen_region: {screen_region}")
-    param = locals()
+    # 明寫成 dict,不用 locals():下面的 import 也會出現在 locals() 裡,
+    # 錄下來的參數就會多兩個模組物件。
+    # Spelled out rather than locals(): the imports below land in locals() too,
+    # so the recorded parameters would carry two module objects.
+    param = {"file_path": file_path, "screen_region": screen_region}
+    import cv2  # noqa: E402  # reason: kept off the facade's import path
+    import numpy as np  # noqa: E402  # reason: kept off the facade's import path
     try:
         record_action_to_list("AC_screenshot", param)
         return cv2.cvtColor(

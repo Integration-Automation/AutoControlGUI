@@ -1,0 +1,119 @@
+# AutoControl X11 verification image — a real X server, a real WM, real clients.
+#
+# Wayland got five jobs that check what actually arrives at a real peer.
+# X11 — the older, more widely deployed of the two Linux paths — got none:
+# every X11 assertion in the suite is made against a mock of python-Xlib, so
+# nothing had ever confirmed that an injected event reaches a client, that it
+# reaches it as *real* input rather than a sent event, or that a captured
+# pixel is the pixel on screen.
+#
+# Xvfb needs no GPU and no seat, so a plain runner can host a genuine X
+# server. Ground truth deliberately comes from other codebases than the one
+# under test:
+#
+#   * ``xev`` — a real X client whose window prints every event that reaches
+#     it. An XTest-injected event has to travel through the server and be
+#     delivered like any other, so this reads back what arrived, the same way
+#     the ydotool job reads back ``/dev/input/eventN``.
+#   * ``import`` (ImageMagick) — an independent screen grabber, standing in
+#     for the role ``grim`` plays in the Wayland job.
+#   * ``xdotool`` / ``xdpyinfo`` — the server's own answers for pointer
+#     position and screen geometry.
+#
+# openbox rather than a full desktop on purpose: it is EWMH-compliant, which
+# is what the window-management checks need, and it does not paint over the
+# root window, which is where the pixel checks put their known colours.
+#
+# What this image CANNOT answer, and why:
+#   * A negative layout origin. On X11 the root window is the union of every
+#     monitor and always begins at (0, 0); a monitor placed to the left
+#     shifts the others right rather than making the origin negative. The
+#     Wayland job's second layout has no X11 analogue — this is a protocol
+#     difference, not an untested case.
+#   * The uinput input path. It needs /dev/uinput, which is the host's to
+#     grant; docker/Dockerfile.ydotool already reads those events back off
+#     the kernel device.
+#
+# Build:  docker build -f docker/Dockerfile.x11 -t autocontrol-x11:latest .
+# Run:    docker run --rm autocontrol-x11:latest
+
+# Build every wheel in a throwaway stage, as docker/Dockerfile does, so the
+# runtime layer installs binaries only and the dependency set is fixed here
+# rather than re-resolved against PyPI at run time.
+FROM python:3.12-slim AS builder
+
+WORKDIR /src
+COPY pyproject.toml README.md ./
+COPY je_auto_control ./je_auto_control
+COPY autocontrol-lsp ./autocontrol-lsp
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip wheel --no-cache-dir --wheel-dir /wheels .
+
+
+FROM python:3.12-slim AS runtime
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# - xvfb + xauth: the X server itself, with RANDR so a monitor layout exists.
+# - x11-utils: xev (the event reader) and xdpyinfo (the server's geometry).
+# - x11-xserver-utils: xrandr, which declares the monitor layout and reads
+#   it back. Debian ships it separately from x11-utils.
+# - xdotool: the server's own answer for where the pointer is.
+# - imagemagick: `import -window root`, an independent grabber.
+# - openbox: a real EWMH window manager, without a desktop over the root.
+# - xterm: a real client to own a real window.
+# - at-spi2-core + dbus-x11: the accessibility bus. AT-SPI is a D-Bus
+#   protocol, so the backend needs a session bus and the two services
+#   D-Bus activates on it (org.a11y.Bus and the registry).
+# - zenity: a real GTK application, so there is an actual accessible
+#   tree to walk. xterm exposes none — it is not a toolkit application.
+# - libgl1 + libglib2.0-0: opencv-python hard-requires libGL.so.1 and
+#   libgthread-2.0.so.0 at import, so the package cannot even load without them.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        xvfb xauth x11-utils x11-xserver-utils xdotool \
+        imagemagick openbox xterm \
+        at-spi2-core dbus-x11 zenity \
+        libgl1 libglib2.0-0 \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir --only-binary :all: --upgrade "pip==26.0.1" \
+    && pip install --no-cache-dir --only-binary :all: --no-index \
+       --find-links=/wheels /wheels/je_auto_control-*.whl \
+    && rm -rf /wheels
+
+COPY docker/x11_verify.py /opt/verify/x11_verify.py
+COPY docker/x11_window_verify.py /opt/verify/x11_window_verify.py
+COPY docker/x11_atspi_verify.py /opt/verify/x11_atspi_verify.py
+COPY docker/entrypoint-x11.sh /usr/local/bin/autocontrol-x11-verify
+RUN chmod +x /usr/local/bin/autocontrol-x11-verify
+
+# Unprivileged, unlike the Wayland verification image. That one runs as root
+# because XDG_RUNTIME_DIR ownership would otherwise be the only thing
+# standing between it and an answer; X11 has no such requirement — the
+# server's socket lives in /tmp and its auth file in $HOME, both of which an
+# ordinary user owns. Running as a normal user is also one less difference
+# between this container and the desktop it stands in for.
+# /app is the working directory, and the library opens its log file in the
+# cwd at import, so the verifying user has to own it.
+RUN useradd --create-home --shell /bin/sh verify \
+    && chown -R verify:verify /app
+USER verify
+
+# GTK3 only loads the accessibility bridge when it is asked to, and
+# what normally asks is a desktop setting this container has no
+# store for. Naming the module directly is what bridges the app.
+ENV HOME=/home/verify \
+    GTK_MODULES=gail:atk-bridge \
+    NO_AT_BRIDGE=0 \
+    PYTHONUNBUFFERED=1 \
+    DISPLAY=:99 \
+    XDG_SESSION_TYPE=x11 \
+    JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11 \
+    SCREEN_GEOMETRY=1280x800x24
+
+ENTRYPOINT ["/usr/local/bin/autocontrol-x11-verify"]

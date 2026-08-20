@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import re
-import sqlite3
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -38,6 +37,7 @@ from je_auto_control.utils.rest_api.rest_handlers import (
     handle_usb_remote_open,
 )
 from je_auto_control.utils.rest_api.rest_metrics import RestMetrics
+from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
 
 
 HandlerFn = Callable[[RouteContext], HandlerResult]
@@ -191,11 +191,12 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         try:
             status, payload = handler(ctx)
         # AutoControlException is the family base (every framework error derives
-        # from it). sqlite3.Error is separate: handlers such as /history read the
-        # shared run-history DB, and a locked/corrupt DB otherwise escaped the
-        # handler thread and dropped the connection with no response.
+        # from it). The sqlite3 errors are separate: handlers such as /history
+        # read the shared run-history DB, and a locked/corrupt DB otherwise
+        # escaped the handler thread and dropped the connection with no
+        # response. The tuple is empty on a Python built without sqlite3.
         except (OSError, RuntimeError, ValueError, TypeError,
-                AutoControlException, sqlite3.Error) as error:
+                AutoControlException, *SQLITE_ERRORS) as error:
             autocontrol_logger.error(
                 "rest-api %s %s handler raised: %r", method, parsed.path, error,
             )

@@ -326,9 +326,14 @@ def _wheel_deltas(scroll_value: int, scroll_direction: int) -> Tuple[int, int]:
 
     ``scroll_direction`` carries axis and sign, per this module's
     ``wayland_scroll_direction_*`` constants: +-1 vertical, +-2 horizontal.
+
+    A negative ``scroll_value`` reverses that direction, the same rule the
+    other three backends follow. The magnitude used to be taken with
+    ``abs()``, which is what let a portable ``mouse_scroll(-3)`` scroll the
+    named direction here instead of the opposite one.
     """
     direction = int(scroll_direction)
-    amount = abs(int(scroll_value)) * (1 if direction > 0 else -1)
+    amount = int(scroll_value) * (1 if direction > 0 else -1)
     return (0, amount) if abs(direction) == 1 else (amount, 0)
 
 

@@ -116,9 +116,6 @@ def cmd_fmt(args: argparse.Namespace) -> int:
 
 def cmd_record(args: argparse.Namespace) -> int:
     """Record mouse/keyboard input into an action file."""
-    if sys.platform == "darwin":
-        sys.stderr.write("record is not supported on macOS\n")
-        return 1
     from je_auto_control.wrapper.auto_control_record import record_to_json
     stop_event = threading.Event()
     if args.duration is None:

@@ -38,6 +38,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -60,7 +61,7 @@ _ALLOWLIST: Dict[str, str] = {
 }
 
 
-class ConfigBundleError(Exception):
+class ConfigBundleError(AutoControlException):
     """Raised when bundle parsing or writing fails in a recoverable way."""
 
 

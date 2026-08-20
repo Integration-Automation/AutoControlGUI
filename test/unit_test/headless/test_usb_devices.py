@@ -46,3 +46,34 @@ def test_vendor_and_product_ids_are_4_hex_chars_when_present():
 def test_result_to_dict_count_matches_devices():
     result = list_usb_devices()
     assert result.to_dict()["count"] == len(result.devices)
+
+
+# --- system_profiler id parsing (macOS shapes, checked on every platform) ---
+
+
+def test_symbolic_vendor_id_is_not_smuggled_through_as_hex():
+    """Apple's own devices report ``apple_vendor_id`` instead of a number.
+
+    Its leading "a" is a valid hex digit, so a lenient parse turns it into
+    ``000a`` and a pass-through returns the word itself — both of which break
+    the 4-hex-digit shape ``UsbDevice`` documents. Only real macOS hardware
+    produces this, which is why it went unseen while the suite ran on
+    Windows alone.
+    """
+    from je_auto_control.utils.usb.usb_devices import _hex4_from_macos
+
+    assert _hex4_from_macos("apple_vendor_id") is None
+
+
+def test_hex_ids_from_system_profiler_are_normalised():
+    from je_auto_control.utils.usb.usb_devices import _hex4_from_macos
+
+    assert _hex4_from_macos("0x05ac") == "05ac"
+    assert _hex4_from_macos("0x8600") == "8600"
+    # system_profiler appends the vendor name to some entries.
+    assert _hex4_from_macos("0x05AC  (Apple Inc.)") == "05ac"
+    # A bare id, and one that needs padding out to four digits.
+    assert _hex4_from_macos("05ac") == "05ac"
+    assert _hex4_from_macos("0x1") == "0001"
+    assert _hex4_from_macos(None) is None
+    assert _hex4_from_macos("") is None

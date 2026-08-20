@@ -277,3 +277,73 @@ def test_malformed_json_returns_parse_error(http_server):
         assert response.status == 200
         payload = json.loads(response.read().decode("utf-8"))
         assert payload["error"]["code"] == -32700
+
+
+def _post_with_accept(server, body, accept):
+    """POST and return the raw body, letting the caller choose ``Accept``."""
+    host, port = server.address
+    url = f"{_TEST_SCHEME}://{host}:{port}{DEFAULT_PATH}"
+    req = urllib.request.Request(
+        url, data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Accept": accept},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=5) as response:  # nosec B310
+        return response.read().decode("utf-8")
+
+
+@pytest.mark.parametrize("accept", ["application/json", "text/event-stream"])
+def test_destructive_confirm_gate_needs_a_session_the_client_keeps(
+        monkeypatch, accept):
+    """A client that ignores Mcp-Session-Id cannot be prompted, by construction.
+
+    The prompt is an ``elicitation/create`` the server has to send *between*
+    receiving a call and answering it, so it needs a channel the client is
+    listening on. A client that neither echoes the session id nor opens the
+    standing GET stream has given the server nowhere to ask, and the call
+    proceeds — the same fallback a stdio client without the ``elicitation``
+    capability takes.
+
+    A client that does echo the id and open the stream is prompted for real;
+    that is ``test_mcp_http_sessions.py``. This test pins the other side of
+    that line so the fallback stays deliberate rather than becoming the only
+    behaviour again.
+    """
+    from je_auto_control.utils.mcp_server.tools import (
+        MCPTool, MCPToolAnnotations,
+    )
+
+    monkeypatch.setenv("JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "1")
+    ran = []
+    tool = MCPTool(
+        name="zap_probe", description="destructive probe",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda: ran.append(1) or "RAN",
+        annotations=MCPToolAnnotations(destructive=True, read_only=False),
+    )
+    server = HttpMCPServer(mcp=MCPServer(
+        tools=[tool], resource_provider=ChainProvider([]),
+        prompt_provider=StaticPromptProvider([]),
+    ), host="127.0.0.1", port=0)
+    server.start()
+    try:
+        init_body = _post_with_accept(server, {
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {"elicitation": {}},
+                "clientInfo": {"name": "probe", "version": "1"},
+            },
+        }, accept)
+        # No Mcp-Session-Id echoed back, and no GET stream opened.
+        call_body = _post_with_accept(server, {
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "zap_probe", "arguments": {}},
+        }, accept)
+    finally:
+        server.stop(timeout=1.0)
+
+    assert "elicitation/create" not in init_body
+    assert "elicitation/create" not in call_body
+    assert ran == [1], "with nowhere to ask, the call proceeds"
+    assert '"isError": false' in call_body

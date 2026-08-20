@@ -13,18 +13,24 @@ An annotation is a dict with a ``type`` and type-specific fields::
     {"type": "arrow", "start": [x1, y1], "end": [x2, y2], "color": [...]}
     {"type": "text", "position": [x, y], "text": "step 3", "color": [...]}
 """
+from __future__ import annotations
+
 import io
 import math
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import (
+    TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple, Union,
+)
 
-from PIL import Image, ImageDraw
+if TYPE_CHECKING:  # pragma: no cover - annotations only
+    from PIL import Image, ImageDraw
 
-ImageSource = Union[str, Path, bytes, Image.Image]
+ImageSource = Union[str, Path, bytes, "Image.Image"]
 
 
-def _load_image(source: ImageSource) -> Image.Image:
+def _load_image(source: ImageSource) -> "Image.Image":
     """Load ``source`` (path / bytes / PIL image) as an RGBA image."""
+    from PIL import Image
     if isinstance(source, Image.Image):
         return source.convert("RGBA")
     if isinstance(source, bytes):
@@ -84,6 +90,7 @@ def annotate_screenshot(source: ImageSource,
     PIL image; ``annotations`` is a list of box / highlight / arrow / text
     dicts. Unknown annotation types are ignored.
     """
+    from PIL import Image, ImageDraw
     base = _load_image(source)
     highlight_layer = Image.new("RGBA", base.size, (0, 0, 0, 0))
     highlight_draw = ImageDraw.Draw(highlight_layer)
