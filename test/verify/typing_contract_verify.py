@@ -76,7 +76,11 @@ def _module_name(relative_path: str) -> str:
 
 def _failing_modules(platform: str) -> set[str]:
     """Return the modules mypy reports errors in when targeting `platform`."""
-    completed = subprocess.run(  # nosec B603  # reason: fixed argv, no shell, no user input
+    # The marker has to sit on the `subprocess.run(` line itself: Codacy honours
+    # `nosemgrep` only on the exact line it reports, and the audit rule reports
+    # the call, not the argument. See `je_auto_control/android/adb_client.py`
+    # for the same shape.
+    completed = subprocess.run(  # nosec B603  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: argv is `sys.executable` plus literals and one value from the module-level PLATFORMS tuple; no shell, no environment, no caller input
         [sys.executable, "-m", "mypy", "--platform", platform, "-O", "json", PACKAGE],
         cwd=REPO_ROOT,
         capture_output=True,
