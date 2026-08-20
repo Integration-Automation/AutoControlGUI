@@ -316,6 +316,20 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **A rejected config bundle aborted the rest of the script.** Five
+  framework errors still inherited `Exception` directly —
+  `ConfigBundleError`, the USB passthrough `ProtocolError`,
+  `SessionError` and `UsbClientError`, and the work queue's
+  `BusinessError` — and the containment boundaries all catch the
+  `AutoControlException` family, so none of them caught these. A
+  malformed bundle passed to `AC_config_import` therefore raised straight
+  past the executor's per-action boundary and killed every remaining
+  action, even under `raise_on_error=False`; `AC_usb_remote_devices` and
+  `AC_usb_remote_open` had the same path through `UsbClientError`. All
+  five derive from `AutoControlException` now, so they are recorded as a
+  failed action like every other framework error. `LoopBreak`,
+  `LoopContinue` and the MCP dispatcher's private error carrier stay
+  outside the family deliberately — they are control flow, not failure.
 - **`import je_auto_control` needed a Python built with `sqlite3`, and
   FreeBSD's is not.** `sqlite3` is in the standard library but not in every
   build of it: CPython links it against a system library, and FreeBSD ships

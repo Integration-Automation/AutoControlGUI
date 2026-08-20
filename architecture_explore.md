@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,028 |
-| 程式碼總行數 | 139,623 |
+| 程式碼總行數 | 139,628 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -266,7 +266,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 12,881 行。
+> 24 個套件、約 12,882 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -293,16 +293,16 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/state_machine/` | 181 | 宣告式有限狀態機驅動 action JSON |
 | `utils/stubs/` | 236 | 為 `AC_*` 指令面產生型別 stub |
 | `utils/test_record/` | 64 | 全域測試紀錄單例，記錄每個動作的參數與例外 |
-| `utils/work_queue/` | 179 | 交易式工作佇列（dispatcher／performer），支撐大量批次執行 |
+| `utils/work_queue/` | 180 | 交易式工作佇列（dispatcher／performer），支撐大量批次執行 |
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 2,649 行。
+> 14 個套件、約 2,650 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/callback/` | 200 | Observer 模式：`callback_executor` 以字串名觸發功能，執行後呼叫回呼 |
-| `utils/config_bundle/` | 399 | 使用者設定的單檔匯出／匯入 |
+| `utils/config_bundle/` | 400 | 使用者設定的單檔匯出／匯入 |
 | `utils/critical_exit/` | 97 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
 | `utils/diagnostics/` | 322 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
 | `utils/dbus_client/` | 680 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
@@ -508,7 +508,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 17,717 行。
+> 6 個套件、約 17,720 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -516,7 +516,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_sync/` | 245 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 11,840 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
-| `utils/usb/` | 4,247 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
+| `utils/usb/` | 4,250 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 920 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
@@ -774,7 +774,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 65 / 73 / 57 / 41 / 29 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
 | `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 41 / 30 / 139 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
-#### `utils/usb/`（4,247 行）與 `utils/usbip/`（920 行）
+#### `utils/usb/`（4,250 行）與 `utils/usbip/`（920 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1022,7 +1022,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/mcp_server/` | 20 | 16,898 |
 | `utils/remote_desktop/` | 56 | 11,840 |
 | `utils/executor/` | 6 | 9,075 |
-| `utils/usb/` | 17 | 4,247 |
+| `utils/usb/` | 17 | 4,250 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,363 |
 | `utils/accessibility/` | 13 | 2,818 |
 | `wrapper/` | 3,065 | 3,013 新增 `window_backends/`：視窗管理的平台縫（`base` / `windows_backend` / `x11_backend` / `macos_backend` / `null_backend`）。放在 `wrapper/` 而不是 `utils/`，因為它必須 import `windows/`、`linux_with_x11/`、`osx/`，而 `utils/` 在分層上在那三者之上。 |
@@ -1038,6 +1038,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 907 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 727 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 690 | 50,423 |
-| **總計** | **1,022** | **139,558** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 690 | 50,425 |
+| **總計** | **1,022** | **139,563** |
 

@@ -65,6 +65,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.usb.passthrough.acl import UsbAcl
 from je_auto_control.utils.usb.passthrough.backend import UsbBackend, UsbHandle
@@ -84,7 +85,7 @@ _ABUSE_DECAY_PER_S = 5.0
 _ABUSE_LOCKOUT_S = 5.0
 
 
-class SessionError(Exception):
+class SessionError(AutoControlException):
     """Raised on session-level invariant violations (not protocol parse errors)."""
 
 

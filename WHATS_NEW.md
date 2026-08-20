@@ -42,6 +42,31 @@ exactly, and the AX walk returns real elements. That was measured first and
 asserted second, and the probe still refuses to pass while its expectations
 table is empty.
 
+### Five Errors That Every Boundary Missed
+
+The exception hierarchy is flat so that the executor, the poll loops, the
+request handlers and the GUI slots can each contain the whole family in one
+`except`. Round 3 reparented the family for that reason; five classes were
+missed, and one of them was reachable from an action list.
+
+`AC_config_import` with a malformed bundle raised `ConfigBundleError`, which
+inherits `Exception` directly, so the executor's per-action clause — which
+lists `AutoControlException` and the builtins — did not catch it. The error
+went past the boundary and took every remaining action with it, under
+`raise_on_error=False`, where the contract is that a failed action is
+*recorded*. Measured, not reasoned: a two-action list lost its second action.
+`AC_usb_remote_devices` and `AC_usb_remote_open` had the same path through
+`UsbClientError`.
+
+All five now derive from `AutoControlException`. What keeps the next one out is
+not a list of the five: `test_exception_family_is_flat.py` walks the package
+with `ast` and fails on *any* class inheriting `Exception` directly, against a
+three-entry allowlist that has to state why. `LoopBreak` and `LoopContinue` are
+on it because they are control flow — a family handler swallowing a `break`
+would be the mirror-image bug — and the MCP dispatcher's private error carrier
+because it never leaves the dispatcher that raised it. The allowlist is checked
+in both directions, so a stale entry fails too.
+
 ### A BSD Found the Same Mistake in a Second Place
 
 The FreeBSD VM was added to prove the X11 backend drives a real BSD. It failed

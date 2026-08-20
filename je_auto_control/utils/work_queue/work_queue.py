@@ -20,6 +20,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.sqlite_support import require_sqlite3
 
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
@@ -31,7 +32,7 @@ STATUS_SUCCESS = "success"
 STATUS_FAILED = "failed"
 
 
-class BusinessError(Exception):
+class BusinessError(AutoControlException):
     """A non-retryable, data-level failure of a work item."""
 
 

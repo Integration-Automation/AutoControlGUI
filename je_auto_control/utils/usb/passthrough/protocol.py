@@ -19,6 +19,7 @@ from __future__ import annotations
 import enum
 import struct
 from dataclasses import dataclass
+from je_auto_control.utils.exception.exceptions import AutoControlException
 
 
 _HEADER_FORMAT = "!BBH"
@@ -43,7 +44,7 @@ class Opcode(enum.IntEnum):
     ERROR = 0xFF
 
 
-class ProtocolError(Exception):
+class ProtocolError(AutoControlException):
     """Raised on malformed frames or invariant violations."""
 
 
