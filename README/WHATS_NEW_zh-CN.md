@@ -61,7 +61,7 @@ AX 樹也走得出真的元素。這是先量再斷言的，而且探針在期�
 system」，七個 X11 後端模組又各自帶一份同樣的 Linux 專屬守衛。
 新的 `utils/platform_id` 是唯一的判定點，`freebsd` job 在 runner 裡開
 真的 FreeBSD 14 VM，在真的 X server 上 import X11 模組並把游標移完讀回。
-`ubuntu-22.04-arm` 加進 smoke 矩陣且全绿。`windows-11-arm` 试过后拿掉了：opencv-python 根本没发 `win_arm64` wheel，这个包今天在 Windows arm64 上装不起来——是量出来的，已记在 `Progress.md`。
+`ubuntu-22.04-arm` 加进 smoke 矩阵且全绿。`windows-11-arm` 试过后拿掉了，而重新实测又挖出当初漏掉的**第二个**卡点：opencv-python 任何版本都没发 `win_arm64` wheel，cryptography 则从 46.0.4 起不再发，而本项目的下限 `>=48.0.1` 是安全下限（GHSA-537c-gmf6-5ccf），不能为了凑 wheel 往下让。原本跟 OpenCV 并列的 Pillow 其实一直都有 arm64 wheel，从来不是卡点。这些都不需要 arm64 机器就验得到——`pip install --dry-run --only-binary=:all: --platform win_arm64` 十秒给答案，指令已连同结论记在 `Progress.md`。
 
 
 ## 本次更新 (2026-08-19) — Wayland 两个等人拍板的取舍,拍板了

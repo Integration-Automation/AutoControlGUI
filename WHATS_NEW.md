@@ -239,9 +239,15 @@ had to be loaded by file path to get even that far. See below: that turned out
 to be the wrong thing to work around, and the job now drives the whole backend.
 
 `ubuntu-22.04-arm` joins the smoke matrix and passes; `macos-14` was already
-arm64. `windows-11-arm` was tried and removed: opencv-python publishes no
-`win_arm64` wheel, so the package cannot be installed there at all today —
-measured, not assumed, and recorded in `Progress.md`.
+arm64. `windows-11-arm` was tried and removed, and re-measuring turned up a
+**second** blocker the first pass had missed: opencv-python publishes no
+`win_arm64` wheel in any version, and cryptography stopped publishing one after
+46.0.3 — while this project's floor is `>=48.0.1`, a security floor
+(GHSA-537c-gmf6-5ccf) that cannot be lowered to reach a wheel. Pillow, named
+alongside OpenCV in the original entry, ships `win_arm64` wheels and was never
+part of the problem. None of that needs an arm64 machine to check: `pip
+install --dry-run --only-binary=:all: --platform win_arm64` answers it in
+seconds, and `Progress.md` records the command next to the finding.
 
 ### The Facade Insisted on OpenCV to Move a Mouse
 

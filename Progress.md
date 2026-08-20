@@ -50,28 +50,49 @@
 
 ---
 
-## Windows arm64 裝不起來，卡在 opencv-python
+## Windows arm64 裝不起來——是兩個上游，不是一個
 
-`BLOCKED` — 上游（opencv-python 沒有 win_arm64 wheel）
+`BLOCKED` — 上游（`opencv-python` 沒有 win_arm64 wheel；`cryptography` 在安全下限之上也沒有）
 
 `windows-11-arm` 加進 `platform-smoke.yml` 的矩陣跑了一次，
 結果是實測而不是推測：**opencv-python 並沒有發
 win_arm64 wheel**，pip 回退到從原碼建，CMake 在 ARM64 上
-configure 不起來，花了十二分鐘失敗。cryptography
-也在同一輪裡被拉去建。
-
-這不是 CI 設定問題，是**這個套件今天在
-Windows arm64 上裝不起來**。所以那一格已從矩陣
-移除，並把原因寫在 workflow 的註解裡；哪天上游
-發了 wheel，把 runner 加回去就好。
+configure 不起來，花了十二分鐘失敗。所以那一格已從矩陣
+移除，並把原因寫在 workflow 的註解裡。
 
 門面已經不在 module scope import OpenCV 了（見
 [WHATS_NEW.md](WHATS_NEW.md)），但這裡卡的不是 import
-而是 **pip 裝不起來**:`opencv-python` 仍列在
-`pyproject.toml` 的 `dependencies`,`pip install -e .`
-第一步就會去建它。要讓 arm64 只裝輸入的部分,得先決定
-把 OpenCV／Pillow 移到 optional extra——那是相容性決定,
-沒有人要求之前不做。
+而是 **pip 裝不起來**：那幾個套件仍列在 `pyproject.toml`
+的 `dependencies`，`pip install -e .` 第一步就會去建它們。
+
+### 2026-08-20 重新實測：當初只數到一半
+
+不必開 runner——`pip` 可以替別的平台解析，十秒就給出答案：
+
+| 依賴 | win_arm64 | 實測 |
+| --- | --- | --- |
+| `opencv-python>=4.8,<6` | **沒有** | 任何版本都沒有，pip 回的是 `from versions: none`。`je_open_cv` 自己是純 Python，但它相依 opencv-python，所以一起卡。 |
+| `cryptography>=48.0.1` | **沒有** | wheel 只出到 **46.0.3**，46.0.4 起上游就不再發 win_arm64。而 `>=48.0.1` 是 347ec1e 為了 GHSA-537c-gmf6-5ccf（high）訂的**安全下限**，不能為了 arm64 降回去。 |
+| `pillow==12.3.0` | 有 | `pillow-12.3.0-cp3xx-win_arm64.whl` 一直都在。**原本這裡寫「把 OpenCV／Pillow 移到 extra」，Pillow 那半是猜的，它從來不是卡點。** |
+| `mss`／`defusedxml`／`je_open_cv` | 有 | 純 Python。 |
+| `PySide6==6.11.1`／`qt-material==2.17` | 有 | `[gui]` extra 在 arm64 上裝得起來。 |
+| `aiortc` | **沒有** | 卡在傳遞相依 `google-crc32c`，與本專案的選擇無關；`av` 自己有 wheel。 |
+
+**所以原本那句「把 OpenCV／Pillow 移到 optional extra，arm64 就能只裝輸入的部分」
+是不成立的**——就算 OpenCV 移走，`cryptography` 還是會把 `pip install` 擋在同一個
+地方，而它的下限是安全下限，沒有往下讓的空間。要真的讓 arm64 裝得起來，**兩個都得
+離開必裝集合**；`cryptography` 今天被六個模組用到（`acme_v2`、`tls_acme`、
+`action_signing`、`secrets`、`remote_desktop` 的加密錄影），那是比 OpenCV 更大的
+相容性決定。沒有人要求之前不做。
+
+重驗指令（不需要 arm64 機器，也不需要 runner）：
+
+```bash
+pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 3.12 --target /tmp/probe 'opencv-python>=4.8,<6' 'cryptography>=48.0.1'
+```
+
+兩行 `ERROR: No matching distribution` 就是現況。哪天其中一行不見了，就是上游發了
+wheel，那時把 `windows-11-arm` 加回 `platform-smoke.yml` 的矩陣。
 
 **Linux arm64 是好的**——`ubuntu-22.04-arm` 兩個 Python 版本
 都綠，macOS 本來就是 arm64。所以卡住的只有 Windows

@@ -126,11 +126,15 @@ silently, on every BSD.
 
 **arm64.** `macos-14` was already arm64; `ubuntu-22.04-arm` joins the
 smoke matrix and passes. `windows-11-arm` was tried and removed, on
-measurement rather than assumption: **opencv-python publishes no `win_arm64`
-wheel**, so pip falls back to building it from source and CMake cannot
-configure for ARM64. That is not a CI problem to work around — the package
-genuinely cannot be installed on Windows arm64 today, which is recorded in
-`Progress.md` with the runner ready to add back when the wheel exists.
+measurement rather than assumption, and **two** dependencies are why:
+**opencv-python publishes no `win_arm64` wheel** in any version, so pip falls
+back to building from source and CMake cannot configure for ARM64; and
+**cryptography stopped publishing one after 46.0.3**, while this project's
+floor is `>=48.0.1` — a security floor (GHSA-537c-gmf6-5ccf) that cannot be
+lowered to reach a wheel. Neither is a CI problem to work around: the package
+genuinely cannot be installed on Windows arm64 today. `Progress.md` records
+both, alongside a `pip --dry-run --platform win_arm64` command that re-checks
+them in seconds without an arm64 machine.
 
 The accessibility row said `backend tests` for Linux X11 and meant nothing by
 it: there was no Linux backend at all, and `_build_backend()` fell straight
