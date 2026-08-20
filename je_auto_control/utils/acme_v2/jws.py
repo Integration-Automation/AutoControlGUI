@@ -12,8 +12,14 @@ import hashlib
 import json
 from typing import Any, Dict, Mapping, Optional
 
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
+try:
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding, rsa
+except ImportError as exc:  # pragma: no cover - platform-dependent wheel
+    raise ImportError(
+        "ACME JWS signing requires cryptography, which publishes no "
+        "Windows arm64 wheel: pip install cryptography"
+    ) from exc
 
 
 class JwsError(ValueError):

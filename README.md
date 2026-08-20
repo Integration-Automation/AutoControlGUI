@@ -54,7 +54,19 @@ Optional extras, installed only when you need them:
 | `fuzzy` / `locale` | `rapidfuzz` matching, `babel` locale parsing |
 | `s3` / `audio` | S3 artifact store, system volume control |
 
-**Requirements:** Python ≥ 3.10. On Linux, install build prerequisites first:
+**Windows on arm64** installs and runs, minus what upstream cannot ship
+there: neither `opencv-python` nor `cryptography` publishes a `win_arm64`
+wheel. So `find_image*`, `screenshot()` (the OpenCV/BGR one — the Pillow
+capture still works), the secret vault, action-file encryption, ACME/TLS
+and encrypted recording each raise a message naming the missing wheel
+instead of failing obscurely. Mouse, keyboard, screen size, window
+management, the accessibility tree, the action executor, the MCP/REST/TCP
+servers and the GUI all work — measured, not assumed. Every other platform
+is unaffected.
+
+**Requirements:** Python ≥ 3.10 (≥ 3.11 on Windows arm64, which is where
+CPython's official builds for it start). On Linux, install build
+prerequisites first:
 
 ```bash
 sudo apt-get install cmake libssl-dev

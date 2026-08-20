@@ -48,7 +48,15 @@ pip install je_auto_control[gui]       # 加上 PySide6 桌面应用
 | `fuzzy` / `locale` | `rapidfuzz` 模糊匹配、`babel` 区域解析 |
 | `s3` / `audio` | S3 制品存储、系统音量控制 |
 
-**系统需求：** Python ≥ 3.10。Linux 请先安装构建依赖：
+**Windows arm64** 装得起来也跑得起来，少的是上游在那里发不出来的那些：
+`opencv-python` 与 `cryptography` 都没发 `win_arm64` wheel。所以 `find_image*`、
+`screenshot()`（OpenCV／BGR 那一支——Pillow 截图仍可用）、密钥金库、动作文件加密、
+ACME／TLS 与加密录影会抛出指名缺哪个 wheel 的错误，而不是难以追查的失败。
+鼠标、键盘、屏幕尺寸、窗口管理、无障碍树、动作执行器、MCP／REST／TCP 服务器
+与 GUI 都正常——这是实测的，不是推论的。其他平台不受影响。
+
+**系统需求：** Python ≥ 3.10（Windows arm64≥ 3.11，CPython 官方构建从那里开始）。
+Linux 请先安装构建依赖：
 
 ```bash
 sudo apt-get install cmake libssl-dev

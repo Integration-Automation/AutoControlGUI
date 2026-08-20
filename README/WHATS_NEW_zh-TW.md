@@ -2,6 +2,40 @@
 
 ## 本次更新 (2026-08-20) — 嬣稱支援的平台，這回真的量過了
 
+### Windows arm64 從來不是程式的問題
+
+這一項原本標成 `BLOCKED`，而那只對一半。兩個相依確實沒發
+`win_arm64` wheel，到今天依舊沒有：`opencv-python` 任何版本都沒有，
+`cryptography` 停在 46.0.3，而本專案的下限 `>=48.0.1` 是安全下限
+（GHSA-537c-gmf6-5ccf），不能往下讓。所以 `pip install` 回退到從原碼建
+OpenCV，CMake 在 ARM64 上 configure 不起來，十二分鐘後失敗。這一半是量過的，
+也是那一格當初離開矩陣的原因。
+
+沒量的是真正重要的那一半。**套件裡沒有任何東西在 import 時需要那兩個
+wheel。** 在子行程裡擋掉 `cryptography`、`cv2`、`je_open_cv`、`numpy`、`PIL`
+之後，`import je_auto_control` 依舊綁定全部 1,238 個公開名稱，executor、MCP
+工具表、CLI、`api.generate_code`、`api.create_failure_bundle` 也都 import 得起來並跑得動。
+卡點完全在 `pyproject.toml` 的相依清單上。
+
+**所以修法是一個標記，不是一套架構。** 三個相依帶上
+`sys_platform != 'win32' or platform_machine != 'ARM64'`：`opencv-python`、
+`cryptography`，以及 `je_open_cv`——它自己是純 Python，但相依 OpenCV，
+不一起標就會從側門把 OpenCV 拉回來。Pillow 刻意不標：它一直都有
+`win_arm64` wheel，先前把它寫成卡點那句是猜的。`windows-11-arm` 已回到
+`platform-smoke.yml`，只跑 3.14，因為 CPython 的官方 Windows arm64 build 從 3.11 才有。
+
+**Windows arm64 放棄了什麼，現在寫在錯誤訊息本身裡。**
+`find_image*`、OpenCV 那支 `screenshot()`、秘密金庫、動作檔加密、ACME／TLS
+與加密錄影都會拋出同時指名「缺哪個 wheel」與「哪個平台」的訊息，而不是一句
+讀起來像安裝壞掉的 `ModuleNotFoundError`。`utils/cv2_utils/optional.py` 的兩個
+取用口蓋住每條影像路徑必經的兩扇門；其餘七十幾句 lazy `import cv2` 刻意不動，
+因為包起來並沒有多給呼叫端可以行動的資訊。
+
+把關的是一支刻意不華麗的測試：
+`test/unit_test/headless/test_arm64_dependency_markers.py` 讀 `pyproject.toml`，
+對五組平台實際評估那個 marker——有人把它拿掉，或「順手」把 Pillow 也收進去，
+都會當場紅，而不是讓一個 arm64 使用者少一個能用的功能。
+
 整套測試一直只在 `windows-2022` 跑，另加容器裡一次 Linux
 執行。macOS 只跑兩行指令。Wayland 有五個 job 對真的對等體
 讀回輸入；X11——兩條 Linux 路徑中更老、部署更廣的那一
@@ -61,7 +95,9 @@ AX 樹也走得出真的元素。這是先量再斷言的，而且探針在期�
 system」，七個 X11 後端模組又各自帶一份同樣的 Linux 專屬守衛。
 新的 `utils/platform_id` 是唯一的判定點，`freebsd` job 在 runner 裡開
 真的 FreeBSD 14 VM，在真的 X server 上 import X11 模組並把游標移完讀回。
-`ubuntu-22.04-arm` 加進 smoke 矩陣且全綠。`windows-11-arm` 試過後拿掉了，而重新實測又挖出當初漏掉的**第二個**卡點：opencv-python 任何版本都沒發 `win_arm64` wheel，cryptography 則從 46.0.4 起不再發，而本專案的下限 `>=48.0.1` 是安全下限（GHSA-537c-gmf6-5ccf），不能為了湊 wheel 往下讓。原本跟 OpenCV 並列的 Pillow 其實一直都有 arm64 wheel，從來不是卡點。這些都不需要 arm64 機器就驗得到——`pip install --dry-run --only-binary=:all: --platform win_arm64` 十秒給答案，指令已連同結論記在 `Progress.md`。
+`ubuntu-22.04-arm` 加進 smoke 矩陣且全綠。（**同一天已被取代**——見本檔最上方
+「Windows arm64 從來不是程式的問題」：runner 已經回來了，因為卡的是相依清單而不是程式。）
+`windows-11-arm` 試過後拿掉了，而重新實測又挖出當初漏掉的**第二個**卡點：opencv-python 任何版本都沒發 `win_arm64` wheel，cryptography 則從 46.0.4 起不再發，而本專案的下限 `>=48.0.1` 是安全下限（GHSA-537c-gmf6-5ccf），不能為了湊 wheel 往下讓。原本跟 OpenCV 並列的 Pillow 其實一直都有 arm64 wheel，從來不是卡點。這些都不需要 arm64 機器就驗得到——`pip install --dry-run --only-binary=:all: --platform win_arm64` 十秒給答案，指令已連同結論記在 `Progress.md`。
 
 
 ## 本次更新 (2026-08-19) — Wayland 兩個等人拍板的取捨,拍板了

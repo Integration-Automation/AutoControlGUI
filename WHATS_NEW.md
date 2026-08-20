@@ -2,6 +2,47 @@
 
 ## What's new (2026-08-20)
 
+### Windows arm64 Was Never a Code Problem
+
+The entry for this said `BLOCKED`, and that was half right. Two dependencies
+publish no `win_arm64` wheel and still do not: `opencv-python` has none in any
+version, and `cryptography` stopped at 46.0.3 while this project's floor of
+`>=48.0.1` is a security floor (GHSA-537c-gmf6-5ccf) that cannot be lowered.
+So `pip install` fell back to building OpenCV from source, CMake could not
+configure for ARM64, and twelve minutes later the runner failed. That much was
+measured, and it is why the runner left the matrix.
+
+What was not measured is the half that mattered. **Nothing in the package
+needs either wheel at import time.** Blocking `cryptography`, `cv2`,
+`je_open_cv`, `numpy` and `PIL` in a subprocess, `import je_auto_control`
+still binds all 1,238 public names, and the executor, the MCP tool registry,
+the CLI, `api.generate_code` and `api.create_failure_bundle` all import and
+run. The blocker lived entirely in `pyproject.toml`'s dependency list.
+
+**So the fix is a marker, not an architecture.** Three requirements carry
+`sys_platform != 'win32' or platform_machine != 'ARM64'` — `opencv-python`,
+`cryptography`, and `je_open_cv`, which is pure Python but depends on OpenCV
+and would otherwise drag it back in through the side door. Pillow is
+deliberately not marked: it has always shipped `win_arm64` wheels and the
+earlier note calling it a blocker was a guess. `windows-11-arm` is back in
+`platform-smoke.yml`, on 3.14 only, because CPython's official Windows arm64
+builds start at 3.11.
+
+**What Windows arm64 gives up is now said out loud, in the error itself.**
+`find_image*`, the OpenCV `screenshot()`, the secret vault, action-file
+encryption, ACME/TLS and encrypted recording raise a message naming the
+missing wheel and the platform, instead of a bare `ModuleNotFoundError` that
+reads like a broken install. Two new accessors in
+`utils/cv2_utils/optional.py` cover the two doors every image path goes
+through; the other seventy-odd lazy `import cv2` sites are left alone on
+purpose, because wrapping them buys the caller nothing it can act on.
+
+A deliberately unglamorous test guards the whole thing:
+`test/unit_test/headless/test_arm64_dependency_markers.py` reads
+`pyproject.toml` and evaluates the marker against five platforms, so removing
+it — or "tidying" Pillow into it — fails loudly rather than costing an arm64
+user a working feature.
+
 ### The Platforms This Project Claims, Now Measured
 
 The suite ran on `windows-2022` alone for its whole life, plus one Linux
@@ -239,7 +280,10 @@ had to be loaded by file path to get even that far. See below: that turned out
 to be the wrong thing to work around, and the job now drives the whole backend.
 
 `ubuntu-22.04-arm` joins the smoke matrix and passes; `macos-14` was already
-arm64. `windows-11-arm` was tried and removed, and re-measuring turned up a
+arm64. (**Superseded the same day** — see "Windows arm64 Was Never a Code
+Problem" at the top of this file: the runner is back, because the blocker
+was the dependency list rather than the code.) `windows-11-arm` was tried
+and removed, and re-measuring turned up a
 **second** blocker the first pass had missed: opencv-python publishes no
 `win_arm64` wheel in any version, and cryptography stopped publishing one after
 46.0.3 — while this project's floor is `>=48.0.1`, a security floor
@@ -490,7 +534,8 @@ recorded as needing a VM running a desktop that consumes libinput devices.
   `WLR_NO_HARDWARE_CURSORS=1`. Every locator, template match and OCR read goes
   through that capture, so the pointer punches a pointer-shaped hole in
   whatever it is sitting on. The check records the behaviour as measured, and
-  what to do about it is an open item in `Progress.md`.
+  the decision was to document it rather than work around it — see the
+  capture section below.
 
 ### The Screen-Capture Portal Could Never Have Worked, and a Real Bus Said So
 
@@ -670,8 +715,9 @@ recorded as needing a VM running a desktop that consumes libinput devices.
 - **What this does not settle.** ydotool's `mousemove --absolute` has an
   origin of its own — it clamps to the compositor's top-left corner and sends
   the target as a relative delta — and whether that corner is the layout
-  origin still needs a compositor that consumes libinput devices. It stays
-  open in `Progress.md` rather than being changed on a guess.
+  origin needs a compositor that consumes libinput devices. That is what the
+  `seat-verification` job later built, and it answered this: the origin is
+  the layout's top-left corner, not the layout coordinate `(0, 0)`.
 
 ### The ydotool Path Was Reporting Success While Doing Nothing
 

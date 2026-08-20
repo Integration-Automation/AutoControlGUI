@@ -25,10 +25,11 @@ is cached per process (:func:`connected_backend`), so a host where libei is
 installed but unusable pays the probe once, not once per keystroke.
 
 The enum values are libei's, from ``libei.h``. They are the one part of this
-module that a wrong guess would silently change — see ``Progress.md``. A
-mismatch degrades safely rather than misfiring: capabilities that do not
-match mean no device ever reports them, the handshake times out, and the CLI
-takes over.
+module that a wrong guess would silently change, so the ``eis-verification``
+job reads them back off a real ``libeis`` server rather than trusting the
+header. A mismatch degrades safely rather than misfiring: capabilities that
+do not match mean no device ever reports them, the handshake times out, and
+the CLI takes over.
 """
 from __future__ import annotations
 

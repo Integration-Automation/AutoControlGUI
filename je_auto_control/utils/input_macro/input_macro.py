@@ -34,10 +34,10 @@ def _sink_click(event: Dict[str, Any]) -> None:
 def _sink_scroll(event: Dict[str, Any]) -> None:
     from je_auto_control.wrapper.auto_control_mouse import mouse_scroll
     # ``value`` is the DSL's name for it, ``delta`` the recorder's. The sign
-    # is kept: it is what decides the direction on Windows and macOS. Linux
-    # takes its direction from `scroll_direction` instead, which is an open
-    # cross-platform decision recorded in Progress.md, not something to
-    # settle here.
+    # is kept, and that is now enough: a negative value reverses the
+    # direction on every backend, X11 and Wayland included. They used to
+    # discard it and always scroll ``scroll_direction``, so a macro
+    # recorded on Windows replayed backwards there, silently.
     mouse_scroll(int(event.get("value", event.get("delta", 1))))
 
 

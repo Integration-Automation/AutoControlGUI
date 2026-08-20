@@ -24,8 +24,8 @@
 # What this image still cannot answer, and why:
 #   * whether a compositor clamps the INT32_MIN reset that --absolute relies
 #     on. The kernel side of that is checked here; the clamp is the
-#     compositor's behaviour, and it remains open in Progress.md rather than
-#     being quietly claimed.
+#     compositor's behaviour, and docker/Dockerfile.seat answers it against a
+#     real wlroots session that consumes these very devices.
 # The portal consent dialog and the EIS fd handover used to be listed here
 # too. They are xdg-desktop-portal's, not ydotool's, and they are now covered
 # by docker/Dockerfile.portal against the real liboeffis.

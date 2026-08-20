@@ -7,10 +7,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Sequence
 
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509.oid import NameOID as _NameOID
+try:
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID as _NameOID
+except ImportError as exc:  # pragma: no cover - platform-dependent wheel
+    raise ImportError(
+        "TLS key and CSR generation requires cryptography, which publishes "
+        "no Windows arm64 wheel: pip install cryptography"
+    ) from exc
 
 
 _DEFAULT_KEY_BITS = 2048
