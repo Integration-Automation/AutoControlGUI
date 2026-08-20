@@ -283,6 +283,20 @@ error to the model without running the action. Requires the client
 to advertise the ``elicitation`` capability — older clients fall
 through with a logged warning.
 
+.. warning::
+
+   **This gate is effective on the stdio transport only.** Over the
+   HTTP transport it never fires: the prompt needs a server→client
+   channel bound to the same connection scope that received
+   ``initialize``, and the HTTP transport is deliberately sessionless
+   — a plain ``POST`` has no such channel at all, and an SSE ``POST``
+   closes its connection after the final event, so no later
+   ``tools/call`` can reach the capabilities the client advertised.
+   Destructive tools therefore run **unprompted** over HTTP even with
+   this variable set. Do not rely on it as the only control on an
+   HTTP-exposed server; use the bearer token and bind to
+   ``127.0.0.1``.
+
 Audit log
 =========
 

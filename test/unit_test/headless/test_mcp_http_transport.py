@@ -277,3 +277,69 @@ def test_malformed_json_returns_parse_error(http_server):
         assert response.status == 200
         payload = json.loads(response.read().decode("utf-8"))
         assert payload["error"]["code"] == -32700
+
+
+def _post_with_accept(server, body, accept):
+    """POST and return the raw body, letting the caller choose ``Accept``."""
+    host, port = server.address
+    url = f"{_TEST_SCHEME}://{host}:{port}{DEFAULT_PATH}"
+    req = urllib.request.Request(
+        url, data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Accept": accept},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=5) as response:  # nosec B310
+        return response.read().decode("utf-8")
+
+
+@pytest.mark.parametrize("accept", ["application/json", "text/event-stream"])
+def test_destructive_confirm_gate_never_fires_over_http(monkeypatch, accept):
+    """Pin the known gap: JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE is stdio-only.
+
+    The elicitation prompt needs a server->client channel bound to the same
+    connection scope that received ``initialize``. A plain POST has no such
+    channel, and an SSE POST closes its connection after the final event, so
+    the capabilities the client advertised are gone by the next ``tools/call``.
+    Destructive tools therefore run unprompted over HTTP even with the gate on.
+
+    This is recorded in ``Progress.md`` and warned about in the MCP docs. When
+    the transport grows real session identity, this test fails -- that is the
+    point: update the docs warning and the Progress.md entry in the same change.
+    """
+    from je_auto_control.utils.mcp_server.tools import (
+        MCPTool, MCPToolAnnotations,
+    )
+
+    monkeypatch.setenv("JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE", "1")
+    ran = []
+    tool = MCPTool(
+        name="zap_probe", description="destructive probe",
+        input_schema={"type": "object", "properties": {}},
+        handler=lambda: ran.append(1) or "RAN",
+        annotations=MCPToolAnnotations(destructive=True, read_only=False),
+    )
+    server = HttpMCPServer(mcp=MCPServer(
+        tools=[tool], resource_provider=ChainProvider([]),
+        prompt_provider=StaticPromptProvider([]),
+    ), host="127.0.0.1", port=0)
+    server.start()
+    try:
+        init_body = _post_with_accept(server, {
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {"elicitation": {}},
+                "clientInfo": {"name": "probe", "version": "1"},
+            },
+        }, accept)
+        call_body = _post_with_accept(server, {
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "zap_probe", "arguments": {}},
+        }, accept)
+    finally:
+        server.stop(timeout=1.0)
+
+    assert "elicitation/create" not in init_body
+    assert "elicitation/create" not in call_body
+    assert ran == [1], "gate did not fire, so the tool should have run"
+    assert '"isError": false' in call_body

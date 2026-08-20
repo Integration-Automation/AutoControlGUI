@@ -268,6 +268,18 @@ Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
 使用者拒絕時模型會收到乾淨的錯誤,不會執行動作。需要 client 自己
 聲明 ``elicitation`` 能力;舊 client 會留下 warning log 後繼續執行。
 
+.. warning::
+
+   **這道關卡目前只在 stdio transport 上有效。** 走 HTTP transport 時
+   它一次都不會觸發:送出提示需要一條與收到 ``initialize`` 的同一個
+   connection scope 綁在一起的 server→client 通道,而 HTTP transport
+   是刻意設計成 sessionless 的——普通 ``POST`` 根本沒有這種通道,
+   SSE ``POST`` 則在送完最後一個事件後就關掉連線,所以後續的
+   ``tools/call`` 拿不到 client 當初聲明的能力。也就是說,即使設了這個
+   環境變數,destructive 工具在 HTTP 上仍然會**不經詢問直接執行**。
+   不要把它當成 HTTP 服務的唯一控制手段;請改用 bearer token 並綁在
+   ``127.0.0.1``。
+
 稽核 Log
 ========
 

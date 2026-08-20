@@ -320,6 +320,34 @@ real X server through `xev`, `freebsd_verify.py` pins it on a BSD, and
 display. The migration note for anyone who was relying on the magnitude alone
 is in `CHANGELOG.md`.
 
+### The Destructive-Action Prompt Was Documented as Covering a Transport It Never Reached
+
+`JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1` is documented as gating *every*
+destructive MCP tool behind a confirmation prompt, with one stated caveat: the
+client has to advertise the `elicitation` capability. Measured against a real
+`HttpMCPServer` with a real destructive tool, the gate fires on stdio and
+**never fires over HTTP** — not in any of the four combinations of plain POST
+or SSE, one connection or two.
+
+Two independent reasons, and the second one is why keeping the connection open
+does not help. A plain `POST` is one request and one response, so its
+connection scope has no server→client channel and the prompt has nothing to
+travel down. An SSE `POST` does have one, but `_dispatch_sse` sets
+`close_connection`, so the scope keyed on that TCP connection is forgotten
+before the next request — and the `elicitation` capability the client
+advertised at `initialize` goes with it. The call then takes the "client
+cannot be prompted" branch, logs one INFO line, and runs the tool.
+
+An operator who sets that variable on an HTTP-exposed server is getting no
+confirmation at all. Both `mcp_server_doc.rst` translations now say so, and
+point at the bearer token and the `127.0.0.1` bind as the controls that do
+work there. `test_destructive_confirm_gate_never_fires_over_http` pins the
+current behaviour for both content types, so whoever closes the gap gets a red
+test telling them to update the warning in the same change. Which of the two
+fixes to take — refuse when the prompt is impossible, or give the transport
+real session identity — is a behaviour change either way and is written up in
+`Progress.md`.
+
 
 ## What's new (2026-08-19)
 

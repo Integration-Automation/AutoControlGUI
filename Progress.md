@@ -98,6 +98,57 @@ wheel，那時把 `windows-11-arm` 加回 `platform-smoke.yml` 的矩陣。
 都綠，macOS 本來就是 arm64。所以卡住的只有 Windows
 這一個組合。
 
+## MCP 的破壞性動作確認,在 HTTP transport 上一次都不會觸發
+
+`DECIDE` — 要嘛補上 session 身分,要嘛改成 fail closed;兩條都會動到行為
+
+`JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1` 的用意是「每個 destructive 工具執行前
+先問過人」。這件事在 stdio 上是好的,**在 HTTP transport 上一次都不會觸發**——
+而且不是文件原本以為的「initialize 跟 tools/call 落在不同連線時才失效」,是**四種
+組合全部失效**。實測(2026-08-20,真的 `HttpMCPServer`,真的 destructive 工具):
+
+| 情境 | 結果 |
+| --- | --- |
+| 行程內(等同 stdio),同一個 server 物件 | 送出 `elicitation/create`,拒絕就不執行 ✅ |
+| HTTP,plain POST,同一條連線 | **不問就執行** |
+| HTTP,plain POST,兩條連線 | **不問就執行** |
+| HTTP,SSE,同一條連線 | **不問就執行** |
+| HTTP,SSE,兩條連線 | **不問就執行** |
+
+原因有兩層,兩層都得處理:
+
+1. `_maybe_confirm_destructive` 在 `self._writer is None` 時直接 return。plain POST
+   的 `connection_scope` 沒有 writer(一次 request/response,沒有 server→client 通道),
+   所以這條路連問的能力都沒有。
+2. 就算是有 writer 的 SSE,`_dispatch_sse` 會把 `close_connection` 設成 True,
+   `finish()` 接著呼叫 `forget_connection(id(self))`。而 connection scope 是用
+   `id(self)`(TCP 連線)當 key,不是用 MCP session,所以 `initialize` 帶進來的
+   `capabilities`(裡面才有 `elicitation`)在下一個 `tools/call` 一定已經被忘掉,
+   於是走進「client 沒有 elicitation 能力」那條分支,留一行 INFO log 後**放行**。
+
+也就是說,操作者設了這個變數、以為擋住了,實際上什麼都沒擋,而且只有 INFO log。
+文件原本寫「gate every destructive tool」,只註明「舊 client 會 fall through」,
+沒說 HTTP 上根本不會啟動——**這一半已經修好了**:兩份 `mcp_server_doc.rst` 都加了
+warning,說明它目前只在 stdio 有效,HTTP 請改靠 bearer token 與綁 `127.0.0.1`。
+`test_mcp_http_transport.py::test_destructive_confirm_gate_never_fires_over_http`
+把現況釘住(plain POST 與 SSE 兩種),哪天有人補好了,那個測試會當場紅掉,
+提醒他同一筆改動要把文件的 warning 跟本節一起改掉。
+
+**還沒決定的是行為要往哪邊走**,兩個選項都不是純加法:
+
+- **(A) fail closed** — 變數開著又問不到人時,直接拒絕執行 destructive 工具。
+  最貼近操作者的意圖,改動也最小。但會翻掉現有的
+  `test_destructive_confirmation_skipped_when_client_lacks_capability`,而且會擋掉
+  今天所有沒有 elicitation 能力的 client(包含 HTTP 上的每一個)。
+- **(B) 補上 `Mcp-Session-Id`** — 讓 scope 跟著 MCP session 走而不是跟著 TCP 連線,
+  這樣 SSE 那條路才有機會真的問出來。這是 MCP 自己的答案,但這個 transport 是
+  **刻意**做成 sessionless 的(`do_DELETE` 的註解就這麼寫),而 per-connection 隔離
+  正是先前一次重構的重點,有 `test_r3_mcp_connection_isolation` 在守。要動得連那條
+  隔離一起重新想,不能只是把 key 換掉。plain POST 就算有了 session 仍然沒有通道,
+  所以 (B) 落地後,plain POST 還是得靠 (A) 收尾。
+
+重驗方式:把上表跑一次即可,四種 HTTP 組合都應該是「不問就執行」。
+
 ## Wayland:剩下的都不是「缺一台機器」
 
 這一項曾經三度寫成「要一台 VM」——先是 portal 交握,再是 ydotool 的絕對移動落點,
