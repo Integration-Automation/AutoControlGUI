@@ -145,6 +145,14 @@ only when documented here with a migration path.
 
 ### Changed
 
+- The default run-history database is created when it is first written to,
+  not while `je_auto_control` is being imported. `HistoryStore` opens its
+  connection (and makes its parent directory) on first use, so merely
+  importing the package no longer creates
+  `~/.je_auto_control/run_history.sqlite`. Every method behaves as before;
+  a store that was never used and then closed simply never touched the
+  disk.
+
 - **The sign of `scroll_value` picks the scroll direction on every platform.**
   Windows and macOS have always read it that way; X11 and Wayland took the
   direction from `scroll_direction` alone and used `abs(scroll_value)`, so
@@ -308,6 +316,22 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **`import je_auto_control` needed a Python built with `sqlite3`, and
+  FreeBSD's is not.** `sqlite3` is in the standard library but not in every
+  build of it: CPython links it against a system library, and FreeBSD ships
+  the result as the separate `databases/py-sqlite3` package. Ten subsystems
+  imported it at module scope — run history, checkpoints, the work queue,
+  agent memory, the remote-desktop audit log, SQL data sources, and the
+  error tuples in the REST, chat-ops and MCP containment boundaries — and
+  all ten are reachable from the facade, so the whole package failed to
+  import on a stock FreeBSD, mouse and keyboard included. They go through
+  `je_auto_control.utils.sqlite_support` now, which fails at the first call
+  that opens a database rather than at import, and raises
+  `AutoControlUnsupportedOperationException` — the type the GUI tabs, the
+  REST handler and the executor already report as "not available here" —
+  instead of an `ImportError` none of them catch. `run_diagnostics()` lists
+  `sqlite3` among the optional dependencies, so the gap is visible without
+  reading a traceback.
 - **`mouse_scroll` did nothing at all on the BSDs.** It matched Windows, then
   macOS, then a literal `["linux", "linux2"]`, so a FreeBSD, OpenBSD, NetBSD or
   DragonFly caller fell off the end of the chain: no backend call, no

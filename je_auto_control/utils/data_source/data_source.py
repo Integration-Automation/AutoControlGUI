@@ -23,11 +23,12 @@ from __future__ import annotations
 import csv
 import json
 import os
-import sqlite3
 from contextlib import closing
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import quote
+
+from je_auto_control.utils.sqlite_support import require_sqlite3
 
 _READ_ONLY_SQL_PREFIXES = ("select", "with")
 
@@ -96,8 +97,9 @@ def _load_sqlite(source: Dict[str, Any]) -> List[Dict[str, Any]]:
     uri = f"file:{safe_path}?mode=ro"
     # closing(): the sqlite3 context manager commits/rolls back but never closes
     # the connection, so the file handle leaks until GC. Close it explicitly.
-    with closing(sqlite3.connect(uri, uri=True)) as conn:
-        conn.row_factory = sqlite3.Row
+    driver = require_sqlite3()
+    with closing(driver.connect(uri, uri=True)) as conn:
+        conn.row_factory = driver.Row
         rows = conn.execute(query).fetchall()
     return [dict(row) for row in rows]
 

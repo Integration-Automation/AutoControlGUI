@@ -20,6 +20,12 @@ that use them now (``test_facade_import_is_light.py`` keeps it that way), which
 leaves this VM needing python-Xlib and defusedxml — both pure Python — and an X
 server. So the whole backend runs here, not just the guard.
 
+Running it then found the same mistake in a second place, one no wheel-shaped
+reasoning would have caught: FreeBSD's ``python311`` has no ``sqlite3`` (it is
+the separate ``databases/py-sqlite3`` package), and ten subsystems imported it
+at module scope, so the facade still would not import. That is why the checks
+below assert the module is *absent* here and that the package works anyway.
+
 Ground truth is the X server answering for itself, never this codebase:
 ``query_pointer`` for where the cursor actually is, its button mask for which
 buttons the server believes are down, and ``query_keymap`` — a bitmap of every
@@ -133,6 +139,20 @@ def check_facade_is_importable() -> None:
         return "cv2, PIL, cryptography, je_open_cv all absent"
     check("the heavy wheels really are not installed here", _absent)
 
+    # Not a wheel — a piece of the standard library the OS packages
+    # separately. Same trap, and asserting it is absent is what keeps this
+    # job testing the property: if a later image ships py311-sqlite3, the
+    # check goes red rather than quietly passing on an easier machine.
+    def _no_sqlite3() -> str:
+        import importlib.util
+
+        _assert_true(
+            importlib.util.find_spec("_sqlite3") is None,
+            "this image has sqlite3, so importing the facade here no longer "
+            "proves the package works without it")
+        return "no _sqlite3, as FreeBSD's python311 ships it"
+    check("sqlite3 really is not installed here", _no_sqlite3)
+
     def _facade() -> str:
         import je_auto_control
 
@@ -147,6 +167,36 @@ def check_facade_is_importable() -> None:
                      f"expected the X11 backend, got {module}")
         return module
     check("the wrapper selects the X11 backend on a BSD", _backend)
+
+
+def check_sqlite_backed_features_degrade() -> None:
+    """Without sqlite3, the stores fail on use — not on import, and not fatally.
+
+    The failure has to be the type every containment boundary already
+    understands. A bare ``ImportError`` escapes all of them, which is how one
+    absent database module took the mouse down with it.
+    """
+    from je_auto_control.utils import sqlite_support
+
+    check("sqlite3_available() reports the truth here",
+          lambda: _assert_eq(sqlite_support.sqlite3_available(), False))
+
+    def _typed() -> str:
+        from je_auto_control.utils.exception.exceptions import (
+            AutoControlException, AutoControlUnsupportedOperationException,
+        )
+        from je_auto_control.utils.run_history.history_store import (
+            default_history_store,
+        )
+
+        try:
+            default_history_store.count()
+        except AutoControlUnsupportedOperationException as error:
+            _assert_true(isinstance(error, AutoControlException),
+                         "not in the family the executor catches")
+            return type(error).__name__
+        raise AssertionError("reading run history did not raise without sqlite3")
+    check("using a store raises the unsupported-operation error", _typed)
 
 
 # --- input, driven and read back off the server -------------------------
@@ -346,6 +396,7 @@ def main() -> int:
     report_environment()
     check_platform_identity()
     check_facade_is_importable()
+    check_sqlite_backed_features_degrade()
     check_mouse_position()
     check_mouse_buttons()
     check_scroll()

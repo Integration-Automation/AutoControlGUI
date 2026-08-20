@@ -20,7 +20,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import sqlite3
 import threading
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -28,6 +27,9 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.sqlite_support import (
+    SQLITE_ERRORS, SQLITE_OPERATIONAL_ERRORS, require_sqlite3,
+)
 
 
 _DEFAULT_PATH_RELATIVE = ".je_auto_control/audit.db"
@@ -55,8 +57,11 @@ class AuditLog:
     def __init__(self, path: Optional[Path] = None) -> None:
         self._path = Path(path) if path is not None else default_audit_log_path()
         self._lock = threading.Lock()
+        # Asked for before the directory is made, so a Python without
+        # sqlite3 does not leave an empty ~/.je_auto_control behind.
+        driver = require_sqlite3()
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(
+        self._conn = driver.connect(
             str(self._path), check_same_thread=False, isolation_level=None,
         )
         self._init_schema()
@@ -87,11 +92,11 @@ class AuditLog:
         # raw-SQL-construction rules without resorting to suppressions.
         try:
             self._conn.execute("ALTER TABLE events ADD COLUMN prev_hash TEXT")
-        except sqlite3.OperationalError:
+        except SQLITE_OPERATIONAL_ERRORS:
             pass  # Column already exists — that's fine.
         try:
             self._conn.execute("ALTER TABLE events ADD COLUMN row_hash TEXT")
-        except sqlite3.OperationalError:
+        except SQLITE_OPERATIONAL_ERRORS:
             pass  # Column already exists — that's fine.
         self._backfill_chain_locked()
 
@@ -148,7 +153,7 @@ class AuditLog:
                 )
                 self._last_hash = row_hash
                 self._maybe_prune_locked()
-            except sqlite3.Error as error:
+            except SQLITE_ERRORS as error:
                 autocontrol_logger.warning("audit log insert: %r", error)
 
     def _maybe_prune_locked(self) -> None:
@@ -178,7 +183,7 @@ class AuditLog:
             try:
                 cur = self._conn.execute(sql, args)
                 rows = cur.fetchall()
-            except sqlite3.Error as error:
+            except SQLITE_ERRORS as error:
                 autocontrol_logger.warning("audit log query: %r", error)
                 return []
         return [
@@ -227,7 +232,7 @@ class AuditLog:
         with self._lock:
             try:
                 self._conn.close()
-            except sqlite3.Error:
+            except SQLITE_ERRORS:
                 pass
 
 

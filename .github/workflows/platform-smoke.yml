@@ -111,6 +111,13 @@ jobs:
             # verification. six is therefore named explicitly — python-Xlib
             # 0.33 imports it from Xlib.display, and with --no-deps nothing
             # else would install it.
+            #
+            # py311-sqlite3 is deliberately not installed either. FreeBSD
+            # packages sqlite3 apart from python311, this VM is the only
+            # machine in CI that does, and it is what caught ten subsystems
+            # importing it at module scope — which made `import
+            # je_auto_control` fail outright on a stock FreeBSD. Adding the
+            # package here would make that regression invisible again.
             python3.11 -m ensurepip --upgrade
             python3.11 -m pip install --no-deps \
               python-xlib==0.33 six defusedxml==0.7.1

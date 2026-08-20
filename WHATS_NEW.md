@@ -42,6 +42,48 @@ exactly, and the AX walk returns real elements. That was measured first and
 asserted second, and the probe still refuses to pass while its expectations
 table is empty.
 
+### A BSD Found the Same Mistake in a Second Place
+
+The FreeBSD VM was added to prove the X11 backend drives a real BSD. It failed
+before it got there, and what it failed on was not a wheel: **FreeBSD's
+`python311` has no `sqlite3`.** The module is in the standard library but not
+in every build of it — CPython links it against a system library, and FreeBSD
+packages the result separately as `databases/py-sqlite3`.
+
+Ten subsystems imported it at module scope: run history, checkpoints, the work
+queue, agent memory, the remote-desktop audit log, SQL data sources, and the
+`except` tuples that keep a database error from killing the REST handler
+thread, the chat-ops poll loop and the MCP transport. Every one of them is
+reachable from the facade, so `import je_auto_control` failed outright — on a
+machine where moving a mouse needs no database at all. This is the same shape
+as the OpenCV/Pillow finding one commit earlier, from a source that reasoning
+about wheels would never reach: the standard library is not the same size on
+every platform.
+
+**The ten now go through `je_auto_control/utils/sqlite_support.py`.**
+`require_sqlite3()` returns the module or raises
+`AutoControlUnsupportedOperationException` — deliberately the type the platform
+backends already raise for something they cannot do, so the GUI tabs, the REST
+handler and the executor report "not available here" instead of dying on an
+`ImportError` that none of them catch. `SQLITE_ERRORS` and
+`SQLITE_OPERATIONAL_ERRORS` are tuples rather than classes, so
+`except (ValueError, *SQLITE_ERRORS)` stays a valid handler that catches
+exactly the right amount — nothing — where nothing can raise them.
+
+That left one thing still opening a database during import: `HistoryStore`
+connected in its constructor, and `default_history_store` is built while the
+facade is importing. It connects on first use now, which is also why
+`import je_auto_control` no longer creates `~/.je_auto_control/` as a side
+effect of being imported.
+
+Three things keep it fixed. `test_sqlite_is_optional.py` blocks `_sqlite3` in a
+subprocess — exactly what FreeBSD reports — and requires the facade to import
+anyway, with the error tuples empty. The FreeBSD job asserts the module is
+*absent* on the VM, so a future image that happens to ship `py311-sqlite3`
+turns the job red rather than quietly retiring the property it was added to
+test. And `run_diagnostics()` lists `sqlite3` among the optional dependencies,
+so an operator sees the gap as a line in a report instead of a traceback.
+
 ### The macOS Recorder Was Written, Unreachable, and Wrong
 
 `OSXRecorder` had been a complete implementation for as long as

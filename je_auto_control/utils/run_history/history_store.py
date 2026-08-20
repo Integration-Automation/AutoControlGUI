@@ -6,14 +6,19 @@ is intentionally minimal — no retention policy, no analytics — callers drive
 pruning via :meth:`clear` or :meth:`prune`.
 """
 import os
-import sqlite3
 import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.sqlite_support import (
+    SQLITE_ERRORS, require_sqlite3,
+)
+
+if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
+    import sqlite3
 
 SOURCE_SCHEDULER = "scheduler"
 SOURCE_TRIGGER = "trigger"
@@ -96,23 +101,41 @@ class HistoryStore:
 
     def __init__(self, path: Union[str, Path] = _IN_MEMORY_DB) -> None:
         self._path = str(path) if path == _IN_MEMORY_DB else str(Path(path))
+        self._lock = threading.Lock()
+        # The database is opened on first use, not here. The module-level
+        # ``default_history_store`` is built during ``import
+        # je_auto_control``, and connecting there made importing the package
+        # create a file on disk and require a Python built with sqlite3 --
+        # which FreeBSD ships as a separate package, so importing the
+        # package failed outright there, mouse and keyboard included.
+        self._conn: Optional["sqlite3.Connection"] = None
+
+    def _connection(self) -> "sqlite3.Connection":
+        """Return the open connection, creating the database on first call.
+
+        Every caller already holds ``self._lock``, so the open happens once.
+        """
+        if self._conn is not None:
+            return self._conn
+        driver = require_sqlite3()
         if self._path != _IN_MEMORY_DB:
             os.makedirs(os.path.dirname(self._path) or ".", exist_ok=True)
-        self._lock = threading.Lock()
-        self._conn = sqlite3.connect(
+        conn = driver.connect(
             self._path, check_same_thread=False, isolation_level=None,
         )
-        self._conn.row_factory = sqlite3.Row
-        self._conn.executescript(_SCHEMA)
-        self._migrate_schema()
+        conn.row_factory = driver.Row
+        conn.executescript(_SCHEMA)
+        self._conn = conn
+        self._migrate_schema_locked(conn)
+        return conn
 
-    def _migrate_schema(self) -> None:
+    def _migrate_schema_locked(self, conn: "sqlite3.Connection") -> None:
         """Add columns that older store files are missing."""
-        cols = {row["name"] for row in self._conn.execute(
+        cols = {row["name"] for row in conn.execute(
             "PRAGMA table_info(runs)",
         ).fetchall()}
         if "artifact_path" not in cols:
-            self._conn.execute(
+            conn.execute(
                 "ALTER TABLE runs ADD COLUMN artifact_path TEXT",
             )
 
@@ -127,7 +150,7 @@ class HistoryStore:
         _validate_source(source_type)
         ts = float(started_at) if started_at is not None else time.time()
         with self._lock:
-            cursor = self._conn.execute(
+            cursor = self._connection().execute(
                 "INSERT INTO runs (source_type, source_id, script_path,"
                 " started_at, status) VALUES (?, ?, ?, ?, ?)",
                 (source_type, source_id, script_path, ts, STATUS_RUNNING),
@@ -144,7 +167,7 @@ class HistoryStore:
             raise ValueError("cannot finish a run with status=running")
         ts = float(finished_at) if finished_at is not None else time.time()
         with self._lock:
-            cursor = self._conn.execute(
+            cursor = self._connection().execute(
                 "UPDATE runs SET finished_at = ?, status = ?, error_text = ?,"
                 " artifact_path = ? WHERE id = ?",
                 (ts, status, error_text, artifact_path, int(run_id)),
@@ -154,7 +177,7 @@ class HistoryStore:
     def attach_artifact(self, run_id: int, artifact_path: str) -> bool:
         """Attach or replace the artifact path on a finished run."""
         with self._lock:
-            cursor = self._conn.execute(
+            cursor = self._connection().execute(
                 "UPDATE runs SET artifact_path = ? WHERE id = ?",
                 (artifact_path, int(run_id)),
             )
@@ -169,7 +192,7 @@ class HistoryStore:
         bound_limit = int(limit)
         if source_type is None:
             with self._lock:
-                rows = self._conn.execute(
+                rows = self._connection().execute(
                     "SELECT * FROM runs "
                     "ORDER BY started_at DESC LIMIT ?",
                     (bound_limit,),
@@ -177,7 +200,7 @@ class HistoryStore:
         else:
             _validate_source(source_type)
             with self._lock:
-                rows = self._conn.execute(
+                rows = self._connection().execute(
                     "SELECT * FROM runs WHERE source_type = ? "
                     "ORDER BY started_at DESC LIMIT ?",
                     (source_type, bound_limit),
@@ -187,7 +210,7 @@ class HistoryStore:
     def get_run(self, run_id: int) -> Optional[RunRecord]:
         """Return a specific row or ``None`` if absent."""
         with self._lock:
-            row = self._conn.execute(
+            row = self._connection().execute(
                 "SELECT * FROM runs WHERE id = ?", (int(run_id),),
             ).fetchone()
         return _row_to_record(row) if row is not None else None
@@ -197,22 +220,22 @@ class HistoryStore:
         if source_type is not None:
             _validate_source(source_type)
             with self._lock:
-                row = self._conn.execute(
+                row = self._connection().execute(
                     "SELECT COUNT(*) FROM runs WHERE source_type = ?",
                     (source_type,),
                 ).fetchone()
         else:
             with self._lock:
-                row = self._conn.execute("SELECT COUNT(*) FROM runs").fetchone()
+                row = self._connection().execute("SELECT COUNT(*) FROM runs").fetchone()
         return int(row[0])
 
     def clear(self) -> int:
         """Delete every row (and its artifact file); return rows removed."""
         with self._lock:
-            paths = [r[0] for r in self._conn.execute(
+            paths = [r[0] for r in self._connection().execute(
                 "SELECT artifact_path FROM runs WHERE artifact_path IS NOT NULL",
             ).fetchall()]
-            cursor = self._conn.execute("DELETE FROM runs")
+            cursor = self._connection().execute("DELETE FROM runs")
             removed = int(cursor.rowcount)
         _remove_artifact_files(paths)
         return removed
@@ -222,13 +245,13 @@ class HistoryStore:
         if keep_latest < 0:
             raise ValueError("keep_latest must be >= 0")
         with self._lock:
-            paths = [r[0] for r in self._conn.execute(
+            paths = [r[0] for r in self._connection().execute(
                 "SELECT artifact_path FROM runs WHERE artifact_path IS NOT NULL"
                 " AND id NOT IN ("
                 "SELECT id FROM runs ORDER BY started_at DESC LIMIT ?)",
                 (int(keep_latest),),
             ).fetchall()]
-            cursor = self._conn.execute(
+            cursor = self._connection().execute(
                 "DELETE FROM runs WHERE id NOT IN ("
                 "SELECT id FROM runs ORDER BY started_at DESC LIMIT ?"
                 ")",
@@ -239,14 +262,22 @@ class HistoryStore:
         return removed
 
     def close(self) -> None:
+        """Close the database if it was ever opened.
+
+        The connection object is deliberately kept: a call after ``close()``
+        must keep raising sqlite3's "closed database" error rather than
+        silently reopening and, for an in-memory store, losing every row.
+        """
         with self._lock:
+            if self._conn is None:
+                return
             try:
                 self._conn.close()
-            except sqlite3.Error as error:
+            except SQLITE_ERRORS as error:
                 autocontrol_logger.warning("history close failed: %r", error)
 
 
-def _row_to_record(row: sqlite3.Row) -> RunRecord:
+def _row_to_record(row: "sqlite3.Row") -> RunRecord:
     artifact = row["artifact_path"] if "artifact_path" in row.keys() else None
     return RunRecord(
         id=int(row["id"]),

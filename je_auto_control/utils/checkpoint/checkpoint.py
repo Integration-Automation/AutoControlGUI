@@ -11,10 +11,14 @@ store is injectable, so resume logic is unit-tested deterministically
 without a real crash.
 """
 import json
-import sqlite3
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+from je_auto_control.utils.sqlite_support import require_sqlite3
+
+if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
+    import sqlite3
 
 
 @dataclass
@@ -33,10 +37,11 @@ class CheckpointStore:
         self._db_path = db_path
         self._ensure_schema()
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self._db_path, timeout=30.0,
-                               isolation_level=None)
-        conn.row_factory = sqlite3.Row
+    def _connect(self) -> "sqlite3.Connection":
+        driver = require_sqlite3()
+        conn = driver.connect(self._db_path, timeout=30.0,
+                              isolation_level=None)
+        conn.row_factory = driver.Row
         return conn
 
     def _ensure_schema(self) -> None:

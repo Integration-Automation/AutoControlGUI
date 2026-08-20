@@ -7,15 +7,18 @@ and run against a read-only connection; values are always bound as
 parameters (never string-interpolated) to avoid SQL injection. Imports no
 ``PySide6`` so it stays fully headless.
 """
-import sqlite3
 from contextlib import closing
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from urllib.parse import quote
 
 from je_auto_control.utils.data_source.data_source import (
     _resolve_path, _validate_select,
 )
+from je_auto_control.utils.sqlite_support import require_sqlite3
+
+if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
+    import sqlite3
 
 _FetchResult = Union[List[Dict[str, Any]], Dict[str, Any], Any, None]
 
@@ -33,7 +36,7 @@ def _read_only_uri(path: Path) -> str:
     return f"file:{safe_path}?mode=ro"
 
 
-def _shape(cursor: sqlite3.Cursor, fetch: str) -> _FetchResult:
+def _shape(cursor: "sqlite3.Cursor", fetch: str) -> _FetchResult:
     """Reduce a cursor to the requested result shape."""
     if fetch in ("all", "rows"):
         return [dict(row) for row in cursor.fetchall()]
@@ -63,8 +66,9 @@ def query_sqlite(database: str, query: str,
     uri = _read_only_uri(path)
     # closing(): sqlite3's own context manager only commits/rolls back the
     # transaction, it does not close the connection (leaking the handle until GC).
-    with closing(sqlite3.connect(uri, uri=True)) as connection:
-        connection.row_factory = sqlite3.Row
+    driver = require_sqlite3()
+    with closing(driver.connect(uri, uri=True)) as connection:
+        connection.row_factory = driver.Row
         cursor = connection.execute(
             statement, params if params is not None else ())
         return _shape(cursor, fetch)
