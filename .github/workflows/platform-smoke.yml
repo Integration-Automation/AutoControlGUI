@@ -95,20 +95,18 @@ jobs:
           release: "14.2"
           usesh: true
           prepare: |
-            pkg install -y python311 py311-pip xorg-vfbserver
+            pkg install -y python311 xorg-vfbserver
           run: |
             set -eu
             echo "uname: $(uname -a)"
 
-            # The two pure-Python dependencies the facade still needs, at the
-            # versions pyproject pins, by their PyPI names. FreeBSD does not
-            # mark its system Python externally-managed today; if that changes
-            # the retry says so in the log rather than the job failing on a
-            # pip policy error.
-            python3.11 -m pip install --no-deps python-xlib==0.33 defusedxml==0.7.1 \
-              || { echo "pip refused the system environment; retrying opted-in"; \
-                   python3.11 -m pip install --break-system-packages --no-deps \
-                     python-xlib==0.33 defusedxml==0.7.1; }
+            # pip comes from ensurepip, not from pkg: FreeBSD 14.2's repository
+            # has no py311-pip (the flavoured port names are not dependable
+            # here, while python311 itself is). The two dependencies are the
+            # only ones the facade still needs, both pure Python, at the
+            # versions pyproject pins and by their PyPI names.
+            python3.11 -m ensurepip --upgrade
+            python3.11 -m pip install --no-deps python-xlib==0.33 defusedxml==0.7.1
 
             # The backend connects to a display at import time, so the server
             # has to be up first. 1280x1024 because the verification drives the

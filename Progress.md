@@ -27,7 +27,7 @@
 | `utils/accessibility/backends/windows_backend.py` | 915 | 已拆出 `windows_query.py`（170）與 `windows_state.py`（98）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
-`utils/mcp_server/tools/_factories.py`（8,968,MCP 工具註冊表）、
+`utils/mcp_server/tools/_factories.py`（8,972,MCP 工具註冊表）、
 `utils/executor/action_executor.py`（8,125,`AC_*` 分派表）、
 `gui/script_builder/command_schema.py`（5,051,每個 `AC_*` 的參數 schema）、
 `je_auto_control/__init__.py`（1,970,門面 re-export）、
