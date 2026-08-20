@@ -90,15 +90,17 @@ def test_the_lazy_modules_still_work_when_the_wheels_are_there():
     assert stats.dominant_rgb == (10, 20, 30)
 
 
-def test_importing_the_facade_writes_nothing_to_the_users_home():
+def test_importing_the_facade_writes_no_state_of_its_own():
     """Importing must not create files, only make the names available.
 
     `default_history_store` used to open its SQLite database in its
     constructor, and that constructor runs while the facade is importing — so
     `import je_auto_control` created `~/.je_auto_control/run_history.sqlite`
-    whether or not the caller ever recorded a run. Any module-level singleton
-    that opens a file puts that back, which is why this reads the whole home
-    directory rather than naming that one path.
+    whether or not the caller ever recorded a run. Every store, key file and
+    cache this package owns lives under that one directory, so its absence is
+    the whole property; the rest of the home directory is left out because a
+    third-party import writing its own cache there would be someone else's
+    business, and a red test for it would be noise.
     """
     with tempfile.TemporaryDirectory(prefix="ac-home-") as raw_home:
         home = pathlib.Path(raw_home)
@@ -112,7 +114,9 @@ def test_importing_the_facade_writes_nothing_to_the_users_home():
             capture_output=True, text=True, timeout=180, check=False, env=env)
         assert result.returncode == 0, result.stderr
 
-        created = sorted(p.relative_to(home).as_posix() for p in home.rglob("*"))
-        assert not created, (
-            "importing je_auto_control created these under the user's home: "
-            f"{created}")
+        state_dir = home / ".je_auto_control"
+        created = sorted(path.relative_to(home).as_posix()
+                         for path in state_dir.rglob("*"))
+        assert not state_dir.exists(), (
+            "importing je_auto_control created its state directory, "
+            f"holding: {created}")
