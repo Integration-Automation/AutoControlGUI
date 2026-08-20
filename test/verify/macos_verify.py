@@ -61,7 +61,13 @@ EXPECTED: Dict[str, Any] = {
     "mouse-move": True,
     "keyboard-post": True,
     "accessibility-tree": True,
-    "recorder-absent": True,
+    # The one row here that a CI run measured rather than a local one: there
+    # is no Mac in the loop where this is written. It is asserted True from
+    # the same grant the rows above it were measured to have — an event tap
+    # needs exactly the Accessibility permission `keyboard-post` already
+    # proved is granted. If that reasoning is wrong the job says so, names
+    # this probe, and prints how many events the tap actually saw.
+    "recorder": True,
     # True means "the code answered", not "the runner had windows". Measured:
     # Quartz reports 5 on-screen windows on a macos-14 runner and *none* of
     # them is at the application layer — they are menu bar and system UI. So
@@ -71,6 +77,10 @@ EXPECTED: Dict[str, Any] = {
 
 #: How long the window server is given to reflect a posted modifier.
 KEY_STATE_TIMEOUT = 3.0
+
+#: How long the recorder's tap thread is given to see the posted events. Its
+#: run loop advances in slices, so one slice is not enough to rely on.
+RECORDER_SETTLE_SECONDS = 1.0
 
 _results: List[Tuple[str, bool, str]] = []
 
@@ -222,17 +232,48 @@ def probe_accessibility() -> Outcome:
 
 
 def probe_recorder() -> Outcome:
-    """macOS ships no recorder, and must say so rather than look broken.
+    """Recording needs Accessibility, a live event tap, and real events in it.
 
-    ``osx/record/osx_record.py`` exists, but wiring it up would put an
-    ``NSApplication`` and a blocking run loop into import of the platform
-    wrapper, so ``recorder`` is None on purpose. This pins that it is a
-    deliberate absence and not something that quietly stopped working.
+    macOS shipped without a recorder for as long as the code did exist: the
+    old listener built an ``NSApplication`` at import and stopped recording
+    with ``AppHelper.runEventLoop()``, so wiring it up would have put both on
+    the path of ``import je_auto_control``. It now captures through a
+    listen-only ``CGEventTap`` on its own thread, and this is where that gets
+    exercised against a real window server rather than a fake.
+
+    Three things have to hold together and only a Mac can answer any of them:
+    the tap can be created at all (that is the Accessibility grant), events
+    posted into the session reach it, and what comes back out carries the
+    coordinates and the release — not just the press.
     """
+    import je_auto_control as ac
     from je_auto_control.wrapper import platform_wrapper
 
-    return Outcome(platform_wrapper.recorder is None,
-                   f"recorder is {platform_wrapper.recorder!r}")
+    if platform_wrapper.recorder is None:
+        return Outcome(False, "no recorder is selected on this platform")
+
+    target = (321, 123)
+    ac.record()
+    try:
+        # Posted through the public API, so this exercises the same path a
+        # user's session does rather than a private Quartz call.
+        ac.set_mouse_position(*target)
+        ac.click_mouse("mouse_left", *target)
+        ac.press_keyboard_key("a")
+        ac.release_keyboard_key("a")
+        # The tap thread runs the loop in slices; give it more than one.
+        time.sleep(RECORDER_SETTLE_SECONDS)
+    finally:
+        events = ac.stop_record_timeline()
+
+    operations = [event.get("op") for event in events]
+    clicks = [event for event in events if event.get("op") == "mouse_down"]
+    landed = [(event.get("x"), event.get("y")) for event in clicks]
+    return Outcome(
+        "mouse_down" in operations and "mouse_up" in operations
+        and "key_down" in operations and target in landed,
+        f"{len(events)} event(s): {operations}; clicks landed at {landed}, "
+        f"posted {target}")
 
 
 def probe_window_management() -> Outcome:
@@ -275,7 +316,7 @@ PROBES: List[Tuple[str, Callable[[], Outcome]]] = [
     ("mouse-move", probe_mouse_move),
     ("keyboard-post", probe_keyboard),
     ("accessibility-tree", probe_accessibility),
-    ("recorder-absent", probe_recorder),
+    ("recorder", probe_recorder),
     ("window-management", probe_window_management),
 ]
 

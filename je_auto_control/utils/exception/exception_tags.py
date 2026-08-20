@@ -6,7 +6,9 @@ je_auto_control_critical_exit_error_message: str = "Auto-control critical exit e
 linux_import_error_message: str = "Should only be loaded on Linux"
 osx_import_error_message: str = "Should only be loaded on macOS"
 windows_import_error_message: str = "Should only be loaded on Windows"
-macos_record_error_message: str = "Cannot use recorder on macOS"
+macos_record_error_message: str = (
+    "Cannot record on macOS without Accessibility permission "
+    "(System Settings -> Privacy & Security -> Accessibility)")
 
 # keyboard tags
 keyboard_error_message: str = "Auto-control keyboard error"

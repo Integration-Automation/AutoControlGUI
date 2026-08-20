@@ -239,11 +239,16 @@ RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
 | Platform | Backend | Input | Screen capture | Recording | Window management |
 |---|---|:---:|:---:|:---:|:---:|
 | Windows 10 / 11 | Win32 ctypes (+ optional Interception driver) | ✅ | ✅ | ✅ | ✅ |
-| macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ❌ | ❌ |
-| Linux X11 | python-Xlib (+ optional `uinput`) | ✅ | ✅ | ✅ | ❌ |
+| macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ✅¹ | ✅ |
+| Linux X11 | python-Xlib (+ optional `uinput`) | ✅ | ✅ | ✅ | ✅ |
 | Linux Wayland | libei via the desktop portal, or ydotool / wtype + a capture tool | ✅ | ✅ | ❌ | ❌ |
 | Android | adb + uiautomator2 | ✅ | ✅ | — | — |
 | iOS | WebDriverAgent / facebook-wda | ✅ | ✅ | — | — |
+
+¹ macOS recording captures through a Quartz event tap and needs
+**Accessibility** permission (System Settings → Privacy & Security →
+Accessibility). Without it recording raises and names the permission
+rather than returning an empty session.
 
 Wayland input falls back to the `ydotool` CLI wherever libei is not
 reachable, and that fallback needs **ydotool 1.0 or newer**. Every argument

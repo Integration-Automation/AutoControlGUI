@@ -10,6 +10,22 @@ only when documented here with a migration path.
 
 ### Added
 
+- **The macOS recorder works.** `record()`, `stop_record()`,
+  `stop_record_timeline()`, the `AC_record*` commands, the `ac_record_*` MCP
+  tools and `je_auto_control record` all run on macOS now; they used to refuse
+  outright with "Cannot use recorder on macOS". Capture goes through a
+  listen-only Quartz `CGEventTap` on its own thread
+  (`je_auto_control.osx.listener.osx_listener.OSXInputTap`), so it records
+  presses, releases, the wheel and per-event timing, exactly as the Windows
+  hook does. Requires Accessibility permission; without it the tap raises
+  `AutoControlRecordException` naming the permission — where the facade's
+  `record()` logs it, as it does every other backend's start failure — rather
+  than starting a session that silently records nothing.
+- `je_auto_control.utils.input_macro.recorder_base` — the platform-neutral
+  half of recording: `timeline()`, `legacy_action_queue()` and the
+  `InputRecorder` base the Windows and macOS recorders now share.
+  `timeline` keeps working when imported from
+  `je_auto_control.windows.record.win32_input_hook`, where it used to live.
 - Cross-platform window management. The 23 `AC_*` window commands and their
   MCP tools now work on macOS and Linux/X11 as well as Windows, through a
   backend seam (`je_auto_control.wrapper.window_backends`). Wayland remains
@@ -129,6 +145,10 @@ only when documented here with a migration path.
 
 ### Changed
 
+- **`macos_record_error_message` now names a permission, not a platform.** It
+  read "Cannot use recorder on macOS", which described a limitation that no
+  longer exists; it now names the Accessibility grant that recording actually
+  needs, and is raised from the event tap rather than from the wrapper.
 - **The `xdg-desktop-portal` capture tier no longer needs `gdbus` installed.**
   It speaks D-Bus directly, so `linux_wayland.portal.is_available()` now
   reports whether a session bus address is set rather than whether the `gdbus`
@@ -266,6 +286,26 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **A recorded timeline replayed nothing.** `replay_timeline`'s dispatch table
+  held the `run_sequence` DSL's vocabulary (`press` / `click` / `key`) and the
+  recorders emit their own (`key_down` / `mouse_up` / `scroll`), and the two
+  were disjoint — so `stop_record_timeline()` fed to `replay_timeline()`, the
+  pipeline both the docstrings and the `ac_record_stop_timeline` tool
+  prescribe, matched no handler, replayed an empty session, and still returned
+  every event as played. The recorder ops dispatch now, and the wheel reads
+  `delta` as well as `value` (reading only `value` fell back to the default of
+  one notch, so a three-notch scroll down replayed as one notch the other
+  way). Affects every platform, not only macOS.
+- macOS: recorded mouse coordinates were mirrored vertically. The listener
+  read `NSEvent.mouseLocation()`, whose origin is the bottom-left of the
+  display, while every replay posts into the top-left space `osx_mouse` uses —
+  so a click recorded near the top of the screen replayed near the bottom. It
+  now reads `CGEventGetLocation`, which is already in the space the replay
+  posts into.
+- macOS: modifier keys were not recorded at all. macOS sends no key-down for
+  Shift, Control, Option or Command, only a `flagsChanged` event carrying the
+  new flag set, so a recording could not say a modifier was held across the
+  actions that followed. They are reconstructed from the flags now.
 - macOS: `write()` typed a space instead of a backspace, because `"\b"` had
   no route in the macOS key table and fell through to the space fallback.
 - macOS: USB enumeration returned `apple_vendor_id` in `vendor_id`, a field

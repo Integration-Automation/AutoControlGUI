@@ -42,6 +42,70 @@ exactly, and the AX walk returns real elements. That was measured first and
 asserted second, and the probe still refuses to pass while its expectations
 table is empty.
 
+### The macOS Recorder Was Written, Unreachable, and Wrong
+
+`OSXRecorder` had been a complete implementation for as long as
+`wrapper/_platform_osx.py` had said `recorder = None`, and that was not an
+oversight. The listener called `NSApplication.sharedApplication()` **at import
+time**, and stopping a recording meant `AppHelper.runEventLoop()` — a loop
+that never returns to its caller. Wiring it up would have put both on the path
+of `import je_auto_control`, which is a regression, not a fix. So `record()`,
+`stop_record()` and `je_auto_control record` all refused on macOS with
+"Cannot use recorder on macOS", and the capability matrix said `unavailable`.
+
+**The premise was wrong: a `CGEventTap` needs a run loop, not an
+application.** Create the tap on a dedicated thread, add its source to *that*
+thread's run loop, and pump the loop in short `CFRunLoopRunInMode` slices so a
+stop flag is honoured between them. Nothing touches AppKit, nothing runs at
+import, and `record()` returns immediately. The macOS hotkey backend had been
+driving a tap exactly this way in the same tree the whole time.
+
+The tap is **listen-only**, which is load-bearing rather than a detail: a
+recorder that consumed events would swallow the very input it is recording, so
+the user's clicks would stop working the moment recording started.
+
+Two defects were sitting in that code, and only a Mac could show either:
+
+- **Recorded clicks were mirrored vertically.** Coordinates came from
+  `NSEvent.mouseLocation()`, whose origin is the **bottom-left** of the
+  display, while every replay posts into the top-left space `osx_mouse` uses.
+  A click recorded near the top of the screen replayed near the bottom, with
+  no error anywhere — the same silent shape as `write("\b")` typing a space.
+  It reads `CGEventGetLocation` now, which is already the replay's space.
+- **Modifiers were not recorded at all.** macOS sends no key-down for Shift,
+  Control, Option or Command; it sends one `flagsChanged` event carrying the
+  new flag set. A recording therefore could not say a modifier was held across
+  the actions that followed — which is one of the two reasons the timeline
+  exists. They are reconstructed from the flag bits now.
+
+**The half that is not platform-specific stopped being copied.** Everything
+after the capture — the down-events-only queue the executor is handed, the
+`delta_ms` timeline a replay consumes, the mouse-only and keyboard-only
+filters — is one implementation in
+`utils/input_macro/recorder_base.py`, and both backends subclass it. A second
+hand-written copy of that shaping would have diverged silently, and the way it
+would surface is a recording made on one OS replaying wrongly on the other.
+
+**And the recording had nowhere to go.** Verifying the new backend end to end
+turned up a defect that was never macOS-specific: `replay_timeline`'s dispatch
+table held the `run_sequence` DSL's vocabulary — `press`, `click`, `key` —
+while every recorder emits its own — `key_down`, `mouse_up`, `scroll`. The two
+sets were **disjoint**. So `stop_record_timeline()` handed to
+`replay_timeline()`, which is the pipeline the docstrings and the
+`ac_record_stop_timeline` tool description both prescribe, matched no handler
+at all: it replayed an empty session and returned the full event count as
+played. The one op that did match, `scroll`, read a key the recorder does not
+write, so it fell back to a single notch in the default direction. Both are
+fixed, on every platform.
+
+**It is verified on a real window server, not against a fake.** The
+`macos-capabilities` job posts a move, a click and a keypress through the
+public API while recording, and asserts they come back out of the tap with the
+release and with the coordinates they were posted at. Decoding is unit-tested
+separately against genuine `CGEventCreate*` events, which needs no
+Accessibility grant — so the parts that can be tested without a permission
+are, and the one part that cannot is where the permission is measured.
+
 ### Window Management Is No Longer Windows-Only
 
 It was: the facade branched on `sys.platform` and raised everywhere else,

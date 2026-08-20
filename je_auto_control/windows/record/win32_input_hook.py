@@ -35,6 +35,12 @@ from je_auto_control.utils.exception.exception_tags import (
 from je_auto_control.utils.exception.exceptions import (
     AutoControlException, AutoControlRecordException,
 )
+# Re-exported: the event cap and the timeline shaping are platform-neutral and
+# shared with the macOS tap, but this is where callers have always imported
+# them from.
+from je_auto_control.utils.input_macro.recorder_base import (  # noqa: F401
+    MAX_EVENTS, timeline,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 if sys.platform not in ["win32", "cygwin", "msys"]:
@@ -54,10 +60,6 @@ _MOUSE_BUTTONS = {
     0x0204: ("mouse_down", "right"), 0x0205: ("mouse_up", "right"),
     0x0207: ("mouse_down", "middle"), 0x0208: ("mouse_up", "middle"),
 }
-
-# A hook that is left installed keeps growing this list forever. Recording is
-# bounded so a forgotten session cannot consume the process.
-MAX_EVENTS = 20000
 
 
 class _KBDLLHOOKSTRUCT(ctypes.Structure):
@@ -203,21 +205,3 @@ class Win32InputHook:
             raw = ctypes.c_short((int(data.mouseData) >> 16) & 0xFFFF).value
             self._put({"op": "scroll", "delta": raw // _WHEEL_NOTCH,
                        "x": int(data.pt.x), "y": int(data.pt.y)})
-
-
-def timeline(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Convert raw events to ``delta_ms`` form for ``replay_timeline``.
-
-    The first event has no gap before it; every later one carries the real pause
-    that preceded it, which is what makes a replay track the original pace.
-    """
-    out: List[Dict[str, Any]] = []
-    previous: Optional[float] = None
-    for event in events:
-        moment = float(event.get("time", 0.0))
-        item = {key: value for key, value in event.items() if key != "time"}
-        item["delta_ms"] = 0 if previous is None else max(
-            0, int((moment - previous) * 1000))
-        out.append(item)
-        previous = moment
-    return out

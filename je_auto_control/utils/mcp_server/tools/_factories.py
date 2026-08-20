@@ -560,7 +560,8 @@ def recording_tools() -> List[MCPTool]:
             name="ac_record_start",
             description=("Start recording mouse and keyboard events in the "
                          "background. Call ac_record_stop to retrieve the "
-                         "captured action list. Not supported on macOS."),
+                         "captured action list. On macOS this needs "
+                         "Accessibility permission."),
             input_schema=schema({}),
             handler=h.record_start,
             annotations=SIDE_EFFECT_ONLY,

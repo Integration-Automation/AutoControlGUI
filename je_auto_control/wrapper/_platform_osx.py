@@ -37,6 +37,7 @@ from je_auto_control.osx.core.utils.osx_vk import (
 )
 from je_auto_control.osx.keyboard import osx_keyboard, osx_keyboard_check
 from je_auto_control.osx.mouse import osx_mouse
+from je_auto_control.osx.record.osx_record import osx_recorder
 from je_auto_control.osx.screen import osx_screen
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -149,7 +150,7 @@ keyboard = osx_keyboard
 keyboard_check = osx_keyboard_check
 mouse = osx_mouse
 screen = osx_screen
-recorder = None
+recorder = osx_recorder
 
-if None in [keyboard_keys_table, mouse_keys_table, keyboard_check, keyboard, mouse, screen]:
+if None in [keyboard_keys_table, mouse_keys_table, keyboard_check, keyboard, mouse, screen, recorder]:
     raise AutoControlException("Can't init auto control")

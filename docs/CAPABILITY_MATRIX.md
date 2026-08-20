@@ -11,7 +11,7 @@ without a compatibility window.
 | Image and anchor locators | beta | CI | CI | implementation | implementation |
 | Accessibility locator | beta | CI | CI/AT-SPI | CI/AT-SPI | CI (tree read) |
 | Window management | beta | CI | CI/openbox | unavailable | CI (listing) |
-| Recorder | beta | CI | implementation | unavailable | unavailable |
+| Recorder | beta | CI | implementation | unavailable | CI |
 | Reports, trace, failure bundle | stable | CI | CI | CI | platform-neutral |
 | REST, MCP, scheduler | beta | CI | CI | CI | platform-neutral |
 | Remote desktop / WebRTC | beta | tests | tests | tests | tests |
@@ -64,6 +64,32 @@ output at x=-1280 — the layout of any desktop with a monitor left of the
 primary one, where the compositor's plane starts at a negative coordinate and
 a size, a crop or a located hit that assumes `(0, 0)` is wrong by the width of
 that monitor.
+
+The recorder row said `unavailable` for macOS while the code for one sat in
+the tree unused, and the reason was real rather than an oversight: the old
+listener built an `NSApplication` at import time and stopped recording with
+`AppHelper.runEventLoop()`, a loop that never returns to its caller. Wiring
+that up would have put both on the path of `import je_auto_control`, so
+`wrapper/_platform_osx.py` set `recorder = None` instead.
+
+Neither was necessary. A `CGEventTap` needs a **run loop**, not an
+application: the tap is created on a dedicated thread, its source is added to
+that thread's run loop, and the loop is pumped in short `CFRunLoopRunInMode`
+slices so a stop flag is honoured between them — the same shape the macOS
+hotkey backend already used. The tap is listen-only, because a recorder that
+consumed events would swallow the input it is recording. This row says `CI`
+because the `macos-capabilities` job records a real session on a real window
+server: it posts a move, a click and a keypress through the public API and
+asserts they come back out of the tap with the release and the coordinates
+they were posted at.
+
+Two defects were in that code and only a Mac could show them. Coordinates came
+from `NSEvent.mouseLocation()`, whose origin is the **bottom-left** of the
+display, while every replay posts into the top-left space `osx_mouse` uses —
+so a click recorded near the top of the screen replayed near the bottom. And
+modifiers were not recorded at all: macOS sends no key-down for Shift,
+Control, Option or Command, only a `flagsChanged` event carrying the new flag
+set, so a recording could not say a modifier was held across what followed.
 
 The table has four columns because those are the four desktops with their own
 backend, not because they are the only supported systems. Two more axes now

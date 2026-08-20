@@ -229,11 +229,15 @@ RemoteDesktopHost(token="tok", ip_allowlist=["10.0.0.0/8", "192.168.1.100"])
 | 平台 | 後端 | 輸入 | 螢幕擷取 | 錄製 | 視窗管理 |
 |---|---|:---:|:---:|:---:|:---:|
 | Windows 10 / 11 | Win32 ctypes（可選 Interception 驅動） | ✅ | ✅ | ✅ | ✅ |
-| macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ❌ | ❌ |
-| Linux X11 | python-Xlib（可選 `uinput`） | ✅ | ✅ | ✅ | ❌ |
+| macOS 10.15+ | pyobjc / Quartz | ✅ | ✅ | ✅¹ | ✅ |
+| Linux X11 | python-Xlib（可選 `uinput`） | ✅ | ✅ | ✅ | ✅ |
 | Linux Wayland | 經桌面 portal 的 libei，或 ydotool／wtype ＋ 擷取工具 | ✅ | ✅ | ❌ | ❌ |
 | Android | adb + uiautomator2 | ✅ | ✅ | — | — |
 | iOS | WebDriverAgent / facebook-wda | ✅ | ✅ | — | — |
+
+¹ macOS 的錄製走 Quartz event tap，需要**輔助使用**權限
+（系統設定 → 隱私權與安全性 → 輔助使用）。沒有授權時會直接拋出並指名
+缺的是哪個權限，而不是安靜地錄到一個空的 session。
 
 Wayland 的輸入在 libei 走不通時會退回 `ydotool` CLI，而這條退路需要
 **ydotool 1.0 以上**。AutoControl 送的每一個參數都是那一版才有的；0.1.x

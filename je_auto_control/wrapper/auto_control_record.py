@@ -1,9 +1,16 @@
+"""Start and stop input recording, and save what was recorded.
+
+macOS used to be refused here outright: the recorder existed but wiring it up
+would have put an ``NSApplication`` and a blocking run loop into the import of
+the platform wrapper. It no longer does — capture runs on a Quartz event tap
+on its own thread — so the refusal is gone and every platform with a recorder
+goes down the same path. A macOS session without Accessibility permission now
+fails where that is actually true, in the tap, naming the permission.
+"""
 import os
-import sys
 import threading
 from typing import Optional
 
-from je_auto_control.utils.exception.exception_tags import macos_record_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.exception.exceptions import AutoControlJsonActionException
 from je_auto_control.utils.json.json_file import write_action_json
@@ -18,8 +25,6 @@ def record() -> None:
     """
     autocontrol_logger.info("record")
     try:
-        if sys.platform == "darwin":
-            raise AutoControlException(macos_record_error_message)
         record_action_to_list("record", None)
         recorder.record()
     except (OSError, RuntimeError, AttributeError, TypeError, ValueError, AutoControlException, AutoControlJsonActionException) as error:
@@ -33,8 +38,6 @@ def stop_record() -> list:
     """
     autocontrol_logger.info("stop_record")
     try:
-        if sys.platform == "darwin":
-            raise AutoControlException(macos_record_error_message)
         action_queue = recorder.stop_record()
         if action_queue is None:
             raise AutoControlJsonActionException
@@ -66,8 +69,6 @@ def stop_record_timeline() -> list:
     """
     autocontrol_logger.info("stop_record_timeline")
     try:
-        if sys.platform == "darwin":
-            raise AutoControlException(macos_record_error_message)
         collect = getattr(recorder, "stop_record_timeline", None)
         if collect is None:
             autocontrol_logger.error(
