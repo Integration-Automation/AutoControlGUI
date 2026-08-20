@@ -2,6 +2,38 @@
 
 ## What's new (2026-08-20)
 
+### Three Tests That Had Been Skipped Since They Were Written
+
+`test_r3_gui_thread_marshal.py` carried three `@pytest.mark.skip`s whose own
+reason said what they needed: *"needs subprocess isolation (see
+test_actions_menu_gui) … skip until then."* They covered real wiring — that a
+file received on a WebRTC worker thread reaches the GUI thread through a
+queued signal rather than a thread-affine `QTimer.singleShot`, and that the
+admin console's thumbnail poll deletes its `QThread` each tick instead of
+leaking one per interval.
+
+Skipping them was the right call at the time: building the WebRTC panel or the
+admin console and then tearing a worker `QThread` down aborts the *shared*
+pytest process under offscreen Qt. Because `deleteLater` is a no-op until an
+event loop runs, the abort does not even land in the test that caused it — it
+detonates inside some later, unrelated file, with no traceback.
+
+**They now run, in their own process.** One probe performs all three checks,
+writes a JSON verdict per check, and `os._exit(0)`s without teardown — the same
+shape `test_actions_menu_gui` has used for the full tab set. Each verdict is
+`ok`, `failed: …` or `unavailable: …`, so a machine without the `[webrtc]`
+extra (CI's `pytest-headless`, among others) reports a skip rather than a
+failure, while a machine that has it actually checks the wiring.
+
+The checks have teeth, which was verified rather than assumed: deleting the
+one line `thread.finished.connect(thread.deleteLater)` from
+`admin_console_tab.py` turns the third verdict into `failed: the QThread
+outlived finish`, and leaves the other two green.
+
+The headless suite now runs end to end with no `--ignore` flags — 4,815
+passing, and the only remaining skips are optional-dependency and
+platform gates. No "skip until then" is left in it.
+
 ### Windows arm64 Was Never a Code Problem
 
 The entry for this said `BLOCKED`, and that was half right. Two dependencies

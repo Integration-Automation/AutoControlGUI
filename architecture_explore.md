@@ -6,7 +6,7 @@
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-08-20　**版本**：`pyproject.toml` version `0.0.220`　**分支**：`feat/windows-arm64-install`
+> **掃描時間**：2026-08-21　**版本**：`pyproject.toml` version `0.0.220`　**分支**：`feat/qt-thread-marshal-isolation`
 
 ---
 

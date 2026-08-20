@@ -219,22 +219,6 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 
 ---
 
-## 三個 Qt thread-marshal 測試永久跳過中
-
-`TODO` — 需要子行程隔離，做法已知
-
-`test/unit_test/headless/test_r3_gui_thread_marshal.py` 裡三個測試被無條件 skip：
-`test_panel_signals_expose_file_received`、`test_webrtc_received_file_marshaled_to_gui`、
-`test_thumbnail_poll_thread_is_reaped`。skip 理由自己寫著「needs subprocess
-isolation (see test_actions_menu_gui) … skip until then」——那句「until then」就是這條。
-
-跟 `CLAUDE.md` §Testing 記的 0xC0000409 `__fastfail` 是同一個家族：
-worker→GUI 的 teardown 在共用的 pytest 行程裡把整個監獸帶走。
-`test_actions_menu_gui.py` 已經示範過解法（把建 widget 的部分丟進子行程），
-這三個只是還沒改過去。沒改之前，這三條路徑沒有任何回歸保護。
-
----
-
 ## 兩個講好要爬、還沒爬的門檻
 
 `TODO` — 兩者都寫在 `pyproject.toml` 的註解裡，但不在任何待辦清單上
