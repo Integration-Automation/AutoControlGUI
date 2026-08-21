@@ -140,6 +140,36 @@ band — to callers that unpack three ints, though `grab_image` has always
 converted to RGB first. **141 modules left, 876 of 1,017 files inside the
 contract.**
 
+### The Three Backends That Only Needed Four Sentences
+
+`linux_with_x11` (3 modules) and `osx` (1) went the same day, and between them
+they held five errors — but one was a live bug of a shape this branch has now
+fixed several times.
+
+`KeypressHandler.record_queue` was assigned `None` in `__init__` with no
+annotation, so its *type* was `None`: `record()` could not legally fill it, and
+`stop_record()` promised a `Queue` while able to hand back the `None` it was
+constructed with. Stopping a recording that was never started therefore reached
+`x11_linux_record`, which reads `.queue` off the result — `AttributeError`, one
+frame away from where the mistake was. It now returns an empty queue, which is
+what "nothing was recorded" looks like and what `stop_record()` on the public
+API already returns for the same case.
+
+`osx_keyboard.press_key` takes `int | str` and sends a string to
+`special_key`. Testing `keycode in special_key_table` narrows the string case
+*into* that branch but leaves `int | str` outside it — so a name the table does
+not know fell through to `normal_key` and reached Quartz as a keycode. A string
+only ever names a special key here, so that is now what the test asks, and an
+unknown name gets `special_key`'s "Unknown special key" rather than a pyobjc
+type error three frames down.
+
+The last one is a checker fact rather than a code fact: `uinput/_device` opens
+`/dev/uinput` with the POSIX-only `O_NONBLOCK`, and the contract checks this
+package against a Windows target too, where the `os` stub does not declare it.
+The flag moved into a `sys.platform` branch mypy can prune, which states the
+Linux-only-ness rather than silencing the question. **137 modules left, 880 of
+1,017 files inside the contract.**
+
 ## What's new (2026-08-20)
 
 ### Three Tests That Had Been Skipped Since They Were Written

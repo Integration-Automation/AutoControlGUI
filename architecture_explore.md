@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,031 |
-| 程式碼總行數 | 140,422 |
+| 程式碼總行數 | 140,451 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -201,7 +201,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `interception/keyboard.py` | 71 | 經 Interception 驅動的鍵盤輸入（繞過部分反自動化偵測）。 |
 | `interception/mouse.py` | 161 | 經 Interception 驅動的滑鼠輸入。 |
 
-#### macOS（`osx/`，17 檔／907 行）
+#### macOS（`osx/`，17 檔／915 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -214,7 +214,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `screen/osx_screen.py` | 143 | 螢幕擷取與尺寸（含 Retina 座標處理）。 |
 | `pid/pid_control.py` | 64 | 以 PID 操作應用程式。 |
 
-#### Linux X11（`linux_with_x11/`，19 檔／1,215 行）
+#### Linux X11（`linux_with_x11/`，19 檔／1,236 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1035,15 +1035,15 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `windows/` | 23 | 1,900 |
 | `utils/rest_api/` | 8 | 1,739 |
 | `utils/agent/` | 8 | 1,250 |
-| `linux_with_x11/` | 19 | 1,215 |
+| `linux_with_x11/` | 19 | 1,236 |
 | `linux_wayland/` | 17 | 2,870 |
 | `utils/triggers/` | 4 | 1,146 |
 | `utils/ocr/` | 9 | 1,112 |
 | `utils/usbip/` | 5 | 920 |
 | `utils/assertion/` | 3 | 863 |
-| `osx/` | 17 | 907 |
+| `osx/` | 17 | 915 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 727 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,454 |
-| **總計** | **1,025** | **140,357** |
+| **總計** | **1,025** | **140,386** |
 

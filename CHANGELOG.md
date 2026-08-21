@@ -382,6 +382,13 @@ only when documented here with a migration path.
   unpacking through `_scroll_to` and now skips the pre-move instead, which is
   the graceful degradation its own comment already documented for backends
   that cannot report the cursor.
+- **Stopping an X11 recording that was never started raised instead of
+  returning nothing.** The X11 listener's `stop_record()` handed back the
+  `None` its queue attribute was constructed with, and the recorder one frame
+  up reads `.queue` off that result, so `stop_record()` without a preceding
+  `record()` produced an `AttributeError` that the wrapper caught and logged
+  as a failure. It now returns an empty queue, so the public `stop_record()`
+  returns the empty list it documents.
 - **`check_key_is_press()` passed `None` to the backend for an unknown key
   name.** A name the virtual-key table has no entry for became `None` and was
   handed to the platform backend anyway: a `TypeError` on Windows and a silent

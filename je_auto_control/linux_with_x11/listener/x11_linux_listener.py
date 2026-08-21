@@ -1,5 +1,6 @@
 from queue import Queue
 from threading import Thread
+from typing import Optional
 
 from je_auto_control.utils.exception.exception_tags import linux_import_error_message, listener_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -41,7 +42,7 @@ class KeypressHandler:
         self.daemon = default_daemon
         self.still_listener = True
         self.record_flag = False
-        self.record_queue = None
+        self.record_queue: Optional[Queue] = None
         self.event_keycode = 0
         self.event_position = (0, 0)
 
@@ -90,8 +91,17 @@ class KeypressHandler:
         """
         停止記錄事件並回傳 Queue
         Stop recording and return the recorded queue
+
+        沒有呼叫過 ``record()`` 就停止時回傳空 Queue：原本回的是 ``None``，
+        而簽章承諾的是 Queue，於是 ``x11_linux_record`` 在讀它的 ``.queue``
+        時拋 AttributeError。
+        Returns an empty queue when ``record()`` was never called: it used to
+        hand back the ``None`` it was constructed with, and the caller one
+        frame up reads ``.queue`` off it.
         """
         self.record_flag = False
+        if self.record_queue is None:
+            return Queue()
         return self.record_queue
 
 

@@ -240,11 +240,11 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
 而不是齊頭式地補測試。
 
-### mypy：整包把關，141 個模組還沒過
+### mypy：整包把關，137 個模組還沒過
 
 範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
 （`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 876 個已經過關。
+新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 880 個已經過關。
 
 `wrapper` 那一群（6 個模組）在 2026-08-21 清掉了，做法見 [WHATS_NEW.md](WHATS_NEW.md)：
 平台縫的八個匯出名稱先宣告型別、再讓分支去綁定，其中三個用
@@ -260,7 +260,12 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 `screen.get_pixel` 把 Pillow 那個「每種 mode 的答案聯集」收斂成它自己承諾的三元組。
 做法見 [WHATS_NEW.md](WHATS_NEW.md)。
 
-剩下 141 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
+`linux_with_x11`（3）與 `osx`（1）同日清掉：X11 listener 的 `record_queue`
+從「型別是 None」變成 `Optional[Queue]`（`stop_record()` 因此不再回一個
+簽章不承認的 `None`），`uinput/_device` 的 POSIX 專屬 `O_NONBLOCK` 收進一個
+mypy 剪得掉的 `sys.platform` 分支，`osx_keyboard` 的字串 keycode 一律當特殊鍵名。
+
+剩下 137 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
 `arg-type`／`union-attr`／`assignment`，成群集中在
 `utils/remote_desktop`（13）、`gui`（11）、
 `utils/accessibility/backends`／`utils/mcp_server`／`utils/usb/passthrough`（各 4）、
@@ -290,9 +295,10 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`is_windows()`／`is_x11_unix()`），所以呼叫端這一側不必再改。
 
 真正的成本在後端那一側：四個平台的 `keyboard`／`mouse` 模組本身都還在豁免清單上，
-Protocol 一旦標上去，它們的內部型別錯誤就會一起浮出來。`linux_wayland` 已經清完，
-**所以這條剩下的前置是 `windows/`（9 個模組）、`linux_with_x11/`（3）與 `osx/`（1）**，
-清完才輪到它。
+Protocol 一旦標上去，它們的內部型別錯誤就會一起浮出來。`linux_wayland`、
+`linux_with_x11`、`osx` 都已經清完，**剩下的前置只有 `windows/`（9 個模組）**——
+其中 `win32_ctype_input`、`win32_ctype_mouse_control`、`win32_keypress_check`
+與 `interception/` 那兩個正是 `keyboard`／`mouse` 在 Windows 上綁到的東西。
 
 有一件事別再踩：**這個閘門的判定不能隨環境浮動**。裝了 `[gui]`／`[webrtc]` 的開發機
 與乾淨的 `pip install -e .` 曾經對 38 個模組看法不同（36 個 Qt 模組只在 PySide6
