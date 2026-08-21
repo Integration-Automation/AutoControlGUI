@@ -240,11 +240,11 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
 而不是齊頭式地補測試。
 
-### mypy：整包把關，137 個模組還沒過
+### mypy：整包把關，136 個模組還沒過
 
 範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
 （`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 880 個已經過關。
+新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 881 個已經過關。
 
 `wrapper` 那一群（6 個模組）在 2026-08-21 清掉了，做法見 [WHATS_NEW.md](WHATS_NEW.md)：
 平台縫的八個匯出名稱先宣告型別、再讓分支去綁定，其中三個用
@@ -265,7 +265,16 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 簽章不承認的 `None`），`uinput/_device` 的 POSIX 專屬 `O_NONBLOCK` 收進一個
 mypy 剪得掉的 `sys.platform` 分支，`osx_keyboard` 的字串 keycode 一律當特殊鍵名。
 
-剩下 137 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
+`windows/` 這一群的**真實錯誤全部清掉了**：`window_message` 匯入一個
+`windows_window_manage` 根本沒有匯出的名字（`FindWindowW`），所以那個模組在
+Windows 上一直是 import 就炸；`win32_ctype_input` 則有一批標錯的註記
+（`_fields_: tuple` 把 ClassVar 重新宣告成 instance variable、`ctypes.POINTER`
+與 `user32.SendInput` 被當成型別用）以及一行改寫標準函式庫的
+`wintypes.ULONG_PTR = wintypes.WPARAM`——全樹沒有任何地方讀它。
+**以 `--platform win32` 檢查時，`je_auto_control/windows/` 底下已經零錯誤。**
+剩下的豁免是下面那條 `DECIDE`。
+
+剩下 136 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
 `arg-type`／`union-attr`／`assignment`，成群集中在
 `utils/remote_desktop`（13）、`gui`（11）、
 `utils/accessibility/backends`／`utils/mcp_server`／`utils/usb/passthrough`（各 4）、
@@ -296,9 +305,32 @@ mypy 剪得掉的 `sys.platform` 分支，`osx_keyboard` 的字串 keycode 一�
 
 真正的成本在後端那一側：四個平台的 `keyboard`／`mouse` 模組本身都還在豁免清單上，
 Protocol 一旦標上去，它們的內部型別錯誤就會一起浮出來。`linux_wayland`、
-`linux_with_x11`、`osx` 都已經清完，**剩下的前置只有 `windows/`（9 個模組）**——
-其中 `win32_ctype_input`、`win32_ctype_mouse_control`、`win32_keypress_check`
-與 `interception/` 那兩個正是 `keyboard`／`mouse` 在 Windows 上綁到的東西。
+`linux_with_x11`、`osx` 都已經清完，而 `windows/` 的**真實**型別錯誤也清完了
+（見上），只剩下面那條 `DECIDE` 的 ctypes 表面問題。所以前置條件實質上已經到位，
+可以開始標 Protocol；下一次動這條的人不必再等別的群集。
+
+#### `DECIDE`：Windows 後端剩下的豁免不是它們的錯
+
+`windows/` 底下還有 8 個模組留在清單上，而它們在 `--platform win32` 上**全部乾淨**。
+留在清單上的唯一原因是這個閘門會用三個目標平台各檢查一次，而 `ctypes` 的
+Win32 專屬表面（`windll`、`WinDLL`、`WINFUNCTYPE`、`WinError`、`get_last_error`）
+在 typeshed 的 linux／darwin 目標上根本沒有宣告。共 18 處，分布在 8 個檔。
+
+三條路都實測過，維護者挑一條：
+
+| 做法 | 成本 | 實測結果 |
+| --- | --- | --- |
+| **剪掉模組本體**（`if TYPE_CHECKING and sys.platform != "win32": raise`） | 每個檔 2 行 | **不能用**。mypy 一旦把模組本體判為 unreachable，`from ... import user32` 的那一端就會拿到 `Cannot determine type of "user32"` [has-type]——把 18 個錯誤換成一串新的、而且落在原本乾淨的模組上。 |
+| **一個 shim 模組**把 Win32 專屬的 ctypes 表面集中匯出，非 Windows 分支綁 POSIX 對應物 | 新檔 + 18 個呼叫點改名 | 可行，事實只寫一次；代價是為了型別去動輸入熱路徑的 `user32` handle 建立方式。 |
+| **18 個 `# type: ignore[attr-defined]`** 各附理由 | 18 行註記 | 可行，執行期零風險；代價是 18 個抑制，且同一句話重複 18 次。 |
+
+第四條是改閘門本身：讓 `typing_contract_verify.py` 只用模組自己的平台去量
+平台專屬模組（`windows/` 只用 win32、`osx/` 只用 darwin、`linux_*` 只用 linux）。
+這是三者裡最貼近事實的一條——拿 Linux 去檢查一個只跑得動在 Windows 的模組本來就沒有意義，
+而閘門的 docstring 自己寫的多目標理由是「要讀得到平台分支後面的程式碼」，不是這個。
+但它會改掉「清單上的模組＝在每個支援平台上都還沒過」這個既定語意，**所以要維護者拍板**。
+
+推薦：第四條，其次是 shim。
 
 有一件事別再踩：**這個閘門的判定不能隨環境浮動**。裝了 `[gui]`／`[webrtc]` 的開發機
 與乾淨的 `pip install -e .` 曾經對 38 個模組看法不同（36 個 Qt 模組只在 PySide6

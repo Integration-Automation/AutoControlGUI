@@ -382,6 +382,19 @@ only when documented here with a migration path.
   unpacking through `_scroll_to` and now skips the pre-move instead, which is
   the graceful degradation its own comment already documented for backends
   that cannot report the cursor.
+- **`je_auto_control.windows.message.window_message` could not be imported
+  at all.** It did `from ...windows_window_manage import FindWindowW`, and
+  that module has no such name — `FindWindowW` is a method on its private
+  `user32` handle — so importing `window_message` raised `ImportError` on
+  every Windows machine. It now calls the module's public
+  `get_one_window_hwnd`, which is also the one that declares HWND-width
+  argtypes rather than letting ctypes truncate a 64-bit handle to `c_int`.
+- **Importing the Win32 input backend no longer writes into
+  `ctypes.wintypes`.** `win32_ctype_input` set `wintypes.ULONG_PTR =
+  wintypes.WPARAM` on the standard library's own module. Nothing in this
+  package ever read it back, so the only effect the assignment could have was
+  on some other library in the same process asking `ctypes.wintypes` whether
+  it has `ULONG_PTR`.
 - **Stopping an X11 recording that was never started raised instead of
   returning nothing.** The X11 listener's `stop_record()` handed back the
   `None` its queue attribute was constructed with, and the recorder one frame

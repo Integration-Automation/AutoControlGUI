@@ -14,7 +14,7 @@
 # "Does not type-check" means on at least one of the three targets mypy can be
 # pointed at (win32, linux, darwin) — not just the one CI happens to run on.
 #
-# Measured entries: 137
+# Measured entries: 136
 
 je_auto_control.__main__
 je_auto_control.cli
@@ -148,7 +148,6 @@ je_auto_control.windows.core.utils.win32_ctype_input
 je_auto_control.windows.core.utils.win32_keypress_check
 je_auto_control.windows.interception._dll
 je_auto_control.windows.interception.mouse
-je_auto_control.windows.message.window_message
 je_auto_control.windows.mouse.win32_ctype_mouse_control
 je_auto_control.windows.record.win32_input_hook
 je_auto_control.windows.screen.win32_screen

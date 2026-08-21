@@ -12,28 +12,26 @@ from je_auto_control.windows.core.utils.win32_vk import WIN32_EventF_UNICODE, WI
 
 user32 = ctypes.WinDLL('user32', use_last_error=True)
 
-wintypes.ULONG_PTR = wintypes.WPARAM
-
 Mouse: int = 0
 Keyboard: int = 1
 Hardware: int = 2
 
 
 class MouseInput(ctypes.Structure):
-    _fields_: tuple = (("dx", wintypes.LONG),
-                       ("dy", wintypes.LONG),
-                       ("mouseData", wintypes.DWORD),
-                       ("dwFlags", wintypes.DWORD),
-                       ("time", wintypes.DWORD),
-                       ("dwExtraInfo", ctypes.c_void_p))
+    _fields_ = (("dx", wintypes.LONG),
+                ("dy", wintypes.LONG),
+                ("mouseData", wintypes.DWORD),
+                ("dwFlags", wintypes.DWORD),
+                ("time", wintypes.DWORD),
+                ("dwExtraInfo", ctypes.c_void_p))
 
 
 class KeyboardInput(ctypes.Structure):
-    _fields_: tuple = (("wVk", wintypes.WORD),
-                       ("wScan", wintypes.WORD),
-                       ("dwFlags", wintypes.DWORD),
-                       ("time", wintypes.DWORD),
-                       ("dwExtraInfo", ctypes.c_void_p))
+    _fields_ = (("wVk", wintypes.WORD),
+                ("wScan", wintypes.WORD),
+                ("dwFlags", wintypes.DWORD),
+                ("time", wintypes.DWORD),
+                ("dwExtraInfo", ctypes.c_void_p))
 
     def __init__(self, *args, **kwds):
         super(KeyboardInput, self).__init__(*args, **kwds)
@@ -42,20 +40,20 @@ class KeyboardInput(ctypes.Structure):
 
 
 class HardwareInput(ctypes.Structure):
-    _fields_: tuple = (("uMsg", wintypes.DWORD),
-                       ("wParamL", wintypes.WORD),
-                       ("wParamH", wintypes.WORD))
+    _fields_ = (("uMsg", wintypes.DWORD),
+                ("wParamL", wintypes.WORD),
+                ("wParamH", wintypes.WORD))
 
 
 class Input(ctypes.Structure):
     class INPUTUnion(ctypes.Union):
-        _fields_: tuple = (("ki", KeyboardInput),
-                           ("mi", MouseInput),
-                           ("hi", HardwareInput))
+        _fields_ = (("ki", KeyboardInput),
+                    ("mi", MouseInput),
+                    ("hi", HardwareInput))
 
-    _anonymous_: tuple = ("_input",)
-    _fields_: tuple = (("type", wintypes.DWORD),
-                       ("_input", INPUTUnion))
+    _anonymous_ = ("_input",)
+    _fields_ = (("type", wintypes.DWORD),
+                ("_input", INPUTUnion))
 
 
 def _check_count(result, func, args) -> list:
@@ -64,9 +62,12 @@ def _check_count(result, func, args) -> list:
     return args
 
 
-LPINPUT: ctypes.POINTER = ctypes.POINTER(Input)
+LPINPUT = ctypes.POINTER(Input)
 
-SendInput: user32.SendInput = user32.SendInput
+SendInput = user32.SendInput
 
-user32.SendInput.errcheck = _check_count
+# 回傳 args 原封不動是 ctypes 對 errcheck 的既定約定，而 typeshed 把這個
+# hook 標成回傳單一 _CData——任何 pass-through 的 errcheck 都滿足不了。
+# reason: returning args unchanged is ctypes' documented errcheck contract.
+user32.SendInput.errcheck = _check_count  # type: ignore[assignment]
 user32.SendInput.argtypes = (wintypes.UINT, ctypes.c_void_p, ctypes.c_int)

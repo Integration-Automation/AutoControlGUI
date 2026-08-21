@@ -170,6 +170,44 @@ The flag moved into a `sys.platform` branch mypy can prune, which states the
 Linux-only-ness rather than silencing the question. **137 modules left, 880 of
 1,017 files inside the contract.**
 
+### A Module Nobody Could Import, and a Line That Edited the Standard Library
+
+The Windows cluster turned out to hold the two most interesting findings on
+this branch, and neither is a typing nicety.
+
+`je_auto_control.windows.message.window_message` did
+`from ...windows_window_manage import FindWindowW`. That module has no such
+name — `FindWindowW` is a method on its *private* `user32` handle — so
+importing `window_message` raised `ImportError`, on every Windows machine,
+since whenever the name was moved. Nothing noticed because the only importer
+in the tree is a manual test. It now calls that module's public
+`get_one_window_hwnd`, which is also the one carrying the argtypes that keep a
+64-bit HWND from being truncated to `c_int`.
+
+`win32_ctype_input` ran `wintypes.ULONG_PTR = wintypes.WPARAM` at import — a
+write into the standard library's own module namespace. Nothing in this package
+reads `ULONG_PTR` back; measured, the name appears exactly once in the tree, on
+that line. So the only thing the assignment could do was answer for some other
+library in the same process that asked `ctypes.wintypes` whether it has
+`ULONG_PTR`. Deleted.
+
+The same file also carried annotations that were wrong rather than merely
+unhelpful: `_fields_: tuple` redeclares a ctypes `ClassVar` as an instance
+variable, and `ctypes.POINTER` and `user32.SendInput` were used as types when
+one is a function and the other a value. Dropping all three leaves exactly what
+mypy infers, which was right all along.
+
+**Every module under `je_auto_control/windows/` now type-checks on the Windows
+target.** Eight of them stay on the exemption list anyway, for a reason that is
+not about them: the gate checks the package against Linux and macOS targets
+too, where typeshed does not declare the Win32-only corner of `ctypes`
+(`windll`, `WinDLL`, `WINFUNCTYPE`, `WinError`, `get_last_error`). Three
+remedies were measured, one of them ruled out — pruning the module body makes
+every *importer* fail with `has-type` instead — and `Progress.md` carries the
+comparison as a `DECIDE`, because the cleanest of them changes what the gate
+means rather than what the code says. **136 modules left, 881 of 1,017 files
+inside the contract.**
+
 ## What's new (2026-08-20)
 
 ### Three Tests That Had Been Skipped Since They Were Written
