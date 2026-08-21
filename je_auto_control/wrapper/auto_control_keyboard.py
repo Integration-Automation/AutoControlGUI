@@ -1,3 +1,13 @@
+"""Keyboard API: key table, press / release / type, ``write``, hotkeys, state.
+
+The platform branches follow the rule written out at the top of
+``auto_control_mouse``: ask ``platform_id`` which input stack this is instead
+of listing OS names (a literal list left the BSDs outside every branch, typing
+nothing and reporting success), spell the macOS test as
+``sys.platform == "darwin"`` because it is the branch whose signature differs
+and the only form a type checker can prune, and raise on a platform that
+matches neither.
+"""
 import sys
 import warnings
 from typing import Optional, Union, Tuple
@@ -10,6 +20,7 @@ from je_auto_control.utils.exception.exceptions import (
     AutoControlCantFindKeyException, AutoControlKeyboardException
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.platform_id import is_windows, is_x11_unix
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.utils.text_unicode.text_unicode import unicode_code_units
 from je_auto_control.wrapper.platform_wrapper import keyboard, keyboard_keys_table, keyboard_check
@@ -49,10 +60,16 @@ def press_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
     autocontrol_logger.info(f"press_keyboard_key, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
     try:
         keycode = _resolve_keycode(keycode)
-        if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
-            keyboard.press_key(keycode)
-        elif sys.platform == "darwin":
+        # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
+        # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
+        # Branch spelling explained in the module docstring.
+        if sys.platform == "darwin":
             keyboard.press_key(keycode, is_shift=is_shift)
+        elif is_windows() or is_x11_unix():
+            keyboard.press_key(keycode)
+        else:
+            raise AutoControlKeyboardException(
+                f"press_keyboard_key: no backend for {sys.platform!r}")
 
         if not skip_record:
             record_action_to_list("press_key", {"keycode": keycode, "is_shift": is_shift})
@@ -74,10 +91,16 @@ def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
     autocontrol_logger.info(f"release_keyboard_key, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
     try:
         keycode = _resolve_keycode(keycode)
-        if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
-            keyboard.release_key(keycode)
-        elif sys.platform == "darwin":
+        # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
+        # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
+        # Branch spelling explained in the module docstring.
+        if sys.platform == "darwin":
             keyboard.release_key(keycode, is_shift=is_shift)
+        elif is_windows() or is_x11_unix():
+            keyboard.release_key(keycode)
+        else:
+            raise AutoControlKeyboardException(
+                f"release_keyboard_key: no backend for {sys.platform!r}")
 
         if not skip_record:
             record_action_to_list("release_key", {"keycode": keycode, "is_shift": is_shift})
@@ -122,6 +145,14 @@ def check_key_is_press(keycode: Union[int, str]) -> Optional[bool]:
     autocontrol_logger.info(f"check_key_is_press, keycode={keycode}")
     try:
         get_key_code = keycode if isinstance(keycode, int) else keyboard_keys_table.get(keycode)
+        if get_key_code is None:
+            # 表裡沒有這個鍵名。原本會把 None 送進後端，讓它自己去炸——
+            # Windows 後端會 TypeError，X11 後端則是安靜地回 False。
+            # A key name the table has no entry for used to be handed to the
+            # backend as None: a TypeError on Windows, a silent False on X11.
+            autocontrol_logger.error(
+                f"check_key_is_press: {table_cant_find_key_error_message}, keycode={keycode}")
+            return None
         record_action_to_list("check_key_is_press", {"keycode": keycode})
         return keyboard_check.check_key_is_press(keycode=get_key_code)
     except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:

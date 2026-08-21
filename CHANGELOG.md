@@ -177,6 +177,21 @@ only when documented here with a migration path.
 
 ### Changed
 
+- `je_auto_control.stop_record()` returns an empty list where it used to
+  return `None`. It has always been annotated `-> list`, but the failure path
+  fell off the end of the function, so a caller that did not write
+  `stop_record() or []` iterated over `None` and raised in its own code
+  instead. `stop_record_timeline()` already returned `[]` on the same
+  failure; the two now agree.
+- `je_auto_control.mouse_scroll()` reports its return type as
+  `Tuple[int, Union[int, str]]`. The value has not changed — X11 and Wayland
+  still hand back the backend axis code the direction name resolved to, and
+  every other platform the name itself — the signature just no longer claims
+  it is always a `str`.
+- The Windows screen backend's `size()` returns a `tuple`, not a `list`.
+  The macOS, X11 and Wayland backends all returned tuples already, and the
+  public `screen_size()` has always been annotated `Tuple[int, int]`; every
+  caller unpacks the two values, so nothing that used it needs changing.
 - The MCP HTTP transport answers `GET /mcp` differently. It used to return
   `405` with `{"error": "GET stream not supported"}` for every request; it now
   serves the session's SSE stream when the request carries
@@ -357,6 +372,22 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **A backend that could not report the cursor aborted the script instead of
+  raising what the API promises.** `press_mouse` / `release_mouse` /
+  `click_mouse` with an omitted `x` or `y` unpacked `get_mouse_position()`
+  without checking it for `None`, so a backend that answers "I don't know"
+  raised `TypeError` from the unpacking — outside the
+  `AutoControlMouseException` family every containment boundary catches. It
+  now raises `AutoControlMouseException`. `mouse_scroll` reached the same
+  unpacking through `_scroll_to` and now skips the pre-move instead, which is
+  the graceful degradation its own comment already documented for backends
+  that cannot report the cursor.
+- **`check_key_is_press()` passed `None` to the backend for an unknown key
+  name.** A name the virtual-key table has no entry for became `None` and was
+  handed to the platform backend anyway: a `TypeError` on Windows and a silent
+  `False` on X11 — that is, "no, it is not pressed" for a key that does not
+  exist. It now logs the lookup failure and returns `None`, which is the
+  documented "could not answer" value.
 - The MCP HTTP transport no longer tries to drain a request body it has
   already read. Any `4xx` decided *after* the body was parsed — the new
   unknown-session `404` and duplicate-stream `409`, and the pre-existing

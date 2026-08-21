@@ -240,18 +240,51 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
 而不是齊頭式地補測試。
 
-### mypy：整包把關，155 個模組還沒過
+### mypy：整包把關，145 個模組還沒過
 
 範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
 （`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 862 個已經過關。
+新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 872 個已經過關。
 
-剩下 155 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
+`wrapper` 那一群（6 個模組）在 2026-08-21 清掉了，做法見 [WHATS_NEW.md](WHATS_NEW.md)：
+平台縫的八個匯出名稱先宣告型別、再讓分支去綁定，其中三個用
+`wrapper/backend_contract.py` 的 Protocol，四個 `_platform_*` 組裝模組各自標注自己綁了什麼。
+順帶帶綠了四個原本卡在縫的偶然型別上、自己其實沒問題的模組
+（`utils/cv2_utils/screen_grabber`、`utils/executor/mouse_aliases`、
+`utils/pytest_plugin/keywords`、`utils/vision/vlm_api`）。
+
+剩下 145 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
 `arg-type`／`union-attr`／`assignment`，成群集中在
-`utils/remote_desktop`（13）、`gui`（11）、`wrapper`（5）、
-`utils/usb/passthrough`／`utils/mcp_server`／`utils/accessibility/backends`／`linux_wayland`（各 4）。
+`utils/remote_desktop`（13）、`gui`（11）、
+`linux_wayland`／`utils/accessibility/backends`／`utils/mcp_server`／`utils/usb/passthrough`（各 4）、
+`utils/observability`／`utils/triggers`（各 3）。
 **下一步**是一次清一個群集，清完把行從清單刪掉——
 `python test/verify/typing_contract_verify.py --fix` 會替你改，CI 會在你忘了刪的時候紅掉。
+
+#### 平台縫還缺的一半：`keyboard` 與 `mouse` 還沒有合約
+
+`TODO` — 八個匯出名稱裡剩這兩個，而它們是被呼叫最多的兩個
+
+`screen`／`keyboard_check`／`recorder` 有 Protocol，少一個成員就在該後端自己的檔案裡紅掉。
+`keyboard` 與 `mouse` 維持 `Any`（這也正是 mypy 本來就替它們推出來的型別，沒有變弱），
+因為**四個後端的呼叫形狀真的不一樣**——以下是實測簽章：
+
+| 後端 | `press_key` | `press_mouse` | 滑鼠鍵代碼 |
+| --- | --- | --- | --- |
+| Windows | `(keycode)` | `(press_button: Tuple[int, int, int])` | 三個 Win32 事件旗標的 tuple |
+| macOS | `(keycode, is_shift)`（`is_shift` **沒有預設值**） | `(x, y, mouse_button)` | int |
+| X11 | `(keycode)` | `(mouse_keycode)` | int |
+| Wayland | `(keycode)` | `(mouse_keycode)` | int |
+
+一個 Protocol 描述不了這四種，要補起來得每個平台一組、用 mypy 認得的
+`sys.platform` 分支去定義（只認 `== "..."` 與 `.startswith("...")`，`in [...]` **不算**，
+已實測）。**前置條件已經備好**：`wrapper/` 裡分辨 macOS 的地方現在一律寫成
+`sys.platform == "darwin"`（與 `is_macos()` 等價但剪得掉），其餘分支問的是輸入堆疊
+（`is_windows()`／`is_x11_unix()`），所以呼叫端這一側不必再改。
+
+真正的成本在後端那一側：四個平台的 `keyboard`／`mouse` 模組本身都還在豁免清單上，
+Protocol 一旦標上去，它們的內部型別錯誤就會一起浮出來。**所以這條排在
+`linux_wayland`（4）與 `windows/`、`osx/` 那幾個模組清完之後**，不是現在。
 
 有一件事別再踩：**這個閘門的判定不能隨環境浮動**。裝了 `[gui]`／`[webrtc]` 的開發機
 與乾淨的 `pip install -e .` 曾經對 38 個模組看法不同（36 個 Qt 模組只在 PySide6

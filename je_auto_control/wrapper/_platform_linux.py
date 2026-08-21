@@ -70,6 +70,9 @@ from je_auto_control.linux_with_x11.mouse.x11_linux_mouse_control import (
 from je_auto_control.linux_with_x11.record.x11_linux_record import x11_linux_recorder
 from je_auto_control.linux_with_x11.screen import x11_linux_screen
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.wrapper.backend_contract import (
+    KeyboardCheckBackend, RecorderBackend, ScreenBackend,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 autocontrol_logger.info("Load Linux x11 Setting")
@@ -259,9 +262,9 @@ def _select_input_backend():
 
 
 keyboard, mouse = _select_input_backend()
-keyboard_check = x11_linux_listener
-screen = x11_linux_screen
-recorder = x11_linux_recorder
+keyboard_check: KeyboardCheckBackend = x11_linux_listener
+screen: ScreenBackend = x11_linux_screen
+recorder: RecorderBackend = x11_linux_recorder
 
 if None in [keyboard_keys_table, mouse_keys_table, special_mouse_keys_table, keyboard, mouse, screen, recorder]:
     raise AutoControlException("Can't init auto control")

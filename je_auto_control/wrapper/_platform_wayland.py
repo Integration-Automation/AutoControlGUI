@@ -18,6 +18,9 @@ from je_auto_control.linux_wayland.keymap import (
     keyboard_keys_table as _wayland_keyboard_table,
 )
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.wrapper.backend_contract import (
+    KeyboardCheckBackend, RecorderBackend, ScreenBackend,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -40,9 +43,9 @@ special_mouse_keys_table = {
 
 keyboard = wayland_keyboard
 mouse = wayland_mouse
-keyboard_check = wayland_listener
-screen = wayland_screen
-recorder = wayland_record.wayland_recorder
+keyboard_check: KeyboardCheckBackend = wayland_listener
+screen: ScreenBackend = wayland_screen
+recorder: RecorderBackend = wayland_record.wayland_recorder
 
 
 if None in [keyboard_keys_table, mouse_keys_table, special_mouse_keys_table,

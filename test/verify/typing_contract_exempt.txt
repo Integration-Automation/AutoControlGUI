@@ -14,7 +14,7 @@
 # "Does not type-check" means on at least one of the three targets mypy can be
 # pointed at (win32, linux, darwin) — not just the one CI happens to run on.
 #
-# Measured entries: 155
+# Measured entries: 145
 
 je_auto_control.__main__
 je_auto_control.cli
@@ -63,7 +63,6 @@ je_auto_control.utils.color_match.color_match
 je_auto_control.utils.color_stats.color_stats
 je_auto_control.utils.config_sync.client
 je_auto_control.utils.critical_exit.critical_exit
-je_auto_control.utils.cv2_utils.screen_grabber
 je_auto_control.utils.cv2_utils.screen_record
 je_auto_control.utils.cv2_utils.video_recording
 je_auto_control.utils.dag.runner
@@ -74,7 +73,6 @@ je_auto_control.utils.element_parse.element_parse
 je_auto_control.utils.element_proposal.element_proposal
 je_auto_control.utils.element_repository.element_repository
 je_auto_control.utils.executor.action_executor
-je_auto_control.utils.executor.mouse_aliases
 je_auto_control.utils.expect_poll.expect_poll
 je_auto_control.utils.feature_match.feature_match
 je_auto_control.utils.file_assoc.file_assoc
@@ -105,7 +103,6 @@ je_auto_control.utils.plugin_loader.plugin_loader
 je_auto_control.utils.preprocess.preprocess
 je_auto_control.utils.profiler.resource_profiler
 je_auto_control.utils.project.create_project_structure
-je_auto_control.utils.pytest_plugin.keywords
 je_auto_control.utils.qr.qr
 je_auto_control.utils.rate_limit.rate_limit
 je_auto_control.utils.recording_edit.editor
@@ -149,7 +146,6 @@ je_auto_control.utils.usb.passthrough.key_provider
 je_auto_control.utils.usb.passthrough.session
 je_auto_control.utils.usb.passthrough.viewer_client
 je_auto_control.utils.usb.passthrough.winusb_backend
-je_auto_control.utils.vision.vlm_api
 je_auto_control.utils.visual_regression.compare
 je_auto_control.utils.watcher.watcher
 je_auto_control.utils.window_capture.window_capture
@@ -165,9 +161,3 @@ je_auto_control.windows.mouse.win32_ctype_mouse_control
 je_auto_control.windows.record.win32_input_hook
 je_auto_control.windows.screen.win32_screen
 je_auto_control.windows.window.windows_window_manage
-je_auto_control.wrapper.auto_control_keyboard
-je_auto_control.wrapper.auto_control_mouse
-je_auto_control.wrapper.auto_control_record
-je_auto_control.wrapper.auto_control_screen
-je_auto_control.wrapper.platform_wrapper
-je_auto_control.wrapper.window_backends.base

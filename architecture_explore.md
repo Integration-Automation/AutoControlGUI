@@ -6,7 +6,7 @@
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-08-21　**版本**：`pyproject.toml` version `0.0.220`　**分支**：`feat/qt-thread-marshal-isolation`
+> **掃描時間**：2026-08-21　**版本**：`pyproject.toml` version `0.0.220`　**分支**：`feat/typing-contract-and-coverage-ratchet`
 
 ---
 
@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,030 |
-| 程式碼總行數 | 140,157 |
+| Python 模組總數（含周邊子專案） | 1,031 |
+| 程式碼總行數 | 140,388 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -167,21 +167,23 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `wrapper/platform_wrapper.py` | 73 | **Strategy 樞紐**。依 `sys.platform` 匯入唯一後端並匯出 `keyboard`、`keyboard_check`、`keyboard_keys_table`、`mouse`、`mouse_keys_table`、`special_mouse_keys_table`、`screen`、`recorder`；載入失敗直接拋 `AutoControlException`（fail fast）。 |
-| `wrapper/_platform_windows.py` | 325 | Windows 後端組裝：Win32 ctypes 模組 + 虛擬鍵表 + 選用 Interception 驅動。 |
-| `wrapper/_platform_osx.py` | 156 | macOS 後端組裝（Quartz 事件 + osx 虛擬鍵表）。 |
-| `wrapper/_platform_linux.py` | 267 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
-| `wrapper/_platform_wayland.py` | 57 | Wayland 後端組裝（libei／ydotool／grim）。 |
-| `wrapper/auto_control_mouse.py` | 366 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
-| `wrapper/auto_control_keyboard.py` | 273 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。 |
-| `wrapper/auto_control_screen.py` | 103 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
+| `wrapper/platform_wrapper.py` | 95 | **Strategy 樞紐**。依 `sys.platform` 匯入唯一後端並匯出 `keyboard`、`keyboard_check`、`keyboard_keys_table`、`mouse`、`mouse_keys_table`、`special_mouse_keys_table`、`screen`、`recorder`；八個名稱先以 `backend_contract` 的型別宣告再由分支綁定；載入失敗直接拋 `AutoControlException`（fail fast）。 |
+| `wrapper/backend_contract.py` | 78 | 平台縫的型別合約：`ScreenBackend`／`KeyboardCheckBackend`／`RecorderBackend` 三個 Protocol 與 `MouseKeycode` 別名。四個 `_platform_*` 組裝模組各自標注自己綁的是什麼，少一個成員就在該後端自己的檔案裡紅掉，而不是在三層之上的呼叫點。 |
+| `wrapper/_platform_windows.py` | 328 | Windows 後端組裝：Win32 ctypes 模組 + 虛擬鍵表 + 選用 Interception 驅動。 |
+| `wrapper/_platform_osx.py` | 159 | macOS 後端組裝（Quartz 事件 + osx 虛擬鍵表）。 |
+| `wrapper/_platform_linux.py` | 270 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
+| `wrapper/_platform_wayland.py` | 60 | Wayland 後端組裝（libei／ydotool／grim）。 |
+| `wrapper/auto_control_mouse.py` | 427 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
+| `wrapper/auto_control_keyboard.py` | 304 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。 |
+| `wrapper/auto_control_screen.py` | 111 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
 | `wrapper/auto_control_image.py` | 83 | 影像 API：`locate_all_image`、`locate_image_center`、`locate_and_click`。 |
-| `wrapper/auto_control_record.py` | 107 | 錄製 API：`record`／`stop_record`／`record_to_json`（支援 stop event 與逾時）。 |
+| `wrapper/auto_control_record.py` | 114 | 錄製 API：`record`／`stop_record`／`record_to_json`（支援 stop event 與逾時）。 |
 | `wrapper/auto_control_window.py` | 278 | 視窗管理門面：列舉、尋找、聚焦、等待、關閉、顯示狀態、幾何、所屬行程 PID、依行程列舉／最小化視窗、不搶焦點的投遞式輸入（目前僅 Windows 實作）。 |
+| `wrapper/window_backends/` | 985 | 視窗管理的平台縫（`base` / `windows_backend` / `x11_backend` / `macos_backend` / `null_backend`）。放在 `wrapper/` 而不是 `utils/`，因為它必須 import `windows/`、`linux_with_x11/`、`osx/`，而 `utils/` 在分層上在那三者之上。 |
 
 ### 5.3 平台後端
 
-#### Windows（`windows/`，23 檔／1,894 行）
+#### Windows（`windows/`，23 檔／1,900 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1029,8 +1031,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/usb/` | 17 | 4,250 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,363 |
 | `utils/accessibility/` | 13 | 2,818 |
-| `wrapper/` | 3,068 | 3,013 新增 `window_backends/`：視窗管理的平台縫（`base` / `windows_backend` / `x11_backend` / `macos_backend` / `null_backend`）。放在 `wrapper/` 而不是 `utils/`，因為它必須 import `windows/`、`linux_with_x11/`、`osx/`，而 `utils/` 在分層上在那三者之上。 |
-| `windows/` | 23 | 1,894 |
+| `wrapper/` | 19 | 3,293 |
+| `windows/` | 23 | 1,900 |
 | `utils/rest_api/` | 8 | 1,739 |
 | `utils/agent/` | 8 | 1,250 |
 | `linux_with_x11/` | 19 | 1,215 |
@@ -1042,6 +1044,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 907 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 727 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 691 | 50,522 |
-| **總計** | **1,024** | **140,092** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,454 |
+| **總計** | **1,025** | **140,323** |
 

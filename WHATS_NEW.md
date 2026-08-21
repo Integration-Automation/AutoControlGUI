@@ -54,8 +54,59 @@ too. That is the same trap the numpy override in `pyproject.toml` had already
 paid for and written down. A dev checkout with `[gui]` and `[webrtc]` and a
 clean base install now produce identical results.
 
-The remaining 155 modules cluster — `utils/remote_desktop` (13), `gui` (11),
-`wrapper` (5) — and `Progress.md` records clearing them one cluster at a time.
+The remaining modules cluster — `utils/remote_desktop` (13), `gui` (11) — and
+`Progress.md` records clearing them one cluster at a time. The first cluster is
+below.
+
+### The Platform Seam Now Says What a Backend Is
+
+`wrapper/platform_wrapper.py` is the Strategy hub: it imports exactly one
+backend and re-exports eight names, and everything above it is written against
+those names rather than against a platform. Nothing said what they *were*.
+
+Measured, that had two consequences, and neither was theoretical:
+
+- **mypy bound every name to the Windows backend, on every target.** The
+  branches are `if is_windows() / elif is_macos() / …`, which a type checker
+  cannot resolve, so it read all of them and kept the first — so the layer above
+  the seam was checked against Win32 signatures even when the target was Linux
+  or macOS, and it reported "`recorder` has type `OSXRecorder`, expected
+  `Win32Recorder`" for the *correct* code on the way past.
+- **A backend could omit a member and nobody would say so** until a call site
+  three layers up failed on the user's machine.
+
+The eight names are now declared before the branches bind them, three of them
+with protocols in the new `wrapper/backend_contract.py` — `ScreenBackend`,
+`KeyboardCheckBackend`, `RecorderBackend` — and each `_platform_*` assembly
+module annotates what it assigns. A backend that does not answer the seam's
+questions now fails in its own file, naming the missing member. That is not
+hypothetical either: turning it on immediately reported that the Windows
+`screen.size()` returns a `list` where the other three backends return a
+`tuple` and where the public `screen_size()` promises a tuple. Fixed, and every
+caller only ever unpacked the two values.
+
+`keyboard` and `mouse` stay `Any`, which is what mypy had already inferred for
+them: macOS takes `is_shift` on `press_key` and orders its mouse calls
+`(x, y, button)` where Windows and X11 take the button alone, and a Windows
+mouse "keycode" is a tuple of three event flags where the others are an int.
+One protocol cannot describe both, and `Progress.md` carries what it would take.
+
+Clearing the cluster fixed four bugs the types had been hiding, all of the same
+shape — a value that could be `None` reaching something that could not take one.
+They are listed in `CHANGELOG.md`. Along the way four modules outside the
+cluster (`utils/cv2_utils/screen_grabber`, `utils/executor/mouse_aliases`,
+`utils/pytest_plugin/keywords`, `utils/vision/vlm_api`) went green on their own:
+they had been failing on the seam's accidental types, not on their own code.
+**145 modules left, 872 of 1,017 files inside the contract.**
+
+Re-measuring `architecture_explore.md` for this change turned up one row the
+measuring tool had never been able to read: §8's `wrapper/` row carried prose
+in its 行數 cell, so it parsed as a one-column row — the tool wrote the *line*
+count into the 檔案數 column, and left the directory out of the named subtotal,
+which meant 其餘模組 counted it a second time. The row is now two plain numbers
+(19 files, 3,293 lines), the note it was carrying has moved to §5.2 as the
+`wrapper/window_backends/` row that section had been missing entirely, and
+其餘模組 no longer double-counts 3,293 lines.
 
 ## What's new (2026-08-20)
 
