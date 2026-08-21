@@ -240,11 +240,11 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
 而不是齊頭式地補測試。
 
-### mypy：整包把關，145 個模組還沒過
+### mypy：整包把關，141 個模組還沒過
 
 範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
 （`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 872 個已經過關。
+新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 876 個已經過關。
 
 `wrapper` 那一群（6 個模組）在 2026-08-21 清掉了，做法見 [WHATS_NEW.md](WHATS_NEW.md)：
 平台縫的八個匯出名稱先宣告型別、再讓分支去綁定，其中三個用
@@ -253,10 +253,17 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`utils/cv2_utils/screen_grabber`、`utils/executor/mouse_aliases`、
 `utils/pytest_plugin/keywords`、`utils/vision/vlm_api`）。
 
-剩下 145 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
+`linux_wayland` 那一群（4 個模組）在 2026-08-22 清掉了：`libei` 的 33 處
+`Optional[BoundSymbols]` 改走一個會拋 `LibeiUnavailable` 的存取器（`_api`），
+`_detect` 的兩支環境查詢收 `Mapping[str, str]` 而不是 `dict`（預設值就是 `os.environ`），
+`capture._write_to_temp_png` 承認它的 writer 會回傳東西而它不看，
+`screen.get_pixel` 把 Pillow 那個「每種 mode 的答案聯集」收斂成它自己承諾的三元組。
+做法見 [WHATS_NEW.md](WHATS_NEW.md)。
+
+剩下 141 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
 `arg-type`／`union-attr`／`assignment`，成群集中在
 `utils/remote_desktop`（13）、`gui`（11）、
-`linux_wayland`／`utils/accessibility/backends`／`utils/mcp_server`／`utils/usb/passthrough`（各 4）、
+`utils/accessibility/backends`／`utils/mcp_server`／`utils/usb/passthrough`（各 4）、
 `utils/observability`／`utils/triggers`（各 3）。
 **下一步**是一次清一個群集，清完把行從清單刪掉——
 `python test/verify/typing_contract_verify.py --fix` 會替你改，CI 會在你忘了刪的時候紅掉。
@@ -283,8 +290,9 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`is_windows()`／`is_x11_unix()`），所以呼叫端這一側不必再改。
 
 真正的成本在後端那一側：四個平台的 `keyboard`／`mouse` 模組本身都還在豁免清單上，
-Protocol 一旦標上去，它們的內部型別錯誤就會一起浮出來。**所以這條排在
-`linux_wayland`（4）與 `windows/`、`osx/` 那幾個模組清完之後**，不是現在。
+Protocol 一旦標上去，它們的內部型別錯誤就會一起浮出來。`linux_wayland` 已經清完，
+**所以這條剩下的前置是 `windows/`（9 個模組）、`linux_with_x11/`（3）與 `osx/`（1）**，
+清完才輪到它。
 
 有一件事別再踩：**這個閘門的判定不能隨環境浮動**。裝了 `[gui]`／`[webrtc]` 的開發機
 與乾淨的 `pip install -e .` 曾經對 38 個模組看法不同（36 個 Qt 模組只在 PySide6

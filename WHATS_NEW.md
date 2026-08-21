@@ -108,6 +108,38 @@ which meant 其餘模組 counted it a second time. The row is now two plain numb
 `wrapper/window_backends/` row that section had been missing entirely, and
 其餘模組 no longer double-counts 3,293 lines.
 
+### The Wayland Cluster: Four Modules, One Invariant Nobody Had Written Down
+
+The next cluster off the typing list is `linux_wayland` — `libei`, `_detect`,
+`capture`, `screen` — and thirty-three of its forty errors were one sentence
+repeated: `Item "None" of "BoundSymbols | None" has no attribute ei_…`.
+
+`LibeiBackend` holds its resolved entry points as `Optional[BoundSymbols]`
+(`None` on a host without libei) and read them straight off that attribute at
+every call site. Every one of those sites is in fact reached only after a guard
+— `connect()` refuses an unavailable backend, `_emit` refuses a disconnected
+one — so nothing was broken here. But the guarantee lived in the call graph
+rather than anywhere a reader or a checker could see it, and what a new call
+site that skipped the guard would raise is `AttributeError`: not an
+`AutoControlException`, and therefore straight through every containment
+boundary in the framework. The entry points now come through one `_api`
+property that raises `LibeiUnavailable` — which is what this module's own
+docstring says every failure in it raises. `_teardown` is the deliberate
+exception: it runs from an `except BaseException` handler, so it narrows the
+attribute itself rather than risking a raise that would replace the real
+failure with a complaint about the symbol table.
+
+The other three modules were each one honest disagreement. `_detect`'s two
+environment probes were annotated `dict` while both of them default to
+`os.environ`, which is a `Mapping` — so one of them could not legally pass its
+own environment to the other. `capture._write_to_temp_png` declared a writer
+returning `None` while every caller passes one returning the tool's stdout,
+which it discards because what it reads is the file. And `screen.get_pixel`
+handed Pillow's `getpixel` union — a float for mode `F`, `None` for an empty
+band — to callers that unpack three ints, though `grab_image` has always
+converted to RGB first. **141 modules left, 876 of 1,017 files inside the
+contract.**
+
 ## What's new (2026-08-20)
 
 ### Three Tests That Had Been Skipped Since They Were Written

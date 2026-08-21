@@ -143,7 +143,15 @@ def get_pixel(x: int, y: int) -> Tuple[int, int, int]:
     :return: (R, G, B)
     """
     image = grab_image([int(x), int(y), int(x) + 1, int(y) + 1])
-    return image.getpixel((0, 0))
+    pixel = image.getpixel((0, 0))
+    # grab_image converts to RGB, so this is a 3-tuple; getpixel is
+    # annotated with the union of every mode's answer (a float for "F",
+    # None for an empty band), so say which one this is rather than
+    # handing the union to a caller that unpacks three ints.
+    if not isinstance(pixel, tuple) or len(pixel) < 3:
+        raise AutoControlScreenException(
+            f"wayland get_pixel: expected an RGB pixel, got {pixel!r}")
+    return int(pixel[0]), int(pixel[1]), int(pixel[2])
 
 
 def screenshot(file_path: Optional[str] = None,

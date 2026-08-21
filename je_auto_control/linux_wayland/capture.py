@@ -176,8 +176,13 @@ def _grim_capture(executable: str,
     return Capture(data, screen_region is not None)
 
 
-def _write_to_temp_png(write: Callable[[str], None], label: str) -> Capture:
-    """Let ``write`` fill a temporary PNG, then read and delete it."""
+def _write_to_temp_png(write: Callable[[str], object], label: str) -> Capture:
+    """Let ``write`` fill a temporary PNG, then read and delete it.
+
+    ``write`` may return anything — every caller wraps ``run_tool``, which
+    hands back the tool's stdout — because what is read here is the file,
+    not the return value.
+    """
     handle, output_path = tempfile.mkstemp(prefix="je_autocontrol_",
                                            suffix=".png")
     os.close(handle)
