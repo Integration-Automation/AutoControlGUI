@@ -46,19 +46,24 @@ class _FakeIMAP:
         return ("OK", [b"1"])
 
     def uid(self, command, *args):
+        # Normalise the way ``imaplib._command`` does before anything reaches
+        # the wire: skip ``None`` (the optional charset slot) and ASCII-encode
+        # ``str``. Pinning one call shape here made the stub, not the server,
+        # the thing the caller had to match.
+        parts = [arg.encode("ascii") if isinstance(arg, str) else arg
+                 for arg in args if arg is not None]
         if command == "SEARCH":
-            criteria = args[1]
-            self.searches.append(criteria)
+            self.searches.append(parts[-1].decode("ascii"))
             return ("OK", [b" ".join(self._uids)])
         if command == "FETCH":
-            uid = args[0]
+            uid = parts[0]
             self.fetched.append(uid)
             payload = self._messages.get(uid)
             if payload is None:
                 return ("NO", [None])
             return ("OK", [(b"1 (RFC822 {%d}" % len(payload), payload)])
         if command == "STORE":
-            self.flagged.append(args[0])
+            self.flagged.append(parts[0])
             return ("OK", [b"stored"])
         return ("NO", [None])
 

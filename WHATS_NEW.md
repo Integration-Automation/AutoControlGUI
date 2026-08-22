@@ -208,6 +208,64 @@ comparison as a `DECIDE`, because the cleanest of them changes what the gate
 means rather than what the code says. **136 modules left, 881 of 1,017 files
 inside the contract.**
 
+### Fifteen More Modules, and Four Errors That Were Wrong Rather Than Untyped
+
+The accessibility backends, the observability trio, the three triggers,
+`chatops.router`, `rest_api.rest_server`, `mcp_server.http_transport` and
+`element_repository` came off the list together, because they kept running into
+the same handful of causes.
+
+**Thirty-four of the forty-three accessibility errors were one missing
+annotation.** `AccessibilityBackend._unsupported` raises for every action a
+backend cannot perform, but it declared no return type — so mypy read the calls
+as expressions that might fall through, and reported "missing return statement"
+in all thirty-four methods that end with one. It is annotated `NoReturn` now,
+which is what its body has always done.
+
+**A catch tuple that is not typed as one catches nothing, as far as mypy is
+concerned.** `_uia_errors()` returns the exception classes a UIA call can raise
+— including `comtypes`' `COMError`, which inherits from `Exception` and from
+nothing else, so an `except (OSError, AttributeError)` never contained it. The
+tuple was annotated `Tuple[type, ...]`, which is not "a tuple of exception
+classes", so all five `except UIA_ERRORS` sites were errors. Same shape in
+`rest_server` and `chatops.router`, where `except (…, *SQLITE_ERRORS)` unpacks
+a tuple mypy cannot follow into an `except`; both now name the whole set as one
+annotated module constant, the way `mcp_server._protocol` already did.
+
+**`parse_content_length` never took the type it declared.** Its parameter said
+`Mapping[str, str]`; all three callers pass `self.headers` from a
+`BaseHTTPRequestHandler`, which is an `email.message.Message` — not a mapping
+over its keys, and case-insensitive about header names, which is the property
+that makes `Content-length` work. It takes a one-method `HeaderLookup` protocol
+now, which is what it actually uses and what the callers actually have.
+
+Four fixes are behaviour:
+
+- **`Gauge` and `Histogram` borrowed `Counter._labels_key` by assignment**
+  (`_labels_key = Counter._labels_key`), so a label typo in a gauge was
+  validated by a method whose `self` was declared to be a counter. The rule is
+  identical for all three, so it moved to `_MetricBase` — which also gives
+  `MetricRegistry.render()` a `render` to call on the base it iterates.
+- **`_search_uids` decoded each IMAP UID at two later call sites and not at the
+  third.** UIDs are now decoded once where they arrive, so `_fetch_message`,
+  `_mark_seen` and `_seen_uids` all speak the same type. The stub in
+  `test_email_trigger.py` had pinned one exact `uid()` call shape
+  (`args[1]`); it now normalises arguments the way `imaplib._command` does —
+  skip `None`, ASCII-encode `str` — so it stands in for the library instead of
+  for one caller.
+- **`ElementRepository` handed a stored locator straight to the accessibility
+  API as `**kwargs`.** A repository file is user-editable, so a field that is
+  not a filter surfaced as a `TypeError` about keyword arguments from inside
+  the backend. `_require` now rejects unknown fields by name, and the three
+  filters are passed explicitly.
+- **`_AtspiConnection._call` had no bus to call outside its `with`.** It raises
+  `DBusError` naming the mistake rather than an `AttributeError` on `None`.
+
+`_process_name` in the Windows accessibility backend also stopped being checked
+against Linux and macOS: it is a `kernel32` round trip, and now says so with a
+`sys.platform` guard mypy can prune, in place of a bare `if process_id <= 0`.
+**108 modules left, 909 of 1,017 files inside the contract.**
+
 ### The Biggest Remaining Cluster: Thirteen Modules Under `utils/remote_desktop`
 
 `Progress.md` named this one as the next step and as the largest group left

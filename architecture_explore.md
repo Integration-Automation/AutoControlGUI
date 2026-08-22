@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,031 |
-| 程式碼總行數 | 140,596 |
+| 程式碼總行數 | 140,680 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -158,7 +158,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `je_auto_control/api/__init__.py` | 22 | 版本化整合進入點。 |
 | `je_auto_control/api/core.py` | 19 | **穩定無頭 API 門面**：只暴露 `execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、`create_failure_bundle`、`failure_bundle_on_error`、`FailureBundleOptions`。mypy 型別契約以此為起點，現已擴到整包（見「設定基線」）。 |
 | `je_auto_control/utils/deprecation.py` | 35 | 公開 API 的一致性棄用警告。 |
-| `je_auto_control/utils/http_headers.py` | 32 | 入站 HTTP 標頭的共用防禦式解析。 |
+| `je_auto_control/utils/http_headers.py` | 45 | 入站 HTTP 標頭的共用防禦式解析。 |
 | `je_auto_control/utils/sqlite_support.py` | 56 | 選用標準函式庫 `sqlite3` 的取用點：`require_sqlite3()`／`sqlite3_available()`／`SQLITE_ERRORS`。十個以 SQLite 存放狀態的子系統都經由這裡，所以 FreeBSD 這種把 `sqlite3` 另外包成 `databases/py-sqlite3` 的 Python 仍然 import 得起門面。 |
 
 ### 5.2 wrapper 抽象層
@@ -320,7 +320,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.3 排程、觸發與背景監看
 
-> 11 個套件、約 3,544 行。
+> 11 個套件、約 3,550 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -331,7 +331,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/recurrence/` | 324 | RFC 5545 重複規則解析與發生時間展開 |
 | `utils/scheduler/` | 352 | 間隔式與 cron 式的 action JSON 排程器 |
 | `utils/session_guard/` | 62 | 驅動輸入前先偵測工作階段是否已鎖定／非互動 |
-| `utils/triggers/` | 1,146 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
+| `utils/triggers/` | 1,152 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
 | `utils/voice/` | 87 | 語音指令路由：把辨識到的語句對應到 `AC_*` action list |
 | `utils/watchdog/` | 173 | 背景彈窗／中斷看門狗，供無人值守自動化 |
 | `utils/watcher/` | 78 | 無頭輪詢原語：滑鼠位置、像素顏色、log tail |
@@ -437,12 +437,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.7 無障礙樹與原生控制項
 
-> 16 個套件、約 4,279 行。
+> 16 個套件、約 4,313 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a11y_audit/` | 355 | 以無障礙樹 + OCR 進行無障礙與 i18n 稽核 |
-| `utils/accessibility/` | 2,818 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
+| `utils/accessibility/` | 2,835 | 跨平台無障礙樹定位與錄製；Windows UIA／macOS AX／null 三後端。支援限定視窗（換搜尋起點，不是過濾）、逐節點可中斷走訪、`IUIAutomation2` 連線逾時、名稱子字串比對與排序、`control_get_state` 一次讀完值／勾選／選取／數值（密碼欄位不回內容） |
 | `utils/ax_events/` | 29 | 反應式 UIA 事件等待（focus-changed） |
 | `utils/ax_props/` | 44 | 讀取豐富 UIA 屬性（enabled／offscreen／help／status／快捷鍵） |
 | `utils/ax_text/` | 102 | 透過 UIA TextPattern 取得原生文字（讀取／尋找／選取／屬性） |
@@ -450,7 +450,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/contrast_map/` | 120 | 取樣實際顏色以評定畫面文字的可讀性（WCAG） |
 | `utils/control_patterns/` | 88 | 延伸 UIA 控制項模式動作（Expand／Select／Range／Scroll） |
 | `utils/cvd_simulate/` | 125 | 模擬色覺缺陷並標示在該狀況下會撞色的顏色 |
-| `utils/element_repository/` | 105 | 原生 UI 元素的具名定位器倉庫（object repository） |
+| `utils/element_repository/` | 122 | 原生 UI 元素的具名定位器倉庫（object repository） |
 | `utils/focus_order/` | 95 | 鍵盤焦點順序：預期 Tab 序列、WCAG 稽核與設定焦點 |
 | `utils/legacy_accessible/` | 45 | MSAA 橋接，處理 UIA 無法建模的舊控制項 |
 | `utils/selection_view/` | 57 | 容器選取狀態與檢視切換（Selection／MultipleView 模式） |
@@ -490,7 +490,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 20,610 行。
+> 13 個套件、約 20,617 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -503,7 +503,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 127 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 357 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 92 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 17,323 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 17,330 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 180 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 106 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 448 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -523,12 +523,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 5,900 行。
+> 24 個套件、約 5,917 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/acme_v2/` | 598 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
-| `utils/chatops/` | 628 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
+| `utils/chatops/` | 633 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
 | `utils/cookie_jar/` | 103 | RFC 6265 cookie jar |
 | `utils/email_send/` | 116 | SMTP 寄信（email 觸發器的發送端搭檔） |
 | `utils/events/` | 82 | 對外 CloudEvents 發送（執行生命週期事件） |
@@ -545,7 +545,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/otp/` | 37 | TOTP 一次性密碼產生（自動化 2FA 登入） |
 | `utils/outbox/` | 92 | 交易式 outbox，保證至少一次的事件投遞 |
 | `utils/pytest_plugin/` | 373 | pytest 外掛 + BDD step library（`pytest11` entry point） |
-| `utils/rest_api/` | 1,739 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
+| `utils/rest_api/` | 1,751 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
 | `utils/socket_server/` | 131 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 112 | Server-Sent Events 用戶端解析 |
 | `utils/tls_acme/` | 447 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
@@ -554,7 +554,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 6,896 行。
+> 34 個套件、約 6,903 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -571,7 +571,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/flakiness/` | 150 | 以執行歷史分析不穩定測試 |
 | `utils/generate_report/` | 310 | HTML／JSON／XML 三種報表產生器（Template Method） |
 | `utils/media_assert/` | 233 | 媒體斷言：音訊活動與影片動態檢查 |
-| `utils/observability/` | 661 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
+| `utils/observability/` | 668 | Prometheus 格式指標 + OpenTelemetry 相容 trace + `/metrics` 匯出伺服器 |
 | `utils/otlp_export/` | 81 | OTLP/JSON span 匯出 |
 | `utils/percentiles/` | 103 | 可合併的串流延遲摘要與精確百分位數 |
 | `utils/process_doc/` | 85 | 由錄製的 action list 產生逐步 SOP 文件 |
@@ -702,14 +702,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `action_schema.py` | 128 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
-#### `utils/mcp_server/`（17,323 行，676 個工具）— 最大子系統
+#### `utils/mcp_server/`（17,330 行，676 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
 | `tools/_factories.py` | 8,739 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
 | `tools/_handlers.py` | 4,651 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter。 |
 | `server.py` | 713 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器。 |
-| `http_transport.py` | 514 | MCP 的 HTTP 傳輸。 |
+| `http_transport.py` | 521 | MCP 的 HTTP 傳輸。 |
 | `http_sessions.py` | 234 | MCP 的 HTTP 傳輸用的 session 身分:`Mcp-Session-Id` 註冊表,以及每個 session 那條常駐的 server→client SSE 串流。 |
 | `_client_requests.py` | 217 | 伺服器主動送出的請求：`roots/list`／`elicitation/create`／`sampling/createMessage`,對應表與回應路由,以及破壞性工具的確認交握。 |
 | `_protocol.py` | 165 | JSON-RPC 線路格式：版本與識別常數、`_MCPError`、決定失敗工具行為的錯誤 tuple、envelope 產生器、工具回傳值轉 `content` 區塊。不碰伺服器狀態。 |
@@ -800,11 +800,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `usbip/libusb_backend.py` | 209 | 以 PyUSB／libusb 執行 URB 的正式後端。 |
 | `usbip/backend.py` | 88 | 可插拔 URB 執行後端。 |
 
-#### `utils/rest_api/`（1,739 行）
+#### `utils/rest_api/`（1,751 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `rest_server.py` | 468 | HTTP 前端主體。 |
+| `rest_server.py` | 480 | HTTP 前端主體。 |
 | `rest_handlers.py` | 486 | 端點實作。 |
 | `rest_openapi.py` | 422 | 走訪路由表產生 OpenAPI 3.1 規格。 |
 | `rest_auth.py` | 143 | Bearer token 驗證 + 逐 client 限流閘門。 |
@@ -1025,25 +1025,25 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 89 | 26,542 |
-| `utils/mcp_server/` | 21 | 17,323 |
+| `utils/mcp_server/` | 21 | 17,330 |
 | `utils/remote_desktop/` | 56 | 11,990 |
 | `utils/executor/` | 6 | 9,075 |
 | `utils/usb/` | 17 | 4,250 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,363 |
-| `utils/accessibility/` | 13 | 2,818 |
+| `utils/accessibility/` | 13 | 2,835 |
 | `wrapper/` | 19 | 3,293 |
 | `windows/` | 23 | 1,901 |
-| `utils/rest_api/` | 8 | 1,739 |
+| `utils/rest_api/` | 8 | 1,751 |
 | `utils/agent/` | 8 | 1,250 |
 | `linux_with_x11/` | 19 | 1,236 |
 | `linux_wayland/` | 17 | 2,870 |
-| `utils/triggers/` | 4 | 1,146 |
+| `utils/triggers/` | 4 | 1,152 |
 | `utils/ocr/` | 9 | 1,112 |
 | `utils/usbip/` | 5 | 920 |
 | `utils/assertion/` | 3 | 863 |
 | `osx/` | 17 | 915 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 727 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,454 |
-| **總計** | **1,025** | **140,531** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,496 |
+| **總計** | **1,025** | **140,615** |
 

@@ -6,7 +6,7 @@
 died and the connection was closed with no response at all — the client saw a
 reset instead of the 400 each server already had code to send.
 """
-from typing import Mapping
+from typing import Any, Protocol
 
 # Sentinel for "the client did not give us a usable length". It is negative on
 # purpose: every caller already rejects non-positive lengths, so an
@@ -15,7 +15,20 @@ from typing import Mapping
 INVALID_CONTENT_LENGTH = -1
 
 
-def parse_content_length(headers: Mapping[str, str]) -> int:
+class HeaderLookup(Protocol):
+    """Anything that answers ``get(name)`` for one HTTP header.
+
+    Deliberately not ``Mapping[str, str]``: ``http.server`` hands each
+    handler an ``email.message.Message``, which is not a mapping over its
+    keys and which matches header names case-insensitively — the property
+    that makes ``Content-length`` work. Every caller here passes that.
+    """
+
+    def get(self, name: str, /) -> Any:
+        """Return the header's value, or ``None`` when it is absent."""
+
+
+def parse_content_length(headers: HeaderLookup) -> int:
     """Return the request's Content-Length, or ``INVALID_CONTENT_LENGTH``.
 
     Never raises: a malformed, negative, or absent header yields the sentinel.

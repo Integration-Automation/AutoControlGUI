@@ -240,11 +240,11 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
 而不是齊頭式地補測試。
 
-### mypy：整包把關，123 個模組還沒過
+### mypy：整包把關，108 個模組還沒過
 
 範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
 （`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 894 個已經過關。
+新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 909 個已經過關。
 
 `wrapper` 那一群（6 個模組）在 2026-08-21 清掉了，做法見 [WHATS_NEW.md](WHATS_NEW.md)：
 平台縫的八個匯出名稱先宣告型別、再讓分支去綁定，其中三個用
@@ -286,15 +286,32 @@ Windows 上一直是 import 就炸；`win32_ctype_input` 則有一批標錯的�
 `base64.binascii.Error`（那個名字只是 `base64` 自己 import 的副作用）。
 做法見 [WHATS_NEW.md](WHATS_NEW.md)。
 
-剩下 123 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
+同日再清掉十五個：`utils/accessibility` 那一群（5）、`utils/observability`（3）、
+`utils/triggers`（3）、`utils/chatops/router`、`utils/rest_api/rest_server`、
+`utils/mcp_server/http_transport`、`utils/element_repository`。四十三個
+accessibility 錯誤裡有三十四個是同一個沒標的回傳型別（`_unsupported` 一定會拋，
+標成 `NoReturn` 就全清）；另一個反覆出現的是**攔截用的 tuple 沒有被標成 tuple**
+（`Tuple[type, ...]` 不算「a tuple of exception classes」，
+`except (…, *SQLITE_ERRORS)` 的星號解包 mypy 也跟不進 `except`）。
+順帶修掉四個行為問題：`Gauge`／`Histogram` 用
+`_labels_key = Counter._labels_key` 借方法、`parse_content_length` 宣告的
+`Mapping[str, str]` 三個呼叫端一個都沒給過（給的是 `email.message.Message`）、
+`ElementRepository` 把使用者可編輯的 locator 直接 `**kwargs` 丟進無障礙 API、
+`_AtspiConnection._call` 在 `with` 之外沒有 bus 可以呼叫。
+做法見 [WHATS_NEW.md](WHATS_NEW.md)。
+
+剩下 108 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
 `arg-type`／`union-attr`／`assignment`，成群集中在
-`gui`（11＋`gui/remote_desktop` 2）、
-`utils/accessibility/backends`／`utils/mcp_server`／`utils/usb/passthrough`（各 4）、
-`utils/observability`／`utils/triggers`（各 3），其餘散在各處。
+`gui`（11＋`gui/remote_desktop` 2）、`utils/mcp_server`（4）、
+`utils/usb/passthrough`（4）、`utils/clipboard`（2），其餘散在各處。
+以檔案計最大的三個是 `utils/usb/passthrough/winusb_backend.py`（34）、
+`gui/_auto_click_tab.py`（31）、`gui/remote_desktop/webrtc_panel.py`（27）。
 **下一步**是一次清一個群集，清完把行從清單刪掉——
 `python test/verify/typing_contract_verify.py --fix` 會替你改，CI 會在你忘了刪的時候紅掉。
-剛清掉的那一群留下一個可以直接套用的樣板：mixin 用 `if TYPE_CHECKING:` 宣告
-借來的成員，`Optional` 屬性用 `TYPE_CHECKING` 匯入真正的型別去標注。
+已經清掉的那些留下四個可以直接套用的樣板：mixin 用 `if TYPE_CHECKING:` 宣告
+借來的成員、`Optional` 屬性用 `TYPE_CHECKING` 匯入真正的型別去標注、
+一定會拋的 helper 標 `NoReturn`、攔截用的 tuple 標
+`Tuple[Type[BaseException], ...]` 並收成一個模組常數（不要在 `except` 裡星號解包）。
 
 #### 平台縫還缺的一半：`keyboard` 與 `mouse` 還沒有合約
 
@@ -323,12 +340,29 @@ Protocol 一旦標上去，它們的內部型別錯誤就會一起浮出來。`l
 （見上），只剩下面那條 `DECIDE` 的 ctypes 表面問題。所以前置條件實質上已經到位，
 可以開始標 Protocol；下一次動這條的人不必再等別的群集。
 
-#### `DECIDE`：Windows 後端剩下的豁免不是它們的錯
+#### `DECIDE`：16 個模組的豁免不是它們的錯
 
-`windows/` 底下還有 8 個模組留在清單上，而它們在 `--platform win32` 上**全部乾淨**。
-留在清單上的唯一原因是這個閘門會用三個目標平台各檢查一次，而 `ctypes` 的
-Win32 專屬表面（`windll`、`WinDLL`、`WINFUNCTYPE`、`WinError`、`get_last_error`）
-在 typeshed 的 linux／darwin 目標上根本沒有宣告。共 18 處，分布在 8 個檔。
+**2026-08-22 重新實測，這一條的規模比原本寫的大一倍，而且形狀不同。**
+原本寫的是「`windows/` 底下 8 個模組」；實際上是 **16 個模組、58 個錯誤**，
+而其中**一半不在 `windows/` 底下**：
+
+| 模組 | 錯誤數 |
+| --- | ---: |
+| `windows/record/win32_input_hook.py` | 8 |
+| `utils/usb/passthrough/key_provider.py` | 8 |
+| `windows/core/utils/win32_ctype_input.py` | 6 |
+| `windows/core/utils/win32_keypress_check.py`、`windows/interception/_dll.py`、`windows/mouse/win32_ctype_mouse_control.py`、`windows/screen/win32_screen.py`、`windows/window/windows_window_manage.py` | 各 4 |
+| `windows/interception/mouse.py`、`gui/main_window.py`、`utils/app_idle/`、`utils/file_assoc/`、`utils/idle_keepawake/`、`utils/lock_session/`、`utils/session_guard/`、`utils/trash/` | 各 2 |
+
+這 16 個模組在 `--platform win32` 上**全部乾淨**，在 linux／darwin 上的錯誤
+**100% 是同一件事**：`ctypes` 的 Win32 專屬表面（`windll`、`WinDLL`、
+`WINFUNCTYPE`、`WinError`、`get_last_error`）在 typeshed 的非 Windows 目標上
+根本沒有宣告。實測方式是把三個平台的結果對比，找出「win32 全綠、其他平台
+只錯在這組名字上」的模組——結果是 16 個，沒有一個是「順便還有別的錯」。
+
+**這件事會改動下面第四條的可行性**：`utils/app_idle/`、`utils/trash/`、
+`gui/main_window.py` 這些不在任何平台目錄底下，所以「照目錄決定用哪個平台量」
+的規則對它們無效。要嘛規則改成看模組內容（難自動判定），要嘛這八個走另一條路。
 
 三條路都實測過，維護者挑一條：
 
@@ -340,6 +374,7 @@ Win32 專屬表面（`windll`、`WinDLL`、`WINFUNCTYPE`、`WinError`、`get_las
 
 第四條是改閘門本身：讓 `typing_contract_verify.py` 只用模組自己的平台去量
 平台專屬模組（`windows/` 只用 win32、`osx/` 只用 darwin、`linux_*` 只用 linux）。
+（**但見上面那張表**：有八個受影響的模組不在平台目錄底下，照目錄分不到它們。）
 這是三者裡最貼近事實的一條——拿 Linux 去檢查一個只跑得動在 Windows 的模組本來就沒有意義，
 而閘門的 docstring 自己寫的多目標理由是「要讀得到平台分支後面的程式碼」，不是這個。
 但它會改掉「清單上的模組＝在每個支援平台上都還沒過」這個既定語意，**所以要維護者拍板**。

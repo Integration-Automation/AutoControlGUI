@@ -14,7 +14,7 @@
 # "Does not type-check" means on at least one of the three targets mypy can be
 # pointed at (win32, linux, darwin) — not just the one CI happens to run on.
 #
-# Measured entries: 123
+# Measured entries: 108
 
 je_auto_control.__main__
 je_auto_control.cli
@@ -32,11 +32,6 @@ je_auto_control.gui.recording_editor_tab
 je_auto_control.gui.remote_desktop.webrtc_dialogs
 je_auto_control.gui.remote_desktop.webrtc_panel
 je_auto_control.gui.test_suite_tab
-je_auto_control.utils.accessibility.backends.base
-je_auto_control.utils.accessibility.backends.linux_backend
-je_auto_control.utils.accessibility.backends.windows_backend
-je_auto_control.utils.accessibility.backends.windows_query
-je_auto_control.utils.accessibility.recorder
 je_auto_control.utils.act_modes.act_modes
 je_auto_control.utils.actionability.actionability
 je_auto_control.utils.admin.admin_client
@@ -46,7 +41,6 @@ je_auto_control.utils.annotate.annotate
 je_auto_control.utils.app_idle.app_idle
 je_auto_control.utils.bulkhead.bulkhead
 je_auto_control.utils.change_localize.change_localize
-je_auto_control.utils.chatops.router
 je_auto_control.utils.clipboard.clipboard
 je_auto_control.utils.clipboard.win32_clipboard_api
 je_auto_control.utils.clipboard_formats.clipboard_formats
@@ -63,7 +57,6 @@ je_auto_control.utils.dbus_client.session_bus
 je_auto_control.utils.deterministic.deterministic
 je_auto_control.utils.element_parse.element_parse
 je_auto_control.utils.element_proposal.element_proposal
-je_auto_control.utils.element_repository.element_repository
 je_auto_control.utils.executor.action_executor
 je_auto_control.utils.expect_poll.expect_poll
 je_auto_control.utils.feature_match.feature_match
@@ -82,14 +75,10 @@ je_auto_control.utils.locale_collation.locale_collation
 je_auto_control.utils.lock_session.lock_session
 je_auto_control.utils.mcp_server.__main__
 je_auto_control.utils.mcp_server._client_requests
-je_auto_control.utils.mcp_server.http_transport
 je_auto_control.utils.mcp_server.server
 je_auto_control.utils.mcp_server.tools._handlers
 je_auto_control.utils.monitor_layout.logical_frame
 je_auto_control.utils.mouse_path.mouse_path
-je_auto_control.utils.observability.exporter
-je_auto_control.utils.observability.metrics
-je_auto_control.utils.observability.tracing
 je_auto_control.utils.ocr.backends
 je_auto_control.utils.plugin_loader.plugin_loader
 je_auto_control.utils.preprocess.preprocess
@@ -100,7 +89,6 @@ je_auto_control.utils.rate_limit.rate_limit
 je_auto_control.utils.recording_edit.editor
 je_auto_control.utils.redaction.policies
 je_auto_control.utils.redaction.rules
-je_auto_control.utils.rest_api.rest_server
 je_auto_control.utils.rotated_match.rotated_match
 je_auto_control.utils.run_history.history_store
 je_auto_control.utils.sbom.sbom
@@ -117,9 +105,6 @@ je_auto_control.utils.text_normalize.text_normalize
 je_auto_control.utils.text_regions.text_regions
 je_auto_control.utils.tls_acme.challenge
 je_auto_control.utils.trash.trash
-je_auto_control.utils.triggers.email_trigger
-je_auto_control.utils.triggers.trigger_engine
-je_auto_control.utils.triggers.webhook_server
 je_auto_control.utils.url_canon.url_canon
 je_auto_control.utils.usb.passthrough.key_provider
 je_auto_control.utils.usb.passthrough.session

@@ -73,16 +73,30 @@ class ElementRepository:
         return {key: dict(value) for key, value in self._items.items()}
 
     def _require(self, key: str) -> Dict[str, str]:
+        """Return the stored locator for ``key``, rejecting unknown fields.
+
+        A repository file is user-editable, so a field no accessibility
+        filter accepts used to surface as a ``TypeError`` about keyword
+        arguments from inside the backend call.
+        """
         locator = self.get(key)
         if locator is None:
             raise KeyError(f"no locator named {key!r}")
+        unknown = sorted(set(locator) - set(_FILTER_FIELDS))
+        if unknown:
+            raise ValueError(
+                f"locator {key!r} has fields that are not accessibility "
+                f"filters: {', '.join(unknown)}")
         return locator
 
     def resolve(self, key: str) -> Any:
         """Find the live element for ``key`` (or ``None`` if not present)."""
         from je_auto_control.utils.accessibility import (
             find_accessibility_element)
-        return find_accessibility_element(**self._require(key))
+        locator = self._require(key)
+        return find_accessibility_element(
+            name=locator.get("name"), role=locator.get("role"),
+            app_name=locator.get("app_name"))
 
     def find_info(self, key: str) -> Dict[str, Any]:
         """Resolve ``key`` and return a serialisable summary."""
@@ -96,4 +110,7 @@ class ElementRepository:
         """Click the element for ``key``; return whether it matched."""
         from je_auto_control.utils.accessibility import (
             click_accessibility_element)
-        return click_accessibility_element(**self._require(key))
+        locator = self._require(key)
+        return click_accessibility_element(
+            name=locator.get("name"), role=locator.get("role"),
+            app_name=locator.get("app_name"))
