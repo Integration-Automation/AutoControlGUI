@@ -41,6 +41,7 @@ class FolderSyncEngine:
         self._include_subdirs = bool(include_subdirs)
         self._snapshot: Dict[str, float] = {}  # rel_path -> mtime
         self._stop = threading.Event()
+        self._ready = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._lifecycle_lock = threading.Lock()
 
@@ -53,6 +54,7 @@ class FolderSyncEngine:
                     f"watch dir not a directory: {self._watch}"
                 )
             self._stop.clear()
+            self._ready.clear()
             self._thread = threading.Thread(
                 target=self._loop, name="folder-sync", daemon=True,
             )
@@ -71,6 +73,16 @@ class FolderSyncEngine:
 
     def is_running(self) -> bool:
         return self._thread is not None and self._thread.is_alive()
+
+    def wait_until_ready(self, timeout: float = 5.0) -> bool:
+        """Block until the baseline snapshot exists; ``True`` if it does.
+
+        ``start()`` returns as soon as the worker is spawned, so a file
+        created immediately after it can still land in the baseline and
+        never be pushed. Callers that add files right after starting
+        should wait here first.
+        """
+        return self._ready.wait(timeout)
 
     def _scan(self) -> Dict[str, float]:
         out: Dict[str, float] = {}
@@ -94,6 +106,7 @@ class FolderSyncEngine:
         # as "already synced" so engaging sync mid-edit doesn't re-upload
         # the entire directory.
         self._snapshot = self._scan()
+        self._ready.set()
         while not self._stop.is_set():
             self._stop.wait(self._interval)
             if self._stop.is_set():

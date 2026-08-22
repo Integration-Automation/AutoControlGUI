@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,031 |
-| 程式碼總行數 | 140,452 |
+| 程式碼總行數 | 140,465 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -510,14 +510,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 17,726 行。
+> 6 個套件、約 17,739 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 327 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 245 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 11,846 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/remote_desktop/` | 11,859 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,250 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 920 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
@@ -726,7 +726,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 87 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（11,846 行／56 檔）
+#### `utils/remote_desktop/`（11,859 行／56 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
@@ -768,7 +768,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `input_dispatch.py` | 133 | 在主機端套用輸入訊息。 |
 | `session_recorder.py` | 129 | 以 PyAV 把 WebRTC 影格錄成 mp4。 |
 | `totp.py` | 129 | RFC 6238 TOTP（零外部相依）。 |
-| `file_sync.py` | 126 | 輪詢式資料夾鏡像。 |
+| `file_sync.py` | 139 | 輪詢式資料夾鏡像。 |
 | `transport.py` | 123 | 可插拔的型別化訊息傳輸。 |
 | `host_access.py` | 105 | TCP 主機的檢視端核准與存取控制：`PendingViewer`、權限字串、分享碼的 TOTP 候選值、IP 白名單。`host` 與 `host_client` 共用,所以獨立成模組。 |
 | `protocol.py` | 96 | 長度前綴的 TCP 框架。 |
@@ -1026,7 +1026,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | --- | ---: | ---: |
 | `gui/` | 89 | 26,542 |
 | `utils/mcp_server/` | 21 | 17,323 |
-| `utils/remote_desktop/` | 56 | 11,846 |
+| `utils/remote_desktop/` | 56 | 11,859 |
 | `utils/executor/` | 6 | 9,075 |
 | `utils/usb/` | 17 | 4,250 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,363 |
@@ -1045,5 +1045,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 727 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,454 |
-| **總計** | **1,025** | **140,387** |
+| **總計** | **1,025** | **140,400** |
 
