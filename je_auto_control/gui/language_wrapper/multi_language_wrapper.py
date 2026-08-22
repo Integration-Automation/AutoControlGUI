@@ -4,7 +4,7 @@ Languages are registered by a display name (shown in the menu) mapped to a
 dict of key → translation. Missing keys fall through to the English default
 so new features degrade gracefully before their translations land.
 """
-from typing import Dict, List
+from typing import Callable, Dict, List
 
 from je_auto_control.gui.language_wrapper.english import english_word_dict
 from je_auto_control.gui.language_wrapper.japanese import japanese_word_dict
@@ -29,7 +29,7 @@ class LanguageWrapper:
             "Japanese": japanese_word_dict,
         }
         self.language: str = "English"
-        self._listeners: List[callable] = []
+        self._listeners: List[Callable[[str], None]] = []
         self.language_word_dict: dict = self._merged(self.language)
 
     @property

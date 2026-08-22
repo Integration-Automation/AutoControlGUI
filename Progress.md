@@ -240,11 +240,11 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
 而不是齊頭式地補測試。
 
-### mypy：整包把關，86 個模組還沒過
+### mypy：整包把關，73 個模組還沒過
 
 範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
 （`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 931 個已經過關。
+新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 944 個已經過關。
 
 `wrapper` 那一群（6 個模組）在 2026-08-21 清掉了，做法見 [WHATS_NEW.md](WHATS_NEW.md)：
 平台縫的八個匯出名稱先宣告型別、再讓分支去綁定，其中三個用
@@ -310,12 +310,37 @@ ctypes 表面一收掉，卡在它後面的兩群也跟著清了：`utils/usb/pa
 而 `object` 沒有任何屬性，所以透過它的十二個 Win32 呼叫全是型別錯誤。
 做法見 [WHATS_NEW.md](WHATS_NEW.md)。
 
-剩下 86 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
-`arg-type`／`union-attr`／`assignment`，**最大的一群現在是 `gui`**
-（11＋`gui/remote_desktop` 2，共 89 個錯誤），其次 `utils/mcp_server`（4，38 個）。
-以檔案計最大的三個是 `gui/_auto_click_tab.py`（31）、
-`gui/remote_desktop/webrtc_panel.py`（27）、
-`utils/mcp_server/_client_requests.py`（21）。
+`gui` 那一群（13 個模組）同日清掉，只剩 `webrtc_panel.py`（見下）。
+大宗又是 mixin 借用宿主的成員（六個分頁 mixin 借 `_tr`／`_translate`／`timer`），
+做法與 webrtc 那三個 mixin 相同。順帶修掉三個真的會壞的地方：
+`assertions_tab` 的 pixel 斷言把 `*_parse_ints(...)[:2]` 星號展開，使用者只打一個
+座標時 RGB 清單會被綁到 `y`，錯誤訊息變成「關鍵字參數重複」而不是「你少打了一個
+座標」；`_auto_click_tab._get_mouse_pos` 直接解包 `get_mouse_position()`，而
+Windows 後端在鎖定桌面上真的會回 `None`；`multi_language_wrapper` 的監聽器清單
+標成 `List[callable]`（`callable` 是內建函式，不是型別）。
+做法見 [WHATS_NEW.md](WHATS_NEW.md)。
+
+剩下 73 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
+`arg-type`／`union-attr`／`assignment`，**最大的一群現在是 `utils/mcp_server`**
+（4 個模組、38 個錯誤）。以檔案計最大的三個是
+`utils/mcp_server/_client_requests.py`（21）、
+`gui/remote_desktop/webrtc_panel.py`（27）、`utils/executor/action_executor.py`（9）。
+
+#### `webrtc_panel.py` 的型別豁免現在卡在它欠的那次拆檔
+
+`TODO` — 27 個錯誤，但清掉它需要先讓這個檔可以變長
+
+二十七個錯誤裡有七個來自 `_build_advanced_group(panel: TranslatableMixin, ...)`：
+這個自由函式**會把五個 widget 屬性寫回 panel 上**（`_stun_edit`、`_turn_edit`、
+`_turn_user_edit`、`_turn_cred_edit`、`_hw_codec_combo`），而 `TranslatableMixin`
+一個都沒有。正確的型別是一個 Protocol，把它需要與寫入的成員寫出來——但
+`webrtc_panel.py` **正好卡在 2,555 行的上限**（見本檔開頭那張表：只准變短），
+而加 Protocol 一定變長。
+
+真正的解法就是那張表早就寫著的：把這個檔拆成 panel + 各控制器。
+`_build_advanced_group` 本身就是第一個該搬出去的——它是共用的 widget group builder，
+不屬於 panel 模組，搬走同時解決長度與型別兩件事。**在那之前這個模組留在豁免清單上，
+理由記在這裡，不是被忘記。**
 **下一步**是一次清一個群集，清完把行從清單刪掉——
 `python test/verify/typing_contract_verify.py --fix` 會替你改，CI 會在你忘了刪的時候紅掉。
 已經清掉的那些留下四個可以直接套用的樣板：mixin 用 `if TYPE_CHECKING:` 宣告

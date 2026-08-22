@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING, Any, Callable
+
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QWidget, QLineEdit, QComboBox, QVBoxLayout, QLabel,
@@ -22,6 +24,14 @@ class AutoClickTabMixin:
     `self.repeat_max` attributes, and the ``TranslatableMixin`` helpers
     (``self._tr(...)``) set up by its __init__.
     """
+
+    if TYPE_CHECKING:
+        # Declared, never defined: the widget this mixin is mixed into owns
+        # every one of these. The block is stripped at runtime, so nothing
+        # here can shadow what the host actually binds.
+        _tr: Callable[..., Any]
+        _translate: Callable[[str], str]
+        timer: Any
 
     def _build_auto_click_tab(self) -> QWidget:
         tab = QWidget()
@@ -234,7 +244,14 @@ class AutoClickTabMixin:
 
     def _get_mouse_pos(self):
         try:
-            x, y = get_mouse_position()
+            position = get_mouse_position()
+            if position is None:
+                # GetCursorPos fails on a locked or secure desktop; the
+                # backend reports that as None rather than raising.
+                raise AutoControlException(
+                    "the OS did not report a cursor position",
+                )
+            x, y = position
             self._pos_label_suffix = f" ({x}, {y})"
             self.pos_label.setText(
                 self._translate("current_position") + self._pos_label_suffix,

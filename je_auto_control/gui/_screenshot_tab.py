@@ -1,4 +1,6 @@
 """Screenshot / pixel-probe tab builder (extracted mixin)."""
+from typing import TYPE_CHECKING, Any, Callable
+
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QFileDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
@@ -22,6 +24,13 @@ class ScreenshotTabMixin:
     ``self._translate(...)``) so every label registers for live language
     switching.
     """
+
+    if TYPE_CHECKING:
+        # Declared, never defined: the widget this mixin is mixed into owns
+        # every one of these. The block is stripped at runtime, so nothing
+        # here can shadow what the host actually binds.
+        _tr: Callable[..., Any]
+        _translate: Callable[[str], str]
 
     def _build_screenshot_tab(self) -> QWidget:
         tab = QWidget()

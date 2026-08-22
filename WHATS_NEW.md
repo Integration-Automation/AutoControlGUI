@@ -208,6 +208,52 @@ comparison as a `DECIDE`, because the cleanest of them changes what the gate
 means rather than what the code says. **136 modules left, 881 of 1,017 files
 inside the contract.**
 
+### The GUI Cluster: Three Real Failures Behind the Mixin Noise
+
+Thirteen of the fourteen `gui` modules came off the list. Most of the eighty-nine
+errors were the mixin shape already fixed twice on this branch — six tab mixins
+read `self._tr`, `self._translate` and `self.timer` off a host they never
+declared, and every one of them said so in its own docstring
+("Requires the host widget to expose…"). Those docstrings are now
+`if TYPE_CHECKING:` declarations, stripped at runtime.
+
+Underneath them were three things that fail for a user, not for a checker:
+
+- **A pixel assertion with one coordinate reported the wrong problem.**
+  `assertions_tab` called
+  `assert_pixel(*_parse_ints(self._xy.text())[:2], _parse_ints(self._rgb.text()), …)`.
+  Type `5` instead of `5,6` and the star-unpack contributes one argument, so the
+  RGB list binds to `y`, `match=` and `raise_on_fail=` collide with the
+  positional slots, and the user sees a `TypeError` about duplicate keyword
+  arguments. The count is checked first now, and the message names what is
+  missing.
+- **`_get_mouse_pos` unpacked a value the Windows backend really does return
+  as `None`.** `win32_ctype_mouse_control.position()` returns `None` when
+  `GetCursorPos` fails — which is what happens on a locked or secure desktop —
+  and the tab did `x, y = get_mouse_position()`. The existing `except TypeError`
+  caught it and showed "cannot unpack non-sequence NoneType object". It raises
+  `AutoControlException` with a sentence instead.
+- **`multi_language_wrapper` typed its listener list `List[callable]`.**
+  `callable` is the builtin *function*, not a type, so mypy read every
+  `listener(language)` call as calling something that is not callable. It is
+  `List[Callable[[str], None]]` now.
+
+`recording_edit.editor` came along with them: both of its optional parameters
+were written `end: int = None`, which PEP 484 prohibits and `no_implicit_optional`
+rejects.
+
+**`webrtc_panel.py` is the one that stayed**, and its reason is now in
+`Progress.md` rather than in nobody's head. Seven of its twenty-seven errors
+come from `_build_advanced_group(panel: TranslatableMixin, …)`, a free function
+that *writes* five widget attributes back onto the panel — none of which
+`TranslatableMixin` has. The correct type is a Protocol naming what it reads and
+writes, and the file is sitting exactly on its 2,555-line cap, which may only
+shrink. The real fix is the split that file already owes: `_build_advanced_group`
+is a shared widget-group builder that does not belong in the panel module, and
+moving it out settles the length and the type in one go.
+
+**73 modules left, 944 of 1,017 files inside the contract.**
+
 ### The WinUSB Backend Was One Failed DLL Load Away From Never Recovering
 
 With the ctypes surface settled, the two clusters behind it came off:
