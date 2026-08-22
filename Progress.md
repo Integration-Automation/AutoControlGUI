@@ -240,11 +240,11 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
 而不是齊頭式地補測試。
 
-### mypy：整包把關，73 個模組還沒過
+### mypy：整包把關，69 個模組還沒過
 
 範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
 （`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 944 個已經過關。
+新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 948 個已經過關。
 
 `wrapper` 那一群（6 個模組）在 2026-08-21 清掉了，做法見 [WHATS_NEW.md](WHATS_NEW.md)：
 平台縫的八個匯出名稱先宣告型別、再讓分支去綁定，其中三個用
@@ -320,11 +320,16 @@ Windows 後端在鎖定桌面上真的會回 `None`；`multi_language_wrapper` �
 標成 `List[callable]`（`callable` 是內建函式，不是型別）。
 做法見 [WHATS_NEW.md](WHATS_NEW.md)。
 
-剩下 73 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
-`arg-type`／`union-attr`／`assignment`，**最大的一群現在是 `utils/mcp_server`**
-（4 個模組、38 個錯誤）。以檔案計最大的三個是
-`utils/mcp_server/_client_requests.py`（21）、
-`gui/remote_desktop/webrtc_panel.py`（27）、`utils/executor/action_executor.py`（9）。
+`utils/mcp_server` 那一群（4 個模組）同日清掉，順帶抓到一個**從來沒成功過的指令**：
+`AC_normalize_url`／`ac_normalize_url` 都把 `drop_fragment=` 傳給
+`url_canon.normalize_url`，而那支函式的參數叫 `strip_fragment`——每一次呼叫都是
+`TypeError`。對外的名字不動（動作 schema 與工具註冊表都用它），改的是兩個呼叫點。
+做法見 [WHATS_NEW.md](WHATS_NEW.md)。
+
+剩下 69 個模組要清，而且**不再有大群集**：最大的檔案是
+`gui/remote_desktop/webrtc_panel.py`（27，見下），其餘每個檔都在 8 個錯誤以下
+（`utils/executor/action_executor.py` 8，`utils/table_grid_fill`／`utils/url_canon`／
+`utils/window_zorder`／`utils/plugin_loader` 各 6）。
 
 #### `webrtc_panel.py` 的型別豁免現在卡在它欠的那次拆檔
 

@@ -230,7 +230,7 @@ def write(write_string: str, is_shift: bool = False) -> Optional[str]:
         raise AutoControlKeyboardException(f"{keyboard_write_error_message} {repr(error)}") from error
 
 
-def hotkey(key_code_list: list, is_shift: bool = False) -> Optional[Tuple[str, str]]:
+def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
     """
     模擬組合鍵 (依序按下，再反向放開)
     Simulate hotkey (press all keys, then release in reverse order)

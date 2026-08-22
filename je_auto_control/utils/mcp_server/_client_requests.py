@@ -10,9 +10,12 @@ router belong together with the senders that populate it.
 Destructive-tool confirmation lives here too: it is an elicitation
 round-trip, not a tool-execution step.
 """
+import itertools
 import json
 import threading
-from typing import Any, Dict, List, Optional
+from typing import (
+    TYPE_CHECKING, Any, Callable, Dict, List, Optional,
+)
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.mcp_server._protocol import (
@@ -28,6 +31,18 @@ class ClientRequestMixin:
     ``_resources``, ``_outbound_lock``, ``_pending_outbound``,
     ``_outbound_id_counter`` and ``_sampling_id_counter``.
     """
+
+    if TYPE_CHECKING:
+        # Declared, never defined: :class:`MCPServer` owns every one of
+        # these. The block is stripped at runtime, so nothing here can
+        # shadow what the host actually binds.
+        _writer: Optional[Callable[[str], None]]
+        _client_capabilities: Dict[str, Any]
+        _resources: Any
+        _outbound_lock: threading.Lock
+        _pending_outbound: Dict[Any, Dict[str, Any]]
+        _outbound_id_counter: "itertools.count[int]"
+        _sampling_id_counter: "itertools.count[int]"
 
     @staticmethod
     def _is_outbound_response(method: Optional[str], msg_id: Any,
@@ -97,7 +112,7 @@ class ClientRequestMixin:
         if writer is None:
             raise RuntimeError(f"{method} requires an outbound writer")
         request_id = f"srv-{next(self._outbound_id_counter)}"
-        slot = {"event": threading.Event()}
+        slot: Dict[str, Any] = {"event": threading.Event()}
         with self._outbound_lock:
             self._pending_outbound[request_id] = slot
         envelope = json.dumps({
@@ -159,7 +174,7 @@ class ClientRequestMixin:
             params["systemPrompt"] = str(system_prompt)
         if model_preferences is not None:
             params["modelPreferences"] = dict(model_preferences)
-        slot = {"event": threading.Event()}
+        slot: Dict[str, Any] = {"event": threading.Event()}
         with self._outbound_lock:
             self._pending_outbound[request_id] = slot
         envelope = json.dumps({

@@ -208,6 +208,42 @@ comparison as a `DECIDE`, because the cleanest of them changes what the gate
 means rather than what the code says. **136 modules left, 881 of 1,017 files
 inside the contract.**
 
+### `normalize_url` Had Never Worked, on Either Surface
+
+The MCP cluster came off next, and the gate found a command that could not
+succeed. `AC_normalize_url` and `ac_normalize_url` both forward to
+`url_canon.normalize_url`, and both passed `drop_fragment=` — the name they
+expose to callers. The function's parameter is `strip_fragment`. Every call,
+with or without that flag, raised
+`TypeError: normalize_url() got an unexpected keyword argument 'drop_fragment'`:
+in the executor, in the MCP tool, and from the Script Builder field that feeds
+them. The outward name is unchanged (it is in the action schema and the tool
+registry); the two call sites now pass it through under the name the callee
+uses. Measured before and after: the MCP tool returns
+`{"url": "https://example.com/b"}` where it used to return an error.
+
+The rest of the cluster was the shapes this branch keeps meeting:
+
+- **`ClientRequestMixin` borrowed seven attributes from `MCPServer`** and listed
+  all seven in its docstring; that list is a `TYPE_CHECKING` declaration now.
+- **Two catch tuples again.** `_DISPATCH_ERRORS` and `_TOOL_INVOKE_ERRORS` are
+  the containment boundary for the whole stdio loop, and neither was typed as a
+  tuple of exception classes, so all three `except` sites were errors.
+- **`_dispatch` fed an `Optional[str]` method name to `dict.get`.** A JSON-RPC
+  request with no `method` now takes the not-found branch explicitly, with the
+  same `-32601` response body it produced by falling through.
+- **The subscription callback was a default-argument lambda**
+  (`lambda u=uri: …`), which mypy cannot infer against a `Callable[[], None]`
+  parameter. `functools.partial` binds `uri` the same way and says the type.
+
+Two public return annotations were also wrong in the safe direction:
+`set_mouse_position` and `hotkey` are declared `... | None` but every path
+either returns the tuple or raises. Narrowing them is what let the MCP handlers
+stop indexing an Optional. `get_mouse_position` keeps its `| None` — the Windows
+backend really does return that.
+
+**69 modules left, 948 of 1,017 files inside the contract.**
+
 ### The GUI Cluster: Three Real Failures Behind the Mixin Noise
 
 Thirteen of the fourteen `gui` modules came off the list. Most of the eighty-nine

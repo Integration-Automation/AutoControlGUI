@@ -122,7 +122,7 @@ def get_mouse_position() -> tuple[int, int] | None:
         raise
 
 
-def set_mouse_position(x: int, y: int) -> tuple[int, int] | None:
+def set_mouse_position(x: int, y: int) -> tuple[int, int]:
     """
     設定滑鼠位置
     Set mouse position

@@ -6711,8 +6711,10 @@ def _normalize_url(url: str, sort_query: bool = False,
                    drop_fragment: bool = False) -> Dict[str, Any]:
     """Adapter: RFC 3986 syntax-based normalisation of a URL."""
     from je_auto_control.utils.url_canon import normalize_url
+    # `drop_fragment` is the AC_ surface's name; url_canon calls the
+    # same flag `strip_fragment`.
     return {"url": normalize_url(url, sort_query=bool(sort_query),
-                                 drop_fragment=bool(drop_fragment))}
+                                 strip_fragment=bool(drop_fragment))}
 
 
 def _urls_equal(first: str, second: str) -> Dict[str, Any]:
