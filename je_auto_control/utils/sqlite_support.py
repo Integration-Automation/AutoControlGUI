@@ -9,10 +9,11 @@ scope made the whole package unimportable on such a Python -- mouse and
 keyboard included, neither of which touches a database. Going through here
 instead defers the failure to the first call that actually opens one.
 """
-from typing import Tuple, Type
+from typing import Any, Tuple, Type
 
-from je_auto_control.utils.exception.exceptions import \
-    AutoControlUnsupportedOperationException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlException, AutoControlUnsupportedOperationException,
+)
 
 try:
     import sqlite3 as _sqlite3
@@ -36,6 +37,19 @@ _UNAVAILABLE_MESSAGE = (
     "log, SQL data sources) cannot run. Install it for this interpreter -- on "
     "FreeBSD it is the separate databases/py-sqlite3 package."
 )
+
+
+def last_row_id(cursor: Any) -> int:
+    """Return the id of the row a just-executed INSERT created.
+
+    ``Cursor.lastrowid`` is ``None`` until an INSERT has run on that
+    cursor, so every caller that returns it has to say what it means when
+    it is not there rather than hand ``None`` on as an id.
+    """
+    row_id = cursor.lastrowid
+    if row_id is None:
+        raise AutoControlException("INSERT did not report a row id")
+    return int(row_id)
 
 
 def sqlite3_available() -> bool:

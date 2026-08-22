@@ -21,7 +21,7 @@ Scope (pure standard library — no ``freezegun`` dependency):
 Imports no ``PySide6``.
 """
 import random
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 from unittest import mock
 
 _UNSET = object()
@@ -68,6 +68,8 @@ class DeterministicRun:
 
     def _freeze_clock(self) -> None:
         instant = self._freeze_time
+        if instant is None:
+            return
         time_patch = mock.patch("time.time", return_value=instant)
         ns_patch = mock.patch("time.time_ns", return_value=int(instant * 1e9))
         for patch in (time_patch, ns_patch):
@@ -81,7 +83,7 @@ class DeterministicRun:
             self._freeze_clock()
         return self
 
-    def __exit__(self, *exc: Any) -> bool:
+    def __exit__(self, *exc: Any) -> Literal[False]:
         while self._patches:
             self._patches.pop().stop()
         if self._rng_state is not _UNSET:

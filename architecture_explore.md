@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,031 |
-| 程式碼總行數 | 140,867 |
+| 程式碼總行數 | 140,898 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -159,7 +159,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `je_auto_control/api/core.py` | 19 | **穩定無頭 API 門面**：只暴露 `execute_action`、`execute_action_with_vars`、`generate_code`、`run_diagnostics`、`create_failure_bundle`、`failure_bundle_on_error`、`FailureBundleOptions`。mypy 型別契約以此為起點，現已擴到整包（見「設定基線」）。 |
 | `je_auto_control/utils/deprecation.py` | 35 | 公開 API 的一致性棄用警告。 |
 | `je_auto_control/utils/http_headers.py` | 45 | 入站 HTTP 標頭的共用防禦式解析。 |
-| `je_auto_control/utils/sqlite_support.py` | 56 | 選用標準函式庫 `sqlite3` 的取用點：`require_sqlite3()`／`sqlite3_available()`／`SQLITE_ERRORS`。十個以 SQLite 存放狀態的子系統都經由這裡，所以 FreeBSD 這種把 `sqlite3` 另外包成 `databases/py-sqlite3` 的 Python 仍然 import 得起門面。 |
+| `je_auto_control/utils/sqlite_support.py` | 70 | 選用標準函式庫 `sqlite3` 的取用點：`require_sqlite3()`／`sqlite3_available()`／`SQLITE_ERRORS`。十個以 SQLite 存放狀態的子系統都經由這裡，所以 FreeBSD 這種把 `sqlite3` 另外包成 `databases/py-sqlite3` 的 Python 仍然 import 得起門面。 |
 
 ### 5.2 wrapper 抽象層
 
@@ -268,7 +268,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 12,906 行。
+> 24 個套件、約 12,916 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -278,7 +278,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/codegen/` | 157 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
 | `utils/dag/` | 475 | 跨主機 DAG 編排器（圖模型 + runner） |
 | `utils/decision_table/` | 103 | DMN 風格決策表：規則 + 命中策略，把分支外部化 |
-| `utils/deterministic/` | 96 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
+| `utils/deterministic/` | 98 | 決定性執行控制：固定亂數種子 + 凍結時鐘 |
 | `utils/executor/` | 9,081 | **核心**。`Executor` 指令分派表（773 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 136 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 342 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
@@ -287,25 +287,25 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/loop_guard/` | 140 | 機械式卡死迴圈偵測（agent loop 用） |
 | `utils/plugin_loader/` | 85 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
 | `utils/plugin_sdk/` | 68 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
-| `utils/project/` | 182 | 專案腳手架：建立目錄結構與範本 action 檔 |
+| `utils/project/` | 186 | 專案腳手架：建立目錄結構與範本 action 檔 |
 | `utils/recording_edit/` | 150 | 不重錄的前提下裁切／過濾／縮放已錄製的 action list |
 | `utils/saga/` | 93 | Saga 協調器：失敗時以 LIFO 補償動作回滾 |
 | `utils/script_vars/` | 190 | 執行期變數作用域與 `${var}` / `${secrets.*}` 插值 |
 | `utils/skill_library/` | 116 | 具名可重用 action 序列（skill）的持久化倉庫 |
 | `utils/state_machine/` | 181 | 宣告式有限狀態機驅動 action JSON |
 | `utils/stubs/` | 236 | 為 `AC_*` 指令面產生型別 stub |
-| `utils/test_record/` | 64 | 全域測試紀錄單例，記錄每個動作的參數與例外 |
-| `utils/work_queue/` | 180 | 交易式工作佇列（dispatcher／performer），支撐大量批次執行 |
+| `utils/test_record/` | 66 | 全域測試紀錄單例，記錄每個動作的參數與例外 |
+| `utils/work_queue/` | 182 | 交易式工作佇列（dispatcher／performer），支撐大量批次執行 |
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 2,650 行。
+> 14 個套件、約 2,651 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/callback/` | 200 | Observer 模式：`callback_executor` 以字串名觸發功能，執行後呼叫回呼 |
 | `utils/config_bundle/` | 400 | 使用者設定的單檔匯出／匯入 |
-| `utils/critical_exit/` | 97 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
+| `utils/critical_exit/` | 98 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
 | `utils/diagnostics/` | 322 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
 | `utils/dbus_client/` | 680 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
 | `utils/exception/` | 210 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
@@ -490,13 +490,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 20,641 行。
+> 13 個套件、約 20,643 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 1,250 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_memory/` | 151 | agent 的持久化情節記憶（goal → trajectory → outcome） |
+| `utils/agent_memory/` | 153 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 63 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 129 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
 | `utils/cost_telemetry/` | 292 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
@@ -510,11 +510,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 17,901 行。
+> 6 個套件、約 17,902 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/admin/` | 327 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
+| `utils/admin/` | 328 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 245 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 11,990 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
@@ -523,7 +523,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 5,919 行。
+> 24 個套件、約 5,922 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -533,7 +533,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/email_send/` | 116 | SMTP 寄信（email 觸發器的發送端搭檔） |
 | `utils/events/` | 82 | 對外 CloudEvents 發送（執行生命週期事件） |
 | `utils/http_cassette/` | 110 | 錄製／重播 HTTP 互動，做離線決定性 API 測試 |
-| `utils/http_client/` | 132 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
+| `utils/http_client/` | 135 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
 | `utils/http_conditional/` | 87 | 條件式 HTTP 請求與快取驗證器 |
 | `utils/http_content/` | 103 | HTTP 內容協商與回應解壓縮 |
 | `utils/http_problem/` | 116 | RFC 9457 problem+json 解析 |
@@ -1044,6 +1044,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 915 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 727 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,550 |
-| **總計** | **1,025** | **140,802** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,581 |
+| **總計** | **1,025** | **140,833** |
 

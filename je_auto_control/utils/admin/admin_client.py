@@ -113,6 +113,7 @@ class AdminConsoleClient:
         scales the resulting image down to a thumbnail tile.
         """
         import base64
+        import binascii
         targets = self._resolve_targets(labels)
         if not targets:
             return {}
@@ -132,7 +133,7 @@ class AdminConsoleClient:
                 return host.label, None
             try:
                 return host.label, base64.b64decode(data)
-            except (ValueError, base64.binascii.Error):
+            except (ValueError, binascii.Error):
                 return host.label, None
 
         with ThreadPoolExecutor(max_workers=self._max_parallel) as pool:

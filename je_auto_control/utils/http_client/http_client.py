@@ -64,7 +64,10 @@ def _try_json(text: str) -> Any:
 
 
 def _read_response(response: Any) -> Dict[str, Any]:
-    status = int(getattr(response, "status", None) or getattr(response, "code", 0))
+    raw_status: Any = getattr(response, "status", None)
+    if raw_status is None:
+        raw_status = getattr(response, "code", 0)
+    status = int(raw_status)
     text = response.read().decode("utf-8", errors="replace")
     raw_headers = getattr(response, "headers", None)
     headers = dict(raw_headers.items()) if raw_headers else {}
