@@ -36,7 +36,7 @@ def cofailure_pairs(runs: Sequence[Sequence[str]], *,
     Each entry is ``{tests:[a,b], jaccard, co_failures}``, most similar first.
     """
     fails = _fail_runs(runs)
-    pairs = []
+    pairs: List[Dict[str, Any]] = []
     for left, right in combinations(sorted(fails), 2):
         score = _set_jaccard(fails[left], fails[right])
         if score >= float(threshold):

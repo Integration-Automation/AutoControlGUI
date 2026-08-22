@@ -85,12 +85,30 @@ def image_locator(template_path: str,
                     detect_threshold=float(detect_threshold))
 
 
+def _as_region(region: Optional[List[int]]
+               ) -> Optional[Tuple[int, int, int, int]]:
+    """Return a four-tuple region, or None when there is no region."""
+    if not region:
+        return None
+    if len(region) != 4:
+        raise ValueError(f"region must have 4 values, got {len(region)}")
+    left, top, width, height = (int(value) for value in region)
+    return left, top, width, height
+
+
+def _require(value: Optional[str], locator: "Locator", field: str) -> str:
+    """Return a field this locator kind must carry, or say which is missing."""
+    if value is None:
+        raise ValueError(f"{locator.kind} locator has no {field}")
+    return value
+
+
 def ocr_locator(text: str, *, min_confidence: float = 60.0,
                 region: Optional[List[int]] = None) -> Locator:
     return Locator(
         kind=KIND_OCR, text=str(text),
         min_confidence=float(min_confidence),
-        region=tuple(region) if region else None,
+        region=_as_region(region),
     )
 
 
@@ -342,7 +360,7 @@ def _ocr_center(locator: Locator) -> Optional[Tuple[int, int]]:
     try:
         from je_auto_control.utils.ocr.ocr_engine import locate_text_center
         return locate_text_center(
-            locator.text,
+            _require(locator.text, locator, "text"),
             region=list(locator.region) if locator.region else None,
             min_confidence=locator.min_confidence,
         )
@@ -354,7 +372,7 @@ def _ocr_candidates(locator: Locator) -> List[_Bbox]:
     try:
         from je_auto_control.utils.ocr.ocr_engine import find_text_matches
         matches = find_text_matches(
-            locator.text,
+            _require(locator.text, locator, "text"),
             region=list(locator.region) if locator.region else None,
             min_confidence=locator.min_confidence,
         )
@@ -368,7 +386,8 @@ def _vlm_point(locator: Locator) -> Optional[Tuple[int, int]]:
     try:
         from je_auto_control.utils.vision.vlm_api import locate_by_description
         return locate_by_description(
-            locator.description, model=locator.model,
+            _require(locator.description, locator, "description"),
+            model=locator.model,
         )
     except _LOCATE_ERRORS:
         return None

@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,031 |
-| 程式碼總行數 | 140,818 |
+| 程式碼總行數 | 140,861 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -338,7 +338,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.4 輸入模擬與動作品質
 
-> 22 個套件、約 2,610 行。
+> 22 個套件、約 2,615 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -346,7 +346,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/act_modes/` | 67 | actionability 閘門之上的 trial／force 動作模式 |
 | `utils/action_effect/` | 110 | 判定一個動作是否真的產生效果，並歸因到目標區域 |
 | `utils/action_grounding/` | 80 | 動作前的接地守衛（邊界檢查 + 吸附到元素） |
-| `utils/actionability/` | 163 | 動作前就緒閘門（可見 + 穩定 + 啟用 + 未被遮擋） |
+| `utils/actionability/` | 166 | 動作前就緒閘門（可見 + 穩定 + 啟用 + 未被遮擋） |
 | `utils/ensure_state/` | 72 | 冪等地把控制項／設定帶到期望狀態 |
 | `utils/field_entry/` | 76 | 清空再輸入的欄位填寫慣用法（Playwright `fill`） |
 | `utils/gamepad/` | 311 | 虛擬遊戲手把後端（Windows ViGEmBus 驅動） |
@@ -358,7 +358,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/mouse_relative/` | 59 | 相對位移滑鼠移動 |
 | `utils/postcondition/` | 138 | 宣告式的動作預期結果規格，對照畫面驗證 |
 | `utils/step_repair/` | 114 | 失敗／無效動作的修復策略（自我修正迴圈） |
-| `utils/table_grid_fill/` | 141 | 以 OCR 文字填滿格線表格，取得可定址的表格 |
+| `utils/table_grid_fill/` | 143 | 以 OCR 文字填滿格線表格，取得可定址的表格 |
 | `utils/input_reach/` | 111 | 送出去的輸入到不到得了：桌面鎖定查詢（免費）＋ 實際送一個 F13 確認沒有被過濾（有副作用，只給診斷用） |
 | `utils/keyboard_layout/` | 148 | 向系統問「這個鍵盤配置下每個鍵印出什麼字」（`ToUnicodeEx`），問不到退回 US 對照表 |
 | `utils/text_unicode/` | 135 | 輸入任意 Unicode（emoji／CJK／重音字）：優先送字元按鍵事件，不支援時退回剪貼簿貼上 |
@@ -411,7 +411,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.6 OCR 與文字理解
 
-> 19 個套件、約 3,180 行。
+> 19 個套件、約 3,184 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -432,7 +432,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/text_blocks/` | 88 | 把 OCR 行組成段落與項目符號／編號清單 |
 | `utils/text_diff/` | 148 | unified diff 產生、套用與三方合併 |
 | `utils/text_normalize/` | 63 | Unicode 正規化與 slug 產生 |
-| `utils/text_regions/` | 157 | 免模型的畫面文字區域偵測（MSER）：區域與行 |
+| `utils/text_regions/` | 161 | 免模型的畫面文字區域偵測（MSER）：區域與行 |
 | `utils/text_similarity/` | 165 | 字串距離度量（文字比對用） |
 
 ### 5.4.7 無障礙樹與原生控制項
@@ -460,13 +460,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 3,995 行。
+> 23 個套件、約 4,014 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/ab_locator/` | 336 | A/B 定位器框架：同時競速 N 種策略並記錄各自勝率 |
 | `utils/adaptive_timeout/` | 84 | 由觀測到的步驟耗時推導等待逾時，而非硬猜 |
-| `utils/anchor_locator/` | 438 | 錨點定位器：以空間關係組合 影像／OCR／VLM／a11y 四種來源 |
+| `utils/anchor_locator/` | 457 | 錨點定位器：以空間關係組合 影像／OCR／VLM／a11y 四種來源 |
 | `utils/app_idle/` | 108 | 等應用程式不再忙碌，再驅動下一步 |
 | `utils/change_localize/` | 80 | 把畫面變化歸因到實際改變的元素框 |
 | `utils/critic_features/` | 85 | 每步的 critic 特徵集合與規則式步驟評分 |
@@ -523,7 +523,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 5,917 行。
+> 24 個套件、約 5,919 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -549,7 +549,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/socket_server/` | 131 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 112 | Server-Sent Events 用戶端解析 |
 | `utils/tls_acme/` | 447 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
-| `utils/url_canon/` | 115 | RFC 3986 URL 正規化與查詢字串工具 |
+| `utils/url_canon/` | 117 | RFC 3986 URL 正規化與查詢字串工具 |
 | `utils/webrunner_bridge/` | 161 | 把 action JSON 橋接到 WebRunner（`je_web_runner`） |
 
 ### 5.4.12 報表、可觀測性與測試治理
@@ -626,7 +626,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,279 行。
+> 13 個套件、約 2,289 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -636,7 +636,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/license_policy/` | 139 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 104 | SLSA 建置來源證明（in-toto v1） |
 | `utils/rbac/` | 272 | 角色型存取控制與逐使用者稽核歸因 |
-| `utils/redaction/` | 457 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
+| `utils/redaction/` | 467 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
 | `utils/sbom/` | 108 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 126 | URI scheme 形式的值參照解析 |
 | `utils/secrets/` | 269 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
@@ -667,7 +667,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,412 行。
+> 16 個套件、約 2,415 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -683,7 +683,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/shell_open/` | 97 | 以預設應用開啟檔案，或以預設瀏覽器開啟 URL |
 | `utils/system_volume/` | 194 | 讀取與控制系統主音量與靜音狀態 |
 | `utils/trash/` | 90 | 把檔案移到系統資源回收筒（可復原刪除） |
-| `utils/window_capture/` | 255 | 逐視窗截圖、視窗版面儲存／還原、貼齊與排列 |
+| `utils/window_capture/` | 258 | 逐視窗截圖、視窗版面儲存／還原、貼齊與排列 |
 | `utils/window_geometry/` | 81 | 視窗客戶區幾何（外框內縮、client→screen 對映） |
 | `utils/window_layout/` | 134 | 視窗拼貼／版面規劃器（左右半、四象限、網格、層疊） |
 | `utils/window_zorder/` | 76 | 視窗 z 序控制（最上層／移到最前／送到最後） |
@@ -1044,6 +1044,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 915 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 727 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,505 |
-| **總計** | **1,025** | **140,753** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,548 |
+| **總計** | **1,025** | **140,796** |
 

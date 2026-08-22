@@ -208,6 +208,43 @@ comparison as a `DECIDE`, because the cleanest of them changes what the gate
 means rather than what the code says. **136 modules left, 881 of 1,017 files
 inside the contract.**
 
+### Thirteen Small Modules, and a Stub That Disagrees With the Library
+
+Past the big clusters the list is a long tail: thirteen modules of two to six
+errors each, cleared in one pass. Three recurring shapes, all of them cheap:
+
+- **`callable` used as a type.** It is the builtin *function*, so mypy reads
+  every call through the annotated value as calling something not callable.
+  `plugin_loader` had it six times, both hotkey backends once each.
+- **`x: SomeType = None` defaults**, which PEP 484 prohibits and
+  `no_implicit_optional` rejects: the three `window_zorder` drivers.
+- **A tuple that lost its length.** `tuple(r)` and `cv2.boundingRect(...)` are
+  `tuple[int, ...]`, and the fields they feed promise four ints. Spelling the
+  four out is both the fix and the documentation.
+
+Two are worth naming on their own:
+
+**`_StabilityTracker` read `now - self._since` on a path where `_since` could
+only be non-`None` because of what an earlier call did.** True today, invisible
+to a reader, and one refactor away from a `TypeError` in the poll loop. It
+binds the value and treats "no start time" as "not stable yet".
+
+**`act_when_ready` passed `report.point` to a callback that requires a point.**
+`point` is `None` whenever the target is invisible; the guard above it tests
+`report.actionable`, which implies visible — again true, again only through the
+call graph. The point is now checked where it is used.
+
+**And the cv2 stub disagrees with the cv2 that ships with it.**
+`text_regions` calls `cv2.MSER_create`, which exists in every supported OpenCV
+at runtime but is absent from the `.pyi` opencv-python installs (measured on
+4.13.0: `hasattr(cv2, "MSER_create")` is `True`, the name is not in the stub).
+That is one justified `type: ignore` — and a note for whoever next reads the
+mypy config: cv2 is listed there under "base dependencies that ship no stubs",
+but it does ship one, so the gate reads it and its verdict can move with the
+OpenCV version inside the `>=4.8,<6` pin.
+
+**56 modules left, 961 of 1,017 files inside the contract.**
+
 ### `normalize_url` Had Never Worked, on Either Surface
 
 The MCP cluster came off next, and the gate found a command that could not

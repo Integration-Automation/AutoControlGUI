@@ -240,11 +240,11 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
 而不是齊頭式地補測試。
 
-### mypy：整包把關，69 個模組還沒過
+### mypy：整包把關，56 個模組還沒過
 
 範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
 （`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 948 個已經過關。
+新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 961 個已經過關。
 
 `wrapper` 那一群（6 個模組）在 2026-08-21 清掉了，做法見 [WHATS_NEW.md](WHATS_NEW.md)：
 平台縫的八個匯出名稱先宣告型別、再讓分支去綁定，其中三個用
@@ -326,10 +326,21 @@ Windows 後端在鎖定桌面上真的會回 `None`；`multi_language_wrapper` �
 `TypeError`。對外的名字不動（動作 schema 與工具註冊表都用它），改的是兩個呼叫點。
 做法見 [WHATS_NEW.md](WHATS_NEW.md)。
 
-剩下 69 個模組要清，而且**不再有大群集**：最大的檔案是
-`gui/remote_desktop/webrtc_panel.py`（27，見下），其餘每個檔都在 8 個錯誤以下
-（`utils/executor/action_executor.py` 8，`utils/table_grid_fill`／`utils/url_canon`／
-`utils/window_zorder`／`utils/plugin_loader` 各 6）。
+長尾那一批（13 個模組、每個 2～6 個錯誤）同日清掉，反覆出現的只有三種形狀：
+`callable` 被當成型別用（`callable` 是內建函式）、`x: SomeType = None` 的隱含
+Optional、以及「掉了長度的 tuple」（`tuple(r)`／`cv2.boundingRect()` 都是
+`tuple[int, ...]`，而收它的欄位承諾四個 int）。另外抓到兩個只靠呼叫圖成立的不變量
+（`_StabilityTracker` 的 `now - self._since`、`act_when_ready` 把可能是 `None` 的
+`report.point` 傳給要求座標的 callback）。做法見 [WHATS_NEW.md](WHATS_NEW.md)。
+
+**順帶一個 mypy 設定上的事實**：`pyproject.toml` 把 `cv2` 列在
+「ship no stubs 的基礎相依」底下，但 opencv-python **有**附 `.pyi`，所以閘門會去讀它，
+而它的內容會隨 OpenCV 版本變動（實測 4.13.0：`cv2.MSER_create` 執行期存在、stub 裡沒有）。
+`>=4.8,<6` 這個範圍內版本一換，閘門的判定就可能跟著動——與 numpy 那條註解同一類的坑。
+
+剩下 56 個模組要清，**不再有大群集**：最大的檔案是
+`gui/remote_desktop/webrtc_panel.py`（27，見下）與
+`utils/executor/action_executor.py`（8），其餘每個檔都只剩 1～2 個錯誤。
 
 #### `webrtc_panel.py` 的型別豁免現在卡在它欠的那次拆檔
 
