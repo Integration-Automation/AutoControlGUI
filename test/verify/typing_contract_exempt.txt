@@ -14,7 +14,7 @@
 # "Does not type-check" means on at least one of the three targets mypy can be
 # pointed at (win32, linux, darwin) — not just the one CI happens to run on.
 #
-# Measured entries: 56
+# Measured entries: 55
 
 je_auto_control.__main__
 je_auto_control.cli
@@ -38,7 +38,6 @@ je_auto_control.utils.dbus_client.session_bus
 je_auto_control.utils.deterministic.deterministic
 je_auto_control.utils.element_parse.element_parse
 je_auto_control.utils.element_proposal.element_proposal
-je_auto_control.utils.executor.action_executor
 je_auto_control.utils.expect_poll.expect_poll
 je_auto_control.utils.feature_match.feature_match
 je_auto_control.utils.flow_debugger.flow_debugger
