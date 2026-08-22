@@ -208,6 +208,74 @@ comparison as a `DECIDE`, because the cleanest of them changes what the gate
 means rather than what the code says. **136 modules left, 881 of 1,017 files
 inside the contract.**
 
+### The Biggest Remaining Cluster: Thirteen Modules Under `utils/remote_desktop`
+
+`Progress.md` named this one as the next step and as the largest group left
+(13 modules, 169 errors). It came off in one pass, and the errors sorted into
+exactly two shapes.
+
+**Nine of the thirteen were `self._x = None` with no annotation.** mypy infers
+the attribute's *type* as `None` from that line, so every later assignment is
+"incompatible types" and every later use is "None has no attribute …". Several
+of them even carried the intended type in a trailing comment
+(`self._files_receiver = None  # Optional[FileTransferReceiver]`) — the fact was
+known, just written somewhere no checker reads. Those comments are now
+annotations, with the classes imported under `TYPE_CHECKING` so the lazy runtime
+imports that keep startup cheap are untouched. Where an attribute is assigned
+and then used through a closure — `_wire_files_channel` in both the host and the
+viewer — the receiver is bound to a local first, because a closure re-reads the
+attribute and no narrowing survives that.
+
+**The other four were mixins reading attributes they do not own.**
+`MediaNegotiationMixin`, `ViewerAuthMixin` and `FrameProductionMixin` are halves
+of a host class split for readability, and each one's docstring already listed
+what it borrows from the class it is mixed into — `_pc`, `_config`, `_send_ctrl`,
+`_spawn_bg`, `_shutdown`, `_clients`… That list is now a declaration: an
+`if TYPE_CHECKING:` block in the class body naming each borrowed attribute and
+method. The block is stripped at runtime, so a stub in it cannot shadow what the
+host actually binds — which a plain class-body `def` would risk for any future
+mixin sibling that does not define it.
+
+Three findings in the batch are behaviour, not annotation:
+
+- **`WebRTCLoopBridge._run` read the loop off shared state.** `start()` set
+  `self._loop` and spawned a thread whose target then read `self._loop` back to
+  run it. The loop is now passed to the thread as an argument, and `start()`
+  returns it, so `submit()` and `call_soon()` hand a value they hold rather than
+  re-reading an `Optional`. Same behaviour, one less cross-thread read.
+- **`_get_cursor_position` was invisible to the platform pruner.** It did
+  `import sys as _sys` *inside* the function and branched on `_sys.platform`,
+  which mypy does not treat as a platform test — so the Win32 branch was
+  type-checked against Linux and macOS too. The import moved to module scope,
+  which is what makes `ctypes.windll` a Windows-only fact rather than an error.
+- **`totp` caught `base64.binascii.Error`.** That attribute exists only because
+  `base64` imports `binascii` itself; nothing declares it, and it would vanish
+  with a stdlib refactor. `binascii` is now imported by name.
+
+Two dicts also stopped being dicts of `object`: `manifest.json`'s entry rows and
+the four `BANDWIDTH_PRESETS` are `TypedDict`s, so `preset["fps"]` is an `int`
+without a cast and the manifest's shape is stated where it is written rather
+than inferred from three literals. **123 modules left, 894 of 1,017 files inside
+the contract.**
+
+### The macOS Grid Cell That Failed on a Test's Own Race
+
+`pytest-headless (macos-14, 3.14)` went red on
+`test_modified_file_is_pushed_again`, asserting one push and seeing two. The
+engine was right and the test was not: it edited the watched file in place and
+*then* pushed its mtime forward, so between `write_text` and `os.utime` the file
+briefly carried a third, intermediate mtime. A poll tick landing in that window
+legitimately pushes twice — once for the intermediate value and once for the
+final one. The new content is now staged outside the watch dir and swapped in
+with `os.replace`, so one edit is one event.
+
+The same file guessed in the other direction too: every test slept a fixed 0.4s
+hoping the baseline snapshot had been taken, while `FolderSyncEngine.start()`
+returns as soon as the worker thread is spawned. On a slow runner the test's own
+edit could land *in* the baseline and be pushed never. `wait_until_ready()` makes
+the handshake observable — and it is not test-only scaffolding: any caller that
+drops files right after `start()` has exactly that race.
+
 ## What's new (2026-08-20)
 
 ### Three Tests That Had Been Skipped Since They Were Written

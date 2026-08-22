@@ -14,7 +14,7 @@
 # "Does not type-check" means on at least one of the three targets mypy can be
 # pointed at (win32, linux, darwin) — not just the one CI happens to run on.
 #
-# Measured entries: 136
+# Measured entries: 123
 
 je_auto_control.__main__
 je_auto_control.cli
@@ -100,19 +100,6 @@ je_auto_control.utils.rate_limit.rate_limit
 je_auto_control.utils.recording_edit.editor
 je_auto_control.utils.redaction.policies
 je_auto_control.utils.redaction.rules
-je_auto_control.utils.remote_desktop.audio
-je_auto_control.utils.remote_desktop.host_capture
-je_auto_control.utils.remote_desktop.host_service
-je_auto_control.utils.remote_desktop.jpeg_recorder
-je_auto_control.utils.remote_desktop.session_recorder
-je_auto_control.utils.remote_desktop.totp
-je_auto_control.utils.remote_desktop.video_codec
-je_auto_control.utils.remote_desktop.viewer
-je_auto_control.utils.remote_desktop.webrtc_host
-je_auto_control.utils.remote_desktop.webrtc_host_auth
-je_auto_control.utils.remote_desktop.webrtc_host_media
-je_auto_control.utils.remote_desktop.webrtc_transport
-je_auto_control.utils.remote_desktop.webrtc_viewer
 je_auto_control.utils.rest_api.rest_server
 je_auto_control.utils.rotated_match.rotated_match
 je_auto_control.utils.run_history.history_store

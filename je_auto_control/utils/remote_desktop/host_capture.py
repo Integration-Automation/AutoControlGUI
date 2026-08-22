@@ -8,6 +8,7 @@ optional dependency (``mss``, Pillow) is missing, so a stock install
 still hosts.
 """
 import json
+import threading
 import time
 from io import BytesIO
 from typing import (
@@ -17,7 +18,7 @@ from typing import (
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.protocol import MessageType
 from je_auto_control.utils.remote_desktop.video_codec import (
-    CODEC_JPEG, codec_tag,
+    CODEC_JPEG, CodecProvider, codec_tag,
 )
 
 if TYPE_CHECKING:  # avoids a runtime cycle: host_client is a sibling
@@ -148,6 +149,22 @@ class FrameProductionMixin:
     ``_cursor_provider``, ``_codec``, ``_fps``, ``_latest_frame`` and
     ``_frame_lock``.
     """
+
+    if TYPE_CHECKING:
+        # Declared, never defined: the host class this is mixed into owns
+        # every one of these. The block is stripped at runtime, so nothing
+        # here can shadow what the host actually binds.
+        _shutdown: threading.Event
+        _clients: List["_ClientHandler"]
+        _clients_lock: threading.Lock
+        _frame_cond: threading.Condition
+        _frame_provider: FrameProvider
+        _cursor_provider: Optional[CursorProvider]
+        _cursor_lock: threading.Lock
+        _latest_cursor_payload: Optional[bytes]
+        _codec_provider: CodecProvider
+        _latest_seq: int
+        _period: float
 
     def _cursor_loop(self) -> None:
         """Poll cursor position at ~30 Hz and push it to viewers as JSON."""

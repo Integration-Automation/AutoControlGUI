@@ -20,7 +20,7 @@ negotiation in AUTH_OK absent → assume jpeg, no tag prefix).
 """
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 CODEC_JPEG = "jpeg"
 CODEC_H264 = "h264"
@@ -104,13 +104,14 @@ class H264CodecProvider(CodecProvider):
         self._width = width
         self._height = height
         self._gop_size = int(gop_size)
-        self._container = None
-        self._stream = None
+        self._container: Optional[Any] = None
+        self._stream: Optional[Any] = None
         self._closed = False
 
-    def _ensure_stream(self, width: int, height: int) -> None:
+    def _ensure_stream(self, width: int, height: int) -> Any:
+        """Return the encoder stream, opening the container on first use."""
         if self._stream is not None:
-            return
+            return self._stream
         import av
         import io
         self._buffer = io.BytesIO()
@@ -129,6 +130,7 @@ class H264CodecProvider(CodecProvider):
             "g": str(self._gop_size),
         }
         self._stream = stream
+        return stream
 
     def encode_jpeg(self, jpeg_bytes: bytes) -> Iterable[bytes]:
         if self._closed or not jpeg_bytes:
@@ -136,16 +138,13 @@ class H264CodecProvider(CodecProvider):
         import av  # noqa: F401  lazy keep
         from io import BytesIO
         from PIL import Image
-        img = Image.open(BytesIO(jpeg_bytes))
-        if img.mode != "RGB":
-            img = img.convert("RGB")
-        self._ensure_stream(img.width, img.height)
-        frame = av.VideoFrame.from_image(img)
+        image: Image.Image = Image.open(BytesIO(jpeg_bytes))
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+        stream = self._ensure_stream(image.width, image.height)
+        frame = av.VideoFrame.from_image(image)
         frame.pts = None
-        packets = []
-        for packet in self._stream.encode(frame):
-            packets.append(bytes(packet))
-        return packets
+        return [bytes(packet) for packet in stream.encode(frame)]
 
     def close(self) -> None:
         if self._closed:

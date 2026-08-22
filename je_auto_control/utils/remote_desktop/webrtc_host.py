@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-from typing import Any, Callable, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.audit_log import default_audit_log
@@ -37,6 +37,18 @@ from je_auto_control.utils.remote_desktop.webrtc_host_auth import (
 from je_auto_control.utils.remote_desktop.webrtc_host_media import (
     MediaNegotiationMixin,
 )
+
+if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
+    from je_auto_control.utils.remote_desktop.webrtc_audio import (
+        OpusMicAudioTrack, OpusMicReceiver,
+    )
+    from je_auto_control.utils.remote_desktop.webrtc_files import (
+        FileTransferReceiver,
+    )
+    from je_auto_control.utils.remote_desktop.webrtc_mic import (
+        MicUplinkReceiver,
+    )
+    from je_auto_control.utils.usb.passthrough import UsbChannelHost
 
 
 _AUTH_GRACE_S = 5.0
@@ -95,21 +107,22 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         self._pending_viewer_id: Optional[str] = None
         self._pc: Optional[RTCPeerConnection] = None
         self._video_track: Optional[ScreenVideoTrack] = None
-        self._control_channel = None
-        self._mic_channel = None
-        self._mic_receiver = None  # Optional[MicUplinkReceiver]
-        self._files_channel = None
-        self._files_receiver = None  # Optional[FileTransferReceiver]
-        self._usb_channel = None
-        self._usb_host = None  # Optional[UsbChannelHost]
+        self._control_channel: Any = None
+        self._mic_channel: Any = None
+        self._mic_receiver: Optional[MicUplinkReceiver] = None
+        self._files_channel: Any = None
+        self._files_receiver: Optional[FileTransferReceiver] = None
+        self._usb_channel: Any = None
+        self._usb_host: Optional[UsbChannelHost] = None
         self._on_file_received: Optional[Callable] = None
         self._on_viewer_video_frame: Optional[Callable] = None
-        self._viewer_video_task = None
-        self._opus_audio_receiver = None  # Optional[OpusMicReceiver]
-        self._host_voice_track = None     # Optional[OpusMicAudioTrack] (outbound)
+        self._viewer_video_task: Optional[asyncio.Task] = None
+        self._opus_audio_receiver: Optional[OpusMicReceiver] = None
+        # Outbound host voice, when the host shares its own microphone.
+        self._host_voice_track: Optional[OpusMicAudioTrack] = None
         self._authenticated = False
         self._has_pending_viewer = False
-        self._auth_deadline_handle = None
+        self._auth_deadline_handle: Optional[asyncio.TimerHandle] = None
         # Hold strong refs to fire-and-forget tasks so the asyncio event
         # loop doesn't garbage-collect them mid-flight (S7502). Tasks
         # remove themselves from this set in their done callback.
@@ -274,11 +287,12 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         if self._opus_audio_receiver is not None:
             return
         try:
-            self._opus_audio_receiver = OpusMicReceiver()
+            receiver = OpusMicReceiver()
         except (RuntimeError, OSError) as error:
             autocontrol_logger.warning("opus audio receiver init: %r", error)
             return
-        self._opus_audio_receiver.consume(track)
+        self._opus_audio_receiver = receiver
+        receiver.consume(track)
         autocontrol_logger.info("webrtc host: receiving Opus audio from viewer")
 
     async def _consume_viewer_video(self, track) -> None:
@@ -362,8 +376,10 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         from je_auto_control.utils.remote_desktop.webrtc_files import (
             FileTransferReceiver,
         )
-        if self._files_receiver is None:
-            self._files_receiver = FileTransferReceiver(inbox_dir=self._inbox_dir)
+        receiver = self._files_receiver
+        if receiver is None:
+            receiver = FileTransferReceiver(inbox_dir=self._inbox_dir)
+            self._files_receiver = receiver
 
         @channel.on("message")
         def _on_message(message) -> None:
@@ -376,7 +392,7 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
                     if self._rate_limiter.should_warn_files():
                         self._safe_audit_log("rate_limit_files")
                     return
-            self._files_receiver.handle_message(
+            receiver.handle_message(
                 message,
                 on_done=self._on_file_done,
             )
@@ -562,13 +578,16 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
         self._maybe_resubscribe_viewer_video()
         self._maybe_resubscribe_viewer_audio()
 
-    def _ensure_files_receiver(self):
+    def _ensure_files_receiver(self) -> "FileTransferReceiver":
+        """Return the inbox receiver, creating it on first use."""
         from je_auto_control.utils.remote_desktop.webrtc_files import (
             FileTransferReceiver,
         )
-        if self._files_receiver is None:
-            self._files_receiver = FileTransferReceiver(inbox_dir=self._inbox_dir)
-        return self._files_receiver
+        receiver = self._files_receiver
+        if receiver is None:
+            receiver = FileTransferReceiver(inbox_dir=self._inbox_dir)
+            self._files_receiver = receiver
+        return receiver
 
     def _handle_list_inbox(self) -> None:
         if not self._permissions.allow_files:

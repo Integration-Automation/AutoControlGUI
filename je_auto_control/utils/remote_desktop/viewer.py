@@ -225,7 +225,7 @@ class RemoteDesktopViewer:
         """Return a TLS-wrapped socket when an ssl_context was configured."""
         if self._ssl_context is None:
             return raw_sock
-        hostname = self._server_hostname or self._host
+        hostname: Optional[str] = self._server_hostname or self._host
         if (self._ssl_context.check_hostname is False
                 and self._ssl_context.verify_mode == ssl.CERT_NONE):
             # ``wrap_socket`` rejects server_hostname when verification is off.
@@ -598,7 +598,7 @@ class RemoteDesktopViewer:
                 "remote_desktop viewer on_cursor callback raised"
             )
 
-    def _notify_error(self, error: BaseException) -> None:
+    def _notify_error(self, error: Exception) -> None:
         if self._shutdown.is_set() or self._on_error is None:
             return
         try:

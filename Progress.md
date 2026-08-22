@@ -240,11 +240,11 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
 而不是齊頭式地補測試。
 
-### mypy：整包把關，136 個模組還沒過
+### mypy：整包把關，123 個模組還沒過
 
 範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
 （`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 881 個已經過關。
+新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 894 個已經過關。
 
 `wrapper` 那一群（6 個模組）在 2026-08-21 清掉了，做法見 [WHATS_NEW.md](WHATS_NEW.md)：
 平台縫的八個匯出名稱先宣告型別、再讓分支去綁定，其中三個用
@@ -274,13 +274,27 @@ Windows 上一直是 import 就炸；`win32_ctype_input` 則有一批標錯的�
 **以 `--platform win32` 檢查時，`je_auto_control/windows/` 底下已經零錯誤。**
 剩下的豁免是下面那條 `DECIDE`。
 
-剩下 136 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
+`utils/remote_desktop` 那一群（13 個模組、169 個錯誤，曾是最大的一群）在
+2026-08-22 清掉了，錯誤只有兩種形狀：九個模組是 `self._x = None` 沒有標注
+（mypy 就把那個屬性的**型別**判成 `None`），其中好幾個把想要的型別寫在行尾註解裡
+——事實一直都在，只是寫在沒有檢查器讀得到的地方；另外四個是 mixin 讀取
+自己不擁有的屬性，而每個 mixin 的 docstring 早就列出它跟宿主借了什麼，
+現在那份清單變成類別本體裡的 `if TYPE_CHECKING:` 宣告（執行期會被剝掉，
+所以不可能蓋掉宿主真正綁的東西）。順帶修掉三個行為問題：
+`WebRTCLoopBridge._run` 從共用狀態讀 loop、`_get_cursor_position` 在函式內
+`import sys as _sys` 導致 mypy 剪不掉平台分支、`totp` 接的是
+`base64.binascii.Error`（那個名字只是 `base64` 自己 import 的副作用）。
+做法見 [WHATS_NEW.md](WHATS_NEW.md)。
+
+剩下 123 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
 `arg-type`／`union-attr`／`assignment`，成群集中在
-`utils/remote_desktop`（13）、`gui`（11）、
+`gui`（11＋`gui/remote_desktop` 2）、
 `utils/accessibility/backends`／`utils/mcp_server`／`utils/usb/passthrough`（各 4）、
-`utils/observability`／`utils/triggers`（各 3）。
+`utils/observability`／`utils/triggers`（各 3），其餘散在各處。
 **下一步**是一次清一個群集，清完把行從清單刪掉——
 `python test/verify/typing_contract_verify.py --fix` 會替你改，CI 會在你忘了刪的時候紅掉。
+剛清掉的那一群留下一個可以直接套用的樣板：mixin 用 `if TYPE_CHECKING:` 宣告
+借來的成員，`Optional` 屬性用 `TYPE_CHECKING` 匯入真正的型別去標注。
 
 #### 平台縫還缺的一半：`keyboard` 與 `mouse` 還沒有合約
 

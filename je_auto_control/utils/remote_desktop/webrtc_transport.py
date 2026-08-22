@@ -8,11 +8,12 @@ the loop; callers do that explicitly via :func:`get_bridge`.
 from __future__ import annotations
 
 import asyncio
+import sys
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple, TypedDict
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
@@ -55,7 +56,14 @@ _ICE_GATHER_TIMEOUT_S = 8.0
 # clamp is the most reliable cross-codec lever we have without dropping
 # into encoder-specific options. "Auto" returns (24, "auto") and the
 # caller should treat it as "use defaults / pick from observed RTT".
-BANDWIDTH_PRESETS = {
+class BandwidthPreset(TypedDict):
+    """One entry of :data:`BANDWIDTH_PRESETS`: a frame rate and its label."""
+
+    fps: int
+    label: str
+
+
+BANDWIDTH_PRESETS: Dict[str, BandwidthPreset] = {
     "auto": {"fps": 24, "label": "Auto"},
     "low": {"fps": 10, "label": "Low (cellular)"},
     "mid": {"fps": 18, "label": "Medium"},
@@ -112,30 +120,32 @@ class _AsyncioBridge:
         self._thread: Optional[threading.Thread] = None
         self._lock = threading.Lock()
 
-    def start(self) -> None:
+    def start(self) -> asyncio.AbstractEventLoop:
+        """Start the background loop if it isn't running; return it either way."""
         with self._lock:
-            if self._loop is not None:
-                return
-            self._loop = asyncio.new_event_loop()
+            loop = self._loop
+            if loop is not None:
+                return loop
+            loop = asyncio.new_event_loop()
+            self._loop = loop
             self._thread = threading.Thread(
-                target=self._run, name="webrtc-loop", daemon=True,
+                target=self._run, args=(loop,), name="webrtc-loop", daemon=True,
             )
             self._thread.start()
             autocontrol_logger.info("webrtc bridge: event loop started")
+            return loop
 
-    def _run(self) -> None:
-        asyncio.set_event_loop(self._loop)
-        self._loop.run_forever()
+    def _run(self, loop: asyncio.AbstractEventLoop) -> None:
+        asyncio.set_event_loop(loop)
+        loop.run_forever()
 
     def submit(self, coro) -> Future:
         """Schedule a coroutine; returns ``concurrent.futures.Future``."""
-        self.start()
-        return asyncio.run_coroutine_threadsafe(coro, self._loop)
+        return asyncio.run_coroutine_threadsafe(coro, self.start())
 
     def call_soon(self, callback, *args) -> None:
         """Schedule a sync callable from any thread."""
-        self.start()
-        self._loop.call_soon_threadsafe(callback, *args)
+        self.start().call_soon_threadsafe(callback, *args)
 
     def stop(self) -> None:
         with self._lock:
@@ -162,18 +172,17 @@ def get_bridge() -> _AsyncioBridge:
 _capture_local = threading.local()
 
 
-def _get_cursor_position() -> Optional[tuple]:
+def _get_cursor_position() -> Optional[Tuple[int, int]]:
     """Return absolute (x, y) cursor position, or None on unsupported platforms."""
-    import sys as _sys
     try:
-        if _sys.platform == "win32":
+        if sys.platform == "win32":
             import ctypes
             from ctypes import wintypes
             point = wintypes.POINT()
             if ctypes.windll.user32.GetCursorPos(ctypes.byref(point)):
                 return point.x, point.y
             return None
-        if _sys.platform == "darwin":
+        if sys.platform == "darwin":
             from Quartz import CGEventSourceGetMouseState  # type: ignore
             location = CGEventSourceGetMouseState(0)
             return int(location.x), int(location.y)
