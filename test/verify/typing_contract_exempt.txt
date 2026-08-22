@@ -14,7 +14,7 @@
 # "Does not type-check" means on at least one of the three targets mypy can be
 # pointed at (win32, linux, darwin) — not just the one CI happens to run on.
 #
-# Measured entries: 92
+# Measured entries: 86
 
 je_auto_control.__main__
 je_auto_control.cli
@@ -39,9 +39,6 @@ je_auto_control.utils.anchor_locator.locator
 je_auto_control.utils.annotate.annotate
 je_auto_control.utils.bulkhead.bulkhead
 je_auto_control.utils.change_localize.change_localize
-je_auto_control.utils.clipboard.clipboard
-je_auto_control.utils.clipboard.win32_clipboard_api
-je_auto_control.utils.clipboard_formats.clipboard_formats
 je_auto_control.utils.codegen.codegen
 je_auto_control.utils.color_match.color_match
 je_auto_control.utils.color_stats.color_stats
@@ -99,9 +96,6 @@ je_auto_control.utils.text_normalize.text_normalize
 je_auto_control.utils.text_regions.text_regions
 je_auto_control.utils.tls_acme.challenge
 je_auto_control.utils.url_canon.url_canon
-je_auto_control.utils.usb.passthrough.session
-je_auto_control.utils.usb.passthrough.viewer_client
-je_auto_control.utils.usb.passthrough.winusb_backend
 je_auto_control.utils.visual_regression.compare
 je_auto_control.utils.watcher.watcher
 je_auto_control.utils.window_capture.window_capture

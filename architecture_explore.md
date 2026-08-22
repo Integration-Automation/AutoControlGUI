@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,031 |
-| 程式碼總行數 | 140,690 |
+| 程式碼總行數 | 140,725 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -510,7 +510,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 17,873 行。
+> 6 個套件、約 17,901 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -518,7 +518,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_sync/` | 245 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 11,990 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
-| `utils/usb/` | 4,253 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
+| `utils/usb/` | 4,281 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 920 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
@@ -667,11 +667,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.16 系統、視窗與剪貼簿
 
-> 16 個套件、約 2,405 行。
+> 16 個套件、約 2,412 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/clipboard/` | 489 | 跨平台無頭剪貼簿存取（文字 + 影像）＋ `win32_clipboard_api.py`：**所有剪貼簿格式共用的 Win32 原型與 open/alloc/lock 流程**（`open_clipboard()` 會等過短暫被別的行程佔住的剪貼簿——Win32 一次只允許一個行程開啟，別人正在複製就必然失敗）（`argtypes` 只宣告一半曾讓四支 writer 在 64 位元上必然丟 `OverflowError`，見 CHANGELOG）。`set_clipboard_image` 同時接受 PNG 位元組與檔案路徑——先前這個名字在本子套件裡有**兩份不同簽章的實作**（`clipboard.py` 吃 bytes、`clipboard_image.py` 吃路徑），匯錯來源只會在執行期才炸，已合併成一支 |
+| `utils/clipboard/` | 496 | 跨平台無頭剪貼簿存取（文字 + 影像）＋ `win32_clipboard_api.py`：**所有剪貼簿格式共用的 Win32 原型與 open/alloc/lock 流程**（`open_clipboard()` 會等過短暫被別的行程佔住的剪貼簿——Win32 一次只允許一個行程開啟，別人正在複製就必然失敗）（`argtypes` 只宣告一半曾讓四支 writer 在 64 位元上必然丟 `OverflowError`，見 CHANGELOG）。`set_clipboard_image` 同時接受 PNG 位元組與檔案路徑——先前這個名字在本子套件裡有**兩份不同簽章的實作**（`clipboard.py` 吃 bytes、`clipboard_image.py` 吃路徑），匯錯來源只會在執行期才炸，已合併成一支 |
 | `utils/clipboard_files/` | 96 | 剪貼簿檔案清單（CF_HDROP）：純 DROPFILES 封裝 + Win32 存取 |
 | `utils/clipboard_formats/` | 151 | 檢視與分類剪貼簿可用格式（純分類／差異 + Win32 列舉） |
 | `utils/clipboard_history/` | 109 | 剪貼簿歷史：環形緩衝 + 背景輪詢器 |
@@ -777,7 +777,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 65 / 73 / 57 / 41 / 29 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
 | `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 41 / 30 / 139 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
-#### `utils/usb/`（4,253 行）與 `utils/usbip/`（920 行）
+#### `utils/usb/`（4,281 行）與 `utils/usbip/`（920 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -1028,7 +1028,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/mcp_server/` | 21 | 17,330 |
 | `utils/remote_desktop/` | 56 | 11,990 |
 | `utils/executor/` | 6 | 9,075 |
-| `utils/usb/` | 17 | 4,253 |
+| `utils/usb/` | 17 | 4,281 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,363 |
 | `utils/accessibility/` | 13 | 2,835 |
 | `wrapper/` | 19 | 3,293 |
@@ -1044,6 +1044,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 915 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 727 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,498 |
-| **總計** | **1,025** | **140,625** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,505 |
+| **總計** | **1,025** | **140,660** |
 

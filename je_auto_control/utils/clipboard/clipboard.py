@@ -101,8 +101,8 @@ def _win_get() -> str:
 
     from je_auto_control.utils.clipboard.win32_clipboard_api import open_clipboard
 
-    user32 = ctypes.WinDLL("user32", use_last_error=True)
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
     cf_unicodetext = 13
 
     user32.OpenClipboard.argtypes = [wintypes.HWND]
@@ -133,8 +133,8 @@ def _win_set(text: str) -> None:
 
     from je_auto_control.utils.clipboard.win32_clipboard_api import open_clipboard
 
-    user32 = ctypes.WinDLL("user32", use_last_error=True)
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
     cf_unicodetext = 13
     gmem_moveable = 0x0002
 
@@ -245,7 +245,9 @@ def _win_set_image(png_bytes: bytes) -> None:
         raise RuntimeError(
             "Pillow is required for clipboard image support"
         ) from error
-    image = Image.open(BytesIO(png_bytes))
+    # `Image.open` returns an `ImageFile`; `convert` returns a plain
+    # `Image`, so the variable has to be declared as the wider one.
+    image: Image.Image = Image.open(BytesIO(png_bytes))
     if image.mode != "RGB":
         image = image.convert("RGB")
     bmp_buf = BytesIO()
@@ -260,8 +262,8 @@ def _win_set_image(png_bytes: bytes) -> None:
         open_clipboard,
     )
 
-    user32 = ctypes.WinDLL("user32", use_last_error=True)
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
     cf_dib = 8
     gmem_moveable = 0x0002
 

@@ -240,11 +240,11 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
 而不是齊頭式地補測試。
 
-### mypy：整包把關，92 個模組還沒過
+### mypy：整包把關，86 個模組還沒過
 
 範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
 （`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 925 個已經過關。
+新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 931 個已經過關。
 
 `wrapper` 那一群（6 個模組）在 2026-08-21 清掉了，做法見 [WHATS_NEW.md](WHATS_NEW.md)：
 平台縫的八個匯出名稱先宣告型別、再讓分支去綁定，其中三個用
@@ -303,12 +303,19 @@ accessibility 錯誤裡有三十四個是同一個沒標的回傳型別（`_unsu
 下面那條 `DECIDE` 也在同日拍板收掉，又清掉 16 個模組（做法見
 [WHATS_NEW.md](WHATS_NEW.md)）。
 
-剩下 92 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
-`arg-type`／`union-attr`／`assignment`，成群集中在
-`gui`（11＋`gui/remote_desktop` 2）、`utils/mcp_server`（4）、
-`utils/usb/passthrough`（3）、`utils/clipboard`（2），其餘散在各處。
-以檔案計最大的三個是 `utils/usb/passthrough/winusb_backend.py`（34）、
-`gui/_auto_click_tab.py`（31）、`gui/remote_desktop/webrtc_panel.py`（27）。
+ctypes 表面一收掉，卡在它後面的兩群也跟著清了：`utils/usb/passthrough`（3）
+與 `utils/clipboard`（3）。兩邊都藏著真的缺陷——`winusb_backend._load_dlls`
+一次公布一個 handle，第二個載入失敗時第一個已經設好，於是 `is not None` 的守衛
+把之後每一次重試都短路掉；`clipboard_api()` 宣告回傳 `Tuple[object, object]`，
+而 `object` 沒有任何屬性，所以透過它的十二個 Win32 呼叫全是型別錯誤。
+做法見 [WHATS_NEW.md](WHATS_NEW.md)。
+
+剩下 86 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
+`arg-type`／`union-attr`／`assignment`，**最大的一群現在是 `gui`**
+（11＋`gui/remote_desktop` 2，共 89 個錯誤），其次 `utils/mcp_server`（4，38 個）。
+以檔案計最大的三個是 `gui/_auto_click_tab.py`（31）、
+`gui/remote_desktop/webrtc_panel.py`（27）、
+`utils/mcp_server/_client_requests.py`（21）。
 **下一步**是一次清一個群集，清完把行從清單刪掉——
 `python test/verify/typing_contract_verify.py --fix` 會替你改，CI 會在你忘了刪的時候紅掉。
 已經清掉的那些留下四個可以直接套用的樣板：mixin 用 `if TYPE_CHECKING:` 宣告

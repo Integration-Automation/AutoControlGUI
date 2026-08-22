@@ -208,6 +208,39 @@ comparison as a `DECIDE`, because the cleanest of them changes what the gate
 means rather than what the code says. **136 modules left, 881 of 1,017 files
 inside the contract.**
 
+### The WinUSB Backend Was One Failed DLL Load Away From Never Recovering
+
+With the ctypes surface settled, the two clusters behind it came off:
+`utils/usb/passthrough` and `utils/clipboard`. Both were the same mistake told
+two ways — a handle whose declared type could not do what the code asks of it —
+and both hid a real defect behind it.
+
+**`winusb_backend` published its three DLL handles one at a time.** `_load_dlls`
+assigned `_setupapi`, then `_winusb`, then `_kernel32`, guarded by
+`if _setupapi is not None: return`. If loading `winusb.dll` raised — which is
+exactly what happens on a machine where no device is bound to WinUSB and the
+DLL is absent — `_setupapi` was already set, so the guard short-circuited every
+later attempt and every call site got
+`AttributeError: 'NoneType' object has no attribute 'WinUsb_Initialize'`
+instead of the retry the guard was written to allow. The three handles now come
+back from one loader as a `NamedTuple`, published only after all three load.
+Two smaller ones went with it: a device enumerated without an interface path is
+skipped rather than passed to `CreateFileW` as `None`, and a `WinUsb_Initialize`
+that reports success with a null handle is now a failure rather than an
+`Optional[int]` handed to the handle wrapper.
+
+**`clipboard_api()` returned `Tuple[object, object]`.** `object` has no
+attributes, so all twelve `user32.OpenClipboard` / `kernel32.GlobalLock` calls
+through it were type errors — on a module whose entire docstring is about
+getting these prototypes right once. A ctypes library resolves every symbol
+through `__getattr__`, so `Any` is the only honest promise, and it is what the
+signature says now.
+
+Both were exercised against the real thing on Windows afterwards: a clipboard
+text round trip, `clipboard_formats()` against a live clipboard, and the WinUSB
+backend enumerating an actual bound device. **86 modules left, 931 of 1,017
+files inside the contract.**
+
 ### The Win32 ctypes DECIDE, Settled — and It Was Twice the Size It Said
 
 `Progress.md` carried a `DECIDE` about eight modules under
