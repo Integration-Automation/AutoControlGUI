@@ -453,6 +453,8 @@ traditional_chinese_word_dict = {
     "rd_webrtc_sync_start": "開始同步",
     "rd_webrtc_sync_stop": "停止同步",
     "rd_webrtc_sync_dir_required": "請先選一個本機資料夾",
+    "rd_webrtc_not_started": "請先開始主機端",
+    "rd_webrtc_not_connected": "請先連線到主機",
     "rd_webrtc_browse": _BROWSE,
 
     # Auto Click Tab

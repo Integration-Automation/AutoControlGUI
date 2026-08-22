@@ -12,7 +12,7 @@ scenarios. Mobile / strict-NAT users will want to add a TURN server.
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QImage
@@ -26,6 +26,9 @@ from PySide6.QtWidgets import (
 from je_auto_control.gui._i18n_helpers import TranslatableMixin
 from je_auto_control.gui.remote_desktop._helpers import (
     _CollapsibleSection, _t,
+)
+from je_auto_control.gui.remote_desktop.advanced_group import (
+    build_advanced_group,
 )
 from je_auto_control.gui.remote_desktop.blanking_overlay import BlankingOverlay
 from je_auto_control.gui.remote_desktop.frame_display import _FrameDisplay
@@ -51,7 +54,7 @@ from je_auto_control.gui.remote_desktop.webrtc_workers import (
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop import (
     MultiViewerHost, SessionRecorder, WebRTCConfig, WebRTCDesktopViewer,
-    active_hardware_codec, available_hardware_codecs, default_address_book,
+    default_address_book,
     default_trust_list, install_hardware_codec, is_webrtc_available,
     load_or_create_viewer_id, send_magic_packet, uninstall_hardware_codec,
 )
@@ -71,6 +74,14 @@ from je_auto_control.utils.remote_desktop.webrtc_transport import (
     BANDWIDTH_PRESETS, fps_for_preset,
 )
 
+if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
+    from je_auto_control.utils.remote_desktop.file_sync import (
+        FolderSyncEngine,
+    )
+    from je_auto_control.utils.remote_desktop.lan_discovery import (
+        HostAdvertiser,
+    )
+
 
 _DEFAULT_FPS = 24
 _DEFAULT_MONITOR = 1
@@ -78,7 +89,6 @@ _DEFAULT_MONITOR = 1
 # to localhost without TLS, and operators put TLS in front via nginx /
 # Caddy. Hotspot S5332 acknowledged on a per-line basis; see callers.
 _DEFAULT_SIGNALING_URL = "http://127.0.0.1:8765"  # NOSONAR python:S5332
-_DEFAULT_STUN = "stun:stun.l.google.com:19302"
 
 _QUALITY_DOT_STYLE = "background-color: #555; border-radius: 7px;"
 _JSON_FILE_FILTER = "JSON (*.json);;All (*)"
@@ -116,43 +126,6 @@ class _PanelSignals(QObject):
     viewer_video_frame = Signal(QImage)
     # Host-side: incoming annotation event from viewer
     annotation = Signal(object)  # dict
-
-
-def _build_advanced_group(panel: TranslatableMixin,
-                          include_hw_codec: bool = False) -> QGroupBox:
-    """Shared 'Advanced' STUN/TURN (+ optional hw codec) group."""
-    group = panel._tr(QGroupBox(), "rd_webrtc_advanced_group")
-    grid = QGridLayout()
-    grid.addWidget(panel._tr(QLabel(), "rd_webrtc_stun_label"), 0, 0)
-    panel._stun_edit = QLineEdit(_DEFAULT_STUN)
-    grid.addWidget(panel._stun_edit, 0, 1, 1, 3)
-    grid.addWidget(panel._tr(QLabel(), "rd_webrtc_turn_label"), 1, 0)
-    panel._turn_edit = panel._tr(QLineEdit(), "rd_webrtc_turn_placeholder")
-    grid.addWidget(panel._turn_edit, 1, 1, 1, 3)
-    grid.addWidget(panel._tr(QLabel(), "rd_webrtc_turn_user_label"), 2, 0)
-    panel._turn_user_edit = QLineEdit()
-    grid.addWidget(panel._turn_user_edit, 2, 1)
-    grid.addWidget(panel._tr(QLabel(), "rd_webrtc_turn_cred_label"), 2, 2)
-    panel._turn_cred_edit = QLineEdit()
-    panel._turn_cred_edit.setEchoMode(QLineEdit.EchoMode.Password)
-    grid.addWidget(panel._turn_cred_edit, 2, 3)
-    if include_hw_codec:
-        grid.addWidget(panel._tr(QLabel(), "rd_webrtc_hw_codec_label"), 3, 0)
-        panel._hw_codec_combo = QComboBox()
-        panel._hw_codec_combo.addItem(_t("rd_webrtc_hw_codec_off"), "")
-        for name in available_hardware_codecs():
-            panel._hw_codec_combo.addItem(name, name)
-        active = active_hardware_codec()
-        if active:
-            idx = panel._hw_codec_combo.findData(active)
-            if idx >= 0:
-                panel._hw_codec_combo.setCurrentIndex(idx)
-        panel._hw_codec_combo.currentIndexChanged.connect(
-            lambda _i: panel._on_hw_codec_changed(),
-        )
-        grid.addWidget(panel._hw_codec_combo, 3, 1, 1, 3)
-    group.setLayout(grid)
-    return group
 
 
 def _checked_or(panel, attr: str, default: bool = False) -> bool:
@@ -229,7 +202,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         self._trust_list = default_trust_list()
         self._blanking: Optional[BlankingOverlay] = None
         self._viewer_screen_window: Optional[ViewerScreenWindow] = None
-        self._lan_advertiser = None
+        self._lan_advertiser: Optional["HostAdvertiser"] = None
         self._annotation_overlay: Optional[HostAnnotationOverlay] = None
         self._tray = install_host_tray(
             on_open=self._on_tray_open,
@@ -255,7 +228,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         layout.addWidget(self._build_signaling_group())
         layout.addWidget(self._build_config_group())
         layout.addWidget(self._build_manual_group())
-        layout.addWidget(_build_advanced_group(self, include_hw_codec=True))
+        layout.addWidget(build_advanced_group(self, include_hw_codec=True))
         layout.addWidget(self._build_trusted_group())
         self._status_label = QLabel(_t("rd_webrtc_status_idle"))
         layout.addWidget(self._status_label)
@@ -825,9 +798,16 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         self._offer_view.setPlainText("")
         QTimer.singleShot(0, self._produce_offer)
 
+    def _require_multi_host(self) -> MultiViewerHost:
+        """Return the running host, or say the session is not up yet."""
+        host = self._multi_host
+        if host is None:
+            raise RuntimeError(_t("rd_webrtc_not_started"))
+        return host
+
     def _produce_offer(self) -> None:
         try:
-            session_id, offer = self._multi_host.create_session_offer()
+            session_id, offer = self._require_multi_host().create_session_offer()
         except (RuntimeError, OSError) as error:  # PermissionError is an OSError
             self._show_error(error)
             return
@@ -1044,8 +1024,9 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
 
     def _trust_session_viewer(self, sid: str) -> None:
         try:
-            with self._multi_host._lock:
-                host = self._multi_host._sessions.get(sid)
+            multi_host = self._require_multi_host()
+            with multi_host._lock:
+                host = multi_host._sessions.get(sid)
             full_vid = host.pending_viewer_id if host is not None else None
             if full_vid:
                 self._trust_list.add(full_vid, label=f"sess {sid[:6]}")
@@ -1311,13 +1292,13 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         from je_auto_control.utils.remote_desktop import default_known_hosts
         self._known_hosts = default_known_hosts()
         try:
-            self._viewer_id = load_or_create_viewer_id()
+            self._viewer_id: Optional[str] = load_or_create_viewer_id()
         except OSError as error:
             autocontrol_logger.warning("viewer_id init: %r", error)
             self._viewer_id = None
         self._recorder: Optional[SessionRecorder] = None
         self._stats_poller: Optional[StatsPoller] = None
-        self._sync_engine = None
+        self._sync_engine: Optional["FolderSyncEngine"] = None
         self._auto_reconnect_attempts = 0
         self._user_initiated_disconnect = False
         # AnyDesk-style pop-out: created on auth_ok, hidden on stop.
@@ -1350,7 +1331,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             self._build_manual_group(),
             "rd_webrtc_manual_group",
         ))
-        layout.addWidget(_build_advanced_group(self))
+        layout.addWidget(build_advanced_group(self))
         layout.addWidget(self._wrap_collapsed(
             self._build_remote_files_group(),
             "rd_webrtc_files_group",
@@ -1467,13 +1448,15 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
             )
             from pathlib import Path as _Path
             try:
-                self._sync_engine = FolderSyncEngine(
+                viewer = self._require_viewer()
+                engine = FolderSyncEngine(
                     watch_dir=_Path(path),
-                    sender=lambda local, name: self._viewer.send_file(
+                    sender=lambda local, name: viewer.send_file(
                         local, remote_name=name,
                     ),
                 )
-                self._sync_engine.start()
+                self._sync_engine = engine
+                engine.start()
             except (RuntimeError, OSError) as error:  # FileNotFoundError is an OSError
                 QMessageBox.warning(self, "WebRTC", str(error))
                 self._sync_btn.setChecked(False)
@@ -2254,7 +2237,7 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         host_id = self._host_id_edit.text().strip()
         expected_dtls = self._known_hosts.dtls_fingerprint_for(host_id) if host_id else None
         try:
-            answer = self._viewer.process_offer(
+            answer = self._require_viewer().process_offer(
                 offer_sdp, expected_dtls_fingerprint=expected_dtls,
             )
         except (ValueError, RuntimeError, OSError) as error:
@@ -2302,9 +2285,16 @@ class _WebRTCViewerPanel(TranslatableMixin, QWidget):
         self._status_label.setText(_t("rd_webrtc_creating_answer"))
         QTimer.singleShot(0, lambda: self._produce_answer(offer))
 
+    def _require_viewer(self) -> WebRTCDesktopViewer:
+        """Return the live viewer, or say it is not connected yet."""
+        viewer = self._viewer
+        if viewer is None:
+            raise RuntimeError(_t("rd_webrtc_not_connected"))
+        return viewer
+
     def _produce_answer(self, offer: str) -> None:
         try:
-            answer = self._viewer.process_offer(offer)
+            answer = self._require_viewer().process_offer(offer)
         except (ValueError, RuntimeError, OSError) as error:
             self._show_error(error)
             return

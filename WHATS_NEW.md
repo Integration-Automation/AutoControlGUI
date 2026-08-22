@@ -208,6 +208,38 @@ comparison as a `DECIDE`, because the cleanest of them changes what the gate
 means rather than what the code says. **136 modules left, 881 of 1,017 files
 inside the contract.**
 
+### The Typing Contract's Exemption List Is Empty
+
+`je_auto_control` type-checks clean on all three targets — win32, linux and
+darwin — with nothing exempted. The list that started this branch at 155 modules
+now holds a header and no entries, and `typing_contract_verify.py` fails if it
+ever grows again.
+
+The last module was `gui/remote_desktop/webrtc_panel.py`, and it was blocked by
+its own size rather than by its types. Seven of its errors came from
+`_build_advanced_group(panel: TranslatableMixin, …)`, a free function that
+*writes* five widget attributes back onto the panel it is handed — none of which
+`TranslatableMixin` has. Writing that contract down needs a Protocol, and the
+file was sitting exactly on the 2,555-line cap it may only shrink from.
+
+So the builder moved out, which is what `Progress.md` had said that file owed
+anyway: `gui/remote_desktop/advanced_group.py` now holds the shared
+STUN/TURN group, the `AdvancedGroupHost` protocol naming what it reads and what
+it sets, and the hardware-codec row as its own function. The panel is 2,545
+lines — under its cap for the first time — and both panels were rebuilt
+offscreen afterwards to confirm the STUN default, the TURN fields and the
+host-only codec picker all still arrive where they did.
+
+Ten more errors in that file were the pattern the whole sweep kept meeting: a
+handle that is `None` until the session starts. `_produce_offer`,
+`_trust_session_viewer`, `_answer_and_push`, `_produce_answer` and the folder
+sync all reached through `self._multi_host` / `self._viewer` without asking. They
+go through `_require_multi_host()` / `_require_viewer()` now, which raise a
+translated "start hosting first" / "connect to a host first" instead of an
+`AttributeError` on `None` — two new keys in all four language catalogues.
+
+**0 modules left. 1,018 of 1,018 files inside the contract.**
+
 ### Thirteen Small Modules, and a Stub That Disagrees With the Library
 
 Past the big clusters the list is a long tail: thirteen modules of two to six

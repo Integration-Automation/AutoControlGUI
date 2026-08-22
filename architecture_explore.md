@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,031 |
-| 程式碼總行數 | 140,989 |
+| Python 模組總數（含周邊子專案） | 1,032 |
+| 程式碼總行數 | 141,079 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -930,12 +930,13 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | diagnostics | `diagnostics_tab.py` | 91 | 執行子系統檢查並顯示結果。 |
 | report | `_report_tab.py` | 81 | 產生 HTML／JSON／XML 報表。 |
 
-#### 遠端桌面 GUI（`gui/remote_desktop/`，17 檔／6,254 行）
+#### 遠端桌面 GUI（`gui/remote_desktop/`，18 檔／6,336 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `webrtc_panel.py` | 2,555 | WebRTC 子分頁主體。 |
+| `webrtc_panel.py` | 2,545 | WebRTC 子分頁主體。 |
 | `webrtc_dialogs.py` | 493 | WebRTC GUI 用的自訂對話框與清單元件（待審檢視者、信任清單、通訊錄、遠端檔案表、稽核記錄、LAN 瀏覽）。 |
+| `advanced_group.py` | 92 | 兩個 WebRTC 面板共用的 Advanced STUN／TURN（含選用硬體編碼器）群組，含它寫回面板的 Protocol。 |
 | `connection_screen.py` | 672 | Quick Connect —— AnyDesk 風格單畫面入口。 |
 | `viewer_panel.py` | 542 | 「控制另一台機器」子分頁。 |
 | `webrtc_known_hosts.py` | 340 | TOFU 釘選庫瀏覽器：`KnownHostsDialog` 與帶外釘選用的小表單。由 `webrtc_dialogs` 再匯出。 |
@@ -1024,7 +1025,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 89 | 26,609 |
+| `gui/` | 90 | 26,699 |
 | `utils/mcp_server/` | 21 | 17,354 |
 | `utils/remote_desktop/` | 56 | 11,990 |
 | `utils/executor/` | 6 | 9,081 |
@@ -1045,5 +1046,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 727 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,667 |
-| **總計** | **1,025** | **140,924** |
+| **總計** | **1,026** | **141,014** |
 

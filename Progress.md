@@ -18,12 +18,13 @@
 
 `CLAUDE.md` §Size and complexity limits 規定:超標檔案只能列在這裡,列不進來的就是缺陷。
 清單上的檔案**可以改、可以變短,但不得再變長**——要再長就得先拆。
-行數為 2026-08-19 實測（`len(text.splitlines())`）。
+行數為 2026-08-19 實測（`len(text.splitlines())`）；`webrtc_panel.py` 於
+2026-08-22 拆出 `advanced_group.py` 後降到 2,545，上限跟著往下走。
 
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
 | `utils/mcp_server/tools/_handlers.py` | 4,789 | 676 個 MCP 工具的處理函式本體。與 `_factories.py`（表）不同,這裡是邏輯,應該依主題拆成 `_handlers/` 套件（input／screen／window／file／agent…）。拆點清楚,純粹是量大。 |
-| `gui/remote_desktop/webrtc_panel.py` | 2,555 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
+| `gui/remote_desktop/webrtc_panel.py` | 2,545 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
 | `utils/accessibility/backends/windows_backend.py` | 915 | 已拆出 `windows_query.py`（170）與 `windows_state.py`（98）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
@@ -39,7 +40,7 @@
 2026-08-18 重新實測時,表上原有的七列**全部**變長,而 `CLAUDE.md` 明寫
 「列上的檔案不得再變長,要再長就得先拆」,所以這裡曾標成 `[DECIDE]`。
 **維護者已於 2026-08-19 拍板:接受實測數字當新基準**——不為了回到舊數字而去拆
-`_handlers.py`（4,789）與 `webrtc_panel.py`（2,555）。上表的行數即是各自的新上限,
+`_handlers.py`（4,789）與 `webrtc_panel.py`。上表的行數即是各自的新上限,
 規則不變:只准變短,再變長就得先拆。
 
 同一批裡有六個檔案在 2026-08-19 已經拆回線內、從表上移除,做法寫在
@@ -219,13 +220,14 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 
 ---
 
-## 兩個門檻：機制已經有了，剩下的是把數字往前推
+## 兩個門檻：mypy 那半已經到終點，覆蓋率那半還在爬
 
-`TODO` — 兩者都已經從「講好要爬」變成「有棘輪在擋」，但都還沒到目的地
+`TODO` — 只剩覆蓋率；型別契約 2026-08-22 收工
 
 原本這一條記的是兩個只存在於 `pyproject.toml` 註解裡、沒有任何機制的承諾。
-2026-08-21 把**機制**補上了（做法見 [WHATS_NEW.md](WHATS_NEW.md)），所以這裡改記
-還差多少、以及下一步怎麼走。
+2026-08-21 把**機制**補上了（做法見 [WHATS_NEW.md](WHATS_NEW.md)）。
+型別契約已於 2026-08-22 走完（豁免清單清空，見下），所以這條剩下的實質內容
+只有覆蓋率；mypy 那一節留著是因為它記的那幾個坑之後還會踩到。
 
 ### 覆蓋率：地板 50，目標 70
 
@@ -240,129 +242,33 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
 而不是齊頭式地補測試。
 
-### mypy：整包把關，56 個模組還沒過
+### mypy：整包把關，**豁免清單已經清空**
+
+`TODO` → **完成（2026-08-22）**
 
 範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
 （`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 961 個已經過關。
+新模組預設在圈外；現在新模組**預設就在契約裡**。
 
-`wrapper` 那一群（6 個模組）在 2026-08-21 清掉了，做法見 [WHATS_NEW.md](WHATS_NEW.md)：
-平台縫的八個匯出名稱先宣告型別、再讓分支去綁定，其中三個用
-`wrapper/backend_contract.py` 的 Protocol，四個 `_platform_*` 組裝模組各自標注自己綁了什麼。
-順帶帶綠了四個原本卡在縫的偶然型別上、自己其實沒問題的模組
-（`utils/cv2_utils/screen_grabber`、`utils/executor/mouse_aliases`、
-`utils/pytest_plugin/keywords`、`utils/vision/vlm_api`）。
+**2026-08-22 那張清單降到零**：`je_auto_control/` 的 1,018 個檔案在
+win32／linux／darwin 三個目標上全部乾淨。清掉 136 個模組的過程與每一群的做法寫在
+[WHATS_NEW.md](WHATS_NEW.md)；這裡只留下之後還用得到的四件事：
 
-`linux_wayland` 那一群（4 個模組）在 2026-08-22 清掉了：`libei` 的 33 處
-`Optional[BoundSymbols]` 改走一個會拋 `LibeiUnavailable` 的存取器（`_api`），
-`_detect` 的兩支環境查詢收 `Mapping[str, str]` 而不是 `dict`（預設值就是 `os.environ`），
-`capture._write_to_temp_png` 承認它的 writer 會回傳東西而它不看，
-`screen.get_pixel` 把 Pillow 那個「每種 mode 的答案聯集」收斂成它自己承諾的三元組。
-做法見 [WHATS_NEW.md](WHATS_NEW.md)。
+* **反覆出現的五種形狀**：mixin 讀取宿主的成員（用類別本體裡的
+  `if TYPE_CHECKING:` 宣告，執行期會被剝掉）、`self._x = None` 沒有標注
+  （mypy 會把屬性的型別判成 `None`）、`callable` 被當成型別用、
+  `x: SomeType = None` 的隱含 Optional、以及掉了長度的 tuple。
+* **攔截用的 tuple 必須標成 `Tuple[Type[BaseException], ...]`**，而且要收成一個
+  模組常數——`except (A, B, *TUPLE)` 的星號解包 mypy 跟不進 `except`。
+* **`# type: ignore` 只有當它是那一行的第一個註解時才生效**（已實測），所以有
+  `# nosec` 的行要把它放前面。
+* **`cv2` 的 stub 會隨版本變**：`pyproject.toml` 把它列在「ship no stubs 的基礎相依」
+  底下，但 opencv-python 有附 `.pyi`，閘門會去讀。實測 4.13.0：`MSER_create`、
+  `ORB_create`、`VideoWriter_fourcc` 執行期都在、stub 裡都沒有。`>=4.8,<6` 範圍內
+  版本一換，判定就可能跟著動——與 numpy 那條註解同一類的坑。
 
-`linux_with_x11`（3）與 `osx`（1）同日清掉：X11 listener 的 `record_queue`
-從「型別是 None」變成 `Optional[Queue]`（`stop_record()` 因此不再回一個
-簽章不承認的 `None`），`uinput/_device` 的 POSIX 專屬 `O_NONBLOCK` 收進一個
-mypy 剪得掉的 `sys.platform` 分支，`osx_keyboard` 的字串 keycode 一律當特殊鍵名。
-
-`windows/` 這一群的**真實錯誤全部清掉了**：`window_message` 匯入一個
-`windows_window_manage` 根本沒有匯出的名字（`FindWindowW`），所以那個模組在
-Windows 上一直是 import 就炸；`win32_ctype_input` 則有一批標錯的註記
-（`_fields_: tuple` 把 ClassVar 重新宣告成 instance variable、`ctypes.POINTER`
-與 `user32.SendInput` 被當成型別用）以及一行改寫標準函式庫的
-`wintypes.ULONG_PTR = wintypes.WPARAM`——全樹沒有任何地方讀它。
-**以 `--platform win32` 檢查時，`je_auto_control/windows/` 底下已經零錯誤。**
-剩下的豁免是下面那條 `DECIDE`。
-
-`utils/remote_desktop` 那一群（13 個模組、169 個錯誤，曾是最大的一群）在
-2026-08-22 清掉了，錯誤只有兩種形狀：九個模組是 `self._x = None` 沒有標注
-（mypy 就把那個屬性的**型別**判成 `None`），其中好幾個把想要的型別寫在行尾註解裡
-——事實一直都在，只是寫在沒有檢查器讀得到的地方；另外四個是 mixin 讀取
-自己不擁有的屬性，而每個 mixin 的 docstring 早就列出它跟宿主借了什麼，
-現在那份清單變成類別本體裡的 `if TYPE_CHECKING:` 宣告（執行期會被剝掉，
-所以不可能蓋掉宿主真正綁的東西）。順帶修掉三個行為問題：
-`WebRTCLoopBridge._run` 從共用狀態讀 loop、`_get_cursor_position` 在函式內
-`import sys as _sys` 導致 mypy 剪不掉平台分支、`totp` 接的是
-`base64.binascii.Error`（那個名字只是 `base64` 自己 import 的副作用）。
-做法見 [WHATS_NEW.md](WHATS_NEW.md)。
-
-同日再清掉十五個：`utils/accessibility` 那一群（5）、`utils/observability`（3）、
-`utils/triggers`（3）、`utils/chatops/router`、`utils/rest_api/rest_server`、
-`utils/mcp_server/http_transport`、`utils/element_repository`。四十三個
-accessibility 錯誤裡有三十四個是同一個沒標的回傳型別（`_unsupported` 一定會拋，
-標成 `NoReturn` 就全清）；另一個反覆出現的是**攔截用的 tuple 沒有被標成 tuple**
-（`Tuple[type, ...]` 不算「a tuple of exception classes」，
-`except (…, *SQLITE_ERRORS)` 的星號解包 mypy 也跟不進 `except`）。
-順帶修掉四個行為問題：`Gauge`／`Histogram` 用
-`_labels_key = Counter._labels_key` 借方法、`parse_content_length` 宣告的
-`Mapping[str, str]` 三個呼叫端一個都沒給過（給的是 `email.message.Message`）、
-`ElementRepository` 把使用者可編輯的 locator 直接 `**kwargs` 丟進無障礙 API、
-`_AtspiConnection._call` 在 `with` 之外沒有 bus 可以呼叫。
-做法見 [WHATS_NEW.md](WHATS_NEW.md)。
-
-下面那條 `DECIDE` 也在同日拍板收掉，又清掉 16 個模組（做法見
-[WHATS_NEW.md](WHATS_NEW.md)）。
-
-ctypes 表面一收掉，卡在它後面的兩群也跟著清了：`utils/usb/passthrough`（3）
-與 `utils/clipboard`（3）。兩邊都藏著真的缺陷——`winusb_backend._load_dlls`
-一次公布一個 handle，第二個載入失敗時第一個已經設好，於是 `is not None` 的守衛
-把之後每一次重試都短路掉；`clipboard_api()` 宣告回傳 `Tuple[object, object]`，
-而 `object` 沒有任何屬性，所以透過它的十二個 Win32 呼叫全是型別錯誤。
-做法見 [WHATS_NEW.md](WHATS_NEW.md)。
-
-`gui` 那一群（13 個模組）同日清掉，只剩 `webrtc_panel.py`（見下）。
-大宗又是 mixin 借用宿主的成員（六個分頁 mixin 借 `_tr`／`_translate`／`timer`），
-做法與 webrtc 那三個 mixin 相同。順帶修掉三個真的會壞的地方：
-`assertions_tab` 的 pixel 斷言把 `*_parse_ints(...)[:2]` 星號展開，使用者只打一個
-座標時 RGB 清單會被綁到 `y`，錯誤訊息變成「關鍵字參數重複」而不是「你少打了一個
-座標」；`_auto_click_tab._get_mouse_pos` 直接解包 `get_mouse_position()`，而
-Windows 後端在鎖定桌面上真的會回 `None`；`multi_language_wrapper` 的監聽器清單
-標成 `List[callable]`（`callable` 是內建函式，不是型別）。
-做法見 [WHATS_NEW.md](WHATS_NEW.md)。
-
-`utils/mcp_server` 那一群（4 個模組）同日清掉，順帶抓到一個**從來沒成功過的指令**：
-`AC_normalize_url`／`ac_normalize_url` 都把 `drop_fragment=` 傳給
-`url_canon.normalize_url`，而那支函式的參數叫 `strip_fragment`——每一次呼叫都是
-`TypeError`。對外的名字不動（動作 schema 與工具註冊表都用它），改的是兩個呼叫點。
-做法見 [WHATS_NEW.md](WHATS_NEW.md)。
-
-長尾那一批（13 個模組、每個 2～6 個錯誤）同日清掉，反覆出現的只有三種形狀：
-`callable` 被當成型別用（`callable` 是內建函式）、`x: SomeType = None` 的隱含
-Optional、以及「掉了長度的 tuple」（`tuple(r)`／`cv2.boundingRect()` 都是
-`tuple[int, ...]`，而收它的欄位承諾四個 int）。另外抓到兩個只靠呼叫圖成立的不變量
-（`_StabilityTracker` 的 `now - self._since`、`act_when_ready` 把可能是 `None` 的
-`report.point` 傳給要求座標的 callback）。做法見 [WHATS_NEW.md](WHATS_NEW.md)。
-
-**順帶一個 mypy 設定上的事實**：`pyproject.toml` 把 `cv2` 列在
-「ship no stubs 的基礎相依」底下，但 opencv-python **有**附 `.pyi`，所以閘門會去讀它，
-而它的內容會隨 OpenCV 版本變動（實測 4.13.0：`cv2.MSER_create` 執行期存在、stub 裡沒有）。
-`>=4.8,<6` 這個範圍內版本一換，閘門的判定就可能跟著動——與 numpy 那條註解同一類的坑。
-
-剩下 56 個模組要清，**不再有大群集**：最大的檔案是
-`gui/remote_desktop/webrtc_panel.py`（27，見下）與
-`utils/executor/action_executor.py`（8），其餘每個檔都只剩 1～2 個錯誤。
-
-#### `webrtc_panel.py` 的型別豁免現在卡在它欠的那次拆檔
-
-`TODO` — 27 個錯誤，但清掉它需要先讓這個檔可以變長
-
-二十七個錯誤裡有七個來自 `_build_advanced_group(panel: TranslatableMixin, ...)`：
-這個自由函式**會把五個 widget 屬性寫回 panel 上**（`_stun_edit`、`_turn_edit`、
-`_turn_user_edit`、`_turn_cred_edit`、`_hw_codec_combo`），而 `TranslatableMixin`
-一個都沒有。正確的型別是一個 Protocol，把它需要與寫入的成員寫出來——但
-`webrtc_panel.py` **正好卡在 2,555 行的上限**（見本檔開頭那張表：只准變短），
-而加 Protocol 一定變長。
-
-真正的解法就是那張表早就寫著的：把這個檔拆成 panel + 各控制器。
-`_build_advanced_group` 本身就是第一個該搬出去的——它是共用的 widget group builder，
-不屬於 panel 模組，搬走同時解決長度與型別兩件事。**在那之前這個模組留在豁免清單上，
-理由記在這裡，不是被忘記。**
-**下一步**是一次清一個群集，清完把行從清單刪掉——
-`python test/verify/typing_contract_verify.py --fix` 會替你改，CI 會在你忘了刪的時候紅掉。
-已經清掉的那些留下四個可以直接套用的樣板：mixin 用 `if TYPE_CHECKING:` 宣告
-借來的成員、`Optional` 屬性用 `TYPE_CHECKING` 匯入真正的型別去標注、
-一定會拋的 helper 標 `NoReturn`、攔截用的 tuple 標
-`Tuple[Type[BaseException], ...]` 並收成一個模組常數（不要在 `except` 裡星號解包）。
+清單現在只有標頭、沒有任何條目。**它變長就是退步**，`typing_contract_verify.py`
+會在有人讓它變長時紅掉。
 
 #### 平台縫還缺的一半：`keyboard` 與 `mouse` 還沒有合約
 
