@@ -1,6 +1,6 @@
 import sys
 from typing import Tuple, Optional
-from ctypes import windll
+from ctypes import windll  # type: ignore[attr-defined]  # reason: win32-only ctypes
 from je_auto_control.utils.exception.exception_tags import windows_import_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -99,7 +99,7 @@ def mouse_event(event: int, x: int, y: int, dw_data: int = 0) -> None:
     :param dw_data: 滾輪數值 Wheel data
     """
     converted_x, converted_y = _convert_position(x, y)
-    ctypes.windll.user32.mouse_event(
+    ctypes.windll.user32.mouse_event(  # type: ignore[attr-defined]  # reason: win32-only ctypes
         event,
         ctypes.c_long(converted_x),
         ctypes.c_long(converted_y),

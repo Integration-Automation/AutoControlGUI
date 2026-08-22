@@ -240,11 +240,11 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
 而不是齊頭式地補測試。
 
-### mypy：整包把關，108 個模組還沒過
+### mypy：整包把關，92 個模組還沒過
 
 範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
 （`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
-新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 909 個已經過關。
+新模組預設在圈外；現在新模組**預設就在契約裡**，1,017 個檔案有 925 個已經過關。
 
 `wrapper` 那一群（6 個模組）在 2026-08-21 清掉了，做法見 [WHATS_NEW.md](WHATS_NEW.md)：
 平台縫的八個匯出名稱先宣告型別、再讓分支去綁定，其中三個用
@@ -300,10 +300,13 @@ accessibility 錯誤裡有三十四個是同一個沒標的回傳型別（`_unsu
 `_AtspiConnection._call` 在 `with` 之外沒有 bus 可以呼叫。
 做法見 [WHATS_NEW.md](WHATS_NEW.md)。
 
-剩下 108 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
+下面那條 `DECIDE` 也在同日拍板收掉，又清掉 16 個模組（做法見
+[WHATS_NEW.md](WHATS_NEW.md)）。
+
+剩下 92 個模組要清。錯誤碼分布是 `attr-defined` 佔大宗，其次
 `arg-type`／`union-attr`／`assignment`，成群集中在
 `gui`（11＋`gui/remote_desktop` 2）、`utils/mcp_server`（4）、
-`utils/usb/passthrough`（4）、`utils/clipboard`（2），其餘散在各處。
+`utils/usb/passthrough`（3）、`utils/clipboard`（2），其餘散在各處。
 以檔案計最大的三個是 `utils/usb/passthrough/winusb_backend.py`（34）、
 `gui/_auto_click_tab.py`（31）、`gui/remote_desktop/webrtc_panel.py`（27）。
 **下一步**是一次清一個群集，清完把行從清單刪掉——
@@ -336,50 +339,32 @@ accessibility 錯誤裡有三十四個是同一個沒標的回傳型別（`_unsu
 
 真正的成本在後端那一側：四個平台的 `keyboard`／`mouse` 模組本身都還在豁免清單上，
 Protocol 一旦標上去，它們的內部型別錯誤就會一起浮出來。`linux_wayland`、
-`linux_with_x11`、`osx` 都已經清完，而 `windows/` 的**真實**型別錯誤也清完了
-（見上），只剩下面那條 `DECIDE` 的 ctypes 表面問題。所以前置條件實質上已經到位，
+`linux_with_x11`、`osx` 都已經清完，而 `windows/` 在 2026-08-22 也全部離開了
+豁免清單（真實型別錯誤 + 下面那條已拍板的 ctypes 表面）。**前置條件已經全數到位**，
 可以開始標 Protocol；下一次動這條的人不必再等別的群集。
 
-#### `DECIDE`：16 個模組的豁免不是它們的錯
+#### 已拍板（2026-08-22）：Win32 ctypes 表面用 28 個逐行抑制解決
 
-**2026-08-22 重新實測，這一條的規模比原本寫的大一倍，而且形狀不同。**
-原本寫的是「`windows/` 底下 8 個模組」；實際上是 **16 個模組、58 個錯誤**，
-而其中**一半不在 `windows/` 底下**：
+原本這裡是一條 `DECIDE`，寫的是「`windows/` 底下 8 個模組」。重新實測後是
+**16 個模組**，而且**一半不在 `windows/` 底下**（`utils/trash/`、`utils/app_idle/`、
+`utils/file_assoc/`、`utils/idle_keepawake/`、`utils/lock_session/`、
+`utils/session_guard/`、`utils/usb/passthrough/key_provider.py`、
+`gui/main_window.py`）——這一點直接否掉了原本推薦的那一條（照目錄決定用哪個平台量，
+分不到這八個）。
 
-| 模組 | 錯誤數 |
-| --- | ---: |
-| `windows/record/win32_input_hook.py` | 8 |
-| `utils/usb/passthrough/key_provider.py` | 8 |
-| `windows/core/utils/win32_ctype_input.py` | 6 |
-| `windows/core/utils/win32_keypress_check.py`、`windows/interception/_dll.py`、`windows/mouse/win32_ctype_mouse_control.py`、`windows/screen/win32_screen.py`、`windows/window/windows_window_manage.py` | 各 4 |
-| `windows/interception/mouse.py`、`gui/main_window.py`、`utils/app_idle/`、`utils/file_assoc/`、`utils/idle_keepawake/`、`utils/lock_session/`、`utils/session_guard/`、`utils/trash/` | 各 2 |
+**維護者選了逐行 `# type: ignore` 附理由**，實際只用了 **28 行**（原本估的 58
+是把同一行在 linux 與 darwin 各算了一次）。做法見 [WHATS_NEW.md](WHATS_NEW.md)，
+兩件必須實測的事記在這裡免得再踩：
 
-這 16 個模組在 `--platform win32` 上**全部乾淨**，在 linux／darwin 上的錯誤
-**100% 是同一件事**：`ctypes` 的 Win32 專屬表面（`windll`、`WinDLL`、
-`WINFUNCTYPE`、`WinError`、`get_last_error`）在 typeshed 的非 Windows 目標上
-根本沒有宣告。實測方式是把三個平台的結果對比，找出「win32 全綠、其他平台
-只錯在這組名字上」的模組——結果是 16 個，沒有一個是「順便還有別的錯」。
+* **mypy 只認每一行的第一個註解**——接在既有 `# nosec` 後面的 `# type: ignore`
+  完全不生效（已實測）。所以有 `# nosec` 的那兩行，marker 放前面、兩個理由併成一句。
+* 有九行放不進 120 字元，是**改寫**而不是把理由砍到看不懂：括號換行時 marker 跟著
+  左括號走，兩處先把值取出來成區域變數（DPAPI 的 `last_error`、input hook 的
+  `kernel32`），讀起來比原本的一行式更清楚。
 
-**這件事會改動下面第四條的可行性**：`utils/app_idle/`、`utils/trash/`、
-`gui/main_window.py` 這些不在任何平台目錄底下，所以「照目錄決定用哪個平台量」
-的規則對它們無效。要嘛規則改成看模組內容（難自動判定），要嘛這八個走另一條路。
-
-三條路都實測過，維護者挑一條：
-
-| 做法 | 成本 | 實測結果 |
-| --- | --- | --- |
-| **剪掉模組本體**（`if TYPE_CHECKING and sys.platform != "win32": raise`） | 每個檔 2 行 | **不能用**。mypy 一旦把模組本體判為 unreachable，`from ... import user32` 的那一端就會拿到 `Cannot determine type of "user32"` [has-type]——把 18 個錯誤換成一串新的、而且落在原本乾淨的模組上。 |
-| **一個 shim 模組**把 Win32 專屬的 ctypes 表面集中匯出，非 Windows 分支綁 POSIX 對應物 | 新檔 + 18 個呼叫點改名 | 可行，事實只寫一次；代價是為了型別去動輸入熱路徑的 `user32` handle 建立方式。 |
-| **18 個 `# type: ignore[attr-defined]`** 各附理由 | 18 行註記 | 可行，執行期零風險；代價是 18 個抑制，且同一句話重複 18 次。 |
-
-第四條是改閘門本身：讓 `typing_contract_verify.py` 只用模組自己的平台去量
-平台專屬模組（`windows/` 只用 win32、`osx/` 只用 darwin、`linux_*` 只用 linux）。
-（**但見上面那張表**：有八個受影響的模組不在平台目錄底下，照目錄分不到它們。）
-這是三者裡最貼近事實的一條——拿 Linux 去檢查一個只跑得動在 Windows 的模組本來就沒有意義，
-而閘門的 docstring 自己寫的多目標理由是「要讀得到平台分支後面的程式碼」，不是這個。
-但它會改掉「清單上的模組＝在每個支援平台上都還沒過」這個既定語意，**所以要維護者拍板**。
-
-推薦：第四條，其次是 shim。
+十六個模組事後都在真的 Windows 機器上重新 import 並實際呼叫過
+（`dpapi_available()`、`_windows_locked()`、`check_key_is_press`）——
+只有型別檢查器驗過的改寫等於沒人驗過。
 
 有一件事別再踩：**這個閘門的判定不能隨環境浮動**。裝了 `[gui]`／`[webrtc]` 的開發機
 與乾淨的 `pip install -e .` 曾經對 38 個模組看法不同（36 個 Qt 模組只在 PySide6

@@ -208,6 +208,42 @@ comparison as a `DECIDE`, because the cleanest of them changes what the gate
 means rather than what the code says. **136 modules left, 881 of 1,017 files
 inside the contract.**
 
+### The Win32 ctypes DECIDE, Settled — and It Was Twice the Size It Said
+
+`Progress.md` carried a `DECIDE` about eight modules under
+`je_auto_control/windows/` that pass on `--platform win32` and fail on the other
+two targets for one reason: typeshed declares `windll`, `WinDLL`, `WINFUNCTYPE`,
+`WinError` and `get_last_error` on Windows only. Re-measuring it — by diffing
+the three platform runs and keeping the modules whose *entire* non-win32 error
+set is that one surface — turned up **sixteen** modules, not eight, and half of
+them are nowhere near `windows/`: `utils/trash/`, `utils/app_idle/`,
+`utils/file_assoc/`, `utils/idle_keepawake/`, `utils/lock_session/`,
+`utils/session_guard/`, `utils/usb/passthrough/key_provider.py` and
+`gui/main_window.py`. That killed the option the entry had recommended —
+"measure a platform module on its own platform" cannot be a directory rule when
+half the affected modules are not in a platform directory.
+
+The maintainer picked the suppression route, and it came to **28 lines, not the
+58 the entry projected**: 58 counted the same source line once for Linux and
+once for macOS. Each carries its own reason, none is blanket, and the runtime is
+untouched.
+
+Two things had to be measured rather than assumed. **mypy honours
+`# type: ignore` only as the first comment on the line** — a trailing one after
+an existing `# nosec` is silently ignored — so on the two lines that already had
+a `# nosec B607` the marker goes first and the two justifications merge into one
+`# reason:`. And nine lines could not hold the marker inside the 120-char limit,
+so they were reformatted rather than shortened into meaninglessness: an opening
+paren takes the comment (`ctypes.WinDLL(  # type: ignore[…]`), and two sites
+hoist a value into a local first — `last_error = ctypes.get_last_error()` in the
+DPAPI wrapper, `kernel32 = ctypes.windll.kernel32` in the input hook — which
+reads better than the one-liner did.
+
+All sixteen were re-imported and exercised on a real Windows machine afterwards
+(`dpapi_available()`, `_windows_locked()`, `check_key_is_press`), because a
+reformat that only a type checker verifies is a reformat nobody verified.
+**92 modules left, 925 of 1,017 files inside the contract.**
+
 ### Fifteen More Modules, and Four Errors That Were Wrong Rather Than Untyped
 
 The accessibility backends, the observability trio, the three triggers,

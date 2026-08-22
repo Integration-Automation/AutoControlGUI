@@ -49,7 +49,9 @@ def _win32_recycle(path: str) -> None:
     operation.wFunc = fo_delete
     operation.pFrom = path + "\0\0"  # the path list is double-null terminated
     operation.fFlags = flags
-    result = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(operation))
+    result = ctypes.windll.shell32.SHFileOperationW(  # type: ignore[attr-defined]  # reason: win32-only ctypes
+        ctypes.byref(operation),
+    )
     if result != 0:
         raise OSError(f"SHFileOperation failed ({result}) for {path!r}")
 

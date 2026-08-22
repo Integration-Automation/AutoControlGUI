@@ -10,7 +10,7 @@ import ctypes
 from ctypes import wintypes
 from je_auto_control.windows.core.utils.win32_vk import WIN32_EventF_UNICODE, WIN32_VkToVSC
 
-user32 = ctypes.WinDLL('user32', use_last_error=True)
+user32 = ctypes.WinDLL('user32', use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
 
 Mouse: int = 0
 Keyboard: int = 1
@@ -58,7 +58,7 @@ class Input(ctypes.Structure):
 
 def _check_count(result, func, args) -> list:
     if result == 0:
-        raise ctypes.WinError(ctypes.get_last_error())
+        raise ctypes.WinError(ctypes.get_last_error())  # type: ignore[attr-defined]  # reason: win32-only ctypes
     return args
 
 

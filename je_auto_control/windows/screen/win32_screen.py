@@ -18,8 +18,8 @@ from ctypes import wintypes
 # This module owns its user32 / gdi32 handles rather than sharing
 # ``ctypes.windll``: prototypes live on the function objects, so a shared handle
 # would leak these declarations into every other caller in the process.
-_user32 = ctypes.WinDLL("user32", use_last_error=True)
-_gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
+_user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
+_gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
 
 # HDC 是**指標寬度**的 handle。ctypes 預設把回傳值與參數當成 c_int，在 64 位元
 # Windows 上會截斷——`GetDC` 回來就已經是壞的，再傳給 `GetPixel` / `ReleaseDC`
