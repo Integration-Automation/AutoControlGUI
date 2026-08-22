@@ -11,7 +11,7 @@ grab the screen / ``region``) and returns a NumPy ndarray you can pass straight 
 OCR / match call or save. OpenCV + NumPy come in via the project's ``je_open_cv``
 dependency and are imported lazily. Imports no ``PySide6``.
 """
-from typing import Any, Optional, Sequence
+from typing import Any, Callable, Dict, Optional, Sequence
 
 ImageSource = Any
 _INTERP = ("nearest", "linear", "cubic", "lanczos")
@@ -149,7 +149,7 @@ def _step_binarize(array, *, block_size: int, c: int, **_kwargs):
     return binarize(array, block_size=block_size, c=c)
 
 
-_STEPS = {
+_STEPS: Dict[str, Callable[..., Any]] = {
     "grayscale": _step_grayscale,
     "upscale": _step_upscale,
     "binarize": _step_binarize,

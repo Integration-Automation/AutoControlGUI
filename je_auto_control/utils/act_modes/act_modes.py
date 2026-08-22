@@ -58,6 +58,7 @@ def act_with_mode(action: Callable[[List[int]], Any],
     point = list(report.point) if report.point is not None else None
     base = {"mode": mode, "actionable": report.actionable,
             "reason": report.reason, "point": point}
-    if mode == "trial" or not report.actionable:
+    target = report.point
+    if mode == "trial" or not report.actionable or target is None:
         return {**base, "acted": False, "result": None}
-    return {**base, "acted": True, "result": action(report.point)}
+    return {**base, "acted": True, "result": action(target)}

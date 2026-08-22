@@ -223,7 +223,7 @@ class Scheduler:
             if live.max_runs is not None and live.runs >= live.max_runs:
                 self._jobs.pop(job.job_id, None)
                 return
-            if live.is_cron:
+            if live.is_cron and live.cron_expression is not None:
                 next_dt = next_match(live.cron_expression,
                                      _dt.datetime.fromtimestamp(now_wall))
                 live.next_run_ts = next_dt.timestamp()

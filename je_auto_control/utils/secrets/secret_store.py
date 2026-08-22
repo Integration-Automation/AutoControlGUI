@@ -27,7 +27,7 @@ import json
 import os
 import threading
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 _VERIFIER_PLAINTEXT = b"autocontrol-vault-v1"
@@ -183,21 +183,21 @@ class SecretManager:
         if not isinstance(value, str):
             raise ValueError("secret value must be a string")
         with self._lock:
-            self._require_unlocked()
-            token = self._fernet.encrypt(value.encode("utf-8")).decode("ascii")
-            self._vault["items"][name] = token  # type: ignore[index]
-            _atomic_write(self._path, self._vault)  # type: ignore[arg-type]
+            fernet, vault = self._require_unlocked()
+            token = fernet.encrypt(value.encode("utf-8")).decode("ascii")
+            vault["items"][name] = token
+            _atomic_write(self._path, vault)
 
     def get(self, name: str) -> Optional[str]:
         """Return the plaintext for ``name`` or ``None`` if unset."""
         with self._lock:
-            self._require_unlocked()
-            token = self._vault["items"].get(name)  # type: ignore[index]
+            fernet, vault = self._require_unlocked()
+            token = vault["items"].get(name)
             if token is None:
                 return None
             _, invalid_token = _fernet_types()
             try:
-                return self._fernet.decrypt(token.encode("ascii")).decode("utf-8")
+                return fernet.decrypt(token.encode("ascii")).decode("utf-8")
             except invalid_token as error:
                 raise SecretStoreError(
                     f"secret {name!r} failed integrity check"
@@ -245,9 +245,12 @@ class SecretManager:
             except FileNotFoundError:
                 pass
 
-    def _require_unlocked(self) -> None:
-        if self._fernet is None or self._vault is None:
+    def _require_unlocked(self) -> Tuple[Any, dict]:
+        """Return the live ``(fernet, vault)`` pair, or raise if locked."""
+        fernet, vault = self._fernet, self._vault
+        if fernet is None or vault is None:
             raise SecretStoreLocked("secret vault is locked")
+        return fernet, vault
 
 
 default_secret_manager = SecretManager()

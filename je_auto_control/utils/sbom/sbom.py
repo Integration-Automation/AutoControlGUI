@@ -31,7 +31,9 @@ def _component(dist: "metadata.Distribution") -> Dict[str, Any]:
         "type": "library", "name": name, "version": version,
         "purl": _purl(name, version),
     }
-    license_name = dist.metadata.get("License")
+    # `dist.metadata` is an `email.message.Message`: it answers `get`,
+    # but is not declared as a mapping.
+    license_name = dist.metadata.get("License")  # type: ignore[attr-defined]  # reason: Message.get
     if license_name and license_name != "UNKNOWN":
         component["licenses"] = [{"license": {"name": license_name}}]
     return component

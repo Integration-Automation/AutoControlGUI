@@ -55,12 +55,16 @@ if __name__ == "__main__":
             "--execute_str",
             type=str, help="execute json str"
         )
-        args = parser.parse_args()
-        args = vars(args)
-        for key, value in args.items():
-            if value is not None:
-                argparse_event_dict.get(key)(value)
-        if all(value is None for value in args.values()):
+        parsed = vars(parser.parse_args())
+        for key, value in parsed.items():
+            if value is None:
+                continue
+            handler = argparse_event_dict.get(key)
+            if handler is None:
+                raise AutoControlArgparseException(
+                    argparse_get_wrong_data_error_message)
+            handler(value)
+        if all(value is None for value in parsed.values()):
             raise AutoControlArgparseException(argparse_get_wrong_data_error_message)
     except AutoControlArgparseException as error:
         autocontrol_logger.error("argparse failure: %r", error)

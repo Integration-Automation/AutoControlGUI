@@ -34,7 +34,7 @@ def tag_kinds(elements: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
     for element in elements:
         box = [int(element["x"]), int(element["y"]),
                int(element["width"]), int(element["height"])]
-        kind = _KIND_BY_SOURCE.get(element.get("source"), "widget")
+        kind = _KIND_BY_SOURCE.get(str(element.get("source", "")), "widget")
         result.append({"box": box, "kind": kind, "index": element.get("index")})
     return result
 

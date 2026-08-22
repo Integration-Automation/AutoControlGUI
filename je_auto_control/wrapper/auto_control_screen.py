@@ -1,5 +1,5 @@
 import sys
-from typing import List, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from je_auto_control.utils.cv2_utils.optional import require_cv2
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
@@ -31,7 +31,7 @@ def screen_size() -> Tuple[int, int]:
 
 
 def screenshot(file_path: Optional[str] = None,
-               screen_region: Optional[list] = None) -> List[int]:
+               screen_region: Optional[list] = None) -> Any:
     """
     use to capture current screen
     擷取當前螢幕畫面

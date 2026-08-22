@@ -11,6 +11,10 @@ import time
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlMouseException,
+)
+
 Point = Tuple[float, float]
 
 
@@ -105,6 +109,9 @@ def move_mouse_humanized(x: int, y: int, *, duration_s: float = 0.4,
     )
     motion = motion or HumanizedMotion()
     start = get_mouse_position()
+    if start is None:
+        raise AutoControlMouseException(
+            "the OS did not report a cursor position to move from")
     path = humanized_path(start, (x, y), motion)
     per_step = max(0.0, float(duration_s)) / max(1, len(path))
     for point_x, point_y in path:

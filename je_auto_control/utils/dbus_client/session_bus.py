@@ -452,7 +452,10 @@ class SessionBus:
             )
         path, abstract = _socket_target(self.address)
         try:
-            self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self._socket = socket.socket(
+                socket.AF_UNIX,  # type: ignore[attr-defined]  # reason: POSIX-only
+                socket.SOCK_STREAM,
+            )
             self._socket.connect(("\0" + path) if abstract else path)
         except OSError as error:
             self.close()
@@ -477,7 +480,7 @@ class SessionBus:
 
     def _authenticate(self) -> None:
         """The SASL EXTERNAL handshake, which is a uid in hex over a socket."""
-        uid = str(os.getuid()).encode("ascii")
+        uid = str(os.getuid()).encode("ascii")  # type: ignore[attr-defined]  # reason: POSIX-only
         self._send_raw(b"\x00AUTH EXTERNAL " + uid.hex().encode("ascii")
                        + b"\r\n")
         reply = self._read_line()

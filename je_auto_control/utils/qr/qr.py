@@ -30,7 +30,8 @@ def _load_np(source: ImageSource, region: Optional[Sequence[int]]):
         image = Image.open(str(source))
     image = image.convert("RGB")
     if region is not None:
-        image = image.crop(tuple(int(v) for v in region))
+        left, top, right, bottom = (int(v) for v in region)
+        image = image.crop((left, top, right, bottom))
     return np.array(image)
 
 

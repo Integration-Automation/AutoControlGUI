@@ -50,6 +50,8 @@ def _score_map(template_hsv, haystack_hsv, channels: Sequence[str]):
                                    template_hsv[:, :, index], cv2.TM_SQDIFF_NORMED)
         result = np.nan_to_num(result, nan=1.0, posinf=1.0)
         accumulator = result if accumulator is None else accumulator + result
+    if accumulator is None:
+        raise ValueError("match_color needs at least one channel")
     return 1.0 - accumulator / len(channels)
 
 
