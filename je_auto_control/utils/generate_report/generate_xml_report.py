@@ -18,11 +18,9 @@ def generate_xml() -> Tuple[Union[str, bytes], Union[str, bytes]]:
     autocontrol_logger.info("generate_xml")
 
     success_dict, failure_dict = generate_json()
-    success_dict = {"xml_data": success_dict}
-    failure_dict = {"xml_data": failure_dict}
 
-    success_xml = dict_to_elements_tree(success_dict)
-    failure_xml = dict_to_elements_tree(failure_dict)
+    success_xml = dict_to_elements_tree({"xml_data": success_dict})
+    failure_xml = dict_to_elements_tree({"xml_data": failure_dict})
 
     return success_xml, failure_xml
 

@@ -1,6 +1,592 @@
 # What's New — AutoControl
 
+## What's new (2026-08-21)
+
+### Two Quality Gates That Had Been Standing Still
+
+`Progress.md` carried an entry called "two thresholds we agreed to climb and
+never did". Both were promises that lived only in a `pyproject.toml` comment,
+with nothing anywhere that would ever move them. Both now have a mechanism.
+
+**Coverage: the floor was 15 points below what the tests already earn.**
+`fail_under = 35` was the first measured baseline and then never moved while the
+suite grew past it. Every square of the nine-way matrix is over 50% — measured
+on the run for PR #484, from 50.26% (ubuntu-22.04 / 3.10) to 51.69%
+(windows-2022 / 3.14) — so CI would have passed a change that deleted a third of
+the tests without a word. The floor is now **50**, taken from the lowest square
+rather than from one machine, and the comment states the rule that was missing:
+this is a ratchet, raised whenever the suite has earned it, not a target to
+admire. 70 is still the destination.
+
+**mypy: the scope was two directories, and could only ever grow by hand.**
+The job checked `je_auto_control/api` and `je_auto_control/utils/failure_bundle`
+— 4 files — while a comment promised the rest would join "the contract" later.
+A scope written as a path list never grows on its own, and every new module
+lands outside it by default.
+
+So the scope is inverted. mypy now checks **the whole package**, and the modules
+that do not pass yet are named in `test/verify/typing_contract_exempt.txt`.
+**862 of 1,017 files are inside the contract today**, a new module is inside it
+the moment it is written, and the list may only shrink:
+`test/verify/typing_contract_verify.py` fails just as loudly when a listed
+module starts passing (delete the line) as when an unlisted one stops. Both
+directions were checked by breaking them.
+
+**And it checks three platforms, not one.** mypy resolves `sys.platform`
+branches against a single target, so the Ubuntu-only job never looked inside
+the Windows, macOS or platform-gated code — three of the four backends. That
+blind spot was real and is now measured: 13 modules fail only when the target is
+Linux, 3 only when it is Windows. The script runs `win32`, `linux` and `darwin`
+and unions the results, so the Windows and macOS backends are type-checked from
+the Ubuntu runner.
+
+**The part that took the work: the gate has to mean one thing.** A first
+measurement taken on a dev checkout disagreed with a bare `pip install -e .`
+about **38 modules** — 36 Qt modules that pass only because PySide6 is *absent*,
+and 2 that fail only because `babel` and `pytest` are. Committing that list
+would have reddened CI on arrival and mis-listed the other 36. A gate that flips
+on `pip install` is not a gate, so every third-party module outside the base
+dependency set is now forced to `Any`. `ignore_missing_imports` alone was not
+enough — it still lets mypy read the real package when it *is* installed — and
+neither was `follow_imports = "skip"`, which is silently ignored for `.pyi`
+files: PySide6 ships inline stubs, so `follow_imports_for_stubs` was required
+too. That is the same trap the numpy override in `pyproject.toml` had already
+paid for and written down. A dev checkout with `[gui]` and `[webrtc]` and a
+clean base install now produce identical results.
+
+The remaining modules cluster — `utils/remote_desktop` (13), `gui` (11) — and
+`Progress.md` records clearing them one cluster at a time. The first cluster is
+below.
+
+### The Platform Seam Now Says What a Backend Is
+
+`wrapper/platform_wrapper.py` is the Strategy hub: it imports exactly one
+backend and re-exports eight names, and everything above it is written against
+those names rather than against a platform. Nothing said what they *were*.
+
+Measured, that had two consequences, and neither was theoretical:
+
+- **mypy bound every name to the Windows backend, on every target.** The
+  branches are `if is_windows() / elif is_macos() / …`, which a type checker
+  cannot resolve, so it read all of them and kept the first — so the layer above
+  the seam was checked against Win32 signatures even when the target was Linux
+  or macOS, and it reported "`recorder` has type `OSXRecorder`, expected
+  `Win32Recorder`" for the *correct* code on the way past.
+- **A backend could omit a member and nobody would say so** until a call site
+  three layers up failed on the user's machine.
+
+The eight names are now declared before the branches bind them, three of them
+with protocols in the new `wrapper/backend_contract.py` — `ScreenBackend`,
+`KeyboardCheckBackend`, `RecorderBackend` — and each `_platform_*` assembly
+module annotates what it assigns. A backend that does not answer the seam's
+questions now fails in its own file, naming the missing member. That is not
+hypothetical either: turning it on immediately reported that the Windows
+`screen.size()` returns a `list` where the other three backends return a
+`tuple` and where the public `screen_size()` promises a tuple. Fixed, and every
+caller only ever unpacked the two values.
+
+`keyboard` and `mouse` stay `Any`, which is what mypy had already inferred for
+them: macOS takes `is_shift` on `press_key` and orders its mouse calls
+`(x, y, button)` where Windows and X11 take the button alone, and a Windows
+mouse "keycode" is a tuple of three event flags where the others are an int.
+One protocol cannot describe both, and `Progress.md` carries what it would take.
+
+Clearing the cluster fixed four bugs the types had been hiding, all of the same
+shape — a value that could be `None` reaching something that could not take one.
+They are listed in `CHANGELOG.md`. Along the way four modules outside the
+cluster (`utils/cv2_utils/screen_grabber`, `utils/executor/mouse_aliases`,
+`utils/pytest_plugin/keywords`, `utils/vision/vlm_api`) went green on their own:
+they had been failing on the seam's accidental types, not on their own code.
+**145 modules left, 872 of 1,017 files inside the contract.**
+
+Re-measuring `architecture_explore.md` for this change turned up one row the
+measuring tool had never been able to read: §8's `wrapper/` row carried prose
+in its 行數 cell, so it parsed as a one-column row — the tool wrote the *line*
+count into the 檔案數 column, and left the directory out of the named subtotal,
+which meant 其餘模組 counted it a second time. The row is now two plain numbers
+(19 files, 3,293 lines), the note it was carrying has moved to §5.2 as the
+`wrapper/window_backends/` row that section had been missing entirely, and
+其餘模組 no longer double-counts 3,293 lines.
+
+### The Wayland Cluster: Four Modules, One Invariant Nobody Had Written Down
+
+The next cluster off the typing list is `linux_wayland` — `libei`, `_detect`,
+`capture`, `screen` — and thirty-three of its forty errors were one sentence
+repeated: `Item "None" of "BoundSymbols | None" has no attribute ei_…`.
+
+`LibeiBackend` holds its resolved entry points as `Optional[BoundSymbols]`
+(`None` on a host without libei) and read them straight off that attribute at
+every call site. Every one of those sites is in fact reached only after a guard
+— `connect()` refuses an unavailable backend, `_emit` refuses a disconnected
+one — so nothing was broken here. But the guarantee lived in the call graph
+rather than anywhere a reader or a checker could see it, and what a new call
+site that skipped the guard would raise is `AttributeError`: not an
+`AutoControlException`, and therefore straight through every containment
+boundary in the framework. The entry points now come through one `_api`
+property that raises `LibeiUnavailable` — which is what this module's own
+docstring says every failure in it raises. `_teardown` is the deliberate
+exception: it runs from an `except BaseException` handler, so it narrows the
+attribute itself rather than risking a raise that would replace the real
+failure with a complaint about the symbol table.
+
+The other three modules were each one honest disagreement. `_detect`'s two
+environment probes were annotated `dict` while both of them default to
+`os.environ`, which is a `Mapping` — so one of them could not legally pass its
+own environment to the other. `capture._write_to_temp_png` declared a writer
+returning `None` while every caller passes one returning the tool's stdout,
+which it discards because what it reads is the file. And `screen.get_pixel`
+handed Pillow's `getpixel` union — a float for mode `F`, `None` for an empty
+band — to callers that unpack three ints, though `grab_image` has always
+converted to RGB first. **141 modules left, 876 of 1,017 files inside the
+contract.**
+
+### The Three Backends That Only Needed Four Sentences
+
+`linux_with_x11` (3 modules) and `osx` (1) went the same day, and between them
+they held five errors — but one was a live bug of a shape this branch has now
+fixed several times.
+
+`KeypressHandler.record_queue` was assigned `None` in `__init__` with no
+annotation, so its *type* was `None`: `record()` could not legally fill it, and
+`stop_record()` promised a `Queue` while able to hand back the `None` it was
+constructed with. Stopping a recording that was never started therefore reached
+`x11_linux_record`, which reads `.queue` off the result — `AttributeError`, one
+frame away from where the mistake was. It now returns an empty queue, which is
+what "nothing was recorded" looks like and what `stop_record()` on the public
+API already returns for the same case.
+
+`osx_keyboard.press_key` takes `int | str` and sends a string to
+`special_key`. Testing `keycode in special_key_table` narrows the string case
+*into* that branch but leaves `int | str` outside it — so a name the table does
+not know fell through to `normal_key` and reached Quartz as a keycode. A string
+only ever names a special key here, so that is now what the test asks, and an
+unknown name gets `special_key`'s "Unknown special key" rather than a pyobjc
+type error three frames down.
+
+The last one is a checker fact rather than a code fact: `uinput/_device` opens
+`/dev/uinput` with the POSIX-only `O_NONBLOCK`, and the contract checks this
+package against a Windows target too, where the `os` stub does not declare it.
+The flag moved into a `sys.platform` branch mypy can prune, which states the
+Linux-only-ness rather than silencing the question. **137 modules left, 880 of
+1,017 files inside the contract.**
+
+### A Module Nobody Could Import, and a Line That Edited the Standard Library
+
+The Windows cluster turned out to hold the two most interesting findings on
+this branch, and neither is a typing nicety.
+
+`je_auto_control.windows.message.window_message` did
+`from ...windows_window_manage import FindWindowW`. That module has no such
+name — `FindWindowW` is a method on its *private* `user32` handle — so
+importing `window_message` raised `ImportError`, on every Windows machine,
+since whenever the name was moved. Nothing noticed because the only importer
+in the tree is a manual test. It now calls that module's public
+`get_one_window_hwnd`, which is also the one carrying the argtypes that keep a
+64-bit HWND from being truncated to `c_int`.
+
+`win32_ctype_input` ran `wintypes.ULONG_PTR = wintypes.WPARAM` at import — a
+write into the standard library's own module namespace. Nothing in this package
+reads `ULONG_PTR` back; measured, the name appears exactly once in the tree, on
+that line. So the only thing the assignment could do was answer for some other
+library in the same process that asked `ctypes.wintypes` whether it has
+`ULONG_PTR`. Deleted.
+
+The same file also carried annotations that were wrong rather than merely
+unhelpful: `_fields_: tuple` redeclares a ctypes `ClassVar` as an instance
+variable, and `ctypes.POINTER` and `user32.SendInput` were used as types when
+one is a function and the other a value. Dropping all three leaves exactly what
+mypy infers, which was right all along.
+
+**Every module under `je_auto_control/windows/` now type-checks on the Windows
+target.** Eight of them stay on the exemption list anyway, for a reason that is
+not about them: the gate checks the package against Linux and macOS targets
+too, where typeshed does not declare the Win32-only corner of `ctypes`
+(`windll`, `WinDLL`, `WINFUNCTYPE`, `WinError`, `get_last_error`). Three
+remedies were measured, one of them ruled out — pruning the module body makes
+every *importer* fail with `has-type` instead — and `Progress.md` carries the
+comparison as a `DECIDE`, because the cleanest of them changes what the gate
+means rather than what the code says. **136 modules left, 881 of 1,017 files
+inside the contract.**
+
+### The Typing Contract's Exemption List Is Empty
+
+`je_auto_control` type-checks clean on all three targets — win32, linux and
+darwin — with nothing exempted. The list that started this branch at 155 modules
+now holds a header and no entries, and `typing_contract_verify.py` fails if it
+ever grows again.
+
+The last module was `gui/remote_desktop/webrtc_panel.py`, and it was blocked by
+its own size rather than by its types. Seven of its errors came from
+`_build_advanced_group(panel: TranslatableMixin, …)`, a free function that
+*writes* five widget attributes back onto the panel it is handed — none of which
+`TranslatableMixin` has. Writing that contract down needs a Protocol, and the
+file was sitting exactly on the 2,555-line cap it may only shrink from.
+
+So the builder moved out, which is what `Progress.md` had said that file owed
+anyway: `gui/remote_desktop/advanced_group.py` now holds the shared
+STUN/TURN group, the `AdvancedGroupHost` protocol naming what it reads and what
+it sets, and the hardware-codec row as its own function. The panel is 2,545
+lines — under its cap for the first time — and both panels were rebuilt
+offscreen afterwards to confirm the STUN default, the TURN fields and the
+host-only codec picker all still arrive where they did.
+
+Ten more errors in that file were the pattern the whole sweep kept meeting: a
+handle that is `None` until the session starts. `_produce_offer`,
+`_trust_session_viewer`, `_answer_and_push`, `_produce_answer` and the folder
+sync all reached through `self._multi_host` / `self._viewer` without asking. They
+go through `_require_multi_host()` / `_require_viewer()` now, which raise a
+translated "start hosting first" / "connect to a host first" instead of an
+`AttributeError` on `None` — two new keys in all four language catalogues.
+
+**0 modules left. 1,018 of 1,018 files inside the contract.**
+
+### Thirteen Small Modules, and a Stub That Disagrees With the Library
+
+Past the big clusters the list is a long tail: thirteen modules of two to six
+errors each, cleared in one pass. Three recurring shapes, all of them cheap:
+
+- **`callable` used as a type.** It is the builtin *function*, so mypy reads
+  every call through the annotated value as calling something not callable.
+  `plugin_loader` had it six times, both hotkey backends once each.
+- **`x: SomeType = None` defaults**, which PEP 484 prohibits and
+  `no_implicit_optional` rejects: the three `window_zorder` drivers.
+- **A tuple that lost its length.** `tuple(r)` and `cv2.boundingRect(...)` are
+  `tuple[int, ...]`, and the fields they feed promise four ints. Spelling the
+  four out is both the fix and the documentation.
+
+Two are worth naming on their own:
+
+**`_StabilityTracker` read `now - self._since` on a path where `_since` could
+only be non-`None` because of what an earlier call did.** True today, invisible
+to a reader, and one refactor away from a `TypeError` in the poll loop. It
+binds the value and treats "no start time" as "not stable yet".
+
+**`act_when_ready` passed `report.point` to a callback that requires a point.**
+`point` is `None` whenever the target is invisible; the guard above it tests
+`report.actionable`, which implies visible — again true, again only through the
+call graph. The point is now checked where it is used.
+
+**And the cv2 stub disagrees with the cv2 that ships with it.**
+`text_regions` calls `cv2.MSER_create`, which exists in every supported OpenCV
+at runtime but is absent from the `.pyi` opencv-python installs (measured on
+4.13.0: `hasattr(cv2, "MSER_create")` is `True`, the name is not in the stub).
+That is one justified `type: ignore` — and a note for whoever next reads the
+mypy config: cv2 is listed there under "base dependencies that ship no stubs",
+but it does ship one, so the gate reads it and its verdict can move with the
+OpenCV version inside the `>=4.8,<6` pin.
+
+**56 modules left, 961 of 1,017 files inside the contract.**
+
+### `normalize_url` Had Never Worked, on Either Surface
+
+The MCP cluster came off next, and the gate found a command that could not
+succeed. `AC_normalize_url` and `ac_normalize_url` both forward to
+`url_canon.normalize_url`, and both passed `drop_fragment=` — the name they
+expose to callers. The function's parameter is `strip_fragment`. Every call,
+with or without that flag, raised
+`TypeError: normalize_url() got an unexpected keyword argument 'drop_fragment'`:
+in the executor, in the MCP tool, and from the Script Builder field that feeds
+them. The outward name is unchanged (it is in the action schema and the tool
+registry); the two call sites now pass it through under the name the callee
+uses. Measured before and after: the MCP tool returns
+`{"url": "https://example.com/b"}` where it used to return an error.
+
+The rest of the cluster was the shapes this branch keeps meeting:
+
+- **`ClientRequestMixin` borrowed seven attributes from `MCPServer`** and listed
+  all seven in its docstring; that list is a `TYPE_CHECKING` declaration now.
+- **Two catch tuples again.** `_DISPATCH_ERRORS` and `_TOOL_INVOKE_ERRORS` are
+  the containment boundary for the whole stdio loop, and neither was typed as a
+  tuple of exception classes, so all three `except` sites were errors.
+- **`_dispatch` fed an `Optional[str]` method name to `dict.get`.** A JSON-RPC
+  request with no `method` now takes the not-found branch explicitly, with the
+  same `-32601` response body it produced by falling through.
+- **The subscription callback was a default-argument lambda**
+  (`lambda u=uri: …`), which mypy cannot infer against a `Callable[[], None]`
+  parameter. `functools.partial` binds `uri` the same way and says the type.
+
+Two public return annotations were also wrong in the safe direction:
+`set_mouse_position` and `hotkey` are declared `... | None` but every path
+either returns the tuple or raises. Narrowing them is what let the MCP handlers
+stop indexing an Optional. `get_mouse_position` keeps its `| None` — the Windows
+backend really does return that.
+
+**69 modules left, 948 of 1,017 files inside the contract.**
+
+### The GUI Cluster: Three Real Failures Behind the Mixin Noise
+
+Thirteen of the fourteen `gui` modules came off the list. Most of the eighty-nine
+errors were the mixin shape already fixed twice on this branch — six tab mixins
+read `self._tr`, `self._translate` and `self.timer` off a host they never
+declared, and every one of them said so in its own docstring
+("Requires the host widget to expose…"). Those docstrings are now
+`if TYPE_CHECKING:` declarations, stripped at runtime.
+
+Underneath them were three things that fail for a user, not for a checker:
+
+- **A pixel assertion with one coordinate reported the wrong problem.**
+  `assertions_tab` called
+  `assert_pixel(*_parse_ints(self._xy.text())[:2], _parse_ints(self._rgb.text()), …)`.
+  Type `5` instead of `5,6` and the star-unpack contributes one argument, so the
+  RGB list binds to `y`, `match=` and `raise_on_fail=` collide with the
+  positional slots, and the user sees a `TypeError` about duplicate keyword
+  arguments. The count is checked first now, and the message names what is
+  missing.
+- **`_get_mouse_pos` unpacked a value the Windows backend really does return
+  as `None`.** `win32_ctype_mouse_control.position()` returns `None` when
+  `GetCursorPos` fails — which is what happens on a locked or secure desktop —
+  and the tab did `x, y = get_mouse_position()`. The existing `except TypeError`
+  caught it and showed "cannot unpack non-sequence NoneType object". It raises
+  `AutoControlException` with a sentence instead.
+- **`multi_language_wrapper` typed its listener list `List[callable]`.**
+  `callable` is the builtin *function*, not a type, so mypy read every
+  `listener(language)` call as calling something that is not callable. It is
+  `List[Callable[[str], None]]` now.
+
+`recording_edit.editor` came along with them: both of its optional parameters
+were written `end: int = None`, which PEP 484 prohibits and `no_implicit_optional`
+rejects.
+
+**`webrtc_panel.py` is the one that stayed**, and its reason is now in
+`Progress.md` rather than in nobody's head. Seven of its twenty-seven errors
+come from `_build_advanced_group(panel: TranslatableMixin, …)`, a free function
+that *writes* five widget attributes back onto the panel — none of which
+`TranslatableMixin` has. The correct type is a Protocol naming what it reads and
+writes, and the file is sitting exactly on its 2,555-line cap, which may only
+shrink. The real fix is the split that file already owes: `_build_advanced_group`
+is a shared widget-group builder that does not belong in the panel module, and
+moving it out settles the length and the type in one go.
+
+**73 modules left, 944 of 1,017 files inside the contract.**
+
+### The WinUSB Backend Was One Failed DLL Load Away From Never Recovering
+
+With the ctypes surface settled, the two clusters behind it came off:
+`utils/usb/passthrough` and `utils/clipboard`. Both were the same mistake told
+two ways — a handle whose declared type could not do what the code asks of it —
+and both hid a real defect behind it.
+
+**`winusb_backend` published its three DLL handles one at a time.** `_load_dlls`
+assigned `_setupapi`, then `_winusb`, then `_kernel32`, guarded by
+`if _setupapi is not None: return`. If loading `winusb.dll` raised — which is
+exactly what happens on a machine where no device is bound to WinUSB and the
+DLL is absent — `_setupapi` was already set, so the guard short-circuited every
+later attempt and every call site got
+`AttributeError: 'NoneType' object has no attribute 'WinUsb_Initialize'`
+instead of the retry the guard was written to allow. The three handles now come
+back from one loader as a `NamedTuple`, published only after all three load.
+Two smaller ones went with it: a device enumerated without an interface path is
+skipped rather than passed to `CreateFileW` as `None`, and a `WinUsb_Initialize`
+that reports success with a null handle is now a failure rather than an
+`Optional[int]` handed to the handle wrapper.
+
+**`clipboard_api()` returned `Tuple[object, object]`.** `object` has no
+attributes, so all twelve `user32.OpenClipboard` / `kernel32.GlobalLock` calls
+through it were type errors — on a module whose entire docstring is about
+getting these prototypes right once. A ctypes library resolves every symbol
+through `__getattr__`, so `Any` is the only honest promise, and it is what the
+signature says now.
+
+Both were exercised against the real thing on Windows afterwards: a clipboard
+text round trip, `clipboard_formats()` against a live clipboard, and the WinUSB
+backend enumerating an actual bound device. **86 modules left, 931 of 1,017
+files inside the contract.**
+
+### The Win32 ctypes DECIDE, Settled — and It Was Twice the Size It Said
+
+`Progress.md` carried a `DECIDE` about eight modules under
+`je_auto_control/windows/` that pass on `--platform win32` and fail on the other
+two targets for one reason: typeshed declares `windll`, `WinDLL`, `WINFUNCTYPE`,
+`WinError` and `get_last_error` on Windows only. Re-measuring it — by diffing
+the three platform runs and keeping the modules whose *entire* non-win32 error
+set is that one surface — turned up **sixteen** modules, not eight, and half of
+them are nowhere near `windows/`: `utils/trash/`, `utils/app_idle/`,
+`utils/file_assoc/`, `utils/idle_keepawake/`, `utils/lock_session/`,
+`utils/session_guard/`, `utils/usb/passthrough/key_provider.py` and
+`gui/main_window.py`. That killed the option the entry had recommended —
+"measure a platform module on its own platform" cannot be a directory rule when
+half the affected modules are not in a platform directory.
+
+The maintainer picked the suppression route, and it came to **28 lines, not the
+58 the entry projected**: 58 counted the same source line once for Linux and
+once for macOS. Each carries its own reason, none is blanket, and the runtime is
+untouched.
+
+Two things had to be measured rather than assumed. **mypy honours
+`# type: ignore` only as the first comment on the line** — a trailing one after
+an existing `# nosec` is silently ignored — so on the two lines that already had
+a `# nosec B607` the marker goes first and the two justifications merge into one
+`# reason:`. And nine lines could not hold the marker inside the 120-char limit,
+so they were reformatted rather than shortened into meaninglessness: an opening
+paren takes the comment (`ctypes.WinDLL(  # type: ignore[…]`), and two sites
+hoist a value into a local first — `last_error = ctypes.get_last_error()` in the
+DPAPI wrapper, `kernel32 = ctypes.windll.kernel32` in the input hook — which
+reads better than the one-liner did.
+
+All sixteen were re-imported and exercised on a real Windows machine afterwards
+(`dpapi_available()`, `_windows_locked()`, `check_key_is_press`), because a
+reformat that only a type checker verifies is a reformat nobody verified.
+**92 modules left, 925 of 1,017 files inside the contract.**
+
+### Fifteen More Modules, and Four Errors That Were Wrong Rather Than Untyped
+
+The accessibility backends, the observability trio, the three triggers,
+`chatops.router`, `rest_api.rest_server`, `mcp_server.http_transport` and
+`element_repository` came off the list together, because they kept running into
+the same handful of causes.
+
+**Thirty-four of the forty-three accessibility errors were one missing
+annotation.** `AccessibilityBackend._unsupported` raises for every action a
+backend cannot perform, but it declared no return type — so mypy read the calls
+as expressions that might fall through, and reported "missing return statement"
+in all thirty-four methods that end with one. It is annotated `NoReturn` now,
+which is what its body has always done.
+
+**A catch tuple that is not typed as one catches nothing, as far as mypy is
+concerned.** `_uia_errors()` returns the exception classes a UIA call can raise
+— including `comtypes`' `COMError`, which inherits from `Exception` and from
+nothing else, so an `except (OSError, AttributeError)` never contained it. The
+tuple was annotated `Tuple[type, ...]`, which is not "a tuple of exception
+classes", so all five `except UIA_ERRORS` sites were errors. Same shape in
+`rest_server` and `chatops.router`, where `except (…, *SQLITE_ERRORS)` unpacks
+a tuple mypy cannot follow into an `except`; both now name the whole set as one
+annotated module constant, the way `mcp_server._protocol` already did.
+
+**`parse_content_length` never took the type it declared.** Its parameter said
+`Mapping[str, str]`; all three callers pass `self.headers` from a
+`BaseHTTPRequestHandler`, which is an `email.message.Message` — not a mapping
+over its keys, and case-insensitive about header names, which is the property
+that makes `Content-length` work. It takes a one-method `HeaderLookup` protocol
+now, which is what it actually uses and what the callers actually have.
+
+Four fixes are behaviour:
+
+- **`Gauge` and `Histogram` borrowed `Counter._labels_key` by assignment**
+  (`_labels_key = Counter._labels_key`), so a label typo in a gauge was
+  validated by a method whose `self` was declared to be a counter. The rule is
+  identical for all three, so it moved to `_MetricBase` — which also gives
+  `MetricRegistry.render()` a `render` to call on the base it iterates.
+- **`_search_uids` decoded each IMAP UID at two later call sites and not at the
+  third.** UIDs are now decoded once where they arrive, so `_fetch_message`,
+  `_mark_seen` and `_seen_uids` all speak the same type. The stub in
+  `test_email_trigger.py` had pinned one exact `uid()` call shape
+  (`args[1]`); it now normalises arguments the way `imaplib._command` does —
+  skip `None`, ASCII-encode `str` — so it stands in for the library instead of
+  for one caller.
+- **`ElementRepository` handed a stored locator straight to the accessibility
+  API as `**kwargs`.** A repository file is user-editable, so a field that is
+  not a filter surfaced as a `TypeError` about keyword arguments from inside
+  the backend. `_require` now rejects unknown fields by name, and the three
+  filters are passed explicitly.
+- **`_AtspiConnection._call` had no bus to call outside its `with`.** It raises
+  `DBusError` naming the mistake rather than an `AttributeError` on `None`.
+
+`_process_name` in the Windows accessibility backend also stopped being checked
+against Linux and macOS: it is a `kernel32` round trip, and now says so with a
+`sys.platform` guard mypy can prune, in place of a bare `if process_id <= 0`.
+**108 modules left, 909 of 1,017 files inside the contract.**
+
+### The Biggest Remaining Cluster: Thirteen Modules Under `utils/remote_desktop`
+
+`Progress.md` named this one as the next step and as the largest group left
+(13 modules, 169 errors). It came off in one pass, and the errors sorted into
+exactly two shapes.
+
+**Nine of the thirteen were `self._x = None` with no annotation.** mypy infers
+the attribute's *type* as `None` from that line, so every later assignment is
+"incompatible types" and every later use is "None has no attribute …". Several
+of them even carried the intended type in a trailing comment
+(`self._files_receiver = None  # Optional[FileTransferReceiver]`) — the fact was
+known, just written somewhere no checker reads. Those comments are now
+annotations, with the classes imported under `TYPE_CHECKING` so the lazy runtime
+imports that keep startup cheap are untouched. Where an attribute is assigned
+and then used through a closure — `_wire_files_channel` in both the host and the
+viewer — the receiver is bound to a local first, because a closure re-reads the
+attribute and no narrowing survives that.
+
+**The other four were mixins reading attributes they do not own.**
+`MediaNegotiationMixin`, `ViewerAuthMixin` and `FrameProductionMixin` are halves
+of a host class split for readability, and each one's docstring already listed
+what it borrows from the class it is mixed into — `_pc`, `_config`, `_send_ctrl`,
+`_spawn_bg`, `_shutdown`, `_clients`… That list is now a declaration: an
+`if TYPE_CHECKING:` block in the class body naming each borrowed attribute and
+method. The block is stripped at runtime, so a stub in it cannot shadow what the
+host actually binds — which a plain class-body `def` would risk for any future
+mixin sibling that does not define it.
+
+Three findings in the batch are behaviour, not annotation:
+
+- **`WebRTCLoopBridge._run` read the loop off shared state.** `start()` set
+  `self._loop` and spawned a thread whose target then read `self._loop` back to
+  run it. The loop is now passed to the thread as an argument, and `start()`
+  returns it, so `submit()` and `call_soon()` hand a value they hold rather than
+  re-reading an `Optional`. Same behaviour, one less cross-thread read.
+- **`_get_cursor_position` was invisible to the platform pruner.** It did
+  `import sys as _sys` *inside* the function and branched on `_sys.platform`,
+  which mypy does not treat as a platform test — so the Win32 branch was
+  type-checked against Linux and macOS too. The import moved to module scope,
+  which is what makes `ctypes.windll` a Windows-only fact rather than an error.
+- **`totp` caught `base64.binascii.Error`.** That attribute exists only because
+  `base64` imports `binascii` itself; nothing declares it, and it would vanish
+  with a stdlib refactor. `binascii` is now imported by name.
+
+Two dicts also stopped being dicts of `object`: `manifest.json`'s entry rows and
+the four `BANDWIDTH_PRESETS` are `TypedDict`s, so `preset["fps"]` is an `int`
+without a cast and the manifest's shape is stated where it is written rather
+than inferred from three literals. **123 modules left, 894 of 1,017 files inside
+the contract.**
+
+### The macOS Grid Cell That Failed on a Test's Own Race
+
+`pytest-headless (macos-14, 3.14)` went red on
+`test_modified_file_is_pushed_again`, asserting one push and seeing two. The
+engine was right and the test was not: it edited the watched file in place and
+*then* pushed its mtime forward, so between `write_text` and `os.utime` the file
+briefly carried a third, intermediate mtime. A poll tick landing in that window
+legitimately pushes twice — once for the intermediate value and once for the
+final one. The new content is now staged outside the watch dir and swapped in
+with `os.replace`, so one edit is one event.
+
+The same file guessed in the other direction too: every test slept a fixed 0.4s
+hoping the baseline snapshot had been taken, while `FolderSyncEngine.start()`
+returns as soon as the worker thread is spawned. On a slow runner the test's own
+edit could land *in* the baseline and be pushed never. `wait_until_ready()` makes
+the handshake observable — and it is not test-only scaffolding: any caller that
+drops files right after `start()` has exactly that race.
+
 ## What's new (2026-08-20)
+
+### Three Tests That Had Been Skipped Since They Were Written
+
+`test_r3_gui_thread_marshal.py` carried three `@pytest.mark.skip`s whose own
+reason said what they needed: *"needs subprocess isolation (see
+test_actions_menu_gui) … skip until then."* They covered real wiring — that a
+file received on a WebRTC worker thread reaches the GUI thread through a
+queued signal rather than a thread-affine `QTimer.singleShot`, and that the
+admin console's thumbnail poll deletes its `QThread` each tick instead of
+leaking one per interval.
+
+Skipping them was the right call at the time: building the WebRTC panel or the
+admin console and then tearing a worker `QThread` down aborts the *shared*
+pytest process under offscreen Qt. Because `deleteLater` is a no-op until an
+event loop runs, the abort does not even land in the test that caused it — it
+detonates inside some later, unrelated file, with no traceback.
+
+**They now run, in their own process.** One probe performs all three checks,
+writes a JSON verdict per check, and `os._exit(0)`s without teardown — the same
+shape `test_actions_menu_gui` has used for the full tab set. Each verdict is
+`ok`, `failed: …` or `unavailable: …`, so a machine without the `[webrtc]`
+extra (CI's `pytest-headless`, among others) reports a skip rather than a
+failure, while a machine that has it actually checks the wiring.
+
+The checks have teeth, which was verified rather than assumed: deleting the
+one line `thread.finished.connect(thread.deleteLater)` from
+`admin_console_tab.py` turns the third verdict into `failed: the QThread
+outlived finish`, and leaves the other two green.
+
+The headless suite now runs end to end with no `--ignore` flags — 4,815
+passing, and the only remaining skips are optional-dependency and
+platform gates. No "skip until then" is left in it.
 
 ### Windows arm64 Was Never a Code Problem
 

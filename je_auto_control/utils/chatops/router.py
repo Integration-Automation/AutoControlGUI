@@ -12,10 +12,20 @@ from __future__ import annotations
 import shlex
 import threading
 from dataclasses import asdict, dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
+
+
+# What a command handler is allowed to fail with. The router is the
+# containment boundary for those failures: a bad script
+# (AutoControlException) or a run-history read error (a sqlite3 error) must
+# come back as a chat reply, not escape and kill the transport's poll loop.
+_HANDLER_ERRORS: Tuple[Type[BaseException], ...] = (
+    RuntimeError, OSError, ValueError, TypeError, LookupError,
+    AttributeError, AutoControlException, *SQLITE_ERRORS,
+)
 
 
 # Built-in commands always available even when the operator only
@@ -136,16 +146,11 @@ class CommandRouter:
                       f"{spec.required_role!r}; you do not have it."),
                 succeeded=False,
             )
-        # The router is the containment boundary for handler failures: a bad
-        # script (AutoControlException) or a run-history read error
-        # (a sqlite3 error) must come back as a chat reply, not escape and kill
-        # the transport's poll loop.
         try:
             return spec.handler(rest, context)
         except ChatOpsError as error:
             return CommandResult(text=f"{name}: {error}", succeeded=False)
-        except (RuntimeError, OSError, ValueError, TypeError, LookupError,
-                AttributeError, AutoControlException, *SQLITE_ERRORS) as error:
+        except _HANDLER_ERRORS as error:
             return CommandResult(
                 text=f"{name} failed: {type(error).__name__}: {error}",
                 succeeded=False,

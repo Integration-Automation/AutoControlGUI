@@ -40,6 +40,9 @@ from je_auto_control.osx.mouse import osx_mouse
 from je_auto_control.osx.record.osx_record import osx_recorder
 from je_auto_control.osx.screen import osx_screen
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.wrapper.backend_contract import (
+    KeyboardCheckBackend, RecorderBackend, ScreenBackend,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 autocontrol_logger.info("Load MacOS Setting")
@@ -147,10 +150,10 @@ mouse_keys_table = {
 
 special_mouse_keys_table = None
 keyboard = osx_keyboard
-keyboard_check = osx_keyboard_check
+keyboard_check: KeyboardCheckBackend = osx_keyboard_check
 mouse = osx_mouse
-screen = osx_screen
-recorder = osx_recorder
+screen: ScreenBackend = osx_screen
+recorder: RecorderBackend = osx_recorder
 
 if None in [keyboard_keys_table, mouse_keys_table, keyboard_check, keyboard, mouse, screen, recorder]:
     raise AutoControlException("Can't init auto control")

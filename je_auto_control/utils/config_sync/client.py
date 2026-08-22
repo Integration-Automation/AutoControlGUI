@@ -96,7 +96,8 @@ def merge_buckets(local: ConfigBucket,
             local_entry = local_sec.get(entry_id)
             remote_entry = remote_sec.get(entry_id)
             if local_entry is None:
-                merged_section[entry_id] = remote_entry
+                if remote_entry is not None:
+                    merged_section[entry_id] = remote_entry
                 continue
             if remote_entry is None:
                 merged_section[entry_id] = local_entry

@@ -95,14 +95,20 @@ class FlowDebugger:
         while not self.finished and len(executed) < max_steps:
             if self._index in self._breakpoints and executed:
                 break
-            executed.append(self.step())
+            record = self.step()
+            if record is None:
+                break
+            executed.append(record)
         return executed
 
     def run_to_end(self) -> List[Dict[str, Any]]:
         """Run every remaining action, ignoring breakpoints."""
         executed: List[Dict[str, Any]] = []
         while not self.finished:
-            executed.append(self.step())
+            record = self.step()
+            if record is None:
+                break
+            executed.append(record)
         return executed
 
     def reset(self) -> None:

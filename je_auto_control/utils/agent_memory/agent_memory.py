@@ -20,7 +20,9 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from je_auto_control.utils.sqlite_support import require_sqlite3
+from je_auto_control.utils.sqlite_support import (
+    last_row_id, require_sqlite3,
+)
 
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
     import sqlite3
@@ -86,7 +88,7 @@ class AgentMemory:
                 "VALUES (?, ?, ?, ?, ?)",
                 (str(goal), json.dumps(steps or []), str(outcome),
                  json.dumps(list(tags or [])), time.time()))
-            return int(cur.lastrowid)
+            return last_row_id(cur)
 
     def get(self, episode_id: int) -> Optional[Episode]:
         """Return an episode by id or ``None``."""

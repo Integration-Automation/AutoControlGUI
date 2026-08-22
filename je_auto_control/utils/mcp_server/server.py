@@ -7,6 +7,7 @@ tools: ``initialize``, ``tools/list``, ``tools/call``, ``ping``, and
 message — no Content-Length framing — matching the MCP stdio spec.
 """
 import contextlib
+import functools
 import itertools
 import json
 import sys
@@ -472,6 +473,8 @@ class MCPServer(ClientRequestMixin):
                   params: Dict[str, Any]) -> Any:
         if method == _TOOLS_CALL_METHOD:
             return self._handle_tools_call(msg_id, params)
+        if method is None:
+            raise _MCPError(-32601, f"Method not found: {method}")
         nullary = {
             "ping": self._handle_ping,
             "tools/list": self._handle_tools_list,
@@ -573,7 +576,8 @@ class MCPServer(ClientRequestMixin):
             if uri in self._resource_subscriptions:
                 return {}
             handle = self._resources.subscribe(
-                uri, lambda u=uri: self._notify_resource_updated(u),
+                uri,
+                functools.partial(self._notify_resource_updated, uri),
             )
             if handle is None:
                 raise _MCPError(-32602, f"Unsubscribable resource: {uri}")

@@ -9,6 +9,7 @@ Only ``is_control_element=True`` nodes are surfaced to avoid millions of
 decorative text children.
 """
 import functools
+import sys
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.accessibility.backends.base import (
@@ -113,8 +114,10 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
     def __init__(self) -> None:
         import threading
         self.available = _is_available()
-        self._automation = None
-        self._uia_module = None
+        self._automation: Any = None
+        # The comtypes-generated UIAutomationClient module; `Any` because it
+        # is generated at import time and has no declarations to check.
+        self._uia_module: Any = None
         self._event_lock = threading.Lock()
 
     def _ensure_automation(self):
@@ -892,7 +895,7 @@ def _process_name(process_id: int) -> str:
     recycle pids, so a very long-lived session could in principle read a stale
     name here; it only labels ``app_name``, and the cache is bounded.
     """
-    if process_id <= 0:
+    if process_id <= 0 or sys.platform != "win32":
         return ""
     try:
         import ctypes

@@ -9,13 +9,26 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-from typing import Any, Callable, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.webrtc_transport import (
     RTCPeerConnection, RTCSessionDescription, WebRTCConfig,
     get_bridge, wait_for_ice_gathering,
 )
+
+if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
+    from je_auto_control.utils.remote_desktop.webrtc_audio import (
+        OpusMicAudioTrack, OpusMicReceiver,
+    )
+    from je_auto_control.utils.remote_desktop.webrtc_files import (
+        FileTransferReceiver,
+    )
+    from je_auto_control.utils.remote_desktop.webrtc_mic import MicUplinkSender
+    from je_auto_control.utils.remote_desktop.webrtc_transport import (
+        ScreenVideoTrack,
+    )
+    from je_auto_control.utils.usb.passthrough import UsbChannelClient
 
 
 _OFFER_TIMEOUT_S = 12.0
@@ -27,6 +40,7 @@ AuthCallback = Callable[[bool], None]
 FingerprintCallback = Callable[[str], None]
 InboxListingCallback = Callable[[list], None]
 InboxOpResultCallback = Callable[[str, bool, Optional[str]], None]
+FileReceivedCallback = Callable[[Any], None]
 
 
 class WebRTCDesktopViewer:
@@ -54,19 +68,19 @@ class WebRTCDesktopViewer:
         self._on_auth_result = on_auth_result
         self._on_fingerprint = on_fingerprint
         self._pc: Optional[RTCPeerConnection] = None
-        self._control_channel = None
-        self._mic_channel = None
-        self._mic_sender = None  # Optional[MicUplinkSender]
-        self._files_channel = None
-        self._files_receiver = None  # Optional[FileTransferReceiver]
-        self._usb_channel = None
-        self._usb_client = None  # Optional[UsbChannelClient]
-        self._on_file_received = None
+        self._control_channel: Any = None
+        self._mic_channel: Any = None
+        self._mic_sender: Optional[MicUplinkSender] = None
+        self._files_channel: Any = None
+        self._files_receiver: Optional[FileTransferReceiver] = None
+        self._usb_channel: Any = None
+        self._usb_client: Optional[UsbChannelClient] = None
+        self._on_file_received: Optional[FileReceivedCallback] = None
         self._on_inbox_listing: Optional[InboxListingCallback] = None
         self._on_inbox_op_result: Optional[InboxOpResultCallback] = None
-        self._viewer_screen_track = None
-        self._opus_audio_track = None
-        self._host_voice_receiver = None  # OpusMicReceiver-like
+        self._viewer_screen_track: Optional[ScreenVideoTrack] = None
+        self._opus_audio_track: Optional[OpusMicAudioTrack] = None
+        self._host_voice_receiver: Optional[OpusMicReceiver] = None
         self._receive_task: Optional[asyncio.Task] = None
         self._authenticated = False
         self._read_only = False
@@ -75,6 +89,13 @@ class WebRTCDesktopViewer:
         # Pin fire-and-forget asyncio tasks so they aren't reaped before
         # they finish (S7502). Tasks self-discard via a done callback.
         self._background_tasks: set = set()
+
+    def _require_pc(self) -> RTCPeerConnection:
+        """Return the live peer connection, or raise if there isn't one yet."""
+        pc = self._pc
+        if pc is None:
+            raise RuntimeError("viewer has no peer connection; connect first")
+        return pc
 
     def _spawn_bg(self, coro) -> "asyncio.Task":
         task = asyncio.ensure_future(coro)
@@ -266,12 +287,14 @@ class WebRTCDesktopViewer:
         from je_auto_control.utils.remote_desktop.webrtc_files import (
             FileTransferReceiver,
         )
-        if self._files_receiver is None:
-            self._files_receiver = FileTransferReceiver()
+        receiver = self._files_receiver
+        if receiver is None:
+            receiver = FileTransferReceiver()
+            self._files_receiver = receiver
 
         @channel.on("message")
         def _on_message(message) -> None:
-            self._files_receiver.handle_message(
+            receiver.handle_message(
                 message,
                 on_done=self._on_viewer_file_done,
             )
@@ -357,7 +380,7 @@ class WebRTCDesktopViewer:
             ScreenVideoTrack,
         )
         video_transceivers = [
-            t for t in self._pc.getTransceivers() if t.kind == "video"
+            t for t in self._require_pc().getTransceivers() if t.kind == "video"
         ]
         if len(video_transceivers) < 2:
             autocontrol_logger.warning(
@@ -382,7 +405,7 @@ class WebRTCDesktopViewer:
             OpusMicAudioTrack,
         )
         audio_transceivers = [
-            t for t in self._pc.getTransceivers() if t.kind == "audio"
+            t for t in self._require_pc().getTransceivers() if t.kind == "audio"
         ]
         if not audio_transceivers:
             autocontrol_logger.warning(
@@ -505,11 +528,12 @@ class WebRTCDesktopViewer:
         if self._host_voice_receiver is not None:
             return
         try:
-            self._host_voice_receiver = OpusMicReceiver()
+            receiver = OpusMicReceiver()
         except (RuntimeError, OSError) as error:
             autocontrol_logger.warning("host voice play init: %r", error)
             return
-        self._host_voice_receiver.consume(track)
+        self._host_voice_receiver = receiver
+        receiver.consume(track)
         autocontrol_logger.info("webrtc viewer: playing host voice")
 
     async def _consume_video(self, track) -> None:

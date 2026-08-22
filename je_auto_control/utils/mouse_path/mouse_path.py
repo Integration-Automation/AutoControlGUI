@@ -33,7 +33,9 @@ def plan_path(waypoints: Sequence[Point], *, easing: str = "linear",
         first = waypoints[0]
         return [[int(first[0]), int(first[1])]]
     for index in range(len(waypoints) - 1):
-        segment = tween_points(waypoints[index], waypoints[index + 1],
+        here, there = waypoints[index], waypoints[index + 1]
+        segment = tween_points((int(here[0]), int(here[1])),
+                               (int(there[0]), int(there[1])),
                                per_segment_steps, easing)
         points.extend(segment[1:] if index else segment)
     return points

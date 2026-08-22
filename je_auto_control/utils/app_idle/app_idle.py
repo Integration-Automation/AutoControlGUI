@@ -84,7 +84,7 @@ def _cursor_is_busy() -> bool:
         _fields_ = [("cbSize", ctypes.c_uint), ("flags", ctypes.c_uint),
                     ("hCursor", ctypes.c_void_p), ("ptScreenPos", _POINT)]
 
-    user32 = ctypes.windll.user32
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined]  # reason: win32-only ctypes
     info = _CURSORINFO()
     info.cbSize = ctypes.sizeof(_CURSORINFO)
     if not user32.GetCursorInfo(ctypes.byref(info)):

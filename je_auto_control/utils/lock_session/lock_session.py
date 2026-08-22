@@ -32,7 +32,7 @@ LockDriver = Callable[[], bool]
 def _win_lock() -> bool:
     """Lock the Windows workstation via ``LockWorkStation``."""
     import ctypes
-    user32 = ctypes.windll.user32  # nosec B607  # reason: fixed system DLL
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined]  # nosec B607  # reason: win32-only ctypes, fixed DLL
     return bool(user32.LockWorkStation())
 
 

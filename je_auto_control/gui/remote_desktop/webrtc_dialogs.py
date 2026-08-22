@@ -7,7 +7,7 @@ every dialog from one place.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -426,7 +426,7 @@ class LanBrowseDialog(QDialog):
         layout.addLayout(button_row)
         # Defer browser start until the dialog is shown so we don't burn
         # mDNS sockets when the dialog is constructed lazily.
-        self._browser = None
+        self._browser: Optional[Any] = None
         self._start_browser()
 
     def _start_browser(self) -> None:

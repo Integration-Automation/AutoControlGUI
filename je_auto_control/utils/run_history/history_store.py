@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.sqlite_support import (
-    SQLITE_ERRORS, require_sqlite3,
+    SQLITE_ERRORS, last_row_id, require_sqlite3,
 )
 
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
@@ -155,7 +155,7 @@ class HistoryStore:
                 " started_at, status) VALUES (?, ?, ?, ?, ?)",
                 (source_type, source_id, script_path, ts, STATUS_RUNNING),
             )
-            return int(cursor.lastrowid)
+            return last_row_id(cursor)
 
     def finish_run(self, run_id: int, status: str,
                    error_text: Optional[str] = None,

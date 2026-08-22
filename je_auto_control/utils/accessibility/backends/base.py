@@ -1,5 +1,5 @@
 """Abstract accessibility backend."""
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, NoReturn, Optional
 
 from je_auto_control.utils.accessibility.element import (
     AccessibilityElement, AccessibilityNotAvailableError,
@@ -323,7 +323,7 @@ class AccessibilityBackend:
         """
         self._unsupported("wait_for_focus_change", timeout)
 
-    def _unsupported(self, operation: str, *context: Any):
+    def _unsupported(self, operation: str, *context: Any) -> NoReturn:
         """Raise a clear error for an action this backend can't perform."""
         raise AccessibilityNotAvailableError(
             f"{operation} is not supported by the {self.name} backend",

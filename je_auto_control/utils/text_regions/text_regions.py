@@ -44,8 +44,8 @@ def _accept(rect: Rect, shape, min_area: int, max_area: Optional[int],
 # that OpenCV 4 segmented fine now yield zero regions at the default
 # min_diversity (0.2). Relax the pruning progressively before concluding
 # the frame has no text.
-_MSER_PARAM_LADDER = ({}, {"min_diversity": 0.01},
-                      {"delta": 1, "min_diversity": 0.0})
+_MSER_PARAM_LADDER: Tuple[Dict[str, Any], ...] = (
+    {}, {"min_diversity": 0.01}, {"delta": 1, "min_diversity": 0.0})
 
 
 def _detect_regions(gray):
@@ -53,7 +53,10 @@ def _detect_regions(gray):
     import cv2
     regions = ()
     for params in _MSER_PARAM_LADDER:
-        regions, _bboxes = cv2.MSER_create(**params).detectRegions(gray)
+        # `MSER_create` is present at runtime in every supported OpenCV
+        # but is not declared in the stub opencv-python ships.
+        mser = cv2.MSER_create(**params)  # type: ignore[attr-defined]  # reason: absent from the cv2 stub
+        regions, _bboxes = mser.detectRegions(gray)
         if len(regions):
             break
     return regions
@@ -67,7 +70,8 @@ def _filtered_boxes(gray, min_area: int, max_area: Optional[int],
     out: List[Rect] = []
     seen = set()
     for points in regions:
-        rect = cv2.boundingRect(points.reshape(-1, 1, 2))
+        box = cv2.boundingRect(points.reshape(-1, 1, 2))
+        rect: Rect = (int(box[0]), int(box[1]), int(box[2]), int(box[3]))
         if rect not in seen and _accept(rect, gray.shape, min_area, max_area,
                                         max_aspect):
             out.append(rect)

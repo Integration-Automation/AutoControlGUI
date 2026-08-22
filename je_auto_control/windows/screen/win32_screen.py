@@ -1,5 +1,5 @@
 import sys
-from typing import List, Tuple
+from typing import Tuple
 
 from je_auto_control.utils.exception.exception_tags import windows_import_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -18,8 +18,8 @@ from ctypes import wintypes
 # This module owns its user32 / gdi32 handles rather than sharing
 # ``ctypes.windll``: prototypes live on the function objects, so a shared handle
 # would leak these declarations into every other caller in the process.
-_user32 = ctypes.WinDLL("user32", use_last_error=True)
-_gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
+_user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
+_gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
 
 # HDC 是**指標寬度**的 handle。ctypes 預設把回傳值與參數當成 c_int，在 64 位元
 # Windows 上會截斷——`GetDC` 回來就已經是壞的，再傳給 `GetPixel` / `ReleaseDC`
@@ -52,14 +52,20 @@ _user32.SetProcessDPIAware()
 _CLR_INVALID = 0xFFFFFFFF
 
 
-def size() -> List[int]:
+def size() -> Tuple[int, int]:
     """
     取得螢幕大小
     Get screen size
 
-    :return: [width, height]
+    一個 tuple，與 osx／x11／wayland 三個後端一致：這裡原本回 list，是四個
+    後端裡唯一一個，而 `wrapper.auto_control_screen.screen_size` 對外承諾的
+    是 tuple。每個呼叫端都只是解包成 width／height，所以型別對齊不改行為。
+    The other three backends return a tuple and every caller unpacks the two
+    values, so this was the odd one out against the seam's own contract.
+
+    :return: (width, height)
     """
-    return [_user32.GetSystemMetrics(0), _user32.GetSystemMetrics(1)]
+    return _user32.GetSystemMetrics(0), _user32.GetSystemMetrics(1)
 
 
 def get_pixel(x: int, y: int, hwnd: int = 0) -> Tuple[int, int, int]:

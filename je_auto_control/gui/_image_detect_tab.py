@@ -1,4 +1,6 @@
 """Image-detection tab builder (extracted mixin)."""
+from typing import TYPE_CHECKING, Any, Callable
+
 from PySide6.QtGui import QDoubleValidator
 from PySide6.QtWidgets import (
     QCheckBox, QFileDialog, QGridLayout, QLabel, QLineEdit, QMessageBox,
@@ -25,6 +27,12 @@ class ImageDetectTabMixin:
     the host also mixes in :class:`AutoClickTabMixin`, falling back to the
     left button otherwise.
     """
+
+    if TYPE_CHECKING:
+        # Declared, never defined: the widget this mixin is mixed into owns
+        # every one of these. The block is stripped at runtime, so nothing
+        # here can shadow what the host actually binds.
+        _tr: Callable[..., Any]
 
     def _build_image_detect_tab(self) -> QWidget:
         tab = QWidget()

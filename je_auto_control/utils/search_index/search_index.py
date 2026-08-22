@@ -14,7 +14,9 @@ import math
 import re
 from collections import Counter
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import (
+    Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union,
+)
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
 
@@ -116,7 +118,7 @@ class SearchIndex:
                mode: str = "bm25") -> List[SearchHit]:
         """Return up to ``top_k`` documents ranked for ``query``."""
         terms = self._terms(query)
-        candidates = set()
+        candidates: Set[str] = set()
         for term in terms:
             candidates.update(self._postings.get(term, {}))
         avgdl = self._avgdl()

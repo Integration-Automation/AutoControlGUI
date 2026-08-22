@@ -35,7 +35,7 @@ def _read_command(request) -> str:
     return str(b"".join(chunks).strip(), encoding="utf-8")
 
 
-def _close_server_async(server: socketserver.TCPServer) -> None:
+def _close_server_async(server: socketserver.BaseServer) -> None:
     """Shut the server down and release its port, off the handler thread.
 
     必須另開執行緒:ThreadingMixIn.server_close() 會 join 所有 handler

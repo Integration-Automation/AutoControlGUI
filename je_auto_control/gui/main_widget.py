@@ -52,7 +52,7 @@ try:
     from je_auto_control.gui.remote_desktop_tab import RemoteDesktopTab
     _REMOTE_DESKTOP_IMPORT_ERROR: Optional[ImportError] = None
 except ImportError as _remote_desktop_error:
-    RemoteDesktopTab = None  # type: ignore[assignment]
+    RemoteDesktopTab = None  # type: ignore[assignment,misc]  # reason: name is a class or None
     _REMOTE_DESKTOP_IMPORT_ERROR = _remote_desktop_error
 from je_auto_control.gui.rest_api_tab import RestApiTab
 from je_auto_control.gui.run_history_tab import RunHistoryTab

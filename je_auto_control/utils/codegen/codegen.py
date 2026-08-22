@@ -42,13 +42,14 @@ def _action_to_call(action: Sequence, event_dict: dict, public: set) -> str:
     name = action[0]
     params = action[1] if len(action) == 2 else None
     func = event_dict.get(name)
-    direct = func is not None and getattr(func, "__name__", "") in public
+    public_name = getattr(func, "__name__", "") if func is not None else ""
+    direct = public_name in public
     if direct and (params is None or isinstance(params, dict)):
         if params:
             kwargs = ", ".join(
                 f"{key}={value!r}" for key, value in params.items())
-            return f"ac.{func.__name__}({kwargs})"
-        return f"ac.{func.__name__}()"
+            return f"ac.{public_name}({kwargs})"
+        return f"ac.{public_name}()"
     return f"ac.execute_action({[list(action)]!r})"
 
 

@@ -35,7 +35,7 @@ def rank_changes(scored_boxes: Sequence[Any], *,
     is ``True`` when the score is at or above ``threshold``.
     """
     limit = float(threshold)
-    result = [
+    result: List[Dict[str, Any]] = [
         {"box": [int(value) for value in box],
          "score": round(float(score), 4),
          "changed": float(score) >= limit}

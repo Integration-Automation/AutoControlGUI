@@ -17,7 +17,8 @@ Two things decide what a desktop-wide accessibility search costs:
 
 Imports no ``PySide6``.
 """
-from typing import Any, Iterator, Optional, Tuple
+import sys
+from typing import Any, Iterator, List, Optional, Tuple, Type
 
 from je_auto_control.utils.accessibility.element import (
     AccessibilityNotAvailableError,
@@ -26,7 +27,7 @@ from je_auto_control.utils.accessibility.element import (
 TREE_SCOPE_DESCENDANTS = 4
 
 
-def _uia_errors() -> Tuple[type, ...]:
+def _uia_errors() -> Tuple[Type[BaseException], ...]:
     """Exception types a UIA call can raise.
 
     ``comtypes`` reports provider failures as ``COMError``, which inherits from
@@ -35,12 +36,10 @@ def _uia_errors() -> Tuple[type, ...]:
     A window that closes mid-walk, or an application that stops responding,
     surfaces exactly that way.
     """
-    errors: list = [OSError, AttributeError, ValueError]
-    try:
+    errors: List[Type[BaseException]] = [OSError, AttributeError, ValueError]
+    if sys.platform == "win32":
         from _ctypes import COMError
-    except ImportError:                  # non-Windows
-        return tuple(errors)
-    errors.append(COMError)
+        errors.append(COMError)
     return tuple(errors)
 
 

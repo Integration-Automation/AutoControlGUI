@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import ctypes
 import sys
-from ctypes import windll, wintypes
+from ctypes import windll, wintypes  # type: ignore[attr-defined]  # reason: win32-only ctypes
 from typing import Optional, Tuple
 
 from je_auto_control.utils.exception.exception_tags import (

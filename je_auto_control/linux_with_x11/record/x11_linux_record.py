@@ -56,7 +56,7 @@ class X11LinuxRecorder:
         停止錄製，並將結果轉換成動作序列 Queue
         """
         self.result_queue = x11_linux_stop_record()
-        action_queue = Queue()
+        action_queue: Queue[Any] = Queue()
 
         # 將原始事件轉換成可讀格式
         for details in self.result_queue.queue:

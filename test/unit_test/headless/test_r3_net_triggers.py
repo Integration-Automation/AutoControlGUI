@@ -127,7 +127,7 @@ def test_email_fire_marks_uid_seen_and_records_error_on_missing_script(
         trigger_id="t1", host="h", username="u", password="p",
         script_path="missing.json")
 
-    fired = watcher._fire_for_uid(client=object(), trigger=trigger, uid=b"42")
+    fired = watcher._fire_for_uid(client=object(), trigger=trigger, uid="42")
 
     assert fired == 1
     assert "42" in trigger._seen_uids  # processed -> no infinite re-fire

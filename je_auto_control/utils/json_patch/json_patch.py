@@ -227,7 +227,7 @@ def apply_patch(doc: Any, patch: List[Dict[str, Any]]) -> Any:
     """Apply an RFC 6902 patch to ``doc`` atomically; return the new document."""
     result = copy.deepcopy(doc)
     for op in patch:
-        handler = _OPS.get(op.get("op"))
+        handler = _OPS.get(str(op.get("op", "")))
         if handler is None:
             raise PatchError(f"unknown patch op {op.get('op')!r}")
         result = handler(result, op)

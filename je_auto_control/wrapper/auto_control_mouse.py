@@ -1,7 +1,29 @@
+"""Mouse API: position, press / release / click, scroll, deprecated posting.
+
+**How the platform branches in this file are written**, because both spellings
+here are load-bearing and neither is arbitrary:
+
+* Everything that is not macOS asks ``platform_id`` *which input stack* this
+  is — ``is_windows() or is_x11_unix()`` — rather than listing OS names. The
+  list this replaced, ``["win32", "cygwin", "msys", "linux", "linux2"]``, left
+  the BSDs outside every branch: a FreeBSD desktop is an ordinary X11 desktop,
+  so the call fell off the end, raised nothing, did nothing, and still reported
+  success. ``mouse_scroll`` was fixed first; the press/release pair carried the
+  same hole until the seam was typed.
+* macOS is spelled ``sys.platform == "darwin"`` rather than ``is_macos()``.
+  The two are the same test by definition, but only the literal is one a type
+  checker can resolve, and macOS is the branch whose *signature* differs — it
+  takes ``(x, y, button)`` where the others take the button alone. Pruning that
+  branch is what a per-platform backend protocol will need; see
+  ``wrapper/backend_contract.py`` and ``Progress.md``.
+* An OS that matches neither raises rather than returning as if it worked.
+  ``platform_wrapper`` refuses such a platform at import, so this is the
+  belt-and-braces half of the same statement.
+"""
 import ctypes
 import sys
 import warnings
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 from je_auto_control.utils.exception.exception_tags import (
     mouse_click_mouse_error_message, mouse_get_position_error_message, mouse_press_mouse_error_message,
@@ -17,6 +39,7 @@ from je_auto_control.utils.platform_id import (
 )
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.auto_control_screen import screen_size
+from je_auto_control.wrapper.backend_contract import MouseKeycode
 from je_auto_control.wrapper.platform_wrapper import mouse, mouse_keys_table, special_mouse_keys_table
 
 
@@ -28,20 +51,22 @@ def get_mouse_table() -> dict:
     return mouse_keys_table
 
 
-def mouse_preprocess(mouse_keycode: Union[int, str], x: int, y: int) -> Tuple[int, int, int]:
+def mouse_preprocess(mouse_keycode: Union[int, str], x: Optional[int],
+                     y: Optional[int]) -> Tuple[MouseKeycode, int, int]:
     """
     前置處理：檢查 keycode 並補齊座標
     Preprocess mouse keycode and coordinates
 
     :param mouse_keycode: 滑鼠按鍵代碼或字串 Mouse keycode or string
-    :param x: X 座標
-    :param y: Y 座標
+    :param x: X 座標，None 代表沿用目前游標位置
+    :param y: Y 座標，None 代表沿用目前游標位置
     :return: (keycode, x, y)
     """
+    keycode: MouseKeycode = mouse_keycode
     try:
         if isinstance(mouse_keycode, str):
-            mouse_keycode = mouse_keys_table.get(mouse_keycode)
-            if mouse_keycode is None:
+            keycode = mouse_keys_table.get(mouse_keycode)
+            if keycode is None:
                 raise AutoControlCantFindKeyException(table_cant_find_key_error_message)
     except AutoControlCantFindKeyException as error:
         raise AutoControlCantFindKeyException(table_cant_find_key_error_message) from error
@@ -53,7 +78,15 @@ def mouse_preprocess(mouse_keycode: Union[int, str], x: int, y: int) -> Tuple[in
     # replay the same effect headlessly.
     if x is None or y is None:
         try:
-            now_x, now_y = get_mouse_position()
+            position = get_mouse_position()
+            if position is None:
+                # 後端回報不出游標位置。原本這裡會在解包時拋 TypeError，
+                # 而 TypeError 不是這支承諾的例外型別。
+                # The backend could not report the cursor: this used to raise
+                # TypeError from the unpacking, which is not the exception
+                # this function promises.
+                raise AutoControlMouseException(mouse_get_position_error_message)
+            now_x, now_y = position
             if x is None:
                 x = now_x
             if y is None:
@@ -67,11 +100,7 @@ def mouse_preprocess(mouse_keycode: Union[int, str], x: int, y: int) -> Tuple[in
     # would hit an un-prototyped SetCursorPos / Xlib fake_input and raise
     # ctypes.ArgumentError / struct.error — which escapes the executor and
     # aborts the whole run instead of clicking at the rounded point.
-    if x is not None:
-        x = int(x)
-    if y is not None:
-        y = int(y)
-    return mouse_keycode, x, y
+    return keycode, int(x), int(y)
 
 
 def get_mouse_position() -> tuple[int, int] | None:
@@ -93,7 +122,7 @@ def get_mouse_position() -> tuple[int, int] | None:
         raise
 
 
-def set_mouse_position(x: int, y: int) -> tuple[int, int] | None:
+def set_mouse_position(x: int, y: int) -> tuple[int, int]:
     """
     設定滑鼠位置
     Set mouse position
@@ -124,7 +153,8 @@ def set_mouse_position(x: int, y: int) -> tuple[int, int] | None:
         raise
 
 
-def press_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) -> tuple[int, int, int] | None:
+def press_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
+                y: Optional[int] = None) -> tuple[MouseKeycode, int, int] | None:
     """
     按下滑鼠按鍵
     Press mouse button
@@ -135,10 +165,16 @@ def press_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) ->
     param = {"keycode": mouse_keycode, "x": x, "y": y}
     try:
         mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
-        if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
-            mouse.press_mouse(mouse_keycode)
-        elif sys.platform == "darwin":
+        # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
+        # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
+        # Branch spelling explained in the module docstring.
+        if sys.platform == "darwin":
             mouse.press_mouse(x, y, mouse_keycode)
+        elif is_windows() or is_x11_unix():
+            mouse.press_mouse(mouse_keycode)
+        else:
+            raise AutoControlMouseException(
+                f"press_mouse: no backend for {sys.platform!r}")
         record_action_to_list("press_mouse", param)
         return mouse_keycode, x, y
     except AutoControlMouseException as error:
@@ -150,7 +186,8 @@ def press_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) ->
         raise
 
 
-def release_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) -> tuple[int, int, int] | None:
+def release_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
+                  y: Optional[int] = None) -> tuple[MouseKeycode, int, int] | None:
     """
     放開滑鼠按鍵
     Release mouse button
@@ -161,10 +198,16 @@ def release_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) 
     param = {"keycode": mouse_keycode, "x": x, "y": y}
     try:
         mouse_keycode, x, y = mouse_preprocess(mouse_keycode, x, y)
-        if sys.platform in ["win32", "cygwin", "msys", "linux", "linux2"]:
-            mouse.release_mouse(mouse_keycode)
-        elif sys.platform == "darwin":
+        # 分支寫法與理由見模組 docstring：非 macOS 問輸入堆疊（BSD 曾經
+        # 落在所有分支之外），macOS 用字面比較（型別檢查器剪得掉）。
+        # Branch spelling explained in the module docstring.
+        if sys.platform == "darwin":
             mouse.release_mouse(x, y, mouse_keycode)
+        elif is_windows() or is_x11_unix():
+            mouse.release_mouse(mouse_keycode)
+        else:
+            raise AutoControlMouseException(
+                f"release_mouse: no backend for {sys.platform!r}")
         record_action_to_list("release_mouse", param)
         return mouse_keycode, x, y
     except AutoControlMouseException as error:
@@ -176,7 +219,8 @@ def release_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) 
         raise
 
 
-def click_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) -> Tuple[int, int, int]:
+def click_mouse(mouse_keycode: Union[int, str], x: Optional[int] = None,
+                y: Optional[int] = None) -> Tuple[MouseKeycode, int, int]:
     """
     在指定座標按下並放開滑鼠按鍵
     Click mouse button at given position
@@ -207,7 +251,7 @@ def click_mouse(mouse_keycode: Union[int, str], x: int = None, y: int = None) ->
         raise AutoControlMouseException(mouse_click_mouse_error_message + " " + repr(error)) from error
 
 
-def _scroll_to(x: int, y: int) -> None:
+def _scroll_to(x: Optional[int], y: Optional[int]) -> None:
     """
     將游標移到滾動位置，缺漏的座標沿用目前位置並做邊界檢查。
     Move the cursor to the requested scroll point, filling in whichever
@@ -220,9 +264,12 @@ def _scroll_to(x: int, y: int) -> None:
     report it (e.g. Wayland) must not be forced to raise.
     """
     width, height = screen_size()
+    # 兩個座標都給定時不會被讀到，見下面的三元運算。
+    # Never read when both coordinates were supplied.
+    now_x, now_y = 0, 0
     if x is None or y is None:
         try:
-            now_x, now_y = get_mouse_position()
+            position = get_mouse_position()
         except (AutoControlMouseException, NotImplementedError, OSError):
             # 後端無法回報游標(如 Wayland 會拋 NotImplementedError)時,無法
             # 補上缺漏的座標軸,直接略過預先移動,讓滾動發生在目前游標處,
@@ -232,15 +279,20 @@ def _scroll_to(x: int, y: int) -> None:
             # scroll at the current cursor instead of escaping the documented
             # graceful degradation.
             return
-    else:
-        now_x, now_y = (None, None)
+        if position is None:
+            # 同上：回報不出來就別動游標，不要在解包時炸掉整支滾動。
+            # Same answer for a backend that returns no position at all.
+            return
+        now_x, now_y = position
     target_x = now_x if x is None else max(0, min(x, width - 1))
     target_y = now_y if y is None else max(0, min(y, height - 1))
     set_mouse_position(target_x, target_y)
 
 
-def mouse_scroll(scroll_value: int, x: int = None, y: int = None,
-                 scroll_direction: str = "scroll_down") -> Tuple[int, str]:
+def mouse_scroll(scroll_value: int, x: Optional[int] = None,
+                 y: Optional[int] = None,
+                 scroll_direction: str = "scroll_down"
+                 ) -> Tuple[int, Union[int, str]]:
     """
     模擬滑鼠滾輪操作
     Simulate mouse scroll
@@ -258,7 +310,10 @@ def mouse_scroll(scroll_value: int, x: int = None, y: int = None,
         The direction a *positive* count scrolls in. Only the X11 and Wayland
         backends read it — Windows and macOS have a single wheel axis and take
         the direction from the sign alone.
-    :return: (scroll_value, scroll_direction)
+    :return: (scroll_value, scroll_direction)，X11／Wayland 回的是換算後的
+        軸代碼，其餘平台回原字串。
+        On X11 and Wayland the direction comes back as the backend axis code
+        the name resolved to; elsewhere it is the name that was passed in.
     """
     autocontrol_logger.info(f"mouse_scroll, value={scroll_value}, x={x}, y={y}, direction={scroll_direction}")
     param = {"scroll_value": scroll_value, "x": x, "y": y, "direction": scroll_direction}
@@ -280,25 +335,31 @@ def mouse_scroll(scroll_value: int, x: int = None, y: int = None,
         # another list of OS names: the ["linux", "linux2"] one left the BSDs
         # outside every branch, so scrolling on FreeBSD raised nothing and
         # did nothing.
+        direction: Union[int, str] = scroll_direction
         if is_windows() or is_macos():
             mouse.scroll(scroll_value)
         elif is_x11_unix():
-            scroll_direction = special_mouse_keys_table.get(scroll_direction, scroll_direction)
-            mouse.scroll(scroll_value, scroll_direction)
+            # Windows 與 macOS 只有一條滾輪軸，那兩個平台的表是 None。
+            # Windows and macOS have a single wheel axis and publish no table.
+            if special_mouse_keys_table is not None:
+                direction = special_mouse_keys_table.get(scroll_direction, scroll_direction)
+            mouse.scroll(scroll_value, direction)
         else:
             raise AutoControlMouseException(
                 f"mouse_scroll: no backend for {sys.platform!r}")
 
         record_action_to_list("mouse_scroll", param)
-        return scroll_value, scroll_direction
+        return scroll_value, direction
 
     except AutoControlMouseException as error:
         autocontrol_logger.error(f"mouse_scroll failed: {repr(error)}")
         raise AutoControlMouseException(mouse_scroll_error_message + " " + repr(error)) from error
 
 
-def send_mouse_event_to_window(window, mouse_keycode: Union[int, str],
-                               x: int = None, y: int = None) -> None:
+def send_mouse_event_to_window(window: Union[int, str],
+                               mouse_keycode: Union[int, str],
+                               x: Optional[int] = None,
+                               y: Optional[int] = None) -> None:
     """
     將滑鼠事件送到指定視窗（**已棄用**，改用 ``post_click_to_window``）
     Send mouse event to a specific window. **Deprecated** — use

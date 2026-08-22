@@ -94,14 +94,15 @@ class HttpChallengeServer:
         return self._port
 
     def stop(self) -> None:
-        if not self.is_running:
+        server = self._server
+        if server is None:
             return
         try:
-            self._server.shutdown()
+            server.shutdown()
         except (OSError, RuntimeError):
             pass
         try:
-            self._server.server_close()
+            server.server_close()
         except OSError:
             pass
         if self._thread is not None:

@@ -1,4 +1,6 @@
 """Report-generation tab builder (extracted mixin)."""
+from typing import TYPE_CHECKING, Any, Callable
+
 from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QLabel, QLineEdit,
     QTextEdit, QVBoxLayout, QWidget,
@@ -17,6 +19,12 @@ class ReportTabMixin:
     Host widget must expose the TranslatableMixin API (``self._tr(...)``)
     so every label/button registers for live language switching.
     """
+
+    if TYPE_CHECKING:
+        # Declared, never defined: the widget this mixin is mixed into owns
+        # every one of these. The block is stripped at runtime, so nothing
+        # here can shadow what the host actually binds.
+        _tr: Callable[..., Any]
 
     def _build_report_tab(self) -> QWidget:
         tab = QWidget()

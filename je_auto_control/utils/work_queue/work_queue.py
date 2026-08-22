@@ -21,7 +21,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.sqlite_support import require_sqlite3
+from je_auto_control.utils.sqlite_support import (
+    last_row_id, require_sqlite3,
+)
 
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
     import sqlite3
@@ -83,7 +85,7 @@ class WorkQueue:
                 "updated) VALUES (?, ?, ?, ?, ?)",
                 (self._name, reference or "", json.dumps(data), STATUS_NEW,
                  time.time()))
-            return int(cur.lastrowid)
+            return last_row_id(cur)
 
     def _has_pending(self, conn: "sqlite3.Connection", reference: str) -> bool:
         row = conn.execute(

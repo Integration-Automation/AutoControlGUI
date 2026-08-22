@@ -19,7 +19,7 @@ otherwise know about (e.g. the user's wallet popup).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Optional, Sequence, Tuple
 
 
 # Detector tag constants (avoid magic strings in the engine + tests).
@@ -50,11 +50,13 @@ class RedactionPolicy:
     overlay_color: Optional[Tuple[int, int, int]] = None
 
     def with_extra_regions(
-            self, extras: List[Tuple[int, int, int, int]]) -> "RedactionPolicy":
+            self, extras: Sequence[Sequence[int]]) -> "RedactionPolicy":
         """Return a policy with ``extras`` appended to ``regions``."""
         return RedactionPolicy(
             detectors=tuple(self.detectors),
-            regions=tuple(self.regions) + tuple(tuple(r) for r in extras),
+            regions=tuple(self.regions) + tuple(
+                (int(r[0]), int(r[1]), int(r[2]), int(r[3]))
+                for r in extras),
             blur_radius=self.blur_radius,
             overlay_color=self.overlay_color,
         )

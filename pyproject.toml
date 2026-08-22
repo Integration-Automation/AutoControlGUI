@@ -137,22 +137,110 @@ omit = ["*/gui/*", "*/language_wrapper/*"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
-# Initial measured repository baseline. Raise toward 70 as legacy modules are
-# brought under the stable API contract; CI enforces that it cannot regress.
-fail_under = 35
+# A ratchet, not a target. The rule is that this number is raised to the
+# measured minimum whenever the suite has earned it, so coverage the tests
+# already provide cannot be given back unnoticed.
+#
+# 35 was the first measured baseline and then sat still while the suite grew
+# past it, which left ~15 points unguarded: every job in the matrix was over
+# 50% and CI would still have passed a change that deleted a third of the
+# tests. Measured 2026-08-21 on the run for PR #484, lowest square of the
+# nine-way matrix (ubuntu-22.04 / 3.10) at 50.26%, highest (windows-2022 /
+# 3.14) at 51.69% — so 50 is the floor the whole matrix clears today.
+#
+# The number is measured, never guessed. Re-read it from the matrix rather
+# than from one machine: the spread across platforms is over a point, and
+# `--cov-fail-under` in `quality.yml` must hold on the lowest of them.
+#
+# 70 remains the destination; Progress.md records what stands between here
+# and there.
+fail_under = 50
 
 [tool.mypy]
 python_version = "3.10"
 warn_redundant_casts = true
 check_untyped_defs = true
 no_implicit_optional = true
-# CI type-checks only the stable API surface; followed legacy modules are
-# analysed for signatures but not reported until they join the contract.
+# CI type-checks the whole package. The modules that do not pass yet are named
+# in `test/verify/typing_contract_exempt.txt`, which may only shrink — see
+# `test/verify/typing_contract_verify.py` for what that gate does and why the
+# scope is written as "everything minus a list" rather than as a path list.
 follow_imports = "silent"
 exclude = "(^test/|^docs/|^build/)"
 
 [[tool.mypy.overrides]]
-module = ["cv2.*", "Xlib.*", "PySide6.*", "objc.*"]
+# Base dependencies that ship no stubs. These are installed by a plain
+# `pip install -e .`, so they are present in every environment the gate runs in
+# and only their missing type information needs handling.
+# Each name is listed twice on purpose: `foo.*` matches submodules only, so the
+# bare `foo` is what covers `import foo` (the same trap documented for numpy
+# below, which is where it was first paid for).
+module = [
+    "cv2", "cv2.*",
+    "je_open_cv", "je_open_cv.*",
+    "defusedxml", "defusedxml.*",
+    "mss", "mss.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Every third-party module OUTSIDE the base dependency set, forced to `Any`.
+#
+# This is what makes the gate mean the same thing everywhere. These modules are
+# optional extras (`[gui]`, `[webrtc]`, `[office]`, …) or undeclared per-platform
+# backends (pyobjc, Xlib, comtypes, pywin32), so whether mypy can see them
+# depends on which extras the machine happens to have installed. Measured: a dev
+# checkout with `[gui]` and `[webrtc]` present disagrees with a bare
+# `pip install -e .` about 38 modules — 36 Qt modules that pass only because
+# PySide6 is absent, and 2 that fail only because babel and pytest are. A gate
+# that flips on `pip install` is not a gate, so the contract does not look
+# inside any of them.
+#
+# `follow_imports = "skip"` (not just `ignore_missing_imports`) is the operative
+# setting: ignoring a missing import still lets mypy use the real package when
+# it IS installed, which is exactly the environment-dependence being removed.
+# Our own signatures and logic stay checked; only calls into these libraries go
+# unchecked, which is where they already were before the scope widened.
+module = [
+    # [gui]
+    "PySide6", "PySide6.*", "qt_material", "qt_material.*",
+    # [webrtc] / [signaling] / [discovery]
+    "aiortc", "aiortc.*", "av", "av.*",
+    "fastapi", "fastapi.*", "uvicorn", "uvicorn.*",
+    "pydantic", "pydantic.*", "zeroconf", "zeroconf.*",
+    # [pdf] / [office] / [fuzzy] / [s3] / [locale] / [audio]
+    "pypdf", "pypdf.*", "openpyxl", "openpyxl.*",
+    "docx", "docx.*", "pptx", "pptx.*",
+    "rapidfuzz", "rapidfuzz.*", "boto3", "boto3.*",
+    "babel", "babel.*", "pycaw", "pycaw.*",
+    # macOS backends (pyobjc)
+    "objc", "objc.*", "Quartz", "Quartz.*", "AppKit", "AppKit.*",
+    "ApplicationServices", "ApplicationServices.*",
+    "CoreFoundation", "CoreFoundation.*",
+    # Linux X11 / Windows COM and service backends
+    "Xlib", "Xlib.*", "comtypes", "comtypes.*",
+    "win32event", "win32service", "win32serviceutil",
+    # OCR / vision / LLM / agent backends
+    "pytesseract", "pytesseract.*", "easyocr", "easyocr.*",
+    "paddleocr", "paddleocr.*", "anthropic", "anthropic.*",
+    "openai", "openai.*",
+    # device, audio and observability backends
+    "usb", "usb.*", "sounddevice", "sounddevice.*",
+    "vgamepad", "vgamepad.*", "psutil", "psutil.*",
+    "opentelemetry", "opentelemetry.*",
+    "uiautomator2", "uiautomator2.*", "wda", "wda.*",
+    # dev-time integrations, absent from a runtime install
+    "pytest", "pytest.*", "behave", "behave.*",
+    "send2trash", "send2trash.*",
+    "je_web_runner", "je_web_runner.*",
+]
+follow_imports = "skip"
+# Required, and for the same reason the numpy block below needs it: `skip` is
+# ignored for `.pyi` files on its own. PySide6 ships inline stubs, so without
+# this the Qt types are read anyway and 26 GUI modules go on failing wherever
+# the `[gui]` extra is installed — which is the whole disagreement this block
+# exists to remove.
+follow_imports_for_stubs = true
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

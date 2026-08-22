@@ -8,7 +8,7 @@ verifying many fields of a form without stopping at the first failure.
 
 Pure-stdlib context manager; imports no ``PySide6``.
 """
-from typing import Any, List
+from typing import Any, List, Literal
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 
@@ -52,7 +52,7 @@ class SoftAssertions:
     def __enter__(self) -> "SoftAssertions":
         return self
 
-    def __exit__(self, exc_type, _exc, _tb) -> bool:
+    def __exit__(self, exc_type, _exc, _tb) -> Literal[False]:
         if exc_type is None and self._raise_on_exit:
             self.assert_all()
         return False

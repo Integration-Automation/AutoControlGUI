@@ -1,5 +1,5 @@
 """Windows hotkey backend: ``RegisterHotKey`` + a message-pump thread."""
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.hotkey.backends.base import HotkeyBackend
 from je_auto_control.utils.hotkey.hotkey_daemon import (
@@ -22,7 +22,7 @@ class WindowsHotkeyBackend(HotkeyBackend):
         import ctypes
         from ctypes import wintypes
 
-        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
         user32.RegisterHotKey.argtypes = [
             wintypes.HWND, ctypes.c_int, wintypes.UINT, wintypes.UINT,
         ]
@@ -85,7 +85,7 @@ class WindowsHotkeyBackend(HotkeyBackend):
             )
 
     def _dispatch(self, registered_id: int,
-                  fire: "callable") -> None:
+                  fire: Callable[[str], None]) -> None:
         match: Optional[str] = None
         for bid, (reg_id, _combo) in self._registered.items():
             if reg_id == registered_id:

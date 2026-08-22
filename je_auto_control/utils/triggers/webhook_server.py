@@ -238,10 +238,9 @@ class WebhookTriggerServer:
         self._server: Optional[ThreadingHTTPServer] = None
         self._thread: Optional[threading.Thread] = None
         self._bound: Optional[Tuple[str, int]] = None
-        if executor is None:
-            self._executor = self._default_executor
-        else:
-            self._executor = executor
+        self._executor: Callable[[list, Dict[str, Any]], Any] = (
+            self._default_executor if executor is None else executor
+        )
 
     @property
     def is_running(self) -> bool:

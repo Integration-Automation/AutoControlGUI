@@ -1,6 +1,8 @@
 from os import getcwd
 from pathlib import Path
 from threading import Lock
+from typing import Optional
+
 
 from je_auto_control.utils.json.json_file import write_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -37,7 +39,8 @@ def _write_file(file_path: Path, content: str) -> None:
         file.write(content)
 
 
-def create_template(parent_name: str, project_path: str = None) -> None:
+def create_template(parent_name: str,
+                    project_path: Optional[str] = None) -> None:
     """
     Create template files in keyword and executor directories.
     在 keyword 與 executor 目錄中建立範例模板檔案
@@ -74,7 +77,8 @@ def create_template(parent_name: str, project_path: str = None) -> None:
             )
 
 
-def create_project_dir(project_path: str = None, parent_name: str = "AutoControl") -> None:
+def create_project_dir(project_path: Optional[str] = None,
+                       parent_name: str = "AutoControl") -> None:
     """
     Create project directory structure and templates.
     建立專案目錄結構並生成範例模板檔案

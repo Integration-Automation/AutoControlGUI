@@ -113,12 +113,23 @@ class _AtspiConnection:
     def root(self) -> Reference:
         return (_REGISTRY, _ROOT_PATH)
 
+    def _require_bus(self) -> SessionBus:
+        """Return the live bus, or say which mistake was made."""
+        bus = self._bus
+        if bus is None:
+            raise DBusError(
+                "AT-SPI connection is not open; use it as a context manager",
+            )
+        return bus
+
     def _call(self, reference: Reference, interface: str, member: str,
               signature: str = "", body: Optional[List[Any]] = None,
               timeout: float = 10.0) -> List[Any]:
         sender, path = reference
-        return self._bus.call(sender, path, interface, member,
-                              signature, body or [], timeout=timeout)
+        return self._require_bus().call(
+            sender, path, interface, member,
+            signature, body or [], timeout=timeout,
+        )
 
     # --- reads -------------------------------------------------------------
 

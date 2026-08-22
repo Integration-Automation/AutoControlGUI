@@ -42,7 +42,7 @@ class AutoControlGUIUI(QMainWindow, QtStyleTools):
         super().__init__()
         self.app_id = _t("application_name", "AutoControlGUI")
         if sys.platform in ["win32", "cygwin", "msys"]:
-            from ctypes import windll
+            from ctypes import windll  # type: ignore[attr-defined]  # reason: win32-only ctypes
             windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.app_id)
 
         self._user_font_pt: int = 0  # 0 means auto-detect from screen

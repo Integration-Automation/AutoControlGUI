@@ -78,7 +78,8 @@ def region_color_stats(source: ImageSource,
     """
     image = _load_rgb(source)
     if region is not None:
-        image = image.crop(tuple(int(v) for v in region))
+        left, top, right, bottom = (int(v) for v in region)
+        image = image.crop((left, top, right, bottom))
     image.thumbnail((128, 128))
     pixels: List[RGB] = list(image.getdata())
     count = len(pixels)

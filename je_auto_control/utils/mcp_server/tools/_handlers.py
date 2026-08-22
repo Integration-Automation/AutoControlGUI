@@ -1975,8 +1975,10 @@ def canonicalize_url(url):
 
 def normalize_url(url, sort_query=False, drop_fragment=False):
     from je_auto_control.utils.url_canon import normalize_url as _norm
+    # `drop_fragment` is this surface's name for it; url_canon calls the
+    # same flag `strip_fragment`.
     return {"url": _norm(url, sort_query=bool(sort_query),
-                         drop_fragment=bool(drop_fragment))}
+                         strip_fragment=bool(drop_fragment))}
 
 
 def urls_equal(first, second):
@@ -2093,7 +2095,7 @@ def emit_event(event_type, data=None, source="je_auto_control",
                subject=None, url=None):
     from je_auto_control.utils.events import post_cloudevent, to_cloudevent
     event = to_cloudevent(event_type, source, data, subject=subject)
-    result = {"event": event}
+    result: Dict[str, Any] = {"event": event}
     if url:
         result["status"] = post_cloudevent(url, event)
     return result
@@ -2160,7 +2162,7 @@ def jwt_decode(token, key, algorithms=None, audience=None, leeway=0.0):
     return {"ok": True, "claims": claims}
 
 
-_RATE_LIMITERS = {}
+_RATE_LIMITERS: Dict[str, Any] = {}
 _RATE_LIMITERS_LOCK = threading.Lock()
 
 
@@ -3408,7 +3410,7 @@ def redact_pii(text, kinds=None, mode="label", mask_char="*"):
 
 def export_sarif(findings, path=None, tool_name="AutoControl"):
     from je_auto_control.utils.sarif import to_sarif, write_sarif
-    result = {"sarif": to_sarif(findings, tool_name=tool_name)}
+    result: Dict[str, Any] = {"sarif": to_sarif(findings, tool_name=tool_name)}
     if path:
         result["path"] = write_sarif(findings, path, tool_name=tool_name)
     return result

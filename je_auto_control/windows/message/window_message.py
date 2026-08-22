@@ -1,7 +1,7 @@
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
 from je_auto_control.windows.core.utils.win32_ctype_input import user32
-from je_auto_control.windows.window.windows_window_manage import FindWindowW
+from je_auto_control.windows.window.windows_window_manage import get_one_window_hwnd
 
 # Win32 API 函式指標 Win32 API function pointers
 PostMessageW = user32.PostMessageW
@@ -57,7 +57,7 @@ def send_message_to_window(window_name: str, action_message: int,
     :param key_code_2: lParam
     :return: (HWND, 傳送狀態)
     """
-    hwnd = FindWindowW(window_name)
+    hwnd = get_one_window_hwnd(None, window_name)
     if not hwnd:
         raise AutoControlException(f"Window '{window_name}' not found")
     post_status = SendMessageW(hwnd, action_message, key_code_1, key_code_2)
@@ -80,7 +80,7 @@ def post_message_to_window(window_name: str, action_message: int,
     使用 PostMessageW 對指定視窗名稱投遞訊息
     Post message to a window by name using PostMessageW
     """
-    hwnd = FindWindowW(window_name)
+    hwnd = get_one_window_hwnd(None, window_name)
     if not hwnd:
         raise AutoControlException(f"Window '{window_name}' not found")
     post_status = PostMessageW(hwnd, action_message, key_code_1, key_code_2)

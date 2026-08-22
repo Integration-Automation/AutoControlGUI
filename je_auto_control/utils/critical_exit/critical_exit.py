@@ -1,6 +1,6 @@
 import _thread
 from threading import Event, Thread
-from typing import Union
+from typing import Optional, Union
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.wrapper.auto_control_keyboard import _resolve_keycode
@@ -33,7 +33,8 @@ class CriticalExit(Thread):
         self._exit_check_key: int = _resolve_keycode("f7")
         self._stop_event = Event()
 
-    def set_critical_key(self, keycode: Union[int, str] = None) -> None:
+    def set_critical_key(self,
+                         keycode: Optional[Union[int, str]] = None) -> None:
         """
         設定退出鍵
         Set critical exit key

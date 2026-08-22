@@ -473,7 +473,14 @@ class HttpMCPServer:
                 self._server.socket, server_side=True,
                 do_handshake_on_connect=False,
             )
-        self._address = self._server.server_address[:2]
+        # `server_address` is typed for every address family a socketserver
+        # can bind; an AF_INET HTTP server always answers with (host, port).
+        bound_host, bound_port = self._server.server_address[:2]
+        self._address = (
+            bound_host.decode() if isinstance(bound_host, (bytes, bytearray))
+            else bound_host,
+            int(bound_port),
+        )
         self._thread = threading.Thread(
             target=self._server.serve_forever, daemon=True,
             name="AutoControlMCPHttp",

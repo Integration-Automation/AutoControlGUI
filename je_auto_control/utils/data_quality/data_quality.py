@@ -9,7 +9,7 @@ Pure standard library (``re`` / ``hashlib``); imports no ``PySide6``.
 """
 import hashlib
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, cast
 
 _TYPES = {
     "int": int, "float": (int, float), "number": (int, float),
@@ -36,7 +36,7 @@ def _matches_type(value: Any, kind: str) -> bool:
         return True
     if kind in ("int", "number", "float") and isinstance(value, bool):
         return False
-    return isinstance(value, expected)
+    return isinstance(value, cast(type, expected))
 
 
 def _number_range_error(value: Any, rule: Dict[str, Any]) -> Optional[str]:
@@ -110,7 +110,8 @@ def validate_rows(rows: List[Dict[str, Any]],
     ``errors`` (``{row, field, error}``).
     """
     rows = list(rows)
-    seen_unique = {field: set() for field, rule in schema.items()
+    seen_unique: Dict[str, Set[Any]] = {
+        field: set() for field, rule in schema.items()
                    if rule.get("unique")}
     errors: List[Dict[str, Any]] = []
     valid: List[Dict[str, Any]] = []

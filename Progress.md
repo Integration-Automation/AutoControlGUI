@@ -18,12 +18,13 @@
 
 `CLAUDE.md` §Size and complexity limits 規定:超標檔案只能列在這裡,列不進來的就是缺陷。
 清單上的檔案**可以改、可以變短,但不得再變長**——要再長就得先拆。
-行數為 2026-08-19 實測（`len(text.splitlines())`）。
+行數為 2026-08-19 實測（`len(text.splitlines())`）；`webrtc_panel.py` 於
+2026-08-22 拆出 `advanced_group.py` 後降到 2,545，上限跟著往下走。
 
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
 | `utils/mcp_server/tools/_handlers.py` | 4,789 | 676 個 MCP 工具的處理函式本體。與 `_factories.py`（表）不同,這裡是邏輯,應該依主題拆成 `_handlers/` 套件（input／screen／window／file／agent…）。拆點清楚,純粹是量大。 |
-| `gui/remote_desktop/webrtc_panel.py` | 2,555 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
+| `gui/remote_desktop/webrtc_panel.py` | 2,545 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
 | `utils/accessibility/backends/windows_backend.py` | 915 | 已拆出 `windows_query.py`（170）與 `windows_state.py`（98）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
@@ -39,7 +40,7 @@
 2026-08-18 重新實測時,表上原有的七列**全部**變長,而 `CLAUDE.md` 明寫
 「列上的檔案不得再變長,要再長就得先拆」,所以這裡曾標成 `[DECIDE]`。
 **維護者已於 2026-08-19 拍板:接受實測數字當新基準**——不為了回到舊數字而去拆
-`_handlers.py`（4,789）與 `webrtc_panel.py`（2,555）。上表的行數即是各自的新上限,
+`_handlers.py`（4,789）與 `webrtc_panel.py`。上表的行數即是各自的新上限,
 規則不變:只准變短,再變長就得先拆。
 
 同一批裡有六個檔案在 2026-08-19 已經拆回線內、從表上移除,做法寫在
@@ -219,31 +220,108 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 
 ---
 
-## 三個 Qt thread-marshal 測試永久跳過中
+## 兩個門檻：mypy 那半已經到終點，覆蓋率那半還在爬
 
-`TODO` — 需要子行程隔離，做法已知
+`TODO` — 只剩覆蓋率；型別契約 2026-08-22 收工
 
-`test/unit_test/headless/test_r3_gui_thread_marshal.py` 裡三個測試被無條件 skip：
-`test_panel_signals_expose_file_received`、`test_webrtc_received_file_marshaled_to_gui`、
-`test_thumbnail_poll_thread_is_reaped`。skip 理由自己寫著「needs subprocess
-isolation (see test_actions_menu_gui) … skip until then」——那句「until then」就是這條。
+原本這一條記的是兩個只存在於 `pyproject.toml` 註解裡、沒有任何機制的承諾。
+2026-08-21 把**機制**補上了（做法見 [WHATS_NEW.md](WHATS_NEW.md)）。
+型別契約已於 2026-08-22 走完（豁免清單清空，見下），所以這條剩下的實質內容
+只有覆蓋率；mypy 那一節留著是因為它記的那幾個坑之後還會踩到。
 
-跟 `CLAUDE.md` §Testing 記的 0xC0000409 `__fastfail` 是同一個家族：
-worker→GUI 的 teardown 在共用的 pytest 行程裡把整個監獸帶走。
-`test_actions_menu_gui.py` 已經示範過解法（把建 widget 的部分丟進子行程），
-這三個只是還沒改過去。沒改之前，這三條路徑沒有任何回歸保護。
+### 覆蓋率：地板 50，目標 70
 
----
+`fail_under` 從 35 提到 **50**。35 是第一次實測的基線，之後測試長大了它卻沒動，
+於是有 15 個百分點是白讓的：九宮格矩陣每一格都在 50% 以上，而 CI 會放行一個
+把三分之一測試刪掉的改動。現在的地板取自矩陣**最低**的那一格
+（ubuntu-22.04／3.10，50.26%；最高的是 windows-2022／3.14，51.69%）。
 
-## 兩個講好要爬、還沒爬的門檻
+規則寫進註解了：**這是棘輪，不是目標**——測試賺到了就把地板提上去。
+往 70 的路上還差 20 點，而覆蓋率排除了 `gui/` 與 `language_wrapper/`，
+所以剩下的缺口都在 `utils/` 的無頭模組裡。**下一步**是找出跌破平均的大模組
+（`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
+而不是齊頭式地補測試。
 
-`TODO` — 兩者都寫在 `pyproject.toml` 的註解裡，但不在任何待辦清單上
+### mypy：整包把關，**豁免清單已經清空**
 
-- **覆蓋率**：`fail_under = 35`，註解寫著「Raise toward 70 as legacy modules are
-  brought under the stable API contract」。目標是 70，今天是 35，中間沒有計畫。
-- **mypy 範圍**：CI 只型別檢查兩條路徑（`quality.yml` 的
-  `mypy je_auto_control/api je_auto_control/utils/failure_bundle`）。註解寫著
-  「followed legacy modules are analysed for signatures but not reported until they
-  join the contract」——同樣是講好要擴、還沒擴。
+`TODO` → **完成（2026-08-22）**
 
-兩者都不是一次做得完的事，但放在這裡至少讓「下一步是什麼」有一個地方可寫。
+範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
+（`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
+新模組預設在圈外；現在新模組**預設就在契約裡**。
+
+**2026-08-22 那張清單降到零**：`je_auto_control/` 的 1,018 個檔案在
+win32／linux／darwin 三個目標上全部乾淨。清掉 136 個模組的過程與每一群的做法寫在
+[WHATS_NEW.md](WHATS_NEW.md)；這裡只留下之後還用得到的四件事：
+
+* **反覆出現的五種形狀**：mixin 讀取宿主的成員（用類別本體裡的
+  `if TYPE_CHECKING:` 宣告，執行期會被剝掉）、`self._x = None` 沒有標注
+  （mypy 會把屬性的型別判成 `None`）、`callable` 被當成型別用、
+  `x: SomeType = None` 的隱含 Optional、以及掉了長度的 tuple。
+* **攔截用的 tuple 必須標成 `Tuple[Type[BaseException], ...]`**，而且要收成一個
+  模組常數——`except (A, B, *TUPLE)` 的星號解包 mypy 跟不進 `except`。
+* **`# type: ignore` 只有當它是那一行的第一個註解時才生效**（已實測），所以有
+  `# nosec` 的行要把它放前面。
+* **`cv2` 的 stub 會隨版本變**：`pyproject.toml` 把它列在「ship no stubs 的基礎相依」
+  底下，但 opencv-python 有附 `.pyi`，閘門會去讀。實測 4.13.0：`MSER_create`、
+  `ORB_create`、`VideoWriter_fourcc` 執行期都在、stub 裡都沒有。`>=4.8,<6` 範圍內
+  版本一換，判定就可能跟著動——與 numpy 那條註解同一類的坑。
+
+清單現在只有標頭、沒有任何條目。**它變長就是退步**，`typing_contract_verify.py`
+會在有人讓它變長時紅掉。
+
+#### 平台縫還缺的一半：`keyboard` 與 `mouse` 還沒有合約
+
+`TODO` — 八個匯出名稱裡剩這兩個，而它們是被呼叫最多的兩個
+
+`screen`／`keyboard_check`／`recorder` 有 Protocol，少一個成員就在該後端自己的檔案裡紅掉。
+`keyboard` 與 `mouse` 維持 `Any`（這也正是 mypy 本來就替它們推出來的型別，沒有變弱），
+因為**四個後端的呼叫形狀真的不一樣**——以下是實測簽章：
+
+| 後端 | `press_key` | `press_mouse` | 滑鼠鍵代碼 |
+| --- | --- | --- | --- |
+| Windows | `(keycode)` | `(press_button: Tuple[int, int, int])` | 三個 Win32 事件旗標的 tuple |
+| macOS | `(keycode, is_shift)`（`is_shift` **沒有預設值**） | `(x, y, mouse_button)` | int |
+| X11 | `(keycode)` | `(mouse_keycode)` | int |
+| Wayland | `(keycode)` | `(mouse_keycode)` | int |
+
+一個 Protocol 描述不了這四種，要補起來得每個平台一組、用 mypy 認得的
+`sys.platform` 分支去定義（只認 `== "..."` 與 `.startswith("...")`，`in [...]` **不算**，
+已實測）。**前置條件已經備好**：`wrapper/` 裡分辨 macOS 的地方現在一律寫成
+`sys.platform == "darwin"`（與 `is_macos()` 等價但剪得掉），其餘分支問的是輸入堆疊
+（`is_windows()`／`is_x11_unix()`），所以呼叫端這一側不必再改。
+
+真正的成本在後端那一側：四個平台的 `keyboard`／`mouse` 模組本身都還在豁免清單上，
+Protocol 一旦標上去，它們的內部型別錯誤就會一起浮出來。`linux_wayland`、
+`linux_with_x11`、`osx` 都已經清完，而 `windows/` 在 2026-08-22 也全部離開了
+豁免清單（真實型別錯誤 + 下面那條已拍板的 ctypes 表面）。**前置條件已經全數到位**，
+可以開始標 Protocol；下一次動這條的人不必再等別的群集。
+
+#### 已拍板（2026-08-22）：Win32 ctypes 表面用 28 個逐行抑制解決
+
+原本這裡是一條 `DECIDE`，寫的是「`windows/` 底下 8 個模組」。重新實測後是
+**16 個模組**，而且**一半不在 `windows/` 底下**（`utils/trash/`、`utils/app_idle/`、
+`utils/file_assoc/`、`utils/idle_keepawake/`、`utils/lock_session/`、
+`utils/session_guard/`、`utils/usb/passthrough/key_provider.py`、
+`gui/main_window.py`）——這一點直接否掉了原本推薦的那一條（照目錄決定用哪個平台量，
+分不到這八個）。
+
+**維護者選了逐行 `# type: ignore` 附理由**，實際只用了 **28 行**（原本估的 58
+是把同一行在 linux 與 darwin 各算了一次）。做法見 [WHATS_NEW.md](WHATS_NEW.md)，
+兩件必須實測的事記在這裡免得再踩：
+
+* **mypy 只認每一行的第一個註解**——接在既有 `# nosec` 後面的 `# type: ignore`
+  完全不生效（已實測）。所以有 `# nosec` 的那兩行，marker 放前面、兩個理由併成一句。
+* 有九行放不進 120 字元，是**改寫**而不是把理由砍到看不懂：括號換行時 marker 跟著
+  左括號走，兩處先把值取出來成區域變數（DPAPI 的 `last_error`、input hook 的
+  `kernel32`），讀起來比原本的一行式更清楚。
+
+十六個模組事後都在真的 Windows 機器上重新 import 並實際呼叫過
+（`dpapi_available()`、`_windows_locked()`、`check_key_is_press`）——
+只有型別檢查器驗過的改寫等於沒人驗過。
+
+有一件事別再踩：**這個閘門的判定不能隨環境浮動**。裝了 `[gui]`／`[webrtc]` 的開發機
+與乾淨的 `pip install -e .` 曾經對 38 個模組看法不同（36 個 Qt 模組只在 PySide6
+*不在*時才過關，2 個只在 babel／pytest 不在時才失敗）。修法是把所有非基礎相依的
+第三方模組壓成 `Any`；其中 `follow_imports = "skip"` 對 `.pyi` 無效、必須同時開
+`follow_imports_for_stubs`，正是 numpy 那條註解早就寫過的坑。

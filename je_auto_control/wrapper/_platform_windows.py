@@ -2,6 +2,9 @@ import os
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.wrapper.backend_contract import (
+    KeyboardCheckBackend, RecorderBackend, ScreenBackend,
+)
 from je_auto_control.windows.core.utils import win32_keypress_check
 from je_auto_control.windows.core.utils.win32_vk import (
     WIN32_ABSOLUTE, WIN32_EventF_EXTENDEDKEY, WIN32_EventF_KEYUP,
@@ -317,9 +320,9 @@ keyboard, mouse = _select_input_backend()
 # Build the table only after the backend is chosen; otherwise the
 # Interception backend would inherit SendInput's flag tuples.
 mouse_keys_table = _build_mouse_keys_table(mouse)
-keyboard_check = win32_keypress_check
-screen = win32_screen
-recorder = win32_recorder
+keyboard_check: KeyboardCheckBackend = win32_keypress_check
+screen: ScreenBackend = win32_screen
+recorder: RecorderBackend = win32_recorder
 
 if None in [keyboard_keys_table, mouse_keys_table, keyboard_check, keyboard, mouse, screen, recorder]:
     raise AutoControlException("Can't init auto control")
