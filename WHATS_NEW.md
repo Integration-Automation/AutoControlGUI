@@ -207,6 +207,71 @@ je_auto_control.windows.window import windows_window_manage` resolves by
 double under its own dotted name does nothing on a machine where the real
 module is importable — the package it is read off has to be the double.
 
+### The Accessibility Backends, Including The One Nobody Could Reach
+
+`utils/accessibility` was the second-largest gap in the project and the one
+that looked hardest: a UIAutomation provider, an AT-SPI bus and a granted
+macOS Accessibility permission are three things no CI runner has, and the
+Windows backend alone is 569 statements at 17%.
+
+The same fact that unlocked the window backends applies here — every
+platform import is inside a method — so the three backends and everything
+under them now run on all nine squares:
+
+| module | before | after |
+| --- | ---: | ---: |
+| `backends/windows_backend.py` | 17.72% | **99.42%** |
+| `backends/linux_backend.py` | 42.41% | **100%** |
+| `backends/macos_backend.py` | 0.00% | **100%** |
+| `backends/windows_query.py` | 24.75% | **99.01%** |
+| `backends/windows_state.py` | 18.75% | **100%** |
+| `backends/base.py` | 74.03% | **100%** |
+| `backends/__init__.py` | 48.94% | **100%** |
+
+Two of the doubles are worth describing because of what they refuse.
+
+The UIA one models the indirection every control pattern goes through — ask
+an element for a pattern id, then query an interface name off the generated
+module — and **refuses a mismatched pair**. Those are two independent
+constants with nothing checking them at runtime, and asking for the
+ValuePattern id while querying the RangeValuePattern interface fails as a
+`None` that reads exactly like "no such control". It also raises
+`AttributeError` for any `Current…` property the test did not supply, because
+answering with a callable would let `str(pattern.CurrentValue or "")` pass
+against the repr of a function.
+
+The AT-SPI one replaces `SessionBus` rather than `_AtspiConnection`. The
+existing Linux test replaces the connection, which is right for testing the
+*walk* and leaves the entire D-Bus call layer beneath it unexecuted — and
+that is where the protocol lives: the accessibility bus is not the session
+bus, an accessible is addressed by a `(sender, path)` *pair*, and the state
+bitfield arrives as two 32-bit words, so reading only the first drops every
+state above bit 31.
+
+### 37 Guards That Did Not Contain The Failure They Were Written For
+
+Writing those tests turned one up. `comtypes` reports a provider failure as
+`COMError`, which derives straight from `Exception`:
+
+```python
+>>> issubclass(COMError, (OSError, AttributeError, ValueError, TypeError))
+False
+```
+
+`windows_query._uia_errors()` exists to say exactly that, and its docstring
+names the case: "a window that closes mid-walk, or an application that stops
+responding, surfaces exactly that way". Two guards in
+`backends/windows_backend.py` used it. The other **37** — every control
+pattern in the file — spelled `(OSError, AttributeError, …)` and contained
+none of them.
+
+The race is real and small: `_find_raw` contains a dead provider and answers
+`None`, so the found path is the exposed one. Between the search that returns
+an element and the `GetCurrentPattern` call that reads it, an application can
+go away — and the answer was a `COMError` out of the `ac_*` tool, past the
+executor's `AutoControlException` boundary, instead of the `None` the method
+promised. All 37 now share one tuple. It only widens what is caught.
+
 ### The Viewer Logged Every Clean Disconnect As An Unhandled Task Exception
 
 `WebRTCDesktopViewer._consume_video` caught `(OSError, RuntimeError)`. aiortc

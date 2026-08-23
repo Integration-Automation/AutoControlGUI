@@ -387,6 +387,20 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **A window closing mid-call let a COM error escape every Windows
+  accessibility read.** `comtypes` reports a provider failure as `COMError`,
+  which derives straight from `Exception` — the reason
+  `windows_query._uia_errors()` exists — but only the two tree-walking guards
+  in `backends/windows_backend.py` used that tuple. The other 37, covering
+  every control pattern (`get_value`, `invoke`, `toggle`, `read_table`, the
+  text and grid reads, …), named `(OSError, AttributeError, …)` and therefore
+  contained none of them. An application that stopped responding, or a window
+  that closed between the search that found an element and the call that read
+  it, raised `COMError` out of the `ac_*` tool or `AC_*` command instead of
+  answering `None` / `False` / `[]`, and past the executor's
+  `AutoControlException` boundary. All 37 now use the same tuple. This only
+  widens what is caught: no call that used to succeed behaves differently.
+
 - **The WebRTC viewer ended every clean disconnect with an unhandled task
   exception.** `WebRTCDesktopViewer._consume_video` caught
   `(OSError, RuntimeError)`, but aiortc signals the end of a track by raising

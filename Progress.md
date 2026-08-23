@@ -25,7 +25,7 @@
 | --- | ---: | --- |
 | `utils/mcp_server/tools/_handlers.py` | 4,789 | 676 個 MCP 工具的處理函式本體。與 `_factories.py`（表）不同,這裡是邏輯,應該依主題拆成 `_handlers/` 套件（input／screen／window／file／agent…）。拆點清楚,純粹是量大。 |
 | `gui/remote_desktop/webrtc_panel.py` | 2,545 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
-| `utils/accessibility/backends/windows_backend.py` | 915 | 已拆出 `windows_query.py`（170）與 `windows_state.py`（98）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
+| `utils/accessibility/backends/windows_backend.py` | 923 | 已拆出 `windows_query.py`（170）與 `windows_state.py`（98）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。**2026-08-24 從 918 長到 923**:見下面的說明。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
 `utils/mcp_server/tools/_factories.py`（8,972,MCP 工具註冊表）、
@@ -48,6 +48,17 @@
 
 行數沒有任何 CI 在把關（`quality.yml` 只跑 ruff 與 bandit,而 ruff 只管行寬),
 所以這張表只會在有人手動實測時才會被發現對不上——上次就是。
+
+### 2026-08-24:`windows_backend.py` 從 918 長到 923，理由記在這裡
+
+表上原本寫 915，2026-08-24 實測時工作樹已經是 **918**（表本身就過期了，
+正是上一段講的那件事）。這次又 +5，是為了改掉一個真的錯：檔內 37 個
+`except (OSError, AttributeError, …)` 攔不到 comtypes 的 `COMError`
+（細節見下面覆蓋率那一節與 [CHANGELOG.md](CHANGELOG.md)）。5 行是一個模組層
+常數加兩行註解——`CLAUDE.md` 允許「超標檔案再變長」的兩條路是**先拆**或
+**在這裡寫明為什麼不拆**，這是後者：拆這個檔的正確切點是 UIA COM 的生命週期
+管理，和這次的修正無關，綁在一起會讓一個三行的正確性修補變成大面積 diff。
+**新上限是 923**，規則不變。
 
 ---
 
@@ -367,7 +378,7 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 | 子系統 | 沒蓋到 / 總 statement | 覆蓋率 |
 | --- | ---: | ---: |
 | `utils/remote_desktop` | 2,297 / 6,622 | 65.3% |
-| `utils/accessibility` | 824 / 1,397 | 41.0% |
+| ~~`utils/accessibility`~~ | ~~824 / 1,397~~ | **2026-08-24 補完（backends 全數 99–100%）** |
 | `utils/executor` | 653 / 3,906 | 83.3% |
 | `utils/usb` | 573 / 2,137 | 73.2% |
 | `utils/mcp_server` | 573 / 4,618 | 87.6% |
@@ -383,14 +394,14 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 | 檔案 | 每一格都沒蓋到 | 備註 |
 | --- | ---: | --- |
 | `utils/executor/action_executor.py` | 589 | 掃不到的那批 adapter：被呼叫者是 class（沒有回傳標注可讀）、或 adapter 伸手進兩個模組 |
-| `utils/accessibility/backends/windows_backend.py` | 446 | UIA COM，要一套夠像的替身 |
+| ~~`utils/accessibility/backends/windows_backend.py`~~ | ~~446~~ | **2026-08-24 補完（99.42%）**，順便修掉 37 個攔不到 `COMError` 的 except |
 | ~~`utils/remote_desktop/webrtc_viewer.py`~~ | ~~354~~ | **2026-08-24 補完（100%）** |
 | ~~`utils/remote_desktop/webrtc_host.py`~~ | ~~351~~ | **2026-08-24 補完（100%）** |
 | `utils/mcp_server/tools/_handlers.py` | 348 | 同 `action_executor.py` |
 | `utils/remote_desktop/signaling_server.py` | 155 | **CI 動不了**：要 `[signaling]` extra（fastapi／uvicorn），沒裝 |
 | ~~`utils/remote_desktop/multi_viewer.py`~~ | ~~146~~ | **2026-08-24 補完（100%）** |
 | ~~`wrapper/window_backends/x11_backend.py`~~ | ~~133~~ | **2026-08-24 補完（100%）**。「只有 Linux 那兩格跑得到」是錯的，見下 |
-| `utils/accessibility/backends/linux_backend.py` | 132 | 同上，尚未補 |
+| ~~`utils/accessibility/backends/linux_backend.py`~~ | ~~132~~ | **2026-08-24 補完（100%）** |
 
 **下一步的順序**：
 
@@ -399,10 +410,8 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 2. 掃不到的那批 adapter：目前卡在「被呼叫者是 class」。要嘛從 class 自己的方法標注
    長出一個替身物件，要嘛承認那批不掃——**得先決定，因為前者會讓「跑起來了」和
    「驗到了東西」分家**。
-3. ~~`wrapper/window_backends`~~ **2026-08-24 整包補完（100%）**，見下下節；
-   `utils/accessibility` 還沒補，做法照抄——AT-SPI 那一層要的是 `SessionBus`
-   的替身，不是 `_AtspiConnection` 的（現有的 `test_accessibility_linux.py`
-   換掉的是後者，所以整個 D-Bus 呼叫層還沒被跑過）。
+3. ~~`wrapper/window_backends` 與 `utils/accessibility`~~
+   **2026-08-24 兩個都整包補完**，見下下節。
 
 `utils/office`（77）與 `signaling_server`（155）**不要碰**：`quality.yml` 沒裝
 `[office]`／`[signaling]`，補的測試會整批 skip，對地板一個點都不動。要補之前
@@ -490,10 +499,45 @@ python -c "import je_auto_control.wrapper.window_backends.x11_backend"   # 在 W
 Windows 上完全沒效果——真的 Win32 模組會被呼叫。要換掉的是**那個套件**。
 
 本機（Windows／3.14）全專案 79.40% → **80.22%**，184 個新測試。
-地板一樣要等九宮格。**下一個照抄的對象是 `utils/accessibility`**：那裡的
-`windows_backend.py`（446 行沒蓋到）用 comtypes，`macos_backend.py`（73，0%）
-用 pyobjc，`linux_backend.py` 的 D-Bus 呼叫層用 `SessionBus`——三個都是
-同樣的 lazy import，同樣塞得進 `sys.modules`。
+地板一樣要等九宮格。
+
+#### 2026-08-24：`utils/accessibility` 照抄同一招，並抓到 37 個攔不到的 except
+
+同一個事實在這裡也成立——三個平台後端的 comtypes／pyobjc／D-Bus import
+全在函式內，所以塞 `sys.modules` 就能在九格都跑：
+
+| 模組 | 之前 | 之後 |
+| --- | ---: | ---: |
+| `backends/windows_backend.py` | 17.72% | **99.42%** |
+| `backends/linux_backend.py` | 42.41% | **100%** |
+| `backends/macos_backend.py` | 0.00% | **100%** |
+| `backends/windows_query.py` | 24.75% | **99.01%** |
+| `backends/windows_state.py` | 18.75% | **100%** |
+| `backends/base.py` | 74.03% | **100%** |
+| `backends/__init__.py` | 48.94% | **100%** |
+
+剩的三行在 `_process_name` 的 Win32 失敗路徑（`OpenProcess` 成功但
+`QueryFullProcessImageNameW` 失敗），要一個「開得到卻查不到」的行程才踩得到。
+
+**AT-SPI 那一層要換的是 `SessionBus`，不是 `_AtspiConnection`。** 現有的
+`test_accessibility_linux.py` 換掉後者，那對測「走訪」是對的，但底下整個
+D-Bus 呼叫層一行都沒跑過——而協定就住在那裡（無障礙匯流排不是 session bus、
+accessible 是 `(sender, path)` **配對**、狀態位元是**兩個 32-bit word**，
+只讀第一個會靜靜丟掉第 31 位以上的每一個狀態）。
+
+**寫測試時抓到一個真的錯，形狀和 WebRTC 那個一模一樣：攔截 tuple 漏了型別。**
+comtypes 把 provider 失敗報成 `COMError`，而它直接繼承 `Exception`：
+
+```python
+issubclass(COMError, (OSError, AttributeError, ValueError, TypeError))  # False
+```
+
+`windows_query._uia_errors()` 存在就是為了講這件事，docstring 也點名了情境
+（「視窗在走訪途中關掉，或應用程式停止回應」）。但 `windows_backend.py` 裡
+只有**兩個**走訪用的 except 用了那個 tuple，**另外 37 個**——也就是每一個
+control pattern——寫的是 `(OSError, AttributeError, …)`，一個都攔不到。
+race 很小但真實：`_find_raw` 自己會攔，所以曝露的是「找到之後、讀之前」
+那一段。已全部改用同一個 tuple；這只會**放寬**攔截範圍。
 
 ### mypy：整包把關，**豁免清單已經清空**
 
