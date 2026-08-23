@@ -41,6 +41,7 @@ from je_auto_control.osx.record.osx_record import osx_recorder
 from je_auto_control.osx.screen import osx_screen
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.backend_contract import (
+    DarwinKeyboardBackend, DarwinMouseBackend,
     KeyboardCheckBackend, RecorderBackend, ScreenBackend,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -149,9 +150,9 @@ mouse_keys_table = {
 }
 
 special_mouse_keys_table = None
-keyboard = osx_keyboard
+keyboard: DarwinKeyboardBackend = osx_keyboard
 keyboard_check: KeyboardCheckBackend = osx_keyboard_check
-mouse = osx_mouse
+mouse: DarwinMouseBackend = osx_mouse
 screen: ScreenBackend = osx_screen
 recorder: RecorderBackend = osx_recorder
 

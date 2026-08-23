@@ -177,6 +177,14 @@ only when documented here with a migration path.
 
 ### Changed
 
+- **`mouse_scroll()` rejects a scroll direction the platform has no axis for.**
+  A name outside `special_mouse_keys_table` used to be passed down to the
+  backend unchanged, which meant `int('scroll_upp')` on Wayland and uinput and
+  an Xlib failure on X11 — deep in the backend, with the offending name nowhere
+  in the message. It now raises `AutoControlCantFindKeyException` naming the
+  direction, the same answer the button table has always given for an unknown
+  button name. Windows and macOS are unaffected: they have a single wheel axis
+  and never read the direction.
 - `je_auto_control.stop_record()` returns an empty list where it used to
   return `None`. It has always been annotated `-> list`, but the failure path
   fell off the end of the function, so a caller that did not write
@@ -372,6 +380,15 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **Typing text through the key-event route raised `AttributeError` on the
+  three platforms that cannot do it.** `type_unicode_keys()` (and
+  `AC_type_unicode_keys` / `ac_type_unicode_keys`) called the backend's
+  `type_unicode_unit` outright, and only Windows has one, so macOS, X11 and
+  Wayland raised an exception from outside the `AutoControlException` family
+  that the executor, the background poll loops and the request handlers each
+  catch in one `except` — it escaped every containment boundary in the
+  project. It now raises `AutoControlKeyboardException` pointing at
+  `type_unicode_text()`, which picks a route that works on any platform.
 - **A backend that could not report the cursor aborted the script instead of
   raising what the API promises.** `press_mouse` / `release_mouse` /
   `click_mouse` with an omitted `x` or `y` unpacked `get_mouse_position()`

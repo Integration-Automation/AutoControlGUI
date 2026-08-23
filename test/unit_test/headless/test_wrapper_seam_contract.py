@@ -16,7 +16,10 @@ import types
 
 import pytest
 
-from je_auto_control.utils.exception.exceptions import AutoControlMouseException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlCantFindKeyException, AutoControlKeyboardException,
+    AutoControlMouseException,
+)
 from je_auto_control.wrapper import (
     auto_control_keyboard, auto_control_mouse, auto_control_record,
 )
@@ -182,6 +185,80 @@ def test_scrolling_reads_no_axis_table_where_there_is_none(mouse_env,
 
     assert auto_control_mouse.mouse_scroll(-2) == (-2, "scroll_down")
     assert mouse_env == [("scroll", -2)]
+
+
+@pytest.mark.parametrize("platform", ["win32", "cygwin", "msys", "darwin"])
+def test_a_single_axis_wheel_is_scrolled_on_every_name_that_has_one(
+        mouse_env, monkeypatch, platform):
+    """The scroll branch is the one place in the wrapper that spells OS names.
+
+    It has to: Windows and macOS take ``scroll(value)`` where X11 and Wayland
+    take ``scroll(value, axis)``, and only a literal ``sys.platform``
+    comparison is a form the type checker can prune — so the two signatures
+    are not measured against each other's call. That makes the list a thing
+    that can silently lose a name, which is what these four assertions are.
+    """
+    monkeypatch.setattr(sys, "platform", platform)
+    monkeypatch.setattr(auto_control_mouse, "special_mouse_keys_table", None)
+
+    assert auto_control_mouse.mouse_scroll(4) == (4, "scroll_down")
+    assert mouse_env == [("scroll", 4)]
+
+
+@pytest.mark.parametrize("platform", ["linux", "linux2", BSD])
+def test_the_axis_name_is_resolved_before_it_reaches_an_x11_backend(
+        mouse_env, monkeypatch, platform):
+    """The other side of the same branch: two arguments, axis already an int."""
+    monkeypatch.setattr(sys, "platform", platform)
+    monkeypatch.setattr(auto_control_mouse, "special_mouse_keys_table",
+                        {"scroll_up": 4})
+
+    assert auto_control_mouse.mouse_scroll(2, scroll_direction="scroll_up")         == (2, 4)
+    assert mouse_env == [("scroll", 2, 4)]
+
+
+def test_an_unknown_axis_name_never_reaches_the_backend(mouse_env, monkeypatch):
+    """Regression: the unresolved *name* was handed to the backend as a string.
+
+    ``special_mouse_keys_table.get(name, name)`` fell back to the name itself,
+    which is not what any of the three backends behind this branch accept:
+    Wayland and uinput die in ``int('scroll_upp')`` and X11 inside Xlib, all
+    three with the offending name nowhere in the message. The button table
+    already refused an unknown name at this boundary; the axis table did not.
+    """
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(auto_control_mouse, "special_mouse_keys_table",
+                        {"scroll_up": 4})
+
+    with pytest.raises(AutoControlCantFindKeyException):
+        auto_control_mouse.mouse_scroll(2, scroll_direction="scroll_upp")
+
+    assert mouse_env == []
+
+
+def test_a_backend_without_unicode_injection_says_so_in_the_family(monkeypatch):
+    """Regression: the seam does not promise ``type_unicode_unit``.
+
+    Only Windows has it. Calling it outright raised ``AttributeError`` on the
+    other three — outside the ``AutoControlException`` family that the
+    executor, the poll loops and the request handlers each catch in one
+    ``except``, so it escaped every containment boundary there is.
+
+    The stub matters here beyond isolation: the real backend on a Windows host
+    would answer this by typing the character into whatever has focus.
+    """
+    from je_auto_control.utils.text_unicode import text_unicode
+    from je_auto_control.wrapper import platform_wrapper
+
+    monkeypatch.setattr(platform_wrapper, "keyboard", object())
+    with pytest.raises(AutoControlKeyboardException):
+        text_unicode._default_sink({"op": "unicode_unit", "unit": 0x5024})
+
+    typed: list = []
+    monkeypatch.setattr(platform_wrapper, "keyboard", types.SimpleNamespace(
+        type_unicode_unit=typed.append))
+    text_unicode._default_sink({"op": "unicode_unit", "unit": 0x5024})
+    assert typed == [0x5024]
 
 
 def test_stop_record_returns_a_list_when_the_recorder_fails(monkeypatch):

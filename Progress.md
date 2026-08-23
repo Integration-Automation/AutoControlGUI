@@ -222,12 +222,13 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 
 ## 兩個門檻：mypy 那半已經到終點，覆蓋率那半還在爬
 
-`TODO` — 只剩覆蓋率；型別契約 2026-08-22 收工
+`TODO` — 只剩覆蓋率；型別契約 2026-08-23 收工
 
 原本這一條記的是兩個只存在於 `pyproject.toml` 註解裡、沒有任何機制的承諾。
 2026-08-21 把**機制**補上了（做法見 [WHATS_NEW.md](WHATS_NEW.md)）。
-型別契約已於 2026-08-22 走完（豁免清單清空，見下），所以這條剩下的實質內容
-只有覆蓋率；mypy 那一節留著是因為它記的那幾個坑之後還會踩到。
+型別契約已經走完：豁免清單 2026-08-22 清空，平台縫最後兩個名稱
+（`keyboard`／`mouse`）2026-08-23 拿到合約。所以這條剩下的實質內容只有覆蓋率；
+mypy 那一節留著是因為它記的那幾個坑之後還會踩到。
 
 ### 覆蓋率：地板 50，目標 70
 
@@ -252,7 +253,7 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 
 **2026-08-22 那張清單降到零**：`je_auto_control/` 的 1,018 個檔案在
 win32／linux／darwin 三個目標上全部乾淨。清掉 136 個模組的過程與每一群的做法寫在
-[WHATS_NEW.md](WHATS_NEW.md)；這裡只留下之後還用得到的四件事：
+[WHATS_NEW.md](WHATS_NEW.md)；這裡只留下之後還用得到的五件事：
 
 * **反覆出現的五種形狀**：mixin 讀取宿主的成員（用類別本體裡的
   `if TYPE_CHECKING:` 宣告，執行期會被剝掉）、`self._x = None` 沒有標注
@@ -266,36 +267,17 @@ win32／linux／darwin 三個目標上全部乾淨。清掉 136 個模組的過�
   底下，但 opencv-python 有附 `.pyi`，閘門會去讀。實測 4.13.0：`MSER_create`、
   `ORB_create`、`VideoWriter_fourcc` 執行期都在、stub 裡都沒有。`>=4.8,<6` 範圍內
   版本一換，判定就可能跟著動——與 numpy 那條註解同一類的坑。
+* **要讓 mypy 剪掉一個分支，整條條件都得是它讀得懂的**：`sys.platform == "..."`
+  與 `.startswith("...")` 算，`in [...]` 不算，而只要裡面**混進一個函式呼叫**
+  （`is_windows()`），`or`／`and` 整條就變成未知、兩邊都會被檢查。所以
+  `platform_wrapper` 那種「問 `platform_id` 才知道綁哪個後端」的分支**沒辦法**
+  讓自己被剪掉——它綁的三種形狀互不相容，一個型別蓋不住。做法是那兩個名稱進來時
+  先落在私有的 `Any` 上、出去時才標合約：後端那一側在 `_platform_*.py` 被檢查，
+  呼叫端那一側在 `auto_control_*.py` 被檢查，中間那一接頭本來就沒有東西可查。
+  細節見 `wrapper/backend_contract.py` 的 docstring。
 
 清單現在只有標頭、沒有任何條目。**它變長就是退步**，`typing_contract_verify.py`
 會在有人讓它變長時紅掉。
-
-#### 平台縫還缺的一半：`keyboard` 與 `mouse` 還沒有合約
-
-`TODO` — 八個匯出名稱裡剩這兩個，而它們是被呼叫最多的兩個
-
-`screen`／`keyboard_check`／`recorder` 有 Protocol，少一個成員就在該後端自己的檔案裡紅掉。
-`keyboard` 與 `mouse` 維持 `Any`（這也正是 mypy 本來就替它們推出來的型別，沒有變弱），
-因為**四個後端的呼叫形狀真的不一樣**——以下是實測簽章：
-
-| 後端 | `press_key` | `press_mouse` | 滑鼠鍵代碼 |
-| --- | --- | --- | --- |
-| Windows | `(keycode)` | `(press_button: Tuple[int, int, int])` | 三個 Win32 事件旗標的 tuple |
-| macOS | `(keycode, is_shift)`（`is_shift` **沒有預設值**） | `(x, y, mouse_button)` | int |
-| X11 | `(keycode)` | `(mouse_keycode)` | int |
-| Wayland | `(keycode)` | `(mouse_keycode)` | int |
-
-一個 Protocol 描述不了這四種，要補起來得每個平台一組、用 mypy 認得的
-`sys.platform` 分支去定義（只認 `== "..."` 與 `.startswith("...")`，`in [...]` **不算**，
-已實測）。**前置條件已經備好**：`wrapper/` 裡分辨 macOS 的地方現在一律寫成
-`sys.platform == "darwin"`（與 `is_macos()` 等價但剪得掉），其餘分支問的是輸入堆疊
-（`is_windows()`／`is_x11_unix()`），所以呼叫端這一側不必再改。
-
-真正的成本在後端那一側：四個平台的 `keyboard`／`mouse` 模組本身都還在豁免清單上，
-Protocol 一旦標上去，它們的內部型別錯誤就會一起浮出來。`linux_wayland`、
-`linux_with_x11`、`osx` 都已經清完，而 `windows/` 在 2026-08-22 也全部離開了
-豁免清單（真實型別錯誤 + 下面那條已拍板的 ctypes 表面）。**前置條件已經全數到位**，
-可以開始標 Protocol；下一次動這條的人不必再等別的群集。
 
 #### 已拍板（2026-08-22）：Win32 ctypes 表面用 28 個逐行抑制解決
 

@@ -20,6 +20,7 @@ from je_auto_control.linux_wayland.keymap import (
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.wrapper.backend_contract import (
     KeyboardCheckBackend, RecorderBackend, ScreenBackend,
+    X11UnixKeyboardBackend, X11UnixMouseBackend,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
@@ -41,8 +42,8 @@ special_mouse_keys_table = {
     "scroll_right": wayland_mouse.wayland_scroll_direction_right,
 }
 
-keyboard = wayland_keyboard
-mouse = wayland_mouse
+keyboard: X11UnixKeyboardBackend = wayland_keyboard
+mouse: X11UnixMouseBackend = wayland_mouse
 keyboard_check: KeyboardCheckBackend = wayland_listener
 screen: ScreenBackend = wayland_screen
 recorder: RecorderBackend = wayland_record.wayland_recorder

@@ -85,11 +85,12 @@ hypothetical either: turning it on immediately reported that the Windows
 `tuple` and where the public `screen_size()` promises a tuple. Fixed, and every
 caller only ever unpacked the two values.
 
-`keyboard` and `mouse` stay `Any`, which is what mypy had already inferred for
-them: macOS takes `is_shift` on `press_key` and orders its mouse calls
-`(x, y, button)` where Windows and X11 take the button alone, and a Windows
-mouse "keycode" is a tuple of three event flags where the others are an int.
-One protocol cannot describe both, and `Progress.md` carries what it would take.
+`keyboard` and `mouse` stayed `Any` for now, which is what mypy had already
+inferred for them: macOS takes `is_shift` on `press_key` and orders its mouse
+calls `(x, y, button)` where Windows and X11 take the button alone, and a
+Windows mouse "keycode" is a tuple of three event flags where the others are an
+int. One protocol cannot describe both. They got three each on 2026-08-23;
+that entry is below.
 
 Clearing the cluster fixed four bugs the types had been hiding, all of the same
 shape — a value that could be `None` reaching something that could not take one.
@@ -107,6 +108,70 @@ which meant 其餘模組 counted it a second time. The row is now two plain numb
 (19 files, 3,293 lines), the note it was carrying has moved to §5.2 as the
 `wrapper/window_backends/` row that section had been missing entirely, and
 其餘模組 no longer double-counts 3,293 lines.
+
+### The Last Two Names on the Platform Seam, and the Three Bugs Behind Them
+
+`keyboard` and `mouse` were the two exports the seam still typed as `Any`, and
+the two called most. They are typed now — not with one protocol each but with
+three, because their call shape is genuinely platform-specific: `Win32*`
+(SendInput and the Interception driver), `Darwin*` (Quartz) and `X11Unix*`
+(XTest, uinput, Wayland and the BSDs, which share one shape). Each backend
+module is checked against *its own* protocol on every target, so the macOS
+mouse is verified from an Ubuntu runner, and `KeyboardBackend` / `MouseBackend`
+alias whichever pair matches the target — which is what makes a caller checked
+against the signature it will really reach. `mouse.press_mouse(x, y, button)`
+is only type-correct on darwin, and only there is it the branch mypy walks into.
+
+**The seam module itself cannot be typed, and that is the point.**
+`platform_wrapper` picks its backend by asking `platform_id`, and a call to a
+function is something mypy cannot resolve — so its branches are not pruned, and
+all four are read on every target. With one type on `mouse` that means three
+mutually incompatible shapes assigned to one name: measured, 9 errors across
+the three targets, all of them correct. So those two names now land on private
+`Any`s on the way in and take their contract on the way out. Both ends are
+still checked — the backend in `_platform_*.py`, the caller in
+`auto_control_*.py` — and the joint in the middle never had anything to check
+that the two ends do not already cover.
+
+Turning it on reported three things that were wrong rather than untyped:
+
+- **An unknown scroll direction was handed to the backend as a string.**
+  `special_mouse_keys_table.get(name, name)` fell back to the *name* when the
+  axis table had no such entry, and all three backends behind that branch take
+  an int: `int('scroll_upp')` on Wayland and uinput, an Xlib error on X11, and
+  in every case the offending name nowhere in the message. The button table had
+  refused an unknown name at this boundary since it was written; the axis table
+  did not. It does now, with the name in the exception.
+- **`type_unicode_unit` was called on backends that do not have it.**
+  `text_unicode._default_sink` called it outright, so the three platforms
+  without Unicode injection raised `AttributeError` — outside the
+  `AutoControlException` family that the executor, the poll loops and the
+  request handlers each catch in one `except`, so it escaped every containment
+  boundary in the project. It now asks the way `unicode_keys_supported()`
+  already did and raises `AutoControlKeyboardException` saying which route to
+  use instead. The seam does not promise the member; only Windows has it.
+- **The resolved button code was being narrowed back to what came in.**
+  `press_mouse`/`release_mouse`/`click_mouse` assigned `mouse_preprocess`'s
+  result over their own `Union[int, str]` parameter, so the platform button
+  code — a tuple of three Win32 flags, or an int — was typed as the *name* the
+  caller passed. It lands in its own local now.
+
+**One branch in `auto_control_mouse` spells OS names, and only one.** Windows
+and macOS take `scroll(value)` where X11 and Wayland take `scroll(value, axis)`,
+so unless one side is pruned each signature fails against the other's call —
+and a `platform_id` call prunes nothing. That branch is `sys.platform ==` four
+times over, exactly `is_windows()`'s names plus `is_macos()`'s, and
+`test_wrapper_seam_contract.py` now pins the behaviour on each of the six
+platform names so the list cannot quietly lose one. Everything else in the file
+still asks which input stack it is.
+
+All sixteen backend modules already satisfied their protocols — the four
+assembly modules plus the Interception and uinput alternatives — which is the
+one result worth stating plainly: the shapes were consistent, nothing said so,
+and now something does. The exemption list is still empty, on all three targets.
+The seam was re-exercised on real Windows afterwards (both input backends
+selected, cursor read, position set, a real key press and release, a real
+scroll); a rewrite only a type checker has seen is a rewrite nobody has seen.
 
 ### The Wayland Cluster: Four Modules, One Invariant Nobody Had Written Down
 
