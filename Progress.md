@@ -228,12 +228,12 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 2026-08-21 把**機制**補上了（做法見 [WHATS_NEW.md](WHATS_NEW.md)）：
 型別契約的豁免清單 2026-08-22 清空，平台縫最後兩個名稱（`keyboard`／`mouse`）
 2026-08-23 拿到合約；覆蓋率那半發現不是爬得不夠，是量測起點錯了，修正後地板
-從 50 提到 69，同日再提到 74。
+從 50 提到 69，隔日再提到 75。
 
 **2026-08-23 維護者拍板：下一個覆蓋率目標是 80。** 這一條留到那時候。
 型別那一節留著是因為它記的那幾個坑之後還會踩到。
 
-### 覆蓋率：地板 74，下一站 80
+### 覆蓋率：地板 75，下一站 80
 
 `TODO` — 目標 **80**（2026-08-23 拍板）。地板本身照舊只跟著實測的最低那一格走。
 
@@ -350,22 +350,23 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 三支共用的機器搬進 `test/unit_test/headless/_contract_sweep.py`，各自只留自己的
 參數來源。
 
-#### 現在的九宮格（2026-08-23 實測，本 PR 的 run）
+#### 現在的九宮格（2026-08-24 實測，本 PR 最後一次 run）
 
 | | 最低 | 最高 |
 | --- | --- | --- |
 | 上一版（PR #486 首輪） | 69.67%（ubuntu-22.04／3.14） | 70.97%（windows-2022／3.12） |
-| 這一版 | **74.99%**（ubuntu-22.04／3.14） | 76.19%（windows-2022，3.10–3.13） |
+| 這一版 | **75.79%**（ubuntu-22.04／3.14） | 76.99%（windows-2022，3.11／3.12） |
 
-地板隨之從 69 提到 **74**。
+地板隨之從 69 提到 **75**。這九個數字讀的是 `coverage report`（也就是
+`fail_under` 真正比對的那個），不是 artifact 的 `line-rate`——理由見上一節。
 
-#### 剩下的 5 點在哪裡（2026-08-23，ubuntu-22.04／3.14 的 artifact）
+#### 剩下的 4 點在哪裡（2026-08-24，ubuntu-22.04／3.14 的 artifact）
 
 以下是 statement 數（artifact 的口徑，不含分支），拿來看缺口分佈：
 
 | 子系統 | 沒蓋到 / 總 statement | 覆蓋率 |
 | --- | ---: | ---: |
-| `utils/remote_desktop` | 2,653 / 6,622 | 59.9% |
+| `utils/remote_desktop` | 2,297 / 6,622 | 65.3% |
 | `utils/accessibility` | 824 / 1,397 | 41.0% |
 | `utils/executor` | 653 / 3,906 | 83.3% |
 | `utils/usb` | 573 / 2,137 | 73.2% |
@@ -376,7 +377,7 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 
 **要動地板，只能補在每一格都跑得到的程式碼上。** 地板取的是最低那一格，
 所以只在 Windows 跑得到的東西補再多也不會動它。把九格的未覆蓋行取交集，
-2026-08-23 量到 **9,697 個 statement 在每一格都沒被執行過**——那就是可攜的缺口，
+2026-08-24 量到 **9,343 個 statement 在每一格都沒被執行過**——那就是可攜的缺口，
 也是唯一會抬地板的地方。最大的幾塊：
 
 | 檔案 | 每一格都沒蓋到 | 備註 |
@@ -393,9 +394,13 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 
 **下一步的順序**（都還沒做）：
 
-1. `webrtc_host`／`webrtc_viewer`／`multi_viewer`／`webrtc_files`：`[webrtc]` 裝了
-   之後這一族才第一次可測，合計 960 個 statement 在每一格都沒跑過。`webrtc_host_auth`
-   與 `webrtc_stats` 已經照這個做法補完（56 個測試），其餘照抄。
+1. `webrtc_host`（351）／`webrtc_viewer`（354）／`multi_viewer`（146）／
+   `webrtc_transport`（139）／`webrtc_audio`（114）：`[webrtc]` 裝了之後這一族才
+   第一次可測。`webrtc_host_auth`、`webrtc_stats`、`webrtc_files`、
+   `webrtc_host_media` 已經照這個做法補完（119 個測試，做法見
+   [WHATS_NEW.md](WHATS_NEW.md)），其餘照抄。`webrtc_host` 與 `webrtc_viewer`
+   是兩個大類別，要的替身比前四個大——**先看能不能拆出可測的那一半**，
+   `webrtc_host_auth`／`webrtc_host_media` 這兩個 mixin 已經是拆出來的先例。
 2. 掃不到的那批 adapter：目前卡在「被呼叫者是 class」。要嘛從 class 自己的方法標注
    長出一個替身物件，要嘛承認那批不掃——**得先決定，因為前者會讓「跑起來了」和
    「驗到了東西」分家**。

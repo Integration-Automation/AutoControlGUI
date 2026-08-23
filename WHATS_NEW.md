@@ -88,18 +88,18 @@ The auth host double supplies exactly the attribute list `ViewerAuthMixin`'s own
 docstring asks for, so a mixin that starts reaching for something else fails
 there rather than leaning on whatever the real host happens to own.
 
-### The Floor Is 74, And The Comment Now Says Which Number That Is
+### The Floor Is 75, And The Comment Now Says Which Number That Is
 
-The nine-way matrix runs 74.99% (ubuntu-22.04 / 3.14) to 76.19% (windows-2022),
-up from 69.67–70.97, so `fail_under` goes 69 → 74 on the usual convention: floor
+The nine-way matrix runs 75.79% (ubuntu-22.04 / 3.14) to 76.99% (windows-2022),
+up from 69.67–70.97, so `fail_under` goes 69 → 75 on the usual convention: floor
 of the lowest square.
 
 `Progress.md` had recorded that the floor "had to be dug out of the XML
 artifact". That is wrong, and following it would set a floor the suite cannot
 clear. `coverage report` — the step that enforces `fail_under` — includes branch
 coverage, because `branch = true`; Cobertura's `line-rate` attribute does not.
-On the same square and the same run those differ by about 1.8 points (76.14%
-against 78.33%). The artifact is the right thing to read for a single
+On the same square and the same run those differ by about 2 points (75.79%
+against 77.78%). The artifact is the right thing to read for a single
 subsystem's gap and the wrong thing to set a floor from.
 
 ## What's new (2026-08-23)

@@ -175,21 +175,21 @@ precision = 2
 # 70 was the destination that number was climbing towards; the maintainer set
 # the next one at 80 on 2026-08-23, and Progress.md tracks the climb.
 #
-# Measured 2026-08-23 on the run for this PR, after `quality.yml` began
-# installing the `[webrtc]` extra and two more registries were swept: the
-# nine-way matrix runs 74.99% (ubuntu-22.04 / 3.14) to 76.19% (windows-2022,
-# 3.10 through 3.13). Windows is still the high corner for the same reason as
-# before — the facade imports the backend of the platform it is running on.
-# Floored to the integer below the lowest square: 74.
+# Measured 2026-08-24 on the last run for this PR, after `quality.yml` began
+# installing the `[webrtc]` extra and the WebRTC subsystem got its first
+# tests: the nine-way matrix runs 75.79% (ubuntu-22.04 / 3.14) to 76.99%
+# (windows-2022, 3.11 and 3.12). Windows is still the high corner for the same
+# reason as before — the facade imports the backend of the platform it is
+# running on. Floored to the integer below the lowest square: 75.
 #
 # Read that matrix from the "Enforce the coverage floor" step, which is this
 # report and therefore the number `fail_under` is compared against. The
 # `coverage.xml` artifact is NOT interchangeable with it: `branch = true`
 # above puts branches in this total and Cobertura's `line-rate` attribute
-# leaves them out, so the XML reads about 1.8 points higher (78.33% against
-# 76.14% on windows-2022 / 3.14, same run). A floor set from the artifact
+# leaves them out, so the XML reads about 2 points higher (77.78% against
+# 75.79% on ubuntu-22.04 / 3.14, same run). A floor set from the artifact
 # would be a floor the suite cannot clear.
-fail_under = 74
+fail_under = 75
 
 [tool.mypy]
 python_version = "3.10"
