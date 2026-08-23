@@ -137,6 +137,13 @@ omit = ["*/gui/*", "*/language_wrapper/*"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+# Two decimals because this number is what the floor below is set from, and at
+# the default precision the whole matrix printed "70%" while the squares ran
+# 69.67 to 70.97 — the floor had to be read out of the XML artifacts instead of
+# the log. It also tightens `fail_under`: coverage lets a total within
+# 10**-precision of the floor pass, which at precision 0 is a whole point of
+# slack under a ratchet.
+precision = 2
 # A ratchet, not a target. The rule is that this number is raised to the
 # measured minimum whenever the suite has earned it, so coverage the tests
 # already provide cannot be given back unnoticed.
@@ -158,15 +165,16 @@ skip_covered = true
 # `coverage run`, and the comment there says why it must stay that way.
 #
 # The number is measured, never guessed, and read from the matrix rather than
-# from one machine — the spread across platforms is over a point and this
-# floor has to hold on the lowest square. 68 is deliberately provisional: it
-# is the first floor under the corrected measurement, set below every
-# plausible square so the corrected matrix can be read off this PR's run and
-# the floor then taken from its minimum, exactly as 50 was taken from #484's.
+# from one machine. Corrected nine-way matrix, measured 2026-08-23 on the run
+# for this PR: lowest square ubuntu-22.04 / 3.14 at 69.67%, highest
+# windows-2022 / 3.12 at 70.97% — a 1.3-point spread, and Windows is the high
+# corner because it is the platform whose backend the facade actually imports.
+# Floored to the integer below the lowest square, the same convention that
+# turned a 50.26% minimum into 50.
 #
-# 70 was the destination and the tests are already past it; Progress.md
-# records where the number goes next.
-fail_under = 68
+# 70 was the destination this was climbing towards and the suite is level with
+# it; Progress.md records that the next destination is the maintainer's call.
+fail_under = 69
 
 [tool.mypy]
 python_version = "3.10"

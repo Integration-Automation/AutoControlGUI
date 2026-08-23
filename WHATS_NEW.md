@@ -146,12 +146,28 @@ second copy of the floor: `fail_under` in `pyproject.toml` is the only one.
 the difference between the two spellings is invisible in a green build —
 reverting gives back 24 points and every job still passes.
 
-The floor is **68** for now, deliberately below any plausible square, so the
-corrected nine-way matrix can be read off this PR's own run and the floor then
-taken from its minimum — the same way 50 was taken from #484's. What is
-genuinely low is now measured rather than assumed: `utils/remote_desktop` 35%,
-`utils/mcp_server` 34% (`_handlers.py` alone at 10%), `utils/executor` 41%,
-`utils/accessibility` 29%, `wrapper/window_backends` 10%.
+The corrected matrix, measured on this PR's own run:
+
+| | lowest | highest |
+| --- | --- | --- |
+| before (`pytest --cov`) | 50.26% (ubuntu-22.04 / 3.10) | 51.69% (windows-2022 / 3.14) |
+| after (`coverage run`) | **69.67%** (ubuntu-22.04 / 3.14) | 70.97% (windows-2022 / 3.12) |
+
+So the floor is **69**, floored from the lowest square exactly as 50 was
+floored from 50.26. `precision` goes to 2 in the same commit, because at the
+default all nine squares printed "70%" while actually running 69.67 to 70.97 —
+the floor had to be read out of the XML artifacts rather than the log — and
+because coverage lets a total within `10**-precision` of the floor pass, which
+at precision 0 is a whole point of slack under something called a ratchet.
+
+Windows is the high corner because the facade imports *its own* platform's
+backend, so part of the remaining 30 points is unreachable from any single
+square. What is genuinely low is now measured rather than assumed:
+`utils/remote_desktop` 35%, `utils/mcp_server` 34% (`_handlers.py` alone at
+10%), `utils/executor` 41%, `utils/accessibility` 29%,
+`wrapper/window_backends` 10% — four subsystems with the same shape, a great
+many thin adapters wrapping headless functions that are already tested, which
+is a registry to walk rather than a pile of tests to hand-write.
 
 ### The Last Two Names on the Platform Seam, and the Three Bugs Behind Them
 
