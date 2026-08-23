@@ -147,7 +147,7 @@ def traced(span_name: Optional[str] = None,
     """Decorator: wrap a callable in a span. ``span_name`` defaults to ``f.__qualname__``."""
 
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
-        name = span_name or getattr(fn, "__qualname__", fn.__name__)
+        name = str(span_name or getattr(fn, "__qualname__", fn.__name__))
 
         @wraps(fn)
         def wrapper(*args, **kwargs):

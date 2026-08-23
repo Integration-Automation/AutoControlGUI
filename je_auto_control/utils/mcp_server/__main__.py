@@ -7,6 +7,7 @@ exits — useful for inspection in CI or manual debugging.
 import argparse
 import json
 import sys
+from typing import Optional
 
 from je_auto_control.utils.mcp_server.fake_backend import (
     install_fake_backend, maybe_install_from_env,
@@ -50,7 +51,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list = None) -> None:
+def main(argv: Optional[list] = None) -> None:
     """CLI entry point. Performs the requested action and returns ``None``."""
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -72,13 +73,13 @@ def _print_listings(args: argparse.Namespace) -> None:
                    sys.stdout, ensure_ascii=False, indent=2)
         sys.stdout.write("\n")
     if args.list_resources:
-        provider = default_resource_provider()
-        json.dump([resource.to_descriptor() for resource in provider.list()],
+        resources = default_resource_provider()
+        json.dump([resource.to_descriptor() for resource in resources.list()],
                    sys.stdout, ensure_ascii=False, indent=2)
         sys.stdout.write("\n")
     if args.list_prompts:
-        provider = default_prompt_provider()
-        json.dump([prompt.to_descriptor() for prompt in provider.list()],
+        prompts = default_prompt_provider()
+        json.dump([prompt.to_descriptor() for prompt in prompts.list()],
                    sys.stdout, ensure_ascii=False, indent=2)
         sys.stdout.write("\n")
 

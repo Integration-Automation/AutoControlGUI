@@ -18,7 +18,7 @@ import sys
 import time
 from contextlib import contextmanager
 from ctypes import wintypes
-from typing import Iterator, Optional, Tuple
+from typing import Any, Iterator, Optional, Tuple
 
 GMEM_MOVEABLE = 0x0002
 _OPEN_FAILED = "OpenClipboard failed"
@@ -40,11 +40,16 @@ def _require_windows() -> None:
         raise RuntimeError("the Win32 clipboard API is only available on Windows")
 
 
-def clipboard_api() -> Tuple[object, object]:
-    """``(user32, kernel32)`` with every clipboard prototype declared."""
+def clipboard_api() -> Tuple[Any, Any]:
+    """``(user32, kernel32)`` with every clipboard prototype declared.
+
+    ``Any``, not a DLL type: a ctypes library object resolves every symbol
+    through ``__getattr__``, so there is nothing narrower to promise, and
+    ``ctypes.WinDLL`` itself is declared on the Windows target only.
+    """
     _require_windows()
-    user32 = ctypes.WinDLL("user32", use_last_error=True)
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
 
     user32.OpenClipboard.argtypes = [wintypes.HWND]
     user32.OpenClipboard.restype = wintypes.BOOL
@@ -75,7 +80,7 @@ def clipboard_api() -> Tuple[object, object]:
 
 
 @contextmanager
-def open_clipboard(user32: Optional[object] = None) -> Iterator[object]:
+def open_clipboard(user32: Optional[Any] = None) -> Iterator[Any]:
     """Own the clipboard for the block, waiting out a transiently busy one.
 
     Pass the ``user32`` handle you already prototyped to keep the declarations

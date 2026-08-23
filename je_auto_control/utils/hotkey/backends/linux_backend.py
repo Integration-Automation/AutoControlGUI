@@ -4,7 +4,7 @@ Requires an X11 display — Wayland is not supported. The grab consumes the
 key, matching Windows ``RegisterHotKey`` semantics. NumLock / CapsLock are
 masked so the hotkey still fires with those toggles active.
 """
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.hotkey.backends.base import HotkeyBackend
 from je_auto_control.utils.hotkey.hotkey_daemon import (
@@ -155,7 +155,7 @@ class LinuxHotkeyBackend(HotkeyBackend):
             grabbed.append(extra_mask)
         return True
 
-    def _drain(self, disp, fire: "callable") -> None:
+    def _drain(self, disp, fire: Callable[[str], None]) -> None:
         from Xlib import X
 
         while disp.pending_events():

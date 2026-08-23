@@ -1,5 +1,5 @@
 import types
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from je_auto_control.utils.exception.exception_tags import (
     action_is_null_error_message, add_command_exception_error_message,
@@ -702,6 +702,7 @@ def _run_agent(goal: str,
     via :func:`_computer_use` / ``AC_computer_use``.
     """
     from je_auto_control.utils.agent import AgentBudget, AgentLoop
+    from je_auto_control.utils.agent.agent_loop import AgentBackend
     from je_auto_control.utils.agent.backends import (
         AnthropicAgentBackend, OpenAIAgentBackend,
     )
@@ -709,6 +710,7 @@ def _run_agent(goal: str,
         export_anthropic_tools, export_openai_tools,
     )
     name = (backend or "anthropic").strip().lower()
+    backend_obj: AgentBackend
     if name == "anthropic":
         tools = export_anthropic_tools()
         backend_obj = AnthropicAgentBackend(
@@ -1612,7 +1614,7 @@ def _ac_web_current_url() -> Any:
 
 # --- Android via ADB (Phase 9.7) ---------------------------------------
 
-_android_client_cache: Dict[Optional[str], Any] = {}
+_android_client_cache: Dict[Tuple[Optional[str], Optional[str]], Any] = {}
 
 
 def _android_client(serial: Optional[str] = None,
@@ -6367,7 +6369,8 @@ def _tween_drag(start: List[int], end: List[int], steps: int = 30,
                 button: str = "mouse_left") -> Dict[str, Any]:
     """Adapter: drag along an eased path from start to end."""
     from je_auto_control.utils.tween_drag import tween_drag
-    result = tween_drag(tuple(start), tuple(end), steps=int(steps),
+    result = tween_drag((int(start[0]), int(start[1])),
+                        (int(end[0]), int(end[1])), steps=int(steps),
                         easing=easing, button=button)
     return {"points": result["points"]}
 
@@ -6711,8 +6714,10 @@ def _normalize_url(url: str, sort_query: bool = False,
                    drop_fragment: bool = False) -> Dict[str, Any]:
     """Adapter: RFC 3986 syntax-based normalisation of a URL."""
     from je_auto_control.utils.url_canon import normalize_url
+    # `drop_fragment` is the AC_ surface's name; url_canon calls the
+    # same flag `strip_fragment`.
     return {"url": normalize_url(url, sort_query=bool(sort_query),
-                                 drop_fragment=bool(drop_fragment))}
+                                 strip_fragment=bool(drop_fragment))}
 
 
 def _urls_equal(first: str, second: str) -> Dict[str, Any]:
@@ -8011,13 +8016,14 @@ class Executor:
     @staticmethod
     def _unwrap_action_list(action_list: Union[list, dict]) -> list:
         """Normalise the ``action_list`` argument or raise on invalid input."""
-        if isinstance(action_list, dict):
-            action_list = action_list.get("auto_control")
-            if action_list is None:
+        actions: Any = action_list
+        if isinstance(actions, dict):
+            actions = actions.get("auto_control")
+            if actions is None:
                 raise AutoControlActionNullException(executor_list_error_message)
-        if not isinstance(action_list, list) or len(action_list) == 0:
+        if not isinstance(actions, list) or len(actions) == 0:
             raise AutoControlActionNullException(action_is_null_error_message)
-        return action_list
+        return actions
 
     def _run_one_action(self, action: list, record: Dict[str, Any],
                         raise_on_error: bool) -> None:

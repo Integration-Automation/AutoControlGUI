@@ -51,6 +51,7 @@ def _build(name: str) -> OCRBackend:
     cached = _cached.get(name)
     if cached is not None:
         return cached
+    backend: OCRBackend
     if name == "tesseract":
         from je_auto_control.utils.ocr.backends.tesseract_backend import (
             TesseractBackend,

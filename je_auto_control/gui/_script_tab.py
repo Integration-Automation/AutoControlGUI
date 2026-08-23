@@ -1,6 +1,8 @@
 """Script-executor tab builder (extracted mixin)."""
 import json
 
+from typing import TYPE_CHECKING, Any, Callable
+
 from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QLabel, QLineEdit, QTextEdit, QVBoxLayout,
     QWidget,
@@ -25,6 +27,12 @@ class ScriptTabMixin:
 
     Host widget must expose the ``TranslatableMixin`` API (``self._tr(...)``).
     """
+
+    if TYPE_CHECKING:
+        # Declared, never defined: the widget this mixin is mixed into owns
+        # every one of these. The block is stripped at runtime, so nothing
+        # here can shadow what the host actually binds.
+        _tr: Callable[..., Any]
 
     def _build_script_tab(self) -> QWidget:
         tab = QWidget()

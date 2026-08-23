@@ -101,7 +101,7 @@ class Win32InputHook:
         """Stop recording and return the raw events."""
         if self._thread_id:
             try:
-                ctypes.windll.user32.PostThreadMessageW(
+                ctypes.windll.user32.PostThreadMessageW(  # type: ignore[attr-defined]  # reason: win32-only ctypes
                     self._thread_id, WM_QUIT, 0, 0)
             except OSError as error:
                 autocontrol_logger.error("recorder stop failed: %r", error)
@@ -109,7 +109,7 @@ class Win32InputHook:
 
     # -- hook thread -------------------------------------------------------
     def _run(self) -> None:
-        user32 = ctypes.windll.user32
+        user32 = ctypes.windll.user32  # type: ignore[attr-defined]  # reason: win32-only ctypes
         try:
             self._install(user32)
         except OSError as error:
@@ -128,8 +128,9 @@ class Win32InputHook:
             self._unhook(user32)
 
     def _install(self, user32) -> None:
-        self._thread_id = ctypes.windll.kernel32.GetCurrentThreadId()
-        proto = ctypes.WINFUNCTYPE(
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]  # reason: win32-only ctypes
+        self._thread_id = kernel32.GetCurrentThreadId()
+        proto = ctypes.WINFUNCTYPE(  # type: ignore[attr-defined]  # reason: win32-only ctypes
             ctypes.c_ssize_t, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM)
         # Declare the signatures: a hook handle is 64-bit and the default
         # c_int return would truncate it.

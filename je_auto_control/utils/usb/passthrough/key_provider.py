@@ -34,7 +34,7 @@ def dpapi_available() -> bool:
         return False
     try:
         import ctypes
-        ctypes.WinDLL("crypt32")
+        ctypes.WinDLL("crypt32")  # type: ignore[attr-defined]  # reason: win32-only ctypes
         return True
     except OSError:
         return False
@@ -48,8 +48,12 @@ def _dpapi_call(func_name: str, data: bytes) -> bytes:
         _fields_ = [("cbData", wintypes.DWORD),
                     ("pbData", ctypes.POINTER(ctypes.c_char))]
 
-    crypt32 = ctypes.WinDLL("crypt32", use_last_error=True)
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    crypt32 = ctypes.WinDLL(  # type: ignore[attr-defined]  # reason: win32-only ctypes
+        "crypt32", use_last_error=True,
+    )
+    kernel32 = ctypes.WinDLL(  # type: ignore[attr-defined]  # reason: win32-only ctypes
+        "kernel32", use_last_error=True,
+    )
     func = getattr(crypt32, func_name)
     func.restype = wintypes.BOOL
 
@@ -61,9 +65,8 @@ def _dpapi_call(func_name: str, data: bytes) -> bytes:
         _CRYPTPROTECT_UI_FORBIDDEN, ctypes.byref(out),
     )
     if not ok:
-        raise RuntimeError(
-            f"{func_name} failed: {ctypes.get_last_error()}",
-        )
+        last_error = ctypes.get_last_error()  # type: ignore[attr-defined]  # reason: win32-only ctypes
+        raise RuntimeError(f"{func_name} failed: {last_error}")
     try:
         return ctypes.string_at(out.pbData, out.cbData)
     finally:

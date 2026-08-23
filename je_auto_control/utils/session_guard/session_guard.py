@@ -20,7 +20,7 @@ def _windows_locked() -> bool:
     """True when the Windows input desktop can't be opened (station locked)."""
     import ctypes
     _DESKTOP_READOBJECTS = 0x0001
-    user32 = ctypes.windll.user32  # nosec B607  # reason: fixed system DLL
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined]  # nosec B607  # reason: win32-only ctypes, fixed DLL
     handle = user32.OpenInputDesktop(0, False, _DESKTOP_READOBJECTS)
     if not handle:
         return True

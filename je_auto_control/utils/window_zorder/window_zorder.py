@@ -12,7 +12,7 @@ The planning is pure and headless-testable; only the default driver touches Win3
 (returning ``False`` on other platforms). Imports no ``PySide6``.
 """
 import sys
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
 ZOrderDriver = Callable[[str, str], bool]
 
@@ -52,18 +52,18 @@ def _default_driver(title: str, action: str) -> bool:
 
 
 def set_topmost(title: str, on: bool = True, *,
-                driver: Callable[[str, str], bool] = None) -> bool:
+                driver: Optional[Callable[[str, str], bool]] = None) -> bool:
     """Pin the window matching ``title`` always-on-top (or release it when ``on`` is False)."""
     return (driver or _default_driver)(title, "topmost" if on else "notopmost")
 
 
 def bring_to_front(title: str, *,
-                   driver: Callable[[str, str], bool] = None) -> bool:
+                   driver: Optional[Callable[[str, str], bool]] = None) -> bool:
     """Raise the window matching ``title`` to the top of the z-order."""
     return (driver or _default_driver)(title, "top")
 
 
 def send_to_back(title: str, *,
-                 driver: Callable[[str, str], bool] = None) -> bool:
+                 driver: Optional[Callable[[str, str], bool]] = None) -> bool:
     """Send the window matching ``title`` to the bottom of the z-order."""
     return (driver or _default_driver)(title, "bottom")

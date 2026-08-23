@@ -14,7 +14,7 @@ is unit-testable on synthetic arrays without a real screen; only the default
 """
 import functools
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Protocol, Sequence, TypeVar
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlFlatTemplateException, AutoControlScreenException,
@@ -243,7 +243,34 @@ def match_template(template: ImageSource, *, haystack: Optional[ImageSource] = N
     return best
 
 
-def _iou(a: Match, b: Match) -> float:
+class _ScoredBox(Protocol):
+    """What suppression reads off a match — position, size, score.
+
+    Read-only properties, not attributes: the match records are frozen
+    dataclasses, and a Protocol member declared as an attribute demands a
+    writable one.
+    """
+
+    @property
+    def x(self) -> int: ...
+
+    @property
+    def y(self) -> int: ...
+
+    @property
+    def width(self) -> int: ...
+
+    @property
+    def height(self) -> int: ...
+
+    @property
+    def score(self) -> float: ...
+
+
+_BoxT = TypeVar("_BoxT", bound=_ScoredBox)
+
+
+def _iou(a: _ScoredBox, b: _ScoredBox) -> float:
     left = max(a.x, b.x)
     top = max(a.y, b.y)
     right = min(a.x + a.width, b.x + b.width)
@@ -255,8 +282,8 @@ def _iou(a: Match, b: Match) -> float:
     return inter / union
 
 
-def _nms(matches: List[Match], iou_threshold: float) -> List[Match]:
-    kept: List[Match] = []
+def _nms(matches: List[_BoxT], iou_threshold: float) -> List[_BoxT]:
+    kept: List[_BoxT] = []
     for candidate in sorted(matches, key=lambda m: m.score, reverse=True):
         if all(_iou(candidate, k) <= iou_threshold for k in kept):
             kept.append(candidate)

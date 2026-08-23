@@ -74,7 +74,7 @@ def fuse_elements(ocr_boxes: Optional[Sequence[Box]] = None,
             item = dict(box)
             item.setdefault("source", source)
             tagged.append(item)
-    tagged.sort(key=lambda box: (rank.get(box.get("source"), len(rank)),
+    tagged.sort(key=lambda box: (rank.get(str(box.get("source", "")), len(rank)),
                                  -_area(box)))
     return _dedup(tagged, float(iou_threshold))
 

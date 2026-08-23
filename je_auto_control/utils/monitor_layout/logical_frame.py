@@ -95,7 +95,7 @@ def _backend_frame_origin() -> Tuple[int, int]:
     return backend_layout_origin()
 
 
-def _load_image_grab():
+def _load_image_grab() -> Any:
     """Load the platform's ``ImageGrab``-shaped grabber lazily.
 
     Pillow off Wayland, the compositor's capture tool on it — see
@@ -113,7 +113,7 @@ def _resample():
 
 def grab_logical(region: Optional[Sequence[int]] = None, *,
                  all_screens: bool = True,
-                 grabber: Optional[Callable[..., Any]] = None,
+                 grabber: Optional[Any] = None,
                  metrics: Optional[MetricsReader] = None) -> Tuple[Any, int, int]:
     """Capture the screen in mouse-coordinate space.
 

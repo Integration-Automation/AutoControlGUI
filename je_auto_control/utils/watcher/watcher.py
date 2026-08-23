@@ -17,9 +17,13 @@ class MouseWatcher:
         """Return the current ``(x, y)``; raise ``RuntimeError`` on failure."""
         from je_auto_control.wrapper.auto_control_mouse import get_mouse_position
         try:
-            x, y = get_mouse_position()
+            position = get_mouse_position()
         except (OSError, RuntimeError, ValueError, TypeError) as error:
             raise RuntimeError(f"MouseWatcher.sample failed: {error!r}") from error
+        if position is None:
+            # The Windows backend reports a failed GetCursorPos this way.
+            raise RuntimeError("MouseWatcher.sample: no cursor position")
+        x, y = position
         return int(x), int(y)
 
 

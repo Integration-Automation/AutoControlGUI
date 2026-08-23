@@ -164,13 +164,17 @@ class AccessibilityRecorder:
 
 def _make_event(kind: str, snapshot: Dict[str, Any],
                 kind_override: bool = False) -> AXRecorderEvent:
-    bounds = snapshot.get("bounds") or (0, 0, 0, 0)
+    # AXRecorderEvent.bounds is a four-tuple; a short or missing box pads
+    # with zeros rather than silently producing a tuple of another length.
+    box = [int(value) for value in list(snapshot.get("bounds") or ())[:4]]
+    box += [0] * (4 - len(box))
+    left, top, width, height = box
     return AXRecorderEvent(
         timestamp_iso=_now_iso(),
         kind=kind,
         role=str(snapshot.get("role") or ""),
         name=str(snapshot.get("name") or ""),
-        bounds=tuple(int(v) for v in bounds[:4]),
+        bounds=(left, top, width, height),
         app_name=str(snapshot.get("app_name") or ""),
         details={"raw": dict(snapshot)} if kind_override else {},
     )

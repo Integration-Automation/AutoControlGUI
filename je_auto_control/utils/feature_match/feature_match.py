@@ -58,8 +58,9 @@ def _make_orb(template_gray, max_features: int):
     smaller = min(template_gray.shape[:2])
     patch = max(7, min(31, smaller // 3))
     edge = max(2, patch // 3)
-    return cv2.ORB_create(nfeatures=int(max_features), edgeThreshold=edge,
-                          patchSize=patch)
+    return cv2.ORB_create(# type: ignore[attr-defined]  # reason: absent from the cv2 stub
+        nfeatures=int(max_features), edgeThreshold=edge,
+        patchSize=patch)
 
 
 def _keypoint_matches(template_gray, scene_gray, max_features: int, ratio: float):

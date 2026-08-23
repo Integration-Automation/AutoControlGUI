@@ -13,7 +13,9 @@ in CI.
 import posixpath
 import re
 from typing import List, Mapping, Sequence, Tuple, Union
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import (
+    SplitResult, parse_qsl, urlencode, urlsplit, urlunsplit,
+)
 
 _DEFAULT_PORTS = {"http": 80, "https": 443, "ftp": 21, "ws": 80, "wss": 443}
 _PERCENT = re.compile(r"%[0-9a-fA-F]{2}")
@@ -37,7 +39,7 @@ def _normalize_path(path: str) -> str:
     return _normalize_percent(collapsed)
 
 
-def _build_netloc(parts: "urlsplit", host: str, scheme: str,
+def _build_netloc(parts: SplitResult, host: str, scheme: str,
                   strip_default_port: bool) -> str:
     """Reassemble the authority, dropping a redundant default port."""
     userinfo = ""

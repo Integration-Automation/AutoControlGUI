@@ -10,6 +10,7 @@ function is pure (text in, text out), so it is fully deterministic in CI.
 """
 import re
 import unicodedata
+from typing import Literal, Tuple, cast
 
 _QUOTE_MAP = {
     "‘": "'", "’": "'", "‚": "'", "‛": "'",
@@ -18,6 +19,10 @@ _QUOTE_MAP = {
     " ": " ",
 }
 _QUOTE_TABLE = str.maketrans(_QUOTE_MAP)
+
+
+_NormalForm = Literal["NFC", "NFD", "NFKC", "NFKD"]
+_NORMAL_FORMS: Tuple[str, ...] = ("NFC", "NFD", "NFKC", "NFKD")
 
 
 def fold_whitespace(text: str) -> str:
@@ -39,7 +44,11 @@ def normalize_quotes(text: str) -> str:
 def normalize_text(text: str, *, form: str = "NFKC", casefold: bool = True,
                    collapse_ws: bool = True) -> str:
     """Canonicalise ``text``: Unicode ``form``, optional casefold + ws fold."""
-    result = unicodedata.normalize(form, text or "")
+    if form not in _NORMAL_FORMS:
+        raise ValueError(
+            f"unknown normalisation form {form!r}; "
+            f"expected one of {', '.join(_NORMAL_FORMS)}")
+    result = unicodedata.normalize(cast(_NormalForm, form), text or "")
     if casefold:
         result = result.casefold()
     if collapse_ws:

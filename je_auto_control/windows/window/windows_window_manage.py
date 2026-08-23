@@ -3,7 +3,9 @@ Windows 視窗管理（Win32 ctypes）
 Windows window management (Win32 ctypes)
 """
 import ctypes
-from ctypes import WINFUNCTYPE, byref, create_unicode_buffer, wintypes
+from ctypes import (  # type: ignore[attr-defined]  # reason: win32-only ctypes
+    WINFUNCTYPE, byref, create_unicode_buffer, wintypes,
+)
 from typing import List, Optional, Tuple
 
 # 相容用途：舊版本從這個模組匯出共用的 user32。
@@ -18,7 +20,7 @@ from je_auto_control.windows.core.utils.win32_ctype_input import user32  # noqa:
 # This module deliberately owns its own user32 handle: argtypes/restype live on
 # the function objects, so sharing one would leak these prototypes into other
 # callers (`utils/window_capture/` passes its own RECT to GetWindowRect).
-_user32 = ctypes.WinDLL("user32", use_last_error=True)
+_user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
 
 # HWND 是指標寬度的 handle。ctypes 預設把參數與回傳值當成 c_int，在 64 位元
 # Windows 上會截斷成 32 位元——與 `OpenProcess` 那個經典陷阱同一類。每個函式

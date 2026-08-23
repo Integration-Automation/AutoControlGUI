@@ -100,7 +100,9 @@ def _spans(grid: Dict[str, Any], text_boxes: Sequence[Box]) -> List[Dict[str, An
         left, top, right, bottom = _box_bounds(box)
         c0, c1 = _index_of(left, col_spans), _index_of(right - 1, col_spans)
         r0, r1 = _index_of(top, row_spans), _index_of(bottom - 1, row_spans)
-        if None in (c0, c1, r0, r1) or (c0 == c1 and r0 == r1):
+        if c0 is None or c1 is None or r0 is None or r1 is None:
+            continue
+        if c0 == c1 and r0 == r1:
             continue
         found.append({"row": r0, "col": c0, "row_span": r1 - r0 + 1,
                       "col_span": c1 - c0 + 1, "text": str(box.get("text", ""))})

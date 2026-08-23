@@ -19,7 +19,7 @@ real vault.
 """
 import secrets
 import time
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 
 class CredentialBrokerError(RuntimeError):
@@ -35,7 +35,7 @@ class CredentialBroker:
         """``resolver(name)`` returns the secret value; ``clock`` returns now."""
         self._resolver = resolver
         self._clock = clock
-        self._leases: Dict[str, Dict[str, object]] = {}
+        self._leases: Dict[str, Dict[str, Any]] = {}
 
     def set_resolver(self, resolver: Callable[[str], Optional[str]]) -> None:
         """Configure the function that maps a secret name to its value."""

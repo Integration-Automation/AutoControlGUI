@@ -85,11 +85,12 @@ class _StabilityTracker:
             self._prev = object()
             return False
         token = (bbox, self._sampler(bbox) if self._sampler else None)
-        if token != self._prev:
+        since = self._since
+        if token != self._prev or since is None:
             self._prev = token
             self._since = now
             return False
-        return (now - self._since) >= self._stable_for_s
+        return (now - since) >= self._stable_for_s
 
 
 def _evaluate(bbox, tracker, now, enabled_probe, hit_tester):
@@ -129,9 +130,10 @@ def wait_actionable(bbox_provider: BboxProvider, *,
     deadline = start + cfg.timeout_s
     while True:
         now = cfg.clock()
-        signals = _evaluate(bbox_provider(), tracker, now, enabled_probe,
-                            hit_tester)
-        report = _report(*signals, now - start)
+        visible, stable, enabled, receives, point = _evaluate(
+            bbox_provider(), tracker, now, enabled_probe, hit_tester)
+        report = _report(visible, stable, enabled, receives, point,
+                         now - start)
         if report.actionable or now >= deadline:
             return report
         cfg.sleep(cfg.poll_interval_s)
@@ -150,7 +152,8 @@ def act_when_ready(action: Callable[[List[int]], Any], bbox_provider: BboxProvid
     report = wait_actionable(bbox_provider, region_sampler=region_sampler,
                              enabled_probe=enabled_probe, hit_tester=hit_tester,
                              config=config)
-    if not report.actionable:
+    point = report.point
+    if not report.actionable or point is None:
         raise AutoControlActionException(
             f"target not actionable ({report.reason}) after {report.waited_s}s")
-    return action(report.point)
+    return action(point)

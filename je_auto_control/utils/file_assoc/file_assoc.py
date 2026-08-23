@@ -48,7 +48,7 @@ def normalize_ext(target: str) -> str:
 
 def _assoc_query(ext: str, assoc_str: int) -> Optional[str]:
     """Run one AssocQueryStringW lookup; return the string or None."""
-    shlwapi = ctypes.windll.shlwapi
+    shlwapi = ctypes.windll.shlwapi  # type: ignore[attr-defined]  # reason: win32-only ctypes
     size = ctypes.c_ulong(0)
     shlwapi.AssocQueryStringW(0, assoc_str, ext, None, None, ctypes.byref(size))
     if size.value == 0:

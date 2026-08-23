@@ -12,7 +12,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_action_json
@@ -23,6 +23,9 @@ from je_auto_control.utils.run_history.artifact_manager import (
 from je_auto_control.utils.run_history.history_store import (
     SOURCE_TRIGGER, STATUS_ERROR, STATUS_OK, default_history_store,
 )
+
+if TYPE_CHECKING:  # imported lazily at runtime, where each trigger needs it
+    from je_auto_control.utils.scheduler.cron import CronExpression
 
 
 @dataclass
@@ -177,7 +180,7 @@ class CronTrigger(_TriggerBase):
     only if the image is on screen".
     """
     cron: str = "* * * * *"
-    _expr: Optional[object] = None
+    _expr: Optional["CronExpression"] = None
     _last_minute: Optional[str] = None
 
     def __post_init__(self) -> None:

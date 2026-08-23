@@ -61,6 +61,32 @@ class _MetricBase:
     help_text: str
     label_names: Tuple[str, ...] = field(default_factory=tuple)
 
+    def _labels_key(self, labels: Optional[Dict[str, str]]
+                    ) -> Tuple[Tuple[str, str], ...]:
+        """Validate a label set against ``label_names`` and freeze it.
+
+        Every metric type validates labels the same way — a typo must not
+        quietly fork into a new series — so the rule lives here rather than
+        being copied off ``Counter`` by each subclass.
+        """
+        if not self.label_names:
+            return ()
+        if not labels:
+            raise ValueError(
+                f"{self.name} expects labels {self.label_names}",
+            )
+        # Reject any label name not declared at registration.
+        unknown = set(labels) - set(self.label_names)
+        if unknown:
+            raise ValueError(
+                f"unknown labels {sorted(unknown)} for {self.name}",
+            )
+        return _frozen_labels(labels)
+
+    def render(self) -> str:
+        """Render this metric in the Prometheus text exposition format."""
+        raise NotImplementedError
+
 
 class Counter(_MetricBase):
     """Monotonically increasing counter.
@@ -91,22 +117,6 @@ class Counter(_MetricBase):
         key = self._labels_key(labels)
         with self._lock:
             return self._values.get(key, 0.0)
-
-    def _labels_key(self, labels: Optional[Dict[str, str]]
-                    ) -> Tuple[Tuple[str, str], ...]:
-        if not self.label_names:
-            return ()
-        if not labels:
-            raise ValueError(
-                f"{self.name} expects labels {self.label_names}",
-            )
-        # Reject any label name not declared at registration.
-        unknown = set(labels) - set(self.label_names)
-        if unknown:
-            raise ValueError(
-                f"unknown labels {sorted(unknown)} for {self.name}",
-            )
-        return _frozen_labels(labels)
 
     def render(self) -> str:
         lines: List[str] = [
@@ -153,8 +163,6 @@ class Gauge(_MetricBase):
         key = self._labels_key(labels)
         with self._lock:
             return self._values.get(key, 0.0)
-
-    _labels_key = Counter._labels_key  # same validation rules
 
     def render(self) -> str:
         lines: List[str] = [
@@ -214,8 +222,6 @@ class Histogram(_MetricBase):
             for idx, boundary in enumerate(self._buckets):
                 if value <= boundary:
                     series.bucket_counts[idx] += 1
-
-    _labels_key = Counter._labels_key
 
     def snapshot(self, *, labels: Optional[Dict[str, str]] = None
                  ) -> Dict[str, object]:

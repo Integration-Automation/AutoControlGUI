@@ -48,7 +48,7 @@ class RecordingThread(threading.Thread):
             resolution = sct.monitors[0]
             output_file = self.video_name + ".mp4"
 
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[attr-defined]  # reason: absent from the cv2 stub
             video_writer = cv2.VideoWriter(
                 output_file,
                 fourcc,

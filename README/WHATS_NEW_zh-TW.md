@@ -2,6 +2,31 @@
 
 ## 本次更新 (2026-08-20) — 嬣稱支援的平台，這回真的量過了
 
+### 三個從寫出來就一直被跳過的測試
+
+`test_r3_gui_thread_marshal.py` 裡有三個 `@pytest.mark.skip`，而它們的 skip 理由
+自己就寫著需要什麼：「needs subprocess isolation (see test_actions_menu_gui)
+… skip until then」。它們蓋的是真的接線：WebRTC worker 執行緒收到的檔案要透過
+queued signal 回到 GUI 執行緒（而不是執行緒綁定的 `QTimer.singleShot`），以及
+admin console 的縮圖輪詢每一 tick 都要把 `QThread` 刪掉，而不是每個間隔漏一個。
+
+當時跳過是對的：在**共用的** pytest 行程裡建 WebRTC 面板或 admin console、
+再拆掉 worker `QThread`，在 offscreen Qt 下會直接 abort。而因為 `deleteLater` 在沒有
+event loop 跑之前是 no-op，那個 abort 甚至不會落在胇事的那支測試上——它會在後面某支
+毫無關係的檔案裡引爆，而且沒有 traceback。
+
+**現在它們跑了，在自己的行程裡。** 一支 probe 把三項檢查一次做完，每項寫一個 JSON
+結論，然後 `os._exit(0)` 不做 teardown——跟 `test_actions_menu_gui` 對整組分頁用的是
+同一個形狀。每項結論是 `ok`、`failed: …` 或 `unavailable: …`，所以沒裝 `[webrtc]`
+extra 的機器（CI 的 `pytest-headless` 就是）得到的是 skip 而不是失敗，裝了的機器則真的在驗接線。
+
+這三項檢查是有牙的，而且是驗過不是假設的：把 `admin_console_tab.py` 裡
+`thread.finished.connect(thread.deleteLater)` 那一行拿掉，第三項結論就變成
+`failed: the QThread outlived finish`，而另外兩項依舊綠。
+
+headless 整套現在不需要任何 `--ignore` 就能從頭跑到尾——共 4,815 項通過，
+剩下的 skip 全部是選用相依與平台閘門。裡面已經沒有任何一句「skip until then」。
+
 ### Windows arm64 從來不是程式的問題
 
 這一項原本標成 `BLOCKED`，而那只對一半。兩個相依確實沒發

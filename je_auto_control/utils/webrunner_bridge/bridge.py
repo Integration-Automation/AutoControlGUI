@@ -1,7 +1,7 @@
 """Delegate ``WR_*`` browser-automation commands to ``je_web_runner``."""
 from __future__ import annotations
 
-from typing import Any, List, Mapping
+from typing import Any, List, Mapping, Sequence
 
 
 class WebRunnerBridgeError(RuntimeError):
@@ -70,7 +70,7 @@ def run_webrunner_action(action: Mapping[str, Any]) -> Any:
         ) from error
 
 
-def run_webrunner_actions(actions: List[Mapping[str, Any]]) -> List[Any]:
+def run_webrunner_actions(actions: Sequence[Mapping[str, Any]]) -> List[Any]:
     """Run a list of WR_* actions in order. Stops at the first error."""
     if not isinstance(actions, list):
         raise WebRunnerBridgeError("actions must be a list")

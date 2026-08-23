@@ -4,7 +4,7 @@ Thin wrapper over :func:`je_auto_control.run_suite`, the JUnit/Allure
 report writers, and the quarantine store. Holds no business logic.
 """
 import json
-from typing import Optional
+from typing import Any, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -46,7 +46,7 @@ class TestSuiteTab(TranslatableMixin, QWidget):
         self._table.horizontalHeader().setStretchLastSection(True)
         self._summary = QLabel()
         self._quarantine = QListWidget()
-        self._last_result = None
+        self._last_result: Optional[Any] = None
         self._apply_headers()
         self._build_layout()
         self._refresh_quarantine()

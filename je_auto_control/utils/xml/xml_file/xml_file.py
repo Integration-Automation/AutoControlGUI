@@ -84,6 +84,8 @@ class XMLParser:
         except (OSError, ParseError) as error:
             raise XMLException(f"{cant_read_xml_error_message}: {repr(error)}") from error
         self.xml_root = self.tree.getroot()
+        if self.xml_root is None:
+            raise XMLException(f"{cant_read_xml_error_message}: empty document")
         self.xml_from_type = "file"
         return self.xml_root
 

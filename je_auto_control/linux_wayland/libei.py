@@ -38,6 +38,7 @@ import os
 import select
 import threading
 import time
+from functools import partial
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 from je_auto_control.linux_wayland import oeffis
@@ -201,6 +202,22 @@ class LibeiBackend:
         """Whether the handshake finished and a device is emulating."""
         return self._ei is not None and self._has_required_devices()
 
+    @property
+    def _api(self) -> BoundSymbols:
+        """The resolved entry points, or a refusal if libei never resolved.
+
+        Every emission and handshake step reads its entry point through here
+        rather than off ``self._symbols`` directly. The two differ only on a
+        host without libei, and there the difference is the whole point: the
+        attribute is ``None``, so touching it raises ``AttributeError`` —
+        which is not an ``AutoControlException`` and therefore escapes every
+        containment boundary in the framework. This raises what the rest of
+        the module promises instead.
+        """
+        if self._symbols is None:
+            raise LibeiUnavailable("libei.so.* not found on the loader path")
+        return self._symbols
+
     def connect(self, *, timeout: float = HANDSHAKE_TIMEOUT,
                 socket_path: Optional[bytes] = None) -> None:
         """Open a backend and run the handshake through to a live device.
@@ -213,7 +230,7 @@ class LibeiBackend:
         with self._lock:
             if self.is_connected:
                 return
-            sender = self._symbols.ei_new_sender(None)
+            sender = self._api.ei_new_sender(None)
             if not sender:
                 raise LibeiUnavailable("ei_new_sender returned NULL")
             self._ei = sender
@@ -237,13 +254,13 @@ class LibeiBackend:
     def press_key(self, keycode: int) -> None:
         """Send a keydown for one evdev key code."""
         self._emit(EI_DEVICE_CAP_KEYBOARD, lambda device:
-                   self._symbols.ei_device_keyboard_key(
+                   self._api.ei_device_keyboard_key(
                        device, int(keycode), True))
 
     def release_key(self, keycode: int) -> None:
         """Send a keyup for one evdev key code."""
         self._emit(EI_DEVICE_CAP_KEYBOARD, lambda device:
-                   self._symbols.ei_device_keyboard_key(
+                   self._api.ei_device_keyboard_key(
                        device, int(keycode), False))
 
     def set_position(self, x: int, y: int) -> None:
@@ -254,19 +271,19 @@ class LibeiBackend:
         is turned into a refusal instead of a silent no-op.
         """
         self._emit(EI_DEVICE_CAP_POINTER_ABSOLUTE, lambda device:
-                   self._symbols.ei_device_pointer_motion_absolute(
+                   self._api.ei_device_pointer_motion_absolute(
                        device, *self._region_point(device, x, y)))
 
     def press_button(self, button_code: int) -> None:
         """Press one BTN_* code (272 is BTN_LEFT)."""
         self._emit(EI_DEVICE_CAP_BUTTON, lambda device:
-                   self._symbols.ei_device_button_button(
+                   self._api.ei_device_button_button(
                        device, int(button_code), True))
 
     def release_button(self, button_code: int) -> None:
         """Release one BTN_* code."""
         self._emit(EI_DEVICE_CAP_BUTTON, lambda device:
-                   self._symbols.ei_device_button_button(
+                   self._api.ei_device_button_button(
                        device, int(button_code), False))
 
     def click_button(self, button_code: int) -> None:
@@ -284,7 +301,7 @@ class LibeiBackend:
         1, did you mean 120?" bug warning showed up.
         """
         self._emit(EI_DEVICE_CAP_SCROLL, lambda device:
-                   self._symbols.ei_device_scroll_discrete(
+                   self._api.ei_device_scroll_discrete(
                        device, int(dx) * SCROLL_UNIT, int(dy) * SCROLL_UNIT))
 
     # --- handshake --------------------------------------------------------
@@ -299,7 +316,7 @@ class LibeiBackend:
         if socket_path is None and not oeffis.is_available():
             socket_path = _default_socket_path()
         if socket_path is not None:
-            code = self._symbols.ei_setup_backend_socket(self._ei, socket_path)
+            code = self._api.ei_setup_backend_socket(self._ei, socket_path)
             if code != 0:
                 raise LibeiUnavailable(
                     f"ei_setup_backend_socket returned {code}",
@@ -311,7 +328,7 @@ class LibeiBackend:
         except oeffis.OeffisUnavailable as error:
             raise LibeiUnavailable(str(error)) from error
         self._session = session
-        code = self._symbols.ei_setup_backend_fd(self._ei, int(eis_fd))
+        code = self._api.ei_setup_backend_fd(self._ei, int(eis_fd))
         if code != 0:
             raise LibeiUnavailable(f"ei_setup_backend_fd returned {code}")
         self._backend_open = True
@@ -329,34 +346,34 @@ class LibeiBackend:
 
     def _pump(self, timeout: float) -> None:
         """Dispatch libei and answer every event that is waiting."""
-        poll_fd = int(self._symbols.ei_get_fd(self._ei))
+        poll_fd = int(self._api.ei_get_fd(self._ei))
         if poll_fd < 0:
             raise LibeiUnavailable("ei_get_fd returned no pollable fd")
         if timeout > 0:
             ready, _, _ = select.select([poll_fd], [], [], timeout)
             if not ready:
                 return
-        self._symbols.ei_dispatch(self._ei)
+        self._api.ei_dispatch(self._ei)
         while True:
-            event = self._symbols.ei_get_event(self._ei)
+            event = self._api.ei_get_event(self._ei)
             if not event:
                 return
             try:
                 self._on_event(event)
             finally:
-                self._symbols.ei_event_unref(event)
+                self._api.ei_event_unref(event)
 
     def _on_event(self, event: int) -> None:
         """Answer one libei event."""
-        event_type = int(self._symbols.ei_event_get_type(event))
+        event_type = int(self._api.ei_event_get_type(event))
         if event_type == EI_EVENT_SEAT_ADDED:
-            self._bind_seat(self._symbols.ei_event_get_seat(event))
+            self._bind_seat(self._api.ei_event_get_seat(event))
         elif event_type == EI_EVENT_DEVICE_ADDED:
-            self._remember_device(self._symbols.ei_event_get_device(event))
+            self._remember_device(self._api.ei_event_get_device(event))
         elif event_type == EI_EVENT_DEVICE_RESUMED:
-            self._start_emulating(self._symbols.ei_event_get_device(event))
+            self._start_emulating(self._api.ei_event_get_device(event))
         elif event_type in (EI_EVENT_DEVICE_PAUSED, EI_EVENT_DEVICE_REMOVED):
-            self._forget_device(self._symbols.ei_event_get_device(event))
+            self._forget_device(self._api.ei_event_get_device(event))
         elif event_type == EI_EVENT_DISCONNECT:
             raise LibeiUnavailable("the compositor disconnected the sender")
 
@@ -369,10 +386,11 @@ class LibeiBackend:
         """
         if not seat:
             return
-        args = [ctypes.c_void_p(seat)]
-        args.extend(ctypes.c_int(cap) for cap in _WANTED_CAPS)
-        args.append(ctypes.c_void_p(None))
-        self._symbols.ei_seat_bind_capabilities(*args)
+        self._api.ei_seat_bind_capabilities(
+            ctypes.c_void_p(seat),
+            *(ctypes.c_int(cap) for cap in _WANTED_CAPS),
+            ctypes.c_void_p(None),
+        )
 
     def _remember_device(self, device: int) -> None:
         """Keep a reference to a device for each capability it carries."""
@@ -380,10 +398,10 @@ class LibeiBackend:
             return
         kept = False
         for cap in _WANTED_CAPS:
-            if not self._symbols.ei_device_has_capability(device, cap):
+            if not self._api.ei_device_has_capability(device, cap):
                 continue
             if not kept:
-                self._symbols.ei_device_ref(device)
+                self._api.ei_device_ref(device)
                 kept = True
             self._devices[cap] = device
 
@@ -392,7 +410,7 @@ class LibeiBackend:
         if not device or device not in self._devices.values():
             return
         self._sequence += 1
-        self._symbols.ei_device_start_emulating(device, self._sequence)
+        self._api.ei_device_start_emulating(device, self._sequence)
         self._emulating[device] = True
 
     def _forget_device(self, device: int) -> None:
@@ -403,7 +421,7 @@ class LibeiBackend:
         stale = [cap for cap, known in self._devices.items() if known == device]
         for cap in stale:
             del self._devices[cap]
-        self._symbols.ei_device_unref(device)
+        self._api.ei_device_unref(device)
 
     def _has_required_devices(self) -> bool:
         return all(self._emulating.get(self._devices.get(cap, 0), False)
@@ -422,14 +440,14 @@ class LibeiBackend:
         """
         regions: List[Region] = []
         for index in range(_MAX_REGIONS):
-            region = self._symbols.ei_device_get_region(device, index)
+            region = self._api.ei_device_get_region(device, index)
             if not region:
                 break
             regions.append((
-                int(self._symbols.ei_region_get_x(region)),
-                int(self._symbols.ei_region_get_y(region)),
-                int(self._symbols.ei_region_get_width(region)),
-                int(self._symbols.ei_region_get_height(region)),
+                int(self._api.ei_region_get_x(region)),
+                int(self._api.ei_region_get_y(region)),
+                int(self._api.ei_region_get_width(region)),
+                int(self._api.ei_region_get_height(region)),
             ))
         return regions
 
@@ -487,7 +505,7 @@ class LibeiBackend:
                     f"no libei device is emulating capability {capability}",
                 )
             send(device)
-            self._symbols.ei_device_frame(device, self._symbols.ei_now(self._ei))
+            self._api.ei_device_frame(device, self._api.ei_now(self._ei))
 
     def _teardown(self) -> None:
         """Release what is safe to release; abandon what is not.
@@ -520,11 +538,14 @@ class LibeiBackend:
         process, since :func:`connected_backend` probes only once. A segfault
         in a library that drives someone's desktop is far worse than that.
         """
-        if self._ei is not None and self._safe_to_unref():
+        # Read through the attribute, not `_api`: this runs from the
+        # `except BaseException` handler in `connect`, where raising would
+        # replace the real failure with a complaint about the symbol table.
+        symbols = self._symbols
+        if symbols is not None and self._ei is not None and self._safe_to_unref():
             for device in set(self._devices.values()):
-                _quietly(lambda handle=device:
-                         self._symbols.ei_device_unref(handle))
-            _quietly(lambda: self._symbols.ei_unref(self._ei))
+                _quietly(partial(symbols.ei_device_unref, device))
+            _quietly(partial(symbols.ei_unref, self._ei))
         self._devices.clear()
         self._emulating.clear()
         self._ei = None

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import threading
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 try:
     import av  # type: ignore
@@ -55,21 +55,26 @@ class SessionRecorder:
         self._started = False
         self._closed = False
 
-    def _open(self, frame) -> None:
-        if self._container is not None:
-            return
+    def _open(self, frame) -> Tuple[
+        "av.container.OutputContainer", "av.video.stream.VideoStream",
+    ]:
+        """Return the open (container, stream) pair, creating it on first use."""
+        if self._container is not None and self._stream is not None:
+            return self._container, self._stream
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._container = av.open(str(self._path), mode="w")
-        stream = self._container.add_stream(self._codec, rate=self._fps)
+        container = av.open(str(self._path), mode="w")
+        stream = container.add_stream(self._codec, rate=self._fps)
         stream.width = frame.width
         stream.height = frame.height
         stream.pix_fmt = self._pixel_format
+        self._container = container
         self._stream = stream
         self._started = True
         autocontrol_logger.info(
             "session_recorder: writing to %s (%dx%d @%dfps, %s)",
             self._path, frame.width, frame.height, self._fps, self._codec,
         )
+        return container, stream
 
     def write_frame(self, frame) -> None:
         """Encode one ``av.VideoFrame``; lazy-init the container."""
@@ -79,10 +84,9 @@ class SessionRecorder:
             if self._closed:
                 return
             try:
-                self._open(frame)
-                packets = self._stream.encode(frame)
-                for packet in packets:
-                    self._container.mux(packet)
+                container, stream = self._open(frame)
+                for packet in stream.encode(frame):
+                    container.mux(packet)
             except (ValueError, OSError, RuntimeError) as error:
                 autocontrol_logger.warning(
                     "session_recorder: write failed, stopping: %r", error,
@@ -99,17 +103,18 @@ class SessionRecorder:
             self._teardown_locked()
 
     def _teardown_locked(self) -> None:
-        if self._stream is not None:
+        container, stream = self._container, self._stream
+        if stream is not None and container is not None:
             try:
-                for packet in self._stream.encode(None):
-                    self._container.mux(packet)
+                for packet in stream.encode(None):
+                    container.mux(packet)
             except (ValueError, OSError, RuntimeError) as error:
                 autocontrol_logger.debug(
                     "session_recorder: flush failed: %r", error,
                 )
-        if self._container is not None:
+        if container is not None:
             try:
-                self._container.close()
+                container.close()
             except (ValueError, OSError, RuntimeError) as error:
                 autocontrol_logger.debug(
                     "session_recorder: close failed: %r", error,

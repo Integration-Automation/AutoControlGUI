@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from je_auto_control.linux_with_x11.core.utils.x11_linux_vk import (
     x11_linux_key_backspace, x11_linux_key_slash_b, x11_linux_key_tab,
     x11_linux_key_enter, x11_linux_key_return, x11_linux_key_shift,
@@ -70,6 +72,10 @@ from je_auto_control.linux_with_x11.mouse.x11_linux_mouse_control import (
 from je_auto_control.linux_with_x11.record.x11_linux_record import x11_linux_recorder
 from je_auto_control.linux_with_x11.screen import x11_linux_screen
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.wrapper.backend_contract import (
+    KeyboardCheckBackend, RecorderBackend, ScreenBackend,
+    X11UnixKeyboardBackend, X11UnixMouseBackend,
+)
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 autocontrol_logger.info("Load Linux x11 Setting")
@@ -215,8 +221,13 @@ special_mouse_keys_table = {
     "scroll_right": x11_linux_scroll_direction_right,
 }
 
-def _select_input_backend():
+def _select_input_backend() -> Tuple[X11UnixKeyboardBackend,
+                                     X11UnixMouseBackend]:
     """Pick keyboard/mouse modules based on JE_AUTOCONTROL_LINUX_BACKEND.
+
+    Both candidates are checked against the seam's Unix protocols here, so a
+    uinput backend that drifted from XTest's shape fails in this function
+    rather than at a call site three layers up.
 
     Default is ``x11`` (the existing XTest backend). Set the env var
     to ``uinput`` to route synthetic input through ``/dev/uinput`` —
@@ -259,9 +270,9 @@ def _select_input_backend():
 
 
 keyboard, mouse = _select_input_backend()
-keyboard_check = x11_linux_listener
-screen = x11_linux_screen
-recorder = x11_linux_recorder
+keyboard_check: KeyboardCheckBackend = x11_linux_listener
+screen: ScreenBackend = x11_linux_screen
+recorder: RecorderBackend = x11_linux_recorder
 
 if None in [keyboard_keys_table, mouse_keys_table, special_mouse_keys_table, keyboard, mouse, screen, recorder]:
     raise AutoControlException("Can't init auto control")

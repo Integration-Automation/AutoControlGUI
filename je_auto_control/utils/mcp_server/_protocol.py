@@ -13,7 +13,7 @@ import os
 import subprocess  # nosec B404  # reason: only its TimeoutExpired type is referenced
 import sys
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -39,8 +39,10 @@ _FRAMEWORK_TOOL_ERRORS = (
 _BUILTIN_DISPATCH_ERRORS = (
     OSError, RuntimeError, ValueError, TypeError, KeyError,
 )
-_DISPATCH_ERRORS = _BUILTIN_DISPATCH_ERRORS + _FRAMEWORK_TOOL_ERRORS
-_TOOL_INVOKE_ERRORS = (
+_DISPATCH_ERRORS: Tuple[Type[BaseException], ...] = (
+    _BUILTIN_DISPATCH_ERRORS + _FRAMEWORK_TOOL_ERRORS
+)
+_TOOL_INVOKE_ERRORS: Tuple[Type[BaseException], ...] = (
     _BUILTIN_DISPATCH_ERRORS + (AttributeError,) + _FRAMEWORK_TOOL_ERRORS
 )
 

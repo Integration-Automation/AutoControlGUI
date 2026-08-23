@@ -18,12 +18,13 @@
 
 `CLAUDE.md` §Size and complexity limits 規定:超標檔案只能列在這裡,列不進來的就是缺陷。
 清單上的檔案**可以改、可以變短,但不得再變長**——要再長就得先拆。
-行數為 2026-08-19 實測（`len(text.splitlines())`）。
+行數為 2026-08-19 實測（`len(text.splitlines())`）；`webrtc_panel.py` 於
+2026-08-22 拆出 `advanced_group.py` 後降到 2,545，上限跟著往下走。
 
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
 | `utils/mcp_server/tools/_handlers.py` | 4,789 | 676 個 MCP 工具的處理函式本體。與 `_factories.py`（表）不同,這裡是邏輯,應該依主題拆成 `_handlers/` 套件（input／screen／window／file／agent…）。拆點清楚,純粹是量大。 |
-| `gui/remote_desktop/webrtc_panel.py` | 2,555 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
+| `gui/remote_desktop/webrtc_panel.py` | 2,545 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
 | `utils/accessibility/backends/windows_backend.py` | 915 | 已拆出 `windows_query.py`（170）與 `windows_state.py`（98）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
@@ -39,7 +40,7 @@
 2026-08-18 重新實測時,表上原有的七列**全部**變長,而 `CLAUDE.md` 明寫
 「列上的檔案不得再變長,要再長就得先拆」,所以這裡曾標成 `[DECIDE]`。
 **維護者已於 2026-08-19 拍板:接受實測數字當新基準**——不為了回到舊數字而去拆
-`_handlers.py`（4,789）與 `webrtc_panel.py`（2,555）。上表的行數即是各自的新上限,
+`_handlers.py`（4,789）與 `webrtc_panel.py`。上表的行數即是各自的新上限,
 規則不變:只准變短,再變長就得先拆。
 
 同一批裡有六個檔案在 2026-08-19 已經拆回線內、從表上移除,做法寫在
@@ -219,31 +220,131 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 
 ---
 
-## 三個 Qt thread-marshal 測試永久跳過中
+## 兩個門檻：mypy 那半到終點了，覆蓋率那半是量錯了
 
-`TODO` — 需要子行程隔離，做法已知
+`DECIDE` — 兩半都做完了，只剩「下一個覆蓋率目標是多少」要維護者拍板
 
-`test/unit_test/headless/test_r3_gui_thread_marshal.py` 裡三個測試被無條件 skip：
-`test_panel_signals_expose_file_received`、`test_webrtc_received_file_marshaled_to_gui`、
-`test_thumbnail_poll_thread_is_reaped`。skip 理由自己寫著「needs subprocess
-isolation (see test_actions_menu_gui) … skip until then」——那句「until then」就是這條。
+原本這一條記的是兩個只存在於 `pyproject.toml` 註解裡、沒有任何機制的承諾。
+2026-08-21 把**機制**補上了（做法見 [WHATS_NEW.md](WHATS_NEW.md)），兩半也都走完了：
+型別契約的豁免清單 2026-08-22 清空，平台縫最後兩個名稱（`keyboard`／`mouse`）
+2026-08-23 拿到合約；覆蓋率那半發現不是爬得不夠，是量測起點錯了，修正後地板
+從 50 提到 69。
 
-跟 `CLAUDE.md` §Testing 記的 0xC0000409 `__fastfail` 是同一個家族：
-worker→GUI 的 teardown 在共用的 pytest 行程裡把整個監獸帶走。
-`test_actions_menu_gui.py` 已經示範過解法（把建 widget 的部分丟進子行程），
-這三個只是還沒改過去。沒改之前，這三條路徑沒有任何回歸保護。
+**這一條還留著，是因為只剩一個問題要維護者回答：下一個覆蓋率目標值是多少。**
+另外兩節留著是因為它們記的那幾個坑之後還會踩到。
 
----
+### 覆蓋率：目標 70 其實早就到了，是量錯了
 
-## 兩個講好要爬、還沒爬的門檻
+`DECIDE` — 地板已經設成修正後矩陣的最低那一格（69）；**下一個目標值要維護者定**
 
-`TODO` — 兩者都寫在 `pyproject.toml` 的註解裡，但不在任何待辦清單上
+`fail_under` 一度從 35 提到 50，理由寫在 `pyproject.toml`。**那兩個數字都低了大約
+24 點**，而原因不在測試，在量測的起點：
 
-- **覆蓋率**：`fail_under = 35`，註解寫著「Raise toward 70 as legacy modules are
-  brought under the stable API contract」。目標是 70，今天是 35，中間沒有計畫。
-- **mypy 範圍**：CI 只型別檢查兩條路徑（`quality.yml` 的
-  `mypy je_auto_control/api je_auto_control/utils/failure_bundle`）。註解寫著
-  「followed legacy modules are analysed for signatures but not reported until they
-  join the contract」——同樣是講好要擴、還沒擴。
+`quality.yml` 用的是 `pytest --cov`，而本套件註冊了 `pytest11` entry point。
+pytest 在載入外掛時就會 import `je_auto_control.utils.pytest_plugin.plugin`——
+要 import 那個子模組，Python 必須先執行 `je_auto_control/__init__.py`，也就是門面，
+連帶把好幾百個模組拉進來。`pytest-cov` 是**在那之後**才開始量的，所以那幾百個模組的
+import 期程式碼（`def` 行、類別本體、常數、兩張大分派表）全部被記成「從沒執行過」。
 
-兩者都不是一次做得完的事，但放在這裡至少讓「下一步是什麼」有一個地方可寫。
+2026-08-23 實測，同一套測試、同一份 `[tool.coverage.run]` 設定，**只差開始的時機**：
+
+| 量法 | 總覆蓋率 |
+| --- | ---: |
+| `pytest --cov=je_auto_control` | 52.22% |
+| `coverage run -m pytest` | **72.05%** |
+
+差 11,962 個 statement。受害最深的正好是最大的幾個檔：`action_executor.py` +786、
+`_handlers.py` +684、門面自己 +369、`_factories.py` +209。
+
+**一個註冊了 pytest 外掛的套件，沒辦法用 `pytest --cov` 量自己。**
+`quality.yml` 已經改成 `coverage run -m pytest`（先於 pytest 載入任何東西），
+`test/unit_test/headless/test_coverage_measurement.py` 把這件事釘住——因為兩種寫法的
+差別在綠色的建置裡看不出來：改回去會白送 24 點，而每一格照樣是綠的。
+
+修正後的九宮格已經量出來了（2026-08-23，本 PR 的 run）：
+
+| | 最低 | 最高 |
+| --- | --- | --- |
+| 修正前（`pytest --cov`） | 50.26%（ubuntu-22.04／3.10） | 51.69%（windows-2022／3.14） |
+| 修正後（`coverage run`） | **69.67%**（ubuntu-22.04／3.14） | 70.97%（windows-2022／3.12） |
+
+地板因此設成 **69**——取最低那一格往下取整，與當初 50 取自 50.26% 是同一個慣例。
+`[tool.coverage.report]` 的 `precision` 也從預設的 0 提到 2：預設精度下九格全部印
+「70%」，而它們其實是 69.67 到 70.97，害得這次的地板得去 XML artifact 裡撈。
+順帶把 `fail_under` 的容差從一整個百分點縮到 0.01。
+地板只有一個家（`pyproject.toml` 的 `fail_under`），`quality.yml` 不再另外抄一份。
+
+Windows 是高的那一角，因為門面 import 進來的是**它自己那個平台的後端**；
+換句話說剩下的那 30 點裡，有一部分是任何單一平台都拿不到的。
+
+**還要決定的**：70 是舊的目的地，現在等於已經到了，**下一個目標值該由維護者定**。
+真正還低的是哪幾塊，現在有實測（本機 Windows／3.14，修正後）：
+`utils/remote_desktop` 35%、`utils/mcp_server` 34%（`_handlers.py` 自己 10%）、
+`utils/executor` 41%、`utils/accessibility` 29%、`wrapper/window_backends` 10%。
+這四塊的共同形狀是「一大堆薄轉接函式包著已經測過的無頭函式」，所以往上爬的方式
+是走註冊表逐一驅動，而不是一支一支手寫測試。
+
+### mypy：整包把關，**豁免清單已經清空**
+
+`TODO` → **完成（2026-08-22）**
+
+範圍不再是兩條路徑，而是**整包減去一張只准變少的清單**
+（`test/verify/typing_contract_exempt.txt`）。差別在於預設值：路徑清單只有人想到才會長，
+新模組預設在圈外；現在新模組**預設就在契約裡**。
+
+**2026-08-22 那張清單降到零**：`je_auto_control/` 的 1,018 個檔案在
+win32／linux／darwin 三個目標上全部乾淨。清掉 136 個模組的過程與每一群的做法寫在
+[WHATS_NEW.md](WHATS_NEW.md)；這裡只留下之後還用得到的五件事：
+
+* **反覆出現的五種形狀**：mixin 讀取宿主的成員（用類別本體裡的
+  `if TYPE_CHECKING:` 宣告，執行期會被剝掉）、`self._x = None` 沒有標注
+  （mypy 會把屬性的型別判成 `None`）、`callable` 被當成型別用、
+  `x: SomeType = None` 的隱含 Optional、以及掉了長度的 tuple。
+* **攔截用的 tuple 必須標成 `Tuple[Type[BaseException], ...]`**，而且要收成一個
+  模組常數——`except (A, B, *TUPLE)` 的星號解包 mypy 跟不進 `except`。
+* **`# type: ignore` 只有當它是那一行的第一個註解時才生效**（已實測），所以有
+  `# nosec` 的行要把它放前面。
+* **`cv2` 的 stub 會隨版本變**：`pyproject.toml` 把它列在「ship no stubs 的基礎相依」
+  底下，但 opencv-python 有附 `.pyi`，閘門會去讀。實測 4.13.0：`MSER_create`、
+  `ORB_create`、`VideoWriter_fourcc` 執行期都在、stub 裡都沒有。`>=4.8,<6` 範圍內
+  版本一換，判定就可能跟著動——與 numpy 那條註解同一類的坑。
+* **要讓 mypy 剪掉一個分支，整條條件都得是它讀得懂的**：`sys.platform == "..."`
+  與 `.startswith("...")` 算，`in [...]` 不算，而只要裡面**混進一個函式呼叫**
+  （`is_windows()`），`or`／`and` 整條就變成未知、兩邊都會被檢查。所以
+  `platform_wrapper` 那種「問 `platform_id` 才知道綁哪個後端」的分支**沒辦法**
+  讓自己被剪掉——它綁的三種形狀互不相容，一個型別蓋不住。做法是那兩個名稱進來時
+  先落在私有的 `Any` 上、出去時才標合約：後端那一側在 `_platform_*.py` 被檢查，
+  呼叫端那一側在 `auto_control_*.py` 被檢查，中間那一接頭本來就沒有東西可查。
+  細節見 `wrapper/backend_contract.py` 的 docstring。
+
+清單現在只有標頭、沒有任何條目。**它變長就是退步**，`typing_contract_verify.py`
+會在有人讓它變長時紅掉。
+
+#### 已拍板（2026-08-22）：Win32 ctypes 表面用 28 個逐行抑制解決
+
+原本這裡是一條 `DECIDE`，寫的是「`windows/` 底下 8 個模組」。重新實測後是
+**16 個模組**，而且**一半不在 `windows/` 底下**（`utils/trash/`、`utils/app_idle/`、
+`utils/file_assoc/`、`utils/idle_keepawake/`、`utils/lock_session/`、
+`utils/session_guard/`、`utils/usb/passthrough/key_provider.py`、
+`gui/main_window.py`）——這一點直接否掉了原本推薦的那一條（照目錄決定用哪個平台量，
+分不到這八個）。
+
+**維護者選了逐行 `# type: ignore` 附理由**，實際只用了 **28 行**（原本估的 58
+是把同一行在 linux 與 darwin 各算了一次）。做法見 [WHATS_NEW.md](WHATS_NEW.md)，
+兩件必須實測的事記在這裡免得再踩：
+
+* **mypy 只認每一行的第一個註解**——接在既有 `# nosec` 後面的 `# type: ignore`
+  完全不生效（已實測）。所以有 `# nosec` 的那兩行，marker 放前面、兩個理由併成一句。
+* 有九行放不進 120 字元，是**改寫**而不是把理由砍到看不懂：括號換行時 marker 跟著
+  左括號走，兩處先把值取出來成區域變數（DPAPI 的 `last_error`、input hook 的
+  `kernel32`），讀起來比原本的一行式更清楚。
+
+十六個模組事後都在真的 Windows 機器上重新 import 並實際呼叫過
+（`dpapi_available()`、`_windows_locked()`、`check_key_is_press`）——
+只有型別檢查器驗過的改寫等於沒人驗過。
+
+有一件事別再踩：**這個閘門的判定不能隨環境浮動**。裝了 `[gui]`／`[webrtc]` 的開發機
+與乾淨的 `pip install -e .` 曾經對 38 個模組看法不同（36 個 Qt 模組只在 PySide6
+*不在*時才過關，2 個只在 babel／pytest 不在時才失敗）。修法是把所有非基礎相依的
+第三方模組壓成 `Any`；其中 `follow_imports = "skip"` 對 `.pyi` 無效、必須同時開
+`follow_imports_for_stubs`，正是 numpy 那條註解早就寫過的坑。

@@ -7,7 +7,17 @@ Covers audit finding #5: ``mouse_scroll(value, x, y)`` with BOTH
 coordinates supplied must NOT query the cursor position (which raises
 ``NotImplementedError`` on Wayland); it should only be queried to fill in
 a coordinate that was actually omitted.
+
+``sys.platform`` is pinned rather than left at the host's, because
+``mouse_scroll`` branches on it and this file's finding is a Wayland one: with
+the host's value the assertions ran against the single-wheel-axis branch on a
+Windows or macOS developer machine and the named-axis branch on the Linux
+runner, so the two were not testing the same code. The axis table is a real one
+for the same reason — the branch this file means to exercise resolves the
+direction name through it.
 """
+import sys
+
 import je_auto_control  # noqa: F401  # load the facade under the real platform first
 from je_auto_control.wrapper import auto_control_mouse as acm
 
@@ -29,7 +39,9 @@ def _install_common(monkeypatch, get_position):
     monkeypatch.setattr(acm, "get_mouse_position", get_position)
     monkeypatch.setattr(acm, "screen_size", lambda: (1920, 1080))
     monkeypatch.setattr(acm, "mouse", fake_mouse)
-    monkeypatch.setattr(acm, "special_mouse_keys_table", {}, raising=False)
+    monkeypatch.setattr(acm, "special_mouse_keys_table",
+                        {"scroll_down": 5}, raising=False)
+    monkeypatch.setattr(sys, "platform", "linux")
 
     def _set_pos(x, y):
         calls["set_pos"] += 1

@@ -27,7 +27,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
@@ -201,7 +201,7 @@ def _interactive_configure() -> int:
     """Prompt the user for the four required fields and write a config."""
     print("AutoControl host service — interactive configuration")
     print(f"Config will be written to: {_DEFAULT_CONFIG_PATH}")
-    answers = {}
+    answers: Dict[str, Any] = {}
     answers["token"] = input("Auth token (shared with viewers): ").strip()
     answers["server_url"] = input("Signaling server URL: ").strip()
     answers["host_id"] = input("Host ID: ").strip()

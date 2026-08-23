@@ -92,7 +92,7 @@ def _load_dll() -> ctypes.CDLL:
     """Load and prototype ``interception.dll``."""
     path = _resolve_dll_path()
     try:
-        dll = ctypes.WinDLL(path)
+        dll = ctypes.WinDLL(path)  # type: ignore[attr-defined]  # reason: win32-only ctypes
     except OSError as exc:
         raise InterceptionUnavailable(
             f"could not load {path!r}: {exc}. Install the driver from "
@@ -192,7 +192,7 @@ def default_mouse_device() -> int:
 
 # --- vk → scancode helper ---------------------------------------------------
 
-_user32 = ctypes.WinDLL("user32", use_last_error=True)
+_user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]  # reason: win32-only ctypes
 _user32.MapVirtualKeyW.restype = wintypes.UINT
 _user32.MapVirtualKeyW.argtypes = [wintypes.UINT, wintypes.UINT]
 

@@ -1,4 +1,5 @@
 """Tests for FolderSyncEngine (round 22 — additive folder mirror)."""
+import os
 import time
 
 import pytest
@@ -8,7 +9,10 @@ from je_auto_control.utils.remote_desktop.file_sync import FolderSyncEngine
 
 @pytest.fixture()
 def watch_dir(tmp_path):
-    return tmp_path
+    """A dedicated watch dir, so a test can stage files beside it."""
+    target = tmp_path / "watch"
+    target.mkdir()
+    return target
 
 
 def _make_engine(watch, sender, *, interval=0.2, include_subdirs=False):
@@ -25,6 +29,7 @@ def test_pre_existing_files_not_pushed(watch_dir):
     engine = _make_engine(watch_dir, lambda p, n: sent.append(n))
     engine.start()
     try:
+        assert engine.wait_until_ready()
         time.sleep(0.5)  # one tick
     finally:
         engine.stop()
@@ -36,31 +41,35 @@ def test_new_file_is_pushed(watch_dir):
     engine = _make_engine(watch_dir, lambda p, n: sent.append(n))
     engine.start()
     try:
-        time.sleep(0.4)  # let initial snapshot settle
+        assert engine.wait_until_ready()  # baseline is fixed from here on
         (watch_dir / "new.txt").write_text("hi", encoding="utf-8")
-        time.sleep(0.6)
+        time.sleep(1.1)
     finally:
         engine.stop()
     assert "new.txt" in sent, sent
 
 
-def test_modified_file_is_pushed_again(watch_dir):
+def test_modified_file_is_pushed_again(watch_dir, tmp_path):
     sent = []
     target = watch_dir / "doc.txt"
     target.write_text("v1", encoding="utf-8")
     engine = _make_engine(watch_dir, lambda p, n: sent.append(n))
     engine.start()
     try:
-        time.sleep(0.4)
-        # bump mtime forward so the diff fires
+        assert engine.wait_until_ready()
+        # Bump mtime forward so the diff fires, but stage the new content
+        # *outside* the watch dir and swap it in atomically. Writing in
+        # place exposes an intermediate mtime between write and utime, and
+        # a tick landing in that window counts the edit twice.
         future = target.stat().st_mtime + 5.0
-        target.write_text("v2", encoding="utf-8")
-        import os
-        os.utime(target, (future, future))
-        time.sleep(0.6)
+        staged = tmp_path / "doc.txt.staged"
+        staged.write_text("v2", encoding="utf-8")
+        os.utime(staged, (future, future))
+        os.replace(staged, target)
+        time.sleep(1.1)
     finally:
         engine.stop()
-    assert sent.count("doc.txt") == 1
+    assert sent.count("doc.txt") == 1, sent
 
 
 def test_deletion_does_not_propagate(watch_dir):
@@ -71,9 +80,9 @@ def test_deletion_does_not_propagate(watch_dir):
     engine = _make_engine(watch_dir, lambda p, n: sent.append(n))
     engine.start()
     try:
-        time.sleep(0.4)
+        assert engine.wait_until_ready()
         target.unlink()
-        time.sleep(0.6)
+        time.sleep(1.1)
     finally:
         engine.stop()
     assert sent == [], f"deletion was propagated: {sent}"
@@ -91,7 +100,7 @@ def test_sender_failure_is_retried_next_tick(watch_dir):
     engine = _make_engine(watch_dir, flaky_sender)
     engine.start()
     try:
-        time.sleep(0.7)
+        assert engine.wait_until_ready()
         (watch_dir / "retry.txt").write_text("data", encoding="utf-8")
         # Engine clamps interval to 0.5s minimum, so wait ≥1.5s for two ticks.
         time.sleep(1.7)

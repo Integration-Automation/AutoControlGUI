@@ -26,7 +26,7 @@ import signal
 import sys
 import threading
 import time
-from typing import Dict, List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlActionException,
@@ -215,7 +215,7 @@ def cmd_start_rest(args: argparse.Namespace) -> int:
     return 0
 
 
-def _run_until_signal(shutdown: callable) -> None:
+def _run_until_signal(shutdown: Callable[[], None]) -> None:
     stopping = {"flag": False}
 
     def _handler(_signum, _frame):

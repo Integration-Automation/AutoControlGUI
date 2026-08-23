@@ -20,5 +20,9 @@ bandit==1.9.4
 pytest==9.1.1
 pytest-timeout==2.4.0
 pytest-rerunfailures==15.1
-pytest-cov>=6.0
+# `coverage`, not `pytest-cov`: this package registers a `pytest11` entry
+# point, so pytest imports the facade before pytest-cov starts measuring and
+# `pytest --cov` under-reports by ~24 points. Measure with
+# `coverage run -m pytest`; see the comment in .github/workflows/quality.yml.
+coverage==7.15.4
 mypy>=1.15

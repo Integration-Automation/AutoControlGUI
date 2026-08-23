@@ -271,6 +271,9 @@ def _default_remote_runner(node: DagNode,
 def _resolve_remote_actions(node: DagNode) -> List[Any]:
     if node.actions is not None:
         return list(node.actions)
+    if node.action_file is None:
+        raise RuntimeError(
+            f"node {node.id!r} has neither actions nor an action_file")
     import json
     with open(node.action_file, "r", encoding="utf-8") as fp:
         loaded = json.load(fp)

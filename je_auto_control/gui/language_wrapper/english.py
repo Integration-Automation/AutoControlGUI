@@ -574,6 +574,8 @@ english_word_dict = {
     "rd_webrtc_sync_start": "Start sync",
     "rd_webrtc_sync_stop": "Stop sync",
     "rd_webrtc_sync_dir_required": "Pick a local folder first",
+    "rd_webrtc_not_started": "Start hosting first",
+    "rd_webrtc_not_connected": "Connect to a host first",
     "rd_webrtc_browse": _BROWSE,
 
     # Auto Click Tab

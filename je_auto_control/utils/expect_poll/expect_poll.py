@@ -12,7 +12,7 @@ Pure-stdlib, imports no ``PySide6``.
 """
 import time
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Dict
 
 from je_auto_control.utils.exception.exceptions import AutoControlActionException
 
@@ -63,7 +63,7 @@ def to_be_truthy() -> Matcher:
 
 def to_be_stable(times: int = 3) -> Matcher:
     """Match once the value has been equal across ``times`` consecutive polls."""
-    state = {"last": object(), "count": 0}
+    state: Dict[str, Any] = {"last": object(), "count": 0}
 
     def matcher(value: Any) -> bool:
         if value == state["last"]:

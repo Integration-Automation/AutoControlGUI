@@ -118,7 +118,7 @@ class ClientHandle:
                          w_value: int = 0, w_index: int = 0,
                          data: bytes = b"", length: int = 0,
                          timeout_ms: int = 1000) -> bytes:
-        request = {
+        request: Dict[str, Any] = {
             "bm_request_type": int(bm_request_type),
             "b_request": int(b_request),
             "w_value": int(w_value), "w_index": int(w_index),

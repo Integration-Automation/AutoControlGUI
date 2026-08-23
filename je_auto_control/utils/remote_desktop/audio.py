@@ -12,7 +12,7 @@ without noticeably starving the video pipe.
 """
 import threading
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 DEFAULT_SAMPLE_RATE = 16_000
 DEFAULT_CHANNELS = 1
@@ -83,7 +83,7 @@ class AudioCapture:
         self._sample_rate = int(sample_rate)
         self._channels = int(channels)
         self._block_frames = int(block_frames)
-        self._stream = None
+        self._stream: Optional[Any] = None
         self._lock = threading.Lock()
 
     @property
@@ -153,7 +153,7 @@ class AudioPlayer:
         self._device = device
         self._sample_rate = int(sample_rate)
         self._channels = int(channels)
-        self._stream = None
+        self._stream: Optional[Any] = None
         self._lock = threading.Lock()
 
     @property

@@ -329,7 +329,7 @@ class UsbPassthroughSession:
         with self._lock:
             claim_id = self._resume_index.get(token)
             claim = self._claims.get(claim_id) if claim_id is not None else None
-        if claim is None:
+        if claim is None or claim_id is None:
             return _opened_failure(frame.claim_id, "unknown or expired resume token")
         self._audit("usb_resume", "?", "?", None, detail=f"claim_id={claim_id}")
         return Frame(

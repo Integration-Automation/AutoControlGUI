@@ -12,9 +12,11 @@ import ctypes
 
 def check_key_is_press(keycode: Union[int, str]) -> bool:
     if isinstance(keycode, int):
-        temp: int = ctypes.windll.user32.GetAsyncKeyState(keycode)
+        temp: int = ctypes.windll.user32.GetAsyncKeyState(  # type: ignore[attr-defined]  # reason: win32-only ctypes
+            keycode)
     else:
-        temp = ctypes.windll.user32.GetAsyncKeyState(ord(keycode))
+        temp = ctypes.windll.user32.GetAsyncKeyState(  # type: ignore[attr-defined]  # reason: win32-only ctypes
+            ord(keycode))
     if temp != 0:
         return True
     return False

@@ -77,7 +77,8 @@ def _draw_arrow(draw: ImageDraw.ImageDraw, ann: Dict[str, Any]) -> None:
 
 
 def _draw_text(draw: ImageDraw.ImageDraw, ann: Dict[str, Any]) -> None:
-    pos = tuple(int(v) for v in ann["position"])
+    raw = ann["position"]
+    pos = (float(raw[0]), float(raw[1]))
     draw.text(pos, str(ann.get("text", "")), fill=_color(ann.get("color")))
 
 
@@ -101,7 +102,7 @@ def annotate_screenshot(source: ImageSource,
     draw = ImageDraw.Draw(base)
     dispatch = {"box": _draw_box, "arrow": _draw_arrow, "text": _draw_text}
     for ann in annotations:
-        handler = dispatch.get(ann.get("type"))
+        handler = dispatch.get(str(ann.get("type", "")))
         if handler is not None:
             handler(draw, ann)
     out = Path(output_path)

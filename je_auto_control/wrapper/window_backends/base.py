@@ -1,5 +1,5 @@
 """Abstract window-management backend."""
-from typing import List, Optional, Tuple
+from typing import List, NoReturn, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlUnsupportedOperationException,
@@ -113,8 +113,14 @@ class WindowManageBackend:
 
     # --- refusal -----------------------------------------------------------
 
-    def _unsupported(self, operation: str):
-        """Raise a clear error naming what this backend cannot do."""
+    def _unsupported(self, operation: str) -> NoReturn:
+        """Raise a clear error naming what this backend cannot do.
+
+        ``NoReturn`` is what makes the callers above type-check: every one of
+        them ends in this call and declares a real return type, which reads as
+        "falls off the end returning None" unless the checker is told this
+        never comes back.
+        """
         raise AutoControlUnsupportedOperationException(
             f"{operation} is not supported by the {self.name} window backend",
         )

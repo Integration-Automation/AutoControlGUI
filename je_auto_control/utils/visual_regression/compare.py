@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple, cast
 
 if TYPE_CHECKING:  # pragma: no cover - annotations only
     from PIL import Image
@@ -129,11 +129,16 @@ def image_difference(actual: Image.Image, expected: Image.Image,
     overlay_draw = ImageDraw.Draw(overlay)
     differing = 0
     diff_data = diff.load()
+    if diff_data is None:
+        raise ValueError("could not read the difference image")
     threshold = max(0, int(per_pixel_threshold))
     width, height = diff.size
     for y in range(height):
         for x in range(width):
-            r, g, b = diff_data[x, y][:3]
+            # Both images were converted to RGB above, so a pixel is
+            # a three-int tuple rather than the union `load()` promises.
+            pixel = cast(Sequence[int], diff_data[x, y])
+            r, g, b = pixel[0], pixel[1], pixel[2]
             if max(r, g, b) > threshold:
                 differing += 1
                 overlay_draw.point((x, y), fill=(255, 0, 0))

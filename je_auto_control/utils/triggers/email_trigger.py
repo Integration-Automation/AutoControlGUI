@@ -107,6 +107,7 @@ def _connect(trigger: EmailTrigger) -> imaplib.IMAP4:
     # Pin a modern TLS floor; create_default_context already does this on
     # 3.10+, but stating it explicitly satisfies python:S4423.
     context.minimum_version = ssl_module.TLSVersion.TLSv1_2
+    client: imaplib.IMAP4
     if trigger.use_ssl:
         client = imaplib.IMAP4_SSL(trigger.host, trigger.port,
                                    ssl_context=context)
@@ -116,14 +117,20 @@ def _connect(trigger: EmailTrigger) -> imaplib.IMAP4:
     return client
 
 
-def _search_uids(client: imaplib.IMAP4, criteria: str) -> List[bytes]:
-    typ, data = client.uid("SEARCH", None, criteria or "UNSEEN")
+def _search_uids(client: imaplib.IMAP4, criteria: str) -> List[str]:
+    """Return the matching message UIDs.
+
+    ``imaplib`` accepts the UID as either ``str`` or ``bytes`` and encodes
+    ASCII either way; the searched-for UIDs arrive as bytes and are decoded
+    here so every helper below takes one type.
+    """
+    typ, data = client.uid("SEARCH", criteria or "UNSEEN")
     if typ != "OK" or not data or not data[0]:
         return []
-    return data[0].split()
+    return [chunk.decode("ascii", "replace") for chunk in data[0].split()]
 
 
-def _fetch_message(client: imaplib.IMAP4, uid: bytes):
+def _fetch_message(client: imaplib.IMAP4, uid: str):
     typ, data = client.uid("FETCH", uid, "(RFC822)")
     if typ != "OK" or not data or data[0] is None:
         return None
@@ -133,7 +140,7 @@ def _fetch_message(client: imaplib.IMAP4, uid: bytes):
     return email.message_from_bytes(bytes(raw), policy=email.policy.default)
 
 
-def _mark_seen(client: imaplib.IMAP4, uid: bytes) -> None:
+def _mark_seen(client: imaplib.IMAP4, uid: str) -> None:
     try:
         client.uid("STORE", uid, "+FLAGS", "(\\Seen)")
     except imaplib.IMAP4.error as error:
@@ -151,10 +158,9 @@ class EmailTriggerWatcher:
         self._triggers: Dict[str, EmailTrigger] = {}
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
-        if executor is None:
-            self._executor = self._default_executor
-        else:
-            self._executor = executor
+        self._executor: Callable[[list, Dict[str, Any]], Any] = (
+            self._default_executor if executor is None else executor
+        )
 
     @property
     def is_running(self) -> bool:
@@ -296,10 +302,9 @@ class EmailTriggerWatcher:
         return fired
 
     def _iter_unprocessed_uids(self, client: imaplib.IMAP4,
-                               trigger: EmailTrigger) -> Iterable[bytes]:
+                               trigger: EmailTrigger) -> Iterable[str]:
         for uid in _search_uids(client, trigger.search_criteria):
-            uid_str = uid.decode("ascii", errors="replace")
-            if uid_str in trigger._seen_uids:
+            if uid in trigger._seen_uids:
                 continue
             yield uid
 
@@ -310,12 +315,11 @@ class EmailTriggerWatcher:
                                  trigger.trigger_id, error)
 
     def _fire_for_uid(self, client: imaplib.IMAP4,
-                      trigger: EmailTrigger, uid: bytes) -> int:
+                      trigger: EmailTrigger, uid: str) -> int:
         msg = _fetch_message(client, uid)
         if msg is None:
             return 0
-        uid_str = uid.decode("ascii", errors="replace")
-        payload = _build_payload(uid_str, msg)
+        payload = _build_payload(uid, msg)
         # A missing/renamed script raises AutoControlJsonActionException (an
         # AutoControlException). Missing the base here let it escape *before*
         # the uid was marked seen below, so the same message re-fired every
@@ -329,7 +333,7 @@ class EmailTriggerWatcher:
                                      trigger.trigger_id, error)
         else:
             trigger.last_error = None
-        trigger._seen_uids.add(uid_str)
+        trigger._seen_uids.add(uid)
         if trigger.mark_seen:
             _mark_seen(client, uid)
         return 1

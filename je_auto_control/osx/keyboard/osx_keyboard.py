@@ -109,7 +109,11 @@ def press_key(keycode: int | str, is_shift: bool) -> None:
     :param keycode: 鍵盤代碼或特殊鍵名稱
     :param is_shift: 是否同時按下 Shift
     """
-    if keycode in special_key_table:
+    if isinstance(keycode, str):
+        # 字串在這裡只可能是特殊鍵名。表裡沒有的名字交給 `special_key` 說
+        # 「不認識這個鍵」，而不是當成 keycode 丟給 Quartz。
+        # A string only ever names a special key. One the table does not know
+        # is `special_key`'s refusal to make, not a keycode for Quartz.
         special_key(keycode, is_shift)
     else:
         normal_key(keycode, is_shift, True)
@@ -123,7 +127,11 @@ def release_key(keycode: int | str, is_shift: bool) -> None:
     :param keycode: 鍵盤代碼或特殊鍵名稱
     :param is_shift: 是否同時按下 Shift
     """
-    if keycode in special_key_table:
+    if isinstance(keycode, str):
+        # 字串在這裡只可能是特殊鍵名。表裡沒有的名字交給 `special_key` 說
+        # 「不認識這個鍵」，而不是當成 keycode 丟給 Quartz。
+        # A string only ever names a special key. One the table does not know
+        # is `special_key`'s refusal to make, not a keycode for Quartz.
         special_key(keycode, is_shift)
     else:
         normal_key(keycode, is_shift, False)

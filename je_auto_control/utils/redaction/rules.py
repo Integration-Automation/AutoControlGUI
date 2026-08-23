@@ -13,7 +13,7 @@ OCR import cost.
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Dict, Iterable, List, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Tuple
 
 from je_auto_control.utils.redaction.policies import (
     DETECTOR_CREDIT_CARD, DETECTOR_EMAIL, DETECTOR_SECURE_FIELD,
@@ -144,14 +144,22 @@ def _overlap(a: BoundingBox, b: BoundingBox) -> bool:
                 or a[3] < b[1] or b[3] < a[1])
 
 
-def _normalise_bbox(bbox) -> BoundingBox:
+def _first_int(source: Mapping[str, Any], *names: str, default: int = 0) -> int:
+    """Return the first of ``names`` present in ``source``, as an int."""
+    for name in names:
+        if name in source:
+            return int(source[name])
+    return default
+
+
+def _normalise_bbox(bbox: Any) -> BoundingBox:
     if bbox is None:
         raise ValueError("bbox cannot be None")
     if isinstance(bbox, dict):
-        x1 = int(bbox.get("x1", bbox.get("left", 0)))
-        y1 = int(bbox.get("y1", bbox.get("top", 0)))
-        x2 = int(bbox.get("x2", bbox.get("right", x1)))
-        y2 = int(bbox.get("y2", bbox.get("bottom", y1)))
+        x1 = _first_int(bbox, "x1", "left")
+        y1 = _first_int(bbox, "y1", "top")
+        x2 = _first_int(bbox, "x2", "right", default=x1)
+        y2 = _first_int(bbox, "y2", "bottom", default=y1)
     else:
         seq = list(bbox)
         if len(seq) != 4:

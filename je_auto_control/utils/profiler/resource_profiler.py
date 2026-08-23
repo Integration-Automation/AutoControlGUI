@@ -104,7 +104,9 @@ class ResourceProfiler:
             return  # FPS-only mode; no sampling thread needed
         # Warm up cpu_percent so the first real call returns a real number.
         try:
-            self._proc.cpu_percent(interval=None)
+            proc = self._proc
+            if proc is not None:
+                proc.cpu_percent(interval=None)
         except (AttributeError, OSError):
             pass
         self._thread = threading.Thread(

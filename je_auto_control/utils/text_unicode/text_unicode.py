@@ -21,6 +21,8 @@ Imports no ``PySide6``.
 """
 from typing import Any, Callable, Dict, List, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlKeyboardException
+
 Sink = Callable[[Dict[str, Any]], None]
 
 
@@ -74,7 +76,21 @@ def _default_sink(event: Dict[str, Any]) -> None:
         hotkey(list(event["keys"]))
     elif op == "unicode_unit":
         from je_auto_control.wrapper.platform_wrapper import keyboard
-        keyboard.type_unicode_unit(int(event["unit"]))
+        # 平台縫沒有承諾這個成員——只有 Windows 有——所以照 `unicode_keys_supported`
+        # 的問法去問，沒有就拋這一族的例外。原本直接呼叫，缺的時候拿到的是
+        # `AttributeError`，那不在 `AutoControlException` 家族裡，每一道
+        # containment boundary 都接不到。
+        # The seam does not promise this member (Windows alone has it), so ask
+        # for it the way `unicode_keys_supported` does. Calling it outright
+        # raised `AttributeError`, which is outside the family every
+        # containment boundary catches.
+        type_unicode_unit = getattr(keyboard, "type_unicode_unit", None)
+        if not callable(type_unicode_unit):
+            raise AutoControlKeyboardException(
+                "this platform's keyboard backend cannot inject Unicode code "
+                "units; use type_unicode_text for a route that works "
+                "everywhere")
+        type_unicode_unit(int(event["unit"]))
 
 
 def type_unicode(text: str, *, modifier: str = "ctrl",

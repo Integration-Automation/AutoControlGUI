@@ -452,6 +452,8 @@ simplified_chinese_word_dict = {
     "rd_webrtc_sync_start": "开始同步",
     "rd_webrtc_sync_stop": "停止同步",
     "rd_webrtc_sync_dir_required": "请先选一个本机目录",
+    "rd_webrtc_not_started": "请先开始主机端",
+    "rd_webrtc_not_connected": "请先连线到主机",
     "rd_webrtc_browse": _BROWSE,
 
     # Auto Click Tab

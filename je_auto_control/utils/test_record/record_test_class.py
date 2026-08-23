@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -42,7 +43,8 @@ class TestRecord:
 test_record_instance = TestRecord()
 
 
-def record_action_to_list(function_name: str, local_param, program_exception: str = None) -> None:
+def record_action_to_list(function_name: str, local_param,
+                          program_exception: Optional[str] = None) -> None:
     """
     將動作紀錄加入清單
     Record action to list

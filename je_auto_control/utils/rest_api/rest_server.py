@@ -14,7 +14,7 @@ import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple, Type
 from urllib.parse import urlparse
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
@@ -39,6 +39,17 @@ from je_auto_control.utils.rest_api.rest_handlers import (
 from je_auto_control.utils.rest_api.rest_metrics import RestMetrics
 from je_auto_control.utils.sqlite_support import SQLITE_ERRORS
 
+
+# What a route handler is allowed to fail with. AutoControlException is the
+# family base (every framework error derives from it). The sqlite3 errors are
+# separate: handlers such as /history read the shared run-history DB, and a
+# locked or corrupt DB otherwise escaped the handler thread and dropped the
+# connection with no response. That tuple is empty on a Python built without
+# sqlite3, which catches exactly the right amount there: nothing.
+_HANDLER_ERRORS: Tuple[Type[BaseException], ...] = (
+    OSError, RuntimeError, ValueError, TypeError, AutoControlException,
+    *SQLITE_ERRORS,
+)
 
 HandlerFn = Callable[[RouteContext], HandlerResult]
 
@@ -190,13 +201,7 @@ class _RestRequestHandler(BaseHTTPRequestHandler):
         ctx = RouteContext(query=parsed.query, body=body, client_ip=client_ip)
         try:
             status, payload = handler(ctx)
-        # AutoControlException is the family base (every framework error derives
-        # from it). The sqlite3 errors are separate: handlers such as /history
-        # read the shared run-history DB, and a locked/corrupt DB otherwise
-        # escaped the handler thread and dropped the connection with no
-        # response. The tuple is empty on a Python built without sqlite3.
-        except (OSError, RuntimeError, ValueError, TypeError,
-                AutoControlException, *SQLITE_ERRORS) as error:
+        except _HANDLER_ERRORS as error:
             autocontrol_logger.error(
                 "rest-api %s %s handler raised: %r", method, parsed.path, error,
             )
@@ -386,7 +391,14 @@ class RestApiServer:
         server.auth_gate = self._auth  # type: ignore[attr-defined]
         server.audit_log = self._audit_log  # type: ignore[attr-defined]
         server.metrics = self._metrics  # type: ignore[attr-defined]
-        self._address = server.server_address[:2]
+        # `server_address` is typed for every address family a socketserver
+        # can bind; an AF_INET HTTP server always answers with (host, port).
+        bound_host, bound_port = server.server_address[:2]
+        self._address = (
+            bound_host.decode() if isinstance(bound_host, (bytes, bytearray))
+            else bound_host,
+            int(bound_port),
+        )
         self._server = server
         self._thread = threading.Thread(
             target=server.serve_forever, daemon=True, name="AutoControlREST",

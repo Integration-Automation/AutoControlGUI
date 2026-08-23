@@ -14,7 +14,7 @@ standard library (``threading`` + ``email.utils``); imports no ``PySide6``.
 import threading
 import time
 from email.utils import parsedate_to_datetime
-from typing import Any, Callable, Dict, Mapping, Optional
+from typing import Any, Callable, Dict, Literal, Mapping, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -59,7 +59,7 @@ class Bulkhead:
             raise BulkheadFullError(f"{self.name} is full ({self._max})")
         return self
 
-    def __exit__(self, *_exc: Any) -> bool:
+    def __exit__(self, *_exc: Any) -> Literal[False]:
         self.release()
         return False
 

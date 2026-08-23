@@ -1,6 +1,8 @@
 """Record / playback tab builder (extracted mixin)."""
 import json
 
+from typing import TYPE_CHECKING, Any, Callable
+
 from PySide6.QtWidgets import (
     QFileDialog, QLabel, QMessageBox, QTextEdit, QVBoxLayout, QWidget,
 )
@@ -26,6 +28,13 @@ class RecordTabMixin:
     ``self._translate(...)``) and a ``self._record_data`` list holding the
     last recording.
     """
+
+    if TYPE_CHECKING:
+        # Declared, never defined: the widget this mixin is mixed into owns
+        # every one of these. The block is stripped at runtime, so nothing
+        # here can shadow what the host actually binds.
+        _tr: Callable[..., Any]
+        _translate: Callable[[str], str]
 
     def _build_record_tab(self) -> QWidget:
         tab = QWidget()

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 import shutil
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Mapping, Optional
 
 
 WAYLAND_WTYPE = "wtype"
@@ -33,7 +33,7 @@ def _normalise(value: Optional[str]) -> str:
     return (value or "").strip().lower()
 
 
-def is_wayland_session(environ: Optional[dict] = None) -> bool:
+def is_wayland_session(environ: Optional[Mapping[str, str]] = None) -> bool:
     """Return True when the live environment looks like Wayland.
 
     Honours an ``XDG_SESSION_TYPE`` of ``wayland`` and the
@@ -45,7 +45,7 @@ def is_wayland_session(environ: Optional[dict] = None) -> bool:
     return bool(_normalise(env.get("WAYLAND_DISPLAY")))
 
 
-def select_display_server(environ: Optional[dict] = None) -> str:
+def select_display_server(environ: Optional[Mapping[str, str]] = None) -> str:
     """Pick ``"wayland"`` or ``"x11"`` based on env + override.
 
     ``JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11|wayland`` forces a

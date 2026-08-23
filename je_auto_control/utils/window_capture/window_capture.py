@@ -41,7 +41,8 @@ def _win32_geometry(hwnd: int) -> Optional[Rect]:
     import ctypes
     from ctypes import wintypes
     rect = wintypes.RECT()
-    if not ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined]  # reason: win32-only ctypes
+    if not user32.GetWindowRect(hwnd, ctypes.byref(rect)):
         return None
     return (rect.left, rect.top,
             rect.right - rect.left, rect.bottom - rect.top)
@@ -124,11 +125,13 @@ def restore_window_layout(layout: Union[List[Dict[str, Any]], str, Path], *,
     ``layout`` is a list from :func:`save_window_layout`, or a path to the
     JSON it wrote. ``mover`` is injectable for tests.
     """
-    if isinstance(layout, (str, Path)):
-        layout = json.loads(Path(layout).read_text(encoding="utf-8"))
+    entries: List[Dict[str, Any]] = (
+        json.loads(Path(layout).read_text(encoding="utf-8"))
+        if isinstance(layout, (str, Path)) else list(layout)
+    )
     move = mover or _default_mover
     restored = 0
-    for entry in layout:
+    for entry in entries:
         title = entry.get("title")
         if title and move(title, int(entry["x"]), int(entry["y"]),
                           int(entry["width"]), int(entry["height"])):

@@ -14,7 +14,7 @@ silently executing with wrong values.
 import json
 import re
 from pathlib import Path
-from typing import Any, Mapping, MutableMapping
+from typing import Any, Mapping, MutableMapping, Optional
 
 # Bounded character class with a single quantifier — avoids the nested
 # alternation that ReDoS scanners (semgrep regex_dos) flag on
@@ -104,7 +104,7 @@ def _lookup_secret(secret_name: str) -> str:
 
 
 def load_vars_from_json(path: str,
-                        into: MutableMapping[str, Any] = None
+                        into: Optional[MutableMapping[str, Any]] = None
                         ) -> MutableMapping[str, Any]:
     """Load a flat JSON object as a variable bag."""
     with open(Path(path), encoding="utf-8") as file:

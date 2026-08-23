@@ -13,12 +13,12 @@ import os
 import pathlib
 import uuid
 from types import ModuleType
-from typing import Dict, List
+from typing import Any, Callable, Dict, List
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
-def load_plugin_file(path: str) -> Dict[str, callable]:
+def load_plugin_file(path: str) -> Dict[str, Callable[..., Any]]:
     """Import ``path`` and return a mapping of ``AC_*`` callables it defines."""
     resolved = os.path.realpath(path)
     if not os.path.isfile(resolved):
@@ -27,12 +27,12 @@ def load_plugin_file(path: str) -> Dict[str, callable]:
     return discover_plugin_commands(module)
 
 
-def load_plugin_directory(directory: str) -> Dict[str, callable]:
+def load_plugin_directory(directory: str) -> Dict[str, Callable[..., Any]]:
     """Load every ``*.py`` in ``directory`` and merge their AC_* callables."""
     root = pathlib.Path(os.path.realpath(directory))
     if not root.is_dir():
         raise NotADirectoryError(f"plugin directory not found: {root}")
-    merged: Dict[str, callable] = {}
+    merged: Dict[str, Callable[..., Any]] = {}
     for file_path in sorted(root.glob("*.py")):
         if file_path.name.startswith("_"):
             continue
@@ -46,9 +46,9 @@ def load_plugin_directory(directory: str) -> Dict[str, callable]:
     return merged
 
 
-def discover_plugin_commands(module: ModuleType) -> Dict[str, callable]:
+def discover_plugin_commands(module: ModuleType) -> Dict[str, Callable[..., Any]]:
     """Return every ``AC_*`` callable defined on ``module``."""
-    commands: Dict[str, callable] = {}
+    commands: Dict[str, Callable[..., Any]] = {}
     for attr_name in dir(module):
         if not attr_name.startswith("AC_"):
             continue
@@ -58,7 +58,7 @@ def discover_plugin_commands(module: ModuleType) -> Dict[str, callable]:
     return commands
 
 
-def register_plugin_commands(commands: Dict[str, callable]) -> List[str]:
+def register_plugin_commands(commands: Dict[str, Callable[..., Any]]) -> List[str]:
     """Register ``commands`` into the global executor and return their names."""
     from je_auto_control.utils.executor.action_executor import executor
     for name, func in commands.items():

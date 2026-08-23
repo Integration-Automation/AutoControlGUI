@@ -8,10 +8,19 @@ re-subscription that runs after each answer are the whole of this mixin.
 """
 from __future__ import annotations
 
+import asyncio
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Mapping, Optional
+
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.webrtc_transport import (
     get_bridge, wait_for_ice_gathering,
 )
+
+if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
+    from je_auto_control.utils.remote_desktop.webrtc_audio import OpusMicReceiver
+    from je_auto_control.utils.remote_desktop.webrtc_transport import (
+        RTCPeerConnection, WebRTCConfig,
+    )
 
 
 class MediaNegotiationMixin:
@@ -21,6 +30,19 @@ class MediaNegotiationMixin:
     ``_opus_audio_receiver``, ``_send_ctrl``, ``_spawn_bg``,
     ``_consume_viewer_video`` and ``_start_opus_audio_receive``.
     """
+
+    if TYPE_CHECKING:
+        # Declared, never defined: the host class this is mixed into owns
+        # every one of these. The block is stripped at runtime, so nothing
+        # here can shadow what the host actually binds.
+        _pc: Optional["RTCPeerConnection"]
+        _config: "WebRTCConfig"
+        _viewer_video_task: Optional[asyncio.Task]
+        _opus_audio_receiver: Optional["OpusMicReceiver"]
+        _send_ctrl: Callable[[Mapping[str, Any]], None]
+        _spawn_bg: Callable[[Any], asyncio.Task]
+        _consume_viewer_video: Callable[[Any], Coroutine[Any, Any, None]]
+        _start_opus_audio_receive: Callable[[Any], None]
 
     def _maybe_resubscribe_viewer_video(self) -> None:
         if not (self._config.accept_viewer_video

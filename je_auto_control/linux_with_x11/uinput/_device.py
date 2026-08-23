@@ -12,6 +12,7 @@ import ctypes
 import errno
 import os
 import struct
+import sys
 import threading
 import time
 from typing import Optional
@@ -20,6 +21,16 @@ from typing import Optional
 #
 # Layout cribbed from <linux/uinput.h> + <linux/input.h>. We only need
 # the subset that drives a standard keyboard + relative-mouse device.
+
+if sys.platform == "win32":
+    # 只是為了通過型別檢查：`/dev/uinput` 只有 Linux 有，而型別契約會用三個
+    # 目標平台各檢查一次，Windows 的 `os` stub 沒有 POSIX 專屬的 O_NONBLOCK。
+    # Only has to type-check. /dev/uinput is Linux-only, and the typing
+    # contract checks this package against a Windows target too, where the
+    # `os` stub does not declare the POSIX-only O_NONBLOCK.
+    _OPEN_FLAGS = os.O_WRONLY
+else:
+    _OPEN_FLAGS = os.O_WRONLY | os.O_NONBLOCK
 
 _UINPUT_MAX_NAME_SIZE = 80
 _BUS_USB = 0x03
@@ -119,7 +130,7 @@ _fd: Optional[int] = None
 def _open_device() -> int:
     """Open ``/dev/uinput`` and create the synthetic combo device."""
     try:
-        fd = os.open("/dev/uinput", os.O_WRONLY | os.O_NONBLOCK)
+        fd = os.open("/dev/uinput", _OPEN_FLAGS)
     except OSError as exc:
         raise UinputUnavailable(
             "could not open /dev/uinput. Either load the module "

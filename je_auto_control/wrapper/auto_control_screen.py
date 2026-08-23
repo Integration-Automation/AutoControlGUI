@@ -1,5 +1,5 @@
 import sys
-from typing import Tuple, List
+from typing import Any, Optional, Tuple
 
 from je_auto_control.utils.cv2_utils.optional import require_cv2
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
@@ -7,6 +7,7 @@ from je_auto_control.utils.exception.exception_tags import screen_get_size_error
 from je_auto_control.utils.exception.exception_tags import screen_screenshot_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlScreenException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+from je_auto_control.utils.platform_id import is_windows
 from je_auto_control.utils.test_record.record_test_class import record_action_to_list
 from je_auto_control.wrapper.platform_wrapper import screen
 
@@ -29,7 +30,8 @@ def screen_size() -> Tuple[int, int]:
         raise
 
 
-def screenshot(file_path: str = None, screen_region: list = None) -> List[int]:
+def screenshot(file_path: Optional[str] = None,
+               screen_region: Optional[list] = None) -> Any:
     """
     use to capture current screen
     擷取當前螢幕畫面
@@ -89,12 +91,18 @@ def get_pixel(x: int, y: int, hwnd=None):
         # 因此在這裡給出明確訊息。
         # Only the windows backend takes an hwnd. Passing one elsewhere would
         # surface as a bare TypeError from the backend, so say what is wrong.
-        if sys.platform not in ["win32", "cygwin", "msys"]:
+        if not is_windows():
             raise AutoControlScreenException(
                 f"get_pixel: hwnd is only supported on Windows, "
                 f"not {sys.platform}"
             )
-        return screen.get_pixel(x, y, hwnd)
+        # 這一支明著點名 Windows 後端，而不是走平台縫：縫的合約是 (x, y)，
+        # 為了單一平台多出來的第三個參數不該把合約撐開。
+        # Named directly rather than called through the seam: the seam's
+        # contract is (x, y), and one platform's extra argument does not
+        # belong in it.
+        from je_auto_control.windows.screen import win32_screen
+        return win32_screen.get_pixel(x, y, hwnd)
     except (OSError, RuntimeError, AttributeError, TypeError, ValueError) as error:
         record_action_to_list("AC_get_pixel", None, repr(error))
         autocontrol_logger.error(

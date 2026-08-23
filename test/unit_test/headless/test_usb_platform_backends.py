@@ -59,11 +59,12 @@ def test_winusb_dlls_loaded():
     should not re-error on import."""
     from je_auto_control.utils.usb.passthrough import winusb_backend as wb
     WinusbBackend()
-    assert wb._setupapi is not None
-    assert wb._winusb is not None
-    assert wb._kernel32 is not None
+    assert wb._loaded is not None
+    dlls = wb._load_dlls()
+    assert dlls is wb._loaded, "the loader must be idempotent"
+    assert (dlls.setupapi, dlls.winusb, dlls.kernel32) != (None, None, None)
     # SetupDiGetClassDevsW signature was bound.
-    assert wb._setupapi.SetupDiGetClassDevsW.restype is not None
+    assert dlls.setupapi.SetupDiGetClassDevsW.restype is not None
 
 
 # ---------------------------------------------------------------------------

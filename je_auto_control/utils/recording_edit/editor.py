@@ -3,11 +3,11 @@
 All functions return new lists rather than mutating the input so callers can
 preserve the original recording.
 """
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 
-def trim_actions(actions: List[list], start: int = 0, end: int = None
-                 ) -> List[list]:
+def trim_actions(actions: List[list], start: int = 0,
+                 end: Optional[int] = None) -> List[list]:
     """Return a slice ``actions[start:end]`` (end=None means to the end)."""
     return list(actions[start:end])
 
@@ -84,7 +84,7 @@ def _action_name(action: object) -> object:
 
 
 def dedupe_moves(actions: List[list],
-                 move_commands: List[str] = None) -> List[list]:
+                 move_commands: Optional[List[str]] = None) -> List[list]:
     """Collapse each run of consecutive mouse-move actions into its last one.
 
     A raw recording captures one action per cursor sample, so a single

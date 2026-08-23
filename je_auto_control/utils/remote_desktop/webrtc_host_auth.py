@@ -10,7 +10,9 @@ readable on its own.
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Mapping, Optional
+from typing import (
+    TYPE_CHECKING, Any, Callable, Coroutine, List, Mapping, Optional,
+)
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.audit_log import default_audit_log
@@ -18,6 +20,12 @@ from je_auto_control.utils.remote_desktop.fingerprint import (
     load_or_create_host_fingerprint,
 )
 from je_auto_control.utils.remote_desktop.webrtc_transport import get_bridge
+
+if TYPE_CHECKING:  # imported lazily at runtime to keep startup cheap
+    from je_auto_control.utils.remote_desktop.permissions import (
+        SessionPermissions,
+    )
+    from je_auto_control.utils.remote_desktop.trust_list import TrustList
 
 
 class ViewerAuthMixin:
@@ -27,6 +35,23 @@ class ViewerAuthMixin:
     ``_ip_whitelist``, ``_authenticated``, ``_pending_viewer_id``,
     ``_send_ctrl``, ``_spawn_bg`` and ``_async_stop``.
     """
+
+    if TYPE_CHECKING:
+        # Declared, never defined: the host class this is mixed into owns
+        # every one of these. The block is stripped at runtime, so nothing
+        # here can shadow what the host actually binds.
+        _token: str
+        _trust_list: Optional["TrustList"]
+        _ip_whitelist: List[str]
+        _permissions: "SessionPermissions"
+        _remote_ip: Optional[str]
+        _authenticated: bool
+        _auth_deadline_handle: Optional[asyncio.TimerHandle]
+        _on_authenticated: Optional[Callable[[], None]]
+        _on_pending_viewer: Optional[Callable[[], None]]
+        _send_ctrl: Callable[[Mapping[str, Any]], None]
+        _spawn_bg: Callable[[Any], asyncio.Task]
+        _async_stop: Callable[[], Coroutine[Any, Any, None]]
 
     def _handle_send_sas(self) -> None:
         try:
@@ -74,15 +99,17 @@ class ViewerAuthMixin:
         get_bridge().call_soon(self._schedule_close_after_fail)
 
     def _auto_approve_via_trust(self) -> bool:
-        if not self._is_trusted_viewer(self._pending_viewer_id):
+        # The emptiness check is what `_is_trusted_viewer` does first anyway;
+        # hoisting it makes the non-empty id available to `touch` below.
+        viewer_id = self._pending_viewer_id
+        if not viewer_id or not self._is_trusted_viewer(viewer_id):
             return False
         autocontrol_logger.info(
-            "webrtc host: viewer_id %s is trusted; auto-approving",
-            self._pending_viewer_id,
+            "webrtc host: viewer_id %s is trusted; auto-approving", viewer_id,
         )
         if self._trust_list is not None:
             try:
-                self._trust_list.touch(self._pending_viewer_id)
+                self._trust_list.touch(viewer_id)
             except (RuntimeError, OSError) as error:
                 autocontrol_logger.debug("trust touch: %r", error)
         self._approve_pending_viewer()

@@ -25,7 +25,7 @@ import ctypes
 import ctypes.wintypes as wintypes
 import platform
 import re
-from typing import List, Optional
+from typing import Any, List, NamedTuple, Optional
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.usb.passthrough.backend import (
@@ -114,24 +114,45 @@ def _winusb_guid() -> _GUID:
 # ---------------------------------------------------------------------------
 
 
-_setupapi: Optional[ctypes.WinDLL] = None
-_winusb: Optional[ctypes.WinDLL] = None
-_kernel32: Optional[ctypes.WinDLL] = None
+class _Dlls(NamedTuple):
+    """The three loaded DLL handles, with their prototypes already bound."""
+
+    setupapi: Any
+    winusb: Any
+    kernel32: Any
 
 
-def _load_dlls() -> None:
-    global _setupapi, _winusb, _kernel32
-    if _setupapi is not None:
-        return
-    _setupapi = ctypes.WinDLL("setupapi", use_last_error=True)
-    _winusb = ctypes.WinDLL("winusb", use_last_error=True)
-    _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-    _bind_setupapi(_setupapi)
-    _bind_winusb(_winusb)
-    _bind_kernel32(_kernel32)
+_loaded: Optional[_Dlls] = None
 
 
-def _bind_setupapi(dll: ctypes.WinDLL) -> None:
+def _load_dlls() -> _Dlls:
+    """Load and bind the three DLLs once; return them.
+
+    The globals are published only after all three have loaded. Assigning
+    them one at a time meant a failure on the second call left the first
+    set, so the `is not None` guard short-circuited every later attempt and
+    the callers got `AttributeError: 'NoneType'` instead of a retry.
+    """
+    global _loaded
+    if _loaded is not None:
+        return _loaded
+    setupapi = ctypes.WinDLL(  # type: ignore[attr-defined]  # reason: win32-only ctypes
+        "setupapi", use_last_error=True,
+    )
+    winusb = ctypes.WinDLL(  # type: ignore[attr-defined]  # reason: win32-only ctypes
+        "winusb", use_last_error=True,
+    )
+    kernel32 = ctypes.WinDLL(  # type: ignore[attr-defined]  # reason: win32-only ctypes
+        "kernel32", use_last_error=True,
+    )
+    _bind_setupapi(setupapi)
+    _bind_winusb(winusb)
+    _bind_kernel32(kernel32)
+    _loaded = _Dlls(setupapi, winusb, kernel32)
+    return _loaded
+
+
+def _bind_setupapi(dll: Any) -> None:
     dll.SetupDiGetClassDevsW.argtypes = [
         ctypes.POINTER(_GUID), wintypes.LPCWSTR, wintypes.HWND, wintypes.DWORD,
     ]
@@ -151,7 +172,7 @@ def _bind_setupapi(dll: ctypes.WinDLL) -> None:
     dll.SetupDiDestroyDeviceInfoList.restype = wintypes.BOOL
 
 
-def _bind_winusb(dll: ctypes.WinDLL) -> None:
+def _bind_winusb(dll: Any) -> None:
     dll.WinUsb_Initialize.argtypes = [
         wintypes.HANDLE, ctypes.POINTER(wintypes.HANDLE),
     ]
@@ -180,7 +201,7 @@ def _bind_winusb(dll: ctypes.WinDLL) -> None:
     dll.WinUsb_SetPipePolicy.restype = wintypes.BOOL
 
 
-def _bind_kernel32(dll: ctypes.WinDLL) -> None:
+def _bind_kernel32(dll: Any) -> None:
     dll.CreateFileW.argtypes = [
         wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p,
         wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE,
@@ -212,27 +233,27 @@ class WinusbBackend(UsbBackend):
             ) from error
 
     def list(self) -> List[BackendDevice]:
+        setupapi = _load_dlls().setupapi
         guid = _winusb_guid()
-        info_set = _setupapi.SetupDiGetClassDevsW(
+        info_set = setupapi.SetupDiGetClassDevsW(
             ctypes.byref(guid), None, None,
             _DIGCF_PRESENT | _DIGCF_DEVICEINTERFACE,
         )
         if info_set is None or info_set == _INVALID_HANDLE_VALUE:
-            raise RuntimeError(
-                f"SetupDiGetClassDevs failed: {ctypes.get_last_error()}",
-            )
+            last_error = ctypes.get_last_error()  # type: ignore[attr-defined]  # reason: win32-only ctypes
+            raise RuntimeError(f"SetupDiGetClassDevs failed: {last_error}")
         devices: List[BackendDevice] = []
         try:
             index = 0
             iface = _SP_DEVICE_INTERFACE_DATA()
             iface.cbSize = ctypes.sizeof(_SP_DEVICE_INTERFACE_DATA)
             while True:
-                ok = _setupapi.SetupDiEnumDeviceInterfaces(
+                ok = setupapi.SetupDiEnumDeviceInterfaces(
                     info_set, None, ctypes.byref(guid), index,
                     ctypes.byref(iface),
                 )
                 if not ok:
-                    error = ctypes.get_last_error()
+                    error = ctypes.get_last_error()  # type: ignore[attr-defined]  # reason: win32-only ctypes
                     if error == _ERROR_NO_MORE_ITEMS:
                         break
                     autocontrol_logger.warning(
@@ -251,7 +272,7 @@ class WinusbBackend(UsbBackend):
                     bus_location=path,
                 ))
         finally:
-            _setupapi.SetupDiDestroyDeviceInfoList(info_set)
+            setupapi.SetupDiDestroyDeviceInfoList(info_set)
         return devices
 
     def open(self, *, vendor_id: str, product_id: str,
@@ -266,6 +287,8 @@ class WinusbBackend(UsbBackend):
         for device in self.list():
             if device.vendor_id != vendor_id or device.product_id != product_id:
                 continue
+            if device.bus_location is None:
+                continue  # enumerated without an interface path; unopenable
             return _open_handle(device.bus_location)
         raise RuntimeError(
             f"WinUSB: no device matches {vendor_id}:{product_id}",
@@ -286,11 +309,12 @@ class _WinusbHandle(UsbHandle):
     def close(self) -> None:
         if self._closed:
             return
+        dlls = _load_dlls()
         try:
-            _winusb.WinUsb_Free(self._winusb_handle)
+            dlls.winusb.WinUsb_Free(self._winusb_handle)
         finally:
             try:
-                _kernel32.CloseHandle(self._file_handle)
+                dlls.kernel32.CloseHandle(self._file_handle)
             finally:
                 self._closed = True
 
@@ -314,13 +338,14 @@ class _WinusbHandle(UsbHandle):
             Length=buffer_size & 0xFFFF,
         )
         transferred = wintypes.DWORD(0)
-        ok = _winusb.WinUsb_ControlTransfer(
+        ok = _load_dlls().winusb.WinUsb_ControlTransfer(
             self._winusb_handle, setup, buffer, buffer_size,
             ctypes.byref(transferred), None,
         )
         if not ok:
+            last_error = ctypes.get_last_error()  # type: ignore[attr-defined]  # reason: win32-only ctypes
             raise RuntimeError(
-                f"WinUsb_ControlTransfer failed: {ctypes.get_last_error()}",
+                f"WinUsb_ControlTransfer failed: {last_error}",
             )
         if is_in:
             return bytes(buffer[: transferred.value])
@@ -353,7 +378,8 @@ class _WinusbHandle(UsbHandle):
         # Apply per-pipe timeout — WinUSB reads/writes don't take a
         # timeout argument directly.
         timeout_value = wintypes.DWORD(int(timeout_ms))
-        ok = _winusb.WinUsb_SetPipePolicy(
+        winusb = _load_dlls().winusb
+        ok = winusb.WinUsb_SetPipePolicy(
             self._winusb_handle, endpoint & 0xFF,
             _PIPE_TRANSFER_TIMEOUT, ctypes.sizeof(timeout_value),
             ctypes.byref(timeout_value),
@@ -361,30 +387,30 @@ class _WinusbHandle(UsbHandle):
         if not ok:
             autocontrol_logger.debug(
                 "WinUsb_SetPipePolicy(timeout) failed: %d",
-                ctypes.get_last_error(),
+                ctypes.get_last_error(),  # type: ignore[attr-defined]  # reason: win32-only ctypes
             )
         transferred = wintypes.DWORD(0)
         if direction == "in":
             buffer = (ctypes.c_ubyte * int(length))()
-            ok = _winusb.WinUsb_ReadPipe(
+            ok = winusb.WinUsb_ReadPipe(
                 self._winusb_handle, endpoint & 0xFF,
                 buffer, int(length), ctypes.byref(transferred), None,
             )
             if not ok:
                 raise RuntimeError(
                     f"WinUsb_ReadPipe ({kind}) failed: "
-                    f"{ctypes.get_last_error()}",
+                    f"{ctypes.get_last_error()}",  # type: ignore[attr-defined]  # reason: win32-only ctypes
                 )
             return bytes(buffer[: transferred.value])
         out_buffer = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
-        ok = _winusb.WinUsb_WritePipe(
+        ok = winusb.WinUsb_WritePipe(
             self._winusb_handle, endpoint & 0xFF,
             out_buffer, len(data), ctypes.byref(transferred), None,
         )
         if not ok:
             raise RuntimeError(
                 f"WinUsb_WritePipe ({kind}) failed: "
-                f"{ctypes.get_last_error()}",
+                f"{ctypes.get_last_error()}",  # type: ignore[attr-defined]  # reason: win32-only ctypes
             )
         return b""
 
@@ -401,17 +427,18 @@ class _WinusbHandle(UsbHandle):
 def _resolve_interface_detail(info_set: int,
                               iface: _SP_DEVICE_INTERFACE_DATA) -> Optional[str]:
     """Two-call pattern: first to size the buffer, second to fill it."""
+    setupapi = _load_dlls().setupapi
     needed = wintypes.DWORD(0)
-    _setupapi.SetupDiGetDeviceInterfaceDetailW(
+    setupapi.SetupDiGetDeviceInterfaceDetailW(
         info_set, ctypes.byref(iface), None, 0, ctypes.byref(needed), None,
     )
-    if ctypes.get_last_error() != _ERROR_INSUFFICIENT_BUFFER:
+    if ctypes.get_last_error() != _ERROR_INSUFFICIENT_BUFFER:  # type: ignore[attr-defined]  # reason: win32-only ctypes
         return None
     buffer = ctypes.create_string_buffer(needed.value)
     # The struct begins with a DWORD cbSize — value depends on bitness.
     cb_size = 8 if ctypes.sizeof(ctypes.c_void_p) == 8 else 6
     ctypes.memmove(buffer, ctypes.byref(wintypes.DWORD(cb_size)), 4)
-    ok = _setupapi.SetupDiGetDeviceInterfaceDetailW(
+    ok = setupapi.SetupDiGetDeviceInterfaceDetailW(
         info_set, ctypes.byref(iface),
         buffer, needed.value, None, None,
     )
@@ -432,7 +459,8 @@ def _parse_vid_pid(path: str) -> tuple:
 
 
 def _open_handle(device_path: str) -> _WinusbHandle:
-    file_handle = _kernel32.CreateFileW(
+    dlls = _load_dlls()
+    file_handle = dlls.kernel32.CreateFileW(
         device_path,
         _GENERIC_READ | _GENERIC_WRITE,
         _FILE_SHARE_READ | _FILE_SHARE_WRITE,
@@ -441,13 +469,13 @@ def _open_handle(device_path: str) -> _WinusbHandle:
     if file_handle is None or file_handle == _INVALID_HANDLE_VALUE:
         raise RuntimeError(
             f"CreateFileW({device_path!r}) failed: "
-            f"{ctypes.get_last_error()}",
+            f"{ctypes.get_last_error()}",  # type: ignore[attr-defined]  # reason: win32-only ctypes
         )
     winusb_handle = wintypes.HANDLE()
-    ok = _winusb.WinUsb_Initialize(file_handle, ctypes.byref(winusb_handle))
-    if not ok:
-        last_error = ctypes.get_last_error()
-        _kernel32.CloseHandle(file_handle)
+    ok = dlls.winusb.WinUsb_Initialize(file_handle, ctypes.byref(winusb_handle))
+    if not ok or winusb_handle.value is None:
+        last_error = ctypes.get_last_error()  # type: ignore[attr-defined]  # reason: win32-only ctypes
+        dlls.kernel32.CloseHandle(file_handle)
         raise RuntimeError(
             f"WinUsb_Initialize failed: {last_error}",
         )

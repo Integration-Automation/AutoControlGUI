@@ -21,7 +21,9 @@ state*, not call results. Imports no ``PySide6``.
 from typing import Any, Callable, Dict
 
 StateReader = Callable[[], Any]
-StateSetter = Callable[[Any], None]
+#: The return value is ignored — `ensure_state` re-reads instead of
+#: trusting what a setter reports.
+StateSetter = Callable[[Any], Any]
 StateEquals = Callable[[Any, Any], bool]
 
 

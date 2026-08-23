@@ -35,6 +35,12 @@ def record() -> None:
 def stop_record() -> list:
     """
     stop current record
+
+    Returns an empty list when the recorder could not be stopped, the same
+    shape :func:`stop_record_timeline` returns on the same failure: this used
+    to fall off the end and hand back ``None`` while its signature promised a
+    list, so every caller that did not write ``stop_record() or []`` iterated
+    over ``None`` and raised there instead of here.
     """
     autocontrol_logger.info("stop_record")
     try:
@@ -53,6 +59,7 @@ def stop_record() -> list:
     except (OSError, RuntimeError, AttributeError, TypeError, ValueError, AutoControlException, AutoControlJsonActionException) as error:
         record_action_to_list("stop_record", None, repr(error))
         autocontrol_logger.error(f"stop_record, failed: {repr(error)}")
+        return []
 
 
 def stop_record_timeline() -> list:

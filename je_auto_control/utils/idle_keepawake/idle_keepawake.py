@@ -109,7 +109,7 @@ def plan_keep_awake(*, display: bool = True,
 
 
 def _win_keep_awake(flags: int) -> Callable[[], None]:
-    kernel32 = ctypes.windll.kernel32
+    kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]  # reason: win32-only ctypes
     kernel32.SetThreadExecutionState(ctypes.c_uint(flags))
 
     def _release() -> None:

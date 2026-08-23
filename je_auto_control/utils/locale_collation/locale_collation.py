@@ -14,7 +14,7 @@ Every function is pure (text in, key/order out), so it is fully deterministic in
 CI and across platforms (unlike ``locale.strxfrm``).
 """
 import unicodedata
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 _STRENGTHS = {"primary": 1, "secondary": 2, "tertiary": 3}
 
@@ -113,7 +113,7 @@ def sort_strings(items: Sequence[str], *, strength: str = "tertiary",
     ``key`` extracts the string from each item (default: the item itself), so
     dicts or tuples can be sorted by one of their fields.
     """
-    extract = key or (lambda item: item)
+    extract: Callable[[Any], str] = key or (lambda item: str(item))
 
     def sort_key(item: object) -> CollationKey:
         return collation_key(str(extract(item)), strength=strength,

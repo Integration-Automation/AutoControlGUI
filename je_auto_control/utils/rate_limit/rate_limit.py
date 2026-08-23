@@ -17,7 +17,7 @@ clock); imports no ``PySide6``.
 import functools
 import threading
 import time
-from typing import Callable, Optional
+from typing import Callable, Dict, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 
@@ -138,7 +138,7 @@ def throttle(interval_s: float, *,
     are dropped (the wrapper returns ``None``).
     """
     def decorator(func: Callable) -> Callable:
-        state = {"last": None}
+        state: Dict[str, Optional[float]] = {"last": None}
         lock = threading.Lock()
 
         @functools.wraps(func)

@@ -26,10 +26,18 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TypedDict
 
 
 _MANIFEST_FILENAME = "manifest.json"
+
+
+class ManifestEntry(TypedDict):
+    """One row of ``manifest.json`` — what was written, when, how big."""
+
+    filename: str
+    timestamp: float
+    size: int
 
 
 class JpegSequenceRecorder:
@@ -47,7 +55,7 @@ class JpegSequenceRecorder:
         self._prefix = file_prefix
         self._digits = max(1, int(digits))
         self._lock = threading.Lock()
-        self._entries: List[Dict[str, float]] = []
+        self._entries: List[ManifestEntry] = []
         self._counter = 0
         self._started = False
         self._stopped = False
@@ -89,7 +97,7 @@ class JpegSequenceRecorder:
             filename = (
                 f"{self._prefix}_{self._counter:0{self._digits}d}.jpg"
             )
-            entry = {
+            entry: ManifestEntry = {
                 "filename": filename,
                 "timestamp": time.time(),
                 "size": len(payload),

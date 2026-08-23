@@ -4,7 +4,7 @@ Thin wrapper over the headless ``je_auto_control.assert_*`` functions.
 Assertions run with ``raise_on_fail=False`` so the GUI reports the
 outcome instead of crashing the tab.
 """
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QHBoxLayout, QLabel, QLineEdit,
@@ -24,7 +24,7 @@ def _t(key: str) -> str:
     return language_wrapper.translate(key, key)
 
 
-def _parse_ints(raw: str):
+def _parse_ints(raw: str) -> List[int]:
     return [int(part.strip()) for part in raw.split(",") if part.strip()]
 
 
@@ -107,8 +107,16 @@ class AssertionsTab(TranslatableMixin, QWidget):
                 self._target.text(), present=present, raise_on_fail=False,
             ).to_dict()
         if kind == "pixel":
+            coords = _parse_ints(self._xy.text())
+            if len(coords) < 2:
+                # Unpacking a short list used to reach assert_pixel with the
+                # RGB list bound to `y`, and the user saw a TypeError about
+                # keyword arguments instead of what they typed wrong.
+                raise ValueError(
+                    f"pixel assertion needs 'x,y'; got {self._xy.text()!r}",
+                )
             return ac.assert_pixel(
-                *_parse_ints(self._xy.text())[:2], _parse_ints(self._rgb.text()),
+                coords[0], coords[1], _parse_ints(self._rgb.text()),
                 match=present, raise_on_fail=False,
             ).to_dict()
         if kind == "window":
