@@ -27,8 +27,19 @@ pip install -r dev_requirements.txt         # dev deps
 pip install -e .[gui]                       # + GUI extra
 python -m pytest test/unit_test/headless    # headless unit tests
 python -m pytest test/integrated_test/      # cross-module workflows
+python -m coverage run -m pytest            # the suite WITH coverage (see below)
+python -m coverage report                   # enforces `fail_under` from pyproject
 python -m build                             # build
 ```
+
+**Coverage is measured with `coverage run -m pytest`, never `pytest --cov`.**
+This package registers a `pytest11` entry point, so pytest imports
+`je_auto_control.utils.pytest_plugin.plugin` — and with it the whole facade —
+while loading plugins, before pytest-cov starts. Several hundred modules then
+have their import-time lines recorded as never executed: measured, that is
+11,962 statements and ~24 percentage points (52.22% vs 72.05% on the same
+suite). `test/unit_test/headless/test_coverage_measurement.py` holds CI to the
+correct spelling.
 
 `pyproject.toml` pins `python_files = ["test_*.py"]` on purpose: the `*_test.py` files under `test/unit_test/` are manual demo scripts whose module bodies drive the real mouse and keyboard on import. Never loosen that setting.
 
