@@ -54,6 +54,7 @@ from je_auto_control.utils.mcp_server.tools import (
 )
 
 _NONE_TYPE = type(None)
+_PACKAGE = "je_auto_control"
 
 # MCP adapters that need more than their callee's return annotation promises.
 # Each is a real coupling the type contract does not express, not a stub defect:
@@ -207,11 +208,17 @@ def _is_foreign_import(node: ast.stmt) -> bool:
 
 def _first_party_from_imports(imports: List[ast.stmt]
                               ) -> List[Tuple[str, List[str]]]:
-    """Return ``(module, names)`` for each from-import outside the stdlib."""
+    """Return ``(module, names)`` for each from-import inside this package.
+
+    "First party" is the package prefix, not merely "not the stdlib": a
+    ``from PySide6... import`` is a backend choice like a plain third-party
+    import, and it is the prefix that lets the resolved path be imported below
+    without trusting whatever the parsed source happened to say.
+    """
     return [(child.module, [alias.name for alias in child.names])
             for child in imports
             if isinstance(child, ast.ImportFrom)
-            and not _is_stdlib(child.module)]
+            and child.module.startswith(_PACKAGE + ".")]
 
 
 def _project_import(adapter: Any) -> Optional[Tuple[str, List[str]]]:
@@ -289,7 +296,9 @@ def _contract_stubs(adapter: Any) -> Optional[Tuple[Any, Dict[str, Any]]]:
         return None
     module_path, names = found
     try:
-        module = importlib.import_module(module_path)
+        # ``module_path`` is a ``je_auto_control.*`` path parsed out of this
+        # repository's own source; no caller supplies it.
+        module = importlib.import_module(module_path)  # nosemgrep  # reason: prefix-checked at the parse site
     except ImportError:
         return None
     values: Dict[str, Any] = {}
