@@ -128,7 +128,7 @@ jobs:
         shell: bash
         # Quoted: `--only-binary :all:` puts a colon-space inside the
         # scalar, which YAML reads as a mapping and refuses.
-        run: "pip install --only-binary :all: ruff==0.15.22 bandit==1.9.4 pytest==9.1.1 pytest-timeout==2.4.0 pytest-rerunfailures==15.1 pytest-cov==7.0.0 PySide6==6.11.1"
+        run: "pip install --only-binary :all: ruff==0.15.22 bandit==1.9.4 pytest==9.1.1 pytest-timeout==2.4.0 pytest-rerunfailures==15.1 coverage==7.15.4 PySide6==6.11.1"
 
       # Paths come from `testpaths` in pyproject.toml. Do NOT pass an explicit
       # path here: an argument overrides testpaths, which previously meant the
@@ -137,15 +137,35 @@ jobs:
       # Linux runs under a real Xvfb rather than Qt's offscreen platform:
       # the X11 backend opens a display at import time, and offscreen
       # would hide exactly the breakage this job exists to find.
-      - name: Run headless pytest suite
+      #
+      # `coverage run -m pytest`, NOT `pytest --cov`, and that is load-bearing:
+      # this package registers a `pytest11` entry point, so pytest imports
+      # `je_auto_control.utils.pytest_plugin.plugin` while loading plugins —
+      # which executes `je_auto_control/__init__.py`, the facade, and with it
+      # several hundred modules. pytest-cov only starts measuring after that,
+      # so every one of those modules' import-time lines was recorded as never
+      # executed. Measured on this tree: 11,962 statements, 24 points, and the
+      # worst-hit files were the biggest ones (`action_executor` +786,
+      # `_handlers` +684). A package that registers a pytest plugin cannot
+      # measure itself with `pytest --cov`; `coverage run` starts first.
+      - name: Run headless pytest suite under coverage
         shell: bash
         run: >-
           ${{ runner.os == 'Linux' && 'xvfb-run -a -s "-screen 0 1280x800x24"' || '' }}
-          pytest -v --tb=short --timeout=120
-          --cov=je_auto_control --cov-report=term-missing
-          --cov-report=xml --cov-fail-under=50
+          python -m coverage run -m pytest -v --tb=short --timeout=120
+
+      # XML before the floor check, so a square that fails the floor still
+      # uploads the report that says which lines it was short of.
+      - name: Write the coverage XML
+        shell: bash
+        run: python -m coverage xml
+
+      - name: Enforce the coverage floor
+        shell: bash
+        run: python -m coverage report  # the floor is `fail_under` in pyproject.toml, so the ratchet lives in exactly one place
 
       - name: Upload coverage report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.os }}-${{ matrix.python-version }}

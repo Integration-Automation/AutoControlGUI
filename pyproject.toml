@@ -144,17 +144,29 @@ skip_covered = true
 # 35 was the first measured baseline and then sat still while the suite grew
 # past it, which left ~15 points unguarded: every job in the matrix was over
 # 50% and CI would still have passed a change that deleted a third of the
-# tests. Measured 2026-08-21 on the run for PR #484, lowest square of the
-# nine-way matrix (ubuntu-22.04 / 3.10) at 50.26%, highest (windows-2022 /
-# 3.14) at 51.69% — so 50 is the floor the whole matrix clears today.
+# tests. Measured 2026-08-21 on the run for PR #484, the nine-way matrix ran
+# 50.26% (ubuntu-22.04 / 3.10) to 51.69% (windows-2022 / 3.14), so the floor
+# went to 50.
 #
-# The number is measured, never guessed. Re-read it from the matrix rather
-# than from one machine: the spread across platforms is over a point, and
-# `--cov-fail-under` in `quality.yml` must hold on the lowest of them.
+# **Every one of those numbers was ~24 points low.** `quality.yml` measured
+# with `pytest --cov`, and this package registers a `pytest11` entry point:
+# pytest imports the plugin — and with it the whole facade — before pytest-cov
+# starts, so several hundred modules had their import-time lines recorded as
+# never executed. Measured 2026-08-23 on one machine, same suite and same
+# config, only the start time moved: 52.22% with `pytest --cov`, **72.05%**
+# with `coverage run -m pytest`. 11,962 statements. `quality.yml` now runs
+# `coverage run`, and the comment there says why it must stay that way.
 #
-# 70 remains the destination; Progress.md records what stands between here
-# and there.
-fail_under = 50
+# The number is measured, never guessed, and read from the matrix rather than
+# from one machine — the spread across platforms is over a point and this
+# floor has to hold on the lowest square. 68 is deliberately provisional: it
+# is the first floor under the corrected measurement, set below every
+# plausible square so the corrected matrix can be read off this PR's run and
+# the floor then taken from its minimum, exactly as 50 was taken from #484's.
+#
+# 70 was the destination and the tests are already past it; Progress.md
+# records where the number goes next.
+fail_under = 68
 
 [tool.mypy]
 python_version = "3.10"

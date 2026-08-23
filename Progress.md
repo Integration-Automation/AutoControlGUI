@@ -220,9 +220,9 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 
 ---
 
-## 兩個門檻：mypy 那半已經到終點，覆蓋率那半還在爬
+## 兩個門檻：mypy 那半到終點了，覆蓋率那半是量錯了
 
-`TODO` — 只剩覆蓋率；型別契約 2026-08-23 收工
+`TODO` — 只剩覆蓋率的地板要重設；型別契約 2026-08-23 收工
 
 原本這一條記的是兩個只存在於 `pyproject.toml` 註解裡、沒有任何機制的承諾。
 2026-08-21 把**機制**補上了（做法見 [WHATS_NEW.md](WHATS_NEW.md)）。
@@ -230,18 +230,43 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 （`keyboard`／`mouse`）2026-08-23 拿到合約。所以這條剩下的實質內容只有覆蓋率；
 mypy 那一節留著是因為它記的那幾個坑之後還會踩到。
 
-### 覆蓋率：地板 50，目標 70
+### 覆蓋率：目標 70 其實早就到了，是量錯了
 
-`fail_under` 從 35 提到 **50**。35 是第一次實測的基線，之後測試長大了它卻沒動，
-於是有 15 個百分點是白讓的：九宮格矩陣每一格都在 50% 以上，而 CI 會放行一個
-把三分之一測試刪掉的改動。現在的地板取自矩陣**最低**的那一格
-（ubuntu-22.04／3.10，50.26%；最高的是 windows-2022／3.14，51.69%）。
+`TODO` — 只剩一件事：把地板設成**修正後**矩陣的最低那一格
 
-規則寫進註解了：**這是棘輪，不是目標**——測試賺到了就把地板提上去。
-往 70 的路上還差 20 點，而覆蓋率排除了 `gui/` 與 `language_wrapper/`，
-所以剩下的缺口都在 `utils/` 的無頭模組裡。**下一步**是找出跌破平均的大模組
-（`--cov-report=term-missing` 已經開著，CI 每一格都存了 `coverage.xml` artifact），
-而不是齊頭式地補測試。
+`fail_under` 一度從 35 提到 50，理由寫在 `pyproject.toml`。**那兩個數字都低了大約
+24 點**，而原因不在測試，在量測的起點：
+
+`quality.yml` 用的是 `pytest --cov`，而本套件註冊了 `pytest11` entry point。
+pytest 在載入外掛時就會 import `je_auto_control.utils.pytest_plugin.plugin`——
+要 import 那個子模組，Python 必須先執行 `je_auto_control/__init__.py`，也就是門面，
+連帶把好幾百個模組拉進來。`pytest-cov` 是**在那之後**才開始量的，所以那幾百個模組的
+import 期程式碼（`def` 行、類別本體、常數、兩張大分派表）全部被記成「從沒執行過」。
+
+2026-08-23 實測，同一套測試、同一份 `[tool.coverage.run]` 設定，**只差開始的時機**：
+
+| 量法 | 總覆蓋率 |
+| --- | ---: |
+| `pytest --cov=je_auto_control` | 52.22% |
+| `coverage run -m pytest` | **72.05%** |
+
+差 11,962 個 statement。受害最深的正好是最大的幾個檔：`action_executor.py` +786、
+`_handlers.py` +684、門面自己 +369、`_factories.py` +209。
+
+**一個註冊了 pytest 外掛的套件，沒辦法用 `pytest --cov` 量自己。**
+`quality.yml` 已經改成 `coverage run -m pytest`（先於 pytest 載入任何東西），
+`test/unit_test/headless/test_coverage_measurement.py` 把這件事釘住——因為兩種寫法的
+差別在綠色的建置裡看不出來：改回去會白送 24 點，而每一格照樣是綠的。
+
+**還沒做的**：地板現在是 **68**，那是個刻意保守的暫定值——低於任何一格可能的數字，
+好讓修正後的九宮格能在這個 PR 的 run 上讀出來。**下一步就是去讀那九格，把地板設成
+最低的那一格**，跟當初 50 取自 PR #484 的矩陣是同一個做法。地板只有一個家
+（`pyproject.toml` 的 `fail_under`），`quality.yml` 不再另外抄一份。
+
+至於「補測試」：70 這個目標在修正後已經越過了，所以下一個目標值該由維護者重新定。
+真正還低的是哪幾塊，現在有實測（本機 Windows／3.14，修正後）：
+`utils/remote_desktop` 35%、`utils/mcp_server` 34%（`_handlers.py` 自己 10%）、
+`utils/executor` 41%、`utils/accessibility` 29%、`wrapper/window_backends` 10%。
 
 ### mypy：整包把關，**豁免清單已經清空**
 

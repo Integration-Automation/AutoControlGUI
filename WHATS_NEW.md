@@ -109,6 +109,50 @@ which meant 其餘模組 counted it a second time. The row is now two plain numb
 `wrapper/window_backends/` row that section had been missing entirely, and
 其餘模組 no longer double-counts 3,293 lines.
 
+### The Coverage Number Had Been 24 Points Low, and Not Because of the Tests
+
+`fail_under` went from 35 to 50 two days ago because the matrix was measured
+and 35 had been left behind. **Every number in that measurement was about 24
+points low**, and the reason is not in the test suite at all.
+
+`quality.yml` measured with `pytest --cov`, and this package registers a
+`pytest11` entry point. pytest imports
+`je_auto_control.utils.pytest_plugin.plugin` while it loads plugins — and to
+import that submodule Python must first execute `je_auto_control/__init__.py`,
+the facade, which pulls in several hundred modules. pytest-cov starts measuring
+*after* plugin loading, so all of those modules had their import-time lines —
+`def` lines, class bodies, constants, the two big dispatch tables — recorded as
+never executed.
+
+Measured on one machine, same suite, same `[tool.coverage.run]` config, the
+only difference being when measurement starts:
+
+| how | total |
+| --- | ---: |
+| `pytest --cov=je_auto_control` | 52.22% |
+| `coverage run -m pytest` | **72.05%** |
+
+11,962 statements, and the files hit hardest were the biggest ones:
+`action_executor.py` +786, `_handlers.py` +684, the facade itself +369,
+`_factories.py` +209. 70 was the destination `Progress.md` had been aiming at
+and describing as twenty points away; the tests had already passed it.
+
+**A package that registers a pytest plugin cannot measure itself with
+`pytest --cov`.** `quality.yml` now runs `coverage run -m pytest`, which starts
+before pytest loads anything, writes the XML before enforcing the floor so a
+failing square still uploads what it was short of, and no longer carries a
+second copy of the floor: `fail_under` in `pyproject.toml` is the only one.
+`test/unit_test/headless/test_coverage_measurement.py` pins all three, because
+the difference between the two spellings is invisible in a green build —
+reverting gives back 24 points and every job still passes.
+
+The floor is **68** for now, deliberately below any plausible square, so the
+corrected nine-way matrix can be read off this PR's own run and the floor then
+taken from its minimum — the same way 50 was taken from #484's. What is
+genuinely low is now measured rather than assumed: `utils/remote_desktop` 35%,
+`utils/mcp_server` 34% (`_handlers.py` alone at 10%), `utils/executor` 41%,
+`utils/accessibility` 29%, `wrapper/window_backends` 10%.
+
 ### The Last Two Names on the Platform Seam, and the Three Bugs Behind Them
 
 `keyboard` and `mouse` were the two exports the seam still typed as `Any`, and
