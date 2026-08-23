@@ -9,6 +9,12 @@ qt-material==2.17
 mss==10.2.0
 defusedxml==0.7.1
 
+# WebRTC ([webrtc] extra) — without these, eleven `utils/remote_desktop`
+# modules raise ImportError at import and their tests skip, so the coverage
+# figure a developer measures is ~4 points under the one CI enforces.
+aiortc>=1.14.0
+av>=14.0.0
+
 # Office I/O ([office] extra) — exercised by the headless Office tests.
 openpyxl==3.1.5
 python-docx==1.2.0

@@ -120,9 +120,20 @@ jobs:
       # snapshot of `je_auto_control/` straight into site-packages and masks
       # the editable install for any sub-package the snapshot doesn't include
       # (admin, usb, remote_desktop, vision, …).
-      - name: Install the project itself
+      #
+      # `[webrtc]` is part of the install and is load-bearing for what this job
+      # measures. Eleven modules under `utils/remote_desktop` raise ImportError
+      # at module level without `aiortc`/`av` — 2,090 statements that were a
+      # hard 0% here no matter what anyone wrote. Worse than the number: the
+      # tests that cover the WebRTC host's auth, TLS, tokens and file transfer
+      # were already written and `importorskip`ped straight past on every
+      # square, so they ran on developer machines and nowhere else. Measured on
+      # this tree, one variable changed: 513 of those statements are covered by
+      # tests that exist today. The extra is NOT added to `typing-stable-api`
+      # below — that gate must not depend on what is installed.
+      - name: Install the project itself, with the WebRTC extra
         shell: bash
-        run: pip install -e .  # NOSONAR githubactions:S8544 githubactions:S8541  # reason: installs the checked-out project itself, so there is no upstream version to lock and no third-party setup script to run
+        run: pip install -e ".[webrtc]"  # NOSONAR githubactions:S8544 githubactions:S8541  # reason: installs the checked-out project itself, so there is no upstream version to lock and no third-party setup script to run
 
       - name: Install the test tooling
         shell: bash
