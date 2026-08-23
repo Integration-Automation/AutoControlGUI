@@ -387,6 +387,13 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **A `null` in a remote-desktop entry's `tags` became a tag named `"None"`.**
+  `AddressBook.set_tags()` cleaned its input with `str(t).strip()`, and
+  `str(None)` is the non-empty string `"None"`, so a JSON `null` in the array —
+  what a client sends for an omitted tag — was stored as a tag and then listed
+  by `all_tags()` alongside the real ones. Nulls are now dropped. Tags that
+  were already stored this way stay until the entry's tags are set again.
+
 - **Typing text through the key-event route raised `AttributeError` on the
   three platforms that cannot do it.** `type_unicode_keys()` (and
   `AC_type_unicode_keys` / `ac_type_unicode_keys`) called the backend's
