@@ -6035,8 +6035,8 @@ def locale_tools() -> List[MCPTool]:
             description=("Format an ISO (YYYY-MM-DD) date for a locale. 'fmt' "
                          "is short/medium/long/full. Returns {text}."),
             input_schema=schema(
-                {"value": {"type": "string"}, "locale": _LOC,
-                 "fmt": {"type": "string"}}, ["value"]),
+                {"value": {"type": "string", "format": "date"},
+                 "locale": _LOC, "fmt": {"type": "string"}}, ["value"]),
             handler=h.format_date,
             annotations=READ_ONLY,
         ),
@@ -7533,7 +7533,8 @@ def recurrence_tools() -> List[MCPTool]:
                          "'dtstart' into the next 'count' ISO datetimes. "
                          "Returns {occurrences}."),
             input_schema=schema(
-                {"rule": {"type": "string"}, "dtstart": {"type": "string"},
+                {"rule": {"type": "string"},
+                 "dtstart": {"type": "string", "format": "date-time"},
                  "count": {"type": "integer"}},
                 ["rule", "dtstart"]),
             handler=h.rrule_occurrences,
@@ -7545,8 +7546,9 @@ def recurrence_tools() -> List[MCPTool]:
                          "(ISO; defaults to current time), anchored at ISO "
                          "'dtstart'. Returns {next}."),
             input_schema=schema(
-                {"rule": {"type": "string"}, "dtstart": {"type": "string"},
-                 "now": {"type": "string"}},
+                {"rule": {"type": "string"},
+                 "dtstart": {"type": "string", "format": "date-time"},
+                 "now": {"type": "string", "format": "date-time"}},
                 ["rule", "dtstart"]),
             handler=h.rrule_next,
             annotations=READ_ONLY,

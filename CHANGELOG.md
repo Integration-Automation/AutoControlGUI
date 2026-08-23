@@ -10,6 +10,13 @@ only when documented here with a migration path.
 
 ### Added
 
+- **`ac_rrule_next`, `ac_rrule_occurrences` and `ac_format_date` now declare
+  the string format they parse.** Their `dtstart` / `now` / `value` properties
+  carry `"format": "date-time"` (or `"date"`) in the tool's input schema, which
+  the descriptions already said in prose and the schema did not. A client
+  generating values from the schema alone used to produce a plain string and
+  get a `ValueError` out of `datetime.fromisoformat`.
+
 - **Windows on arm64 installs.** `opencv-python`, `cryptography` and
   `je_open_cv` now carry the environment marker
   `sys_platform != 'win32' or platform_machine != 'ARM64'`, because none of

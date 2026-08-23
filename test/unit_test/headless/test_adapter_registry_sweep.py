@@ -34,16 +34,17 @@ Out of scope by design: an adapter that reaches into two project modules
 third-party module (it picks its own backend, so what it returns depends on the
 machine -- the opposite of what a sweep can assert).
 """
-import ast
-import importlib
 import inspect
 import json
-import sys
-import textwrap
 import typing
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List
 
 import pytest
+
+from headless._contract_sweep import (
+    NONE_TYPE, contract_stubs, delegation, install_recorder, install_stubs,
+    is_serialisable, sample_value,
+)
 
 from je_auto_control.gui.script_builder.command_schema import (
     FieldSpec, FieldType, _build_specs,
@@ -53,8 +54,6 @@ from je_auto_control.utils.mcp_server.tools import (
     MCPContent, MCPTool, build_default_tool_registry,
 )
 
-_NONE_TYPE = type(None)
-_PACKAGE = "je_auto_control"
 
 # MCP adapters that need more than their callee's return annotation promises.
 # Each is a real coupling the type contract does not express, not a stub defect:
@@ -65,6 +64,7 @@ _NEEDS_MORE_THAN_THE_CONTRACT = {
     "ac_anchor_click",
     # Indexes a key out of a Dict[str, Any] the annotation cannot promise.
     "ac_tween_drag",
+    "ac_voice_dispatch",
 }
 
 
@@ -73,11 +73,6 @@ _NEEDS_MORE_THAN_THE_CONTRACT = {
 # Sample values by JSON-Schema type. Strings carry their property name so a
 # swapped pair of same-typed arguments shows as a mismatch, not as two equal
 # placeholders.
-_SCALARS: Dict[str, Any] = {
-    "integer": 3, "number": 1.5, "boolean": True,
-    "array": [], "object": {}, "null": None,
-}
-
 # One sample per Script Builder field type; a field's own default wins where it
 # has one, so enums and paths stay inside the values the editor would offer.
 _FIELD_SAMPLES: Dict[FieldType, Callable[[FieldSpec], Any]] = {
@@ -89,30 +84,6 @@ _FIELD_SAMPLES: Dict[FieldType, Callable[[FieldSpec], Any]] = {
     FieldType.FILE_PATH: lambda field: "sample.txt",
     FieldType.RGB: lambda field: [1, 2, 3],
 }
-
-# The emptiest value each concrete annotation allows, as factories so two
-# adapters never share one mutable container.
-_ZEROS: Dict[Any, Callable[[], Any]] = {
-    int: lambda: 0, float: lambda: 0.0, bool: lambda: False,
-    str: lambda: "", bytes: lambda: b"",
-    list: list, dict: dict, set: set, tuple: tuple,
-}
-
-
-def _sample_value(spec: Dict[str, Any], name: str) -> Any:
-    """Return a value satisfying one JSON-Schema property node."""
-    enum = spec.get("enum")
-    if isinstance(enum, list) and enum:
-        return enum[0]
-    kind = spec.get("type", "string")
-    if isinstance(kind, list):
-        kind = next((entry for entry in kind if entry != "null"), "string")
-    if kind == "array":
-        item = spec.get("items")
-        return [_sample_value(item, name)] if item else []
-    if kind == "string":
-        return f"value-for-{name}"
-    return _SCALARS.get(kind, f"value-for-{name}")
 
 
 def _field_value(field: FieldSpec) -> Any:
@@ -133,7 +104,7 @@ def _annotated_value(annotation: Any, name: str) -> Any:
     origin = typing.get_origin(annotation)
     arguments = typing.get_args(annotation)
     if origin is typing.Union:
-        if _NONE_TYPE in arguments:
+        if NONE_TYPE in arguments:
             return None
         return _annotated_value(arguments[0], name)
     if origin in (list, tuple, set):
@@ -144,198 +115,6 @@ def _annotated_value(annotation: Any, name: str) -> Any:
     return scalars.get(annotation)
 
 
-def _value_for_generic(origin: Any, arguments: Tuple[Any, ...]) -> Any:
-    """Build the emptiest value a parameterised annotation allows."""
-    if origin is typing.Union:
-        return None if _NONE_TYPE in arguments else _value_for(arguments[0])
-    if origin is tuple:
-        if not arguments or arguments[-1] is Ellipsis:
-            return ()
-        return tuple(_value_for(entry) for entry in arguments)
-    if origin in (list, set, frozenset, dict):
-        return origin()
-    raise ValueError(f"unmodelled container {origin!r}")
-
-
-def _value_for(annotation: Any) -> Any:
-    """Build the emptiest value a return annotation allows.
-
-    ``Optional[X]`` yields None, containers yield empty containers, scalars
-    yield their zero. Raises :class:`ValueError` for an annotation this cannot
-    model, which leaves the adapter out of the sweep rather than testing it
-    against a value its callee never promised.
-    """
-    if annotation is inspect.Signature.empty:
-        raise ValueError("no return annotation")
-    if annotation in (None, _NONE_TYPE, typing.Any):
-        return None
-    origin = typing.get_origin(annotation)
-    if origin is not None:
-        return _value_for_generic(origin, typing.get_args(annotation))
-    if annotation in _ZEROS:
-        return _ZEROS[annotation]()
-    raise ValueError(f"unmodelled return annotation {annotation!r}")
-
-
-# === Finding the callee an adapter stands in front of =======================
-
-def _adapter_source(adapter: Any) -> Optional[ast.FunctionDef]:
-    """Return the parsed definition of ``adapter``, or None if unavailable."""
-    try:
-        source = textwrap.dedent(inspect.getsource(adapter))
-    except (OSError, TypeError):
-        return None
-    node = ast.parse(source).body[0]
-    return node if isinstance(node, ast.FunctionDef) else None
-
-
-def _is_stdlib(module_path: str) -> bool:
-    """Return True for a standard-library module path."""
-    return module_path.split(".")[0] in sys.stdlib_module_names
-
-
-def _is_foreign_import(node: ast.stmt) -> bool:
-    """Return True for an import that is neither stdlib nor first-party-from.
-
-    A plain ``import`` of a third-party package means the adapter picks its own
-    backend; a relative import means the source could not be resolved to a
-    module path. Either way the adapter is out of scope.
-    """
-    if isinstance(node, ast.Import):
-        return any(not _is_stdlib(alias.name) for alias in node.names)
-    return not node.module or bool(node.level)
-
-
-def _first_party_from_imports(imports: List[ast.stmt]
-                              ) -> List[Tuple[str, List[str]]]:
-    """Return ``(module, names)`` for each from-import inside this package.
-
-    "First party" is the package prefix, not merely "not the stdlib": a
-    ``from PySide6... import`` is a backend choice like a plain third-party
-    import, and it is the prefix that lets the resolved path be imported below
-    without trusting whatever the parsed source happened to say.
-    """
-    return [(child.module, [alias.name for alias in child.names])
-            for child in imports
-            if isinstance(child, ast.ImportFrom)
-            and child.module.startswith(_PACKAGE + ".")]
-
-
-def _project_import(adapter: Any) -> Optional[Tuple[str, List[str]]]:
-    """Return ``(module, names)`` for the one project callee an adapter imports.
-
-    Standard-library imports are ignored: ``import json`` inside an adapter
-    parses a field the visual editor passed as text, and ``import base64``
-    encodes what the callee returned -- neither is the callee.
-    """
-    node = _adapter_source(adapter)
-    if node is None:
-        return None
-    imports = [child for child in ast.walk(node)
-               if isinstance(child, (ast.Import, ast.ImportFrom))]
-    if any(_is_foreign_import(child) for child in imports):
-        return None
-    found = _first_party_from_imports(imports)
-    return found[0] if len(found) == 1 else None
-
-
-def _sole_imported_name(node: ast.stmt) -> Optional[Tuple[str, str, str]]:
-    """Return ``(module, attribute, local_name)`` for ``from X import y as z``."""
-    if not isinstance(node, ast.ImportFrom) or not node.module or node.level:
-        return None
-    if len(node.names) != 1:
-        return None
-    alias = node.names[0]
-    return node.module, alias.name, alias.asname or alias.name
-
-
-def _returned_callee(node: ast.stmt) -> Optional[str]:
-    """Return the plain name a ``return name(...)`` statement calls."""
-    if not isinstance(node, ast.Return):
-        return None
-    call = node.value
-    if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Name):
-        return None
-    return call.func.id
-
-
-def _delegated_call(node: ast.FunctionDef) -> Optional[Tuple[str, str]]:
-    """Return ``(module, attribute)`` for a body that is import-then-return."""
-    body = [statement for statement in node.body
-            if not (isinstance(statement, ast.Expr)
-                    and isinstance(statement.value, ast.Constant))]
-    if len(body) != 2:
-        return None
-    imported = _sole_imported_name(body[0])
-    called = _returned_callee(body[1])
-    if imported is None or called is None or called != imported[2]:
-        return None
-    return imported[0], imported[1]
-
-
-def _delegation(adapter: Any) -> Optional[Tuple[str, str]]:
-    """Return ``(module, attribute)`` when ``adapter`` is a pure delegator.
-
-    A pure delegator's body is exactly one ``from ... import name`` followed by
-    ``return name(...)``. Anything else -- a temporary, a branch, a second
-    import -- means the adapter does work of its own; the output sweeps cover
-    those instead.
-    """
-    node = _adapter_source(adapter)
-    return None if node is None else _delegated_call(node)
-
-
-def _contract_stubs(adapter: Any) -> Optional[Tuple[Any, Dict[str, Any]]]:
-    """Return ``(module, {name: value})`` stubbing one adapter's callees.
-
-    Each value comes from that callee's own return annotation, so the adapter
-    runs against exactly what the typing contract promises it.
-    """
-    found = _project_import(adapter)
-    if found is None:
-        return None
-    module_path, names = found
-    try:
-        # ``module_path`` is a ``je_auto_control.*`` path parsed out of this
-        # repository's own source; no caller supplies it.
-        module = importlib.import_module(module_path)  # nosemgrep  # reason: prefix-checked at the parse site
-    except ImportError:
-        return None
-    values: Dict[str, Any] = {}
-    for name in names:
-        target = getattr(module, name, None)
-        if not callable(target):
-            return None
-        try:
-            hints = typing.get_type_hints(target)
-            values[name] = _value_for(hints.get("return",
-                                                inspect.Signature.empty))
-        except (ValueError, TypeError, NameError):
-            return None
-    return module, values
-
-
-def _install_stubs(monkeypatch: pytest.MonkeyPatch, module: Any,
-                   values: Dict[str, Any]) -> None:
-    """Replace each named callee with a stub returning its contract value."""
-    for name, value in values.items():
-        monkeypatch.setattr(module, name, lambda *a, _v=value, **k: _v)
-
-
-def _is_serialisable(value: Any) -> bool:
-    """Return True when a result can cross the JSON boundary."""
-    if isinstance(value, MCPContent):
-        return True
-    if isinstance(value, list) and value and all(
-            isinstance(entry, MCPContent) for entry in value):
-        return True
-    try:
-        json.dumps(value)
-    except (TypeError, ValueError):
-        return False
-    return True
-
-
 # === The MCP tool registry ==================================================
 
 def _tool_arguments(schema: Dict[str, Any],
@@ -343,7 +122,7 @@ def _tool_arguments(schema: Dict[str, Any],
     """Build a call payload from a tool's input schema."""
     properties = schema.get("properties") or {}
     names = (schema.get("required") or []) if required_only else list(properties)
-    return {name: _sample_value(properties[name], name)
+    return {name: sample_value(properties[name], name)
             for name in names if name in properties}
 
 
@@ -361,38 +140,17 @@ def _unique_by_handler(tools: List[MCPTool]) -> List[MCPTool]:
 
 REGISTRY = build_default_tool_registry(read_only=False, aliases=False)
 _TOOLS = _unique_by_handler(REGISTRY)
-DELEGATING = [(tool, *_delegation(tool.handler)) for tool in _TOOLS
-              if _delegation(tool.handler) is not None]
+DELEGATING = [(tool, *delegation(tool.handler)) for tool in _TOOLS
+              if delegation(tool.handler) is not None]
 STUBBABLE = [tool for tool in _TOOLS
-             if _contract_stubs(tool.handler) is not None]
-
-
-def _install_recorder(monkeypatch: pytest.MonkeyPatch, module_path: str,
-                      attribute: str) -> Tuple[Dict[str, Any], Any, Callable]:
-    """Replace ``module_path.attribute`` with a call recorder.
-
-    Returns the record dict, the sentinel the recorder returns, and the real
-    callable, whose signature says what the recorded arguments are named.
-    """
-    module = importlib.import_module(module_path)
-    original = getattr(module, attribute)
-    record: Dict[str, Any] = {}
-    sentinel = object()
-
-    def _recorder(*args: Any, **kwargs: Any) -> Any:
-        record["args"] = args
-        record["kwargs"] = kwargs
-        return sentinel
-
-    monkeypatch.setattr(module, attribute, _recorder)
-    return record, sentinel, original
+             if contract_stubs(tool.handler) is not None]
 
 
 @pytest.mark.parametrize("case", DELEGATING, ids=lambda case: case[0].name)
 def test_required_arguments_alone_make_the_tool_callable(case, monkeypatch):
     """A client sending exactly the schema's required properties succeeds."""
     tool, module_path, attribute = case
-    record, sentinel, _original = _install_recorder(
+    record, sentinel, _original = install_recorder(
         monkeypatch, module_path, attribute)
     payload = _tool_arguments(tool.input_schema, required_only=True)
     assert tool.invoke(payload) is sentinel
@@ -403,7 +161,7 @@ def test_required_arguments_alone_make_the_tool_callable(case, monkeypatch):
 def test_declared_arguments_reach_the_delegate_unchanged(case, monkeypatch):
     """Every property the schema declares is accepted and forwarded intact."""
     tool, module_path, attribute = case
-    record, sentinel, original = _install_recorder(
+    record, sentinel, original = install_recorder(
         monkeypatch, module_path, attribute)
     payload = _tool_arguments(tool.input_schema, required_only=False)
     assert tool.invoke(payload) is sentinel
@@ -429,11 +187,10 @@ def test_tool_result_survives_json(tool, monkeypatch):
     """An adapter fed exactly what its callee promises returns JSON."""
     if tool.name in _NEEDS_MORE_THAN_THE_CONTRACT:
         pytest.skip("documented: needs more than the callee's annotation")
-    module, values = _contract_stubs(tool.handler)
-    _install_stubs(monkeypatch, module, values)
+    install_stubs(monkeypatch, contract_stubs(tool.handler))
     result = tool.invoke(_tool_arguments(tool.input_schema,
                                          required_only=False))
-    assert _is_serialisable(result), (
+    assert is_serialisable(result, (MCPContent,)), (
         f"{tool.name} returned {type(result).__name__}, which json.dumps "
         "cannot encode")
 
@@ -444,16 +201,16 @@ def test_the_documented_exceptions_are_still_needed(monkeypatch):
     for tool in STUBBABLE:
         if tool.name not in _NEEDS_MORE_THAN_THE_CONTRACT:
             continue
-        module, values = _contract_stubs(tool.handler)
+        stubs = contract_stubs(tool.handler)
         with monkeypatch.context() as patch:
-            _install_stubs(patch, module, values)
+            install_stubs(patch, stubs)
             try:
                 result = tool.invoke(
                     _tool_arguments(tool.input_schema, required_only=False))
             except Exception:  # noqa: BLE001  # reason: any failure keeps it
                 still_failing.add(tool.name)
             else:
-                if not _is_serialisable(result):
+                if not is_serialisable(result, (MCPContent,)):
                     still_failing.add(tool.name)
     assert still_failing == _NEEDS_MORE_THAN_THE_CONTRACT, (
         "these entries now pass and should be deleted: "
@@ -494,7 +251,7 @@ def _is_drivable(command: str, adapter: Any) -> bool:
     annotated at all) leaves nothing to build a value from, and passing None
     would test the adapter's None-handling rather than its wiring.
     """
-    if _contract_stubs(adapter) is None:
+    if contract_stubs(adapter) is None:
         return False
     if any(parameter.kind is parameter.VAR_KEYWORD
            for parameter in inspect.signature(adapter).parameters.values()):
@@ -513,8 +270,7 @@ SWEEPABLE = sorted(command for command, adapter in executor.event_dict.items()
 def test_command_dispatches_and_records_json(command, monkeypatch):
     """The command runs from a client's arguments and lands JSON in the record."""
     adapter = executor.event_dict[command]
-    module, values = _contract_stubs(adapter)
-    _install_stubs(monkeypatch, module, values)
+    install_stubs(monkeypatch, contract_stubs(adapter))
     payload = _command_arguments(command, adapter)
     record = executor.execute_action([[command, payload]])
     assert record, f"{command} produced no execution record"
