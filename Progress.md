@@ -228,12 +228,12 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 2026-08-21 把**機制**補上了（做法見 [WHATS_NEW.md](WHATS_NEW.md)）：
 型別契約的豁免清單 2026-08-22 清空，平台縫最後兩個名稱（`keyboard`／`mouse`）
 2026-08-23 拿到合約；覆蓋率那半發現不是爬得不夠，是量測起點錯了，修正後地板
-從 50 提到 69。
+從 50 提到 69，同日再提到 74。
 
 **2026-08-23 維護者拍板：下一個覆蓋率目標是 80。** 這一條留到那時候。
 型別那一節留著是因為它記的那幾個坑之後還會踩到。
 
-### 覆蓋率：地板 69，下一站 80
+### 覆蓋率：地板 74，下一站 80
 
 `TODO` — 目標 **80**（2026-08-23 拍板）。地板本身照舊只跟著實測的最低那一格走。
 
@@ -270,9 +270,16 @@ import 期程式碼（`def` 行、類別本體、常數、兩張大分派表）�
 
 地板因此設成 **69**——取最低那一格往下取整，與當初 50 取自 50.26% 是同一個慣例。
 `[tool.coverage.report]` 的 `precision` 也從預設的 0 提到 2：預設精度下九格全部印
-「70%」，而它們其實是 69.67 到 70.97，害得這次的地板得去 XML artifact 裡撈。
+「70%」，而它們其實是 69.67 到 70.97，分不出最低的是哪一格。
 順帶把 `fail_under` 的容差從一整個百分點縮到 0.01。
 地板只有一個家（`pyproject.toml` 的 `fail_under`），`quality.yml` 不再另外抄一份。
+
+**這一段原本寫「地板得去 XML artifact 裡撈」，那是錯的，2026-08-23 實測更正。**
+上面那九個數字是 `coverage report` 印的，也就是 `fail_under` 真正比對的那個數字，
+而它**含分支**（`[tool.coverage.run]` 的 `branch = true`）；`coverage.xml` 的
+`line-rate` 屬性**不含分支**，所以同一格會高出約 1.8 點——a585e65 那一格
+report 印 69.67%，artifact 是 71.07%。照 artifact 設地板，設出來的會是這套測試
+過不了的地板。要看單一子系統的缺口用 artifact，要設地板只能用 report。
 
 Windows 是高的那一角，因為門面 import 進來的是**它自己那個平台的後端**；
 換句話說剩下的那 30 點裡，有一部分是任何單一平台都拿不到的。
@@ -307,32 +314,97 @@ MCP adapter 與 372 個執行器 adapter 可以在沒有滑鼠、沒有螢幕、
 機器）。三個 MCP adapter 需要的比合約承諾的更多，用名字列在測試檔裡，各附一行
 理由；**其中任何一個哪天開始通過，測試會要求把它刪掉**，清單不會爛在那裡。
 
-#### 剩下的在哪裡（2026-08-23 實測，本機 Windows／3.14）
+#### 2026-08-23 拍板：`quality.yml` 裝 `[webrtc]` extra
 
-兩支 sweep 之後的數字（`utils/executor` 與 `utils/mcp_server` 已經含進去了）：
+原本這裡是一條 `DECIDE`，寫的是「要嘛讓 CI 裝那個 extra，要嘛承認那 2,900 個
+statement 是分母裡的死重」。**維護者選了裝**，理由不是那一點覆蓋率：
+
+`utils/remote_desktop` 底下有 **11 個模組在沒有 `aiortc`／`av` 時於模組層拋
+ImportError**，共 2,090 個 statement——在 CI 上是硬性的 0%，寫什麼測試都動不了。
+比數字嚴重的是另一件事：**涵蓋 WebRTC host 的 auth、TLS、resume token、檔案傳輸的
+測試早就寫好了**，只是每一格都 `importorskip` 略過，等於只在開發機上跑過。
+
+只換這一個變數實測（同一台機器、同一套測試）：那 2,090 個裡有 **513 個**是現有測試
+就會蓋到的，端到端 +1.23 點（windows-2022／3.14）。相依在九宮格上都解得開
+（`aiortc` 1.15.0 + `av` 17.1.0 對 win_amd64／manylinux x86_64／macos-14 arm64 的
+3.10 與 3.14 都有 wheel）。`typing-stable-api` **刻意不裝**——那個閘門的判定不能隨
+環境浮動，理由在下一節。
+
+`dev_requirements.txt` 與 `CLAUDE.md` 的開發指令也跟著加了那個 extra：少裝它的人
+量到的數字會比 CI 執行的地板低約 4 點。
+
+#### 三個註冊表都掃過了，替身再往合約深一層
+
+`test_adapter_registry_sweep.py` 之後又走了三步（做法見 [WHATS_NEW.md](WHATS_NEW.md)）：
+
+| 這次多掃到的 | 為什麼原本掃不到 |
+| --- | --- |
+| 92 個 adapter：被呼叫者回傳專案 dataclass | `_value_for` 只認純量與容器，dataclass 直接被判成「模不出來」。現在從 dataclass **自己的欄位標注**造實例，於是 adapter 的 `.to_dict()` 也一起跑起來 |
+| 101 個 adapter：被呼叫者是模組層單例的方法 | 匯入的名字不是 function 而是 `default_observer`／`default_scheduler`／`registry` 這種物件。呼叫**單一**方法就是同一個轉接形狀往下一層，方法的標注就是合約；呼叫兩個以上算編排，仍然排除 |
+| 31 條 REST 路由 | `rest_handlers` 是同一形狀的第三個註冊表，而現有的 REST 測試走 HTTP 層，在無頭 runner 上多半只是看著 handler 掉進自己的 `except` 回 500 |
+
+REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handler 不同檔，
+所以掃不出「拿被測程式當答案」的循環；順帶白拿一條契約測試：**路由表與 OpenAPI
+文件必須描述同一組 API**，多一條少一條都當場紅。
+
+三支共用的機器搬進 `test/unit_test/headless/_contract_sweep.py`，各自只留自己的
+參數來源。
+
+#### 現在的九宮格（2026-08-23 實測，本 PR 的 run）
+
+| | 最低 | 最高 |
+| --- | --- | --- |
+| 上一版（PR #486 首輪） | 69.67%（ubuntu-22.04／3.14） | 70.97%（windows-2022／3.12） |
+| 這一版 | **74.99%**（ubuntu-22.04／3.14） | 76.19%（windows-2022，3.10–3.13） |
+
+地板隨之從 69 提到 **74**。
+
+#### 剩下的 5 點在哪裡（2026-08-23，ubuntu-22.04／3.14 的 artifact）
+
+以下是 statement 數（artifact 的口徑，不含分支），拿來看缺口分佈：
 
 | 子系統 | 沒蓋到 / 總 statement | 覆蓋率 |
 | --- | ---: | ---: |
-| `utils/remote_desktop` | 2,923 / 6,622 | 55.9% |
-| `utils/accessibility` | 822 / 1,397 | 41.2% |
-| `utils/executor` | 797 / 3,906 | 79.6% |
-| `utils/mcp_server` | 761 / 4,618 | 83.5% |
-| `utils/usb` | 455 / 2,137 | 78.7% |
-| `wrapper/window_backends` | 397 / 477 | 16.8% |
+| `utils/remote_desktop` | 2,653 / 6,622 | 59.9% |
+| `utils/accessibility` | 824 / 1,397 | 41.0% |
+| `utils/executor` | 653 / 3,906 | 83.3% |
+| `utils/usb` | 573 / 2,137 | 73.2% |
+| `utils/mcp_server` | 573 / 4,618 | 87.6% |
+| `wrapper/window_backends` | 361 / 477 | 24.3% |
 | `utils/hotkey` | 221 / 426 | 48.1% |
-| `utils/rest_api` | 220 / 808 | 72.8% |
+| `utils/rest_api` | 146 / 808 | 81.9% |
 
-**一件之前沒量過、但決定 80 到底可不可能的事**：其他平台的程式碼
-（X11／Wayland／macOS／Android／iOS）在這一格是 3,291 個 statement，
-其中 1,854 個沒被蓋到。就算那些永遠蓋不到，這一格的上限仍有 96%，
-所以**80 不是被「單一平台拿不到」卡住的**——純粹是量的問題：
-可攜程式碼還有 9,539 個 statement 沒被執行過。
+**要動地板，只能補在每一格都跑得到的程式碼上。** 地板取的是最低那一格，
+所以只在 Windows 跑得到的東西補再多也不會動它。把九格的未覆蓋行取交集，
+2026-08-23 量到 **9,697 個 statement 在每一格都沒被執行過**——那就是可攜的缺口，
+也是唯一會抬地板的地方。最大的幾塊：
 
-**最大的那一塊有個前提要先決定**：`utils/remote_desktop` 佔了將近三分之一，
-但 `quality.yml` 不裝 `[webrtc]` extra，所以 webrtc 那一族在 CI 上**永遠是 0%**，
-在那裡補的測試會整批 skip，對地板一個點也不會動。要嘛先讓 CI 裝那個 extra，
-要嘛承認那 2,900 個 statement 是分母裡的死重、把 80 算在其餘部分上。
-**兩條路都可以，但得先選一條再動手。**
+| 檔案 | 每一格都沒蓋到 | 備註 |
+| --- | ---: | --- |
+| `utils/executor/action_executor.py` | 589 | 掃不到的那批 adapter：被呼叫者是 class（沒有回傳標注可讀）、或 adapter 伸手進兩個模組 |
+| `utils/accessibility/backends/windows_backend.py` | 446 | UIA COM，要一套夠像的替身 |
+| `utils/remote_desktop/webrtc_viewer.py` | 354 | 現在 import 得到了（17.9%），但沒有測試驅動 |
+| `utils/remote_desktop/webrtc_host.py` | 351 | 同上（24.8%） |
+| `utils/mcp_server/tools/_handlers.py` | 348 | 同 `action_executor.py` |
+| `utils/remote_desktop/signaling_server.py` | 155 | **CI 動不了**：要 `[signaling]` extra（fastapi／uvicorn），沒裝 |
+| `utils/remote_desktop/multi_viewer.py` | 146 | |
+| `wrapper/window_backends/x11_backend.py` | 133 | 只有 Linux 那兩格跑得到，抬得動地板 |
+| `utils/accessibility/backends/linux_backend.py` | 132 | 同上 |
+
+**下一步的順序**（都還沒做）：
+
+1. `webrtc_host`／`webrtc_viewer`／`multi_viewer`／`webrtc_files`：`[webrtc]` 裝了
+   之後這一族才第一次可測，合計 960 個 statement 在每一格都沒跑過。`webrtc_host_auth`
+   與 `webrtc_stats` 已經照這個做法補完（56 個測試），其餘照抄。
+2. 掃不到的那批 adapter：目前卡在「被呼叫者是 class」。要嘛從 class 自己的方法標注
+   長出一個替身物件，要嘛承認那批不掃——**得先決定，因為前者會讓「跑起來了」和
+   「驗到了東西」分家**。
+3. `utils/accessibility` 與 `wrapper/window_backends` 的 Linux 後端：抬得動地板，
+   但需要一套 Xlib／AT-SPI 的替身。
+
+`utils/office`（77）與 `signaling_server`（155）**不要碰**：`quality.yml` 沒裝
+`[office]`／`[signaling]`，補的測試會整批 skip，對地板一個點都不動。要補之前
+先照 `[webrtc]` 的先例把 extra 加進 CI。
 
 ### mypy：整包把關，**豁免清單已經清空**
 

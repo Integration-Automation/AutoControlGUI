@@ -1,5 +1,107 @@
 # What's New — AutoControl
 
+## What's new (2026-08-24)
+
+### A Whole Subsystem Was Being Measured At Zero, And Its Tests Were Skipping
+
+`quality.yml` now installs the `[webrtc]` extra. The coverage number was the
+smaller half of the reason. Eleven modules under `utils/remote_desktop` raise
+`ImportError` at module level without `aiortc`/`av` — 2,090 statements that were
+a hard 0% on every square no matter what anyone wrote — but the part that
+mattered is that the tests covering the WebRTC host's auth, TLS, resume tokens
+and file transfer *were already written*. They `importorskip`ped straight past on
+all nine squares, so they ran on developer machines and nowhere else.
+
+Measured with one variable changed, same machine and same suite: 513 of those
+statements are covered by tests that exist today, worth +1.23 points end to end.
+The extra resolves on every square (`aiortc` 1.15.0 and `av` 17.1.0 have wheels
+for win_amd64, manylinux x86_64 and macos-14 arm64 on both ends of the supported
+Python range). `typing-stable-api` deliberately does not get it: that gate's
+verdict must not depend on what happens to be installed.
+
+`dev_requirements.txt` and the `CLAUDE.md` setup line carry it too, because a
+developer without it measures about 4 points below the floor CI enforces.
+
+### The Stub Grows One Level Deeper, And A Third Registry Gets Swept
+
+Yesterday's sweep replaced each adapter's callee with a value built from its
+return annotation. Three things it could not reach, and now does:
+
+**A dataclass return is not the end of the contract, it is one more level of
+it.** `Optional[X]` → None and containers → empty containers stopped at the
+first `-> HealOutcome`, so 92 adapters sat out. The stub is now an instance
+built from the dataclass's own field annotations, which means the adapter's
+`.to_dict()` runs too — against the declared shape rather than a mock that
+answers everything.
+
+**Some adapters import a singleton, not a function.** `default_observer`,
+`default_scheduler`, `registry` — the adapter calls one method on the object.
+That is the same wiring shape one indirection along, so the callee is the method
+and its annotation is the contract; 101 more adapters. Calling *two* methods
+means the adapter orchestrates the object rather than standing in front of one
+call, and those stay out.
+
+**The REST route table is the third registry of this shape.** Its handlers'
+own module docstring says they are "pure … trivial to unit-test without an HTTP
+layer", and the existing REST tests go through the HTTP layer instead — so on a
+headless runner most of them reached a handler only to watch it fall into its
+own `except` and answer 500. `test_rest_route_sweep.py` calls all 31 routes with
+the arguments their own OpenAPI document declares, and asserts what the
+dispatcher relies on: `(status, dict)`, a real HTTP code, a payload `json.dumps`
+accepts — for a documented request, for the empty one an unhelpful client sends,
+and for a body of the wrong shape. It also compares the route table against the
+document, so a route nobody describes or a documented route nobody serves is
+now a named failure.
+
+The machinery the three sweeps share moved to `test/unit_test/headless/
+_contract_sweep.py`. Each keeps its own argument source — a JSON schema, the
+Script Builder's field specs, an OpenAPI document — which is what stops a sweep
+from passing by restating the code it checks.
+
+Two things fell out of building it. `ac_rrule_next` and its neighbours now
+declare `"format": "date-time"` on the properties they parse, which their
+descriptions already said in prose and their schemas did not; a client
+generating values from the schema alone used to get a `ValueError` out of
+`datetime.fromisoformat`. And `AddressBook.set_tags()` cleaned its input with
+`str(t).strip()`, so a JSON `null` — what a client sends for an omitted tag —
+became a tag literally named `"None"`, which `all_tags()` then listed next to
+the real ones.
+
+### The Trust Store And The Auth Boundary Get Tests, Because Now They Can
+
+Four modules decide who may drive this machine unattended, whether the host
+answering is the one that answered last time, what the viewer reconnects to, and
+how hard the encoder is pushed when the link degrades. All are ordinary Python —
+a JSON file, a lock and some arithmetic — and none was imported by any test on
+any square, because the subsystem could not be loaded without the extra.
+
+117 tests over the decisions they make in the operator's absence: a trust entry
+that must not lose its label on re-add, a store that opens empty rather than
+throwing on a truncated file, a fingerprint comparison that survives an SDP
+spelling the same certificate in a different case, a token accepted only when it
+is an equal string, an IP whitelist that matches by network rather than by
+string, a grace period that closes a peer which never authenticated, and five
+derived rates that must refuse to invent a number from one sample, a zero
+interval, or a counter that went backwards.
+
+The auth host double supplies exactly the attribute list `ViewerAuthMixin`'s own
+docstring asks for, so a mixin that starts reaching for something else fails
+there rather than leaning on whatever the real host happens to own.
+
+### The Floor Is 74, And The Comment Now Says Which Number That Is
+
+The nine-way matrix runs 74.99% (ubuntu-22.04 / 3.14) to 76.19% (windows-2022),
+up from 69.67–70.97, so `fail_under` goes 69 → 74 on the usual convention: floor
+of the lowest square.
+
+`Progress.md` had recorded that the floor "had to be dug out of the XML
+artifact". That is wrong, and following it would set a floor the suite cannot
+clear. `coverage report` — the step that enforces `fail_under` — includes branch
+coverage, because `branch = true`; Cobertura's `line-rate` attribute does not.
+On the same square and the same run those differ by about 1.8 points (76.14%
+against 78.33%). The artifact is the right thing to read for a single
+subsystem's gap and the wrong thing to set a floor from.
+
 ## What's new (2026-08-23)
 
 ### A Thousand Adapters Now Get Called, Because the Type Contract Can Build Their Stubs
