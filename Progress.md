@@ -371,7 +371,7 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 | `utils/executor` | 653 / 3,906 | 83.3% |
 | `utils/usb` | 573 / 2,137 | 73.2% |
 | `utils/mcp_server` | 573 / 4,618 | 87.6% |
-| `wrapper/window_backends` | 361 / 477 | 24.3% |
+| ~~`wrapper/window_backends`~~ | ~~361 / 477~~ | **2026-08-24 補完（100%）** |
 | `utils/hotkey` | 221 / 426 | 48.1% |
 | `utils/rest_api` | 146 / 808 | 81.9% |
 
@@ -389,8 +389,8 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 | `utils/mcp_server/tools/_handlers.py` | 348 | 同 `action_executor.py` |
 | `utils/remote_desktop/signaling_server.py` | 155 | **CI 動不了**：要 `[signaling]` extra（fastapi／uvicorn），沒裝 |
 | ~~`utils/remote_desktop/multi_viewer.py`~~ | ~~146~~ | **2026-08-24 補完（100%）** |
-| `wrapper/window_backends/x11_backend.py` | 133 | 只有 Linux 那兩格跑得到，抬得動地板 |
-| `utils/accessibility/backends/linux_backend.py` | 132 | 同上 |
+| ~~`wrapper/window_backends/x11_backend.py`~~ | ~~133~~ | **2026-08-24 補完（100%）**。「只有 Linux 那兩格跑得到」是錯的，見下 |
+| `utils/accessibility/backends/linux_backend.py` | 132 | 同上，尚未補 |
 
 **下一步的順序**：
 
@@ -399,8 +399,10 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 2. 掃不到的那批 adapter：目前卡在「被呼叫者是 class」。要嘛從 class 自己的方法標注
    長出一個替身物件，要嘛承認那批不掃——**得先決定，因為前者會讓「跑起來了」和
    「驗到了東西」分家**。
-3. `utils/accessibility` 與 `wrapper/window_backends` 的 Linux 後端：抬得動地板，
-   但需要一套 Xlib／AT-SPI 的替身。
+3. ~~`wrapper/window_backends`~~ **2026-08-24 整包補完（100%）**，見下下節；
+   `utils/accessibility` 還沒補，做法照抄——AT-SPI 那一層要的是 `SessionBus`
+   的替身，不是 `_AtspiConnection` 的（現有的 `test_accessibility_linux.py`
+   換掉的是後者，所以整個 D-Bus 呼叫層還沒被跑過）。
 
 `utils/office`（77）與 `signaling_server`（155）**不要碰**：`quality.yml` 沒裝
 `[office]`／`[signaling]`，補的測試會整批 skip，對地板一個點都不動。要補之前
@@ -444,6 +446,54 @@ RateLimiter 與 SessionPermissions，檢視端只存下 callback——而每一�
 **地板還沒動。** 本機（Windows／3.14）全專案 77.04% → 79.40%，363 個新測試，
 但地板取的是九宮格最低那一格，**要等 CI 的 `coverage report` 印出來才能改**——
 這條規則在上面那節寫過，不從單機的數字推。
+
+#### 2026-08-24：平台後端不是「只有那一格跑得到」，是沒人給過替身
+
+上面第 3 項與缺口表都寫著 `x11_backend.py`／`linux_backend.py`
+「只有 Linux 那兩格跑得到」。**實測是錯的**：`wrapper/window_backends/` 底下
+八個平台模組，每一句 `import Xlib`／`import Quartz`／`import AppKit`／
+`import ApplicationServices`／`import comtypes` **全部在函式內**，所以在一台
+沒裝任何一個的 Windows 上這八個模組都 import 得起來——
+
+```bash
+python -c "import je_auto_control.wrapper.window_backends.x11_backend"   # 在 Windows 上就過
+```
+
+擋住它們的從來不是平台，是**沒有替身**。把套件塞進 `sys.modules` 之後，
+同一份測試在九格都跑得到，而不是只有兩格；地板取最低那一格，所以
+「九格都漲」比「兩格漲」更有意義。
+
+| 檔案 | 之前 | 之後 |
+| --- | ---: | ---: |
+| `window_backends/x11_backend.py` | 0.00% | **100%** |
+| `window_backends/macos_backend.py` | 0.00% | **100%** |
+| `window_backends/__init__.py`（後端選擇） | 46.34% | **100%** |
+| `window_backends/base.py` | 63.64% | **100%** |
+| `window_backends/windows_backend.py` | 89.19% | **100%** |
+| `window_backends/null_backend.py` | 100% | 100% |
+
+**替身要對得上真貨，否則只是自己跟自己同意。** 兩支 stub 的處理不一樣，
+因為兩邊的常數性質不同：
+
+- `_xlib_stub.py` 的常數**帶真值**（`SubstructureRedirectMask` 就是 `1 << 20`），
+  因為那些數字會真的上線；`test_xlib_stub_values.py` 在有裝 python-Xlib 的地方
+  （CI 的兩格 Linux）逐一比對，對不上就當場紅。本機另外用
+  `pip install --target` 拉 0.33 實測過一輪，12 個常數全中。
+- `_pyobjc_stub.py` 的常數**是哨兵**，因為它們不是 dict key 就是原封不動傳回
+  同一支 stub 函式的 token，數值到不了任何算術；`test_pyobjc_stub_names.py`
+  改成在 macOS 那兩格比對**名字存在**，另外只釘那三個真的會做位元運算的
+  window-list 旗標。
+
+**一個踩到的坑**：`from je_auto_control.windows.window import windows_window_manage`
+這種 `from 套件 import 名字`，Python **先用套件的屬性解析**，解析不到才回頭查
+`sys.modules`。只把替身放進 `sys.modules["...windows_window_manage"]` 在
+Windows 上完全沒效果——真的 Win32 模組會被呼叫。要換掉的是**那個套件**。
+
+本機（Windows／3.14）全專案 79.40% → **80.22%**，184 個新測試。
+地板一樣要等九宮格。**下一個照抄的對象是 `utils/accessibility`**：那裡的
+`windows_backend.py`（446 行沒蓋到）用 comtypes，`macos_backend.py`（73，0%）
+用 pyobjc，`linux_backend.py` 的 D-Bus 呼叫層用 `SessionBus`——三個都是
+同樣的 lazy import，同樣塞得進 `sys.modules`。
 
 ### mypy：整包把關，**豁免清單已經清空**
 

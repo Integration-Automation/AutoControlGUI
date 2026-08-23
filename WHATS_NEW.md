@@ -143,6 +143,70 @@ The thing that had to be split, in the end, was the test files — `CLAUDE.md`'s
 750-line limit has no exception for new ones. Host: session (557) and channels
 (739). Viewer: session (466), media (385), control (519).
 
+### The Platform Backends Were Never Linux-Only To Test, They Just Had No Double
+
+`Progress.md` listed `x11_backend.py` and its accessibility neighbour as
+reachable by "only the two Linux squares", and priced them accordingly: work
+that lifts two squares out of nine, when the floor is the lowest one.
+
+That was wrong, and one command says so:
+
+```bash
+python -c "import je_auto_control.wrapper.window_backends.x11_backend"
+```
+
+That passes on Windows, with no python-Xlib installed. Every `import Xlib`,
+`import Quartz`, `import AppKit`, `import ApplicationServices` and
+`import comtypes` under `wrapper/window_backends/` is *inside* a method — the
+seam was built that way on purpose, so a platform without a backend still
+imports. What kept those modules at 0% was never the platform. It was that
+nobody had written the double.
+
+With the frameworks stubbed into `sys.modules`, the whole package goes from
+14.24% to 100% and does it on all nine squares:
+
+| module | before | after |
+| --- | ---: | ---: |
+| `x11_backend.py` | 0.00% | **100%** |
+| `macos_backend.py` | 0.00% | **100%** |
+| `__init__.py` (backend selection) | 46.34% | **100%** |
+| `base.py` | 63.64% | **100%** |
+| `windows_backend.py` | 89.19% | **100%** |
+
+184 tests, and what they are about is protocol arithmetic that fails quietly.
+EWMH requests are addressed to the *root* window with `SubstructureRedirect`,
+because that is what routes them to the window manager — sent to the window
+itself they reach nobody. `_NET_CLIENT_LIST_STACKING` is bottom-to-top, so it
+is reversed and `_NET_CLIENT_LIST`, which carries no order at all, is not.
+`move()` sizes the client while `window_rect()` reads the frame, so the
+decorations come off the requested size — get that wrong and a window shrinks
+by a title bar every time a script round-trips it. On macOS an AX call
+returns an error code where zero means success, and `close()` returns
+`not error`: read backwards, that is a cheerful "yes" for every action that
+failed.
+
+**A double that nobody checks is a test agreeing with itself**, so the two
+stubs are pinned differently, because their constants are different in kind:
+
+* The Xlib stub's constants carry their real `X.h` values —
+  `SubstructureRedirectMask` is `1 << 20` — because those numbers go on the
+  wire. `test_xlib_stub_values.py` compares all twelve against the installed
+  library wherever there is one, which on CI is both Linux squares. (They
+  were also checked here against python-Xlib 0.33 pulled into a throwaway
+  `--target` directory: twelve for twelve.)
+* The pyobjc stub's constants are sentinels, because every one of them is
+  either a key into an info dictionary the stub itself builds or a token
+  handed straight back to a function the stub itself provides — no number
+  reaches any arithmetic. `test_pyobjc_stub_names.py` pins the *names*
+  against the real frameworks on the macOS squares instead, plus the three
+  window-list flags that genuinely get OR-ed together.
+
+One thing worth knowing before writing the next one of these: `from
+je_auto_control.windows.window import windows_window_manage` resolves by
+**attribute on the package** before it consults `sys.modules`. Registering the
+double under its own dotted name does nothing on a machine where the real
+module is importable — the package it is read off has to be the double.
+
 ### The Viewer Logged Every Clean Disconnect As An Unhandled Task Exception
 
 `WebRTCDesktopViewer._consume_video` caught `(OSError, RuntimeError)`. aiortc
