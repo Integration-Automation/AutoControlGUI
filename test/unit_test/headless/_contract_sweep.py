@@ -210,10 +210,15 @@ def _project_import(adapter: Any) -> Optional[Tuple[str, List[str]]]:
 
 
 def _sole_imported_name(node: ast.stmt) -> Optional[Tuple[str, str, str]]:
-    """Return ``(module, attribute, local_name)`` for ``from X import y as z``."""
+    """Return ``(module, attribute, local_name)`` for ``from X import y as z``.
+
+    ``X`` has to be inside this package: a delegator standing in front of
+    ``json.dumps`` is not wiring under test, and it is the prefix that lets the
+    parsed path be imported below without trusting what the source said.
+    """
     if not isinstance(node, ast.ImportFrom) or not node.module or node.level:
         return None
-    if len(node.names) != 1:
+    if len(node.names) != 1 or not node.module.startswith(_PACKAGE + "."):
         return None
     alias = node.names[0]
     return node.module, alias.name, alias.asname or alias.name
@@ -372,7 +377,9 @@ def _install_recorder(monkeypatch: pytest.MonkeyPatch, module_path: str,
     Returns the record dict, the sentinel the recorder returns, and the real
     callable, whose signature says what the recorded arguments are named.
     """
-    module = importlib.import_module(module_path)
+    # ``module_path`` is the ``je_auto_control.*`` path `_sole_imported_name`
+    # parsed and prefix-checked; no caller supplies it.
+    module = importlib.import_module(module_path)  # nosemgrep  # reason: prefix-checked at the parse site
     original = getattr(module, attribute)
     record: Dict[str, Any] = {}
     sentinel = object()

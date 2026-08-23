@@ -172,9 +172,24 @@ precision = 2
 # Floored to the integer below the lowest square, the same convention that
 # turned a 50.26% minimum into 50.
 #
-# 70 was the destination this was climbing towards and the suite is level with
-# it; Progress.md records that the next destination is the maintainer's call.
-fail_under = 69
+# 70 was the destination that number was climbing towards; the maintainer set
+# the next one at 80 on 2026-08-23, and Progress.md tracks the climb.
+#
+# Measured 2026-08-23 on the run for this PR, after `quality.yml` began
+# installing the `[webrtc]` extra and two more registries were swept: the
+# nine-way matrix runs 74.99% (ubuntu-22.04 / 3.14) to 76.19% (windows-2022,
+# 3.10 through 3.13). Windows is still the high corner for the same reason as
+# before — the facade imports the backend of the platform it is running on.
+# Floored to the integer below the lowest square: 74.
+#
+# Read that matrix from the "Enforce the coverage floor" step, which is this
+# report and therefore the number `fail_under` is compared against. The
+# `coverage.xml` artifact is NOT interchangeable with it: `branch = true`
+# above puts branches in this total and Cobertura's `line-rate` attribute
+# leaves them out, so the XML reads about 1.8 points higher (78.33% against
+# 76.14% on windows-2022 / 3.14, same run). A floor set from the artifact
+# would be a floor the suite cannot clear.
+fail_under = 74
 
 [tool.mypy]
 python_version = "3.10"
