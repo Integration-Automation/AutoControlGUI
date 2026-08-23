@@ -1,5 +1,70 @@
 # What's New — AutoControl
 
+## What's new (2026-08-23)
+
+### A Thousand Adapters Now Get Called, Because the Type Contract Can Build Their Stubs
+
+`utils/mcp_server/tools/_handlers.py` and the `AC_*` dispatch table in
+`utils/executor/action_executor.py` are the same layer twice: about a thousand
+short functions whose whole job is to take a client's arguments, call one
+headless function, and hand back something that survives `json.dumps`. They were
+also the two least-covered files in the project — `_handlers.py` at 37.47%,
+`action_executor.py` at 55.78% — and not through neglect. Each adapter is two to
+eight lines, so the per-feature test that touches one is testing the feature; the
+adapter itself, which is where the wiring lives, was checked by nobody. Wiring
+fails only when a client calls it.
+
+Both registries are now swept, in one file:
+`test/unit_test/headless/test_adapter_registry_sweep.py`. 657 MCP tools driven
+with the arguments their own JSON schema declares, and 773 `AC_*` commands driven
+with the arguments the Script Builder's `command_schema.py` says a client sends.
+Neither sweep reads an adapter's source to decide what to pass it, so neither can
+pass by restating the code it is checking.
+
+**What made this possible was the other gate that landed last week.** The
+problem with calling a thousand adapters is what to do about the thing each one
+calls: a real call moves a mouse, and hand-writing a fake per callee is a
+thousand guesses at what each returns. Since the typing contract's exemption
+list was emptied on 2026-08-22, there is a third option — every callee's return
+annotation is machine-readable, so the stub can be *derived* from it.
+`Optional[X]` becomes None, containers become empty containers, scalars become
+their zero. Each adapter then runs against exactly what its callee promises, no
+more and no less, with no mouse, no display and no network in the picture.
+
+That is the sharper test as well as the cheaper one: an adapter that needs *more*
+than the contract offers now says so here instead of in front of a client. Three
+do, and each is named in the file with its reason — one uses the return value as
+a context manager, one imports a class rather than a function, one indexes a key
+out of a `Dict[str, Any]`. A fourth test fails if any of the three starts
+passing, so the list cannot quietly rot.
+
+| | before | after |
+| --- | ---: | ---: |
+| `_handlers.py` | 37.47% | **75.21%** |
+| `action_executor.py` | 55.78% | **73.52%** |
+| whole package | 71.91% | **74.91%** |
+
+Everything was green on the first run, so these are guards rather than a bug
+report — and a guard is worth only what it catches, so it was checked by breaking
+it: swapping two arguments inside one adapter (`_open_path(verb, target)`) fails
+the forwarding sweep by name, pointing at the tool and both values.
+
+**One invariant did fall out of building it.** 31 mandatory executor parameters
+have no field in the visual editor, and every one of them is annotated `Any`,
+`List[...]` or `Dict[...]` — a shape the editor's scalar field types cannot
+express, filled from its raw JSON view instead. That was true by convention and
+enforced by nobody. A mandatory *scalar* with no field is a different thing
+entirely: it means the editor emits an action that raises `TypeError` the first
+time it is run. That is a test now, alongside two more of the same kind — every
+schema field names a parameter its command accepts, and every command the editor
+can emit is a command the dispatch table resolves.
+
+Out of scope by design, and stated in the file rather than left to be
+rediscovered: an adapter that reaches into two project modules composes them
+rather than normalising one, and an adapter that imports a third-party module is
+picking its own backend, so what it returns depends on the machine — the
+opposite of what a sweep can assert.
+
 ## What's new (2026-08-21)
 
 ### Two Quality Gates That Had Been Standing Still
