@@ -387,6 +387,16 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **The WebRTC viewer ended every clean disconnect with an unhandled task
+  exception.** `WebRTCDesktopViewer._consume_video` caught
+  `(OSError, RuntimeError)`, but aiortc signals the end of a track by raising
+  `MediaStreamError`, which derives straight from `Exception` and so matched
+  neither. Nothing awaits that task, so the normal end of a session — the host
+  stopping its screen share, or the connection closing — reached the console as
+  asyncio's "Task exception was never retrieved" traceback instead of the
+  "video stream ended" line the host's own drain loop already logged. The
+  stream is unaffected either way; only the logging changes.
+
 - **A `null` in a remote-desktop entry's `tags` became a tag named `"None"`.**
   `AddressBook.set_tags()` cleaned its input with `str(t).strip()`, and
   `str(None)` is the non-empty string `"None"`, so a JSON `null` in the array —

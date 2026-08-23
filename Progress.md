@@ -384,23 +384,18 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 | --- | ---: | --- |
 | `utils/executor/action_executor.py` | 589 | 掃不到的那批 adapter：被呼叫者是 class（沒有回傳標注可讀）、或 adapter 伸手進兩個模組 |
 | `utils/accessibility/backends/windows_backend.py` | 446 | UIA COM，要一套夠像的替身 |
-| `utils/remote_desktop/webrtc_viewer.py` | 354 | 現在 import 得到了（17.9%），但沒有測試驅動 |
-| `utils/remote_desktop/webrtc_host.py` | 351 | 同上（24.8%） |
+| ~~`utils/remote_desktop/webrtc_viewer.py`~~ | ~~354~~ | **2026-08-24 補完（100%）** |
+| ~~`utils/remote_desktop/webrtc_host.py`~~ | ~~351~~ | **2026-08-24 補完（100%）** |
 | `utils/mcp_server/tools/_handlers.py` | 348 | 同 `action_executor.py` |
 | `utils/remote_desktop/signaling_server.py` | 155 | **CI 動不了**：要 `[signaling]` extra（fastapi／uvicorn），沒裝 |
-| `utils/remote_desktop/multi_viewer.py` | 146 | |
+| ~~`utils/remote_desktop/multi_viewer.py`~~ | ~~146~~ | **2026-08-24 補完（100%）** |
 | `wrapper/window_backends/x11_backend.py` | 133 | 只有 Linux 那兩格跑得到，抬得動地板 |
 | `utils/accessibility/backends/linux_backend.py` | 132 | 同上 |
 
-**下一步的順序**（都還沒做）：
+**下一步的順序**：
 
-1. `webrtc_host`（351）／`webrtc_viewer`（354）／`multi_viewer`（146）／
-   `webrtc_transport`（139）／`webrtc_audio`（114）：`[webrtc]` 裝了之後這一族才
-   第一次可測。`webrtc_host_auth`、`webrtc_stats`、`webrtc_files`、
-   `webrtc_host_media` 已經照這個做法補完（119 個測試，做法見
-   [WHATS_NEW.md](WHATS_NEW.md)），其餘照抄。`webrtc_host` 與 `webrtc_viewer`
-   是兩個大類別，要的替身比前四個大——**先看能不能拆出可測的那一半**，
-   `webrtc_host_auth`／`webrtc_host_media` 這兩個 mixin 已經是拆出來的先例。
+1. ~~`webrtc_host`／`webrtc_viewer`／`multi_viewer`／`webrtc_transport`／
+   `webrtc_audio`~~ **2026-08-24 做完**，見下一節。
 2. 掃不到的那批 adapter：目前卡在「被呼叫者是 class」。要嘛從 class 自己的方法標注
    長出一個替身物件，要嘛承認那批不掃——**得先決定，因為前者會讓「跑起來了」和
    「驗到了東西」分家**。
@@ -410,6 +405,45 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 `utils/office`（77）與 `signaling_server`（155）**不要碰**：`quality.yml` 沒裝
 `[office]`／`[signaling]`，補的測試會整批 skip，對地板一個點都不動。要補之前
 先照 `[webrtc]` 的先例把 extra 加進 CI。
+
+#### 2026-08-24：WebRTC 那一族補完了，而「先拆一半」是問錯了問題
+
+上面第 1 項原本寫著「`webrtc_host` 與 `webrtc_viewer` 是兩個大類別，
+**先看能不能拆出可測的那一半**」，理由是那兩個 mixin
+（`webrtc_host_auth`／`webrtc_host_media`）是拆出來才測得到的先例。
+**實際去看之後發現不必拆**：兩個類別的建構子都不碰 aiortc——主機只存下 config、
+RateLimiter 與 SessionPermissions，檢視端只存下 callback——而每一個協作對象
+（`RTCPeerConnection`、`ScreenVideoTrack`、asyncio 橋接、稽核記錄）都是
+模組層名稱或建構參數，換掉就好。擋在 19.83%／14.08% 的從來不是類別的形狀，
+是「要跑到第一行得先站起一個 PeerConnection、一個螢幕擷取器和一條背景事件迴圈」。
+
+| 模組 | 之前 | 之後 |
+| --- | ---: | ---: |
+| `webrtc_host.py` | 19.83% | **100%** |
+| `webrtc_viewer.py` | 14.08% | **100%** |
+| `multi_viewer.py` | 21.24% | **100%** |
+| `webrtc_audio.py` | 0.00% | **96.27%** |
+| `webrtc_transport.py` | 27.89% | **88.84%** |
+
+沒補完的兩塊是刻意的：`webrtc_transport._get_cursor_position` 是三條平台分支，
+任何一格只跑得到自己那條；`webrtc_audio._enqueue` 裡兩個吞掉的 queue 競態
+只有「謊報自己滿了的 queue」造得出來，那是在測替身不是在測程式。
+
+替身集中在 `test/unit_test/headless/_webrtc_doubles.py`（形狀比照
+`_contract_sweep.py`），六個測試檔共用；`FakePeerConnection` 刻意把主機端與
+檢視端的介面放在同一個類別裡——它替的是同一個 aiortc 型別，照方向拆成兩個
+只會讓兩份替身各自漂走。
+
+**要拆的是測試檔，不是被測的類別**，因為 `CLAUDE.md` 的 750 行上限對新檔案
+沒有例外。主機拆成 `test_webrtc_host_session.py`（557，offer／answer／狀態／拆除）
+與 `test_webrtc_host_channels.py`（739，四條 DataChannel、權限、限流、收件匣）；
+檢視端拆成 `test_webrtc_viewer_session.py`（466）／
+`test_webrtc_viewer_media.py`（385，m-line 位置與開關）／
+`test_webrtc_viewer_control.py`（519）。
+
+**地板還沒動。** 本機（Windows／3.14）全專案 77.04% → 79.40%，363 個新測試，
+但地板取的是九宮格最低那一格，**要等 CI 的 `coverage report` 印出來才能改**——
+這條規則在上面那節寫過，不從單機的數字推。
 
 ### mypy：整包把關，**豁免清單已經清空**
 

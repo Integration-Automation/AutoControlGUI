@@ -88,6 +88,76 @@ The auth host double supplies exactly the attribute list `ViewerAuthMixin`'s own
 docstring asks for, so a mixin that starts reaching for something else fails
 there rather than leaning on whatever the real host happens to own.
 
+### The Two Big WebRTC Classes Did Not Need Splitting, They Needed Doubles
+
+`Progress.md` had the next step down as "first see whether a testable half can
+be split out of `webrtc_host` and `webrtc_viewer`", on the precedent of the two
+mixins that had already been carved off them. Going and looking says that was
+the wrong question. Neither constructor touches aiortc — the host stores a
+config, a rate limiter and a permission set, the viewer stores callbacks — and
+every collaborator either arrives as a keyword argument or is a module-level
+name. What held them at 19.83% and 14.08% was never the shape of the class; it
+was that reaching line one meant standing up an `RTCPeerConnection`, a screen
+grabber and a background event loop.
+
+So the five remaining WebRTC modules got 363 tests against doubles, and the
+classes were left where they are:
+
+| module | before | after |
+| --- | ---: | ---: |
+| `webrtc_host.py` | 19.83% | **100%** |
+| `webrtc_viewer.py` | 14.08% | **100%** |
+| `multi_viewer.py` | 21.24% | **100%** |
+| `webrtc_audio.py` | 0.00% | **96.27%** |
+| `webrtc_transport.py` | 27.89% | **88.84%** |
+
+Two remainders are deliberate. `_get_cursor_position` is three platform
+branches of which any one square runs one, and the two swallowed queue races in
+`_enqueue` need a queue that lies about being full — that would be a test of the
+double, not of the code.
+
+Most of what the tests pin down is refusal, because that is most of what these
+classes do with what arrives from the wire. The host's four channels each open
+with the PeerConnection, which is *before* the token has been checked, so each
+one is tested for what it does with traffic from a peer that never
+authenticated, from one the operator has since put in read-only, and from one
+that is simply flooding. The three inbox verbs — list, fetch, delete — are
+tested for the thing they all route through: `_safe_basename`, which is what
+stands between a viewer sending `../secret.txt` and the host's own files.
+
+On the viewer side the load-bearing detail is that slots are found by m-line
+order rather than by direction: aiortc gives every answerer transceiver the
+default `recvonly` regardless of what the offer asked for, so "my screen goes in
+the second video transceiver" is arithmetic, and off by one there replaces the
+picture the viewer is watching. Same for the toggles, which are asymmetric on
+purpose — off is `replaceTrack(None)` in place, on always renegotiates, because
+the host needs a fresh `track` event to restart its consume task.
+
+The doubles live in `test/unit_test/headless/_webrtc_doubles.py`, shaped like
+`_contract_sweep.py` and shared by six test modules. `FakePeerConnection`
+carries both ends' surface in one class deliberately: it stands in for one
+aiortc type, and splitting it by direction would be two doubles drifting apart
+from the same original.
+
+The thing that had to be split, in the end, was the test files — `CLAUDE.md`'s
+750-line limit has no exception for new ones. Host: session (557) and channels
+(739). Viewer: session (466), media (385), control (519).
+
+### The Viewer Logged Every Clean Disconnect As An Unhandled Task Exception
+
+`WebRTCDesktopViewer._consume_video` caught `(OSError, RuntimeError)`. aiortc
+ends a track by raising `MediaStreamError` out of `recv()`, and that derives
+straight from `Exception`, so it matched neither arm. Nothing awaits that task,
+which means the ordinary end of a session — the host stopping its screen share,
+or the connection closing — surfaced as asyncio's "Task exception was never
+retrieved" instead of the "video stream ended" line the host's own drain loop
+and the Opus receiver have always logged. It now catches it, and
+`CancelledError` still propagates as the comment there requires.
+
+The doubles found it: the shared `FrameTrack` ends a stream the way aiortc does,
+and the viewer's own test had been written against a local double that ended it
+with `OSError`.
+
 ### The Floor Is 75, And The Comment Now Says Which Number That Is
 
 The nine-way matrix runs 75.79% (ubuntu-22.04 / 3.14) to 76.99% (windows-2022),
