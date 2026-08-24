@@ -383,7 +383,7 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 | `utils/usb` | 573 / 2,137 | 73.2% |
 | `utils/mcp_server` | 573 / 4,618 | 87.6% |
 | ~~`wrapper/window_backends`~~ | ~~361 / 477~~ | **2026-08-24 補完（100%）** |
-| `utils/hotkey` | 221 / 426 | 48.1% |
+| ~~`utils/hotkey`~~ | ~~221 / 426~~ | **2026-08-24 backends 全數 100%** |
 | `utils/rest_api` | 146 / 808 | 81.9% |
 
 **要動地板，只能補在每一格都跑得到的程式碼上。** 地板取的是最低那一格，
@@ -538,6 +538,31 @@ issubclass(COMError, (OSError, AttributeError, ValueError, TypeError))  # False
 control pattern——寫的是 `(OSError, AttributeError, …)`，一個都攔不到。
 race 很小但真實：`_find_raw` 自己會攔，所以曝露的是「找到之後、讀之前」
 那一段。已全部改用同一個 tuple；這只會**放寬**攔截範圍。
+
+#### 2026-08-24：`utils/hotkey/backends` 補完，**所有 backend seam 都有覆蓋了**
+
+`CLAUDE.md` 列的 backend seam 有八個（accessibility／ocr／vision／llm／agent／
+hotkey／usb／usbip）。ocr、vision、llm、agent 本來就只差個位數，
+accessibility 與 window 這兩天補掉，剩下的就是 hotkey：三個平台、三套完全
+不同的機制（`RegisterHotKey` + 訊息幫浦／`XGrabKey`／`CGEventTap` + run loop），
+12.64%／24.46%／40.94% **全部到 100%**。
+
+一樣都不需要桌面。Windows 那支把 `user32` 當**參數**傳給真正做事的三個方法，
+所以錄音機式的替身在哪裡都能驅動；只有組出 `user32` 的開頭需要
+`ctypes.wintypes`，那兩支測試標成只在 Windows 跑。
+
+**又抓到一個真的錯，這次是資源洩漏。** X11 的 `_sync_one` 在 combo 改掉時
+只把舊登記從自己的表裡拿掉，**沒有 `ungrab_key`**——舊的組合鍵於是一直被
+grab 在 X server 上，被所有應用程式吞掉、什麼也不觸發，而且 `_ungrab_all`
+關機時也放不掉（它已經不知道那筆了）。使用者把 `ctrl+alt+k` 改成別的，
+`ctrl+alt+k` 就在整個桌面上死到行程結束為止。
+
+同一個檔案其實知道這個形狀——`_grab_masked` 的回滾註解就寫著「留著不放、
+`_registered` 又沒更新，會洩漏 grab 並在每次輪詢時噴 BadAccess」——而 Windows
+那支一直都在同一個位置 unregister。漏的只有改綁定這條路。
+
+X11 那批測試也把 Xlib stub 從 12 個常數長到 18 個外加一張 keysym 表，
+全部照舊在 Linux 兩格對真貨比對（本機也用 python-Xlib 0.33 實測過：31 中 31）。
 
 ### mypy：整包把關，**豁免清單已經清空**
 

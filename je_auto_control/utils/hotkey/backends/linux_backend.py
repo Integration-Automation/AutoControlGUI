@@ -106,6 +106,14 @@ class LinuxHotkeyBackend(HotkeyBackend):
         if prior is not None and prior[0] == binding.combo:
             return
         if prior is not None:
+            # Release the old key before forgetting it. Dropping it from
+            # `_registered` alone leaves the grab held on the server for the
+            # life of the process — the *previous* combo keeps being consumed
+            # from every application and fires nothing, and `_ungrab_all`
+            # cannot release what it no longer knows about. The Windows
+            # backend has always unregistered here.
+            _combo, prior_mask, prior_keycode = prior
+            self._ungrab_masked(root, prior_keycode, prior_mask)
             self._registered.pop(binding.binding_id, None)
         try:
             mask, keycode = _combo_to_x11(binding.combo)

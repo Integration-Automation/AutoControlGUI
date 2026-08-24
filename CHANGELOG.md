@@ -387,6 +387,16 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **Changing a hotkey's combo on X11 left the old key grabbed for the life of
+  the daemon.** `LinuxHotkeyBackend._sync_one` dropped the previous
+  registration from its own table without calling `ungrab_key`, so the *old*
+  combo stayed grabbed on the X server: it was swallowed from every
+  application, fired nothing, and `_ungrab_all` could not release it at
+  shutdown because it no longer knew about it. Rebinding `ctrl+alt+k` to
+  something else made `ctrl+alt+k` dead system-wide until the process exited.
+  The Windows backend has always unregistered at the same point; the X11 one
+  now does too. Unaffected on Windows and macOS.
+
 - **A window closing mid-call let a COM error escape every Windows
   accessibility read.** `comtypes` reports a provider failure as `COMError`,
   which derives straight from `Exception` — the reason

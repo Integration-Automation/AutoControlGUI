@@ -207,6 +207,39 @@ je_auto_control.windows.window import windows_window_manage` resolves by
 double under its own dotted name does nothing on a machine where the real
 module is importable — the package it is read off has to be the double.
 
+### Every Backend Seam Is Covered Now, And The Last One Was Hiding A Leak
+
+`utils/hotkey/backends/` was the last of the project's backend seams with a
+real hole in it — the accessibility, window, OCR, vision, LLM and agent seams
+are all covered. Three platforms, three completely different mechanisms:
+`RegisterHotKey` and a message pump, `XGrabKey` on the root window, a
+`CGEventTap` on a run loop. All three go to 100%, from 12.64%, 24.46% and
+40.94%.
+
+None of them needed a desktop. The Windows backend takes `user32` as an
+*argument* to the three methods that do the work, so a recorder drives them
+from anywhere; only the prologue that builds it needs `ctypes.wintypes`, and
+those two tests say so. The other two import their platform libraries inside
+their loops.
+
+**Changing a hotkey's combo on X11 left the old key grabbed for the life of
+the daemon.** `_sync_one` dropped the previous registration from its own
+table and never called `ungrab_key`, so the old combo stayed grabbed on the X
+server: swallowed from every application, firing nothing, and impossible for
+`_ungrab_all` to release at shutdown because it no longer knew about it.
+Rebind `ctrl+alt+k` and `ctrl+alt+k` is dead system-wide until the process
+exits.
+
+The same module already knew the shape of that mistake — the rollback in
+`_grab_masked` carries a comment saying that leaving grabs held with
+`_registered` never updated "leaks the grab and spams BadAccess on every
+following poll" — and the Windows backend unregisters at exactly this point.
+Only the rebinding path was missed.
+
+The X11 tests are also what grew the Xlib stub from 12 constants to 18 plus a
+keysym table, all of them still compared against the installed library on the
+Linux squares (and verified here against python-Xlib 0.33: 31 for 31).
+
 ### The Accessibility Backends, Including The One Nobody Could Reach
 
 `utils/accessibility` was the second-largest gap in the project and the one

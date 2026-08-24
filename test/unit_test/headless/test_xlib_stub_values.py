@@ -44,6 +44,23 @@ def test_every_predefined_atom_matches_the_installed_library(name):
     )
 
 
+@pytest.mark.parametrize("name", sorted(_xlib_stub.KEYSYMS))
+def test_every_keysym_matches_what_the_installed_library_resolves(name):
+    # `XK.string_to_keysym` is what turns "Page_Up" into the number a grab is
+    # registered against; a wrong one grabs the wrong key.
+    from Xlib import XK
+    assert _xlib_stub.KEYSYMS[name] == XK.string_to_keysym(name), (
+        f"the stub's keysym for {name!r} is not what python-Xlib resolves"
+    )
+
+
+def test_an_unknown_key_name_resolves_to_zero():
+    # Zero is how X says "no such keysym", and the hotkey backend reports it
+    # as an unsupported key rather than grabbing keycode 0.
+    from Xlib import XK
+    assert XK.string_to_keysym("not-a-key") == 0
+
+
 def test_the_event_classes_the_stub_fakes_all_exist():
     # A stub that answers for an event class the library does not have would
     # let a backend build a message nothing can send.

@@ -30,17 +30,38 @@ import types
 
 # --- X.h -----------------------------------------------------------------
 
-#: `X.h` event masks and sentinels the window backend actually names.
+#: `X.h` event masks, modifier masks and sentinels the backends name.
 X_CONSTANTS = {
     "NONE": 0,
     "CurrentTime": 0,
     "AnyPropertyType": 0,
+    "KeyPress": 2,
     "KeyPressMask": 1 << 0,
     "KeyReleaseMask": 1 << 1,
     "ButtonPressMask": 1 << 2,
     "ButtonReleaseMask": 1 << 3,
     "SubstructureNotifyMask": 1 << 19,
     "SubstructureRedirectMask": 1 << 20,
+    # Modifier masks, for the hotkey backend's grabs. The two lock masks are
+    # what it re-grabs each combo under, so a hotkey still fires with NumLock
+    # or CapsLock on.
+    "ShiftMask": 1 << 0,
+    "LockMask": 1 << 1,
+    "ControlMask": 1 << 2,
+    "Mod1Mask": 1 << 3,
+    "Mod2Mask": 1 << 4,
+    "Mod4Mask": 1 << 6,
+    "GrabModeSync": 0,
+    "GrabModeAsync": 1,
+}
+
+#: Keysyms `XK.string_to_keysym` answers for, by their `keysymdef.h` values.
+#: Latin-1 letters are their ASCII code point; the named keys are 0xFF00-range
+#: function keysyms.
+KEYSYMS = {
+    "a": 0x0061, "b": 0x0062, "k": 0x006B, "q": 0x0071, "z": 0x007A,
+    "1": 0x0031, "Return": 0xFF0D, "Tab": 0xFF09, "Escape": 0xFF1B,
+    "space": 0x0020, "F5": 0xFFC2, "Page_Up": 0xFF55, "Delete": 0xFFFF,
 }
 
 #: `Xatom.h` predefined atoms, by their fixed protocol numbers.
@@ -82,6 +103,11 @@ class Window:
         self.parent_id = parent_id
         self.sent = []
         self.mapped = None
+        self.attributes = {}
+        self.grabs = []
+        self.ungrabs = []
+        self.grab_errors = {}       # (keycode, mask) -> exception
+        self.ungrab_errors = {}
         self.property_error = None
         self.tree_error = None
         self.geometry_error = None
@@ -123,6 +149,30 @@ class Window:
     def unmap(self):
         self.mapped = False
 
+    def change_attributes(self, **kwargs):
+        self.attributes = dict(kwargs)
+
+    def grab_key(self, keycode, mask, owner_events, pointer_mode, key_mode):
+        error = self.grab_errors.get((keycode, mask))
+        if error is not None:
+            raise error
+        self.grabs.append((keycode, mask, owner_events, pointer_mode,
+                           key_mode))
+
+    def ungrab_key(self, keycode, mask):
+        if (keycode, mask) in self.ungrab_errors:
+            raise self.ungrab_errors[(keycode, mask)]
+        self.ungrabs.append((keycode, mask))
+
+    @property
+    def grabbed(self):
+        """The `(keycode, mask)` pairs currently held, in grab order."""
+        held = [(keycode, mask) for keycode, mask, *_rest in self.grabs]
+        for pair in self.ungrabs:
+            if pair in held:
+                held.remove(pair)
+        return held
+
 
 class Display:
     """One X connection: an atom table, a root, and a window table."""
@@ -134,6 +184,10 @@ class Display:
     def __init__(self) -> None:
         self.atoms = {}
         self.flushes = 0
+        self.syncs = 0
+        self.closed = False
+        self.events = []
+        self.keycodes = {}      # keysym -> keycode
         self._windows = {}
         self.root = Window(self, 1)
         self._windows[1] = self.root
@@ -153,6 +207,21 @@ class Display:
 
     def flush(self) -> None:
         self.flushes += 1
+
+    def sync(self) -> None:
+        self.syncs += 1
+
+    def close(self) -> None:
+        self.closed = True
+
+    def keysym_to_keycode(self, keysym: int) -> int:
+        return self.keycodes.get(keysym, 0)
+
+    def pending_events(self) -> int:
+        return len(self.events)
+
+    def next_event(self):
+        return self.events.pop(0)
 
     # -- test helpers --
     def atom_name(self, atom: int):
@@ -177,11 +246,16 @@ class Display:
         self.root.properties[name] = value
 
 
-def install(monkeypatch, display=None) -> Display:
+def install(monkeypatch, display=None, display_error=None) -> Display:
     """Put the stub in `sys.modules` and hand back the display it opens.
 
     Shadows the real `Xlib` for the duration wherever one is installed, so
     the same test reads the same on every square.
+
+    `display_error` makes `Display()` raise while leaving the rest of the
+    package importable, which is the shape of a Wayland or headless session:
+    python-Xlib is a hard dependency on Linux, so it is always *there* — it
+    is the connection that is not.
     """
     display = display if display is not None else Display()
 
@@ -193,6 +267,11 @@ def install(monkeypatch, display=None) -> Display:
     for name, value in XATOM_CONSTANTS.items():
         setattr(xatom_module, name, value)
 
+    # `XK.string_to_keysym` answers 0 for a name X does not know, which is
+    # the "unknown key" branch the hotkey backend has to report.
+    xk_module = types.ModuleType("Xlib.XK")
+    xk_module.string_to_keysym = lambda name: KEYSYMS.get(name, 0)
+
     event_module = types.SimpleNamespace(
         ClientMessage=lambda **kwargs: Event("ClientMessage", **kwargs),
         KeyPress=lambda **kwargs: Event("KeyPress", **kwargs),
@@ -203,17 +282,24 @@ def install(monkeypatch, display=None) -> Display:
     protocol_module = types.ModuleType("Xlib.protocol")
     protocol_module.event = event_module
 
+    def _open_display(*args, **kwargs):
+        if display_error is not None:
+            raise display_error
+        return display
+
     display_module = types.ModuleType("Xlib.display")
-    display_module.Display = lambda *args, **kwargs: display
+    display_module.Display = _open_display
 
     package = types.ModuleType("Xlib")
     package.X = x_module
     package.Xatom = xatom_module
+    package.XK = xk_module
     package.protocol = protocol_module
     package.display = display_module
 
     for name, module in (("Xlib", package), ("Xlib.X", x_module),
                          ("Xlib.Xatom", xatom_module),
+                         ("Xlib.XK", xk_module),
                          ("Xlib.protocol", protocol_module),
                          ("Xlib.display", display_module)):
         monkeypatch.setitem(sys.modules, name, module)
