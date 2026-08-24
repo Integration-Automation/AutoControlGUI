@@ -43,6 +43,14 @@ from je_auto_control.utils.remote_desktop.webrtc_viewer import (
 def bridge(monkeypatch):
     fake = Bridge()
     monkeypatch.setattr(viewer_module, "get_bridge", lambda: fake)
+    # `send_file` hands the work to `FileTransferSender`, which reads
+    # `get_bridge` out of `webrtc_files` -- patching it here alone left that
+    # path on the real bridge, so the chunks landed on a background event
+    # loop and the assertion read `sent[0]` before anything was in it. It
+    # passed wherever the loop won the race, which was every square until a
+    # loaded runner lost it.
+    from je_auto_control.utils.remote_desktop import webrtc_files
+    monkeypatch.setattr(webrtc_files, "get_bridge", lambda: fake)
     return fake
 
 
