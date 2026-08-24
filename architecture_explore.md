@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,032 |
-| 程式碼總行數 | 141,347 |
+| 程式碼總行數 | 141,350 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -179,7 +179,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `wrapper/auto_control_image.py` | 83 | 影像 API：`locate_all_image`、`locate_image_center`、`locate_and_click`。 |
 | `wrapper/auto_control_record.py` | 114 | 錄製 API：`record`／`stop_record`／`record_to_json`（支援 stop event 與逾時）。 |
 | `wrapper/auto_control_window.py` | 278 | 視窗管理門面：列舉、尋找、聚焦、等待、關閉、顯示狀態、幾何、所屬行程 PID、依行程列舉／最小化視窗、不搶焦點的投遞式輸入（目前僅 Windows 實作）。 |
-| `wrapper/window_backends/` | 985 | 視窗管理的平台縫（`base` / `windows_backend` / `x11_backend` / `macos_backend` / `null_backend`）。放在 `wrapper/` 而不是 `utils/`，因為它必須 import `windows/`、`linux_with_x11/`、`osx/`，而 `utils/` 在分層上在那三者之上。 |
+| `wrapper/window_backends/` | 988 | 視窗管理的平台縫（`base` / `windows_backend` / `x11_backend` / `macos_backend` / `null_backend`）。放在 `wrapper/` 而不是 `utils/`，因為它必須 import `windows/`、`linux_with_x11/`、`osx/`，而 `utils/` 在分層上在那三者之上。 |
 
 ### 5.3 平台後端
 
@@ -1032,7 +1032,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/usb/` | 17 | 4,281 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,367 |
 | `utils/accessibility/` | 13 | 2,840 |
-| `wrapper/` | 19 | 3,514 |
+| `wrapper/` | 19 | 3,517 |
 | `windows/` | 23 | 1,906 |
 | `utils/rest_api/` | 8 | 1,751 |
 | `utils/agent/` | 8 | 1,250 |
@@ -1046,5 +1046,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 735 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,683 |
-| **總計** | **1,026** | **141,282** |
+| **總計** | **1,026** | **141,285** |
 

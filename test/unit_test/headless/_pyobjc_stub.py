@@ -36,7 +36,7 @@ WINDOW_KEYS = (
 #: The rest of the surface the backend names, by module.
 QUARTZ_NAMES = WINDOW_KEYS + (
     "kCGWindowListOptionOnScreenOnly", "kCGWindowListExcludeDesktopElements",
-    "kCGNullWindowID", "kAXValueCGPointType", "kAXValueCGSizeType",
+    "kCGNullWindowID",
     "CGWindowListCopyWindowInfo", "CGPoint", "CGSize",
 )
 APPKIT_NAMES = (
@@ -47,6 +47,9 @@ AX_NAMES = (
     "AXUIElementCreateApplication", "AXUIElementCopyAttributeValue",
     "AXUIElementSetAttributeValue", "AXUIElementPerformAction",
     "AXValueCreate", "AXValueGetValue",
+    # HIServices declares these and ApplicationServices inherits them;
+    # Quartz does not, which is what the macOS squares caught.
+    "kAXValueCGPointType", "kAXValueCGSizeType",
 )
 
 #: What an AX call returns when it worked. Zero, and the backend reads it as
@@ -164,8 +167,6 @@ def install(monkeypatch, world: World) -> World:
     quartz.kCGWindowListOptionOnScreenOnly = 1
     quartz.kCGWindowListExcludeDesktopElements = 16
     quartz.kCGNullWindowID = 0
-    quartz.kAXValueCGPointType = "point"
-    quartz.kAXValueCGSizeType = "size"
     quartz.CGWindowListCopyWindowInfo = world.copy_window_info
     quartz.CGPoint = AXPoint
     quartz.CGSize = AXSize
@@ -182,6 +183,8 @@ def install(monkeypatch, world: World) -> World:
     services.AXUIElementPerformAction = world.ax_perform_action
     services.AXValueCreate = world.ax_value_create
     services.AXValueGetValue = world.ax_value_get
+    services.kAXValueCGPointType = "point"
+    services.kAXValueCGSizeType = "size"
 
     for name, module in (("Quartz", quartz), ("AppKit", appkit),
                          ("ApplicationServices", services)):
