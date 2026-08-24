@@ -78,6 +78,17 @@ def _element(name="", control_type=50000, rect=None, process_id=0,
                       cached=cached)
 
 
+def _raise(error):
+    """Raise the error a fixture parked in its state dict.
+
+    Raising the subscript directly reads as ``raise None`` to an analyser
+    that infers the slot from the dict literal declaring it, and the
+    ``is not None`` guard does not narrow that inference. Passing the error
+    through a parameter says what it is where it is raised.
+    """
+    raise error
+
+
 # --- availability and the automation object -----------------------------------
 
 def test_a_windows_box_without_comtypes_refuses_and_says_how_to_fix_it(
@@ -169,7 +180,7 @@ def listing(monkeypatch):
     def _walk_elements(automation, root, limit):
         state["budgets"].append(limit)
         if state["walk_error"] is not None:
-            raise state["walk_error"]
+            _raise(state["walk_error"])
         for element in state["under"].get(id(root), []):
             yield element
 
