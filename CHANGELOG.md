@@ -10,6 +10,13 @@ only when documented here with a migration path.
 
 ### Added
 
+- **`ac_rrule_next`, `ac_rrule_occurrences` and `ac_format_date` now declare
+  the string format they parse.** Their `dtstart` / `now` / `value` properties
+  carry `"format": "date-time"` (or `"date"`) in the tool's input schema, which
+  the descriptions already said in prose and the schema did not. A client
+  generating values from the schema alone used to produce a plain string and
+  get a `ValueError` out of `datetime.fromisoformat`.
+
 - **Windows on arm64 installs.** `opencv-python`, `cryptography` and
   `je_open_cv` now carry the environment marker
   `sys_platform != 'win32' or platform_machine != 'ARM64'`, because none of
@@ -379,6 +386,47 @@ only when documented here with a migration path.
   and import stable entry points from `je_auto_control.api`.
 
 ### Fixed
+
+- **Changing a hotkey's combo on X11 left the old key grabbed for the life of
+  the daemon.** `LinuxHotkeyBackend._sync_one` dropped the previous
+  registration from its own table without calling `ungrab_key`, so the *old*
+  combo stayed grabbed on the X server: it was swallowed from every
+  application, fired nothing, and `_ungrab_all` could not release it at
+  shutdown because it no longer knew about it. Rebinding `ctrl+alt+k` to
+  something else made `ctrl+alt+k` dead system-wide until the process exited.
+  The Windows backend has always unregistered at the same point; the X11 one
+  now does too. Unaffected on Windows and macOS.
+
+- **A window closing mid-call let a COM error escape every Windows
+  accessibility read.** `comtypes` reports a provider failure as `COMError`,
+  which derives straight from `Exception` — the reason
+  `windows_query._uia_errors()` exists — but only the two tree-walking guards
+  in `backends/windows_backend.py` used that tuple. The other 37, covering
+  every control pattern (`get_value`, `invoke`, `toggle`, `read_table`, the
+  text and grid reads, …), named `(OSError, AttributeError, …)` and therefore
+  contained none of them. An application that stopped responding, or a window
+  that closed between the search that found an element and the call that read
+  it, raised `COMError` out of the `ac_*` tool or `AC_*` command instead of
+  answering `None` / `False` / `[]`, and past the executor's
+  `AutoControlException` boundary. All 37 now use the same tuple. This only
+  widens what is caught: no call that used to succeed behaves differently.
+
+- **The WebRTC viewer ended every clean disconnect with an unhandled task
+  exception.** `WebRTCDesktopViewer._consume_video` caught
+  `(OSError, RuntimeError)`, but aiortc signals the end of a track by raising
+  `MediaStreamError`, which derives straight from `Exception` and so matched
+  neither. Nothing awaits that task, so the normal end of a session — the host
+  stopping its screen share, or the connection closing — reached the console as
+  asyncio's "Task exception was never retrieved" traceback instead of the
+  "video stream ended" line the host's own drain loop already logged. The
+  stream is unaffected either way; only the logging changes.
+
+- **A `null` in a remote-desktop entry's `tags` became a tag named `"None"`.**
+  `AddressBook.set_tags()` cleaned its input with `str(t).strip()`, and
+  `str(None)` is the non-empty string `"None"`, so a JSON `null` in the array —
+  what a client sends for an omitted tag — was stored as a tag and then listed
+  by `all_tags()` alongside the real ones. Nulls are now dropped. Tags that
+  were already stored this way stay until the entry's tags are set again.
 
 - **Typing text through the key-event route raised `AttributeError` on the
   three platforms that cannot do it.** `type_unicode_keys()` (and

@@ -24,7 +24,7 @@ Layering: entry points (`cli.py`, `gui/`, socket / REST / MCP servers) → execu
 
 ```bash
 pip install -r dev_requirements.txt         # dev deps
-pip install -e .[gui]                       # + GUI extra
+pip install -e .[gui,webrtc]                # + GUI and WebRTC extras
 python -m pytest test/unit_test/headless    # headless unit tests
 python -m pytest test/integrated_test/      # cross-module workflows
 python -m coverage run -m pytest            # the suite WITH coverage (see below)
@@ -40,6 +40,13 @@ have their import-time lines recorded as never executed: measured, that is
 11,962 statements and ~24 percentage points (52.22% vs 72.05% on the same
 suite). `test/unit_test/headless/test_coverage_measurement.py` holds CI to the
 correct spelling.
+
+**Measure it with the `[webrtc]` extra installed**, which is why it is in the
+line above. Eleven modules under `utils/remote_desktop` raise `ImportError` at
+module level without `aiortc`/`av` — 2,090 statements, about 4 points — and the
+tests covering the WebRTC host's auth, TLS, tokens and file transfer
+`importorskip` straight past. `quality.yml` installs the extra so the floor is
+measured against the same tree a developer sees.
 
 `pyproject.toml` pins `python_files = ["test_*.py"]` on purpose: the `*_test.py` files under `test/unit_test/` are manual demo scripts whose module bodies drive the real mouse and keyboard on import. Never loosen that setting.
 

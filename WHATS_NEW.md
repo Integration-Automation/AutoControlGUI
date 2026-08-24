@@ -1,5 +1,511 @@
 # What's New — AutoControl
 
+## What's new (2026-08-24)
+
+### The Floor Is 81, And The Target Set On 2026-08-23 Is Met
+
+The nine-way matrix now runs **81.40%** (ubuntu-22.04 / 3.14) to 82.73%
+(windows-2022 / 3.12), so `fail_under` goes from 75 to 81 — floored to the
+integer below the lowest square, the convention every step of this ratchet has
+used. The target the maintainer set on 2026-08-23 was 80.
+
+Five batches got it there from 75: the WebRTC family, the window backends, the
+accessibility backends, the hotkey backends, and the class-callee half of the
+adapter sweep. Linux is still the low corner and Windows the high one, for the
+reason that has held all along — the facade imports the backend of whatever
+platform it is running on, so some of the remaining 18 points cannot be reached
+from any single square, and raising this number again means covering code that
+runs on all nine.
+
+### Two Races That Only A Loaded Runner Could Lose
+
+Both showed up as squares failing in a matrix where the same tests had passed
+the round before, which is the shape of a race rather than a regression.
+
+**A poller that outlived its test.** `AC_usb_watch_start` really starts a
+hotplug poller now that the sweep runs genuine objects, and on Windows that
+poller shells out to PowerShell every interval. `test_wayland_libei` patches
+`subprocess.run` across the whole process and reads the first argv it recorded
+— so it read the poller's. Every `_start` in both registries has a `_stop`
+sibling, all eight of them, so the sweep now runs it, and an autouse guard
+fails any case that leaves a thread behind. The next adapter to grow one is
+named here rather than becoming somebody else's flake three files away.
+
+**A bridge patched on the wrong module.** `send_file` hands the work to
+`FileTransferSender`, which reads `get_bridge` out of `webrtc_files`; the host
+and viewer fixtures patched it on the host and the viewer. That left the real
+bridge on that one path, queueing the chunks onto a background event loop while
+the assertion read `sent[0]` immediately afterwards. It passed wherever the
+loop won the race — every square, until two lost it in the same round.
+`test_webrtc_file_transfer` had always patched the right module, which is why
+it never flaked.
+
+### The AX Constants Came From The Wrong Framework, And Nine Green Squares Said Otherwise
+
+`Quartz.kAXValueCGPointType` does not exist. pyobjc builds `ApplicationServices`
+on top of `HIServices`, which is where the AXValue type constants are declared,
+and `Quartz` has no such parent — so on macOS the lookup raised `AttributeError`.
+That took out `move()`, `_point()`, and through `_point` the frame comparison
+that decides which accessibility element a given Quartz window is, which every
+other window action depends on.
+
+Every square was green while this was true, because the pyobjc stub answered
+for the names on `Quartz` — the failure mode the stub was written to create and
+`test_pyobjc_stub_names` was written to catch. It caught it on the first run:
+the two macOS squares, where the real frameworks are installed, failed on
+exactly those two names. The stub now declares them where they live, so they
+are checked against `ApplicationServices`.
+
+The ground truth came out of the wheel rather than a guess:
+`HIServices/_metadata.py` defines both constants, and
+`ApplicationServices/__init__.py` names `(Quartz, HIServices, CoreText)` as its
+parents while `Quartz` names no such thing.
+
+### When The Callee Is A Class, Build The Real Thing
+
+The sweep could read a contract made of `Optional[X]`, containers, scalars and
+dataclasses. 134 adapters had a callee that is a class, and sat out — the
+biggest group left. A constructor's parameters carry annotations too, so an
+instance can be built from them the same way a dataclass is built from its
+fields; measured, 112 of the 134 are reachable that way.
+
+What decides whether that is a test or just an execution is which of two shapes
+the callee has, and they are handled oppositely:
+
+**A callee that returns a class** gets a stub returning a real instance. The
+adapter then runs its real continuation: `get_egress_policy().is_allowed(url)`
+and `parse_baggage(header).to_dict()` execute against the declared shape rather
+than against something that answers every method.
+
+**A callee that is a class** is left alone. Stubbing it was tried first and is
+wrong twice over: the prepared instance discards the client's arguments, which
+are the thing under test — `CoordinateSpace` divided by a zero `model_w` that no
+client sent — and a stub standing in for a class has no alternative
+constructors, which surfaced as `'function' object has no attribute 'from_dict'`.
+Letting the adapter build the genuine object out of the genuine arguments has
+neither problem.
+
+Running real objects rather than stand-ins had three consequences worth naming:
+
+**A declared object is no longer flattened to `{}`.** A tool that names `kind`
+as required is describing a payload no client would send empty; handing the
+adapter `{}` tested the sample rather than the wiring. Samples now follow the
+schema's own `properties`, bounded by depth.
+
+**A class defined beside a third-party import stays out.** `S3ArtifactStore`
+builds from its annotations perfectly well and reaches for `boto3` on the first
+method call. That is the existing "the adapter is choosing its own backend"
+rule one level down, and applying it there kept eight entries that would all
+have read "boto3" off the documented-exception list.
+
+**Both sweeps now run in a directory of their own.** A checkpoint store handed
+the sample path creates a SQLite database where it stands: unisolated, the
+sweep left `sample.txt` and `value-for-db` in the repository, and one case
+passed or failed depending on whether another had run first.
+
+586 MCP adapters (from 554) and 537 executor adapters (from 471) now get
+called. Four need more than any annotation can promise and are named with a
+reason each — a presence registry that is real and empty and correctly refuses
+an unknown viewer, a cassette with nothing recorded in it, and an anchor whose
+`kind` enum sends the call into OpenCV template matching against a real screen.
+
+### A Whole Subsystem Was Being Measured At Zero, And Its Tests Were Skipping
+
+`quality.yml` now installs the `[webrtc]` extra. The coverage number was the
+smaller half of the reason. Eleven modules under `utils/remote_desktop` raise
+`ImportError` at module level without `aiortc`/`av` — 2,090 statements that were
+a hard 0% on every square no matter what anyone wrote — but the part that
+mattered is that the tests covering the WebRTC host's auth, TLS, resume tokens
+and file transfer *were already written*. They `importorskip`ped straight past on
+all nine squares, so they ran on developer machines and nowhere else.
+
+Measured with one variable changed, same machine and same suite: 513 of those
+statements are covered by tests that exist today, worth +1.23 points end to end.
+The extra resolves on every square (`aiortc` 1.15.0 and `av` 17.1.0 have wheels
+for win_amd64, manylinux x86_64 and macos-14 arm64 on both ends of the supported
+Python range). `typing-stable-api` deliberately does not get it: that gate's
+verdict must not depend on what happens to be installed.
+
+`dev_requirements.txt` and the `CLAUDE.md` setup line carry it too, because a
+developer without it measures about 4 points below the floor CI enforces.
+
+### The Stub Grows One Level Deeper, And A Third Registry Gets Swept
+
+Yesterday's sweep replaced each adapter's callee with a value built from its
+return annotation. Three things it could not reach, and now does:
+
+**A dataclass return is not the end of the contract, it is one more level of
+it.** `Optional[X]` → None and containers → empty containers stopped at the
+first `-> HealOutcome`, so 92 adapters sat out. The stub is now an instance
+built from the dataclass's own field annotations, which means the adapter's
+`.to_dict()` runs too — against the declared shape rather than a mock that
+answers everything.
+
+**Some adapters import a singleton, not a function.** `default_observer`,
+`default_scheduler`, `registry` — the adapter calls one method on the object.
+That is the same wiring shape one indirection along, so the callee is the method
+and its annotation is the contract; 101 more adapters. Calling *two* methods
+means the adapter orchestrates the object rather than standing in front of one
+call, and those stay out.
+
+**The REST route table is the third registry of this shape.** Its handlers'
+own module docstring says they are "pure … trivial to unit-test without an HTTP
+layer", and the existing REST tests go through the HTTP layer instead — so on a
+headless runner most of them reached a handler only to watch it fall into its
+own `except` and answer 500. `test_rest_route_sweep.py` calls all 31 routes with
+the arguments their own OpenAPI document declares, and asserts what the
+dispatcher relies on: `(status, dict)`, a real HTTP code, a payload `json.dumps`
+accepts — for a documented request, for the empty one an unhelpful client sends,
+and for a body of the wrong shape. It also compares the route table against the
+document, so a route nobody describes or a documented route nobody serves is
+now a named failure.
+
+The machinery the three sweeps share moved to `test/unit_test/headless/
+_contract_sweep.py`. Each keeps its own argument source — a JSON schema, the
+Script Builder's field specs, an OpenAPI document — which is what stops a sweep
+from passing by restating the code it checks.
+
+Two things fell out of building it. `ac_rrule_next` and its neighbours now
+declare `"format": "date-time"` on the properties they parse, which their
+descriptions already said in prose and their schemas did not; a client
+generating values from the schema alone used to get a `ValueError` out of
+`datetime.fromisoformat`. And `AddressBook.set_tags()` cleaned its input with
+`str(t).strip()`, so a JSON `null` — what a client sends for an omitted tag —
+became a tag literally named `"None"`, which `all_tags()` then listed next to
+the real ones.
+
+### The Trust Store And The Auth Boundary Get Tests, Because Now They Can
+
+Four modules decide who may drive this machine unattended, whether the host
+answering is the one that answered last time, what the viewer reconnects to, and
+how hard the encoder is pushed when the link degrades. All are ordinary Python —
+a JSON file, a lock and some arithmetic — and none was imported by any test on
+any square, because the subsystem could not be loaded without the extra.
+
+117 tests over the decisions they make in the operator's absence: a trust entry
+that must not lose its label on re-add, a store that opens empty rather than
+throwing on a truncated file, a fingerprint comparison that survives an SDP
+spelling the same certificate in a different case, a token accepted only when it
+is an equal string, an IP whitelist that matches by network rather than by
+string, a grace period that closes a peer which never authenticated, and five
+derived rates that must refuse to invent a number from one sample, a zero
+interval, or a counter that went backwards.
+
+The auth host double supplies exactly the attribute list `ViewerAuthMixin`'s own
+docstring asks for, so a mixin that starts reaching for something else fails
+there rather than leaning on whatever the real host happens to own.
+
+### The Two Big WebRTC Classes Did Not Need Splitting, They Needed Doubles
+
+`Progress.md` had the next step down as "first see whether a testable half can
+be split out of `webrtc_host` and `webrtc_viewer`", on the precedent of the two
+mixins that had already been carved off them. Going and looking says that was
+the wrong question. Neither constructor touches aiortc — the host stores a
+config, a rate limiter and a permission set, the viewer stores callbacks — and
+every collaborator either arrives as a keyword argument or is a module-level
+name. What held them at 19.83% and 14.08% was never the shape of the class; it
+was that reaching line one meant standing up an `RTCPeerConnection`, a screen
+grabber and a background event loop.
+
+So the five remaining WebRTC modules got 363 tests against doubles, and the
+classes were left where they are:
+
+| module | before | after |
+| --- | ---: | ---: |
+| `webrtc_host.py` | 19.83% | **100%** |
+| `webrtc_viewer.py` | 14.08% | **100%** |
+| `multi_viewer.py` | 21.24% | **100%** |
+| `webrtc_audio.py` | 0.00% | **96.27%** |
+| `webrtc_transport.py` | 27.89% | **88.84%** |
+
+Two remainders are deliberate. `_get_cursor_position` is three platform
+branches of which any one square runs one, and the two swallowed queue races in
+`_enqueue` need a queue that lies about being full — that would be a test of the
+double, not of the code.
+
+Most of what the tests pin down is refusal, because that is most of what these
+classes do with what arrives from the wire. The host's four channels each open
+with the PeerConnection, which is *before* the token has been checked, so each
+one is tested for what it does with traffic from a peer that never
+authenticated, from one the operator has since put in read-only, and from one
+that is simply flooding. The three inbox verbs — list, fetch, delete — are
+tested for the thing they all route through: `_safe_basename`, which is what
+stands between a viewer sending `../secret.txt` and the host's own files.
+
+On the viewer side the load-bearing detail is that slots are found by m-line
+order rather than by direction: aiortc gives every answerer transceiver the
+default `recvonly` regardless of what the offer asked for, so "my screen goes in
+the second video transceiver" is arithmetic, and off by one there replaces the
+picture the viewer is watching. Same for the toggles, which are asymmetric on
+purpose — off is `replaceTrack(None)` in place, on always renegotiates, because
+the host needs a fresh `track` event to restart its consume task.
+
+The doubles live in `test/unit_test/headless/_webrtc_doubles.py`, shaped like
+`_contract_sweep.py` and shared by six test modules. `FakePeerConnection`
+carries both ends' surface in one class deliberately: it stands in for one
+aiortc type, and splitting it by direction would be two doubles drifting apart
+from the same original.
+
+The thing that had to be split, in the end, was the test files — `CLAUDE.md`'s
+750-line limit has no exception for new ones. Host: session (557) and channels
+(739). Viewer: session (466), media (385), control (519).
+
+### The Platform Backends Were Never Linux-Only To Test, They Just Had No Double
+
+`Progress.md` listed `x11_backend.py` and its accessibility neighbour as
+reachable by "only the two Linux squares", and priced them accordingly: work
+that lifts two squares out of nine, when the floor is the lowest one.
+
+That was wrong, and one command says so:
+
+```bash
+python -c "import je_auto_control.wrapper.window_backends.x11_backend"
+```
+
+That passes on Windows, with no python-Xlib installed. Every `import Xlib`,
+`import Quartz`, `import AppKit`, `import ApplicationServices` and
+`import comtypes` under `wrapper/window_backends/` is *inside* a method — the
+seam was built that way on purpose, so a platform without a backend still
+imports. What kept those modules at 0% was never the platform. It was that
+nobody had written the double.
+
+With the frameworks stubbed into `sys.modules`, the whole package goes from
+14.24% to 100% and does it on all nine squares:
+
+| module | before | after |
+| --- | ---: | ---: |
+| `x11_backend.py` | 0.00% | **100%** |
+| `macos_backend.py` | 0.00% | **100%** |
+| `__init__.py` (backend selection) | 46.34% | **100%** |
+| `base.py` | 63.64% | **100%** |
+| `windows_backend.py` | 89.19% | **100%** |
+
+184 tests, and what they are about is protocol arithmetic that fails quietly.
+EWMH requests are addressed to the *root* window with `SubstructureRedirect`,
+because that is what routes them to the window manager — sent to the window
+itself they reach nobody. `_NET_CLIENT_LIST_STACKING` is bottom-to-top, so it
+is reversed and `_NET_CLIENT_LIST`, which carries no order at all, is not.
+`move()` sizes the client while `window_rect()` reads the frame, so the
+decorations come off the requested size — get that wrong and a window shrinks
+by a title bar every time a script round-trips it. On macOS an AX call
+returns an error code where zero means success, and `close()` returns
+`not error`: read backwards, that is a cheerful "yes" for every action that
+failed.
+
+**A double that nobody checks is a test agreeing with itself**, so the two
+stubs are pinned differently, because their constants are different in kind:
+
+* The Xlib stub's constants carry their real `X.h` values —
+  `SubstructureRedirectMask` is `1 << 20` — because those numbers go on the
+  wire. `test_xlib_stub_values.py` compares all twelve against the installed
+  library wherever there is one, which on CI is both Linux squares. (They
+  were also checked here against python-Xlib 0.33 pulled into a throwaway
+  `--target` directory: twelve for twelve.)
+* The pyobjc stub's constants are sentinels, because every one of them is
+  either a key into an info dictionary the stub itself builds or a token
+  handed straight back to a function the stub itself provides — no number
+  reaches any arithmetic. `test_pyobjc_stub_names.py` pins the *names*
+  against the real frameworks on the macOS squares instead, plus the three
+  window-list flags that genuinely get OR-ed together.
+
+One thing worth knowing before writing the next one of these: `from
+je_auto_control.windows.window import windows_window_manage` resolves by
+**attribute on the package** before it consults `sys.modules`. Registering the
+double under its own dotted name does nothing on a machine where the real
+module is importable — the package it is read off has to be the double.
+
+### Every Backend Seam Is Covered Now, And The Last One Was Hiding A Leak
+
+`utils/hotkey/backends/` was the last of the project's backend seams with a
+real hole in it — the accessibility, window, OCR, vision, LLM and agent seams
+are all covered. Three platforms, three completely different mechanisms:
+`RegisterHotKey` and a message pump, `XGrabKey` on the root window, a
+`CGEventTap` on a run loop. All three go to 100%, from 12.64%, 24.46% and
+40.94%.
+
+None of them needed a desktop. The Windows backend takes `user32` as an
+*argument* to the three methods that do the work, so a recorder drives them
+from anywhere; only the prologue that builds it needs `ctypes.wintypes`, and
+those two tests say so. The other two import their platform libraries inside
+their loops.
+
+**Changing a hotkey's combo on X11 left the old key grabbed for the life of
+the daemon.** `_sync_one` dropped the previous registration from its own
+table and never called `ungrab_key`, so the old combo stayed grabbed on the X
+server: swallowed from every application, firing nothing, and impossible for
+`_ungrab_all` to release at shutdown because it no longer knew about it.
+Rebind `ctrl+alt+k` and `ctrl+alt+k` is dead system-wide until the process
+exits.
+
+The same module already knew the shape of that mistake — the rollback in
+`_grab_masked` carries a comment saying that leaving grabs held with
+`_registered` never updated "leaks the grab and spams BadAccess on every
+following poll" — and the Windows backend unregisters at exactly this point.
+Only the rebinding path was missed.
+
+The X11 tests are also what grew the Xlib stub from 12 constants to 18 plus a
+keysym table, all of them still compared against the installed library on the
+Linux squares (and verified here against python-Xlib 0.33: 31 for 31).
+
+### The Accessibility Backends, Including The One Nobody Could Reach
+
+`utils/accessibility` was the second-largest gap in the project and the one
+that looked hardest: a UIAutomation provider, an AT-SPI bus and a granted
+macOS Accessibility permission are three things no CI runner has, and the
+Windows backend alone is 569 statements at 17%.
+
+The same fact that unlocked the window backends applies here — every
+platform import is inside a method — so the three backends and everything
+under them now run on all nine squares:
+
+| module | before | after |
+| --- | ---: | ---: |
+| `backends/windows_backend.py` | 17.72% | **99.42%** |
+| `backends/linux_backend.py` | 42.41% | **100%** |
+| `backends/macos_backend.py` | 0.00% | **100%** |
+| `backends/windows_query.py` | 24.75% | **99.01%** |
+| `backends/windows_state.py` | 18.75% | **100%** |
+| `backends/base.py` | 74.03% | **100%** |
+| `backends/__init__.py` | 48.94% | **100%** |
+
+Two of the doubles are worth describing because of what they refuse.
+
+The UIA one models the indirection every control pattern goes through — ask
+an element for a pattern id, then query an interface name off the generated
+module — and **refuses a mismatched pair**. Those are two independent
+constants with nothing checking them at runtime, and asking for the
+ValuePattern id while querying the RangeValuePattern interface fails as a
+`None` that reads exactly like "no such control". It also raises
+`AttributeError` for any `Current…` property the test did not supply, because
+answering with a callable would let `str(pattern.CurrentValue or "")` pass
+against the repr of a function.
+
+The AT-SPI one replaces `SessionBus` rather than `_AtspiConnection`. The
+existing Linux test replaces the connection, which is right for testing the
+*walk* and leaves the entire D-Bus call layer beneath it unexecuted — and
+that is where the protocol lives: the accessibility bus is not the session
+bus, an accessible is addressed by a `(sender, path)` *pair*, and the state
+bitfield arrives as two 32-bit words, so reading only the first drops every
+state above bit 31.
+
+### 37 Guards That Did Not Contain The Failure They Were Written For
+
+Writing those tests turned one up. `comtypes` reports a provider failure as
+`COMError`, which derives straight from `Exception`:
+
+```python
+>>> issubclass(COMError, (OSError, AttributeError, ValueError, TypeError))
+False
+```
+
+`windows_query._uia_errors()` exists to say exactly that, and its docstring
+names the case: "a window that closes mid-walk, or an application that stops
+responding, surfaces exactly that way". Two guards in
+`backends/windows_backend.py` used it. The other **37** — every control
+pattern in the file — spelled `(OSError, AttributeError, …)` and contained
+none of them.
+
+The race is real and small: `_find_raw` contains a dead provider and answers
+`None`, so the found path is the exposed one. Between the search that returns
+an element and the `GetCurrentPattern` call that reads it, an application can
+go away — and the answer was a `COMError` out of the `ac_*` tool, past the
+executor's `AutoControlException` boundary, instead of the `None` the method
+promised. All 37 now share one tuple. It only widens what is caught.
+
+### The Viewer Logged Every Clean Disconnect As An Unhandled Task Exception
+
+`WebRTCDesktopViewer._consume_video` caught `(OSError, RuntimeError)`. aiortc
+ends a track by raising `MediaStreamError` out of `recv()`, and that derives
+straight from `Exception`, so it matched neither arm. Nothing awaits that task,
+which means the ordinary end of a session — the host stopping its screen share,
+or the connection closing — surfaced as asyncio's "Task exception was never
+retrieved" instead of the "video stream ended" line the host's own drain loop
+and the Opus receiver have always logged. It now catches it, and
+`CancelledError` still propagates as the comment there requires.
+
+The doubles found it: the shared `FrameTrack` ends a stream the way aiortc does,
+and the viewer's own test had been written against a local double that ended it
+with `OSError`.
+
+### The Floor Is 75, And The Comment Now Says Which Number That Is
+
+The nine-way matrix runs 75.79% (ubuntu-22.04 / 3.14) to 76.99% (windows-2022),
+up from 69.67–70.97, so `fail_under` goes 69 → 75 on the usual convention: floor
+of the lowest square.
+
+`Progress.md` had recorded that the floor "had to be dug out of the XML
+artifact". That is wrong, and following it would set a floor the suite cannot
+clear. `coverage report` — the step that enforces `fail_under` — includes branch
+coverage, because `branch = true`; Cobertura's `line-rate` attribute does not.
+On the same square and the same run those differ by about 2 points (75.79%
+against 77.78%). The artifact is the right thing to read for a single
+subsystem's gap and the wrong thing to set a floor from.
+
+## What's new (2026-08-23)
+
+### A Thousand Adapters Now Get Called, Because the Type Contract Can Build Their Stubs
+
+`utils/mcp_server/tools/_handlers.py` and the `AC_*` dispatch table in
+`utils/executor/action_executor.py` are the same layer twice: about a thousand
+short functions whose whole job is to take a client's arguments, call one
+headless function, and hand back something that survives `json.dumps`. They were
+also the two least-covered files in the project — `_handlers.py` at 37.47%,
+`action_executor.py` at 55.78% — and not through neglect. Each adapter is two to
+eight lines, so the per-feature test that touches one is testing the feature; the
+adapter itself, which is where the wiring lives, was checked by nobody. Wiring
+fails only when a client calls it.
+
+Both registries are now swept, in one file:
+`test/unit_test/headless/test_adapter_registry_sweep.py`. 657 MCP tools driven
+with the arguments their own JSON schema declares, and 773 `AC_*` commands driven
+with the arguments the Script Builder's `command_schema.py` says a client sends.
+Neither sweep reads an adapter's source to decide what to pass it, so neither can
+pass by restating the code it is checking.
+
+**What made this possible was the other gate that landed last week.** The
+problem with calling a thousand adapters is what to do about the thing each one
+calls: a real call moves a mouse, and hand-writing a fake per callee is a
+thousand guesses at what each returns. Since the typing contract's exemption
+list was emptied on 2026-08-22, there is a third option — every callee's return
+annotation is machine-readable, so the stub can be *derived* from it.
+`Optional[X]` becomes None, containers become empty containers, scalars become
+their zero. Each adapter then runs against exactly what its callee promises, no
+more and no less, with no mouse, no display and no network in the picture.
+
+That is the sharper test as well as the cheaper one: an adapter that needs *more*
+than the contract offers now says so here instead of in front of a client. Three
+do, and each is named in the file with its reason — one uses the return value as
+a context manager, one imports a class rather than a function, one indexes a key
+out of a `Dict[str, Any]`. A fourth test fails if any of the three starts
+passing, so the list cannot quietly rot.
+
+| | before | after |
+| --- | ---: | ---: |
+| `_handlers.py` | 37.47% | **75.21%** |
+| `action_executor.py` | 55.78% | **73.52%** |
+| whole package | 71.91% | **74.91%** |
+
+Everything was green on the first run, so these are guards rather than a bug
+report — and a guard is worth only what it catches, so it was checked by breaking
+it: swapping two arguments inside one adapter (`_open_path(verb, target)`) fails
+the forwarding sweep by name, pointing at the tool and both values.
+
+**One invariant did fall out of building it.** 31 mandatory executor parameters
+have no field in the visual editor, and every one of them is annotated `Any`,
+`List[...]` or `Dict[...]` — a shape the editor's scalar field types cannot
+express, filled from its raw JSON view instead. That was true by convention and
+enforced by nobody. A mandatory *scalar* with no field is a different thing
+entirely: it means the editor emits an action that raises `TypeError` the first
+time it is run. That is a test now, alongside two more of the same kind — every
+schema field names a parameter its command accepts, and every command the editor
+can emit is a command the dispatch table resolves.
+
+Out of scope by design, and stated in the file rather than left to be
+rediscovered: an adapter that reaches into two project modules composes them
+rather than normalising one, and an adapter that imports a third-party module is
+picking its own backend, so what it returns depends on the machine — the
+opposite of what a sweep can assert.
+
 ## What's new (2026-08-21)
 
 ### Two Quality Gates That Had Been Standing Still

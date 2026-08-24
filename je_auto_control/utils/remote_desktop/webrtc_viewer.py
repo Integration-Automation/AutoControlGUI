@@ -540,6 +540,14 @@ class WebRTCDesktopViewer:
         # CancelledError is intentionally not caught — it must propagate
         # so the awaiter knows the consumer ended via cancellation
         # rather than a stream error (S7497).
+        #
+        # MediaStreamError is the *normal* end: aiortc raises it from recv()
+        # when the host stops sharing or the connection closes. It derives
+        # straight from Exception, so it is not covered by the OSError /
+        # RuntimeError arm below, and nobody awaits this task — letting it
+        # escape turns every clean disconnect into an un-retrieved task
+        # exception. The host's own drain loop has always caught it.
+        from aiortc.mediastreams import MediaStreamError
         try:
             while not self._closed.is_set():
                 frame = await track.recv()
@@ -548,6 +556,8 @@ class WebRTCDesktopViewer:
                         self._on_frame(frame)
                     except (RuntimeError, OSError) as error:
                         autocontrol_logger.debug("frame cb: %r", error)
+        except MediaStreamError:
+            autocontrol_logger.info("webrtc viewer: video stream ended")
         except (OSError, RuntimeError) as error:
             autocontrol_logger.info("webrtc viewer: video stream ended: %r", error)
 

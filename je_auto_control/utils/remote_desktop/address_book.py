@@ -142,8 +142,14 @@ class AddressBook:
 
     def set_tags(self, *, host_id: str, server_url: str,
                  tags: list) -> None:
-        """Replace ``tags`` on the matching entry."""
-        clean = [str(t).strip() for t in tags if str(t).strip()]
+        """Replace ``tags`` on the matching entry.
+
+        A JSON ``null`` reaches here as None, and ``str(None)`` is the
+        non-empty string ``"None"`` -- so an omitted tag used to be stored as
+        one, and `all_tags` then listed it alongside the real ones.
+        """
+        clean = [str(t).strip() for t in tags
+                 if t is not None and str(t).strip()]
         with self._lock:
             for entry in self._entries:
                 if (entry.get("host_id") == host_id

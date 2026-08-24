@@ -10,7 +10,7 @@ decorative text children.
 """
 import functools
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from je_auto_control.utils.accessibility.backends.base import (
     AccessibilityBackend,
@@ -25,6 +25,11 @@ from je_auto_control.utils.accessibility.backends.windows_state import (
     is_password, read_state,
 )
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
+
+#: Every guard below. ``COMError`` is why a narrower tuple would contain
+#: nothing — see ``windows_query._uia_errors``; ``TypeError`` joins it because
+#: several of these reads coerce whatever the provider returned.
+_UIA_ERRORS: Tuple[Type[BaseException], ...] = UIA_ERRORS + (TypeError,)
 
 _UIA_IS_CONTROL_ELEMENT_PROPERTY = 30016
 _UIA_NAME_PROPERTY = 30005
@@ -98,7 +103,7 @@ def _create_automation(uia_module):
                                           interface=interface)
             automation.ConnectionTimeout = _CONNECTION_TIMEOUT_MS
             return automation
-        except (OSError, AttributeError, ValueError) as error:
+        except _UIA_ERRORS as error:
             autocontrol_logger.info(
                 "UIAutomation2 unavailable, provider waits are unbounded: %r",
                 error)
@@ -258,7 +263,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
                 return None
             interface = getattr(self._uia_module, interface_name)
             return unknown.QueryInterface(interface)
-        except (OSError, AttributeError, ValueError):
+        except _UIA_ERRORS:
             return None
 
     def get_value(self, name=None, role=None, app_name=None,
@@ -278,7 +283,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             return None
         try:
             return str(pattern.CurrentValue or "")
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return None
 
     def set_value(self, value, name=None, role=None, app_name=None,
@@ -291,7 +296,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         try:
             pattern.SetValue(str(value))
             return True
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return False
 
     def invoke(self, name=None, role=None, app_name=None,
@@ -304,7 +309,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         try:
             pattern.Invoke()
             return True
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return False
 
     def toggle(self, name=None, role=None, app_name=None,
@@ -317,7 +322,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         try:
             pattern.Toggle()
             return True
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return False
 
     def read_table(self, name=None, role=None, app_name=None,
@@ -330,7 +335,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         try:
             rows = int(pattern.CurrentRowCount or 0)
             cols = int(pattern.CurrentColumnCount or 0)
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return []
         return [self._read_row(pattern, r, cols) for r in range(rows)]
 
@@ -344,7 +349,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         try:
             action(pattern)
             return True
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return False
 
     def expand(self, name=None, role=None, app_name=None, automation_id=None):
@@ -366,7 +371,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             return None
         try:
             return _EXPAND_STATES.get(int(pattern.CurrentExpandCollapseState))
-        except (OSError, AttributeError, ValueError, TypeError):
+        except _UIA_ERRORS:
             return None
 
     def select_item(self, name=None, role=None, app_name=None, automation_id=None):
@@ -397,7 +402,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             return {"value": float(pattern.CurrentValue),
                     "minimum": float(pattern.CurrentMinimum),
                     "maximum": float(pattern.CurrentMaximum)}
-        except (OSError, AttributeError, ValueError, TypeError):
+        except _UIA_ERRORS:
             return None
 
     def _realize(self, raw) -> None:
@@ -408,7 +413,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             return
         try:
             pattern.Realize()
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             pass
 
     def find_virtual_item(self, item_name=None, by="name", container_name=None,
@@ -424,7 +429,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
                        else _UIA_NAME_PROPERTY)
         try:
             found = pattern.FindItemByProperty(None, property_id, item_name)
-        except (OSError, AttributeError, ValueError):
+        except _UIA_ERRORS:
             return None
         if not found:
             return None
@@ -479,7 +484,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         try:
             return _WINDOW_INTERACTION_STATES.get(
                 int(pattern.CurrentWindowInteractionState))
-        except (OSError, AttributeError, ValueError, TypeError):
+        except _UIA_ERRORS:
             return None
 
     def legacy_info(self, name=None, role=None, app_name=None,
@@ -511,7 +516,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             items = _header_names(pattern.GetCurrentSelection())
             can_multiple = bool(pattern.CurrentCanSelectMultiple)
             required = bool(pattern.CurrentIsSelectionRequired)
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return None
         return {"items": items, "can_select_multiple": can_multiple,
                 "is_required": required}
@@ -529,7 +534,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         try:
             view_ids = list(pattern.GetCurrentSupportedViews())
             current = int(pattern.CurrentCurrentView)
-        except (OSError, AttributeError, ValueError, TypeError):
+        except _UIA_ERRORS:
             return None
         return {"current": _view_name(pattern, current),
                 "views": [_view_name(pattern, view_id) for view_id in view_ids]}
@@ -544,7 +549,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
                 if _view_name(pattern, view_id) == str(view):
                     pattern.SetCurrentView(int(view_id))
                     return True
-        except (OSError, AttributeError, ValueError, TypeError):
+        except _UIA_ERRORS:
             return False
         return False
 
@@ -577,7 +582,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         try:
             with self._event_lock:
                 automation.AddFocusChangedEventHandler(None, handler)
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return None
         try:
             return events.get(timeout=float(timeout))
@@ -587,7 +592,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             with self._event_lock:
                 try:
                     automation.RemoveFocusChangedEventHandler(handler)
-                except (OSError, AttributeError):
+                except _UIA_ERRORS:
                     pass
 
     def get_table_headers(self, name=None, role=None, app_name=None,
@@ -600,7 +605,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         try:
             columns = pattern.GetCurrentColumnHeaders()
             rows = pattern.GetCurrentRowHeaders()
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return None
         return {"columns": _header_names(columns), "rows": _header_names(rows)}
 
@@ -613,7 +618,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             return None
         try:
             cell = grid.GetItem(int(row), int(column))
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return None
         if not cell:
             return None
@@ -636,7 +641,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             return None
         try:
             return str(pattern.DocumentRange.GetText(-1) or "")
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return None
 
     def selected_text(self, name=None, role=None, app_name=None,
@@ -649,7 +654,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             if not selection or int(selection.Length or 0) == 0:
                 return ""
             return str(selection.GetElement(0).GetText(-1) or "")
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return None
 
     def visible_text(self, name=None, role=None, app_name=None,
@@ -662,7 +667,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             count = int(ranges.Length or 0)
             return "".join(str(ranges.GetElement(i).GetText(-1) or "")
                            for i in range(count))
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return None
 
     def _find_range(self, text, ignore_case, name, role, app_name, automation_id):
@@ -673,7 +678,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         try:
             return pattern.DocumentRange.FindText(str(text), False,
                                                   bool(ignore_case))
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return None
 
     def find_text(self, text="", ignore_case=True, name=None, role=None,
@@ -690,7 +695,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         try:
             found.Select()
             return True
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return False
 
     def text_attributes(self, name=None, role=None, app_name=None,
@@ -703,7 +708,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             text_range = (selection.GetElement(0)
                           if selection and int(selection.Length or 0) > 0
                           else pattern.DocumentRange)
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return None
         return _read_text_attributes(text_range)
 
@@ -715,7 +720,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
         try:
             raw.SetFocus()
             return True
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             return False
 
     @staticmethod
@@ -726,7 +731,7 @@ class WindowsAccessibilityBackend(AccessibilityBackend):
             try:
                 cell = pattern.GetItem(row, col)
                 cells.append(str(cell.CurrentName or "") if cell else "")
-            except (OSError, AttributeError):
+            except _UIA_ERRORS:
                 cells.append("")
         return cells
 
@@ -735,7 +740,7 @@ def _view_name(pattern, view_id) -> str:
     """Return a MultipleViewPattern view's name, or '' on failure."""
     try:
         return str(pattern.GetViewName(int(view_id)) or "")
-    except (OSError, AttributeError, ValueError, TypeError):
+    except _UIA_ERRORS:
         return ""
 
 
@@ -744,12 +749,12 @@ def _header_names(array) -> List[str]:
     names: List[str] = []
     try:
         count = int(array.Length or 0)
-    except (OSError, AttributeError):
+    except _UIA_ERRORS:
         return names
     for index in range(count):
         try:
             names.append(str(array.GetElement(index).CurrentName or ""))
-        except (OSError, AttributeError):
+        except _UIA_ERRORS:
             names.append("")
     return names
 
@@ -766,7 +771,7 @@ def _read_cell(item_pattern, cell, row: int, column: int) -> Dict[str, Any]:
                           ("column_span", "CurrentColumnSpan")):
             try:
                 info[key] = int(getattr(item_pattern, attr))
-            except (OSError, AttributeError, ValueError, TypeError):
+            except _UIA_ERRORS:
                 pass
     return info
 
@@ -774,7 +779,7 @@ def _read_cell(item_pattern, cell, row: int, column: int) -> Dict[str, Any]:
 def _safe_name(raw) -> str:
     try:
         return str(raw.CurrentName or "")
-    except (OSError, AttributeError):
+    except _UIA_ERRORS:
         return ""
 
 
@@ -793,7 +798,7 @@ _TEXT_ATTR_IS_ITALIC = 40014
 def _attr(text_range, attribute_id, cast):
     try:
         return cast(text_range.GetAttributeValue(attribute_id))
-    except (OSError, AttributeError, ValueError, TypeError):
+    except _UIA_ERRORS:
         return None
 
 
@@ -826,7 +831,7 @@ def _read_legacy(pattern) -> Dict[str, Any]:
     for key, attribute, cast in _LEGACY_READS:
         try:
             info[key] = cast(getattr(pattern, attribute))
-        except (OSError, AttributeError, ValueError, TypeError):
+        except _UIA_ERRORS:
             info[key] = None
     return info
 
@@ -849,7 +854,7 @@ def _read_properties(raw) -> Dict[str, Any]:
     for key, attribute, cast in _PROPERTY_READS:
         try:
             properties[key] = cast(getattr(raw, attribute))
-        except (OSError, AttributeError, ValueError, TypeError):
+        except _UIA_ERRORS:
             properties[key] = None
     return properties
 
@@ -871,7 +876,7 @@ def _convert_uia(raw, cached: bool = False) -> Optional[AccessibilityElement]:
         process_id = int(getattr(raw, prefix + "ProcessId") or 0)
         automation_id = str(getattr(raw, prefix + "AutomationId") or "")
         enabled = bool(getattr(raw, prefix + "IsEnabled"))
-    except (OSError, AttributeError):
+    except _UIA_ERRORS:
         return None
     width = max(0, int(rect.right - rect.left))
     height = max(0, int(rect.bottom - rect.top))
