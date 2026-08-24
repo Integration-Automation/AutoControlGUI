@@ -36,6 +36,7 @@ machine -- the opposite of what a sweep can assert).
 """
 import inspect
 import json
+import threading
 import typing
 from typing import Any, Callable, Dict, List
 
@@ -89,6 +90,41 @@ def _in_a_directory_of_its_own(tmp_path, monkeypatch):
     nobody else can see.
     """
     monkeypatch.chdir(tmp_path)
+
+
+@pytest.fixture(autouse=True)
+def _leaves_no_background_work_behind():
+    """No sweep case may outlive itself in a thread.
+
+    Running the genuine object rather than a stand-in means an adapter whose
+    job is to *start* something really starts it: `AC_usb_watch_start` leaves
+    a hotplug poller running, and on Windows that poller shells out to
+    PowerShell every interval. Any later test that patches `subprocess.run`
+    process-wide and reads the first call it recorded then sees the poller's
+    argv instead of its own -- which is how `test_wayland_libei` failed on one
+    square of the matrix and nowhere else.
+
+    The sweep stops what it starts, below; this is the guard that says so, and
+    it names the next adapter to grow a thread instead of letting it become
+    somebody else's flake.
+    """
+    before = {thread.ident for thread in threading.enumerate()}
+    yield
+    left = [thread.name for thread in threading.enumerate()
+            if thread.ident not in before and thread.is_alive()]
+    assert not left, f"the case left these threads running: {left}"
+
+
+def _stop_whatever_it_started(name: str, dispatch) -> None:
+    """Run the `_stop` sibling of a `_start` adapter, where there is one.
+
+    Every `_start` in either registry has one, which is what makes this a
+    convention rather than a special case -- and running it is coverage of
+    the stop adapter too, from the only state where stopping means anything.
+    """
+    if not name.endswith("_start"):
+        return
+    dispatch(name[:-len("_start")] + "_stop")
 
 
 # === Reading a value out of a declared type =================================
@@ -161,6 +197,14 @@ def _unique_by_handler(tools: List[MCPTool]) -> List[MCPTool]:
     return unique
 
 
+def _invoke_by_name(name: str) -> None:
+    """Call one tool by name with what its own schema declares, if it exists."""
+    for tool in REGISTRY:
+        if tool.name == name:
+            tool.invoke(_tool_arguments(tool.input_schema, required_only=False))
+            return
+
+
 REGISTRY = build_default_tool_registry(read_only=False, aliases=False)
 _TOOLS = _unique_by_handler(REGISTRY)
 DELEGATING = [(tool, *delegation(tool.handler)) for tool in _TOOLS
@@ -213,6 +257,7 @@ def test_tool_result_survives_json(tool, monkeypatch):
     install_stubs(monkeypatch, contract_stubs(tool.handler))
     result = tool.invoke(_tool_arguments(tool.input_schema,
                                          required_only=False))
+    _stop_whatever_it_started(tool.name, lambda stop: _invoke_by_name(stop))
     assert is_serialisable(result, (MCPContent,)), (
         f"{tool.name} returned {type(result).__name__}, which json.dumps "
         "cannot encode")
@@ -296,6 +341,8 @@ def test_command_dispatches_and_records_json(command, monkeypatch):
     install_stubs(monkeypatch, contract_stubs(adapter))
     payload = _command_arguments(command, adapter)
     record = executor.execute_action([[command, payload]])
+    _stop_whatever_it_started(command, lambda stop: executor.execute_action(
+        [[stop, _command_arguments(stop, executor.event_dict[stop])]]))
     assert record, f"{command} produced no execution record"
     try:
         json.dumps(record)

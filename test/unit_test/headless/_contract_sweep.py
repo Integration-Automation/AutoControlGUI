@@ -25,6 +25,7 @@ Nothing here is a test; the file is named so pytest does not collect it.
 import ast
 import collections.abc
 import dataclasses
+import functools
 import importlib
 import inspect
 import json
@@ -179,7 +180,7 @@ def _constructed_value(cls: type, seen: FrozenSet[type]) -> Any:
         raise ValueError(f"self-referential constructor on {cls!r}")
     if not getattr(cls, "__module__", "").startswith(_PACKAGE + "."):
         raise ValueError(f"not a first-party class: {cls!r}")
-    if _module_picks_a_backend(cls):
+    if _module_picks_a_backend(cls.__module__):
         raise ValueError(f"{cls!r} is defined beside a third-party import")
     try:
         signature = inspect.signature(cls.__init__)
@@ -203,8 +204,9 @@ def _constructed_value(cls: type, seen: FrozenSet[type]) -> Any:
             f"{cls!r} refuses its contract's zero values: {error}") from error
 
 
-def _module_picks_a_backend(cls: type) -> bool:
-    """Return True when the module defining ``cls`` imports a third-party one.
+@functools.lru_cache(maxsize=None)
+def _module_picks_a_backend(module_path: str) -> bool:
+    """Return True when the module at ``module_path`` imports a third-party one.
 
     The sweeps already refuse an adapter that imports a third-party package,
     because what it returns then depends on what is installed on the machine
@@ -215,7 +217,7 @@ def _module_picks_a_backend(cls: type) -> bool:
     documented-exception list, where they would all have said "boto3".
     """
     try:
-        source = inspect.getsource(sys.modules[cls.__module__])
+        source = inspect.getsource(sys.modules[module_path])
     except (OSError, TypeError, KeyError):
         return True
     for node in ast.walk(ast.parse(source)):
