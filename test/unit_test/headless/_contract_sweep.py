@@ -23,6 +23,7 @@ sweep from passing by restating the code it checks.
 Nothing here is a test; the file is named so pytest does not collect it.
 """
 import ast
+import collections.abc
 import dataclasses
 import importlib
 import inspect
@@ -53,6 +54,9 @@ _SCALARS: Dict[str, Any] = {
 # before delegating enforces it. Without this the sweep hands `ac_rrule_next`
 # the generic sample and watches `datetime.fromisoformat` reject it -- which
 # says nothing about the adapter and everything about the sample.
+#: How far into a nested object the sample builder will follow `properties`.
+_MAX_SCHEMA_DEPTH = 4
+
 _STRING_FORMATS: Dict[str, str] = {
     "date-time": "2026-01-02T03:04:05",
     "date": "2026-01-02",
@@ -60,8 +64,15 @@ _STRING_FORMATS: Dict[str, str] = {
 }
 
 
-def _sample_value(spec: Dict[str, Any], name: str) -> Any:
-    """Return a value satisfying one JSON-Schema property node."""
+def _sample_value(spec: Dict[str, Any], name: str, depth: int = 0) -> Any:
+    """Return a value satisfying one JSON-Schema property node.
+
+    A declared ``object`` is built from its own ``properties`` rather than
+    left empty: a tool whose ``anchor`` argument names ``kind`` as required
+    is describing a payload no client would send as ``{}``, and handing the
+    adapter ``{}`` tests the sample, not the wiring. ``depth`` stops a schema
+    that describes itself.
+    """
     enum = spec.get("enum")
     if isinstance(enum, list) and enum:
         return enum[0]
@@ -70,7 +81,13 @@ def _sample_value(spec: Dict[str, Any], name: str) -> Any:
         kind = next((entry for entry in kind if entry != "null"), "string")
     if kind == "array":
         item = spec.get("items")
-        return [_sample_value(item, name)] if item else []
+        return [_sample_value(item, name, depth + 1)] if item else []
+    if kind == "object":
+        properties = spec.get("properties") or {}
+        if not properties or depth >= _MAX_SCHEMA_DEPTH:
+            return {}
+        return {key: _sample_value(sub, key, depth + 1)
+                for key, sub in properties.items()}
     if kind == "string":
         return _STRING_FORMATS.get(spec.get("format"), f"value-for-{name}")
     return _SCALARS.get(kind, f"value-for-{name}")
@@ -82,6 +99,18 @@ _ZEROS: Dict[Any, Callable[[], Any]] = {
     int: lambda: 0, float: lambda: 0.0, bool: lambda: False,
     str: lambda: "", bytes: lambda: b"",
     list: list, dict: dict, set: set, tuple: tuple,
+}
+
+# An annotation is free to promise the abstract protocol rather than the
+# concrete type, and `Mapping[str, X]` originates at `collections.abc.Mapping`,
+# which cannot be instantiated. The emptiest value satisfying each is the
+# builtin that registers as it.
+_ABSTRACT_CONTAINERS: Dict[Any, Callable[[], Any]] = {
+    collections.abc.Mapping: dict, collections.abc.MutableMapping: dict,
+    collections.abc.Sequence: list, collections.abc.MutableSequence: list,
+    collections.abc.Iterable: list, collections.abc.Iterator: iter([]).__iter__,
+    collections.abc.Collection: list,
+    collections.abc.Set: set, collections.abc.MutableSet: set,
 }
 
 
@@ -98,6 +127,8 @@ def _value_for_generic(origin: Any, arguments: Tuple[Any, ...],
         return tuple(_value_for(entry, seen) for entry in arguments)
     if origin in (list, set, frozenset, dict):
         return origin()
+    if origin in _ABSTRACT_CONTAINERS:
+        return _ABSTRACT_CONTAINERS[origin]()
     raise ValueError(f"unmodelled container {origin!r}")
 
 
@@ -124,6 +155,81 @@ def _dataclass_value(cls: type, seen: FrozenSet[type]) -> Any:
     return cls(**arguments)
 
 
+def _constructed_value(cls: type, seen: FrozenSet[type]) -> Any:
+    """Build a real instance of a first-party class from its own ``__init__``.
+
+    This is `_dataclass_value` one level along, and for the same reason: a
+    constructor's parameters carry annotations, so "what does calling this
+    promise the caller?" stays a question the program can answer. The instance
+    is the genuine class, not a double -- its methods run, its ``to_dict()``
+    runs, and an adapter that calls one with the wrong arguments still raises.
+    That is what keeps "the adapter ran" and "the adapter was checked" from
+    coming apart, which a double answering every method would not.
+
+    Only the constructor's *required* parameters are filled: a default is the
+    class's own statement of what the caller may leave out.
+
+    Raising :class:`ValueError` leaves the adapter out of the sweep, which is
+    the right answer for all three ways this can fail -- a class outside the
+    package (the adapter is choosing a backend), a parameter the contract
+    never described, and zero values that break an invariant the annotation
+    cannot express (``rate must be positive`` for a token bucket, say).
+    """
+    if cls in seen:
+        raise ValueError(f"self-referential constructor on {cls!r}")
+    if not getattr(cls, "__module__", "").startswith(_PACKAGE + "."):
+        raise ValueError(f"not a first-party class: {cls!r}")
+    if _module_picks_a_backend(cls):
+        raise ValueError(f"{cls!r} is defined beside a third-party import")
+    try:
+        signature = inspect.signature(cls.__init__)
+        hints = typing.get_type_hints(cls.__init__)
+    except (TypeError, ValueError, NameError) as error:
+        raise ValueError(f"unreadable constructor on {cls!r}: {error}") from error
+    arguments = {}
+    for name, parameter in signature.parameters.items():
+        if name == "self" or parameter.default is not parameter.empty:
+            continue
+        if parameter.kind not in (parameter.POSITIONAL_OR_KEYWORD,
+                                  parameter.KEYWORD_ONLY):
+            continue
+        if name not in hints:
+            raise ValueError(f"{cls!r} takes an unannotated {name}")
+        arguments[name] = _value_for(hints[name], seen | {cls})
+    try:
+        return cls(**arguments)
+    except Exception as error:  # noqa: BLE001  # reason: any refusal means the contract's zero values do not build one, and the adapter leaves the sweep
+        raise ValueError(
+            f"{cls!r} refuses its contract's zero values: {error}") from error
+
+
+def _module_picks_a_backend(cls: type) -> bool:
+    """Return True when the module defining ``cls`` imports a third-party one.
+
+    The sweeps already refuse an adapter that imports a third-party package,
+    because what it returns then depends on what is installed on the machine
+    rather than on any contract. A real instance moves that question one level
+    down: ``S3ArtifactStore`` constructs from its annotations perfectly well
+    and then reaches for ``boto3`` the moment a method is called. Same rule,
+    same seam, one level along -- and it keeps eight adapters off the
+    documented-exception list, where they would all have said "boto3".
+    """
+    try:
+        source = inspect.getsource(sys.modules[cls.__module__])
+    except (OSError, TypeError, KeyError):
+        return True
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            if any(not _is_stdlib(alias.name)
+                   and not alias.name.startswith(_PACKAGE) for alias in node.names):
+                return True
+        elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+            root = node.module.split(".")[0]
+            if not _is_stdlib(root) and root != _PACKAGE:
+                return True
+    return False
+
+
 def _value_for(annotation: Any, seen: FrozenSet[type] = frozenset()) -> Any:
     """Build the emptiest value a return annotation allows.
 
@@ -144,6 +250,8 @@ def _value_for(annotation: Any, seen: FrozenSet[type] = frozenset()) -> Any:
         return _ZEROS[annotation]()
     if isinstance(annotation, type) and dataclasses.is_dataclass(annotation):
         return _dataclass_value(annotation, seen)
+    if isinstance(annotation, type):
+        return _constructed_value(annotation, seen)
     raise ValueError(f"unmodelled return annotation {annotation!r}")
 
 
@@ -334,8 +442,25 @@ def _contract_stubs(adapter: Any) -> Optional[List[Tuple[Any, str, Any]]]:
         if callee is None:
             return None
         owner, attribute = callee
+        target = getattr(owner, attribute)
+        if isinstance(target, type):
+            # A class callee is left alone: the adapter constructs the real
+            # object out of the client's own arguments, which is both the
+            # strongest form of "run against the declared type" and the only
+            # one that keeps the arguments under test. Replacing the class
+            # with something returning a prepared instance would throw those
+            # arguments away -- and take the class's own constructors with
+            # them, since a stub standing in for a class has no `from_dict`.
+            # `_constructed_value` below still has to succeed, so a class the
+            # contract cannot build stays out of the sweep rather than being
+            # run blind.
+            try:
+                _value_for(target)
+            except (ValueError, TypeError, NameError):
+                return None
+            continue
         try:
-            hints = typing.get_type_hints(getattr(owner, attribute))
+            hints = typing.get_type_hints(target)
             stubs.append((owner, attribute,
                           _value_for(hints.get("return",
                                                inspect.Signature.empty))))

@@ -52,6 +52,20 @@ _JSON = "application/json"
 _NOT_JSON_ROUTES = {("GET", "/dashboard"), ("GET", "/docs"), ("GET", "/metrics")}
 
 
+@pytest.fixture(autouse=True)
+def _in_a_directory_of_its_own(tmp_path, monkeypatch):
+    """Run every sweep case in an empty directory.
+
+    An adapter whose callee is a class builds the real object out of the
+    client's own arguments, and some of those objects are stores: a
+    checkpoint store handed the sample file path creates a SQLite database
+    where it stands. In the repository that leaves files behind and makes one
+    case depend on whether another ran first; here each case gets a directory
+    nobody else can see.
+    """
+    monkeypatch.chdir(tmp_path)
+
+
 def _routes() -> List[Tuple[str, str, Any]]:
     """Every `(method, path, handler)` the dispatcher can reach."""
     return ([("GET", path, handler)

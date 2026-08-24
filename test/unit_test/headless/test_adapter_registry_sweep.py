@@ -60,12 +60,35 @@ from je_auto_control.utils.mcp_server.tools import (
 _NEEDS_MORE_THAN_THE_CONTRACT = {
     # Uses the return value as a context manager; the annotation is untyped.
     "ac_list_monitors",
-    # Its single import is a class, so there is no return annotation to build.
-    "ac_anchor_click",
     # Indexes a key out of a Dict[str, Any] the annotation cannot promise.
     "ac_tween_drag",
     "ac_voice_dispatch",
+    # Its anchor's `kind` selects a locator backend, and the first value the
+    # enum offers is `image` -- so the call leaves the adapter and goes into
+    # OpenCV template matching against a real screen.
+    "ac_anchor_click",
+    # Needs a viewer that registered earlier. The registry it is handed is
+    # real and empty, and refusing an unknown viewer is what it is for.
+    "ac_presence_update_cursor",
+    "ac_presence_set_role",
+    # Needs an interaction recorded into the cassette first; a fresh one
+    # misses by design.
+    "ac_http_replay",
 }
+
+
+@pytest.fixture(autouse=True)
+def _in_a_directory_of_its_own(tmp_path, monkeypatch):
+    """Run every sweep case in an empty directory.
+
+    An adapter whose callee is a class builds the real object out of the
+    client's own arguments, and some of those objects are stores: a
+    checkpoint store handed the sample file path creates a SQLite database
+    where it stands. In the repository that leaves files behind and makes one
+    case depend on whether another ran first; here each case gets a directory
+    nobody else can see.
+    """
+    monkeypatch.chdir(tmp_path)
 
 
 # === Reading a value out of a declared type =================================
