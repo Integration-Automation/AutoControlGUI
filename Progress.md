@@ -244,16 +244,19 @@ capability enum 值與 variadic `ei_seat_bind_capabilities`、event-type enum �
 **2026-08-23 維護者拍板：下一個覆蓋率目標是 80。** 這一條留到那時候。
 型別那一節留著是因為它記的那幾個坑之後還會踩到。
 
-### 覆蓋率：地板 75，目標 80——本機已過，等九宮格
+### 覆蓋率：目標 80 達成，地板提到 81——**這一條結束了**
 
-`TODO` — 目標 **80**（2026-08-23 拍板）。**2026-08-24 本機（Windows／3.14）已到
-82.40%**（77.04% 起算，四批：WebRTC 那一族、window backends、accessibility、
-hotkey backends），但**地板照舊只跟著九宮格最低那一格走**，所以
-`fail_under` 還停在 75，要等 CI 的 `coverage report` 印出來才動。
-本機與最低那一格上一次相差約 1.3 點（77.04 對 75.79）。
+`TODO` → **完成（2026-08-24）**。2026-08-23 拍板的目標是 **80**；九宮格實測
+最低那一格 **81.40%**（ubuntu-22.04／3.14），最高 82.73%（windows-2022／3.12），
+`fail_under` 隨之從 75 提到 **81**。
 
-**這一條要收掉，只差兩件事**：讀一次矩陣把地板提上去，以及下面第 2 項那個
-`DECIDE`（掃不到的那批 adapter）。其餘計畫內的項目都做完了。
+從 75 到 81 是五批：WebRTC 那一族、window backends、accessibility backends、
+hotkey backends，以及最後這一批——掃不到的那批 adapter（下面第 2 項那條
+`DECIDE`，2026-08-24 拍板走「建真的實例」）。
+
+**這一整節之後只剩參考價值**：它記的幾個坑（量測起點、地板只能從
+`coverage report` 讀、只補跑得到九格的程式碼）之後每次動覆蓋率都還會踩到，
+所以留著。下一個目標由維護者再定。
 
 `fail_under` 一度從 35 提到 50，理由寫在 `pyproject.toml`。**那兩個數字都低了大約
 24 點**，而原因不在測試，在量測的起點：
@@ -368,15 +371,19 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 三支共用的機器搬進 `test/unit_test/headless/_contract_sweep.py`，各自只留自己的
 參數來源。
 
-#### 現在的九宮格（2026-08-24 實測，本 PR 最後一次 run）
+#### 九宮格怎麼走到 81 的（每一列都是 `coverage report` 實測）
 
-| | 最低 | 最高 |
-| --- | --- | --- |
-| 上一版（PR #486 首輪） | 69.67%（ubuntu-22.04／3.14） | 70.97%（windows-2022／3.12） |
-| 這一版 | **75.79%**（ubuntu-22.04／3.14） | 76.99%（windows-2022，3.11／3.12） |
+| | 最低 | 最高 | 地板 |
+| --- | --- | --- | ---: |
+| PR #486 首輪 | 69.67%（ubuntu-22.04／3.14） | 70.97%（windows-2022／3.12） | 69 |
+| 補完 WebRTC 之後 | 75.79%（ubuntu-22.04／3.14） | 76.99%（windows-2022，3.11／3.12） | 75 |
+| 補完後四批之後 | **81.40%**（ubuntu-22.04／3.14） | 82.73%（windows-2022／3.12） | **81** |
 
-地板隨之從 69 提到 **75**。這九個數字讀的是 `coverage report`（也就是
-`fail_under` 真正比對的那個），不是 artifact 的 `line-rate`——理由見上一節。
+這九個數字讀的是 `coverage report`（也就是 `fail_under` 真正比對的那個），
+不是 artifact 的 `line-rate`——理由見上一節。最低那一格始終是 Linux、最高那一格
+始終是 Windows，因為門面 import 進來的是它自己那個平台的後端；換句話說
+**剩下的那 18 點裡有一部分是任何單一平台都拿不到的**，要再往上只能補在九格
+都跑得到的程式碼上。
 
 #### 剩下的 4 點在哪裡（2026-08-24，ubuntu-22.04／3.14 的 artifact）
 
@@ -400,11 +407,11 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 
 | 檔案 | 每一格都沒蓋到 | 備註 |
 | --- | ---: | --- |
-| `utils/executor/action_executor.py` | 589 | 掃不到的那批 adapter：被呼叫者是 class（沒有回傳標注可讀）、或 adapter 伸手進兩個模組 |
+| ~~`utils/executor/action_executor.py`~~ | ~~589~~ | **2026-08-24 補到 79.76%**（本機實測 77.31% → 79.76%，未覆蓋 589 → 498） |
 | ~~`utils/accessibility/backends/windows_backend.py`~~ | ~~446~~ | **2026-08-24 補完（99.42%）**，順便修掉 37 個攔不到 `COMError` 的 except |
 | ~~`utils/remote_desktop/webrtc_viewer.py`~~ | ~~354~~ | **2026-08-24 補完（100%）** |
 | ~~`utils/remote_desktop/webrtc_host.py`~~ | ~~351~~ | **2026-08-24 補完（100%）** |
-| `utils/mcp_server/tools/_handlers.py` | 348 | 同 `action_executor.py` |
+| ~~`utils/mcp_server/tools/_handlers.py`~~ | ~~348~~ | **2026-08-24 補到 86.73%**（本機實測 83.23% → 86.73%，未覆蓋 348 → 262） |
 | `utils/remote_desktop/signaling_server.py` | 155 | **CI 動不了**：要 `[signaling]` extra（fastapi／uvicorn），沒裝 |
 | ~~`utils/remote_desktop/multi_viewer.py`~~ | ~~146~~ | **2026-08-24 補完（100%）** |
 | ~~`wrapper/window_backends/x11_backend.py`~~ | ~~133~~ | **2026-08-24 補完（100%）**。「只有 Linux 那兩格跑得到」是錯的，見下 |
@@ -414,9 +421,10 @@ REST 那一支的參數來自 `rest_openapi.build_openapi_spec()`——與 handl
 
 1. ~~`webrtc_host`／`webrtc_viewer`／`multi_viewer`／`webrtc_transport`／
    `webrtc_audio`~~ **2026-08-24 做完**，見下一節。
-2. 掃不到的那批 adapter：目前卡在「被呼叫者是 class」。要嘛從 class 自己的方法標注
-   長出一個替身物件，要嘛承認那批不掃——**得先決定，因為前者會讓「跑起來了」和
-   「驗到了東西」分家**。
+2. ~~掃不到的那批 adapter：卡在「被呼叫者是 class」~~ **2026-08-24 做完**。
+   原本寫的兩個選項是個假二選一：第三條路是照 class 自己的 `__init__` 標注
+   **建真的實例**，不用方法替身，所以「跑起來了」和「驗到了東西」不會分家。
+   維護者拍板走這條，見下下節。
 3. ~~`wrapper/window_backends` 與 `utils/accessibility`~~
    **2026-08-24 兩個都整包補完**，見下下節。
 

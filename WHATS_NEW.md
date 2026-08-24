@@ -2,6 +2,113 @@
 
 ## What's new (2026-08-24)
 
+### The Floor Is 81, And The Target Set On 2026-08-23 Is Met
+
+The nine-way matrix now runs **81.40%** (ubuntu-22.04 / 3.14) to 82.73%
+(windows-2022 / 3.12), so `fail_under` goes from 75 to 81 — floored to the
+integer below the lowest square, the convention every step of this ratchet has
+used. The target the maintainer set on 2026-08-23 was 80.
+
+Five batches got it there from 75: the WebRTC family, the window backends, the
+accessibility backends, the hotkey backends, and the class-callee half of the
+adapter sweep. Linux is still the low corner and Windows the high one, for the
+reason that has held all along — the facade imports the backend of whatever
+platform it is running on, so some of the remaining 18 points cannot be reached
+from any single square, and raising this number again means covering code that
+runs on all nine.
+
+### Two Races That Only A Loaded Runner Could Lose
+
+Both showed up as squares failing in a matrix where the same tests had passed
+the round before, which is the shape of a race rather than a regression.
+
+**A poller that outlived its test.** `AC_usb_watch_start` really starts a
+hotplug poller now that the sweep runs genuine objects, and on Windows that
+poller shells out to PowerShell every interval. `test_wayland_libei` patches
+`subprocess.run` across the whole process and reads the first argv it recorded
+— so it read the poller's. Every `_start` in both registries has a `_stop`
+sibling, all eight of them, so the sweep now runs it, and an autouse guard
+fails any case that leaves a thread behind. The next adapter to grow one is
+named here rather than becoming somebody else's flake three files away.
+
+**A bridge patched on the wrong module.** `send_file` hands the work to
+`FileTransferSender`, which reads `get_bridge` out of `webrtc_files`; the host
+and viewer fixtures patched it on the host and the viewer. That left the real
+bridge on that one path, queueing the chunks onto a background event loop while
+the assertion read `sent[0]` immediately afterwards. It passed wherever the
+loop won the race — every square, until two lost it in the same round.
+`test_webrtc_file_transfer` had always patched the right module, which is why
+it never flaked.
+
+### The AX Constants Came From The Wrong Framework, And Nine Green Squares Said Otherwise
+
+`Quartz.kAXValueCGPointType` does not exist. pyobjc builds `ApplicationServices`
+on top of `HIServices`, which is where the AXValue type constants are declared,
+and `Quartz` has no such parent — so on macOS the lookup raised `AttributeError`.
+That took out `move()`, `_point()`, and through `_point` the frame comparison
+that decides which accessibility element a given Quartz window is, which every
+other window action depends on.
+
+Every square was green while this was true, because the pyobjc stub answered
+for the names on `Quartz` — the failure mode the stub was written to create and
+`test_pyobjc_stub_names` was written to catch. It caught it on the first run:
+the two macOS squares, where the real frameworks are installed, failed on
+exactly those two names. The stub now declares them where they live, so they
+are checked against `ApplicationServices`.
+
+The ground truth came out of the wheel rather than a guess:
+`HIServices/_metadata.py` defines both constants, and
+`ApplicationServices/__init__.py` names `(Quartz, HIServices, CoreText)` as its
+parents while `Quartz` names no such thing.
+
+### When The Callee Is A Class, Build The Real Thing
+
+The sweep could read a contract made of `Optional[X]`, containers, scalars and
+dataclasses. 134 adapters had a callee that is a class, and sat out — the
+biggest group left. A constructor's parameters carry annotations too, so an
+instance can be built from them the same way a dataclass is built from its
+fields; measured, 112 of the 134 are reachable that way.
+
+What decides whether that is a test or just an execution is which of two shapes
+the callee has, and they are handled oppositely:
+
+**A callee that returns a class** gets a stub returning a real instance. The
+adapter then runs its real continuation: `get_egress_policy().is_allowed(url)`
+and `parse_baggage(header).to_dict()` execute against the declared shape rather
+than against something that answers every method.
+
+**A callee that is a class** is left alone. Stubbing it was tried first and is
+wrong twice over: the prepared instance discards the client's arguments, which
+are the thing under test — `CoordinateSpace` divided by a zero `model_w` that no
+client sent — and a stub standing in for a class has no alternative
+constructors, which surfaced as `'function' object has no attribute 'from_dict'`.
+Letting the adapter build the genuine object out of the genuine arguments has
+neither problem.
+
+Running real objects rather than stand-ins had three consequences worth naming:
+
+**A declared object is no longer flattened to `{}`.** A tool that names `kind`
+as required is describing a payload no client would send empty; handing the
+adapter `{}` tested the sample rather than the wiring. Samples now follow the
+schema's own `properties`, bounded by depth.
+
+**A class defined beside a third-party import stays out.** `S3ArtifactStore`
+builds from its annotations perfectly well and reaches for `boto3` on the first
+method call. That is the existing "the adapter is choosing its own backend"
+rule one level down, and applying it there kept eight entries that would all
+have read "boto3" off the documented-exception list.
+
+**Both sweeps now run in a directory of their own.** A checkpoint store handed
+the sample path creates a SQLite database where it stands: unisolated, the
+sweep left `sample.txt` and `value-for-db` in the repository, and one case
+passed or failed depending on whether another had run first.
+
+586 MCP adapters (from 554) and 537 executor adapters (from 471) now get
+called. Four need more than any annotation can promise and are named with a
+reason each — a presence registry that is real and empty and correctly refuses
+an unknown viewer, a cassette with nothing recorded in it, and an anchor whose
+`kind` enum sends the call into OpenCV template matching against a real screen.
+
 ### A Whole Subsystem Was Being Measured At Zero, And Its Tests Were Skipping
 
 `quality.yml` now installs the `[webrtc]` extra. The coverage number was the

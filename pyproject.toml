@@ -189,7 +189,19 @@ precision = 2
 # leaves them out, so the XML reads about 2 points higher (77.78% against
 # 75.79% on ubuntu-22.04 / 3.14, same run). A floor set from the artifact
 # would be a floor the suite cannot clear.
-fail_under = 75
+#
+# Measured 2026-08-24 on the run that turned every square green, after the
+# WebRTC modules, the window and accessibility backends, the hotkey backends
+# and the class-callee half of the adapter sweep: the nine-way matrix runs
+# 81.40% (ubuntu-22.04 / 3.14) to 82.73% (windows-2022 / 3.12). That clears
+# the 80 the maintainer set on 2026-08-23. Floored to the integer below the
+# lowest square, the same convention every step of this ratchet has used: 81.
+#
+# The spread is still about 1.3 points and Windows is still the high corner,
+# for the reason given above — the facade imports the backend of the platform
+# it is running on, so part of the remainder is unreachable from any single
+# square. Raising this number again means covering code that runs on all nine.
+fail_under = 81
 
 [tool.mypy]
 python_version = "3.10"
