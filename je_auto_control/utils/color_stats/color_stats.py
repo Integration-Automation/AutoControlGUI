@@ -14,7 +14,7 @@ from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import (
-    TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple, Union,
+    TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple, Union, cast,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - annotations only
@@ -81,7 +81,9 @@ def region_color_stats(source: ImageSource,
         left, top, right, bottom = (int(v) for v in region)
         image = image.crop((left, top, right, bottom))
     image.thumbnail((128, 128))
-    pixels: List[RGB] = list(image.get_flattened_data())
+    # _load_rgb converted the image, so every pixel is an (r, g, b) int
+    # triple; Pillow's stub types the result for every mode at once.
+    pixels = cast(List[RGB], list(image.get_flattened_data()))
     count = len(pixels)
     if count == 0:
         return ColorStats((0, 0, 0), (0, 0, 0), 0.0, 0)
