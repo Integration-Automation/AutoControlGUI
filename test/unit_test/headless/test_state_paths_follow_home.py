@@ -169,7 +169,7 @@ def test_importing_the_package_captures_no_home_path(tmp_path):
     home.mkdir()
     env = dict(os.environ, HOME=str(home), USERPROFILE=str(home),
                PYTHONPATH=str(_PACKAGE.parent))
-    result = subprocess.run(  # nosec B603  # reason: fixed argv, the test interpreter
+    result = subprocess.run(  # nosec B603  # nosemgrep  # reason: fixed argv, the test interpreter
         [sys.executable, "-c", _CAPTURE_PROBE, home.name],
         capture_output=True, text=True, timeout=180, check=True, env=env)
     assert result.stdout.strip() == "", result.stdout

@@ -143,7 +143,8 @@ Moving that WebRunner module breaks the bridge.
 - `import je_auto_control` must not load PySide6; the GUI window is imported only inside `start_autocontrol_gui()`.
   `test/unit_test/headless/test_facade_import_is_light.py` also keeps `cv2`, `numpy`, `PIL`, `cryptography`,
   `je_open_cv` and `mss` off the import path.
-- `utils/logging/logging_instance.py` sets the root logger to DEBUG and attaches a file handler at import, but the
+- `utils/logging/logging_instance.py` attaches a file handler at import and sets the level of its own logger only
+  (never the root logger — that would push every third-party library's DEBUG records into the host's handlers). The
   handler opens its file on the first record, and nothing logs during the import: importing writes no file at all.
   The file is `$JE_AUTOCONTROL_LOG_FILE` as read when the file is opened (so a `conftest.py` can still set it after
   the `pytest11` plugin imported the package; a relative path resolves against the cwd then), else

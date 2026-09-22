@@ -158,20 +158,6 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 ---
 
-## `import je_auto_control` 會把 root logger 設成 DEBUG
-
-`TODO` — `utils/logging/logging_instance.py` 開頭的 `logging.root.setLevel(logging.DEBUG)`
-
-函式庫不該動宿主程式的全域日誌設定：任何 import 了本套件的程式，所有第三方 logger 的
-DEBUG 都會流到 root 的 handler（用了 `basicConfig` 的程式會被灌爆）。本套件自己的記錄
-不需要它，改成只設 `autocontrol_logger` 的等級即可。
-
-**卡點不是程式，是下游可能默默依賴它**：pytest 的 `caplog` 沒設等級時，拿到的 DEBUG 記錄
-其實是靠這一行才有。動手前先在 Jeffrey_RPA、PyBreeze、TestPioneer 跑一次整套（它們都
-直接或經 pytest11 外掛載入本套件），確認沒有測試因此少抓到記錄。
-
----
-
 ## libei 的 `ei_unref` 在半開交握上會 SIGSEGV
 
 `BLOCKED` — 上游（libei 1.3.901）

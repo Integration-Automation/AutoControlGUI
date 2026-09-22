@@ -27,11 +27,15 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 
-# 設定 root logger 等級 Set root logger level
-logging.root.setLevel(logging.DEBUG)
-
 # 建立 AutoControlGUI 專用 logger Create dedicated logger
+# 只設自己這個 logger 的等級。以前這裡設的是 root：函式庫改掉宿主程式的全域
+# 日誌設定，任何 import 本套件的程式都會把所有第三方 logger 的 DEBUG 灌進
+# root 的 handler。
+# Only this logger's level. It used to be the root logger's, so importing the
+# package flooded the host application's handlers with every third-party
+# library's DEBUG records.
 autocontrol_logger = logging.getLogger("AutoControlGUI")
+autocontrol_logger.setLevel(logging.DEBUG)
 
 # 日誌格式 Formatter
 formatter = logging.Formatter(

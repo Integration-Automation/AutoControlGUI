@@ -44,7 +44,11 @@ _ROW = re.compile(r"^\|\s*`([^`]+)`")
 _ONE_NUMBER = re.compile(r"^(\|[^|]*\|\s*)([\d,]+)(\s*\|)")
 _TWO_NUMBERS = re.compile(r"^(\|[^|]*\|\s*)([\d,]+)(\s*\|\s*)([\d,]+)(\s*\|)")
 # A row that groups several files: `a.py` / `b.py` | 82 / 78 | ...
-_SLASHED_NUMBERS = re.compile(r"^(\|[^|]*\|\s*)([\d,]+(?:\s*/\s*[\d,]+)+)(\s*\|)")
+# The input is this repo's own generated table rows, and the alternative
+# (splitting the row by hand) is harder to read than the nested quantifier
+# is to reason about.
+_SLASHED_NUMBERS = re.compile(  # nosemgrep  # reason: see above
+    r"^(\|[^|]*\|\s*)([\d,]+(?:\s*/\s*[\d,]+)+)(\s*\|)")
 _TICKED = re.compile(r"`([^`]+)`")
 _SUBSECTION = re.compile(r"^####\s")
 _SECTION = re.compile(r"^###\s")

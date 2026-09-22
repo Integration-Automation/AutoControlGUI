@@ -24,6 +24,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **Importing the package no longer sets the root logger to DEBUG.** A
+  library must not reconfigure its host's logging, and that one line sent
+  every third-party logger's DEBUG records to whatever handlers the host
+  application had configured. `autocontrol_logger` now carries the DEBUG
+  level itself, so this package's own records are unchanged. Migration: a
+  program that relied on the side effect should call
+  `logging.getLogger().setLevel(logging.DEBUG)` itself.
+
 - **Per-user state paths are resolved when used, not at import.** Nine
   defaults under `~/.je_auto_control/` (the action signing and encryption
   keys, the host fingerprint and known hosts, the host service config, the

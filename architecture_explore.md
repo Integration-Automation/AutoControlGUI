@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,039 |
-| 程式碼總行數 | 141,882 |
+| 程式碼總行數 | 141,886 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -299,7 +299,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 2,744 行。
+> 14 個套件、約 2,748 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -311,7 +311,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/exception/` | 212 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
 | `utils/failure_bundle/` | 187 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
 | `utils/file_process/` | 26 | 目錄檔案列舉（`execute_dir` 的後端） |
-| `utils/logging/` | 157 | `autocontrol_logger` 單例 + 家目錄共用記錄檔 handler（`JE_AUTOCONTROL_LOG_FILE` 可改） |
+| `utils/logging/` | 161 | `autocontrol_logger` 單例 + 家目錄共用記錄檔 handler（`JE_AUTOCONTROL_LOG_FILE` 可改） |
 | `utils/package_manager/` | 98 | 動態載入套件並把 executor 注入其中 |
 | `utils/path_guard/` | 99 | 命令列傳入路徑的正規化與邊界檢查（防路徑穿越） |
 | `utils/platform_id/` | 62 | 作業系統家族的單一判定點。`sys.platform` 原本在一百多處跟字面清單比對，而那些清單都沒有 BSD；`is_x11_unix()` 問的是「這是不是 X11 unix」，這才是守衛一直想問的問題 |
@@ -1072,6 +1072,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,942 |
-| **總計** | **1,033** | **141,817** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,946 |
+| **總計** | **1,033** | **141,821** |
 

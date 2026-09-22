@@ -153,7 +153,7 @@ def _run_in_fresh_home(tmp_path, code):
                PYTHONPATH=str(_REPO_ROOT))
     env.pop("HOMEDRIVE", None)
     env.pop("HOMEPATH", None)
-    subprocess.run(  # nosec B603  # reason: fixed argv, the test interpreter
+    subprocess.run(  # nosec B603  # nosemgrep  # reason: fixed argv, the test interpreter
         [sys.executable, "-c", code],
         cwd=str(work), env=env, check=True, timeout=110)
     return work, home
@@ -196,3 +196,20 @@ def test_this_test_run_is_not_writing_the_shared_file():
     """test/conftest.py points the whole suite at a temporary file."""
     assert li.default_log_file() != (
         Path.home() / ".je_auto_control" / "logs" / "AutoControlGUI.log")
+
+
+def test_importing_the_package_leaves_the_root_logger_alone(tmp_path):
+    """A library must not reconfigure the host application's logging.
+
+    The module used to call ``logging.root.setLevel(DEBUG)``, so every
+    third-party logger in any program that imported this package started
+    sending DEBUG records to that program's handlers.
+    """
+    work, _home = _run_in_fresh_home(
+        tmp_path,
+        "import logging, je_auto_control\n"
+        "from je_auto_control.utils.logging.logging_instance import "
+        "autocontrol_logger as log\n"
+        "assert logging.root.level == logging.WARNING, logging.root.level\n"
+        "assert log.getEffectiveLevel() == logging.DEBUG\n")
+    assert list(work.iterdir()) == []
