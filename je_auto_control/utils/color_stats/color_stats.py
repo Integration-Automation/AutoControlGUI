@@ -81,7 +81,7 @@ def region_color_stats(source: ImageSource,
         left, top, right, bottom = (int(v) for v in region)
         image = image.crop((left, top, right, bottom))
     image.thumbnail((128, 128))
-    pixels: List[RGB] = list(image.getdata())
+    pixels: List[RGB] = list(image.get_flattened_data())
     count = len(pixels)
     if count == 0:
         return ColorStats((0, 0, 0), (0, 0, 0), 0.0, 0)

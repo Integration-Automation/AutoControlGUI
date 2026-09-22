@@ -26,7 +26,7 @@ def _bits_to_hex(bits: str) -> str:
 
 def average_hash(image: Any, hash_size: int = 8) -> str:
     """Average-hash an image to a hex fingerprint (brightness vs. the mean)."""
-    pixels = list(_gray_resized(image, (hash_size, hash_size)).getdata())
+    pixels = list(_gray_resized(image, (hash_size, hash_size)).get_flattened_data())
     average = sum(pixels) / len(pixels)
     return _bits_to_hex("".join("1" if p > average else "0" for p in pixels))
 
@@ -34,7 +34,7 @@ def average_hash(image: Any, hash_size: int = 8) -> str:
 def dhash(image: Any, hash_size: int = 8) -> str:
     """Difference-hash an image (each pixel brighter than its right neighbour)."""
     width = hash_size + 1
-    pixels = list(_gray_resized(image, (width, hash_size)).getdata())
+    pixels = list(_gray_resized(image, (width, hash_size)).get_flattened_data())
     bits = [
         "1" if pixels[row * width + col] > pixels[row * width + col + 1]
         else "0"
