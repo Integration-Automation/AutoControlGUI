@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,032 |
-| 程式碼總行數 | 141,440 |
+| Python 模組總數（含周邊子專案） | 1,033 |
+| 程式碼總行數 | 141,453 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -490,7 +490,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 20,645 行。
+> 13 個套件、約 20,658 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -503,7 +503,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 127 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 357 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 92 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 17,356 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 17,369 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 180 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 106 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 448 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -702,12 +702,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `action_schema.py` | 128 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
-#### `utils/mcp_server/`（17,356 行，676 個工具）— 最大子系統
+#### `utils/mcp_server/`（17,369 行，676 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `tools/_factories.py` | 8,974 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
-| `tools/_handlers.py` | 4,791 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter。 |
+| `tools/_factories.py` | 8,975 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
+| `tools/_handlers.py` | 4,389 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter。 |
+| `tools/_handlers_qa.py` | 414 | 同一種 adapter，QA 主題：斷言 DSL、資料驅動、SQL／PDF／郵件／HTTP 步驟、codegen、視覺回歸、狀態機、flaky 偵測與隔離、suite runner、無障礙稽核、裝置矩陣、媒體斷言。從 `_handlers.py` 依主題拆出的第一塊（750 行上限）；兩者互不引用。 |
 | `server.py` | 717 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器。 |
 | `http_transport.py` | 521 | MCP 的 HTTP 傳輸。 |
 | `http_sessions.py` | 234 | MCP 的 HTTP 傳輸用的 session 身分:`Mcp-Session-Id` 註冊表,以及每個 session 那條常駐的 server→client SSE 串流。 |
@@ -982,7 +983,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | **新 GUI 分頁** | 在 `gui/` 新增 widget（只做 UI 翻譯）→ 在 `main_widget.py` `_add_tab` 註冊 → 提供 `menu_actions()` | 主視窗選單建構邏輯 |
 | **新 OCR／VLM／LLM／a11y 後端** | 在對應 `backends/` 實作 base 協定 | 呼叫端 |
 | **新報表格式** | 仿 `generate_report/` 既有三者的骨架新增產生器 | 執行紀錄收集 |
-| **新 MCP 工具** | 在 `mcp_server/tools/_factories.py` 加工廠、`_handlers.py` 加 adapter | 傳輸層 |
+| **新 MCP 工具** | 在 `mcp_server/tools/_factories.py` 加工廠、`_handlers.py` 加 adapter（QA 主題加在 `_handlers_qa.py`） | 傳輸層 |
 
 ---
 
@@ -1047,7 +1048,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 90 | 26,699 |
-| `utils/mcp_server/` | 21 | 17,356 |
+| `utils/mcp_server/` | 22 | 17,369 |
 | `utils/remote_desktop/` | 56 | 12,006 |
 | `utils/executor/` | 6 | 9,081 |
 | `utils/usb/` | 17 | 4,281 |
@@ -1067,5 +1068,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 735 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,696 |
-| **總計** | **1,026** | **141,375** |
+| **總計** | **1,027** | **141,388** |
 

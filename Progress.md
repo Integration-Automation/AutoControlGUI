@@ -24,17 +24,17 @@
 
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
-| `utils/mcp_server/tools/_handlers.py` | 4,789 | 676 個 MCP 工具的處理函式本體。與 `_factories.py`（表）不同,這裡是邏輯,應該依主題拆成 `_handlers/` 套件（input／screen／window／file／agent…）。拆點清楚,純粹是量大。 |
+| `utils/mcp_server/tools/_handlers.py` | 4,389 | 676 個 MCP 工具的處理函式本體（QA 主題的 34 個已拆到 `_handlers_qa.py`）。與 `_factories.py`（表）不同,這裡是邏輯,應該依主題繼續拆（input／screen／window／a11y／agent…）。拆點不完全乾淨:`# === Semantic locators` 一節（約 2,400 行）與 `# === WebRunner bridge` 一節早已混進不相干的 adapter,要先按主題重排再切。 |
 | `gui/remote_desktop/webrtc_panel.py` | 2,545 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
 | `utils/accessibility/backends/windows_backend.py` | 923 | 已拆出 `windows_query.py`（170）與 `windows_state.py`（98）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。**2026-08-24 從 918 長到 923**:見下面的說明。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
-`utils/mcp_server/tools/_factories.py`（8,972,MCP 工具註冊表）、
-`utils/executor/action_executor.py`（8,125,`AC_*` 分派表）、
+`utils/mcp_server/tools/_factories.py`（8,975,MCP 工具註冊表）、
+`utils/executor/action_executor.py`（8,131,`AC_*` 分派表）、
 `gui/script_builder/command_schema.py`（5,051,每個 `AC_*` 的參數 schema）、
 `je_auto_control/__init__.py`（1,970,門面 re-export）、
 `gui/language_wrapper/{english,japanese,traditional_chinese,simplified_chinese}.py`
-（1,316／1,203／1,189／1,188,語系字串表）。
+（1,318／1,205／1,191／1,190,語系字串表；2026-09-22 實測）。
 
 ### 2026-08-19 決議:上表的實測行數就是新的上限
 
@@ -60,24 +60,6 @@ commit `46f4cd5` 的說明裡（`docs/updates/` 沒有對應條目：舊的 `WHA
 **在這裡寫明為什麼不拆**，這是後者：拆這個檔的正確切點是 UIA COM 的生命週期
 管理，和這次的修正無關，綁在一起會讓一個三行的正確性修補變成大面積 diff。
 **新上限是 923**，規則不變。
-
-### `_handlers.py` 比登記的上限多 2 行，而且沒有人記下理由
-
-`TODO` — 先拆出第一個主題模組，或在這裡寫明不拆的理由並把上限改成 4,791
-
-上表登記的上限是 **4,789**，2026-09-22 實測（`wc -l`，與 `len(text.splitlines())`
-同口徑）是 **4,791**。多出來的 2 行是 f322a53（2026-08-22）在 `normalize_url`
-裡加的兩行註解——修 `drop_fragment`／`strip_fragment` 參數名的那一筆，這個檔 +6／−4。
-當時既沒有先拆、也沒有在這裡寫明為什麼不拆，照 `CLAUDE.md` §Size and complexity limits
-這就是一個缺陷，和上面 `windows_backend.py` 那段不一樣。同一次實測，表上另外兩列都剛好
-等於上限（`webrtc_panel.py` 2,545、`windows_backend.py` 923）。
-
-兩條路擇一：照上表寫好的拆點拆出第一個 `_handlers/` 子模組，讓它回到 4,789 以下；
-或照 `windows_backend.py` 的先例在這裡寫明理由、把上表改成 4,791。重驗：
-
-```bash
-wc -l je_auto_control/utils/mcp_server/tools/_handlers.py
-```
 
 ---
 

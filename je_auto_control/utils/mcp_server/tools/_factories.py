@@ -8,6 +8,7 @@ MCP client surfaces to the model.
 from typing import List
 
 from je_auto_control.utils.mcp_server.tools import _handlers as h
+from je_auto_control.utils.mcp_server.tools import _handlers_qa as hq
 from je_auto_control.utils.mcp_server.tools._base import (
     DESTRUCTIVE, MCPTool, MCPToolAnnotations, NON_DESTRUCTIVE, READ_ONLY,
     SIDE_EFFECT_ONLY, schema,
@@ -8230,7 +8231,7 @@ def assertion_tools() -> List[MCPTool]:
                 "raise_on_fail": {"type": "boolean"},
                 "capture_on_fail": {"type": "boolean"},
             }, required=["text"]),
-            handler=h.assert_text,
+            handler=hq.assert_text,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8244,7 +8245,7 @@ def assertion_tools() -> List[MCPTool]:
                 "raise_on_fail": {"type": "boolean"},
                 "capture_on_fail": {"type": "boolean"},
             }, required=["template_path"]),
-            handler=h.assert_image,
+            handler=hq.assert_image,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8260,7 +8261,7 @@ def assertion_tools() -> List[MCPTool]:
                 "raise_on_fail": {"type": "boolean"},
                 "capture_on_fail": {"type": "boolean"},
             }, required=["x", "y", "rgb"]),
-            handler=h.assert_pixel,
+            handler=hq.assert_pixel,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8274,7 +8275,7 @@ def assertion_tools() -> List[MCPTool]:
                 "raise_on_fail": {"type": "boolean"},
                 "capture_on_fail": {"type": "boolean"},
             }, required=["title"]),
-            handler=h.assert_window,
+            handler=hq.assert_window,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8292,7 +8293,7 @@ def assertion_tools() -> List[MCPTool]:
                 "raise_on_fail": {"type": "boolean"},
                 "capture_on_fail": {"type": "boolean"},
             }, required=["text"]),
-            handler=h.assert_clipboard,
+            handler=hq.assert_clipboard,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8306,7 +8307,7 @@ def assertion_tools() -> List[MCPTool]:
                 "raise_on_fail": {"type": "boolean"},
                 "capture_on_fail": {"type": "boolean"},
             }, required=["name"]),
-            handler=h.assert_process,
+            handler=hq.assert_process,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8323,7 +8324,7 @@ def assertion_tools() -> List[MCPTool]:
                 "min_size": {"type": "integer"},
                 "raise_on_fail": {"type": "boolean"},
             }, required=["path"]),
-            handler=h.assert_file,
+            handler=hq.assert_file,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8340,7 +8341,7 @@ def assertion_tools() -> List[MCPTool]:
                 "method": {"type": "string"},
                 "raise_on_fail": {"type": "boolean"},
             }, required=["url"]),
-            handler=h.assert_http,
+            handler=hq.assert_http,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8355,7 +8356,7 @@ def assertion_tools() -> List[MCPTool]:
                 "specs": {"type": "array", "items": {"type": "object"}},
                 "raise_on_fail": {"type": "boolean"},
             }, required=["specs"]),
-            handler=h.assert_all,
+            handler=hq.assert_all,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8368,7 +8369,7 @@ def assertion_tools() -> List[MCPTool]:
                 "specs": {"type": "array", "items": {"type": "object"}},
                 "raise_on_fail": {"type": "boolean"},
             }, required=["specs"]),
-            handler=h.assert_any,
+            handler=hq.assert_any,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8383,7 +8384,7 @@ def assertion_tools() -> List[MCPTool]:
                 "interval": {"type": "number"},
                 "raise_on_fail": {"type": "boolean"},
             }, required=["spec"]),
-            handler=h.assert_eventually,
+            handler=hq.assert_eventually,
             annotations=READ_ONLY,
         ),
     ]
@@ -8403,7 +8404,7 @@ def data_source_tools() -> List[MCPTool]:
                 "source": {"type": "object"},
                 "limit": {"type": "integer"},
             }, required=["source"]),
-            handler=h.load_data,
+            handler=hq.load_data,
             annotations=READ_ONLY,
         ),
     ]
@@ -8420,7 +8421,7 @@ def pdf_tools() -> List[MCPTool]:
                 "path": {"type": "string"},
                 "pages": {"type": ["integer", "array", "null"]},
             }, required=["path"]),
-            handler=h.extract_pdf_text,
+            handler=hq.extract_pdf_text,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8438,7 +8439,7 @@ def pdf_tools() -> List[MCPTool]:
                 "case_sensitive": {"type": "boolean"},
                 "raise_on_fail": {"type": "boolean"},
             }, required=["path", "text"]),
-            handler=h.assert_pdf_text,
+            handler=hq.assert_pdf_text,
             annotations=READ_ONLY,
         ),
     ]
@@ -8458,7 +8459,7 @@ def email_tools() -> List[MCPTool]:
                 "message": {"type": "object"},
                 "smtp": {"type": "object"},
             }, required=["message", "smtp"]),
-            handler=h.send_email,
+            handler=hq.send_email,
             annotations=SIDE_EFFECT_ONLY,
         ),
     ]
@@ -8480,7 +8481,7 @@ def sql_tools() -> List[MCPTool]:
                 "params": {"type": ["array", "object"]},
                 "fetch": {"type": "string", "enum": ["all", "one", "scalar"]},
             }, required=["database", "query"]),
-            handler=h.sql_query,
+            handler=hq.sql_query,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8498,7 +8499,7 @@ def sql_tools() -> List[MCPTool]:
                 "expected": {},
                 "raise_on_fail": {"type": "boolean"},
             }, required=["database", "query"]),
-            handler=h.assert_db,
+            handler=hq.assert_db,
             annotations=READ_ONLY,
         ),
     ]
@@ -8526,7 +8527,7 @@ def http_tools() -> List[MCPTool]:
                 "auth": {"type": "object"},
                 "timeout": {"type": "number"},
             }, required=["url"]),
-            handler=h.http_request,
+            handler=hq.http_request,
             annotations=SIDE_EFFECT_ONLY,
         ),
     ]
@@ -8543,7 +8544,7 @@ def visual_regression_tools() -> List[MCPTool]:
                 "path": {"type": "string"},
                 "region": {"type": "array", "items": {"type": "integer"}},
             }, required=["path"]),
-            handler=h.take_golden,
+            handler=hq.take_golden,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -8563,7 +8564,7 @@ def visual_regression_tools() -> List[MCPTool]:
                 "create_if_missing": {"type": "boolean"},
                 "raise_on_fail": {"type": "boolean"},
             }, required=["golden_path"]),
-            handler=h.assert_visual,
+            handler=hq.assert_visual,
             annotations=READ_ONLY,
         ),
     ]
@@ -8580,7 +8581,7 @@ def state_machine_tools() -> List[MCPTool]:
                          "{final_state, steps, elapsed_s}."),
             input_schema=schema({"spec": {"type": "object"}},
                                 required=["spec"]),
-            handler=h.run_state_machine,
+            handler=hq.run_state_machine,
             annotations=SIDE_EFFECT_ONLY,
         ),
     ]
@@ -8605,7 +8606,7 @@ def codegen_tools() -> List[MCPTool]:
                 "name": {"type": "string"},
                 "output": {"type": "string"},
             }, required=["source"]),
-            handler=h.generate_code,
+            handler=hq.generate_code,
             annotations=SIDE_EFFECT_ONLY,
         ),
     ]
@@ -8625,7 +8626,7 @@ def flakiness_tools() -> List[MCPTool]:
                 "group_by": {"type": "string",
                              "enum": ["script_path", "source_id"]},
             }),
-            handler=h.flaky_report,
+            handler=hq.flaky_report,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8740,7 +8741,7 @@ def suite_tools() -> List[MCPTool]:
                 "junit_path": {"type": "string"},
                 "allure_dir": {"type": "string"},
             }, required=["spec"]),
-            handler=h.run_suite,
+            handler=hq.run_suite,
             annotations=SIDE_EFFECT_ONLY,
         ),
     ]
@@ -8756,7 +8757,7 @@ def quarantine_tools() -> List[MCPTool]:
                 "name": {"type": "string"},
                 "reason": {"type": "string"},
             }, required=["name"]),
-            handler=h.quarantine_add,
+            handler=hq.quarantine_add,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
@@ -8764,14 +8765,14 @@ def quarantine_tools() -> List[MCPTool]:
             description="Release a case name from quarantine.",
             input_schema=schema({"name": {"type": "string"}},
                                 required=["name"]),
-            handler=h.quarantine_remove,
+            handler=hq.quarantine_remove,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_quarantine_list",
             description="List every quarantined case name with its reason.",
             input_schema=schema({}),
-            handler=h.quarantine_list,
+            handler=hq.quarantine_list,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8785,7 +8786,7 @@ def quarantine_tools() -> List[MCPTool]:
                 "group_by": {"type": "string",
                              "enum": ["script_path", "source_id"]},
             }),
-            handler=h.quarantine_auto,
+            handler=hq.quarantine_auto,
             annotations=NON_DESTRUCTIVE,
         ),
     ]
@@ -8808,7 +8809,7 @@ def a11y_audit_tools() -> List[MCPTool]:
                 "min_ratio": {"type": "number"},
                 "max_results": {"type": "integer"},
             }),
-            handler=h.audit_accessibility,
+            handler=hq.audit_accessibility,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8821,7 +8822,7 @@ def a11y_audit_tools() -> List[MCPTool]:
                 "background": {"type": "array", "items": {"type": "integer"}},
                 "min_ratio": {"type": "number"},
             }, required=["foreground", "background"]),
-            handler=h.audit_contrast,
+            handler=hq.audit_contrast,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8840,7 +8841,7 @@ def a11y_audit_tools() -> List[MCPTool]:
                 "min_target_px": {"type": "integer"},
                 "max_results": {"type": "integer"},
             }),
-            handler=h.wcag_audit,
+            handler=hq.wcag_audit,
             annotations=READ_ONLY,
         ),
     ]
@@ -8861,7 +8862,7 @@ def device_matrix_tools() -> List[MCPTool]:
                 "max_parallel": {"type": "integer"},
                 "var_name": {"type": "string"},
             }, required=["actions", "devices"]),
-            handler=h.run_device_matrix,
+            handler=hq.run_device_matrix,
             annotations=SIDE_EFFECT_ONLY,
         ),
     ]
@@ -8882,7 +8883,7 @@ def media_assert_tools() -> List[MCPTool]:
                 "channels": {"type": "integer"},
                 "raise_on_fail": {"type": "boolean"},
             }),
-            handler=h.assert_audio,
+            handler=hq.assert_audio,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8899,7 +8900,7 @@ def media_assert_tools() -> List[MCPTool]:
                 "region": {"type": "array", "items": {"type": "integer"}},
                 "raise_on_fail": {"type": "boolean"},
             }, required=["video_path"]),
-            handler=h.assert_video_changes,
+            handler=hq.assert_video_changes,
             annotations=READ_ONLY,
         ),
     ]

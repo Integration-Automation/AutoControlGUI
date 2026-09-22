@@ -98,7 +98,7 @@ wrapper/auto_control_record.record → OS listener (e.g. windows/record/win32_in
 3. Register the `AC_*` name in `Executor.event_dict` (`utils/executor/action_executor.py`); commands with nested
    action bodies go in `BLOCK_COMMANDS` (`utils/executor/flow_control.py`).
 4. Describe its parameters in `gui/script_builder/command_schema.py` (Script Builder form).
-5. Optional MCP tool: factory in `utils/mcp_server/tools/_factories.py`, adapter in `utils/mcp_server/tools/_handlers.py`.
+5. Optional MCP tool: factory in `utils/mcp_server/tools/_factories.py`, adapter in `utils/mcp_server/tools/_handlers.py` (QA-theme adapters — assertions, suites, reports — in `_handlers_qa.py`).
 6. GUI: thin widget in `gui/`, registered in `gui/main_widget.py` (`_add_tab`) with commands exposed through
    `menu_actions()`; strings in every `gui/language_wrapper/*.py` catalogue.
 7. Headless test in `test/unit_test/headless/`.
