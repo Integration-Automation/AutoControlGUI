@@ -12,13 +12,13 @@ restarts, mirroring the other per-user config stores in the project.
 from __future__ import annotations
 
 import json
-import os
 import threading
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Union
 
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -60,7 +60,14 @@ class QuarantineStore:
         except (OSError, ValueError) as error:
             autocontrol_logger.warning("quarantine load failed: %r", error)
             return
-        for item in raw.get("entries", []):
+        entries = raw.get("entries") if isinstance(raw, dict) else None
+        if not isinstance(entries, list):
+            # A list or string at the top level crashed the constructor.
+            autocontrol_logger.warning("quarantine file %s ignored: not an object", self._path)
+            return
+        for item in entries:
+            if not isinstance(item, dict):
+                continue
             name = item.get("name")
             if name:
                 self._entries[name] = QuarantineEntry(
@@ -72,15 +79,9 @@ class QuarantineStore:
     def _save(self) -> None:
         payload = {"entries": [e.to_dict() for e in self._entries.values()]}
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        if os.name == "posix":
-            try:
-                os.chmod(self._path, 0o600)
-            except OSError as error:
-                autocontrol_logger.warning("quarantine chmod failed: %r", error)
+        # atomic_write_text: a concurrent reader saw a half-written file, and
+        # its mkstemp file is 0600 from the start instead of after a chmod.
+        atomic_write_text(self._path, json.dumps(payload, ensure_ascii=False, indent=2))
 
     def add(self, name: str, reason: str = "",
             flip_rate: Optional[float] = None) -> QuarantineEntry:

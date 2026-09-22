@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-26 | 2026-09-23 | JSON store audit: in-place rewrites, constructor crashes, lost counts and log lines | #incident #stores | [2026-09](2026-09.md) |
 | U-20260923-25 | 2026-09-23 | SQLite store audit: stuck work items, dedupe race, leaked connections, audit chain | #incident #stores | [2026-09](2026-09.md) |
 | U-20260923-24 | 2026-09-23 | Outbound audit: credentials across redirects, egress bypass, chat-ops screenshot path | #incident #security #chatops | [2026-09](2026-09.md) |
 | U-20260923-23 | 2026-09-23 | File transfer / admin audit: partial files, size limits, device names, poll crash | #incident #security #remote-desktop | [2026-09](2026-09.md) |
@@ -130,7 +131,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 41 |
+| [2026-09.md](2026-09.md) | 2026-09 | 42 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

@@ -33,6 +33,23 @@ def atomic_write_text(path: Union[str, Path], text: str,
             os.remove(tmp_name)
 
 
+def append_json_line(path: Union[str, Path], line: str) -> None:
+    """Append ``line`` and a newline to a JSON-lines file.
+
+    If the file does not end in a newline -- the last write was cut off --
+    one is written first. Otherwise the new record joined the torn line and
+    was unreadable along with it.
+    """
+    file_path = Path(path)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    with file_path.open("ab+") as handle:  # appends always land at the end
+        if handle.seek(0, os.SEEK_END) > 0:
+            handle.seek(-1, os.SEEK_END)
+            if handle.read(1) != b"\n":
+                handle.write(b"\n")
+        handle.write(line.encode("utf-8") + b"\n")
+
+
 def read_json_dict(path: Optional[Union[str, Path]]) -> Dict[str, Any]:
     """Return the JSON object at ``path``, or ``{}`` if missing/unreadable."""
     if path is None:

@@ -146,6 +146,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **JSON-file stores.** The flaky-test quarantine, the remote-desktop trust
+  list and known hosts, and the RBAC user store are replaced atomically
+  (readers never see a partial file) and load empty instead of raising when
+  the file is not UTF-8 or has the wrong shape. A failed first read no longer
+  makes the A/B locator store overwrite its counts, and a torn last line in
+  the cost or self-healing log no longer swallows the next record.
+
 - **SQLite-backed stores.** Two dispatchers can no longer enqueue the same
   work-item reference; `WorkQueue.fail` on an unknown id raises instead of
   reporting a requeue; the work queue, checkpoint store and agent memory

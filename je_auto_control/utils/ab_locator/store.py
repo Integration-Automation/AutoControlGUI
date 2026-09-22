@@ -132,11 +132,15 @@ class ABStore:
     def _load_if_needed(self) -> None:
         if self._loaded:
             return
-        self._loaded = True
         try:
             raw = self._path.read_text(encoding="utf-8")
         except FileNotFoundError:
+            self._loaded = True
             return
+        # Marked loaded only once the read worked: set before it, one
+        # transient PermissionError left the cache empty for good, and the
+        # next record() overwrote every stored count.
+        self._loaded = True
         try:
             payload = json.loads(raw)
         except ValueError:

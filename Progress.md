@@ -239,3 +239,20 @@ viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單�
 **為什麼要拍板**：`dest_path` 的語意會從「viewer 上的絕對路徑」變成「viewer 下載目錄裡的相對路徑」，
 現有腳本與文件範例都要跟著改。
 
+---
+
+## 多個行程共用的 JSON 檔會互相蓋掉更新
+
+`TODO` — 需要一個跨行程鎖，範圍超過一次修補
+
+`utils/governance/governance.py`（核准閘門）、`utils/assets/assets.py`、`utils/locator_repair/locator_repair.py`
+都經 `json_store` 存檔：每個實例建立時讀一次檔，之後每次修改都把**自己手上的整份 dict** 寫回去。
+核准閘門的說明明寫 maker 和 checker 可以是不同行程，但兩個 checker 同時決定同一筆時，兩邊都回報成功，
+檔案裡只留下後寫的那個決定；另一個行程新增的項目也會被整份覆蓋掉（2026-09-23 稽核以固定交錯重現）。
+
+**做法**：每次「修改並寫回」前在同目錄取一個鎖檔（`os.open(..., O_CREAT | O_EXCL)`，逾時視為殘留），
+在鎖內重讀檔案、套用這一次的修改、`atomic_write_text` 寫回；`_decide` 在重讀後的資料上重新確認仍是 `pending`。
+三個模組共用同一個 helper，放在 `utils/json_store/`。
+
+**要先補的測試**：兩個實例交錯核准／駁回同一筆，只能有一個成功；兩個實例各自新增，兩筆都在。
+

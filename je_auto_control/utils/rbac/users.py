@@ -11,6 +11,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
+from je_auto_control.utils.json_store.json_store import atomic_write_text
+
 
 class Role:
     """Enum-like string constants. Strings (not IntEnum) so JSON is readable."""
@@ -190,7 +192,7 @@ class UserStore:
             return
         try:
             body = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except (OSError, ValueError):  # ValueError: bad JSON or not UTF-8
             return
         users = body.get("users") if isinstance(body, dict) else None
         if not isinstance(users, list):
@@ -212,14 +214,9 @@ class UserStore:
     def _save_locked(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         body = {"users": [u.to_dict() for u in self._users.values()]}
-        self._path.write_text(
-            json.dumps(body, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
-        try:
-            os.chmod(self._path, 0o600)
-        except OSError:
-            pass
+        # atomic_write_text: a concurrent reader saw a half-written file, and
+        # its mkstemp file is 0600 from the start instead of after a chmod.
+        atomic_write_text(self._path, json.dumps(body, indent=2, ensure_ascii=False))
 
 
 _default_store: Optional[UserStore] = None

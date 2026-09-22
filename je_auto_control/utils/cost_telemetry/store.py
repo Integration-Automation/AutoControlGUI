@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
+from je_auto_control.utils.json_store.json_store import append_json_line
 from je_auto_control.utils.cost_telemetry.pricing import estimate_usd
 
 
@@ -97,10 +98,7 @@ class CostStore:
         )
         payload = json.dumps(event.to_dict(), ensure_ascii=False)
         with self._lock:
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-            with self._path.open("a", encoding="utf-8") as fp:
-                fp.write(payload)
-                fp.write("\n")
+            append_json_line(self._path, payload)
         return event
 
     def list_events(self, limit: int = 1000) -> List[CostEvent]:

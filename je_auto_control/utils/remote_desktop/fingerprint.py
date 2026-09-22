@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional
 
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -80,7 +81,7 @@ class KnownHosts:
             return
         try:
             data = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
+        except (OSError, ValueError) as error:  # ValueError: bad JSON or not UTF-8
             autocontrol_logger.warning("known_hosts load: %r", error)
             return
         if not isinstance(data, dict):
@@ -108,14 +109,9 @@ class KnownHosts:
     def _save(self) -> None:
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
-            self._path.write_text(
-                json.dumps(self._entries, indent=2, ensure_ascii=False),
-                encoding="utf-8",
-            )
-            try:
-                os.chmod(self._path, 0o600)
-            except OSError:
-                pass
+            # atomic_write_text: a concurrent reader saw a half-written file, and
+            # its mkstemp file is 0600 from the start instead of after a chmod.
+            atomic_write_text(self._path, json.dumps(self._entries, indent=2, ensure_ascii=False))
         except OSError as error:
             autocontrol_logger.warning("known_hosts save: %r", error)
 
