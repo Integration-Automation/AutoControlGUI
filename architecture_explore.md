@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,033 |
-| 程式碼總行數 | 141,633 |
+| 程式碼總行數 | 141,638 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -510,7 +510,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 17,977 行。
+> 6 個套件、約 17,982 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -518,7 +518,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_sync/` | 246 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 12,026 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
-| `utils/usb/` | 4,313 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
+| `utils/usb/` | 4,318 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 926 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
@@ -778,7 +778,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 72 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
 | `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 40 / 29 / 146 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
-#### `utils/usb/`（4,313 行）與 `utils/usbip/`（926 行）
+#### `utils/usb/`（4,318 行）與 `utils/usbip/`（926 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -795,7 +795,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `usb/passthrough/key_provider.py` | 125 | ACL 的可插拔 HMAC 金鑰來源。 |
 | `usb/passthrough/commands.py` | 150 | 無頭直通指令（單一真實來源）。 |
 | `usb/usb_devices.py` | 296 | 跨平台 USB 裝置列舉。 |
-| `usb/usb_watcher.py` | 241 | 輪詢式 USB 熱插拔監看。 |
+| `usb/usb_watcher.py` | 246 | 輪詢式 USB 熱插拔監看。 |
 | `usbip/protocol.py` | 330 | USB/IP 線路格式封裝／解析。 |
 | `usbip/server.py` | 241 | USB/IP 主機端 TCP 伺服器。 |
 | `usbip/libusb_backend.py` | 208 | 以 PyUSB／libusb 執行 URB 的正式後端。 |
@@ -1050,7 +1050,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/mcp_server/` | 22 | 17,371 |
 | `utils/remote_desktop/` | 56 | 12,026 |
 | `utils/executor/` | 6 | 9,081 |
-| `utils/usb/` | 17 | 4,313 |
+| `utils/usb/` | 17 | 4,318 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,367 |
 | `utils/accessibility/` | 13 | 2,842 |
 | `wrapper/` | 19 | 3,545 |
@@ -1067,5 +1067,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,807 |
-| **總計** | **1,027** | **141,568** |
+| **總計** | **1,027** | **141,573** |
 

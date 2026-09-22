@@ -241,3 +241,80 @@ def test_restart_does_not_revive_a_poller_that_outlived_stop(monkeypatch):
 def test_stop_outlasts_one_enumeration():
     """``stop()`` reported "stopped" while a slow enumeration still ran."""
     assert usb_watcher._STOP_JOIN_TIMEOUT_S > SUBPROCESS_TIMEOUT_S
+
+
+class _SlowFirstEnumerator:
+    """Call 1 blocks until released and then sees ``first``; later calls ``rest``."""
+
+    def __init__(self, first: List[UsbDevice], rest: List[UsbDevice]):
+        self.entered = threading.Event()
+        self.release = threading.Event()
+        self.calls = 0
+        self._first = first
+        self._rest = rest
+
+    def __call__(self) -> UsbEnumerationResult:
+        self.calls += 1
+        if self.calls == 1:
+            self.entered.set()
+            self.release.wait(5.0)
+            return UsbEnumerationResult(backend="fake", devices=list(self._first))
+        return UsbEnumerationResult(backend="fake", devices=list(self._rest))
+
+
+def _snapshot_ids(watcher: UsbHotplugWatcher) -> set:
+    return {device.product_id for device in watcher._snapshot.values()}
+
+
+def test_a_stop_during_priming_still_primes(monkeypatch):
+    """start(); stop(); poll_once() must report changes since start().
+
+    The priming enumeration used to be discarded whenever ``stop()`` had been
+    called, so whether the snapshot was primed depended on which side of the
+    enumeration the stop landed -- and five tests here that drive
+    start(); stop(); poll_once() went red on a fast CI runner.
+    """
+    monkeypatch.setattr(usb_watcher, "_STOP_JOIN_TIMEOUT_S", 0.05)
+    enumerator = _SlowFirstEnumerator([_dev("a", "1")], [_dev("a", "1")])
+    watcher = UsbHotplugWatcher(enumerator=enumerator)
+    before = set(_pollers())
+    watcher.start()
+    try:
+        assert enumerator.entered.wait(2.0)
+        stale = [t for t in _pollers() if t not in before]
+        watcher.stop()                  # lands while priming is in progress
+        enumerator.release.set()
+        for thread in stale:
+            thread.join(2.0)
+        assert _snapshot_ids(watcher) == {"1"}
+        assert watcher.poll_once() == []
+    finally:
+        enumerator.release.set()
+        watcher.stop()
+
+
+def test_a_superseded_run_does_not_overwrite_the_new_snapshot(monkeypatch):
+    monkeypatch.setattr(usb_watcher, "_STOP_JOIN_TIMEOUT_S", 0.05)
+    enumerator = _SlowFirstEnumerator([_dev("old", "1")], [_dev("new", "2")])
+    watcher = UsbHotplugWatcher(enumerator=enumerator, poll_interval_s=30)
+    before = set(_pollers())
+    watcher.start()
+    try:
+        assert enumerator.entered.wait(2.0)
+        stale = [t for t in _pollers() if t not in before]
+        watcher.stop()
+        watcher.start()                 # the new run primes with "2"
+        deadline = threading.Event()
+        for _ in range(200):
+            if _snapshot_ids(watcher) == {"2"}:
+                break
+            deadline.wait(0.01)
+        assert _snapshot_ids(watcher) == {"2"}
+        enumerator.release.set()        # the old run finishes with "1"
+        for thread in stale:
+            thread.join(2.0)
+        assert _snapshot_ids(watcher) == {"2"}
+    finally:
+        enumerator.release.set()
+        monkeypatch.setattr(usb_watcher, "_STOP_JOIN_TIMEOUT_S", 2.0)
+        watcher.stop()

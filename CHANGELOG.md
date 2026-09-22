@@ -64,6 +64,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **A USB watcher stopped while it was still taking its first inventory
+  forgot that inventory.** The poller discarded its priming enumeration
+  whenever `stop()` had been called, not only when a newer `start()` had
+  replaced it, so a following `poll_once()` reported every connected device
+  as newly added — or not, depending on which side of the enumeration the
+  stop landed. It now discards it only when superseded.
+
 - **On Windows the key name `down` pressed F17 instead of the Down arrow.**
   The Windows `keyboard_keys_table` was built from every constant in
   `win32_vk.py`, including the `MOUSEEVENTF_*` and `KEYEVENTF_*` flags, and

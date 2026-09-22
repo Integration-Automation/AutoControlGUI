@@ -163,13 +163,18 @@ class UsbHotplugWatcher:
         # initial inventory.
         try:
             initial = self._enumerator()
-            if stop.is_set():
-                # Stopped mid-enumeration; a newer run may own the snapshot.
-                return
-            with self._lock:
-                self._snapshot = {
-                    _device_key(dev): dev for dev in initial.devices
-                }
+            with self._lifecycle_lock:
+                # Superseded, not merely stopped: once a newer run exists its
+                # snapshot is the one that counts. A run that was only stopped
+                # still primes, so start(); stop(); poll_once() reports changes
+                # since start() and not the whole inventory -- whether the
+                # stop landed before or after this enumeration returned.
+                if stop is not self._stop:
+                    return
+                with self._lock:
+                    self._snapshot = {
+                        _device_key(dev): dev for dev in initial.devices
+                    }
         except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: enumeration may fail per-OS
             autocontrol_logger.warning(
                 "usb hotplug initial enumeration: %r", error,
