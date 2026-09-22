@@ -24,6 +24,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **The scheduler could start a job again while it was still running.** A job
+  is rescheduled only after it finishes, so until then it still looks due. A
+  single loop cannot overlap itself, but after a `stop()` whose join timed out
+  inside a long job, the new run's loop saw the job as due and started a second
+  copy. `Scheduler` now tracks the jobs it is executing and skips them.
+
 - **A remote desktop viewer from a stopped host could attach to the restarted
   one.** `RemoteDesktopHost`, `RemoteDesktopRelay` and `RemoteDesktopViewer`
   had the same shared-event restart as the services below. On the host it

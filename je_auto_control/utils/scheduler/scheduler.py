@@ -8,7 +8,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Set
 
 from je_auto_control.utils.json.json_file import read_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
@@ -63,6 +63,11 @@ class Scheduler:
         self._execute = executor or execute_action
         self._tick = max(0.1, float(tick_seconds))
         self._jobs: Dict[str, ScheduledJob] = {}
+        # Jobs being executed right now, by id. A job is rescheduled only
+        # after it finishes, so until then it still looks due; a second
+        # loop -- the new run after a stop() that timed out mid-job --
+        # would otherwise start it again while the first is still running.
+        self._in_flight: Set[str] = set()
         self._lock = threading.Lock()
         # 保護 start()/stop() 互斥。兩者原本毫無互斥,交錯時 stop() 會在
         # start() 指派 _thread 與呼叫 .start() 之間 join 尚未啟動的執行緒
@@ -168,23 +173,37 @@ class Scheduler:
         due: List[ScheduledJob] = []
         with self._lock:
             for job in self._jobs.values():
-                if not job.enabled:
+                if not job.enabled or job.job_id in self._in_flight:
                     continue
                 deadline_now = now_wall if job.is_cron else now_mono
                 if deadline_now >= job.next_run_ts:
                     due.append(job)
-        for job in due:
-            # _fire's run-history bookkeeping (start_run / capture_error_snapshot
-            # / finish_run) and its cron re-scheduling sit OUTSIDE its own broad
-            # except. A sqlite3.Error from the shared history DB, or an
-            # AutoControlScreenException while snapshotting, would otherwise kill
-            # this loop and stop every scheduled job. Contain per job.
-            try:
-                self._fire(job, now_mono, now_wall)
-            except Exception as error:  # noqa: BLE001  # reason: see above
-                autocontrol_logger.error("scheduler job %s bookkeeping "
-                                         "failed: %r", job.job_id, error,
-                                         exc_info=True)
+                    self._in_flight.add(job.job_id)
+        pending = list(due)
+        try:
+            while pending:
+                job = pending.pop(0)
+                # _fire's run-history bookkeeping (start_run / capture_error_snapshot
+                # / finish_run) and its cron re-scheduling sit OUTSIDE its own broad
+                # except. A sqlite3.Error from the shared history DB, or an
+                # AutoControlScreenException while snapshotting, would otherwise kill
+                # this loop and stop every scheduled job. Contain per job.
+                try:
+                    self._fire(job, now_mono, now_wall)
+                except Exception as error:  # noqa: BLE001  # reason: see above
+                    autocontrol_logger.error("scheduler job %s bookkeeping "
+                                             "failed: %r", job.job_id, error,
+                                             exc_info=True)
+                finally:
+                    with self._lock:
+                        self._in_flight.discard(job.job_id)
+        finally:
+            # Anything that escaped the loop above (a BaseException) must not
+            # leave the jobs it never reached marked as running forever. Only
+            # those: a job already handled may be another loop's by now.
+            with self._lock:
+                self._in_flight.difference_update(
+                    job.job_id for job in pending)
 
     def _fire(self, job: ScheduledJob, now_mono: float, now_wall: float) -> None:
         run_id = default_history_store.start_run(

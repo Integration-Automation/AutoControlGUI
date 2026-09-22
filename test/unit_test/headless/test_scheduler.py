@@ -70,3 +70,54 @@ def test_max_runs_cap(monkeypatch):
     finally:
         sched.stop(timeout=1.0)
     assert len(executed) == 2
+
+
+class _NullHistory:
+    """Run-history store that records nothing."""
+
+    def start_run(self, *_args, **_kwargs):
+        return 1
+
+    def finish_run(self, *_args, **_kwargs):
+        return None
+
+
+def test_a_job_still_running_is_not_started_again(monkeypatch):
+    """A job is rescheduled only when it finishes, so it looks due until then.
+
+    One loop cannot overlap itself, but two can: the new run after a stop()
+    whose join timed out inside a long job used to see that job as due and
+    start it a second time while the first was still executing.
+    """
+    import threading
+
+    from je_auto_control.utils.scheduler import scheduler as scheduler_mod
+    monkeypatch.setattr(scheduler_mod, "default_history_store", _NullHistory())
+    monkeypatch.setattr(scheduler_mod, "read_action_json",
+                        lambda path: [["AC_noop"]])
+    entered, release = threading.Event(), threading.Event()
+    calls = []
+
+    def executor(actions):
+        calls.append(actions)
+        if len(calls) == 1:
+            entered.set()
+            release.wait(5.0)
+
+    sched = Scheduler(executor=executor)
+    sched.add_job("fake.json", interval_seconds=0.1, repeat=True)
+    time.sleep(0.15)                      # let the job fall due
+    first = threading.Thread(target=sched._tick_once, daemon=True)
+    first.start()
+    try:
+        assert entered.wait(2.0), "the first loop never started the job"
+        sched._tick_once()                # a second loop, same instant
+        assert len(calls) == 1, "the job was started again while running"
+    finally:
+        release.set()
+        first.join(2.0)
+    assert not first.is_alive()
+    # Finished and rescheduled: it may run again once it is due.
+    time.sleep(0.15)
+    sched._tick_once()
+    assert len(calls) == 2
