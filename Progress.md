@@ -47,7 +47,7 @@
 同一批裡有六個檔案在 2026-08-19 已經拆回線內、從表上移除,做法寫在
 commit `46f4cd5` 的說明裡（`docs/updates/` 沒有對應條目：舊的 `WHATS_NEW.md` 從沒記過這件事）。
 
-行數沒有任何 CI 在把關（`quality.yml` 只跑 ruff 與 bandit,而 ruff 只管行寬),
+行數沒有任何 CI 在把關（`quality.yml` 的五個 job 裡只有 ruff 管到這一節的限制,而它只管行寬),
 所以這張表只會在有人手動實測時才會被發現對不上——上次就是。
 
 ### 2026-08-24:`windows_backend.py` 從 918 長到 923，理由記在這裡
@@ -199,28 +199,8 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 ## 文件與現況不符
 
-`TODO` — 下面五處描述的是舊行為（2026-09-22 逐條對過程式碼與 workflow）
+`TODO` — 還有一處描述的是舊行為（2026-09-22 對過 tag 與檔案）
 
-- **`python -m je_auto_control` 不會開 GUI。** `README.md`:123（`README/README_zh-TW.md`:113、
-  `README/README_zh-CN.md`:113 同一行）把它寫成桌面程式的啟動方式，但
-  `je_auto_control/__main__.py` 只有 `-e`／`-d`／`-c`／`--execute_str` 四個選項，
-  一個都沒給就拋 `AutoControlArgparseException` 並 `sys.exit(1)`。開 GUI 的是
-  `je_auto_control.start_autocontrol_gui()`（同一行的註解裡已經寫了）。
-- **視窗管理不再只限 Windows。** `README.md`:158 的功能表寫 *(Windows)*、:331–333 寫
-  「currently Windows-only and raises a clear `NotImplementedError` elsewhere」；兩份翻譯同樣
-  （表格都在 :147；內文 zh-TW :302–303、zh-CN :301–302）。但 2026-08-20 起
-  `wrapper/window_backends/` 已有 `x11_backend.py` 與 `macos_backend.py`（見
-  [docs/updates/2026-08.md](docs/updates/2026-08.md) U-20260820-01 的
-  「Window Management Is No Longer Windows-Only」）。
-- **`CLAUDE.md` 對「CI 裝不裝 `[webrtc]`」前後矛盾。** §Testing 講 `deleteLater()` 的那一段
-  結尾說 `test_usb_acl_prompt.py` 需要的 `webrtc` extra「CI does not install」，所以 CI 會
-  略過它、崩潰只有開發機看得到；但 §Development Commands 的「Measure it with the `[webrtc]`
-  extra installed」一段說 `quality.yml` 有裝，而 `quality.yml` 的 `pytest-headless` 確實跑
-  `pip install -e ".[webrtc]"`。改寫那段之前，先確認那支測試現在在 CI 上真的有跑。
-- **`CLAUDE.md` §Size and complexity limits 與本檔「750 行上限」一節都說 `quality.yml`
-  只跑 ruff 與 bandit。** 它現在還有 `pytest-headless`（coverage 與 `fail_under`）與
-  `typing-stable-api`（mypy）兩個 job。「檔案行數沒有 CI 在把關」這個結論仍然成立，
-  要改的只是那份 job 清單。
 - **`CHANGELOG.md` 沒有任何版本節。** 全檔只有 `## Unreleased`，但它建立（2026-07-03）之後
   打過的 tag 有 v0.0.216–v0.0.222，其中 v0.0.219–v0.0.222 是 2026-08-19 到 08-23 發的，
   沒有一個有自己的版本節。已發佈的內容要從 Unreleased 切到各自的版本底下。

@@ -120,11 +120,12 @@ je_auto_control run flow.json --dry-run     # list the steps without touching th
 
 ```bash
 pip install je_auto_control[gui]
-python -m je_auto_control          # or: je_auto_control.start_autocontrol_gui()
+python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 ```
 
 Record a flow, edit it in the visual Script Builder, and save it as the same JSON
-format the CLI runs.
+format the CLI runs. (`python -m je_auto_control` is the legacy action-file runner — `-e`, `-d`,
+`-c`, `--execute_str` — not the GUI.)
 
 ---
 
@@ -155,7 +156,7 @@ desktop app; tab commands live in the window's **Actions** menu.
 | Scheduler (interval + cron) | `default_scheduler` | — | Scheduler |
 | Global hotkeys | `default_hotkey_daemon` | — | Hotkeys |
 | Event triggers | `default_trigger_engine` | `AC_email_trigger_add` | Triggers, Webhooks, Email |
-| Window management *(Windows)* | `list_windows`, `focus_window` | `AC_focus_window`, `AC_snap_window` | Window Manager |
+| Window management *(Windows, macOS, X11)* | `list_windows`, `focus_window` | `AC_focus_window`, `AC_snap_window` | Window Manager |
 | Clipboard (text + image) | `get_clipboard`, `set_clipboard`, `get_clipboard_image`, `set_clipboard_image` | `AC_clipboard_get`, `AC_clipboard_set`, `AC_clipboard_get_image`, `AC_clipboard_set_image` | — |
 | Remote desktop | `RemoteDesktopHost`, `RemoteDesktopViewer` | `AC_start_remote_host`, `AC_remote_connect` | Remote Desktop |
 | USB enumeration & passthrough | `list_usb_devices`, `enable_usb_passthrough` | `AC_usb_*` (16 commands) | USB Devices, USB Share |
@@ -329,8 +330,10 @@ export JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND="mycapture --png {output}"
 
 Wayland forbids global input recording for unprivileged clients — set
 `JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` to record on an X11 session. Window
-management is currently Windows-only and raises a clear `NotImplementedError`
-elsewhere. Opt-in driver-level backends (`JE_AUTOCONTROL_WIN32_BACKEND=interception`,
+management works on Windows, macOS (pyobjc) and X11, including XWayland; on a pure
+Wayland session, whose protocol hides other clients' windows, `list_windows()` returns
+an empty list and every window action raises `AutoControlUnsupportedOperationException`
+saying why. Opt-in driver-level backends (`JE_AUTOCONTROL_WIN32_BACKEND=interception`,
 `JE_AUTOCONTROL_LINUX_BACKEND=uinput`, ViGEm virtual gamepad) exist for apps that
 ignore synthetic input, and fall back silently when the driver is absent.
 

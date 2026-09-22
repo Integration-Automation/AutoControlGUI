@@ -110,10 +110,11 @@ je_auto_control run flow.json --dry-run     # 只列出步骤，不会真的动�
 
 ```bash
 pip install je_auto_control[gui]
-python -m je_auto_control          # 或：je_auto_control.start_autocontrol_gui()
+python -c "import je_auto_control; je_auto_control.start_autocontrol_gui()"
 ```
 
 录制一段流程、在可视化 Script Builder 里编辑，然后存成 CLI 能直接执行的同一种 JSON 格式。
+（`python -m je_auto_control` 是旧式的动作文件执行器——`-e`、`-d`、`-c`、`--execute_str`——不会打开 GUI。）
 
 ---
 
@@ -144,7 +145,7 @@ python -m je_auto_control          # 或：je_auto_control.start_autocontrol_gui
 | 调度（间隔 + cron） | `default_scheduler` | — | Scheduler |
 | 全局热键 | `default_hotkey_daemon` | — | Hotkeys |
 | 事件触发 | `default_trigger_engine` | `AC_email_trigger_add` | Triggers、Webhooks、Email |
-| 窗口管理 *(仅 Windows)* | `list_windows`、`focus_window` | `AC_focus_window`、`AC_snap_window` | Window Manager |
+| 窗口管理 *(Windows、macOS、X11)* | `list_windows`、`focus_window` | `AC_focus_window`、`AC_snap_window` | Window Manager |
 | 剪贴板（文本 + 图片） | `get_clipboard`、`set_clipboard`、`get_clipboard_image`、`set_clipboard_image` | `AC_clipboard_get`、`AC_clipboard_set`、`AC_clipboard_get_image`、`AC_clipboard_set_image` | — |
 | 远程桌面 | `RemoteDesktopHost`、`RemoteDesktopViewer` | `AC_start_remote_host`、`AC_remote_connect` | Remote Desktop |
 | USB 枚举与直通 | `list_usb_devices`、`enable_usb_passthrough` | `AC_usb_*`（16 个命令） | USB Devices、USB Share |
@@ -298,8 +299,9 @@ export JE_AUTOCONTROL_WAYLAND_CAPTURE_COMMAND="mycapture --png {output}"
 ```
 
 Wayland 禁止非特权客户端进行全局输入录制——若要录制，请设置
-`JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` 并在 X11 会话下运行。窗口管理目前仅
-Windows 有实现，其他平台会抛出明确的 `NotImplementedError`。对于会忽略合成输入的应用，
+`JE_AUTOCONTROL_LINUX_DISPLAY_SERVER=x11` 并在 X11 会话下运行。窗口管理支持
+Windows、macOS（pyobjc）与 X11（含 XWayland）；纯 Wayland 会话的协议不让客户端看到其他程序的窗口，
+所以 `list_windows()` 返回空列表，其余窗口操作一律抛出带原因的 `AutoControlUnsupportedOperationException`。对于会忽略合成输入的应用，
 可选用驱动层后端（`JE_AUTOCONTROL_WIN32_BACKEND=interception`、
 `JE_AUTOCONTROL_LINUX_BACKEND=uinput`、ViGEm 虚拟手柄）；驱动未安装时会自动回退到原有行为。
 

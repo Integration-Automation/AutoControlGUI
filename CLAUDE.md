@@ -123,7 +123,7 @@ Anything agreed but not done — deferred follow-ups, known gaps, half-delivered
 
 Cyclomatic complexity ≤ 10 · cognitive complexity ≤ 15 · function ≤ 75 lines · parameters ≤ 7 · nesting ≤ 4 · file ≤ 750 lines · line ≤ 120 chars · no duplicated block ≥ 10 lines.
 
-**What actually enforces these.** `quality.yml` runs ruff and bandit only, so line length is the only limit a CI job rejects. Complexity is measured by `radon cc -nc` in the pre-commit list below and read by a human. The file-length limit is enforced by nobody — treat this section as a review standard, not a gate, and do not describe it as CI-enforced.
+**What actually enforces these.** `quality.yml` has five jobs — `lint` (ruff), `security` (bandit), `pytest-headless` (the suite plus the coverage floor), `typing-stable-api` (mypy) and `dependency-review` — and of the limits in this section only line length is rejected by one of them (ruff). Complexity is measured by `radon cc -nc` in the pre-commit list below and read by a human. The file-length limit is enforced by nobody — treat this section as a review standard, not a gate, and do not describe it as CI-enforced.
 
 **Scope of the file-length limit.** It applies to:
 
@@ -193,10 +193,11 @@ Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes
   seven `AdminConsoleTab`s this way, and they detonated inside the nested modal
   `exec()` of `test_usb_acl_prompt.py`, killing the interpreter with rc
   3221226505 (0xC0000409) — a `__fastfail`, so no traceback, no faulthandler
-  output, and nothing after it in the suite ran. Note the failure is invisible
-  to CI: `test_usb_acl_prompt.py` needs the optional `webrtc` extra (`av`,
-  `aiortc`), which CI does not install, so CI skips it and only developers with
-  that extra installed see the crash.
+  output, and nothing after it in the suite ran. `test_usb_acl_prompt.py` needs
+  the optional `webrtc` extra (`av`, `aiortc`) and skips without it; the
+  `pytest-headless` job installs `.[webrtc]`, so CI runs it on every square
+  and a leak like this fails CI instead of only a developer's machine. Keep
+  the extra in that install for this reason as well as for coverage.
 
 ## Key Conventions
 
