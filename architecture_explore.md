@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,033 |
-| 程式碼總行數 | 141,567 |
+| 程式碼總行數 | 141,633 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -169,10 +169,10 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | --- | ---: | --- |
 | `wrapper/platform_wrapper.py` | 116 | **Strategy 樞紐**。依 `sys.platform` 匯入唯一後端並匯出 `keyboard`、`keyboard_check`、`keyboard_keys_table`、`mouse`、`mouse_keys_table`、`special_mouse_keys_table`、`screen`、`recorder`；八個名稱都帶著 `backend_contract` 的型別出去，其中 `keyboard`／`mouse` 因為四個分支綁的是三種互不相容的形狀，先落在私有的 `_keyboard`／`_mouse`（`Any`）上再標合約；載入失敗直接拋 `AutoControlException`（fail fast）。 |
 | `wrapper/backend_contract.py` | 238 | 平台縫的型別合約：`ScreenBackend`／`KeyboardCheckBackend`／`RecorderBackend` 三個跨平台 Protocol，加上 `keyboard`／`mouse` 各自的三份——`Win32*`（SendInput 與 Interception）、`Darwin*`（Quartz）、`X11Unix*`（XTest／uinput／Wayland／BSD），因為這兩個名稱的呼叫形狀真的因平台而異；`KeyboardBackend`／`MouseBackend` 依 `sys.platform` 別名到其中一組，所以呼叫端被檢查的是它真的會走到的簽章。四個 `_platform_*` 組裝模組各自標注自己綁的是什麼，少一個成員就在該後端自己的檔案裡紅掉，而不是在三層之上的呼叫點。 |
-| `wrapper/_platform_windows.py` | 317 | Windows 後端組裝：Win32 ctypes 模組 + 虛擬鍵表 + 選用 Interception 驅動。 |
-| `wrapper/_platform_osx.py` | 160 | macOS 後端組裝（Quartz 事件 + osx 虛擬鍵表）。 |
-| `wrapper/_platform_linux.py` | 278 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
-| `wrapper/_platform_wayland.py` | 61 | Wayland 後端組裝（libei／ydotool／grim）。 |
+| `wrapper/_platform_windows.py` | 315 | Windows 後端組裝：Win32 ctypes 模組 + 虛擬鍵表 + 選用 Interception 驅動。 |
+| `wrapper/_platform_osx.py` | 157 | macOS 後端組裝（Quartz 事件 + osx 虛擬鍵表）。 |
+| `wrapper/_platform_linux.py` | 275 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
+| `wrapper/_platform_wayland.py` | 58 | Wayland 後端組裝（libei／ydotool／grim）。 |
 | `wrapper/auto_control_mouse.py` | 451 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
 | `wrapper/auto_control_keyboard.py` | 360 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
 | `wrapper/auto_control_screen.py` | 111 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
@@ -299,7 +299,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 2,654 行。
+> 14 個套件、約 2,731 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -311,7 +311,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/exception/` | 210 | **例外階層根**。所有錯誤繼承 `AutoControlException`，加上集中式錯誤訊息字串（`exception_tags`） |
 | `utils/failure_bundle/` | 187 | 可攜、已遮蔽的失敗診斷 ZIP（截圖 + 診斷 + log 尾段） |
 | `utils/file_process/` | 26 | 目錄檔案列舉（`execute_dir` 的後端） |
-| `utils/logging/` | 71 | `autocontrol_logger` 單例 + 輪替檔案 handler |
+| `utils/logging/` | 148 | `autocontrol_logger` 單例 + 家目錄共用記錄檔 handler（`JE_AUTOCONTROL_LOG_FILE` 可改） |
 | `utils/package_manager/` | 98 | 動態載入套件並把 executor 注入其中 |
 | `utils/path_guard/` | 99 | 命令列傳入路徑的正規化與邊界檢查（防路徑穿越） |
 | `utils/platform_id/` | 62 | 作業系統家族的單一判定點。`sys.platform` 原本在一百多處跟字面清單比對，而那些清單都沒有 BSD；`is_x11_unix()` 問的是「這是不是 X11 unix」，這才是守衛一直想問的問題 |
@@ -1053,7 +1053,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/usb/` | 17 | 4,313 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,367 |
 | `utils/accessibility/` | 13 | 2,842 |
-| `wrapper/` | 19 | 3,556 |
+| `wrapper/` | 19 | 3,545 |
 | `windows/` | 23 | 1,951 |
 | `utils/rest_api/` | 8 | 1,751 |
 | `utils/agent/` | 8 | 1,250 |
@@ -1066,6 +1066,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,730 |
-| **總計** | **1,027** | **141,502** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,807 |
+| **總計** | **1,027** | **141,568** |
 

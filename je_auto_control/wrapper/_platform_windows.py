@@ -118,8 +118,6 @@ def _build_mouse_keys_table(mouse_module) -> dict:
     }
 
 
-autocontrol_logger.info("Load Windows Setting")
-
 # 只放虛擬鍵碼。滑鼠事件旗標（MOUSEEVENTF_*）、KEYEVENTF_* 與 MapVirtualKey 的
 # 型別常數不是鍵，數值卻跟真的鍵重疊：以前 "down" 是 MOUSEEVENTF_XDOWN（0x80），
 # 送出去的是 F17 而不是方向鍵下，"middledown" 則跟 space 同碼。

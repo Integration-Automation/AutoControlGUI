@@ -22,10 +22,7 @@ from je_auto_control.wrapper.backend_contract import (
     KeyboardCheckBackend, RecorderBackend, ScreenBackend,
     X11UnixKeyboardBackend, X11UnixMouseBackend,
 )
-from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
-
-autocontrol_logger.info("Load Linux Wayland Setting")
 
 keyboard_keys_table = dict(_wayland_keyboard_table)
 

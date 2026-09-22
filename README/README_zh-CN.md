@@ -65,6 +65,11 @@ sudo apt-get install cmake libssl-dev
 OCR、VLM 与 LLM 后端（`pytesseract`、`easyocr`、`paddleocr`、`anthropic`、`openai`）
 都是按需加载——只装你实际会用到的。
 
+**日志文件：** 库写到 `~/.je_auto_control/logs/AutoControlGUI.log`，第一条记录时
+才创建（只 import 不会写任何文件），同一个账户的所有进程共用（追加写入、每行带进程 ID，
+超过 10 MB 就改名为 `.1`）。要写到别处就设置
+`JE_AUTOCONTROL_LOG_FILE`，设为 `os.devnull` 则不写文件。
+
 ---
 
 ## 60 秒上手

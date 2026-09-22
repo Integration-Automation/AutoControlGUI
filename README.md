@@ -75,6 +75,12 @@ sudo apt-get install cmake libssl-dev
 OCR, VLM, and LLM backends (`pytesseract`, `easyocr`, `paddleocr`, `anthropic`,
 `openai`) are loaded on demand — install whichever you actually use.
 
+**Log file:** the library logs to `~/.je_auto_control/logs/AutoControlGUI.log`,
+created on the first record (importing alone writes nothing) and shared by every
+process on the account (appended to, one process id per line, moved to `.1`
+past 10 MB). Set `JE_AUTOCONTROL_LOG_FILE` to write elsewhere, or to
+`os.devnull` to turn the file off.
+
 ---
 
 ## 60-second quick start

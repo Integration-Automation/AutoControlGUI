@@ -22,6 +22,27 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   generating values from the schema alone used to produce a plain string and
   get a `ValueError` out of `datetime.fromisoformat`.
 
+### Changed
+
+- **The log file moved out of the current directory.** Importing the package
+  opened `AutoControlGUI.log` relative to the cwd, so every process that
+  imported it — including every pytest run on a machine where it is installed,
+  through the `pytest11` plugin — left a log wherever it started. The file is
+  now `~/.je_auto_control/logs/AutoControlGUI.log`, or whatever
+  `JE_AUTOCONTROL_LOG_FILE` names (`os.devnull` turns it off). Because every
+  process shares it, lines carry the process id (`time | pid | logger | level
+  | message`), and instead of growing without limit it is moved to `.1` once
+  past 10 MB, at the moment a process opens it. The file is opened on the
+  first record rather than at import, and the `Load Windows Setting` /
+  `Load Linux x11 Setting` / `Load Linux Wayland Setting` / `Load MacOS
+  Setting` lines every import used to log are gone, so importing the package
+  writes no file. A file that cannot be opened (read-only home or cwd) is
+  replaced by `os.devnull` with one `RuntimeWarning`; it used to make
+  `import je_auto_control` fail.
+  Migration: to keep the old location, set
+  `JE_AUTOCONTROL_LOG_FILE=AutoControlGUI.log`; changing the working
+  directory before the import no longer redirects the file.
+
 ### Security
 
 - **The `pdf` extra now requires `pypdf>=6.16.1`** (was `>=4.0`).

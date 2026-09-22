@@ -44,9 +44,6 @@ from je_auto_control.wrapper.backend_contract import (
     DarwinKeyboardBackend, DarwinMouseBackend,
     KeyboardCheckBackend, RecorderBackend, ScreenBackend,
 )
-from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-
-autocontrol_logger.info("Load MacOS Setting")
 
 keyboard_keys_table = {
     "a": osx_key_a, "A": osx_key_A,

@@ -140,8 +140,13 @@ Moving that WebRunner module breaks the bridge.
 - `import je_auto_control` must not load PySide6; the GUI window is imported only inside `start_autocontrol_gui()`.
   `test/unit_test/headless/test_facade_import_is_light.py` also keeps `cv2`, `numpy`, `PIL`, `cryptography`,
   `je_open_cv` and `mss` off the import path.
-- `utils/logging/logging_instance.py` attaches a `RotatingFileHandler` for the **relative** path `AutoControlGUI.log`
-  (mode `"w"`) at import and sets the root logger to DEBUG, so the log is created (and truncated) in the caller's cwd.
+- `utils/logging/logging_instance.py` sets the root logger to DEBUG and attaches a file handler at import, but the
+  handler opens its file on the first record, and nothing logs during the import: importing writes no file at all.
+  The file is `$JE_AUTOCONTROL_LOG_FILE` if set (a relative path resolves against the cwd at import), else
+  `~/.je_auto_control/logs/AutoControlGUI.log`, shared by every process: appended to, rotated to `.1` past 10 MB
+  only when a process opens it, and swapped for `os.devnull` with one `RuntimeWarning` when it cannot be opened.
+  Consumers that must keep the log out of a shared file (a test suite) set the variable before importing;
+  changing the working directory no longer redirects it.
 
 **De-facto public:** `docs/API_LIFECYCLE.md` calls `je_auto_control.utils.*` internal, but the internal paths in the
 table above are used by sibling repos; treat renaming or removing them as a breaking change and check the consumers
