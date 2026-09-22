@@ -448,12 +448,49 @@ def test_state_changes_are_reported_with_their_session_id():
     assert seen == [(session_id, "connected")]
 
 
-def test_no_state_callback_means_no_wrapper_is_installed():
-    # The single-viewer host checks this for None before calling it, so
-    # handing it a wrapper that calls nothing would only cost work.
+def _wait_for(condition, timeout=2.0):
+    import time
+    deadline = time.monotonic() + timeout
+    while not condition() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    return condition()
+
+
+@pytest.mark.parametrize("state", ["failed", "closed"])
+def test_a_session_whose_connection_ended_is_pruned(state):
+    """Even with no listener: the coordinator itself needs this state.
+
+    The wrapper used to be skipped when nobody subscribed, and nothing else
+    removed a session whose peer had gone -- ``session_count`` only grew and
+    the capture never stopped.
+    """
     host = _host()
     host.create_session_offer()
-    assert _FakeHost.instances[0].kwargs["on_state_change"] is None
+    track = host.screen_track()
+    _FakeHost.instances[0].kwargs["on_state_change"](state)
+    assert _wait_for(lambda: host.session_count() == 0)
+    assert _FakeHost.instances[0].stopped
+    assert track.stopped, "the last viewer left, so the capture must stop"
+
+
+def test_a_disconnected_session_is_kept_because_ice_can_recover():
+    host = _host()
+    host.create_session_offer()
+    _FakeHost.instances[0].kwargs["on_state_change"]("disconnected")
+    assert not _wait_for(lambda: host.session_count() == 0, timeout=0.2)
+
+
+def test_a_failed_offer_leaves_no_session_behind(monkeypatch):
+    """The caller never gets the session id, so nobody else could stop it."""
+    def refuse(self, peer_label="remote viewer"):
+        raise PermissionError("capture consent refused")
+
+    monkeypatch.setattr(_FakeHost, "create_offer", refuse)
+    host = _host()
+    with pytest.raises(PermissionError):
+        host.create_session_offer()
+    assert host.session_count() == 0
+    assert host.screen_track() is None, "the source must be released too"
 
 
 def test_authentication_stamps_the_connection_time_and_notifies():

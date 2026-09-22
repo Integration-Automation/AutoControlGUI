@@ -10,6 +10,7 @@ readable on its own.
 from __future__ import annotations
 
 import asyncio
+import hmac
 from typing import (
     TYPE_CHECKING, Any, Callable, Coroutine, List, Mapping, Optional,
 )
@@ -66,7 +67,10 @@ class ViewerAuthMixin:
 
     def _handle_auth(self, data: Mapping[str, Any]) -> None:
         token = data.get("token")
-        if not isinstance(token, str) or token != self._token:
+        # compare_digest, not !=: a short-circuiting comparison tells anyone
+        # who can send auth messages how many leading characters matched.
+        if not isinstance(token, str) or not hmac.compare_digest(
+                token.encode("utf-8"), self._token.encode("utf-8")):
             self._reject_auth(data)
             return
         viewer_id = data.get("viewer_id")
@@ -78,7 +82,7 @@ class ViewerAuthMixin:
         if self._auto_approve_via_whitelist():
             return
         if self._on_pending_viewer is None:
-            self._approve_pending_viewer()
+            self._grant()
             return
         self._has_pending_viewer = True
         try:
@@ -112,7 +116,7 @@ class ViewerAuthMixin:
                 self._trust_list.touch(viewer_id)
             except (RuntimeError, OSError) as error:
                 autocontrol_logger.debug("trust touch: %r", error)
-        self._approve_pending_viewer()
+        self._grant()
         return True
 
     def _auto_approve_via_whitelist(self) -> bool:
@@ -122,7 +126,7 @@ class ViewerAuthMixin:
             "webrtc host: remote ip %s matches whitelist; auto-approving",
             self._remote_ip,
         )
-        self._approve_pending_viewer()
+        self._grant()
         return True
 
     def _is_ip_whitelisted(self, ip: Optional[str]) -> bool:
@@ -173,8 +177,16 @@ class ViewerAuthMixin:
         get_bridge().call_soon(self._reject_pending_viewer)
 
     def _approve_pending_viewer(self) -> None:
-        if not self._has_pending_viewer and self._authenticated:
+        # Only a viewer that presented the token and is waiting on the user
+        # can be approved. The guard used to read `not pending and
+        # authenticated`, so approving a session whose viewer never sent a
+        # token -- neither pending nor authenticated -- let it through.
+        if not self._has_pending_viewer:
             return
+        self._grant()
+
+    def _grant(self) -> None:
+        """Authenticate the viewer. Callers have verified its token."""
         self._has_pending_viewer = False
         self._authenticated = True
         self._send_ctrl({
@@ -214,7 +226,10 @@ class ViewerAuthMixin:
         loop.call_later(0.5, lambda: self._spawn_bg(self._async_stop()))
 
     def _enforce_auth_deadline(self) -> None:
-        if self._authenticated:
+        # A viewer with the right token that is waiting on the user's
+        # Accept/Reject is not failing to authenticate; tearing it down after
+        # the grace period left the user approving a dead session.
+        if self._authenticated or self._has_pending_viewer:
             return
         autocontrol_logger.warning(
             "webrtc host: viewer failed to authenticate within grace period",

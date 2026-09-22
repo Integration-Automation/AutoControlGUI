@@ -99,7 +99,7 @@ def write_default_config(path: Optional[Path] = None) -> Path:
 def run_daemon(config: HostServiceConfig) -> None:
     """Block forever: publish offer → wait for answer → accept → loop."""
     from je_auto_control.utils.remote_desktop import (
-        WebRTCConfig, default_trust_list, signaling_client,
+        WebRTCConfig, default_trust_list,
     )
     from je_auto_control.utils.remote_desktop.multi_viewer import MultiViewerHost
 
@@ -119,21 +119,7 @@ def run_daemon(config: HostServiceConfig) -> None:
     )
     while True:
         try:
-            session_id, offer = multi.create_session_offer()
-            signaling_client.push_offer(
-                config.server_url, config.host_id, offer,
-                secret=config.server_secret,
-            )
-            answer = signaling_client.wait_for_answer(
-                config.server_url, config.host_id,
-                secret=config.server_secret,
-                timeout_s=300.0,
-            )
-            multi.accept_session_answer(session_id, answer)
-            autocontrol_logger.info(
-                "host_service: viewer connected to session %s (%d total)",
-                session_id, multi.session_count(),
-            )
+            _serve_one_viewer(multi, config)
             time.sleep(config.poll_interval_s)
         except KeyboardInterrupt:
             autocontrol_logger.info("host_service: shutting down")
@@ -142,6 +128,36 @@ def run_daemon(config: HostServiceConfig) -> None:
         except Exception as error:  # noqa: BLE001  # reason: a daemon must survive ANY transient error (signaling/aiortc/av/ValueError) and retry, not exit the loop
             autocontrol_logger.warning("host_service loop: %r", error)
             time.sleep(min(30.0, config.poll_interval_s * 5))
+
+
+def _serve_one_viewer(multi: Any, config: HostServiceConfig) -> None:
+    """Publish one offer, wait for its answer, and connect the viewer.
+
+    Any failure after the offer exists stops that session before the error
+    reaches the retry loop. It used to stay registered: with no viewer, every
+    300-second answer timeout left another session holding a subscription to
+    the screen source, for the life of the daemon.
+    """
+    from je_auto_control.utils.remote_desktop import signaling_client
+    session_id, offer = multi.create_session_offer()
+    try:
+        signaling_client.push_offer(
+            config.server_url, config.host_id, offer,
+            secret=config.server_secret,
+        )
+        answer = signaling_client.wait_for_answer(
+            config.server_url, config.host_id,
+            secret=config.server_secret,
+            timeout_s=300.0,
+        )
+        multi.accept_session_answer(session_id, answer)
+    except BaseException:
+        multi.stop_session(session_id)
+        raise
+    autocontrol_logger.info(
+        "host_service: viewer connected to session %s (%d total)",
+        session_id, multi.session_count(),
+    )
 
 
 # --- service installation helpers ----------------------------------------

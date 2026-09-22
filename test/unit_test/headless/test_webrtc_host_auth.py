@@ -356,6 +356,48 @@ def test_the_deadline_leaves_an_authenticated_peer_alone(bridge):
     assert host.spawned == []
 
 
+def test_the_deadline_spares_a_viewer_waiting_for_the_user(bridge):
+    """Right token, dialog open: the user is deciding, the viewer is not late.
+
+    The deadline used to look only at ``_authenticated``, so a viewer waiting
+    on Accept/Reject was torn down after the grace period and the user then
+    approved a dead session.
+    """
+    host = _Host(token="secret", on_pending_viewer=lambda: None)
+    host._handle_auth({"token": "secret", "viewer_id": "v1"})
+    assert host.has_pending_viewer
+    host._enforce_auth_deadline()
+    assert host.spawned == []
+
+
+def test_approving_a_viewer_that_never_sent_the_token_does_nothing(bridge):
+    """The public approve path must not authenticate an unauthenticated peer.
+
+    The guard read ``not pending and authenticated``; for a session whose
+    viewer sent no token at all both are false, so approval went through and
+    the viewer could send input without ever presenting the token.
+    """
+    host = _Host(token="secret", on_pending_viewer=lambda: None)
+    host.approve_pending_viewer()
+    assert host._authenticated is False
+    assert "auth_ok" not in host.types_sent()
+
+
+def test_the_token_is_compared_in_constant_time(bridge, monkeypatch):
+    compared = []
+    real = auth_module.hmac.compare_digest
+
+    def spy(left, right):
+        compared.append((left, right))
+        return real(left, right)
+
+    monkeypatch.setattr(auth_module.hmac, "compare_digest", spy)
+    host = _Host(token="secret")
+    host._handle_auth({"token": "secreT", "viewer_id": "v1"})
+    assert compared == [(b"secreT", b"secret")]
+    assert host._authenticated is False
+
+
 # === The secure attention sequence ==========================================
 
 def test_a_successful_sas_is_reported_to_the_viewer(bridge, monkeypatch):

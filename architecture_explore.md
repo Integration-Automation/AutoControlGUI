@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,043 |
-| 程式碼總行數 | 142,096 |
+| 程式碼總行數 | 142,152 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -510,14 +510,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 18,020 行。
+> 6 個套件、約 18,076 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 334 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 246 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 12,039 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/remote_desktop/` | 12,095 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
 | `utils/usb/` | 4,335 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 928 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
@@ -736,7 +736,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 88 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（12,039 行／56 檔）
+#### `utils/remote_desktop/`（12,095 行／56 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
@@ -746,11 +746,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `webrtc_viewer.py` | 672 | WebRTC 檢視端：接收視訊並送出輸入。 |
 | `host.py` | 634 | TCP 主機：接受迴圈、TLS 包裝、連線／認證握手、音訊與剪貼簿廣播、檔案推送、單次 token。 |
 | `viewer.py` | 634 | TCP 檢視端。 |
-| `host_service.py` | 542 | 無頭 WebRTC 主機執行器 + 多平台服務安裝器。 |
+| `host_service.py` | 558 | 無頭 WebRTC 主機執行器 + 多平台服務安裝器。 |
 | `host_client.py` | 406 | TCP 主機的每連線處理器：一個檢視端一個實例,擁有它的認證交換、sender／audio／receiver 三條執行緒,以及入站訊息的路由表。 |
 | `registry.py` | 370 | `AC_remote_*` 指令使用的行程級單例。 |
 | `webrtc_transport.py` | 369 | 共用 WebRTC 管線：asyncio 橋接執行緒、螢幕視訊軌、設定。 |
-| `multi_viewer.py` | 314 | 每個連入檢視端各跑一個 `WebRTCDesktopHost` 的協調器。 |
+| `multi_viewer.py` | 339 | 每個連入檢視端各跑一個 `WebRTCDesktopHost` 的協調器。 |
 | `signaling_server.py` | 297 | 獨立的 WebRTC SDP 交換 rendezvous 服務。 |
 | `audit_log.py` | 288 | SQLite 雜湊鏈稽核記錄。 |
 | `host_capture.py` | 297 | TCP 主機的影格與游標產生：螢幕列舉、監視器索引轉擷取區域、預設 JPEG／游標 provider,以及 `FrameProductionMixin`（游標輪詢、擷取迴圈、上線編碼）。 |
@@ -764,7 +764,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `address_book.py` | 215 | 檢視端的主機通訊錄。 |
 | `audio.py` / `webrtc_audio.py` / `webrtc_mic.py` | 205 / 189 / 151 | 音訊擷取播放、音訊軌、麥克風上行。 |
 | `webrtc_files.py` | 205 | 專屬 DataChannel 的分塊檔案傳輸。 |
-| `webrtc_host_auth.py` | 222 | 檢視端認證與核准：token 檢查、信任清單／IP 白名單自動放行、手動接受／拒絕、SAS、逾時關閉。 |
+| `webrtc_host_auth.py` | 237 | 檢視端認證與核准：token 檢查、信任清單／IP 白名單自動放行、手動接受／拒絕、SAS、逾時關閉。 |
 | `lan_discovery.py` | 189 | mDNS／Zeroconf 區網探索。 |
 | `video_codec.py` | 181 | TCP／WS 路徑的可插拔視訊編解碼。 |
 | `webrtc_host_media.py` | 194 | 重新協商與 recvonly 軌管理。aiortc 沒有 `removeTransceiver`,所以開／關不對稱——開是加軌重新 offer,關只能設 inactive 並停掉 receiver。 |
@@ -1058,7 +1058,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | --- | ---: | ---: |
 | `gui/` | 91 | 26,791 |
 | `utils/mcp_server/` | 31 | 17,473 |
-| `utils/remote_desktop/` | 56 | 12,039 |
+| `utils/remote_desktop/` | 56 | 12,095 |
 | `utils/executor/` | 6 | 9,155 |
 | `utils/usb/` | 17 | 4,335 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,367 |
@@ -1077,5 +1077,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,957 |
-| **總計** | **1,037** | **142,031** |
+| **總計** | **1,037** | **142,087** |
 

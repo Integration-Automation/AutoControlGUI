@@ -67,6 +67,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **A WebRTC viewer could be approved without ever sending the token.** The
+  public `approve_pending_viewer` guard read `not pending and authenticated`,
+  so for a session whose viewer had sent nothing both were false and the
+  approval went through, cancelling the auth deadline and accepting input.
+  Only a viewer that presented the token and is waiting on the user can be
+  approved now; the token is compared with `hmac.compare_digest` instead of
+  `!=`, which leaked how many leading characters matched.
+
 - **The `pdf` extra now requires `pypdf>=6.16.1`** (was `>=4.0`).
   `extract_pdf_text`, `pdf_metadata` and `assert_pdf_text` open whatever PDF
   they are given, and every pypdf before 6.16.1 can be driven into an
@@ -85,6 +93,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Multi-viewer WebRTC host: sessions that outlived their viewer.** A
+  viewer waiting on the Accept/Reject dialog was torn down by the 5-second
+  auth deadline, so the user approved a dead session. A session whose peer
+  connection failed or closed stayed registered — `session_count` only grew
+  and screen capture never stopped once the last viewer left. An offer that
+  failed (consent refused, timeout) left a session the caller never learned
+  the id of, and the host-service daemon left one behind on every answer that
+  did not arrive within 300 s. All four now end the session.
 
 - **Flow control: seven ways a script did something other than it said.**
   A failed assertion inside an `AC_parallel` branch, or in an `AC_retry` that
