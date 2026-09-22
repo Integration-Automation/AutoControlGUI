@@ -24,6 +24,17 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **A remote desktop viewer from a stopped host could attach to the restarted
+  one.** `RemoteDesktopHost`, `RemoteDesktopRelay` and `RemoteDesktopViewer`
+  had the same shared-event restart as the services below. On the host it
+  mattered most: the accept loop performs the auth handshake (up to 60 s)
+  before re-checking the stop flag, so a handshake begun before `stop()` and
+  finished after the next `start()` passed that check and attached a viewer
+  authenticated against the old run to the new one. On the viewer, a receiver
+  outliving `disconnect()` marked the *next* connection as disconnected and
+  reported its own closing socket through that connection's `on_error`. Each
+  run now has its own event, and a receiver only touches its own connection.
+
 - **Restarting a background service could leave the old loop running beside
   the new one.** Sixteen services — the scheduler, trigger engine, e-mail
   triggers, hotkey daemon, screen observer, popup watchdog, clipboard history,

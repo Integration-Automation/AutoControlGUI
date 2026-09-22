@@ -214,10 +214,14 @@ class RemoteDesktopViewer:
         channel.settimeout(None)
         self._sock = sock
         self._channel = channel
-        self._shutdown.clear()
+        # A fresh event per run, never clear() on the old one: a receiver
+        # that outlived disconnect()'s join would see it cleared and resume beside
+        # the new run.
+        self._shutdown = threading.Event()
         self._connected = True
         self._receiver = threading.Thread(
-            target=self._recv_loop, name="rd-viewer", daemon=True,
+            target=self._recv_loop, args=(channel, self._shutdown),
+            name="rd-viewer", daemon=True,
         )
         self._receiver.start()
 
@@ -383,23 +387,27 @@ class RemoteDesktopViewer:
                 f"got {announced!r}"
             )
 
-    def _recv_loop(self) -> None:
-        channel = self._channel
-        if channel is None:
-            return
+    def _recv_loop(self, channel: MessageChannel,
+                   stop: threading.Event) -> None:
         try:
-            while not self._shutdown.is_set():
+            while not stop.is_set():
                 if not self._read_and_dispatch(channel):
                     return
         finally:
-            self._connected = False
+            # Only this run's connection: a receiver finishing after a
+            # reconnect must not mark the new connection as down.
+            if self._channel is channel:
+                self._connected = False
 
     def _read_and_dispatch(self, channel: MessageChannel) -> bool:
         """Read one typed message and dispatch it; return False on disconnect."""
         try:
             msg_type, payload = channel.read_typed()
         except (OSError, ProtocolError) as error:
-            self._notify_error(error)
+            # A read failing on a connection that has since been replaced
+            # is the old one closing, not an error in the new session.
+            if self._channel is channel:
+                self._notify_error(error)
             return False
         handler = _RECV_HANDLERS.get(msg_type)
         if handler is None:

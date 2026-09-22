@@ -149,7 +149,10 @@ class RelayServer:
     def start(self) -> None:
         if self.is_running:
             return
-        self._shutdown.clear()
+        # A fresh event per run, never clear() on the old one: a loop that
+        # outlived stop()'s join would see it cleared and resume beside
+        # the new run.
+        self._shutdown = threading.Event()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self._bind, self._requested_port))
@@ -164,7 +167,8 @@ class RelayServer:
         self._port = sock.getsockname()[1]
         self._listen_sock = sock
         self._accept_thread = threading.Thread(
-            target=self._accept_loop, name="relay-accept", daemon=True,
+            target=self._accept_loop, args=(self._shutdown,),
+            name="relay-accept", daemon=True,
         )
         self._accept_thread.start()
 
@@ -188,13 +192,13 @@ class RelayServer:
             self._accept_thread.join(timeout=timeout)
             self._accept_thread = None
 
-    def _accept_loop(self) -> None:
+    def _accept_loop(self, stop: threading.Event) -> None:
         # The timeout is already set by start(); touching the socket here would
         # reintroduce the shutdown race this loop is meant to survive.
         listen = self._listen_sock
         if listen is None:
             return
-        while not self._shutdown.is_set():
+        while not stop.is_set():
             try:
                 client_sock, _address = listen.accept()
             except socket.timeout:

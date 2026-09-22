@@ -222,7 +222,10 @@ class RemoteDesktopHost(FrameProductionMixin):
     def _start_locked(self) -> None:
         if self.is_running:
             return
-        self._shutdown.clear()
+        # A fresh event per run, never clear() on the old one: a loop that
+        # outlived stop()'s join would see it cleared and resume beside
+        # the new run.
+        self._shutdown = threading.Event()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self._bind, self._requested_port))
@@ -234,16 +237,19 @@ class RemoteDesktopHost(FrameProductionMixin):
         self._port = sock.getsockname()[1]
         self._listen_sock = sock
         self._accept_thread = threading.Thread(
-            target=self._accept_loop, name="rd-accept", daemon=True,
+            target=self._accept_loop, args=(self._shutdown,),
+            name="rd-accept", daemon=True,
         )
         self._capture_thread = threading.Thread(
-            target=self._capture_loop, name="rd-capture", daemon=True,
+            target=self._capture_loop, args=(self._shutdown,),
+            name="rd-capture", daemon=True,
         )
         self._accept_thread.start()
         self._capture_thread.start()
         if self._cursor_provider is not None:
             self._cursor_thread = threading.Thread(
-                target=self._cursor_loop, name="rd-cursor", daemon=True,
+                target=self._cursor_loop, args=(self._shutdown,),
+                name="rd-cursor", daemon=True,
             )
             self._cursor_thread.start()
         self._start_audio_capture()
@@ -522,14 +528,14 @@ class RemoteDesktopHost(FrameProductionMixin):
                 pass
             return None
 
-    def _accept_loop(self) -> None:
+    def _accept_loop(self, stop: threading.Event) -> None:
         # The timeout is set by start() on the owning thread, before the socket
         # is published: calling settimeout() here would race a concurrent
         # stop() closing it and raise WSAENOTSOCK outside any handler.
         listen = self._listen_sock
         if listen is None:
             return
-        while not self._shutdown.is_set():
+        while not stop.is_set():
             try:
                 client_sock, address = listen.accept()
             except socket.timeout:
@@ -560,7 +566,7 @@ class RemoteDesktopHost(FrameProductionMixin):
                 # the handler is registered *after* that snapshot, so nothing
                 # ever stops it — leaving a viewer dispatching input to a host
                 # the operator has already stopped.
-                if self._shutdown.is_set():
+                if stop.is_set():
                     autocontrol_logger.info(
                         "remote_desktop dropping %s: host stopped during "
                         "handshake", address,
