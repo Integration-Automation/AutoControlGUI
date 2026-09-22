@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,042 |
-| 程式碼總行數 | 141,928 |
+| Python 模組總數（含周邊子專案） | 1,043 |
+| 程式碼總行數 | 142,003 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -268,7 +268,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 12,991 行。
+> 24 個套件、約 13,002 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -293,7 +293,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/script_vars/` | 190 | 執行期變數作用域與 `${var}` / `${secrets.*}` 插值 |
 | `utils/skill_library/` | 116 | 具名可重用 action 序列（skill）的持久化倉庫 |
 | `utils/state_machine/` | 181 | 宣告式有限狀態機驅動 action JSON |
-| `utils/stubs/` | 276 | 為 `AC_*` 指令面產生型別 stub |
+| `utils/stubs/` | 287 | 為 `AC_*` 指令面產生型別 stub |
 | `utils/test_record/` | 66 | 全域測試紀錄單例，記錄每個動作的參數與例外 |
 | `utils/work_queue/` | 182 | 交易式工作佇列（dispatcher／performer），支撐大量批次執行 |
 
@@ -510,7 +510,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 18,006 行。
+> 6 個套件、約 18,020 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -518,7 +518,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/config_sync/` | 246 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
 | `utils/remote_desktop/` | 12,039 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
-| `utils/usb/` | 4,321 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
+| `utils/usb/` | 4,335 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 928 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
@@ -715,7 +715,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `tools/_handlers_runs.py` | 110 | 同一種 adapter，執行主題：executor、執行歷史、錄製、動作檔。 |
 | `tools/_handlers_scheduling.py` | 200 | 同一種 adapter，排程主題：排程器、觸發器、熱鍵常駐。 |
 | `tools/_handlers_remote.py` | 66 | 同一種 adapter，遠端桌面的 host 與 viewer。 |
-| `tools/_handlers_executor_bridge.py` | 1,448 | 252 個純委派（中位數 3 行，最長的 16 行全是參數簽章）：每個都是 `from action_executor import _x` 再 `return _x(...)`，沒有分支邏輯。扁平表格,依 `CLAUDE.md` 的 flat data tables 條款不受 750 行限制。 |
+| `tools/_handlers_executor_bridge.py` | 1,448 | 252 個純委派（中位數 3 行，最長的 16 行全是參數簽章）：每個都是 `from action_executor import _x` 再 `return _x(...)`，沒有分支邏輯。超過 750 行,理由記在 `Progress.md` 的豁免表（再切只能照 MCP 工廠領域分,會把同一種委派散進十幾個沒有語意邊界的檔）。 |
 | `tools/_handlers_locators.py` | 417 | 同一種 adapter，定位主題：無障礙樹、智慧等待、自我修復、螢幕觀察、座標空間、視覺與 OCR、影像去重、元件倉庫、A/B 定位。 |
 | `tools/_handlers_operations.py` | 644 | 同一種 adapter，營運主題：agent 與其記憶／追蹤、治理與合規、成本與遙測、失敗掛鉤、看門狗、速率限制、檢查點、核可、產物與資產、測試選擇與分片、佇列與 saga。 |
 | `server.py` | 717 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器。 |
@@ -787,7 +787,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 72 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
 | `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 40 / 29 / 146 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
-#### `utils/usb/`（4,321 行）與 `utils/usbip/`（928 行）
+#### `utils/usb/`（4,335 行）與 `utils/usbip/`（928 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -804,7 +804,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `usb/passthrough/key_provider.py` | 125 | ACL 的可插拔 HMAC 金鑰來源。 |
 | `usb/passthrough/commands.py` | 150 | 無頭直通指令（單一真實來源）。 |
 | `usb/usb_devices.py` | 296 | 跨平台 USB 裝置列舉。 |
-| `usb/usb_watcher.py` | 246 | 輪詢式 USB 熱插拔監看。 |
+| `usb/usb_watcher.py` | 260 | 輪詢式 USB 熱插拔監看。 |
 | `usbip/protocol.py` | 330 | USB/IP 線路格式封裝／解析。 |
 | `usbip/server.py` | 241 | USB/IP 主機端 TCP 伺服器。 |
 | `usbip/libusb_backend.py` | 210 | 以 PyUSB／libusb 執行 URB 的正式後端。 |
@@ -940,13 +940,14 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | diagnostics | `diagnostics_tab.py` | 91 | 執行子系統檢查並顯示結果。 |
 | report | `_report_tab.py` | 81 | 產生 HTML／JSON／XML 報表。 |
 
-#### 遠端桌面 GUI（`gui/remote_desktop/`，18 檔／6,343 行）
+#### 遠端桌面 GUI（`gui/remote_desktop/`，19 檔／6,393 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `webrtc_panel.py` | 2,550 | WebRTC 子分頁主體。 |
+| `webrtc_panel.py` | 2,530 | WebRTC 子分頁主體。 |
 | `webrtc_dialogs.py` | 493 | WebRTC GUI 用的自訂對話框與清單元件（待審檢視者、信任清單、通訊錄、遠端檔案表、稽核記錄、LAN 瀏覽）。 |
 | `advanced_group.py` | 92 | 兩個 WebRTC 面板共用的 Advanced STUN／TURN（含選用硬體編碼器）群組，含它寫回面板的 Protocol。 |
+| `trusted_group.py` | 70 | WebRTC host 面板的信任 viewer 清單群組（移除／清空／匯入／匯出），含它寫回面板的 Protocol。 |
 | `connection_screen.py` | 672 | Quick Connect —— AnyDesk 風格單畫面入口。 |
 | `viewer_panel.py` | 542 | 「控制另一台機器」子分頁。 |
 | `webrtc_known_hosts.py` | 342 | TOFU 釘選庫瀏覽器：`KnownHostsDialog` 與帶外釘選用的小表單。由 `webrtc_dialogs` 再匯出。 |
@@ -1055,11 +1056,11 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 90 | 26,722 |
+| `gui/` | 91 | 26,772 |
 | `utils/mcp_server/` | 31 | 17,473 |
 | `utils/remote_desktop/` | 56 | 12,039 |
 | `utils/executor/` | 6 | 9,081 |
-| `utils/usb/` | 17 | 4,321 |
+| `utils/usb/` | 17 | 4,335 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,367 |
 | `utils/accessibility/` | 13 | 2,842 |
 | `wrapper/` | 19 | 3,551 |
@@ -1075,6 +1076,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,946 |
-| **總計** | **1,036** | **141,863** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,957 |
+| **總計** | **1,037** | **141,938** |
 

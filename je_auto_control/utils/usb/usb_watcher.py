@@ -85,6 +85,9 @@ class UsbHotplugWatcher:
         self._thread: Optional[threading.Thread] = None
         self._lifecycle_lock = threading.Lock()
         self._snapshot: Dict[_DeviceKey, UsbDevice] = {}
+        #: Bumped by every snapshot write, so a slow priming
+        #: enumeration can tell whether it is still the newest reading.
+        self._snapshot_epoch = 0
         self._events: Deque[UsbEvent] = deque(maxlen=int(event_log_capacity))
         self._next_seq: int = 1
 
@@ -150,6 +153,7 @@ class UsbHotplugWatcher:
             count = len(self._events)
             self._events.clear()
             self._snapshot = {}
+            self._snapshot_epoch += 1
             self._next_seq = 1
         return count
 
@@ -161,6 +165,8 @@ class UsbHotplugWatcher:
         # Prime the snapshot without emitting events for already-present
         # devices — the watcher tracks *changes from now*, not the
         # initial inventory.
+        with self._lock:
+            epoch = self._snapshot_epoch
         try:
             initial = self._enumerator()
             with self._lifecycle_lock:
@@ -172,9 +178,16 @@ class UsbHotplugWatcher:
                 if stop is not self._stop:
                     return
                 with self._lock:
+                    # ...unless a poll already wrote a newer reading while
+                    # this enumeration was running: stop() gives up after
+                    # _STOP_JOIN_TIMEOUT_S, so poll_once() can land first, and
+                    # priming over it would report its devices as removed next.
+                    if self._snapshot_epoch != epoch:
+                        return
                     self._snapshot = {
                         _device_key(dev): dev for dev in initial.devices
                     }
+                    self._snapshot_epoch += 1
         except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: enumeration may fail per-OS
             autocontrol_logger.warning(
                 "usb hotplug initial enumeration: %r", error,
@@ -217,6 +230,7 @@ class UsbHotplugWatcher:
                 self._events.append(event)
                 new_events.append(event)
             self._snapshot = current
+            self._snapshot_epoch += 1
         if self._callback is not None:
             for event in new_events:
                 try:

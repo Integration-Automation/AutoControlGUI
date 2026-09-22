@@ -206,3 +206,15 @@ def test_the_shipped_stub_lists_every_executor_command():
     live = {name for name in Executor().event_dict if isinstance(name, str)}
     assert shipped == live, (
         f"missing: {sorted(live - shipped)[:10]} stale: {sorted(shipped - live)[:10]}")
+
+
+def test_a_long_docstring_line_is_wrapped_too():
+    """The stub is linted at 120 columns; a handler's summary is unbounded."""
+    from je_auto_control.utils.stubs import generator as gen
+    summary = "Wait until " + "a very descriptive condition " * 6 + "holds."
+    out = render_pyi([_sig("AC_x", "", "None", doc=summary)])
+    assert max(len(line) for line in out.splitlines()) <= gen.MAX_LINE_LENGTH
+    import ast
+    module = ast.parse(out)
+    text = ast.get_docstring(module.body[-1]) or ""
+    assert " ".join(text.split()) == " ".join(summary.split())

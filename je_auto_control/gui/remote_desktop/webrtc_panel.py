@@ -40,12 +40,15 @@ from je_auto_control.gui.remote_desktop.annotation_overlay import (
     HostAnnotationOverlay,
 )
 from je_auto_control.gui.remote_desktop.tray_icon import install_host_tray
+from je_auto_control.gui.remote_desktop.trusted_group import (
+    build_trusted_group,
+)
 from je_auto_control.gui.remote_desktop.viewer_screen_window import (
     ViewerScreenWindow,
 )
 from je_auto_control.gui.remote_desktop.webrtc_dialogs import (
     AddressBookList, AuditLogDialog, KnownHostsDialog, LanBrowseDialog,
-    PendingViewerDialog, RemoteFilesTable, TrustedViewersList,
+    PendingViewerDialog, RemoteFilesTable,
 )
 from je_auto_control.gui.remote_desktop.webrtc_workers import (
     HostPublishLoopWorker, ViewerAnswerPushWorker, ViewerSignalingWorker,
@@ -229,7 +232,7 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         layout.addWidget(self._build_config_group())
         layout.addWidget(self._build_manual_group())
         layout.addWidget(build_advanced_group(self, include_hw_codec=True))
-        layout.addWidget(self._build_trusted_group())
+        layout.addWidget(build_trusted_group(self))
         self._status_label = QLabel(_t("rd_webrtc_status_idle"))
         layout.addWidget(self._status_label)
         sessions_row = QHBoxLayout()
@@ -333,29 +336,6 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
             self._status_label.setText(
                 _t("rd_webrtc_hw_codec_failed").format(codec=codec),
             )
-
-    def _build_trusted_group(self) -> QGroupBox:
-        group = self._tr(QGroupBox(), "rd_webrtc_trusted_group")
-        layout = QVBoxLayout()
-        self._trusted_list = TrustedViewersList()
-        self._trusted_list.removed.connect(self._on_remove_trust)
-        layout.addWidget(self._trusted_list)
-        button_row = QHBoxLayout()
-        remove_btn = self._tr(QPushButton(), "rd_webrtc_remove_trusted")
-        remove_btn.clicked.connect(self._on_remove_trust_button)
-        button_row.addWidget(remove_btn)
-        clear_btn = self._tr(QPushButton(), "rd_webrtc_clear_trusted")
-        clear_btn.clicked.connect(self._on_clear_trust)
-        button_row.addWidget(clear_btn)
-        import_btn = self._tr(QPushButton(), "rd_webrtc_trust_import")
-        import_btn.clicked.connect(self._on_import_trust)
-        button_row.addWidget(import_btn)
-        export_btn = self._tr(QPushButton(), "rd_webrtc_trust_export")
-        export_btn.clicked.connect(self._on_export_trust)
-        button_row.addWidget(export_btn)
-        layout.addLayout(button_row)
-        group.setLayout(layout)
-        return group
 
     def _on_export_trust(self) -> None:
         import json as _json

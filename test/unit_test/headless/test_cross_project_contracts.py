@@ -161,3 +161,41 @@ def test_gui_widget_pybreeze_embeds_is_still_there():
     classes = {node.name for node in ast.walk(ast.parse(source))
                if isinstance(node, ast.ClassDef)}
     assert "AutoControlGUIWidget" in classes
+
+
+def test_key_tables_jeffrey_rpa_reads():
+    """``platform_wrapper.keyboard_keys_table`` / ``mouse_keys_table``.
+
+    Jeffrey_RPA validates every key name a user types against the keyboard
+    table before sending it, and reverse-looks-up recorded virtual keys
+    through it, so a name that disappears from it becomes a rejected hotkey
+    there. Its own fixture asserts at least 100 entries, and it names these
+    keys directly.
+    """
+    from je_auto_control.wrapper import platform_wrapper
+
+    keyboard = platform_wrapper.keyboard_keys_table
+    mouse = platform_wrapper.mouse_keys_table
+    assert isinstance(keyboard, dict) and len(keyboard) >= 100
+    assert isinstance(mouse, dict) and len(mouse) >= 3
+    for name in ("mouse_left", "mouse_right", "mouse_middle"):
+        assert name in mouse, name
+    for name in ("up", "down", "left", "right", "space", "tab", "shift",
+                 "a", "z", "0", "9", "f1", "f12"):
+        assert name in keyboard, name
+
+
+@pytest.mark.skipif(not sys.platform.startswith("win"),
+                    reason="Jeffrey_RPA drives Windows; other backends name "
+                           "their keys differently and it skips there too")
+def test_windows_key_names_jeffrey_rpa_sends():
+    """Names Jeffrey_RPA's aliases resolve to, as this backend spells them.
+
+    Its own alias test fails when a target disappears, but only once someone
+    runs that suite; this is the side that ships the table.
+    """
+    from je_auto_control.wrapper import platform_wrapper
+
+    for name in ("return", "escape", "control", "menu", "back", "delete",
+                 "home", "end", "insert", "capital", "vk_down"):
+        assert name in platform_wrapper.keyboard_keys_table, name

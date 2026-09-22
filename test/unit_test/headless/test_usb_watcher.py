@@ -318,3 +318,29 @@ def test_a_superseded_run_does_not_overwrite_the_new_snapshot(monkeypatch):
         enumerator.release.set()
         monkeypatch.setattr(usb_watcher, "_STOP_JOIN_TIMEOUT_S", 2.0)
         watcher.stop()
+
+
+def test_priming_does_not_overwrite_a_snapshot_taken_while_it_ran(monkeypatch):
+    """``stop()`` gives up after its timeout; the poller may still be inside
+    its first enumeration, and a ``poll_once()`` in between writes the newer
+    reading. Priming over it would report that reading's devices as removed
+    on the next poll.
+    """
+    monkeypatch.setattr(usb_watcher, "_STOP_JOIN_TIMEOUT_S", 0.05)
+    enumerator = _SlowFirstEnumerator([_dev("old", "1")], [_dev("new", "2")])
+    watcher = UsbHotplugWatcher(enumerator=enumerator)
+    before = set(_pollers())
+    watcher.start()
+    try:
+        assert enumerator.entered.wait(2.0)
+        stale = [t for t in _pollers() if t not in before]
+        watcher.stop()                      # returns while priming still runs
+        assert {e.device.product_id for e in watcher.poll_once()} == {"2"}
+        enumerator.release.set()            # the priming enumeration finishes
+        for thread in stale:
+            thread.join(2.0)
+        assert _snapshot_ids(watcher) == {"2"}
+        assert watcher.poll_once() == []    # no phantom removal of "2"
+    finally:
+        enumerator.release.set()
+        watcher.stop()

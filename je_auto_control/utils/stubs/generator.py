@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import inspect
 import sys
+import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
@@ -216,12 +217,22 @@ def _render_head(sig: StubSignature) -> str:
     return "".join(lines)
 
 
+def _render_docstring(text: str) -> str:
+    """The one-line docstring, wrapped when it would pass the line limit.
+
+    The stub is checked by the same ``E501`` rule as the package, and a
+    handler's first docstring line is not bounded by anything.
+    """
+    single = f'    """{text}"""\n'
+    if len(single) - 1 <= MAX_LINE_LENGTH:
+        return single
+    wrapped = textwrap.wrap(text, MAX_LINE_LENGTH - 8) or [text]
+    return '    """' + "\n    ".join(wrapped) + '"""\n'
+
+
 def _render_signature(sig: StubSignature) -> str:
     head = _render_head(sig)
-    if sig.docstring:
-        body = f'    """{sig.docstring}"""\n'
-    else:
-        body = "    ...\n"
+    body = _render_docstring(sig.docstring) if sig.docstring else "    ...\n"
     return head + body + "\n"
 
 

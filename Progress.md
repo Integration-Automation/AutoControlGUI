@@ -19,17 +19,19 @@
 
 `CLAUDE.md` §Size and complexity limits 規定:超標檔案只能列在這裡,列不進來的就是缺陷。
 清單上的檔案**可以改、可以變短,但不得再變長**——要再長就得先拆。
-行數為 2026-08-19 實測（`len(text.splitlines())`）；`webrtc_panel.py` 於
-2026-08-22 拆出 `advanced_group.py` 後降到 2,545，上限跟著往下走。
+行數為實測（`len(text.splitlines())`）；`webrtc_panel.py` 於 2026-08-22 拆出
+`advanced_group.py`、2026-09-23 拆出 `trusted_group.py` 後降到 2,530，上限跟著往下走。
+**這張表現在有測試在守**：`test/unit_test/headless/test_file_length_budget.py` 比對本表與樹，
+超標未列、列上的檔案變長、或已經縮到線內卻還留著的列，都會紅。
 
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
-| `gui/remote_desktop/webrtc_panel.py` | 2,545 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
+| `utils/mcp_server/tools/_handlers_executor_bridge.py` | 1,448 | 2026-09-23 拆 `_handlers.py` 時新建。252 個純委派（中位數 3 行）：`from action_executor import _x` 再 `return _x(...)`,沒有分支。**不套用 flat data tables 條款**——那一條講的是「一個對照表或清單」,這裡是 252 個函式定義。再切下去只能照 MCP 工廠領域分（159 個領域）,那會把同一種委派散進十幾個檔,而它們之間沒有語意邊界。規則照舊:只准變短。 |
+| `gui/remote_desktop/webrtc_panel.py` | 2,530 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
 | `utils/accessibility/backends/windows_backend.py` | 923 | 已拆出 `windows_query.py`（170）與 `windows_state.py`（98）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。**2026-08-24 從 918 長到 923**:見下面的說明。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
 `utils/mcp_server/tools/_factories.py`（8,975,MCP 工具註冊表）、
-`utils/mcp_server/tools/_handlers_executor_bridge.py`（1,448,252 個純委派,中位數 3 行:`from action_executor import _x` 再 `return _x(...)`,沒有分支）、
 `utils/executor/action_executor.py`（8,131,`AC_*` 分派表）、
 `gui/script_builder/command_schema.py`（5,051,每個 `AC_*` 的參數 schema）、
 `je_auto_control/__init__.py`（1,970,門面 re-export）、

@@ -58,6 +58,8 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-11 | 2026-09-23 | The 750-line limit is now a gate, and it caught one | #done #quality | [2026-09](2026-09.md) |
+| U-20260923-10 | 2026-09-23 | Review follow-ups: priming race, stub width, key-table contract | #done #review | [2026-09](2026-09.md) |
 | U-20260923-09 | 2026-09-23 | _handlers.py under the line limit: nine themed modules | #done #mcp | [2026-09](2026-09.md) |
 | U-20260923-08 | 2026-09-23 | Import no longer sets the root logger to DEBUG | #done #logging | [2026-09](2026-09.md) |
 | U-20260923-07 | 2026-09-23 | Tests get their own home; no state path resolved at import | #done #testing #state | [2026-09](2026-09.md) |
@@ -114,7 +116,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 25 |
+| [2026-09.md](2026-09.md) | 2026-09 | 27 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |
