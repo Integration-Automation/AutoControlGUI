@@ -100,8 +100,9 @@ wrapper/auto_control_record.record → OS listener (e.g. windows/record/win32_in
 4. Describe its parameters in `gui/script_builder/command_schema.py` (Script Builder form).
 5. Optional MCP tool: factory in `utils/mcp_server/tools/_factories.py`, adapter in the themed handler module —
    `_handlers_input.py`, `_handlers_screen.py`, `_handlers_system.py`, `_handlers_runs.py`,
-   `_handlers_scheduling.py`, `_handlers_remote.py`, `_handlers_qa.py`, or `_handlers.py` for the locator and
-   WebRunner-bridge themes still in it.
+   `_handlers_scheduling.py`, `_handlers_remote.py`, `_handlers_locators.py`, `_handlers_operations.py`,
+   `_handlers_qa.py`, `_handlers_executor_bridge.py` (a three-line delegation to an executor function), or
+   `_handlers.py` for data, text and the WebRunner bridge.
 6. GUI: thin widget in `gui/`, registered in `gui/main_widget.py` (`_add_tab`) with commands exposed through
    `menu_actions()`; strings in every `gui/language_wrapper/*.py` catalogue.
 7. Headless test in `test/unit_test/headless/`.

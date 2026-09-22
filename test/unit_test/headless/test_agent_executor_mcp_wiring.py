@@ -64,7 +64,9 @@ def test_mcp_handler_round_trips(monkeypatch):
     _patch_backends(monkeypatch, [
         {"stop": True, "message": "mcp-ok"},
     ])
-    from je_auto_control.utils.mcp_server.tools._handlers import run_agent
+    from je_auto_control.utils.mcp_server.tools._handlers_executor_bridge import (
+        run_agent,
+    )
     record = run_agent(
         goal="probe-mcp", backend="openai",
         max_steps=2, wall_seconds=5.0,

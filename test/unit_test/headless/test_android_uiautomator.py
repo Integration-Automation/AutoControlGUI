@@ -148,7 +148,7 @@ def test_mcp_handler_round_trip(monkeypatch):
         "je_auto_control.android.click_element",
         lambda **kw: (50, 75),
     )
-    from je_auto_control.utils.mcp_server.tools._handlers import (
+    from je_auto_control.utils.mcp_server.tools._handlers_executor_bridge import (
         android_click_element,
     )
     assert android_click_element(text="Next") == {"x": 50, "y": 75}

@@ -24,12 +24,12 @@
 
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
-| `utils/mcp_server/tools/_handlers.py` | 2,992 | 676 個 MCP 工具的處理函式本體。邊界乾淨的七個主題已經拆出去（`_handlers_qa`／`_input`／`_screen`／`_system`／`_runs`／`_scheduling`／`_remote`）。剩下的是 `# === Semantic locators`（2,437 行、421 個 adapter，長年被當成雜物間）與 `# === WebRunner bridge`（542）兩節,**要先按主題重排才能再切**——照現有標題切只會把不相干的東西一起搬走。 |
 | `gui/remote_desktop/webrtc_panel.py` | 2,545 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
 | `utils/accessibility/backends/windows_backend.py` | 923 | 已拆出 `windows_query.py`（170）與 `windows_state.py`（98）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。**2026-08-24 從 918 長到 923**:見下面的說明。 |
 
 **本質豁免（依 `CLAUDE.md` 的「flat data tables」條款,不算既有豁免）**:
 `utils/mcp_server/tools/_factories.py`（8,975,MCP 工具註冊表）、
+`utils/mcp_server/tools/_handlers_executor_bridge.py`（1,448,252 個純委派,中位數 3 行:`from action_executor import _x` 再 `return _x(...)`,沒有分支）、
 `utils/executor/action_executor.py`（8,131,`AC_*` 分派表）、
 `gui/script_builder/command_schema.py`（5,051,每個 `AC_*` 的參數 schema）、
 `je_auto_control/__init__.py`（1,970,門面 re-export）、
@@ -43,6 +43,8 @@
 **維護者已於 2026-08-19 拍板:接受實測數字當新基準**——不為了回到舊數字而去拆
 `_handlers.py`（4,789）與 `webrtc_panel.py`。上表的行數即是各自的新上限,
 規則不變:只准變短,再變長就得先拆。
+（`_handlers.py` 後來還是拆了:2026-09-22 拆出 QA 主題,2026-09-23 再拆出九個主題模組,
+本體降到 522 行、離開上表。見 `docs/updates/` 的 U-20260922-05 與 U-20260923-09。）
 
 同一批裡有六個檔案在 2026-08-19 已經拆回線內、從表上移除,做法寫在
 commit `46f4cd5` 的說明裡（`docs/updates/` 沒有對應條目：舊的 `WHATS_NEW.md` 從沒記過這件事）。
