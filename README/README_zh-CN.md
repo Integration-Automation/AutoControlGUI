@@ -323,7 +323,7 @@ Windows 有实现，其他平台会抛出明确的 `NotImplementedError`。对�
 ## 开发
 
 ```bash
-git clone https://github.com/Intergration-Automation-Testing/AutoControl.git
+git clone https://github.com/Integration-Automation/AutoControlGUI.git
 cd AutoControl
 pip install -r dev_requirements.txt
 uv sync                 # 或：以已提交的 uv.lock 做可重现安装
@@ -349,6 +349,6 @@ bandit -c pyproject.toml -r je_auto_control/
 [MIT License](../LICENSE) © JE-Chen。
 内含与可选第三方组件的许可请见 [Third_Party_License.md](../Third_Party_License.md)。
 
-- **主页**：https://github.com/Intergration-Automation-Testing/AutoControl
+- **主页**：https://github.com/Integration-Automation/AutoControlGUI
 - **PyPI**：https://pypi.org/project/je_auto_control/
 - **文档**：https://autocontrol.readthedocs.io/en/latest/

@@ -74,9 +74,9 @@ je_auto_control_mcp = "je_auto_control.utils.mcp_server.__main__:main"
 je_auto_control = "je_auto_control.utils.pytest_plugin.plugin"
 
 [project.urls]
-Homepage = "https://github.com/Intergration-Automation-Testing/AutoControl"
+Homepage = "https://github.com/Integration-Automation/AutoControlGUI"
 Documentation = "https://autocontrol.readthedocs.io/en/latest/"
-Code = "https://github.com/Intergration-Automation-Testing/AutoControl"
+Code = "https://github.com/Integration-Automation/AutoControlGUI"
 
 [project.readme]
 file = "README.md"

@@ -354,7 +354,7 @@ ignore synthetic input, and fall back silently when the driver is absent.
 ## Development
 
 ```bash
-git clone https://github.com/Intergration-Automation-Testing/AutoControl.git
+git clone https://github.com/Integration-Automation/AutoControlGUI.git
 cd AutoControl
 pip install -r dev_requirements.txt
 uv sync                 # or: reproducible install from the committed uv.lock
@@ -382,6 +382,6 @@ API and a GUI surface.
 See [Third_Party_License.md](Third_Party_License.md) for the licenses of bundled and
 optional third-party components.
 
-- **Homepage**: https://github.com/Intergration-Automation-Testing/AutoControl
+- **Homepage**: https://github.com/Integration-Automation/AutoControlGUI
 - **PyPI**: https://pypi.org/project/je_auto_control/
 - **Documentation**: https://autocontrol.readthedocs.io/en/latest/

@@ -1,6 +1,6 @@
 """Phase 7.7: bridge AutoControl action JSON over to WebRunner (``je_web_runner``).
 
-The sister project at https://github.com/Intergration-Automation-Testing/WebRunner
+The sister project at https://github.com/Integration-Automation/WebRunner
 exposes ~440 ``WR_*`` commands for Selenium / Playwright browser
 automation. This bridge lets an AutoControl script call into those
 commands from the same JSON file by issuing ``AC_web_run`` /

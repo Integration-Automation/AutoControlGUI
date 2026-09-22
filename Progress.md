@@ -242,3 +242,14 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 - **`CHANGELOG.md` 沒有任何版本節。** 全檔只有 `## Unreleased`，但它建立（2026-07-03）之後
   打過的 tag 有 v0.0.216–v0.0.222，其中 v0.0.219–v0.0.222 是 2026-08-19 到 08-23 發的，
   沒有一個有自己的版本節。已發佈的內容要從 Unreleased 切到各自的版本底下。
+
+---
+
+## MCP registry 的名稱還是拼錯的舊 org
+
+`DECIDE` — `je_auto_control/utils/mcp_registry/registry.py`:19–20 的 `_SERVER_NAME`
+（`io.github.intergration-automation-testing/autocontrol`）與 `_REPO_URL` 仍是舊 org
+`Intergration-Automation-Testing`。其他地方的網址 2026-09-22 已改成
+`Integration-Automation/AutoControlGUI`（工作區 X-11），這兩個刻意沒動：
+`io.github.<owner>/…` 命名空間要以該 GitHub 帳號登入才能發佈，改名等於換一個 registry
+條目。先確認這個名稱有沒有真的發佈到 MCP registry；沒有就直接改，有的話要改名並重新發佈。
