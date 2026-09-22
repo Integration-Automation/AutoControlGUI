@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,045 |
-| 程式碼總行數 | 143,045 |
+| 程式碼總行數 | 143,119 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,239 |
@@ -270,7 +270,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 13,319 行。
+> 24 個套件、約 13,396 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -285,7 +285,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/flow_debugger/` | 142 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 359 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
 | `utils/json/` | 94 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
-| `utils/json_store/` | 78 | JSON 字典檔持久化的共用小工具（內部管線） |
+| `utils/json_store/` | 155 | JSON 字典檔持久化的共用小工具（內部管線） |
 | `utils/loop_guard/` | 140 | 機械式卡死迴圈偵測（agent loop 用） |
 | `utils/plugin_loader/` | 85 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
 | `utils/plugin_sdk/` | 68 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
@@ -628,13 +628,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,321 行。
+> 13 個套件、約 2,322 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/config_redaction/` | 75 | 設定結構與 log 字串的機密遮蔽 |
 | `utils/egress/` | 114 | 無頭 HTTP 用戶端的網路外連允許清單守衛 |
-| `utils/governance/` | 199 | 治理：maker-checker 核准閘門與即時憑證租約 |
+| `utils/governance/` | 200 | 治理：maker-checker 核准閘門與即時憑證租約 |
 | `utils/license_policy/` | 139 | 以 SBOM 元件評估 SPDX 授權允許／拒絕政策 |
 | `utils/provenance/` | 104 | SLSA 建置來源證明（in-toto v1） |
 | `utils/rbac/` | 269 | 角色型存取控制與逐使用者稽核歸因 |
@@ -648,12 +648,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 1,706 行。
+> 14 個套件、約 1,702 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/artifact_store/` | 114 | S3 相容產出物儲存（報表／截圖／錄影） |
-| `utils/assets/` | 155 | 環境範圍的型別化資產／設定儲存（UiPath Assets 風格） |
+| `utils/assets/` | 151 | 環境範圍的型別化資產／設定儲存（UiPath Assets 風格） |
 | `utils/bulkhead/` | 134 | Bulkhead 併發隔離 + 伺服器限流標頭解析 |
 | `utils/chaos/` | 153 | 決定性混沌實驗（穩態假說 + 故障注入） |
 | `utils/dedup_window/` | 63 | 時間視窗內的訊息去重 |
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,390 |
-| **總計** | **1,039** | **142,980** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,464 |
+| **總計** | **1,039** | **143,054** |
 

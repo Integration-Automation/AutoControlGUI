@@ -15,7 +15,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
-from je_auto_control.utils.json_store import read_json_dict, write_json_dict
+from je_auto_control.utils.json_store import SharedJsonDict
 
 ENV_VAR = "JE_AUTOCONTROL_ENV"
 DEFAULT_ENV = "default"
@@ -66,27 +66,24 @@ class AssetStore:
                  secret_resolver: Optional[Callable[[str], Any]] = None
                  ) -> None:
         """``secret_resolver(name)`` resolves ``credential`` references lazily."""
-        self._path = db_path
+        # Re-read and locked per change, so processes sharing the file do
+        # not overwrite each other's assets.
+        self._state = SharedJsonDict(db_path)
         self._resolver = secret_resolver
-        self._data: Dict[str, Dict[str, Dict[str, Any]]] = read_json_dict(
-            db_path)
-
-    def _flush(self) -> None:
-        if self._path is not None:
-            write_json_dict(self._path, self._data)
 
     def set(self, name: str, value: Any, *, asset_type: str = TYPE_TEXT,
             environment: str = DEFAULT_ENV) -> None:
         """Store ``value`` for ``name`` under ``environment`` with a type tag."""
-        self._data.setdefault(environment, {})[name] = {
-            "type": asset_type, "value": value}
-        self._flush()
+        record = {"type": asset_type, "value": value}
+        self._state.update(
+            lambda data: data.setdefault(environment, {}).__setitem__(name, record))
 
     def _lookup(self, name: str, environment: str,
                 fallback_to_default: bool) -> Optional[Dict[str, Any]]:
-        record = self._data.get(environment, {}).get(name)
+        data = self._state.read()
+        record = data.get(environment, {}).get(name)
         if record is None and fallback_to_default and environment != DEFAULT_ENV:
-            record = self._data.get(DEFAULT_ENV, {}).get(name)
+            record = data.get(DEFAULT_ENV, {}).get(name)
         return record
 
     def get(self, name: str, *, environment: str = DEFAULT_ENV,
@@ -110,18 +107,17 @@ class AssetStore:
 
     def delete(self, name: str, *, environment: str = DEFAULT_ENV) -> bool:
         """Delete an asset; return whether it existed."""
-        removed = self._data.get(environment, {}).pop(name, None) is not None
-        if removed:
-            self._flush()
-        return removed
+        return self._state.update(
+            lambda data: data.get(environment, {}).pop(name, None) is not None)
 
     def list(self, *, environment: Optional[str] = None) -> List[Asset]:
         """List assets, optionally restricted to one ``environment``."""
-        envs = [environment] if environment else list(self._data)
+        data = self._state.read()
+        envs = [environment] if environment else list(data)
         return [
             Asset(name, str(rec["type"]), env, rec["value"])
             for env in envs
-            for name, rec in self._data.get(env, {}).items()
+            for name, rec in data.get(env, {}).items()
         ]
 
 

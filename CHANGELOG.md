@@ -150,6 +150,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Approval gate, asset store and locator-repair store across processes.**
+  Each change re-reads the file under a lock file, so processes sharing it no
+  longer overwrite each other; an approval request can be decided only once.
+
 - **Recording and hotkeys.** A recording that cannot start no longer
   replaces the output file with `[]`; starting a second recording stops the
   first input hook instead of leaking it. Hotkeys on punctuation keys
