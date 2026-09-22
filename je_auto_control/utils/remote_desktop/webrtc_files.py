@@ -30,9 +30,9 @@ from je_auto_control.utils.remote_desktop.webrtc_transport import get_bridge
 
 
 _DEFAULT_CHUNK_SIZE = 16 * 1024  # 16 KB; SCTP message limit varies, 16K is safe
-_DEFAULT_INBOX = (
-    Path(os.path.expanduser("~")) / ".je_auto_control" / "inbox"
-)
+def default_inbox_dir() -> Path:
+    """``~/.je_auto_control/inbox``, resolved at call time."""
+    return Path(os.path.expanduser("~")) / ".je_auto_control" / "inbox"
 
 
 class FileTransferError(RuntimeError):
@@ -54,7 +54,7 @@ class FileTransferReceiver:
     """Reassemble incoming chunks into a file under ``inbox_dir``."""
 
     def __init__(self, inbox_dir: Optional[Path] = None) -> None:
-        self._inbox = Path(inbox_dir) if inbox_dir else _DEFAULT_INBOX
+        self._inbox = Path(inbox_dir) if inbox_dir else default_inbox_dir()
         self._inbox.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._current: Optional[dict] = None

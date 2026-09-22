@@ -10,7 +10,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.sqlite_support import (
@@ -99,8 +99,19 @@ def _validate_status(status: str) -> None:
 class HistoryStore:
     """SQLite-backed run log. Safe to share across threads."""
 
-    def __init__(self, path: Union[str, Path] = _IN_MEMORY_DB) -> None:
-        self._path = str(path) if path == _IN_MEMORY_DB else str(Path(path))
+    def __init__(self,
+                 path: Union[str, Path, Callable[[], Path]] = _IN_MEMORY_DB,
+                 ) -> None:
+        # A callable is resolved on first use. The module-level
+        # ``default_history_store`` is built while the package imports, and
+        # a path fixed then ignores a HOME set afterwards -- which is when a
+        # test suite's conftest.py runs, after the pytest11 plugin.
+        self._path_source: Optional[Callable[[], Path]] = (
+            path if callable(path) else None)
+        self._path: Optional[str] = None
+        if not callable(path):
+            self._path = (str(path) if path == _IN_MEMORY_DB
+                          else str(Path(path)))
         self._lock = threading.Lock()
         # The database is opened on first use, not here. The module-level
         # ``default_history_store`` is built during ``import
@@ -118,10 +129,10 @@ class HistoryStore:
         if self._conn is not None:
             return self._conn
         driver = require_sqlite3()
-        if self._path != _IN_MEMORY_DB:
-            os.makedirs(os.path.dirname(self._path) or ".", exist_ok=True)
+        if self.path != _IN_MEMORY_DB:
+            os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
         conn = driver.connect(
-            self._path, check_same_thread=False, isolation_level=None,
+            self.path, check_same_thread=False, isolation_level=None,
         )
         conn.row_factory = driver.Row
         conn.executescript(_SCHEMA)
@@ -141,6 +152,10 @@ class HistoryStore:
 
     @property
     def path(self) -> str:
+        if self._path is None:
+            source = self._path_source
+            self._path = (str(Path(source())) if source is not None
+                          else _IN_MEMORY_DB)
         return self._path
 
     def start_run(self, source_type: str, source_id: str,
@@ -309,4 +324,4 @@ def _remove_artifact_files(paths) -> None:
             )
 
 
-default_history_store = HistoryStore(path=_default_history_path())
+default_history_store = HistoryStore(path=_default_history_path)

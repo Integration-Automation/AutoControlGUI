@@ -98,7 +98,10 @@ wrapper/auto_control_record.record → OS listener (e.g. windows/record/win32_in
 3. Register the `AC_*` name in `Executor.event_dict` (`utils/executor/action_executor.py`); commands with nested
    action bodies go in `BLOCK_COMMANDS` (`utils/executor/flow_control.py`).
 4. Describe its parameters in `gui/script_builder/command_schema.py` (Script Builder form).
-5. Optional MCP tool: factory in `utils/mcp_server/tools/_factories.py`, adapter in `utils/mcp_server/tools/_handlers.py` (QA-theme adapters — assertions, suites, reports — in `_handlers_qa.py`).
+5. Optional MCP tool: factory in `utils/mcp_server/tools/_factories.py`, adapter in the themed handler module —
+   `_handlers_input.py`, `_handlers_screen.py`, `_handlers_system.py`, `_handlers_runs.py`,
+   `_handlers_scheduling.py`, `_handlers_remote.py`, `_handlers_qa.py`, or `_handlers.py` for the locator and
+   WebRunner-bridge themes still in it.
 6. GUI: thin widget in `gui/`, registered in `gui/main_widget.py` (`_add_tab`) with commands exposed through
    `menu_actions()`; strings in every `gui/language_wrapper/*.py` catalogue.
 7. Headless test in `test/unit_test/headless/`.
@@ -148,6 +151,9 @@ Moving that WebRunner module breaks the bridge.
   only when a process opens it, and swapped for `os.devnull` with one `RuntimeWarning` when it cannot be opened.
   Consumers that must keep the log out of a shared file (a test suite) set the variable before importing;
   changing the working directory no longer redirects it.
+- No module reads the home directory at import; every `~/.je_auto_control/` path is resolved when used, so a
+  consumer can redirect `HOME` / `USERPROFILE` after the import (this repo's `test/conftest.py` gives each test run
+  a temporary home). `test/unit_test/headless/test_state_paths_follow_home.py` scans the package for violations.
 
 **De-facto public:** `docs/API_LIFECYCLE.md` calls `je_auto_control.utils.*` internal, but the internal paths in the
 table above are used by sibling repos; treat renaming or removing them as a breaking change and check the consumers

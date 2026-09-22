@@ -9,6 +9,12 @@ from typing import List
 
 from je_auto_control.utils.mcp_server.tools import _handlers as h
 from je_auto_control.utils.mcp_server.tools import _handlers_qa as hq
+from je_auto_control.utils.mcp_server.tools import _handlers_input as h_input
+from je_auto_control.utils.mcp_server.tools import _handlers_screen as h_screen
+from je_auto_control.utils.mcp_server.tools import _handlers_system as h_system
+from je_auto_control.utils.mcp_server.tools import _handlers_runs as h_runs
+from je_auto_control.utils.mcp_server.tools import _handlers_scheduling as h_sched
+from je_auto_control.utils.mcp_server.tools import _handlers_remote as h_remote
 from je_auto_control.utils.mcp_server.tools._base import (
     DESTRUCTIVE, MCPTool, MCPToolAnnotations, NON_DESTRUCTIVE, READ_ONLY,
     SIDE_EFFECT_ONLY, schema,
@@ -28,14 +34,14 @@ def mouse_tools() -> List[MCPTool]:
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
             }),
-            handler=h.click_mouse,
+            handler=h_input.click_mouse,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_get_mouse_position",
             description="Return the current cursor position as [x, y].",
             input_schema=schema({}),
-            handler=h.get_mouse_position,
+            handler=h_input.get_mouse_position,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -45,7 +51,7 @@ def mouse_tools() -> List[MCPTool]:
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
             }, required=["x", "y"]),
-            handler=h.set_mouse_position,
+            handler=h_input.set_mouse_position,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
@@ -61,7 +67,7 @@ def mouse_tools() -> List[MCPTool]:
                 "y": {"type": "integer"},
                 "scroll_direction": {"type": "string"},
             }, required=["scroll_value"]),
-            handler=h.mouse_scroll,
+            handler=h_input.mouse_scroll,
             annotations=DESTRUCTIVE,
         ),
     ]
@@ -75,7 +81,7 @@ def keyboard_tools() -> List[MCPTool]:
                          "Use ac_press_key or ac_hotkey for control keys."),
             input_schema=schema({"text": {"type": "string"}},
                                 required=["text"]),
-            handler=h.type_text,
+            handler=h_input.type_text,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -85,7 +91,7 @@ def keyboard_tools() -> List[MCPTool]:
                          "f1, a, 1)."),
             input_schema=schema({"keycode": {"type": "string"}},
                                 required=["keycode"]),
-            handler=h.press_key,
+            handler=h_input.press_key,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -95,7 +101,7 @@ def keyboard_tools() -> List[MCPTool]:
             input_schema=schema({
                 "keys": {"type": "array", "items": {"type": "string"}},
             }, required=["keys"]),
-            handler=h.hotkey,
+            handler=h_input.hotkey,
             annotations=DESTRUCTIVE,
         ),
     ]
@@ -107,7 +113,7 @@ def screen_tools() -> List[MCPTool]:
             name="ac_screen_size",
             description="Return the primary screen size as [width, height].",
             input_schema=schema({}),
-            handler=h.screen_size,
+            handler=h_screen.screen_size,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -125,7 +131,7 @@ def screen_tools() -> List[MCPTool]:
                                    "items": {"type": "integer"}},
                 "monitor_index": {"type": "integer"},
             }),
-            handler=h.screenshot,
+            handler=h_screen.screenshot,
             annotations=MCPToolAnnotations(destructive=False, idempotent=False),
         ),
         MCPTool(
@@ -134,7 +140,7 @@ def screen_tools() -> List[MCPTool]:
                          "spans all monitors; 1+ are single displays. Use "
                          "the index with ac_screenshot's monitor_index."),
             input_schema=schema({}),
-            handler=h.list_monitors,
+            handler=h_screen.list_monitors,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -144,7 +150,7 @@ def screen_tools() -> List[MCPTool]:
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
             }, required=["x", "y"]),
-            handler=h.get_pixel,
+            handler=h_screen.get_pixel,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -159,7 +165,7 @@ def screen_tools() -> List[MCPTool]:
                 "poll": {"type": "number"},
                 "detect_threshold": {"type": "number"},
             }, required=["image_path"]),
-            handler=h.wait_for_image,
+            handler=h_screen.wait_for_image,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -176,7 +182,7 @@ def screen_tools() -> List[MCPTool]:
                 "timeout": {"type": "number"},
                 "poll": {"type": "number"},
             }, required=["x", "y", "target_rgb"]),
-            handler=h.wait_for_pixel,
+            handler=h_screen.wait_for_pixel,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -193,7 +199,7 @@ def screen_tools() -> List[MCPTool]:
                 "threshold": {"type": "integer"},
                 "min_box_pixels": {"type": "integer"},
             }, required=["image_path_a", "image_path_b"]),
-            handler=h.diff_screenshots,
+            handler=h_screen.diff_screenshots,
             annotations=READ_ONLY,
         ),
     ]
@@ -209,7 +215,7 @@ def image_and_ocr_tools() -> List[MCPTool]:
                 "image_path": {"type": "string"},
                 "detect_threshold": {"type": "number"},
             }, required=["image_path"]),
-            handler=h.locate_image_center,
+            handler=h_screen.locate_image_center,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -220,7 +226,7 @@ def image_and_ocr_tools() -> List[MCPTool]:
                 "mouse_keycode": {"type": "string"},
                 "detect_threshold": {"type": "number"},
             }, required=["image_path"]),
-            handler=h.locate_and_click,
+            handler=h_screen.locate_and_click,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -233,7 +239,7 @@ def image_and_ocr_tools() -> List[MCPTool]:
                 "region": {"type": "array", "items": {"type": "integer"}},
                 "min_confidence": {"type": "number"},
             }, required=["text"]),
-            handler=h.locate_text,
+            handler=h_screen.locate_text,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -245,7 +251,7 @@ def image_and_ocr_tools() -> List[MCPTool]:
                 "region": {"type": "array", "items": {"type": "integer"}},
                 "min_confidence": {"type": "number"},
             }, required=["text"]),
-            handler=h.click_text,
+            handler=h_screen.click_text,
             annotations=DESTRUCTIVE,
         ),
     ]
@@ -258,7 +264,7 @@ def window_tools() -> List[MCPTool]:
             description=("List visible top-level windows as "
                          "[{hwnd, title}, ...] (Windows only)."),
             input_schema=schema({}),
-            handler=h.list_windows,
+            handler=h_system.list_windows,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -268,7 +274,7 @@ def window_tools() -> List[MCPTool]:
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
-            handler=h.focus_window,
+            handler=h_system.focus_window,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
@@ -279,7 +285,7 @@ def window_tools() -> List[MCPTool]:
                 "timeout": {"type": "number"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
-            handler=h.wait_for_window,
+            handler=h_system.wait_for_window,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -291,7 +297,7 @@ def window_tools() -> List[MCPTool]:
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
-            handler=h.close_window,
+            handler=h_system.close_window,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -301,7 +307,7 @@ def window_tools() -> List[MCPTool]:
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
-            handler=h.minimize_window,
+            handler=h_system.minimize_window,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
@@ -309,7 +315,7 @@ def window_tools() -> List[MCPTool]:
             description=("The window the user is currently working in, as "
                          "{hwnd, title}; hwnd is 0 when there is none."),
             input_schema=schema({}),
-            handler=h.foreground_window,
+            handler=h_system.foreground_window,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -321,7 +327,7 @@ def window_tools() -> List[MCPTool]:
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
-            handler=h.window_rect,
+            handler=h_system.window_rect,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -330,7 +336,7 @@ def window_tools() -> List[MCPTool]:
                          "{pid}; 0 when unavailable. Titles are not identity — "
                          "use this to tell which program is in front."),
             input_schema=schema({}),
-            handler=h.foreground_window_pid,
+            handler=h_system.foreground_window_pid,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -342,7 +348,7 @@ def window_tools() -> List[MCPTool]:
                 "pid": {"type": "integer"},
                 "titled_only": {"type": "boolean"},
             }, required=["pid"]),
-            handler=h.windows_for_pid,
+            handler=h_system.windows_for_pid,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -350,7 +356,7 @@ def window_tools() -> List[MCPTool]:
             description=("Minimise every window a process owns, as "
                          "{minimized}."),
             input_schema=schema({"pid": {"type": "integer"}}, required=["pid"]),
-            handler=h.minimize_windows_for_pid,
+            handler=h_system.minimize_windows_for_pid,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
@@ -364,7 +370,7 @@ def window_tools() -> List[MCPTool]:
                 "key": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring", "key"]),
-            handler=h.post_key_to_window,
+            handler=h_system.post_key_to_window,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
@@ -380,7 +386,7 @@ def window_tools() -> List[MCPTool]:
                 "y": {"type": "integer"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
-            handler=h.post_click_to_window,
+            handler=h_system.post_click_to_window,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
@@ -391,7 +397,7 @@ def window_tools() -> List[MCPTool]:
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
-            handler=h.window_pid,
+            handler=h_system.window_pid,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -407,7 +413,7 @@ def window_tools() -> List[MCPTool]:
                 "height": {"type": "integer"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring", "x", "y", "width", "height"]),
-            handler=h.window_move,
+            handler=h_system.window_move,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -417,7 +423,7 @@ def window_tools() -> List[MCPTool]:
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
-            handler=h.window_minimize,
+            handler=h_system.window_minimize,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -427,7 +433,7 @@ def window_tools() -> List[MCPTool]:
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
-            handler=h.window_maximize,
+            handler=h_system.window_maximize,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -438,7 +444,7 @@ def window_tools() -> List[MCPTool]:
                 "title_substring": {"type": "string"},
                 "case_sensitive": {"type": "boolean"},
             }, required=["title_substring"]),
-            handler=h.window_restore,
+            handler=h_system.window_restore,
             annotations=DESTRUCTIVE,
         ),
     ]
@@ -450,7 +456,7 @@ def system_tools() -> List[MCPTool]:
             name="ac_get_clipboard",
             description="Return the current text clipboard contents.",
             input_schema=schema({}),
-            handler=h.get_clipboard,
+            handler=h_system.get_clipboard,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -458,7 +464,7 @@ def system_tools() -> List[MCPTool]:
             description="Replace the text clipboard contents with ``text``.",
             input_schema=schema({"text": {"type": "string"}},
                                 required=["text"]),
-            handler=h.set_clipboard,
+            handler=h_system.set_clipboard,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -468,7 +474,7 @@ def system_tools() -> List[MCPTool]:
                          "Returns a text block 'clipboard does not contain "
                          "an image' when the clipboard has no image."),
             input_schema=schema({}),
-            handler=h.get_clipboard_image,
+            handler=h_system.get_clipboard_image,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -478,7 +484,7 @@ def system_tools() -> List[MCPTool]:
                          "raise NotImplementedError."),
             input_schema=schema({"image_path": {"type": "string"}},
                                 required=["image_path"]),
-            handler=h.set_clipboard_image,
+            handler=h_system.set_clipboard_image,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -490,7 +496,7 @@ def system_tools() -> List[MCPTool]:
                 "actions": {"type": "array",
                             "items": {"type": "array"}},
             }, required=["actions"]),
-            handler=h.execute_actions,
+            handler=h_runs.execute_actions,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -498,14 +504,14 @@ def system_tools() -> List[MCPTool]:
             description="Load a JSON action file from disk and execute it.",
             input_schema=schema({"file_path": {"type": "string"}},
                                 required=["file_path"]),
-            handler=h.execute_action_file,
+            handler=h_runs.execute_action_file,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_list_action_commands",
             description="Return every action command name the executor recognises.",
             input_schema=schema({}),
-            handler=h.list_action_commands,
+            handler=h_runs.list_action_commands,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -516,7 +522,7 @@ def system_tools() -> List[MCPTool]:
                 "limit": {"type": "integer"},
                 "source_type": {"type": "string"},
             }),
-            handler=h.list_run_history,
+            handler=h_runs.list_run_history,
             annotations=READ_ONLY,
         ),
     ]
@@ -537,7 +543,7 @@ def screen_record_tools() -> List[MCPTool]:
                 "width": {"type": "integer"},
                 "height": {"type": "integer"},
             }, required=["recorder_name", "file_path"]),
-            handler=h.screen_record_start,
+            handler=h_screen.screen_record_start,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -545,14 +551,14 @@ def screen_record_tools() -> List[MCPTool]:
             description="Stop the named screen recorder.",
             input_schema=schema({"recorder_name": {"type": "string"}},
                                 required=["recorder_name"]),
-            handler=h.screen_record_stop,
+            handler=h_screen.screen_record_stop,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
             name="ac_screen_record_list",
             description="Return the names of currently running screen recorders.",
             input_schema=schema({}),
-            handler=h.screen_record_list,
+            handler=h_screen.screen_record_list,
             annotations=READ_ONLY,
         ),
     ]
@@ -567,7 +573,7 @@ def recording_tools() -> List[MCPTool]:
                          "captured action list. On macOS this needs "
                          "Accessibility permission."),
             input_schema=schema({}),
-            handler=h.record_start,
+            handler=h_runs.record_start,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -576,7 +582,7 @@ def recording_tools() -> List[MCPTool]:
                          "action list ([[command, args], ...]) ready to "
                          "feed back into ac_execute_actions."),
             input_schema=schema({}),
-            handler=h.record_stop,
+            handler=h_runs.record_stop,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -589,7 +595,7 @@ def recording_tools() -> List[MCPTool]:
                          "original pacing. Feed these to "
                          "ac_replay_timeline."),
             input_schema=schema({}),
-            handler=h.record_stop_timeline,
+            handler=h_runs.record_stop_timeline,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -597,7 +603,7 @@ def recording_tools() -> List[MCPTool]:
             description="Read a JSON action file from disk and return its parsed contents.",
             input_schema=schema({"file_path": {"type": "string"}},
                                 required=["file_path"]),
-            handler=h.read_action_file,
+            handler=h_runs.read_action_file,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -607,7 +613,7 @@ def recording_tools() -> List[MCPTool]:
                 "file_path": {"type": "string"},
                 "actions": {"type": "array"},
             }, required=["file_path", "actions"]),
-            handler=h.write_action_file,
+            handler=h_runs.write_action_file,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -619,7 +625,7 @@ def recording_tools() -> List[MCPTool]:
                 "start": {"type": "integer"},
                 "end": {"type": "integer"},
             }, required=["actions"]),
-            handler=h.trim_actions,
+            handler=h_runs.trim_actions,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -631,7 +637,7 @@ def recording_tools() -> List[MCPTool]:
                 "factor": {"type": "number"},
                 "clamp_ms": {"type": "integer"},
             }, required=["actions"]),
-            handler=h.adjust_delays,
+            handler=h_runs.adjust_delays,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -644,7 +650,7 @@ def recording_tools() -> List[MCPTool]:
                 "x_factor": {"type": "number"},
                 "y_factor": {"type": "number"},
             }, required=["actions"]),
-            handler=h.scale_coordinates,
+            handler=h_runs.scale_coordinates,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -659,7 +665,7 @@ def recording_tools() -> List[MCPTool]:
                 "move_commands": {"type": "array",
                                   "items": {"type": "string"}},
             }, required=["actions"]),
-            handler=h.dedupe_moves,
+            handler=h_runs.dedupe_moves,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -670,7 +676,7 @@ def recording_tools() -> List[MCPTool]:
             input_schema=schema({
                 "actions": {"type": "array"},
             }, required=["actions"]),
-            handler=h.merge_sleeps,
+            handler=h_runs.merge_sleeps,
             annotations=READ_ONLY,
         ),
     ]
@@ -690,7 +696,7 @@ def drag_and_send_tools() -> List[MCPTool]:
                 "end_y": {"type": "integer"},
                 "mouse_keycode": {"type": "string"},
             }, required=["start_x", "start_y", "end_x", "end_y"]),
-            handler=h.drag,
+            handler=h_input.drag,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -701,7 +707,7 @@ def drag_and_send_tools() -> List[MCPTool]:
                 "window_title": {"type": "string"},
                 "keycode": {"type": "string"},
             }, required=["window_title", "keycode"]),
-            handler=h.send_key_to_window,
+            handler=h_input.send_key_to_window,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -714,7 +720,7 @@ def drag_and_send_tools() -> List[MCPTool]:
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
             }, required=["window_title"]),
-            handler=h.send_mouse_to_window,
+            handler=h_input.send_mouse_to_window,
             annotations=DESTRUCTIVE,
         ),
     ]
@@ -1942,7 +1948,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                  "multiplier": {"type": "number"},
                                  "jitter": {"type": "string"}},
                                 required=["attempt"]),
-            handler=h.retry_delay,
+            handler=h_system.retry_delay,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -1956,7 +1962,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                  "multiplier": {"type": "number"},
                                  "jitter": {"type": "string"}},
                                 required=["attempts"]),
-            handler=h.plan_retry_delays,
+            handler=h_system.plan_retry_delays,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -1969,7 +1975,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                  "actual": {"type": "string"},
                                  "mode": {"type": "string"}},
                                 required=["expected", "actual"]),
-            handler=h.compare_field_value,
+            handler=h_system.compare_field_value,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -1985,7 +1991,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                  "automation_id": {"type": "string"},
                                  "mode": {"type": "string"}},
                                 required=["expected"]),
-            handler=h.verify_field_value,
+            handler=h_system.verify_field_value,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2001,7 +2007,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                  "min_s": {"type": "number"},
                                  "max_s": {"type": "number"}},
                                 required=["durations"]),
-            handler=h.adaptive_timeout,
+            handler=h_system.adaptive_timeout,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2016,7 +2022,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                  "min_s": {"type": "number"},
                                  "max_s": {"type": "number"}},
                                 required=["durations"]),
-            handler=h.timeout_stats,
+            handler=h_system.timeout_stats,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2033,7 +2039,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                  "automation_id": {"type": "string"},
                                  "attempts": {"type": "integer"}},
                                 required=["desired"]),
-            handler=h.ensure_field_value,
+            handler=h_system.ensure_field_value,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -2045,7 +2051,7 @@ def smart_wait_tools() -> List[MCPTool]:
             input_schema=schema({"quiet_samples": {"type": "integer"},
                                  "timeout": {"type": "number"},
                                  "interval": {"type": "number"}}),
-            handler=h.wait_until_app_idle,
+            handler=h_system.wait_until_app_idle,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2057,7 +2063,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                                  "items": {"type": "boolean"}},
                                  "quiet_samples": {"type": "integer"}},
                                 required=["busy_samples"]),
-            handler=h.idle_point,
+            handler=h_system.idle_point,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2072,7 +2078,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                  "scroll_amount": {"type": "integer"},
                                  "button": {"type": "string"}},
                                 required=["target"]),
-            handler=h.act_in_view,
+            handler=h_system.act_in_view,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -2086,7 +2092,7 @@ def smart_wait_tools() -> List[MCPTool]:
                                  "mode": {"type": "string"},
                                  "button": {"type": "string"}},
                                 required=["x", "y"]),
-            handler=h.act_with_mode,
+            handler=h_system.act_with_mode,
             annotations=SIDE_EFFECT_ONLY,
         ),
     ]
@@ -2261,7 +2267,7 @@ def scheduler_tools() -> List[MCPTool]:
                 "max_runs": {"type": "integer"},
                 "job_id": {"type": "string"},
             }, required=["script_path"]),
-            handler=h.scheduler_add_job,
+            handler=h_sched.scheduler_add_job,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -2269,28 +2275,28 @@ def scheduler_tools() -> List[MCPTool]:
             description="Remove a scheduled job by id; returns True if it existed.",
             input_schema=schema({"job_id": {"type": "string"}},
                                 required=["job_id"]),
-            handler=h.scheduler_remove_job,
+            handler=h_sched.scheduler_remove_job,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
             name="ac_scheduler_list_jobs",
             description="List currently registered scheduler jobs.",
             input_schema=schema({}),
-            handler=h.scheduler_list_jobs,
+            handler=h_sched.scheduler_list_jobs,
             annotations=READ_ONLY,
         ),
         MCPTool(
             name="ac_scheduler_start",
             description="Start the scheduler polling thread (idempotent).",
             input_schema=schema({}),
-            handler=h.scheduler_start,
+            handler=h_sched.scheduler_start,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_scheduler_stop",
             description="Stop the scheduler polling thread.",
             input_schema=schema({}),
-            handler=h.scheduler_stop,
+            handler=h_sched.scheduler_stop,
             annotations=NON_DESTRUCTIVE,
         ),
     ]
@@ -2321,7 +2327,7 @@ def trigger_tools() -> List[MCPTool]:
                 "tolerance": {"type": "integer"},
                 "watch_path": {"type": "string"},
             }, required=["kind", "script_path"]),
-            handler=h.trigger_add,
+            handler=h_sched.trigger_add,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -2329,28 +2335,28 @@ def trigger_tools() -> List[MCPTool]:
             description="Remove a trigger by id.",
             input_schema=schema({"trigger_id": {"type": "string"}},
                                 required=["trigger_id"]),
-            handler=h.trigger_remove,
+            handler=h_sched.trigger_remove,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
             name="ac_trigger_list",
             description="List currently registered triggers.",
             input_schema=schema({}),
-            handler=h.trigger_list,
+            handler=h_sched.trigger_list,
             annotations=READ_ONLY,
         ),
         MCPTool(
             name="ac_trigger_start",
             description="Start the trigger engine polling thread (idempotent).",
             input_schema=schema({}),
-            handler=h.trigger_start,
+            handler=h_sched.trigger_start,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_trigger_stop",
             description="Stop the trigger engine polling thread.",
             input_schema=schema({}),
-            handler=h.trigger_stop,
+            handler=h_sched.trigger_stop,
             annotations=NON_DESTRUCTIVE,
         ),
     ]
@@ -2367,7 +2373,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                 "argv": {"type": "array", "items": {"type": "string"}},
                 "working_directory": {"type": "string"},
             }, required=["argv"]),
-            handler=h.launch_process,
+            handler=h_system.launch_process,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -2377,7 +2383,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             input_schema=schema({
                 "name_contains": {"type": "string"},
             }),
-            handler=h.list_processes,
+            handler=h_system.list_processes,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2389,7 +2395,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                 "pid": {"type": "integer"},
                 "timeout": {"type": "number"},
             }, required=["pid"]),
-            handler=h.kill_process,
+            handler=h_system.kill_process,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -2401,7 +2407,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                 "command": {"type": "string"},
                 "timeout": {"type": "number"},
             }, required=["command"]),
-            handler=h.shell_command,
+            handler=h_system.shell_command,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -2412,7 +2418,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             input_schema=schema({"target": {"type": "string"},
                                  "verb": {"type": "string"}},
                                 required=["target"]),
-            handler=h.open_path,
+            handler=h_system.open_path,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -2423,7 +2429,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             input_schema=schema({"target": {"type": "string"},
                                  "verb": {"type": "string"}},
                                 required=["target"]),
-            handler=h.plan_open,
+            handler=h_system.plan_open,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2431,7 +2437,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Seconds since the last user keyboard / mouse input "
                          "(GetLastInputInfo on Windows). Returns {idle_seconds}."),
             input_schema=schema({}),
-            handler=h.idle_seconds,
+            handler=h_system.idle_seconds,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2440,7 +2446,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "'threshold' seconds. Returns {idle, idle_seconds}."),
             input_schema=schema({"threshold": {"type": "number"}},
                                 required=["threshold"]),
-            handler=h.is_idle,
+            handler=h_system.is_idle,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2449,7 +2455,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "(pure): {display, system, backend, flags}."),
             input_schema=schema({"display": {"type": "boolean"},
                                  "system": {"type": "boolean"}}),
-            handler=h.plan_keep_awake,
+            handler=h_system.plan_keep_awake,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2458,7 +2464,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "ac_allow_sleep is called. Returns the active plan."),
             input_schema=schema({"display": {"type": "boolean"},
                                  "system": {"type": "boolean"}}),
-            handler=h.keep_awake_on,
+            handler=h_system.keep_awake_on,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -2466,7 +2472,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Release a previously-started keep-awake so the machine "
                          "can sleep again. Returns {released}."),
             input_schema=schema({}),
-            handler=h.allow_sleep,
+            handler=h_system.allow_sleep,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -2475,7 +2481,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "dot) of a path or bare extension (pure): {ext}."),
             input_schema=schema({"target": {"type": "string"}},
                                 required=["target"]),
-            handler=h.normalize_ext,
+            handler=h_system.normalize_ext,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2485,7 +2491,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "command, exe, friendly, content_type} (Windows)."),
             input_schema=schema({"target": {"type": "string"}},
                                 required=["target"]),
-            handler=h.file_association,
+            handler=h_system.file_association,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2494,7 +2500,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "0..100. Returns {volume, muted} (Windows, needs "
                          "the optional 'pycaw' dependency)."),
             input_schema=schema({}),
-            handler=h.get_volume,
+            handler=h_system.get_volume,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2503,7 +2509,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "0..100). Returns the applied {volume}."),
             input_schema=schema({"level": {"type": "number"}},
                                 required=["level"]),
-            handler=h.set_volume,
+            handler=h_system.set_volume,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -2512,7 +2518,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "negative; clamped to 0..100). Returns {volume}."),
             input_schema=schema({"delta": {"type": "number"}},
                                 required=["delta"]),
-            handler=h.change_volume,
+            handler=h_system.change_volume,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -2520,7 +2526,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Mute or unmute the master output. 'muted' defaults to "
                          "true. Returns the new {muted} state."),
             input_schema=schema({"muted": {"type": "boolean"}}),
-            handler=h.set_mute,
+            handler=h_system.set_mute,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -2528,7 +2534,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             description=("Flip the master mute flag. Returns the new {muted} "
                          "state."),
             input_schema=schema({}),
-            handler=h.toggle_mute,
+            handler=h_system.toggle_mute,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -2537,7 +2543,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "lock-session / CGSession). Returns {locked}. "
                          "Interrupts the interactive session."),
             input_schema=schema({}),
-            handler=h.lock_session,
+            handler=h_system.lock_session,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -2546,7 +2552,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "OS without locking (pure): {backend, argv, "
                          "available}."),
             input_schema=schema({}),
-            handler=h.plan_lock_session,
+            handler=h_system.plan_lock_session,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2556,7 +2562,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "{unlocked}."),
             input_schema=schema({"timeout": {"type": "number"},
                                  "interval": {"type": "number"}}),
-            handler=h.wait_for_unlock,
+            handler=h_system.wait_for_unlock,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2566,7 +2572,7 @@ def process_and_shell_tools() -> List[MCPTool]:
             input_schema=schema({"states": {"type": "array",
                                             "items": {"type": "boolean"}}},
                                 required=["states"]),
-            handler=h.classify_lock_transitions,
+            handler=h_system.classify_lock_transitions,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2575,7 +2581,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "IMM32). Returns {open, composing, composition, "
                          "conversion, conversion_flags}."),
             input_schema=schema({}),
-            handler=h.ime_state,
+            handler=h_system.ime_state,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2584,7 +2590,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "(unsafe to type / read the field). Returns "
                          "{composing}."),
             input_schema=schema({}),
-            handler=h.is_composing,
+            handler=h_system.is_composing,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2594,7 +2600,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "{committed}."),
             input_schema=schema({"timeout": {"type": "number"},
                                  "interval": {"type": "number"}}),
-            handler=h.wait_for_composition_commit,
+            handler=h_system.wait_for_composition_commit,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -2604,7 +2610,7 @@ def process_and_shell_tools() -> List[MCPTool]:
                          "char_code} (pure)."),
             input_schema=schema({"flags": {"type": "integer"}},
                                 required=["flags"]),
-            handler=h.decode_conversion_mode,
+            handler=h_system.decode_conversion_mode,
             annotations=READ_ONLY,
         ),
     ]
@@ -4201,7 +4207,7 @@ def img_histogram_tools() -> List[MCPTool]:
                                  "kind": {"type": "string"},
                                  "severity": {"type": "number"}},
                                 required=["rgb"]),
-            handler=h.simulate_cvd,
+            handler=h_system.simulate_cvd,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4218,7 +4224,7 @@ def img_histogram_tools() -> List[MCPTool]:
                                  "severity": {"type": "number"},
                                  "threshold": {"type": "number"}},
                                 required=["left", "right"]),
-            handler=h.colors_collide,
+            handler=h_system.colors_collide,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4234,7 +4240,7 @@ def img_histogram_tools() -> List[MCPTool]:
                                  "bounds": {"type": "array",
                                            "items": {"type": "integer"}}},
                                 required=["marks"]),
-            handler=h.place_labels,
+            handler=h_system.place_labels,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4245,7 +4251,7 @@ def img_histogram_tools() -> List[MCPTool]:
             input_schema=schema({"background": {"type": "array",
                                                "items": {"type": "integer"}}},
                                 required=["background"]),
-            handler=h.label_color,
+            handler=h_system.label_color,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4258,7 +4264,7 @@ def img_histogram_tools() -> List[MCPTool]:
                                  "background": {"type": "array",
                                                "items": {"type": "integer"}}},
                                 required=["foreground", "background"]),
-            handler=h.grade_contrast,
+            handler=h_system.grade_contrast,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4269,7 +4275,7 @@ def img_histogram_tools() -> List[MCPTool]:
             input_schema=schema({"pixels": {"type": "array",
                                            "items": {"type": "array"}}},
                                 required=["pixels"]),
-            handler=h.dominant_pair,
+            handler=h_system.dominant_pair,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4279,7 +4285,7 @@ def img_histogram_tools() -> List[MCPTool]:
                          "foreground, background, samples}."),
             input_schema=schema({"region": {"type": "array",
                                            "items": {"type": "integer"}}}),
-            handler=h.region_contrast,
+            handler=h_system.region_contrast,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4295,7 +4301,7 @@ def img_histogram_tools() -> List[MCPTool]:
                                  "method": {"type": "string"},
                                  "min_score": {"type": "number"}},
                                 required=["template"]),
-            handler=h.match_theme,
+            handler=h_system.match_theme,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4308,7 +4314,7 @@ def img_histogram_tools() -> List[MCPTool]:
                                                  "items": {"type": "object"}},
                                  "threshold": {"type": "number"}},
                                 required=["scored_boxes"]),
-            handler=h.rank_changes,
+            handler=h_system.rank_changes,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4325,7 +4331,7 @@ def img_histogram_tools() -> List[MCPTool]:
                                  "region": {"type": "array",
                                            "items": {"type": "integer"}}},
                                 required=["reference", "boxes"]),
-            handler=h.localize_changes,
+            handler=h_system.localize_changes,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4335,7 +4341,7 @@ def img_histogram_tools() -> List[MCPTool]:
                          "button/icon). Pure. Returns {type}."),
             input_schema=schema({"features": {"type": "object"}},
                                 required=["features"]),
-            handler=h.classify_widget,
+            handler=h_system.classify_widget,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4347,7 +4353,7 @@ def img_histogram_tools() -> List[MCPTool]:
                                  "box": {"type": "array",
                                         "items": {"type": "integer"}}},
                                 required=["source", "box"]),
-            handler=h.classify_icon,
+            handler=h_system.classify_icon,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4360,7 +4366,7 @@ def img_histogram_tools() -> List[MCPTool]:
                                            "items": {"type": "integer"}},
                                  "min_area": {"type": "integer"},
                                  "iou_threshold": {"type": "number"}}),
-            handler=h.propose_elements,
+            handler=h_system.propose_elements,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -4372,7 +4378,7 @@ def img_histogram_tools() -> List[MCPTool]:
             input_schema=schema({"elements": {"type": "array",
                                              "items": {"type": "object"}}},
                                 required=["elements"]),
-            handler=h.tag_kinds,
+            handler=h_system.tag_kinds,
             annotations=READ_ONLY,
         ),
     ]
@@ -7876,7 +7882,7 @@ def hotkey_tools() -> List[MCPTool]:
                 "script_path": {"type": "string"},
                 "binding_id": {"type": "string"},
             }, required=["combo", "script_path"]),
-            handler=h.hotkey_bind,
+            handler=h_sched.hotkey_bind,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -7884,28 +7890,28 @@ def hotkey_tools() -> List[MCPTool]:
             description="Remove a hotkey binding by id.",
             input_schema=schema({"binding_id": {"type": "string"}},
                                 required=["binding_id"]),
-            handler=h.hotkey_unbind,
+            handler=h_sched.hotkey_unbind,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
             name="ac_hotkey_list",
             description="List the registered hotkey bindings.",
             input_schema=schema({}),
-            handler=h.hotkey_list,
+            handler=h_sched.hotkey_list,
             annotations=READ_ONLY,
         ),
         MCPTool(
             name="ac_hotkey_daemon_start",
             description="Start the global hotkey listener thread (idempotent).",
             input_schema=schema({}),
-            handler=h.hotkey_daemon_start,
+            handler=h_sched.hotkey_daemon_start,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_hotkey_daemon_stop",
             description="Stop the global hotkey listener thread.",
             input_schema=schema({}),
-            handler=h.hotkey_daemon_stop,
+            handler=h_sched.hotkey_daemon_stop,
             annotations=NON_DESTRUCTIVE,
         ),
     ]
@@ -7936,14 +7942,14 @@ def remote_desktop_tools() -> List[MCPTool]:
                 "host_id": {"type": "string",
                             "description": "Optional 9-digit ID; auto-generated when omitted"},
             }, required=["token"]),
-            handler=h.remote_host_start,
+            handler=h_remote.remote_host_start,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
             name="ac_remote_host_stop",
             description="Stop the singleton TCP remote-desktop host.",
             input_schema=schema({"timeout": {"type": "number"}}),
-            handler=h.remote_host_stop,
+            handler=h_remote.remote_host_stop,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
@@ -7953,7 +7959,7 @@ def remote_desktop_tools() -> List[MCPTool]:
                 "{running, port, host_id, connected_clients}."
             ),
             input_schema=schema({}),
-            handler=h.remote_host_status,
+            handler=h_remote.remote_host_status,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -7974,21 +7980,21 @@ def remote_desktop_tools() -> List[MCPTool]:
                                    "host advertises a different ID.",
                 },
             }, required=["host", "port", "token"]),
-            handler=h.remote_viewer_connect,
+            handler=h_remote.remote_viewer_connect,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
             name="ac_remote_viewer_disconnect",
             description="Disconnect the singleton viewer.",
             input_schema=schema({"timeout": {"type": "number"}}),
-            handler=h.remote_viewer_disconnect,
+            handler=h_remote.remote_viewer_disconnect,
             annotations=SIDE_EFFECT_ONLY,
         ),
         MCPTool(
             name="ac_remote_viewer_status",
             description="Read-only viewer state: {connected, host_id}.",
             input_schema=schema({}),
-            handler=h.remote_viewer_status,
+            handler=h_remote.remote_viewer_status,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8006,7 +8012,7 @@ def remote_desktop_tools() -> List[MCPTool]:
                                    "{action: 'mouse_move', x: 100, y: 200}",
                 },
             }, required=["action"]),
-            handler=h.remote_viewer_send_input,
+            handler=h_remote.remote_viewer_send_input,
             annotations=DESTRUCTIVE,
         ),
     ]
@@ -8023,7 +8029,7 @@ def gamepad_tools() -> List[MCPTool]:
             ),
             input_schema=schema({"button": {"type": "string"}},
                                 required=["button"]),
-            handler=h.gamepad_press,
+            handler=h_input.gamepad_press,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -8031,7 +8037,7 @@ def gamepad_tools() -> List[MCPTool]:
             description="Release a virtual Xbox 360 button.",
             input_schema=schema({"button": {"type": "string"}},
                                 required=["button"]),
-            handler=h.gamepad_release,
+            handler=h_input.gamepad_release,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -8039,7 +8045,7 @@ def gamepad_tools() -> List[MCPTool]:
             description="Press then release a virtual Xbox 360 button.",
             input_schema=schema({"button": {"type": "string"}},
                                 required=["button"]),
-            handler=h.gamepad_click,
+            handler=h_input.gamepad_click,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -8050,7 +8056,7 @@ def gamepad_tools() -> List[MCPTool]:
             ),
             input_schema=schema({"direction": {"type": "string"}},
                                 required=["direction"]),
-            handler=h.gamepad_dpad,
+            handler=h_input.gamepad_dpad,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -8063,7 +8069,7 @@ def gamepad_tools() -> List[MCPTool]:
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
             }, required=["x", "y"]),
-            handler=h.gamepad_left_stick,
+            handler=h_input.gamepad_left_stick,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -8073,7 +8079,7 @@ def gamepad_tools() -> List[MCPTool]:
                 "x": {"type": "integer"},
                 "y": {"type": "integer"},
             }, required=["x", "y"]),
-            handler=h.gamepad_right_stick,
+            handler=h_input.gamepad_right_stick,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -8081,7 +8087,7 @@ def gamepad_tools() -> List[MCPTool]:
             description="Set left-trigger pressure (0..255).",
             input_schema=schema({"value": {"type": "integer"}},
                                 required=["value"]),
-            handler=h.gamepad_left_trigger,
+            handler=h_input.gamepad_left_trigger,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -8089,7 +8095,7 @@ def gamepad_tools() -> List[MCPTool]:
             description="Set right-trigger pressure (0..255).",
             input_schema=schema({"value": {"type": "integer"}},
                                 required=["value"]),
-            handler=h.gamepad_right_trigger,
+            handler=h_input.gamepad_right_trigger,
             annotations=DESTRUCTIVE,
         ),
         MCPTool(
@@ -8099,7 +8105,7 @@ def gamepad_tools() -> List[MCPTool]:
                 "pressure on the virtual gamepad."
             ),
             input_schema=schema({}),
-            handler=h.gamepad_reset,
+            handler=h_input.gamepad_reset,
             annotations=DESTRUCTIVE,
         ),
     ]
@@ -8121,14 +8127,14 @@ def usb_passthrough_tools() -> List[MCPTool]:
                          "off; must be enabled before any usb channel is "
                          "honoured."),
             input_schema=schema({"enabled": {"type": "boolean"}}),
-            handler=h.usb_passthrough_enable,
+            handler=h_input.usb_passthrough_enable,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
             name="ac_usb_passthrough_status",
             description="Report whether USB passthrough is enabled.",
             input_schema=schema({}),
-            handler=h.usb_passthrough_status,
+            handler=h_input.usb_passthrough_status,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8136,7 +8142,7 @@ def usb_passthrough_tools() -> List[MCPTool]:
             description=("List USB ACL rules plus the default policy and the "
                          "HMAC integrity state."),
             input_schema=schema({}),
-            handler=h.usb_acl_list,
+            handler=h_input.usb_acl_list,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8150,7 +8156,7 @@ def usb_passthrough_tools() -> List[MCPTool]:
                 "prompt_on_open": {"type": "boolean"},
                 "label": {"type": "string"},
             }, required=["vendor_id", "product_id"]),
-            handler=h.usb_acl_add,
+            handler=h_input.usb_acl_add,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
@@ -8159,7 +8165,7 @@ def usb_passthrough_tools() -> List[MCPTool]:
             input_schema=schema(
                 dict(_VID_PID), required=["vendor_id", "product_id"],
             ),
-            handler=h.usb_acl_remove,
+            handler=h_input.usb_acl_remove,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
@@ -8168,7 +8174,7 @@ def usb_passthrough_tools() -> List[MCPTool]:
             input_schema=schema({
                 "policy": {"type": "string", "enum": ["allow", "deny"]},
             }, required=["policy"]),
-            handler=h.usb_acl_set_default,
+            handler=h_input.usb_acl_set_default,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
@@ -8176,7 +8182,7 @@ def usb_passthrough_tools() -> List[MCPTool]:
             description=("List ACL-visible USB devices on this machine over "
                          "the in-process loopback channel."),
             input_schema=schema({}),
-            handler=h.usb_loopback_list,
+            handler=h_input.usb_loopback_list,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8187,7 +8193,7 @@ def usb_passthrough_tools() -> List[MCPTool]:
             input_schema=schema(
                 dict(_VID_PID), required=["vendor_id", "product_id"],
             ),
-            handler=h.usb_loopback_open,
+            handler=h_input.usb_loopback_open,
             annotations=NON_DESTRUCTIVE,
         ),
         MCPTool(
@@ -8196,7 +8202,7 @@ def usb_passthrough_tools() -> List[MCPTool]:
                          "WebRTC usb channel. Requires a connected WebRTC "
                          "viewer."),
             input_schema=schema({}),
-            handler=h.usb_remote_list,
+            handler=h_input.usb_remote_list,
             annotations=READ_ONLY,
         ),
         MCPTool(
@@ -8206,7 +8212,7 @@ def usb_passthrough_tools() -> List[MCPTool]:
             input_schema=schema(
                 dict(_VID_PID), required=["vendor_id", "product_id"],
             ),
-            handler=h.usb_remote_open,
+            handler=h_input.usb_remote_open,
             annotations=NON_DESTRUCTIVE,
         ),
     ]

@@ -64,16 +64,27 @@ class ABReport:
         }
 
 
+def default_stats_path() -> Path:
+    """``~/.je_auto_control/ab_locator_stats.json``, resolved at call time."""
+    return Path.home() / ".je_auto_control" / "ab_locator_stats.json"
+
+
 class ABStore:
     """Thread-safe ``(target_id, strategy) → ABStrategyStats`` ledger."""
 
-    DEFAULT_PATH = Path.home() / ".je_auto_control" / "ab_locator_stats.json"
-
     def __init__(self, path: Optional[Path] = None) -> None:
-        self._path = Path(path) if path is not None else self.DEFAULT_PATH
+        # Only an explicit path is kept; the default is resolved on every
+        # use, because this module builds a shared instance while the
+        # package imports -- before a test suite's conftest.py can set HOME.
+        self._explicit_path: Optional[Path] = (
+            Path(path) if path is not None else None)
         self._lock = threading.RLock()
         self._cache: Dict[Tuple[str, str], ABStrategyStats] = {}
         self._loaded = False
+
+    @property
+    def _path(self) -> Path:
+        return self._explicit_path or default_stats_path()
 
     @property
     def path(self) -> Path:

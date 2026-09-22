@@ -24,6 +24,18 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **Per-user state paths are resolved when used, not at import.** Nine
+  defaults under `~/.je_auto_control/` (the action signing and encryption
+  keys, the host fingerprint and known hosts, the host service config, the
+  WebRTC inbox, and the A/B locator, cost and self-healing logs) were fixed
+  when their module was imported, so setting `HOME` / `USERPROFILE`
+  afterwards had no effect on them. The class attributes
+  `ABStore.DEFAULT_PATH`, `CostStore.DEFAULT_PATH` and
+  `HealEventLog.DEFAULT_PATH` are replaced by the functions
+  `default_stats_path()`, `default_cost_log_path()` and
+  `default_heal_log_path()` in the same modules. Migration: call the
+  function where the attribute was read.
+
 - **The log file moved out of the current directory.** Importing the package
   opened `AutoControlGUI.log` relative to the cwd, so every process that
   imported it — including every pytest run on a machine where it is installed,

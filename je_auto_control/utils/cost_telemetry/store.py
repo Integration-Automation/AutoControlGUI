@@ -51,14 +51,25 @@ class CostSummary:
         return asdict(self)
 
 
+def default_cost_log_path() -> Path:
+    """``~/.je_auto_control/cost_events.jsonl``, resolved at call time."""
+    return Path.home() / ".je_auto_control" / "cost_events.jsonl"
+
+
 class CostStore:
     """Thread-safe append-only JSONL log of :class:`CostEvent` records."""
 
-    DEFAULT_PATH = Path.home() / ".je_auto_control" / "cost_events.jsonl"
-
     def __init__(self, path: Optional[Path] = None) -> None:
-        self._path = Path(path) if path is not None else self.DEFAULT_PATH
+        # Only an explicit path is kept; the default is resolved on every
+        # use, because this module builds a shared instance while the
+        # package imports -- before a test suite's conftest.py can set HOME.
+        self._explicit_path: Optional[Path] = (
+            Path(path) if path is not None else None)
         self._lock = threading.Lock()
+
+    @property
+    def _path(self) -> Path:
+        return self._explicit_path or default_cost_log_path()
 
     @property
     def path(self) -> Path:

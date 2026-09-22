@@ -32,9 +32,9 @@ from typing import Any, Dict, Optional
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
-_DEFAULT_CONFIG_PATH = (
-    Path(os.path.expanduser("~")) / ".je_auto_control" / "host_service.json"
-)
+def _default_config_path() -> Path:
+    """``~/.je_auto_control/host_service.json``, resolved at call time."""
+    return Path(os.path.expanduser("~")) / ".je_auto_control" / "host_service.json"
 
 
 @dataclass
@@ -52,7 +52,7 @@ class HostServiceConfig:
 
 
 def load_config(path: Optional[Path] = None) -> HostServiceConfig:
-    target = Path(path) if path else _DEFAULT_CONFIG_PATH
+    target = Path(path) if path else _default_config_path()
     if not target.exists():
         raise FileNotFoundError(f"service config not found: {target}")
     raw = json.loads(target.read_text(encoding="utf-8"))
@@ -75,7 +75,7 @@ def load_config(path: Optional[Path] = None) -> HostServiceConfig:
 
 def write_default_config(path: Optional[Path] = None) -> Path:
     """Write a stub config the user must edit before installing."""
-    target = Path(path) if path else _DEFAULT_CONFIG_PATH
+    target = Path(path) if path else _default_config_path()
     target.parent.mkdir(parents=True, exist_ok=True)
     template = {
         "token": "CHANGE_ME_BEFORE_USE",  # nosec B105  # NOSONAR — placeholder in stub config the user MUST edit before installing the service
@@ -200,7 +200,7 @@ WantedBy=default.target
 def _interactive_configure() -> int:
     """Prompt the user for the four required fields and write a config."""
     print("AutoControl host service — interactive configuration")
-    print(f"Config will be written to: {_DEFAULT_CONFIG_PATH}")
+    print(f"Config will be written to: {_default_config_path()}")
     answers: Dict[str, Any] = {}
     answers["token"] = input("Auth token (shared with viewers): ").strip()
     answers["server_url"] = input("Signaling server URL: ").strip()
@@ -216,30 +216,30 @@ def _interactive_configure() -> int:
         input("Show cursor in stream? (Y/n): ").strip().lower() != "n"
     )
     answers["poll_interval_s"] = 2.0
-    _DEFAULT_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    # _DEFAULT_CONFIG_PATH is a hardcoded module constant, not user input
-    _DEFAULT_CONFIG_PATH.write_text(  # NOSONAR
+    _default_config_path().parent.mkdir(parents=True, exist_ok=True)
+    # The path is derived from the home directory, not from user input.
+    _default_config_path().write_text(  # NOSONAR
         json.dumps(answers, indent=2), encoding="utf-8",
     )
     try:
-        os.chmod(_DEFAULT_CONFIG_PATH, 0o600)
+        os.chmod(_default_config_path(), 0o600)
     except OSError:
         pass
-    print(f"Wrote {_DEFAULT_CONFIG_PATH}")
+    print(f"Wrote {_default_config_path()}")
     return 0
 
 
 def _print_status() -> int:
     """Print whether config exists + Windows service state if applicable."""
-    if _DEFAULT_CONFIG_PATH.exists():
+    if _default_config_path().exists():
         try:
             cfg = load_config()
-            print(f"Config: {_DEFAULT_CONFIG_PATH}  ({len(cfg.token)}-char token, "
+            print(f"Config: {_default_config_path()}  ({len(cfg.token)}-char token, "
                   f"host_id={cfg.host_id})")
         except (ValueError, OSError) as error:
             print(f"Config exists but invalid: {error}")
     else:
-        print(f"No config at {_DEFAULT_CONFIG_PATH} — run 'configure' or 'init'.")
+        print(f"No config at {_default_config_path()} — run 'configure' or 'init'.")
     if sys.platform == "win32":
         import subprocess  # nosec B404  # reason: only invoke fixed sc query argv
         try:
@@ -490,11 +490,11 @@ def _cmd_available_codecs(_args) -> int:
 
 
 def _cmd_install_windows_service(args) -> int:
-    return _install_windows_service(args.config or _DEFAULT_CONFIG_PATH)
+    return _install_windows_service(args.config or _default_config_path())
 
 
 def _cmd_generate_launchd(args) -> int:
-    _generate_launchd_plist(args.config or _DEFAULT_CONFIG_PATH, args.output)
+    _generate_launchd_plist(args.config or _default_config_path(), args.output)
     print(f"Wrote launchd plist: {args.output}")
     print("Activate with:")
     print(f"  cp {args.output} ~/Library/LaunchAgents/")
@@ -503,7 +503,7 @@ def _cmd_generate_launchd(args) -> int:
 
 
 def _cmd_generate_systemd(args) -> int:
-    _generate_systemd_unit(args.config or _DEFAULT_CONFIG_PATH, args.output)
+    _generate_systemd_unit(args.config or _default_config_path(), args.output)
     print(f"Wrote systemd unit: {args.output}")
     print("Activate with:")
     print(f"  mkdir -p ~/.config/systemd/user && cp {args.output} "

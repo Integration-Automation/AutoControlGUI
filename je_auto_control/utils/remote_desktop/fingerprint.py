@@ -25,17 +25,17 @@ from typing import Dict, Optional
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
-_HOST_FP_PATH = (
-    Path(os.path.expanduser("~")) / ".je_auto_control" / "host_fingerprint"
-)
-_KNOWN_HOSTS_PATH = (
-    Path(os.path.expanduser("~")) / ".je_auto_control" / "known_hosts.json"
-)
+def _host_fingerprint_path() -> Path:
+    return Path(os.path.expanduser("~")) / ".je_auto_control" / "host_fingerprint"
+
+
+def _known_hosts_path() -> Path:
+    return Path(os.path.expanduser("~")) / ".je_auto_control" / "known_hosts.json"
 
 
 def load_or_create_host_fingerprint(path: Optional[Path] = None) -> str:
     """Return the persisted host fingerprint, creating one on first call."""
-    target = Path(path) if path is not None else _HOST_FP_PATH
+    target = Path(path) if path is not None else _host_fingerprint_path()
     if target.exists():
         try:
             existing = target.read_text(encoding="utf-8").strip()
@@ -70,7 +70,7 @@ class KnownHosts:
     """
 
     def __init__(self, path: Optional[Path] = None) -> None:
-        self._path = (Path(path) if path is not None else _KNOWN_HOSTS_PATH)
+        self._path = (Path(path) if path is not None else _known_hosts_path())
         self._lock = threading.Lock()
         self._entries: Dict[str, dict] = {}
         self._load()

@@ -1001,7 +1001,7 @@ def test_screen_record_start_validates_directory(tmp_path):
 
 def test_screen_record_list_starts_empty(monkeypatch):
     """Force a fresh recorder so leftover state from other tests doesn't bleed in."""
-    import je_auto_control.utils.mcp_server.tools._handlers as handlers
+    import je_auto_control.utils.mcp_server.tools._handlers_screen as handlers
     monkeypatch.setattr(handlers, "_screen_recorder_singleton", None)
     by_name = {tool.name: tool for tool in build_default_tool_registry()}
     assert by_name["ac_screen_record_list"].invoke({}) == []
@@ -1036,7 +1036,7 @@ def test_clipboard_image_tools_present_in_default_registry():
 
 def test_get_clipboard_image_returns_text_block_when_empty(monkeypatch):
     """When the clipboard has no image, return a clear text fallback."""
-    import je_auto_control.utils.mcp_server.tools._handlers as handlers
+    import je_auto_control.utils.mcp_server.tools._handlers_system as handlers
     import je_auto_control.utils.clipboard.clipboard as image_clip
     monkeypatch.setattr(image_clip, "get_clipboard_image", lambda: None)
     result = handlers.get_clipboard_image()
@@ -1045,7 +1045,7 @@ def test_get_clipboard_image_returns_text_block_when_empty(monkeypatch):
 
 
 def test_get_clipboard_image_returns_image_block_when_set(monkeypatch):
-    import je_auto_control.utils.mcp_server.tools._handlers as handlers
+    import je_auto_control.utils.mcp_server.tools._handlers_system as handlers
     import je_auto_control.utils.clipboard.clipboard as image_clip
     monkeypatch.setattr(image_clip, "get_clipboard_image",
                          lambda: b"\x89PNG\r\n\x1a\n")
@@ -1279,7 +1279,7 @@ def test_logging_set_level_rejects_unknown_name():
 
 
 def test_wait_for_image_returns_center_when_template_found(monkeypatch):
-    import je_auto_control.utils.mcp_server.tools._handlers as handlers
+    import je_auto_control.utils.mcp_server.tools._handlers_system as handlers
     import je_auto_control.wrapper.auto_control_image as image_module
     monkeypatch.setattr(image_module, "locate_image_center",
                         lambda image_path, detect_threshold=1.0: (42, 84))
@@ -1351,7 +1351,7 @@ def test_window_geometry_tools_present_in_default_registry():
     reason="windows_window_manage uses ctypes.WINFUNCTYPE; Win32-only.",
 )
 def test_window_move_calls_into_windows_manager(monkeypatch):
-    import je_auto_control.utils.mcp_server.tools._handlers as handlers
+    import je_auto_control.utils.mcp_server.tools._handlers_system as handlers
     import je_auto_control.wrapper.auto_control_window as window_module
     monkeypatch.setattr(window_module, "find_window",
                         lambda title, case_sensitive=False: (123, title))

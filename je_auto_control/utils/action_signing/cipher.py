@@ -17,7 +17,12 @@ from typing import Optional, Union
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
-_DEFAULT_KEY_PATH = Path.home() / ".je_auto_control" / "action_encryption_key"
+
+def _default_key_path() -> Path:
+    """``~/.je_auto_control/action_encryption_key``, resolved at call time."""
+    return Path.home() / ".je_auto_control" / "action_encryption_key"
+
+
 _ENC_SUFFIX = ".enc"
 
 KeyType = Optional[Union[bytes, str]]
@@ -44,13 +49,14 @@ def _fernet_types() -> tuple:
 def _persistent_key() -> bytes:
     """Read the per-user Fernet key, creating it (0600) on first use."""
     fernet_cls, _ = _fernet_types()
-    if _DEFAULT_KEY_PATH.exists():
-        return _DEFAULT_KEY_PATH.read_bytes()
-    _DEFAULT_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    key_path = _default_key_path()
+    if key_path.exists():
+        return key_path.read_bytes()
+    key_path.parent.mkdir(parents=True, exist_ok=True)
     generated = fernet_cls.generate_key()
-    _DEFAULT_KEY_PATH.write_bytes(generated)
+    key_path.write_bytes(generated)
     try:
-        os.chmod(_DEFAULT_KEY_PATH, 0o600)
+        os.chmod(key_path, 0o600)
     except OSError as error:
         autocontrol_logger.warning("encryption key chmod failed: %r", error)
     return generated

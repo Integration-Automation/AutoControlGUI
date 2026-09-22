@@ -478,12 +478,11 @@ def viewer_inbox(tmp_path, monkeypatch):
     """Point the viewer's inbox at tmp_path.
 
     The viewer takes no `inbox_dir` -- unlike the host it always uses
-    `webrtc_files._DEFAULT_INBOX`, which is resolved at import time under
-    the real `~/.je_auto_control`. Redirecting HOME would be too late.
+    `webrtc_files.default_inbox_dir()`.
     """
     from je_auto_control.utils.remote_desktop import webrtc_files
     inbox = tmp_path / "inbox"
-    monkeypatch.setattr(webrtc_files, "_DEFAULT_INBOX", inbox)
+    monkeypatch.setattr(webrtc_files, "default_inbox_dir", lambda: inbox)
     return inbox
 
 

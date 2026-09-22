@@ -20,7 +20,12 @@ from typing import Any, Dict, Optional, Union
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
-_DEFAULT_KEY_PATH = Path.home() / ".je_auto_control" / "action_signing_key"
+
+def _default_key_path() -> Path:
+    """``~/.je_auto_control/action_signing_key``, resolved at call time."""
+    return Path.home() / ".je_auto_control" / "action_signing_key"
+
+
 _SIG_SUFFIX = ".sig"
 _REQUIRE_ENV = "JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS"
 
@@ -50,13 +55,14 @@ def _load_or_create_key(key: KeyType) -> bytes:
     explicit = _coerce_key(key)
     if explicit is not None:
         return explicit
-    if _DEFAULT_KEY_PATH.exists():
-        return _DEFAULT_KEY_PATH.read_bytes()
-    _DEFAULT_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    key_path = _default_key_path()
+    if key_path.exists():
+        return key_path.read_bytes()
+    key_path.parent.mkdir(parents=True, exist_ok=True)
     generated = os.urandom(32)
-    _DEFAULT_KEY_PATH.write_bytes(generated)
+    key_path.write_bytes(generated)
     try:
-        os.chmod(_DEFAULT_KEY_PATH, 0o600)
+        os.chmod(key_path, 0o600)
     except OSError as error:
         autocontrol_logger.warning("signing key chmod failed: %r", error)
     return generated

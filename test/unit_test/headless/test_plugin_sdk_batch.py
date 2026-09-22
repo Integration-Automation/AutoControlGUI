@@ -41,7 +41,10 @@ def test_discover_empty_when_no_entry_points():
     assert discover_plugins(entry_points=[]) == {}
 
 
-def test_load_registers_into_executor():
+def test_load_registers_into_executor(monkeypatch):
+    # A copy, so the command registered here does not outlive this test on
+    # the shared executor every later test sees.
+    monkeypatch.setattr(ac.executor, "event_dict", dict(ac.executor.event_dict))
     eps = [_FakeEP("demo", lambda: {"AC_plugin_loaded": lambda: {"v": 1}})]
     loaded = load_plugins(entry_points=eps)
     assert loaded == ["AC_plugin_loaded"]

@@ -103,10 +103,18 @@ class SecretManager:
     """In-memory cache around a Fernet-encrypted JSON vault."""
 
     def __init__(self, path: Optional[Path] = None) -> None:
-        self._path = Path(path) if path is not None else default_secret_store_path()
+        # Only an explicit path is kept; the default is resolved on every
+        # use, because this module builds a shared instance while the
+        # package imports -- before a test suite's conftest.py can set HOME.
+        self._explicit_path: Optional[Path] = (
+            Path(path) if path is not None else None)
         self._lock = threading.RLock()
         self._fernet = None  # type: ignore[assignment]
         self._vault: Optional[dict] = None
+
+    @property
+    def _path(self) -> Path:
+        return self._explicit_path or default_secret_store_path()
 
     @property
     def path(self) -> Path:

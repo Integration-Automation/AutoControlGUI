@@ -139,8 +139,10 @@ def test_summarise_handles_empty_log(tmp_path):
 
 def test_record_llm_call_uses_default_store(monkeypatch, tmp_path):
     from je_auto_control.utils.cost_telemetry import store as store_mod
-    monkeypatch.setattr(store_mod.default_cost_store, "_path",
-                         tmp_path / "evt.jsonl")
+    # ``_path`` resolves the per-user default on every read now, so the
+    # override goes on the explicit path the store keeps.
+    monkeypatch.setattr(store_mod.default_cost_store, "_explicit_path",
+                        tmp_path / "evt.jsonl")
     event = record_llm_call(
         provider="anthropic", model="claude-opus-4-7",
         input_tokens=1, output_tokens=1,

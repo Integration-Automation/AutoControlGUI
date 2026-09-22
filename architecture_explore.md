@@ -19,8 +19,8 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,033 |
-| 程式碼總行數 | 141,752 |
+| Python 模組總數（含周邊子專案） | 1,039 |
+| 程式碼總行數 | 141,882 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -268,12 +268,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 12,979 行。
+> 24 個套件、約 12,991 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/action_lint/` | 328 | action 檔 linter 與 JSON Schema 產生器（CI 用 `python -m` 進入點） |
-| `utils/action_signing/` | 248 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
+| `utils/action_signing/` | 260 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 120 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 158 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
 | `utils/dag/` | 478 | 跨主機 DAG 編排器（圖模型 + runner） |
@@ -367,7 +367,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.5 影像辨識與畫面分析
 
-> 37 個套件、約 5,105 行。
+> 37 個套件、約 5,107 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -375,7 +375,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/barcode/` | 53 | 一維條碼（EAN／UPC）解碼，解碼器可注入 |
 | `utils/color_match/` | 105 | 在 HSV 通道上做顏色感知的樣板比對 |
 | `utils/color_region/` | 79 | 以顏色定位畫面區域（遮罩 + 連通元件） |
-| `utils/color_stats/` | 96 | 區域顏色統計：平均色與主色 |
+| `utils/color_stats/` | 98 | 區域顏色統計：平均色與主色 |
 | `utils/coordinate_space/` | 84 | 模型網格座標與實體像素之間的座標空間對映 |
 | `utils/cv2_utils/` | 637 | OpenCV 基礎層：擷取後端選擇（`screen_grabber`，Pillow／mss 或平台後端）、截圖、樣板比對（走 `grab_logical`，涵蓋所有螢幕）、螢幕錄影、影片錄製、連通元件、影像堆疊的取用口（`optional`，Windows arm64 沒有 wheel 時語意報錯） |
 | `utils/edge_lines/` | 120 | 以 Hough 轉換偵測線條／格線／分隔線 |
@@ -460,11 +460,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.8 元素定位、自我修復與智慧等待
 
-> 23 個套件、約 4,014 行。
+> 23 個套件、約 4,036 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `utils/ab_locator/` | 336 | A/B 定位器框架：同時競速 N 種策略並記錄各自勝率 |
+| `utils/ab_locator/` | 347 | A/B 定位器框架：同時競速 N 種策略並記錄各自勝率 |
 | `utils/adaptive_timeout/` | 84 | 由觀測到的步驟耗時推導等待逾時，而非硬猜 |
 | `utils/anchor_locator/` | 457 | 錨點定位器：以空間關係組合 影像／OCR／VLM／a11y 四種來源 |
 | `utils/app_idle/` | 108 | 等應用程式不再忙碌，再驅動下一步 |
@@ -483,14 +483,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/observation_delta/` | 103 | token 預算內的觀察差異：兩個 UI 影格之間變了什麼 |
 | `utils/screen_state/` | 143 | 語義畫面狀態：快照／差異與結構化畫面描述 |
 | `utils/scroll_find/` | 84 | 捲動直到目標影像／文字可見 |
-| `utils/self_healing/` | 342 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
+| `utils/self_healing/` | 353 | 自癒定位器：先影像樣板、失敗改用 VLM，並留稽核記錄 |
 | `utils/semantic_recording/` | 423 | 為錄製內容加上語義錨點，支援換機重播與自癒重播 |
 | `utils/settle_detector/` | 76 | 以純函式介面判定 UI 是否已靜止 |
 | `utils/smart_waits/` | 646 | 智慧等待：以影格差異取代 `time.sleep` |
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 20,663 行。
+> 13 個套件、約 20,734 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -499,11 +499,11 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/agent_memory/` | 153 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 63 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 129 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
-| `utils/cost_telemetry/` | 292 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
+| `utils/cost_telemetry/` | 303 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
 | `utils/cua_action/` | 127 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 357 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 92 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 17,371 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 17,431 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 180 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 106 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 449 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -554,7 +554,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 6,906 行。
+> 34 個套件、約 6,921 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -579,7 +579,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/profiler/` | 426 | 逐動作效能剖析器 + 資源剖析器 |
 | `utils/quarantine/` | 190 | 易碎測試隔離區，讓套件執行器跳過已知不穩定案例 |
 | `utils/run_diff/` | 123 | 兩次執行軌跡的差異（LCS 對齊：新增／移除／狀態翻轉／退化） |
-| `utils/run_history/` | 377 | 執行歷史儲存與產出物管理 |
+| `utils/run_history/` | 392 | 執行歷史儲存與產出物管理 |
 | `utils/sarif/` | 134 | 以 SARIF 2.1.0 匯出發現項，供 GitHub／Azure code scanning |
 | `utils/slo/` | 112 | SLO 評估：SLI、錯誤預算與多視窗燃燒率告警 |
 | `utils/smoothing/` | 67 | 數列移動平均平滑 |
@@ -626,7 +626,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.14 安全、機密與合規
 
-> 13 個套件、約 2,294 行。
+> 13 個套件、約 2,302 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -639,7 +639,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/redaction/` | 467 | 截圖遮蔽層：規則偵測 + 政策 + 協調器（上傳 VLM 前先遮） |
 | `utils/sbom/` | 110 | SBOM（CycloneDX）產生 |
 | `utils/secret_ref/` | 126 | URI scheme 形式的值參照解析 |
-| `utils/secrets/` | 272 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
+| `utils/secrets/` | 280 | 加密機密儲存庫，供 `${secrets.NAME}` 解析 |
 | `utils/secrets_scan/` | 98 | 掃描 action JSON／資料中應入庫卻硬編碼的機密 |
 | `utils/vex/` | 130 | OpenVEX 陳述撰寫與漏洞分類處置 |
 | `utils/vuln_scan/` | 188 | 以 OSV 比對 SBOM 元件的漏洞（純標準庫） |
@@ -702,13 +702,19 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `action_schema.py` | 128 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
-#### `utils/mcp_server/`（17,371 行，676 個工具）— 最大子系統
+#### `utils/mcp_server/`（17,431 行，676 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `tools/_factories.py` | 8,975 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
-| `tools/_handlers.py` | 4,389 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter。 |
+| `tools/_factories.py` | 8,981 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
+| `tools/_handlers.py` | 2,992 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter。 |
 | `tools/_handlers_qa.py` | 414 | 同一種 adapter，QA 主題：斷言 DSL、資料驅動、SQL／PDF／郵件／HTTP 步驟、codegen、視覺回歸、狀態機、flaky 偵測與隔離、suite runner、無障礙稽核、裝置矩陣、媒體斷言。從 `_handlers.py` 依主題拆出的第一塊（750 行上限）；兩者互不引用。 |
+| `tools/_handlers_input.py` | 212 | 同一種 adapter，輸入主題：滑鼠、鍵盤、虛擬手把（ViGEm）。 |
+| `tools/_handlers_screen.py` | 304 | 同一種 adapter，螢幕主題：擷取、像素、影像與文字搜尋、螢幕錄影。 |
+| `tools/_handlers_system.py` | 559 | 同一種 adapter，桌面工作階段：視窗、行程與 shell、開檔、閒置與睡眠、音量、鎖定、輸入法狀態、欄位驗證與重試、色彩對比、變更排序、元件分類、剪貼簿。 |
+| `tools/_handlers_runs.py` | 110 | 同一種 adapter，執行主題：executor、執行歷史、錄製、動作檔。 |
+| `tools/_handlers_scheduling.py` | 200 | 同一種 adapter，排程主題：排程器、觸發器、熱鍵常駐。 |
+| `tools/_handlers_remote.py` | 66 | 同一種 adapter，遠端桌面的 host 與 viewer。 |
 | `server.py` | 717 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器。 |
 | `http_transport.py` | 521 | MCP 的 HTTP 傳輸。 |
 | `http_sessions.py` | 234 | MCP 的 HTTP 傳輸用的 session 身分:`Mcp-Session-Id` 註冊表,以及每個 session 那條常駐的 server→client SSE 串流。 |
@@ -1047,7 +1053,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 90 | 26,722 |
-| `utils/mcp_server/` | 22 | 17,371 |
+| `utils/mcp_server/` | 28 | 17,431 |
 | `utils/remote_desktop/` | 56 | 12,039 |
 | `utils/executor/` | 6 | 9,081 |
 | `utils/usb/` | 17 | 4,321 |
@@ -1066,6 +1072,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,872 |
-| **總計** | **1,027** | **141,687** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,942 |
+| **總計** | **1,033** | **141,817** |
 

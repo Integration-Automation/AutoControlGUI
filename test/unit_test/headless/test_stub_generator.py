@@ -194,11 +194,15 @@ def test_the_shipped_stub_lists_every_executor_command():
     comparison would depend on which interpreter regenerated the file.
     Regenerate with ``python -m je_auto_control.utils.stubs.generator
     je_auto_control/actions.pyi``.
+
+    A fresh ``Executor()`` rather than the shared ``executor``: other tests
+    register commands on the singleton (a plugin test left ``AC_plugin_loaded``
+    behind), and the stub describes what the package ships.
     """
-    from je_auto_control.utils.executor.action_executor import executor
+    from je_auto_control.utils.executor.action_executor import Executor
     stub = Path(__file__).resolve().parents[3] / "je_auto_control" / "actions.pyi"
     shipped = set(re.findall(r"^def (\w+)\(", stub.read_text(encoding="utf-8"),
                              flags=re.MULTILINE))
-    live = {name for name in executor.event_dict if isinstance(name, str)}
+    live = {name for name in Executor().event_dict if isinstance(name, str)}
     assert shipped == live, (
         f"missing: {sorted(live - shipped)[:10]} stale: {sorted(shipped - live)[:10]}")

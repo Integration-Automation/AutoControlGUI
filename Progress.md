@@ -24,7 +24,7 @@
 
 | 檔案 | 行數 | 為何還沒拆 |
 | --- | ---: | --- |
-| `utils/mcp_server/tools/_handlers.py` | 4,389 | 676 個 MCP 工具的處理函式本體（QA 主題的 34 個已拆到 `_handlers_qa.py`）。與 `_factories.py`（表）不同,這裡是邏輯,應該依主題繼續拆（input／screen／window／a11y／agent…）。拆點不完全乾淨:`# === Semantic locators` 一節（約 2,400 行）與 `# === WebRunner bridge` 一節早已混進不相干的 adapter,要先按主題重排再切。 |
+| `utils/mcp_server/tools/_handlers.py` | 2,992 | 676 個 MCP 工具的處理函式本體。邊界乾淨的七個主題已經拆出去（`_handlers_qa`／`_input`／`_screen`／`_system`／`_runs`／`_scheduling`／`_remote`）。剩下的是 `# === Semantic locators`（2,437 行、421 個 adapter，長年被當成雜物間）與 `# === WebRunner bridge`（542）兩節,**要先按主題重排才能再切**——照現有標題切只會把不相干的東西一起搬走。 |
 | `gui/remote_desktop/webrtc_panel.py` | 2,545 | 單一 Qt 面板,但已含連線、監視器選擇、頻寬自適應、麥克風、錄影五組互動狀態。應拆成 panel + 各控制器。 |
 | `utils/accessibility/backends/windows_backend.py` | 923 | 已拆出 `windows_query.py`（170）與 `windows_state.py`（98）。剩下的是同一套 UIA COM 生命週期管理,再拆會把 `CoInitialize`／介面釋放的配對邏輯切散。**2026-08-24 從 918 長到 923**:見下面的說明。 |
 
@@ -169,22 +169,6 @@ DEBUG 都會流到 root 的 handler（用了 `basicConfig` 的程式會被灌爆
 **卡點不是程式，是下游可能默默依賴它**：pytest 的 `caplog` 沒設等級時，拿到的 DEBUG 記錄
 其實是靠這一行才有。動手前先在 Jeffrey_RPA、PyBreeze、TestPioneer 跑一次整套（它們都
 直接或經 pytest11 外掛載入本套件），確認沒有測試因此少抓到記錄。
-
----
-
-## 測試會寫進真正的 `~/.je_auto_control/`
-
-`TODO` — `test/conftest.py` 只把記錄檔導到暫存目錄，其他每使用者狀態沒有
-
-2026-09-23 跑整套測試的時段，家目錄的 `audit.db`（遠端桌面的稽核鏈）、`address_book.json`、
-`quarantine.json`、`run_history.sqlite` 都被改過，`artifacts/` 累積了 419 張錯誤截圖（日期
-對得上每一天的開發測試）。這些預設路徑大多在**呼叫時**才算 `Path.home()`（`audit_log.py:41`、
-`address_book.py:31`、`quarantine/store.py:39`、`run_history/history_store.py:81`、
-`run_history/artifact_manager.py:20`），所以在 `test/conftest.py` 把 `HOME`／`USERPROFILE`
-指到每次一個的暫存目錄就擋得住；**import 時就算好的**常數（`ab_locator/store.py:70`、
-`cost_telemetry/store.py:57`、`action_signing/{cipher,signer}.py`、`remote_desktop/fingerprint.py`、
-`host_service.py:36`、`webrtc_files.py:34`）擋不住，因為 pytest11 外掛比 conftest 早 import
-整個套件——要先確認測試有沒有碰到它們，碰到就改成呼叫時才算。
 
 ---
 
