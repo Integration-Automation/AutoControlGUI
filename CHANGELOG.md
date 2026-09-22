@@ -137,6 +137,16 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Remote-desktop file transfers cannot leave partial files or destroy the
+  original.** Both receivers write to a `.part` file and rename it into place
+  only when exactly the announced number of bytes arrived; excess or missing
+  data fails the transfer. The WebRTC inbox refuses Windows device names
+  (`nul`, `COM1.txt`) and names ending in a dot or space, and a malformed
+  envelope or destination fails the transfer instead of killing the
+  connection's receive thread.
+- **One misbehaving admin host no longer fails every host's poll**, and an
+  address book whose `hosts` is not a list loads empty instead of raising.
+
 - **A failing data step no longer aborts the script.** SQLite, CSV, regex,
   PDF and malformed-HTTP errors from `AC_sql_to_var`, `AC_assert_db`,
   `AC_for_each_row`, `AC_transform_var`, `AC_pdf_to_var` and the HTTP

@@ -220,3 +220,22 @@ CI 只有 macos-14(arm64)，量不到這一點。重新檢查（不需要機器�
 pip install --dry-run --only-binary=:all: --platform macosx_10_9_x86_64 \
     --python-version 3.12 --target /tmp/probe 'cryptography>=50'
 ```
+
+---
+
+## Viewer 端要不要把 host 推來的檔案關在一個目錄裡
+
+`DECIDE` — 這是改一個已寫進文件的功能，由維護者決定
+
+`host.send_file_to_viewers(source, dest_path)` 由 **host** 指定 viewer 機器上的完整路徑
+（`docs/source/{Eng,Zh}/doc/new_features/new_features_doc.rst` 的範例是 `/tmp/from_host.bin`），
+viewer 端的 `FileReceiver`（`utils/remote_desktop/file_transfer.py`）照單全收：`expanduser`、
+建立父目錄、寫入。也就是被控端可以在控制端機器的任何可寫位置放檔案。模組說明的
+「trusted token holders == trusted users」只涵蓋 host 端；viewer 連上一台被入侵的 host 時沒有這層保護。
+
+**做法**：`FileReceiver` 加 `base_dir`，viewer（`viewer.py` 的 `_ensure_file_receiver`、GUI 的
+`viewer_panel.py`）預設給一個下載目錄，只保留相對路徑並拒絕跳出 `base_dir`；host 端維持現狀。
+
+**為什麼要拍板**：`dest_path` 的語意會從「viewer 上的絕對路徑」變成「viewer 下載目錄裡的相對路徑」，
+現有腳本與文件範例都要跟著改。
+

@@ -14,7 +14,11 @@ Limitations:
     you need to ship multi-GB files, add a ``bufferedAmount`` poll.
 
 Host inbox defaults to ``~/.je_auto_control/inbox`` and incoming filenames
-are stripped of any directory components to defeat path traversal.
+are stripped of any directory components to defeat path traversal; names a
+Windows filesystem would redirect (device names such as ``NUL``, a trailing
+dot or space) are refused. Data goes to a ``.part`` file that replaces the
+target only after exactly ``size`` bytes arrived, so a failed transfer
+keeps any earlier copy.
 """
 from __future__ import annotations
 
@@ -25,6 +29,7 @@ import threading
 from pathlib import Path
 from typing import Callable, Optional
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.webrtc_transport import get_bridge
 
@@ -35,8 +40,14 @@ def default_inbox_dir() -> Path:
     return Path(os.path.expanduser("~")) / ".je_auto_control" / "inbox"
 
 
-class FileTransferError(RuntimeError):
+class FileTransferError(AutoControlException, RuntimeError):
     """Protocol or filesystem error during a transfer."""
+
+
+_MAX_SIZE = 4 * 1024 * 1024 * 1024
+_WINDOWS_DEVICE_NAMES = frozenset(
+    ["CON", "PRN", "AUX", "NUL"]
+    + [f"{prefix}{digit}" for prefix in ("COM", "LPT") for digit in range(10)])
 
 
 def _safe_basename(name: str) -> str:
@@ -45,9 +56,31 @@ def _safe_basename(name: str) -> str:
     base = Path(name).name
     if not base or base in (".", ".."):
         raise FileTransferError(f"invalid filename after sanitize: {name!r}")
-    if any(ch in base for ch in "\x00<>:\"|?*"):
+    if any(ch in base for ch in "<>:\"|?*") or any(ord(ch) < 32 for ch in base):
         raise FileTransferError(f"invalid filename characters: {base!r}")
+    if _redirected_on_windows(base):
+        raise FileTransferError(f"filename not portable: {base!r}")
     return base
+
+
+def _redirected_on_windows(base: str) -> bool:
+    """Whether Windows would open something other than ``base`` itself.
+
+    'nul' went to the null device yet was reported as received, and
+    'report. ' overwrote 'report'.
+    """
+    return base[-1] in ". " or base.split(".")[0].upper() in _WINDOWS_DEVICE_NAMES
+
+
+def _announced_size(raw) -> int:
+    """Validate the envelope's ``size``: an int in 0..4 GiB."""
+    try:
+        size = int(raw)
+    except (TypeError, ValueError, OverflowError) as error:
+        raise FileTransferError(f"invalid size: {raw!r}") from error
+    if size < 0 or size > _MAX_SIZE:
+        raise FileTransferError(f"invalid size: {size}")
+    return size
 
 
 class FileTransferReceiver:
@@ -79,6 +112,8 @@ class FileTransferReceiver:
             data = json.loads(raw)
         except json.JSONDecodeError as error:
             raise FileTransferError(f"bad envelope: {error}") from error
+        if not isinstance(data, dict):
+            raise FileTransferError("bad envelope: not an object")
         msg_type = data.get("type")
         if msg_type == "file_begin":
             self._begin(data)
@@ -95,6 +130,9 @@ class FileTransferReceiver:
             current = self._current
         if current is None:
             return  # silently drop stray chunk
+        if current["written"] + len(chunk) > current["size"]:
+            raise FileTransferError(
+                f"more data than the {current['size']} bytes announced")
         try:
             current["fh"].write(chunk)
         except OSError as error:
@@ -108,17 +146,16 @@ class FileTransferReceiver:
             if self._current is not None:
                 raise FileTransferError("transfer already in progress")
             name = _safe_basename(data.get("name", ""))
-            size = int(data.get("size", 0))
-            if size < 0 or size > 4 * 1024 * 1024 * 1024:
-                raise FileTransferError(f"invalid size: {size}")
+            size = _announced_size(data.get("size", 0))
             target = self._inbox / name
+            part = self._inbox / f".{name}.{secrets.token_hex(4)}.part"
             try:
-                fh = target.open("wb")
+                fh = part.open("wb")
             except OSError as error:
                 raise FileTransferError(f"open failed: {error}") from error
             self._current = {
                 "fh": fh, "size": size, "written": 0,
-                "path": target,
+                "path": target, "part": part,
                 "transfer_id": data.get("transfer_id", ""),
             }
         autocontrol_logger.info(
@@ -128,13 +165,20 @@ class FileTransferReceiver:
     def _finish(self, on_done) -> None:
         with self._lock:
             current = self._current
+            if current is not None and current["written"] != current["size"]:
+                # Raised with the transfer still current, so handle_message
+                # aborts it; a truncated file used to be reported received.
+                raise FileTransferError(
+                    f"received {current['written']} of {current['size']} bytes")
             self._current = None
         if current is None:
             return
         try:
             current["fh"].close()
+            os.replace(current["part"], current["path"])
         except OSError as error:
-            autocontrol_logger.warning("file close: %r", error)
+            current["part"].unlink(missing_ok=True)
+            raise FileTransferError(f"cannot finish {current['path'].name}: {error}") from error
         autocontrol_logger.info(
             "file transfer: complete %s (%d bytes)",
             current["path"], current["written"],
@@ -150,7 +194,7 @@ class FileTransferReceiver:
             return
         try:
             current["fh"].close()
-            current["path"].unlink(missing_ok=True)
+            current["part"].unlink(missing_ok=True)
         except OSError:
             pass
         autocontrol_logger.warning("file transfer aborted: %s", reason)

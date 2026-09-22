@@ -15,6 +15,11 @@ Three message types form a transfer:
 There is no central per-host file-size limit — operators relying on
 this should keep ``trusted token holders == trusted users`` in mind, and
 treat the dropbox / destination filesystem accordingly.
+
+The receiver writes to a ``.part`` file beside the destination and renames
+it into place only when ``FILE_END`` reports success and exactly the
+announced number of bytes arrived, so a failed transfer never truncates an
+existing file or leaves a partial one behind.
 """
 import json
 import os
@@ -24,6 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.remote_desktop.protocol import MessageType
 
@@ -38,7 +44,7 @@ ProgressCallback = Callable[[str, int, int], None]
 CompleteCallback = Callable[[str, bool, Optional[str], str], None]
 
 
-class FileTransferError(RuntimeError):
+class FileTransferError(AutoControlException, RuntimeError):
     """Raised when a file-transfer payload is malformed."""
 
 
@@ -124,10 +130,19 @@ class _Incoming:
 
     transfer_id: str
     dest_path: Path
+    part_path: Path
     total_size: int
     handle: Any  # file object
     bytes_done: int = 0
     error: Optional[str] = None
+
+
+def _discard(part: Path) -> None:
+    """Delete a part file that will not be renamed into place."""
+    try:
+        part.unlink(missing_ok=True)
+    except OSError as error:
+        autocontrol_logger.info("remote_desktop part file %s left: %r", part, error)
 
 
 class FileReceiver:
@@ -142,16 +157,28 @@ class FileReceiver:
 
     def handle_begin(self, payload: bytes) -> None:
         transfer_id, dest_path, total_size = decode_begin(payload)
+        with self._lock:
+            duplicate = transfer_id in self._active
+        if duplicate:
+            # Replacing the entry leaked the first transfer's open handle.
+            autocontrol_logger.info(
+                "remote_desktop FILE_BEGIN for active transfer %s ignored",
+                transfer_id,
+            )
+            return
         path = Path(os.path.expanduser(dest_path))
-        path.parent.mkdir(parents=True, exist_ok=True)
+        part = path.with_name(f".{path.name}.{transfer_id[:8]}.part")
         try:
-            handle = open(path, "wb")  # noqa: SIM115  managed manually
-        except OSError as error:
+            # mkdir inside the try: a NUL in the name (ValueError) or a
+            # protected directory killed the connection's receive thread.
+            path.parent.mkdir(parents=True, exist_ok=True)
+            handle = open(part, "wb")  # noqa: SIM115  managed manually
+        except (OSError, ValueError) as error:
             self._fire_complete(transfer_id, False, str(error), str(path))
             return
         with self._lock:
             self._active[transfer_id] = _Incoming(
-                transfer_id=transfer_id, dest_path=path,
+                transfer_id=transfer_id, dest_path=path, part_path=part,
                 total_size=total_size, handle=handle,
             )
         if self._on_progress is not None:
@@ -166,6 +193,11 @@ class FileReceiver:
                 "remote_desktop FILE_CHUNK for unknown transfer %s",
                 transfer_id,
             )
+            return
+        if incoming.bytes_done + len(chunk) > incoming.total_size:
+            incoming.error = (
+                f"more data than the {incoming.total_size} bytes announced")
+            self._abort(incoming)
             return
         try:
             incoming.handle.write(chunk)
@@ -185,21 +217,39 @@ class FileReceiver:
             incoming = self._active.pop(transfer_id, None)
         if incoming is None:
             return
-        try:
-            incoming.handle.close()
-        except OSError:
-            pass
-        ok = (status == "ok") and incoming.error is None
-        message = error or incoming.error
+        ok, message = self._commit(incoming, status == "ok", error)
         self._fire_complete(
             transfer_id, ok, message, str(incoming.dest_path),
         )
+
+    @staticmethod
+    def _commit(incoming: _Incoming, sender_ok: bool,
+                sender_error: Optional[str]) -> Tuple[bool, Optional[str]]:
+        """Close the part file and rename it into place, or discard it."""
+        message = sender_error or incoming.error
+        try:
+            incoming.handle.close()
+        except OSError as close_error:
+            message = message or str(close_error)
+        ok = sender_ok and message is None
+        if ok and incoming.bytes_done != incoming.total_size:
+            ok, message = False, (
+                f"received {incoming.bytes_done} of {incoming.total_size} bytes")
+        if ok:
+            try:
+                os.replace(incoming.part_path, incoming.dest_path)
+                return True, None
+            except OSError as replace_error:
+                ok, message = False, str(replace_error)
+        _discard(incoming.part_path)
+        return ok, message
 
     def _abort(self, incoming: _Incoming) -> None:
         try:
             incoming.handle.close()
         except OSError:
             pass
+        _discard(incoming.part_path)
         with self._lock:
             self._active.pop(incoming.transfer_id, None)
         self._fire_complete(

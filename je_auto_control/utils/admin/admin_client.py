@@ -9,6 +9,7 @@ must protect it like an SSH private key (the file is written with mode
 """
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import tempfile
@@ -121,7 +122,7 @@ class AdminConsoleClient:
         def grab(host: AdminHost) -> tuple:
             try:
                 body = self._http_get(host, "/screenshot")
-            except (OSError, ValueError) as error:
+            except (OSError, ValueError, http.client.HTTPException) as error:
                 autocontrol_logger.info(
                     "admin: thumbnail %s failed: %r", host.label, error,
                 )
@@ -166,7 +167,10 @@ class AdminConsoleClient:
             sessions = self._http_get(host, "/sessions")
         # Not redundant: TimeoutError is not an OSError on Python 3.10,
         # the lowest supported version.
-        except (OSError, ValueError, TimeoutError) as error:  # NOSONAR
+        # HTTPException (a garbage status line, a truncated body) is no
+        # OSError: one bad host escaped pool.map and failed every host's round.
+        except (OSError, ValueError, TimeoutError,  # NOSONAR
+                http.client.HTTPException) as error:
             return HostStatus(
                 label=host.label, base_url=host.base_url, healthy=False,
                 latency_ms=(time.monotonic() - start) * 1000.0,
@@ -185,7 +189,10 @@ class AdminConsoleClient:
             return self._http_get(host, path)
         # Not redundant: TimeoutError is not an OSError on Python 3.10,
         # the lowest supported version.
-        except (OSError, ValueError, TimeoutError) as error:  # NOSONAR
+        # HTTPException (a garbage status line, a truncated body) is no
+        # OSError: one bad host escaped pool.map and failed every host's round.
+        except (OSError, ValueError, TimeoutError,  # NOSONAR
+                http.client.HTTPException) as error:
             autocontrol_logger.warning(
                 "admin: %s GET %s failed: %r", host.label, path, error,
             )
@@ -198,7 +205,10 @@ class AdminConsoleClient:
             return {"label": host.label, "ok": True, "result": payload}
         # Not redundant: TimeoutError is not an OSError on Python 3.10,
         # the lowest supported version.
-        except (OSError, ValueError, TimeoutError) as error:  # NOSONAR
+        # HTTPException (a garbage status line, a truncated body) is no
+        # OSError: one bad host escaped pool.map and failed every host's round.
+        except (OSError, ValueError, TimeoutError,  # NOSONAR
+                http.client.HTTPException) as error:
             return {"label": host.label, "ok": False, "error": str(error)}
 
     def _http_get(self, host: AdminHost, path: str) -> Dict[str, Any]:
@@ -257,8 +267,13 @@ class AdminConsoleClient:
             autocontrol_logger.warning(
                 "admin: %s is not a JSON object; ignoring", self._path)
             return
+        entries = payload.get("hosts", [])
+        if not isinstance(entries, list):
+            autocontrol_logger.warning(
+                "admin: %s 'hosts' is not a list; ignoring", self._path)
+            return
         hosts: Dict[str, AdminHost] = {}
-        for entry in payload.get("hosts", []):
+        for entry in entries:
             if not (isinstance(entry, dict) and entry.get("label")):
                 continue
             try:
