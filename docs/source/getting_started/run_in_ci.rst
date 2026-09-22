@@ -66,9 +66,9 @@ Reuse from any branch by adding this job to your own workflow:
      headless-pytest:
        runs-on: ubuntu-22.04
        steps:
-         - uses: actions/checkout@v4
-         - uses: docker/setup-buildx-action@v3
-         - uses: docker/build-push-action@v5
+         - uses: actions/checkout@v5
+         - uses: docker/setup-buildx-action@v4
+         - uses: docker/build-push-action@v7
            with:
              context: .
              file: docker/Dockerfile
