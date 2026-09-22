@@ -1,9 +1,9 @@
 import json
-from threading import Lock
 from typing import Dict, Tuple
 
 from je_auto_control.utils.exception.exception_tags import cant_generate_json_report_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlGenerateJsonReportException
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
 
@@ -41,21 +41,13 @@ def generate_json() -> Tuple[Dict[str, Dict[str, str]], Dict[str, Dict[str, str]
     return success_dict, failure_dict
 
 
-def _write_json_file(file_name: str, data: Dict[str, Dict[str, str]], lock: Lock) -> None:
-    """
-    Write JSON data to file safely with lock.
-    使用 Lock 安全地將 JSON 資料寫入檔案
-
-    :param file_name: 檔案名稱
-    :param data: 要寫入的 JSON 資料
-    :param lock: 執行緒鎖
-    """
-    with lock:
-        try:
-            with open(file_name, "w+", encoding="utf-8") as file_to_write:
-                json.dump(data, file_to_write, indent=4, ensure_ascii=False)
-        except (OSError, TypeError, ValueError) as error:
-            autocontrol_logger.error(f"Failed to write {file_name}, error: {repr(error)}")
+def _write_json_file(file_name: str, data: Dict[str, Dict[str, str]]) -> None:
+    """Write ``data`` atomically; raise on failure instead of only logging it."""
+    try:
+        atomic_write_text(file_name, json.dumps(data, indent=4, ensure_ascii=False))
+    except (OSError, TypeError, ValueError) as error:
+        raise AutoControlGenerateJsonReportException(
+            f"cannot write report {file_name!r}: {error!r}") from error
 
 
 def generate_json_report(json_file_name: str = "default_name") -> None:
@@ -68,7 +60,5 @@ def generate_json_report(json_file_name: str = "default_name") -> None:
     autocontrol_logger.info(f"generate_json_report, json_file_name: {json_file_name}")
 
     success_dict, failure_dict = generate_json()
-    lock = Lock()
-
-    _write_json_file(json_file_name + "_success.json", success_dict, lock)
-    _write_json_file(json_file_name + "_failure.json", failure_dict, lock)
+    _write_json_file(json_file_name + "_success.json", success_dict)
+    _write_json_file(json_file_name + "_failure.json", failure_dict)

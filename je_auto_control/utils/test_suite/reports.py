@@ -20,6 +20,7 @@ from typing import Any, Dict, List
 from je_auto_control.utils.test_suite.result import (
     STATUS_ERROR, STATUS_FAILED, STATUS_SKIPPED, TestSuiteResult,
 )
+from je_auto_control.utils.xml.change_xml_structure.change_xml_structure import xml_safe_text
 
 _ALLURE_STATUS = {
     "passed": "passed",
@@ -31,26 +32,30 @@ _ALLURE_STATUS = {
 
 def _case_element(parent: ET.Element, case: Any, suite_name: str) -> None:
     """Append one ``<testcase>`` (with failure/error/skipped child) element."""
+    # Messages are str(error) / OCR text / captured output: an ANSI colour
+    # code in one made the whole file unreadable to every CI system.
+    message = xml_safe_text(case.message)
     node = ET.SubElement(parent, "testcase", {
-        "name": case.name,
+        "name": xml_safe_text(case.name),
         "classname": suite_name,
         "time": f"{case.duration_s:.3f}",
     })
     if case.status == STATUS_FAILED:
-        child = ET.SubElement(node, "failure", {"message": case.message})
-        child.text = case.message
+        child = ET.SubElement(node, "failure", {"message": message})
+        child.text = message
     elif case.status == STATUS_ERROR:
-        child = ET.SubElement(node, "error", {"message": case.message})
-        child.text = case.message
+        child = ET.SubElement(node, "error", {"message": message})
+        child.text = message
     elif case.status == STATUS_SKIPPED:
-        ET.SubElement(node, "skipped", {"message": case.message})
+        ET.SubElement(node, "skipped", {"message": message})
 
 
 def to_junit_xml(result: TestSuiteResult) -> str:
     """Render ``result`` as a JUnit XML string."""
     suites = ET.Element("testsuites")
+    suite_name = xml_safe_text(result.name)
     suite = ET.SubElement(suites, "testsuite", {
-        "name": result.name,
+        "name": suite_name,
         "tests": str(result.total),
         "failures": str(result.failed),
         "errors": str(result.errored),
@@ -58,14 +63,14 @@ def to_junit_xml(result: TestSuiteResult) -> str:
         "time": f"{result.duration_s:.3f}",
     })
     if result.setup_error:
+        setup_error = xml_safe_text(result.setup_error)
         error_case = ET.SubElement(suite, "testcase", {
-            "name": "<setup>", "classname": result.name, "time": "0.000",
+            "name": "<setup>", "classname": suite_name, "time": "0.000",
         })
-        node = ET.SubElement(error_case, "error",
-                             {"message": result.setup_error})
-        node.text = result.setup_error
+        node = ET.SubElement(error_case, "error", {"message": setup_error})
+        node.text = setup_error
     for case in result.cases:
-        _case_element(suite, case, result.name)
+        _case_element(suite, case, suite_name)
     return ET.tostring(suites, encoding="unicode")
 
 

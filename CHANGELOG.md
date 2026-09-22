@@ -131,6 +131,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Reports.** A recorded control character (an ANSI colour code, a stray
+  `\x01`) no longer breaks the XML report or makes a JUnit file unreadable;
+  such characters appear as U+FFFD. A report that cannot be written raises
+  `AutoControlHTMLException`, `AutoControlGenerateJsonReportException` or
+  `XMLException` instead of being logged and skipped, and reports are written
+  atomically. Exception text is no longer wrapped in an extra pair of quotes.
+
 - **Vault passphrases and secret values no longer reach logs or results.**
   The arguments of `AC_secret_*` commands are shown as `***` in the
   executor's log lines and in the keys of the record it returns (a secret

@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-21 | 2026-09-23 | Report audit: control characters, silent write failures | #incident #reports | [2026-09](2026-09.md) |
 | U-20260923-20 | 2026-09-23 | CI actions moved off the deprecated Node 20 runtime | #ci #maintenance | [2026-09](2026-09.md) |
 | U-20260923-19 | 2026-09-23 | Secret handling: masked passphrases in logs, atomic vault rekey, unique backups | #incident #security #secrets | [2026-09](2026-09.md) |
 | U-20260923-18 | 2026-09-23 | Action signing audit: enforcement on every run path, key files, salted passphrases | #incident #security #signing | [2026-09](2026-09.md) |
@@ -125,7 +126,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 36 |
+| [2026-09.md](2026-09.md) | 2026-09 | 37 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

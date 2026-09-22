@@ -3,6 +3,7 @@ from threading import Lock
 
 from je_auto_control.utils.exception.exception_tags import html_generate_no_data_tag_error_message
 from je_auto_control.utils.exception.exceptions import AutoControlHTMLException
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.test_record.record_test_class import test_record_instance
 
@@ -164,9 +165,8 @@ def generate_html_report(html_name: str = "default_name") -> None:
 
     with _lock:  # 使用 with 確保 Lock 正確釋放 Ensure lock is released properly
         try:
-            with open(html_name + ".html", "w+", encoding="utf-8") as file_to_write:
-                file_to_write.write(new_html_string)
+            atomic_write_text(html_name + ".html", new_html_string)
         except OSError as error:
-            autocontrol_logger.error(
-                f"generate_html_report failed, html_name: {html_name}, error: {repr(error)}"
-            )
+            # Only logging it made a missing report look like a written one.
+            raise AutoControlHTMLException(
+                f"cannot write report {html_name + '.html'!r}: {error!r}") from error
