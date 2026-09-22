@@ -15,6 +15,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Added
 
+- **`WorkQueue.get_next(stale_after_s=...)`** (and the same optional
+  argument on `AC_queue_next` / `ac_queue_next`) reclaims an item a crashed
+  performer left in progress for that many seconds.
+
 - **`ac_rrule_next`, `ac_rrule_occurrences` and `ac_format_date` now declare
   the string format they parse.** Their `dtstart` / `now` / `value` properties
   carry `"format": "date-time"` (or `"date"`) in the tool's input schema, which
@@ -141,6 +145,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **SQLite-backed stores.** Two dispatchers can no longer enqueue the same
+  work-item reference; `WorkQueue.fail` on an unknown id raises instead of
+  reporting a requeue; the work queue, checkpoint store and agent memory
+  close their connections; a run-history or audit-log database error is an
+  `AutoControlException` (`HistoryStoreError`, `AuditLogError`) instead of a
+  `sqlite3.Error` that ended the hotkey listener thread; and two processes
+  writing one audit log keep its hash chain valid.
 
 - **Credentials no longer follow a redirect to another host.** The HTTP
   client drops `Authorization` and cookies when a redirect changes host. The

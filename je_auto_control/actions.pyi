@@ -2156,7 +2156,7 @@ def AC_queue_fail(
 ) -> Dict[str, Any]:
     """Adapter: fail a work item (application errors retry, business don't)."""
 
-def AC_queue_next(db: str, name: str = ...) -> Dict[str, Any] | None:
+def AC_queue_next(db: str, name: str = ..., stale_after_s: float | None = ...) -> Dict[str, Any] | None:
     """Adapter: atomically claim the next work item (or None)."""
 
 def AC_queue_stats(db: str, name: str = ...) -> Dict[str, int]:

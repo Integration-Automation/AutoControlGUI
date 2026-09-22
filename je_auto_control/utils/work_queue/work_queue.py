@@ -18,11 +18,11 @@ Pure standard library (``sqlite3``); imports no ``PySide6``.
 import json
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, ContextManager, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.sqlite_support import (
-    last_row_id, require_sqlite3,
+    autocommit_connection, last_row_id,
 )
 
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
@@ -58,12 +58,8 @@ class WorkQueue:
         self._name = name
         self._ensure_schema()
 
-    def _connect(self) -> "sqlite3.Connection":
-        driver = require_sqlite3()
-        conn = driver.connect(self._db_path, timeout=30.0,
-                              isolation_level=None)
-        conn.row_factory = driver.Row
-        return conn
+    def _connect(self) -> ContextManager["sqlite3.Connection"]:
+        return autocommit_connection(self._db_path)
 
     def _ensure_schema(self) -> None:
         with self._connect() as conn:
@@ -78,13 +74,18 @@ class WorkQueue:
             dedupe: bool = True) -> Optional[int]:
         """Enqueue an item; skip (return None) on a live duplicate reference."""
         with self._connect() as conn:
+            # One write transaction for the check and the insert: in autocommit
+            # two dispatchers could both pass the check and enqueue twice.
+            conn.execute("BEGIN IMMEDIATE")
             if dedupe and reference and self._has_pending(conn, reference):
+                conn.execute("COMMIT")
                 return None
             cur = conn.execute(
                 "INSERT INTO work_items (queue, reference, data, status, "
                 "updated) VALUES (?, ?, ?, ?, ?)",
                 (self._name, reference or "", json.dumps(data), STATUS_NEW,
                  time.time()))
+            conn.execute("COMMIT")
             return last_row_id(cur)
 
     def _has_pending(self, conn: "sqlite3.Connection", reference: str) -> bool:
@@ -94,13 +95,26 @@ class WorkQueue:
             (self._name, reference, STATUS_NEW, STATUS_IN_PROGRESS)).fetchone()
         return row is not None
 
-    def get_next(self) -> Optional[WorkItem]:
-        """Atomically claim the oldest ``new`` item, marking it in-progress."""
+    def get_next(self, *, stale_after_s: Optional[float] = None) -> Optional[WorkItem]:
+        """Atomically claim the oldest ``new`` item, marking it in-progress.
+
+        With ``stale_after_s``, an ``in_progress`` item not updated for that
+        long is claimable again too: a performer that crashed mid-item left
+        it in progress for good -- and, since a live duplicate blocks
+        ``add``, it could not even be enqueued again.
+        """
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            row = conn.execute(
-                "SELECT * FROM work_items WHERE queue=? AND status=? "
-                "ORDER BY id LIMIT 1", (self._name, STATUS_NEW)).fetchone()
+            if stale_after_s is None:
+                row = conn.execute(
+                    "SELECT * FROM work_items WHERE queue=? AND status=? "
+                    "ORDER BY id LIMIT 1", (self._name, STATUS_NEW)).fetchone()
+            else:
+                row = conn.execute(
+                    "SELECT * FROM work_items WHERE queue=? AND (status=? OR "
+                    "(status=? AND updated<?)) ORDER BY id LIMIT 1",
+                    (self._name, STATUS_NEW, STATUS_IN_PROGRESS,
+                     time.time() - float(stale_after_s))).fetchone()
             if row is None:
                 conn.execute("COMMIT")
                 return None
@@ -124,7 +138,10 @@ class WorkQueue:
         with self._connect() as conn:
             row = conn.execute("SELECT retries FROM work_items WHERE id=?",
                                (item_id,)).fetchone()
-            retries = int(row["retries"]) if row else 0
+            if row is None:
+                # It used to report "new" -- requeued -- having updated nothing.
+                raise AutoControlException(f"no work item with id {item_id}")
+            retries = int(row["retries"])
             retryable = kind == "application" and retries < int(max_retries)
             status = STATUS_NEW if retryable else STATUS_FAILED
             conn.execute(

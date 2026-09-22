@@ -4358,7 +4358,7 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
     ))
     specs.append(CommandSpec(
         "AC_queue_next", "Queue", "Queue: Get Next Item",
-        fields=(db, name),
+        fields=(db, name, FieldSpec("stale_after_s", FieldType.FLOAT, optional=True)),
         description="Atomically claim the next work item (performer).",
     ))
     specs.append(CommandSpec(

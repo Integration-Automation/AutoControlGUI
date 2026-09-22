@@ -2638,8 +2638,11 @@ def work_queue_tools() -> List[MCPTool]:
             name="ac_queue_next",
             description=("Atomically claim the next 'new' work item "
                          "(performer), marking it in-progress. Returns the "
-                         "item or null when the queue is drained."),
-            input_schema=schema(dict(_Q), required=["db"]),
+                         "item or null when the queue is drained. With "
+                         "stale_after_s, an item left in progress that long "
+                         "(a crashed performer) is claimable again."),
+            input_schema=schema({"stale_after_s": {"type": "number"}, **_Q},
+                                required=["db"]),
             handler=h.queue_next,
             annotations=SIDE_EFFECT_ONLY,
         ),

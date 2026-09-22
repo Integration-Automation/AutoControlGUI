@@ -32,8 +32,8 @@ def queue_add(db, data, reference=None, name="default"):
     return {"id": _work_queue(db, name).add(data, reference=reference)}
 
 
-def queue_next(db, name="default"):
-    item = _work_queue(db, name).get_next()
+def queue_next(db, name="default", stale_after_s=None):
+    item = _work_queue(db, name).get_next(stale_after_s=stale_after_s)
     return None if item is None else {
         "id": item.id, "reference": item.reference, "data": item.data,
         "status": item.status, "retries": item.retries}

@@ -12,9 +12,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.sqlite_support import (
-    SQLITE_ERRORS, last_row_id, require_sqlite3,
+    SQLITE_ERRORS, last_row_id, require_sqlite3, sqlite_errors_as,
 )
 
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
@@ -96,6 +97,10 @@ def _validate_status(status: str) -> None:
         )
 
 
+class HistoryStoreError(AutoControlException):
+    """The run-history database failed (corrupt file, lock timeout...)."""
+
+
 class HistoryStore:
     """SQLite-backed run log. Safe to share across threads."""
 
@@ -158,6 +163,7 @@ class HistoryStore:
                           else _IN_MEMORY_DB)
         return self._path
 
+    @sqlite_errors_as(HistoryStoreError)
     def start_run(self, source_type: str, source_id: str,
                   script_path: str, started_at: Optional[float] = None,
                   ) -> int:
@@ -172,6 +178,7 @@ class HistoryStore:
             )
             return last_row_id(cursor)
 
+    @sqlite_errors_as(HistoryStoreError)
     def finish_run(self, run_id: int, status: str,
                    error_text: Optional[str] = None,
                    finished_at: Optional[float] = None,
@@ -189,6 +196,7 @@ class HistoryStore:
             )
             return cursor.rowcount > 0
 
+    @sqlite_errors_as(HistoryStoreError)
     def attach_artifact(self, run_id: int, artifact_path: str) -> bool:
         """Attach or replace the artifact path on a finished run."""
         with self._lock:
@@ -198,6 +206,7 @@ class HistoryStore:
             )
             return cursor.rowcount > 0
 
+    @sqlite_errors_as(HistoryStoreError)
     def list_runs(self, limit: int = 100,
                   source_type: Optional[str] = None,
                   ) -> List[RunRecord]:
@@ -222,6 +231,7 @@ class HistoryStore:
                 ).fetchall()
         return [_row_to_record(row) for row in rows]
 
+    @sqlite_errors_as(HistoryStoreError)
     def get_run(self, run_id: int) -> Optional[RunRecord]:
         """Return a specific row or ``None`` if absent."""
         with self._lock:
@@ -230,6 +240,7 @@ class HistoryStore:
             ).fetchone()
         return _row_to_record(row) if row is not None else None
 
+    @sqlite_errors_as(HistoryStoreError)
     def count(self, source_type: Optional[str] = None) -> int:
         """Return the number of rows, optionally filtered by source."""
         if source_type is not None:
@@ -244,6 +255,7 @@ class HistoryStore:
                 row = self._connection().execute("SELECT COUNT(*) FROM runs").fetchone()
         return int(row[0])
 
+    @sqlite_errors_as(HistoryStoreError)
     def clear(self) -> int:
         """Delete every row (and its artifact file); return rows removed."""
         with self._lock:
@@ -255,6 +267,7 @@ class HistoryStore:
         _remove_artifact_files(paths)
         return removed
 
+    @sqlite_errors_as(HistoryStoreError)
     def prune(self, keep_latest: int) -> int:
         """Keep only the newest ``keep_latest`` rows; delete the rest."""
         if keep_latest < 0:

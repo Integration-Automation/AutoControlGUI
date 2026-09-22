@@ -3185,9 +3185,10 @@ def _queue_add(db: str, data: Any, reference: Optional[str] = None,
     return {"id": _queue(db, name).add(data, reference=reference)}
 
 
-def _queue_next(db: str, name: str = "default") -> Optional[Dict[str, Any]]:
+def _queue_next(db: str, name: str = "default",
+                stale_after_s: Optional[float] = None) -> Optional[Dict[str, Any]]:
     """Adapter: atomically claim the next work item (or None)."""
-    item = _queue(db, name).get_next()
+    item = _queue(db, name).get_next(stale_after_s=stale_after_s)
     return None if item is None else {
         "id": item.id, "reference": item.reference, "data": item.data,
         "status": item.status, "retries": item.retries}

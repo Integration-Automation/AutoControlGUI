@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.sqlite_support import (
     SQLITE_ERRORS, SQLITE_OPERATIONAL_ERRORS, require_sqlite3,
@@ -51,8 +52,17 @@ class ChainVerification:
     total_rows: int
 
 
+class AuditLogError(AutoControlException):
+    """The audit database could not be opened (corrupt file, lock timeout...)."""
+
+
 class AuditLog:
-    """Append-only event log with hash-chain integrity."""
+    """Append-only event log with hash-chain integrity.
+
+    Several processes may share one file (the host service and the GUI): each
+    ``log`` reads the chain head inside its own write transaction, so a
+    per-instance cache cannot link a row to a stale predecessor.
+    """
 
     def __init__(self, path: Optional[Path] = None) -> None:
         self._path = Path(path) if path is not None else default_audit_log_path()
@@ -64,8 +74,13 @@ class AuditLog:
         self._conn = driver.connect(
             str(self._path), check_same_thread=False, isolation_level=None,
         )
-        self._init_schema()
-        self._last_hash: str = self._load_last_hash()
+        try:
+            self._init_schema()
+        except SQLITE_ERRORS as error:
+            # A corrupt file raised sqlite3.DatabaseError, outside the
+            # family every caller's boundary contains.
+            self._conn.close()
+            raise AuditLogError(f"cannot open audit log {self._path}: {error}") from error
 
     def _init_schema(self) -> None:
         self._conn.execute(
@@ -129,10 +144,6 @@ class AuditLog:
         row = cur.fetchone()
         return row[0] if row else _GENESIS_HASH
 
-    def _load_last_hash(self) -> str:
-        with self._lock:
-            return self._read_last_hash_locked()
-
     def log(self, event_type: str, *,
             host_id: Optional[str] = None,
             viewer_id: Optional[str] = None,
@@ -140,8 +151,10 @@ class AuditLog:
         ts = datetime.now(timezone.utc).isoformat()
         with self._lock:
             try:
+                self._conn.execute("BEGIN IMMEDIATE")
+                prev_hash = self._read_last_hash_locked()
                 row_hash = _compute_row_hash(
-                    self._last_hash, ts, event_type, host_id, viewer_id, detail,
+                    prev_hash, ts, event_type, host_id, viewer_id, detail,
                 )
                 self._conn.execute(
                     "INSERT INTO events"
@@ -149,11 +162,13 @@ class AuditLog:
                     "  prev_hash, row_hash)"
                     " VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (ts, event_type, host_id, viewer_id, detail,
-                     self._last_hash, row_hash),
+                     prev_hash, row_hash),
                 )
-                self._last_hash = row_hash
+                self._conn.execute("COMMIT")
                 self._maybe_prune_locked()
             except SQLITE_ERRORS as error:
+                if self._conn.in_transaction:
+                    self._conn.execute("ROLLBACK")
                 autocontrol_logger.warning("audit log insert: %r", error)
 
     def _maybe_prune_locked(self) -> None:
@@ -225,7 +240,6 @@ class AuditLog:
             cur = self._conn.execute("SELECT COUNT(*) FROM events")
             (count,) = cur.fetchone()
             self._conn.execute("DELETE FROM events")
-            self._last_hash = _GENESIS_HASH
         return int(count)
 
     def close(self) -> None:

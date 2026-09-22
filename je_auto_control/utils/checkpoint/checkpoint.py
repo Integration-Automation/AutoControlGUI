@@ -13,9 +13,9 @@ without a real crash.
 import json
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, ContextManager, Dict, List, Optional
 
-from je_auto_control.utils.sqlite_support import require_sqlite3
+from je_auto_control.utils.sqlite_support import autocommit_connection
 
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
     import sqlite3
@@ -37,12 +37,8 @@ class CheckpointStore:
         self._db_path = db_path
         self._ensure_schema()
 
-    def _connect(self) -> "sqlite3.Connection":
-        driver = require_sqlite3()
-        conn = driver.connect(self._db_path, timeout=30.0,
-                              isolation_level=None)
-        conn.row_factory = driver.Row
-        return conn
+    def _connect(self) -> ContextManager["sqlite3.Connection"]:
+        return autocommit_connection(self._db_path)
 
     def _ensure_schema(self) -> None:
         with self._connect() as conn:
