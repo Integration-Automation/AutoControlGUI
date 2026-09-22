@@ -993,10 +993,9 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 
 | 檔案 | 用途 |
 | --- | --- |
-| `dev.yml` | 開發分支測試。 |
-| `stable.yml` | 合併到 main 後版本遞增並上傳 PyPI（使用 `PYPI_API_TOKEN`）。 |
+| `stable.yml` | 每次 push／PR 到 `main` 與每日排程跑 Windows 五版本的示範腳本；合併到 main 後版本遞增並上傳 PyPI（使用 `PYPI_API_TOKEN`）。 |
 | `release.yml` | 發佈流程（上傳步驟目前關閉）。 |
-| `quality.yml` | 靜態分析與型別檢查。 |
+| `quality.yml` | ruff、bandit、dependency review、九格矩陣的 headless pytest（含 coverage 地板）與 mypy。 |
 | `platform-smoke.yml` | 跨平台煙霧測試。 |
 | `docker.yml` | 容器映像建置。 |
 | `action-json-lint.yml` | 用 `python -m je_auto_control.utils.action_lint` 檢查 action JSON。 |

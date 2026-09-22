@@ -2,14 +2,14 @@ name: AutoControl Docker CI
 
 on:
   push:
-    branches: [ "dev", "main" ]
+    branches: [ "main" ]
     paths:
       - "docker/**"
       - "je_auto_control/**"
       - "pyproject.toml"
       - ".github/workflows/docker.yml"
   pull_request:
-    branches: [ "dev", "main" ]
+    branches: [ "main" ]
     paths:
       - "docker/**"
       - "je_auto_control/**"

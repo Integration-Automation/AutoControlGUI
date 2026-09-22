@@ -174,23 +174,3 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 重驗方式就是跑那兩支腳本（`eis-verification` job 已經在跑）；哪天 banner 不再
 出現，就把 `_teardown` 的迴避拿掉。形狀與 arm64 那條一樣：卡上游、有一行重驗。
-
----
-
-## CI：四個 workflow 還在監聽停用的 `dev` 分支
-
-`TODO` — 從各 workflow 的 `branches` 拿掉 `dev`（除非維護者決定 `dev` 要復用）
-
-`dev` 最後一次有東西進來是 2026-07-23：`origin/dev` 停在 b4f5245（PR #470），PR #471 是最後
-一次 `dev` → `main`。之後合進 `main` 的 PR（#480–#483、#485）全部直接開向 `main`；
-2026-09-22 實測 `origin/dev` 落後 `origin/main` 143 個 commit、領先 0 個。但觸發條件還寫著它：
-
-| workflow | `push`／`pull_request` 的 `branches` | 備註 |
-| --- | --- | --- |
-| `dev.yml` | 只有 `dev` | 這兩個觸發已經是死的；它實際上只剩每日 `schedule`，跑在預設分支 `main` 上 |
-| `docker.yml` | `dev`、`main` | |
-| `platform-smoke.yml` | `main`、`dev` | |
-| `quality.yml` | `dev`、`main`、`stable` | 遠端追蹤分支裡也沒有 `stable`（`stable.yml` 同樣列了它） |
-
-後三個只是多列了一個不會再觸發的分支，無害但誤導；`dev.yml` 則是名字與行為對不上——
-叫「Dev CI」，跑的其實是 `main` 的每日排程。

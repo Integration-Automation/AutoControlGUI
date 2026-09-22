@@ -2,9 +2,9 @@ name: AutoControl Stable CI
 
 on:
   push:
-    branches: [ "main", "stable" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "main", "stable" ]
+    branches: [ "main" ]
   schedule:
     - cron: "0 1 * * *"
 
