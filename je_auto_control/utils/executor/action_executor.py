@@ -30,6 +30,7 @@ from je_auto_control.utils.executor.action_schema import (
 from je_auto_control.utils.executor.flow_control import (
     BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
+from je_auto_control.utils.executor.action_redaction import describe_action, redact_actions
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.llm.planner import (
     plan_actions as llm_plan_actions,
@@ -7976,7 +7977,7 @@ class Executor:
             return event(*resolved)
         if len(action) == 1:
             return event()
-        raise AutoControlActionException(cant_execute_action_error_message + " " + str(action))
+        raise AutoControlActionException(cant_execute_action_error_message + " " + describe_action(action))
 
     def execute_action(self, action_list: Union[list, dict],
                        raise_on_error: bool = False,
@@ -7995,7 +7996,7 @@ class Executor:
         :param step_callback: 每個 action 開始前呼叫此 hook（偵錯用）。
         :return: 執行紀錄字典
         """
-        autocontrol_logger.info(f"execute_action, action_list: {action_list}")
+        autocontrol_logger.info(f"execute_action, action_list: {redact_actions(action_list)}")
         action_list = self._unwrap_action_list(action_list)
         if not _validated:
             validate_actions(action_list, self.known_commands())
@@ -8005,7 +8006,7 @@ class Executor:
             if step_callback is not None:
                 step_callback(action)
             if dry_run:
-                execute_record_dict["dry-run: " + str(action)] = "(not executed)"
+                execute_record_dict["dry-run: " + describe_action(action)] = "(not executed)"
                 continue
             try:
                 self._run_one_action(action, execute_record_dict, raise_on_error)
@@ -8040,7 +8041,7 @@ class Executor:
         if raise_on_error:
             raise error
         record_action_to_list("AC_execute_action", None, repr(error))
-        record["execute: " + str(action)] = repr(error)
+        record["execute: " + describe_action(action)] = repr(error)
 
     @staticmethod
     def _unwrap_action_list(action_list: Union[list, dict]) -> list:
@@ -8058,7 +8059,7 @@ class Executor:
                         raise_on_error: bool) -> None:
         """Execute a single action, recording the result or raising."""
         import time as _time
-        key = "execute: " + str(action)
+        key = "execute: " + describe_action(action)
         if key in record:
             # Two byte-identical actions would otherwise share one record slot,
             # so an earlier failure is silently overwritten by a later success.
@@ -8095,7 +8096,7 @@ class Executor:
                     error, (AutoControlAssertionException, MacroDepthExceeded)):
                 raise
             autocontrol_logger.info(
-                f"execute_action failed, action: {action}, error: {repr(error)}"
+                f"execute_action failed, action: {describe_action(action)}, error: {repr(error)}"
             )
             record_action_to_list("AC_execute_action", None, repr(error))
             record[key] = repr(error)

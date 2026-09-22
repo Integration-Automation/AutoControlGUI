@@ -252,9 +252,7 @@ class ConfigBundleImporter:
                            relative: str, report: ImportReport,
                            backup_stamp: int) -> None:
         if target.exists():
-            backup_path = target.with_name(
-                f"{target.name}.bak.{backup_stamp}",
-            )
+            backup_path = _unused_backup_path(target, backup_stamp)
             try:
                 target.replace(backup_path)
                 report.backups[relative] = str(backup_path.name)
@@ -273,6 +271,20 @@ class ConfigBundleImporter:
             report.skipped.append(relative)
             return
         report.written.append(relative)
+
+
+def _unused_backup_path(target: Path, backup_stamp: int) -> Path:
+    """``<name>.bak.<stamp>``, with ``.N`` added until no file has the name.
+
+    Two imports in the same second used the same name, and ``replace``
+    overwrote the first backup -- the one holding the user's original file.
+    """
+    candidate = target.with_name(f"{target.name}.bak.{backup_stamp}")
+    counter = 1
+    while candidate.exists():
+        candidate = target.with_name(f"{target.name}.bak.{backup_stamp}.{counter}")
+        counter += 1
+    return candidate
 
 
 def import_config_bundle(bundle: Any,

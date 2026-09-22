@@ -74,7 +74,9 @@ class TCPServerHandler(socketserver.BaseRequestHandler):
             autocontrol_logger.info("socket command read dropped: %r", error)
             return
         socket = self.request
-        autocontrol_logger.info("command is: %s", command_string)
+        # Not the text itself: it may carry a vault passphrase or secret, and
+        # execute_action logs the parsed list with those masked.
+        autocontrol_logger.info("command received: %d characters", len(command_string))
         if command_string == "quit_server":
             autocontrol_logger.info("Now quit server")
             _close_server_async(self.server)

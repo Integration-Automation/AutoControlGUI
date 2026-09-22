@@ -131,6 +131,17 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Vault passphrases and secret values no longer reach logs or results.**
+  The arguments of `AC_secret_*` commands are shown as `***` in the
+  executor's log lines and in the keys of the record it returns (a secret
+  command's key changes accordingly), and the socket server no longer logs
+  the command text.
+- **Changing the vault passphrase cannot lose secrets.** The vault is
+  rewritten once, atomically, instead of being deleted and refilled.
+  `SecretStoreError` is now also an `AutoControlException`.
+- **Config-bundle imports keep every backup.** Two imports in the same
+  second no longer overwrite the first `.bak` file.
+
 - **`JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` covers every way a file runs.**
   Only `execute_files` checked it: the CLI's `run`, the scheduler, triggers,
   webhooks, hotkeys, the MCP `execute_action_file` tool and the GUI ran

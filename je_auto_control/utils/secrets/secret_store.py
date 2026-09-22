@@ -29,6 +29,8 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from je_auto_control.utils.exception.exceptions import AutoControlException
+
 
 _VERIFIER_PLAINTEXT = b"autocontrol-vault-v1"
 _KEY_ITERATIONS = 600_000
@@ -53,8 +55,13 @@ def _fernet_types() -> tuple:
     return Fernet, InvalidToken
 
 
-class SecretStoreError(RuntimeError):
-    """Raised when the vault file is corrupt or a passphrase is wrong."""
+class SecretStoreError(AutoControlException, RuntimeError):
+    """Raised when the vault file is corrupt or a passphrase is wrong.
+
+    Part of the ``AutoControlException`` family like every framework error, so
+    the containment boundaries catch it; still a ``RuntimeError`` for callers
+    that caught it as one.
+    """
 
 
 class SecretStoreLocked(SecretStoreError):
@@ -89,7 +96,9 @@ def _load_vault(path: Path) -> Optional[dict]:
 def _atomic_write(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    with tmp.open("w", encoding="utf-8") as handle:
+    # Created 0600, so the file is never readable by others before chmod.
+    descriptor = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2, sort_keys=True)
     os.replace(tmp, path)
     try:
@@ -97,6 +106,21 @@ def _atomic_write(path: Path, payload: dict) -> None:
     except OSError:
         # Windows: ACL restricts by default; chmod is best-effort there.
         pass
+
+
+def _new_vault(passphrase: str) -> Tuple[Any, dict]:
+    """Return ``(fernet, payload)`` for an empty vault keyed by ``passphrase``."""
+    fernet_cls, _ = _fernet_types()
+    salt = os.urandom(_SALT_BYTES)
+    fernet = fernet_cls(_derive_key(passphrase, salt, _KEY_ITERATIONS))
+    payload = {
+        "version": 1,
+        "salt": base64.b64encode(salt).decode("ascii"),
+        "iterations": _KEY_ITERATIONS,
+        "verifier": fernet.encrypt(_VERIFIER_PLAINTEXT).decode("ascii"),
+        "items": {},
+    }
+    return fernet, payload
 
 
 class SecretManager:
@@ -141,18 +165,7 @@ class SecretManager:
         with self._lock:
             if self._path.exists():
                 raise SecretStoreError("vault already exists")
-            fernet_cls, _ = _fernet_types()
-            salt = os.urandom(_SALT_BYTES)
-            key = _derive_key(passphrase, salt, _KEY_ITERATIONS)
-            fernet = fernet_cls(key)
-            verifier = fernet.encrypt(_VERIFIER_PLAINTEXT).decode("ascii")
-            payload = {
-                "version": 1,
-                "salt": base64.b64encode(salt).decode("ascii"),
-                "iterations": _KEY_ITERATIONS,
-                "verifier": verifier,
-                "items": {},
-            }
+            fernet, payload = _new_vault(passphrase)
             _atomic_write(self._path, payload)
             self._fernet = fernet
             self._vault = payload
@@ -228,7 +241,13 @@ class SecretManager:
             return True
 
     def change_passphrase(self, old: str, new: str) -> None:
-        """Re-encrypt the entire vault under a new passphrase."""
+        """Re-encrypt the entire vault under a new passphrase.
+
+        The new vault is built in memory and replaces the old file in one
+        atomic write: it used to delete the vault and re-add each secret with
+        its own write, so an error or crash part-way lost every secret not
+        yet re-added.
+        """
         if not isinstance(new, str) or not new:
             raise ValueError("new passphrase must be a non-empty string")
         with self._lock:
@@ -238,11 +257,14 @@ class SecretManager:
                 name: self.get(name) or ""
                 for name in self.list_names()
             }
-            self.lock()
-            self._path.unlink()
-            self.initialize(new)
-            for name, value in plaintexts.items():
-                self.set(name, value)
+            fernet, payload = _new_vault(new)
+            payload["items"] = {
+                name: fernet.encrypt(value.encode("utf-8")).decode("ascii")
+                for name, value in plaintexts.items()
+            }
+            _atomic_write(self._path, payload)
+            self._fernet = fernet
+            self._vault = payload
 
     def destroy(self) -> None:
         """Delete the vault file (after confirming via direct call)."""
