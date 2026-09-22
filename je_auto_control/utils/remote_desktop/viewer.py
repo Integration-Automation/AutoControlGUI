@@ -336,7 +336,7 @@ class RemoteDesktopViewer:
         if self._on_clipboard is not None:
             try:
                 self._on_clipboard(kind, data)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
                 autocontrol_logger.exception(
                     "remote_desktop viewer on_clipboard callback raised"
                 )
@@ -430,7 +430,7 @@ class RemoteDesktopViewer:
             return
         try:
             self._on_frame(payload)
-        except Exception as error:  # noqa: BLE001  callback isolation
+        except Exception as error:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop viewer on_frame callback raised"
             )
@@ -485,7 +485,7 @@ class RemoteDesktopViewer:
             return
         try:
             self._on_audio(payload)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop viewer on_audio callback raised"
             )
@@ -567,7 +567,7 @@ class RemoteDesktopViewer:
             return
         try:
             self._on_chat(str(sender), text)
-        except Exception:  # noqa: BLE001  callback isolation
+        except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop viewer on_chat callback raised"
             )
@@ -592,7 +592,7 @@ class RemoteDesktopViewer:
         if viewer_id and self._on_viewer_cursor is not None:
             try:
                 self._on_viewer_cursor(str(viewer_id), x, y)
-            except Exception:  # noqa: BLE001  callback isolation
+            except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
                 autocontrol_logger.exception(
                     "remote_desktop viewer on_viewer_cursor callback raised"
                 )
@@ -601,7 +601,7 @@ class RemoteDesktopViewer:
             return
         try:
             self._on_cursor(x, y)
-        except Exception:  # noqa: BLE001  callback isolation
+        except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop viewer on_cursor callback raised"
             )
@@ -611,7 +611,7 @@ class RemoteDesktopViewer:
             return
         try:
             self._on_error(error)
-        except Exception:  # noqa: BLE001  callback isolation
+        except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop viewer on_error callback raised"
             )

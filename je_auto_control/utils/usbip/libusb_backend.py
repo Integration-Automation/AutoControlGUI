@@ -130,7 +130,7 @@ class LibUsbBackend(UrbBackend):
             if _is_control_endpoint(request.ep):
                 return self._submit_control(device, request)
             return self._submit_bulk_or_interrupt(device, request)
-        except Exception as error:  # noqa: BLE001 — translate to URB status
+        except Exception as error:  # noqa: BLE001  # reason: every failure becomes a URB status
             return UrbResponse(
                 status=_translate_error(error),
                 actual_length=0,

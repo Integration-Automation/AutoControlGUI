@@ -213,7 +213,7 @@ class FileReceiver:
             return
         try:
             self._on_complete(transfer_id, ok, error, dest_path)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop FileReceiver.on_complete callback raised"
             )

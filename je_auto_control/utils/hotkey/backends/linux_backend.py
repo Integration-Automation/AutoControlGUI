@@ -73,7 +73,7 @@ class LinuxHotkeyBackend(HotkeyBackend):
 
         try:
             disp = xdisplay.Display()
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001  # reason: Xlib display errors share no base with OSError
             autocontrol_logger.error("open X display failed: %r", error)
             return
 

@@ -428,7 +428,7 @@ def send_mouse_event_to_window(window: Union[int, str],
             posted = wm.post_click(int(window), button, int(x or 0), int(y or 0))
         record_action_to_list("send_mouse_event_to_window", {**param, "posted": posted})
 
-    except Exception as error:  # noqa: BLE001 - preserved contract: never raises
+    except Exception as error:  # noqa: BLE001  # reason: preserved contract, never raises
         record_action_to_list("send_mouse_event_to_window", param, repr(error))
         autocontrol_logger.error(f"send_mouse_event_to_window failed: {repr(error)}")
 

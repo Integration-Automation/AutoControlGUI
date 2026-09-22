@@ -358,7 +358,7 @@ class _ClientHandler:
             return
         try:
             callback(str(sender), text)
-        except Exception:  # noqa: BLE001  callback isolation
+        except Exception:  # noqa: BLE001  # reason: callback isolation, a caller's handler must not kill the receive loop
             autocontrol_logger.exception(
                 "remote_desktop on_chat callback raised"
             )

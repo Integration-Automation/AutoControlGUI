@@ -131,7 +131,7 @@ def _release_still_held(still_held: list, is_shift: bool) -> None:
         key = still_held.pop()
         try:
             release_keyboard_key(key, is_shift, skip_record=True)
-        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except
+        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except  # reason: see docstring
             autocontrol_logger.error(
                 f"failed to release a still-held key {key!r}: {repr(error)}")
 
@@ -353,7 +353,7 @@ def send_key_event_to_window(window_title: str, keycode: Union[int, str]) -> Non
         record_action_to_list(
             "send_key_event_to_window",
             {"window_title": window_title, "keycode": keycode, "posted": posted})
-    except Exception as error:  # noqa: BLE001 - preserved contract: never raises
+    except Exception as error:  # noqa: BLE001  # reason: preserved contract, never raises
         record_action_to_list("send_key_event_to_window", {"window_title": window_title, "keycode": keycode}, repr(error))
         autocontrol_logger.error(
             f"send_key_event_to_window failed, window={window_title}, keycode={keycode}, error={repr(error)}"

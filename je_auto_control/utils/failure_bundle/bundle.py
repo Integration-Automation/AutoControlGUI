@@ -65,7 +65,7 @@ def _collect_diagnostics(archive: zipfile.ZipFile,
         from je_auto_control.utils.diagnostics import run_diagnostics
         archive.writestr("diagnostics.json",
                          _json_bytes(run_diagnostics().to_dict()))
-    except Exception as exc:  # diagnostics are best-effort
+    except Exception as exc:  # noqa: BLE001  # reason: best-effort, recorded in the manifest
         failures.append({"collector": "diagnostics", "error": repr(exc)})
 
 
@@ -80,7 +80,7 @@ def _collect_screenshot(archive: zipfile.ZipFile,
             archive.write(image_path, "screenshot.png")
         finally:
             Path(image_path).unlink(missing_ok=True)
-    except Exception as exc:  # headless and locked sessions are valid
+    except Exception as exc:  # noqa: BLE001  # reason: headless/locked sessions are valid, recorded
         failures.append({"collector": "screenshot", "error": repr(exc)})
 
 
@@ -90,7 +90,7 @@ def _collect_log(archive: zipfile.ZipFile, opts: FailureBundleOptions,
         archive.writestr("logs/tail.log", _read_log_tail(
             Path(opts.log_path or "").expanduser().resolve(),
             max(1, opts.log_tail_bytes)))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001  # reason: a bad log path must not lose the bundle
         failures.append({"collector": "log", "error": repr(exc)})
 
 
@@ -103,7 +103,7 @@ def _collect_attachments(archive: zipfile.ZipFile, opts: FailureBundleOptions,
             if not path.is_file():
                 raise ValueError("attachment is not a regular file")
             archive.write(path, f"attachments/{_safe_name(path, used)}")
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001  # reason: one bad attachment must not lose the bundle
             failures.append({"collector": "attachment", "error": repr(exc)})
 
 

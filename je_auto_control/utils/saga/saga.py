@@ -46,7 +46,7 @@ class Saga:
                 continue
             try:
                 compensation()
-            except Exception as error:  # best-effort: log, keep rolling back
+            except Exception as error:  # noqa: BLE001  # reason: best-effort, log and keep rolling back
                 from je_auto_control.utils.logging.logging_instance import (
                     autocontrol_logger)
                 autocontrol_logger.warning(
@@ -59,7 +59,7 @@ class Saga:
         for index, (name, action, _compensation) in enumerate(self._steps):
             try:
                 action()
-            except Exception as error:  # noqa: BLE001  # saga catches any step failure
+            except Exception as error:  # noqa: BLE001  # reason: any step failure triggers compensation
                 result.ok = False
                 result.failed_step = name
                 result.error = str(error)

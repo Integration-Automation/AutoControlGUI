@@ -159,6 +159,8 @@ These tools own the generic rules (bare `except`, mutable defaults, unused names
 
 Suppressions need an inline justification — `# noqa: <code>  # reason: <why>` or `# nosec B404  # reason: <why>`. Blanket file- or module-level suppressions are forbidden.
 
+A broad `except` (`Exception`, `BaseException`, bare) that swallows rather than re-raises needs `# reason:` on its own `except` line. `test/unit_test/headless/test_broad_except_reasons.py` fails CI on one that does not — the linters cannot: CI runs `ruff` with its default rules (no `BLE`) and does not run pylint.
+
 ## Stage commits, `Progress.md`, `docs/updates/` and `architecture.md`
 
 Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes\CLAUDE.md`).

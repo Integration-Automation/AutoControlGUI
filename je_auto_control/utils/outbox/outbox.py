@@ -52,7 +52,7 @@ class Outbox:
             entry["attempts"] += 1
             try:
                 sink(entry["event"])
-            except Exception as error:  # pylint: disable=broad-exception-caught
+            except Exception as error:  # noqa: BLE001  # pylint: disable=broad-exception-caught  # reason: counts as a failed attempt
                 if entry["attempts"] >= max_attempts:
                     entry["status"] = "failed"
                     entry["error"] = str(error)

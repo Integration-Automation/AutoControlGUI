@@ -60,7 +60,7 @@ def _verify_probes(probes: Sequence[Probe]) -> Dict[str, Any]:
             value = probe.call()
             met = _check_tolerance(value, probe.tolerance)
             results.append({"name": probe.name, "ok": met, "value": value})
-        except Exception as exc:  # pylint: disable=broad-exception-caught
+        except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught  # reason: a failing probe is the measurement
             met = False
             results.append({"name": probe.name, "ok": False,
                             "error": str(exc)})
@@ -71,7 +71,7 @@ def _verify_probes(probes: Sequence[Probe]) -> Dict[str, Any]:
 def _apply_fault(fault: Fault) -> Dict[str, Any]:
     try:
         return {"name": fault.name, "ok": True, "result": fault.apply()}
-    except Exception as exc:  # pylint: disable=broad-exception-caught
+    except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught  # reason: reported per fault
         return {"name": fault.name, "ok": False, "error": str(exc)}
 
 
@@ -81,7 +81,7 @@ def _run_rollbacks(rollbacks: Sequence[Callable[[], Any]]) -> List[Dict[str, Any
         try:
             rollback()
             results.append({"ok": True})
-        except Exception as exc:  # pylint: disable=broad-exception-caught
+        except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught  # reason: every rollback must run
             results.append({"ok": False, "error": str(exc)})
     return results
 
