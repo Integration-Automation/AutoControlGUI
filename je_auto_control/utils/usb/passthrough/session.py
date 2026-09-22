@@ -67,7 +67,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
-from je_auto_control.utils.usb.passthrough.acl import UsbAcl
+from je_auto_control.utils.usb.passthrough.acl import UsbAcl, normalize_usb_id
 from je_auto_control.utils.usb.passthrough.backend import UsbBackend, UsbHandle
 from je_auto_control.utils.usb.passthrough.protocol import (
     Frame, Opcode, fragment_payload,
@@ -264,14 +264,19 @@ class UsbPassthroughSession:
     def _handle_open(self, frame: Frame) -> Frame:
         try:
             request = _decode_json_payload(frame.payload)
-            vendor_id = str(request["vendor_id"])
-            product_id = str(request["product_id"])
+            vendor_id = normalize_usb_id(request["vendor_id"])
+            product_id = normalize_usb_id(request["product_id"])
             serial = request.get("serial")
             if serial is not None:
                 serial = str(serial)
         except (KeyError, ValueError, TypeError) as error:
             return _opened_failure(frame.claim_id, f"bad OPEN payload: {error}")
         decision = self._acl_decision(vendor_id, product_id, serial)
+        if serial is None and self._has_serial_rules(vendor_id, product_id):
+            # A rule scoped to one serial cannot be honoured if the viewer
+            # does not say which device it wants: the backend would open the
+            # first match, which may be the one the rule was written for.
+            decision = "deny"
         if decision == "deny":
             self._audit("usb_open_denied", vendor_id, product_id, serial)
             return _opened_failure(
@@ -295,8 +300,7 @@ class UsbPassthroughSession:
             return _opened_failure(frame.claim_id, str(error))
         resume_token = secrets.token_hex(16)
         with self._lock:
-            claim_id = self._next_claim_id
-            self._next_claim_id = (self._next_claim_id % 0xFFFE) + 1
+            claim_id = self._allocate_claim_id_locked()
             self._claims[claim_id] = _ClaimState(
                 handle=handle,
                 inbound_credits=self._initial_credits,
@@ -338,6 +342,27 @@ class UsbPassthroughSession:
                 "ok": True, "claim_id": claim_id, "resume_token": token,
             }),
         )
+
+    def _allocate_claim_id_locked(self) -> int:
+        """Next free claim id in 1..0xFFFE. Caller holds ``self._lock``.
+
+        The counter wraps; handing out an id still in use overwrote that
+        claim and orphaned its open handle, which not even ``close_all``
+        could then reach. ``_max_claims`` keeps a free id always available.
+        """
+        while True:
+            claim_id = self._next_claim_id
+            self._next_claim_id = (self._next_claim_id % 0xFFFE) + 1
+            if claim_id not in self._claims:
+                return claim_id
+
+    def _has_serial_rules(self, vendor_id: str, product_id: str) -> bool:
+        if self._acl is None:
+            return False
+        return any(
+            rule.serial is not None and rule.matches(
+                vendor_id=vendor_id, product_id=product_id, serial=rule.serial)
+            for rule in self._acl.list_rules())
 
     def _acl_decision(self, vendor_id: str, product_id: str,
                       serial: Optional[str]) -> str:
@@ -433,6 +458,8 @@ class UsbPassthroughSession:
         try:
             request = _decode_json_payload(frame.payload)
         except ValueError as error:
+            with self._lock:
+                claim.inbound_credits += 1  # nothing was served; refund it
             return [_error_frame(frame.claim_id, f"bad payload: {error}")]
         try:
             result_bytes = dispatcher(handle, request)
@@ -450,6 +477,11 @@ class UsbPassthroughSession:
         frames = fragment_payload(
             _reply_opcode(frame.op), frame.claim_id, reply_payload,
         )
+        # The CREDIT frame lets the viewer send _TOPUP_PER_REPLY more requests;
+        # our own count has to rise by the same amount, or the claim stalls
+        # with "credit exhausted" after the initial allowance is spent.
+        with self._lock:
+            claim.inbound_credits += _TOPUP_PER_REPLY
         frames.append(self._make_credit_frame(frame.claim_id, _TOPUP_PER_REPLY))
         return frames
 
@@ -486,6 +518,21 @@ class UsbPassthroughSession:
 # ---------------------------------------------------------------------------
 
 
+#: Bounds on numbers taken from the wire. A control transfer's wLength is a
+#: 16-bit field; bulk and interrupt reads are capped so one request cannot
+#: make the host allocate (and base64, and fragment) gigabytes.
+MAX_CONTROL_LENGTH = 0xFFFF
+MAX_ENDPOINT_LENGTH = 1024 * 1024
+MAX_TIMEOUT_MS = 60_000
+
+
+def _bounded(request: Dict[str, Any], key: str, default: int, upper: int) -> int:
+    value = int(request.get(key, default))
+    if not 0 <= value <= upper:
+        raise ValueError(f"{key} must be within 0..{upper}, got {value}")
+    return value
+
+
 def _control_handler(handle: UsbHandle, request: Dict[str, Any]) -> bytes:
     payload = _decode_b64(request.get("data"))
     return handle.control_transfer(
@@ -494,8 +541,8 @@ def _control_handler(handle: UsbHandle, request: Dict[str, Any]) -> bytes:
         w_value=int(request.get("w_value", 0)),
         w_index=int(request.get("w_index", 0)),
         data=payload,
-        length=int(request.get("length", 0)),
-        timeout_ms=int(request.get("timeout_ms", 1000)),
+        length=_bounded(request, "length", 0, MAX_CONTROL_LENGTH),
+        timeout_ms=_bounded(request, "timeout_ms", 1000, MAX_TIMEOUT_MS),
     )
 
 
@@ -516,8 +563,8 @@ def _endpoint_call(method: Callable[..., bytes],
         endpoint=int(request["endpoint"]),
         direction=direction,
         data=_decode_b64(request.get("data")),
-        length=int(request.get("length", 0)),
-        timeout_ms=int(request.get("timeout_ms", 1000)),
+        length=_bounded(request, "length", 0, MAX_ENDPOINT_LENGTH),
+        timeout_ms=_bounded(request, "timeout_ms", 1000, MAX_TIMEOUT_MS),
     )
 
 

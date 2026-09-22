@@ -86,6 +86,19 @@ class UsbChannelHost:
         self._enabled = enabled_check or is_usb_passthrough_enabled
         self._lock = threading.Lock()
         channel.on("message")(self._on_message)
+        channel.on("close")(self.close)
+
+    def close(self) -> None:
+        """Release every claim. Called when the channel or the peer goes.
+
+        Without it an open device stayed claimed after the viewer left --
+        libusb handle open, kernel HID drivers detached -- which can leave
+        the host without its own keyboard or mouse.
+        """
+        with self._lock:
+            session = self._session
+        if session is not None:
+            session.close_all()
 
     @property
     def session(self) -> Optional[UsbPassthroughSession]:

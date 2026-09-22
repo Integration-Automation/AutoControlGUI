@@ -327,10 +327,13 @@ def test_credit_exhaustion_returns_error():
     transfer = _transfer_frame(Opcode.BULK, claim_id, {
         "endpoint": 1, "direction": "in", "length": 4,
     })
-    # 2 successful transfers, then exhausted.
+    # Every reply grants the viewer more credit, so a request/reply exchange
+    # never runs dry (test_usb_passthrough_audit.py holds that). A viewer that
+    # sends more than it was granted before reading the replies does:
     for _ in range(2):
         replies = session.handle_frame(transfer)
         assert replies[0].op == Opcode.BULK
+    session._claims[claim_id].inbound_credits = 0
     exhausted = session.handle_frame(transfer)
     assert exhausted[0].op == Opcode.ERROR
     body = json.loads(exhausted[0].payload.decode("utf-8"))

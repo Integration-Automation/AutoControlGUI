@@ -67,6 +67,19 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **USB passthrough: three ways a viewer got past the ACL.** Vendor and
+  product ids were compared as strings but parsed by the backend with
+  `int(x, 16)`, so `0x1050`, `01050` or `10_50` missed a `1050` deny rule and
+  opened the device anyway; ids are now normalised to four lowercase hex digits
+  (an optional `0x` prefix is accepted, anything else is refused). A viewer
+  that omitted the serial skipped rules written for one serial and got
+  whichever matching device the backend found first; that is refused when the
+  ACL has a serial rule for the device. The WinUSB backend logged a requested
+  serial and ignored it; it now refuses to open by serial. Transfer `length`
+  and `timeout_ms` from the wire are bounded (control 0–65535, bulk/interrupt
+  up to 1 MiB, timeout up to 60 s), where a single request could make the host
+  allocate a gigabyte.
+
 - **A WebRTC viewer could be approved without ever sending the token.** The
   public `approve_pending_viewer` guard read `not pending and authenticated`,
   so for a session whose viewer had sent nothing both were false and the
@@ -93,6 +106,15 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **USB passthrough claims stalled, leaked and outlived their viewer.** After
+  the first 16 transfers every request failed with "credit exhausted" — the
+  host granted the viewer more credit with each reply but never counted it
+  itself — and each failure counted as abuse. Claims were never released when
+  the viewer's channel closed or the host stopped, leaving the device open and
+  its kernel drivers detached (a claimed keyboard or mouse stayed gone). After
+  65,534 claims the id counter wrapped onto a live claim and orphaned its
+  handle.
 
 - **Multi-viewer WebRTC host: sessions that outlived their viewer.** A
   viewer waiting on the Accept/Reject dialog was torn down by the 5-second

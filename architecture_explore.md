@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,043 |
-| 程式碼總行數 | 142,152 |
+| 程式碼總行數 | 142,250 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -510,15 +510,15 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.10 遠端桌面與 USB
 
-> 6 個套件、約 18,076 行。
+> 6 個套件、約 18,174 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/admin/` | 334 | 多主機管理主控台：平行輪詢 N 個 AutoControl REST 端點 |
 | `utils/config_sync/` | 246 | 透過訊令伺服器做跨機器設定同步 |
 | `utils/device_matrix/` | 138 | 行動裝置矩陣：同一 action list 於多台裝置平行執行 |
-| `utils/remote_desktop/` | 12,095 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
-| `utils/usb/` | 4,335 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
+| `utils/remote_desktop/` | 12,106 | **遠端桌面子系統**（56 檔／11.7K LOC）：TCP／WebSocket／WebRTC 三條傳輸路徑、主機與檢視端、訊令伺服器、TURN／中繼、多檢視者、錄影、信任清單、TOTP、稽核鏈 |
+| `utils/usb/` | 4,422 | 跨平台 USB 列舉／熱插拔／裝置直通（WinUSB、IOKit、libusb 後端 + ACL + WebRTC DataChannel 通道） |
 | `utils/usbip/` | 928 | USB/IP 線路協定主機端（協定封包、TCP 伺服器、libusb URB 後端） |
 
 ### 5.4.11 伺服器、網路協定與外部整合
@@ -736,13 +736,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `rate_limit.py` | 48 | 工具呼叫的 token bucket 限流。 |
 | `__main__.py` | 88 | `je_auto_control_mcp` console script 進入點。 |
 
-#### `utils/remote_desktop/`（12,095 行／56 檔）
+#### `utils/remote_desktop/`（12,106 行／56 檔）
 
 三條傳輸路徑並存：**TCP**（JPEG 影格）、**WebSocket**（同協定換傳輸）、**WebRTC**（aiortc 視訊 + DataChannel）。
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `webrtc_host.py` | 705 | WebRTC 主機：串流螢幕視訊並接受檢視端輸入;session 生命週期、DataChannel 接線、檔案收發。 |
+| `webrtc_host.py` | 716 | WebRTC 主機：串流螢幕視訊並接受檢視端輸入;session 生命週期、DataChannel 接線、檔案收發。 |
 | `webrtc_viewer.py` | 672 | WebRTC 檢視端：接收視訊並送出輸入。 |
 | `host.py` | 634 | TCP 主機：接受迴圈、TLS 包裝、連線／認證握手、音訊與剪貼簿廣播、檔案推送、單次 token。 |
 | `viewer.py` | 634 | TCP 檢視端。 |
@@ -787,17 +787,17 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 72 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
 | `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 40 / 29 / 146 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
-#### `utils/usb/`（4,335 行）與 `utils/usbip/`（928 行）
+#### `utils/usb/`（4,422 行）與 `utils/usbip/`（928 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `usb/passthrough/session.py` | 595 | 逐 peer 的 USB 直通 session。 |
+| `usb/passthrough/session.py` | 642 | 逐 peer 的 USB 直通 session。 |
 | `usb/passthrough/viewer_client.py` | 561 | 檢視端的直通協定用戶端。 |
 | `usb/passthrough/backend.py` | 463 | 後端 ABC + libusb 實作。 |
 | `usb/passthrough/winusb_backend.py` | 488 | Windows WinUSB 後端（ctypes）。 |
-| `usb/passthrough/acl.py` | 432 | 逐裝置 ACL。 |
+| `usb/passthrough/acl.py` | 459 | 逐裝置 ACL。 |
 | `usb/passthrough/iokit_backend.py` | 221 | macOS IOKit 後端。 |
-| `usb/passthrough/webrtc_channel.py` | 167 | 把直通協定橋到 WebRTC `usb` DataChannel。 |
+| `usb/passthrough/webrtc_channel.py` | 180 | 把直通協定橋到 WebRTC `usb` DataChannel。 |
 | `usb/passthrough/loopback.py` | 159 | 行程內 loopback 傳輸（測試用）。 |
 | `usb/passthrough/protocol.py` | 133 | 線路框格式。 |
 | `usb/passthrough/descriptor.py` | 132 | USB 標準裝置描述元解析。 |
@@ -1058,9 +1058,9 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | --- | ---: | ---: |
 | `gui/` | 91 | 26,791 |
 | `utils/mcp_server/` | 31 | 17,473 |
-| `utils/remote_desktop/` | 56 | 12,095 |
+| `utils/remote_desktop/` | 56 | 12,106 |
 | `utils/executor/` | 6 | 9,155 |
-| `utils/usb/` | 17 | 4,335 |
+| `utils/usb/` | 17 | 4,422 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,367 |
 | `utils/accessibility/` | 13 | 2,842 |
 | `wrapper/` | 19 | 3,551 |
@@ -1077,5 +1077,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,957 |
-| **總計** | **1,037** | **142,087** |
+| **總計** | **1,037** | **142,185** |
 

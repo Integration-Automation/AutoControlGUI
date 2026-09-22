@@ -281,12 +281,12 @@ class WinusbBackend(UsbBackend):
     def open(self, *, vendor_id: str, product_id: str,
              serial: Optional[str] = None) -> UsbHandle:
         if serial is not None:
-            # WinUSB enumeration doesn't include the serial cheaply; fail
-            # closed rather than silently ignore the operator's intent.
-            autocontrol_logger.info(
-                "WinUSB open: serial filter %r ignored "
-                "(not yet exposed by enumeration)", serial,
-            )
+            # WinUSB enumeration doesn't include the serial cheaply. Ignoring
+            # it (as this used to) opened the first device with that vid/pid,
+            # which may not be the one an ACL rule for this serial allowed.
+            raise RuntimeError(
+                f"WinUSB open: cannot select by serial ({serial!r}); "
+                "the serial is not exposed by enumeration")
         for device in self.list():
             if device.vendor_id != vendor_id or device.product_id != product_id:
                 continue

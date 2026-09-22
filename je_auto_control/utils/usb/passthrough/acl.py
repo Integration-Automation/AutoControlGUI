@@ -59,6 +59,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
 import threading
 from dataclasses import asdict, dataclass, field
@@ -75,6 +76,32 @@ _VALID_DECISIONS = frozenset({"allow", "deny", "prompt"})
 _SIG_SUFFIX = ".sig"
 _KEY_SUFFIX = ".key"
 _KEY_BYTES = 32
+
+
+_USB_ID_RE = re.compile(r"^(?:0[xX])?([0-9a-fA-F]{4})$")
+
+
+def normalize_usb_id(value: object) -> str:
+    """Return a vendor/product id as four lowercase hex digits.
+
+    Accepts an optional ``0x`` prefix and nothing else. The ACL compared ids
+    as strings while the libusb backend parsed them with ``int(x, 16)``, so
+    ``"0x1050"``, ``"01050"`` or ``"10_50"`` missed a ``1050`` deny rule
+    and then opened device 0x1050 anyway.
+
+    :raises ValueError: for anything that is not exactly one 16-bit hex id.
+    """
+    match = _USB_ID_RE.match(str(value).strip())
+    if match is None:
+        raise ValueError(f"not a 4-digit hex USB id: {value!r}")
+    return match.group(1).lower()
+
+
+def _same_id(left: str, right: str) -> bool:
+    try:
+        return normalize_usb_id(left) == normalize_usb_id(right)
+    except ValueError:
+        return left.lower() == right.lower()
 
 
 def default_acl_path() -> Path:
@@ -98,8 +125,8 @@ class AclRule:
         # uppercase-hex rule still matches a lowercase device id (and vice
         # versa). A case mismatch would silently skip the rule — bypassing a
         # DENY rule when the default policy is "allow".
-        if (self.vendor_id.lower() != vendor_id.lower()
-                or self.product_id.lower() != product_id.lower()):
+        if (not _same_id(self.vendor_id, vendor_id)
+                or not _same_id(self.product_id, product_id)):
             return False
         if self.serial is None:
             return True
