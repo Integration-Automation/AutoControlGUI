@@ -240,6 +240,15 @@ HTTP 傳輸(含 SSE / Auth / TLS)
 
 Bearer token 也可從 ``JE_AUTOCONTROL_MCP_TOKEN`` 環境變數讀取。
 
+瀏覽器送來的請求只接受本機來源：``Origin`` 不是 loopback 的一律回 403；伺服器綁在
+loopback 時，``Host`` 不是 loopback 名稱的也回 403（防 DNS rebinding）。非瀏覽器的
+客戶端不送 ``Origin``，不受影響。要讓其他來源的瀏覽器客戶端連線，把完整來源列在
+``JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS``（逗號分隔，例如 ``https://tool.example:8443``）。
+
+設定 ``JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1`` 時，宣告了 ``elicitation`` 的客戶端
+必須先開著該 session 的事件串流，破壞性工具才能確認；沒有串流就拒絕執行，而不是直接放行。
+確認提示只接受它被送往的那個 session 的回覆。
+
 Session
 =======
 

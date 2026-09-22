@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,043 |
-| 程式碼總行數 | 142,250 |
+| 程式碼總行數 | 142,317 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -490,7 +490,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 20,776 行。
+> 13 個套件、約 20,833 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -503,7 +503,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/cua_action/` | 127 | 標準化 computer-use 動作結構（Anthropic／OpenAI → `AC_*`） |
 | `utils/llm/` | 357 | 自然語言 → action list 規劃器 + Anthropic／null 後端 |
 | `utils/mcp_registry/` | 92 | MCP registry `server.json` 資訊清單產生（可被發現） |
-| `utils/mcp_server/` | 17,473 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
+| `utils/mcp_server/` | 17,530 | **無頭 MCP 伺服器**（16K LOC，預設註冊 676 個工具＝657 個 `ac_*` + 19 個別名）：stdio + HTTP 傳輸、工具工廠與處理器、資源、prompt、稽核、限流、外掛熱重載 |
 | `utils/tool_use_schema/` | 180 | 把 `AC_*` 指令匯出成 Claude／OpenAI 的 tool-use schema |
 | `utils/trajectory_eval/` | 106 | agent 軌跡評估：依評分規準為一次執行打分 |
 | `utils/vision/` | 449 | VLM 元素定位器（依描述找元素）+ Anthropic／OpenAI／null 後端 |
@@ -523,7 +523,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 5,928 行。
+> 24 個套件、約 5,938 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -545,8 +545,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/otp/` | 37 | TOTP 一次性密碼產生（自動化 2FA 登入） |
 | `utils/outbox/` | 92 | 交易式 outbox，保證至少一次的事件投遞 |
 | `utils/pytest_plugin/` | 373 | pytest 外掛 + BDD step library（`pytest11` entry point） |
-| `utils/rest_api/` | 1,751 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
-| `utils/socket_server/` | 131 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
+| `utils/rest_api/` | 1,758 | 純標準庫 REST 前端：路由、Bearer 驗證、限流、Prometheus 指標、OpenAPI 3.1 產生 |
+| `utils/socket_server/` | 134 | 執行 action JSON 的執行緒式 TCP 指令伺服器（預設綁 127.0.0.1） |
 | `utils/sse_client/` | 112 | Server-Sent Events 用戶端解析 |
 | `utils/tls_acme/` | 450 | TLS 自動化：HTTP-01 挑戰伺服器、金鑰／CSR、自動續期 |
 | `utils/url_canon/` | 117 | RFC 3986 URL 正規化與查詢字串工具 |
@@ -702,7 +702,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `action_schema.py` | 128 | action list 的結構驗證：形狀、參數型別、未知指令拒絕。單一走訪同時支援兩種消費方式：`validate_actions()` 遇到第一個問題就拋、`unknown_command_names()` 收齊全部不認得的名字（REST `/execute` 用它回 400）。 |
 | `mouse_aliases.py` | 39 | 單鍵點擊別名（`AC_click_left` 等），executor 與 callback executor 共用。 |
 
-#### `utils/mcp_server/`（17,473 行，676 個工具）— 最大子系統
+#### `utils/mcp_server/`（17,530 行，676 個工具）— 最大子系統
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -719,9 +719,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `tools/_handlers_locators.py` | 417 | 同一種 adapter，定位主題：無障礙樹、智慧等待、自我修復、螢幕觀察、座標空間、視覺與 OCR、影像去重、元件倉庫、A/B 定位。 |
 | `tools/_handlers_operations.py` | 644 | 同一種 adapter，營運主題：agent 與其記憶／追蹤、治理與合規、成本與遙測、失敗掛鉤、看門狗、速率限制、檢查點、核可、產物與資產、測試選擇與分片、佇列與 saga。 |
 | `server.py` | 717 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器。 |
-| `http_transport.py` | 521 | MCP 的 HTTP 傳輸。 |
+| `http_transport.py` | 565 | MCP 的 HTTP 傳輸。 |
 | `http_sessions.py` | 234 | MCP 的 HTTP 傳輸用的 session 身分:`Mcp-Session-Id` 註冊表,以及每個 session 那條常駐的 server→client SSE 串流。 |
-| `_client_requests.py` | 232 | 伺服器主動送出的請求：`roots/list`／`elicitation/create`／`sampling/createMessage`,對應表與回應路由,以及破壞性工具的確認交握。 |
+| `_client_requests.py` | 245 | 伺服器主動送出的請求：`roots/list`／`elicitation/create`／`sampling/createMessage`,對應表與回應路由,以及破壞性工具的確認交握。 |
 | `_protocol.py` | 167 | JSON-RPC 線路格式：版本與識別常數、`_MCPError`、決定失敗工具行為的錯誤 tuple、envelope 產生器、工具回傳值轉 `content` 區塊。不碰伺服器狀態。 |
 | `resources.py` | 303 | MCP resource 提供者。 |
 | `prompts.py` | 220 | MCP prompt 目錄。 |
@@ -810,14 +810,14 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `usbip/libusb_backend.py` | 210 | 以 PyUSB／libusb 執行 URB 的正式後端。 |
 | `usbip/backend.py` | 87 | 可插拔 URB 執行後端。 |
 
-#### `utils/rest_api/`（1,751 行）
+#### `utils/rest_api/`（1,758 行）
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
 | `rest_server.py` | 480 | HTTP 前端主體。 |
 | `rest_handlers.py` | 486 | 端點實作。 |
 | `rest_openapi.py` | 422 | 走訪路由表產生 OpenAPI 3.1 規格。 |
-| `rest_auth.py` | 143 | Bearer token 驗證 + 逐 client 限流閘門。 |
+| `rest_auth.py` | 150 | Bearer token 驗證 + 逐 client 限流閘門。 |
 | `rest_metrics.py` | 75 | Prometheus 曝露端點。 |
 | `rest_registry.py` | 75 | 保存執行中 REST 伺服器的行程級單例。 |
 | `__main__.py` | 56 | `python -m je_auto_control.utils.rest_api` 進入點。 |
@@ -1057,7 +1057,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `gui/` | 91 | 26,791 |
-| `utils/mcp_server/` | 31 | 17,473 |
+| `utils/mcp_server/` | 31 | 17,530 |
 | `utils/remote_desktop/` | 56 | 12,106 |
 | `utils/executor/` | 6 | 9,155 |
 | `utils/usb/` | 17 | 4,422 |
@@ -1065,7 +1065,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/accessibility/` | 13 | 2,842 |
 | `wrapper/` | 19 | 3,551 |
 | `windows/` | 23 | 1,951 |
-| `utils/rest_api/` | 8 | 1,751 |
+| `utils/rest_api/` | 8 | 1,758 |
 | `utils/agent/` | 8 | 1,252 |
 | `linux_with_x11/` | 19 | 1,236 |
 | `linux_wayland/` | 17 | 2,870 |
@@ -1076,6 +1076,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,957 |
-| **總計** | **1,037** | **142,185** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,960 |
+| **總計** | **1,037** | **142,252** |
 

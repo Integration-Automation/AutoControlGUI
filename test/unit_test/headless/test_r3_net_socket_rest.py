@@ -122,6 +122,19 @@ def _make_rest_handler():
     return handler, server, sent
 
 
+def test_invalid_utf8_is_answered_not_dropped():
+    """A payload that is not UTF-8 raised UnicodeDecodeError outside every
+    handler; the thread died and the client got no reply at all."""
+    handler = ss.TCPServerHandler.__new__(ss.TCPServerHandler)
+    request = _FakeRequest([bytes([0xFF, 0xFE]) + b" not utf-8\n"])
+    handler.request = request
+    handler.server = object()
+
+    handler.handle()  # must not raise
+
+    assert b"Return_Data_Over_JE" in b"".join(request.sent)
+
+
 def test_dispatch_contains_framework_family():
     """The reparent makes AutoControlException contain the whole family."""
     handler, server, sent = _make_rest_handler()

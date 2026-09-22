@@ -520,3 +520,131 @@ def test_drain_still_runs_when_the_body_was_never_read():
 def test_drain_survives_a_peer_that_vanished():
     handler = _bare_handler(consumed=False, reader=_VanishedReader())
     handler._drain_body()  # must not raise: courtesy to a peer that has gone
+
+
+# --- 2026-09-23 audit ------------------------------------------------------
+
+def test_another_session_cannot_answer_the_confirmation(live_server):
+    """A reply is honoured only from the session the prompt was sent to.
+
+    Replies were matched by id alone, the ids counted up from ``srv-1``, and
+    any client could POST ``accept`` for a prompt shown to somebody else.
+    """
+    server, ran = live_server
+    victim = _initialize(server)
+    intruder = _initialize(server)
+
+    stream_conn = _connect(server)
+    stream_conn.request("GET", DEFAULT_PATH, headers={
+        SESSION_HEADER: victim, "Accept": "text/event-stream",
+    })
+    stream = stream_conn.getresponse()
+    call_result = {}
+
+    def run_call():
+        conn = _connect(server)
+        try:
+            _response, body = _post(conn, _CALL, session_id=victim)
+            call_result["body"] = body
+        finally:
+            conn.close()
+
+    caller = threading.Thread(target=run_call, daemon=True)
+    caller.start()
+    try:
+        prompt = _read_sse_event(stream)
+        assert prompt["id"] != "srv-1", "prompt ids must not be guessable"
+        forged = _connect(server)
+        try:
+            _post(forged, {"jsonrpc": "2.0", "id": prompt["id"],
+                           "result": {"action": "accept", "content": {}}},
+                  session_id=intruder)
+        finally:
+            forged.close()
+        # The victim declines; the forged accept must not have counted.
+        reply = _connect(server)
+        try:
+            _post(reply, {"jsonrpc": "2.0", "id": prompt["id"],
+                          "result": {"action": "decline"}}, session_id=victim)
+        finally:
+            reply.close()
+        caller.join(timeout=20.0)
+    finally:
+        stream_conn.close()
+    assert ran == []
+    assert "declined" in call_result["body"]
+
+
+def test_a_confirmation_with_no_stream_to_ask_on_is_refused(live_server):
+    """Elicitation advertised, no event stream open: refuse, do not run."""
+    server, ran = live_server
+    session_id = _initialize(server)
+    conn = _connect(server)
+    try:
+        _response, body = _post(conn, _CALL, session_id=session_id)
+    finally:
+        conn.close()
+    assert ran == []
+    assert "confirmation unavailable" in body
+
+
+def _post_with(server, headers):
+    conn = _connect(server)
+    try:
+        merged = {"Content-Type": "text/plain"}
+        merged.update(headers)
+        conn.request("POST", DEFAULT_PATH, body=json.dumps(_INIT), headers=merged)
+        return conn.getresponse().status
+    finally:
+        conn.close()
+
+
+def test_a_browser_on_another_site_is_refused(live_server):
+    server, _ran = live_server
+    assert _post_with(server, {"Origin": "http://evil.example"}) == 403
+
+
+def test_a_rebound_host_name_is_refused(live_server):
+    server, _ran = live_server
+    assert _post_with(server, {"Host": "evil.example"}) == 403
+
+
+@pytest.mark.parametrize("origin", ["http://localhost:3000", "http://127.0.0.1"])
+def test_a_loopback_origin_is_allowed(live_server, origin):
+    server, _ran = live_server
+    assert _post_with(server, {"Origin": origin}) == 200
+
+
+def test_an_allow_listed_origin_is_allowed(live_server, monkeypatch):
+    server, _ran = live_server
+    monkeypatch.setenv("JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS", "https://tool.example")
+    assert _post_with(server, {"Origin": "https://tool.example"}) == 200
+
+
+def test_a_non_ascii_token_is_refused_not_crashed(monkeypatch):
+    """compare_digest raised TypeError on a non-ASCII str; the thread died."""
+    monkeypatch.setenv("JE_AUTOCONTROL_MCP_TOKEN", "right-token")
+    server = HttpMCPServer(mcp=MCPServer(tools=[], resource_provider=ChainProvider([]),
+                                         prompt_provider=StaticPromptProvider([])),
+                           host="127.0.0.1", port=0)
+    server.start()
+    try:
+        conn = _connect(server)
+        try:
+            conn.putrequest("POST", DEFAULT_PATH)
+            conn.putheader("Content-Type", "application/json")
+            conn.putheader("Authorization", "Bearer é".encode("latin-1"))
+            body = json.dumps(_INIT).encode("utf-8")
+            conn.putheader("Content-Length", str(len(body)))
+            conn.endheaders(body)
+            assert conn.getresponse().status == 403
+        finally:
+            conn.close()
+    finally:
+        server.stop(timeout=2.0)
+
+
+def test_the_rest_token_check_refuses_non_ascii_without_raising():
+    from je_auto_control.utils.rest_api.rest_auth import constant_time_equal
+    assert constant_time_equal("é", "right-token") is False
+    assert constant_time_equal("right-token", "right-token") is True

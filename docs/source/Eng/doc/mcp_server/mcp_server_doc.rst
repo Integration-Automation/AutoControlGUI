@@ -253,6 +253,19 @@ box), start the same dispatcher behind HTTP:
 
 Bearer token can also come from ``JE_AUTOCONTROL_MCP_TOKEN``.
 
+Browser requests are refused unless they come from this machine: a request
+whose ``Origin`` header is not a loopback origin gets 403, and when the
+server is bound to loopback so does one whose ``Host`` header does not name
+loopback (DNS rebinding). Clients that are not browsers send no ``Origin``
+and are unaffected. To let a browser-based client on another origin in, list
+its exact origins in ``JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS``
+(comma-separated, e.g. ``https://tool.example:8443``).
+
+With ``JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1``, a client that advertised
+``elicitation`` must have its session's event stream open for a destructive
+call to be confirmed; without one the call is refused rather than run. Only
+the session a prompt was sent to can answer it.
+
 Sessions
 ========
 

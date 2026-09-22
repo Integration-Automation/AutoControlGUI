@@ -38,8 +38,15 @@ def generate_token() -> str:
 
 
 def constant_time_equal(provided: str, expected: str) -> bool:
-    """Timing-safe string compare; both args must be ``str``."""
-    return secrets.compare_digest(provided, expected)
+    """Timing-safe string compare; both args must be ``str``.
+
+    Compared as UTF-8 bytes: ``compare_digest`` raises ``TypeError`` on a
+    non-ASCII ``str``, and http.server decodes headers as latin-1, so a
+    crafted token used to kill the request thread -- no response, and no
+    failed attempt counted toward the lockout -- instead of being refused.
+    """
+    return secrets.compare_digest(provided.encode("utf-8"),
+                                  expected.encode("utf-8"))
 
 
 @dataclass

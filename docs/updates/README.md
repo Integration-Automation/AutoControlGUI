@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-16 | 2026-09-23 | MCP/REST audit: cross-session confirm, browser CSRF, token crash | #incident #security #mcp | [2026-09](2026-09.md) |
 | U-20260923-15 | 2026-09-23 | USB passthrough audit: ACL bypasses, credit stall, claim leaks | #incident #security #usb | [2026-09](2026-09.md) |
 | U-20260923-14 | 2026-09-23 | WebRTC host audit: approval without token, dead sessions | #incident #security #remote-desktop | [2026-09](2026-09.md) |
 | U-20260923-13 | 2026-09-23 | Flow-control audit: seven defects reproduced and fixed | #incident #executor | [2026-09](2026-09.md) |
@@ -120,7 +121,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 31 |
+| [2026-09.md](2026-09.md) | 2026-09 | 32 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |

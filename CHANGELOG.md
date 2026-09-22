@@ -67,6 +67,20 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **MCP over HTTP: a web page could drive the machine, and one session could
+  confirm another's destructive call.** With no token configured (the default)
+  the server accepted cross-site browser requests — a `text/plain` POST needs
+  no CORS preflight — so any page the user opened could run tools; it now
+  refuses a non-loopback `Origin`, and a non-loopback `Host` when bound to
+  loopback (DNS rebinding). `JE_AUTOCONTROL_MCP_ALLOWED_ORIGINS` admits
+  specific browser origins. Replies to server-sent prompts were matched by a
+  sequential id alone, so any client could accept a confirmation shown to
+  another; they are now bound to the session the prompt went to and the ids
+  are random. With `JE_AUTOCONTROL_MCP_CONFIRM_DESTRUCTIVE=1`, a destructive
+  call that had no stream to ask on ran unconfirmed; it is refused. A
+  non-ASCII bearer token crashed the request thread in both the MCP and REST
+  servers (never counted toward lockout); it is refused.
+
 - **USB passthrough: three ways a viewer got past the ACL.** Vendor and
   product ids were compared as strings but parsed by the backend with
   `int(x, 16)`, so `0x1050`, `01050` or `10_50` missed a `1050` deny rule and

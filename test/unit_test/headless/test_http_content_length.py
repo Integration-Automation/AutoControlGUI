@@ -19,7 +19,7 @@ def _status_line(port: int, path: str) -> bytes:
     sock = socket.create_connection(("127.0.0.1", port), timeout=5)
     try:
         sock.sendall(
-            f"POST {path} HTTP/1.1\r\nHost: x\r\n"
+            f"POST {path} HTTP/1.1\r\nHost: 127.0.0.1\r\n"
             "Content-Length: abc\r\nContent-Type: application/json\r\n\r\n"
             .encode()
         )

@@ -32,7 +32,10 @@ def _read_command(request) -> str:
         total += len(chunk)
         if _COMMAND_TERMINATOR in chunk or total >= _MAX_COMMAND_BYTES:
             break
-    return str(b"".join(chunks).strip(), encoding="utf-8")
+    # errors="replace": invalid UTF-8 then fails as bad JSON and is answered
+    # with the error and the sentinel, instead of a UnicodeDecodeError that
+    # escaped every handler here and dropped the client without a reply.
+    return b"".join(chunks).strip().decode("utf-8", errors="replace")
 
 
 def _close_server_async(server: socketserver.BaseServer) -> None:
