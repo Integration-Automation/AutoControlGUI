@@ -9,7 +9,7 @@ nested in a block (``AC_loop``, ``AC_if``...) is logged with its parent.
 """
 from typing import Any
 
-_SECRET_PREFIX = "AC_secret_"
+_VAULT_COMMAND_PREFIX = "AC_secret_"
 _MASK = "***"
 
 
@@ -22,7 +22,7 @@ def redact_actions(value: Any) -> Any:
         return {key: redact_actions(item) for key, item in value.items()}
     if not isinstance(value, list):
         return value
-    if value and isinstance(value[0], str) and value[0].startswith(_SECRET_PREFIX):
+    if value and isinstance(value[0], str) and value[0].startswith(_VAULT_COMMAND_PREFIX):
         return [value[0], *(_mask(argument) for argument in value[1:])]
     return [redact_actions(item) for item in value]
 

@@ -198,7 +198,8 @@ class _MCPHttpHandler(BaseHTTPRequestHandler):
         if origin and origin not in _allowed_origins():
             if urlsplit(origin).hostname not in _LOOPBACK_NAMES:
                 return False
-        bound_host = self.server.server_address[0]
+        address = self.server.server_address
+        bound_host = address[0] if isinstance(address, tuple) else address
         if bound_host in _LOOPBACK_NAMES:
             host = urlsplit("//" + self.headers.get("Host", "")).hostname
             if host not in _LOOPBACK_NAMES:

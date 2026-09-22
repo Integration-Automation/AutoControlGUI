@@ -30,7 +30,7 @@ class ClientRequestMixin:
 
     Requires the host to provide ``_writer``, ``_client_capabilities``,
     ``_resources``, ``_outbound_lock``, ``_pending_outbound``,
-    ``_outbound_id_counter`` and ``_sampling_id_counter``.
+    ``_outbound_id_counter``, ``_sampling_id_counter`` and ``_connection_id``.
     """
 
     if TYPE_CHECKING:
@@ -44,6 +44,10 @@ class ClientRequestMixin:
         _pending_outbound: Dict[Any, Dict[str, Any]]
         _outbound_id_counter: "itertools.count[int]"
         _sampling_id_counter: "itertools.count[int]"
+
+        @property
+        def _connection_id(self) -> Any:
+            """Identity of the connection the current request arrived on."""
 
     @staticmethod
     def _is_outbound_response(method: Optional[str], msg_id: Any,
