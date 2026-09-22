@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,043 |
-| 程式碼總行數 | 142,317 |
+| 程式碼總行數 | 142,386 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -320,7 +320,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.3 排程、觸發與背景監看
 
-> 11 個套件、約 3,594 行。
+> 11 個套件、約 3,663 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -329,9 +329,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/lock_session/` | 163 | 鎖定工作站、等待解鎖並分類鎖定狀態轉換 |
 | `utils/observer/` | 222 | 反應式畫面觀察者，在出現／消失／變化時觸發 |
 | `utils/recurrence/` | 324 | RFC 5545 重複規則解析與發生時間展開 |
-| `utils/scheduler/` | 373 | 間隔式與 cron 式的 action JSON 排程器 |
+| `utils/scheduler/` | 422 | 間隔式與 cron 式的 action JSON 排程器 |
 | `utils/session_guard/` | 62 | 驅動輸入前先偵測工作階段是否已鎖定／非互動 |
-| `utils/triggers/` | 1,156 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
+| `utils/triggers/` | 1,176 | 事件驅動觸發引擎：影像／視窗／像素／檔案／webhook／IMAP 郵件 |
 | `utils/voice/` | 87 | 語音指令路由：把辨識到的語句對應到 `AC_*` action list |
 | `utils/watchdog/` | 175 | 背景彈窗／中斷看門狗，供無人值守自動化 |
 | `utils/watcher/` | 82 | 無頭輪詢原語：滑鼠位置、像素顏色、log tail |
@@ -1069,13 +1069,13 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/agent/` | 8 | 1,252 |
 | `linux_with_x11/` | 19 | 1,236 |
 | `linux_wayland/` | 17 | 2,870 |
-| `utils/triggers/` | 4 | 1,156 |
+| `utils/triggers/` | 4 | 1,176 |
 | `utils/ocr/` | 9 | 1,113 |
 | `utils/usbip/` | 5 | 928 |
 | `utils/assertion/` | 3 | 863 |
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,960 |
-| **總計** | **1,037** | **142,252** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 48,009 |
+| **總計** | **1,037** | **142,321** |
 

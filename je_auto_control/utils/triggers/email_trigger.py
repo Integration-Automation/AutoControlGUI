@@ -131,7 +131,10 @@ def _search_uids(client: imaplib.IMAP4, criteria: str) -> List[str]:
 
 
 def _fetch_message(client: imaplib.IMAP4, uid: str):
-    typ, data = client.uid("FETCH", uid, "(RFC822)")
+    # BODY.PEEK[]: a plain RFC822 fetch sets \Seen on the server (RFC 3501),
+    # so messages were marked read with mark_seen=False, and before the
+    # script had run -- one lost for good if the process died mid-run.
+    typ, data = client.uid("FETCH", uid, "(BODY.PEEK[])")
     if typ != "OK" or not data or data[0] is None:
         return None
     raw = data[0][1] if isinstance(data[0], tuple) else data[0]

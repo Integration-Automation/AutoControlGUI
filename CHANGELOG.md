@@ -24,6 +24,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **`max_runs` must be at least 1.** `Scheduler.add_job` and
+  `add_cron_job` raise `ValueError` for `max_runs=0` or below, which used to
+  run the job once. Migration: pass `max_runs=1`.
+
 - **Importing the package no longer sets the root logger to DEBUG.** A
   library must not reconfigure its host's logging, and that one line sent
   every third-party logger's DEBUG records to whatever handlers the host
@@ -120,6 +124,25 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Cron expressions follow standard cron, and a job with no next run stops.**
+  With both day fields restricted a day now matches if *either* does
+  (`0 0 1 * 1` is the 1st and every Monday, as in Vixie cron and croniter;
+  it was the Mondays that fall on the 1st), `7` is accepted as Sunday, and
+  `5/15` is `5,20,35,50` rather than `5`. `0 0 29 2 *` failed to find its next
+  run whenever the next leap day was over a year away, and the scheduler then
+  fired that job on every tick; the search covers eight years, and a job whose
+  next run cannot be computed is removed and logged. Migration: an expression
+  with both day fields restricted fires on more days than before — write one
+  of them as `*` to keep the old intersection.
+- **`AllOf` triggers no longer lose a cron minute, file change or sequence
+  step to a false sibling.** The edge child was checked first and spent its
+  event before a later condition failed; edges are now checked last.
+- **E-mail triggers leave mail unread with `mark_seen=False`.** The fetch
+  itself set `\Seen`; it uses `BODY.PEEK[]`.
+- **A webhook whose script fails with any exception answers 500.** Types
+  outside four caught ones were recorded as a success and dropped the
+  connection without a reply.
 
 - **USB passthrough claims stalled, leaked and outlived their viewer.** After
   the first 16 transfers every request failed with "credit exhausted" — the

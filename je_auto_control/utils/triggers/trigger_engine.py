@@ -12,7 +12,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, ClassVar, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.json.json_file import read_action_json
@@ -38,6 +38,10 @@ class _TriggerBase:
     fired: int = 0
     cooldown_seconds: float = 0.5
     _last_fire: float = field(default=0.0)
+    #: True when checking the trigger uses up the event it reports (an edge:
+    #: a cron minute, a file change, a sequence step), so a composite has to
+    #: check it last. Not a dataclass field.
+    consumes_on_check: ClassVar[bool] = False
 
     def is_fired(self) -> bool:  # pragma: no cover - abstract
         raise NotImplementedError
@@ -110,6 +114,7 @@ class PixelColorTrigger(_TriggerBase):
 
 @dataclass
 class FilePathTrigger(_TriggerBase):
+    consumes_on_check: ClassVar[bool] = True
     """Fire when ``watch_path`` mtime changes (created or modified)."""
     watch_path: str = ""
     _baseline: Optional[float] = None
@@ -134,8 +139,12 @@ class AllOfTrigger(_TriggerBase):
     children: List[_TriggerBase] = field(default_factory=list)
 
     def is_fired(self) -> bool:
-        return bool(self.children) and all(
-            child.is_fired() for child in self.children)
+        # Level conditions first, edges last: all() stops at the first false
+        # child, and an edge checked before a false level child had already
+        # spent its event -- "at 09:00 and only if the image is on screen"
+        # never fired if the image appeared a few seconds into the minute.
+        ordered = sorted(self.children, key=_consumes_on_check)
+        return bool(ordered) and all(child.is_fired() for child in ordered)
 
 
 @dataclass
@@ -156,6 +165,7 @@ class SequenceTrigger(_TriggerBase):
     """
     children: List[_TriggerBase] = field(default_factory=list)
     _step: int = 0
+    consumes_on_check: ClassVar[bool] = True
 
     def is_fired(self) -> bool:
         if not self.children:
@@ -170,6 +180,14 @@ class SequenceTrigger(_TriggerBase):
         return False
 
 
+def _consumes_on_check(trigger: _TriggerBase) -> bool:
+    """Whether checking ``trigger`` spends an event, composites included."""
+    if isinstance(trigger, (AllOfTrigger, AnyOfTrigger)):
+        return any(_consumes_on_check(child) for child in trigger.children)
+    # Duck-typed children (anything with is_fired) count as level conditions.
+    return bool(getattr(type(trigger), "consumes_on_check", False))
+
+
 @dataclass
 class CronTrigger(_TriggerBase):
     """Fire when the current local time matches a five-field cron expression.
@@ -179,6 +197,7 @@ class CronTrigger(_TriggerBase):
     ``AllOfTrigger`` of a cron + an image trigger means "at 09:00 *and*
     only if the image is on screen".
     """
+    consumes_on_check: ClassVar[bool] = True
     cron: str = "* * * * *"
     _expr: Optional["CronExpression"] = None
     _last_minute: Optional[str] = None

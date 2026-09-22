@@ -34,7 +34,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
-from je_auto_control.utils.exception.exceptions import AutoControlException
 from je_auto_control.utils.http_headers import (
     INVALID_CONTENT_LENGTH, parse_content_length,
 )
@@ -342,8 +341,7 @@ class WebhookTriggerServer:
             try:
                 actions = read_action_json(trigger.script_path)
                 self._executor(actions, payload)
-            except (OSError, ValueError, RuntimeError,
-                    AutoControlException) as error:
+            except Exception as error:  # noqa: BLE001  # reason: any script failure must be recorded and answered
                 status = STATUS_ERROR
                 error_text = repr(error)
                 autocontrol_logger.error("webhook %s failed: %r",

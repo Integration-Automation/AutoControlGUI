@@ -85,6 +85,7 @@ class Scheduler:
                 repeat: bool = True, max_runs: Optional[int] = None,
                 job_id: Optional[str] = None) -> ScheduledJob:
         """Register and schedule a new interval job; return the record."""
+        _check_max_runs(max_runs)
         jid = job_id or uuid.uuid4().hex[:8]
         now = time.monotonic()
         interval = max(0.1, float(interval_seconds))
@@ -103,6 +104,7 @@ class Scheduler:
                      max_runs: Optional[int] = None,
                      job_id: Optional[str] = None) -> ScheduledJob:
         """Register a cron-driven job (5-field expression)."""
+        _check_max_runs(max_runs)
         expression = parse_cron(cron_expression)
         jid = job_id or uuid.uuid4().hex[:8]
         now_wall = _dt.datetime.now()
@@ -245,14 +247,28 @@ class Scheduler:
                 self._jobs.pop(job.job_id, None)
                 return
             if live.is_cron and live.cron_expression is not None:
-                next_dt = next_match(live.cron_expression,
-                                     _dt.datetime.fromtimestamp(now_wall))
+                try:
+                    next_dt = next_match(live.cron_expression,
+                                         _dt.datetime.fromtimestamp(now_wall))
+                except ValueError as error:
+                    # Escaping here left next_run_ts in the past, so the job
+                    # fired again on every tick. It has no future run: drop it.
+                    self._jobs.pop(job.job_id, None)
+                    autocontrol_logger.error(
+                        "scheduler job %s removed: %s", job.job_id, error)
+                    return
                 live.next_run_ts = next_dt.timestamp()
                 return
             if not live.repeat:
                 self._jobs.pop(job.job_id, None)
                 return
             live.next_run_ts = now_mono + live.interval_seconds
+
+
+def _check_max_runs(max_runs: Optional[int]) -> None:
+    """``max_runs`` is a positive count or ``None``; 0 used to mean "once"."""
+    if max_runs is not None and int(max_runs) < 1:
+        raise ValueError(f"max_runs must be at least 1 or None, got {max_runs!r}")
 
 
 default_scheduler = Scheduler()
