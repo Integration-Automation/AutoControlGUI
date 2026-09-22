@@ -6,7 +6,7 @@
 > 擷取每個模組的 docstring 與頂層公開名稱；統計數字取自實際檔案，非估算。
 > 指令數與公開 API 數以 `executor.known_commands()` 與 `je_auto_control.__all__` 在工作樹上實測取得。
 >
-> **掃描時間**：2026-08-24　**版本**：`pyproject.toml` version `0.0.221`　**分支**：`feat/coverage-to-80`
+> **掃描時間**：2026-09-22　**版本**：`pyproject.toml` version `0.0.221`　**分支**：`feat/coverage-to-80`
 
 ---
 
@@ -189,25 +189,25 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | --- | ---: | --- |
 | `core/utils/win32_ctype_input.py` | 73 | `SendInput` 的 ctypes 結構定義與送出。 |
 | `core/utils/win32_vk.py` | 188 | Windows 虛擬鍵碼對照表。 |
-| `core/utils/win32_keypress_check.py` | 21 | `GetAsyncKeyState` 按鍵狀態查詢。 |
+| `core/utils/win32_keypress_check.py` | 22 | `GetAsyncKeyState` 按鍵狀態查詢。 |
 | `mouse/win32_ctype_mouse_control.py` | 220 | 滑鼠事件產生（含多螢幕絕對座標換算）。 |
-| `keyboard/win32_ctype_keyboard_control.py` | 55 | 鍵盤事件產生。 |
-| `record/win32_input_hook.py` | 207 | 單一一組低階鍵鼠 hook（`WH_KEYBOARD_LL`／`WH_MOUSE_LL`）＋訊息迴圈，產生帶時間戳的事件時間軸；停止時以 `PostThreadMessageW(WM_QUIT)` 收掉執行緒，不會每錄一次就漏一條。 |
+| `keyboard/win32_ctype_keyboard_control.py` | 98 | 鍵盤事件產生。 |
+| `record/win32_input_hook.py` | 229 | 單一一組低階鍵鼠 hook（`WH_KEYBOARD_LL`／`WH_MOUSE_LL`）＋訊息迴圈，產生帶時間戳的事件時間軸；停止時以 `PostThreadMessageW(WM_QUIT)` 收掉執行緒，不會每錄一次就漏一條。 |
 | `record/win32_record.py` | 41 | 把 `win32_input_hook` 的時間軸轉成 action list（含按鍵放開、滾輪與間隔）；整形本體與 macOS 共用 `utils/input_macro/recorder_base.py`。 |
-| `screen/win32_screen.py` | 89 | 螢幕尺寸與像素讀取。**每支 Win32 函式都明寫 argtypes/restype**（HDC 是指標寬度，走預設的 c_int 會截斷，錯誤會沉默地擴散到 GetPixel／ReleaseDC），並持有自己的 user32／gdi32 handle。import 時呼叫 `SetProcessDPIAware()`——**行程層級且不可還原**，實體↔邏輯座標換算請走 `utils/monitor_layout`。 |
-| `window/windows_window_manage.py` | 366 | 視窗列舉／聚焦／關閉／最小化／幾何／所屬行程 PID／投遞式輸入（`auto_control_window` 的實作）。**每支 Win32 函式都明寫 argtypes/restype**，並持有自己的 user32 handle，避免把原型外溢到別的模組；hwnd 一律是 int。 |
+| `screen/win32_screen.py` | 95 | 螢幕尺寸與像素讀取。**每支 Win32 函式都明寫 argtypes/restype**（HDC 是指標寬度，走預設的 c_int 會截斷，錯誤會沉默地擴散到 GetPixel／ReleaseDC），並持有自己的 user32／gdi32 handle。import 時呼叫 `SetProcessDPIAware()`——**行程層級且不可還原**，實體↔邏輯座標換算請走 `utils/monitor_layout`。 |
+| `window/windows_window_manage.py` | 368 | 視窗列舉／聚焦／關閉／最小化／幾何／所屬行程 PID／投遞式輸入（`auto_control_window` 的實作）。**每支 Win32 函式都明寫 argtypes/restype**，並持有自己的 user32 handle，避免把原型外溢到別的模組；hwnd 一律是 int。 |
 | `message/window_message.py` | 97 | 直接對視窗送 `WM_*` 訊息（背景輸入）。 |
-| `interception/_dll.py` | 231 | `interception.dll` 的延遲 ctypes 載入與結構定義。 |
-| `interception/keyboard.py` | 71 | 經 Interception 驅動的鍵盤輸入（繞過部分反自動化偵測）。 |
-| `interception/mouse.py` | 161 | 經 Interception 驅動的滑鼠輸入。 |
+| `interception/_dll.py` | 230 | `interception.dll` 的延遲 ctypes 載入與結構定義。 |
+| `interception/keyboard.py` | 70 | 經 Interception 驅動的鍵盤輸入（繞過部分反自動化偵測）。 |
+| `interception/mouse.py` | 160 | 經 Interception 驅動的滑鼠輸入。 |
 
 #### macOS（`osx/`，17 檔／915 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `core/utils/osx_vk.py` | 114 | macOS 虛擬鍵碼表。 |
+| `core/utils/osx_vk.py` | 113 | macOS 虛擬鍵碼表。 |
 | `mouse/osx_mouse.py` | 137 | Quartz `CGEvent` 滑鼠事件。 |
-| `keyboard/osx_keyboard.py` | 129 | Quartz 鍵盤事件。 |
+| `keyboard/osx_keyboard.py` | 137 | Quartz 鍵盤事件。 |
 | `keyboard/osx_keyboard_check.py` | 24 | 按鍵狀態查詢。 |
 | `listener/osx_listener.py` | 253 | 專屬執行緒上的 listen-only `CGEventTap`＋自己的 `CFRunLoopRunInMode` 切片；不在 import 時建 `NSApplication`，也不用會卡住呼叫緒的 `AppHelper.runEventLoop()`。修飾鍵由 `flagsChanged` 的旗標還原成 press／release，座標取 `CGEventGetLocation`（左上原點，與重播送出的座標同一空間）。 |
 | `record/osx_record.py` | 41 | 錄製。捕捉後的整形（舊版按下事件 Queue、時間軸、只錄滑鼠／只錄鍵盤）走共用的 `utils/input_macro/recorder_base.py`。 |
@@ -218,16 +218,16 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
-| `core/utils/x11_linux_display.py` | 14 | 共用 `Xlib.display.Display` 實例。 |
-| `core/utils/x11_linux_vk.py` | 197 | X11 keysym 對照表。 |
-| `mouse/x11_linux_mouse_control.py` | 133 | XTest 滑鼠事件。 |
-| `keyboard/x11_linux_keyboard_control.py` | 85 | XTest 鍵盤事件。 |
-| `listener/x11_linux_listener.py` | 195 | XRecord 監聽。 |
-| `record/x11_linux_record.py` | 73 | 錄製。 |
-| `screen/x11_linux_screen.py` | 62 | 螢幕尺寸與擷取。 |
-| `uinput/_device.py` | 234 | `/dev/uinput` 封裝（核心層輸入，選用）。 |
-| `uinput/keyboard.py` | 33 | uinput 鍵盤後端，介面與 X11 版一致。 |
-| `uinput/mouse.py` | 116 | uinput 滑鼠後端。 |
+| `core/utils/x11_linux_display.py` | 16 | 共用 `Xlib.display.Display` 實例。 |
+| `core/utils/x11_linux_vk.py` | 199 | X11 keysym 對照表。 |
+| `mouse/x11_linux_mouse_control.py` | 155 | XTest 滑鼠事件。 |
+| `keyboard/x11_linux_keyboard_control.py` | 88 | XTest 鍵盤事件。 |
+| `listener/x11_linux_listener.py` | 208 | XRecord 監聽。 |
+| `record/x11_linux_record.py` | 76 | 錄製。 |
+| `screen/x11_linux_screen.py` | 65 | 螢幕尺寸與擷取。 |
+| `uinput/_device.py` | 244 | `/dev/uinput` 封裝（核心層輸入，選用）。 |
+| `uinput/keyboard.py` | 32 | uinput 鍵盤後端，介面與 X11 版一致。 |
+| `uinput/mouse.py` | 115 | uinput 滑鼠後端。 |
 
 #### Linux Wayland（`linux_wayland/`，17 檔／2,870 行）
 
@@ -706,8 +706,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 | 檔案 | 行數 | 職責 |
 | --- | ---: | --- |
-| `tools/_factories.py` | 8,739 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
-| `tools/_handlers.py` | 4,651 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter。 |
+| `tools/_factories.py` | 8,974 | 工具工廠：每個函式回傳一個領域的 `MCPTool` 清單（把 `AC_*` 能力包成 MCP 工具）。 |
+| `tools/_handlers.py` | 4,791 | 把 MCP 工具呼叫橋接到 AutoControl 無頭 API 的 adapter。 |
 | `server.py` | 717 | JSON-RPC 2.0 over stdio 的最小 MCP 伺服器：連線範圍狀態、行內／併發分派、工具與 resource／prompt 處理器。 |
 | `http_transport.py` | 521 | MCP 的 HTTP 傳輸。 |
 | `http_sessions.py` | 234 | MCP 的 HTTP 傳輸用的 session 身分:`Mcp-Session-Id` 註冊表,以及每個 session 那條常駐的 server→client SSE 串流。 |
@@ -717,9 +717,9 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `prompts.py` | 220 | MCP prompt 目錄。 |
 | `fake_backend.py` | 184 | CI／無頭測試用的記憶體內假後端。 |
 | `plugin_watcher.py` | 149 | 檔案變更時熱重載外掛工具的背景 watcher。 |
-| `tools/_base.py` | 147 | 工具註冊表的共用型別與輔助。 |
-| `tools/_validation.py` | 107 | MCP 工具用到的 JSON Schema 子集驗證器。 |
-| `tools/plugin_tools.py` | 90 | 把外掛載入的 `AC_*` callable 包成 `MCPTool`。 |
+| `tools/_base.py` | 146 | 工具註冊表的共用型別與輔助。 |
+| `tools/_validation.py` | 106 | MCP 工具用到的 JSON Schema 子集驗證器。 |
+| `tools/plugin_tools.py` | 89 | 把外掛載入的 `AC_*` callable 包成 `MCPTool`。 |
 | `log_bridge.py` | 90 | 把 Python logging 記錄橋接成 MCP `notifications/message`。 |
 | `audit.py` | 78 | MCP 工具呼叫稽核記錄。 |
 | `context.py` | 71 | 傳給 opt-in 工具處理器的每次呼叫上下文。 |
@@ -752,7 +752,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `presence.py` | 221 | 多檢視者的執行緒安全在場註冊表。 |
 | `jpeg_recorder_encrypted.py` | 223 | AES-GCM 加密版 session 錄影。 |
 | `address_book.py` | 215 | 檢視端的主機通訊錄。 |
-| `audio.py` / `webrtc_audio.py` / `webrtc_mic.py` | 206 / 190 / 152 | 音訊擷取播放、音訊軌、麥克風上行。 |
+| `audio.py` / `webrtc_audio.py` / `webrtc_mic.py` | 205 / 189 / 151 | 音訊擷取播放、音訊軌、麥克風上行。 |
 | `webrtc_files.py` | 205 | 專屬 DataChannel 的分塊檔案傳輸。 |
 | `webrtc_host_auth.py` | 222 | 檢視端認證與核准：token 檢查、信任清單／IP 白名單自動放行、手動接受／拒絕、SAS、逾時關閉。 |
 | `lan_discovery.py` | 189 | mDNS／Zeroconf 區網探索。 |
@@ -772,10 +772,10 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `transport.py` | 123 | 可插拔的型別化訊息傳輸。 |
 | `host_access.py` | 105 | TCP 主機的檢視端核准與存取控制：`PendingViewer`、權限字串、分享碼的 TOTP 候選值、IP 白名單。`host` 與 `host_client` 共用,所以獨立成模組。 |
 | `protocol.py` | 96 | 長度前綴的 TCP 框架。 |
-| `resume_tokens.py` / `session_quality_cache.py` / `rate_limit.py` | 95 / 86 / 85 | 快速重連 token、每 session 品質快取、檢視端限流。 |
-| `host_id.py` / `viewer_id.py` | 82 / 78 | 主機與檢視端的持久身分。 |
-| `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 65 / 73 / 57 / 41 / 29 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
-| `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 41 / 30 / 139 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
+| `resume_tokens.py` / `session_quality_cache.py` / `rate_limit.py` | 94 / 85 / 84 | 快速重連 token、每 session 品質快取、檢視端限流。 |
+| `host_id.py` / `viewer_id.py` | 81 / 77 | 主機與檢視端的持久身分。 |
+| `permissions.py` / `clipboard_sync.py` / `wake_on_lan.py` / `session_actions.py` / `auth.py` | 64 / 72 / 56 / 40 / 28 | 逐 session 權限、剪貼簿同步、WOL、SAS 注入與螢幕遮蔽、HMAC 挑戰回應。 |
+| `ws_host.py` / `ws_viewer.py` / `jpeg_recorder.py` | 40 / 29 / 146 | WebSocket 傳輸變體與 TCP 路徑錄影。 |
 
 #### `utils/usb/`（4,281 行）與 `utils/usbip/`（920 行）
 
@@ -783,22 +783,22 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | --- | ---: | --- |
 | `usb/passthrough/session.py` | 595 | 逐 peer 的 USB 直通 session。 |
 | `usb/passthrough/viewer_client.py` | 561 | 檢視端的直通協定用戶端。 |
-| `usb/passthrough/backend.py` | 464 | 後端 ABC + libusb 實作。 |
-| `usb/passthrough/winusb_backend.py` | 458 | Windows WinUSB 後端（ctypes）。 |
-| `usb/passthrough/acl.py` | 433 | 逐裝置 ACL。 |
-| `usb/passthrough/iokit_backend.py` | 222 | macOS IOKit 後端。 |
-| `usb/passthrough/webrtc_channel.py` | 168 | 把直通協定橋到 WebRTC `usb` DataChannel。 |
-| `usb/passthrough/loopback.py` | 158 | 行程內 loopback 傳輸（測試用）。 |
+| `usb/passthrough/backend.py` | 463 | 後端 ABC + libusb 實作。 |
+| `usb/passthrough/winusb_backend.py` | 485 | Windows WinUSB 後端（ctypes）。 |
+| `usb/passthrough/acl.py` | 432 | 逐裝置 ACL。 |
+| `usb/passthrough/iokit_backend.py` | 221 | macOS IOKit 後端。 |
+| `usb/passthrough/webrtc_channel.py` | 167 | 把直通協定橋到 WebRTC `usb` DataChannel。 |
+| `usb/passthrough/loopback.py` | 157 | 行程內 loopback 傳輸（測試用）。 |
 | `usb/passthrough/protocol.py` | 133 | 線路框格式。 |
-| `usb/passthrough/descriptor.py` | 133 | USB 標準裝置描述元解析。 |
-| `usb/passthrough/key_provider.py` | 123 | ACL 的可插拔 HMAC 金鑰來源。 |
-| `usb/passthrough/commands.py` | 151 | 無頭直通指令（單一真實來源）。 |
-| `usb/usb_devices.py` | 286 | 跨平台 USB 裝置列舉。 |
-| `usb/usb_watcher.py` | 214 | 輪詢式 USB 熱插拔監看。 |
-| `usbip/protocol.py` | 331 | USB/IP 線路格式封裝／解析。 |
-| `usbip/server.py` | 236 | USB/IP 主機端 TCP 伺服器。 |
-| `usbip/libusb_backend.py` | 209 | 以 PyUSB／libusb 執行 URB 的正式後端。 |
-| `usbip/backend.py` | 88 | 可插拔 URB 執行後端。 |
+| `usb/passthrough/descriptor.py` | 132 | USB 標準裝置描述元解析。 |
+| `usb/passthrough/key_provider.py` | 125 | ACL 的可插拔 HMAC 金鑰來源。 |
+| `usb/passthrough/commands.py` | 150 | 無頭直通指令（單一真實來源）。 |
+| `usb/usb_devices.py` | 294 | 跨平台 USB 裝置列舉。 |
+| `usb/usb_watcher.py` | 213 | 輪詢式 USB 熱插拔監看。 |
+| `usbip/protocol.py` | 330 | USB/IP 線路格式封裝／解析。 |
+| `usbip/server.py` | 235 | USB/IP 主機端 TCP 伺服器。 |
+| `usbip/libusb_backend.py` | 208 | 以 PyUSB／libusb 執行 URB 的正式後端。 |
+| `usbip/backend.py` | 87 | 可插拔 URB 執行後端。 |
 
 #### `utils/rest_api/`（1,751 行）
 
@@ -861,17 +861,17 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `gui/__init__.py` | 23 | `start_autocontrol_gui()`：**唯一**會延遲匯入 PySide6 的地方，維持頂層套件 Qt-free。 |
-| `main_window.py` | 290 | `QMainWindow`：選單列（File／Actions／View／…）、可關閉分頁、即時語言切換、字級預設、qt-material 主題。分頁分為 core／editing／detection／automation／system 五類。 |
+| `main_window.py` | 289 | `QMainWindow`：選單列（File／Actions／View／…）、可關閉分頁、即時語言切換、字級預設、qt-material 主題。分頁分為 core／editing／detection／automation／system 五類。 |
 | `main_widget.py` | 423 | 擁有 `QTabWidget`，註冊 48 個分頁，並暴露 show/hide/list API 給選單列。核心分頁在註冊時直接宣告 `(label_key, handler)` 動作對；分頁本體都在下列 mixin。 |
-| `_auto_click_tab.py` | 270 | 自動點擊分頁的 mixin 建構器。 |
-| `_screenshot_tab.py` | 127 | 截圖／取像素分頁 mixin。 |
-| `_image_detect_tab.py` | 106 | 影像偵測分頁 mixin。 |
-| `_script_tab.py` | 105 | 腳本執行分頁 mixin。 |
-| `_record_tab.py` | 101 | 錄製／回放分頁 mixin。 |
-| `_report_tab.py` | 81 | 報表分頁 mixin。 |
-| `_i18n_helpers.py` | 67 | 需要即時語言切換的分頁共用的翻譯註冊 mixin。 |
-| `language_wrapper/` | 4,977 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
-| `selector/` | 183 | 拖曳選取螢幕區域的半透明全螢幕覆蓋層與樣板裁切工具（互動式，但都有對應的程式化 API）。 |
+| `_auto_click_tab.py` | 286 | 自動點擊分頁的 mixin 建構器。 |
+| `_screenshot_tab.py` | 136 | 截圖／取像素分頁 mixin。 |
+| `_image_detect_tab.py` | 114 | 影像偵測分頁 mixin。 |
+| `_script_tab.py` | 113 | 腳本執行分頁 mixin。 |
+| `_record_tab.py` | 110 | 錄製／回放分頁 mixin。 |
+| `_report_tab.py` | 88 | 報表分頁 mixin。 |
+| `_i18n_helpers.py` | 66 | 需要即時語言切換的分頁共用的翻譯註冊 mixin。 |
+| `language_wrapper/` | 4,987 | 四語系字典（英／日／簡中／繁中）+ `multi_language_wrapper` 執行期切換器與監聽註冊表。 |
+| `selector/` | 179 | 拖曳選取螢幕區域的半透明全螢幕覆蓋層與樣板裁切工具（互動式，但都有對應的程式化 API）。 |
 
 > **分頁指令一律走 Actions 選單**：分頁本身只放輸入、表格與結果檢視，指令由視窗層選單暴露。
 > 核心分頁在 `main_widget.py` 註冊時宣告動作；功能分頁實作 `menu_actions()`（目前 40 個檔案有此 hook）。

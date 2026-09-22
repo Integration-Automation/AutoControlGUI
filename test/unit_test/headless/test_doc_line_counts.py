@@ -43,7 +43,12 @@ _SIZE_TABLE_HEADER = "| 層／子系統 | 檔案數 | 行數 |"
 _ROW = re.compile(r"^\|\s*`([^`]+)`")
 _ONE_NUMBER = re.compile(r"^(\|[^|]*\|\s*)([\d,]+)(\s*\|)")
 _TWO_NUMBERS = re.compile(r"^(\|[^|]*\|\s*)([\d,]+)(\s*\|\s*)([\d,]+)(\s*\|)")
+# A row that groups several files: `a.py` / `b.py` | 82 / 78 | ...
+_SLASHED_NUMBERS = re.compile(r"^(\|[^|]*\|\s*)([\d,]+(?:\s*/\s*[\d,]+)+)(\s*\|)")
+_TICKED = re.compile(r"`([^`]+)`")
 _SUBSECTION = re.compile(r"^####\s")
+_SECTION = re.compile(r"^###\s")
+_CHAPTER = re.compile(r"^##\s")
 _PATH_TICK = re.compile(r"`([^`]+/)`")
 _PAREN = re.compile(r"（[^（）]*）")
 _COUNT_OF = re.compile(r"(\d[\d,]*)(\s*(?:檔|行))")
@@ -78,13 +83,28 @@ def _resolve(name: str, context: Optional[str]) -> Optional[pathlib.Path]:
     """Find what a backticked name in the document refers to, or ``None``.
 
     Names are written relative to ``je_auto_control/`` in most tables, relative
-    to the repo root in a few (``autocontrol-lsp/``), and as a bare file name
-    in the §5.4.17 file tables — where the enclosing ``#### `utils/x/``` header
-    supplies the package.
+    to the repo root in a few (``autocontrol-lsp/``), and relative to the
+    heading's package everywhere else — a bare file name in the §5.4.17 tables
+    (``server.py`` under ``utils/mcp_server/``), a sub-path in the platform and
+    §5.4.17 tables (``record/win32_input_hook.py`` under ``windows/``,
+    ``tools/_handlers.py`` under ``utils/mcp_server/``), or a sibling package's
+    path (``usbip/server.py`` under ``utils/usb/``, which lives in ``utils/``).
+
+    Sub-paths used to be tried only against the package root, so 71 rows —
+    every platform backend file, the MCP tool modules, all of USB, the GUI
+    skeleton — resolved to nothing and were skipped without a word, and some
+    had drifted by hundreds of lines. `test_every_row_names_something_in_the_tree`
+    now fails instead.
     """
-    candidates = [PACKAGE / name, ROOT / name]
-    if context and "/" not in name:
-        candidates.insert(0, PACKAGE / context / name)
+    candidates = []
+    if context:
+        package = pathlib.PurePosixPath(context)
+        candidates.append(PACKAGE / package / name)
+        if "/" in name:
+            candidates.extend(PACKAGE / parent / name
+                              for parent in package.parents
+                              if str(parent) != ".")
+    candidates.extend((PACKAGE / name, ROOT / name))
     for candidate in candidates:
         if candidate.is_file() or candidate.is_dir():
             return candidate
@@ -154,11 +174,19 @@ def _table_rows(doc_lines: List[str]) -> Dict[int, Tuple[str, Optional[str]]]:
     """
     rows: Dict[int, Tuple[str, Optional[str]]] = {}
     context: Optional[str] = None
+    section: Optional[str] = None
     header: Optional[str] = None
     for index, line in enumerate(doc_lines):
-        if _SUBSECTION.match(line):
+        # A `###` heading's package is the default for every `####` under it
+        # that names none of its own: §5.5's `gui/` is what "#### 骨架" means.
+        if _CHAPTER.match(line):
+            section = context = None
+        elif _SECTION.match(line):
             paths = _PATH_TICK.findall(line)
-            context = paths[0].rstrip("/") if paths else None
+            section = context = paths[0].rstrip("/") if paths else None
+        elif _SUBSECTION.match(line):
+            paths = _PATH_TICK.findall(line)
+            context = paths[0].rstrip("/") if paths else section
         if not line.startswith("|"):
             header = None
             continue
@@ -220,6 +248,9 @@ def _rewrite_table_rows(doc_lines: List[str]) -> Dict[str, object]:
         if name == _GRAND_TOTAL:
             derived["total"] = index
             continue
+        if _SLASHED_NUMBERS.match(line):
+            doc_lines[index] = _rewrite_slashed_row(line, context)
+            continue
         two_columns = _TWO_NUMBERS.match(line) is not None
         target = _resolve(name, context)
         if target is None:
@@ -233,6 +264,22 @@ def _rewrite_table_rows(doc_lines: List[str]) -> Dict[str, object]:
             line, (files, total) if two_columns else (total,))
     derived["named"] = (named_files, named_lines)
     return derived
+
+
+def _rewrite_slashed_row(line: str, context: Optional[str]) -> str:
+    """Rewrite a row that quotes one figure per file: ``82 / 78``.
+
+    Such a row used to be skipped whole — the single-number pattern does not
+    match ``82 / 78`` — so none of its figures was ever checked.
+    """
+    names = _TICKED.findall(line.split("|")[1])
+    match = _SLASHED_NUMBERS.match(line)
+    quoted = match.group(2).split("/")
+    targets = [_resolve(name, context) for name in names]
+    if len(targets) != len(quoted) or None in targets:
+        return line
+    figures = " / ".join(f"{_measure(target)[1]:,}" for target in targets)
+    return f"{match.group(1)}{figures}{match.group(3)}{line[match.end():]}"
 
 
 def _rewrite_appendix_totals(doc_lines: List[str],
@@ -319,6 +366,56 @@ def test_every_quoted_line_count_matches_the_tree():
         f"match the tree. CLAUDE.md says to re-measure rather than adjust by "
         f"hand:\n\n    {FIX_COMMAND}\n\n{preview}{more}"
     )
+
+
+def unresolved_rows() -> List[str]:
+    """Every table row whose file or package is not in the tree.
+
+    The rewriter skips a row it cannot resolve, which is right for a single
+    pass and wrong as a steady state: a file that moved or was deleted, or a
+    path written relative to something the resolver does not know, leaves a
+    figure nobody checks. That is how 71 rows went unmeasured.
+    """
+    doc_lines = DOC.read_text(encoding="utf-8").split("\n")
+    missing = []
+    for index, (name, context) in _table_rows(doc_lines).items():
+        if name.startswith(_REMAINDER) or name == _GRAND_TOTAL:
+            continue
+        names = _TICKED.findall(doc_lines[index].split("|")[1]) or [name]
+        for each in names:
+            if _resolve(each, context) is None:
+                missing.append(f"line {index + 1}: {each}")
+    return missing
+
+
+def test_every_row_names_something_in_the_tree():
+    """A row the rewriter cannot resolve is a figure nobody measures."""
+    missing = unresolved_rows()
+    assert not missing, (
+        "these rows of architecture_explore.md name nothing in the tree, so "
+        "their line counts are never checked — fix the path, or teach "
+        "`_resolve` how the table writes it:\n" + "\n".join(missing))
+
+
+def test_a_sub_path_resolves_against_the_heading_package():
+    """The three shapes the platform, MCP and USB tables use."""
+    assert _resolve("record/win32_input_hook.py", "windows") == (
+        PACKAGE / "windows" / "record" / "win32_input_hook.py")
+    assert _resolve("tools/_handlers.py", "utils/mcp_server") == (
+        PACKAGE / "utils" / "mcp_server" / "tools" / "_handlers.py")
+    # A sibling package quoted under the other one's heading.
+    assert _resolve("usbip/server.py", "utils/usb") == (
+        PACKAGE / "utils" / "usbip" / "server.py")
+
+
+def test_a_slashed_row_is_measured_per_file():
+    """``82 / 78`` rows quote one figure per file; each has to be checked."""
+    row = "| `host_id.py` / `viewer_id.py` | 1 / 2 | ids |"
+    rewritten = _rewrite_slashed_row(row, "utils/remote_desktop")
+    host = _lines(PACKAGE / "utils" / "remote_desktop" / "host_id.py")
+    viewer = _lines(PACKAGE / "utils" / "remote_desktop" / "viewer_id.py")
+    assert rewritten == (
+        f"| `host_id.py` / `viewer_id.py` | {host:,} / {viewer:,} | ids |")
 
 
 def test_the_rewriter_is_idempotent():
