@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,032 |
-| 程式碼總行數 | 141,384 |
+| 程式碼總行數 | 141,440 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -174,7 +174,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `wrapper/_platform_linux.py` | 278 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
 | `wrapper/_platform_wayland.py` | 61 | Wayland 後端組裝（libei／ydotool／grim）。 |
 | `wrapper/auto_control_mouse.py` | 451 | 滑鼠 API：位置讀寫、按下／放開／點擊、捲動、座標前處理、送訊息給指定視窗。 |
-| `wrapper/auto_control_keyboard.py` | 304 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。 |
+| `wrapper/auto_control_keyboard.py` | 360 | 鍵盤 API：鍵表查詢、按下／放開／敲擊、`write` 字串、`hotkey` 組合鍵、按鍵狀態偵測。**`type_keyboard` 與 `hotkey` 的放開走 `finally`**（見下）。 |
 | `wrapper/auto_control_screen.py` | 111 | 螢幕 API：`screen_size`、`screenshot`（可指定區域）、`get_pixel`。 |
 | `wrapper/auto_control_image.py` | 83 | 影像 API：`locate_all_image`、`locate_image_center`、`locate_and_click`。 |
 | `wrapper/auto_control_record.py` | 114 | 錄製 API：`record`／`stop_record`／`record_to_json`（支援 stop event 與逾時）。 |
@@ -1019,6 +1019,27 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 讓 executor、背景輪詢迴圈、請求處理器與 GUI slot 這四種收納邊界能用單一 `except` 攔住整個家族。
 **不可**新增直接繼承 `Exception` 的兄弟類別——那會靜默逃出每一道邊界。
 
+**「按下 → 放開」之間的失敗必須走 `finally`，不能靠 `except`**（2026-09-09）。
+`auto_control_keyboard` 的 `hotkey` 與 `type_keyboard` 原本是「按下，然後放開」而中間
+沒有任何保護：任何一步拋例外，已經按下去的鍵就**留在按下狀態**——那是使用者真實的
+鍵盤，一個卡住的 `Ctrl` 或 `Alt` 會讓之後每一次點選與按鍵都變成別的意思，而畫面上沒有
+任何跡象。`hotkey(["ctrl", "shift", "esc"])` 在第三個鍵上失敗是這個缺陷最貴的形態。
+
+**為什麼是 `finally` 而不是把型別加進 `except`**：這兩支收的是
+`(OSError, RuntimeError, AttributeError, TypeError, ValueError)`，而
+`press_keyboard_key` / `release_keyboard_key` 丟的是 `AutoControlKeyboardException`
+——它屬於 `AutoControlException` 家族，**不在那五個的任何一個底下**（實測確認）。也就是說**最可能發生
+的失敗**（鍵名不在對照表裡、平台不支援、後端出錯）根本走不到那個 `except`。這和上面
+那條「不可新增直接繼承 `Exception` 的兄弟類別」是同一個問題的另一面：那條防的是例外逃出
+家族，這裡是 `except` 只列了內建型別、沒列家族本身，於是漏接了它們**自己**的例外。`finally` 是唯一每條離開路徑都會跑到的地方。
+
+收尾由 `_release_still_held(still_held, is_shift)` 負責：只放開**真的按下去而且還沒放開**
+的鍵（按成功才記，所以不會去放開一個從沒按下的鍵——那會取消使用者自己正按著的鍵），
+倒著放，而且**絕不往外拋**（清理路徑再丟例外只會把原因蓋掉）。
+守門：`test/unit_test/headless/test_keyboard_release_on_failure.py`（11 支，變異驗證 5/5），
+其中一支專門釘住「`AutoControlKeyboardException` 不在那五個型別底下」這個**前提**——整個
+設計靠它成立，前提哪天變了，這批註解也要跟著改。
+
 ---
 
 ## 8. 附錄：各層規模
@@ -1032,7 +1053,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/usb/` | 17 | 4,281 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,367 |
 | `utils/accessibility/` | 13 | 2,840 |
-| `wrapper/` | 19 | 3,517 |
+| `wrapper/` | 19 | 3,573 |
 | `windows/` | 23 | 1,927 |
 | `utils/rest_api/` | 8 | 1,751 |
 | `utils/agent/` | 8 | 1,250 |
@@ -1046,5 +1067,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 735 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,696 |
-| **總計** | **1,026** | **141,319** |
+| **總計** | **1,026** | **141,375** |
 

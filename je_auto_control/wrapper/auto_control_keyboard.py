@@ -113,16 +113,49 @@ def release_keyboard_key(keycode: Union[int, str], is_shift: bool = False,
         raise AutoControlKeyboardException(f"{keyboard_release_key_error_message} {repr(error)}") from error
 
 
+def _release_still_held(still_held: list, is_shift: bool) -> None:
+    """把「已經按下去、還沒放開」的鍵**倒著**放開。清空 ``still_held``。
+    Release keys that are still held down, in reverse order.
+
+    這支跑在 ``finally`` 裡，所以**絕不往外拋**：清理路徑再丟一個例外只會把原本
+    那個蓋掉，而使用者真正需要看到的是原因。放不開就記一行 error 繼續處理下一個
+    ——放開三個鍵時第一個失敗，不該讓另外兩個也留在按下狀態。
+    This runs from ``finally`` and therefore never raises: an exception here
+    would replace the original one, which is what the caller actually needs.
+
+    收 ``Exception`` 而不是那份 ``(OSError, RuntimeError, …)`` 名單，是因為
+    ``release_keyboard_key`` 丟的是 ``AutoControlKeyboardException``，它屬於
+    ``AutoControlException`` 家族——不在那份名單裡的任何一項底下。
+    """
+    while still_held:
+        key = still_held.pop()
+        try:
+            release_keyboard_key(key, is_shift, skip_record=True)
+        except Exception as error:  # noqa: BLE001  # pylint: disable=broad-except
+            autocontrol_logger.error(
+                f"failed to release a still-held key {key!r}: {repr(error)}")
+
+
 def type_keyboard(keycode: Union[int, str], is_shift: bool = False,
                   skip_record: bool = False) -> Optional[str]:
     """
     模擬輸入 (按下再放開)
     Type a keyboard key (press and release)
+
+    按下與放開之間的任何失敗都**不可以**把鍵留在按下狀態——那是使用者真實的鍵盤：
+    一個卡住的 Ctrl 或 Alt 會讓後面每一次點選、每一次按鍵都變成別的意思，而且畫面上
+    沒有任何跡象。所以放開走 ``finally``，不是走 ``except``。
+    A failure between press and release must never leave the key down: this is
+    the user's real keyboard, and a stuck modifier silently changes the meaning
+    of every subsequent click and keystroke.
     """
     autocontrol_logger.info(f"type_keyboard, keycode={keycode}, is_shift={is_shift}, skip_record={skip_record}")
+    still_held: list = []
     try:
         press_keyboard_key(keycode, is_shift, skip_record=True)
+        still_held.append(keycode)
         release_keyboard_key(keycode, is_shift, skip_record=True)
+        still_held.clear()
 
         if not skip_record:
             record_action_to_list("type_keyboard", {"keycode": keycode, "is_shift": is_shift})
@@ -133,6 +166,14 @@ def type_keyboard(keycode: Union[int, str], is_shift: bool = False,
             record_action_to_list("type_keyboard", {"keycode": keycode}, repr(error))
         autocontrol_logger.error(f"type_keyboard failed: {repr(error)}")
         raise AutoControlKeyboardException(f"{keyboard_type_key_error_message} {repr(error)}") from error
+    finally:
+        # **為什麼是 `finally` 而不是加進上面的 `except`**：`press_keyboard_key` 與
+        # `release_keyboard_key` 丟的是 `AutoControlKeyboardException`，它屬於
+        # `AutoControlException` 家族、**不在**那份 `(OSError, RuntimeError, AttributeError,
+        # TypeError, ValueError)` 名單的任何一項底下（實測確認）。也就是說最可能
+        # 發生的失敗（鍵名不在對照表裡、平台不支援、後端出錯）根本走不到那個
+        # `except`。`finally` 是唯一每條離開路徑都會跑到的地方。
+        _release_still_held(still_held, is_shift)
 
 def check_key_is_press(keycode: Union[int, str]) -> Optional[bool]:
     """
@@ -240,15 +281,23 @@ def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
     :return: (press_str, release_str)
     """
     autocontrol_logger.info(f"hotkey, key_code_list={key_code_list}, is_shift={is_shift}")
+    # 已經按下去、還沒放開的鍵，**依按下的順序**。放開時倒著走。
+    still_held: list = []
     try:
         press_list = []
         release_list = []
 
         for key in key_code_list:
             press_list.append(press_keyboard_key(key, is_shift, skip_record=True))
+            # 按成功了才記——`press_keyboard_key` 丟例外時那個鍵並沒有被按下去，
+            # 記進來的話收尾會去放開一個從來沒按下的鍵。
+            still_held.append(key)
 
         for key in reversed(key_code_list):
             release_list.append(release_keyboard_key(key, is_shift, skip_record=True))
+            # 放開的順序與 `still_held` 的堆疊順序一致（都是反序），所以 `pop()`
+            # 拿到的必定就是剛放開的那一個——同一個鍵重複出現在清單裡也對。
+            still_held.pop()
 
         press_str = ",".join(filter(None, press_list))
         release_str = ",".join(filter(None, release_list))
@@ -260,6 +309,13 @@ def hotkey(key_code_list: list, is_shift: bool = False) -> Tuple[str, str]:
         record_action_to_list("hotkey", {"keys": key_code_list}, repr(error))
         autocontrol_logger.error(f"hotkey failed: {repr(error)}")
         raise AutoControlKeyboardException(f"{keyboard_hotkey_error_message} {repr(error)}") from error
+    finally:
+        # 組合鍵是這個缺陷**最貴**的形態：`hotkey(["ctrl", "shift", "esc"])` 在第三
+        # 個鍵上失敗，就會把 Ctrl 與 Shift 留在按下狀態——使用者真實的鍵盤上，之後
+        # 每一次點選與按鍵都變成別的意思，而畫面上沒有任何跡象。
+        # 為什麼是 `finally` 不是 `except`：見 `type_keyboard` 的同名說明
+        # （`AutoControlKeyboardException` 不在那份 except 名單的任何一項底下）。
+        _release_still_held(still_held, is_shift)
 
 def send_key_event_to_window(window_title: str, keycode: Union[int, str]) -> None:
     """

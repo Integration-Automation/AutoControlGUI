@@ -387,6 +387,18 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **A failing `hotkey()` or `type_keyboard()` left keys held down.** Both
+  press and then release with nothing protecting the gap, and their
+  `except (OSError, RuntimeError, AttributeError, TypeError, ValueError)` does
+  not cover `AutoControlKeyboardException` — the error `press_keyboard_key` /
+  `release_keyboard_key` actually raise for an unknown key name, an unsupported
+  platform or a backend failure. So `hotkey(["ctrl", "shift", "esc"])` failing
+  on `esc` left `Ctrl` and `Shift` down on the real keyboard, changing the
+  meaning of every later click and keystroke. The release now runs from
+  `finally`: only keys that were actually pressed and not yet released are
+  released, in reverse order, and a release that fails during that cleanup is
+  logged rather than raised, so the caller still sees the original error.
+
 - **The Windows recorder dropped mouse side buttons.** Playback has always
   accepted `mouse_x1` / `mouse_x2`, but the low-level hook keyed its button
   table by message id, and `WM_XBUTTONDOWN` / `WM_XBUTTONUP` are one id for
