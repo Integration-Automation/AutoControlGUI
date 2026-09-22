@@ -22,6 +22,25 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   generating values from the schema alone used to produce a plain string and
   get a `ValueError` out of `datetime.fromisoformat`.
 
+### Security
+
+- **The `pdf` extra now requires `pypdf>=6.16.1`** (was `>=4.0`).
+  `extract_pdf_text`, `pdf_metadata` and `assert_pdf_text` open whatever PDF
+  they are given, and every pypdf before 6.16.1 can be driven into an
+  infinite loop or unbounded memory by a malformed file (unterminated inline
+  images, repeated bad cross-reference entries, large `/ToUnicode` streams or
+  CID width ranges, `TreeObject.insert_child`, outlines, XForm objects).
+  Migration: `pip install -U "je_auto_control[pdf]"`.
+- **`requirements.txt` states `pillow>=12.3.0` directly.** It already
+  resolved 12.3.0 through the `je_auto_control>=0.0.216` floor; the direct
+  line is for the dependency graph, which still reported Pillow 12.2.0 for
+  this file from before that floor existed.
+- **`uv.lock` moves anyio 4.13.0 → 4.14.2, cryptography 49.0.0 → 50.0.1 and
+  pypdf 6.13.3 → 6.19.0.** anyio (through `starlette`, `[signaling]` extra)
+  fixes a TLS host-name encoding flaw that allowed certificate spoofing.
+  cryptography 50 fixes a PKCS#7 EnvelopedData decryption oracle; this
+  package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
+
 ### Fixed
 
 - **On Windows the key name `down` pressed F17 instead of the Down arrow.**

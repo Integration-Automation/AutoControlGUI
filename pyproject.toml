@@ -100,7 +100,10 @@ gui = ["PySide6==6.11.1", "qt-material==2.17"]
 webrtc = ["aiortc>=1.14.0", "av>=14.0.0"]
 signaling = ["fastapi>=0.115", "uvicorn>=0.32"]
 discovery = ["zeroconf>=0.130"]
-pdf = ["pypdf>=4.0"]
+# Security floor: utils/pdf opens PDFs the caller hands it, and every pypdf
+# before 6.16.1 has a malformed-file infinite loop or memory blow-up
+# (inline images, xref entries, /ToUnicode, CID widths, outlines, XForms).
+pdf = ["pypdf>=6.16.1"]
 office = ["openpyxl>=3.1", "python-docx>=1.1", "python-pptx>=0.6"]
 fuzzy = ["rapidfuzz>=3.0"]
 s3 = ["boto3>=1.34"]
