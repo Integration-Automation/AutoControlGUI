@@ -314,7 +314,7 @@ Windows 有实现，其他平台会抛出明确的 `NotImplementedError`。对�
 | [architecture_explore.md](../architecture_explore.md) | 逐层记录每个模块的职责。 |
 | [docs/CAPABILITY_MATRIX.md](../docs/CAPABILITY_MATRIX.md) | 能力 × 平台对照矩阵。 |
 | [docs/API_LIFECYCLE.md](../docs/API_LIFECYCLE.md) | 稳定 API 与弃用策略。 |
-| [WHATS_NEW.md](../WHATS_NEW.md) | 各版本更新说明。 |
+| [docs/updates/](../docs/updates/README.md) | 更新记录：各版本说明与完成的工作，每月一个文件（原 `WHATS_NEW.md`）。 |
 | [CHANGELOG.md](../CHANGELOG.md) | 兼容性变更记录。 |
 | [SECURITY.md](../SECURITY.md) | 安全策略与报告方式。 |
 

@@ -1,7 +1,7 @@
 # Changelog
 
 This file records user-visible compatibility changes. Detailed development
-notes remain in `WHATS_NEW.md`.
+notes are recorded in `docs/updates/` (index: `docs/updates/README.md`).
 
 The format follows Keep a Changelog. Until 1.0, breaking changes are permitted
 only when documented here with a migration path.

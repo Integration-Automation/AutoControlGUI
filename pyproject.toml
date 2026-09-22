@@ -173,7 +173,8 @@ precision = 2
 # turned a 50.26% minimum into 50.
 #
 # 70 was the destination that number was climbing towards; the maintainer set
-# the next one at 80 on 2026-08-23, and Progress.md tracks the climb.
+# the next one at 80 on 2026-08-23; the climb is recorded in
+# docs/updates/2026-08.md (U-20260824-02).
 #
 # Measured 2026-08-24 on the last run for this PR, after `quality.yml` began
 # installing the `[webrtc]` extra and the WebRTC subsystem got its first

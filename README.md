@@ -345,7 +345,7 @@ ignore synthetic input, and fall back silently when the driver is absent.
 | [architecture_explore.md](architecture_explore.md) | Every module's responsibility, layer by layer. |
 | [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md) | Capability × platform matrix. |
 | [docs/API_LIFECYCLE.md](docs/API_LIFECYCLE.md) | Stable-API and deprecation policy. |
-| [WHATS_NEW.md](WHATS_NEW.md) | Per-release notes. |
+| [docs/updates/](docs/updates/README.md) | Update log: release notes and finished work, one file per month (formerly `WHATS_NEW.md`). |
 | [CHANGELOG.md](CHANGELOG.md) | Compatibility changelog. |
 | [SECURITY.md](SECURITY.md) | Security policy and reporting. |
 

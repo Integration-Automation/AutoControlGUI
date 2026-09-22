@@ -98,7 +98,7 @@ The map is only useful while it matches the tree, so **update it in the same cha
 Anything agreed but not done — deferred follow-ups, known gaps, half-delivered features, decisions waiting on the maintainer — is recorded in [Progress.md](Progress.md), not left in chat history or buried in a commit message.
 
 - **Write the entry when you defer the work**, in the same change that created the gap. Each entry states its status (`TODO` / `WIP` / `BLOCKED` / `DECIDE`), what is missing, and where in the tree.
-- **Open items only.** Delete the entry when the work lands; shipped work is described in `WHATS_NEW.md` and compatibility changes in `CHANGELOG.md`. `Progress.md` is not a changelog.
+- **Open items only.** Delete the entry when the work lands; finished work is recorded as an entry in `docs/updates/` (index and query commands: `docs/updates/README.md`) and compatibility changes in `CHANGELOG.md`. `Progress.md` is not a changelog.
 - A feature that reaches only some of the delivery surfaces above belongs here until the rest land.
 
 ## Coding Standards
@@ -158,6 +158,19 @@ radon cc je_auto_control/ -a -nc               # flags functions with CC >= C (>
 These tools own the generic rules (bare `except`, mutable defaults, unused names, dead code, `eval`/`exec`, `shell=True`, `pickle` on untrusted data, weak hashes, missing `timeout=`, hardcoded secrets, naming). Fix what they report rather than restating them here.
 
 Suppressions need an inline justification — `# noqa: <code>  # reason: <why>` or `# nosec B404  # reason: <why>`. Blanket file- or module-level suppressions are forbidden.
+
+## Stage commits, `Progress.md`, `docs/updates/` and `architecture.md`
+
+Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes\CLAUDE.md`).
+
+- **Commit at every stage.** A stage is the smallest piece of work that leaves the repository consistent and passes this project's checks (definition of done, tests, lint): one finished `Progress.md` item, or one self-contained step of a larger one. Commit it before starting the next stage, before switching to another repository, and before the session ends. Do not leave work uncommitted across sessions; if a stage cannot be finished, commit the consistent part and record the rest in `Progress.md`.
+  - Stage only the files that stage touched (`git add <path>`, never `git add -A`), follow this file's commit-message rules, and never add AI attribution.
+  - Committing is not pushing: push or open a PR only as this project's branch flow says or when asked.
+- **`Progress.md`** (repository root, tracked) holds outstanding work only: no finished items, no history, no rules.
+- **`docs/updates/`** records finished work: one batch file per month (`YYYY-MM.md`), one entry per piece of work headed `## U-YYYYMMDD-NN · date · title · #tags`, and an index with query commands in `docs/updates/README.md`. When a `Progress.md` item is done, delete it and add a `#done` entry plus its index row in the same commit.
+- **`architecture.md`** (repository root) is the short architecture overview: layers, entry points, main flows, extension points, cross-project boundaries. Update it in the same commit whenever a change alters any of those. `architecture_explore.md` stays the detailed per-module map under its own rule in this file.
+- **Cross-project contracts** are listed in `architecture.md` §6: what other repositories rely on here (CLI flags, import paths, constructor arguments, file layouts) and what this repository relies on elsewhere. No test here protects them, so never rename or remove one without changing its consumers in the same round, and update §6 whenever a contract is added or changes.
+- Here the progress file is `Progress.md` (see "Outstanding work goes in `Progress.md`" above); its 750-line exemption list stays there. `WHATS_NEW.md` now only points to `docs/updates/`, and compatibility changes still go to `CHANGELOG.md`.
 
 ## Commit Conventions
 
