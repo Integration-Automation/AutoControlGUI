@@ -10,7 +10,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Set
 
-from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
@@ -214,7 +214,7 @@ class Scheduler:
         status = STATUS_OK
         error_text: Optional[str] = None
         try:
-            actions = read_action_json(job.script_path)
+            actions = read_executable_action_json(job.script_path)
             self._execute(actions)
         # 一個排程工作失敗必須記錄為 STATUS_ERROR 並繼續輪詢,絕不能拖垮
         # 排程執行緒。原本的 tuple 漏掉 AutoControlException——它是幾乎所有

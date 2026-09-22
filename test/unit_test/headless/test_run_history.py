@@ -111,7 +111,7 @@ def test_scheduler_records_history(monkeypatch, store):
     from je_auto_control.utils.scheduler import scheduler as sched_mod
 
     monkeypatch.setattr(sched_mod, "default_history_store", store)
-    monkeypatch.setattr(sched_mod, "read_action_json", lambda _: [["AC_noop"]])
+    monkeypatch.setattr(sched_mod, "read_executable_action_json", lambda _: [["AC_noop"]])
 
     sched = sched_mod.Scheduler(
         executor=lambda actions: None, tick_seconds=0.05,
@@ -137,7 +137,7 @@ def test_scheduler_records_error(monkeypatch, store):
         raise RuntimeError("fail")
 
     monkeypatch.setattr(sched_mod, "default_history_store", store)
-    monkeypatch.setattr(sched_mod, "read_action_json", boom)
+    monkeypatch.setattr(sched_mod, "read_executable_action_json", boom)
     monkeypatch.setattr(sched_mod, "capture_error_snapshot", lambda _rid: None)
 
     sched = sched_mod.Scheduler(

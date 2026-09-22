@@ -32,7 +32,7 @@ def test_job_fires_and_updates_runs(monkeypatch):
         tick_seconds=0.1,
     )
     monkeypatch.setattr(
-        "je_auto_control.utils.scheduler.scheduler.read_action_json",
+        "je_auto_control.utils.scheduler.scheduler.read_executable_action_json",
         lambda path: [["AC_noop"]],
     )
     job = sched.add_job("fake.json", interval_seconds=0.1, repeat=False)
@@ -57,7 +57,7 @@ def test_max_runs_cap(monkeypatch):
         tick_seconds=0.05,
     )
     monkeypatch.setattr(
-        "je_auto_control.utils.scheduler.scheduler.read_action_json",
+        "je_auto_control.utils.scheduler.scheduler.read_executable_action_json",
         lambda path: [["AC_noop"]],
     )
     sched.add_job("fake.json", interval_seconds=0.1,
@@ -93,7 +93,7 @@ def test_a_job_still_running_is_not_started_again(monkeypatch):
 
     from je_auto_control.utils.scheduler import scheduler as scheduler_mod
     monkeypatch.setattr(scheduler_mod, "default_history_store", _NullHistory())
-    monkeypatch.setattr(scheduler_mod, "read_action_json",
+    monkeypatch.setattr(scheduler_mod, "read_executable_action_json",
                         lambda path: [["AC_noop"]])
     entered, release = threading.Event(), threading.Event()
     calls = []

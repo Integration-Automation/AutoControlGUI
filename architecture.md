@@ -68,8 +68,10 @@ action.json → utils/json/json_file.read_action_json
 ```
 
 Errors of the `AutoControlException` family are recorded, not raised (unless `raise_on_error=True`);
-`AutoControlAssertionException` always propagates. `execute_files` first calls `require_signed_actions`
-(`utils/action_signing/`).
+`AutoControlAssertionException` always propagates. Every path that runs an action file from disk (`execute_files`,
+the CLI, the scheduler, triggers, hotkeys, webhooks, the MCP run tool, the GUI) loads it with
+`read_executable_action_json`, which reads it once and verifies those bytes against the `.sig` sidecar when
+`JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` is set (`utils/action_signing/`).
 
 **B. Remote and external drivers** all feed the single global `executor`:
 

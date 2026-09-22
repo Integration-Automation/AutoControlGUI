@@ -19,11 +19,11 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 
 | 指標 | 數值 |
 | --- | ---: |
-| Python 模組總數（含周邊子專案） | 1,043 |
-| 程式碼總行數 | 142,386 |
+| Python 模組總數（含周邊子專案） | 1,044 |
+| 程式碼總行數 | 142,510 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
-| 套件門面 `__all__` 公開名稱數 | 1,238 |
+| 套件門面 `__all__` 公開名稱數 | 1,239 |
 | GUI 分頁數（`main_widget` 註冊） | 48 |
 | MCP 工具數（`build_default_tool_registry()` 實測） | 676 |
 | `test_*.py` 測試檔／測試函式 | 478 / 4,654 |
@@ -119,7 +119,9 @@ action.json ─► utils/json/json_file.read_action_json
 
 錯誤處理原則：`AutoControlException` 家族在此被「收納」成紀錄而非中止整份腳本；
 但 `AutoControlAssertionException`（`AC_assert_*` 失敗）即使在 `raise_on_error=False` 下仍會往上拋，
-確保斷言不會被靜默吃掉。`execute_files` 會先呼叫 `require_signed_actions` 驗簽。
+確保斷言不會被靜默吃掉。從磁碟執行動作檔的路徑（`execute_files`、CLI、排程器、觸發器、熱鍵、
+webhook、MCP 執行工具、GUI）都經 `read_executable_action_json` 載入：檔案只讀一次，
+設定 `JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` 時就以這份位元組對 `.sig` 驗簽，再解析同一份位元組。
 
 **B. 錄製 → 重播 → 產碼**
 
@@ -268,12 +270,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 13,076 行。
+> 24 個套件、約 13,198 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/action_lint/` | 328 | action 檔 linter 與 JSON Schema 產生器（CI 用 `python -m` 進入點） |
-| `utils/action_signing/` | 260 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
+| `utils/action_signing/` | 362 | action 檔 HMAC-SHA256 簽章與 Fernet 加密，`execute_files` 會強制驗簽 |
 | `utils/checkpoint/` | 120 | 流程檢查點與續跑，讓長 action list 具持久性 |
 | `utils/codegen/` | 158 | 由 action list 產生可執行的 pytest / python / robot 測試碼 |
 | `utils/dag/` | 478 | 跨主機 DAG 編排器（圖模型 + runner） |
@@ -282,7 +284,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/executor/` | 9,155 | **核心**。`Executor` 指令分派表（773 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 142 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 355 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
-| `utils/json/` | 74 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
+| `utils/json/` | 94 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
 | `utils/json_store/` | 61 | JSON 字典檔持久化的共用小工具（內部管線） |
 | `utils/loop_guard/` | 140 | 機械式卡死迴圈偵測（agent loop 用） |
 | `utils/plugin_loader/` | 85 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
@@ -876,7 +878,7 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 | `_auto_click_tab.py` | 286 | 自動點擊分頁的 mixin 建構器。 |
 | `_screenshot_tab.py` | 136 | 截圖／取像素分頁 mixin。 |
 | `_image_detect_tab.py` | 114 | 影像偵測分頁 mixin。 |
-| `_script_tab.py` | 113 | 腳本執行分頁 mixin。 |
+| `_script_tab.py` | 115 | 腳本執行分頁 mixin。 |
 | `_record_tab.py` | 110 | 錄製／回放分頁 mixin。 |
 | `_report_tab.py` | 88 | 報表分頁 mixin。 |
 | `_i18n_helpers.py` | 66 | 需要即時語言切換的分頁共用的翻譯註冊 mixin。 |
@@ -1056,7 +1058,7 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 
 | 層／子系統 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `gui/` | 91 | 26,791 |
+| `gui/` | 91 | 26,793 |
 | `utils/mcp_server/` | 31 | 17,530 |
 | `utils/remote_desktop/` | 56 | 12,106 |
 | `utils/executor/` | 6 | 9,155 |
@@ -1076,6 +1078,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 48,009 |
-| **總計** | **1,037** | **142,321** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,131 |
+| **總計** | **1,038** | **142,445** |
 

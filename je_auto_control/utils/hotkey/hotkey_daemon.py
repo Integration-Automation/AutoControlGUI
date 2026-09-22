@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import Callable, Dict, FrozenSet, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
@@ -188,7 +188,7 @@ class HotkeyDaemon:
         status = STATUS_OK
         error_text: Optional[str] = None
         try:
-            actions = read_action_json(match.script_path)
+            actions = read_executable_action_json(match.script_path)
             self._execute(actions)
         except (OSError, ValueError, RuntimeError, AutoControlException) as error:
             # AutoControlException covers the common cases — a missing/renamed

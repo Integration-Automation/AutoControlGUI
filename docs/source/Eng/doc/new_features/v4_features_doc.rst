@@ -118,13 +118,18 @@ File security & safety
 
 * **Action-file signing** — ``sign_action_file`` writes an HMAC-SHA256
   ``.sig`` sidecar; ``verify_action_file`` checks it in constant time.
-  ``execute_files`` enforces signatures when
-  ``JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS`` is set (opt-in).
+  When ``JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS`` is set (opt-in), every
+  path that runs a file from disk -- ``execute_files``, ``je_auto_control run``,
+  the scheduler, triggers, hotkeys, webhooks, the MCP run tool and the GUI --
+  refuses an unsigned or altered file; load files yourself with
+  ``read_executable_action_json`` for the same check. The per-user key
+  file must hold at least 32 bytes.
   ``AC_sign_action_file`` / ``AC_verify_action_file``.
 * **Action-file encryption** — ``encrypt_action_file`` /
   ``decrypt_action_file`` keep a script's contents secret at rest with
-  Fernet (AES-128-CBC + HMAC), keyed by a passphrase or a per-user 0600
-  key. ``AC_encrypt_action_file`` / ``AC_decrypt_action_file``.
+  Fernet (AES-128-CBC + HMAC), keyed by a per-user 0600 key or by a
+  passphrase run through scrypt with a random per-file salt.
+  ``AC_encrypt_action_file`` / ``AC_decrypt_action_file``.
 * **Recoverable deletion** — ``move_to_trash(path)`` sends a file to the OS
   recycle bin (Win32 ``SHFileOperation`` undo flag / macOS Trash / Linux
   XDG trash, preferring ``send2trash``) so a "deleted" file can be

@@ -24,6 +24,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **Passphrase-encrypted action files are salted.** `encrypt_action_file`
+  with a passphrase now derives the key with scrypt and a random per-file
+  salt, and writes `ACENC1:` + salt + token; it used one unsalted SHA-256.
+  Older files still decrypt. Migration: none, but a file written by this
+  version cannot be decrypted by an older one.
+
 - **`max_runs` must be at least 1.** `Scheduler.add_job` and
   `add_cron_job` raise `ValueError` for `max_runs=0` or below, which used to
   run the job once. Migration: pass `max_runs=1`.
@@ -124,6 +130,18 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **`JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS` covers every way a file runs.**
+  Only `execute_files` checked it: the CLI's `run`, the scheduler, triggers,
+  webhooks, hotkeys, the MCP `execute_action_file` tool and the GUI ran
+  unsigned files with enforcement on, and `execute_files` itself verified one
+  read of the file and parsed another. All of them now load through the new
+  `read_executable_action_json`, which verifies and parses the same bytes.
+- **Signing and encryption keys.** Key files are created 0600 in one step and
+  never overwritten by a concurrent process; a key file shorter than 32
+  bytes, which an interrupted first run could leave empty, is refused instead
+  of being used as an empty HMAC key. An empty explicit key or passphrase is
+  refused.
 
 - **Cron expressions follow standard cron, and a job with no next run stops.**
   With both day fields restricted a day now matches if *either* does

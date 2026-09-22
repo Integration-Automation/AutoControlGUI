@@ -11,14 +11,14 @@ from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.executor.action_executor import execute_files
 from je_auto_control.utils.file_process.get_dir_file_list import \
     get_dir_files_as_list
-from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.project.create_project_structure import create_project_dir
 
 if __name__ == "__main__":
     try:
         def preprocess_execute_action(file_path: str):
-            execute_action(read_action_json(file_path))
+            execute_action(read_executable_action_json(file_path))
 
 
         def preprocess_execute_files(file_path: str):

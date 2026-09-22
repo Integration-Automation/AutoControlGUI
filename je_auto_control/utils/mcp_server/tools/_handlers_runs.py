@@ -18,9 +18,9 @@ def execute_actions(actions: List[Any]) -> Dict[str, str]:
 
 def execute_action_file(file_path: str) -> Dict[str, str]:
     from je_auto_control.utils.executor.action_executor import execute_action
-    from je_auto_control.utils.json.json_file import read_action_json
+    from je_auto_control.utils.json.json_file import read_executable_action_json
     safe_path = os.path.realpath(os.fspath(file_path))
-    result = execute_action(read_action_json(safe_path))
+    result = execute_action(read_executable_action_json(safe_path))
     return {key: str(value) for key, value in result.items()}
 
 

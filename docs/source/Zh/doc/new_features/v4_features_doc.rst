@@ -105,11 +105,14 @@ Builder 項目。視覺與視窗功能的 geometry / IO 操作皆可注入,因�
 
 * **動作檔簽章** — ``sign_action_file`` 寫出 HMAC-SHA256 的 ``.sig``
   sidecar;``verify_action_file`` 以常數時間驗證。設定
-  ``JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS`` 時,``execute_files`` 會強制
-  簽章(opt-in)。``AC_sign_action_file`` / ``AC_verify_action_file``。
+  ``JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS`` 時(opt-in),所有從磁碟執行檔案的
+  路徑 -- ``execute_files``、``je_auto_control run``、排程器、觸發器、熱鍵、
+  webhook、MCP 執行工具與 GUI -- 都會拒絕未簽章或被改過的檔案;自行載入時
+  用 ``read_executable_action_json`` 可得到同樣的檢查。每位使用者的金鑰檔
+  至少要有 32 位元組。``AC_sign_action_file`` / ``AC_verify_action_file``。
 * **動作檔加密** — ``encrypt_action_file`` / ``decrypt_action_file`` 以
-  Fernet(AES-128-CBC + HMAC)讓腳本內容在靜態時保密,金鑰來自通行碼或
-  每位使用者的 0600 金鑰。``AC_encrypt_action_file`` /
+  Fernet(AES-128-CBC + HMAC)讓腳本內容在靜態時保密,金鑰來自每位使用者的
+  0600 金鑰,或經 scrypt 與每個檔案各自的隨機鹽值衍生自通行碼。``AC_encrypt_action_file`` /
   ``AC_decrypt_action_file``。
 * **可還原刪除** — ``move_to_trash(path)`` 把檔案送進 OS 資源回收桶
   (Win32 ``SHFileOperation`` undo flag / macOS Trash / Linux XDG trash,

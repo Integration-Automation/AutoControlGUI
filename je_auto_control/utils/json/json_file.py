@@ -30,6 +30,26 @@ def read_action_json(json_file_path: str) -> List[List[Dict[str, Dict[str, str]]
             raise AutoControlJsonActionException(f"{cant_find_json_error_message}: {repr(error)}") from error
 
 
+def read_executable_action_json(json_file_path: str) -> List[List[Dict[str, Dict[str, str]]]]:
+    """Read an action file that is about to run.
+
+    Every path that executes a file from disk loads it here rather than via
+    :func:`read_action_json`, so ``JE_AUTOCONTROL_REQUIRE_SIGNED_ACTIONS``
+    covers all of them: the file is read once, those bytes are verified
+    against the ``.sig`` sidecar when enforcement is on, and the same bytes
+    are parsed. Raises :class:`AutoControlException` on a failed signature.
+    """
+    from je_auto_control.utils.action_signing.signer import read_signed_action_bytes
+    if not Path(json_file_path).is_file():
+        raise AutoControlJsonActionException(cant_find_json_error_message)
+    try:
+        data = read_signed_action_bytes(json_file_path)
+        return json.loads(data.decode("utf-8"))
+    except (OSError, ValueError) as error:
+        # ValueError covers JSONDecodeError and UnicodeDecodeError.
+        raise AutoControlJsonActionException(f"{cant_find_json_error_message}: {repr(error)}") from error
+
+
 def write_action_json(json_save_path: str, action_json: list) -> None:
     """
     Write action JSON file.

@@ -1192,7 +1192,7 @@ from je_auto_control.utils.generate_report.generate_xml_report import \
 from je_auto_control.utils.generate_report.generate_xml_report import \
     generate_xml_report
 # json
-from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import read_action_json, read_executable_action_json
 from je_auto_control.utils.json.json_file import write_action_json
 from je_auto_control.utils.json.json_file import format_action_json
 # codegen: action list -> pytest / python / robot source
@@ -1304,7 +1304,7 @@ __all__ = [
     "ImageNotFoundException", "AutoControlJsonActionException",
     "AutoControlRecordException", "AutoControlActionNullException", "AutoControlActionException", "record",
     "stop_record", "stop_record_timeline",
-    "read_action_json", "write_action_json", "format_action_json",
+    "read_action_json", "read_executable_action_json", "write_action_json", "format_action_json",
     "execute_action", "execute_files", "executor",
     "execute_action_with_vars", "record_to_json",
     "generate_code", "generate_code_file", "http_request", "query_sqlite",

@@ -24,7 +24,7 @@ from email.header import decode_header, make_header
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
@@ -353,7 +353,7 @@ class EmailTriggerWatcher:
             status = STATUS_OK
             error_text: Optional[str] = None
             try:
-                actions = read_action_json(trigger.script_path)
+                actions = read_executable_action_json(trigger.script_path)
                 self._executor(actions, payload)
             # Include the framework base so a bad script is recorded as
             # STATUS_ERROR — not a bogus STATUS_OK — before re-raising.

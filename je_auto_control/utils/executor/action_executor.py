@@ -8109,11 +8109,11 @@ class Executor:
         :return: 每個檔案的執行結果
         """
         autocontrol_logger.info(f"execute_files, execute_files_list: {execute_files_list}")
-        from je_auto_control.utils.action_signing import require_signed_actions
+        from je_auto_control.utils.json.json_file import read_executable_action_json
         execute_detail_list = []
         for file in execute_files_list:
-            require_signed_actions(file)
-            execute_detail_list.append(self.execute_action(read_action_json(file)))
+            execute_detail_list.append(
+                self.execute_action(read_executable_action_json(file)))
         return execute_detail_list
 
 

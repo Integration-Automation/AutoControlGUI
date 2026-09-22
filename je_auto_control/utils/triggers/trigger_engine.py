@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, ClassVar, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
-from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
@@ -332,7 +332,7 @@ class TriggerEngine:
         status = STATUS_OK
         error_text: Optional[str] = None
         try:
-            actions = read_action_json(trigger.script_path)
+            actions = read_executable_action_json(trigger.script_path)
             self._execute(actions)
         # 這裡刻意攔截所有例外：一個 trigger 失敗必須記錄成 STATUS_ERROR
         # 並繼續，而不是拖垮輪詢執行緒。原本的 tuple 漏掉

@@ -53,8 +53,8 @@ def cmd_run(args: argparse.Namespace) -> int:
     from je_auto_control.utils.executor.action_executor import (
         execute_action, execute_action_with_vars,
     )
-    from je_auto_control.utils.json.json_file import read_action_json
-    actions = read_action_json(args.script)
+    from je_auto_control.utils.json.json_file import read_executable_action_json
+    actions = read_executable_action_json(args.script)
     variables = _parse_vars(args.var)
     if args.dry_run:
         from je_auto_control.utils.executor.action_executor import executor

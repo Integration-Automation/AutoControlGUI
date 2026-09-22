@@ -37,7 +37,7 @@ from urllib.parse import parse_qs, urlparse
 from je_auto_control.utils.http_headers import (
     INVALID_CONTENT_LENGTH, parse_content_length,
 )
-from je_auto_control.utils.json.json_file import read_action_json
+from je_auto_control.utils.json.json_file import read_executable_action_json
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.run_history.artifact_manager import (
     capture_error_snapshot,
@@ -339,7 +339,7 @@ class WebhookTriggerServer:
             # response. Catch the whole family so the fire is recorded as an
             # error and _dispatch still answers the request.
             try:
-                actions = read_action_json(trigger.script_path)
+                actions = read_executable_action_json(trigger.script_path)
                 self._executor(actions, payload)
             except Exception as error:  # noqa: BLE001  # reason: any script failure must be recorded and answered
                 status = STATUS_ERROR
