@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,045 |
-| 程式碼總行數 | 142,800 |
+| 程式碼總行數 | 142,845 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,239 |
@@ -525,17 +525,17 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.11 伺服器、網路協定與外部整合
 
-> 24 個套件、約 5,965 行。
+> 24 個套件、約 6,011 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/acme_v2/` | 598 | 完整 ACME v2 用戶端（RFC 8555），不依賴 certbot |
-| `utils/chatops/` | 636 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
+| `utils/chatops/` | 649 | Chat-ops bot：接收 Slack／Discord／webhook 的 slash 指令並路由到動作 |
 | `utils/cookie_jar/` | 103 | RFC 6265 cookie jar |
 | `utils/email_send/` | 116 | SMTP 寄信（email 觸發器的發送端搭檔） |
 | `utils/events/` | 82 | 對外 CloudEvents 發送（執行生命週期事件） |
 | `utils/http_cassette/` | 110 | 錄製／重播 HTTP 互動，做離線決定性 API 測試 |
-| `utils/http_client/` | 160 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
+| `utils/http_client/` | 193 | 零依賴 HTTP(S) 用戶端，供 action 步驟呼叫 API |
 | `utils/http_conditional/` | 87 | 條件式 HTTP 請求與快取驗證器 |
 | `utils/http_content/` | 103 | HTTP 內容協商與回應解壓縮 |
 | `utils/http_problem/` | 116 | RFC 9457 problem+json 解析 |
@@ -556,7 +556,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.12 報表、可觀測性與測試治理
 
-> 34 個套件、約 6,911 行。
+> 34 個套件、約 6,910 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -567,7 +567,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/canonical_log/` | 90 | canonical log line 與結構化 JSON 日誌 |
 | `utils/ci_annotations/` | 62 | 由執行結果輸出 CI 工作流程註記（GitHub Actions） |
 | `utils/compliance/` | 136 | 合規：把治理證據對應到 SOC2／ISO 27001 控制項 |
-| `utils/failure_hooks/` | 396 | 失敗 → 工單自動化：開 Jira／Linear／GitHub issue |
+| `utils/failure_hooks/` | 395 | 失敗 → 工單自動化：開 Jira／Linear／GitHub issue |
 | `utils/failure_signature/` | 74 | 把錯誤訊息正規化成穩定的 SHA-256 失敗簽章並分群 |
 | `utils/flake_cluster/` | 103 | 以共同失敗 Jaccard 相似度為易碎測試分群 |
 | `utils/flakiness/` | 150 | 以執行歷史分析不穩定測試 |
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,256 |
-| **總計** | **1,039** | **142,735** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,301 |
+| **總計** | **1,039** | **142,780** |
 

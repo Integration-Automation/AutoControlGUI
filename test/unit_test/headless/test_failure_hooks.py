@@ -205,7 +205,7 @@ def test_post_json_refuses_non_http_url():
 def test_post_json_handles_url_error():
     import urllib.error
     with patch(
-        "urllib.request.urlopen",
+        "je_auto_control.utils.http_client.http_client.urllib_transport",
         side_effect=urllib.error.URLError("disconnected"),
     ):
         result = _post_json("test", "https://example.com",

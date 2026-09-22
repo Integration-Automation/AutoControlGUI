@@ -229,7 +229,10 @@ Chat-ops 機器人
 傳輸層中立的 ``CommandRouter`` 加上 Slack polling adapter，
 ``/run <script>`` 經 Slack 進入和 scheduler 相同的執行路徑。
 內建命令：``/help``、``/scripts``、``/run``、``/screenshot``、
-``/status``。RBAC 透過 ``required_role`` 參數。
+``/status``。``/screenshot [name]`` 寫進 context 的 ``screenshot_dir``
+（預設為暫存目錄下的 ``je_auto_control_chatops``），給的名稱只保留檔名。
+Slack adapter 走套件的 HTTP client，所以出站政策同樣適用。
+RBAC 透過 ``required_role`` 參數。
 GUI：**Chat-Ops** 試用分頁。
 
 

@@ -236,7 +236,11 @@ Chat-ops bot
 Transport-agnostic ``CommandRouter`` plus a polling Slack adapter so
 ``/run <script>`` over Slack hits the same execution path as the
 scheduler. Built-in commands: ``/help``, ``/scripts``, ``/run``,
-``/screenshot``, ``/status``. RBAC via the ``required_role``
+``/screenshot [name]``, ``/status``. ``/screenshot`` writes into the
+context's ``screenshot_dir`` (default: ``je_auto_control_chatops`` in the
+temp directory) and keeps only the file name it is given. The Slack
+adapter goes through the package HTTP client, so the egress policy applies.
+RBAC via the ``required_role``
 parameter. GUI: **Chat-Ops** playground tab.
 
 

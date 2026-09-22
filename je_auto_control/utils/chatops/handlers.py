@@ -107,13 +107,27 @@ def _format_duration(duration_seconds: Any) -> str:
 
 
 def cmd_screenshot(argv: List[str],
-                   _context: Dict[str, Any]) -> CommandResult:
-    """``/screenshot [path]`` — capture the screen and return the path."""
-    target = Path(argv[0]).expanduser().resolve() if argv else Path(
-        tempfile.NamedTemporaryFile(
-            prefix="chatops_", suffix=".png", delete=False,
-        ).name,
-    )
+                   context: Dict[str, Any]) -> CommandResult:
+    """``/screenshot [name]`` — capture the screen and return the path.
+
+    The file goes into ``context['screenshot_dir']`` (default: a
+    ``je_auto_control_chatops`` folder in the temp directory); a given name
+    keeps only its last component. The argument used to be a full path taken
+    from the chat message, so anyone in the channel could write a PNG to any
+    location the bot's account can write.
+    """
+    directory = Path(context.get("screenshot_dir")
+                     or Path(tempfile.gettempdir()) / "je_auto_control_chatops")
+    directory.mkdir(parents=True, exist_ok=True)
+    if argv:
+        name = Path(argv[0]).name
+        if name in ("", ".", ".."):
+            raise ChatOpsError(f"invalid screenshot name: {argv[0]!r}")
+        target = directory / name
+    else:
+        target = Path(tempfile.NamedTemporaryFile(
+            dir=directory, prefix="chatops_", suffix=".png", delete=False,
+        ).name)
     from je_auto_control.wrapper.auto_control_screen import screenshot
     screenshot(file_path=str(target))
     return CommandResult(

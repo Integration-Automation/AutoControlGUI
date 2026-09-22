@@ -198,7 +198,7 @@ def test_cmd_screenshot_invokes_screen_helper(tmp_path):
     with patch(
         "je_auto_control.wrapper.auto_control_screen.screenshot",
     ) as mocked:
-        result = cmd_screenshot([str(target)], {})
+        result = cmd_screenshot(["shot.png"], {"screenshot_dir": str(tmp_path)})
     mocked.assert_called_once_with(file_path=str(target))
     assert result.artifact_path == str(target)
 

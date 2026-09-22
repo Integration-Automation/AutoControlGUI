@@ -24,6 +24,11 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **Chat-ops `/screenshot` takes a file name, not a path.** The PNG is
+  written into the router context's `screenshot_dir` (default: a
+  `je_auto_control_chatops` folder in the temp directory); anyone in the
+  channel could previously choose any path. Migration: set `screenshot_dir`.
+
 - **`AC_shell_to_var` on Windows.** A string command is passed to
   `CreateProcess` as written; quoted arguments used to arrive with their
   quotes still on. Output is decoded with the new `encoding` argument,
@@ -136,6 +141,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Credentials no longer follow a redirect to another host.** The HTTP
+  client drops `Authorization` and cookies when a redirect changes host. The
+  Jira, Linear and GitHub failure-hook backends and the Slack bot now obey
+  the egress policy and refuse redirects, and a non-object JSON reply is a
+  failed call instead of an exception that stopped the Slack poll loop.
 
 - **Remote-desktop file transfers cannot leave partial files or destroy the
   original.** Both receivers write to a `.part` file and rename it into place

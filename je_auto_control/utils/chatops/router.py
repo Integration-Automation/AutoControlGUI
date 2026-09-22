@@ -35,7 +35,7 @@ _BUILTIN_LIST = "list"
 _BUILTIN_HELP = "help"
 
 
-class ChatOpsError(ValueError):
+class ChatOpsError(AutoControlException, ValueError):
     """Raised for malformed commands the user can fix in their next message."""
 
 

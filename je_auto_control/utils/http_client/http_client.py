@@ -11,6 +11,7 @@ import base64
 import http.client
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any, Dict, Mapping, Optional
 
@@ -107,10 +108,30 @@ class _CheckedRedirectHandler(urllib.request.HTTPRedirectHandler):
         from je_auto_control.utils.egress.egress_policy import get_egress_policy
         _validate_url(newurl)
         get_egress_policy().check(newurl)
-        return super().redirect_request(req, fp, code, msg, headers, newurl)
+        new_request = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new_request is not None and _host(newurl) != _host(req.full_url):
+            # urllib carries every header over, so a redirect to another host
+            # received the Authorization meant for this one.
+            for name in _CREDENTIAL_HEADERS:
+                new_request.remove_header(name)
+        return new_request
 
 
+class _RefusingRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Return a 3xx as the response instead of following it."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: D102
+        return None
+
+
+def _host(url: str) -> str:
+    return (urllib.parse.urlsplit(url).netloc or "").lower()
+
+
+# Request.remove_header matches the capitalize()d spelling urllib stores.
+_CREDENTIAL_HEADERS = ("Authorization", "Cookie", "Proxy-authorization")
 _OPENER = urllib.request.build_opener(_CheckedRedirectHandler)
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_RefusingRedirectHandler)
 
 
 def urllib_transport(call: Mapping[str, Any]) -> Dict[str, Any]:
@@ -118,13 +139,15 @@ def urllib_transport(call: Mapping[str, Any]) -> Dict[str, Any]:
 
     A malformed reply (``http.client.HTTPException``: a garbage status
     line, a truncated body) is raised as ``urllib.error.URLError``, the
-    ``OSError`` every other transport failure already arrives as.
+    ``OSError`` every other transport failure already arrives as. With
+    ``call["follow_redirects"]`` false a 3xx comes back as the response.
     """
     request = urllib.request.Request(
         call["url"], data=call.get("body"), method=call["method"],
         headers=dict(call.get("headers") or {}))
+    opener = _OPENER if call.get("follow_redirects", True) else _NO_REDIRECT_OPENER
     try:
-        with _OPENER.open(  # nosec B310 — scheme allow-listed, redirects too
+        with opener.open(  # nosec B310 — scheme allow-listed, redirects too
                 request, timeout=float(call.get("timeout", _DEFAULT_TIMEOUT))) \
                 as response:
             return _read_response(response)
@@ -148,7 +171,17 @@ def http_request(url: str, method: str = "GET",
     responses are returned (with their body) rather than raised, so callers
     can assert on status codes.
     """
-    call = build_call(url, method, headers, json_body, data, auth, timeout)
+    return perform_call(build_call(url, method, headers, json_body, data, auth, timeout))
+
+
+def perform_call(call: Mapping[str, Any]) -> Dict[str, Any]:
+    """Send a :func:`build_call` dict after the egress-policy check.
+
+    The one path every outbound request in the package should take, so the
+    egress policy, the redirect checks and the malformed-reply handling apply
+    to all of them. Set ``call["follow_redirects"] = False`` to get a 3xx back
+    instead of following it.
+    """
     from je_auto_control.utils.egress.egress_policy import get_egress_policy
-    get_egress_policy().check(url)  # allow-all unless an operator locked it down
+    get_egress_policy().check(call["url"])  # allow-all unless an operator locked it down
     return urllib_transport(call)

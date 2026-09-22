@@ -18,7 +18,6 @@ Three pieces of state are tracked per channel:
 """
 from __future__ import annotations
 
-import json
 import threading
 import urllib.error
 import urllib.parse
@@ -28,6 +27,7 @@ from typing import Any, Dict, Optional
 
 from je_auto_control.utils.chatops.router import CommandResult, CommandRouter
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.http_client.http_client import build_call, perform_call
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -37,7 +37,7 @@ _MIN_POLL_INTERVAL = 1.0
 _MAX_BACKOFF = 60.0
 
 
-class SlackError(RuntimeError):
+class SlackError(AutoControlException, RuntimeError):
     """Raised when the Slack API returns ``ok: false`` or HTTP fails."""
 
 
@@ -151,7 +151,8 @@ class SlackBot:
         if self.last_seen_ts:
             params["oldest"] = self.last_seen_ts
         body = self._api_get("conversations.history", params)
-        return list(body.get("messages") or [])
+        messages = body.get("messages") or []
+        return [message for message in messages if isinstance(message, dict)]
 
     def _is_self(self, message: Dict[str, Any]) -> bool:
         if message.get("subtype") == "bot_message":
@@ -188,23 +189,21 @@ class SlackBot:
                  ) -> Dict[str, Any]:
         if not url.startswith("https://slack.com/api/"):
             raise SlackError(f"refusing to call non-Slack URL: {url}")
-        headers = {"Authorization": f"Bearer {self.token}"}
-        data: Optional[bytes] = None
-        if payload is not None:
-            data = json.dumps(payload).encode("utf-8")
-            headers["Content-Type"] = "application/json"
-        request = urllib.request.Request(  # nosec B310  # reason: scheme allow-listed above
-            url, data=data, method=method, headers=headers,
-        )
+        # Through http_client, so the egress policy applies to Slack too; a
+        # Slack API call never redirects, so a 3xx is an error, not followed.
+        call = build_call(url, method, headers={"Authorization": f"Bearer {self.token}"},
+                          json_body=payload, timeout=_HTTP_TIMEOUT)
+        call["follow_redirects"] = False
         try:
-            with urllib.request.urlopen(  # nosec B310
-                    request, timeout=_HTTP_TIMEOUT,
-            ) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except urllib.error.URLError as error:
+            response = perform_call(call)
+        except (OSError, ValueError) as error:  # URLError, EgressBlocked
             raise SlackError(f"HTTP failure: {error}") from error
-        except ValueError as error:
-            raise SlackError(f"non-JSON response: {error}") from error
+        body = response["json"]
+        if not isinstance(body, dict):
+            # A list or string body raised AttributeError, which run_forever
+            # does not catch: one bad reply ended the poll loop for good.
+            raise SlackError(f"Slack {url} returned HTTP {response['status']} "
+                             "without a JSON object")
         if not body.get("ok"):
             raise SlackError(
                 f"Slack {url} returned {body.get('error', 'unknown')}",
