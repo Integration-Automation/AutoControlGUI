@@ -70,7 +70,7 @@ Flow control & variables
   assertion DSL.
 * **Read into a variable** — bind external data into the flow scope for
   later ``${var}`` use: ``AC_ocr_to_var`` (region text), ``AC_shell_to_var``
-  (command stdout), ``AC_read_file_to_var`` (file text), ``AC_http_to_var``
+  (command stdout, decoded with ``encoding`` -- default the locale's), ``AC_read_file_to_var`` (file text), ``AC_http_to_var``
   (GET body or a dotted JSON path), ``AC_now_to_var`` (strftime), and
   ``AC_random_to_var`` (seeded int / float / choice).
 * **Transform a variable** — ``AC_transform_var`` applies upper / lower /

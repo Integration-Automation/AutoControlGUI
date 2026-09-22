@@ -18,16 +18,26 @@ from je_auto_control.utils.exception.exceptions import AutoControlActionExceptio
 def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
     """Run a shell command and store its stdout in a flow variable.
 
-    The command is split into an argv list (never ``shell=True``) and its
-    captured stdout is bound under ``var`` (default ``shell_output``) for
-    later ``${var}`` use — the shell counterpart of ``AC_ocr_to_var``.
+    Never ``shell=True``. A list is the argv; a string is split with POSIX
+    rules, except on Windows, where it goes to ``CreateProcess`` as the
+    command line it is -- ``shlex`` in non-POSIX mode keeps the quote
+    characters in each token, and ``subprocess`` then quoted them again.
+    Captured stdout is decoded with ``encoding`` (default: the locale's,
+    which is what a console program writes on Windows) and bound under
+    ``var`` (default ``shell_output``) for later ``${var}`` use.
     """
+    import locale
     import os
     import shlex
     import subprocess  # nosec B404 — argv list only, no shell
     command = args.get("command", args.get("shell_command"))
-    argv = ([str(part) for part in command] if isinstance(command, list)
-            else shlex.split(str(command), posix=(os.name != "nt")))
+    if isinstance(command, list):
+        argv: Any = [str(part) for part in command]
+    elif os.name == "nt":
+        argv = str(command)
+    else:
+        argv = shlex.split(str(command))
+    encoding = str(args.get("encoding") or locale.getpreferredencoding(False))
     timeout_s = float(args.get("timeout", 30.0))
     try:
         completed = subprocess.run(  # nosec B603 — argv list, no shell  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit
@@ -40,7 +50,7 @@ def exec_shell_to_var(executor: Any, args: Mapping[str, Any]) -> Dict[str, Any]:
         raise AutoControlActionException(
             f"AC_shell_to_var: command timed out after {timeout_s}s"
         ) from error
-    output = completed.stdout.decode("utf-8", errors="replace").strip()
+    output = completed.stdout.decode(encoding, errors="replace").strip()
     var_name = args.get("var", "shell_output")
     executor.variables.set(var_name, output)
     return {"var": var_name, "output": output,
@@ -184,7 +194,11 @@ _SIMPLE_TRANSFORMS: Dict[str, Callable[[str], str]] = {
 
 def _regex_extract(text: str, args: Mapping[str, Any]) -> str:
     import re
-    match = re.search(str(args.get("pattern", "")), text)
+    try:
+        pattern = re.compile(str(args.get("pattern", "")))
+    except re.error as error:
+        raise AutoControlActionException(f"invalid regex: {error}") from error
+    match = pattern.search(text)
     return match.group(int(args.get("group", 0))) if match else ""
 
 

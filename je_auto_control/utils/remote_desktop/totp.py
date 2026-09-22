@@ -69,10 +69,19 @@ def _code_for_counter(secret: bytes, counter: int,
     return f"{code:0{digits}d}"
 
 
+def _check_parameters(step: int, digits: int) -> None:
+    """``step=0`` divided by zero; RFC 4226 codes have 1..10 digits."""
+    if step <= 0:
+        raise TOTPError(f"TOTP step must be positive, got {step}")
+    if not 1 <= digits <= 10:
+        raise TOTPError(f"TOTP digits must be 1..10, got {digits}")
+
+
 def generate_code(secret: str, *, at: Optional[float] = None,
                   step: int = _DEFAULT_STEP,
                   digits: int = _DEFAULT_DIGITS) -> str:
     """Return the current TOTP for ``secret``. Pass ``at`` to spoof time."""
+    _check_parameters(step, digits)
     now = time.time() if at is None else at
     counter = int(now) // step
     return _code_for_counter(_decode_secret(secret), counter, digits=digits)
@@ -84,6 +93,7 @@ def verify_code(secret: str, code: str, *,
                 digits: int = _DEFAULT_DIGITS,
                 window: int = _DEFAULT_WINDOW) -> bool:
     """Constant-time check of ``code`` against ``secret`` within ±``window`` steps."""
+    _check_parameters(step, digits)
     if not isinstance(code, str):
         return False
     cleaned = code.strip()

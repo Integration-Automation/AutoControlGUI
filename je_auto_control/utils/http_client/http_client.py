@@ -8,6 +8,7 @@ non-2xx responses are inspectable rather than raised. Imports no
 ``PySide6`` and only allows http/https schemes (Bandit B310).
 """
 import base64
+import http.client
 import json
 import urllib.error
 import urllib.request
@@ -95,18 +96,42 @@ def build_call(url: str, method: str = "GET",
     }
 
 
+class _CheckedRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Apply the scheme allow-list and the egress policy to every redirect.
+
+    Only the first URL used to be checked, so a server on an allowed host
+    could redirect to any other host -- or to ``ftp://``.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: D102
+        from je_auto_control.utils.egress.egress_policy import get_egress_policy
+        _validate_url(newurl)
+        get_egress_policy().check(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_OPENER = urllib.request.build_opener(_CheckedRedirectHandler)
+
+
 def urllib_transport(call: Mapping[str, Any]) -> Dict[str, Any]:
-    """The default live transport: perform a ``call`` with ``urllib``."""
+    """The default live transport: perform a ``call`` with ``urllib``.
+
+    A malformed reply (``http.client.HTTPException``: a garbage status
+    line, a truncated body) is raised as ``urllib.error.URLError``, the
+    ``OSError`` every other transport failure already arrives as.
+    """
     request = urllib.request.Request(
         call["url"], data=call.get("body"), method=call["method"],
         headers=dict(call.get("headers") or {}))
     try:
-        with urllib.request.urlopen(  # nosec B310 — scheme allow-listed
+        with _OPENER.open(  # nosec B310 — scheme allow-listed, redirects too
                 request, timeout=float(call.get("timeout", _DEFAULT_TIMEOUT))) \
                 as response:
             return _read_response(response)
     except urllib.error.HTTPError as error:
         return _read_response(error)
+    except http.client.HTTPException as error:
+        raise urllib.error.URLError(f"malformed HTTP response: {error!r}") from error
 
 
 def http_request(url: str, method: str = "GET",

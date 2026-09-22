@@ -4868,6 +4868,7 @@ def _add_work_queue_specs(specs: List[CommandSpec]) -> None:
             FieldSpec("command", FieldType.STRING),
             FieldSpec("var", FieldType.STRING, default="shell_output"),
             FieldSpec("timeout", FieldType.FLOAT, optional=True, default=30.0),
+            FieldSpec("encoding", FieldType.STRING, optional=True),
         ),
         description="Run a command and store its stdout in a flow variable.",
     ))

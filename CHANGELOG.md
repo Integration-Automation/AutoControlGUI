@@ -24,6 +24,12 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **`AC_shell_to_var` on Windows.** A string command is passed to
+  `CreateProcess` as written; quoted arguments used to arrive with their
+  quotes still on. Output is decoded with the new `encoding` argument,
+  defaulting to the locale's encoding rather than always UTF-8. Migration:
+  pass `"encoding": "utf-8"` for a program that writes UTF-8.
+
 - **Passphrase-encrypted action files are salted.** `encrypt_action_file`
   with a passphrase now derives the key with scrypt and a random per-file
   salt, and writes `ACENC1:` + salt + token; it used one unsalted SHA-256.
@@ -130,6 +136,14 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **A failing data step no longer aborts the script.** SQLite, CSV, regex,
+  PDF and malformed-HTTP errors from `AC_sql_to_var`, `AC_assert_db`,
+  `AC_for_each_row`, `AC_transform_var`, `AC_pdf_to_var` and the HTTP
+  commands are recorded like any other failed action; `AC_otp_to_var`
+  refuses `step <= 0` instead of dividing by zero.
+- **HTTP redirects obey the egress policy.** Only the first URL was checked,
+  so an allowed host could redirect a request anywhere, including `ftp://`.
 
 - **Reports.** A recorded control character (an ANSI colour code, a stray
   `\x01`) no longer breaks the XML report or makes a JUnit file unreadable;

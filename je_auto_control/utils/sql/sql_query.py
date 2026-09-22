@@ -15,7 +15,8 @@ from urllib.parse import quote
 from je_auto_control.utils.data_source.data_source import (
     _resolve_path, _validate_select,
 )
-from je_auto_control.utils.sqlite_support import require_sqlite3
+from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.sqlite_support import SQLITE_ERRORS, require_sqlite3
 
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
     import sqlite3
@@ -69,6 +70,11 @@ def query_sqlite(database: str, query: str,
     driver = require_sqlite3()
     with closing(driver.connect(uri, uri=True)) as connection:
         connection.row_factory = driver.Row
-        cursor = connection.execute(
-            statement, params if params is not None else ())
-        return _shape(cursor, fetch)
+        try:
+            cursor = connection.execute(
+                statement, params if params is not None else ())
+            return _shape(cursor, fetch)
+        except SQLITE_ERRORS as error:
+            # sqlite3.Error is outside the AutoControlException family: a
+            # misspelt table aborted the whole script instead of this step.
+            raise AutoControlActionException(f"SQLite {path}: {error}") from error

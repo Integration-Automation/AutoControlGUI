@@ -28,7 +28,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import quote
 
-from je_auto_control.utils.sqlite_support import require_sqlite3
+from je_auto_control.utils.exception.exceptions import AutoControlActionException
+from je_auto_control.utils.sqlite_support import SQLITE_ERRORS, require_sqlite3
 
 _READ_ONLY_SQL_PREFIXES = ("select", "with")
 
@@ -50,7 +51,11 @@ def _load_csv(source: Dict[str, Any]) -> List[Dict[str, Any]]:
     encoding = str(source.get("encoding", "utf-8"))
     with path.open("r", encoding=encoding, newline="") as handle:
         reader = csv.DictReader(handle, delimiter=delimiter)
-        return [dict(row) for row in reader]
+        try:
+            return [dict(row) for row in reader]
+        except csv.Error as error:
+            # csv.Error derives from Exception alone and escaped the executor.
+            raise AutoControlActionException(f"CSV {path}: {error}") from error
 
 
 def _coerce_json_rows(payload: Any) -> List[Dict[str, Any]]:
@@ -100,7 +105,10 @@ def _load_sqlite(source: Dict[str, Any]) -> List[Dict[str, Any]]:
     driver = require_sqlite3()
     with closing(driver.connect(uri, uri=True)) as conn:
         conn.row_factory = driver.Row
-        rows = conn.execute(query).fetchall()
+        try:
+            rows = conn.execute(query).fetchall()
+        except SQLITE_ERRORS as error:
+            raise AutoControlActionException(f"SQLite {path}: {error}") from error
     return [dict(row) for row in rows]
 
 
