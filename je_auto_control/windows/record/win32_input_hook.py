@@ -95,6 +95,8 @@ class Win32InputHook:
         self._thread_id = 0
         self._ready = threading.Event()
         self._hooks: List[Any] = []
+        # Wheel movement not yet worth a whole notch; see _wheel_notches.
+        self._wheel_remainder = 0
         # WINFUNCTYPE callbacks must stay referenced: once collected, the OS
         # still calls that address and the process dies.
         self._procs: List[Any] = []
@@ -223,7 +225,29 @@ class Win32InputHook:
                     "button": which,
                     "x": int(data.pt.x), "y": int(data.pt.y)})
         elif message == _WM_MOUSEWHEEL:
-            # The high word of mouseData is a signed notch count times 120.
+            # The high word of mouseData is a signed wheel delta in 1/120ths
+            # of a notch.
             raw = ctypes.c_short((int(data.mouseData) >> 16) & 0xFFFF).value
-            self._put({"op": "scroll", "delta": raw // _WHEEL_NOTCH,
-                       "x": int(data.pt.x), "y": int(data.pt.y)})
+            notches = self._wheel_notches(raw)
+            if notches:
+                self._put({"op": "scroll", "delta": notches,
+                           "x": int(data.pt.x), "y": int(data.pt.y)})
+
+    def _wheel_notches(self, raw: int) -> int:
+        """Whole notches completed by a wheel delta of ``raw`` (1/120 units).
+
+        Precision touchpads and free-spinning wheels send fractions of a notch
+        (``±30`` is typical), and replay can only scroll whole notches. Flooring
+        each event on its own lost every upward fraction (``30 // 120 == 0``)
+        and turned every downward one into a full notch (``-30 // 120 == -1``),
+        so a touchpad recording dropped scrolling up and quadrupled scrolling
+        down. The remainder is carried to the next event instead, and dropped
+        when the direction reverses so a leftover fraction cannot cancel a
+        scroll the other way.
+        """
+        if raw * self._wheel_remainder < 0:
+            self._wheel_remainder = 0
+        total = self._wheel_remainder + raw
+        notches = int(total / _WHEEL_NOTCH)
+        self._wheel_remainder = total - notches * _WHEEL_NOTCH
+        return notches

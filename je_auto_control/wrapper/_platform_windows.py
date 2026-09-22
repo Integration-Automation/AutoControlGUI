@@ -9,10 +9,6 @@ from je_auto_control.wrapper.backend_contract import (
 )
 from je_auto_control.windows.core.utils import win32_keypress_check
 from je_auto_control.windows.core.utils.win32_vk import (
-    WIN32_ABSOLUTE, WIN32_EventF_EXTENDEDKEY, WIN32_EventF_KEYUP,
-    WIN32_EventF_SCANCODE, WIN32_EventF_UNICODE, WIN32_HWHEEL,
-    WIN32_LEFTDOWN, WIN32_LEFTUP, WIN32_MIDDLEDOWN, WIN32_MIDDLEUP,
-    WIN32_MOVE, WIN32_RIGHTDOWN, WIN32_RIGHTUP,
     WIN32_VK_ACCEPT, WIN32_VK_ADD, WIN32_VK_APPS, WIN32_VK_BACK,
     WIN32_VK_BROWSER_BACK, WIN32_VK_BROWSER_FAVORITES,
     WIN32_VK_BROWSER_FORWARD, WIN32_VK_BROWSER_REFRESH,
@@ -44,8 +40,7 @@ from je_auto_control.windows.core.utils.win32_vk import (
     WIN32_VK_SEPARATOR, WIN32_VK_SHIFT, WIN32_VK_SLEEP, WIN32_VK_SNAPSHOT,
     WIN32_VK_SPACE, WIN32_VK_SUBTRACT, WIN32_VK_TAB, WIN32_VK_UP,
     WIN32_VK_VOLUME_DOWN, WIN32_VK_VOLUME_MUTE, WIN32_VK_VOLUME_UP,
-    WIN32_VK_XBUTTON1, WIN32_VK_XBUTTON2, WIN32_VkToVSC,
-    WIN32_WHEEL, WIN32_XBUTTON1, WIN32_XBUTTON2, WIN32_DOWN, WIN32_XUP,
+    WIN32_VK_XBUTTON1, WIN32_VK_XBUTTON2,
     WIN32_key0, WIN32_key1, WIN32_key2, WIN32_key3, WIN32_key4,
     WIN32_key5, WIN32_key6, WIN32_key7, WIN32_key8, WIN32_key9,
     WIN32_keyA, WIN32_keyB, WIN32_keyC, WIN32_keyD, WIN32_keyE,
@@ -125,20 +120,13 @@ def _build_mouse_keys_table(mouse_module) -> dict:
 
 autocontrol_logger.info("Load Windows Setting")
 
+# 只放虛擬鍵碼。滑鼠事件旗標（MOUSEEVENTF_*）、KEYEVENTF_* 與 MapVirtualKey 的
+# 型別常數不是鍵，數值卻跟真的鍵重疊：以前 "down" 是 MOUSEEVENTF_XDOWN（0x80），
+# 送出去的是 F17 而不是方向鍵下，"middledown" 則跟 space 同碼。
+# Virtual-key codes only. Mouse-event flags, KEYEVENTF_* and the MapVirtualKey
+# type constants are not keys, yet their values collide with real ones: "down"
+# used to be MOUSEEVENTF_XDOWN (0x80), which typed F17 instead of Down arrow.
 keyboard_keys_table = {
-    "absolute": WIN32_ABSOLUTE,
-    "eventf_extendedkey": WIN32_EventF_EXTENDEDKEY,
-    "eventf_keyup": WIN32_EventF_KEYUP,
-    "eventf_scancode": WIN32_EventF_SCANCODE,
-    "eventf_unicode": WIN32_EventF_UNICODE,
-    "hwheel": WIN32_HWHEEL,
-    "leftdown": WIN32_LEFTDOWN,
-    "leftup": WIN32_LEFTUP,
-    "middledown": WIN32_MIDDLEDOWN,
-    "middleup": WIN32_MIDDLEUP,
-    "move": WIN32_MOVE,
-    "rightdown": WIN32_RIGHTDOWN,
-    "rightup": WIN32_RIGHTUP,
     "accept": WIN32_VK_ACCEPT,
     "add": WIN32_VK_ADD,
     "apps": WIN32_VK_APPS,
@@ -250,12 +238,7 @@ keyboard_keys_table = {
     "volume_up": WIN32_VK_VOLUME_UP,
     "vk_xbutton1": WIN32_VK_XBUTTON1,
     "vk_xbutton2": WIN32_VK_XBUTTON2,
-    "xbutton1": WIN32_XBUTTON1,
-    "xbutton2": WIN32_XBUTTON2,
-    "vktovsc": WIN32_VkToVSC,
-    "wheel": WIN32_WHEEL,
-    "down": WIN32_DOWN,
-    "xup": WIN32_XUP,
+    "down": WIN32_VK_DOWN,
     "0": WIN32_key0,
     "1": WIN32_key1,
     "2": WIN32_key2,

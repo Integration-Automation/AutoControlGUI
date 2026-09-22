@@ -24,6 +24,29 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **On Windows the key name `down` pressed F17 instead of the Down arrow.**
+  The Windows `keyboard_keys_table` was built from every constant in
+  `win32_vk.py`, including the `MOUSEEVENTF_*` and `KEYEVENTF_*` flags, and
+  `down` was `MOUSEEVENTF_XDOWN` (0x80), which is `VK_F17`. It is now `VK_DOWN`,
+  as on Linux and macOS. The 18 other names that were flags rather than keys
+  are gone from the table, so a script using one fails with "unknown key"
+  instead of pressing whatever key shares its value (`middledown` pressed
+  space, `move` and `xbutton1` sent the left-button code): `absolute`,
+  `eventf_extendedkey`, `eventf_keyup`, `eventf_scancode`, `eventf_unicode`,
+  `hwheel`, `leftdown`, `leftup`, `middledown`, `middleup`, `move`,
+  `rightdown`, `rightup`, `xbutton1`, `xbutton2`, `vktovsc`, `wheel`, `xup`.
+  Migration: click mouse buttons through the mouse API (`mouse_x1`,
+  `mouse_x2`, `mouse_left`…); `vk_xbutton1` / `vk_xbutton2` remain for the
+  side-button virtual keys.
+
+- **Recording on Windows lost touchpad scrolling up and multiplied it down.**
+  A precision touchpad reports the wheel in fractions of a notch (typically
+  ±30 of 120), and the recorder floored each event separately: `30 // 120` is
+  0 and `-30 // 120` is -1. Scrolling up vanished from the recording and
+  scrolling down replayed about four times too far. The hook now carries the
+  remainder until it makes a whole notch, and drops it when the direction
+  reverses.
+
 - **The scheduler could start a job again while it was still running.** A job
   is rescheduled only after it finishes, so until then it still looks due. A
   single loop cannot overlap itself, but after a `stop()` whose join timed out

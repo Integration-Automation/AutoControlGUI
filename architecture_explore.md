@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,033 |
-| 程式碼總行數 | 141,560 |
+| 程式碼總行數 | 141,567 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,238 |
@@ -169,7 +169,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | --- | ---: | --- |
 | `wrapper/platform_wrapper.py` | 116 | **Strategy 樞紐**。依 `sys.platform` 匯入唯一後端並匯出 `keyboard`、`keyboard_check`、`keyboard_keys_table`、`mouse`、`mouse_keys_table`、`special_mouse_keys_table`、`screen`、`recorder`；八個名稱都帶著 `backend_contract` 的型別出去，其中 `keyboard`／`mouse` 因為四個分支綁的是三種互不相容的形狀，先落在私有的 `_keyboard`／`_mouse`（`Any`）上再標合約；載入失敗直接拋 `AutoControlException`（fail fast）。 |
 | `wrapper/backend_contract.py` | 238 | 平台縫的型別合約：`ScreenBackend`／`KeyboardCheckBackend`／`RecorderBackend` 三個跨平台 Protocol，加上 `keyboard`／`mouse` 各自的三份——`Win32*`（SendInput 與 Interception）、`Darwin*`（Quartz）、`X11Unix*`（XTest／uinput／Wayland／BSD），因為這兩個名稱的呼叫形狀真的因平台而異；`KeyboardBackend`／`MouseBackend` 依 `sys.platform` 別名到其中一組，所以呼叫端被檢查的是它真的會走到的簽章。四個 `_platform_*` 組裝模組各自標注自己綁的是什麼，少一個成員就在該後端自己的檔案裡紅掉，而不是在三層之上的呼叫點。 |
-| `wrapper/_platform_windows.py` | 334 | Windows 後端組裝：Win32 ctypes 模組 + 虛擬鍵表 + 選用 Interception 驅動。 |
+| `wrapper/_platform_windows.py` | 317 | Windows 後端組裝：Win32 ctypes 模組 + 虛擬鍵表 + 選用 Interception 驅動。 |
 | `wrapper/_platform_osx.py` | 160 | macOS 後端組裝（Quartz 事件 + osx 虛擬鍵表）。 |
 | `wrapper/_platform_linux.py` | 278 | X11 後端組裝（python-Xlib + 選用 uinput）。 |
 | `wrapper/_platform_wayland.py` | 61 | Wayland 後端組裝（libei／ydotool／grim）。 |
@@ -183,7 +183,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.3 平台後端
 
-#### Windows（`windows/`，23 檔／1,927 行）
+#### Windows（`windows/`，23 檔／1,951 行）
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -192,7 +192,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `core/utils/win32_keypress_check.py` | 22 | `GetAsyncKeyState` 按鍵狀態查詢。 |
 | `mouse/win32_ctype_mouse_control.py` | 220 | 滑鼠事件產生（含多螢幕絕對座標換算）。 |
 | `keyboard/win32_ctype_keyboard_control.py` | 98 | 鍵盤事件產生。 |
-| `record/win32_input_hook.py` | 229 | 單一一組低階鍵鼠 hook（`WH_KEYBOARD_LL`／`WH_MOUSE_LL`）＋訊息迴圈，產生帶時間戳的事件時間軸；停止時以 `PostThreadMessageW(WM_QUIT)` 收掉執行緒，不會每錄一次就漏一條。 |
+| `record/win32_input_hook.py` | 253 | 單一一組低階鍵鼠 hook（`WH_KEYBOARD_LL`／`WH_MOUSE_LL`）＋訊息迴圈，產生帶時間戳的事件時間軸；停止時以 `PostThreadMessageW(WM_QUIT)` 收掉執行緒，不會每錄一次就漏一條。 |
 | `record/win32_record.py` | 41 | 把 `win32_input_hook` 的時間軸轉成 action list（含按鍵放開、滾輪與間隔）；整形本體與 macOS 共用 `utils/input_macro/recorder_base.py`。 |
 | `screen/win32_screen.py` | 95 | 螢幕尺寸與像素讀取。**每支 Win32 函式都明寫 argtypes/restype**（HDC 是指標寬度，走預設的 c_int 會截斷，錯誤會沉默地擴散到 GetPixel／ReleaseDC），並持有自己的 user32／gdi32 handle。import 時呼叫 `SetProcessDPIAware()`——**行程層級且不可還原**，實體↔邏輯座標換算請走 `utils/monitor_layout`。 |
 | `window/windows_window_manage.py` | 368 | 視窗列舉／聚焦／關閉／最小化／幾何／所屬行程 PID／投遞式輸入（`auto_control_window` 的實作）。**每支 Win32 函式都明寫 argtypes/restype**，並持有自己的 user32 handle，避免把原型外溢到別的模組；hwnd 一律是 int。 |
@@ -1053,8 +1053,8 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `utils/usb/` | 17 | 4,313 |
 | `je_auto_control/`（頂層 3 檔） | 3 | 2,367 |
 | `utils/accessibility/` | 13 | 2,842 |
-| `wrapper/` | 19 | 3,573 |
-| `windows/` | 23 | 1,927 |
+| `wrapper/` | 19 | 3,556 |
+| `windows/` | 23 | 1,951 |
 | `utils/rest_api/` | 8 | 1,751 |
 | `utils/agent/` | 8 | 1,250 |
 | `linux_with_x11/` | 19 | 1,236 |
@@ -1067,5 +1067,5 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
 | 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 673 | 47,730 |
-| **總計** | **1,027** | **141,495** |
+| **總計** | **1,027** | **141,502** |
 
