@@ -158,7 +158,8 @@ def _win_set(text: str) -> None:
     pointer = kernel32.GlobalLock(handle)
     if not pointer:
         raise RuntimeError("GlobalLock failed")
-    ctypes.memmove(pointer, ctypes.addressof(data), size)  # NOSONAR S5655 false positive — Array is accepted by addressof
+    # S5655 is a false positive: addressof accepts a ctypes Array.
+    ctypes.memmove(pointer, ctypes.addressof(data), size)  # NOSONAR S5655
     kernel32.GlobalUnlock(handle)
     with open_clipboard(user32):
         user32.EmptyClipboard()

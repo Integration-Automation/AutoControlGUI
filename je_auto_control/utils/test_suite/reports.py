@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import json
 import uuid
-import xml.etree.ElementTree as ET  # nosemgrep  # nosec B405  # reason: write-only XML generation; never parses untrusted input
+# Write-only XML generation; never parses untrusted input.
+import xml.etree.ElementTree as ET  # nosemgrep  # nosec B405  # reason: see above
 from pathlib import Path
 from typing import Any, Dict, List
 

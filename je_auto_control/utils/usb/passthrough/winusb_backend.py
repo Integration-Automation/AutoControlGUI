@@ -58,7 +58,9 @@ class _GUID(ctypes.Structure):
     ]
 
 
-class _SP_DEVICE_INTERFACE_DATA(ctypes.Structure):  # NOSONAR python:S101  # name mirrors the WinAPI SetupAPI struct verbatim — renaming would obscure the cross-reference to MSDN
+# The name mirrors the SetupAPI struct verbatim; renaming it would obscure
+# the cross-reference to the Windows documentation.
+class _SP_DEVICE_INTERFACE_DATA(ctypes.Structure):  # NOSONAR python:S101
     _fields_ = [
         ("cbSize", wintypes.DWORD),
         ("InterfaceClassGuid", _GUID),
@@ -67,7 +69,8 @@ class _SP_DEVICE_INTERFACE_DATA(ctypes.Structure):  # NOSONAR python:S101  # nam
     ]
 
 
-class _WINUSB_SETUP_PACKET(ctypes.Structure):  # NOSONAR python:S101  # WinUSB API verbatim — see MSDN WINUSB_SETUP_PACKET
+# WinUSB API name verbatim (WINUSB_SETUP_PACKET).
+class _WINUSB_SETUP_PACKET(ctypes.Structure):  # NOSONAR python:S101
     _fields_ = [
         ("RequestType", ctypes.c_ubyte),
         ("Request", ctypes.c_ubyte),

@@ -88,7 +88,10 @@ class RemoteDesktopViewer:
     """
 
     def __init__(
-            self, host: str, port: int, token: str,  # NOSONAR python:S107  # reason: each callback is a documented public hook; bundling further would force every caller (viewer_panel, registry, 10+ test files) through a wrapper object for marginal benefit
+            # Each callback is a documented public hook; bundling them would
+            # force every caller (viewer_panel, registry, 10+ test files)
+            # through a wrapper object.
+            self, host: str, port: int, token: str,  # NOSONAR python:S107  # reason: see above
             on_frame: Optional[FrameCallback] = None,
             on_error: Optional[ErrorCallback] = None,
             on_audio: Optional[AudioCallback] = None,

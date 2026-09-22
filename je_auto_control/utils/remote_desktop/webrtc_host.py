@@ -68,7 +68,10 @@ class WebRTCDesktopHost(ViewerAuthMixin, MediaNegotiationMixin):
     "one person controls my machine" workflow and keeps the GUI simple.
     """
 
-    def __init__(self, *, token: str,  # NOSONAR python:S107  # public constructor; callbacks/permissions are kept as discrete kwargs to keep the call site readable at the GUI layer (see gui/remote_desktop/webrtc_panel.py + utils/remote_desktop/multi_viewer.py)
+    # Public constructor: callbacks and permissions stay discrete kwargs so the
+    # GUI call sites read well (gui/remote_desktop/webrtc_panel.py,
+    # utils/remote_desktop/multi_viewer.py).
+    def __init__(self, *, token: str,  # NOSONAR python:S107
                  config: Optional[WebRTCConfig] = None,
                  on_state_change: Optional[StateCallback] = None,
                  on_authenticated: Optional[Callable[[], None]] = None,

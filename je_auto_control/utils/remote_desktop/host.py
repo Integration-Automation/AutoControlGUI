@@ -79,7 +79,10 @@ class RemoteDesktopHost(FrameProductionMixin):
     """
 
     def __init__(
-            self, token: str,  # NOSONAR python:S107  # reason: each kwarg is a documented public knob; bundling further would split the API across patterns and force every existing caller (registry, host_panel, tests in 8 files) through a wrapper object for marginal benefit
+            # Each kwarg is a documented public knob; bundling them would split
+            # the API across patterns and force every caller (registry,
+            # host_panel, tests in 8 files) through a wrapper object.
+            self, token: str,  # NOSONAR python:S107  # reason: see above
             bind: str = "127.0.0.1",
             port: int = 0,
             fps: float = 10.0,

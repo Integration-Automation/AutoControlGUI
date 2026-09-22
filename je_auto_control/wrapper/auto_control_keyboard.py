@@ -13,8 +13,10 @@ import warnings
 from typing import Optional, Union, Tuple
 
 from je_auto_control.utils.exception.exception_tags import (
-    keyboard_press_key_error_message, keyboard_release_key_error_message, keyboard_type_key_error_message,
-    table_cant_find_key_error_message, keyboard_write_cant_find_error_message, keyboard_write_error_message, keyboard_hotkey_error_message
+    keyboard_press_key_error_message, keyboard_release_key_error_message,
+    keyboard_type_key_error_message, table_cant_find_key_error_message,
+    keyboard_write_cant_find_error_message, keyboard_write_error_message,
+    keyboard_hotkey_error_message,
 )
 from je_auto_control.utils.exception.exceptions import (
     AutoControlCantFindKeyException, AutoControlKeyboardException
@@ -354,7 +356,9 @@ def send_key_event_to_window(window_title: str, keycode: Union[int, str]) -> Non
             "send_key_event_to_window",
             {"window_title": window_title, "keycode": keycode, "posted": posted})
     except Exception as error:  # noqa: BLE001  # reason: preserved contract, never raises
-        record_action_to_list("send_key_event_to_window", {"window_title": window_title, "keycode": keycode}, repr(error))
+        record_action_to_list(
+            "send_key_event_to_window",
+            {"window_title": window_title, "keycode": keycode}, repr(error))
         autocontrol_logger.error(
             f"send_key_event_to_window failed, window={window_title}, keycode={keycode}, error={repr(error)}"
         )

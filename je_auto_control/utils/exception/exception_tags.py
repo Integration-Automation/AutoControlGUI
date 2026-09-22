@@ -45,7 +45,9 @@ find_image_error_variable_error_message: str = "Variable error"
 listener_error_message: str = "Auto-control listener error"
 
 # test_record tags
-record_queue_error_message: str = "Cannot get test_record queue: it is None. Are you stopping test_record before running it?"
+record_queue_error_message: str = (
+    "Cannot get test_record queue: it is None. "
+    "Are you stopping test_record before running it?")
 record_not_found_action_error_message: str = "test_record action not found"
 
 # json tag

@@ -7,7 +7,7 @@ information, so we surface them as a check with ``ok=False``.
 """
 from __future__ import annotations
 
-import importlib
+from importlib import import_module
 import os
 import platform
 import shutil
@@ -108,7 +108,7 @@ def _check_optional_deps() -> Check:
             # tuple above — no runtime input ever reaches this call,
             # which is what Semgrep's non-literal-import rule guards
             # against. Suppression is justified by the literal source.
-            importlib.import_module(module_name)  # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
+            import_module(module_name)  # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
             available.append(module_name)
         except ImportError:
             missing.append(f"{module_name} ({purpose})")

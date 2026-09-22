@@ -172,6 +172,22 @@ DEBUG 都會流到 root 的 handler（用了 `basicConfig` 的程式會被灌爆
 
 ---
 
+## 測試會寫進真正的 `~/.je_auto_control/`
+
+`TODO` — `test/conftest.py` 只把記錄檔導到暫存目錄，其他每使用者狀態沒有
+
+2026-09-23 跑整套測試的時段，家目錄的 `audit.db`（遠端桌面的稽核鏈）、`address_book.json`、
+`quarantine.json`、`run_history.sqlite` 都被改過，`artifacts/` 累積了 419 張錯誤截圖（日期
+對得上每一天的開發測試）。這些預設路徑大多在**呼叫時**才算 `Path.home()`（`audit_log.py:41`、
+`address_book.py:31`、`quarantine/store.py:39`、`run_history/history_store.py:81`、
+`run_history/artifact_manager.py:20`），所以在 `test/conftest.py` 把 `HOME`／`USERPROFILE`
+指到每次一個的暫存目錄就擋得住；**import 時就算好的**常數（`ab_locator/store.py:70`、
+`cost_telemetry/store.py:57`、`action_signing/{cipher,signer}.py`、`remote_desktop/fingerprint.py`、
+`host_service.py:36`、`webrtc_files.py:34`）擋不住，因為 pytest11 外掛比 conftest 早 import
+整個套件——要先確認測試有沒有碰到它們，碰到就改成呼叫時才算。
+
+---
+
 ## libei 的 `ei_unref` 在半開交握上會 SIGSEGV
 
 `BLOCKED` — 上游（libei 1.3.901）

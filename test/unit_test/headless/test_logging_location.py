@@ -174,3 +174,25 @@ def test_the_first_record_lands_in_the_home_file(tmp_path):
     assert list(work.iterdir()) == []
     log_file = home / ".je_auto_control" / "logs" / "AutoControlGUI.log"
     assert "first record" in log_file.read_text(encoding="utf-8")
+
+
+def test_the_package_handler_reads_the_variable_when_it_opens(monkeypatch, tmp_path):
+    """conftest.py runs after the pytest11 plugin imported the package.
+
+    So the variable has to be read when the file is opened, not when the
+    handler is built, or a test suite could never redirect it.
+    """
+    handler = li.AutoControlGUILoggingHandler(delay=True)
+    target = tmp_path / "redirected" / "late.log"
+    monkeypatch.setenv(li.LOG_FILE_ENV, str(target))
+    try:
+        _write_line(handler, "after the import")
+    finally:
+        handler.close()
+    assert "after the import" in target.read_text(encoding="utf-8")
+
+
+def test_this_test_run_is_not_writing_the_shared_file():
+    """test/conftest.py points the whole suite at a temporary file."""
+    assert li.default_log_file() != (
+        Path.home() / ".je_auto_control" / "logs" / "AutoControlGUI.log")

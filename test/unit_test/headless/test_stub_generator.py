@@ -159,3 +159,46 @@ def test_generated_stub_compiles_to_valid_python_syntax(tmp_path: Path):
     # Empty docstring guards against the line ending in ``""""``.
     assert not re.search(r'""""', body)
     ast.parse(body)  # raises SyntaxError on bad output
+
+
+# === line length and the shipped stub =====================================
+
+def test_split_parameters_keeps_annotation_commas_together():
+    from je_auto_control.utils.stubs import generator as gen
+    assert gen._split_parameters(
+        "a: Dict[str, Any], b: Tuple[int, int] = ..., *args: Any") == [
+        "a: Dict[str, Any]", "b: Tuple[int, int] = ...", "*args: Any"]
+
+
+def test_a_long_signature_is_wrapped_one_parameter_per_line():
+    from je_auto_control.utils.stubs import generator as gen
+    params = ", ".join(f"parameter_{i}: Dict[str, Any] = ..." for i in range(6))
+    out = render_pyi([_sig("AC_long", params, "Dict[str, Any]")])
+    assert "def AC_long(\n    parameter_0: Dict[str, Any] = ...,\n" in out
+    assert ") -> Dict[str, Any]:\n" in out
+    assert max(len(line) for line in out.splitlines()) <= gen.MAX_LINE_LENGTH
+    import ast
+    ast.parse(out)
+
+
+def test_a_short_signature_stays_on_one_line():
+    out = render_pyi([_sig("AC_x", "a: int = ...", "Any")])
+    assert "def AC_x(a: int = ...) -> Any:\n" in out
+
+
+def test_the_shipped_stub_lists_every_executor_command():
+    """``je_auto_control/actions.pyi`` had fallen to 199 of 739 commands.
+
+    Only the names are compared: annotations render differently across Python
+    versions (3.14 prints ``typing.Union`` as ``X | Y``), so a byte-for-byte
+    comparison would depend on which interpreter regenerated the file.
+    Regenerate with ``python -m je_auto_control.utils.stubs.generator
+    je_auto_control/actions.pyi``.
+    """
+    from je_auto_control.utils.executor.action_executor import executor
+    stub = Path(__file__).resolve().parents[3] / "je_auto_control" / "actions.pyi"
+    shipped = set(re.findall(r"^def (\w+)\(", stub.read_text(encoding="utf-8"),
+                             flags=re.MULTILINE))
+    live = {name for name in executor.event_dict if isinstance(name, str)}
+    assert shipped == live, (
+        f"missing: {sorted(live - shipped)[:10]} stale: {sorted(shipped - live)[:10]}")

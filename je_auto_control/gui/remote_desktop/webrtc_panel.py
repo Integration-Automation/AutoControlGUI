@@ -886,14 +886,18 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
     def _sync_session_pollers(self) -> None:
         """Spawn StatsPoller for new sessions; stop pollers for gone ones."""
         if self._multi_host is None:
-            for poller in list(self._session_pollers.values()):  # NOSONAR python:S7504  # snapshot before clear() so a slow stop() doesn't race with the clear that follows
+            # Snapshot before clear() so a slow stop() doesn't race with the
+            # clear that follows.
+            for poller in list(self._session_pollers.values()):  # NOSONAR python:S7504
                 poller.stop()
             self._session_pollers.clear()
             self._session_cache.reset()
             return
         active_sids = {s["session_id"] for s in self._multi_host.list_sessions()}
         # Stop pollers whose session is gone
-        for sid in list(self._session_pollers.keys()):  # NOSONAR python:S7504  # the loop deletes from self._session_pollers — list() is required to avoid RuntimeError
+        # The loop deletes from self._session_pollers, so list() is required
+        # to avoid a RuntimeError.
+        for sid in list(self._session_pollers.keys()):  # NOSONAR python:S7504
             if sid not in active_sids:
                 self._session_pollers[sid].stop()
                 del self._session_pollers[sid]
@@ -1244,7 +1248,8 @@ class _WebRTCHostPanel(TranslatableMixin, QWidget):
         if self._annotation_overlay is not None:
             self._annotation_overlay.clear()
             self._annotation_overlay.hide()
-        for poller in list(self._session_pollers.values()):  # NOSONAR python:S7504  # snapshot before clear() — same reasoning as in _refresh_session_pollers
+        # Snapshot before clear(), as in _refresh_session_pollers.
+        for poller in list(self._session_pollers.values()):  # NOSONAR python:S7504
             poller.stop()
         self._session_pollers.clear()
         self._session_cache.reset()

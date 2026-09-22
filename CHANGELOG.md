@@ -29,7 +29,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   imported it — including every pytest run on a machine where it is installed,
   through the `pytest11` plugin — left a log wherever it started. The file is
   now `~/.je_auto_control/logs/AutoControlGUI.log`, or whatever
-  `JE_AUTOCONTROL_LOG_FILE` names (`os.devnull` turns it off). Because every
+  `JE_AUTOCONTROL_LOG_FILE` names when the file is first opened, so a
+  `conftest.py` can still redirect it after the plugin imported the package
+  (`os.devnull` turns it off). Because every
   process shares it, lines carry the process id (`time | pid | logger | level
   | message`), and instead of growing without limit it is moved to `.1` once
   past 10 MB, at the moment a process opens it. The file is opened on the

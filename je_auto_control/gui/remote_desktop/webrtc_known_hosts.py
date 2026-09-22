@@ -296,7 +296,9 @@ class KnownHostsDialog(QDialog):
         )
         if result != _QMB.StandardButton.Yes:
             return
-        for host_id in list(self._known.list_entries().keys()):  # NOSONAR python:S7504  # forget() mutates the underlying mapping — list() is required to avoid RuntimeError
+        # forget() mutates the underlying mapping, so list() is required to
+        # avoid a RuntimeError.
+        for host_id in list(self._known.list_entries().keys()):  # NOSONAR python:S7504
             self._known.forget(host_id)
         self._refresh()
 

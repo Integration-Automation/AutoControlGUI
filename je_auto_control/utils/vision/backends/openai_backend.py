@@ -30,7 +30,8 @@ class OpenAIVLMBackend(VLMBackend):
             self.available = False
             return
         try:
-            from openai import OpenAI  # nosemgrep: codacy.python.openai.import-without-guardrails  # reason: internal client init, input is user-supplied prompt only
+            # Internal client init; the only input is the caller's prompt.
+            from openai import OpenAI  # nosemgrep: codacy.python.openai.import-without-guardrails  # reason: see above
             self._client = OpenAI(timeout=_REQUEST_TIMEOUT_S)
             self.available = True
         except (ImportError, ValueError, RuntimeError) as error:

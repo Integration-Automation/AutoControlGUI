@@ -110,6 +110,16 @@ s3 = ["boto3>=1.34"]
 locale = ["babel>=2.12"]
 audio = ["pycaw>=20240210"]
 
+# CLAUDE.md's 120-character line limit. Without this table CI's `ruff check`
+# ran the default rule set, which has no E501, so the documented limit was
+# enforced by nothing. Lines ending in a pragma (`# noqa`, `# nosec`) are
+# exempt by ruff's own rule, since a marker cannot move to another line.
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+extend-select = ["E501"]
+
 [tool.bandit]
 exclude_dirs = [
     "test", "docs", ".venv", "build", "dist",

@@ -176,8 +176,48 @@ def _first_doc_line(handler: Callable[..., Any]) -> Optional[str]:
     return doc.splitlines()[0].strip() or None
 
 
-def _render_signature(sig: StubSignature) -> str:
+#: Longest line the stub may contain; the package's ruff limit.
+MAX_LINE_LENGTH = 120
+
+_OPENERS = {"[": "]", "(": ")", "{": "}"}
+
+
+def _split_parameters(parameters: str) -> List[str]:
+    """Split a rendered parameter list at its top-level commas only.
+
+    ``Dict[str, Any]`` and ``Tuple[int, int]`` hold commas of their own, so a
+    plain ``split(", ")`` would cut an annotation in half.
+    """
+    parts: List[str] = []
+    depth = 0
+    start = 0
+    for index, char in enumerate(parameters):
+        if char in _OPENERS:
+            depth += 1
+        elif char in _OPENERS.values():
+            depth -= 1
+        elif char == "," and depth == 0:
+            parts.append(parameters[start:index].strip())
+            start = index + 1
+    tail = parameters[start:].strip()
+    if tail:
+        parts.append(tail)
+    return parts
+
+
+def _render_head(sig: StubSignature) -> str:
+    """The ``def`` line, or one parameter per line when it would be too long."""
     head = f"def {sig.name}({sig.parameters}) -> {sig.return_annotation}:\n"
+    if len(head) - 1 <= MAX_LINE_LENGTH or not sig.parameters:
+        return head
+    lines = [f"def {sig.name}(\n"]
+    lines.extend(f"    {part},\n" for part in _split_parameters(sig.parameters))
+    lines.append(f") -> {sig.return_annotation}:\n")
+    return "".join(lines)
+
+
+def _render_signature(sig: StubSignature) -> str:
+    head = _render_head(sig)
     if sig.docstring:
         body = f'    """{sig.docstring}"""\n'
     else:

@@ -2,7 +2,9 @@ from typing import Any, Callable
 
 # utils cv2_utils
 from je_auto_control.utils.cv2_utils.screenshot import pil_screenshot
-from je_auto_control.utils.exception.exception_tags import get_bad_trigger_method_error_message, get_bad_trigger_function_error_message
+from je_auto_control.utils.exception.exception_tags import (
+    get_bad_trigger_function_error_message, get_bad_trigger_method_error_message,
+)
 from je_auto_control.utils.exception.exceptions import AutoControlException, CallbackExecutorException
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 # executor

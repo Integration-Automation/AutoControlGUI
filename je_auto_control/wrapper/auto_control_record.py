@@ -27,7 +27,8 @@ def record() -> None:
     try:
         record_action_to_list("record", None)
         recorder.record()
-    except (OSError, RuntimeError, AttributeError, TypeError, ValueError, AutoControlException, AutoControlJsonActionException) as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError,
+            AutoControlException, AutoControlJsonActionException) as error:
         record_action_to_list("record", None, repr(error))
         autocontrol_logger.error(f"record, failed: {repr(error)}")
 
@@ -56,7 +57,8 @@ def stop_record() -> list:
                 new_list.append([action[0], {"x": action[1], "y": action[2]}])
         record_action_to_list("stop_record", None)
         return new_list
-    except (OSError, RuntimeError, AttributeError, TypeError, ValueError, AutoControlException, AutoControlJsonActionException) as error:
+    except (OSError, RuntimeError, AttributeError, TypeError, ValueError,
+            AutoControlException, AutoControlJsonActionException) as error:
         record_action_to_list("stop_record", None, repr(error))
         autocontrol_logger.error(f"stop_record, failed: {repr(error)}")
         return []

@@ -2,7 +2,8 @@
 
 The log file lives at ``~/.je_auto_control/logs/AutoControlGUI.log`` unless the
 ``JE_AUTOCONTROL_LOG_FILE`` environment variable names another path (a relative
-one resolves against the cwd at import time; ``os.devnull`` turns the file off).
+one resolves against the cwd when the file is opened; ``os.devnull`` turns the
+file off).
 It used to be the relative path ``AutoControlGUI.log``, opened at import, so
 every process that imported the package -- including every pytest run on a
 machine where it is installed, through its ``pytest11`` plugin -- left a log in
@@ -10,7 +11,10 @@ whatever directory it happened to start in.
 
 The package's handler opens the file on the first record, not at import:
 importing writes nothing (``test_facade_import_is_light`` holds that for the
-whole state directory). The file is shared by every process on the account, so
+whole state directory). It also reads ``JE_AUTOCONTROL_LOG_FILE`` at that
+moment rather than at import, so a test suite -- whose ``conftest.py`` runs
+only after the ``pytest11`` plugin has imported the package -- can still
+redirect it. The file is shared by every process on the account, so
 it is opened for append, each line carries the process id, and it is rotated
 only when a process opens it: renaming a file another process holds open fails
 on Windows, and a rotation attempted inside ``emit()`` would then fail on every
@@ -72,7 +76,9 @@ class AutoControlGUILoggingHandler(RotatingFileHandler):
     - 開不了檔就改寫到 ``os.devnull``，並發出一次 ``RuntimeWarning``
 
     ``delay=True`` defers opening (and so creating the directory) to the first
-    record, which is how the package's own handler is built.
+    record, which is how the package's own handler is built. Without an
+    explicit ``filename`` the path is re-read from ``default_log_file()`` each
+    time the file is opened.
     """
 
     def __init__(
@@ -85,6 +91,7 @@ class AutoControlGUILoggingHandler(RotatingFileHandler):
         errors: str = "backslashreplace",
         delay: bool = False,
     ):
+        self._follows_environment = filename is None
         path = filename if filename is not None else str(default_log_file())
         # encoding 必須明確指定。省略時 RotatingFileHandler 會採用系統
         # 預設編碼（zh-TW Windows 為 cp950），任何非 CP950 字元都會讓
@@ -123,6 +130,8 @@ class AutoControlGUILoggingHandler(RotatingFileHandler):
         the import fail: the handler writes to ``os.devnull`` instead and says
         so once.
         """
+        if self._follows_environment:
+            self.baseFilename = os.path.abspath(default_log_file())
         path = Path(self.baseFilename)
         try:
             path.parent.mkdir(parents=True, exist_ok=True)

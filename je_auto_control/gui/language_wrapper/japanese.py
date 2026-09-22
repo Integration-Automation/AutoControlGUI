@@ -83,7 +83,9 @@ japanese_word_dict = {
 
     # USB passthrough ACL プロンプト ダイアログ
     "usb_prompt_title": "USB デバイス使用要求",
-    "usb_prompt_intro": "リモート viewer がこのホストの USB デバイスの占有を要求しています。要求を認識できる場合のみ許可してください。",
+    "usb_prompt_intro": (
+        "リモート viewer がこのホストの USB デバイスの占有を要求しています。"
+        "要求を認識できる場合のみ許可してください。"),
     "usb_prompt_vendor": "Vendor ID:",
     "usb_prompt_product": "Product ID:",
     "usb_prompt_serial": "シリアル:",
@@ -135,7 +137,9 @@ japanese_word_dict = {
     "usb_share_policy_allow": "許可",
     "usb_share_policy_deny": "拒否",
     "usb_share_policy_prompt": "確認",
-    "usb_share_intro": "左で共有を有効にし、ここで in-process channel 経由で共有デバイスを一覧・オープンするか、下で遠隔ホストを閲覧します。",
+    "usb_share_intro": (
+        "左で共有を有効にし、ここで in-process channel 経由で共有デバイスを"
+        "一覧・オープンするか、下で遠隔ホストを閲覧します。"),
     "usb_share_fetch_shared": "共有デバイスを一覧",
     "usb_share_open_selected": "選択を開く",
     "usb_share_enable_first": "先に共有を有効にしてください。",
@@ -231,7 +235,9 @@ japanese_word_dict = {
     "rest_config_export": "設定をエクスポート",
     "rest_config_import": "設定をインポート",
     "rest_config_export_done": "{count} ファイルを {path} に書き出しました。",
-    "rest_config_import_confirm": "このバンドルでユーザー設定を置き換えますか？既存ファイルは .bak.<時刻> にリネームされます。",
+    "rest_config_import_confirm": (
+        "このバンドルでユーザー設定を置き換えますか？"
+        "既存ファイルは .bak.<時刻> にリネームされます。"),
     "rest_config_import_done": "{written} ファイル書き込み、{skipped} スキップ。",
 
     # Remote Desktop — WebRTC サブタブ

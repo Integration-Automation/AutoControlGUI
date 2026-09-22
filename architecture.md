@@ -142,7 +142,8 @@ Moving that WebRunner module breaks the bridge.
   `je_open_cv` and `mss` off the import path.
 - `utils/logging/logging_instance.py` sets the root logger to DEBUG and attaches a file handler at import, but the
   handler opens its file on the first record, and nothing logs during the import: importing writes no file at all.
-  The file is `$JE_AUTOCONTROL_LOG_FILE` if set (a relative path resolves against the cwd at import), else
+  The file is `$JE_AUTOCONTROL_LOG_FILE` as read when the file is opened (so a `conftest.py` can still set it after
+  the `pytest11` plugin imported the package; a relative path resolves against the cwd then), else
   `~/.je_auto_control/logs/AutoControlGUI.log`, shared by every process: appended to, rotated to `.1` past 10 MB
   only when a process opens it, and swapped for `os.devnull` with one `RuntimeWarning` when it cannot be opened.
   Consumers that must keep the log out of a shared file (a test suite) set the variable before importing;

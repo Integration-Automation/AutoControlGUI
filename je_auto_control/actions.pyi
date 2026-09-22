@@ -6,22 +6,49 @@ from typing import (
     Sequence, Tuple, Union,
 )
 
-def AC_a11y_click(name: str | None = ..., role: str | None = ..., app_name: str | None = ...) -> bool:
+def AC_a11y_click(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    window_title: str | None = ...,
+    contains: bool = ...,
+) -> bool:
     """Click the center of the first element matching the filters."""
 
 def AC_a11y_dump(app_name: str | None = ..., max_results: int = ...) -> Dict[str, Any]:
     """Executor adapter: dump the accessibility tree as nested dict."""
 
-def AC_a11y_find(name: str | None = ..., role: str | None = ..., app_name: str | None = ...) -> dict | None:
+def AC_a11y_find(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    window_title: str | None = ...,
+    contains: Any = ...,
+) -> dict | None:
     """Executor adapter: find an accessibility element, return its dict."""
 
-def AC_a11y_list(app_name: str | None = ..., max_results: int = ...) -> List[dict]:
+def AC_a11y_find_all(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    window_title: str | None = ...,
+    contains: Any = ...,
+    max_results: int = ...,
+    scan_limit: int = ...,
+) -> List[dict]:
+    """Executor adapter: every matching accessibility element, best match first."""
+
+def AC_a11y_list(app_name: str | None = ..., max_results: int = ..., window_title: str | None = ...) -> List[dict]:
     """Executor adapter: list accessibility elements as plain dicts."""
 
 def AC_a11y_record_events() -> List[Dict[str, Any]]:
     """Executor adapter: peek at events without stopping the recorder."""
 
-def AC_a11y_record_start(app_name: str | None = ..., poll_interval_s: float = ..., min_movement_px: int = ...) -> Dict[str, Any]:
+def AC_a11y_record_start(
+    app_name: str | None = ...,
+    poll_interval_s: float = ...,
+    min_movement_px: int = ...,
+) -> Dict[str, Any]:
     """Executor adapter: start the singleton accessibility recorder."""
 
 def AC_a11y_record_stop() -> List[Dict[str, Any]]:
@@ -33,11 +60,41 @@ def AC_ab_best_strategy(target_id: str) -> Dict[str, Any]:
 def AC_ab_clear() -> Dict[str, Any]:
     ...
 
-def AC_ab_locate(target_id: str, strategies: Dict[str, Dict[str, Any]], max_parallel: int = ..., record: bool = ...) -> Dict[str, Any]:
+def AC_ab_locate(
+    target_id: str,
+    strategies: Dict[str, Dict[str, Any]],
+    max_parallel: int = ...,
+    record: bool = ...,
+) -> Dict[str, Any]:
     """Executor adapter: race N locator strategies for the same target."""
 
 def AC_ab_report(target_id: str) -> Dict[str, Any]:
     ...
+
+def AC_ab_significance(a_conv: int, a_n: int, b_conv: int, b_n: int) -> Dict[str, Any]:
+    """Adapter: two-proportion z-test on A/B conversion counts."""
+
+def AC_act_in_view(
+    target: Any,
+    kind: Any = ...,
+    direction: Any = ...,
+    max_scrolls: Any = ...,
+    scroll_amount: Any = ...,
+    button: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: scroll a target into view then click it when actionable."""
+
+def AC_act_with_mode(x: Any, y: Any, mode: Any = ..., button: Any = ...) -> Dict[str, Any]:
+    """Adapter: click a point under an action mode (auto / trial / force)."""
+
+def AC_adaptive_timeout(
+    durations: Any,
+    percentile_q: Any = ...,
+    factor: Any = ...,
+    min_s: Any = ...,
+    max_s: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: recommend a wait timeout from observed durations (pure)."""
 
 def AC_add_package_to_callback_executor(package: str) -> None:
     """將套件成員加入 CallbackExecutor"""
@@ -60,11 +117,60 @@ def AC_admin_poll(labels: List[str] | None = ...) -> List[Dict[str, Any]]:
 def AC_admin_remove_host(label: str) -> Dict[str, Any]:
     ...
 
-def AC_anchor_click(anchor: Dict[str, Any], target: Dict[str, Any], mouse_keycode: str = ..., relation: str = ..., max_distance_px: float = ...) -> Dict[str, Any]:
+def AC_agent_card(path: str | None = ...) -> Dict[str, Any]:
+    """Adapter: build (or write) the A2A agent card."""
+
+def AC_allow_sleep() -> Dict[str, Any]:
+    """Adapter: release a previously-started keep-awake."""
+
+def AC_anchor_click(
+    anchor: Dict[str, Any],
+    target: Dict[str, Any],
+    mouse_keycode: str = ...,
+    relation: str = ...,
+    max_distance_px: float = ...,
+) -> Dict[str, Any]:
     """Executor adapter: anchor-locate + click."""
 
-def AC_anchor_locate(anchor: Dict[str, Any], target: Dict[str, Any], relation: str = ..., max_distance_px: float = ...) -> Dict[str, Any]:
-    """Executor adapter: anchor-based spatial locator."""
+def AC_anchor_locate(
+    anchor: Dict[str, Any],
+    target: Dict[str, Any],
+    relation: str = ...,
+    max_distance_px: float = ...,
+    ordinal: Any = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: anchor-based spatial locator (Nth match via ordinal)."""
+
+def AC_anchor_locate_all(
+    anchor: Dict[str, Any],
+    target: Dict[str, Any],
+    relation: str = ...,
+    max_distance_px: float = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: every anchor-relative match, nearest-first."""
+
+def AC_android_click_element(
+    text: str | None = ...,
+    resource_id: str | None = ...,
+    description: str | None = ...,
+    class_name: str | None = ...,
+    timeout_s: float = ...,
+    serial: str | None = ...,
+) -> Dict[str, int]:
+    """Tap the first widget matching the selectors; return click centre."""
+
+def AC_android_dump_hierarchy(serial: str | None = ...) -> str:
+    """Return the device's widget tree as an XML string."""
+
+def AC_android_find_element(
+    text: str | None = ...,
+    resource_id: str | None = ...,
+    description: str | None = ...,
+    class_name: str | None = ...,
+    timeout_s: float = ...,
+    serial: str | None = ...,
+) -> Dict[str, int]:
+    """Find an Android widget via uiautomator2; return its bounding rect."""
 
 def AC_android_key(key: str, serial: str | None = ..., adb_path: str | None = ...) -> None:
     """Send a keycode (``KEYCODE_HOME`` etc.) via ``input keyevent``."""
@@ -78,7 +184,15 @@ def AC_android_screenshot(file_path: str, serial: str | None = ..., adb_path: st
 def AC_android_shell(command: str, serial: str | None = ..., adb_path: str | None = ...) -> str:
     """Run an ``adb shell`` command and return its stdout."""
 
-def AC_android_swipe(x1: int, y1: int, x2: int, y2: int, duration_ms: int = ..., serial: str | None = ..., adb_path: str | None = ...) -> None:
+def AC_android_swipe(
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+    duration_ms: int = ...,
+    serial: str | None = ...,
+    adb_path: str | None = ...,
+) -> None:
     """Send a touch swipe via ``input swipe``."""
 
 def AC_android_tap(x: int, y: int, serial: str | None = ..., adb_path: str | None = ...) -> None:
@@ -87,37 +201,493 @@ def AC_android_tap(x: int, y: int, serial: str | None = ..., adb_path: str | Non
 def AC_android_text(text: str, serial: str | None = ..., adb_path: str | None = ...) -> None:
     """Type a string via ``input text``."""
 
+def AC_annotate_screenshot(source: str, annotations: List[Dict[str, Any]] | str, output_path: str) -> Dict[str, Any]:
+    """Executor adapter: draw annotations onto a screenshot and save it."""
+
+def AC_apply_json_patch(doc: Any, patch: Any) -> Dict[str, Any]:
+    """Adapter: apply an RFC 6902 JSON Patch (each a list/object or JSON str)."""
+
+def AC_apply_unified(text: str, diff: str) -> Dict[str, Any]:
+    """Adapter: apply a unified diff to text."""
+
+def AC_apply_vex(findings: Any, vex: Any) -> Dict[str, Any]:
+    """Adapter: suppress VEX'd vulnerability findings (each JSON string/obj)."""
+
+def AC_approval_approve(token: str, approver: str, db: str | None = ...) -> Dict[str, Any]:
+    """Adapter: approve a request as ``approver`` (must differ from maker)."""
+
+def AC_approval_reject(token: str, approver: str, db: str | None = ...) -> Dict[str, Any]:
+    """Adapter: reject a request as ``approver`` (must differ from maker)."""
+
+def AC_approval_request(action: str, requester: str = ..., db: str | None = ...) -> Dict[str, Any]:
+    """Adapter: file a maker-checker approval request; return its token."""
+
+def AC_approval_status(token: str, db: str | None = ...) -> Dict[str, Any]:
+    """Adapter: report the status and approved flag of a request token."""
+
+def AC_approve_artifact(name: str, approvals_dir: str = ..., extension: str = ...) -> Dict[str, Any]:
+    """Adapter: promote a received artifact to the approved baseline."""
+
+def AC_arrange_cascade(titles: Any, offset: Any = ...) -> Dict[str, Any]:
+    """Executor adapter: cascade a list of window titles diagonally."""
+
+def AC_arrange_grid(titles: Any, rows: Any = ..., cols: Any = ..., gap: Any = ...) -> Dict[str, Any]:
+    """Executor adapter: tile a list of window titles into a grid."""
+
+def AC_assert_all(specs: List[Dict[str, Any]], raise_on_fail: bool = ...) -> Dict[str, Any]:
+    """Executor adapter: run a batch of assertion specs (soft assertions)."""
+
+def AC_assert_any(specs: List[Dict[str, Any]], raise_on_fail: bool = ...) -> Dict[str, Any]:
+    """Executor adapter: pass when at least one assertion spec passes."""
+
+def AC_assert_audio(
+    duration_s: float = ...,
+    threshold: float = ...,
+    expect_sound: bool = ...,
+    samplerate: int = ...,
+    channels: int = ...,
+    raise_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: assert audio activity / silence."""
+
+def AC_assert_clipboard(
+    text: str,
+    mode: str = ...,
+    ignore_case: bool = ...,
+    present: bool = ...,
+    raise_on_fail: bool = ...,
+    capture_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: assert clipboard text matches ``text``."""
+
+def AC_assert_eventually(
+    spec: Dict[str, Any],
+    timeout: float = ...,
+    interval: float = ...,
+    raise_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: poll one assertion spec until it passes / times out."""
+
+def AC_assert_file(
+    path: str,
+    exists: bool = ...,
+    contains: str | None = ...,
+    sha256: str | None = ...,
+    min_size: int | None = ...,
+    raise_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: assert a file's existence / content / hash / size."""
+
+def AC_assert_http(
+    url: str,
+    status: int = ...,
+    contains: str | None = ...,
+    timeout: float = ...,
+    method: str = ...,
+    raise_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: assert an HTTP(S) endpoint status / body."""
+
+def AC_assert_image(
+    template_path: str,
+    threshold: float = ...,
+    present: bool = ...,
+    raise_on_fail: bool = ...,
+    capture_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: assert a template image is (not) on screen."""
+
+def AC_assert_pdf_text(
+    path: str,
+    text: str,
+    present: bool = ...,
+    page: Any = ...,
+    case_sensitive: bool = ...,
+    raise_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Adapter: assert text is present/absent in a PDF document."""
+
+def AC_assert_pixel(
+    x: int,
+    y: int,
+    rgb: List[int],
+    tolerance: int = ...,
+    match: bool = ...,
+    raise_on_fail: bool = ...,
+    capture_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: assert a pixel matches (or differs from) ``rgb``."""
+
+def AC_assert_process(
+    name: str,
+    running: bool = ...,
+    raise_on_fail: bool = ...,
+    capture_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: assert a process matching ``name`` is (not) running."""
+
+def AC_assert_session_active() -> Dict[str, Any]:
+    """Adapter: raise unless the session is interactive (not locked)."""
+
+def AC_assert_text(
+    text: str,
+    region: List[int] | None = ...,
+    lang: str = ...,
+    regex: bool = ...,
+    present: bool = ...,
+    ignore_case: bool = ...,
+    min_confidence: float = ...,
+    raise_on_fail: bool = ...,
+    capture_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: assert OCR text is (not) on screen."""
+
+def AC_assert_video_changes(
+    video_path: str,
+    start_s: float = ...,
+    end_s: float | None = ...,
+    threshold: float = ...,
+    expect_motion: bool = ...,
+    region: List[int] | None = ...,
+    raise_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: assert a video segment has motion / is static."""
+
+def AC_assert_visual(
+    golden_path: str,
+    region: List[int] | None = ...,
+    tolerance: float = ...,
+    per_pixel_threshold: int = ...,
+    diff_path: str | None = ...,
+    create_if_missing: bool = ...,
+    raise_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Adapter: compare the screen to a golden image (first run creates it)."""
+
+def AC_assert_vlm(
+    description: str,
+    present: bool = ...,
+    screen_region: List[int] | None = ...,
+    model: str | None = ...,
+    raise_on_fail: bool = ...,
+    capture_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: assert the screen matches a description (VLM judged)."""
+
+def AC_assert_window(
+    title: str,
+    exists: bool = ...,
+    ignore_case: bool = ...,
+    raise_on_fail: bool = ...,
+    capture_on_fail: bool = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: assert a window matching ``title`` does (not) exist."""
+
+def AC_assign_stable_ids(elements: Any, prior: Any = ..., iou_threshold: Any = ...) -> Dict[str, Any]:
+    """Adapter: tag element boxes with stable IDs carried from a prior frame."""
+
+def AC_associate_fields(text_boxes: Any, directions: Any = ..., max_gap: Any = ...) -> Dict[str, Any]:
+    """Adapter: pair form labels with their nearest aligned value boxes."""
+
+def AC_audit_accessibility(
+    app_name: str | None = ...,
+    contrast_pairs: List[Dict[str, Any]] | None = ...,
+    texts: List[str] | None = ...,
+    min_ratio: float = ...,
+    max_results: int = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: run the accessibility / i18n audit."""
+
+def AC_audit_contrast(foreground: List[int], background: List[int], min_ratio: float = ...) -> Dict[str, Any]:
+    """Executor adapter: WCAG contrast ratio for one colour pair."""
+
+def AC_audit_focus_order(app_name: str | None = ..., max_results: int = ...) -> Dict[str, Any]:
+    """Executor adapter: WCAG focus-order audit over the app's elements."""
+
 def AC_audit_log_clear() -> Dict[str, Any]:
     ...
 
-def AC_audit_log_list(event_type: str | None = ..., host_id: str | None = ..., limit: int = ...) -> List[Dict[str, Any]]:
+def AC_audit_log_list(
+    event_type: str | None = ...,
+    host_id: str | None = ...,
+    limit: int = ...,
+) -> List[Dict[str, Any]]:
     """Executor adapter: query the audit log."""
 
 def AC_audit_log_verify() -> Dict[str, Any]:
     ...
 
-def AC_chatops_dispatch(message: str, context: Dict[str, Any] | None = ..., script_root: str | None = ...) -> Dict[str, Any]:
+def AC_auto_threshold(template: str, region: Any = ..., method: str = ...) -> Dict[str, Any]:
+    """Adapter: Otsu-derived accept threshold for a template (+ separability)."""
+
+def AC_baggage_format(items: Any) -> Dict[str, Any]:
+    """Adapter: serialise an items dict into a W3C baggage {header}."""
+
+def AC_baggage_parse(header: str) -> Dict[str, Any]:
+    """Adapter: parse a W3C baggage header into {items}."""
+
+def AC_best_candidate(candidates: Any, want_role: Any = ..., want_name: Any = ..., anchor: Any = ...) -> Dict[str, Any]:
+    """Adapter: the single highest-scoring candidate element."""
+
+def AC_bidi_check(text: str) -> Dict[str, Any]:
+    """Adapter: bidirectional-text QA report (controls/balance/Trojan-source)."""
+
+def AC_bidi_strip(text: str) -> Dict[str, Any]:
+    """Adapter: remove all bidi control characters from a string."""
+
+def AC_bring_to_front(title: str) -> Dict[str, Any]:
+    """Adapter: raise a window to the top of the z-order."""
+
+def AC_build_critic_record(
+    action: Any,
+    before: Any,
+    after: Any,
+    postcondition: Any = ...,
+    radius: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: per-step critic feature bundle (effect + delta + postcondition)."""
+
+def AC_build_multipart(fields: Any = ..., files: Any = ..., boundary: Any = ...) -> Dict[str, Any]:
+    """Adapter: build a multipart/form-data body (base64-encoded)."""
+
+def AC_build_provenance(paths: Any, builder_id: str = ..., build_type: str = ...) -> Dict[str, Any]:
+    """Adapter: build a SLSA provenance statement over a list of file paths."""
+
+def AC_build_timeline(steps: Any) -> Dict[str, Any]:
+    """Adapter: a per-run step waterfall (offsets / durations / bottleneck)."""
+
+def AC_bulkhead_run(name: str, max_concurrent: int, actions: Any) -> Dict[str, Any]:
+    """Adapter: run an action list under a named bulkhead permit."""
+
+def AC_burn_alerts(records: Any, target: float) -> Dict[str, Any]:
+    """Adapter: multi-window burn-rate alerts for outcome records."""
+
+def AC_canonical_log(fields: Any) -> Dict[str, Any]:
+    """Adapter: build a canonical log line from a fields dict."""
+
+def AC_canonicalize_url(url: str) -> Dict[str, Any]:
+    """Adapter: opinionated canonical form of a URL, for equality checks."""
+
+def AC_capture_window(title: str, output_path: str) -> Dict[str, Any]:
+    """Executor adapter: screenshot the window matching ``title``."""
+
+def AC_cas_get(name: str, key: str) -> Dict[str, Any]:
+    """Adapter: read a record from a named versioned store."""
+
+def AC_cas_put(name: str, key: str, value: Any, expected_version: Any = ...) -> Dict[str, Any]:
+    """Adapter: optimistic put into a named versioned store."""
+
+def AC_cascade_rects(count: Any, screen: Any = ..., offset: Any = ..., size: Any = ...) -> Dict[str, Any]:
+    """Adapter: count staggered, overlapping window rectangles (a cascade)."""
+
+def AC_categorical_drift(reference: Any, current: Any) -> Dict[str, Any]:
+    """Adapter: categorical distribution drift summary."""
+
+def AC_cell_by_header(
+    row: Any,
+    column_header: str,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: read the cell at (row, named column) — assert by header."""
+
+def AC_cell_changes(old_rows: Any, new_rows: Any, key: Any) -> Dict[str, Any]:
+    """Adapter: per-cell changes between two row-sets keyed by key."""
+
+def AC_cell_for_point(x: Any, y: Any, rows: Any, cols: Any, region: Any = ...) -> Dict[str, Any]:
+    """Adapter: the grid cell containing a point (or found=False if outside)."""
+
+def AC_change_volume(delta: Any) -> Dict[str, Any]:
+    """Adapter: add ``delta`` percent to the master volume."""
+
+def AC_changed_regions(
+    before: str,
+    after: Any = ...,
+    threshold: Any = ...,
+    min_area: Any = ...,
+    blur: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: boxes of regions that moved between two frames (after=screen)."""
+
+def AC_chatops_dispatch(
+    message: str,
+    context: Dict[str, Any] | None = ...,
+    script_root: str | None = ...,
+) -> Dict[str, Any]:
     """Executor adapter: route one chat message through the default router."""
+
+def AC_check_accepted_values(rows: Any, col: str, allowed: Any) -> Dict[str, Any]:
+    """Adapter: accepted-values check for a column."""
+
+def AC_check_catalog(base: Dict[str, Any], target: Dict[str, Any]) -> Dict[str, Any]:
+    """Adapter: diff a translation catalog against the base locale."""
+
+def AC_check_compatibility(old: Any, new: Any, mode: str = ...) -> Dict[str, Any]:
+    """Adapter: classify JSON-Schema compatibility (backward/forward/full)."""
+
+def AC_check_foreign_key(child_rows: Any, child_col: str, parent_rows: Any, parent_col: str) -> Dict[str, Any]:
+    """Adapter: foreign-key referential check across two row-sets."""
 
 def AC_check_key_is_press(keycode: int | str) -> bool | None:
     """檢查某個鍵是否正在被按下"""
 
-def AC_click_mouse(mouse_keycode: int | str, x: int = ..., y: int = ...) -> Tuple[int, int, int]:
+def AC_check_licenses(components: Any, allow: Any = ..., deny: Any = ...) -> Dict[str, Any]:
+    """Adapter: evaluate SBOM component licenses against allow/deny lists."""
+
+def AC_check_overflow(
+    elements: List[Any] | None = ...,
+    avg_char_px: float = ...,
+    app_name: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: flag text wider than its widget (live a11y unless given)."""
+
+def AC_check_postcondition(after: Any, spec: Any, before: Any = ...) -> Dict[str, Any]:
+    """Adapter: evaluate a declarative postcondition spec against after/before frames."""
+
+def AC_check_row_count(rows: Any, minimum: Any = ..., maximum: Any = ...) -> Dict[str, Any]:
+    """Adapter: row-count bounds check."""
+
+def AC_check_unique_key(rows: Any, cols: Any) -> Dict[str, Any]:
+    """Adapter: single/composite key uniqueness check."""
+
+def AC_checkpoint_clear(run_id: str, db: str) -> Dict[str, Any]:
+    """Adapter: delete a run's checkpoint."""
+
+def AC_checkpoint_status(run_id: str, db: str) -> Dict[str, Any]:
+    """Adapter: return the saved checkpoint for a run (or null)."""
+
+def AC_checksum_digit(scheme: str, partial: str) -> Dict[str, Any]:
+    """Adapter: compute the check digit(s) for a value under a named scheme."""
+
+def AC_checksum_validate(scheme: str, number: str) -> Dict[str, Any]:
+    """Adapter: validate a number's check digit under a named scheme."""
+
+def AC_ci_annotations(annotations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Adapter: emit GitHub Actions annotations from result dicts."""
+
+def AC_circuit_call(name: str, actions: List[Any], threshold: int = ..., reset_s: float = ...) -> Dict[str, Any]:
+    """Adapter: run an action list through a named circuit breaker."""
+
+def AC_classify_effect(before: Any, after: Any, action: Any, radius: Any = ...) -> Dict[str, Any]:
+    """Adapter: classify whether an action changed the screen (target-local)."""
+
+def AC_classify_formats(formats: Any) -> Dict[str, Any]:
+    """Adapter: classify a provided list of clipboard formats (pure)."""
+
+def AC_classify_icon(source: Any, box: Any) -> Dict[str, Any]:
+    """Adapter: classify the widget in a box from its pixels (device)."""
+
+def AC_classify_lines(lines: Any, heading_ratio: Any = ...) -> Dict[str, Any]:
+    """Adapter: classify OCR lines as headings vs body with levels."""
+
+def AC_classify_lock_transitions(states: Any) -> Dict[str, Any]:
+    """Adapter: reduce lock-state samples to lock / unlock events (pure)."""
+
+def AC_classify_widget(features: Any) -> Dict[str, Any]:
+    """Adapter: map geometric features to a widget type (pure)."""
+
+def AC_click_mouse(mouse_keycode: int | str, x: int | None = ..., y: int | None = ...) -> Tuple[Any, int, int]:
     """在指定座標按下並放開滑鼠按鍵"""
 
-def AC_click_text(target: str, mouse_keycode: int | str = ..., lang: str = ..., region: Sequence[int] | None = ..., min_confidence: float = ..., case_sensitive: bool = ..., backend: Any = ...) -> Tuple[int, int]:
+def AC_click_text(
+    target: str,
+    mouse_keycode: int | str = ...,
+    lang: str = ...,
+    region: Sequence[int] | None = ...,
+    min_confidence: float = ...,
+    case_sensitive: bool = ...,
+    backend: Any = ...,
+) -> Tuple[int, int]:
     """Locate ``target`` text and click its centre."""
+
+def AC_client_point(title: str, x: Any, y: Any) -> Dict[str, Any]:
+    """Adapter: screen point for a client-area-local (x, y) inside a window."""
+
+def AC_clip_history_capture() -> Dict[str, Any]:
+    """Adapter: capture the live clipboard into history."""
+
+def AC_clip_history_list() -> Dict[str, Any]:
+    """Adapter: list clipboard history (newest first)."""
+
+def AC_clip_history_search(query: str) -> Dict[str, Any]:
+    """Adapter: search clipboard history."""
+
+def AC_clip_history_start() -> Dict[str, Any]:
+    """Adapter: start the background clipboard-history poller."""
+
+def AC_clip_history_stop() -> Dict[str, Any]:
+    """Adapter: stop the background clipboard-history poller."""
+
+def AC_clipboard_formats() -> Dict[str, Any]:
+    """Adapter: enumerate and classify the live clipboard's formats (Windows)."""
 
 def AC_clipboard_get() -> str:
     """Return the current clipboard text (empty string if empty)."""
 
+def AC_clipboard_get_image(path: str) -> Dict[str, Any]:
+    """Adapter: save the clipboard's image to ``path``. ``{saved: bool}``."""
+
 def AC_clipboard_set(text: str) -> None:
     """Replace clipboard contents with ``text``."""
 
-def AC_close_window(title_substring: str, case_sensitive: bool = ...) -> bool:
-    """Minimise the first matching window."""
+def AC_clipboard_set_image(path: str) -> Dict[str, Any]:
+    """Adapter: put an image file on the clipboard."""
 
-def AC_computer_use(goal: str, display_width_px: int | None = ..., display_height_px: int | None = ..., display_number: int | None = ..., max_steps: int = ..., wall_seconds: float = ..., model: str = ..., max_tokens: int = ...) -> Dict[str, Any]:
+def AC_close_window(title_substring: str, case_sensitive: bool = ...) -> bool:
+    """Ask the first matching window to close. ``False`` if nothing matched."""
+
+def AC_cofailure_pairs(runs: Any, threshold: Any = ...) -> Dict[str, Any]:
+    """Adapter: test pairs that fail together above a Jaccard threshold."""
+
+def AC_collapse_control(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: collapse a tree node / combobox (ExpandCollapsePattern)."""
+
+def AC_collation_compare(first: str, second: str, strength: str = ..., tailoring: Any = ...) -> Dict[str, Any]:
+    """Adapter: locale-aware comparison of two strings."""
+
+def AC_collation_sort(items: Any, strength: str = ..., tailoring: Any = ..., reverse: Any = ...) -> Dict[str, Any]:
+    """Adapter: locale-aware sort of a list of strings."""
+
+def AC_colors_collide(
+    left: Any,
+    right: Any,
+    kind: Any = ...,
+    severity: Any = ...,
+    threshold: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: whether two colours become confusable under a CVD type (pure)."""
+
+def AC_column_gutters(boxes: Any, page_width: Any = ..., min_gap: Any = ...) -> Dict[str, Any]:
+    """Adapter: interior whitespace column gutters from OCR boxes."""
+
+def AC_compare_field_value(expected: Any, actual: Any, mode: Any = ...) -> Dict[str, Any]:
+    """Adapter: compare an expected vs actual field value under a mode (pure)."""
+
+def AC_compliance_report(
+    evidence: Any,
+    frameworks: Any = ...,
+    path: str | None = ...,
+    fmt: str = ...,
+) -> Dict[str, Any]:
+    """Adapter: map governance evidence to SOC2/ISO controls; optionally write."""
+
+def AC_computer_use(
+    goal: str,
+    display_width_px: int | None = ...,
+    display_height_px: int | None = ...,
+    display_number: int | None = ...,
+    max_steps: int = ...,
+    wall_seconds: float = ...,
+    model: str = ...,
+    max_tokens: int = ...,
+) -> Dict[str, Any]:
     """Executor adapter: run Anthropic Computer-Use to achieve ``goal``."""
 
 def AC_config_export() -> Dict[str, Any]:
@@ -126,25 +696,273 @@ def AC_config_export() -> Dict[str, Any]:
 def AC_config_import(bundle: Dict[str, Any], dry_run: bool = ...) -> Dict[str, Any]:
     """Executor adapter: apply a config bundle dict to the user config root."""
 
+def AC_confusable_compare(first: str, second: str) -> Dict[str, Any]:
+    """Adapter: whether two strings render to the same skeleton."""
+
+def AC_confusable_scan(text: str) -> Dict[str, Any]:
+    """Adapter: homoglyph / mixed-script spoofing report for a string."""
+
+def AC_consensus_element(candidates: Any, elements: Any) -> Dict[str, Any]:
+    """Adapter: vote grounding proposals to the nearest element."""
+
+def AC_consensus_point(candidates: Any, cluster_radius: Any = ...) -> Dict[str, Any]:
+    """Adapter: agreed target point from clustered grounding proposals."""
+
+def AC_control_expand_state(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: the expand/collapse state of a control."""
+
+def AC_control_get_state(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> dict | None:
+    """Adapter: read everything a native control currently holds, in one call."""
+
+def AC_control_get_value(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> str | None:
+    """Adapter: read a native control's value via the accessibility backend."""
+
+def AC_control_invoke(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: invoke a native control (e.g. press a button)."""
+
+def AC_control_range(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: read a slider / progress range (RangeValuePattern)."""
+
+def AC_control_set_value(
+    value: str,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: set a native control's value via the accessibility backend."""
+
+def AC_control_text_attributes(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: read a control selection's font/colour formatting (TextPattern)."""
+
+def AC_control_toggle(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: toggle a native control (e.g. a checkbox)."""
+
+def AC_cookie_header(set_cookies: Any) -> Dict[str, Any]:
+    """Adapter: build a Cookie header from one/many Set-Cookie strings."""
+
 def AC_costs_clear() -> Dict[str, Any]:
     ...
 
 def AC_costs_list(limit: int = ...) -> List[Dict[str, Any]]:
     ...
 
-def AC_costs_record(provider: str, model: str, input_tokens: int, output_tokens: int, label: str | None = ..., run_id: str | None = ..., user: str | None = ...) -> Dict[str, Any]:
+def AC_costs_record(
+    provider: str,
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+    label: str | None = ...,
+    run_id: str | None = ...,
+    user: str | None = ...,
+) -> Dict[str, Any]:
     """Executor adapter: append one LLM call to the cost-telemetry log."""
 
 def AC_costs_summary(limit: int = ...) -> Dict[str, Any]:
     """Executor adapter: aggregate cost events by model / provider / day."""
 
-def AC_create_project(project_path: str = ..., parent_name: str = ...) -> None:
+def AC_create_project(project_path: str | None = ..., parent_name: str = ...) -> None:
     """Create project directory structure and templates."""
+
+def AC_critical_steps(steps: Any, top: Any = ...) -> Dict[str, Any]:
+    """Adapter: the steps that dominate a run's time (bottlenecks)."""
+
+def AC_cua_command(payload: Any, source: str = ...) -> Dict[str, Any]:
+    """Adapter: normalize a computer-use payload and map it to an AC_* command."""
+
+def AC_debug_trace(actions: List[Any], dry_run: bool = ...) -> Dict[str, Any]:
+    """Adapter: run an action list and return a per-step trace."""
+
+def AC_decision_table(spec: Any, context: Any) -> Dict[str, Any]:
+    """Adapter: evaluate a DMN-style decision table against a context."""
+
+def AC_decode_body(headers: Any, body_base64: str) -> Dict[str, Any]:
+    """Adapter: decode a Content-Encoding (gzip/deflate) base64 body."""
+
+def AC_decode_conversion_mode(flags: Any) -> Dict[str, Any]:
+    """Adapter: decode an IMM32 conversion bitmask into named flags (pure)."""
+
+def AC_decrypt_action_file(enc_path: str, key: str | None = ..., output_path: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: decrypt a Fernet-encrypted action file."""
+
+def AC_dedup_check(name: str, message_id: str, ttl_s: Any = ...) -> Dict[str, Any]:
+    """Adapter: check-and-mark a message id in a named dedup window."""
+
+def AC_dedupe_images(paths: Any, max_distance: int = ...) -> Dict[str, Any]:
+    """Adapter: drop near-duplicate images, keeping the first of each cluster."""
+
+def AC_delta_observation(
+    prev: Any,
+    curr: Any,
+    viewport: Any = ...,
+    max_elements: Any = ...,
+    max_lines: Any = ...,
+    interactive_only: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: token-budgeted "what changed" delta between two element frames."""
+
+def AC_describe_screen(app_name: str | None = ...) -> Dict[str, Any]:
+    """Adapter: structured 'where am I' description of the live screen."""
+
+def AC_describe_stats(values: Any) -> Dict[str, Any]:
+    """Adapter: summary statistics + percentiles of a numeric list (or JSON)."""
+
+def AC_detect_anomalies(values: Any, method: str = ..., threshold: Any = ...) -> Dict[str, Any]:
+    """Adapter: flag anomalies in a numeric series (mad/zscore)."""
+
+def AC_detect_borderless_table(
+    boxes: Any,
+    page_width: Any = ...,
+    min_gap: Any = ...,
+    min_cols: Any = ...,
+    min_rows: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: infer a borderless table from OCR boxes via whitespace columns."""
+
+def AC_detect_drift(reference: Any, current: Any, threshold: Any = ..., bins: Any = ...) -> Dict[str, Any]:
+    """Adapter: numeric distribution drift report (PSI + KS)."""
+
+def AC_detect_lists(lines: Any) -> Dict[str, Any]:
+    """Adapter: detect bulleted / numbered list items among OCR lines."""
+
+def AC_detect_pii(text: str, kinds: Any = ...) -> Dict[str, Any]:
+    """Adapter: detect PII spans in text."""
+
+def AC_detect_scale(
+    template: Any,
+    haystack: Any = ...,
+    region: Any = ...,
+    scales: Any = ...,
+    method: str = ...,
+) -> Dict[str, Any]:
+    """Adapter: infer the display scale a template renders at (visual DPI)."""
 
 def AC_diagnose() -> Dict[str, Any]:
     """Executor adapter: run system diagnostics and return the report."""
 
-def AC_email_trigger_add(host: str, username: str, password: str, script_path: str, port: int | None = ..., use_ssl: bool = ..., mailbox: str = ..., search_criteria: str = ..., mark_seen: bool = ..., poll_seconds: float = ...) -> Dict[str, Any]:
+def AC_diff_formats(before: Any, after: Any) -> Dict[str, Any]:
+    """Adapter: diff two clipboard-format snapshots (pure)."""
+
+def AC_diff_json(actual: Any, expected: Any) -> Dict[str, Any]:
+    """Adapter: path-tagged diff between two JSON payloads."""
+
+def AC_diff_rows(old_rows: Any, new_rows: Any, key: Any) -> Dict[str, Any]:
+    """Adapter: diff two row-sets by key into {diff, summary}."""
+
+def AC_diff_runs(before: Any, after: Any, key: str = ..., regress_factor: Any = ...) -> Dict[str, Any]:
+    """Adapter: diff two run step-traces (added/removed/flips/regressions)."""
+
+def AC_dominant_hue_regions(
+    hue: Any,
+    hue_tol: Any = ...,
+    sat_min: Any = ...,
+    val_min: Any = ...,
+    min_area: Any = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: locate any-brightness regions near a hue on the screen."""
+
+def AC_dominant_pair(pixels: Any) -> Dict[str, Any]:
+    """Adapter: split sampled RGB pixels into fg/bg dominant colours (pure)."""
+
+def AC_drag_path(waypoints: Any, button: str = ..., easing: str = ..., per_segment_steps: Any = ...) -> Dict[str, Any]:
+    """Adapter: press, drag through a polyline of waypoints, release."""
+
+def AC_drop_files(hwnd: Any, paths: Any, point: Any = ...) -> Dict[str, Any]:
+    """Adapter: drop files onto a window via WM_DROPFILES (Windows)."""
+
+def AC_edge_match(template: str, min_score: Any = ..., scales: Any = ..., region: Any = ...) -> Dict[str, Any]:
+    """Adapter: best edge-shape (Chamfer) template match on the screen."""
+
+def AC_edge_match_all(
+    template: str,
+    min_score: Any = ...,
+    max_results: Any = ...,
+    nms_iou: Any = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: every edge-shape (Chamfer) match on the screen (NMS)."""
+
+def AC_effect_near_point(before: Any, after: Any, point: Any, radius: Any = ...) -> Dict[str, Any]:
+    """Adapter: did any before/after change land within radius of a point."""
+
+def AC_egress_allow(allow: List[str] | None = ..., deny: List[str] | None = ...) -> Dict[str, Any]:
+    """Adapter: lock the HTTP client to an egress allow/deny policy."""
+
+def AC_egress_check(url: str) -> Dict[str, Any]:
+    """Adapter: report whether ``url`` is permitted by the egress policy."""
+
+def AC_egress_reset() -> Dict[str, Any]:
+    """Adapter: clear the egress policy back to allow-all."""
+
+def AC_element_click(path: str, key: str) -> Dict[str, Any]:
+    """Adapter: click the element behind a saved locator."""
+
+def AC_element_find(path: str, key: str) -> Dict[str, Any]:
+    """Adapter: resolve a saved locator to a live element summary."""
+
+def AC_element_list(path: str) -> Dict[str, Any]:
+    """Adapter: list saved locator names."""
+
+def AC_element_remove(path: str, key: str) -> Dict[str, Any]:
+    """Adapter: delete a saved locator."""
+
+def AC_element_save(
+    path: str,
+    key: str,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: save a named native-UI locator (object repository)."""
+
+def AC_email_trigger_add(
+    host: str,
+    username: str,
+    password: str,
+    script_path: str,
+    port: int | None = ...,
+    use_ssl: bool = ...,
+    mailbox: str = ...,
+    search_criteria: str = ...,
+    mark_seen: bool = ...,
+    poll_seconds: float = ...,
+) -> Dict[str, Any]:
     """Executor adapter: register an IMAP poll trigger."""
 
 def AC_email_trigger_list() -> List[Dict[str, Any]]:
@@ -162,7 +980,50 @@ def AC_email_trigger_start() -> Dict[str, Any]:
 def AC_email_trigger_stop() -> Dict[str, Any]:
     ...
 
-def AC_execute_action(action_list: list | dict, raise_on_error: bool = ..., _validated: bool = ..., dry_run: bool = ..., step_callback: Callable[[list], None] | None = ...) -> Dict[str, str]:
+def AC_emit_event(
+    event_type: str,
+    data: Any = ...,
+    source: str = ...,
+    subject: str | None = ...,
+    url: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: build a CloudEvent; optionally POST it (egress-guarded)."""
+
+def AC_encrypt_action_file(path: str, key: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: Fernet-encrypt an action file to <path>.enc."""
+
+def AC_ensure_field_value(
+    desired: Any,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+    attempts: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: idempotently set a native control's value and verify (read-act)."""
+
+def AC_enumerate_monitors() -> Dict[str, Any]:
+    """Adapter: list connected monitors with virtual-desktop geometry."""
+
+def AC_evaluate_flag(flags: Any, key: str, context: Any = ...) -> Dict[str, Any]:
+    """Adapter: evaluate a feature flag (flags/context dict or JSON string)."""
+
+def AC_evaluate_slo(records: Any, target: float, window_s: float | None = ...) -> Dict[str, Any]:
+    """Adapter: SLI + error budget for outcome records (list or JSON string)."""
+
+def AC_evaluate_trajectory(trajectory: Any, rubric: Any) -> Dict[str, Any]:
+    """Adapter: score an agent trajectory against a declarative rubric."""
+
+def AC_ewma(values: Any, alpha: Any = ...) -> Dict[str, Any]:
+    """Adapter: exponentially-weighted moving average."""
+
+def AC_execute_action(
+    action_list: list | dict,
+    raise_on_error: bool = ...,
+    _validated: bool = ...,
+    dry_run: bool = ...,
+    step_callback: Callable[[list], None] | None = ...,
+) -> Dict[str, str]:
     """執行 action list"""
 
 def AC_execute_files(execute_files_list: list) -> List[Dict[str, str]]:
@@ -171,20 +1032,184 @@ def AC_execute_files(execute_files_list: list) -> List[Dict[str, str]]:
 def AC_execute_process(exe_path: str) -> None:
     """Start an external executable file."""
 
+def AC_expand_control(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: expand a tree node / combobox (ExpandCollapsePattern)."""
+
+def AC_expect_poll(
+    action: Any,
+    key: Any = ...,
+    op: str = ...,
+    expected: Any = ...,
+    timeout_s: Any = ...,
+    interval_s: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: re-run a nested action until a key of its result matches."""
+
+def AC_explain_config(layers: Any, key: str) -> Dict[str, Any]:
+    """Adapter: report the value and winning layer for a dotted config key."""
+
+def AC_export_sarif(findings: Any, path: str | None = ..., tool_name: str = ...) -> Dict[str, Any]:
+    """Adapter: build (and optionally write) a SARIF 2.1.0 document."""
+
+def AC_extract_fields(
+    text: str,
+    fields: List[str] | None = ...,
+    patterns: Dict[str, str] | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: extract structured fields from free text."""
+
+def AC_failure_clusters(runs: Any, threshold: Any = ..., min_size: Any = ...) -> Dict[str, Any]:
+    """Adapter: cluster tests that fail together (co-failure Jaccard)."""
+
 def AC_failure_hook_clear() -> Dict[str, Any]:
     ...
 
-def AC_failure_hook_fire(source: str, source_id: str, error_text: str = ..., script_path: str | None = ..., screenshot_path: str | None = ..., log_tail: str = ..., metadata: Dict[str, Any] | None = ...) -> List[Dict[str, Any]]:
+def AC_failure_hook_fire(
+    source: str,
+    source_id: str,
+    error_text: str = ...,
+    script_path: str | None = ...,
+    screenshot_path: str | None = ...,
+    log_tail: str = ...,
+    metadata: Dict[str, Any] | None = ...,
+) -> List[Dict[str, Any]]:
     """Executor adapter: file a ticket through every registered backend."""
 
 def AC_failure_hook_list() -> List[Dict[str, Any]]:
     ...
 
-def AC_find_text_regex(pattern: str, lang: str = ..., region: List[int] | None = ..., min_confidence: float = ..., flags: int = ...) -> List[dict]:
+def AC_failure_signature(error: str, length: Any = ...) -> Dict[str, Any]:
+    """Adapter: normalise + hash an error message to a stable signature."""
+
+def AC_feature_match(
+    template: str,
+    region: Any = ...,
+    max_features: Any = ...,
+    ratio: Any = ...,
+    min_inliers: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: locate a template by ORB keypoints (rotation/scale/theme robust)."""
+
+def AC_file_association(target: str) -> Dict[str, Any]:
+    """Adapter: the app registered to open ``target``'s file type."""
+
+def AC_find_color_region(rgb: Any, tolerance: Any = ..., min_area: Any = ..., region: Any = ...) -> Dict[str, Any]:
+    """Adapter: locate coloured regions on the screen, largest first."""
+
+def AC_find_control_text(
+    text: str,
+    ignore_case: Any = ...,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: whether text occurs in a control (TextPattern.FindText)."""
+
+def AC_find_grid(min_length: Any = ..., tol: Any = ..., region: Any = ...) -> Dict[str, Any]:
+    """Adapter: recover a table grid (rows / cols / cells) from screen lines."""
+
+def AC_find_lines(
+    min_length: Any = ...,
+    max_gap: Any = ...,
+    orientation: str = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: detect straight line segments on screen (Hough)."""
+
+def AC_find_rectangles(
+    region: Any = ...,
+    min_area: Any = ...,
+    max_area: Any = ...,
+    aspect_range: Any = ...,
+    epsilon: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: boxes of the ~rectangular shapes (buttons / cards), largest first."""
+
+def AC_find_separators(axis: str = ..., min_length: Any = ..., tol: Any = ..., region: Any = ...) -> Dict[str, Any]:
+    """Adapter: coordinates of long divider lines along an axis."""
+
+def AC_find_shapes(region: Any = ..., min_area: Any = ..., max_area: Any = ...) -> Dict[str, Any]:
+    """Adapter: bounding boxes of all distinct on-screen shapes, largest first."""
+
+def AC_find_text_lines(y_tolerance: Any = ..., region: Any = ...) -> Dict[str, Any]:
+    """Adapter: locate horizontal text lines on screen via MSER (no OCR)."""
+
+def AC_find_text_regex(
+    pattern: str,
+    lang: str = ...,
+    region: List[int] | None = ...,
+    min_confidence: float = ...,
+    flags: int = ...,
+) -> List[dict]:
     """Executor adapter: regex OCR search returning JSON-friendly dicts."""
+
+def AC_find_text_regions(
+    min_area: Any = ...,
+    max_area: Any = ...,
+    merge: Any = ...,
+    max_aspect: Any = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: locate text/glyph regions on screen via MSER (no OCR)."""
+
+def AC_flag_enabled(flags: Any, key: str, context: Any = ..., default: bool = ...) -> Dict[str, Any]:
+    """Adapter: boolean feature-flag check."""
+
+def AC_flaky_report(limit: int = ..., min_runs: int = ..., group_by: str = ...) -> Dict[str, Any]:
+    """Executor adapter: score run-history flakiness per script / source."""
+
+def AC_flow_order(boxes: Any, min_gap: Any = ...) -> Dict[str, Any]:
+    """Adapter: column-aware reading order of OCR boxes (XY-cut)."""
+
+def AC_focus_control(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Executor adapter: set keyboard focus on a control (UIA SetFocus)."""
 
 def AC_focus_window(title_substring: str, case_sensitive: bool = ...) -> int:
     """Bring the first matching window to the foreground; return its hwnd."""
+
+def AC_foreground_window() -> Dict[str, Any]:
+    """Adapter: the window the user is currently working in."""
+
+def AC_foreground_window_pid() -> Dict[str, Any]:
+    """Adapter: the PID owning the foreground window (``0`` when unknown)."""
+
+def AC_format_currency(value: float, currency: str, locale: str = ...) -> Dict[str, Any]:
+    """Adapter: format a value as currency for a locale."""
+
+def AC_format_date(value: str, locale: str = ..., fmt: str = ...) -> Dict[str, Any]:
+    """Adapter: format an ISO date string for a locale."""
+
+def AC_format_decimal(value: float, locale: str = ...) -> Dict[str, Any]:
+    """Adapter: format a number for a locale."""
+
+def AC_format_list(items: Any, style: str = ..., locale: str = ...) -> Dict[str, Any]:
+    """Adapter: join items into a localised list string."""
+
+def AC_format_message(pattern: str, args: Any = ..., locale: str = ...) -> Dict[str, Any]:
+    """Adapter: render an ICU-lite MessageFormat pattern."""
+
+def AC_fuse_elements(ocr: Any = ..., icon: Any = ..., a11y: Any = ..., iou_threshold: Any = ...) -> Dict[str, Any]:
+    """Adapter: union OCR / icon / a11y element boxes, dropping duplicates."""
+
+def AC_fuzzy_best_match(query: Any, choices: Any, score_cutoff: float = ..., ignore_case: bool = ...) -> Dict[str, Any]:
+    """Adapter: best fuzzy match from choices, or a null match."""
+
+def AC_fuzzy_dedupe(items: Any, threshold: float = ..., ignore_case: bool = ...) -> Dict[str, Any]:
+    """Adapter: drop near-duplicate items, keeping the first of each cluster."""
+
+def AC_fuzzy_ratio(left: Any, right: Any, ignore_case: bool = ...) -> Dict[str, Any]:
+    """Adapter: similarity score (0..1) between two values."""
 
 def AC_gamepad_click(button: str) -> Dict[str, Any]:
     ...
@@ -213,6 +1238,24 @@ def AC_gamepad_right_stick(x: int, y: int) -> Dict[str, Any]:
 def AC_gamepad_right_trigger(value: int) -> Dict[str, Any]:
     ...
 
+def AC_generate_code(
+    source: Any,
+    output: str | None = ...,
+    target: str = ...,
+    name: str = ...,
+    style: str = ...,
+) -> str:
+    """Render an action list/file as code, optionally writing a file."""
+
+def AC_generate_data(
+    schema: Dict[str, Any],
+    count: int = ...,
+    path: str | None = ...,
+    fmt: str | None = ...,
+    seed: int | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: generate synthetic rows; write to ``path`` when given."""
+
 def AC_generate_html() -> str:
     """產生完整 HTML 報告字串"""
 
@@ -225,11 +1268,51 @@ def AC_generate_json() -> Tuple[Dict[str, Dict[str, str]], Dict[str, Dict[str, s
 def AC_generate_json_report(json_file_name: str = ...) -> None:
     """Output JSON report files (success and failure)."""
 
+def AC_generate_sbom(path: str | None = ..., root: str = ...) -> Dict[str, Any]:
+    """Adapter: build (or write) a CycloneDX SBOM for the project."""
+
+def AC_generate_sop(actions: List[Any], title: str = ..., path: str | None = ...) -> Dict[str, Any]:
+    """Adapter: build (or write) a step-by-step SOP from an action list."""
+
 def AC_generate_xml() -> Tuple[str | bytes, str | bytes]:
     """Generate XML strings from test records."""
 
 def AC_generate_xml_report(xml_file_name: str = ...) -> None:
     """Output XML report files (success and failure)."""
+
+def AC_get_asset(name: str, environment: str = ..., db: str | None = ...) -> Dict[str, Any]:
+    """Adapter: read a typed asset (credential stays a reference)."""
+
+def AC_get_client_rect(title: str) -> Dict[str, Any]:
+    """Adapter: a window's client-area rect in screen coordinates."""
+
+def AC_get_clipboard_csv(delimiter: str = ...) -> Dict[str, Any]:
+    """Adapter: read the clipboard's Csv content as rows (Windows)."""
+
+def AC_get_clipboard_files() -> Dict[str, Any]:
+    """Adapter: read the clipboard's file-drop list (CF_HDROP) (Windows)."""
+
+def AC_get_clipboard_html() -> Dict[str, Any]:
+    """Adapter: read the clipboard's HTML fragment (Windows)."""
+
+def AC_get_clipboard_rtf() -> Dict[str, Any]:
+    """Adapter: read the clipboard's RTF document string (Windows)."""
+
+def AC_get_control_text(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: read a control's full text via TextPattern (multiline-safe)."""
+
+def AC_get_element_properties(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: read rich UIA properties (enabled/offscreen/help/status/keys)."""
 
 def AC_get_keyboard_keys_table() -> dict:
     """取得鍵盤對應表"""
@@ -240,14 +1323,166 @@ def AC_get_mouse_position() -> tuple[int, int] | None:
 def AC_get_mouse_table() -> dict:
     """取得滑鼠按鍵對應表"""
 
+def AC_get_selected_text(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: read a control's currently selected text (TextPattern)."""
+
+def AC_get_selection(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: a container's selection state (SelectionPattern)."""
+
+def AC_get_visible_text(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: read only the on-screen text of a control (TextPattern)."""
+
+def AC_get_volume() -> Dict[str, Any]:
+    """Adapter: the system master volume as an integer percent."""
+
+def AC_gettext_ngettext(po: str, msgid: str, msgid_plural: str, n: Any) -> Dict[str, Any]:
+    """Adapter: parse a .po string and look up a plural translation."""
+
+def AC_gettext_translate(po: str, msgid: str, context: Any = ...) -> Dict[str, Any]:
+    """Adapter: parse a .po string and look up a singular translation."""
+
+def AC_grade_contrast(foreground: Any, background: Any) -> Dict[str, Any]:
+    """Adapter: grade a foreground/background colour pair vs WCAG (pure)."""
+
+def AC_grid_cell(boxes: Any, row: Any, col: Any, row_tolerance: Any = ...) -> Dict[str, Any]:
+    """Adapter: address a grid cell by (row, col) from a JSON list of boxes."""
+
+def AC_grid_cells(rows: Any, cols: Any, region: Any = ...) -> Dict[str, Any]:
+    """Adapter: every cell of an rows x cols labelled grid over the screen."""
+
+def AC_grid_rects(rows: Any, cols: Any, screen: Any = ..., gap: Any = ...) -> Dict[str, Any]:
+    """Adapter: one rectangle per cell of an rows x cols grid over the screen."""
+
+def AC_group_failures(errors: Any) -> Dict[str, Any]:
+    """Adapter: group error messages by failure signature."""
+
+def AC_group_paragraphs(lines: Any, line_gap_factor: Any = ...) -> Dict[str, Any]:
+    """Adapter: group OCR lines into paragraphs by vertical spacing."""
+
+def AC_guard_text(text: str, threshold: int = ...) -> Dict[str, Any]:
+    """Adapter: assess text for prompt-injection patterns."""
+
+def AC_handle_file_dialog(
+    path: str,
+    action: str = ...,
+    window_title: str | None = ...,
+    timeout_s: float = ...,
+    confirm_key: str = ...,
+) -> Dict[str, Any]:
+    """Adapter: wait for a native file dialog, type the path, confirm."""
+
+def AC_has_motion(before: str, after: Any = ..., threshold: Any = ..., min_area: Any = ...) -> Dict[str, Any]:
+    """Adapter: whether anything moved between two frames (after=screen)."""
+
+def AC_heal_stats(limit: int = ...) -> Dict[str, Any]:
+    """Adapter: aggregate the self-heal log into metrics."""
+
+def AC_histogram_changed(
+    reference: str,
+    current: Any = ...,
+    method: str = ...,
+    threshold: Any = ...,
+    space: str = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: whether the screen / current image differs from a reference."""
+
 def AC_history_clear() -> int:
     """Delete every row (and its artifact file); return rows removed."""
 
 def AC_history_list(limit: int = ..., source_type: str | None = ...) -> List[dict]:
     """Executor adapter: list run history as plain dicts (JSON-friendly)."""
 
-def AC_hotkey(key_code_list: list, is_shift: bool = ...) -> Tuple[str, str] | None:
+def AC_hold_key(key: str, duration_s: Any = ..., rate_hz: Any = ...) -> Dict[str, Any]:
+    """Adapter: hold a key for a duration (or auto-repeat at rate_hz)."""
+
+def AC_hotkey(key_code_list: list, is_shift: bool = ...) -> Tuple[str, str]:
     """模擬組合鍵 (依序按下，再反向放開)"""
+
+def AC_http_replay(cassette: Any, url: str, method: str = ...) -> Dict[str, Any]:
+    """Adapter: replay a recorded HTTP response from a cassette (no network)."""
+
+def AC_http_request(
+    url: str,
+    method: str = ...,
+    headers: Mapping[str, Any] | None = ...,
+    json_body: Any = ...,
+    data: Any = ...,
+    auth: Mapping[str, Any] | None = ...,
+    timeout: float = ...,
+) -> Dict[str, Any]:
+    """Perform an HTTP(S) request and return a response dict."""
+
+def AC_human_move(
+    x: int,
+    y: int,
+    duration_s: float = ...,
+    curve: float = ...,
+    overshoot: float = ...,
+    jitter: float = ...,
+    seed: int | None = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: move the mouse to (x, y) along a human-like path."""
+
+def AC_human_type(
+    text: str,
+    base_delay: float = ...,
+    jitter: float = ...,
+    pause_chance: float = ...,
+    seed: int | None = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: type text with humanized inter-key delays."""
+
+def AC_humanize_role(role: str) -> Dict[str, Any]:
+    """Executor adapter: translate a raw UIA role to a friendly name."""
+
+def AC_idempotency_begin(name: str, key: str, request: Any = ...) -> Dict[str, Any]:
+    """Adapter: register/look up an idempotency key in a named store."""
+
+def AC_idempotency_complete(name: str, key: str, response: Any) -> Dict[str, Any]:
+    """Adapter: store the completed response for an idempotency key."""
+
+def AC_idle_point(busy_samples: Any, quiet_samples: Any = ...) -> Dict[str, Any]:
+    """Adapter: index where a busy/idle sample series first settles idle (pure)."""
+
+def AC_idle_seconds() -> Dict[str, Any]:
+    """Adapter: seconds since the last user input."""
+
+def AC_image_hash(path: str, algo: str = ...) -> Dict[str, Any]:
+    """Adapter: perceptual hash of an image (average or dhash)."""
+
+def AC_image_histogram(source: Any = ..., bins: Any = ..., space: str = ..., region: Any = ...) -> Dict[str, Any]:
+    """Adapter: per-channel colour histogram of an image / the screen."""
+
+def AC_image_quality(source: Any = ..., region: Any = ...) -> Dict[str, Any]:
+    """Adapter: sharpness / contrast / brightness of an image or the screen."""
+
+def AC_ime_state() -> Dict[str, Any]:
+    """Adapter: the focused window's live IME composition / conversion state."""
+
+def AC_infer_schema(rows: Any, columns: Any = ...) -> Dict[str, Any]:
+    """Adapter: infer a validate_rows-compatible schema from rows."""
+
+def AC_input_reachable() -> Dict[str, Any]:
+    """Adapter: can this process actually drive the machine right now?"""
+
+def AC_input_sequence(steps: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Adapter: run a declarative input sequence (press/hold/repeat/...)."""
 
 def AC_inspector_recent(n: int = ...) -> List[Dict[str, Any]]:
     """Executor adapter: most recent N WebRTC stat samples."""
@@ -258,29 +1493,358 @@ def AC_inspector_reset() -> Dict[str, Any]:
 def AC_inspector_summary() -> Dict[str, Any]:
     ...
 
+def AC_ios_click_element(
+    name: str | None = ...,
+    class_name: str | None = ...,
+    predicate: str | None = ...,
+    timeout_s: float = ...,
+    url: str | None = ...,
+) -> Dict[str, int]:
+    ...
+
+def AC_ios_dump_source(url: str | None = ...) -> str:
+    ...
+
+def AC_ios_find_element(
+    name: str | None = ...,
+    class_name: str | None = ...,
+    predicate: str | None = ...,
+    timeout_s: float = ...,
+    url: str | None = ...,
+) -> Dict[str, int]:
+    ...
+
+def AC_ios_screenshot(file_path: str, url: str | None = ...) -> str:
+    ...
+
+def AC_ios_swipe(x1: int, y1: int, x2: int, y2: int, duration_s: float = ..., url: str | None = ...) -> Dict[str, Any]:
+    ...
+
+def AC_ios_tap(x: int, y: int, url: str | None = ...) -> Dict[str, int]:
+    ...
+
+def AC_ios_type(text: str, url: str | None = ...) -> str:
+    ...
+
+def AC_is_composing() -> Dict[str, Any]:
+    """Adapter: whether the IME has an uncommitted composition."""
+
+def AC_is_idle(threshold: Any) -> Dict[str, Any]:
+    """Adapter: whether the user has been idle for >= ``threshold`` seconds."""
+
+def AC_json_extract(data: Any, mapping: Any) -> Dict[str, Any]:
+    """Adapter: extract a {key: path} mapping from data into a flat dict."""
+
+def AC_json_query(data: Any, path: str) -> Dict[str, Any]:
+    """Adapter: return all JSONPath matches in data (JSON string or object)."""
+
+def AC_jwt_decode(
+    token: str,
+    key: str,
+    algorithms: Any = ...,
+    audience: str | None = ...,
+    leeway: float = ...,
+) -> Dict[str, Any]:
+    """Adapter: verify a JWT and return {ok, claims} or {ok: False, error}."""
+
+def AC_jwt_encode(claims: Any, key: str, alg: str = ...) -> Dict[str, Any]:
+    """Adapter: sign a compact JWT from claims (a dict or JSON string)."""
+
+def AC_keep_awake_on(display: Any = ..., system: Any = ...) -> Dict[str, Any]:
+    """Adapter: keep the machine awake until ``AC_allow_sleep``."""
+
+def AC_label_color(background: Any) -> Dict[str, Any]:
+    """Adapter: the higher-contrast label colour for a background (pure)."""
+
+def AC_lease_active() -> Dict[str, Any]:
+    """Adapter: list active (non-expired) leases without any secret values."""
+
+def AC_lease_secret(name: str, ttl: float = ...) -> Dict[str, Any]:
+    """Adapter: issue a JIT lease for a secret name (no value returned)."""
+
+def AC_lease_valid(token: str) -> Dict[str, Any]:
+    """Adapter: report whether a lease token is still valid."""
+
+def AC_legacy_default_action(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: fire an old control's MSAA default action (Value/Invoke fallback)."""
+
+def AC_legacy_info(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: MSAA IAccessible info of an old control (LegacyIAccessible)."""
+
+def AC_list_assets(environment: str | None = ..., db: str | None = ...) -> Dict[str, Any]:
+    """Adapter: list assets, optionally restricted to one environment."""
+
+def AC_list_plugins(group: str = ...) -> Dict[str, Any]:
+    """Adapter: discover third-party plugin command names (no register)."""
+
 def AC_list_usb_devices() -> Dict[str, Any]:
     """Executor adapter: enumerate USB devices on this host."""
 
-def AC_list_windows() -> List[Tuple[int, str]]:
-    """Return a list of ``(hwnd, title)`` for every visible top-level window."""
+def AC_list_views(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: a control's selectable views (MultipleViewPattern)."""
+
+def AC_list_windows(titled_only: bool = ...) -> List[Tuple[int, str]]:
+    """Return ``(hwnd, title)`` for every visible top-level window, front-most"""
 
 def AC_llm_plan(description: str, examples: list | None = ..., model: str | None = ..., max_tokens: int = ...) -> list:
     """Executor adapter: plan without executing, using current command set."""
 
-def AC_llm_run(description: str, examples: list | None = ..., model: str | None = ..., max_tokens: int = ...) -> Dict[str, Any]:
+def AC_llm_run(
+    description: str,
+    examples: list | None = ...,
+    model: str | None = ...,
+    max_tokens: int = ...,
+) -> Dict[str, Any]:
     """Executor adapter: plan and execute against the global executor."""
+
+def AC_load_data(source: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Executor adapter: load tabular rows from a data source spec."""
+
+def AC_load_dotenv(path: str, override: Any = ...) -> Dict[str, Any]:
+    """Adapter: load a .env file into a fresh {values} dict."""
+
+def AC_load_plugins(group: str = ...) -> Dict[str, Any]:
+    """Adapter: discover + register third-party plugin commands."""
+
+def AC_localize_changes(
+    reference: Any,
+    boxes: Any,
+    current: Any = ...,
+    threshold: Any = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: rank which element boxes changed between two frames (device)."""
 
 def AC_locate_all_image(image: Any, detect_threshold: float = ..., draw_image: bool = ...) -> List[List[int]]:
     """找出螢幕上所有符合的影像位置"""
 
-def AC_locate_and_click(image: Any, mouse_keycode: int | str, detect_threshold: float = ..., draw_image: bool = ...) -> Tuple[int, int]:
+def AC_locate_and_click(
+    image: Any,
+    mouse_keycode: int | str,
+    detect_threshold: float = ...,
+    draw_image: bool = ...,
+) -> Tuple[int, int]:
     """找出影像後自動移動滑鼠並點擊"""
+
+def AC_locate_chain(boxes: Any, ops: Any = ...) -> Dict[str, Any]:
+    """Adapter: apply a chain of refinement ops to a set of element boxes."""
 
 def AC_locate_image_center(image: Any, detect_threshold: float = ..., draw_image: bool = ...) -> Tuple[int, int]:
     """找出單一影像並回傳中心座標"""
 
-def AC_locate_text(target: str, lang: str = ..., region: Sequence[int] | None = ..., min_confidence: float = ..., case_sensitive: bool = ..., backend: Any = ...) -> Tuple[int, int]:
+def AC_locate_text(
+    target: str,
+    lang: str = ...,
+    region: Sequence[int] | None = ...,
+    min_confidence: float = ...,
+    case_sensitive: bool = ...,
+    backend: Any = ...,
+) -> Tuple[int, int]:
     """Return the centre (x, y) of the first match; raise if not found."""
+
+def AC_lock_session() -> Dict[str, Any]:
+    """Adapter: lock the workstation now."""
+
+def AC_loop_guard_observe(tool: str, args: Any = ..., result_digest: str = ...) -> Dict[str, Any]:
+    """Adapter: feed a step to the default loop guard; report the verdict."""
+
+def AC_loop_guard_reset() -> Dict[str, Any]:
+    """Adapter: clear the default loop guard's history."""
+
+def AC_make_json_patch(old: Any, new: Any) -> Dict[str, Any]:
+    """Adapter: compute an RFC 6902 patch turning old into new."""
+
+def AC_mark_click(mark_id: int) -> Dict[str, Any]:
+    """Adapter: click the element behind a numbered mark."""
+
+def AC_mark_screen(app_name: str | None = ..., render_path: str | None = ...) -> Dict[str, Any]:
+    """Adapter: number live UI elements (Set-of-Marks) for VLM grounding."""
+
+def AC_mask_rows(rows: List[Dict[str, Any]], rules: Dict[str, str]) -> Dict[str, Any]:
+    """Adapter: mask sensitive columns in rows."""
+
+def AC_match_auto(
+    template: str,
+    floor: Any = ...,
+    max_results: Any = ...,
+    region: Any = ...,
+    method: str = ...,
+) -> Dict[str, Any]:
+    """Adapter: matches above the auto-derived (Otsu) threshold, one per region."""
+
+def AC_match_color(
+    template: str,
+    channels: Any = ...,
+    min_score: Any = ...,
+    scales: Any = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: best colour (HSV-channel) template match on the screen."""
+
+def AC_match_color_all(
+    template: str,
+    channels: Any = ...,
+    min_score: Any = ...,
+    max_results: Any = ...,
+    nms_iou: Any = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: every colour (HSV-channel) match on the screen (NMS)."""
+
+def AC_match_elements(before: Any, after: Any, iou_threshold: Any = ...) -> Dict[str, Any]:
+    """Adapter: geometry-aware match of two element-box lists."""
+
+def AC_match_ensemble(
+    templates: Any,
+    min_score: Any = ...,
+    agree_px: Any = ...,
+    min_votes: Any = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: vote several template references onto one consensus location."""
+
+def AC_match_json(actual: Any, expected: Any, partial: bool = ..., match_type: bool = ...) -> Dict[str, Any]:
+    """Adapter: match a JSON payload against an expected one (relaxed rules)."""
+
+def AC_match_labels_to_widgets(labels: Any, widgets: Any) -> Dict[str, Any]:
+    """Adapter: match each widget (checkbox / radio / input) to its nearest label."""
+
+def AC_match_masked(template: str, mask: Any = ..., min_score: Any = ..., region: Any = ...) -> Dict[str, Any]:
+    """Adapter: best masked template match (alpha / mask ignores background)."""
+
+def AC_match_masked_all(
+    template: str,
+    mask: Any = ...,
+    min_score: Any = ...,
+    max_results: Any = ...,
+    nms_iou: Any = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: every masked template match on the screen (NMS)."""
+
+def AC_match_persistence(template: str, frames: Any, min_score: Any = ..., agree_px: Any = ...) -> Dict[str, Any]:
+    """Adapter: whether a template match holds steady across frames."""
+
+def AC_match_rotated(
+    template: str,
+    min_score: Any = ...,
+    scales: Any = ...,
+    angles: Any = ...,
+    region: Any = ...,
+    method: str = ...,
+) -> Dict[str, Any]:
+    """Adapter: best rotation/scale-tolerant template match on the screen."""
+
+def AC_match_rotated_all(
+    template: str,
+    min_score: Any = ...,
+    scales: Any = ...,
+    angles: Any = ...,
+    max_results: Any = ...,
+    nms_iou: Any = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: every rotation/scale-tolerant template match (NMS)."""
+
+def AC_match_subpixel(template: str, min_score: Any = ..., region: Any = ..., method: str = ...) -> Dict[str, Any]:
+    """Adapter: best template match with a sub-pixel-refined centre."""
+
+def AC_match_template(
+    template: str,
+    min_score: Any = ...,
+    scales: Any = ...,
+    region: Any = ...,
+    method: str = ...,
+) -> Dict[str, Any]:
+    """Adapter: best confidence-scored template match on the screen."""
+
+def AC_match_template_all(
+    template: str,
+    min_score: Any = ...,
+    max_results: Any = ...,
+    nms_iou: Any = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: every confidence-scored template match on the screen (NMS)."""
+
+def AC_match_theme(template: Any, region: Any = ..., method: Any = ..., min_score: Any = ...) -> Dict[str, Any]:
+    """Adapter: locate a template across a light/dark theme flip (device)."""
+
+def AC_match_with_trust(
+    template: str,
+    min_score: Any = ...,
+    scales: Any = ...,
+    ambiguous_ratio: Any = ...,
+    region: Any = ...,
+    method: str = ...,
+) -> Dict[str, Any]:
+    """Adapter: best template match with trust metrics (ambiguity / PSR)."""
+
+def AC_mcp_manifest(path: str | None = ..., include_tools: bool = ...) -> Dict[str, Any]:
+    """Adapter: build (or write) the MCP registry server.json manifest."""
+
+def AC_memory_forget(db: str, episode_id: int) -> Dict[str, Any]:
+    """Adapter: delete an episode."""
+
+def AC_memory_recall(db: str, query: str, limit: int = ...) -> Dict[str, Any]:
+    """Adapter: recall episodes most relevant to a query."""
+
+def AC_memory_recent(db: str, limit: int = ...) -> Dict[str, Any]:
+    """Adapter: list the most recent episodes."""
+
+def AC_memory_remember(
+    db: str,
+    goal: str,
+    steps: List[Any] | None = ...,
+    outcome: str = ...,
+    tags: List[str] | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: store an agent episode (goal/trajectory/outcome)."""
+
+def AC_memory_stats(db: str) -> Dict[str, int]:
+    """Adapter: episode count for a memory store."""
+
+def AC_merge_patch(doc: Any, patch: Any) -> Dict[str, Any]:
+    """Adapter: apply an RFC 7386 JSON Merge Patch (null deletes)."""
+
+def AC_merge_results(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Adapter: merge per-shard report dicts into one report."""
+
+def AC_mine_actions(actions: Any, min_len: int = ..., max_len: int = ..., min_count: int = ...) -> Dict[str, Any]:
+    """Adapter: mine an action log for repeated, automatable sequences."""
+
+def AC_minimize_window(title_substring: str, case_sensitive: bool = ...) -> bool:
+    """Minimise the first matching window. ``False`` if nothing matched."""
+
+def AC_minimize_windows_for_pid(pid: int) -> Dict[str, Any]:
+    """Adapter: minimise every window a process owns."""
+
+def AC_monitor_at_point(x: Any, y: Any) -> Dict[str, Any]:
+    """Adapter: report which monitor contains a virtual point."""
+
+def AC_most_salient(
+    source: Any = ...,
+    region: Any = ...,
+    size: Any = ...,
+    threshold: Any = ...,
+    min_area: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: the single most visually-salient region (where to look)."""
 
 def AC_mouse_left(x: int | None = ..., y: int | None = ...) -> Tuple[int, int, int]:
     """Click the mouse left mouse button at (x, y)."""
@@ -291,11 +1855,210 @@ def AC_mouse_middle(x: int | None = ..., y: int | None = ...) -> Tuple[int, int,
 def AC_mouse_right(x: int | None = ..., y: int | None = ...) -> Tuple[int, int, int]:
     """Click the mouse right mouse button at (x, y)."""
 
-def AC_mouse_scroll(scroll_value: int, x: int = ..., y: int = ..., scroll_direction: str = ...) -> Tuple[int, str]:
+def AC_mouse_scroll(
+    scroll_value: int,
+    x: int | None = ...,
+    y: int | None = ...,
+    scroll_direction: str = ...,
+) -> Tuple[int, int | str]:
     """模擬滑鼠滾輪操作"""
 
-def AC_ocr_read_structure(region: List[int] | None = ..., lang: str = ..., min_confidence: float = ...) -> Dict[str, Any]:
+def AC_move_along_path(waypoints: Any, easing: str = ..., per_segment_steps: Any = ...) -> Dict[str, Any]:
+    """Adapter: move the pointer through a polyline of waypoints."""
+
+def AC_move_element(
+    x: Any,
+    y: Any,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: move a UIA element to (x, y) (TransformPattern)."""
+
+def AC_move_mouse_relative(dx: Any, dy: Any) -> Dict[str, Any]:
+    """Adapter: move the pointer by a delta from its current position."""
+
+def AC_move_to_trash(path: str) -> Dict[str, Any]:
+    """Executor adapter: move a file to the OS recycle bin (recoverable)."""
+
+def AC_move_window(
+    title_substring: str,
+    x: int,
+    y: int,
+    width: int | None = ...,
+    height: int | None = ...,
+    case_sensitive: bool = ...,
+) -> bool:
+    """Move (and optionally resize) the first matching window."""
+
+def AC_near_duplicates(texts: Any, max_distance: Any = ...) -> Dict[str, Any]:
+    """Adapter: cluster near-duplicate texts by SimHash distance."""
+
+def AC_next_url(value: str) -> Dict[str, Any]:
+    """Adapter: return the rel=next URL from a Link header."""
+
+def AC_normalize_ext(target: str) -> Dict[str, Any]:
+    """Adapter: the lowercased extension of a path / bare ext (pure)."""
+
+def AC_normalize_text(text: str, form: str = ..., casefold: Any = ..., collapse_ws: Any = ...) -> Dict[str, Any]:
+    """Adapter: Unicode-normalise text into {text}."""
+
+def AC_normalize_url(url: str, sort_query: bool = ..., drop_fragment: bool = ...) -> Dict[str, Any]:
+    """Adapter: RFC 3986 syntax-based normalisation of a URL."""
+
+def AC_notify(title: str, message: str = ...) -> Dict[str, Any]:
+    """Executor adapter: show a cross-platform desktop notification."""
+
+def AC_notify_webhook(url: str, text: str, transport: str = ..., title: str | None = ...) -> Dict[str, Any]:
+    """Adapter: send a chat/webhook notification (slack/discord/teams/raw)."""
+
+def AC_observation_index(elements: Any, viewport: Any = ..., max_elements: Any = ...) -> Dict[str, Any]:
+    """Adapter: the on-screen elements in reading order, capped, each indexed."""
+
+def AC_observe_add(
+    name: str,
+    kind: str = ...,
+    event: str = ...,
+    actions: List[Any] | None = ...,
+    **params: Any,
+) -> Dict[str, Any]:
+    """Adapter: watch image/text/pixel; run ``actions`` on the event."""
+
+def AC_observe_list() -> Dict[str, Any]:
+    """Adapter: list registered watch names."""
+
+def AC_observe_poll() -> Dict[str, Any]:
+    """Adapter: evaluate all watches once; return fired events."""
+
+def AC_observe_remove(name: str) -> Dict[str, Any]:
+    """Adapter: remove a registered watch."""
+
+def AC_observe_start() -> Dict[str, Any]:
+    """Adapter: start the background observer thread."""
+
+def AC_observe_stop() -> Dict[str, Any]:
+    """Adapter: stop the background observer thread."""
+
+def AC_ocr_read_structure(
+    region: List[int] | None = ...,
+    lang: str = ...,
+    min_confidence: float = ...,
+) -> Dict[str, Any]:
     """Executor adapter: structured OCR (rows / tables / form fields)."""
+
+def AC_open_path(target: str, verb: str = ...) -> Dict[str, Any]:
+    """Adapter: open a file with its default app / a URL in the browser."""
+
+def AC_outbox_enqueue(name: str, event: Any) -> Dict[str, Any]:
+    """Adapter: enqueue an event into a named outbox."""
+
+def AC_outbox_pending(name: str) -> Dict[str, Any]:
+    """Adapter: list pending entries of a named outbox."""
+
+def AC_outline(lines: Any, heading_ratio: Any = ...) -> Dict[str, Any]:
+    """Adapter: the document outline (headings in order) from OCR lines."""
+
+def AC_parse_cache_control(headers: Any) -> Dict[str, Any]:
+    """Adapter: parse a Cache-Control header into {directives}."""
+
+def AC_parse_decimal(text: str, locale: str = ...) -> Dict[str, Any]:
+    """Adapter: parse a locale-formatted decimal string to a float."""
+
+def AC_parse_dotenv(text: str) -> Dict[str, Any]:
+    """Adapter: parse .env text into a {values} dict."""
+
+def AC_parse_link_header(value: str) -> Dict[str, Any]:
+    """Adapter: parse an RFC 8288 Link header into {links}."""
+
+def AC_parse_multipart(content_type: str, body_base64: str) -> Dict[str, Any]:
+    """Adapter: parse a base64-encoded multipart body into {fields, files}."""
+
+def AC_parse_number(text: str, locale: str = ...) -> Dict[str, Any]:
+    """Adapter: parse a locale-formatted integer string to an int."""
+
+def AC_parse_problem(response: Any) -> Dict[str, Any]:
+    """Adapter: parse an RFC 9457 problem+json HTTP response."""
+
+def AC_parse_quality_values(header: str) -> Dict[str, Any]:
+    """Adapter: parse a quality-value header into {values}."""
+
+def AC_parse_set_cookie(header: str) -> Dict[str, Any]:
+    """Adapter: parse one Set-Cookie header into its components."""
+
+def AC_parse_sse(text: str) -> Dict[str, Any]:
+    """Adapter: parse a text/event-stream blob into {events}."""
+
+def AC_pending_artifacts(approvals_dir: str = ...) -> Dict[str, Any]:
+    """Adapter: list artifacts awaiting approval."""
+
+def AC_percentiles(samples: Any, qs: Any = ...) -> Dict[str, Any]:
+    """Adapter: exact percentiles of a numeric sample list (or JSON string)."""
+
+def AC_perceptual_diff(
+    actual: str,
+    expected: str,
+    threshold: Any = ...,
+    include_aa: Any = ...,
+    max_diff_ratio: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: perceptual (YIQ) image diff with anti-alias suppression."""
+
+def AC_place_labels(marks: Any, label_width: Any = ..., label_height: Any = ..., bounds: Any = ...) -> Dict[str, Any]:
+    """Adapter: lay out non-overlapping Set-of-Marks label boxes (pure)."""
+
+def AC_plan_file_drop(paths: Any, point: Any = ...) -> Dict[str, Any]:
+    """Adapter: build the WM_DROPFILES payload without sending (pure)."""
+
+def AC_plan_keep_awake(display: Any = ..., system: Any = ...) -> Dict[str, Any]:
+    """Adapter: describe a keep-awake request (pure, no OS call)."""
+
+def AC_plan_lock_session() -> Dict[str, Any]:
+    """Adapter: describe how the workstation would be locked (pure)."""
+
+def AC_plan_open(target: str, verb: str = ...) -> Dict[str, Any]:
+    """Adapter: classify how a file path / URL would be opened (pure)."""
+
+def AC_plan_repair(verdict: Any, max_attempts: Any = ...) -> Dict[str, Any]:
+    """Adapter: ordered repair tactics for an effect verdict (no_op / changed_…)."""
+
+def AC_plan_retry_delays(
+    attempts: Any,
+    base: Any = ...,
+    max_delay: Any = ...,
+    multiplier: Any = ...,
+    jitter: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: the backoff delay schedule for the first N retries (pure)."""
+
+def AC_point_for_cell(label: str, rows: Any, cols: Any, region: Any = ...) -> Dict[str, Any]:
+    """Adapter: the centre point of a named grid cell (ready to click)."""
+
+def AC_populate_table(grid: Any, text_boxes: Any, overlap: Any = ...) -> Dict[str, Any]:
+    """Adapter: fill a ruling-line grid with OCR text boxes → addressable table."""
+
+def AC_post_click_to_window(
+    title_substring: str,
+    button: str = ...,
+    x: int = ...,
+    y: int = ...,
+    case_sensitive: bool = ...,
+) -> Dict[str, Any]:
+    """Adapter: post one click into a window without focusing it."""
+
+def AC_post_key_to_window(title_substring: str, key: str, case_sensitive: bool = ...) -> Dict[str, Any]:
+    """Adapter: post one key to a window without focusing it."""
+
+def AC_preprocess_image(
+    output_path: str,
+    source: Any = ...,
+    steps: Any = ...,
+    scale: Any = ...,
+    region: Any = ...,
+    block_size: Any = ...,
+    c: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: run the preprocessing pipeline and write the result to a file."""
 
 def AC_presence_clear() -> Dict[str, Any]:
     ...
@@ -318,8 +2081,11 @@ def AC_presence_update_cursor(viewer_id: str, x: int, y: int) -> Dict[str, Any]:
 def AC_press_keyboard_key(keycode: int | str, is_shift: bool = ..., skip_record: bool = ...) -> str | None:
     """按下指定鍵"""
 
-def AC_press_mouse(mouse_keycode: int | str, x: int = ..., y: int = ...) -> tuple[int, int, int] | None:
+def AC_press_mouse(mouse_keycode: int | str, x: int | None = ..., y: int | None = ...) -> tuple[Any, int, int] | None:
     """按下滑鼠按鍵"""
+
+def AC_profile_rows(rows: Any, columns: Any = ...) -> Dict[str, Any]:
+    """Adapter: profile a row-set into per-column statistics."""
 
 def AC_profiler_disable() -> Dict[str, Any]:
     ...
@@ -336,16 +2102,152 @@ def AC_profiler_reset() -> Dict[str, Any]:
 def AC_profiler_stats(limit: int | None = ...) -> List[dict]:
     """Executor adapter: dump profiler stats as JSON-friendly dicts."""
 
+def AC_propose_elements(region: Any = ..., min_area: Any = ..., iou_threshold: Any = ...) -> Dict[str, Any]:
+    """Adapter: propose text/widget element boxes from pixels (device)."""
+
+def AC_pseudo_localize(
+    text: str | None = ...,
+    mapping: Dict[str, Any] | None = ...,
+    expansion: float = ...,
+) -> Dict[str, Any]:
+    """Adapter: pseudo-localize a string or a whole catalog mapping."""
+
+def AC_quality_gate(
+    source: Any = ...,
+    region: Any = ...,
+    min_sharpness: Any = ...,
+    min_contrast: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: pass / fail an image for OCR readability with named issues."""
+
+def AC_quarantine_add(name: str, reason: str = ...) -> Dict[str, Any]:
+    ...
+
+def AC_quarantine_auto(
+    flip_rate_threshold: float = ...,
+    min_runs: int = ...,
+    limit: int = ...,
+    group_by: str = ...,
+) -> List[Dict[str, Any]]:
+    ...
+
+def AC_quarantine_clear() -> Dict[str, Any]:
+    ...
+
+def AC_quarantine_list() -> List[Dict[str, Any]]:
+    ...
+
+def AC_quarantine_remove(name: str) -> Dict[str, Any]:
+    ...
+
+def AC_queue_add(db: str, data: Any, reference: str | None = ..., name: str = ...) -> Dict[str, Any]:
+    """Adapter: enqueue a work item (skips live duplicate references)."""
+
+def AC_queue_complete(db: str, item_id: int, output: Any = ..., name: str = ...) -> Dict[str, Any]:
+    """Adapter: mark a work item successful."""
+
+def AC_queue_fail(
+    db: str,
+    item_id: int,
+    error: str,
+    kind: str = ...,
+    max_retries: int = ...,
+    name: str = ...,
+) -> Dict[str, Any]:
+    """Adapter: fail a work item (application errors retry, business don't)."""
+
+def AC_queue_next(db: str, name: str = ...) -> Dict[str, Any] | None:
+    """Adapter: atomically claim the next work item (or None)."""
+
+def AC_queue_stats(db: str, name: str = ...) -> Dict[str, int]:
+    """Adapter: return per-status counts for a work queue."""
+
+def AC_rank_changes(scored_boxes: Any, threshold: Any = ...) -> Dict[str, Any]:
+    """Adapter: rank scored element boxes by how much they changed (pure)."""
+
+def AC_rank_tests(flows: List[str], history_path: str | None = ..., window: int = ...) -> Dict[str, Any]:
+    """Adapter: score flows by risk (riskiest first)."""
+
+def AC_rate_limit(name: str, rate: float = ..., capacity: float = ..., n: float = ...) -> Dict[str, Any]:
+    """Adapter: try to take ``n`` tokens from a named token-bucket limiter."""
+
+def AC_read_barcodes(source: Any = ..., region: Any = ...) -> Dict[str, Any]:
+    """Adapter: decode 1-D barcodes on screen / in an image."""
+
+def AC_read_document(path: str) -> Dict[str, Any]:
+    """Adapter: read a .docx file's paragraphs."""
+
+def AC_read_presentation(path: str) -> Dict[str, Any]:
+    """Adapter: read a .pptx file's per-slide text."""
+
+def AC_read_qr(region: List[int] | str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: decode QR codes in a screen region."""
+
+def AC_read_table(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> List[List[str]]:
+    """Adapter: read a grid/table/list control as rows of cell strings."""
+
 def AC_read_text_in_region(region: List[int] | None = ..., lang: str = ..., min_confidence: float = ...) -> List[dict]:
     """Executor adapter: dump OCR hits in a region as JSON-friendly dicts."""
+
+def AC_read_workbook(path: str, sheet: str = ...) -> Dict[str, Any]:
+    """Adapter: read an .xlsx worksheet into rows."""
+
+def AC_readability_report(text: str) -> Dict[str, Any]:
+    """Adapter: full readability report (all metrics + counts) for a string."""
+
+def AC_reading_order(elements: Any, row_tol: Any = ...) -> Dict[str, Any]:
+    """Adapter: order element boxes top-to-bottom, left-to-right, with an index."""
+
+def AC_realize_item(
+    item_name: str,
+    by: str = ...,
+    container_name: str | None = ...,
+    container_role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: find + realize a virtualized list/grid item (VirtualizedItem)."""
 
 def AC_record() -> None:
     """start record keyboard and mouse event until stop_record"""
 
+def AC_redact_config(obj: Any, mask: str = ...) -> Dict[str, Any]:
+    """Adapter: redact secret-looking values from a config structure."""
+
+def AC_redact_pii(text: str, kinds: Any = ..., mode: str = ..., mask_char: str = ...) -> Dict[str, Any]:
+    """Adapter: redact PII in text (label/mask/partial/hash)."""
+
+def AC_redact_screenshot(
+    file_path: str,
+    output_path: str | None = ...,
+    policy: str = ...,
+    regions: List[List[int]] | None = ...,
+    accessibility: List[Dict[str, Any]] | None = ...,
+    ocr: List[Dict[str, Any]] | None = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: blur PII regions in a saved screenshot."""
+
+def AC_redact_secret_text(text: str, mask: str = ...) -> Dict[str, Any]:
+    """Adapter: mask secret-looking tokens within a free-text string."""
+
+def AC_region_color_stats(region: List[int] | str | None = ..., buckets: int = ...) -> Dict[str, Any]:
+    """Executor adapter: average + dominant colour of a screen region."""
+
+def AC_region_contrast(region: Any = ...) -> Dict[str, Any]:
+    """Adapter: sample a screen region and grade its text contrast (device)."""
+
+def AC_region_stability(frames: Any, settle_threshold: Any = ...) -> Dict[str, Any]:
+    """Adapter: how settled an injected frame sequence is (consecutive SSIM)."""
+
 def AC_release_keyboard_key(keycode: int | str, is_shift: bool = ..., skip_record: bool = ...) -> str | None:
     """放開指定鍵"""
 
-def AC_release_mouse(mouse_keycode: int | str, x: int = ..., y: int = ...) -> tuple[int, int, int] | None:
+def AC_release_mouse(mouse_keycode: int | str, x: int | None = ..., y: int | None = ...) -> tuple[Any, int, int] | None:
     """放開滑鼠按鍵"""
 
 def AC_remote_connect(host: str, port: int, token: str, timeout: float = ...) -> Dict[str, Any]:
@@ -363,7 +2265,60 @@ def AC_remote_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
 def AC_remote_viewer_status() -> Dict[str, Any]:
     ...
 
-def AC_rest_api_start(host: str = ..., port: int = ..., token: str | None = ..., enable_audit: bool = ...) -> Dict[str, Any]:
+def AC_repair_approve(suggestion_id: str, db: str | None = ...) -> Dict[str, Any]:
+    """Adapter: approve a pending locator-repair suggestion."""
+
+def AC_repair_pending(db: str | None = ...) -> Dict[str, Any]:
+    """Adapter: list locator-repair suggestions awaiting review."""
+
+def AC_repair_record(
+    key: str,
+    method: str,
+    coordinates: Any = ...,
+    description: str | None = ...,
+    confidence: float = ...,
+    auto_threshold: float = ...,
+    db: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: record a corrected locator from a heal (auto-apply or queue)."""
+
+def AC_repair_resolved(key: str, db: str | None = ...) -> Dict[str, Any]:
+    """Adapter: return the learned corrected locator for a key (or null)."""
+
+def AC_replay_timeline(events: List[Dict[str, Any]], speed: float = ...) -> Dict[str, Any]:
+    """Adapter: replay timed input events at a speed multiplier."""
+
+def AC_replay_trace(trace: Any) -> Dict[str, Any]:
+    """Adapter: replay a trajectory by running each step's action via the executor."""
+
+def AC_resize_element(
+    width: Any,
+    height: Any,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: resize a UIA element (TransformPattern)."""
+
+def AC_resolve_config(layers: Any) -> Dict[str, Any]:
+    """Adapter: deep-merge config layers into a resolved {config}."""
+
+def AC_resolve_pointer(doc: Any, pointer: str) -> Dict[str, Any]:
+    """Adapter: resolve a JSON Pointer in doc (a dict/list or JSON string)."""
+
+def AC_resolve_ref(ref: str) -> Dict[str, Any]:
+    """Adapter: resolve an env:// / file:// / secret:// reference."""
+
+def AC_resolve_refs(obj: Any) -> Dict[str, Any]:
+    """Adapter: recursively resolve references in a structure (or JSON str)."""
+
+def AC_rest_api_start(
+    host: str = ...,
+    port: int = ...,
+    token: str | None = ...,
+    enable_audit: bool = ...,
+) -> Dict[str, Any]:
     """Executor adapter: start the singleton REST API server."""
 
 def AC_rest_api_status() -> Dict[str, Any]:
@@ -372,14 +2327,161 @@ def AC_rest_api_status() -> Dict[str, Any]:
 def AC_rest_api_stop() -> Dict[str, Any]:
     ...
 
+def AC_restore_window_layout(layout: List[Dict[str, Any]] | str) -> Dict[str, Any]:
+    """Executor adapter: move windows back to a saved layout (list or path)."""
+
+def AC_retry_after(response: Any) -> Dict[str, Any]:
+    """Adapter: server-advised wait from a response (dict or JSON string)."""
+
+def AC_retry_delay(
+    attempt: Any,
+    base: Any = ...,
+    max_delay: Any = ...,
+    multiplier: Any = ...,
+    jitter: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: the (jittered) backoff delay before a retry attempt (pure)."""
+
+def AC_revoke_lease(token: str) -> Dict[str, Any]:
+    """Adapter: revoke a lease token immediately."""
+
+def AC_rrule_next(rule: str, dtstart: str, now: str | None = ...) -> Dict[str, Any]:
+    """Adapter: next RRULE occurrence at/after now (ISO in, ISO out)."""
+
+def AC_rrule_occurrences(rule: str, dtstart: str, count: int = ...) -> Dict[str, Any]:
+    """Adapter: expand an RRULE from an ISO dtstart into ISO datetimes."""
+
+def AC_run_agent(
+    goal: str,
+    backend: str = ...,
+    max_steps: int = ...,
+    wall_seconds: float = ...,
+    model: str | None = ...,
+    max_tokens: int = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: drive the closed-loop ``AgentLoop`` against ``goal``."""
+
+def AC_run_chaos(spec: Any) -> Dict[str, Any]:
+    """Adapter: run a chaos experiment whose probes/method/rollbacks are actions."""
+
 def AC_run_dag(definition: Dict[str, Any], max_parallel: int = ...) -> Dict[str, Any]:
     """Executor adapter: run a cross-host DAG definition."""
+
+def AC_run_device_matrix(
+    actions: List[Any],
+    devices: List[Dict[str, Any]],
+    max_parallel: int = ...,
+    var_name: str = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: run an action list across many devices in parallel."""
+
+def AC_run_resumable(
+    actions: List[Any],
+    run_id: str,
+    db: str,
+    variables: Dict[str, Any] | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: run actions with checkpoint/resume keyed by run_id."""
+
+def AC_run_saga(steps: Any) -> Dict[str, Any]:
+    """Adapter: run a saga (steps with compensating rollback) from a spec."""
+
+def AC_run_state_machine(spec: Any) -> Dict[str, Any]:
+    """Adapter: run a finite-state-machine spec through the executor."""
+
+def AC_run_suite(
+    spec: Dict[str, Any],
+    tags: List[str] | None = ...,
+    respect_quarantine: bool = ...,
+    junit_path: str | None = ...,
+    allure_dir: str | None = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: run a QA suite and optionally write CI reports."""
+
+def AC_s3_delete(key: str) -> Dict[str, Any]:
+    """Adapter: delete an artifact from the default S3 store."""
+
+def AC_s3_download(key: str, local_path: str) -> Dict[str, Any]:
+    """Adapter: download an artifact from the default S3 store."""
+
+def AC_s3_list(prefix: str | None = ...) -> Dict[str, Any]:
+    """Adapter: list artifact keys in the default S3 store."""
+
+def AC_s3_upload(local_path: str, key: str | None = ...) -> Dict[str, Any]:
+    """Adapter: upload an artifact to the default S3 store; return the key."""
+
+def AC_salient_regions(
+    source: Any = ...,
+    region: Any = ...,
+    size: Any = ...,
+    threshold: Any = ...,
+    min_area: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: ranked visually-salient regions of an image / the screen."""
+
+def AC_save_window_layout(path: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: snapshot every window's geometry (optionally to file)."""
+
+def AC_scale_sweep(
+    template: Any,
+    haystack: Any = ...,
+    region: Any = ...,
+    scales: Any = ...,
+    method: str = ...,
+) -> Dict[str, Any]:
+    """Adapter: per-scale match-score profile of a template."""
+
+def AC_scan_secrets(data: Any) -> Dict[str, Any]:
+    """Adapter: scan JSON/data for hardcoded secrets."""
+
+def AC_scan_vulns(components: Any, advisories: Any = ..., sarif_path: str | None = ...) -> Dict[str, Any]:
+    """Adapter: match SBOM components against an OSV advisory database."""
+
+def AC_score_candidates(
+    candidates: Any,
+    want_role: Any = ...,
+    want_name: Any = ...,
+    anchor: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: rank candidate element boxes by role / name / proximity."""
+
+def AC_score_step(record: Any) -> Dict[str, Any]:
+    """Adapter: rule-based score of a critic record."""
+
+def AC_screen_changed(app_name: str | None = ...) -> Dict[str, Any]:
+    """Adapter: diff the live screen against the last snapshot baseline."""
+
+def AC_screen_diff(before: List[Dict[str, Any]], after: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Adapter: semantic diff between two snapshots."""
 
 def AC_screen_size() -> Tuple[int, int]:
     """get screen size"""
 
-def AC_screenshot(file_path: str = ..., screen_region: list = ...) -> List[int]:
+def AC_screen_snapshot(app_name: str | None = ...) -> Dict[str, Any]:
+    """Adapter: snapshot the live a11y tree as a diff baseline."""
+
+def AC_screenshot(file_path: str | None = ..., screen_region: list | None = ...) -> Any:
     """use to capture current screen"""
+
+def AC_scroll_control_into_view(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: scroll a control into view (ScrollItemPattern)."""
+
+def AC_scroll_to_find(
+    target: str,
+    kind: str = ...,
+    direction: str = ...,
+    max_scrolls: int = ...,
+    scroll_amount: int = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: scroll until a target image / text is visible."""
+
+def AC_search_documents(docs: Any, query: str, top_k: int = ..., mode: str = ...) -> Dict[str, Any]:
+    """Adapter: BM25/TF-IDF search a {doc_id: text} corpus (dict or JSON str)."""
 
 def AC_secret_init(passphrase: str) -> Dict[str, Any]:
     """Executor adapter: create a fresh vault under ``passphrase``."""
@@ -402,10 +2504,58 @@ def AC_secret_status() -> Dict[str, Any]:
 def AC_secret_unlock(passphrase: str) -> Dict[str, Any]:
     ...
 
-def AC_self_heal_click(template_path: str | None = ..., description: str | None = ..., mouse_keycode: str = ..., detect_threshold: float = ..., screen_region: List[int] | None = ..., model: str | None = ..., raise_on_miss: bool = ...) -> Dict[str, Any]:
+def AC_seed_everything(seed: int = ...) -> Dict[str, Any]:
+    """Adapter: seed all RNG run-wide for reproducible runs."""
+
+def AC_segment_hsv(lower_hsv: Any, upper_hsv: Any, min_area: Any = ..., region: Any = ...) -> Dict[str, Any]:
+    """Adapter: locate blobs inside an explicit HSV band on the screen."""
+
+def AC_select_control_item(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: select a list / tree / tab item (SelectionItemPattern)."""
+
+def AC_select_control_text(
+    text: str,
+    ignore_case: Any = ...,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: find + select text in a control (TextPattern.FindText + Select)."""
+
+def AC_select_tests(
+    flows: List[str],
+    k: int | None = ...,
+    threshold: float | None = ...,
+    history_path: str | None = ...,
+    window: int = ...,
+) -> Dict[str, Any]:
+    """Adapter: pick the riskiest flows to run (top-k / threshold)."""
+
+def AC_self_heal_click(
+    template_path: str | None = ...,
+    description: str | None = ...,
+    mouse_keycode: str = ...,
+    detect_threshold: float = ...,
+    screen_region: List[int] | None = ...,
+    model: str | None = ...,
+    raise_on_miss: bool = ...,
+) -> Dict[str, Any]:
     """Executor adapter: locate with self-heal, then click."""
 
-def AC_self_heal_locate(template_path: str | None = ..., description: str | None = ..., detect_threshold: float = ..., screen_region: List[int] | None = ..., model: str | None = ..., raise_on_miss: bool = ...) -> Dict[str, Any]:
+def AC_self_heal_locate(
+    template_path: str | None = ...,
+    description: str | None = ...,
+    detect_threshold: float = ...,
+    screen_region: List[int] | None = ...,
+    model: str | None = ...,
+    raise_on_miss: bool = ...,
+) -> Dict[str, Any]:
     """Executor adapter: template-first locate with VLM fallback."""
 
 def AC_self_heal_log_clear() -> Dict[str, Any]:
@@ -414,22 +2564,177 @@ def AC_self_heal_log_clear() -> Dict[str, Any]:
 def AC_self_heal_log_list(limit: int = ...) -> List[Dict[str, Any]]:
     """Executor adapter: return the recent self-healing events."""
 
-def AC_set_mouse_position(x: int, y: int) -> tuple[int, int] | None:
+def AC_send_email(message: Any, smtp: Any) -> Dict[str, Any]:
+    """Adapter: send an email via SMTP (message/smtp config dicts)."""
+
+def AC_send_to_back(title: str) -> Dict[str, Any]:
+    """Adapter: send a window to the bottom of the z-order."""
+
+def AC_sequence_observe(name: str, stream_id: str, seq: Any) -> Dict[str, Any]:
+    """Adapter: observe a sequence number in a named tracker."""
+
+def AC_serialize_observation(elements: Any, viewport: Any = ..., max_elements: Any = ...) -> Dict[str, Any]:
+    """Adapter: render an indexed a11y text observation from element dicts."""
+
+def AC_set_asset(
+    name: str,
+    value: Any,
+    asset_type: str = ...,
+    environment: str = ...,
+    db: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: store a typed, environment-scoped asset."""
+
+def AC_set_clipboard_csv(rows: Any, delimiter: str = ...) -> Dict[str, Any]:
+    """Adapter: put a table on the clipboard as the Csv format (Windows)."""
+
+def AC_set_clipboard_files(paths: Any) -> Dict[str, Any]:
+    """Adapter: put a file-drop list (CF_HDROP) on the clipboard (Windows)."""
+
+def AC_set_clipboard_html(html: str, fragment_plaintext: Any = ...) -> Dict[str, Any]:
+    """Adapter: put an HTML fragment on the clipboard as CF_HTML (Windows)."""
+
+def AC_set_clipboard_rtf(text: str) -> Dict[str, Any]:
+    """Adapter: put text on the clipboard as Rich Text Format (Windows)."""
+
+def AC_set_control_range(
+    value: Any,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: set a slider / progress / spinner value (RangeValuePattern)."""
+
+def AC_set_field_text(text: str, clear: str = ..., paste: Any = ..., modifier: str = ...) -> Dict[str, Any]:
+    """Adapter: clear the focused field and enter text."""
+
+def AC_set_mouse_position(x: int, y: int) -> tuple[int, int]:
     """設定滑鼠位置"""
+
+def AC_set_mute(muted: Any = ...) -> Dict[str, Any]:
+    """Adapter: set the master mute flag."""
 
 def AC_set_record_enable(set_enable: bool = ...) -> None:
     """設定是否啟用紀錄"""
 
+def AC_set_topmost(title: str, on: Any = ...) -> Dict[str, Any]:
+    """Adapter: pin a window always-on-top (or release it)."""
+
+def AC_set_view(
+    view: str,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: switch a control to a named view (MultipleViewPattern)."""
+
+def AC_set_volume(level: Any) -> Dict[str, Any]:
+    """Adapter: set the master volume to ``level`` percent."""
+
+def AC_set_window_state(
+    state: str,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> bool:
+    """Adapter: set a window's visual state normal/maximized/minimized."""
+
+def AC_settle_point(churns: Any, quiet_samples: Any = ..., max_churn: Any = ...) -> Dict[str, Any]:
+    """Adapter: index at which a churn series first settles (or settled=False)."""
+
+def AC_shard_suite(
+    flows: List[str],
+    shards: int = ...,
+    history_path: str | None = ...,
+    window: int = ...,
+) -> Dict[str, Any]:
+    """Adapter: balance flows into duration-aware shards."""
+
 def AC_shell_command(shell_command: str | List[str]) -> None:
     """Execute shell command with shell=False."""
 
-def AC_start_mcp_http_server(host: str = ..., port: int = ..., mcp: Any = ..., auth_token: str | None = ..., ssl_context: Any = ...) -> Any:
+def AC_sign_action_file(path: str, key: str | None = ...) -> Dict[str, Any]:
+    """Executor adapter: write an HMAC-SHA256 signature sidecar for a file."""
+
+def AC_simhash(text: str, bits: Any = ...) -> Dict[str, Any]:
+    """Adapter: SimHash fingerprint of text (as int)."""
+
+def AC_simulate_cvd(rgb: Any, kind: Any = ..., severity: Any = ...) -> Dict[str, Any]:
+    """Adapter: map an RGB colour through a CVD simulation matrix (pure)."""
+
+def AC_skill_list(path: str) -> Dict[str, Any]:
+    """Adapter: list saved skill names."""
+
+def AC_skill_remove(path: str, name: str) -> Dict[str, Any]:
+    """Adapter: delete a saved skill."""
+
+def AC_skill_run(path: str, name: str) -> Dict[str, Any]:
+    """Adapter: execute a stored skill's actions."""
+
+def AC_skill_save(
+    path: str,
+    name: str,
+    actions: List[Any],
+    description: str = ...,
+    tags: List[str] | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: save a reusable action sequence (skill)."""
+
+def AC_skill_search(path: str, query: str) -> Dict[str, Any]:
+    """Adapter: search skills by name/description/tags."""
+
+def AC_slugify(text: str, sep: str = ...) -> Dict[str, Any]:
+    """Adapter: produce an ASCII slug from text."""
+
+def AC_sma(values: Any, window: Any) -> Dict[str, Any]:
+    """Adapter: trailing simple moving average."""
+
+def AC_snap_window(title: str, position: str = ...) -> Dict[str, Any]:
+    """Executor adapter: snap a window to a screen region."""
+
+def AC_soft_assert(checks: Any, raise_on_fail: Any = ...) -> Dict[str, Any]:
+    """Adapter: aggregate a list of {value, op, expected, message} checks."""
+
+def AC_spans_to_otlp(spans: Any, resource_attrs: Any = ...) -> Dict[str, Any]:
+    """Adapter: wrap spans in an OTLP/JSON resourceSpans envelope."""
+
+def AC_ssim_changed_regions(
+    reference: str,
+    current: Any = ...,
+    ignore: Any = ...,
+    threshold: Any = ...,
+    min_area: Any = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: boxes of the regions that structurally changed, largest first."""
+
+def AC_ssim_compare(reference: str, current: Any = ..., ignore: Any = ..., region: Any = ...) -> Dict[str, Any]:
+    """Adapter: structural-similarity score between reference and current/screen."""
+
+def AC_start_mcp_http_server(
+    host: str = ...,
+    port: int = ...,
+    mcp: Any = ...,
+    auth_token: str | None = ...,
+    ssl_context: Any = ...,
+) -> Any:
     """Start and return an :class:`HttpMCPServer`; convenience wrapper."""
 
 def AC_start_mcp_server() -> Any:
     """Start a stdio MCP server in the foreground; blocks until EOF."""
 
-def AC_start_remote_host(token: str, bind: str = ..., port: int = ..., fps: float = ..., quality: int = ..., region: List[int] | None = ..., max_clients: int = ...) -> Dict[str, Any]:
+def AC_start_remote_host(
+    token: str,
+    bind: str = ...,
+    port: int = ...,
+    fps: float = ...,
+    quality: int = ...,
+    region: List[int] | None = ...,
+    max_clients: int = ...,
+) -> Dict[str, Any]:
     """Executor adapter: start the singleton remote-desktop host."""
 
 def AC_start_webrtc_host(token: str, read_only: bool = ...) -> Dict[str, Any]:
@@ -438,11 +2743,22 @@ def AC_start_webrtc_host(token: str, read_only: bool = ...) -> Dict[str, Any]:
 def AC_start_webrtc_viewer(token: str, viewer_id: str | None = ...) -> Dict[str, Any]:
     """Executor adapter: allocate the singleton WebRTC viewer."""
 
-def AC_start_ws_host(token: str, bind: str = ..., port: int = ..., fps: float = ..., quality: int = ..., region: List[int] | None = ..., max_clients: int = ...) -> Dict[str, Any]:
+def AC_start_ws_host(
+    token: str,
+    bind: str = ...,
+    port: int = ...,
+    fps: float = ...,
+    quality: int = ...,
+    region: List[int] | None = ...,
+    max_clients: int = ...,
+) -> Dict[str, Any]:
     """Executor adapter: start the singleton WebSocket-transport host."""
 
 def AC_stop_record() -> list:
     """stop current record"""
+
+def AC_stop_record_timeline() -> List[dict]:
+    """Adapter: stop recording and return the full replayable timeline."""
 
 def AC_stop_remote_host() -> Dict[str, Any]:
     ...
@@ -456,34 +2772,131 @@ def AC_stop_webrtc_viewer() -> Dict[str, Any]:
 def AC_stop_ws_host() -> Dict[str, Any]:
     ...
 
+def AC_store_validators(response: Any) -> Dict[str, Any]:
+    """Adapter: extract cache validators from an HTTP response."""
+
+def AC_tab_order(app_name: str | None = ..., max_results: int = ...) -> Dict[str, Any]:
+    """Executor adapter: focusable elements in keyboard Tab order."""
+
+def AC_table_cell(
+    row: Any,
+    column: Any,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: the cell at (row, column) with its span (GridItemPattern)."""
+
+def AC_table_headers(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: a table's row/column header labels (TablePattern)."""
+
+def AC_tag_kinds(elements: Any) -> Dict[str, Any]:
+    """Adapter: label fused boxes text/widget by source (pure)."""
+
+def AC_take_golden(path: str, region: List[int] | None = ...) -> str:
+    """Adapter: capture and save a golden/baseline image."""
+
+def AC_text_similarity(a: str, b: str, metric: str = ...) -> Dict[str, Any]:
+    """Adapter: normalised string similarity for the chosen metric."""
+
+def AC_three_way_merge(base: str, ours: str, theirs: str) -> Dict[str, Any]:
+    """Adapter: three-way merge ours/theirs against base."""
+
+def AC_tile_rect(slot: str, screen: Any = ..., gap: Any = ...) -> Dict[str, Any]:
+    """Adapter: rectangle for a named tiling slot of the screen work area."""
+
+def AC_timeout_stats(
+    durations: Any,
+    percentile_q: Any = ...,
+    factor: Any = ...,
+    min_s: Any = ...,
+    max_s: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: timeout recommendation plus percentiles / clamp flags (pure)."""
+
+def AC_to_model(x: int, y: int, physical_w: int, physical_h: int, model_w: int, model_h: int) -> Dict[str, Any]:
+    """Adapter: map a physical-pixel coordinate to a model grid."""
+
+def AC_to_physical(x: float, y: float, physical_w: int, physical_h: int, model_w: int, model_h: int) -> Dict[str, Any]:
+    """Adapter: map a model-grid coordinate to physical pixels."""
+
+def AC_toggle_mute() -> Dict[str, Any]:
+    """Adapter: flip the master mute flag."""
+
+def AC_trace_export() -> Dict[str, Any]:
+    """Adapter: export the default agent trace in OTLP-friendly shape."""
+
+def AC_trace_extract(headers: Any) -> Dict[str, Any]:
+    """Adapter: extract a trace context from request headers."""
+
+def AC_trace_inject(headers: Any = ..., traceparent: Any = ...) -> Dict[str, Any]:
+    """Adapter: propagate a trace context into outgoing headers."""
+
+def AC_trace_record(
+    operation: str,
+    model: str | None = ...,
+    system: str | None = ...,
+    input_tokens: int | None = ...,
+    output_tokens: int | None = ...,
+    tool_name: str | None = ...,
+    duration_s: float = ...,
+    status: str = ...,
+) -> Dict[str, Any]:
+    """Adapter: record a GenAI-convention span on the default agent trace."""
+
+def AC_trace_reset() -> Dict[str, Any]:
+    """Adapter: clear the default agent trace."""
+
+def AC_trace_summary() -> Dict[str, Any]:
+    """Adapter: roll up the default agent trace (count/tokens/duration)."""
+
+def AC_ts_downsample(series: Any, bucket_s: Any, agg: str = ...) -> Dict[str, Any]:
+    """Adapter: downsample a (ts, value) series into tumbling buckets."""
+
+def AC_ts_rate(series: Any, window_s: Any = ...) -> Dict[str, Any]:
+    """Adapter: per-second counter rate over a (ts, value) series."""
+
+def AC_tween_drag(
+    start: List[int],
+    end: List[int],
+    steps: int = ...,
+    easing: str = ...,
+    button: str = ...,
+) -> Dict[str, Any]:
+    """Adapter: drag along an eased path from start to end."""
+
 def AC_type_keyboard(keycode: int | str, is_shift: bool = ..., skip_record: bool = ...) -> str | None:
     """模擬輸入 (按下再放開)"""
 
-def AC_usb_recent_events(since: int = ..., limit: int | None = ...) -> List[Dict[str, Any]]:
-    ...
+def AC_type_unicode(text: str, modifier: str = ...) -> Dict[str, Any]:
+    """Adapter: enter arbitrary Unicode text via clipboard paste."""
 
-def AC_usb_watch_start(poll_interval_s: float = ...) -> Dict[str, Any]:
-    """Executor adapter: start the singleton USB hotplug watcher."""
+def AC_type_unicode_keys(text: str) -> Dict[str, Any]:
+    """Adapter: enter arbitrary Unicode text as key events, sparing the clipboard."""
 
-def AC_usb_watch_stop() -> Dict[str, Any]:
-    ...
+def AC_type_unicode_text(text: str, modifier: str = ...) -> Dict[str, Any]:
+    """Adapter: enter arbitrary Unicode text by the best route this platform has."""
 
-def AC_usb_passthrough_enable(enabled: bool = ...) -> Dict[str, Any]:
-    """Toggle the USB passthrough feature flag (default off)."""
+def AC_unified_diff(a: str, b: str) -> Dict[str, Any]:
+    """Adapter: unified diff transforming text a into b."""
 
-def AC_usb_passthrough_status() -> Dict[str, Any]:
-    ...
+def AC_urls_equal(first: str, second: str) -> Dict[str, Any]:
+    """Adapter: whether two URLs are equivalent after canonicalisation."""
 
-def AC_usb_acl_list() -> Dict[str, Any]:
-    ...
-
-def AC_usb_acl_add(vendor_id: str, product_id: str, serial: str | None = ..., allow: bool = ..., prompt_on_open: bool = ..., label: str = ...) -> Dict[str, Any]:
-    """Add a per-device rule to the USB ACL."""
-
-def AC_usb_acl_remove(vendor_id: str, product_id: str, serial: str | None = ...) -> Dict[str, Any]:
-    ...
-
-def AC_usb_acl_set_default(policy: str) -> Dict[str, Any]:
+def AC_usb_acl_add(
+    vendor_id: str,
+    product_id: str,
+    serial: str | None = ...,
+    allow: bool = ...,
+    prompt_on_open: bool = ...,
+    label: str = ...,
+) -> Dict[str, Any]:
     ...
 
 def AC_usb_acl_export(path: str) -> Dict[str, Any]:
@@ -492,38 +2905,271 @@ def AC_usb_acl_export(path: str) -> Dict[str, Any]:
 def AC_usb_acl_import(path: str, replace: bool = ...) -> Dict[str, Any]:
     ...
 
+def AC_usb_acl_list() -> Dict[str, Any]:
+    ...
+
+def AC_usb_acl_remove(vendor_id: str, product_id: str, serial: str | None = ...) -> Dict[str, Any]:
+    ...
+
+def AC_usb_acl_set_default(policy: str) -> Dict[str, Any]:
+    ...
+
 def AC_usb_loopback_list() -> Dict[str, Any]:
-    """List ACL-visible devices over the in-process loopback channel."""
+    ...
 
 def AC_usb_loopback_open(vendor_id: str, product_id: str, serial: str | None = ...) -> Dict[str, Any]:
-    """Claim a local device over loopback and read its descriptor."""
+    ...
+
+def AC_usb_passthrough_enable(enabled: bool = ...) -> Dict[str, Any]:
+    ...
+
+def AC_usb_passthrough_status() -> Dict[str, Any]:
+    ...
+
+def AC_usb_recent_events(since: int = ..., limit: int | None = ...) -> List[Dict[str, Any]]:
+    ...
 
 def AC_usb_remote_list() -> Dict[str, Any]:
-    """List the remote host's devices over the live WebRTC usb channel."""
+    ...
 
 def AC_usb_remote_open(vendor_id: str, product_id: str, serial: str | None = ...) -> Dict[str, Any]:
-    """Claim a remote device over the live WebRTC usb channel and probe it."""
+    ...
 
-def AC_vlm_click(description: str, screen_region: List[int] | None = ..., model: str | None = ..., backend: Any = ...) -> bool:
+def AC_usb_watch_start(poll_interval_s: float = ...) -> Dict[str, Any]:
+    """Executor adapter: start the singleton USB hotplug watcher."""
+
+def AC_usb_watch_stop() -> Dict[str, Any]:
+    ...
+
+def AC_validate_action(action: Any, screen: Any = ..., targets: Any = ...) -> Dict[str, Any]:
+    """Adapter: validate a coordinate action (bounds + optional snap-to-target)."""
+
+def AC_validate_config(schema: Any, config: Any) -> Dict[str, Any]:
+    """Adapter: validate a config mapping against a schema spec."""
+
+def AC_validate_json(data: Any, schema: Any) -> Dict[str, Any]:
+    """Adapter: validate data against a JSON Schema (each JSON string or object)."""
+
+def AC_validate_rows(rows: List[Dict[str, Any]], schema: Dict[str, Any]) -> Dict[str, Any]:
+    """Adapter: validate rows against a declarative schema."""
+
+def AC_verify_action_file(path: str, key: str | None = ..., raise_on_fail: bool = ...) -> Dict[str, Any]:
+    """Executor adapter: verify an action file against its signature sidecar."""
+
+def AC_verify_artifact(name: str, content: Any, approvals_dir: str = ..., extension: str = ...) -> Dict[str, Any]:
+    """Adapter: verify an artifact against its approved baseline."""
+
+def AC_verify_field_value(
+    expected: Any,
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+    mode: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: read a native control's value back and compare to expected."""
+
+def AC_verify_provenance(statement: Any, files: Any) -> Dict[str, Any]:
+    """Adapter: re-hash files (name->path) against a provenance statement."""
+
+def AC_vlm_click(
+    description: str,
+    screen_region: List[int] | None = ...,
+    model: str | None = ...,
+    backend: Any = ...,
+) -> bool:
     """Locate by description, then click the center of the match."""
 
 def AC_vlm_locate(description: str, screen_region: List[int] | None = ..., model: str | None = ...) -> List[int] | None:
     """Executor adapter: return VLM-located coords as a JSON-safe list."""
 
-def AC_wait_pixel_changes(x: int, y: int, timeout_s: float = ..., poll_interval_s: float = ..., rgb_tolerance: int = ...) -> Dict[str, Any]:
+def AC_voice_clear() -> Dict[str, Any]:
+    """Adapter: clear all registered voice commands."""
+
+def AC_voice_dispatch(text: str) -> Dict[str, Any]:
+    """Adapter: run the command best matching recognized ``text``."""
+
+def AC_voice_list() -> Dict[str, Any]:
+    """Adapter: list registered voice-command phrases."""
+
+def AC_voice_register(phrase: str, actions: Any) -> Dict[str, Any]:
+    """Adapter: register a voice command on the default router."""
+
+def AC_vote_centers(centers: Any, agree_px: Any = ..., min_votes: Any = ...) -> Dict[str, Any]:
+    """Adapter: vote candidate hit centres into a consensus target."""
+
+def AC_wait_actionable(
+    template: str,
+    timeout_s: Any = ...,
+    stable_for_s: Any = ...,
+    min_score: Any = ...,
+    region: Any = ...,
+) -> Dict[str, Any]:
+    """Adapter: wait until a template is visible + stable before acting."""
+
+def AC_wait_clipboard_change(
+    baseline: str | None = ...,
+    target: str | None = ...,
+    contains: bool = ...,
+    timeout_s: float = ...,
+    poll_interval_s: float = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: wait until the clipboard changes (or matches target)."""
+
+def AC_wait_color(
+    target_rgb: Any,
+    region: Any = ...,
+    tolerance: int = ...,
+    min_fraction: float = ...,
+    present: bool = ...,
+    timeout_s: float = ...,
+    poll_interval_s: float = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: wait until a colour fills/leaves a region."""
+
+def AC_wait_for_composition_commit(timeout: Any = ..., interval: Any = ...) -> Dict[str, Any]:
+    """Adapter: block until the IME finishes composing or timeout."""
+
+def AC_wait_for_file(
+    path: str,
+    timeout_s: float = ...,
+    poll_interval_s: float = ...,
+    stable_for_s: float = ...,
+    min_size: int = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: wait until a file exists and finishes being written."""
+
+def AC_wait_for_focus_change(timeout: Any = ...) -> Dict[str, Any]:
+    """Adapter: block until the keyboard focus moves (UIA focus event)."""
+
+def AC_wait_for_port(
+    host: str,
+    port: int,
+    timeout_s: float = ...,
+    poll_interval_s: float = ...,
+    connect_timeout_s: float = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: wait until a TCP port accepts connections."""
+
+def AC_wait_for_process(
+    name: str,
+    present: bool = ...,
+    timeout_s: float = ...,
+    poll_interval_s: float = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: wait until a process appears or exits."""
+
+def AC_wait_for_unlock(timeout: Any = ..., interval: Any = ...) -> Dict[str, Any]:
+    """Adapter: block until the session is unlocked or timeout."""
+
+def AC_wait_image_gone(
+    image: Any,
+    detect_threshold: float = ...,
+    timeout_s: float = ...,
+    poll_interval_s: float = ...,
+    gone_for_s: float = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: wait until an image is no longer on screen."""
+
+def AC_wait_pixel_changes(
+    x: int,
+    y: int,
+    timeout_s: float = ...,
+    poll_interval_s: float = ...,
+    rgb_tolerance: int = ...,
+) -> Dict[str, Any]:
     """Executor adapter: smart wait for one pixel to change colour."""
 
-def AC_wait_region_idle(region: List[int], timeout_s: float = ..., poll_interval_s: float = ..., stable_for_s: float = ..., max_pixel_diff: int = ...) -> Dict[str, Any]:
+def AC_wait_region_idle(
+    region: List[int],
+    timeout_s: float = ...,
+    poll_interval_s: float = ...,
+    stable_for_s: float = ...,
+    max_pixel_diff: int = ...,
+) -> Dict[str, Any]:
     """Executor adapter: smart wait for a sub-region to stop moving."""
 
-def AC_wait_screen_stable(region: List[int] | None = ..., timeout_s: float = ..., poll_interval_s: float = ..., stable_for_s: float = ..., max_pixel_diff: int = ...) -> Dict[str, Any]:
+def AC_wait_screen_stable(
+    region: List[int] | None = ...,
+    timeout_s: float = ...,
+    poll_interval_s: float = ...,
+    stable_for_s: float = ...,
+    max_pixel_diff: int = ...,
+) -> Dict[str, Any]:
     """Executor adapter: smart wait for the screen to stop moving."""
 
-def AC_wait_text(target: str, lang: str = ..., region: Sequence[int] | None = ..., timeout: float = ..., poll: float = ..., min_confidence: float = ..., case_sensitive: bool = ..., backend: Any = ...) -> Tuple[int, int]:
+def AC_wait_text(
+    target: str,
+    lang: str = ...,
+    region: Sequence[int] | None = ...,
+    timeout: float = ...,
+    poll: float = ...,
+    min_confidence: float = ...,
+    case_sensitive: bool = ...,
+    backend: Any = ...,
+) -> Tuple[int, int]:
     """Poll until ``target`` appears on screen; raise on timeout."""
+
+def AC_wait_text_gone(
+    text: str,
+    timeout_s: float = ...,
+    poll_interval_s: float = ...,
+    gone_for_s: float = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: wait until text is no longer on screen (OCR)."""
+
+def AC_wait_until_app_idle(quiet_samples: Any = ..., timeout: Any = ..., interval: Any = ...) -> Dict[str, Any]:
+    """Adapter: block until the foreground app's busy cursor settles or timeout."""
 
 def AC_wait_window(title_substring: str, timeout: float = ..., poll: float = ..., case_sensitive: bool = ...) -> int:
     """Poll until a window with the given title appears; return its hwnd."""
+
+def AC_wait_window_closed(
+    title: str,
+    case_sensitive: bool = ...,
+    timeout_s: float = ...,
+    poll_interval_s: float = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: wait until a window matching ``title`` disappears."""
+
+def AC_wait_window_title(
+    pattern: str,
+    present: bool = ...,
+    regex: bool = ...,
+    timeout_s: float = ...,
+    poll_interval_s: float = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: wait for a window title (regex) to appear / vanish."""
+
+def AC_walk_tree(app_name: str | None = ..., max_results: int = ...) -> Dict[str, Any]:
+    """Executor adapter: dump the a11y tree with friendly roles + node paths."""
+
+def AC_watchdog_add(
+    title: str,
+    action: str = ...,
+    case_sensitive: bool = ...,
+    name: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: register a popup-dismissal rule on the default watchdog."""
+
+def AC_watchdog_list() -> Dict[str, Any]:
+    """Adapter: report the watchdog's rules, run state and dismissals."""
+
+def AC_watchdog_start() -> Dict[str, Any]:
+    """Adapter: start the background popup watchdog."""
+
+def AC_watchdog_stop() -> Dict[str, Any]:
+    """Adapter: stop the background popup watchdog."""
+
+def AC_wcag_audit(
+    app_name: str | None = ...,
+    contrast_pairs: List[Dict[str, Any]] | None = ...,
+    texts: List[str] | None = ...,
+    level: str = ...,
+    min_target_px: int = ...,
+    max_results: int = ...,
+) -> Dict[str, Any]:
+    """Executor adapter: WCAG-tagged conformance audit (SC ids + levels)."""
 
 def AC_web_available() -> bool:
     """Return True when ``je_web_runner`` is importable."""
@@ -549,7 +3195,12 @@ def AC_web_run_actions(actions: list) -> list:
 def AC_web_screenshot(file_path: str) -> Any:
     """Convenience executor: save a screenshot of the active browser."""
 
-def AC_webhook_add(path: str, script_path: str, methods: List[str] | None = ..., token: str | None = ...) -> Dict[str, Any]:
+def AC_webhook_add(
+    path: str,
+    script_path: str,
+    methods: List[str] | None = ...,
+    token: str | None = ...,
+) -> Dict[str, Any]:
     ...
 
 def AC_webhook_list() -> List[Dict[str, Any]]:
@@ -585,8 +3236,40 @@ def AC_webrtc_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
 def AC_webrtc_viewer_status() -> Dict[str, Any]:
     ...
 
+def AC_window_interaction_state(
+    name: str | None = ...,
+    role: str | None = ...,
+    app_name: str | None = ...,
+    automation_id: str | None = ...,
+) -> Dict[str, Any]:
+    """Adapter: a window's interaction state (ready/blocked/not_responding)."""
+
+def AC_window_pid(title_substring: str, case_sensitive: bool = ...) -> Dict[str, Any]:
+    """Adapter: the PID owning the first matching window (``0`` when none)."""
+
+def AC_window_rect(title_substring: str, case_sensitive: bool = ...) -> Dict[str, Any]:
+    """Adapter: a window's screen rectangle as ``{rect: [l, t, r, b]}``."""
+
+def AC_windows_for_pid(pid: int, titled_only: bool = ...) -> Dict[str, Any]:
+    """Adapter: every visible top-level window owned by a process."""
+
+def AC_with_modifiers(modifiers: Any, actions: Any) -> Dict[str, Any]:
+    """Adapter: run nested actions while modifier keys are held down."""
+
 def AC_write(write_string: str, is_shift: bool = ...) -> str | None:
     """模擬輸入整個字串"""
+
+def AC_write_document(path: str, paragraphs: List[str]) -> Dict[str, Any]:
+    """Adapter: write paragraphs to a .docx file."""
+
+def AC_write_presentation(path: str, slides: List[Any]) -> Dict[str, Any]:
+    """Adapter: write slides to a .pptx file."""
+
+def AC_write_step_video(steps: Any, output: str, fps: int = ..., seconds_per_step: float = ...) -> Dict[str, Any]:
+    """Adapter: render captioned screenshots into a walkthrough video."""
+
+def AC_write_workbook(path: str, rows: List[Dict[str, Any]], sheet: str = ...) -> Dict[str, Any]:
+    """Adapter: write rows to an .xlsx file."""
 
 def AC_ws_connect(host: str, port: int, token: str, path: str = ..., timeout: float = ...) -> Dict[str, Any]:
     """Executor adapter: connect the singleton WS viewer."""
@@ -602,3 +3285,6 @@ def AC_ws_send_input(action: Dict[str, Any]) -> Dict[str, Any]:
 
 def AC_ws_viewer_status() -> Dict[str, Any]:
     ...
+
+def AC_xy_cut(boxes: Any, min_gap: Any = ...) -> Dict[str, Any]:
+    """Adapter: recursive XY-cut region tree of OCR boxes."""

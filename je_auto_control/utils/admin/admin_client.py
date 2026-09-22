@@ -164,7 +164,9 @@ class AdminConsoleClient:
         start = time.monotonic()
         try:
             sessions = self._http_get(host, "/sessions")
-        except (OSError, ValueError, TimeoutError) as error:  # NOSONAR — TimeoutError diverges from OSError on Python 3.10 (the project's lowest supported version), so it is not redundant in the catch tuple
+        # Not redundant: TimeoutError is not an OSError on Python 3.10,
+        # the lowest supported version.
+        except (OSError, ValueError, TimeoutError) as error:  # NOSONAR
             return HostStatus(
                 label=host.label, base_url=host.base_url, healthy=False,
                 latency_ms=(time.monotonic() - start) * 1000.0,
@@ -181,7 +183,9 @@ class AdminConsoleClient:
     def _safe_get(self, host: AdminHost, path: str) -> Optional[Dict[str, Any]]:
         try:
             return self._http_get(host, path)
-        except (OSError, ValueError, TimeoutError) as error:  # NOSONAR — TimeoutError diverges from OSError on Python 3.10 (the project's lowest supported version), so it is not redundant in the catch tuple
+        # Not redundant: TimeoutError is not an OSError on Python 3.10,
+        # the lowest supported version.
+        except (OSError, ValueError, TimeoutError) as error:  # NOSONAR
             autocontrol_logger.warning(
                 "admin: %s GET %s failed: %r", host.label, path, error,
             )
@@ -192,7 +196,9 @@ class AdminConsoleClient:
         try:
             payload = self._http_post(host, "/execute", {"actions": actions})
             return {"label": host.label, "ok": True, "result": payload}
-        except (OSError, ValueError, TimeoutError) as error:  # NOSONAR — TimeoutError diverges from OSError on Python 3.10 (the project's lowest supported version), so it is not redundant in the catch tuple
+        # Not redundant: TimeoutError is not an OSError on Python 3.10,
+        # the lowest supported version.
+        except (OSError, ValueError, TimeoutError) as error:  # NOSONAR
             return {"label": host.label, "ok": False, "error": str(error)}
 
     def _http_get(self, host: AdminHost, path: str) -> Dict[str, Any]:

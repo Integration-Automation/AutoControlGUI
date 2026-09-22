@@ -130,7 +130,8 @@ class PromptBridge(QObject):
         # .invokeMethod + queued slot above: ``result`` is mutated by
         # ``_show_dialog`` on the GUI thread before ``done`` is set,
         # so neither key is guaranteed False at this point.
-        if result["allow"] and result["remember"] and self._acl is not None:  # NOSONAR — cross-thread mutation through Q_ARG(object, result), see comment above
+        # (Cross-thread mutation through Q_ARG(object, result).)
+        if result["allow"] and result["remember"] and self._acl is not None:  # NOSONAR
             self._acl.add_rule(AclRule(
                 vendor_id=vendor_id, product_id=product_id,
                 serial=(serial or None),
