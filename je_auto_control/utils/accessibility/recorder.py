@@ -72,9 +72,11 @@ class AccessibilityRecorder:
         """Spawn the background polling thread if not already running."""
         if self._thread is not None and self._thread.is_alive():
             return
-        self._stop.clear()
+        # A fresh event per run, never clear() on the old one: a thread that
+        # outlived stop()'s join would see it cleared and keep running.
+        self._stop = threading.Event()
         self._thread = threading.Thread(
-            target=self._run, name="AccessibilityRecorder", daemon=True,
+            target=self._run, args=(self._stop,), name="AccessibilityRecorder", daemon=True,
         )
         self._thread.start()
 
@@ -109,13 +111,13 @@ class AccessibilityRecorder:
 
     # --- internals -----------------------------------------------
 
-    def _run(self) -> None:
-        while not self._stop.is_set():
+    def _run(self, stop: threading.Event) -> None:
+        while not stop.is_set():
             try:
                 self.sample_once()
             except (RuntimeError, OSError, ValueError):
                 pass
-            self._stop.wait(self._poll)
+            stop.wait(self._poll)
 
     def _compare_and_emit(self, snapshot: Optional[Dict[str, Any]],
                           ) -> Optional[AXRecorderEvent]:

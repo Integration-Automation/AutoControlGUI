@@ -247,9 +247,11 @@ class TriggerEngine:
     def start(self) -> None:
         if self._thread is not None and self._thread.is_alive():
             return
-        self._stop.clear()
+        # A fresh event per run, never clear() on the old one: a thread that
+        # outlived stop()'s join would see it cleared and keep running.
+        self._stop = threading.Event()
         self._thread = threading.Thread(
-            target=self._run, daemon=True, name="AutoControlTriggers",
+            target=self._run, args=(self._stop,), daemon=True, name="AutoControlTriggers",
         )
         self._thread.start()
 
@@ -259,10 +261,10 @@ class TriggerEngine:
             self._thread.join(timeout=timeout)
             self._thread = None
 
-    def _run(self) -> None:
-        while not self._stop.is_set():
+    def _run(self, stop: threading.Event) -> None:
+        while not stop.is_set():
             self._poll_once()
-            self._stop.wait(self._tick)
+            stop.wait(self._tick)
 
     def _poll_once(self) -> None:
         now = time.monotonic()

@@ -40,9 +40,11 @@ class PluginWatcher:
             raise NotADirectoryError(
                 f"plugin directory not found: {self._directory}"
             )
-        self._stop.clear()
+        # A fresh event per run, never clear() on the old one: a thread that
+        # outlived stop()'s join would see it cleared and keep running.
+        self._stop = threading.Event()
         self._thread = threading.Thread(
-            target=self._run, daemon=True, name="MCPPluginWatcher",
+            target=self._run, args=(self._stop,), daemon=True, name="MCPPluginWatcher",
         )
         self._thread.start()
 
@@ -74,19 +76,19 @@ class PluginWatcher:
 
     # --- internals ----------------------------------------------------------
 
-    def _run(self) -> None:
+    def _run(self, stop: threading.Event) -> None:
         autocontrol_logger.info(
             "plugin watcher started: %s (every %ss)",
             self._directory, self._poll_seconds,
         )
-        while not self._stop.is_set():
+        while not stop.is_set():
             try:
                 self.poll_once()
             except OSError as error:
                 autocontrol_logger.warning(
                     "plugin watcher poll failed: %r", error,
                 )
-            self._stop.wait(self._poll_seconds)
+            stop.wait(self._poll_seconds)
         autocontrol_logger.info("plugin watcher stopped")
 
     def _reload_file(self, path: str, mtime: float) -> None:

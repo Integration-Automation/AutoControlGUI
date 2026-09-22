@@ -98,9 +98,11 @@ class PopupWatchdog:
         with self._lifecycle_lock:
             if self.running:
                 return
-            self._stop.clear()
+            # A fresh event per run, never clear() on the old one: a thread that
+            # outlived stop()'s join would see it cleared and keep running.
+            self._stop = threading.Event()
             self._thread = threading.Thread(
-                target=self._loop, name="rd-popup-watchdog", daemon=True)
+                target=self._loop, args=(self._stop,), name="rd-popup-watchdog", daemon=True)
             self._thread.start()
 
     def stop(self, timeout: float = 2.0) -> None:
@@ -135,10 +137,10 @@ class PopupWatchdog:
             self._hits.append({"rule": rule.name, "time": time.time()})
         return True
 
-    def _loop(self) -> None:
-        while not self._stop.is_set():
+    def _loop(self, stop: threading.Event) -> None:
+        while not stop.is_set():
             self.check_once()
-            self._stop.wait(self._poll)
+            stop.wait(self._poll)
 
 
 def _window_matcher(title: str, case_sensitive: bool) -> Callable[[], bool]:

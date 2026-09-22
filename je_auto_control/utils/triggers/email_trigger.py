@@ -220,9 +220,11 @@ class EmailTriggerWatcher:
         with self._lock:
             if self.is_running:
                 return
-            self._stop.clear()
+            # A fresh event per run, never clear() on the old one: a thread that
+            # outlived stop()'s join would see it cleared and keep running.
+            self._stop = threading.Event()
             self._thread = threading.Thread(
-                target=self._run, name="AutoControlEmailTrigger",
+                target=self._run, args=(self._stop,), name="AutoControlEmailTrigger",
                 daemon=True,
             )
             self._thread.start()
@@ -238,9 +240,9 @@ class EmailTriggerWatcher:
         """Run exactly one polling pass; return total messages fired."""
         return self._poll_pass()
 
-    def _run(self) -> None:
+    def _run(self, stop: threading.Event) -> None:
         last_check: Dict[str, float] = {}
-        while not self._stop.is_set():
+        while not stop.is_set():
             now = time.monotonic()
             for trigger in self.list_triggers():
                 if not trigger.enabled:
@@ -261,7 +263,7 @@ class EmailTriggerWatcher:
                         trigger.trigger_id, error, exc_info=True,
                     )
                 last_check[trigger.trigger_id] = now
-            self._stop.wait(1.0)
+            stop.wait(1.0)
 
     def _poll_pass(self) -> int:
         fired = 0

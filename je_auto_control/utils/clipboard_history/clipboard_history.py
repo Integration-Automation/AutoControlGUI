@@ -81,9 +81,11 @@ class ClipboardHistory:
         """Start polling the clipboard on a background thread (idempotent)."""
         if self.running:
             return
-        self._stop.clear()
+        # A fresh event per run, never clear() on the old one: a thread that
+        # outlived stop()'s join would see it cleared and keep running.
+        self._stop = threading.Event()
         self._thread = threading.Thread(
-            target=self._loop, name="clipboard-history", daemon=True)
+            target=self._loop, args=(self._stop,), name="clipboard-history", daemon=True)
         self._thread.start()
 
     def stop(self, timeout: float = 2.0) -> None:
@@ -94,10 +96,10 @@ class ClipboardHistory:
             thread.join(timeout=float(timeout))
         self._thread = None
 
-    def _loop(self) -> None:
-        while not self._stop.is_set():
+    def _loop(self, stop: threading.Event) -> None:
+        while not stop.is_set():
             self.capture_once()
-            self._stop.wait(self._poll)
+            stop.wait(self._poll)
 
 
 default_clipboard_history = ClipboardHistory()

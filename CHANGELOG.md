@@ -24,6 +24,19 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Restarting a background service could leave the old loop running beside
+  the new one.** Sixteen services — the scheduler, trigger engine, e-mail
+  triggers, hotkey daemon, screen observer, popup watchdog, clipboard history,
+  resource profiler, accessibility recorder, MCP plugin watcher, folder sync,
+  ACME renewal, USB loopback, USB/IP server, the macOS recorder tap and the
+  Slack bot — stopped by setting an event and joining with a timeout, and
+  started by calling `clear()` on that same event. When the join timed out
+  because the loop was inside a long iteration (a scheduled job, a hotkey
+  action), the next `start()` cleared the event the old loop was waiting for
+  and it resumed, untracked: every scheduled job ran twice, every hotkey fired
+  twice. Each run now gets its own event, passed to its loop, so a stopped run
+  stays stopped.
+
 - **Restarting the USB hotplug watcher could leave a second poller running.**
   `UsbHotplugWatcher.stop()` waited only 2 s for the poller, but one
   enumeration (PowerShell `Get-PnpDevice`, `lsusb`, `system_profiler`) may

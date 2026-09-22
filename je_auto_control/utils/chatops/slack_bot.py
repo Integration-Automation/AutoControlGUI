@@ -92,10 +92,13 @@ class SlackBot:
 
     def run_forever(self, *, max_iterations: Optional[int] = None) -> None:
         """Poll on a loop until :meth:`stop` is called."""
-        self._stop.clear()
+        # A fresh event per call, never clear() on the old one: a loop still
+        # inside poll_once() when stop() was called would see it cleared by
+        # the next run_forever() and keep polling beside it.
+        stop = self._stop = threading.Event()
         backoff = 0.0
         iteration = 0
-        while not self._stop.is_set():
+        while not stop.is_set():
             try:
                 self.poll_once()
                 backoff = 0.0
@@ -105,7 +108,7 @@ class SlackBot:
             iteration += 1
             if max_iterations is not None and iteration >= max_iterations:
                 return
-            self._stop.wait(self.poll_interval_s + backoff)
+            stop.wait(self.poll_interval_s + backoff)
 
     def stop(self) -> None:
         self._stop.set()

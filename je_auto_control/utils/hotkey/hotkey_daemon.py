@@ -156,12 +156,15 @@ class HotkeyDaemon:
             return
         from je_auto_control.utils.hotkey.backends import get_backend
         backend = get_backend()
+        # A fresh event per run, never clear() on the old one: a backend loop
+        # that outlived stop()'s join would see it cleared, keep its hotkeys
+        # registered, and fire every binding twice beside the new one.
+        self._stop = threading.Event()
         context = BackendContext(
             stop_event=self._stop,
             get_bindings=self._snapshot,
             fire=self._fire_binding,
         )
-        self._stop.clear()
         self._thread = threading.Thread(
             target=backend.run_forever, args=(context,),
             daemon=True, name=f"AutoControlHotkey-{backend.name}",

@@ -136,8 +136,10 @@ class Scheduler:
         with self._lifecycle_lock:
             if self._thread is not None and self._thread.is_alive():
                 return
-            self._stop.clear()
-            self._thread = threading.Thread(target=self._run, daemon=True,
+            # A fresh event per run, never clear() on the old one: a thread that
+            # outlived stop()'s join would see it cleared and keep running.
+            self._stop = threading.Event()
+            self._thread = threading.Thread(target=self._run, args=(self._stop,), daemon=True,
                                             name="AutoControlScheduler")
             self._thread.start()
 
@@ -149,8 +151,8 @@ class Scheduler:
                 thread.join(timeout=timeout)
             self._thread = None
 
-    def _run(self) -> None:
-        while not self._stop.is_set():
+    def _run(self, stop: threading.Event) -> None:
+        while not stop.is_set():
             # Outer guard: _tick_once must never let anything escape and take
             # the scheduler thread (hence every job) down.
             try:
@@ -158,7 +160,7 @@ class Scheduler:
             except Exception as error:  # noqa: BLE001  # reason: see above
                 autocontrol_logger.error("scheduler tick failed: %r",
                                          error, exc_info=True)
-            self._stop.wait(self._tick)
+            stop.wait(self._tick)
 
     def _tick_once(self) -> None:
         now_mono = time.monotonic()
