@@ -51,11 +51,13 @@ def _parse_vars(pairs: Optional[Sequence[str]]) -> Dict[str, object]:
 
 def cmd_run(args: argparse.Namespace) -> int:
     from je_auto_control.utils.executor.action_executor import (
-        execute_action, execute_action_with_vars,
+        execute_action, execute_action_with_vars, recorded_failures,
+        reset_recorded_failures,
     )
     from je_auto_control.utils.json.json_file import read_executable_action_json
     actions = read_executable_action_json(args.script)
     variables = _parse_vars(args.var)
+    reset_recorded_failures()
     if args.dry_run:
         from je_auto_control.utils.executor.action_executor import executor
         if variables:
@@ -70,6 +72,12 @@ def cmd_run(args: argparse.Namespace) -> int:
         result = execute_action(actions)
     json.dump(result, sys.stdout, indent=2, default=str, ensure_ascii=False)
     sys.stdout.write("\n")
+    # Failed actions are recorded and the run goes on; exiting 0 anyway left
+    # a CI pipeline unable to tell a failed run from a clean one.
+    failures = recorded_failures()
+    if failures:
+        sys.stderr.write(f"error: {failures} action(s) failed\n")
+        return 1
     return 0
 
 
@@ -122,6 +130,8 @@ def cmd_record(args: argparse.Namespace) -> int:
         sys.stderr.write("Recording... press Enter to stop.\n")
         threading.Thread(
             target=_set_on_enter, args=(stop_event,), daemon=True).start()
+    if args.duration is not None and args.duration < 0:
+        raise ValueError("--duration cannot be negative")
     actions = record_to_json(
         args.output, stop_event=stop_event, timeout=args.duration)
     sys.stderr.write(f"Recorded {len(actions)} action(s) to {args.output}\n")
@@ -172,6 +182,8 @@ def cmd_failure_bundle(args: argparse.Namespace) -> int:
         FailureBundleOptions, create_failure_bundle,
     )
     context = json.loads(args.context) if args.context else {}
+    if not isinstance(context, dict):
+        raise ValueError("--context must be a JSON object")
     path = create_failure_bundle(
         args.output, error=args.error, context=context,
         options=FailureBundleOptions(

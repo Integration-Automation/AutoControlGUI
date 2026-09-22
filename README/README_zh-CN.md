@@ -183,7 +183,7 @@ je_auto_control version
 ```
 
 `--var name=value` 会尽量以 JSON 解析（`count=10` 会变成整数），否则视为字符串。
-旧版 `python -m je_auto_control -e file.json` 入口仍然可用。
+`run` 只要有任何动作失败就以 1 退出（仍会跑完整份脚本），CI 步骤会随之失败。旧版 `python -m je_auto_control -e file.json` 入口仍然可用。
 
 ---
 

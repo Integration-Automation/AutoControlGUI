@@ -11,6 +11,7 @@ Usage::
     default_hotkey_daemon.bind("ctrl+alt+1", "scripts/greet.json")
     default_hotkey_daemon.start()
 """
+import sys
 import threading
 import uuid
 from dataclasses import dataclass
@@ -90,9 +91,19 @@ def parse_combo(combo: str) -> Tuple[int, int]:
     return modifiers, _key_to_vk(key)
 
 
+# The US-layout punctuation keys. A virtual-key code equals the character's
+# code point only for A-Z and 0-9: ord('.') is VK_DELETE, ord('[') VK_LWIN.
+_OEM_KEYS = {
+    ";": 0xBA, "=": 0xBB, ",": 0xBC, "-": 0xBD, ".": 0xBE, "/": 0xBF,
+    "`": 0xC0, "[": 0xDB, "\\": 0xDC, "]": 0xDD, "'": 0xDE,
+}
+
+
 def _key_to_vk(key: str) -> int:
-    if len(key) == 1:
+    if len(key) == 1 and key.isascii() and key.isalnum():
         return ord(key.upper())
+    if key in _OEM_KEYS:
+        return _OEM_KEYS[key]
     table = {
         "f1": 0x70, "f2": 0x71, "f3": 0x72, "f4": 0x73, "f5": 0x74,
         "f6": 0x75, "f7": 0x76, "f8": 0x77, "f9": 0x78, "f10": 0x79,
@@ -133,6 +144,8 @@ class HotkeyDaemon:
              binding_id: Optional[str] = None) -> HotkeyBinding:
         """Register a hotkey → script binding. Safe to call before/after start."""
         split_combo(combo)
+        if sys.platform == "win32":
+            parse_combo(combo)  # a key RegisterHotKey cannot take fails here, not later
         bid = binding_id or uuid.uuid4().hex[:8]
         binding = HotkeyBinding(
             binding_id=bid, combo=combo, script_path=script_path,
@@ -182,15 +195,13 @@ class HotkeyDaemon:
             match = self._bindings.get(binding_id)
         if match is None or not match.enabled:
             return
-        run_id = default_history_store.start_run(
-            SOURCE_HOTKEY, match.binding_id, match.script_path,
-        )
+        run_id = _start_history(match)
         status = STATUS_OK
         error_text: Optional[str] = None
         try:
             actions = read_executable_action_json(match.script_path)
             self._execute(actions)
-        except (OSError, ValueError, RuntimeError, AutoControlException) as error:
+        except Exception as error:  # noqa: BLE001  # reason: this runs on the backend's listener thread; any escape ends every hotkey
             # AutoControlException covers the common cases — a missing/renamed
             # script (AutoControlJsonActionException) or an action that raises
             # (image/window not found). Without it the exception escaped the
@@ -200,12 +211,32 @@ class HotkeyDaemon:
             autocontrol_logger.error("hotkey %s failed: %r",
                                      match.combo, error)
         finally:
-            artifact = (capture_error_snapshot(run_id)
-                        if status == STATUS_ERROR else None)
-            default_history_store.finish_run(
-                run_id, status, error_text, artifact_path=artifact,
-            )
-        match.fired += 1
+            _finish_history(run_id, status, error_text)
+        with self._lock:
+            match.fired += 1
+
+
+def _start_history(match: HotkeyBinding) -> Optional[int]:
+    """Record the run's start; a history failure must not stop the hotkey."""
+    try:
+        return default_history_store.start_run(
+            SOURCE_HOTKEY, match.binding_id, match.script_path)
+    except AutoControlException as error:
+        autocontrol_logger.error("hotkey %s: run history unavailable: %r", match.combo, error)
+        return None
+
+
+def _finish_history(run_id: Optional[int], status: str,
+                    error_text: Optional[str]) -> None:
+    if run_id is None:
+        return
+    try:
+        artifact = (capture_error_snapshot(run_id)
+                    if status == STATUS_ERROR else None)
+        default_history_store.finish_run(
+            run_id, status, error_text, artifact_path=artifact)
+    except AutoControlException as error:
+        autocontrol_logger.error("hotkey run %s: history not updated: %r", run_id, error)
 
 
 default_hotkey_daemon = HotkeyDaemon()

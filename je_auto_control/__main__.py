@@ -1,12 +1,14 @@
 # argparse
 import argparse
 import json
+import os
 import sys
 
 from je_auto_control.utils.exception.exception_tags import \
     argparse_get_wrong_data_error_message
-from je_auto_control.utils.exception.exceptions import \
-    AutoControlArgparseException
+from je_auto_control.utils.exception.exceptions import (
+    AutoControlArgparseException, AutoControlException,
+)
 from je_auto_control.utils.executor.action_executor import execute_action
 from je_auto_control.utils.executor.action_executor import execute_files
 from je_auto_control.utils.file_process.get_dir_file_list import \
@@ -22,6 +24,11 @@ if __name__ == "__main__":
 
 
         def preprocess_execute_files(file_path: str):
+            if not os.path.isdir(file_path):
+                # os.walk yields nothing for a missing directory, so a typo
+                # ran no file at all and still exited 0.
+                raise AutoControlArgparseException(
+                    f"not a directory: {file_path}")
             execute_files(get_dir_files_as_list(file_path))
 
 
@@ -69,6 +76,8 @@ if __name__ == "__main__":
     except AutoControlArgparseException as error:
         autocontrol_logger.error("argparse failure: %r", error)
         sys.exit(1)
-    except (OSError, ValueError, RuntimeError) as error:
+    # AutoControlException: a missing or invalid action file used to end in
+    # a raw traceback rather than this message (the exit status was 1 then too).
+    except (OSError, ValueError, RuntimeError, AutoControlException) as error:
         autocontrol_logger.error("cli execution failed: %r", error)
         sys.exit(1)

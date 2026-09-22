@@ -28,6 +28,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **`je_auto_control run` exits 1 when any action failed.** It used to exit
+  0 whenever the file loaded. Migration: a pipeline that relied on the old
+  status can ignore it (`|| true`).
+
 - **Chat-ops `/screenshot` takes a file name, not a path.** The PNG is
   written into the router context's `screenshot_dir` (default: a
   `je_auto_control_chatops` folder in the temp directory); anyone in the
@@ -145,6 +149,17 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Recording and hotkeys.** A recording that cannot start no longer
+  replaces the output file with `[]`; starting a second recording stops the
+  first input hook instead of leaking it. Hotkeys on punctuation keys
+  (`ctrl+.`, `ctrl+[`) register those keys rather than Delete or the Windows
+  key; a combo Windows cannot register is refused by `bind` and no longer
+  retried 20 times a second; and an error in the run history or an injected
+  executor no longer ends the hotkey listener.
+- **Legacy `python -m je_auto_control`.** A missing or invalid action file
+  is reported as a log line instead of a traceback (the exit status was
+  already 1), and a `-d` path that is not a directory is an error.
 
 - **JSON-file stores.** The flaky-test quarantine, the remote-desktop trust
   list and known hosts, and the RBAC user store are replaced atomically

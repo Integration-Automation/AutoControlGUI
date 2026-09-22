@@ -128,7 +128,7 @@ def test_record_subcommand_delegates_to_helper(tmp_path, monkeypatch):
 def test_record_to_json_helper_writes_file(tmp_path, monkeypatch):
     recorded = [["AC_type_keyboard", {"keycode": "x"}]]
     import je_auto_control.wrapper.auto_control_record as rec_mod
-    monkeypatch.setattr(rec_mod, "record", lambda: None)
+    monkeypatch.setattr(rec_mod, "record", lambda: True)
     monkeypatch.setattr(rec_mod, "stop_record", lambda: recorded)
     out = str(tmp_path / "rec2.json")
     event = threading.Event()

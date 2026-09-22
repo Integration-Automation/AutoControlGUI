@@ -44,7 +44,7 @@ entry points → execution core (`utils/executor/`) → headless capabilities (`
 | Python facade | `import je_auto_control` | Broad historical surface (`__all__`). |
 | Stable API | `je_auto_control.api` → `api/core.py` | `execute_action`, `execute_action_with_vars`, `generate_code`, `run_diagnostics`, `create_failure_bundle`, `failure_bundle_on_error`, `FailureBundleOptions`. |
 | Main CLI | `je_auto_control` → `je_auto_control.cli:main` | Subcommands `run` (`--var`, `--dry-run`), `validate` / `lint`, `fmt`, `list-commands`, `record`, `codegen`, `failure-bundle`, `list-jobs`, `start-server`, `start-rest`, `version`. |
-| Legacy CLI | `python -m je_auto_control` (`__main__.py`) | `-e/--execute_file FILE`, `-d/--execute_dir DIR`, `-c/--create_project PATH`, `--execute_str JSON`. `--execute_str` also accepts a double-encoded JSON string. |
+| Legacy CLI | `python -m je_auto_control` (`__main__.py`) | `-e/--execute_file FILE`, `-d/--execute_dir DIR`, `-c/--create_project PATH`, `--execute_str JSON`. `--execute_str` also accepts a double-encoded JSON string. Any error exits 1 with a log line rather than a traceback, and a `-d` path that is not a directory is an error. |
 | MCP server | `je_auto_control_mcp` → `utils/mcp_server/__main__.py:main` | stdio; `start_mcp_stdio_server()`; HTTP transport via the `AC_start_mcp_http_server` command. |
 | REST API | `je_auto_control start-rest`, `python -m je_auto_control.utils.rest_api`, `start_rest_api_server()` | Default `127.0.0.1:9939`, bearer token + rate limit. |
 | TCP server | `je_auto_control start-server`, `start_autocontrol_socket_server()` | `utils/socket_server/auto_control_socket_server.py`, default `127.0.0.1:9938`, JSON action lists. |

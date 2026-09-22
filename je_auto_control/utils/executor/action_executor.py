@@ -1,3 +1,4 @@
+import threading
 import types
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -8043,6 +8044,7 @@ class Executor:
             raise error
         record_action_to_list("AC_execute_action", None, repr(error))
         record["execute: " + describe_action(action)] = repr(error)
+        _count_recorded_failure()
 
     @staticmethod
     def _unwrap_action_list(action_list: Union[list, dict]) -> list:
@@ -8101,6 +8103,7 @@ class Executor:
             )
             record_action_to_list("AC_execute_action", None, repr(error))
             record[key] = repr(error)
+            _count_recorded_failure()
 
     def execute_files(self, execute_files_list: list) -> List[Dict[str, str]]:
         """
@@ -8117,6 +8120,30 @@ class Executor:
             execute_detail_list.append(
                 self.execute_action(read_executable_action_json(file)))
         return execute_detail_list
+
+
+_RECORDED_FAILURES = threading.local()
+
+
+def reset_recorded_failures() -> None:
+    """Zero this thread's count of failures ``execute_action`` recorded."""
+    _RECORDED_FAILURES.count = 0
+
+
+def recorded_failures() -> int:
+    """Failures ``execute_action`` recorded on this thread since the reset.
+
+    A failed action is recorded as its ``repr`` and the run goes on, so the
+    result dict alone cannot tell a failure from a command that returned a
+    string; ``je_auto_control run`` reads this for its exit code. Failures
+    that propagate (``raise_on_error=True``, inside ``AC_try``) are not
+    counted here -- whoever catches them decides.
+    """
+    return getattr(_RECORDED_FAILURES, "count", 0)
+
+
+def _count_recorded_failure() -> None:
+    _RECORDED_FAILURES.count = recorded_failures() + 1
 
 
 # === 全域 Executor 實例 Global Executor Instance ===

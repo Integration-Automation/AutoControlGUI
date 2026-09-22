@@ -196,8 +196,9 @@ je_auto_control version
 ```
 
 `--var name=value` is parsed as JSON when possible (`count=10` becomes an int),
-otherwise kept as a string. The legacy `python -m je_auto_control -e file.json`
-entry point still works.
+otherwise kept as a string. `run` exits 1 when any action failed (the run
+still goes on to the end), so a CI step fails with it. The legacy
+`python -m je_auto_control -e file.json` entry point still works.
 
 ---
 

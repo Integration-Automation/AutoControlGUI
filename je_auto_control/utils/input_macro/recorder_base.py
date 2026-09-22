@@ -103,6 +103,10 @@ class InputRecorder:
 
     # -- capture -----------------------------------------------------------
     def _start(self, kinds: Sequence[str]) -> None:
+        if self.hook is not None:
+            # Replacing it left the first low-level hook and its message
+            # pump installed for the life of the process.
+            self.hook.stop()
         self._kinds = tuple(kinds)
         self.hook = self.new_hook()
         self.record_queue = Queue()

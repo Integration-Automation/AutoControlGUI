@@ -17,6 +17,8 @@ class WindowsHotkeyBackend(HotkeyBackend):
         self._id_counter = 100
         # binding_id -> (os_registration_id, combo)
         self._registered: Dict[str, Tuple[int, str]] = {}
+        # binding_id -> the combo that could not be registered
+        self._failed: Dict[str, str] = {}
 
     def run_forever(self, context: BackendContext) -> None:
         import ctypes
@@ -53,18 +55,27 @@ class WindowsHotkeyBackend(HotkeyBackend):
 
     def _sync(self, user32, bindings: List[HotkeyBinding]) -> None:
         """Add new bindings + drop removed ones vs. ``self._registered``."""
-        current_ids = {b.binding_id for b in bindings}
-        for stale_id in [bid for bid in self._registered if bid not in current_ids]:
-            reg_id, _combo = self._registered.pop(stale_id)
-            user32.UnregisterHotKey(None, reg_id)
+        self._drop_removed(user32, {b.binding_id for b in bindings})
         for binding in bindings:
             existing = self._registered.get(binding.binding_id)
             if existing is not None and existing[1] == binding.combo:
+                continue
+            if self._failed.get(binding.binding_id) == binding.combo:
+                # Retried every 50 ms tick, a combo another program owns
+                # logged an error 20 times a second for as long as it ran.
                 continue
             if existing is not None:
                 user32.UnregisterHotKey(None, existing[0])
                 self._registered.pop(binding.binding_id, None)
             self._try_register(user32, binding)
+
+    def _drop_removed(self, user32, current_ids: set) -> None:
+        """Unregister bindings that are gone and forget their failures."""
+        for stale_id in [bid for bid in self._registered if bid not in current_ids]:
+            reg_id, _combo = self._registered.pop(stale_id)
+            user32.UnregisterHotKey(None, reg_id)
+        for stale_id in [bid for bid in self._failed if bid not in current_ids]:
+            del self._failed[stale_id]
 
     def _try_register(self, user32, binding: HotkeyBinding) -> None:
         try:
@@ -73,14 +84,17 @@ class WindowsHotkeyBackend(HotkeyBackend):
             autocontrol_logger.error(
                 "hotkey parse failed for %s: %r", binding.combo, error,
             )
+            self._failed[binding.binding_id] = binding.combo
             return
         self._id_counter += 1
         reg_id = self._id_counter
         if user32.RegisterHotKey(None, reg_id, modifiers, vk):
             self._registered[binding.binding_id] = (reg_id, binding.combo)
+            self._failed.pop(binding.binding_id, None)
         else:
+            self._failed[binding.binding_id] = binding.combo
             autocontrol_logger.error(
-                "RegisterHotKey failed for %s (%s)",
+                "RegisterHotKey failed for %s (%s); not retried until the combo changes",
                 binding.combo, binding.binding_id,
             )
 
