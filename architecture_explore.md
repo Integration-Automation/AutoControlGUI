@@ -1003,8 +1003,8 @@ GUI 是**選用 extra**（`pip install je_auto_control[gui]`，PySide6 + qt-mate
 **設定基線**（`pyproject.toml`）：
 
 - **pytest**：`testpaths` 限定 `test/unit_test/headless` 與 `test/unit_test/flow_control`；`--strict-markers --strict-config`。
-- **coverage**：`fail_under = 50`（棘輪：實測九宮格矩陣最低的一格是 50.26%，取整數當地板），排除 `gui/` 與 `language_wrapper/`。
-- **mypy**：對**整包**把關，尚未過關的模組列在 `test/verify/typing_contract_exempt.txt`（155 個，只准變少）；
+- **coverage**：`fail_under = 81`（棘輪：九格矩陣實測 81.40%（ubuntu-22.04／3.14）到 82.73%（windows-2022／3.12），取最低一格的整數當地板；維護者 2026-08-23 訂的 80 已達成），排除 `gui/` 與 `language_wrapper/`。量法一律是 `coverage run -m pytest`，不是 `pytest --cov`（見 CLAUDE.md）。
+- **mypy**：對**整包**把關，尚未過關的模組列在 `test/verify/typing_contract_exempt.txt`（只准變少，目前 **0** 個——整包都已過關）；
   `test/verify/typing_contract_verify.py` 會分別以 `win32`／`linux`／`darwin` 三個目標平台各跑一次並取聯集，
   所以 Windows 與 macOS 後端在 Ubuntu runner 上也被檢查。非基礎相依的第三方模組一律以
   `follow_imports = "skip"` + `follow_imports_for_stubs` 壓成 `Any`，閘門才不會因為裝了哪個 extra 而改變判定。
