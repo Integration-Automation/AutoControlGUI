@@ -43,6 +43,19 @@ def _examples() -> int:
     return len(list((ROOT / "examples").glob("*.py")))
 
 
+def _coverage_floor() -> int:
+    # A regex, not tomllib: the suite also runs on 3.10, which has no tomllib.
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    return int(re.search(r"^fail_under = (\d+)", text, re.MULTILINE).group(1))
+
+
+def _typing_exemptions() -> int:
+    lines = (ROOT / "test" / "verify" / "typing_contract_exempt.txt"
+             ).read_text(encoding="utf-8").splitlines()
+    return sum(1 for line in lines
+               if line.strip() and not line.lstrip().startswith("#"))
+
+
 # (doc, regex with one capture group, what it counts, how to measure it)
 CITATIONS: List[Tuple[str, str, str, Callable[[], int]]] = [
     ("architecture_explore.md",
@@ -54,6 +67,13 @@ CITATIONS: List[Tuple[str, str, str, Callable[[], int]]] = [
     ("architecture_explore.md",
      r"### 5\.4 能力層 `utils/`（(\d+) 個子套件）",
      "utils/ subpackages", _utils_subpackages),
+    # §7 quoted the first rung of both ratchets (50, 155) long after they had
+    # moved to 81 and 0; neither figure had a guard.
+    ("architecture_explore.md", r"`fail_under = (\d+)`",
+     "coverage floor", _coverage_floor),
+    ("architecture_explore.md",
+     r"`test/verify/typing_contract_exempt\.txt`（只准變少，目前 \*\*(\d+)\*\* 個",
+     "mypy exemptions", _typing_exemptions),
     ("README.md", r"(\d+) `AC_\*` commands", "AC_* commands", _commands),
     ("README.md", r"all (\d+) commands", "AC_* commands", _commands),
     ("README.md", r"(\d+) tools for", "MCP tools", _mcp_tools),
