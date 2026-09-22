@@ -201,3 +201,22 @@ pip install --dry-run --only-binary=:all: --platform win_arm64 --python-version 
 
 重驗方式就是跑那兩支腳本（`eis-verification` job 已經在跑）；哪天 banner 不再
 出現，就把 `_teardown` 的迴避拿掉。形狀與 arm64 那條一樣：卡上游、有一行重驗。
+
+---
+
+## `cryptography` 的安全下限要不要拉到 50
+
+`DECIDE` — 要不要用 Intel Mac 的預編 wheel 換掉一個本套件沒用到的漏洞範圍
+
+`pyproject.toml` 的 `cryptography>=48.0.1` 仍包含 GHSA-g6cj-pr64-35w5（high,`>=44.0.0, <50.0.0`,
+PKCS#7 EnvelopedData 解密的 Bleichenbacher oracle）的範圍。本套件沒有呼叫 PKCS#7 解密
+（用的是 Fernet，以及 aiortc 的 DTLS），所以目前不受影響。`uv.lock` 已鎖在 50.0.1。
+
+**為什麼要拍板**:49.0.0 起上游不再發 `macosx_10_9_universal2` wheel，只剩 `macosx_11_0_arm64`。
+下限拉到 `>=50.0.0` 之後，Intel Mac 上的 `pip install` 要從原始碼編譯（得先裝 Rust 工具鏈）。
+CI 只有 macos-14(arm64)，量不到這一點。重新檢查（不需要機器）:
+
+```bash
+pip install --dry-run --only-binary=:all: --platform macosx_10_9_x86_64 \
+    --python-version 3.12 --target /tmp/probe 'cryptography>=50'
+```
