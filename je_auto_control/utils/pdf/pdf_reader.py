@@ -26,7 +26,12 @@ def _pdf_errors_as_action_errors(function: Callable[..., _Result]) -> Callable[.
     """
     @functools.wraps(function)
     def wrapper(*args: Any, **kwargs: Any) -> _Result:
-        from pypdf.errors import PyPdfError
+        try:
+            from pypdf.errors import PyPdfError
+        except ImportError:
+            # Without pypdf there is nothing of its to translate: the function
+            # either uses a stubbed reader or _open_pdf explains what is missing.
+            return function(*args, **kwargs)
         try:
             return function(*args, **kwargs)
         except PyPdfError as error:

@@ -6,9 +6,8 @@ the ``AutoControlException`` family, so it aborted the script) and the JUnit
 file unreadable by CI. A report that could not be written was logged and
 dropped, and exception text was quoted twice.
 """
-import xml.dom.minidom
-
 import pytest
+from defusedxml import minidom
 
 from je_auto_control.utils.exception.exceptions import (
     AutoControlGenerateJsonReportException, AutoControlHTMLException, XMLException,
@@ -38,14 +37,14 @@ def test_the_xml_report_survives_control_characters(records, tmp_path):
     record_action_to_list("bad\x0b", None, repr(ValueError("x\x02")))
     generate_xml_report(str(tmp_path / "r"))
     for name in ("r_success.xml", "r_failure.xml"):
-        xml.dom.minidom.parse(str(tmp_path / name))  # well-formed
+        minidom.parse(str(tmp_path / name))  # well-formed
 
 
 def test_the_junit_report_survives_control_characters():
     result = suite_result.TestSuiteResult(name="suite\x01", cases=[
         suite_result.TestCaseResult(name="c\x1b", status="failed", message="got \x1b[31mred\x1b[0m"),
     ])
-    parsed = xml.dom.minidom.parseString(to_junit_xml(result))
+    parsed = minidom.parseString(to_junit_xml(result))
     failure = parsed.getElementsByTagName("failure")[0]
     assert "red" in failure.getAttribute("message")
 

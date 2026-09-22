@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,045 |
-| 程式碼總行數 | 142,845 |
+| 程式碼總行數 | 142,850 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,239 |
@@ -597,7 +597,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.13 資料來源、結構驗證與 i18n
 
-> 24 個套件、約 3,950 行。
+> 24 個套件、約 3,955 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -619,7 +619,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/locale_parse/` | 68 | 地區感知數字／貨幣／日期解析與格式化（選用 babel） |
 | `utils/message_format/` | 236 | ICU-lite MessageFormat（plural／select／selectordinal） |
 | `utils/office/` | 162 | Office 文件無頭讀寫（Excel／Word／PowerPoint） |
-| `utils/pdf/` | 110 | PDF 讀取與斷言（選用 pypdf 後端） |
+| `utils/pdf/` | 115 | PDF 讀取與斷言（選用 pypdf 後端） |
 | `utils/referential/` | 75 | 跨資料集的參照完整性檢查 |
 | `utils/schema_compat/` | 162 | JSON Schema 相容性分級 |
 | `utils/sql/` | 84 | 對 SQLite 的臨時唯讀 SQL 查詢 |
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 738 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,301 |
-| **總計** | **1,039** | **142,780** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 674 | 48,306 |
+| **總計** | **1,039** | **142,785** |
 
