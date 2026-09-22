@@ -24,7 +24,9 @@ from typing import Any, Dict, List, Optional
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
-_SUBPROCESS_TIMEOUT_S = 10.0
+#: Upper bound on one enumeration subprocess. Public because the hotplug
+#: watcher's stop() has to outlast it.
+SUBPROCESS_TIMEOUT_S = 10.0
 
 
 @dataclass
@@ -208,7 +210,7 @@ def _run_capture(cmd: List[str], backend: str) -> Any:
     try:
         completed = subprocess.run(  # nosec B603 B607  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit.dangerous-subprocess-use-audit  # reason: argv list (never shell=True); cmd is built from project-controlled allowlists in _enumerate_via_lsusb / _enumerate_via_system_profiler — no user input flows in
             cmd, capture_output=True, text=True,
-            timeout=_SUBPROCESS_TIMEOUT_S, check=False,
+            timeout=SUBPROCESS_TIMEOUT_S, check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as error:
         return UsbEnumerationResult(

@@ -20,11 +20,17 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Tuple
 
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 from je_auto_control.utils.usb.usb_devices import (
-    UsbDevice, list_usb_devices,
+    SUBPROCESS_TIMEOUT_S, UsbDevice, list_usb_devices,
 )
 
 
 _DEFAULT_INTERVAL_S = 2.0
+#: How long ``stop()`` waits for the poller. It must outlast one enumeration:
+#: the poller only sees the stop event between enumerations, and the platform
+#: tool behind one (PowerShell ``Get-PnpDevice``, ``lsusb``,
+#: ``system_profiler``) is bounded by ``SUBPROCESS_TIMEOUT_S``. The old 2 s
+#: was shorter than a cold PowerShell start on a loaded machine.
+_STOP_JOIN_TIMEOUT_S = SUBPROCESS_TIMEOUT_S + 1.0
 _DEFAULT_EVENT_LOG_CAPACITY = 500
 _EVENT_KIND_ADDED = "added"
 _EVENT_KIND_REMOVED = "removed"
@@ -39,6 +45,7 @@ class UsbEvent:
     device: UsbDevice = field(default_factory=UsbDevice)
 
     def to_dict(self) -> Dict[str, Any]:
+        """JSON-ready form: ``seq``, ``kind`` and the device as a dict."""
         return {
             "seq": self.seq,
             "kind": self.kind,
@@ -83,16 +90,23 @@ class UsbHotplugWatcher:
 
     @property
     def is_running(self) -> bool:
+        """Whether a poller thread is alive for the current run."""
         with self._lifecycle_lock:
             return self._thread is not None and self._thread.is_alive()
 
     def start(self) -> None:
+        """Start polling on a daemon thread; a no-op while already running."""
         with self._lifecycle_lock:
             if self._thread is not None:
                 return
-            self._stop.clear()
+            # A fresh event per run, never ``clear()`` on the old one: a
+            # poller that outlived its ``stop()`` (still inside an
+            # enumeration) would see a cleared event, carry on polling, and
+            # run beside the new one untracked for the life of the process.
+            self._stop = threading.Event()
             self._thread = threading.Thread(
-                target=self._loop, name="usb-hotplug", daemon=True,
+                target=self._loop, args=(self._stop,),
+                name="usb-hotplug", daemon=True,
             )
             self._thread.start()
         autocontrol_logger.info(
@@ -100,12 +114,23 @@ class UsbHotplugWatcher:
         )
 
     def stop(self) -> None:
+        """Stop polling and wait for the poller to finish its enumeration."""
         with self._lifecycle_lock:
             self._stop.set()
             thread = self._thread
             self._thread = None
-        if thread is not None:
-            thread.join(timeout=2.0)
+        if thread is None:
+            return
+        # The poller can only notice the event between enumerations, and one
+        # enumeration may take as long as its subprocess timeout. Returning
+        # sooner reports "stopped" while the thread is still running.
+        thread.join(timeout=_STOP_JOIN_TIMEOUT_S)
+        if thread.is_alive():
+            autocontrol_logger.warning(
+                "usb hotplug watcher: poller still inside an enumeration "
+                "after %.0fs; it exits as soon as that returns",
+                _STOP_JOIN_TIMEOUT_S,
+            )
 
     def recent_events(self, *, since: int = 0,
                       limit: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -132,12 +157,15 @@ class UsbHotplugWatcher:
         """Run one diff cycle synchronously; useful for tests."""
         return self._diff_and_record()
 
-    def _loop(self) -> None:
+    def _loop(self, stop: threading.Event) -> None:
         # Prime the snapshot without emitting events for already-present
         # devices — the watcher tracks *changes from now*, not the
         # initial inventory.
         try:
             initial = self._enumerator()
+            if stop.is_set():
+                # Stopped mid-enumeration; a newer run may own the snapshot.
+                return
             with self._lock:
                 self._snapshot = {
                     _device_key(dev): dev for dev in initial.devices
@@ -146,9 +174,9 @@ class UsbHotplugWatcher:
             autocontrol_logger.warning(
                 "usb hotplug initial enumeration: %r", error,
             )
-        while not self._stop.is_set():
-            self._stop.wait(self._interval)
-            if self._stop.is_set():
+        while not stop.is_set():
+            stop.wait(self._interval)
+            if stop.is_set():
                 return
             try:
                 self._diff_and_record()

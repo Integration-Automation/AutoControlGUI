@@ -1,8 +1,10 @@
 """Tests for the USB hotplug watcher (round 34)."""
+import threading
 from typing import List
 
+from je_auto_control.utils.usb import usb_watcher
 from je_auto_control.utils.usb.usb_devices import (
-    UsbDevice, UsbEnumerationResult,
+    SUBPROCESS_TIMEOUT_S, UsbDevice, UsbEnumerationResult,
 )
 from je_auto_control.utils.usb.usb_watcher import (
     UsbHotplugWatcher, default_usb_watcher,
@@ -184,3 +186,58 @@ def test_default_watcher_is_singleton():
     a = default_usb_watcher()
     b = default_usb_watcher()
     assert a is b
+
+
+class _BlockingEnumerator:
+    """The first call blocks until released, like a slow PowerShell start."""
+
+    def __init__(self):
+        self.entered = threading.Event()
+        self.release = threading.Event()
+        self.calls = 0
+
+    def __call__(self) -> UsbEnumerationResult:
+        self.calls += 1
+        if self.calls == 1:
+            self.entered.set()
+            self.release.wait(5.0)
+        return UsbEnumerationResult(backend="fake", devices=[])
+
+
+def _pollers() -> List[threading.Thread]:
+    return [thread for thread in threading.enumerate()
+            if thread.name == "usb-hotplug" and thread.is_alive()]
+
+
+def test_restart_does_not_revive_a_poller_that_outlived_stop(monkeypatch):
+    """``start()`` used to ``clear()`` the one shared stop event.
+
+    A poller still inside an enumeration when ``stop()`` gave up waiting then
+    saw the event cleared again, carried on polling, and ran beside the new
+    poller -- untracked, for the life of the process.
+    """
+    monkeypatch.setattr(usb_watcher, "_STOP_JOIN_TIMEOUT_S", 0.05)
+    enumerator = _BlockingEnumerator()
+    watcher = UsbHotplugWatcher(enumerator=enumerator, poll_interval_s=0.25)
+    before = set(_pollers())
+    watcher.start()
+    try:
+        assert enumerator.entered.wait(2.0)
+        stale = [t for t in _pollers() if t not in before]
+        watcher.stop()                  # gives up while it is still blocked
+        watcher.start()
+        enumerator.release.set()
+        for thread in stale:
+            thread.join(1.0)
+        revived = [thread for thread in stale if thread.is_alive()]
+        assert not revived, "the stopped poller came back to life"
+    finally:
+        enumerator.release.set()
+        monkeypatch.setattr(usb_watcher, "_STOP_JOIN_TIMEOUT_S", 2.0)
+        watcher.stop()
+    assert not [t for t in _pollers() if t not in before]
+
+
+def test_stop_outlasts_one_enumeration():
+    """``stop()`` reported "stopped" while a slow enumeration still ran."""
+    assert usb_watcher._STOP_JOIN_TIMEOUT_S > SUBPROCESS_TIMEOUT_S

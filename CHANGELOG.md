@@ -387,6 +387,19 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **Restarting the USB hotplug watcher could leave a second poller running.**
+  `UsbHotplugWatcher.stop()` waited only 2 s for the poller, but one
+  enumeration (PowerShell `Get-PnpDevice`, `lsusb`, `system_profiler`) may
+  take up to its 10 s subprocess timeout, so `stop()` could return — and
+  `AC_usb_watch_stop` report `running: false` — while the thread was still
+  running. A following `start()` then called `clear()` on the same stop
+  event, and the old poller carried on beside the new one, untracked, for the
+  life of the process. Each run now gets its own event, a poller stopped
+  mid-enumeration no longer overwrites a newer run's snapshot, and `stop()`
+  waits for up to the subprocess timeout plus one second, logging a warning
+  if the poller is still running after that.
+  `usb_devices.SUBPROCESS_TIMEOUT_S` is now public (it was `_SUBPROCESS_TIMEOUT_S`).
+
 - **A failing `hotkey()` or `type_keyboard()` left keys held down.** Both
   press and then release with nothing protecting the gap, and their
   `except (OSError, RuntimeError, AttributeError, TypeError, ValueError)` does
