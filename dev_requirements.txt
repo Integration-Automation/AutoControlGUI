@@ -31,4 +31,7 @@ pytest-rerunfailures==15.1
 # `pytest --cov` under-reports by ~24 points. Measure with
 # `coverage run -m pytest`; see the comment in .github/workflows/quality.yml.
 coverage==7.15.4
+# The complexity limit in CLAUDE.md is measured by this, both in the
+# pre-commit list and by test/unit_test/headless/test_complexity_budget.py.
+radon==6.0.1
 mypy>=1.15

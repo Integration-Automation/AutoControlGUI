@@ -139,7 +139,7 @@ jobs:
         shell: bash
         # Quoted: `--only-binary :all:` puts a colon-space inside the
         # scalar, which YAML reads as a mapping and refuses.
-        run: "pip install --only-binary :all: ruff==0.15.22 bandit==1.9.4 pytest==9.1.1 pytest-timeout==2.4.0 pytest-rerunfailures==15.1 coverage==7.15.4 PySide6==6.11.1"
+        run: "pip install --only-binary :all: ruff==0.15.22 bandit==1.9.4 pytest==9.1.1 pytest-timeout==2.4.0 pytest-rerunfailures==15.1 coverage==7.15.4 PySide6==6.11.1 radon==6.0.1"
 
       # Paths come from `testpaths` in pyproject.toml. Do NOT pass an explicit
       # path here: an argument overrides testpaths, which previously meant the
