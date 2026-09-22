@@ -58,8 +58,15 @@ def _sink_key(event: Dict[str, Any]) -> None:
 
 
 # The recorder names a button "left"; the input API names it "mouse_left".
+#: Recorded button name -> mouse-table key. The lookups below fall back to
+#: ``mouse_left``, so every name a recorder can emit MUST appear here: a missing
+#: entry does not drop the event, it replays it as a LEFT click. That is why
+#: ``x1`` / ``x2`` landed here in the same change that taught the Windows hook
+#: to record ``WM_XBUTTON*`` -- adding one without the other is worse than the
+#: gap it closes.
 _RECORDED_BUTTON = {"left": "mouse_left", "right": "mouse_right",
-                    "middle": "mouse_middle"}
+                    "middle": "mouse_middle",
+                    "x1": "mouse_x1", "x2": "mouse_x2"}
 
 
 def _sink_key_down(event: Dict[str, Any]) -> None:

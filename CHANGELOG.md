@@ -387,6 +387,18 @@ only when documented here with a migration path.
 
 ### Fixed
 
+- **The Windows recorder dropped mouse side buttons.** Playback has always
+  accepted `mouse_x1` / `mouse_x2`, but the low-level hook keyed its button
+  table by message id, and `WM_XBUTTONDOWN` / `WM_XBUTTONUP` are one id for
+  both buttons (which one is in the high word of `mouseData`). Side clicks were
+  therefore never recorded, and a macro replayed without them with no warning.
+  `stop_record_timeline()` now yields `mouse_down` / `mouse_up` events with
+  `button` `"x1"` / `"x2"`, and `replay_timeline()` maps them to `mouse_x1` /
+  `mouse_x2`. An unrecognised side-button value is dropped rather than guessed,
+  because the replay side falls back to the left button for a name it does not
+  know. The legacy down-events-only queue (`stop_record()`) still omits them:
+  there is no `AC_mouse_x1` command to put in it.
+
 - **Changing a hotkey's combo on X11 left the old key grabbed for the life of
   the daemon.** `LinuxHotkeyBackend._sync_one` dropped the previous
   registration from its own table without calling `ungrab_key`, so the *old*

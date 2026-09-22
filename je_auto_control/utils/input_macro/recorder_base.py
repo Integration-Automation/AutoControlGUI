@@ -31,6 +31,12 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 MAX_EVENTS = 20000
 
 #: Legacy queue entries: the down-event half, shaped as executor commands.
+#: Side buttons (``x1`` / ``x2``) are deliberately absent: there is no
+#: ``AC_mouse_x1`` executor alias, and the caller below drops a name it cannot
+#: map. Dropping is the safe direction here -- naming a command that does not
+#: exist would fail at replay time instead. The timeline path
+#: (``stop_record_timeline`` -> ``replay_timeline``) does handle them; only this
+#: historical down-events-only queue does not.
 LEGACY_MOUSE_COMMAND = {"left": "AC_mouse_left", "right": "AC_mouse_right",
                         "middle": "AC_mouse_middle"}
 
