@@ -86,6 +86,19 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Fixed
 
+- **Flow control: seven ways a script did something other than it said.**
+  A failed assertion inside an `AC_parallel` branch, or in an `AC_retry` that
+  ran out of attempts, was wrapped into an ordinary error and swallowed under
+  `raise_on_error=False`; it now propagates like any other assertion.
+  `AC_break` / `AC_continue` with no enclosing loop escaped `execute_action`
+  entirely and skipped the rest of the script; they are now a recorded failure
+  ("outside a loop"). A macro that calls itself recursed until Python's limit
+  (or, with two self-calls, ran exponentially long); calls now fail past
+  `MAX_MACRO_DEPTH` (50) and the failure is recorded at the top level. An
+  empty macro, `AC_assert_duration` body or `AC_parallel` branch is a no-op,
+  as empty bodies are everywhere else, instead of an error. `AC_wait_image` /
+  `AC_wait_pixel` with `timeout` 0 now look once instead of never.
+
 - **A USB watcher stopped while it was still taking its first inventory
   forgot that inventory.** The poller discarded its priming enumeration
   whenever `stop()` had been called, not only when a newer `start()` had

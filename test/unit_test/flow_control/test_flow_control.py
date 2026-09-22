@@ -314,10 +314,11 @@ def test_parallel_surfaces_a_failed_branch():
     """
     ex = Executor()
     with pytest.raises(AutoControlActionException, match="branch"):
-        ex.execute_action([["AC_parallel", {"branches": [
-            [["AC_set_var", {"name": "a", "value": 1}]],
-            [],                                   # empty branch raises in-thread
-        ]}]], raise_on_error=True)
+        # A JSON-string ``branches`` skips up-front validation, so the
+        # malformed second branch fails inside its worker thread.
+        ex.execute_action([["AC_parallel", {"branches": (
+            '[[["AC_set_var", {"name": "a", "value": 1}]], {"not": "a list"}]'
+        )}]], raise_on_error=True)
 
 
 @pytest.mark.parametrize("action", [

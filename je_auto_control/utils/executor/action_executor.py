@@ -28,7 +28,7 @@ from je_auto_control.utils.executor.action_schema import (
     unknown_command_names, validate_actions,
 )
 from je_auto_control.utils.executor.flow_control import (
-    BLOCK_COMMANDS, LoopBreak, LoopContinue,
+    BLOCK_COMMANDS, LoopBreak, LoopContinue, MacroDepthExceeded,
 )
 from je_auto_control.utils.executor.mouse_aliases import MOUSE_BUTTON_COMMANDS
 from je_auto_control.utils.llm.planner import (
@@ -8007,11 +8007,40 @@ class Executor:
             if dry_run:
                 execute_record_dict["dry-run: " + str(action)] = "(not executed)"
                 continue
-            self._run_one_action(action, execute_record_dict, raise_on_error)
+            try:
+                self._run_one_action(action, execute_record_dict, raise_on_error)
+            except (LoopBreak, LoopContinue, MacroDepthExceeded) as signal:
+                if _validated:
+                    raise  # a nested body: the enclosing block handles it
+                self._record_unwound_signal(
+                    action, signal, execute_record_dict, raise_on_error)
 
         for key, value in execute_record_dict.items():
             autocontrol_logger.info("%s -> %s", key, value)
         return execute_record_dict
+
+    @staticmethod
+    def _record_unwound_signal(action: list, signal: Exception,
+                               record: Dict[str, Any],
+                               raise_on_error: bool) -> None:
+        """Settle, at the top level, a signal that unwound every nested body.
+
+        AC_break / AC_continue with no enclosing loop is a failed command:
+        the signals derive from ``Exception`` so AC_try cannot catch them, and
+        uncaught here they escaped every ``AutoControlException`` boundary
+        and silently skipped the rest of the script. A macro nested past its
+        depth limit unwinds the same way so the failure is recorded here, not
+        inside the deepest body.
+        """
+        if isinstance(signal, AutoControlException):
+            error: AutoControlException = signal
+        else:
+            name = action[0] if action and isinstance(action[0], str) else "<invalid>"
+            error = AutoControlActionException(f"{name} outside a loop")
+        if raise_on_error:
+            raise error
+        record_action_to_list("AC_execute_action", None, repr(error))
+        record["execute: " + str(action)] = repr(error)
 
     @staticmethod
     def _unwrap_action_list(action_list: Union[list, dict]) -> list:
@@ -8062,7 +8091,8 @@ class Executor:
             # under raise_on_error=False — otherwise the assertion would be
             # silently neutralised. ``AC_try``/``AC_retry`` run their body with
             # raise_on_error=True and still catch it via their own tuples.
-            if raise_on_error or isinstance(error, AutoControlAssertionException):
+            if raise_on_error or isinstance(
+                    error, (AutoControlAssertionException, MacroDepthExceeded)):
                 raise
             autocontrol_logger.info(
                 f"execute_action failed, action: {action}, error: {repr(error)}"

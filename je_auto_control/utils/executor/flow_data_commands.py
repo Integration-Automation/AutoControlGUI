@@ -246,7 +246,8 @@ def exec_assert_duration(executor: Any, args: Mapping[str, Any]) -> Dict[str, An
     from je_auto_control.utils.assertion import assert_duration
     body = args.get("body") or []
     return assert_duration(
-        lambda: executor.execute_action(body, _validated=True),
+        # An empty body is a no-op (it measures nothing), not an error.
+        lambda: executor.execute_action(body, _validated=True) if body else None,
         max_ms=float(args.get("max_ms", 1000.0)),
         min_ms=float(args.get("min_ms", 0.0)),
         raise_on_fail=bool(args.get("raise_on_fail", True)),
