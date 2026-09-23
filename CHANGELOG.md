@@ -183,6 +183,10 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Security
 
+- **The `discovery` extra requires zeroconf 0.149.16**, which fixes the
+  2026 mDNS memory and CPU exhaustion advisories reachable from the local
+  network.
+
 - **The `signaling` extra requires Starlette 1.0.1** (CVE-2026-48710,
   "BadHost": a crafted `Host` header made middleware see another path than
   the router served). The signaling server's pre-body guard also decides by

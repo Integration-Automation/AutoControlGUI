@@ -529,7 +529,7 @@ requires-dist = [
     { name = "rapidfuzz", marker = "extra == 'fuzzy'", specifier = ">=3.0" },
     { name = "starlette", marker = "extra == 'signaling'", specifier = ">=1.0.1" },
     { name = "uvicorn", marker = "extra == 'signaling'", specifier = ">=0.32" },
-    { name = "zeroconf", marker = "extra == 'discovery'", specifier = ">=0.130" },
+    { name = "zeroconf", marker = "extra == 'discovery'", specifier = ">=0.149.16" },
 ]
 provides-extras = ["gui", "webrtc", "signaling", "discovery", "pdf", "office", "fuzzy", "s3", "locale", "audio"]
 

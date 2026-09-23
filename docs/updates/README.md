@@ -58,6 +58,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-01 | 2026-09-24 | Security floors: zeroconf 0.149.16 for discovery, and a test pinning every floor | #security #deps | [2026-09](2026-09.md) |
 | U-20260923-54 | 2026-09-23 | Signaling guard keyed on the routed path (Starlette BadHost, CVE-2026-48710) | #security #remote_desktop #deps | [2026-09](2026-09.md) |
 | U-20260923-53 | 2026-09-23 | Signaling server serves the config-sync bucket routes | #feature #remote_desktop #config_sync | [2026-09](2026-09.md) |
 | U-20260923-52 | 2026-09-23 | Server-surface audit: signaling secret checked before the body, bearer scheme case | #incident #security #remote_desktop | [2026-09](2026-09.md) |
@@ -159,7 +160,7 @@ In the same commit: delete the item from `Progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 70 |
+| [2026-09.md](2026-09.md) | 2026-09 | 71 |
 | [2026-08-f.md](2026-08-f.md) | 2026-08 | 1 |
 | [2026-08-e.md](2026-08-e.md) | 2026-08 | 2 |
 | [2026-08-d.md](2026-08-d.md) | 2026-08 | 2 |
