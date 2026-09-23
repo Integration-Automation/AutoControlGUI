@@ -11,6 +11,7 @@ value through an injected resolver — so the secret never lands in a plain
 
 JSON-backed (or in-memory); pure standard library; imports no ``PySide6``.
 """
+import functools
 import os
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
@@ -23,6 +24,7 @@ TYPE_TEXT = "text"
 TYPE_INT = "int"
 TYPE_BOOL = "bool"
 TYPE_CREDENTIAL = "credential"
+_TYPES = (TYPE_TEXT, TYPE_INT, TYPE_BOOL, TYPE_CREDENTIAL)
 
 
 @dataclass(frozen=True)
@@ -73,7 +75,18 @@ class AssetStore:
 
     def set(self, name: str, value: Any, *, asset_type: str = TYPE_TEXT,
             environment: str = DEFAULT_ENV) -> None:
-        """Store ``value`` for ``name`` under ``environment`` with a type tag."""
+        """Store ``value`` for ``name`` under ``environment`` with a type tag.
+
+        An unknown type, or a value the type cannot read (``"eighty"`` as an
+        ``int``), raises ``ValueError`` here -- it used to be stored and then
+        fail on every later read.
+        """
+        if asset_type not in _TYPES:
+            raise ValueError(f"unknown asset type {asset_type!r}; expected one of {_TYPES}")
+        try:
+            _coerce(value, asset_type)
+        except (TypeError, ValueError) as error:
+            raise ValueError(f"{value!r} is not a valid {asset_type} asset") from error
         record = {"type": asset_type, "value": value}
         self._state.update(
             lambda data: data.setdefault(environment, {}).__setitem__(name, record))
@@ -121,11 +134,25 @@ class AssetStore:
         ]
 
 
+@functools.lru_cache(maxsize=1)
+def _process_store() -> AssetStore:
+    return AssetStore(None)
+
+
+def asset_store(db: Optional[str] = None) -> AssetStore:
+    """The store in ``db`` or, without ``db``, the one this process shares.
+
+    Each command built a fresh in-memory store, so without ``db`` a value
+    set by ``AC_set_asset`` was gone by the next ``AC_get_asset``.
+    """
+    return AssetStore(db) if db else _process_store()
+
+
 def store_set(name: str, value: Any, *, asset_type: str = TYPE_TEXT,
               environment: str = DEFAULT_ENV,
               db: Optional[str] = None) -> Dict[str, Any]:
     """Set an asset and return a result dict (shared by executor/MCP layers)."""
-    AssetStore(db).set(name, value, asset_type=asset_type,
+    asset_store(db).set(name, value, asset_type=asset_type,
                        environment=environment)
     return {"ok": True, "name": name, "environment": environment}
 
@@ -133,13 +160,13 @@ def store_set(name: str, value: Any, *, asset_type: str = TYPE_TEXT,
 def store_get(name: str, *, environment: str = DEFAULT_ENV,
               db: Optional[str] = None) -> Dict[str, Any]:
     """Get an asset as a result dict (credential value stays a reference)."""
-    asset = AssetStore(db).get(name, environment=environment)
+    asset = asset_store(db).get(name, environment=environment)
     return {"name": asset.name, "type": asset.type, "value": asset.value}
 
 
 def store_list(*, environment: Optional[str] = None,
                db: Optional[str] = None) -> Dict[str, Any]:
     """List assets as a result dict of ``{name, type, environment}`` (no values)."""
-    assets = AssetStore(db).list(environment=environment)
+    assets = asset_store(db).list(environment=environment)
     return {"assets": [{"name": a.name, "type": a.type,
                         "environment": a.environment} for a in assets]}

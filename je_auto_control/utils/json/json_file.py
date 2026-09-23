@@ -23,10 +23,13 @@ def read_action_json(json_file_path: str) -> List[List[Dict[str, Dict[str, str]]
         try:
             file_path = Path(json_file_path)
             if file_path.exists() and file_path.is_file():
-                with open(json_file_path, encoding="utf-8") as read_file:
+                # utf-8-sig: Notepad saves UTF-8 with a BOM, which utf-8 refused.
+                with open(json_file_path, encoding="utf-8-sig") as read_file:
                     return json.load(read_file)
             raise AutoControlJsonActionException(cant_find_json_error_message)
-        except (OSError, json.JSONDecodeError) as error:
+        # ValueError covers JSONDecodeError and UnicodeDecodeError (a file that
+        # is not UTF-8), which used to escape as a raw decode error.
+        except (OSError, ValueError) as error:
             raise AutoControlJsonActionException(f"{cant_find_json_error_message}: {repr(error)}") from error
 
 

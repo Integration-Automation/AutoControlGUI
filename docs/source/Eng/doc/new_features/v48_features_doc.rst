@@ -35,7 +35,8 @@ Headless API
 Types are ``text`` / ``int`` / ``bool`` / ``credential``; ``get`` coerces to the
 declared type and falls back to the ``default`` environment unless disabled.
 ``active_environment()`` reads ``JE_AUTOCONTROL_ENV``. ``list`` / ``delete`` round
-out the store.
+out the store. ``set`` refuses an unknown type and a value the type cannot read
+(``"eighty"`` as an ``int``) at write time.
 
 Executor commands
 -----------------
@@ -51,4 +52,5 @@ Command                          Effect
 Credential **resolution** is intentionally Python-API-only (so secrets never
 enter run records). The same lifecycle operations are exposed as MCP tools
 (``ac_set_asset`` / ``ac_get_asset`` / ``ac_list_assets``) and as Script Builder
-commands under **Data**.
+commands under **Data**. The commands take an optional ``db`` path; without one
+they share a single in-memory store for the process (``asset_store()``).

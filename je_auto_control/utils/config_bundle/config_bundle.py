@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from je_auto_control.utils.exception.exceptions import AutoControlException
+from je_auto_control.utils.json_store.json_store import atomic_write_text
 from je_auto_control.utils.logging.logging_instance import autocontrol_logger
 
 
@@ -239,9 +240,14 @@ class ConfigBundleImporter:
                 f"format mismatch: bundle says {declared_format!r}, "
                 f"allowlist says {fmt!r}",
             )
+        if "content" not in entry:
+            # An entry with no content used to overwrite the file with null.
+            raise ConfigBundleError("bundle entry has no content")
         if fmt == "json":
+            if not isinstance(entry["content"], (dict, list)):
+                raise ConfigBundleError("json entry content must be an object or a list")
             return json.dumps(
-                entry.get("content"), ensure_ascii=False, indent=2,
+                entry["content"], ensure_ascii=False, indent=2,
             )
         content = entry.get("content")
         if not isinstance(content, str):
@@ -263,7 +269,10 @@ class ConfigBundleImporter:
                 report.skipped.append(relative)
                 return
         try:
-            target.write_text(body, encoding="utf-8")
+            # Created 0600 and replaced atomically: these files hold tokens
+            # (admin_hosts.json is documented as 0600), and write_text left
+            # them at the umask's default -- world-readable.
+            atomic_write_text(target, body)
         except OSError as error:
             autocontrol_logger.warning(
                 "config bundle write %s: %r", target, error,

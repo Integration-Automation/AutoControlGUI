@@ -42,6 +42,9 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
 
 ### Changed
 
+- **`AssetStore.set` validates the type and value** it is given, and a
+  string `tags` argument is one tag, not a list of letters.
+
 - **Plugins cannot replace built-in commands by default.**
   `register_plugin_commands` and `load_plugins` skip (and log) a name that
   already belongs to a built-in or user command; pass `allow_override=True`
@@ -216,6 +219,13 @@ it shipped into a `## [x.y.z] - date` section of their own; the tag's
   package does no PKCS#7 decryption, so the `>=48.0.1` floor is unchanged.
 
 ### Fixed
+
+- **Stores keep what they are given.** Two skill libraries or element
+  repositories on one file no longer lose each other's saves (a corrupt file
+  still raises rather than being erased); asset commands without `db` share
+  one store; a config-bundle entry without content no longer empties its
+  file, and imported files are written 0600; agent memory recalls non-ASCII
+  words; action files with a UTF-8 BOM load.
 
 - **Plugins load reliably.** One plugin file that fails to import no longer
   stops the rest of its directory, `@dataclass` plugins load, a non-function

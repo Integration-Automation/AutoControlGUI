@@ -20,7 +20,7 @@ iOS（WebDriverAgent）。核心能力是滑鼠／鍵盤控制、影像辨識、
 | 指標 | 數值 |
 | --- | ---: |
 | Python 模組總數（含周邊子專案） | 1,046 |
-| 程式碼總行數 | 144,883 |
+| 程式碼總行數 | 144,933 |
 | `je_auto_control/utils/` 子套件數 | 310 |
 | `AC_*` 動作指令數（`known_commands()` 實測） | 773 |
 | 套件門面 `__all__` 公開名稱數 | 1,241 |
@@ -270,7 +270,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.1 執行引擎與腳本資產
 
-> 24 個套件、約 13,642 行。
+> 24 個套件、約 13,663 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -284,8 +284,8 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/executor/` | 9,298 | **核心**。`Executor` 指令分派表（773 個 `AC_*`）、參數插值、乾跑、逐步 callback；`flow_control` 提供 34 個區塊指令（迴圈／分支／try／巨集／變數） |
 | `utils/flow_debugger/` | 142 | action list 的單步除錯器與追蹤器 |
 | `utils/input_macro/` | 359 | 定時輸入事件：錄製結果的整形（`timeline`／`InputRecorder`，Windows 與 macOS 共用）、重播與宣告式輸入序列 DSL |
-| `utils/json/` | 94 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
-| `utils/json_store/` | 176 | JSON 字典檔持久化的共用小工具（內部管線） |
+| `utils/json/` | 97 | action JSON 檔讀寫與正規化格式化（`fmt --check` 的後端） |
+| `utils/json_store/` | 195 | JSON 字典檔持久化的共用小工具（內部管線） |
 | `utils/loop_guard/` | 146 | 機械式卡死迴圈偵測（agent loop 用） |
 | `utils/plugin_loader/` | 128 | 掃描外部 Python 外掛目錄並註冊其 `AC_` callable |
 | `utils/plugin_sdk/` | 70 | 外掛 SDK：透過 entry points 發佈／載入第三方 `AC_*` 指令 |
@@ -293,7 +293,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/recording_edit/` | 150 | 不重錄的前提下裁切／過濾／縮放已錄製的 action list |
 | `utils/saga/` | 93 | Saga 協調器：失敗時以 LIFO 補償動作回滾 |
 | `utils/script_vars/` | 190 | 執行期變數作用域與 `${var}` / `${secrets.*}` 插值 |
-| `utils/skill_library/` | 116 | 具名可重用 action 序列（skill）的持久化倉庫 |
+| `utils/skill_library/` | 115 | 具名可重用 action 序列（skill）的持久化倉庫 |
 | `utils/state_machine/` | 260 | 宣告式有限狀態機驅動 action JSON |
 | `utils/stubs/` | 287 | 為 `AC_*` 指令面產生型別 stub |
 | `utils/test_record/` | 70 | 全域測試紀錄單例，記錄每個動作的參數與例外 |
@@ -301,12 +301,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.2 框架基礎設施
 
-> 14 個套件、約 2,793 行。
+> 14 個套件、約 2,801 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/callback/` | 202 | Observer 模式：`callback_executor` 以字串名觸發功能，執行後呼叫回呼 |
-| `utils/config_bundle/` | 412 | 使用者設定的單檔匯出／匯入 |
+| `utils/config_bundle/` | 420 | 使用者設定的單檔匯出／匯入 |
 | `utils/critical_exit/` | 98 | 監看緊急停止鍵的守護執行緒，用於中止失控腳本 |
 | `utils/diagnostics/` | 322 | 跨子系統的「一切正常嗎」健檢，附 `python -m` 進入點 |
 | `utils/dbus_client/` | 683 | 只用標準函式庫的 D-Bus session bus 客戶端。原本在 `linux_wayland/` 為 portal 交握而寫，AT-SPI 無障礙後端成為第二個使用者後搬到這裡（`utils/` 在分層上在各 OS 套件之上） |
@@ -439,7 +439,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.7 無障礙樹與原生控制項
 
-> 16 個套件、約 4,345 行。
+> 16 個套件、約 4,336 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
@@ -452,7 +452,7 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 | `utils/contrast_map/` | 120 | 取樣實際顏色以評定畫面文字的可讀性（WCAG） |
 | `utils/control_patterns/` | 88 | 延伸 UIA 控制項模式動作（Expand／Select／Range／Scroll） |
 | `utils/cvd_simulate/` | 125 | 模擬色覺缺陷並標示在該狀況下會撞色的顏色 |
-| `utils/element_repository/` | 122 | 原生 UI 元素的具名定位器倉庫（object repository） |
+| `utils/element_repository/` | 113 | 原生 UI 元素的具名定位器倉庫（object repository） |
 | `utils/focus_order/` | 95 | 鍵盤焦點順序：預期 Tab 序列、WCAG 稽核與設定焦點 |
 | `utils/legacy_accessible/` | 45 | MSAA 橋接，處理 UIA 無法建模的舊控制項 |
 | `utils/selection_view/` | 57 | 容器選取狀態與檢視切換（Selection／MultipleView 模式） |
@@ -492,13 +492,13 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.9 AI / Agent / LLM
 
-> 13 個套件、約 21,040 行。
+> 13 個套件、約 21,043 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/a2a/` | 92 | A2A（agent-to-agent）agent card 產生 |
 | `utils/agent/` | 1,348 | 閉環 Computer-Use Agent 主迴圈 + Anthropic／OpenAI／Computer-Use 三後端 |
-| `utils/agent_memory/` | 149 | agent 的持久化情節記憶（goal → trajectory → outcome） |
+| `utils/agent_memory/` | 152 | agent 的持久化情節記憶（goal → trajectory → outcome） |
 | `utils/agent_replay/` | 63 | 可攜的 agent 軌跡追蹤（記錄 observation→action 並重播） |
 | `utils/agent_trace/` | 129 | agent 可觀測性：OpenTelemetry GenAI 慣例的 LLM span |
 | `utils/cost_telemetry/` | 301 | 每次呼叫的 LLM 成本遙測：token 數 + 估算美金 |
@@ -648,12 +648,12 @@ socket server 有 8 MiB 讀取上限與 30 秒 handler timeout。
 
 ### 5.4.15 韌性、流量控制與設定
 
-> 14 個套件、約 1,839 行。
+> 14 個套件、約 1,866 行。
 
 | 模組 | 行數 | 職責 |
 | --- | ---: | --- |
 | `utils/artifact_store/` | 114 | S3 相容產出物儲存（報表／截圖／錄影） |
-| `utils/assets/` | 151 | 環境範圍的型別化資產／設定儲存（UiPath Assets 風格） |
+| `utils/assets/` | 178 | 環境範圍的型別化資產／設定儲存（UiPath Assets 風格） |
 | `utils/bulkhead/` | 139 | Bulkhead 併發隔離 + 伺服器限流標頭解析 |
 | `utils/chaos/` | 153 | 決定性混沌實驗（穩態假說 + 故障注入） |
 | `utils/dedup_window/` | 63 | 時間視窗內的訊息去重 |
@@ -1079,6 +1079,6 @@ socket 預設綁 `127.0.0.1`；資源一律用 `with`。
 | `osx/` | 17 | 919 |
 | `autocontrol-lsp/` | 8 | 744 |
 | `utils/hotkey/` | 7 | 783 |
-| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,776 |
-| **總計** | **1,040** | **144,818** |
+| 其餘模組（約 286 個 `utils/` 子套件 + `android/`／`ios/`／周邊小工具） | 675 | 49,826 |
+| **總計** | **1,040** | **144,868** |
 

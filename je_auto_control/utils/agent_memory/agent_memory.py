@@ -27,7 +27,8 @@ from je_auto_control.utils.sqlite_support import (
 if TYPE_CHECKING:  # reason: sqlite3 types are named only in annotations
     import sqlite3
 
-_TOKEN = re.compile(r"[a-z0-9]+")
+# Any language's letters and digits: [a-z0-9] never matched "登入" and cut "café".
+_TOKEN = re.compile(r"\w+")
 
 
 @dataclass
@@ -83,7 +84,9 @@ class AgentMemory:
                 "INSERT INTO episodes (goal, steps, outcome, tags, created) "
                 "VALUES (?, ?, ?, ?, ?)",
                 (str(goal), json.dumps(steps or []), str(outcome),
-                 json.dumps(list(tags or [])), time.time()))
+                 # A bare string is one tag, not its letters.
+                 json.dumps([tags] if isinstance(tags, str) else list(tags or [])),
+                 time.time()))
             return last_row_id(cur)
 
     def get(self, episode_id: int) -> Optional[Episode]:

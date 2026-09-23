@@ -89,6 +89,16 @@ def read_json_dict(path: Optional[Union[str, Path]]) -> Dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def _read_json_object(path: Path) -> Dict[str, Any]:
+    """The JSON object at ``path`` (``{}`` if missing); anything else raises ``ValueError``."""
+    if not path.is_file():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"{path} does not hold a JSON object")
+    return data
+
+
 def write_json_dict(path: Union[str, Path], data: Dict[str, Any]) -> None:
     """Write ``data`` as indented JSON to ``path`` (creating parent dirs)."""
     file_path = Path(path)
@@ -147,24 +157,33 @@ class SharedJsonDict:
     copy on every change lost each other's updates -- two checkers deciding
     one approval request were both told they had succeeded. With no path the
     dict lives in memory only.
+
+    By default an unreadable file reads as empty. With ``strict`` it raises
+    ``ValueError`` instead -- for stores of user-authored content (skills,
+    locators) where writing back an empty dict would erase the file.
     """
 
-    def __init__(self, path: Optional[Union[str, Path]]) -> None:
+    def __init__(self, path: Optional[Union[str, Path]], *,
+                 strict: bool = False) -> None:
         self._path = Path(path) if path is not None else None
         self._memory: Dict[str, Any] = {}
+        self._strict = strict
+
+    def _load(self, path: Path) -> Dict[str, Any]:
+        return _read_json_object(path) if self._strict else read_json_dict(path)
 
     def read(self) -> Dict[str, Any]:
         """Return the current contents (a fresh copy when file-backed)."""
         if self._path is None:
             return self._memory
-        return read_json_dict(self._path)
+        return self._load(self._path)
 
     def update(self, mutate: Callable[[Dict[str, Any]], _Result]) -> _Result:
         """Apply ``mutate`` to the current contents and persist them."""
         if self._path is None:
             return mutate(self._memory)
         with _file_lock(self._path):
-            data = read_json_dict(self._path)
+            data = self._load(self._path)
             result = mutate(data)
             write_json_dict(self._path, data)
         return result

@@ -10,11 +10,11 @@ Pure standard library (JSON storage); imports no ``PySide6``. The
 executor is imported lazily so storage and search work headless on any
 platform.
 """
-import json
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from je_auto_control.utils.json_store import SharedJsonDict
 
 
 @dataclass
@@ -34,25 +34,28 @@ def _to_skill(name: str, raw: Dict[str, Any]) -> Skill:
                  updated=float(raw.get("updated") or 0.0))
 
 
+def _as_tags(tags: Any) -> List[str]:
+    """A bare string is one tag -- ``list("login")`` stored its letters."""
+    if isinstance(tags, str):
+        return [tags]
+    return [str(tag) for tag in tags or []]
+
+
 class SkillLibrary:
-    """A JSON-backed store of named action sequences."""
+    """A JSON-backed store of named action sequences.
+
+    Every change re-reads the file under a lock and writes it atomically, so
+    two libraries (or processes) on one file no longer drop each other's
+    saves; a file that is not a JSON object raises instead of being erased.
+    """
 
     def __init__(self, path: str) -> None:
-        self._path = Path(path)
-        self._items: Dict[str, Dict[str, Any]] = self._load()
+        self._state = SharedJsonDict(path, strict=True)
+        self._state.read()          # a corrupt library fails here, as before
 
-    def _load(self) -> Dict[str, Dict[str, Any]]:
-        if not self._path.exists():
-            return {}
-        data = json.loads(self._path.read_text(encoding="utf-8"))
-        if not isinstance(data, dict):
-            raise ValueError(f"{self._path} is not a skill library")
-        return {str(k): dict(v) for k, v in data.items()}
-
-    def _flush(self) -> None:
-        self._path.write_text(
-            json.dumps(self._items, indent=2, ensure_ascii=False),
-            encoding="utf-8")
+    @property
+    def _items(self) -> Dict[str, Dict[str, Any]]:
+        return {str(key): dict(value) for key, value in self._state.read().items()}
 
     def save(self, name: str, actions: List[Any], *, description: str = "",
              tags: Optional[List[str]] = None) -> Skill:
@@ -60,9 +63,8 @@ class SkillLibrary:
         if not isinstance(actions, list) or not actions:
             raise ValueError("a skill needs a non-empty list of actions")
         record = {"actions": list(actions), "description": str(description),
-                  "tags": list(tags or []), "updated": time.time()}
-        self._items[str(name)] = record
-        self._flush()
+                  "tags": _as_tags(tags), "updated": time.time()}
+        self._state.update(lambda items: items.__setitem__(str(name), record))
         return _to_skill(str(name), record)
 
     def get(self, name: str) -> Optional[Skill]:
@@ -72,11 +74,7 @@ class SkillLibrary:
 
     def remove(self, name: str) -> bool:
         """Delete a skill; return whether it existed."""
-        existed = str(name) in self._items
-        if existed:
-            del self._items[str(name)]
-            self._flush()
-        return existed
+        return self._state.update(lambda items: items.pop(str(name), None) is not None)
 
     def names(self) -> List[str]:
         """Return the saved skill names, sorted."""
@@ -85,9 +83,10 @@ class SkillLibrary:
     def search(self, query: str) -> List[Skill]:
         """Return skills whose name, description or tags match ``query``."""
         needle = str(query).lower().strip()
-        matches = [name for name, raw in self._items.items()
+        items = self._items
+        matches = [name for name, raw in items.items()
                    if _skill_matches(name, raw, needle)]
-        return [_to_skill(name, self._items[name]) for name in sorted(matches)]
+        return [_to_skill(name, items[name]) for name in sorted(matches)]
 
     def run(self, name: str, *, executor: Any = None) -> Dict[str, Any]:
         """Execute a stored skill's actions; return the execution record."""

@@ -31,7 +31,8 @@ JSON 後端(或記憶體內);純標準函式庫;不匯入 ``PySide6``。
 
 型別為 ``text`` / ``int`` / ``bool`` / ``credential``;``get`` 會轉成宣告型別,並在未停用
 時退回 ``default`` 環境。``active_environment()`` 讀取 ``JE_AUTOCONTROL_ENV``。``list`` /
-``delete`` 補齊整個儲存體。
+``delete`` 補齊整個儲存體。``set`` 在寫入時就拒絕未知型別,以及該型別讀不懂的值(例如把
+``"eighty"`` 當 ``int``)。
 
 執行器指令
 ----------
@@ -46,4 +47,5 @@ JSON 後端(或記憶體內);純標準函式庫;不匯入 ``PySide6``。
 
 credential 的**解析**刻意僅限 Python API(因此密鑰永不進入執行紀錄)。相同的生命週期操
 作亦提供為 MCP 工具(``ac_set_asset`` / ``ac_get_asset`` / ``ac_list_assets``),以及
-Script Builder 中 **Data** 分類下的指令。
+Script Builder 中 **Data** 分類下的指令。這些指令接受選用的 ``db`` 路徑;不給時共用同一行程內的
+記憶體儲存體(``asset_store()``)。
